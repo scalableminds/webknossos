@@ -11,7 +11,7 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.box.Box.tryo
-import com.scalableminds.util.tools.{Fox, MathUtils}
+import com.scalableminds.util.tools.{Fox, FoxIterator, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
@@ -535,7 +535,7 @@ class VolumeTracingService @Inject() (
       os: OutputStream
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] = {
     val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
-    val buckets: Iterator[NamedStream] = volumeDataZipFormat match {
+    val buckets: FoxIterator[NamedStream] = volumeDataZipFormat match {
       case VolumeDataZipFormat.wkw =>
         new WKWBucketStreamSink(volumeLayer, tracing.fallbackLayer.nonEmpty)(
           volumeLayer.bucketProvider.bucketStream(Some(tracing.version)),
@@ -689,7 +689,7 @@ class VolumeTracingService @Inject() (
     for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(sourceTracingId)
       sourceVolumeLayer = volumeTracingLayer(sourceAnnotationId, sourceTracingId, sourceTracing, isTemporaryTracing)
-      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceVolumeLayer.bucketProvider.bucketStream(
+      buckets: FoxIterator[(BucketPosition, Array[Byte])] = sourceVolumeLayer.bucketProvider.bucketStream(
         Some(sourceTracing.version)
       )
       destinationVolumeLayer = volumeTracingLayer(newAnnotationId, newTracingId, newTracing)
@@ -805,20 +805,21 @@ class VolumeTracingService @Inject() (
       tc: TokenContext
   ): Fox[Option[Vec3Int]] =
     for {
-      _ <- Fox.successful(())
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
       volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing, isTemporaryTracing = isTemporaryTracing)
-      bucketStream = volumeLayer.bucketStream
-      bucketPosOpt =
-        if (bucketStream.hasNext) {
-          val bucket = bucketStream.next()
-          val bucketPos = bucket._1
-          getPositionOfNonZeroData(
-            bucket._2,
-            Vec3Int(bucketPos.voxelMag1X, bucketPos.voxelMag1Y, bucketPos.voxelMag1Z),
-            volumeLayer.bytesPerElement
+      firstBucketBox <- volumeLayer.bucketStream.next().shiftBox
+      bucketPosOpt <- firstBucketBox match {
+        case Full((bucketPos, data)) =>
+          Fox.successful(
+            getPositionOfNonZeroData(
+              data,
+              Vec3Int(bucketPos.voxelMag1X, bucketPos.voxelMag1Y, bucketPos.voxelMag1Z),
+              volumeLayer.bytesPerElement
+            )
           )
-        } else None
+        case Empty            => Fox.successful(None)
+        case failure: Failure => failure.toFox
+      }
     } yield bucketPosOpt
 
   def merge(

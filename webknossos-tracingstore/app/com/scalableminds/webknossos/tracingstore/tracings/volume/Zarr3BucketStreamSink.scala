@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
-import com.scalableminds.util.tools.{ByteUtils, Fox}
+import com.scalableminds.util.tools.{ByteUtils, Fox, FoxIterator, SyncFoxIterator}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.*
@@ -32,16 +32,16 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   private lazy val rank = layer.additionalAxes.getOrElse(Seq.empty).length + 4
   private lazy val additionalAxesSorted = reorderAdditionalAxes(layer.additionalAxes.getOrElse(Seq.empty))
 
-  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[VoxelSize])(
+  def apply(bucketStream: FoxIterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[VoxelSize])(
       implicit ec: ExecutionContext
-  ): Iterator[NamedStream] = {
+  ): FoxIterator[NamedStream] = {
 
     val header = Zarr3ArrayHeader.fromDataLayer(
       layer,
       mags.headOption.getOrElse(Vec3Int.ones),
       additionalCodecs = Seq(BloscCodecConfiguration.defaultForWKZarrOutput)
     )
-    bucketStream.flatMap { case (bucket, data) =>
+    val bucketFileStream = bucketStream.flatMap { case (bucket, data) =>
       val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedElement(data)
       if (skipBucket) {
         // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
@@ -55,14 +55,19 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
           )
         )
       }
-    } ++ mags.map { mag =>
+    }
+    val headerFileStream = new SyncFoxIterator(mags.iterator.map { mag =>
       NamedFunctionStream.fromJsonSerializable(zarrHeaderFilePath(defaultLayerName, mag), header)
-    } ++ Seq(
-      NamedFunctionStream.fromJsonSerializable(
-        UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
-        createVolumeDataSource(voxelSize)
+    })
+    val dataSourcePropertiesStream = new SyncFoxIterator(
+      Iterator.single(
+        NamedFunctionStream.fromJsonSerializable(
+          UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
+          createVolumeDataSource(voxelSize)
+        )
       )
     )
+    bucketFileStream.concat(headerFileStream).concat(dataSourcePropertiesStream)
   }
 
   private def createVolumeDataSource(voxelSize: Option[VoxelSize]): UsableDataSource = {

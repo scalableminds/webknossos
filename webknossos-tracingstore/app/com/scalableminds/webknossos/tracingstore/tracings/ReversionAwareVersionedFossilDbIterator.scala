@@ -20,12 +20,13 @@ class ReversionAwareVersionedFossilDbIterator[T](
   override def next(): Fox[T] =
     for {
       keyValuePair <- rawIterator.next()
-      result <- if (isRevertedElement(keyValuePair)) next()
-      else
-        transform(keyValuePair) match {
-          case Some(value) => Fox.successful(value)
-          case None        => next()
-        }
+      result <-
+        if (isRevertedElement(keyValuePair)) next()
+        else
+          transform(keyValuePair) match {
+            case Some(value) => Fox.successful(value)
+            case None        => next()
+          }
     } yield result
 
 }

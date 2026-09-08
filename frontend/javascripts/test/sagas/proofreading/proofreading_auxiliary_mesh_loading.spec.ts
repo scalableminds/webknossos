@@ -7,7 +7,7 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { actionChannel, cancel, delay, takeEvery } from "typed-redux-saga";
+import { actionChannel, cancel, delay, takeEvery, call as typedCall } from "typed-redux-saga";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
@@ -21,11 +21,13 @@ import {
 } from "viewer/model/actions/proofread_actions";
 import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 import {
+  removeSegmentAction,
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { scheduleMeshUpdate } from "viewer/model/sagas/volume/proofreading/mesh_update_registry_saga";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import { Store } from "viewer/singletons";
 import { startSaga, type WebknossosState } from "viewer/store";
@@ -1194,6 +1196,44 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           anchorPosition: [6, 6, 6],
         },
       ]);
+    });
+    await task.toPromise();
+  });
+
+  it("removes an orphaned mesh if its mesh-sync task is cancelled before reaching it", async (context: WebknossosTestContext) => {
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+
+    const task = startSaga(function* task(): Saga<void> {
+      const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield loadAgglomerateMeshes([4]);
+
+      // 4's segment-list entry is gone but its mesh-sync task never resolves it.
+      yield put(removeSegmentAction(4n, tracingId, true));
+
+      function* neverSettles(): Saga<void> {
+        yield take("__TEST_NEVER_FIRES__" as unknown as ActionPattern);
+      }
+      yield* scheduleMeshUpdate(typedCall(neverSettles), tracingId, [
+        { oldAgglomerateId: 4n, newAgglomerateId: 5n, nodePosition: getPositionForSegmentId(4) },
+      ]);
+
+      // Shares id 4, so this cancels the stuck task above.
+      function* noop(): Saga<void> {}
+      yield* scheduleMeshUpdate(typedCall(noop), tracingId, [
+        { oldAgglomerateId: 4n, newAgglomerateId: 6n, nodePosition: getPositionForSegmentId(4) },
+      ]);
+
+      yield race({
+        removed: take(
+          ((action: Action) =>
+            action.type === "REMOVE_MESH" && action.segmentId === 4n) as ActionPattern,
+        ),
+        timeout: delay(2000),
+      });
+
+      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
+      expect([...loadedMeshIds]).not.toContain(4n);
     });
     await task.toPromise();
   });

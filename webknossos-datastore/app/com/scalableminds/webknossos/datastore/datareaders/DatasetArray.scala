@@ -122,7 +122,10 @@ class DatasetArray(
       for (additionalCoordinate <- additionalCoordinates) {
         val wkSlot = fullAxisOrder.wkSlotOfPhysicalIndex(additionalAxesMap(additionalCoordinate.name).index)
         offsetArray(wkSlot) = additionalCoordinate.value
-        // shapeArray at positions of additional coordinates is always 1
+        // shapeArray at positions of additional coordinates is 1, unless a batch of consecutive
+        // values along that axis was requested (see AdditionalCoordinate.length / repackBatchedAxisIntoZSlot).
+        // Clamped defensively since, unlike the fixed 32 for x/y/z, this is client-controlled sizing input.
+        shapeArray(wkSlot) = additionalCoordinate.length.getOrElse(1).min(DataLayer.bucketLength)
       }
     }
 
@@ -168,7 +171,7 @@ class DatasetArray(
   ): MultiArray =
     batchedAxisOf(additionalCoordinatesOpt) match {
       case Some(batched) =>
-        val batchedAxisWkSlot = fullAxisOrder.wkToArrayPermutation(additionalAxesMap(batched.name).index)
+        val batchedAxisWkSlot = fullAxisOrder.wkSlotOfPhysicalIndex(additionalAxesMap(batched.name).index)
         // readAsFortranOrder builds its target array with shape.reverse, so wk slot `s` lives at
         // dimension `rank - 1 - s`. Z's wk slot is always rank - 1, i.e. dimension 0.
         val batchedAxisDimension = rank - 1 - batchedAxisWkSlot
@@ -219,7 +222,7 @@ class DatasetArray(
   // The local variables like chunkIndices are also in this order unless explicitly named.
   // Loading data adapts to the array's axis order so that …CXYZ data in fortran-order is
   // returned, regardless of the array’s internal storage.
-  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int], isBatchedRead: Boolean = false)(using
+  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int], isBatchedRead: Boolean)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[MultiArray] = {

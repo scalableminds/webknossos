@@ -74,7 +74,7 @@ case class RawCuboidRequest(
 
 case class AdditionalCoordinate(
     name: String,
-    value: Int
+    value: Int,
     // Number of consecutive values starting at `value` to read along this axis, instead of just one.
     // Only supported for a single additional axis at a time (see
     // DatasetArray.constructOffsetAndShapeArrays/repackBatchedAxisIntoZSlot), where the batch is

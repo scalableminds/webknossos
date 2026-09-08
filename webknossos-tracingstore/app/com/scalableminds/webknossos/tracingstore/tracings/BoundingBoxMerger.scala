@@ -30,6 +30,8 @@ trait BoundingBoxMerger extends ProtoGeometryConversions {
       )
     } yield boundingBoxToProto(union)
 
+  // Bounding boxes are deduplicated based on content across A and B and given all-new IDs.
+  // This approach is different from merging trees and groups, where we just shift the ids of B.
   protected def combineUserBoundingBoxes(
       singleBoundingBoxAOpt: Option[ProtoBoundingBox],
       singleBoundingBoxBOpt: Option[ProtoBoundingBox],

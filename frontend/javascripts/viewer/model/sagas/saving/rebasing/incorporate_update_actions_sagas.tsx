@@ -313,20 +313,15 @@ export function* tryToIncorporateActions(
               );
             return { opacity: meshInfo?.opacity, isVisible: meshInfo?.isVisible };
           });
-          // agglomerateId2 might itself already be queued as a "new id" from an earlier split
-          // within this same incorporation batch - fold that entry's old ids onto agglomerateId1
-          // instead of dropping them, so a split-then-merge chain stays eligible for local
-          // splicing too.
+          // agglomerateId2 is merged into agglomerateId1. So entries already existing for agglomerateId2 need to be
+          // remapped to agglomerateId1.
           foldMeshReloadEntry(
             actionTracingId,
             agglomerateId2,
             agglomerateId1,
             mergedMeshDisplayProps,
           );
-          // Record both sides as old ids feeding into the surviving agglomerateId1, so
-          // detectMergeAndSplitChanges can recognize this as a merge and try to splice it locally
-          // instead of a hard reload (mirrors how updateProofreadingSegmentsAndScheduleSyncMeshes
-          // builds refreshInfos for the current user's own merges).
+          // Record that the agglomerate 1 needs potential refreshing.
           recordMeshToLoad(actionTracingId, agglomerateId1, agglomerateId1, mergedMeshDisplayProps);
           recordMeshToLoad(actionTracingId, agglomerateId1, agglomerateId2, mergedMeshDisplayProps);
           break;

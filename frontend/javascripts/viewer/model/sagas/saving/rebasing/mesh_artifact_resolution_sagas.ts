@@ -48,9 +48,6 @@ function* reloadMeshes(
       // No segment exists for newAgglomerateId anymore - this can happen if, by the time this
       // runs, newAgglomerateId itself was already superseded by something else (e.g. a
       // concurrent local proofreading action independently relabeled it onto a further id).
-      // There's nothing meaningful left to load or splice into, so just clean up every
-      // contributing old id's now-stale mesh directly, rather than silently leaving it orphaned
-      // under an id nothing references anymore.
       if (!(segment && (segment?.anchorPosition || hasSegmentIndex))) {
         for (const oldAgglomerateId of oldAgglomerateIds) {
           yield* put(removeMeshAction(tracingId, oldAgglomerateId));

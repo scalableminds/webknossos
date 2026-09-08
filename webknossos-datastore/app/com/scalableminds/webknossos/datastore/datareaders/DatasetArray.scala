@@ -81,9 +81,7 @@ class DatasetArray(
       bytes <- readBytes(offsetArray, shapeArray)
     } yield bytes
 
-  // Not private so that DatasetArrayAxisOrderTestSuite (package datareaders) can exercise it
-  // directly without needing to fake an actual chunk read.
-  private[datareaders] def constructOffsetAndShapeArrays(
+  private def constructOffsetAndShapeArrays(
       offsetXYZ: Vec3Int,
       shapeXYZ: Vec3Int,
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],

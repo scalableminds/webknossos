@@ -13,7 +13,7 @@ const WORD_COUNT = BUCKET_VOXEL_COUNT / WORD_BITS; // 1024
  * 32, a word is exactly one x-row of the bucket. A scanline therefore never
  * straddles a word boundary, which is what makes markRun cheap.
  */
-export class VoxelMask {
+export class BucketVoxelMask {
   private readonly words = new Uint32Array(WORD_COUNT);
   private markedCount = 0;
 

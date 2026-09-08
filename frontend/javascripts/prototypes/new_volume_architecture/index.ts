@@ -56,10 +56,10 @@ export {
   voxelOffsetInBucket,
   voxelOffsetOf,
 } from "./types";
-export { VoxelMask } from "./voxel_mask";
+export { BucketVoxelMask } from "./voxel_mask";
 export {
-  type BucketWrites,
+  type BucketWrite,
+  type BucketWriteMap,
+  BucketWriteMapBuilder,
   countVoxels,
-  type VoxelWriteSet,
-  WriteSetBuilder,
 } from "./write_set";

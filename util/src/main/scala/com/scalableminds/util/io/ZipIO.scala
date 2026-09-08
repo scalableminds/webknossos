@@ -4,7 +4,7 @@ import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import java.io.*
 import java.nio.file.{Files, Path}
 import java.util.zip.{GZIPOutputStream as DefaultGZIPOutputStream, *}
-import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxIterator, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import Box.tryo
@@ -101,6 +101,24 @@ object ZipIO extends LazyLogging {
           throw new Exception(e.getMessage)
       }
     }
+
+  def zip(sources: FoxIterator[NamedStream], out: OutputStream, level: Int)(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] = {
+    val zip = startZip(out)
+    if (level != -1) {
+      zip.stream.setLevel(level)
+    }
+    Fox.withCleanup(zipIterator(sources, zip)) {
+      zip.close()
+      out.close()
+    }
+  }
+
+  // Failures while pulling from sources (e.g. a FossilDB error) are already Fox failures, not thrown exceptions,
+  // so unlike the Iterator variant above, no try/catch is needed here.
+  private def zipIterator(sources: FoxIterator[NamedStream], zip: OpenZip)(implicit ec: ExecutionContext): Fox[Unit] =
+    Fox.serialCombined(sources)(s => zip.withFile(s.normalizedName)(s.writeTo)).map(_ => ())
 
   def startZip(out: OutputStream): OpenZip =
     OpenZip(new ZipOutputStream(out))

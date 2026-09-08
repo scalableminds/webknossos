@@ -56,7 +56,6 @@ class FossilDBClient(
   private val channel =
     NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
   private val stub = FossilDBGrpc.stub(channel)
-  private val blockingStub = FossilDBGrpc.blockingStub(channel)
   private val healthStub = HealthGrpc.newFutureStub(channel)
   lazy val authority: String = f"$address:$port"
 
@@ -173,30 +172,6 @@ class FossilDBClient(
         VersionedKeyValuePair(VersionedKey(t._1, t._2), t._3)
       }
     } yield combined.toList
-  }
-
-  def getMultipleKeysSync[T](
-      startAfterKey: Option[String],
-      prefix: Option[String],
-      version: Option[Long] = None,
-      limit: Option[Int] = None
-  )(fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
-    def flatCombineTuples[A, B, C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
-      val boxTuples: List[Box[(A, B, C)]] = keys.zip(versions).zip(values).map {
-        case ((k, v), Full(value)) => Full(k, v, value)
-        case _                     => Empty
-      }
-      boxTuples.flatten
-    }
-
-    val reply = blockingStub.getMultipleKeys(GetMultipleKeysRequest(collection, startAfterKey, prefix, version, limit))
-    if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-    val parsedValues: List[Box[T]] = reply.values.map { v =>
-      fromByteArray(v.toByteArray)
-    }.toList
-    flatCombineTuples(reply.keys.toList, reply.actualVersions.toList, parsedValues).map { t =>
-      VersionedKeyValuePair(VersionedKey(t._1, t._2), t._3)
-    }
   }
 
   def getMultipleKeysByList[T](keys: Seq[String], version: Option[Long], batchSize: Int = 1000)(

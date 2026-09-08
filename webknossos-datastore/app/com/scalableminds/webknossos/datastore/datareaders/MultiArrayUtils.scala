@@ -263,7 +263,8 @@ object MultiArrayUtils extends LazyLogging {
 
   def axisOrderXYZViewF(source: MultiArray, fullAxisOrder: FullAxisOrder, sourceIsF: Boolean): MultiArray = {
     // create view with F order and wk-compatible axis order
-    val permutation = if (sourceIsF) fullAxisOrder.arrayFToWkFPermutation else fullAxisOrder.arrayCToWkFPermutation
+    val permutation =
+      if (sourceIsF) fullAxisOrder.physicalFToWkFPermutation else fullAxisOrder.physicalCToWkFPermutation
     source.permute(permutation)
   }
 

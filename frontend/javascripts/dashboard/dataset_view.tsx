@@ -254,9 +254,8 @@ function DatasetView({
   );
 
   const adminHeader = (
-    <Space>
-      {isUserAdminOrDatasetManagerOrTeamManager ? (
-        <Fragment>
+      isUserAdminOrDatasetManagerOrTeamManager ? (
+        <Space>
           <DatasetRefreshButton context={context} />
           <DatasetAddButton context={context} />
           {context.activeFolderId != null && (
@@ -276,11 +275,10 @@ function DatasetView({
             </PricingEnforcedButton>
           )}
           {search}
-        </Fragment>
+        </Space>
       ) : (
         search
-      )}
-    </Space>
+      )
   );
 
   const datasets = context.datasets;

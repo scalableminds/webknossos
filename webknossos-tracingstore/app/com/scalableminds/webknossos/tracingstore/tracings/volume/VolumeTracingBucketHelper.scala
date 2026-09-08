@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.Msg
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxIterator}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
@@ -412,7 +412,7 @@ trait VolumeTracingBucketHelper
   def bucketStreamWithVersion(
       volumeLayer: VolumeTracingLayer,
       version: Option[Long]
-  ): Iterator[(BucketPosition, Array[Byte], Long)] = {
+  )(using ec: ExecutionContext): FoxIterator[(BucketPosition, Array[Byte], Long)] = {
     val keyPrefix = buildKeyPrefix(volumeLayer.name)
     new VersionedBucketIterator(
       keyPrefix,
@@ -432,13 +432,56 @@ trait VolumeTracingBucketHelper
   }
 }
 
+// Wraps a VersionedFossilDbIterator, adding reversion-filtering, bucket-key-parsing and decompression.
+// Only used where the caller can await Fox results (see bucketStreamWithVersion); bucketStream/BucketIterator
+// below needs a blocking Iterator instead, so it does not build on top of this class.
 class VersionedBucketIterator(
     prefix: String,
     volumeDataStore: FossilDBClient,
     expectedUncompressedBucketSize: Int,
     version: Option[Long] = None,
     additionalAxes: Option[Seq[AdditionalAxis]]
-) extends Iterator[(BucketPosition, Array[Byte], Long)]
+)(implicit ec: ExecutionContext)
+    extends FoxIterator[(BucketPosition, Array[Byte], Long)]
+    with VolumeBucketCompression
+    with BucketKeys
+    with ReversionHelper {
+
+  private val rawIterator = new VersionedFossilDbIterator(prefix, volumeDataStore, version)
+
+  override def next(): Fox[(BucketPosition, Array[Byte], Long)] =
+    for {
+      keyValuePair <- rawIterator.next()
+      result <-
+        if (isRevertedElement(keyValuePair)) next()
+        else
+          parseBucketKey(keyValuePair.key, additionalAxes) match {
+            case Some((_, bucketPosition)) =>
+              val debugInfo =
+                s"key: ${keyValuePair.key}, ${keyValuePair.value.length} bytes, version ${keyValuePair.version}"
+              Fox.successful(
+                (
+                  bucketPosition,
+                  decompressIfNeeded(keyValuePair.value, expectedUncompressedBucketSize, debugInfo),
+                  keyValuePair.version
+                )
+              )
+            case None => next()
+          }
+    } yield result
+
+}
+
+// A blocking counterpart to VersionedBucketIterator, for callers that need a synchronous Iterator (e.g. lazily
+// zipping bucket data into an output stream). Duplicates the batch-fetch loop rather than building on
+// VersionedBucketIterator, since that one pulls asynchronously via getMultipleKeys.
+class BucketIterator(
+    prefix: String,
+    volumeDataStore: FossilDBClient,
+    expectedUncompressedBucketSize: Int,
+    version: Option[Long] = None,
+    additionalAxes: Option[Seq[AdditionalAxis]]
+) extends Iterator[(BucketPosition, Array[Byte])]
     with KeyValueStoreConversions
     with VolumeBucketCompression
     with BucketKeys
@@ -481,7 +524,7 @@ class VersionedBucketIterator(
       nextBucket.isDefined
     }
 
-  override def next(): (BucketPosition, Array[Byte], Long) = {
+  override def next(): (BucketPosition, Array[Byte]) = {
     val nextRes = nextBucket match {
       case Some(bucket) => bucket
       case None         => getNextNonRevertedBucket.getOrElse(throw new NoSuchElementException())
@@ -489,28 +532,10 @@ class VersionedBucketIterator(
     nextBucket = None
     parseBucketKey(nextRes.key, additionalAxes).map { key =>
       val debugInfo = s"key: ${nextRes.key}, ${nextRes.value.length} bytes, version ${nextRes.version}"
-      (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize, debugInfo), nextRes.version)
+      (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize, debugInfo))
     }.getOrElse(
       throw new IllegalStateException(s"parseBucketKey returned None for key ${nextRes.key} despite prior filtering")
     )
   }
 
-}
-
-class BucketIterator(
-    prefix: String,
-    volumeDataStore: FossilDBClient,
-    expectedUncompressedBucketSize: Int,
-    version: Option[Long] = None,
-    additionalAxes: Option[Seq[AdditionalAxis]]
-) extends Iterator[(BucketPosition, Array[Byte])] {
-  private val versionedBucketIterator =
-    new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version, additionalAxes)
-
-  override def next(): (BucketPosition, Array[Byte]) = {
-    val tuple = versionedBucketIterator.next()
-    (tuple._1, tuple._2)
-  }
-
-  override def hasNext: Boolean = versionedBucketIterator.hasNext
 }

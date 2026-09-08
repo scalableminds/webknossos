@@ -1,11 +1,6 @@
-package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
+package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.tools.{Fox, FoxIterator}
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  FossilDBClient,
-  KeyValueStoreConversions,
-  VersionedKeyValuePair
-}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext

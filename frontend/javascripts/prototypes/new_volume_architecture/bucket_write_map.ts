@@ -1,3 +1,4 @@
+import { BucketVoxelMask } from "./bucket_voxel_mask";
 import {
   BUCKET_WIDTH,
   type BucketAddress,
@@ -10,7 +11,6 @@ import {
   voxelIndexOf,
   voxelOffsetInBucket,
 } from "./types";
-import { BucketVoxelMask } from "./voxel_mask";
 
 /**
  * Writes for one bucket: which voxels were touched, and the single value being

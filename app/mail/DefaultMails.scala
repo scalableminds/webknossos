@@ -299,10 +299,12 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
       recipients = List(multiUser.email)
     )
 
-  def jobFailedGenericMail(multiUser: MultiUser,
-                           datasetName: String,
-                           jobTitle: String,
-                           errorMessage: Option[String]): Mail =
+  def jobFailedGenericMail(
+      multiUser: MultiUser,
+      datasetName: String,
+      jobTitle: String,
+      errorMessage: Option[String]
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = "Oops. Your WEBKNOSSOS job failed",

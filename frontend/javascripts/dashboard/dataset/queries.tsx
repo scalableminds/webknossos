@@ -7,7 +7,13 @@ import {
   moveFolder,
   updateFolder,
 } from "admin/api/folders";
-import { type DatasetUpdater, getDataset, getDatasets, updateDatasetPartial } from "admin/rest_api";
+import {
+  type DatasetUpdater,
+  getDataset,
+  getDatasets,
+  getImportedDataset,
+  updateDatasetPartial,
+} from "admin/rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { conjugate, diffArrays, pluralize } from "libs/utils";
@@ -393,7 +399,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
         return updateDatasetPartial(id, updater);
       }
       const datasetId = params;
-      return getDataset(datasetId);
+      return getImportedDataset(datasetId);
     },
     mutationKey,
     onSuccess: (updatedDataset: APIDataset) => {

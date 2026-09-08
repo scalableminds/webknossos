@@ -1480,7 +1480,7 @@ export function updateDatasetDefaultConfiguration(
   });
 }
 
-export function getDatasetAccessList(dataset: APIDataset): Promise<Array<APIUser>> {
+export function getDatasetAccessList(dataset: APIMaybeUnimportedDataset): Promise<Array<APIUser>> {
   return Request.receiveJSON(`/api/datasets/${dataset.id}/accessList`);
 }
 

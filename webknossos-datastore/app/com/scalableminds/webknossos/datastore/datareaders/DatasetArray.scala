@@ -124,8 +124,18 @@ class DatasetArray(
         offsetArray(wkSlot) = additionalCoordinate.value
         // shapeArray at positions of additional coordinates is 1, unless a batch of consecutive
         // values along that axis was requested (see AdditionalCoordinate.length / repackBatchedAxisIntoZSlot).
-        // Clamped defensively since, unlike the fixed 32 for x/y/z, this is client-controlled sizing input.
-        shapeArray(wkSlot) = additionalCoordinate.length.getOrElse(1).min(DataLayer.bucketLength)
+        // Validated rather than clamped because, unlike the fixed 32 for x/y/z, this is
+        // client-controlled sizing input, and only a full batch can be served: the repack merely
+        // reorders dimensions, so a partial length would yield a short buffer rather than the
+        // fixed-size bucket the wire format promises. A zero or negative length has no valid
+        // interpretation at all. Failing here (inside the caller's tryo) beats returning a
+        // malformed response.
+        val requestedLength = additionalCoordinate.length.getOrElse(1)
+        require(
+          requestedLength == 1 || requestedLength == DataLayer.bucketLength,
+          s"Additional-coordinate batch length for '${additionalCoordinate.name}' must be 1 or ${DataLayer.bucketLength}, got $requestedLength"
+        )
+        shapeArray(wkSlot) = requestedLength
       }
     }
 

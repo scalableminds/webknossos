@@ -10,7 +10,7 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/rest_api";
+import { clearCache, deleteDatasetOnDisk, getDataset, getImportedDataset } from "admin/rest_api";
 import { App, type MenuProps, Typography } from "antd";
 import type { useAppProps } from "antd/es/app/context";
 import { applyViewConfigurationToDatasetsInFolder } from "dashboard/advanced_dataset/apply_view_configuration";
@@ -341,8 +341,9 @@ export function getDatasetActionContextMenu({
             icon: <ReloadOutlined className="icon-margin-right" />,
             label: "Reload",
             onClick: async () => {
-              const fullDataset = await getDataset(dataset.id);
-              return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
+              return dataset.isActive
+                ? onClearCache(await getImportedDataset(dataset.id), reloadDataset)
+                : null;
             },
           },
         ],

@@ -127,13 +127,13 @@ const ModalToken = {
 // A modal that genuinely does not fit the scale (a bare spinner, a docked panel) may still set
 // its own width, but should say why in a comment.
 export const ModalWidth = {
-  /** Forms. */
+  // Forms
   Medium: 600,
-  /** Tables and other rich content. */
+  // Tables and other rich content
   Large: 800,
-  /** Data-heavy dialogs, e.g. statistics tables and the shortcut configuration. */
+  // Data-heavy dialogs, e.g. statistics tables and the shortcut configuration
   ExtraLarge: 1000,
-  /** Dialogs that embed a whole view, e.g. dataset upload and onboarding. */
+  // Dialogs that embed a whole view, e.g. dataset upload and onboarding
   Full: "85%",
 } as const;
 

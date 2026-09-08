@@ -224,7 +224,7 @@ export function handleTaskCreationResponse(
   modal.info({
     title: `${successfulTasks.length} ${pluralize("task", successfulTasks.length)} successfully created, ${failedTasks.length} ${pluralize("task", failedTasks.length)} failed. ${warnings.length} ${pluralize("warning", warnings.length)}.`,
     content: (
-      <div>
+      <Space orientation="vertical">
         {warningsContent}
         {successfulTasks.length > 0 ? (
           <div>
@@ -241,7 +241,7 @@ export function handleTaskCreationResponse(
             </div>
           </React.Fragment>
         ) : null}
-      </div>
+      </Space>
     ),
     footer:
       successfulTasks.length > 0 || failedTasks.length > 0

@@ -1,4 +1,4 @@
-import { Button, Modal, Space } from "antd";
+import { Button, Modal, Space, Typography } from "antd";
 import type { useNavigate } from "react-router-dom";
 import { ModalWidth } from "theme";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
@@ -75,8 +75,20 @@ export default function PostUploadModal({
         )
       }
     >
-      The dataset was {addTypeToVerb[datasetAddType]} successfully
-      {datasetNeedsConversion ? " and a conversion job was started" : null}.
+      <Typography.Paragraph>
+        The dataset{" "}
+        {uploadedDatasetName && (
+          <>
+            <Typography.Text strong>{uploadedDatasetName}</Typography.Text>{" "}
+          </>
+        )}
+        was {addTypeToVerb[datasetAddType]} successfully.
+      </Typography.Paragraph>
+      <Typography.Paragraph>
+        {datasetNeedsConversion
+          ? "A background conversion job has been started to prepare your data. You can track the progress in the jobs queue or return to the dashboard."
+          : "Your dataset is now ready to use. You can open it in the viewer, configure its settings, or return to the dashboard."}
+      </Typography.Paragraph>
     </Modal>
   );
 }

@@ -9,7 +9,7 @@ import {
   voxelIndexOf,
   voxelOffsetInBucket,
 } from "./types";
-import type { BucketWrites } from "./write_set";
+import type { BucketWrite } from "./write_set";
 
 export type BucketState = "absent" | "pending" | "resident";
 
@@ -22,7 +22,7 @@ export interface TransactionCube {
   /** Dense content of a resident bucket, or undefined. Never fetches. */
   getResident(address: BucketAddress): BigUint64Array | undefined;
   /** Apply a bucket's writes at once, walking the mask's runs. */
-  applyWrites(address: BucketAddress, writes: BucketWrites): void;
+  applyWrites(address: BucketAddress, write: BucketWrite): void;
   /**
    * A predicate telling the overwrite filter whether a voxel is background, or
    * null when the bucket has no authoritative content to test against.
@@ -160,11 +160,11 @@ export class WorkingDataCube implements LoadingVoxelCube {
    * bucket is not materialized — the diff still exists in the write set and the
    * journal, and will be folded in whenever the bucket is eventually loaded.
    */
-  applyWrites(address: BucketAddress, writes: BucketWrites): void {
+  applyWrites(address: BucketAddress, write: BucketWrite): void {
     const data = this.materializedData(address);
     if (data == null) return;
-    for (const { start, length } of writes.mask.runs()) {
-      data.fill(writes.value, start, start + length);
+    for (const { start, length } of write.mask.runs()) {
+      data.fill(write.value, start, start + length);
     }
     this.gpuDirty.add(bucketKey(address));
   }

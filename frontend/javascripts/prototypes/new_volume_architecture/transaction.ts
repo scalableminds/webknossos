@@ -11,8 +11,8 @@ import {
   type SegmentId,
   type VoxelIndex,
 } from "./types";
-import { VoxelMask } from "./voxel_mask";
-import type { VoxelWriteSet, WriteSetEntry } from "./write_set";
+import { BucketVoxelMask } from "./voxel_mask";
+import type { BucketWriteMap, BucketWriteMapEntry } from "./write_set";
 
 /**
  * Bucket-scoped write cursor. Obtained once per bucket, then written to in a
@@ -39,7 +39,7 @@ export interface BucketWriter {
  * hand the finished write set to `recordAll`.
  */
 export class VolumeTransaction {
-  private readonly writes: VoxelWriteSet = new Map();
+  private readonly bucketWrites: BucketWriteMap = new Map();
   /** Pre-transaction values, first touch only, resident buckets only. */
   private readonly beforeAccumulating = new Map<BucketKey, Map<VoxelIndex, SegmentId>>();
   private committed = false;
@@ -51,12 +51,12 @@ export class VolumeTransaction {
     private readonly mags: MagList,
   ) {}
 
-  private entryFor(address: BucketAddress, value: SegmentId): WriteSetEntry {
+  private entryFor(address: BucketAddress, value: SegmentId): BucketWriteMapEntry {
     const key = bucketKey(address);
-    let entry = this.writes.get(key);
+    let entry = this.bucketWrites.get(key);
     if (entry == null) {
-      entry = { address, writes: { mask: new VoxelMask(), value } };
-      this.writes.set(key, entry);
+      entry = { address, write: { mask: new BucketVoxelMask(), value } };
+      this.bucketWrites.set(key, entry);
     }
     return entry;
   }
@@ -87,22 +87,22 @@ export class VolumeTransaction {
       isBackground,
       mark(index: VoxelIndex) {
         captureBefore(index);
-        entry.writes.mask.mark(index);
+        entry.write.mask.mark(index);
       },
       markRun(start: VoxelIndex, length: number) {
         // todop: can we make this more efficient?
         for (let i = start; i < start + length; i++) captureBefore(i);
-        entry.writes.mask.markRun(start, length);
+        entry.write.mask.markRun(start, length);
       },
     };
   }
 
   /** Merge a whole write set (from the resolver, or a remote peer). */
   // todop: could this be cheaper in case the current transaction is empty?
-  recordAll(writeSet: VoxelWriteSet): void {
-    for (const incoming of writeSet.values()) {
-      const writer = this.writerFor(incoming.address, incoming.writes.value);
-      for (const { start, length } of incoming.writes.mask.runs()) {
+  recordAll(bucketWriteMap: BucketWriteMap): void {
+    for (const incoming of bucketWriteMap.values()) {
+      const writer = this.writerFor(incoming.address, incoming.write.value);
+      for (const { start, length } of incoming.write.mask.runs()) {
         writer.markRun(start, length);
       }
     }
@@ -110,13 +110,13 @@ export class VolumeTransaction {
 
   /** Push accumulated source-mag writes into the cube for live feedback. */
   flushToCube(): void {
-    for (const entry of this.writes.values()) {
-      this.cube.applyWrites(entry.address, entry.writes);
+    for (const entry of this.bucketWrites.values()) {
+      this.cube.applyWrites(entry.address, entry.write);
     }
   }
 
-  get sourceWrites(): VoxelWriteSet {
-    return this.writes;
+  get sourceWrites(): BucketWriteMap {
+    return this.bucketWrites;
   }
 
   /**
@@ -127,15 +127,15 @@ export class VolumeTransaction {
     if (this.committed) throw new Error("Transaction already committed");
     this.committed = true;
 
-    const perMag = propagate(this.writes, this.ctx, this.mags);
+    const perMag = propagate(this.bucketWrites, this.ctx, this.mags);
 
     // Every mag, source included. The source mag was already written through
     // during the interaction, but re-applying is idempotent (runs are absolute
     // writes) and covers the case where a fetch landed mid-stroke and replaced
     // the array before these writes were in the journal.
-    for (const writeSet of perMag.values()) {
-      for (const entry of writeSet.values()) {
-        this.cube.applyWrites(entry.address, entry.writes);
+    for (const bucketWriteMap of perMag.values()) {
+      for (const entry of bucketWriteMap.values()) {
+        this.cube.applyWrites(entry.address, entry.write);
       }
     }
 
@@ -151,19 +151,19 @@ export class VolumeTransaction {
   /** Restore every touched resident bucket. Used to cancel an open stroke. */
   abort(): void {
     for (const [key, before] of this.beforeAccumulating) {
-      const entry = this.writes.get(key);
+      const entry = this.bucketWrites.get(key);
       if (entry == null) continue;
       const data = this.cube.getResident(entry.address);
       if (data == null) continue;
       for (const [index, value] of before) data[index] = value;
     }
-    this.writes.clear();
+    this.bucketWrites.clear();
     this.beforeAccumulating.clear();
     this.committed = true;
   }
 
   /** Which mags a commit would touch. Exposed for tests. */
   previewMagIndices(): MagIndex[] {
-    return [...propagate(this.writes, this.ctx, this.mags).keys()].sort((a, b) => a - b);
+    return [...propagate(this.bucketWrites, this.ctx, this.mags).keys()].sort((a, b) => a - b);
   }
 }

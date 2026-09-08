@@ -1,18 +1,18 @@
 import {
   BUCKET_VOXEL_COUNT,
   BUCKET_WIDTH,
-  VoxelMask,
+  BucketVoxelMask,
   voxelIndexOf,
 } from "prototypes/new_volume_architecture";
 import { describe, expect, it } from "vitest";
 
-function runsOf(mask: VoxelMask): Array<[number, number]> {
+function runsOf(mask: BucketVoxelMask): Array<[number, number]> {
   return [...mask.runs()].map(({ start, length }) => [start, length]);
 }
 
-describe("new volume architecture — VoxelMask", () => {
+describe("new volume architecture — BucketVoxelMask", () => {
   it("marks and reports single voxels", () => {
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     expect(mask.count).toBe(0);
     expect(mask.has(0)).toBe(false);
 
@@ -30,7 +30,7 @@ describe("new volume architecture — VoxelMask", () => {
   });
 
   it("marks runs that stay inside one word", () => {
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     mask.markRun(4, 8);
     expect(mask.count).toBe(8);
     expect(runsOf(mask)).toEqual([[4, 8]]);
@@ -41,19 +41,19 @@ describe("new volume architecture — VoxelMask", () => {
   });
 
   it("marks a full 32-bit word without the 1<<32 wraparound", () => {
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     mask.markRun(0, 32);
     expect(mask.count).toBe(32);
     expect(runsOf(mask)).toEqual([[0, 32]]);
   });
 
   it("splits runs at word boundaries, because a word is one x-row", () => {
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     mask.markRun(30, 70); // crosses four words
     expect(mask.count).toBe(70);
     // Not [[30, 70]]: a run must never span rows, or mag propagation would
     // project it as a 70-voxel x-extent and streak across rows it never
-    // touched. See VoxelMask.runs().
+    // touched. See BucketVoxelMask.runs().
     expect(runsOf(mask)).toEqual([
       [30, 2],
       [32, 32],
@@ -63,7 +63,7 @@ describe("new volume architecture — VoxelMask", () => {
   });
 
   it("counts overlapping runs only once", () => {
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     mask.markRun(10, 20);
     mask.markRun(15, 20); // overlaps 15..29
     expect(mask.count).toBe(25); // 10..34
@@ -74,7 +74,7 @@ describe("new volume architecture — VoxelMask", () => {
   });
 
   it("merges adjacent runs and separates disjoint ones", () => {
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     mask.markRun(0, 10);
     mask.markRun(10, 5); // abuts the previous run
     mask.markRun(40, 3); // disjoint
@@ -85,21 +85,21 @@ describe("new volume architecture — VoxelMask", () => {
   });
 
   it("handles a run ending exactly at the last voxel", () => {
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     mask.markRun(BUCKET_VOXEL_COUNT - 5, 5);
     expect(mask.count).toBe(5);
     expect(runsOf(mask)).toEqual([[BUCKET_VOXEL_COUNT - 5, 5]]);
   });
 
   it("rejects runs that would leave the bucket", () => {
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     expect(() => mask.markRun(BUCKET_VOXEL_COUNT - 2, 5)).toThrow();
     expect(() => mask.markRun(-1, 2)).toThrow();
   });
 
   it("treats a word as exactly one x-row, so a scanline never straddles words", () => {
     // Row (y=1, z=0) occupies indices 32..63, i.e. word 1 in full.
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     mask.markRun(voxelIndexOf(0, 1, 0), BUCKET_WIDTH);
     expect(runsOf(mask)).toEqual([[32, 32]]);
     expect(mask.has(voxelIndexOf(0, 0, 0))).toBe(false);
@@ -108,7 +108,7 @@ describe("new volume architecture — VoxelMask", () => {
   });
 
   it("enumerates indices consistently with runs", () => {
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     mask.markRun(5, 3);
     mask.mark(100);
     mask.markRun(200, 2);
@@ -118,7 +118,7 @@ describe("new volume architecture — VoxelMask", () => {
   it("never yields a run that crosses a row, however the mask was filled", () => {
     // Fill several complete rows plus a partial one. Naively merging set bits
     // would collapse these into one enormous run.
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     mask.markRun(voxelIndexOf(0, 0, 0), BUCKET_WIDTH * 3 + 7);
 
     const runs = [...mask.runs()];
@@ -132,7 +132,7 @@ describe("new volume architecture — VoxelMask", () => {
   });
 
   it("reports nothing for an empty mask", () => {
-    const mask = new VoxelMask();
+    const mask = new BucketVoxelMask();
     expect(runsOf(mask)).toEqual([]);
     expect([...mask.indices()]).toEqual([]);
   });

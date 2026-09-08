@@ -1,5 +1,5 @@
 import type { BucketAddress, MagIndex, SegmentId, VoxelIndex } from "./types";
-import type { BucketWrites, VoxelWriteSet } from "./write_set";
+import type { BucketWrite, BucketWriteMap } from "./write_set";
 
 /**
  * A run of consecutive voxel indices sharing one value. Every run a transaction
@@ -32,10 +32,10 @@ export interface TransactionDiff {
  * Extract runs from a bucket's writes. A word scan over the mask — no sort and
  * no per-voxel value lookup, because the value is held once for the bucket.
  */
-export function toRuns(writes: BucketWrites): VoxelRun[] {
+export function toRuns(write: BucketWrite): VoxelRun[] {
   const runs: VoxelRun[] = [];
-  for (const { start, length } of writes.mask.runs()) {
-    runs.push({ start, length, value: writes.value });
+  for (const { start, length } of write.mask.runs()) {
+    runs.push({ start, length, value: write.value });
   }
   return runs;
 }
@@ -45,12 +45,12 @@ export function applyRun(data: BigUint64Array, run: VoxelRun): void {
   data.fill(run.value, run.start, run.start + run.length);
 }
 
-export function bucketDiffsOf(writeSets: Iterable<VoxelWriteSet>): BucketDiff[] {
+export function bucketDiffsOf(bucketWriteMaps: Iterable<BucketWriteMap>): BucketDiff[] {
   const diffs: BucketDiff[] = [];
-  for (const writeSet of writeSets) {
-    for (const entry of writeSet.values()) {
-      if (entry.writes.mask.count === 0) continue;
-      diffs.push({ address: entry.address, runs: toRuns(entry.writes) });
+  for (const bucketWriteMap of bucketWriteMaps) {
+    for (const entry of bucketWriteMap.values()) {
+      if (entry.write.mask.count === 0) continue;
+      diffs.push({ address: entry.address, runs: toRuns(entry.write) });
     }
   }
   return diffs;

@@ -213,10 +213,6 @@ function DatasetActionView(props: Props) {
   );
   const brokenDatasetActions = (
     <div className="dataset-table-actions">
-      <Link to={`/datasets/${getReadableURLPart(dataset)}/edit`}>
-        <SettingOutlined className="icon-margin-right" />
-        Settings
-      </Link>
       {reloadLink}
       <a
         onClick={() =>
@@ -326,7 +322,7 @@ export function getDatasetActionContextMenu({
                 },
               }
             : null,
-          dataset.isEditable
+          dataset.isActive && dataset.isEditable
             ? {
                 key: "edit",
                 icon: <SettingOutlined className="icon-margin-right" />,

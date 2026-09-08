@@ -1,3 +1,4 @@
+import type { BucketWrite } from "./bucket_write_map";
 import type { BucketJournal } from "./journal";
 import {
   BUCKET_VOXEL_COUNT,
@@ -9,7 +10,6 @@ import {
   voxelIndexOf,
   voxelOffsetInBucket,
 } from "./types";
-import type { BucketWrite } from "./write_set";
 
 export type BucketState = "absent" | "pending" | "resident";
 

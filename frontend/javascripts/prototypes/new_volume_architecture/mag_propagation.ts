@@ -1,3 +1,4 @@
+import { type BucketWriteMap, BucketWriteMapBuilder } from "./bucket_write_map";
 import {
   type EditContext,
   FINEST_MAG_INDEX,
@@ -9,7 +10,6 @@ import {
   type Vector3,
   voxelOffsetOf,
 } from "./types";
-import { type BucketWriteMap, BucketWriteMapBuilder } from "./write_set";
 
 /**
  * Source mag → every other mag, walking the pyramid outward one adjacent level

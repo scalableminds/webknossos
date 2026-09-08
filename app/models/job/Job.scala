@@ -27,6 +27,7 @@ case class Job(
     _worker: Option[ObjectId] = None,
     _voxelyticsWorkflowHash: Option[String] = None,
     latestRunId: Option[String] = None,
+    latestRunErrorDetails: Option[JsObject] = None,
     returnValue: Option[String] = None,
     retriedBySuperUser: Boolean = false,
     started: Option[Instant] = None,
@@ -74,6 +75,7 @@ case class JobCompactInfo(
     ownerEmail: String,
     args: JsObject,
     state: JobState,
+    errorDetails: Option[JsObject],
     returnValue: Option[String],
     resultLink: Option[String],
     voxelyticsWorkflowHash: Option[String],
@@ -104,6 +106,7 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       state <- JobState.fromString(r.state).toFox
       command <- JobCommand.fromString(r.command).toFox
       commandArgs <- JsonHelper.parseAs[JsObject](r.commandargs).toFox
+      latestRunErrorDetails <- Fox.runOptional(r.latestrunerrordetails)(JsonHelper.parseAs[JsObject](_).toFox)
     } yield Job(
       ObjectId(r._id),
       ObjectId(r._owner),
@@ -115,6 +118,7 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       r._worker.map(ObjectId(_)),
       r._voxelytics_workflowhash,
       r.latestrunid,
+      latestRunErrorDetails,
       r.returnvalue,
       r.retriedbysuperuser,
       r.started.map(Instant.fromSql),
@@ -160,7 +164,7 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       rows <- run(
         q"""
           SELECT j._id, j.command, u._organization, mu.firstName, mu.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
-                 j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, j.lastRetry, ct.milli_credit_delta
+                 j.returnValue, j.latestRunErrorDetails, j._voxelytics_workflowHash, j.created, j.started, j.ended, j.lastRetry, ct.milli_credit_delta
           FROM webknossos.jobs_ j
           JOIN webknossos.users_ u on j._owner = u._id
           JOIN webknossos.multiusers_ mu on u._multiUser = mu._id
@@ -181,6 +185,7 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
               String,
               Option[String],
               Option[String],
+              Option[String],
               Instant,
               Option[Instant],
               Option[Instant],
@@ -194,6 +199,7 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
           command <- JobCommand.fromString(row._2).toFox
           effectiveState <- JobState.fromString(row._8).toFox
           commandArgs <- JsonHelper.parseAs[JsObject](row._7).toFox
+          errorDetails <- Fox.runOptional(row._10)(JsonHelper.parseAs[JsObject](_).toFox)
         } yield JobCompactInfo(
           id = row._1,
           command = command,
@@ -203,14 +209,15 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
           ownerEmail = row._6,
           args = commandArgs,
           state = effectiveState,
+          errorDetails = errorDetails,
           returnValue = row._9,
           resultLink = None, // To be filled by calling “enrich”
-          voxelyticsWorkflowHash = row._10,
-          created = row._11,
-          started = row._12,
-          ended = row._13,
-          lastRetry = row._14,
-          costInMilliCredits = row._15.map(_ * -1) // delta is negative, so cost should be positive.
+          voxelyticsWorkflowHash = row._11,
+          created = row._12,
+          started = row._13,
+          ended = row._14,
+          lastRetry = row._15,
+          costInMilliCredits = row._16.map(_ * -1) // delta is negative, so cost should be positive.
         )
       }
     } yield parsed
@@ -293,13 +300,13 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"""INSERT INTO webknossos.jobs(
                     _id, _owner, _dataStore, command, commandArgs,
                     state, manualState, _worker,
-                    latestRunId, returnValue, started, ended, lastRetry,
+                    latestRunId, latestRunErrorDetails, returnValue, started, ended, lastRetry,
                     created, isDeleted
                    )
                    VALUES(
                     ${j._id}, ${j._owner}, ${j._dataStore}, ${j.command}, ${j.args},
                     ${j.state}, ${j.manualState}, ${j._worker},
-                    ${j.latestRunId}, ${j.returnValue}, ${j.started}, ${j.ended}, ${j.lastRetry},
+                    ${j.latestRunId}, ${j.latestRunErrorDetails}, ${j.returnValue}, ${j.started}, ${j.ended}, ${j.lastRetry},
                     ${j.created}, ${j.isDeleted})""".asUpdate)
     } yield ()
 
@@ -328,6 +335,7 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(q"""UPDATE webknossos.jobs SET
                    latestRunId = ${s.latestRunId},
+                   latestRunErrorDetails = ${s.errorDetails},
                    state = ${s.state},
                    returnValue = ${s.returnValue},
                    started = ${s.started},

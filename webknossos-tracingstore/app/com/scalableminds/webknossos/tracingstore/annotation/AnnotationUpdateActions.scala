@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
@@ -35,7 +36,7 @@ case class AddLayerAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -51,7 +52,7 @@ case class DeleteLayerAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -66,7 +67,7 @@ case class UpdateLayerMetadataAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -80,7 +81,7 @@ case class UpdateMetadataAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -94,7 +95,7 @@ case class RevertToVersionAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -108,7 +109,7 @@ case class ResetToBaseAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with ApplyImmediatelyUpdateAction {
+    with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -120,7 +121,7 @@ case class UpdateTdCameraAnnotationAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends AnnotationUpdateAction {
+) extends AnnotationUpdateAction derives JsonAutoFormat {
 
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -140,7 +141,7 @@ case class UpdateCameraAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends AnnotationUpdateAction
-    with UserStateUpdateAction {
+    with UserStateUpdateAction derives JsonAutoFormat {
 
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -148,33 +149,4 @@ case class UpdateCameraAnnotationAction(
   override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def isViewOnlyChange: Boolean = true
-}
-
-object AddLayerAnnotationAction {
-  implicit val jsonFormat: OFormat[AddLayerAnnotationAction] = Json.format[AddLayerAnnotationAction]
-}
-object DeleteLayerAnnotationAction {
-  implicit val jsonFormat: OFormat[DeleteLayerAnnotationAction] = Json.format[DeleteLayerAnnotationAction]
-}
-object UpdateLayerMetadataAnnotationAction {
-  implicit val jsonFormat: OFormat[UpdateLayerMetadataAnnotationAction] =
-    Json.format[UpdateLayerMetadataAnnotationAction]
-}
-object UpdateMetadataAnnotationAction {
-  implicit val jsonFormat: OFormat[UpdateMetadataAnnotationAction] =
-    Json.format[UpdateMetadataAnnotationAction]
-}
-object RevertToVersionAnnotationAction {
-  implicit val jsonFormat: OFormat[RevertToVersionAnnotationAction] =
-    Json.format[RevertToVersionAnnotationAction]
-}
-object ResetToBaseAnnotationAction {
-  implicit val jsonFormat: OFormat[ResetToBaseAnnotationAction] =
-    Json.format[ResetToBaseAnnotationAction]
-}
-object UpdateTdCameraAnnotationAction {
-  implicit val jsonFormat: OFormat[UpdateTdCameraAnnotationAction] = Json.format[UpdateTdCameraAnnotationAction]
-}
-object UpdateCameraAnnotationAction {
-  implicit val jsonFormat: OFormat[UpdateCameraAnnotationAction] = Json.format[UpdateCameraAnnotationAction]
 }

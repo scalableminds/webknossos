@@ -1,30 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
-import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
-import { Alert, Modal, Spin, Table } from "antd";
-import { formatNumberToArea, formatNumberToVolume } from "libs/format_utils";
+import { Alert, Modal, Space, Spin, Table } from "antd";
+import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import capitalize from "lodash-es/capitalize";
 import { useCallback, useMemo } from "react";
-import type { APISegmentationLayer, VoxelSize } from "types/api_types";
+import type { APISegmentationLayer, SegmentCovarianceMatrix } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
-import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   getAdditionalCoordinatesAsString,
   hasAdditionalCoordinates,
 } from "viewer/model/accessors/flycam_accessor";
-import { getCurrentMappingName } from "viewer/model/accessors/volumetracing_accessor";
 import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
-import { api, Store } from "viewer/singletons";
 import type { Segment, SegmentGroup } from "viewer/store";
 import { findGroup, MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
-
-const getSegmentStatisticsCSVHeader = (dataSourceUnit: string) => {
-  const capitalizedUnit = capitalize(dataSourceUnit);
-  return `segmentId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${capitalizedUnit}3,surfaceAreaIn${capitalizedUnit}2,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`;
-};
+import { useSegmentStatistics } from "./hooks/use_segment_statistics";
+import { covarianceMatrixToPrincipalExtents } from "./segment_statistics_helpers";
 
 const ADDITIONAL_COORDS_COLUMN = "additionalCoordinates";
 
@@ -33,7 +25,8 @@ type Props = {
   tracingId: string | undefined;
   visibleSegmentationLayer: APISegmentationLayer;
   relevantSegments: Segment[];
-  parentGroup: number;
+  /** Appended to the exported filename to tell exports of the same layer apart. */
+  csvFilenameSuffix: string | null;
   segmentGroups: SegmentGroup[];
 };
 
@@ -53,39 +46,53 @@ type SegmentInfo = {
   boundingBoxTopLeftAsString: string | undefined;
   boundingBoxPosition: Vector3 | undefined;
   boundingBoxPositionAsString: string | undefined;
+  maxDistanceInUnit: number | undefined;
+  formattedMaxDistance: string | undefined;
+  sphericity: number | undefined;
+  formattedSphericity: string | undefined;
+  centerOfMass: Vector3 | undefined;
+  centerOfMassAsString: string | undefined;
+  principalExtents: Vector3 | undefined;
+  formattedPrincipalExtents: string | undefined;
+  covarianceMatrix: SegmentCovarianceMatrix | undefined;
+};
+
+type CsvValue = string | number | bigint | undefined;
+
+/*
+ * Describes one statistic in both of its representations, so that the rendered table and the
+ * exported CSV cannot drift apart when columns are shown conditionally. A spec without a `title`
+ * is exported but not rendered; `csvHeaders` and the array returned by `getCsvValues` always have
+ * the same length, so missing values keep the CSV columns aligned.
+ */
+type StatisticSpec = {
+  key: string;
+  title?: string;
+  dataIndex?: keyof SegmentInfo;
+  width?: number;
+  isLoading?: boolean;
+  isError?: boolean;
+  csvHeaders: string[];
+  getCsvValues: (row: SegmentInfo) => CsvValue[];
 };
 
 const exportStatisticsToCSV = (
   segmentInformation: SegmentInfo[],
+  specs: StatisticSpec[],
   tracingIdOrDatasetName: string,
-  groupIdToExport: number,
-  hasAdditionalCoords: boolean,
-  voxelSize: VoxelSize,
+  filenameSuffix: string | null,
 ) => {
-  const segmentStatisticsAsRows = segmentInformation.map((row) => {
-    const maybeAdditionalCoords = hasAdditionalCoords ? [row.additionalCoordinates] : [];
-    return transformToCSVRow([
-      ...maybeAdditionalCoords,
-      row.segmentId,
-      row.segmentName,
-      row.groupId,
-      row.groupName,
-      row.volumeInVoxel,
-      row.volumeInUnit3,
-      row.surfaceAreaInUnit2,
-      ...(row.boundingBoxTopLeft || []),
-      ...(row.boundingBoxPosition || []),
-    ]);
-  });
+  const csvHeader = specs.flatMap((spec) => spec.csvHeaders);
+  const segmentStatisticsAsRows = segmentInformation.map((row) =>
+    // Fill missing statistics with "" to also include incomplete statistic rows.
+    transformToCSVRow(specs.flatMap((spec) => spec.getCsvValues(row)).map((value) => value ?? "")),
+  );
 
-  const csv_header = hasAdditionalCoords
-    ? [ADDITIONAL_COORDS_COLUMN, getSegmentStatisticsCSVHeader(voxelSize.unit)].join(",")
-    : getSegmentStatisticsCSVHeader(voxelSize.unit);
   const filename =
-    groupIdToExport === -1
+    filenameSuffix == null
       ? `segmentStatistics_${tracingIdOrDatasetName}.csv`
-      : `segmentStatistics_${tracingIdOrDatasetName}_group-${groupIdToExport}.csv`;
-  saveAsCSV([csv_header], segmentStatisticsAsRows, filename);
+      : `segmentStatistics_${tracingIdOrDatasetName}_${filenameSuffix}.csv`;
+  saveAsCSV(csvHeader, segmentStatisticsAsRows, filename);
 };
 
 export function SegmentStatisticsModal({
@@ -93,41 +100,42 @@ export function SegmentStatisticsModal({
   tracingId,
   visibleSegmentationLayer,
   relevantSegments: segments,
-  parentGroup,
+  csvFilenameSuffix,
   segmentGroups,
 }: Props) {
-  const { dataset, annotation } = useWkSelector((state) => state);
-  const magInfo = getMagInfo(visibleSegmentationLayer.mags);
-  const layersFinestMag = magInfo.getFinestMag();
+  const dataset = useWkSelector((state) => state.dataset);
   const voxelSize = dataset.dataSource.scale;
+  const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
 
-  // Omit checking that all prerequisites for segment stats (such as a segment index) are
-  // met right here because that should happen before opening the modal.
-  const storeInfoType = useMemo(
-    () => ({
-      dataset,
-      annotation,
-      tracingId: visibleSegmentationLayer.tracingId,
-      segmentationLayerName: visibleSegmentationLayer.name,
-    }),
-    [dataset, annotation, visibleSegmentationLayer.tracingId, visibleSegmentationLayer.name],
-  );
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const hasAdditionalCoords = hasAdditionalCoordinates(additionalCoordinates);
   const additionalCoordinateStringForModal = getAdditionalCoordinatesAsString(
     additionalCoordinates,
     ", ",
   );
-  const currentMeshFile = useWkSelector((state) =>
-    visibleSegmentationLayer != null
-      ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile
-      : null,
-  );
-  const mappingName: string | null | undefined = useWkSelector(getCurrentMappingName);
 
   const segmentIds = useMemo(() => segments.map((s) => s.id), [segments]);
 
   const additionalCoordStringForCsv = getAdditionalCoordinatesAsString(additionalCoordinates);
+
+  // Omit checking that all prerequisites for segment stats (such as a segment index) are
+  // met right here because that should happen before opening the modal.
+  const {
+    fileInfo,
+    statisticsMag,
+    boundingBoxMag,
+    isBoundingBoxAvailable,
+    isVolumeAvailable,
+    isSurfaceAreaAvailable,
+    availableFileMetrics,
+    volumes,
+    boundingBoxes,
+    surfaceAreas,
+    maxDistances,
+    sphericities,
+    centersOfMass,
+    covarianceMatrices,
+  } = useSegmentStatistics({ layer: visibleSegmentationLayer, segmentIds });
 
   const getGroupIdForSegment = useCallback(
     // Segments without a groupId belong to the (virtual) root group.
@@ -144,113 +152,24 @@ export function SegmentStatisticsModal({
     [segmentGroups],
   );
 
-  const {
-    data: volumes,
-    isLoading: isLoadingVolumes,
-    isError: isErrorVolumes,
-  } = useQuery({
-    queryKey: [
-      "segmentVolumes",
-      segmentIds,
-      layersFinestMag,
-      additionalCoordinates,
-      mappingName,
-      storeInfoType,
-    ],
-    queryFn: async () => {
-      await api.tracing.save();
-      const annotationVersion = Store.getState().annotation.version;
-      return getSegmentVolumes(
-        storeInfoType,
-        layersFinestMag,
-        segmentIds,
-        additionalCoordinates,
-        mappingName,
-        annotationVersion,
-      );
-    },
-    gcTime: 0,
-  });
-
-  const {
-    data: boundingBoxes,
-    isLoading: isLoadingBboxes,
-    isError: isErrorBboxes,
-  } = useQuery({
-    queryKey: [
-      "segmentBoundingBoxes",
-      segmentIds,
-      layersFinestMag,
-      additionalCoordinates,
-      mappingName,
-      storeInfoType,
-    ],
-    queryFn: async () => {
-      await api.tracing.save();
-      const annotationVersion = Store.getState().annotation.version;
-      return getSegmentBoundingBoxes(
-        storeInfoType,
-        layersFinestMag,
-        segmentIds,
-        additionalCoordinates,
-        mappingName,
-        annotationVersion,
-      );
-    },
-    gcTime: 0,
-  });
-
-  const {
-    data: surfaceAreas,
-    isLoading: isLoadingSurfaceAreas,
-    isError: isErrorSurfaceAreas,
-  } = useQuery({
-    queryKey: [
-      "segmentSurfaceAreas",
-      segmentIds,
-      layersFinestMag,
-      additionalCoordinates,
-      mappingName,
-      storeInfoType,
-      currentMeshFile?.name,
-    ],
-    queryFn: async () => {
-      await api.tracing.save();
-      const annotationVersion = Store.getState().annotation.version;
-      return getSegmentSurfaceArea(
-        storeInfoType,
-        layersFinestMag,
-        currentMeshFile?.name,
-        segmentIds,
-        additionalCoordinates,
-        mappingName,
-        annotationVersion,
-      );
-    },
-    gcTime: 0,
-  });
-
   const statisticsList = useMemo(() => {
     return segments.map((segment, i) => {
       const currentGroupId = getGroupIdForSegment(segment);
 
       let volumeStats = {};
-      if (volumes) {
-        const volumeInVoxel = volumes[i];
-        const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, layersFinestMag, volumeInVoxel);
+      if (volumes.data) {
+        const volumeInVoxel = volumes.data[i];
+        const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, statisticsMag, volumeInVoxel);
         volumeStats = {
           volumeInVoxel,
           volumeInUnit3,
-          formattedSize: formatNumberToVolume(
-            volumeInUnit3,
-            LongUnitToShortUnitMap[voxelSize.unit],
-          ),
+          formattedSize: formatNumberToVolume(volumeInUnit3, shortUnit),
         };
       }
 
       let bboxStats = {};
-      if (boundingBoxes) {
-        const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxes[i], layersFinestMag);
+      if (boundingBoxes.data) {
+        const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxes.data[i], boundingBoxMag);
         bboxStats = {
           boundingBoxTopLeft: boundingBoxInMag1.topLeft,
           boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
@@ -264,14 +183,51 @@ export function SegmentStatisticsModal({
       }
 
       let surfaceStats = {};
-      if (surfaceAreas) {
-        const surfaceAreaInUnit2 = surfaceAreas[i];
+      if (surfaceAreas.data) {
+        const surfaceAreaInUnit2 = surfaceAreas.data[i];
         surfaceStats = {
           surfaceAreaInUnit2,
-          formattedSurfaceArea: formatNumberToArea(
-            surfaceAreaInUnit2,
-            LongUnitToShortUnitMap[voxelSize.unit],
-          ),
+          formattedSurfaceArea: formatNumberToArea(surfaceAreaInUnit2, shortUnit),
+        };
+      }
+
+      let maxDistanceStats = {};
+      if (maxDistances.data) {
+        const maxDistanceInUnit = maxDistances.data[i];
+        maxDistanceStats = {
+          maxDistanceInUnit,
+          formattedMaxDistance: formatNumberToLength(maxDistanceInUnit, shortUnit),
+        };
+      }
+
+      let sphericityStats = {};
+      if (sphericities.data) {
+        const sphericity = sphericities.data[i];
+        sphericityStats = {
+          sphericity,
+          formattedSphericity: sphericity.toFixed(3),
+        };
+      }
+
+      let centerOfMassStats = {};
+      if (centersOfMass.data) {
+        const centerOfMass = centersOfMass.data[i];
+        centerOfMassStats = {
+          centerOfMass,
+          centerOfMassAsString: `(${centerOfMass.map((value) => Math.round(value)).join(", ")})`,
+        };
+      }
+
+      let covarianceStats = {};
+      if (covarianceMatrices.data) {
+        const covarianceMatrix = covarianceMatrices.data[i];
+        const principalExtents = covarianceMatrixToPrincipalExtents(covarianceMatrix, voxelSize);
+        covarianceStats = {
+          covarianceMatrix,
+          principalExtents,
+          formattedPrincipalExtents: principalExtents
+            .map((extent) => formatNumberToLength(extent, shortUnit))
+            .join(" × "),
         };
       }
 
@@ -285,68 +241,217 @@ export function SegmentStatisticsModal({
         ...volumeStats,
         ...bboxStats,
         ...surfaceStats,
+        ...maxDistanceStats,
+        ...sphericityStats,
+        ...centerOfMassStats,
+        ...covarianceStats,
       } as SegmentInfo;
     });
   }, [
     segments,
-    volumes,
-    boundingBoxes,
-    surfaceAreas,
+    volumes.data,
+    boundingBoxes.data,
+    surfaceAreas.data,
+    maxDistances.data,
+    sphericities.data,
+    centersOfMass.data,
+    covarianceMatrices.data,
     getGroupIdForSegment,
     getGroupNameForId,
     additionalCoordStringForCsv,
     voxelSize,
-    layersFinestMag,
+    shortUnit,
+    statisticsMag,
+    boundingBoxMag,
   ]);
 
-  const columns = [
-    { title: "Segment ID", dataIndex: "segmentId", key: "segmentId" },
-    { title: "Segment Name", dataIndex: "segmentName", key: "segmentName" },
-    {
-      title: "Volume",
-      dataIndex: "formattedSize",
-      key: "formattedSize",
-      render: (text: string) => {
-        if (isLoadingVolumes) return <Spin size="small" />;
-        if (isErrorVolumes) return "n/a";
-        return text;
-      },
-    },
-    {
-      title: "Surface Area",
-      dataIndex: "formattedSurfaceArea",
-      key: "formattedSurfaceArea",
-      render: (text: string) => {
-        if (isLoadingSurfaceAreas) return <Spin size="small" />;
-        if (isErrorSurfaceAreas) return "n/a";
-        return text;
-      },
-    },
-    {
-      title: "Bounding Box\nTop Left Position",
-      dataIndex: "boundingBoxTopLeftAsString",
-      key: "boundingBoxTopLeft",
-      width: 150,
-      render: (text: string) => {
-        if (isLoadingBboxes) return <Spin size="small" />;
-        if (isErrorBboxes) return "n/a";
-        return text;
-      },
-    },
-    {
-      title: "Bounding Box\nSize in vx",
-      dataIndex: "boundingBoxPositionAsString",
-      key: "boundingBoxPosition",
-      width: 150,
-      render: (text: string) => {
-        if (isLoadingBboxes) return <Spin size="small" />;
-        if (isErrorBboxes) return "n/a";
-        return text;
-      },
-    },
-  ];
+  const statisticSpecs: StatisticSpec[] = useMemo(() => {
+    const capitalizedUnit = capitalize(voxelSize.unit);
+    const specs: StatisticSpec[] = [];
 
-  const isErrorCase = isErrorVolumes || isErrorBboxes || isErrorSurfaceAreas;
+    if (hasAdditionalCoords) {
+      specs.push({
+        key: ADDITIONAL_COORDS_COLUMN,
+        csvHeaders: [ADDITIONAL_COORDS_COLUMN],
+        getCsvValues: (row) => [row.additionalCoordinates],
+      });
+    }
+
+    specs.push(
+      {
+        key: "segmentId",
+        title: "Segment ID",
+        dataIndex: "segmentId",
+        csvHeaders: ["segmentId"],
+        getCsvValues: (row) => [row.segmentId],
+      },
+      {
+        key: "segmentName",
+        title: "Segment Name",
+        dataIndex: "segmentName",
+        csvHeaders: ["segmentName"],
+        getCsvValues: (row) => [row.segmentName],
+      },
+      {
+        key: "group",
+        csvHeaders: ["groupId", "groupName"],
+        getCsvValues: (row) => [row.groupId ?? undefined, row.groupName],
+      },
+    );
+
+    if (isVolumeAvailable) {
+      specs.push({
+        key: "volume",
+        title: "Volume",
+        dataIndex: "formattedSize",
+        isLoading: volumes.isLoading,
+        isError: volumes.isError,
+        csvHeaders: ["volumeInVoxel", `volumeIn${capitalizedUnit}3`],
+        getCsvValues: (row) => [row.volumeInVoxel, row.volumeInUnit3],
+      });
+    }
+
+    if (isSurfaceAreaAvailable) {
+      specs.push({
+        key: "surfaceArea",
+        title: "Surface Area",
+        dataIndex: "formattedSurfaceArea",
+        isLoading: surfaceAreas.isLoading,
+        isError: surfaceAreas.isError,
+        csvHeaders: [`surfaceAreaIn${capitalizedUnit}2`],
+        getCsvValues: (row) => [row.surfaceAreaInUnit2],
+      });
+    }
+
+    if (availableFileMetrics.maxDistance) {
+      specs.push({
+        key: "maxDistance",
+        title: "Max Distance",
+        dataIndex: "formattedMaxDistance",
+        isLoading: maxDistances.isLoading,
+        isError: maxDistances.isError,
+        csvHeaders: [`maxDistanceIn${capitalizedUnit}`],
+        getCsvValues: (row) => [row.maxDistanceInUnit],
+      });
+    }
+
+    if (availableFileMetrics.sphericity) {
+      specs.push({
+        key: "sphericity",
+        title: "Sphericity",
+        dataIndex: "formattedSphericity",
+        isLoading: sphericities.isLoading,
+        isError: sphericities.isError,
+        csvHeaders: ["sphericity"],
+        getCsvValues: (row) => [row.sphericity],
+      });
+    }
+
+    if (availableFileMetrics.covariance) {
+      specs.push(
+        {
+          key: "principalExtents",
+          title: "Principal Extents",
+          dataIndex: "formattedPrincipalExtents",
+          width: 200,
+          isLoading: covarianceMatrices.isLoading,
+          isError: covarianceMatrices.isError,
+          csvHeaders: [1, 2, 3].map((index) => `principalExtent${index}In${capitalizedUnit}`),
+          getCsvValues: (row) => row.principalExtents ?? [undefined, undefined, undefined],
+        },
+        {
+          key: "covarianceMatrix",
+          csvHeaders: [0, 1, 2].flatMap((i) => [0, 1, 2].map((j) => `covariance${i}${j}`)),
+          getCsvValues: (row) =>
+            row.covarianceMatrix?.flat() ?? new Array<CsvValue>(9).fill(undefined),
+        },
+      );
+    }
+
+    if (isBoundingBoxAvailable) {
+      specs.push(
+        {
+          key: "boundingBoxTopLeft",
+          title: "Bounding Box\nTop Left Position",
+          dataIndex: "boundingBoxTopLeftAsString",
+          width: 150,
+          isLoading: boundingBoxes.isLoading,
+          isError: boundingBoxes.isError,
+          csvHeaders: ["X", "Y", "Z"].map((axis) => `boundingBoxTopLeftPosition${axis}`),
+          getCsvValues: (row) => row.boundingBoxTopLeft ?? [undefined, undefined, undefined],
+        },
+        {
+          key: "boundingBoxPosition",
+          title: "Bounding Box\nSize in vx",
+          dataIndex: "boundingBoxPositionAsString",
+          width: 150,
+          isLoading: boundingBoxes.isLoading,
+          isError: boundingBoxes.isError,
+          csvHeaders: ["X", "Y", "Z"].map((axis) => `boundingBoxSize${axis}`),
+          getCsvValues: (row) => row.boundingBoxPosition ?? [undefined, undefined, undefined],
+        },
+      );
+    }
+
+    if (availableFileMetrics.centerOfMass) {
+      specs.push({
+        key: "centerOfMass",
+        title: "Center of Mass\nin vx",
+        dataIndex: "centerOfMassAsString",
+        width: 150,
+        isLoading: centersOfMass.isLoading,
+        isError: centersOfMass.isError,
+        csvHeaders: ["X", "Y", "Z"].map((axis) => `centerOfMass${axis}`),
+        getCsvValues: (row) => row.centerOfMass ?? [undefined, undefined, undefined],
+      });
+    }
+
+    return specs;
+  }, [
+    voxelSize.unit,
+    hasAdditionalCoords,
+    availableFileMetrics,
+    isBoundingBoxAvailable,
+    isVolumeAvailable,
+    isSurfaceAreaAvailable,
+    volumes.isLoading,
+    volumes.isError,
+    surfaceAreas.isLoading,
+    surfaceAreas.isError,
+    maxDistances.isLoading,
+    maxDistances.isError,
+    sphericities.isLoading,
+    sphericities.isError,
+    covarianceMatrices.isLoading,
+    covarianceMatrices.isError,
+    boundingBoxes.isLoading,
+    boundingBoxes.isError,
+    centersOfMass.isLoading,
+    centersOfMass.isError,
+  ]);
+
+  const columns = statisticSpecs
+    .filter((spec) => spec.title != null)
+    .map((spec) => {
+      // Only the fetched statistics have a loading and error state; segment id and name are
+      // rendered as plain values.
+      const isFetchedStatistic = spec.isLoading !== undefined;
+      return {
+        title: spec.title,
+        dataIndex: spec.dataIndex,
+        key: spec.key,
+        width: spec.width,
+        render: isFetchedStatistic
+          ? (text: string) => {
+              if (spec.isLoading) return <Spin size="small" />;
+              if (spec.isError) return "n/a";
+              return text;
+            }
+          : undefined,
+      };
+    });
+
+  const isAnyStatisticLoading = statisticSpecs.some((spec) => spec.isLoading);
 
   return (
     <Modal
@@ -355,36 +460,43 @@ export function SegmentStatisticsModal({
       onCancel={onCancel}
       width={1000}
       onOk={() =>
-        !isErrorCase &&
         exportStatisticsToCSV(
           statisticsList,
+          statisticSpecs,
           tracingId || dataset.name,
-          parentGroup,
-          hasAdditionalCoords,
-          voxelSize,
+          csvFilenameSuffix,
         )
       }
       okText="Export to CSV"
-      okButtonProps={{
-        disabled: isErrorCase || isLoadingVolumes || isLoadingBboxes || isLoadingSurfaceAreas,
-      }}
+      okButtonProps={{ disabled: isAnyStatisticLoading }}
     >
-      {hasAdditionalCoords && (
-        <Alert
-          title={`These statistics only refer to the current additional ${pluralize(
-            "coordinate",
-            additionalCoordinates?.length || 0,
-          )} ${additionalCoordinateStringForModal}.`}
-          type="info"
-          showIcon
+      <Space vertical size="small" style={{ width: "100%" }} styles={{ item: { minWidth: 0 } }}>
+        {hasAdditionalCoords && (
+          <Alert
+            title={`These statistics only refer to the current additional ${pluralize(
+              "coordinate",
+              additionalCoordinates?.length || 0,
+            )} ${additionalCoordinateStringForModal}.`}
+            type="info"
+            showIcon
+          />
+        )}
+        {fileInfo != null && (
+          <Alert
+            title={`Statistics are read from a precomputed segment statistics file, which was computed for mag ${fileInfo.mag.join(
+              "-",
+            )}.`}
+            type="info"
+            showIcon
+          />
+        )}
+        <Table
+          dataSource={statisticsList}
+          columns={columns}
+          style={{ whiteSpace: "pre" }}
+          scroll={{ x: "max-content" }}
         />
-      )}
-      <Table
-        dataSource={statisticsList}
-        columns={columns}
-        style={{ whiteSpace: "pre" }}
-        scroll={{ x: "max-content" }}
-      />
+      </Space>
     </Modal>
   );
 }

@@ -2,12 +2,12 @@ package models.job
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow, GetResultJobsRow}
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsObject, Json}
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceStatus
@@ -82,7 +82,7 @@ case class JobCompactInfo(
     ended: Option[Instant],
     lastRetry: Option[Instant],
     costInMilliCredits: Option[Int]
-) extends JobResultLinks {
+) extends JobResultLinks derives JsonAutoFormat {
 
   protected def effectiveState: JobState = state
 
@@ -91,10 +91,6 @@ case class JobCompactInfo(
     args = args - "webknossos_token" - "user_auth_token"
   )
 
-}
-
-object JobCompactInfo {
-  implicit val jsonFormat: OFormat[JobCompactInfo] = Json.format[JobCompactInfo]
 }
 
 class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)

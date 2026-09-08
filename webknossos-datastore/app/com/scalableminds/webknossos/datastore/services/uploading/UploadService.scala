@@ -14,7 +14,7 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.box.Box.tryo
-import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -48,7 +48,6 @@ import com.scalableminds.webknossos.datastore.services.{
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
-import play.api.libs.json.{Json, OFormat}
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
 import java.io.{File, RandomAccessFile}
@@ -61,10 +60,7 @@ case class ResumableUploadInfo(
     totalFileCount: Long,
     filePaths: Option[Seq[String]],
     totalFileSizeInBytes: Option[Long]
-)
-object ResumableUploadInfo {
-  implicit val jsonFormat: OFormat[ResumableUploadInfo] = Json.format[ResumableUploadInfo]
-}
+) derives JsonAutoFormat
 
 case class DatasetUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
@@ -78,10 +74,7 @@ case class DatasetUploadInfo(
     needsConversion: Option[Boolean], // None means false
     voxelSizeFactor: Option[Vec3Double],
     voxelSizeUnit: Option[LengthUnit]
-)
-object DatasetUploadInfo {
-  implicit val jsonFormat: OFormat[DatasetUploadInfo] = Json.format[DatasetUploadInfo]
-}
+) derives JsonAutoFormat
 
 case class MagUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
@@ -89,10 +82,7 @@ case class MagUploadInfo(
     layerName: String,
     mag: MagLocator,
     overwritePending: Boolean
-)
-object MagUploadInfo {
-  implicit val jsonFormat: OFormat[MagUploadInfo] = Json.format[MagUploadInfo]
-}
+) derives JsonAutoFormat
 
 case class AttachmentUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
@@ -101,28 +91,13 @@ case class AttachmentUploadInfo(
     attachmentType: LayerAttachmentType,
     attachment: LayerAttachment,
     overwritePending: Boolean
-)
-object AttachmentUploadInfo {
-  implicit val jsonFormat: OFormat[AttachmentUploadInfo] = Json.format[AttachmentUploadInfo]
-}
+) derives JsonAutoFormat
 
-case class DatasetUploadAdditionalInfo(newDatasetId: ObjectId, directoryName: String)
-object DatasetUploadAdditionalInfo {
-  implicit val jsonFormat: OFormat[DatasetUploadAdditionalInfo] =
-    Json.format[DatasetUploadAdditionalInfo]
-}
+case class DatasetUploadAdditionalInfo(newDatasetId: ObjectId, directoryName: String) derives JsonAutoFormat
 
-case class MagUploadAdditionalInfo(dataSourceId: DataSourceId)
-object MagUploadAdditionalInfo {
-  implicit val jsonFormat: OFormat[MagUploadAdditionalInfo] =
-    Json.format[MagUploadAdditionalInfo]
-}
+case class MagUploadAdditionalInfo(dataSourceId: DataSourceId) derives JsonAutoFormat
 
-case class AttachmentUploadAdditionalInfo(dataSourceId: DataSourceId)
-object AttachmentUploadAdditionalInfo {
-  implicit val jsonFormat: OFormat[AttachmentUploadAdditionalInfo] =
-    Json.format[AttachmentUploadAdditionalInfo]
-}
+case class AttachmentUploadAdditionalInfo(dataSourceId: DataSourceId) derives JsonAutoFormat
 
 case class ReportDatasetUploadParameters(
     needsConversion: Boolean,
@@ -130,36 +105,25 @@ case class ReportDatasetUploadParameters(
     dataSourceOpt: Option[UsableDataSource], // must be set if needsConversion is false
     layersToLink: Seq[LinkedLayerIdentifier],
     voxelSize: Option[VoxelSize]
-)
-object ReportDatasetUploadParameters {
-  implicit val jsonFormat: OFormat[ReportDatasetUploadParameters] =
-    Json.format[ReportDatasetUploadParameters]
-}
+) derives JsonAutoFormat
+
 case class ReportMagUploadParameters(
     datasetId: ObjectId,
     layerName: String,
     mag: MagLocator,
     magSizeBytes: Long
-)
-object ReportMagUploadParameters {
-  implicit val jsonFormat: OFormat[ReportMagUploadParameters] = Json.format[ReportMagUploadParameters]
-}
+) derives JsonAutoFormat
+
 case class ReportAttachmentUploadParameters(
     datasetId: ObjectId,
     layerName: String,
     attachmentType: LayerAttachmentType,
     attachment: LayerAttachment,
     attachmentSizeBytes: Long
-)
-object ReportAttachmentUploadParameters {
-  implicit val jsonFormat: OFormat[ReportAttachmentUploadParameters] = Json.format[ReportAttachmentUploadParameters]
-}
+) derives JsonAutoFormat
 
 case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
-
-object LinkedLayerIdentifier {
-  implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
-}
+    derives JsonAutoFormat
 
 class UploadService @Inject() (
     dataSourceService: DataSourceService,

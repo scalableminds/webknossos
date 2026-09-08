@@ -58,6 +58,7 @@ import type { MeshFiles } from "./hooks/use_mesh_files";
 import type { MeshOperations } from "./hooks/use_mesh_operations";
 import type { SegmentGroupOperations } from "./hooks/use_segment_group_operations";
 import type { SegmentSelection } from "./hooks/use_segment_selection";
+import { useSegmentStatisticsFile } from "./hooks/use_segment_statistics_file";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import {
   mayEditVisibleSegmentation,
@@ -69,13 +70,21 @@ const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 export type SegmentContextMenuBuilder = (node: SegmentUiNode) => MenuProps;
 export type GroupContextMenuBuilder = (node: SegmentGroupUiNode) => MenuProps;
 
+/*
+ * What the segment statistics modal was opened for. A group is passed by id so that the modal
+ * always reflects the group's current contents, whereas an explicit selection is passed as-is.
+ */
+export type SegmentStatisticsTarget =
+  | { kind: "group"; groupId: number }
+  | { kind: "segments"; segments: Segment[] };
+
 export type ContextMenuDependencies = {
   hierarchy: SegmentsHierarchy;
   selection: SegmentSelection;
   groupOperations: SegmentGroupOperations;
   meshOperations: MeshOperations;
   meshFiles: MeshFiles;
-  openStatisticsModal: (groupId: number) => void;
+  openStatisticsModal: (target: SegmentStatisticsTarget) => void;
   hideContextMenu: () => void;
 };
 
@@ -84,27 +93,54 @@ function getColorOfFirstSegmentOrGrey(segments: Segment[]): Vector3 {
 }
 
 /*
- * Menu items that operate on a list of segments (either the current multi-selection
- * or all segments of a group). Used by both the multi-select and the group context menu.
+ * Menu items that operate on a list of segments (a single segment, the current multi-selection, or
+ * all segments of a group). Used by all three segment context menus, so that an entry offered in
+ * more than one of them is defined and gated in exactly one place.
  */
 function useSegmentListMenuItems({
   groupOperations,
   meshOperations,
   meshFiles,
+  openStatisticsModal,
   hideContextMenu,
 }: Pick<
   ContextMenuDependencies,
-  "groupOperations" | "meshOperations" | "meshFiles" | "hideContextMenu"
+  "groupOperations" | "meshOperations" | "meshFiles" | "openStatisticsModal" | "hideContextMenu"
 >) {
   const dispatch = useDispatch();
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
+  const isSegmentIndexAvailable = useWkSelector((state) =>
+    getMaybeSegmentIndexAvailability(state.dataset, visibleSegmentationLayer?.name),
+  );
+  // A segment statistics file can serve volume and surface area on its own, so the modal is also
+  // worth offering on datasets that have no segment index.
+  const { fileInfo: segmentStatisticsFileInfo } =
+    useSegmentStatisticsFile(visibleSegmentationLayer);
+  const areSegmentStatisticsAvailable =
+    isSegmentIndexAvailable || segmentStatisticsFileInfo != null;
 
   return useCallback(
-    (segments: Segment[]) => {
+    (
+      segments: Segment[],
+      // A group passes itself so that the modal tracks its live contents and the CSV is named after
+      // it; a plain selection is reported as the segments it consists of.
+      statisticsTarget: SegmentStatisticsTarget = { kind: "segments", segments },
+    ) => {
       const runAndHide = (action: () => void) => () => {
         action();
         hideContextMenu();
       };
+
+      // Defined here so that the group, multi-select and single-segment menus all offer the exact
+      // same entry, gated the same way.
+      const segmentStatisticsItem: ItemType = areSegmentStatisticsAvailable
+        ? {
+            key: "segmentStatistics",
+            icon: <BarChartOutlined />,
+            label: "Show Segment Statistics",
+            onClick: runAndHide(() => openStatisticsModal(statisticsTarget)),
+          }
+        : null;
 
       const loadPrecomputedItem: ItemType = {
         key: "loadByFile",
@@ -205,6 +241,7 @@ function useSegmentListMenuItems({
         setColorItem,
         resetColorItem,
         removeFromListItem,
+        segmentStatisticsItem,
       };
     },
     [
@@ -213,6 +250,8 @@ function useSegmentListMenuItems({
       groupOperations,
       meshOperations,
       meshFiles,
+      areSegmentStatisticsAvailable,
+      openStatisticsModal,
       hideContextMenu,
     ],
   );
@@ -249,6 +288,7 @@ export function useSegmentContextMenuBuilder(
         items.setColorItem,
         items.resetColorItem,
         items.removeFromListItem,
+        items.segmentStatisticsItem,
       ],
     };
   }, [getSegmentListMenuItems, selection.selectedSegments]);
@@ -421,10 +461,12 @@ export function useSegmentContextMenuBuilder(
               activeVolumeTracing.fallbackLayer != null,
             label: "Delete Segment's Data",
           },
+          getSegmentListMenuItems([segment]).segmentStatisticsItem,
         ],
       };
     },
     [
+      getSegmentListMenuItems,
       dispatch,
       modal,
       allowUpdate,
@@ -454,14 +496,9 @@ export function useSegmentContextMenuBuilder(
 export function useGroupContextMenuBuilder(
   dependencies: ContextMenuDependencies,
 ): GroupContextMenuBuilder {
-  const { hierarchy, selection, groupOperations, openStatisticsModal, hideContextMenu } =
-    dependencies;
+  const { hierarchy, selection, groupOperations, hideContextMenu } = dependencies;
   const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
-  const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
   const segmentGroups = useWkSelector((state) => getVisibleSegments(state).segmentGroups);
-  const isSegmentIndexAvailable = useWkSelector((state) =>
-    getMaybeSegmentIndexAvailability(state.dataset, visibleSegmentationLayer?.name),
-  );
   const getSegmentListMenuItems = useSegmentListMenuItems(dependencies);
 
   return useCallback(
@@ -469,7 +506,7 @@ export function useGroupContextMenuBuilder(
       const groupId = node.group.groupId;
       const isEditingDisabled = !allowUpdate;
       const groupSegments = groupOperations.getSegmentsOfGroupRecursively(groupId);
-      const listItems = getSegmentListMenuItems(groupSegments);
+      const listItems = getSegmentListMenuItems(groupSegments, { kind: "group", groupId });
 
       // Expand/collapse are only offered when they would actually change something.
       const expandedKeySet = new Set(hierarchy.expandedKeys);
@@ -539,17 +576,7 @@ export function useGroupContextMenuBuilder(
           },
           listItems.setColorItem,
           listItems.resetColorItem,
-          isSegmentIndexAvailable
-            ? {
-                key: "segmentStatistics",
-                icon: <BarChartOutlined />,
-                label: "Show Segment Statistics",
-                onClick: () => {
-                  openStatisticsModal(groupId);
-                  hideContextMenu();
-                },
-              }
-            : null,
+          listItems.segmentStatisticsItem,
           listItems.loadPrecomputedItem,
           listItems.computeAdHocItem,
           ...listItems.meshManagementItems,
@@ -563,8 +590,6 @@ export function useGroupContextMenuBuilder(
       selection.selectedSegmentIds,
       groupOperations,
       getSegmentListMenuItems,
-      isSegmentIndexAvailable,
-      openStatisticsModal,
       hideContextMenu,
     ],
   );

@@ -13,7 +13,7 @@ import zip from "lodash-es/zip";
 import messages from "messages";
 import { SAXParser } from "sax-ts";
 import type { AdditionalCoordinate, APIBuildInfoWk, MetadataEntryProto } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 import Constants, {
   IdentityTransform,
   type TreeType,
@@ -35,7 +35,6 @@ import {
   type TreeGroup,
 } from "viewer/model/types/tree_types";
 import type {
-  BoundingBoxObject,
   SkeletonTracing,
   StoreAnnotation,
   UserBoundingBox,

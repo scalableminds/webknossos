@@ -1,9 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
-import play.api.libs.json.{Json, OFormat}
+import com.scalableminds.util.tools.JsonAutoFormat
 
-case class UpdateActionBranchPoint(nodeId: Int, timestamp: Long)
-
-object UpdateActionBranchPoint {
-  implicit val jsonFormat: OFormat[UpdateActionBranchPoint] = Json.format[UpdateActionBranchPoint]
-}
+case class UpdateActionBranchPoint(nodeId: Int, timestamp: Long) derives JsonAutoFormat

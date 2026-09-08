@@ -5,7 +5,7 @@ import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import React from "react";
-import { useDispatch } from "react-redux";
+import { shallowEqual, useDispatch } from "react-redux";
 import { CtrlOrCmdKey } from "viewer/constants";
 import {
   loadAgglomerateTreeAtPosition,
@@ -150,15 +150,17 @@ export function useNoNodeContextMenuOptions(
     dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
   }, [dispatch, visibleSegmentationLayer, dataset]);
 
-  const positionInLayerSpace = useWkSelector((state) =>
-    globalPosition != null && visibleSegmentationLayer != null
-      ? globalToLayerTransformedPosition(
-          globalPosition,
-          visibleSegmentationLayer.name,
-          "segmentation",
-          state,
-        )
-      : null,
+  const positionInLayerSpace = useWkSelector(
+    (state) =>
+      globalPosition != null && visibleSegmentationLayer != null
+        ? globalToLayerTransformedPosition(
+            globalPosition,
+            visibleSegmentationLayer.name,
+            "segmentation",
+            state,
+          )
+        : null,
+    shallowEqual,
   );
 
   const loadPrecomputedMesh = async () => {

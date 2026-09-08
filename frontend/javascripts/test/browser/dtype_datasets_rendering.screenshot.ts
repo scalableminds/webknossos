@@ -105,8 +105,8 @@ const selectiveSegmentIdByDtype: Partial<Record<DType, bigint>> = {
   int16: -527n,
   uint32: 2181570682n,
   int32: 34087034n,
-  uint64: 4575085335741433n,
-  int64: -142971416741958n,
+  uint64: 9369774767598502393n,
+  int64: -146402730743726615n,
 };
 
 type Spec = {
@@ -273,22 +273,33 @@ describe("DType Dataset Rendering", () => {
         console.timeEnd("Comparing screenshot...");
 
         let success = isPixelEquivalent(changedPixels, width, height);
-        if (spec.alsoTestSelectiveSegmentId && selectiveSegmentIdByDtype[spec.dtype] != null) {
+        const selectiveSegmentId = selectiveSegmentIdByDtype[spec.dtype];
+        if (spec.alsoTestSelectiveSegmentId && selectiveSegmentId != null) {
           const actions = [
             setHideUnregisteredSegmentsAction(true),
-            updateTemporarySettingAction(
-              "hoveredSegmentId",
-              selectiveSegmentIdByDtype[spec.dtype] ?? null,
-            ),
+            updateTemporarySettingAction("hoveredSegmentId", selectiveSegmentId),
           ];
+          // page.evaluate serializes its arguments as JSON, which cannot represent
+          // BigInt. The hoveredSegmentId action's value is stringified here and
+          // turned back into a BigInt inside the browser context right before dispatching.
+          const serializableActions = actions.map((action) =>
+            action.type === "UPDATE_TEMPORARY_SETTING" && action.propertyName === "hoveredSegmentId"
+              ? { ...action, value: action.value?.toString() ?? null }
+              : action,
+          );
 
           console.time("evaluate");
           await page.evaluate(async (actions) => {
             for (const action of actions) {
-              window.webknossos.DEV.store.dispatch(action);
+              const dispatchableAction =
+                action.type === "UPDATE_TEMPORARY_SETTING" &&
+                action.propertyName === "hoveredSegmentId"
+                  ? { ...action, value: action.value != null ? BigInt(action.value) : null }
+                  : action;
+              window.webknossos.DEV.store.dispatch(dispatchableAction);
             }
             await window.webknossos.DEV.api.tracing.save();
-          }, actions);
+          }, serializableActions);
           console.timeEnd("evaluate");
 
           console.time("Taking TracingView screenshot...");

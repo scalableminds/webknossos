@@ -8,7 +8,8 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.user.{MultiUser, MultiUserDAO, User}
 import MailchimpTag.MailchimpTag
-import play.api.libs.json.{Json, OFormat}
+import com.scalableminds.util.tools.JsonAutoFormat
+import play.api.libs.json.Json
 import play.api.libs.ws.WSResponse
 import utils.WkConf
 
@@ -81,12 +82,5 @@ class MailchimpClient @Inject() (wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUs
 
 }
 
-case class MailchimpTagsResponse(tags: List[MailchimpTagResponse])
-case class MailchimpTagResponse(name: String, date_added: String)
-
-object MailchimpTagResponse {
-  implicit val jsonFormat: OFormat[MailchimpTagResponse] = Json.format[MailchimpTagResponse]
-}
-object MailchimpTagsResponse {
-  implicit val jsonFormat: OFormat[MailchimpTagsResponse] = Json.format[MailchimpTagsResponse]
-}
+case class MailchimpTagsResponse(tags: List[MailchimpTagResponse]) derives JsonAutoFormat
+case class MailchimpTagResponse(name: String, date_added: String) derives JsonAutoFormat

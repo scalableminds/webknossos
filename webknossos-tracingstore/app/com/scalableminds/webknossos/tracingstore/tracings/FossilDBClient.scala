@@ -152,6 +152,34 @@ class FossilDBClient(
       prefix: Option[String],
       version: Option[Long] = None,
       limit: Option[Int] = None
+  )(fromByteArray: Array[Byte] => Box[T]): Fox[List[VersionedKeyValuePair[T]]] = {
+    def flatCombineTuples[A, B, C](keys: Seq[A], versions: Seq[B], values: Seq[Box[C]]) = {
+      val boxTuples: Seq[Box[(A, B, C)]] = keys.zip(versions).zip(values).map {
+        case ((k, v), Full(value)) => Full(k, v, value)
+        case _                     => Empty
+      }
+      boxTuples.flatten
+    }
+
+    for {
+      reply <- wrapException(
+        stub.getMultipleKeys(GetMultipleKeysRequest(collection, startAfterKey, prefix, version, limit))
+      )
+      _ <- assertSuccess(reply.success, reply.errorMessage)
+      parsedValues: Seq[Box[T]] = reply.values.map { v =>
+        fromByteArray(v.toByteArray)
+      }
+      combined = flatCombineTuples(reply.keys, reply.actualVersions, parsedValues).map { t =>
+        VersionedKeyValuePair(VersionedKey(t._1, t._2), t._3)
+      }
+    } yield combined.toList
+  }
+
+  def getMultipleKeysSync[T](
+      startAfterKey: Option[String],
+      prefix: Option[String],
+      version: Option[Long] = None,
+      limit: Option[Int] = None
   )(fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
     def flatCombineTuples[A, B, C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
       val boxTuples: List[Box[(A, B, C)]] = keys.zip(versions).zip(values).map {

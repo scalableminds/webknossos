@@ -450,7 +450,9 @@ class VersionedBucketIterator(
   private var nextBucket: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
   private def fetchNext =
-    volumeDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox).iterator
+    volumeDataStore
+      .getMultipleKeysSync(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox)
+      .iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext

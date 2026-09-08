@@ -27,7 +27,7 @@ class VersionedAgglomerateToGraphIterator(
 
   private def fetchNext: Iterator[VersionedKeyValuePair[Array[Byte]]] =
     segmentToAgglomerateDataStore
-      .getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox)
+      .getMultipleKeysSync(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox)
       .iterator
 
   private def fetchNextAndSave = {
@@ -84,7 +84,7 @@ class VersionedSegmentToAgglomerateChunkIterator(
 
   private def fetchNext: Iterator[VersionedKeyValuePair[Array[Byte]]] =
     segmentToAgglomerateDataStore
-      .getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox)
+      .getMultipleKeysSync(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox)
       .iterator
 
   private def fetchNextAndSave = {

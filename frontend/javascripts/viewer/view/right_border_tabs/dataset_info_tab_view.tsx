@@ -4,6 +4,7 @@ import Icon, {
   ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import IconBoundingBox from "@images/icons/icon-bounding-box.svg?react";
 import IconDownsampling from "@images/icons/icon-downsampling.svg?react";
 import IconExtent from "@images/icons/icon-extent.svg?react";
 import IconMousewheel from "@images/icons/icon-mousewheel.svg?react";
@@ -52,6 +53,7 @@ import {
   getViewDatasetURL,
 } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
+import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -292,12 +294,14 @@ export function AnnotationStats({
   stats,
   asInfoBlock,
   withMargin,
+  boundingBoxCount,
 }: {
   stats: TracingStats | EmptyObject;
   asInfoBlock: boolean;
   withMargin?: boolean | null | undefined;
+  boundingBoxCount?: number;
 }) {
-  if (!stats || Object.keys(stats).length === 0) return null;
+  if ((!stats || Object.keys(stats).length === 0) && !boundingBoxCount) return null;
   const formatLabel = (str: string) => (asInfoBlock ? str : "");
   const useStyleWithMargin = withMargin != null ? withMargin : true;
   const styleWithLargeMarginBottom = { marginBottom: 14 };
@@ -336,8 +340,7 @@ export function AnnotationStats({
           {volumeStats.length > 0 ? (
             <FastTooltip
               placement="left"
-              html={`${totalSegmentCount}
-                      Only segments that were manually registered (either brushed or
+              html={`${totalSegmentCount} – Only segments that were manually registered (either brushed or
                       interacted with) are counted in this statistic. Segmentation layers
                       created from automated workflows (also known as fallback layers) are not
                       considered currently.`}
@@ -351,6 +354,25 @@ export function AnnotationStats({
               </td>
             </FastTooltip>
           ) : null}
+          {boundingBoxCount ? (
+            <FastTooltip
+              placement="left"
+              html={`${boundingBoxCount} – Only user-defined bounding boxes are counted in this statistic. Layer bounding boxes are excluded.`}
+              wrapper="tr"
+            >
+              <td>
+                <Icon
+                  component={IconBoundingBox}
+                  className="info-tab-icon"
+                  aria-label="Bounding Boxes"
+                />
+              </td>
+              <td>
+                {boundingBoxCount}{" "}
+                {formatLabel(pluralize("Bounding Box", boundingBoxCount, "Bounding Boxes"))}
+              </td>
+            </FastTooltip>
+          ) : null}
         </tbody>
       </table>
     </div>
@@ -359,7 +381,10 @@ export function AnnotationStats({
 
 function AnnotationStatisticsSection() {
   const stats = useWkSelector((state) => cachedGetStats(state.annotation));
-  return <AnnotationStats stats={stats} asInfoBlock />;
+  const boundingBoxCount = useWkSelector(
+    (state) => maybeGetSomeTracing(state.annotation)?.userBoundingBoxes.length ?? 0,
+  );
+  return <AnnotationStats stats={stats} asInfoBlock boundingBoxCount={boundingBoxCount} />;
 }
 
 function MagInfoRow() {

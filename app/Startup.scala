@@ -69,13 +69,15 @@ class Startup @Inject() (
 
   ThreadPoolHealthLogger.registerPeriodicLogging(actorSystem, lifecycle)
 
-  actorSystem.scheduler.scheduleWithFixedDelay(10 minutes, 10 minutes)(() =>
-    SlickPoolHealthLogger.logHealth(sqlClient.db)
-  )
+  private val slickPoolHealthLogging =
+    actorSystem.scheduler.scheduleWithFixedDelay(10 minutes, 10 minutes)(() =>
+      SlickPoolHealthLogger.logHealth(sqlClient.db)
+    )
 
   lifecycle.addStopHook { () =>
     Future.successful {
       logger.info("Closing SQL Database handle")
+      slickPoolHealthLogging.cancel()
       sqlClient.db.close()
     }
   }

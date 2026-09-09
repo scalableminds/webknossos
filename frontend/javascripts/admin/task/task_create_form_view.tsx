@@ -44,7 +44,13 @@ import uniq from "lodash-es/uniq";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_types";
+import type {
+  APIDatasetCompact,
+  APIProject,
+  APIScript,
+  APITask,
+  APITaskType,
+} from "types/api_types";
 import type { BoundingBoxObject } from "types/bounding_box";
 import type { Vector3, Vector6 } from "viewer/constants";
 import type {
@@ -297,7 +303,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const { token } = theme.useToken();
   const [form] = Form.useForm<FormValues>();
 
-  const [datasets, setDatasets] = useState<APIDataset[]>([]);
+  const [datasets, setDatasets] = useState<APIDatasetCompact[]>([]);
   const [taskTypes, setTaskTypes] = useState<APITaskType[]>([]);
   const [projects, setProjects] = useState<APIProject[]>([]);
   const [scripts, setScripts] = useState<APIScript[]>([]);
@@ -537,7 +543,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                 style={fullWidth}
                 disabled={isEditingMode || specificationType === SpecificationEnum.BaseAnnotation}
                 loading={isFetchingData}
-                options={datasets.map((dataset: APIDataset) => ({
+                options={datasets.map((dataset: APIDatasetCompact) => ({
                   label: dataset.name,
                   value: dataset.id,
                 }))}

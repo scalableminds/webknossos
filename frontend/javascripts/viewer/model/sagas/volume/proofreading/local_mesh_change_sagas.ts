@@ -375,11 +375,9 @@ export function* trySplitMeshLocally(
   );
   if (newAgglomerateIdToSegmentIds == null) return false;
 
-  // hasFullyMergedMesh only says the mesh *can* be sliced at all; this additionally confirms that
-  // every new id will actually receive geometry. Without it, a new id whose supervoxels aren't in
-  // any loaded LOD would get a store entry from splitMeshAction but nothing in the scene - and the
-  // reload fallback below would then skip it, because loadCoarseMesh treats an existing store
-  // entry as "already loaded". That's the "the original survives, the split-off part is gone" case.
+  // hasFullyMergedMesh only says the mesh can be sliced at all; this confirms that every new id
+  // actually receives geometry. Without it the reload fallback would skip a geometry-less new id,
+  // because loadCoarseMesh treats its store entry as "already loaded".
   const canSplitLocally = segmentMeshController.canSplitMeshByNewMapping(
     oldId,
     layerName,
@@ -403,9 +401,8 @@ export function* trySplitMeshLocally(
     additionalCoordinates,
   );
   if (!succeeded) {
-    // Shouldn't happen given the checks above, but guard against drift between them anyway. The
-    // store entries splitMeshAction just created must be dropped again, otherwise the caller's
-    // reload fallback would consider all new ids already loaded and skip them.
+    // Shouldn't happen given the checks above. The store entries splitMeshAction created must be
+    // dropped again, else the caller's reload fallback would skip all new ids as already loaded.
     console.error(`splitMeshByNewMapping unexpectedly failed for segment ${oldId}.`);
     for (const newId of new Set([oldId, ...newIds])) {
       yield* put(removeMeshAction(layerName, newId));

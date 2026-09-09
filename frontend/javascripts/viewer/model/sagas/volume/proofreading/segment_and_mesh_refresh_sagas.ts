@@ -136,12 +136,11 @@ function* loadCoarseMesh(
   }
 }
 
-// Shared tail for all four proofreading handlers (handleProofreadMerge, handleMinCutAgglomerate,
-// performPartitionedMinCut, handleProofreadCutFromNeighbors): ensure segment items exist/are
-// removed for the affected agglomerate ids, sync with the backend, and schedule a (possibly
-// locally-spliced) mesh refresh. Each caller builds its own refreshInfos array - a 2-item one for
-// the two merge/min-cut handlers, a 1+N-item one for cut-from-neighbors - since the shape differs
-// per caller, but the tail itself doesn't need to know anything about that shape.
+/*
+ * Shared tail of all proofreading handlers: update the segment items of the affected agglomerate
+ * ids, sync with the back-end and schedule a (possibly locally applied) mesh refresh. The
+ * refreshInfos are built by each caller, as their shape differs per operation.
+ */
 export function* updateProofreadingSegmentsAndScheduleSyncMeshes(
   volumeTracingId: string,
   refreshInfos: AgglomerateChangeItem[],
@@ -287,12 +286,9 @@ export function* reloadMeshes(
         : undefined;
     const opacity = item.opacity ?? oldDisplayProps?.opacity;
     const isVisible = item.isVisible ?? oldDisplayProps?.isVisible;
-    // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es). Skip removal if
-    // oldAgglomerateId is itself the id a *different*, already-successful merge/split group in
-    // this same batch just spliced and kept alive - e.g. a merge that lives on as agglomerate 1
-    // and an unrelated, independently-processed split leftover that also references old id 1.
-    // Removing it here would destroy a mesh that's already correct, purely as a side effect of
-    // processing an unrelated item.
+    // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es). Skip the removal if
+    // another group of this batch already applied its change locally and kept oldAgglomerateId
+    // alive - its mesh is correct and must not be destroyed as a side effect.
     if (
       item.oldAgglomerateId &&
       !removedIds.has(item.oldAgglomerateId) &&
@@ -353,8 +349,7 @@ function* completeItemsForSurvivingAgglomerates(
     );
     // Genuinely gone (a merge's absorbed id, or an agglomerate that was split up completely).
     if (!isStillPresent) continue;
-    // Its own outgoing mesh is the fallback source for a seed position, since an agglomerate whose
-    // segment item hasn't arrived yet has no anchor position to offer.
+    // Fall back to the mesh's seed position if there is no segment item to take an anchor from.
     const nodePosition = yield* select(
       (state) =>
         getSegmentsForLayer(state, layerName).getNullable(oldAgglomerateId)?.anchorPosition ??
@@ -411,9 +406,8 @@ export function* syncAffectedAndLoadMissingMeshes(
   // TODO: discuss whether we want the parallelized scheduled variation allowing
   // parallel local merges and splits.
   const itemsToReload: AgglomerateChangeItem[] = [...remainingItems];
-  // Ids that a merge/split group below successfully spliced locally - reloadMeshes must never
-  // remove one of these, even if a *different*, unrelated item elsewhere in this same batch
-  // happens to reference it as an oldAgglomerateId (see reloadMeshes for why).
+  // Ids a merge/split group below applied locally. reloadMeshes must not remove these, even if an
+  // unrelated item of this batch references one as its oldAgglomerateId.
   const locallyHandledNewIds = new Set<bigint>();
   for (const { newAgglomerateId, oldIds, items } of mergeGroups) {
     const handledLocally = yield* call(

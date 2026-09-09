@@ -782,16 +782,11 @@ export function isMeshLoaded(
   return meshData[segmentId.toString()] != null;
 }
 
-/**
+/*
  * Whether the given agglomerate id still refers to something that exists, judged from the two
- * places that know: the segment list and the layer's active mapping.
- *
- * Neither alone is enough during live collaboration, because they are updated by different steps
- * and can lag behind each other while foreign proofreading actions are being incorporated. A
- * freshly split-off agglomerate is in the mapping before its (separately transmitted) segment item
- * arrives, while an agglomerate whose remaining supervoxels aren't part of the partial local
- * mapping is only represented by its segment item. An id that neither knows about is gone - it was
- * merged away or split up entirely.
+ * places that know: the segment list and the layer's active mapping. Neither alone is enough, as
+ * they are updated by different steps and can lag behind each other. An id that neither knows
+ * about is gone - it was merged away or split up entirely.
  */
 export function isAgglomerateIdStillPresent(
   state: WebknossosState,

@@ -3,8 +3,7 @@ import type { AgglomerateChangeItem } from "viewer/model/sagas/volume/proofreadi
 import { describe, expect, it, vi } from "vitest";
 
 // local_mesh_change_sagas.ts transitively imports precomputed_mesh_saga.ts, which instantiates a
-// three-mesh-bvh web worker at module load time - mock it away like apiHelpers.ts does for the full
-// proofreading test suite, since this file only exercises the pure grouping logic.
+// web worker at module load time. Mock it away like apiHelpers.ts does for the other suites.
 vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
 }));

@@ -237,9 +237,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         } = meshTracker.getMeshInfos();
         // Agglomerate 1 and 4 were both already loaded, so the merge is spliced locally (see
         // segment_and_mesh_refresh_sagas.ts) instead of reloading both meshes from scratch. The
-        // segment-list entry for 4 is removed immediately (for save-queue purposes), but its mesh
-        // is preserved (not eagerly removed) so the splice above can reuse it - see
-        // updateAffectedSegmentItems's preserveMesh flag.
+        // segment item of 4 is removed immediately, but its mesh is preserved so that the local
+        // merge can reuse it - see updateAffectedSegmentItems's preserveMesh flag.
         expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 6n]);
         expect(sortBy([...removedMeshes])).toEqual([]);
         // Mesh 4 was already loaded and thus can be locally merged -> not reloaded from backend
@@ -387,9 +386,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       const meshTracker = yield* trackMeshes(context, tracingId);
       // A split of agglomerate 1 that reports only brand-new ids and no item for 1 itself, even
-      // though 1 still exists. The local splice can't handle ids the loaded supervoxels don't map
-      // to, so this falls back to a hard reload -- which used to leave agglomerate 1 removed and
-      // never load it again.
+      // though 1 still exists. This falls back to a full reload, which used to leave agglomerate 1
+      // removed and never load it again.
       yield call(syncAffectedAndLoadMissingMeshes, tracingId, [
         { oldAgglomerateId: 1n, newAgglomerateId: 2001n, nodePosition: [1, 1, 1] },
         { oldAgglomerateId: 1n, newAgglomerateId: 2002n, nodePosition: [1, 1, 1] },
@@ -565,11 +563,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         loadedMeshIds: loadedMeshIdsAfterMerge,
       } = meshTracker.getMeshInfos();
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 6n, 1339n]);
-      // The interfering split renumbers the merge's source position onto new id 1339 (instead of
-      // 1) before the merge is applied. Agglomerate 4 was already loaded, so merging it into 1339
-      // is spliced locally instead of reloading it - only 1 (reloaded because of the unrelated
-      // split leftover sharing its old id - see detectMergeAndSplitChanges's known limitation) and
-      // 1339 (the split's other new id) go through a real remove+reload.
+      // The interfering split renumbers the merge's source position onto new id 1339 before the
+      // merge is applied. Agglomerate 4 was already loaded, so merging it into 1339 is done
+      // locally; only 1 and 1339 go through a real remove+reload.
       expect(sortBy([...removedMeshes])).toEqual([1n, 1339n]);
       expect(sortBy([...addedMeshes])).toEqual([1n, 1339n]);
       expect(sortBy([...meshTracker.getMeshInfos().locallyMergedIntoIds])).toEqual([1339n]);
@@ -897,13 +893,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      // Registered right after the initial meshes are loaded but before the merge itself is
-      // triggered (via performMergeTreesProofreading's afterLoadingMeshes hook), so the initial
-      // load's own FINISHED_LOADING_MESH events aren't mistaken for the merge settling below, and
-      // so the merge's own settle event - which can fire (via a local splice) before
-      // performMergeTreesProofreading's own operationFinished signal returns, since
-      // scheduleMeshUpdate spawns the mesh sync detached rather than waiting for it - isn't missed
-      // by a plain take() placed after the call returns.
+      // Registered via the afterLoadingMeshes hook, i.e. after the initial meshes are loaded and
+      // before the merge is triggered - see performMergeTreesProofreading.
       let meshTracker:
         | (ReturnType<typeof trackMeshes> extends Generator<any, infer R, any> ? R : never)
         | undefined;
@@ -1057,12 +1048,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
 
       // Wait for both the foreign merge (4 <- 6) and the local split (1 -> 1, 1339) to settle.
-      // Each settles either via a fresh reload (FINISHED_LOADING_MESH) or, since the meshes
-      // involved were already loaded, via a local splice/split (MERGE_MESHES/SPLIT_MESH) - see
-      // segment_and_mesh_refresh_sagas.ts. A local splice/split resolves much faster than a
-      // network reload, so waiting on id 4 alone (as a fresh reload would have implied) is no
-      // longer a reliable proxy for "every affected mesh has settled" - wait on the new split
-      // piece (1339, which never existed before) too.
+      // The local split can settle via SPLIT_MESH instead of a reload, and does so much faster, so
+      // waiting on id 4 alone is not a reliable proxy for "every affected mesh has settled".
       yield all([
         take(
           ((action: Action) =>

@@ -280,6 +280,7 @@ class PullQueue {
         sibling.markAsRequested();
       }
       if (!sibling.isRequested()) {
+        // The bucket might already be LOADED or MISSING.
         continue;
       }
 

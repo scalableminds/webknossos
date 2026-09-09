@@ -141,6 +141,8 @@ export type DataTextureSizeAndCount = {
 // simply the natural (possibly multi-row) value. For layers with a much smaller
 // bucket footprint (e.g., 2D datasets), a bucket may pack into less than one row;
 // the height is then rounded up to one full row, at the cost of some unused padding.
+// In the future, we might want to rethink this so that multiple buckets in one texture
+// row are also supported.
 export function getBucketHeightInTexture(
   textureWidth: number,
   packingDegree: number,

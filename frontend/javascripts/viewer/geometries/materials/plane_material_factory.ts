@@ -356,6 +356,7 @@ class PlaneMaterialFactory {
     // textureBucketManager is only guaranteed to exist once getDataTextures() below
     // has triggered its lazy setup.
     const isTRecyclingEnabledPerLayer: number[] = [];
+    // todop: make this comment clearer. also, what is footprint exactly?
     // Note that this must be the *atlas* footprint of a bucket, which is not the same as
     // the cube's effective (CPU-side) bucket voxel count for a t-recycling layer: there,
     // one atlas slot holds a whole batch of shrunk t-slices. The shader derives its

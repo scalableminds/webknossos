@@ -107,11 +107,6 @@ class DataCube {
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
   boundingBox: BoundingBox;
-  // The layer's intrinsic bounding box (independent of any tracing bounding box
-  // restriction the user may set, which is reflected in `boundingBox` above and can
-  // change at runtime). Used to detect degenerate (e.g., 2D) layers once at construction
-  // time so that bucket storage can be shrunk accordingly. See `effectiveBucketDepth`.
-  private readonly layerBoundingBox: BoundingBox;
   // For layers whose z-extent is a single voxel (e.g., 2D datasets), every bucket only
   // ever holds real data in its first z-slice. In that case, storage for the bucket's
   // typed array (and, on the GPU, the atlas footprint) can be shrunk to this depth,
@@ -173,7 +168,6 @@ class DataCube {
     this.layerName = layerName;
     this.additionalAxes = keyBy(additionalAxes, "name");
     this.emitter = createNanoEvents();
-    this.layerBoundingBox = layerBBox;
     this.effectiveBucketDepth = getEffectiveBucketDepth(layerBBox.getSize()[2]);
     this.isTRecyclingEligible = wantsTRecycling(
       layerBBox.getSize()[2],

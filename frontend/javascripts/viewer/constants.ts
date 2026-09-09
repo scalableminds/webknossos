@@ -413,13 +413,14 @@ export function getEffectiveBucketDepth(layerDepthInMag1: number): number {
 // This check must be applied consistently wherever bucket/atlas sizing decisions are
 // made (both before a DataCube exists, from raw dataset metadata, and afterwards).
 //
-// Editable (volume-tracing) layers are excluded: t-recycling relies on one whole t-batch
+// Editable (volume-tracing) layers are excluded (for now): t-recycling relies on one whole t-batch
 // arriving from the backend as a single shared buffer, which every t within the batch then
 // renders out of. Locally created annotation data has no such buffer — each t is its own
 // bucket with its own array, all of them collide on one t-batch cuckoo key, and nothing
 // would re-upload on a same-batch t change (see LayerRenderingManager.updateDataTextures),
 // so one t's labels would show up at every t in the batch. Note that read-only segmentation
 // layers are fine; it's editability that breaks the assumption.
+// todop: clarify wording. "wants" vs "eligible" vs "supported" vs isTRecyclingEnabledPerLaye
 export function wantsTRecycling(
   layerDepthInMag1: number,
   hasTAxis: boolean,

@@ -76,14 +76,11 @@ function maybePadRgbData(src: TypedArray, elementClass: ElementClass, bucketVoxe
   return tmpPaddingBuffer.subarray(0, idx);
 }
 
-// A bucket's packed data may cover less than the atlas region it is uploaded into —
-// either because it packs into less than one full texture row (see
-// getBucketHeightInTexture), which it still occupies entirely with the remainder unused,
-// or because it is a single t-slice going into a full-depth t-recycling region. Since
-// gl.texSubImage2D requires the source buffer to cover the whole region being uploaded,
+// A bucket's packed data may cover less than the atlas region it is uploaded into (e.g.,
+// because it packs into less than one full texture row; see getBucketHeightInTexture).
+// Since gl.texSubImage2D requires the source buffer to cover the whole region being uploaded,
 // the real data is copied into a zero-filled scratch buffer of the right size, at
-// destElementOffset (nonzero only for the t-recycling case, where the slice belongs in
-// its own t-slot rather than at the start).
+// destElementOffset.
 let tmpRowPaddingBuffer: TypedArray | null = null;
 function padToUploadRegion(
   src: TypedArray,
@@ -250,15 +247,6 @@ export default class TextureBucketManager {
   // Takes an array of buckets and ensures that these
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
-  //
-  // For a t-recycling layer, the passed buckets all share the flycam's current t (they
-  // come from one bucket pick), and therefore all belong to the same t-batch. Since the
-  // cuckoo key only encodes the *batch* (see getCuckooKey) and one upload covers the whole
-  // batch (see processWriterQueue), no extra bookkeeping is needed here: one active bucket
-  // per (x, y, mag) maps to one atlas slot, exactly like for any other layer. Note that
-  // two active buckets of a t-recycling layer can never collide on the same cuckoo key,
-  // because such a layer is z-degenerate, so DataCube's containment check only ever hands
-  // out z == 0 buckets.
   setActiveBuckets(buckets: Array<DataBucket>): void {
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
@@ -372,12 +360,11 @@ export default class TextureBucketManager {
       const requiredElementCount = Math.round(
         (rgbPaddedSrc.length * width * height) / (uploadVoxelCount / this.packingDegree),
       );
-      // A lone t-slice must land in the t-slot the shader will read it from (t % 32, see
-      // texture_access.glsl.ts's maybeOverrideOffsetInBucketZ), not at the start of the
-      // region. Slices are equally sized, so the slot's offset is just zSlot source-lengths
-      // in. This should not be reachable now that editable layers are excluded from
-      // t-recycling (see wantsTRecycling) — the eligible ones always upload a whole shared
-      // batch buffer — but placing the slice correctly beats silently rendering it at t=0.
+      // If t-recycling is enabled, but no raw bucket data is available for some reason
+      // (e.g., volume tracings should not use t-recycling currently, but if we decide to
+      // add support for that, this scenario can quickly occur), we ensure that the single
+      // t-slice is written into the correct t-slot.
+      // In the happy case, the value will simply be 0.
       const destElementOffset =
         this.isTRecyclingEnabled && !useRawBatchData
           ? (bucket.getT() % constants.BUCKET_WIDTH) * rgbPaddedSrc.length

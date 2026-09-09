@@ -10,6 +10,9 @@ jobs:
     if: "!github.event.pull_request.draft"
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 5
+          persistent-credentials: false
 
       - name: Check for TODO comments without issue links
         run: tools/check-todos.sh

@@ -128,8 +128,7 @@ function DatasetActionView(props: Props) {
 
   const onReloadDataset = async (datasetId: string) => {
     setIsReloading(true);
-    const dataset = await getDataset(datasetId);
-    await onReloadImpl(dataset, context.clearCacheAndReloadDataset);
+    await onReloadImpl(datasetId, context.clearCacheAndReloadDataset);
     setIsReloading(false);
   };
 
@@ -267,14 +266,12 @@ function DatasetActionView(props: Props) {
   );
 }
 const onReloadImpl = async (
-  dataset: APIMaybeUnimportedDataset,
+  datasetId: string,
   clearCacheAndReloadDataset: (arg0: string) => Promise<void>,
 ) => {
-  await clearCacheAndReloadDataset(dataset.id);
+  await clearCacheAndReloadDataset(datasetId);
   Toast.success(
-    messages["dataset.clear_cache_success"]({
-      datasetName: dataset.name,
-    }),
+    messages["dataset.clear_cache_success"],
   );
 };
 
@@ -331,7 +328,7 @@ export function getDatasetActionContextMenu({
             icon: <ReloadOutlined className="icon-margin-right" />,
             label: "Reload",
             onClick: async () =>
-              onReloadImpl(await getDataset(dataset.id), clearCacheAndReloadDataset),
+              onReloadImpl(dataset.id, clearCacheAndReloadDataset),
           },
         ],
       },

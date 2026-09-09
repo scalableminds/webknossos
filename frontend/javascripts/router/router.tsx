@@ -13,7 +13,7 @@ import loadable from "libs/lazy_loader";
 import Navbar from "navbar";
 import { createBrowserRouter, Navigate, Outlet, type RouteObject, redirect } from "react-router";
 import type { EmptyObject } from "types/type_utils";
-import { CommandPalette } from "viewer/view/components/command_palette";
+import { CommandPaletteLoader } from "viewer/view/components/command_palette_loader";
 
 const { Content } = Layout;
 
@@ -129,7 +129,7 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 function RootLayout() {
   return (
     <Layout>
-      <CommandPalette />
+      <CommandPaletteLoader />
       <Navbar />
       <Content>
         <ErrorBoundary>

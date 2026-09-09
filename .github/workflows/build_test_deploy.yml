@@ -34,9 +34,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Lint frontend code and check formatting
-        run: yarn run check-frontend
-      - name: Lint frontend code with custom GritQL plugins
-        run: yarn run check-frontend-lint-plugins
+        run: yarn run check-frontend-ci
       - name: Typecheck frontend code
         run: yarn typecheck
       - name: Check for cyclic dependencies in frontend

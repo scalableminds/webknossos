@@ -11,10 +11,10 @@ used to catch antd anti-patterns that Biome's built-in rules cannot express.
 ## These only run in CI
 
 The plugins are **not** declared in the root `biome.jsonc`. They are declared in
-`.biome-ci/biome.jsonc`, which extends the root config, and CI runs them via:
+`biome.ci.jsonc`, which extends the root config, and CI runs them via:
 
 ```bash
-yarn check-frontend-lint-plugins
+yarn check-frontend-ci
 ```
 
 Why: plugins are expensive. Measured on `frontend/javascripts` (~880 files):

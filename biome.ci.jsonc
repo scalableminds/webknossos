@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  // CI-only configuration: identical to `biome.jsonc`, but additionally enables the
+  // GritQL lint plugins. These are slow and are therefore skipped locally (see the
+  // `check-frontend-ci` script in package.json).
+  "extends": ["./biome.jsonc"],
+  "plugins": ["frontend/lint-plugins/noRawHeading.grit", "frontend/lint-plugins/noFlexDiv.grit"]
+}

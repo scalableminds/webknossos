@@ -9,6 +9,7 @@ import type {
   APIDataset,
   APIDatasetCompact,
   APIDatasetCompactWithoutStatusAndLayerNames,
+  APIMaybeUnimportedDataset,
   FolderItem,
 } from "types/api_types";
 import {
@@ -39,7 +40,7 @@ export type DatasetCollectionContextValue = {
   checkDatasets: (organizationId: string | undefined) => Promise<void>;
   fetchDatasets: () => void;
   reloadDataset: (datasetId: string, datasetsToUpdate?: Array<APIDatasetCompact>) => Promise<void>;
-  updateCachedDataset: (datasetId: string, updater: DatasetUpdater) => Promise<APIDataset>;
+  updateCachedDataset: (datasetId: string, updater: DatasetUpdater) => Promise<APIMaybeUnimportedDataset>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;

@@ -3,7 +3,7 @@ import { createContext, useContext } from "react";
 import type { APIDataSource, APIDataset } from "types/api_types";
 import type { DatasetConfiguration } from "viewer/store";
 import type { DatasetRotationAndMirroringSettings } from "./dataset_rotation_form_item";
-import type { TransformationsMode } from "./dataset_settings_data_tab";
+import type { TransformationsMode } from "./dataset_transformations_mode";
 
 export type DatasetSettingsFormData = {
   dataSource: APIDataSource;

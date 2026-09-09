@@ -2,14 +2,12 @@ import {
   getDatasetIdFromNameAndOrganization,
   getOrganizationForDataset,
 } from "admin/api/disambiguate_legacy_routes";
-import Onboarding from "admin/onboarding";
 import { createExplorational, getShortLink } from "admin/rest_api";
 import { Typography } from "antd";
 import AsyncRedirect from "components/redirect";
-import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
-import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
-import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import { urlTokenToTabKeyMap } from "dashboard/dashboard_tab_keys";
 import features from "features";
+import loadable from "libs/lazy_loader";
 import { useWkSelector } from "libs/react_hooks";
 import { coalesce, getUrlParamsObjectFromString } from "libs/utils";
 import window from "libs/window";
@@ -22,6 +20,12 @@ import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/da
 import { Store } from "viewer/singletons";
 import TracingLayoutView from "viewer/view/layouting/tracing_layout_view";
 import { PageNotFoundView } from "./page_not_found_view";
+
+// Loaded on demand for the same reason as the pages in router.tsx: these are whole
+// application screens that the initial render never needs.
+const Onboarding = loadable(() => import("admin/onboarding"));
+const DashboardView = loadable(() => import("dashboard/dashboard_view"));
+const DatasetSettingsScreen = loadable(() => import("dashboard/dataset/dataset_settings_screen"));
 
 function markTracingViewLoadStartEffect() {
   const markName = PerformanceMarkEnum.TRACING_VIEW_LOAD;
@@ -106,11 +110,7 @@ export function DatasetSettingsRouteWrapper() {
       />
     );
   }
-  return (
-    <DatasetSettingsProvider isEditingMode datasetId={datasetId || ""}>
-      <DatasetSettingsView />
-    </DatasetSettingsProvider>
-  );
+  return <DatasetSettingsScreen datasetId={datasetId || ""} />;
 }
 
 export function CreateExplorativeRouteWrapper() {

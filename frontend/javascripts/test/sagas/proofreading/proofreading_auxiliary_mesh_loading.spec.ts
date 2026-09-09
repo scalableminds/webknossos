@@ -28,7 +28,6 @@ import {
 import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { scheduleMeshUpdate } from "viewer/model/sagas/volume/proofreading/mesh_update_registry_saga";
-import { syncAffectedAndLoadMissingMeshes } from "viewer/model/sagas/volume/proofreading/segment_and_mesh_refresh_sagas";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import { Store } from "viewer/singletons";
 import { startSaga, type WebknossosState } from "viewer/store";
@@ -375,30 +374,67 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     await task.toPromise();
   });
 
-  it("should reload the original agglomerate when a failed local split lists no item for it", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+  it("should create segment items and meshes for every agglomerate a partitioned min-cut produces", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    // Edges 1-2-3-1337-1338-1 form a circle, i.e. one agglomerate 1.
+    mockInitialBucketAndAgglomerateData(
+      context,
+      [
+        [1n, 1338n],
+        [3n, 1337n],
+      ],
+      Store.getState(),
+    );
+
+    // The cut separates the two partitions, but additionally cuts partition A's own segments 1 and
+    // 2 apart. So it produces three agglomerates ({1}, {2, 3} and {1337, 1338}) while the
+    // partitions only name two of them. The third one must not be forgotten.
+    mockEdgesForPartitionedAgglomerateMinCut(mocks, 8, [
+      {
+        position1: getPositionForSegmentId(1),
+        position2: getPositionForSegmentId(2),
+        segmentId1: 1n,
+        segmentId2: 2n,
+      },
+    ]);
+
+    const { tracingId } = Store.getState().annotation.volumes[0];
 
     const task = startSaga(function* task(): Saga<void> {
-      const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
-      yield call(initializeMappingAndTool, context, tracingId);
-      yield loadAgglomerateMeshes([1]);
-      expect([...getAllCurrentlyLoadedMeshIds(context, tracingId)]).toEqual([1n]);
-
       const meshTracker = yield* trackMeshes(context, tracingId);
-      // A split of agglomerate 1 that reports only brand-new ids and no item for 1 itself, even
-      // though 1 still exists. This falls back to a full reload, which used to leave agglomerate 1
-      // removed and never load it again.
-      yield call(syncAffectedAndLoadMissingMeshes, tracingId, [
-        { oldAgglomerateId: 1n, newAgglomerateId: 2001n, nodePosition: [1, 1, 1] },
-        { oldAgglomerateId: 1n, newAgglomerateId: 2002n, nodePosition: [1, 1, 1] },
-      ]);
-      yield meshTracker.consumeFinishedLoadingActions(3);
+      yield simulatePartitionedSplitAgglomeratesViaMeshes(context, true);
+      // Three settle events for the initially loaded meshes (1, 4 and 6), plus one per agglomerate
+      // the cut produces.
+      yield meshTracker.consumeFinishedLoadingActions(3 + 3);
 
-      expect(sortBy([...getAllCurrentlyLoadedMeshIds(context, tracingId)])).toEqual([
-        1n,
-        2001n,
-        2002n,
+      const finalMapping = yield* select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1], // partition A's segment 1, which keeps the original agglomerate id
+          [2, 1340], // the agglomerate neither partition names
+          [3, 1340],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
+          [1337, 1339], // partition B
+          [1338, 1339],
+        ]),
+      );
+
+      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
+      expect(sortBy([...loadedMeshIds])).toEqual([1n, 4n, 6n, 1339n, 1340n]);
+      yield expectSegmentList(tracingId, [
+        { id: 1n, anchorPosition: getPositionForSegmentId(1) },
+        { id: 4n, anchorPosition: getPositionForSegmentId(4) },
+        { id: 6n, anchorPosition: getPositionForSegmentId(6) },
+        { id: 1339n, anchorPosition: getPositionForSegmentId(1338) },
+        { id: 1340n, anchorPosition: getPositionForSegmentId(3) },
       ]);
+
       yield* meshTracker.cleanUp();
     });
     await task.toPromise();

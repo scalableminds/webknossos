@@ -43,7 +43,6 @@ import { Store } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
   LabelAction,
-  NumberLikeMap,
   SegmentGroup,
   SegmentJournalEntry,
   SegmentMap,
@@ -780,33 +779,6 @@ export function isMeshLoaded(
   const meshData = localSegmentationState.meshes[additionalCoordinateKey];
   if (meshData == null || meshData[segmentId.toString()] == null) return false;
   return meshData[segmentId.toString()] != null;
-}
-
-/*
- * Whether the given agglomerate id still refers to something that exists, judged from the two
- * places that know: the segment list and the layer's active mapping. Neither alone is enough, as
- * they are updated by different steps and can lag behind each other. An id that neither knows
- * about is gone - it was merged away or split up entirely.
- */
-export function isAgglomerateIdStillPresent(
-  state: WebknossosState,
-  layerName: string,
-  agglomerateId: bigint,
-): boolean {
-  if (getSegmentsForLayer(state, layerName).getNullable(agglomerateId) != null) {
-    return true;
-  }
-  // The mapping is number-keyed for uint32-backed datasets and bigint-keyed otherwise, so its
-  // values have to be normalized to bigint before comparing them to an agglomerate id.
-  const mapping = state.temporaryConfiguration.activeMappingByLayer[layerName]?.mapping as
-    | NumberLikeMap
-    | null
-    | undefined;
-  if (mapping == null) return false;
-  for (const mappedId of mapping.values()) {
-    if (BigInt(mappedId) === agglomerateId) return true;
-  }
-  return false;
 }
 
 export function getAllLoadedMeshes(state: WebknossosState, layerName: string): Set<bigint> {

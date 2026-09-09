@@ -3,6 +3,7 @@ import Toast from "libs/toast";
 import { isEditableEventTarget } from "libs/utils";
 import messages from "messages";
 import { all, call, put } from "typed-redux-saga";
+import type { Vector3 } from "viewer/constants";
 import {
   isAnnotationEditableByNonOwners,
   mayEditAnnotation,
@@ -135,13 +136,14 @@ export function* performPartitionedMinCut(
       ...partitions.partitionA,
       ...partitions.partitionB,
     ]);
-    // Make sure the reloaded partial mapping has mapping info about the partitions and first removed edge. The first removed edge is used for reloading the meshes.
-    // The unmapped segments of this edge might not be present in the partial mapping of the frontend as splitting can be done via mesh interactions.
+    // Make sure the reloaded partial mapping has mapping info about the partitions and all removed
+    // edges. The removed edges are used for reloading the meshes below.
+    // The unmapped segments of these edges might not be present in the partial mapping of the frontend as splitting can be done via mesh interactions.
     // There is no guarantee that for all mesh parts the mapping is locally stored.
     // So we put them all into segmentsInvolvedInSplit.
     // All these segments belonged to agglomerateId before the (min-cut) split.
     const segmentsInvolvedInSplit = unmappedSegmentsOfPartitions.union(
-      new Set([edgesToRemove[0].segmentId1, edgesToRemove[0].segmentId2]),
+      new Set(edgesToRemove.flatMap((edge) => [edge.segmentId1, edge.segmentId2])),
     );
 
     // Now that the changes are saved, we can split the mapping locally (because it requires
@@ -174,46 +176,37 @@ export function* performPartitionedMinCut(
       ),
     );
 
-    /* Reload meshes */
-    const newAgglomerateIdFromPartition1 = yield* call(
-      preparation.mapSegmentId,
-      partitions.partitionA[0],
-      mappingWithSplitApplied,
-    );
-    const newAgglomerateIdFromPartition2 = yield* call(
-      preparation.mapSegmentId,
-      partitions.partitionB[0],
-      mappingWithSplitApplied,
-    );
-
-    // Get positions of new meshes from first split edge information.
-    const firstEdgeFirstSegmentNewAgglomerate = yield* call(
-      preparation.mapSegmentId,
-      edgesToRemove[0].segmentId1,
-      mappingWithSplitApplied,
-    );
-    const meshLoadingPositionForPartition1 =
-      firstEdgeFirstSegmentNewAgglomerate === newAgglomerateIdFromPartition1
-        ? edgesToRemove[0].position1
-        : edgesToRemove[0].position2;
-    const meshLoadingPositionForPartition2 =
-      firstEdgeFirstSegmentNewAgglomerate === newAgglomerateIdFromPartition2
-        ? edgesToRemove[0].position1
-        : edgesToRemove[0].position2;
-
     /* Ensure segment items exist for affected segments and reload affected meshes */
-    const refreshInfos = [
-      {
+    // Every agglomerate the cut produces is adjacent to at least one removed edge, so the edge
+    // endpoints yield both the id and a position of each of them. Note that a cut can produce more
+    // than two agglomerates, as the cut may also separate the segments of one partition from each
+    // other. Deriving the items from the two partitions alone would miss such an agglomerate and
+    // thus delete its segment item and its mesh although it still exists.
+    const nodePositionByNewAgglomerateId = new Map<bigint, Vector3>();
+    for (const edge of edgesToRemove) {
+      const endpoints = [
+        [edge.segmentId1, edge.position1],
+        [edge.segmentId2, edge.position2],
+      ] as const;
+      for (const [segmentId, position] of endpoints) {
+        const newAgglomerateId = yield* call(
+          preparation.mapSegmentId,
+          segmentId,
+          mappingWithSplitApplied,
+        );
+        if (!nodePositionByNewAgglomerateId.has(newAgglomerateId)) {
+          nodePositionByNewAgglomerateId.set(newAgglomerateId, position);
+        }
+      }
+    }
+    const refreshInfos = Array.from(
+      nodePositionByNewAgglomerateId,
+      ([newAgglomerateId, nodePosition]) => ({
         oldAgglomerateId: agglomerateIdBeforeSplit,
-        newAgglomerateId: newAgglomerateIdFromPartition1,
-        nodePosition: meshLoadingPositionForPartition1,
-      },
-      {
-        oldAgglomerateId: agglomerateIdBeforeSplit,
-        newAgglomerateId: newAgglomerateIdFromPartition2,
-        nodePosition: meshLoadingPositionForPartition2,
-      },
-    ];
+        newAgglomerateId,
+        nodePosition,
+      }),
+    );
     yield* call(
       updateProofreadingSegmentsAndScheduleSyncMeshes,
       volumeTracingId,

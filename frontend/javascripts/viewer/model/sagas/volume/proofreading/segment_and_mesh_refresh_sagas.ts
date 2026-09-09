@@ -6,12 +6,7 @@ import { all, call, put } from "typed-redux-saga";
 import type { AdditionalCoordinate } from "types/api_types";
 import Constants, { type Vector3 } from "viewer/constants";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import {
-  getMeshInfoForSegment,
-  getSegmentsForLayer,
-  isAgglomerateIdStillPresent,
-  isMeshLoaded,
-} from "viewer/model/accessors/volumetracing_accessor";
+import { getMeshInfoForSegment, isMeshLoaded } from "viewer/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   removeMeshAction,
@@ -322,51 +317,6 @@ export function* reloadMeshes(
 }
 
 /*
- * Adds a missing `old -> old` item for every agglomerate that outlives the batch, establishing the
- * invariant the rest of this pipeline relies on: every still-existing agglomerate is the
- * newAgglomerateId of at least one item. An id appearing only as an oldAgglomerateId is otherwise
- * read as gone - it is left out of the split group's newIds (making a local split impossible) and
- * its mesh is removed without ever being loaded again.
- *
- * Producers can violate the invariant: performPartitionedMinCut only names the agglomerates of
- * partitionA[0] and partitionB[0], but a min cut can yield more fragments than that.
- */
-function* completeItemsForSurvivingAgglomerates(
-  layerName: string,
-  items: AgglomerateChangeItem[],
-  additionalCoordinates: AdditionalCoordinate[] | undefined,
-): Saga<AgglomerateChangeItem[]> {
-  const targetIds = new Set(items.map((item) => item.newAgglomerateId));
-  const oldIdsWithoutOwnItem = uniq(
-    items.map((item) => item.oldAgglomerateId).filter((id) => id != null),
-  ).filter((oldAgglomerateId) => !targetIds.has(oldAgglomerateId));
-  if (oldIdsWithoutOwnItem.length === 0) return items;
-
-  const additionalItems: AgglomerateChangeItem[] = [];
-  for (const oldAgglomerateId of oldIdsWithoutOwnItem) {
-    const isStillPresent = yield* select((state) =>
-      isAgglomerateIdStillPresent(state, layerName, oldAgglomerateId),
-    );
-    // Genuinely gone (a merge's absorbed id, or an agglomerate that was split up completely).
-    if (!isStillPresent) continue;
-    // Fall back to the mesh's seed position if there is no segment item to take an anchor from.
-    const nodePosition = yield* select(
-      (state) =>
-        getSegmentsForLayer(state, layerName).getNullable(oldAgglomerateId)?.anchorPosition ??
-        getMeshInfoForSegment(state, additionalCoordinates ?? null, layerName, oldAgglomerateId)
-          ?.seedPosition,
-    );
-    if (nodePosition == null) continue;
-    additionalItems.push({
-      oldAgglomerateId,
-      newAgglomerateId: oldAgglomerateId,
-      nodePosition,
-    });
-  }
-  return additionalItems.length > 0 ? [...items, ...additionalItems] : items;
-}
-
-/*
  * This saga takes AgglomerateChangeItems and from them detects merges and splits, Then tries
  * to apply the changes to the loaded meshes locally and only falls back to a full refresh in
  * case the local mesh update failed. The whole idea is to save a very costly backend full mesh
@@ -375,16 +325,9 @@ function* completeItemsForSurvivingAgglomerates(
  */
 export function* syncAffectedAndLoadMissingMeshes(
   layerName: string,
-  rawChangeInfoItems: AgglomerateChangeItem[],
+  changeInfoItems: AgglomerateChangeItem[],
 ): Saga<void> {
   const additionalCoordinates = undefined;
-
-  const changeInfoItems = yield* call(
-    completeItemsForSurvivingAgglomerates,
-    layerName,
-    rawChangeInfoItems,
-    additionalCoordinates,
-  );
 
   // Capture the opacity and visibility of all old meshes up front, i.e. before any of them are
   // removed below, so that reloaded meshes keep the user-chosen opacity and visibility. This must

@@ -22,7 +22,7 @@ import messages from "messages";
 import type * as React from "react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIDatasetCompact, APIMaybeUnimportedDataset } from "types/api_types";
+import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
 
@@ -270,9 +270,7 @@ const onReloadImpl = async (
   clearCacheAndReloadDataset: (arg0: string) => Promise<void>,
 ) => {
   await clearCacheAndReloadDataset(datasetId);
-  Toast.success(
-    messages["dataset.clear_cache_success"],
-  );
+  Toast.success(messages["dataset.clear_cache_success"]);
 };
 
 export function getDatasetActionContextMenu({
@@ -327,8 +325,7 @@ export function getDatasetActionContextMenu({
             key: "reload",
             icon: <ReloadOutlined className="icon-margin-right" />,
             label: "Reload",
-            onClick: async () =>
-              onReloadImpl(dataset.id, clearCacheAndReloadDataset),
+            onClick: async () => onReloadImpl(dataset.id, clearCacheAndReloadDataset),
           },
         ],
       },

@@ -2,7 +2,6 @@ import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import {
   clearCache,
   type DatasetUpdater,
-  getDataset,
   getDatastores,
   triggerDatasetCheck,
 } from "admin/rest_api";

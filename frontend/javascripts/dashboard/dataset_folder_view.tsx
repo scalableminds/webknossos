@@ -1,4 +1,4 @@
-import { Button, Card, Col, Flex, Row } from "antd";
+import { Button, Card, Col, Flex, Row, Space } from "antd";
 import features, { getDemoDatasetUrl } from "features";
 import { filterNullValues, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import React, { useEffect, useRef } from "react";
@@ -159,10 +159,10 @@ function DatasetFolderViewInner(props: Props) {
 
     const adminHeader =
       isUserAdminOrDatasetManager(props.user) || isUserTeamManager(props.user) ? (
-        <>
+        <Space>
           <DatasetRefreshButton context={context} />
           <DatasetAddButton context={context} />
-        </>
+        </Space>
       ) : null;
 
     return (

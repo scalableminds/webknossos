@@ -276,7 +276,8 @@ class PullQueue {
       if (sibling.type !== "data") {
         continue;
       }
-      if (sibling.needsRequest()) {
+      const didMarkAsRequested = sibling.needsRequest();
+      if (didMarkAsRequested) {
         sibling.markAsRequested();
       }
       if (!sibling.isRequested()) {
@@ -284,20 +285,46 @@ class PullQueue {
         continue;
       }
 
-      if (bucketData == null) {
-        if (renderMissingDataBlack) {
-          // Render empty buckets as black (zeroed) data.
-          this.handleBucket(sibling, null);
-        } else {
-          sibling.markAsMissing();
+      try {
+        if (bucketData == null) {
+          if (renderMissingDataBlack) {
+            // Render empty buckets as black (zeroed) data.
+            this.handleBucket(sibling, null);
+          } else {
+            sibling.markAsMissing();
+          }
+          continue;
         }
-        continue;
-      }
 
-      const voxelOffsetInWireData = isBatched
-        ? (sibling.getT() % constants.BUCKET_WIDTH) * this.cube.getEffectiveBucketVoxelCount()
-        : 0;
-      this.handleBucket(sibling, bucketData, voxelOffsetInWireData);
+        const voxelOffsetInWireData = isBatched
+          ? (sibling.getT() % constants.BUCKET_WIDTH) * this.cube.getEffectiveBucketVoxelCount()
+          : 0;
+        this.handleBucket(sibling, bucketData, voxelOffsetInWireData);
+      } catch (error) {
+        // receiveData can throw — most plainly on a malformed wire buffer, which, since that
+        // buffer is shared across the whole batch, fails for every sibling. Undoing the
+        // transition above is ours to do: pullBatch's failedBucketAddresses only knows about
+        // the address that was originally requested, and a bucket left in REQUESTED is stuck
+        // there for good (pull() only admits UNREQUESTED buckets, the GC skips REQUESTED ones,
+        // and ensureLoaded would await an event that is never emitted).
+        // A sibling that was already REQUESTED when we found it belongs to a concurrent batch
+        // — or is this batch's own primary — so settling it is that owner's job, not ours.
+        if (didMarkAsRequested && sibling.isRequested()) {
+          sibling.markAsFailed();
+
+          if (sibling.dirty) {
+            sibling.addToPullQueueWithHighestPriority();
+          }
+        }
+
+        // Rethrowing aborts the remaining siblings, which is intended: the failure is usually
+        // a property of the shared buffer, so continuing would just repeat the same error
+        // (and its ErrorHandling.notify) up to BUCKET_WIDTH times. Untouched siblings stay
+        // UNREQUESTED, i.e. exactly as before this batching existed, and get requested again
+        // when actually demanded. The throw is also what puts the originally requested bucket
+        // into failedBucketAddresses (see pullBatch).
+        throw error;
+      }
     }
   }
 

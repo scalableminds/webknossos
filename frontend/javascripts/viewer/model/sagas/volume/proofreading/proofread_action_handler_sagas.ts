@@ -27,13 +27,11 @@ import {
 import { Store } from "viewer/singletons";
 import type { Action } from "../../../actions/actions";
 import type { OperationContext } from "../../operation_context_saga";
-import { spawnUntilCanceled } from "../../saga_helpers";
 import { syncAgglomerateTreesAfterMergeAction } from "./agglomerate_tree_syncing_saga_helpers";
 import {
   pushPendingProofreadingOperationInfo,
   subscribeToAnnotationMutexInLiveCollab,
   syncAndUpdatePostProcessingInfo,
-  syncWithBackend,
 } from "./backend_sync_helper_sagas";
 import { performCutFromNeighbors, performMinCut } from "./cut_operation_helper_sagas";
 import { splitAgglomerateInMapping, updateMappingWithMerge } from "./local_mapping_update_sagas";
@@ -46,11 +44,7 @@ import {
   prepareSplitOrMerge,
   reloadMappingAndAggloIds,
 } from "./preparation_sagas";
-import {
-  maybeRefreshAffectedMeshes,
-  refreshAffectedSegmentItems,
-  refreshProofreadingSegmentsAndMeshes,
-} from "./segment_and_mesh_refresh_sagas";
+import { updateProofreadingSegmentsAndScheduleSyncMeshes } from "./segment_and_mesh_refresh_sagas";
 
 export function* performPartitionedMinCut(
   action: MinCutPartitionsAction | EnterAction,
@@ -220,15 +214,12 @@ export function* performPartitionedMinCut(
         nodePosition: meshLoadingPositionForPartition2,
       },
     ];
-    yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
-
-    // Now that the segment items are up-to-date we can sync with the back-end
-    // and release the mutex.
-    yield* call(syncWithBackend, ctx);
-
-    // Refreshing the meshes might take a while and won't block the saga
-    // here.
-    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* call(
+      updateProofreadingSegmentsAndScheduleSyncMeshes,
+      volumeTracingId,
+      refreshInfos,
+      ctx,
+    );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -342,13 +333,28 @@ export function* handleProofreadMerge(action: ProofreadMergeAction, ctx: Operati
       volumeTracingId,
     );
 
+    /* Ensure segment items exist for affected segments and reload affected meshes */
+    const refreshInfos = [
+      {
+        oldAgglomerateId: sourceInfo.agglomerateId,
+        newAgglomerateId: sourceAgglomerateId,
+        nodePosition: sourceInfo.position,
+      },
+      {
+        oldAgglomerateId: targetInfo.agglomerateId,
+        newAgglomerateId: targetAgglomerateId,
+        nodePosition:
+          // targetInfo.position can only be undefined in case of
+          // a merge (see idInfos.type). In that case,
+          // this element was merged into another element.
+          // Therefore, sourceInfo.position is a valid replacement.
+          targetInfo.position ?? sourceInfo.position,
+      },
+    ];
     yield* call(
-      refreshProofreadingSegmentsAndMeshes,
+      updateProofreadingSegmentsAndScheduleSyncMeshes,
       volumeTracingId,
-      sourceInfo,
-      targetInfo,
-      sourceAgglomerateId,
-      targetAgglomerateId,
+      refreshInfos,
       ctx,
     );
   } finally {
@@ -460,7 +466,8 @@ export function* handleMinCutAgglomerate(
     // Now that the changes are saved, we can split the local mapping (because it requires
     // communication with the back-end).
     const autoUpdateAgglomerateTrees = true;
-    const splitMappingInfo = yield* splitAgglomerateInMapping(
+    const splitMappingInfo = yield* call(
+      splitAgglomerateInMapping,
       activeMapping,
       latestSourceAgglomerateId,
       [sourceInfo.unmappedId],
@@ -488,7 +495,7 @@ export function* handleMinCutAgglomerate(
     // reload the agglomerate id info and the mapping.
     const newInfo = yield* call(
       reloadMappingAndAggloIds,
-      volumeTracing.tracingId,
+      volumeTracingId,
       sourceInfo.unmappedId,
       targetInfo.unmappedId,
     );
@@ -502,13 +509,28 @@ export function* handleMinCutAgglomerate(
     sourceAgglomerateId = newInfo.sourceAgglomerateId;
     targetAgglomerateId = newInfo.targetAgglomerateId;
 
+    /* Ensure segment items exist for affected segments and reload affected meshes */
+    const refreshInfos = [
+      {
+        oldAgglomerateId: sourceInfo.agglomerateId,
+        newAgglomerateId: sourceAgglomerateId,
+        nodePosition: sourceInfo.position,
+      },
+      {
+        oldAgglomerateId: targetInfo.agglomerateId,
+        newAgglomerateId: targetAgglomerateId,
+        nodePosition:
+          // targetInfo.position can only be undefined in case of
+          // a merge (see idInfos.type). In that case,
+          // this element was merged into another element.
+          // Therefore, sourceInfo.position is a valid replacement.
+          targetInfo.position ?? sourceInfo.position,
+      },
+    ];
     yield* call(
-      refreshProofreadingSegmentsAndMeshes,
+      updateProofreadingSegmentsAndScheduleSyncMeshes,
       volumeTracingId,
-      sourceInfo,
-      targetInfo,
-      sourceAgglomerateId,
-      targetAgglomerateId,
+      refreshInfos,
       ctx,
     );
   } finally {
@@ -656,13 +678,12 @@ export function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationC
         nodePosition: neighbor.position,
       })),
     ];
-    yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
-
-    yield* call(syncWithBackend, ctx);
-
-    // Refreshing the meshes might take a while and won't block the saga
-    // here.
-    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* call(
+      updateProofreadingSegmentsAndScheduleSyncMeshes,
+      volumeTracingId,
+      refreshInfos,
+      ctx,
+    );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);

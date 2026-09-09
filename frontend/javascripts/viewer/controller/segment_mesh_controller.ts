@@ -1,7 +1,6 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
-import forEach from "lodash-es/forEach";
 import get from "lodash-es/get";
 import isEqual from "lodash-es/isEqual";
 import setWith from "lodash-es/setWith";
@@ -34,7 +33,11 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
 import Store, { MinCutPartitionKeys, type MinCutPartitions } from "viewer/store";
-import type { BufferGeometryWithInfo } from "./mesh_helpers";
+import {
+  type BufferGeometryWithInfo,
+  extractSubGeometry,
+  mergeGeometriesByUnmappedSegmentId,
+} from "./mesh_helpers";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable
@@ -85,6 +88,16 @@ type GroupForLOD = Group & {
   forEach: (callback: (el: SceneGroupForMeshes) => void) => void;
 };
 
+function forEachLodGroup<T>(
+  groupsByLod: Record<number, T> | null | undefined,
+  callback: (group: T, lod: number) => void,
+): void {
+  if (groupsByLod == null) return;
+  for (const [lodStr, group] of Object.entries(groupsByLod)) {
+    callback(group, Number.parseInt(lodStr, 10));
+  }
+}
+
 export default class SegmentMeshController {
   lightsGroup: Group;
   // meshesLayerLODRootGroup holds a CustomLOD for each segmentation layer with meshes.
@@ -129,6 +142,67 @@ export default class SegmentMeshController {
       this.getMeshGroups(getAdditionalCoordinatesAsString(additionalCoordinates), layerName, id) !=
       null
     );
+  }
+
+  getLoadedLods(
+    id: bigint,
+    layerName: string,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): number[] {
+    const meshGroups = this.getMeshGroups(
+      getAdditionalCoordinatesAsString(additionalCoordinates),
+      layerName,
+      id,
+    );
+    const lods: number[] = [];
+    forEachLodGroup(meshGroups, (_group, lod) => lods.push(lod));
+    return lods;
+  }
+
+  /**
+   * Returns the unmapped/supervoxel ids already present (via vertexSegmentMapping) in id's
+   * geometry at a given LOD. Used by the proofreading merge orchestration to diff a freshly
+   * listed chunk set against what's already loaded, so only the missing ("delta") chunks are
+   * fetched (see segment_and_mesh_refresh_sagas.ts). Chunks without a vertexSegmentMapping
+   * (ad-hoc meshes) contribute nothing.
+   */
+  getLoadedUnmappedSegmentIds(
+    id: bigint,
+    layerName: string,
+    lod: number,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): Set<bigint> {
+    const ids = new Set<bigint>();
+    const targetGroup = this.getMeshGroupsByLOD(additionalCoordinates, layerName, id, lod);
+    if (targetGroup == null) return ids;
+    for (const chunkGroup of targetGroup.children as SceneGroupForMeshes[]) {
+      for (const node of chunkGroup.children) {
+        const vertexSegmentMapping = node.geometry.vertexSegmentMapping;
+        if (vertexSegmentMapping != null) {
+          for (const segmentId of vertexSegmentMapping.unmappedSegmentIds) {
+            ids.add(segmentId);
+          }
+        }
+      }
+    }
+    return ids;
+  }
+
+  /**
+   * Union of getLoadedUnmappedSegmentIds across every LOD id currently has geometry for. Used by
+   * the proofreading split orchestration to find the full set of supervoxel ids that need to be
+   * classified into their post-split agglomerate ids (see segment_and_mesh_refresh_sagas.ts).
+   */
+  getAllLoadedUnmappedSegmentIds(
+    id: bigint,
+    layerName: string,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): Set<bigint> {
+    let ids = new Set<bigint>();
+    for (const lod of this.getLoadedLods(id, layerName, additionalCoordinates)) {
+      ids = ids.union(this.getLoadedUnmappedSegmentIds(id, layerName, lod, additionalCoordinates));
+    }
+    return ids;
   }
 
   async addMeshFromVerticesAsync(
@@ -319,9 +393,7 @@ export default class SegmentMeshController {
       return;
     }
 
-    forEach(meshGroups, (meshGroup, lodStr) => {
-      const currentLod = Number.parseInt(lodStr, 10);
-
+    forEachLodGroup(meshGroups, (meshGroup, currentLod) => {
       if (options?.lod != null && currentLod !== options.lod) {
         // If options.lod is provided, only remove that LOD.
         return;
@@ -354,6 +426,271 @@ export default class SegmentMeshController {
     });
   }
 
+  /**
+   * Moves the meshes belonging to oldSegmentId to the group belonging to newSegmentId (creating if needed).
+   * Only updates the scene graph structure / bookkeeping, nothing else.
+   */
+  moveMeshesToNewSegmentId(
+    oldSegmentId: bigint,
+    newSegmentId: bigint,
+    layerName: string,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): void {
+    if (oldSegmentId === newSegmentId) return;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+    const oldMeshGroups = this.getMeshGroups(additionalCoordKey, layerName, oldSegmentId);
+    if (oldMeshGroups == null) return;
+    const layerLODGroup = this.getLODGroupOfLayer(layerName);
+    if (layerLODGroup == null) return;
+
+    forEachLodGroup(oldMeshGroups, (oldTargetGroup, lod) => {
+      const existingNewTargetGroup = this.getMeshGroupsByLOD(
+        additionalCoordinates,
+        layerName,
+        newSegmentId,
+        lod,
+      );
+      // oldTargetGroup is the per-(segment, LOD) container ("GroupForLOD"), whose children are
+      // the individual chunk wrapper groups (SceneGroupForMeshes) - addMeshFromGeometry also
+      // stamps `segmentId` directly onto this container, even though that's not reflected in the
+      // GroupForLOD type declared on meshesGroupsPerSegmentId.
+      const oldGroup = oldTargetGroup as GroupForLOD & { segmentId: bigint };
+
+      if (existingNewTargetGroup == null) {
+        // Nothing exists yet for newSegmentId at this LOD: just re-key the existing group in our
+        // bookkeeping. The group's position in the actual three.js scene graph doesn't change.
+        oldGroup.segmentId = newSegmentId;
+        for (const child of oldGroup.children) {
+          child.segmentId = newSegmentId;
+        }
+        setWith(
+          this.meshesGroupsPerSegmentId,
+          [additionalCoordKey, layerName, newSegmentId.toString(), lod],
+          oldTargetGroup,
+          Object,
+        );
+      } else {
+        // A mesh already exists for newSegmentId at this LOD: reparent every chunk group of the
+        // old mesh into the existing target group (three.js Object3D.add() reparents
+        // automatically, removing the child from its previous parent), then discard the now-empty
+        // old target group.
+        for (const child of [...oldGroup.children]) {
+          child.segmentId = newSegmentId;
+          existingNewTargetGroup.add(child);
+        }
+        if (lod === NO_LOD_MESH_INDEX) {
+          layerLODGroup.removeNoLODSupportedMesh(oldTargetGroup);
+        } else {
+          layerLODGroup.removeLODMesh(oldTargetGroup, lod);
+        }
+      }
+    });
+
+    this.removeMeshFromMeshGroups(additionalCoordKey, layerName, oldSegmentId);
+  }
+
+  /**
+   * Collects every chunk node of oldSegmentId's mesh, grouped by LOD, and validates that all of
+   * them carry a vertexSegmentMapping. If at least one has no vertexSegmentMapping, null is returned.
+   */
+  private collectSplittableNodesByLod(
+    oldSegmentId: bigint,
+    layerName: string,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): Array<{ lod: number; scale: ThreeVector3; nodes: MeshSceneNode[] }> | null {
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+    const oldMeshGroups = this.getMeshGroups(additionalCoordKey, layerName, oldSegmentId);
+    if (oldMeshGroups == null) return null;
+
+    const nodesByLod: Array<{ lod: number; scale: ThreeVector3; nodes: MeshSceneNode[] }> = [];
+    forEachLodGroup(oldMeshGroups, (targetGroup, lod) => {
+      const nodes: MeshSceneNode[] = [];
+      for (const chunkGroup of targetGroup.children as SceneGroupForMeshes[]) {
+        for (const node of chunkGroup.children) {
+          if (node.geometry.vertexSegmentMapping == null) {
+            return null;
+          }
+          nodes.push(node);
+        }
+      }
+      nodesByLod.push({ lod, scale: targetGroup.scale.clone(), nodes });
+    });
+    return nodesByLod;
+  }
+
+  /**
+   * Checks whether oldSegmentId's mesh is fully present and has a vertexSegmentMapping
+   * at every LOD it has.
+   */
+  hasFullyMergedMesh(
+    oldSegmentId: bigint,
+    layerName: string,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): boolean {
+    return this.collectSplittableNodesByLod(oldSegmentId, layerName, additionalCoordinates) != null;
+  }
+
+  /**
+   * Merges all sibling mesh chunks pre LOD associated with one id into one single mesh chunk
+   * with a vertexSegmentMapping.
+   */
+  async mergeMeshSiblingsIntoOneGeometry(
+    segmentId: bigint,
+    layerName: string,
+    opacity: number | undefined,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): Promise<void> {
+    const nodesByLod = this.collectSplittableNodesByLod(
+      segmentId,
+      layerName,
+      additionalCoordinates,
+    );
+    if (nodesByLod == null) return;
+
+    for (const { lod, scale, nodes } of nodesByLod) {
+      if (nodes.length <= 1) continue;
+
+      // Each sibling node already knows its own ids' vertex ranges via its own
+      // vertexSegmentMapping - mergeGeometriesByUnmappedSegmentId reads those directly and
+      // interleaves them into one globally-sorted geometry, instead of exploding every sibling
+      // down to one throwaway geometry per id first.
+      let mergedGeometry: BufferGeometryWithInfo | null = null;
+      try {
+        mergedGeometry = mergeGeometriesByUnmappedSegmentId(nodes.map((node) => node.geometry));
+        if (mergedGeometry != null) {
+          mergedGeometry.boundsTree = await computeBvhAsync(mergedGeometry);
+        }
+      } catch (exception) {
+        mergedGeometry?.dispose();
+        mergedGeometry = null;
+        console.error(`Failed to consolidate mesh chunks for segment ${segmentId}:`, exception);
+      }
+      if (mergedGeometry == null) continue;
+
+      this.removeMeshById(segmentId, layerName, { lod, additionalCoordinates });
+      this.addMeshFromGeometry(
+        mergedGeometry,
+        segmentId,
+        null,
+        lod,
+        layerName,
+        additionalCoordinates,
+        opacity,
+        true,
+      );
+      // addMeshFromGeometry only derives a scale from its `scale` param when it creates a
+      // brand-new target group; make sure the new group matches the original scale (dataset/mag-
+      // derived), which we captured above before removing it.
+      const newTargetGroup = this.getMeshGroupsByLOD(
+        additionalCoordinates,
+        layerName,
+        segmentId,
+        lod,
+      );
+      newTargetGroup?.scale.copy(scale);
+    }
+  }
+
+  /**
+   * Locally splits oldSegmentId's mesh based on newAgglomerateIdToSegmentIds entries.
+   * The function maintains vertexSegmentMappings and moves the split off mesh chunks
+   * to the new scene graph group.
+   *
+   * Note: Callers must dispatch the Redux mesh-info entries for every id in newIdToKeepIds *before*
+   * calling this (mirroring how addPrecomputedMeshAction/addAdHocMeshAction are always dispatched
+   * before the corresponding addMeshFromGeometry call elsewhere), since addMeshFromGeometry reads
+   * the new segment's isVisible from the store when first creating its target group.
+   */
+  async splitMeshByNewMapping(
+    oldSegmentId: bigint,
+    layerName: string,
+    newAgglomerateIdToSegmentIds: Map<bigint, Set<bigint>>,
+    opacity: number | undefined,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): Promise<boolean> {
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+    const nodesByLodOfOriginalMesh = this.collectSplittableNodesByLod(
+      oldSegmentId,
+      layerName,
+      additionalCoordinates,
+    );
+    if (nodesByLodOfOriginalMesh == null) return false;
+
+    for (const { lod, scale, nodes } of nodesByLodOfOriginalMesh) {
+      for (const [newSegmentId, keepIds] of newAgglomerateIdToSegmentIds) {
+        for (const node of nodes) {
+          const subGeometry = extractSubGeometry(node.geometry, keepIds);
+          if (subGeometry == null) continue;
+          subGeometry.boundsTree = await computeBvhAsync(subGeometry);
+          this.addMeshFromGeometry(
+            subGeometry,
+            newSegmentId,
+            null,
+            lod,
+            layerName,
+            additionalCoordinates,
+            opacity,
+            true,
+          );
+          const newTargetGroup = this.getMeshGroupsByLOD(
+            additionalCoordinates,
+            layerName,
+            newSegmentId,
+            lod,
+          );
+          if (newTargetGroup) {
+            // Need to set scale manually as addMeshFromGeometry takes the scale and adapts it to the
+            // dataset scale. Thus, changing the original input scale. But we want the potentially new
+            // mesh group to have the same scale as its previous group had. The plain copy achieves this.
+            newTargetGroup.scale.copy(scale);
+          } else {
+            throw new Error(
+              `Meshes added to scene for ${additionalCoordinates}, ${layerName}, ${newSegmentId}, ${lod} could not be found.`,
+            );
+          }
+        }
+      }
+    }
+
+    // Remove all old nodes and remove now empty scene groups.
+    // In a split usually one of the split off segments should remain in the original segment group.
+    // Thus, the check below targetGroup.children.length === 0 never removes the original group.
+    const layerLODGroup = this.getLODGroupOfLayer(layerName);
+    for (const { lod, nodes } of nodesByLodOfOriginalMesh) {
+      for (const node of nodes) {
+        const chunkGroup = node.parent;
+        this.disposeMeshGroup(chunkGroup);
+        chunkGroup.parent?.remove(chunkGroup);
+      }
+      // If nothing but the now-removed old chunks lived under this LOD, oldSegmentId isn't one of
+      // the new ids - drop the now-empty target group too.
+      const targetGroup = this.getMeshGroupsByLOD(
+        additionalCoordinates,
+        layerName,
+        oldSegmentId,
+        lod,
+      );
+      if (targetGroup != null && targetGroup.children.length === 0) {
+        if (layerLODGroup != null) {
+          if (lod === NO_LOD_MESH_INDEX) {
+            layerLODGroup.removeNoLODSupportedMesh(targetGroup);
+          } else {
+            layerLODGroup.removeLODMesh(targetGroup, lod);
+          }
+        }
+        this.removeMeshLODFromMeshGroups(additionalCoordKey, layerName, oldSegmentId, lod);
+      }
+    }
+    // Also drop the top-level oldSegmentId bookkeeping entry if every LOD ended up empty/removed
+    // (i.e. oldSegmentId isn't one of the new ids).
+    const remainingMeshGroups = this.getMeshGroups(additionalCoordKey, layerName, oldSegmentId);
+    if (remainingMeshGroups == null || Object.keys(remainingMeshGroups).length === 0) {
+      this.removeMeshFromMeshGroups(additionalCoordKey, layerName, oldSegmentId);
+    }
+
+    return true;
+  }
+
   getMeshGeometryInBestLOD(
     segmentId: bigint,
     layerName: string,
@@ -378,7 +715,7 @@ export default class SegmentMeshController {
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): void {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-    forEach(this.getMeshGroups(additionalCoordKey, layerName, id), (meshGroup) => {
+    forEachLodGroup(this.getMeshGroups(additionalCoordKey, layerName, id), (meshGroup) => {
       meshGroup.visible = visibility;
     });
   }
@@ -403,13 +740,11 @@ export default class SegmentMeshController {
   ) => {
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
       const meshDataForOneSegment = recordsOfLayers[layerName][segmentId.toString()];
-      if (meshDataForOneSegment != null) {
-        for (const lodGroup of Object.values(meshDataForOneSegment)) {
-          for (const meshGroup of lodGroup.children) {
-            meshGroup.children.forEach(functionToApply);
-          }
+      forEachLodGroup(meshDataForOneSegment, (lodGroup) => {
+        for (const meshGroup of lodGroup.children) {
+          meshGroup.children.forEach(functionToApply);
         }
-      }
+      });
     }
   };
 
@@ -762,9 +1097,7 @@ export default class SegmentMeshController {
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
       for (const recordsOfSegments of Object.values(recordsOfLayers)) {
         for (const recordsOfLODs of Object.values(recordsOfSegments)) {
-          for (const meshGroup of Object.values(recordsOfLODs)) {
-            this.disposeMeshGroup(meshGroup);
-          }
+          forEachLodGroup(recordsOfLODs, (meshGroup) => this.disposeMeshGroup(meshGroup));
         }
       }
     }

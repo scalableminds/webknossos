@@ -1,4 +1,4 @@
-import type { PreservedMeshDisplayProps } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
+import type { PreservedMeshDisplayProps } from "../../volume/proofreading/proofreading_types";
 
 /*
  * This module holds the "artifacts" that applying foreign missing update actions produces, i.e. the information
@@ -8,13 +8,22 @@ import type { PreservedMeshDisplayProps } from "../../volume/proofreading/segmen
  * the applying/saving is done (see mesh_artifact_resolution_sagas.ts).
  */
 
+// Every agglomerate id that fed into a queued reload's new agglomerate id (a single id for a
+// plain split piece, two-or-more for a merge survivor - see recordMeshToLoad in
+// incorporate_update_actions_sagas.ts) plus the display properties (opacity/visibility) the
+// reloaded/spliced mesh should inherit. Keeping the contributing old ids around (rather than
+// just the display props) lets resolveApplyingUpdateArtifacts hand off real
+// AgglomerateChangeItem-shaped data to syncAffectedAndLoadMissingMeshes, so foreign
+// merges/splits can be spliced locally instead of always doing a hard reload.
+export type MeshReloadEntry = {
+  oldAgglomerateIds: ReadonlySet<bigint>;
+  displayProps: PreservedMeshDisplayProps;
+};
+
 export type ApplyingUpdateArtifacts = {
-  // All properties having the layer name / tracing id as a key.
-  meshIdsToRemovePerLayer: ReadonlyMap<string, ReadonlySet<bigint>>;
-  // Maps for each layer to agglomerate ids whose meshes should be (re)loaded. In the inner map
-  // the agglomerate ids map to the display properties (opacity and visibility). This info is
-  // necessary because the display properties of reloaded meshes should inherit stay the same as before.
-  meshesToLoadPerLayer: ReadonlyMap<string, ReadonlyMap<bigint, PreservedMeshDisplayProps>>;
+  // Maps each layer / tracing id to the agglomerate ids whose meshes should be (re)loaded, and
+  // for each, which old agglomerate id(s) it came from.
+  meshesToLoadPerLayer: ReadonlyMap<string, ReadonlyMap<bigint, MeshReloadEntry>>;
 };
 
 export type ApplyingUpdateResults = {
@@ -25,14 +34,12 @@ export type ApplyingUpdateResults = {
 export const FailedIncorporateActionsReturnValue: ApplyingUpdateResults = {
   success: false,
   artifactInfos: {
-    meshIdsToRemovePerLayer: new Map(),
     meshesToLoadPerLayer: new Map(),
   },
 };
 export const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {
   success: true,
   artifactInfos: {
-    meshIdsToRemovePerLayer: new Map(),
     meshesToLoadPerLayer: new Map(),
   },
 };

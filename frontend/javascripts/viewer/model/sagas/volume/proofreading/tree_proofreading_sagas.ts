@@ -34,7 +34,6 @@ import {
   type UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
 import type { OperationContext } from "../../operation_context_saga";
-import { spawnUntilCanceled } from "../../saga_helpers";
 import {
   pollNewestBackendVersion,
   pushPendingProofreadingOperationInfo,
@@ -45,10 +44,7 @@ import {
 import { performMinCut } from "./cut_operation_helper_sagas";
 import { splitAgglomerateInMapping, updateMappingWithMerge } from "./local_mapping_update_sagas";
 import { getAgglomerateInfos, lookupAgglomerateId, prepareSplitOrMerge } from "./preparation_sagas";
-import {
-  maybeRefreshAffectedMeshes,
-  refreshAffectedSegmentItems,
-} from "./segment_and_mesh_refresh_sagas";
+import { updateProofreadingSegmentsAndScheduleSyncMeshes } from "./segment_and_mesh_refresh_sagas";
 
 // Shared setup for tree-based proofreading handlers. Returns null if the action should not proceed.
 // Note: the skeletontracing reducer already mutated the trees according to the received action.
@@ -299,12 +295,12 @@ export function* handleMergeViaTree(action: MergeTreesAction, ctx: OperationCont
         nodePosition: targetNodePosition,
       },
     ];
-    yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
-    // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
-    yield* call(syncWithBackend, ctx);
-
-    // Refreshing the meshes might take a while and won't block the saga here.
-    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* call(
+      updateProofreadingSegmentsAndScheduleSyncMeshes,
+      volumeTracingId,
+      refreshInfos,
+      ctx,
+    );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -513,12 +509,12 @@ export function* handleSplitViaTree(
         nodePosition: targetNodePosition,
       },
     ];
-    yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
-    // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
-    yield* call(syncWithBackend, ctx);
-
-    // Refreshing the meshes might take a while and won't block the saga here.
-    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* call(
+      updateProofreadingSegmentsAndScheduleSyncMeshes,
+      volumeTracingId,
+      refreshInfos,
+      ctx,
+    );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);

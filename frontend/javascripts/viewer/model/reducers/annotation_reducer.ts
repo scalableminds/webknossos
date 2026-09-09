@@ -487,6 +487,75 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       return updatedKey;
     }
 
+    case "MERGE_MESHES": {
+      const { layerName, oldSegmentId, newSegmentId, additionalCoordinates } = action;
+      if (oldSegmentId === newSegmentId) return state;
+      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+      const maybeMeshes = getMeshesForAdditionalCoordinates(
+        state,
+        additionalCoordinates,
+        layerName,
+      );
+      if (maybeMeshes == null || maybeMeshes[oldSegmentId.toString()] == null) {
+        // No mesh exists for oldSegmentId. No need to do anything.
+        return state;
+      }
+      const meshes = maybeMeshes as Record<string, MeshInformation>;
+      const oldMeshInfo = meshes[oldSegmentId.toString()];
+      const newMeshInfo: MeshInformation = meshes[newSegmentId.toString()] ?? {
+        ...oldMeshInfo,
+        segmentId: newSegmentId,
+      };
+      const { [oldSegmentId.toString()]: _, ...remainingMeshes } = meshes;
+      const newMeshes: Record<string, MeshInformation> = {
+        ...remainingMeshes,
+        [newSegmentId.toString()]: newMeshInfo,
+      };
+      return update(state, {
+        localSegmentationStateByLayer: {
+          [layerName]: {
+            meshes: {
+              [additionalCoordKey]: {
+                $set: newMeshes,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    case "SPLIT_MESH": {
+      const { layerName, oldSegmentId, newSegmentIds, additionalCoordinates } = action;
+      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+      const maybeMeshes = getMeshesForAdditionalCoordinates(
+        state,
+        additionalCoordinates,
+        layerName,
+      );
+      if (maybeMeshes == null || maybeMeshes[oldSegmentId.toString()] == null) {
+        // No mesh exists for oldSegmentId. No need to do anything.
+        return state;
+      }
+      const meshes = maybeMeshes as Record<string, MeshInformation>;
+      const oldMeshInfo = meshes[oldSegmentId.toString()];
+      const { [oldSegmentId.toString()]: _, ...remainingMeshes } = meshes;
+      const newMeshes: Record<string, MeshInformation> = { ...remainingMeshes };
+      for (const newSegmentId of newSegmentIds) {
+        newMeshes[newSegmentId.toString()] = { ...oldMeshInfo, segmentId: newSegmentId };
+      }
+      return update(state, {
+        localSegmentationStateByLayer: {
+          [layerName]: {
+            meshes: {
+              [additionalCoordKey]: {
+                $set: newMeshes,
+              },
+            },
+          },
+        },
+      });
+    }
+
     case "STARTED_LOADING_MESH": {
       const { layerName, segmentId } = action;
       const additionalCoordKey = getAdditionalCoordinatesAsString(

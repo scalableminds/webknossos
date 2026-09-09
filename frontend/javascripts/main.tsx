@@ -17,7 +17,6 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
-import { setupApi } from "viewer/api/internal_api";
 import Model from "viewer/model";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setHasOrganizationsAction, setThemeAction } from "viewer/model/actions/ui_actions";
@@ -43,7 +42,6 @@ window.OlvyConfig = null;
 
 setModel(Model);
 setStore(UnthrottledStore);
-setupApi();
 startSaga(warnIfEmailIsUnverified);
 
 const reactQueryClient = new QueryClient({

@@ -18,7 +18,6 @@ import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "t
 import { ControlModeEnum, PerformanceMarkEnum } from "viewer/constants";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { Store } from "viewer/singletons";
-import TracingLayoutView from "viewer/view/layouting/tracing_layout_view";
 import { PageNotFoundView } from "./page_not_found_view";
 
 // Loaded on demand for the same reason as the pages in router.tsx: these are whole
@@ -26,6 +25,10 @@ import { PageNotFoundView } from "./page_not_found_view";
 const Onboarding = loadable(() => import("admin/onboarding"));
 const DashboardView = loadable(() => import("dashboard/dashboard_view"));
 const DatasetSettingsScreen = loadable(() => import("dashboard/dataset/dataset_settings_screen"));
+// The annotation viewer is by far the largest screen in the app - it reaches three.js, the
+// shaders, the geometries and the flexlayout-based layouting. Loading it on demand keeps all
+// of that out of the login screen, the dashboard and every admin page.
+const TracingLayoutView = loadable(() => import("viewer/view/layouting/tracing_layout_view"));
 
 function markTracingViewLoadStartEffect() {
   const markName = PerformanceMarkEnum.TRACING_VIEW_LOAD;

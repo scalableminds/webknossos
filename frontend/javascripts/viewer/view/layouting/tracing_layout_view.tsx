@@ -13,6 +13,7 @@ import type { Dispatch } from "redux";
 import { NavAndStatusBarTheme } from "theme";
 import type { APICompoundType } from "types/api_types";
 import CrossOriginApi from "viewer/api/cross_origin_api";
+import { setupApi } from "viewer/api/internal_api";
 import Constants, { type Vector3 } from "viewer/constants";
 import type { ControllerStatus } from "viewer/controller";
 import WebKnossosController from "viewer/controller";
@@ -58,6 +59,13 @@ import VoxelValueTooltip from "../voxel_pipette_tooltip";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
+
+// The API used to be created in main.tsx, which meant api_latest (and with it three.js and
+// tween.js) was part of the initial payload on every page. It is set up here instead: this
+// module is the lazily loaded entry point of the viewer, so this runs as soon as the viewer
+// chunk is fetched and before any viewer code can read the `api` singleton - the same
+// guarantee main.tsx used to provide, just scoped to the viewer.
+setupApi();
 
 const { Sider } = Layout;
 

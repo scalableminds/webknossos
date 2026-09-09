@@ -2,6 +2,7 @@ import com.scalableminds.util.box.{Failure, Full}
 import org.apache.pekko.actor.{ActorSystem, Props}
 import com.scalableminds.util.diagnostics.ThreadPoolHealthLogger
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.tracingstore.cleanup.WkCleanUpService
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
@@ -15,7 +16,7 @@ import play.api.inject.ApplicationLifecycle
 import security.WkSilhouetteEnvironment
 import telemetry.SlackNotificationService
 import utils.WkConf
-import utils.sql.SqlClient
+import utils.sql.{SlickPoolHealthLogger, SqlClient}
 
 import javax.inject.*
 import scala.collection.mutable
@@ -68,6 +69,10 @@ class Startup @Inject() (
   }
 
   ThreadPoolHealthLogger.registerPeriodicLogging(actorSystem, lifecycle)
+
+  cleanUpService.register("slick pool health logging", 1 minute) {
+    Fox.successful(SlickPoolHealthLogger.logHealth(sqlClient.db))
+  }
 
   lifecycle.addStopHook { () =>
     Future.successful {

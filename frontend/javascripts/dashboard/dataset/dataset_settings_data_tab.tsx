@@ -37,6 +37,7 @@ import {
   getRotationalTransformation,
 } from "./dataset_rotation_form_item";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
+import { TransformationsMode } from "./dataset_transformations_mode";
 
 export default function DatasetSettingsDataTab() {
   const { dataset, form } = useDatasetSettingsContext();
@@ -138,12 +139,6 @@ function DatasetTransformationSettingsCard({
     default:
       return null;
   }
-}
-
-export enum TransformationsMode {
-  NONE = "none",
-  SIMPLE = "simple",
-  ADVANCED = "advanced",
 }
 
 function SimpleDatasetForm({

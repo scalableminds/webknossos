@@ -33,7 +33,7 @@ import {
   DatasetSettingsContext,
   type DatasetSettingsContextValue,
 } from "./dataset_settings_context";
-import { TransformationsMode } from "./dataset_settings_data_tab";
+import { TransformationsMode } from "./dataset_transformations_mode";
 import { hasFormError } from "./helper_components";
 import useBeforeUnload from "./useBeforeUnload_hook";
 

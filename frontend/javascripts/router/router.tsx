@@ -1,36 +1,14 @@
-import AccountSettingsView from "admin/account/account_settings_view";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import LoginView from "admin/auth/login_view";
 import RegistrationView from "admin/auth/registration_view";
 import StartResetPasswordView from "admin/auth/start_reset_password_view";
 import VerifyEmailView from "admin/auth/verify_email_view";
-import DatasetAddView from "admin/dataset/dataset_add_view";
-import { DatasetURLImport, datasetURLImportLoader } from "admin/dataset/dataset_url_import";
-import JobListView from "admin/job/job_list_view";
-import OrganizationView from "admin/organization/organization_view";
+import { datasetURLImportLoader } from "admin/dataset/dataset_url_import";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import ProjectCreateView from "admin/project/project_create_view";
-import ProjectListView from "admin/project/project_list_view";
-import ScriptCreateView from "admin/scripts/script_create_view";
-import ScriptListView from "admin/scripts/script_list_view";
-import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
-import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
-import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
-import TaskCreateFormView from "admin/task/task_create_form_view";
-import TaskCreateView from "admin/task/task_create_view";
-import TaskListView from "admin/task/task_list_view";
-import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
-import TaskTypeListView from "admin/tasktype/task_type_list_view";
-import TeamListView from "admin/team/team_list_view";
-import UserListView from "admin/user/user_list_view";
-import AiModelListView from "admin/voxelytics/ai_model_list_view";
 import { Layout } from "antd";
 import ErrorBoundary from "components/error_boundary";
-import { Imprint, Privacy } from "components/legal";
 import SecuredRoute from "components/secured_route";
-import DashboardView from "dashboard/dashboard_view";
-import PublicationDetailView from "dashboard/publication_details_view";
 import loadable from "libs/lazy_loader";
 import Navbar from "navbar";
 import { createBrowserRouter, Navigate, Outlet, type RouteObject, redirect } from "react-router";
@@ -39,20 +17,6 @@ import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
 
-import AccountAuthTokenView from "admin/account/account_auth_token_view";
-import AccountProfileView from "admin/account/account_profile_view";
-import AccountSecurityView from "admin/account/account_security_view";
-import { OrganizationCreditActivityView } from "admin/organization/organization_credit_activity_view";
-import { OrganizationDangerZoneView } from "admin/organization/organization_danger_zone_view";
-import { OrganizationNotificationsView } from "admin/organization/organization_notifications_view";
-import { OrganizationOverviewView } from "admin/organization/organization_overview_view";
-import { OrganizationPlanActivityView } from "admin/organization/organization_plan_activity_view";
-import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
-import DatasetSettingsDeleteTab from "dashboard/dataset/dataset_settings_delete_tab";
-import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metadata_tab";
-import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
-import DatasetSettingsStorageTab from "dashboard/dataset/dataset_settings_storage_tab";
-import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -70,6 +34,92 @@ import {
   TracingViewRouteWrapper,
   UserDetailsRouteWrapper,
 } from "./route_wrappers";
+
+// Admin and dashboard pages are loaded on demand: none of them is needed to render the
+// navbar or the login screen, and together they account for a large part of the entry chunk.
+// loadable() adds the Suspense boundary and the stale-chunk error handling (see libs/lazy_loader).
+const AccountAuthTokenView = loadable(() => import("admin/account/account_auth_token_view"));
+const AccountProfileView = loadable(() => import("admin/account/account_profile_view"));
+const AccountSecurityView = loadable(() => import("admin/account/account_security_view"));
+const AccountSettingsView = loadable(() => import("admin/account/account_settings_view"));
+const AiModelListView = loadable(() => import("admin/voxelytics/ai_model_list_view"));
+const AvailableTasksReportView = loadable(
+  () => import("admin/statistic/available_tasks_report_view"),
+);
+const DashboardView = loadable(() => import("dashboard/dashboard_view"));
+const DatasetAddView = loadable(() => import("admin/dataset/dataset_add_view"));
+const DatasetSettingsDataTab = loadable(
+  () => import("dashboard/dataset/dataset_settings_data_tab"),
+);
+const DatasetSettingsDeleteTab = loadable(
+  () => import("dashboard/dataset/dataset_settings_delete_tab"),
+);
+const DatasetSettingsMetadataTab = loadable(
+  () => import("dashboard/dataset/dataset_settings_metadata_tab"),
+);
+const DatasetSettingsSharingTab = loadable(
+  () => import("dashboard/dataset/dataset_settings_sharing_tab"),
+);
+const DatasetSettingsStorageTab = loadable(
+  () => import("dashboard/dataset/dataset_settings_storage_tab"),
+);
+const DatasetSettingsViewConfigTab = loadable(
+  () => import("dashboard/dataset/dataset_settings_viewconfig_tab"),
+);
+const JobListView = loadable(() => import("admin/job/job_list_view"));
+const OrganizationView = loadable(() => import("admin/organization/organization_view"));
+const ProjectCreateView = loadable(() => import("admin/project/project_create_view"));
+const ProjectListView = loadable(() => import("admin/project/project_list_view"));
+const ProjectProgressReportView = loadable(
+  () => import("admin/statistic/project_progress_report_view"),
+);
+const PublicationDetailView = loadable(() => import("dashboard/publication_details_view"));
+const ScriptCreateView = loadable(() => import("admin/scripts/script_create_view"));
+const ScriptListView = loadable(() => import("admin/scripts/script_list_view"));
+const TaskCreateFormView = loadable(() => import("admin/task/task_create_form_view"));
+const TaskCreateView = loadable(() => import("admin/task/task_create_view"));
+const TaskListView = loadable(() => import("admin/task/task_list_view"));
+const TaskTypeCreateView = loadable(() => import("admin/tasktype/task_type_create_view"));
+const TaskTypeListView = loadable(() => import("admin/tasktype/task_type_list_view"));
+const TeamListView = loadable(() => import("admin/team/team_list_view"));
+const TimeTrackingOverview = loadable(() => import("admin/statistic/time_tracking_overview"));
+const UserListView = loadable(() => import("admin/user/user_list_view"));
+const DatasetURLImport = loadable<EmptyObject>(() =>
+  import("admin/dataset/dataset_url_import").then((module) => ({
+    default: module.DatasetURLImport,
+  })),
+);
+const Imprint = loadable<EmptyObject>(() =>
+  import("components/legal").then((module) => ({ default: module.Imprint })),
+);
+const OrganizationCreditActivityView = loadable<EmptyObject>(() =>
+  import("admin/organization/organization_credit_activity_view").then((module) => ({
+    default: module.OrganizationCreditActivityView,
+  })),
+);
+const OrganizationDangerZoneView = loadable<EmptyObject>(() =>
+  import("admin/organization/organization_danger_zone_view").then((module) => ({
+    default: module.OrganizationDangerZoneView,
+  })),
+);
+const OrganizationNotificationsView = loadable<EmptyObject>(() =>
+  import("admin/organization/organization_notifications_view").then((module) => ({
+    default: module.OrganizationNotificationsView,
+  })),
+);
+const OrganizationOverviewView = loadable<EmptyObject>(() =>
+  import("admin/organization/organization_overview_view").then((module) => ({
+    default: module.OrganizationOverviewView,
+  })),
+);
+const OrganizationPlanActivityView = loadable<EmptyObject>(() =>
+  import("admin/organization/organization_plan_activity_view").then((module) => ({
+    default: module.OrganizationPlanActivityView,
+  })),
+);
+const Privacy = loadable<EmptyObject>(() =>
+  import("components/legal").then((module) => ({ default: module.Privacy })),
+);
 
 const AsyncWorkflowView = loadable<EmptyObject>(() => import("admin/voxelytics/workflow_view"));
 const AsyncWorkflowListView = loadable<EmptyObject>(

@@ -4,6 +4,7 @@ import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/or
 import { getUser, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
 import { Spin, Tabs, Typography } from "antd";
+import { urlTokenToTabKeyMap } from "dashboard/dashboard_tab_keys";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import { PublicationViewWithHeader } from "dashboard/publication_view";
@@ -47,13 +48,6 @@ type State = {
   user: APIUser | null | undefined;
   organization: APIOrganization | null;
   pricingPlanStatus: APIPricingPlanStatus | null;
-};
-
-export const urlTokenToTabKeyMap = {
-  publications: "publications",
-  datasets: "datasets",
-  tasks: "tasks",
-  annotations: "explorativeAnnotations",
 };
 
 function TabBarExtraContent() {

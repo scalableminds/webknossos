@@ -3,10 +3,9 @@ import { isDatasetNameValid, storeRemoteDataset } from "admin/rest_api";
 import { Button, Col, Divider, Flex, Form, type FormInstance, List, Modal, Row } from "antd";
 import BrainSpinner from "components/brain_spinner";
 import type { DatasetSettingsFormData } from "dashboard/dataset/dataset_settings_context";
-import DatasetSettingsDataTab, {
-  TransformationsMode,
-} from "dashboard/dataset/dataset_settings_data_tab";
+import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
 import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
+import { TransformationsMode } from "dashboard/dataset/dataset_transformations_mode";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";

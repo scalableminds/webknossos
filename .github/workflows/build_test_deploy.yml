@@ -33,7 +33,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Lint frontend code and check formatting
-        run: yarn run check-frontend
+        run: yarn run check-frontend-ci
       - name: Typecheck frontend code
         run: yarn typecheck
       - name: Check for cyclic dependencies in frontend

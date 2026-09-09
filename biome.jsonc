@@ -23,7 +23,6 @@
       "!binaryData"
     ]
   },
-  "plugins": ["frontend/lint-plugins/noRawHeading.grit"],
   "assist": {
     "actions": {
       "source": {

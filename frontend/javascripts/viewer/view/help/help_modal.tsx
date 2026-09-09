@@ -55,6 +55,9 @@ export function HelpModal(props: HelpModalProps) {
       open={props.isModalOpen}
       mask={props.centeredLayout}
       onCancel={props.onCancel}
+      // This renders as a panel docked to the bottom right rather than a centered dialog, and
+      // toggles between a compact and an expanded size.
+      // biome-ignore lint/plugin: deliberately off the ModalWidth scale, see above
       width={isExpanded ? 720 : 540}
       footer={null}
       closable={false}

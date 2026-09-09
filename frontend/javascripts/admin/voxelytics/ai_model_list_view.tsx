@@ -31,6 +31,7 @@ import uniq from "lodash-es/uniq";
 import type { Key } from "react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { ModalWidth } from "theme";
 import type { AiModel } from "types/api_types";
 import { enforceActiveUser, formatUserName } from "viewer/model/accessors/user_accessor";
 
@@ -246,7 +247,7 @@ function EditModelSharedOrganizationsModal({
       onOk={submitNewSharedOrganizations}
       onCancel={onClose}
       mask={{ closable: false }}
-      width={800}
+      width={ModalWidth.Large}
     >
       <p>
         Select all organizations that should have access to the AI model{" "}

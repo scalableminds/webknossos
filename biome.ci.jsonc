@@ -4,5 +4,9 @@
   // GritQL lint plugins. These are slow and are therefore skipped locally (see the
   // `check-frontend-ci` script in package.json).
   "extends": ["./biome.jsonc"],
-  "plugins": ["frontend/lint-plugins/noRawHeading.grit", "frontend/lint-plugins/noFlexDiv.grit"]
+  "plugins": [
+    "frontend/lint-plugins/noRawHeading.grit",
+    "frontend/lint-plugins/noRawModalWidth.grit",
+    "frontend/lint-plugins/noFlexDiv.grit"
+  ]
 }

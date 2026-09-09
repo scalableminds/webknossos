@@ -43,6 +43,7 @@ import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import { ModalWidth } from "theme";
 import type { ZarrPrivateLink } from "types/api_types";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
@@ -466,14 +467,11 @@ function PrivateLinksModalInner({
     <Modal
       title="Manage Zarr Links"
       open={isOpen}
-      width={800}
+      width={ModalWidth.Large}
       onCancel={onOk}
       onOk={onOk}
-      footer={[
-        <Button key="ok" type="primary" loading={isBusy} onClick={onOk}>
-          OK
-        </Button>,
-      ]}
+      okButtonProps={{ loading: isBusy }}
+      footer={(_, { OkBtn }) => <OkBtn />} // exclude cancel button
     >
       <PrivateLinksView annotationId={annotationId} />
     </Modal>

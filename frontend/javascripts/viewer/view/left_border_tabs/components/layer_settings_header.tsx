@@ -271,17 +271,11 @@ export default function LayerSettingsHeader({
           ? "Changes to the original segmentation layer will be discarded and the original state will be displayed again. "
           : "";
       const shouldDelete = await modal.confirm({
-        title: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone. Are you sure you want to delete this layer?`,
-        okText: `Yes, delete annotation layer "${readableAnnotationLayerName}"`,
+        title: `Delete annotation layer "${readableAnnotationLayerName}"?`,
+        content: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone.`,
+        okText: "Delete",
+        okType: "danger",
         cancelText: "Cancel",
-        okButtonProps: {
-          danger: true,
-          block: true,
-          style: { whiteSpace: "normal", height: "auto", margin: "10px 0 0 0" },
-        },
-        cancelButtonProps: {
-          block: true,
-        },
       });
       if (!shouldDelete) return;
       dispatch(

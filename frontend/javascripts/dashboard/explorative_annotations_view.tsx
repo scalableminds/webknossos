@@ -399,6 +399,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     }
 
     this.props.modal.confirm({
+      title: "Archive Annotations",
       content: `Are you sure you want to archive ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that annotations that you don't own are ignored.`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);

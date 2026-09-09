@@ -665,6 +665,14 @@ export class DataBucket {
     computeValueSet: boolean = false,
     voxelOffsetInWireData: number = 0,
   ): void {
+    // Validate the state before touching any field: everything below assumes REQUESTED, but
+    // the switch at the bottom only rejects a wrong state *after* rawBucketData has already
+    // been overwritten — and TextureBucketManager uploads rawBucketData to the GPU, so that
+    // would leave the CPU-side `data` and the GPU texture describing different fetches.
+    if (!this.isRequested()) {
+      this.unexpectedState();
+    }
+
     // The backend always sends (or, for missing buckets, uint8ToTypedBuffer synthesizes)
     // a full 32^3-voxel cube. wireData is validated against that full size below and then
     // sliced down to this layer's effective (possibly shrunk) bucket footprint, so that

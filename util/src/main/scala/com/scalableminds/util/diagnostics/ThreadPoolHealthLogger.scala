@@ -27,7 +27,7 @@ object ThreadPoolHealthLogger extends LazyLogging {
   def registerPeriodicLogging(
       actorSystem: ActorSystem,
       lifecycle: ApplicationLifecycle,
-      interval: FiniteDuration = 1 minutes,
+      interval: FiniteDuration = 10 minutes,
       dispatcherId: String = "pekko.actor.default-dispatcher"
   )(implicit ec: ExecutionContext): Unit =
     if (registeredSystems.putIfAbsent(actorSystem, ()).isEmpty) {

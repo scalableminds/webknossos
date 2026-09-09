@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
 import org.apache.pekko.actor.ActorSystem
-import com.google.inject.name.Named
 import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
@@ -100,7 +99,7 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
 class DSDatasetErrorLoggingService @Inject() (
     val lifecycle: ApplicationLifecycle,
     dsApplicationHealthService: ApplicationHealthService,
-    @Named("webknossos-datastore") val actorSystem: ActorSystem
+    val actorSystem: ActorSystem
 )(implicit val ec: ExecutionContext)
     extends DatasetErrorLoggingService {
   protected def applicationHealthService: Option[ApplicationHealthService] = Some(dsApplicationHealthService)

@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.AbstractModule
-import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services.mesh.AdHocMeshServiceHolder
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.cleanup.TSCleanUpService
@@ -14,15 +13,12 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TemporaryTracingService,
   TracingDataStore
 }
-import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 
 class TracingStoreModule extends AbstractModule {
 
-  private val actorSystem: ActorSystem = ActorSystem("webknossos-tracingstore")
-
   override def configure(): Unit = {
-    bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-tracingstore")).toInstance(actorSystem)
+    bind(classOf[TSThreadPoolHealthService]).asEagerSingleton()
     bind(classOf[TracingDataStore]).asEagerSingleton()
     bind(classOf[VolumeTracingService]).asEagerSingleton()
     bind(classOf[TracingStoreAccessTokenService]).asEagerSingleton()

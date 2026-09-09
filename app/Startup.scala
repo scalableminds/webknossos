@@ -1,5 +1,6 @@
 import com.scalableminds.util.box.{Failure, Full}
 import org.apache.pekko.actor.{ActorSystem, Props}
+import com.scalableminds.util.diagnostics.ThreadPoolHealthLogger
 import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.tracingstore.cleanup.WkCleanUpService
 import com.typesafe.scalalogging.LazyLogging
@@ -65,6 +66,8 @@ class Startup @Inject() (
   cleanUpService.register("deletion of expired thumbnails", 1 day) {
     thumbnailCachingService.removeExpiredThumbnails()
   }
+
+  ThreadPoolHealthLogger.registerPeriodicLogging(actorSystem, lifecycle)
 
   lifecycle.addStopHook { () =>
     Future.successful {

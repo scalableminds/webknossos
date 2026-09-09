@@ -1343,15 +1343,13 @@ export async function getDatasets(
     params.set("includeSubfolders", includeSubfolders ? "true" : "false");
   }
 
-  params.set("compact", "true");
-
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);
   return datasets;
 }
 
-export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
-  const datasets: Array<APIDataset> = await Request.receiveJSON(
+export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDatasetCompact>> {
+  const datasets: Array<APIDatasetCompact> = await Request.receiveJSON(
     "/api/datasets?isActive=true&onlyMyOrganization=true",
   );
   assertResponseLimit(datasets);

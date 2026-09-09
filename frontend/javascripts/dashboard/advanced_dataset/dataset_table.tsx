@@ -77,7 +77,6 @@ type Props = {
   searchTags: Array<string>;
   isUserAdminOrDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
-  reloadDataset: (datasetId: string) => Promise<void>;
   updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
@@ -104,20 +103,14 @@ type ContextMenuProps = {
   hideContextMenu: () => void;
   datasets: APIDatasetCompact[];
   folder: FolderItemWithName | null;
-  reloadDataset: Props["reloadDataset"];
 };
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = useContext(ContextMenuContext);
   const { modal } = App.useApp();
-  const {
-    datasets,
-    reloadDataset,
-    contextMenuPosition,
-    hideContextMenu,
-    folder,
-    datasetCollectionContext,
-  } = propsWithInputRef;
+  const { datasets, contextMenuPosition, hideContextMenu, folder, datasetCollectionContext } =
+    propsWithInputRef;
+  const { clearCacheAndReloadDataset } = datasetCollectionContext;
   let menu: MenuProps = { items: [] };
 
   if (contextMenuPosition != null) {
@@ -127,7 +120,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
       menu = getDatasetActionContextMenu({
         hideContextMenu,
         datasets,
-        reloadDataset,
+        clearCacheAndReloadDataset,
         modal,
       });
     } else if (folder != null) {
@@ -395,12 +388,7 @@ class DatasetRenderer {
     return <FormattedDate timestamp={this.data.created} />;
   }
   renderActionsColumn(): React.ReactNode {
-    return (
-      <DatasetActionView
-        dataset={this.data}
-        reloadDataset={this.datasetTable.reloadSingleDataset}
-      />
-    );
+    return <DatasetActionView dataset={this.data} />;
   }
 }
 
@@ -487,8 +475,6 @@ class DatasetTable extends PureComponent<Props, State> {
       sortedInfo: sorter,
     });
   };
-
-  reloadSingleDataset = (datasetId: string): Promise<void> => this.props.reloadDataset(datasetId);
 
   getFilteredDatasets() {
     const filterByMode = (datasets: APIDatasetCompact[]) => {
@@ -685,7 +671,6 @@ class DatasetTable extends PureComponent<Props, State> {
           }}
           datasets={datasetsForContextMenu}
           folder={folderForContextMenu}
-          reloadDataset={this.props.reloadDataset}
           contextMenuPosition={contextMenuPosition}
           datasetCollectionContext={context}
         />

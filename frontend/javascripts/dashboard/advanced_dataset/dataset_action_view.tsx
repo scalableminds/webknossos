@@ -10,18 +10,19 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearCache, deleteDatasetOnDisk, getDataset, getImportedDataset } from "admin/rest_api";
+import { deleteDatasetOnDisk, getDataset } from "admin/rest_api";
 import { App, type MenuProps, Typography } from "antd";
 import type { useAppProps } from "antd/es/app/context";
 import { applyViewConfigurationToDatasetsInFolder } from "dashboard/advanced_dataset/apply_view_configuration";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
+import { useDatasetCollectionContext } from "dashboard/dataset/dataset_collection_context";
 import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
 import type * as React from "react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIDataset, APIDatasetCompact } from "types/api_types";
+import type { APIDatasetCompact, APIMaybeUnimportedDataset } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
 
@@ -85,7 +86,6 @@ function NewAnnotationLink({
 
 type Props = {
   dataset: APIDatasetCompact;
-  reloadDataset: (arg0: string) => Promise<void>;
 };
 
 function LinkWithDisabled({
@@ -119,22 +119,17 @@ function LinkWithDisabled({
 
 function DatasetActionView(props: Props) {
   const queryClient = useQueryClient();
+  const context = useDatasetCollectionContext();
   const { modal } = App.useApp();
   const { dataset } = props;
 
   const [isReloading, setIsReloading] = useState(false);
   const [isCreateExplorativeModalVisible, setIsCreateExplorativeModalVisible] = useState(false);
 
-  const onClearCache = async (compactDataset: APIDatasetCompact) => {
+  const onReloadDataset = async (datasetId: string) => {
     setIsReloading(true);
-    const dataset = await getDataset(compactDataset.id);
-    await clearCache(dataset);
-    await props.reloadDataset(dataset.id);
-    Toast.success(
-      messages["dataset.clear_cache_success"]({
-        datasetName: dataset.name,
-      }),
-    );
+    const dataset = await getDataset(datasetId);
+    await onReloadImpl(dataset, context.clearCacheAndReloadDataset);
     setIsReloading(false);
   };
 
@@ -186,7 +181,7 @@ function DatasetActionView(props: Props) {
   const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);
   const reloadLink = (
     <a
-      onClick={() => onClearCache(dataset)}
+      onClick={() => onReloadDataset(dataset.id)}
       title="Reload Dataset"
       style={disabledWhenReloadingStyle}
       type="link"
@@ -271,12 +266,11 @@ function DatasetActionView(props: Props) {
     </div>
   );
 }
-const onClearCache = async (
-  dataset: APIDataset,
-  reloadDataset: (arg0: string) => Promise<void>,
+const onReloadImpl = async (
+  dataset: APIMaybeUnimportedDataset,
+  clearCacheAndReloadDataset: (arg0: string) => Promise<void>,
 ) => {
-  await clearCache(dataset);
-  await reloadDataset(dataset.id);
+  await clearCacheAndReloadDataset(dataset.id);
   Toast.success(
     messages["dataset.clear_cache_success"]({
       datasetName: dataset.name,
@@ -285,12 +279,12 @@ const onClearCache = async (
 };
 
 export function getDatasetActionContextMenu({
-  reloadDataset,
+  clearCacheAndReloadDataset,
   datasets,
   hideContextMenu,
   modal,
 }: {
-  reloadDataset: (arg0: string) => Promise<void>;
+  clearCacheAndReloadDataset: (arg0: string) => Promise<void>;
   datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
   modal: useAppProps["modal"];
@@ -336,11 +330,8 @@ export function getDatasetActionContextMenu({
             key: "reload",
             icon: <ReloadOutlined className="icon-margin-right" />,
             label: "Reload",
-            onClick: async () => {
-              return dataset.isActive
-                ? onClearCache(await getImportedDataset(dataset.id), reloadDataset)
-                : null;
-            },
+            onClick: async () =>
+              onReloadImpl(await getDataset(dataset.id), clearCacheAndReloadDataset),
           },
         ],
       },

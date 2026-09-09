@@ -7,13 +7,7 @@ import {
   moveFolder,
   updateFolder,
 } from "admin/api/folders";
-import {
-  type DatasetUpdater,
-  getDataset,
-  getDatasets,
-  getImportedDataset,
-  updateDatasetPartial,
-} from "admin/rest_api";
+import { type DatasetUpdater, getDataset, getDatasets, updateDatasetPartial } from "admin/rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { conjugate, diffArrays, pluralize } from "libs/utils";
@@ -21,9 +15,8 @@ import isEqualWith from "lodash-es/isEqualWith";
 import keyBy from "lodash-es/keyBy";
 import { useEffect, useRef } from "react";
 import {
-  type APIDataset,
   type APIDatasetCompact,
-  APIMaybeUnimportedDataset,
+  type APIMaybeUnimportedDataset,
   convertDatasetToCompact,
   type FlatFolderTreeItem,
   type Folder,

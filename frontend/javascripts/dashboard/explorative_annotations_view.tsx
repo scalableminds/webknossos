@@ -46,7 +46,7 @@ import without from "lodash-es/without";
 import messages from "messages";
 import type React from "react";
 import { PureComponent } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import {
   type APIAnnotationInfo,
   type APIUser,

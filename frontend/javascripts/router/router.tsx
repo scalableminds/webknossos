@@ -40,7 +40,7 @@ import {
   Outlet,
   Route,
   redirect,
-} from "react-router-dom";
+} from "react-router";
 import type { EmptyObject } from "types/type_utils";
 import { CommandPalette } from "viewer/view/components/command_palette";
 

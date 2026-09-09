@@ -1,5 +1,5 @@
 import { Button, Card, Col, Flex, Row } from "antd";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 export function DashboardEmptyAnnotationsPlaceholder() {
   return (

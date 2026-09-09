@@ -30,7 +30,7 @@ import { filterWithSearchQueryAND, scrollToTop } from "libs/utils";
 import uniq from "lodash-es/uniq";
 import type { Key } from "react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { ModalWidth } from "theme";
 import type { AiModel } from "types/api_types";
 import { enforceActiveUser, formatUserName } from "viewer/model/accessors/user_accessor";

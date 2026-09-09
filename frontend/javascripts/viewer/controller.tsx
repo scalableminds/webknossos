@@ -10,7 +10,7 @@ import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import messages from "messages";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
-import type { BlockerFunction } from "react-router-dom";
+import type { BlockerFunction } from "react-router";
 import type { APIOrganization, APIUser } from "types/api_types";
 import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
 import ApiLoader from "viewer/api/api_loader";

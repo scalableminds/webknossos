@@ -1,5 +1,5 @@
 import { Button, Modal, Space, Typography } from "antd";
-import type { useNavigate } from "react-router-dom";
+import type { useNavigate } from "react-router";
 import { ModalWidth } from "theme";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import type { DatasetAddType } from "../dataset_add_view";

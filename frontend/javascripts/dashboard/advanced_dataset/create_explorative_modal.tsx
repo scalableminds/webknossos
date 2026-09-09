@@ -4,7 +4,7 @@ import { Button, Modal, Radio, Spin, Tooltip, Typography } from "antd";
 import { Slider } from "components/slider";
 import { useFetch } from "libs/react_helpers";
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIDataset, APISegmentationLayer } from "types/api_types";
 import {
   doesSupportVolumeWithFallback,

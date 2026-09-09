@@ -21,7 +21,7 @@ import { rgbToHex } from "libs/colors";
 import { useWkSelector } from "libs/react_hooks";
 import noop from "lodash-es/noop";
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIOrganization, APIUser } from "types/api_types";
 import { PRIMARY_COLOR } from "viewer/constants";
 import SwitchSetting from "viewer/view/left_border_tabs/components/switch_setting";

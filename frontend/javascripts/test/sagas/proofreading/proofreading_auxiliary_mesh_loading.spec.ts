@@ -28,6 +28,7 @@ import {
 import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { scheduleMeshUpdate } from "viewer/model/sagas/volume/proofreading/mesh_update_registry_saga";
+import { syncAffectedAndLoadMissingMeshes } from "viewer/model/sagas/volume/proofreading/segment_and_mesh_refresh_sagas";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import { Store } from "viewer/singletons";
 import { startSaga, type WebknossosState } from "viewer/store";
@@ -371,6 +372,36 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           anchorPosition: [1, 1, 1],
         },
       ]);
+    });
+    await task.toPromise();
+  });
+
+  it("should reload the original agglomerate when a failed local split lists no item for it", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+
+    const task = startSaga(function* task(): Saga<void> {
+      const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield loadAgglomerateMeshes([1]);
+      expect([...getAllCurrentlyLoadedMeshIds(context, tracingId)]).toEqual([1n]);
+
+      const meshTracker = yield* trackMeshes(context, tracingId);
+      // A split of agglomerate 1 that reports only brand-new ids and no item for 1 itself, even
+      // though 1 still exists. The local splice can't handle ids the loaded supervoxels don't map
+      // to, so this falls back to a hard reload -- which used to leave agglomerate 1 removed and
+      // never load it again.
+      yield call(syncAffectedAndLoadMissingMeshes, tracingId, [
+        { oldAgglomerateId: 1n, newAgglomerateId: 2001n, nodePosition: [1, 1, 1] },
+        { oldAgglomerateId: 1n, newAgglomerateId: 2002n, nodePosition: [1, 1, 1] },
+      ]);
+      yield meshTracker.consumeFinishedLoadingActions(3);
+
+      expect(sortBy([...getAllCurrentlyLoadedMeshIds(context, tracingId)])).toEqual([
+        1n,
+        2001n,
+        2002n,
+      ]);
+      yield* meshTracker.cleanUp();
     });
     await task.toPromise();
   });

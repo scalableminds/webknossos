@@ -88,13 +88,23 @@ type GroupForLOD = Group & {
   forEach: (callback: (el: SceneGroupForMeshes) => void) => void;
 };
 
+// The LOD groups of one (segment, layer) as [lod, group] pairs, with the record's string keys
+// turned back into numbers. Prefer this over forEachLodGroup whenever the loop body needs to
+// `return`, `break` or `continue` the *enclosing* function - a callback can only ever return from
+// itself, and forEachLodGroup discards what it returns.
+function lodGroupEntries<T>(
+  groupsByLod: Record<number, T> | null | undefined,
+): Array<[lod: number, group: T]> {
+  if (groupsByLod == null) return [];
+  return Object.entries(groupsByLod).map(([lodStr, group]) => [Number.parseInt(lodStr, 10), group]);
+}
+
 function forEachLodGroup<T>(
   groupsByLod: Record<number, T> | null | undefined,
   callback: (group: T, lod: number) => void,
 ): void {
-  if (groupsByLod == null) return;
-  for (const [lodStr, group] of Object.entries(groupsByLod)) {
-    callback(group, Number.parseInt(lodStr, 10));
+  for (const [lod, group] of lodGroupEntries(groupsByLod)) {
+    callback(group, lod);
   }
 }
 
@@ -341,10 +351,13 @@ export default class SegmentMeshController {
 
     const state = Store.getState();
     if (isNewlyAddedMesh) {
+      // The store entry is normally created before the geometry is added (see trySplitMeshLocally
+      // / the mesh loading sagas), but must not be assumed - a missing entry would otherwise throw
+      // here and abort the whole (partially applied) scene update.
       const isVisible =
         state.localSegmentationStateByLayer?.[layerName]?.meshes?.[additionalCoordinatesString]?.[
           segmentId.toString()
-        ].isVisible ?? true;
+        ]?.isVisible ?? true;
       this.setMeshVisibility(segmentId, isVisible, layerName, additionalCoordinates);
     }
 
@@ -502,8 +515,12 @@ export default class SegmentMeshController {
     const oldMeshGroups = this.getMeshGroups(additionalCoordKey, layerName, oldSegmentId);
     if (oldMeshGroups == null) return null;
 
+    // lodGroupEntries rather than forEachLodGroup, because hitting an untagged node has to abort
+    // *this* function - from a callback the `return null` below would only skip that one LOD and
+    // report the mesh as splittable anyway, so the splice would leave the untagged LOD's geometry
+    // behind on the old id and never hand it to the new ones.
     const nodesByLod: Array<{ lod: number; scale: ThreeVector3; nodes: MeshSceneNode[] }> = [];
-    forEachLodGroup(oldMeshGroups, (targetGroup, lod) => {
+    for (const [lod, targetGroup] of lodGroupEntries(oldMeshGroups)) {
       const nodes: MeshSceneNode[] = [];
       for (const chunkGroup of targetGroup.children as SceneGroupForMeshes[]) {
         for (const node of chunkGroup.children) {
@@ -514,7 +531,10 @@ export default class SegmentMeshController {
         }
       }
       nodesByLod.push({ lod, scale: targetGroup.scale.clone(), nodes });
-    });
+    }
+    // No geometry at all (e.g. every LOD group is empty) is not something that can be spliced
+    // either - an empty array would otherwise read as "splittable" to hasFullyMergedMesh.
+    if (nodesByLod.every(({ nodes }) => nodes.length === 0)) return null;
     return nodesByLod;
   }
 
@@ -528,6 +548,55 @@ export default class SegmentMeshController {
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): boolean {
     return this.collectSplittableNodesByLod(oldSegmentId, layerName, additionalCoordinates) != null;
+  }
+
+  /**
+   * Checks whether splitMeshByNewMapping would actually produce geometry for *every* new
+   * agglomerate id. splitMeshByNewMapping itself skips a (new id, node) pair whose supervoxels
+   * aren't present in that node, so without this check a new id whose supervoxels live in no
+   * loaded LOD at all would end up with a mesh entry in the store but nothing in the scene - the
+   * split-off part would simply disappear while the original survives.
+   *
+   * Callers must run this *before* mutating any store state, so a false result can still fall back
+   * to a full reload cleanly.
+   */
+  canSplitMeshByNewMapping(
+    oldSegmentId: bigint,
+    layerName: string,
+    newAgglomerateIdToSegmentIds: Map<bigint, Set<bigint>>,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): boolean {
+    const nodesByLod = this.collectSplittableNodesByLod(
+      oldSegmentId,
+      layerName,
+      additionalCoordinates,
+    );
+    if (nodesByLod == null) return false;
+
+    const newIdsWithGeometry = new Set<bigint>();
+    for (const { nodes } of nodesByLod) {
+      for (const node of nodes) {
+        const unmappedSegmentIds = node.geometry.vertexSegmentMapping?.unmappedSegmentIds;
+        if (unmappedSegmentIds == null) continue;
+        for (const [newAgglomerateId, segmentIdsToKeep] of newAgglomerateIdToSegmentIds) {
+          if (newIdsWithGeometry.has(newAgglomerateId)) continue;
+          if (unmappedSegmentIds.some((id) => segmentIdsToKeep.has(id))) {
+            newIdsWithGeometry.add(newAgglomerateId);
+          }
+        }
+      }
+    }
+
+    const missingIds = Array.from(newAgglomerateIdToSegmentIds.keys()).filter(
+      (newSegmentId) => !newIdsWithGeometry.has(newSegmentId),
+    );
+    if (missingIds.length > 0) {
+      console.warn(
+        `Cannot split mesh ${oldSegmentId} locally: no loaded geometry for new agglomerate id(s) ${missingIds.join(", ")}.`,
+      );
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -615,6 +684,18 @@ export default class SegmentMeshController {
       additionalCoordinates,
     );
     if (nodesByLodOfOriginalMesh == null) return false;
+    // Re-check before touching the scene graph, so a split that would drop one of the new ids
+    // bails out while everything is still in its original state (see canSplitMeshByNewMapping).
+    if (
+      !this.canSplitMeshByNewMapping(
+        oldSegmentId,
+        layerName,
+        newAgglomerateIdToSegmentIds,
+        additionalCoordinates,
+      )
+    ) {
+      return false;
+    }
 
     for (const { lod, scale, nodes } of nodesByLodOfOriginalMesh) {
       for (const [newSegmentId, keepIds] of newAgglomerateIdToSegmentIds) {
@@ -701,9 +782,7 @@ export default class SegmentMeshController {
 
     if (meshGroups == null) return null;
 
-    const bestLod = Math.min(
-      ...Object.keys(meshGroups).map((lodVal) => Number.parseInt(lodVal, 10)),
-    );
+    const bestLod = Math.min(...lodGroupEntries(meshGroups).map(([lod]) => lod));
 
     return this.getMeshGroupsByLOD(additionalCoordinates, layerName, segmentId, bestLod);
   }

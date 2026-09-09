@@ -6,7 +6,12 @@ import { all, call, put } from "typed-redux-saga";
 import type { AdditionalCoordinate } from "types/api_types";
 import Constants, { type Vector3 } from "viewer/constants";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { getMeshInfoForSegment, isMeshLoaded } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getMeshInfoForSegment,
+  getSegmentsForLayer,
+  isAgglomerateIdStillPresent,
+  isMeshLoaded,
+} from "viewer/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   removeMeshAction,
@@ -270,8 +275,8 @@ export function* reloadMeshes(
 ): Saga<void> {
   // Remember which meshes were removed in this saga
   // and which were fetched again to avoid doing redundant work.
-  const removedIds = new Set();
-  const newlyLoadedIds = new Set();
+  const removedIds = new Set<bigint>();
+  const newlyLoadedIds = new Set<bigint>();
   const meshLoadingEffects: Array<() => Saga<void>> = [];
   for (const item of itemsToReload) {
     // Opacity and visibility are either passed in explicitly (e.g. by the rebasing saga, which
@@ -311,12 +316,59 @@ export function* reloadMeshes(
       newlyLoadedIds.add(item.newAgglomerateId);
     }
   }
+
   // Do all mesh loadings in parallel for more speed.
   yield* call(
     processTaskWithPool,
     meshLoadingEffects,
     Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT,
   );
+}
+
+/*
+ * Adds a missing `old -> old` item for every agglomerate that outlives the batch, establishing the
+ * invariant the rest of this pipeline relies on: every still-existing agglomerate is the
+ * newAgglomerateId of at least one item. An id appearing only as an oldAgglomerateId is otherwise
+ * read as gone - it is left out of the split group's newIds (making a local split impossible) and
+ * its mesh is removed without ever being loaded again.
+ *
+ * Producers can violate the invariant: performPartitionedMinCut only names the agglomerates of
+ * partitionA[0] and partitionB[0], but a min cut can yield more fragments than that.
+ */
+function* completeItemsForSurvivingAgglomerates(
+  layerName: string,
+  items: AgglomerateChangeItem[],
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
+): Saga<AgglomerateChangeItem[]> {
+  const targetIds = new Set(items.map((item) => item.newAgglomerateId));
+  const oldIdsWithoutOwnItem = uniq(
+    items.map((item) => item.oldAgglomerateId).filter((id) => id != null),
+  ).filter((oldAgglomerateId) => !targetIds.has(oldAgglomerateId));
+  if (oldIdsWithoutOwnItem.length === 0) return items;
+
+  const additionalItems: AgglomerateChangeItem[] = [];
+  for (const oldAgglomerateId of oldIdsWithoutOwnItem) {
+    const isStillPresent = yield* select((state) =>
+      isAgglomerateIdStillPresent(state, layerName, oldAgglomerateId),
+    );
+    // Genuinely gone (a merge's absorbed id, or an agglomerate that was split up completely).
+    if (!isStillPresent) continue;
+    // Its own outgoing mesh is the fallback source for a seed position, since an agglomerate whose
+    // segment item hasn't arrived yet has no anchor position to offer.
+    const nodePosition = yield* select(
+      (state) =>
+        getSegmentsForLayer(state, layerName).getNullable(oldAgglomerateId)?.anchorPosition ??
+        getMeshInfoForSegment(state, additionalCoordinates ?? null, layerName, oldAgglomerateId)
+          ?.seedPosition,
+    );
+    if (nodePosition == null) continue;
+    additionalItems.push({
+      oldAgglomerateId,
+      newAgglomerateId: oldAgglomerateId,
+      nodePosition,
+    });
+  }
+  return additionalItems.length > 0 ? [...items, ...additionalItems] : items;
 }
 
 /*
@@ -328,9 +380,16 @@ export function* reloadMeshes(
  */
 export function* syncAffectedAndLoadMissingMeshes(
   layerName: string,
-  changeInfoItems: AgglomerateChangeItem[],
+  rawChangeInfoItems: AgglomerateChangeItem[],
 ): Saga<void> {
   const additionalCoordinates = undefined;
+
+  const changeInfoItems = yield* call(
+    completeItemsForSurvivingAgglomerates,
+    layerName,
+    rawChangeInfoItems,
+    additionalCoordinates,
+  );
 
   // Capture the opacity and visibility of all old meshes up front, i.e. before any of them are
   // removed below, so that reloaded meshes keep the user-chosen opacity and visibility. This must

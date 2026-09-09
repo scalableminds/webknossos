@@ -17,6 +17,7 @@ import type { Action } from "viewer/model/actions/actions";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   mergeMeshesAction,
+  removeMeshAction,
   splitMeshAction,
 } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
@@ -374,9 +375,22 @@ export function* trySplitMeshLocally(
   );
   if (newAgglomerateIdToSegmentIds == null) return false;
 
+  // hasFullyMergedMesh only says the mesh *can* be sliced at all; this additionally confirms that
+  // every new id will actually receive geometry. Without it, a new id whose supervoxels aren't in
+  // any loaded LOD would get a store entry from splitMeshAction but nothing in the scene - and the
+  // reload fallback below would then skip it, because loadCoarseMesh treats an existing store
+  // entry as "already loaded". That's the "the original survives, the split-off part is gone" case.
+  const canSplitLocally = segmentMeshController.canSplitMeshByNewMapping(
+    oldId,
+    layerName,
+    newAgglomerateIdToSegmentIds,
+    additionalCoordinates,
+  );
+  if (!canSplitLocally) return false;
+
   // Update Redux (and thus the new ids' isVisible, which addMeshFromGeometry reads when creating
-  // their target groups) before touching the scene graph - hasFullyMergedMesh already confirmed
-  // the split itself will succeed, so there's no window where Redux and the scene could end up
+  // their target groups) before touching the scene graph - the check above already confirmed the
+  // split itself will succeed, so there's no window where Redux and the scene could end up
   // inconsistent.
   yield* put(splitMeshAction(layerName, oldId, newIds, additionalCoordinates));
 
@@ -389,9 +403,13 @@ export function* trySplitMeshLocally(
     additionalCoordinates,
   );
   if (!succeeded) {
-    // Shouldn't happen given the hasFullyMergedMesh check above, but guard against drift between
-    // the two anyway rather than leaving Redux and the scene inconsistent.
-    console.error(`splitMeshByUnmappedSegmentIds unexpectedly failed for segment ${oldId}.`);
+    // Shouldn't happen given the checks above, but guard against drift between them anyway. The
+    // store entries splitMeshAction just created must be dropped again, otherwise the caller's
+    // reload fallback would consider all new ids already loaded and skip them.
+    console.error(`splitMeshByNewMapping unexpectedly failed for segment ${oldId}.`);
+    for (const newId of new Set([oldId, ...newIds])) {
+      yield* put(removeMeshAction(layerName, newId));
+    }
     return false;
   }
 

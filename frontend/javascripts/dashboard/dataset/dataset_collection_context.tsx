@@ -1,12 +1,17 @@
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
-import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/rest_api";
+import {
+  clearCache,
+  type DatasetUpdater,
+  getDataset,
+  getDatastores,
+  triggerDatasetCheck,
+} from "admin/rest_api";
 import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import last from "lodash-es/last";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
-  APIDataset,
   APIDatasetCompact,
   APIDatasetCompactWithoutStatusAndLayerNames,
   APIMaybeUnimportedDataset,
@@ -39,8 +44,11 @@ export type DatasetCollectionContextValue = {
   isChecking: boolean;
   checkDatasets: (organizationId: string | undefined) => Promise<void>;
   fetchDatasets: () => void;
-  reloadDataset: (datasetId: string, datasetsToUpdate?: Array<APIDatasetCompact>) => Promise<void>;
-  updateCachedDataset: (datasetId: string, updater: DatasetUpdater) => Promise<APIMaybeUnimportedDataset>;
+  clearCacheAndReloadDataset: (datasetId: string) => Promise<void>;
+  updateCachedDataset: (
+    datasetId: string,
+    updater: DatasetUpdater,
+  ) => Promise<APIMaybeUnimportedDataset>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
@@ -169,7 +177,9 @@ export default function DatasetCollectionContextProvider({
     datasetSearchQuery.refetch();
   }
 
-  async function reloadDataset(datasetId: string) {
+  async function clearCacheAndReloadDataset(datasetId: string) {
+    const dataset = await getDataset(datasetId);
+    await clearCache(dataset);
     await updateDatasetMutation.mutateAsync(datasetId);
   }
 
@@ -213,7 +223,7 @@ export default function DatasetCollectionContextProvider({
         datasetsInFolderQuery.isRefetching) || isMutating;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): omitted to maintain stability as underlying data dependencies are already tracked
-  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(clearCacheAndReloadDataset): omitted to maintain stability as underlying data dependencies are already tracked
   // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): omitted to maintain stability as underlying data dependencies are already tracked
   const value: DatasetCollectionContextValue = useMemo(
     () => ({
@@ -221,7 +231,7 @@ export default function DatasetCollectionContextProvider({
       datasets,
       isLoading,
       fetchDatasets,
-      reloadDataset,
+      clearCacheAndReloadDataset,
       updateCachedDataset,
       activeFolderId,
       setActiveFolderId,

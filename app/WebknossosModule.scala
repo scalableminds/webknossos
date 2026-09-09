@@ -17,7 +17,7 @@ import models.dataset.{
   VirtualDatasetsRealPathScanService
 }
 import models.job.{JobService, WorkerLivenessService}
-import models.organization.FreeCreditTransactionService
+import models.organization.{FreeCreditTransactionService, PricingPlanExpiryReminderService}
 import models.storage.UsedStorageService
 import models.task.TaskService
 import models.user.*
@@ -53,6 +53,7 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[AnnotationDataSourceTemporaryStore]).asEagerSingleton()
     bind(classOf[CertificateValidationService]).asEagerSingleton()
     bind(classOf[FreeCreditTransactionService]).asEagerSingleton()
+    bind(classOf[PricingPlanExpiryReminderService]).asEagerSingleton()
     bind(classOf[AnalyticsService]).asEagerSingleton()
     bind(classOf[AnnotationReservedIdsService]).asEagerSingleton()
     bind(classOf[DatasetDAOLike]).to(classOf[DatasetDAO])

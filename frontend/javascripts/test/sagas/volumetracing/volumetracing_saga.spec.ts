@@ -36,18 +36,20 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 
+const mockActionChannel = { take: () => {}, close: () => {} };
+
 const dummyActiveMapping: ActiveMappingInfo = {
   mappingName: "dummy-mapping-name",
   mapping: new Map(),
   mappingColors: [],
   hideUnmappedIds: false,
   mappingStatus: "ENABLED",
-  mappingType: "HDF5",
+  mappingType: "AGGLOMERATE",
 };
 
 const ensureMaybeMappingIsLockedReturnValueDummy = { isMappingLockedIfNeeded: true };
 
-const ACTIVE_CELL_ID = 5;
+const ACTIVE_CELL_ID = 5n;
 const setActiveCell = setActiveCellAction(ACTIVE_CELL_ID);
 const startEditing = startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
 const addToContourList = addToContourListAction;
@@ -92,7 +94,7 @@ describe("VolumeTracingSaga", () => {
         name: "updateActiveSegmentId",
         value: {
           actionTracingId: volumeTracing.tracingId,
-          activeSegmentId: 5,
+          activeSegmentId: 5n,
         },
       });
     });
@@ -184,7 +186,7 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
-    saga.next("action_channel");
+    saga.next(mockActionChannel);
     saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
     saga.next(addToContourList([2, 3, 4]));
@@ -238,7 +240,7 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
-    saga.next("action_channel");
+    saga.next(mockActionChannel);
     saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
     // Validate that finishLayer was called
@@ -303,7 +305,7 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
-    saga.next("action_channel");
+    saga.next(mockActionChannel);
     saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
     const wroteVoxelsBox = {

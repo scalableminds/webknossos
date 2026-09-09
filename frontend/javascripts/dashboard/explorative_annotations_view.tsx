@@ -30,8 +30,8 @@ import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import TextWithDescription from "components/text_with_description";
 import update from "immutability-helper";
+import { stringToTagColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
-import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import { compareBy, filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
@@ -509,7 +509,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
   renderNameWithDescription(annotation: APIAnnotationInfo) {
     return (
-      <div style={{ color: annotation.name ? "inherit" : "#7c7c7c" }}>
+      <div style={{ color: annotation.name ? "inherit" : "var(--ant-color-text-secondary)" }}>
         <TextWithDescription
           isEditable={this.isAnnotationEditable(annotation)}
           value={annotation.name ? annotation.name : "Unnamed Annotation"}
@@ -536,7 +536,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       if (!this.props.isAdminView && owner.id === this.props.activeUser.id) {
         return (
           <span>
-            {formatUserName(owner)} <span style={{ color: "#7c7c7c" }}>(you)</span>
+            {formatUserName(owner)}{" "}
+            <span style={{ color: "var(--ant-color-text-secondary)" }}>(you)</span>
           </span>
         );
       }
@@ -624,7 +625,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         render: (owner: APIUser | null, annotation: APIAnnotationInfo) => {
           const ownerName = owner != null ? renderOwner(owner) : null;
           const teamTags = annotation.teams.map((t) => (
-            <Tag key={t.id} color={stringToColor(t.name)} variant="outlined">
+            <Tag key={t.id} color={stringToTagColor(t.name)} variant="outlined">
               {t.name}
             </Tag>
           ));

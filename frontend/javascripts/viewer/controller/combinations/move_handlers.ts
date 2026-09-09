@@ -46,6 +46,7 @@ export const moveW = (
   deltaW: number,
   oneSlide: boolean,
   useDynamicSpaceDirection: boolean = false,
+  clampToDatasetBounds: boolean = false,
 ): void => {
   const state = Store.getState();
   if (is2dDataset(state.dataset)) {
@@ -69,6 +70,7 @@ export const moveW = (
         Dimensions.transDim([0, 0, Math.sign(deltaW) * Math.max(1, wStep)], activeViewport),
         activeViewport,
         useDynamicSpaceDirection,
+        clampToDatasetBounds,
       ),
     );
   } else {

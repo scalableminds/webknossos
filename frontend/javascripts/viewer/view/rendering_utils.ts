@@ -16,6 +16,7 @@ import constants, {
   OrthoViewColors,
   OrthoViews,
   OrthoViewValues,
+  TDViewPerspectiveCameraName,
 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";
@@ -24,6 +25,13 @@ import Store from "viewer/store";
 
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
+
+// Shared with PlaneView.getActiveTDViewCamera so both places agree on which
+// camera is actually active for the TD viewport.
+export const getActiveTDViewCameraName = (
+  tdViewUsePerspectiveCamera: boolean,
+): OrthoView | typeof TDViewPerspectiveCameraName =>
+  tdViewUsePerspectiveCamera ? TDViewPerspectiveCameraName : OrthoViews.TDView;
 
 export const setupRenderArea = (
   renderer: WebGLRenderer,
@@ -62,7 +70,13 @@ export function renderToTexture(
   const { renderer, scene: defaultScene } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
-  camera = (camera || scene.getObjectByName(plane)) as OrthographicCamera | PerspectiveCamera;
+  if (camera == null) {
+    const cameraName =
+      plane === OrthoViews.TDView
+        ? getActiveTDViewCameraName(state.userConfiguration.tdViewUsePerspectiveCamera)
+        : plane;
+    camera = scene.getObjectByName(cameraName) as OrthographicCamera | PerspectiveCamera;
+  }
 
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
   // nodes there.

@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import mail.{DefaultMails, Send}
 
@@ -19,7 +19,7 @@ import models.organization.{
   PricingPlan
 }
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
-import play.api.libs.json.{JsNull, Json, OFormat}
+import play.api.libs.json.{JsNull, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.WkConf
 
@@ -28,10 +28,7 @@ import security.{WkEnv, WkSilhouetteEnvironment}
 
 import scala.concurrent.ExecutionContext
 
-case class OrganizationParameters(name: String, newUserMailingList: String)
-object OrganizationParameters {
-  implicit val jsonFormat: OFormat[OrganizationParameters] = Json.format[OrganizationParameters]
-}
+case class OrganizationParameters(name: String, newUserMailingList: String) derives JsonAutoFormat
 
 class OrganizationController @Inject() (
     organizationDAO: OrganizationDAO,
@@ -76,9 +73,7 @@ class OrganizationController @Inject() (
   }
 
   case class OrganizationCreationParameters(organization: Option[String], organizationName: String, ownerEmail: String)
-  object OrganizationCreationParameters {
-    implicit val jsonFormat: OFormat[OrganizationCreationParameters] = Json.format[OrganizationCreationParameters]
-  }
+      derives JsonAutoFormat
   def create: Action[OrganizationCreationParameters] =
     sil.SecuredAction.fox(validateJson[OrganizationCreationParameters]) { implicit request =>
       for {
@@ -331,6 +326,11 @@ class OrganizationController @Inject() (
         ) ~> NOT_FOUND
         _ <- organizationDAO.insertPlanUpdate(organization._id, request.body)
         _ <- organizationDAO.updatePlan(organization._id, request.body)
+        // Note that this logs its failures rather than propagating them, as the plan update above has
+        // already been persisted at this point.
+        _ <- Fox.runOptional(request.body.pricingPlan)(newPricingPlan =>
+          organizationService.sendPricingPlanUpgradeMails(organization, organization.pricingPlan, newPricingPlan)
+        )
       } yield Ok
     }
 

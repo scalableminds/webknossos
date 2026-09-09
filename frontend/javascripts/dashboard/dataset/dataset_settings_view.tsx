@@ -8,7 +8,7 @@ import {
   SettingOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { Alert, Breadcrumb, Button, Form, Layout, Menu, Space, Tooltip } from "antd";
+import { Alert, Breadcrumb, Button, Form, Layout, Menu, Space, Tooltip, Typography } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import { useDatasetSettingsContext } from "dashboard/dataset/dataset_settings_context";
 import features from "features";
@@ -118,11 +118,9 @@ const DatasetSettingsView: React.FC = () => {
     isEditingMode || (dataset != null && dataset.dataSource.status == null) ? "Save" : "Import";
   const errorIcon = (
     <Tooltip title="Some fields in this tab require your attention.">
-      <ExclamationCircleOutlined
-        style={{
-          color: "var(--ant-color-error)",
-        }}
-      />
+      <Typography.Text type="danger">
+        <ExclamationCircleOutlined />
+      </Typography.Text>
     </Tooltip>
   );
 

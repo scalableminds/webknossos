@@ -37,6 +37,10 @@ class AboutPageRedirectController @Inject() (
       val status = if (request.uri == "/") SEE_OTHER else MOVED_PERMANENTLY
       Fox.successful(Redirect(conf.AboutPageRedirect.prefix + request.uri, status = status))
     } else {
+      // The main view references the content-hashed asset URLs of the current build, which are deleted
+      // as soon as a new version is deployed. "no-cache" (the fallback in ExtendedController) would still
+      // let the browser replay a stored copy without revalidating (history navigation, session/tab
+      // restore), making it request assets that no longer exist. "no-store" prevents that.
       for {
         multiUserOpt <- Fox.runOptional(request.identity)(user =>
           multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
@@ -51,7 +55,7 @@ class AboutPageRedirectController @Inject() (
           multiUserOpt,
           openGraphTags
         ).toFox ?~> "Could not render main view template"
-      } yield addCspHeader(Ok(mainView).as("text/html"))
+      } yield addCspHeader(Ok(mainView).as("text/html").withHeaders(CACHE_CONTROL -> "no-store"))
     }
   }
 

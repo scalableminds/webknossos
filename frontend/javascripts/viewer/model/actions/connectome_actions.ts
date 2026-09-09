@@ -92,7 +92,7 @@ export const updateCurrentConnectomeFileAction = (
 
 export const setActiveConnectomeAgglomerateIdsAction = (
   layerName: string,
-  agglomerateIds: Array<number>,
+  agglomerateIds: Array<bigint>,
 ) =>
   ({
     type: "SET_ACTIVE_CONNECTOME_AGGLOMERATE_IDS",
@@ -103,7 +103,7 @@ export const setActiveConnectomeAgglomerateIdsAction = (
 export const loadConnectomeAgglomerateTreeAction = (
   layerName: string,
   mappingName: string,
-  agglomerateId: number,
+  agglomerateId: bigint,
 ) =>
   ({
     type: "LOAD_CONNECTOME_AGGLOMERATE_TREE",
@@ -115,7 +115,7 @@ export const loadConnectomeAgglomerateTreeAction = (
 export const removeConnectomeAgglomerateTreeAction = (
   layerName: string,
   mappingName: string,
-  agglomerateId: number,
+  agglomerateId: bigint,
 ) =>
   ({
     type: "REMOVE_CONNECTOME_AGGLOMERATE_TREE",

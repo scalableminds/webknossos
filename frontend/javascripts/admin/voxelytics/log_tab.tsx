@@ -175,13 +175,12 @@ export default function LogTab({
           Refresh
         </Button>
         <Button onClick={downloadFullLog}>Download</Button>
-        <Select onChange={(value) => setLevel(value)} value={level} style={{ marginLeft: -1 }}>
-          {Object.values(LOG_LEVELS).map((_level) => (
-            <Select.Option value={_level} key={_level}>
-              {_level}
-            </Select.Option>
-          ))}
-        </Select>
+        <Select
+          onChange={(value) => setLevel(value)}
+          value={level}
+          style={{ marginLeft: -1 }}
+          options={Object.values(LOG_LEVELS).map((_level) => ({ value: _level, label: _level }))}
+        />
       </Flex>
       {logText.length >= LOG_LINE_LIMIT && (
         <p className="log-tab-warning">

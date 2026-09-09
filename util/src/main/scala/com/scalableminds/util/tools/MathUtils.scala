@@ -36,4 +36,7 @@ object MathUtils {
     sign * (num.abs + divisor.abs - 1) / divisor.abs
   }
 
+  def maxUnsigned(a: Long, b: Long): Long = if (java.lang.Long.compareUnsigned(a, b) >= 0) a else b
+  def minUnsigned(a: Long, b: Long): Long = if (java.lang.Long.compareUnsigned(a, b) <= 0) a else b
+
 }

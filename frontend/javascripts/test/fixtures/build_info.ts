@@ -9,7 +9,6 @@ export const buildInfo: APIBuildInfoWk = {
     scalaVersion: "2.12.15",
     version: "23138",
     sbtVersion: "1.6.2",
-    datastoreApiVersion: "2.0",
     commitDate: "Tue May 23 10:24:41 2023 +0200",
   },
   "webknossos-wrap": {

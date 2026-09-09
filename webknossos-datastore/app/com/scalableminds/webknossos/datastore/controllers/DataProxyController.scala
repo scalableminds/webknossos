@@ -4,9 +4,10 @@ import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, Encoding}
 import com.scalableminds.webknossos.datastore.datavault.Encoding.Encoding
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -46,6 +47,30 @@ class DataProxyController @Inject() (
           (bytes, encoding, rangeHeader) <- requestedPath.readBytesEncodingAndRangeHeader(byteRange)
           headers = buildResponseHeaders(encoding, rangeHeader)
         } yield resultWithStatus(byteRange.successResponseCode, bytes).withHeaders(headers*)
+      }
+    }
+
+  // Readers of neuroglancerPrecomputed mags also request the info header at the *parent* path of each mag.
+  // We have to serve a valid info header at this path.
+  def proxyPrecomputedInfo(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
+    Action.fox { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+        for {
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Layer
+            .notFound(dataLayerName) ~> NOT_FOUND
+          magLocator <- dataLayer.mags.headOption.toFox ?~> Msg.Dataset.Layer.zeroMags(dataLayerName) ~> NOT_FOUND
+          magPath <- dataVaultService.vaultPathFor(magLocator)
+          requestedPath = magPath.parent / PrecomputedHeader.FILENAME_INFO
+          bytes <- requestedPath.readBytes()
+          rootHeader <- JsonHelper.parseAs[PrecomputedHeader](bytes).toFox ?~> "Could not parse array header"
+          rootHeaderAdapted = rootHeader.copy(scales = rootHeader.scales.flatMap { scale =>
+            val matchingMagOpt = dataLayer.mags.find(_.path.exists(_.basename == scale.key))
+            matchingMagOpt match {
+              case Some(matchingMag) => Some(scale.copy(key = matchingMag.mag.toMagLiteral(allowScalar = true)))
+              case None              => None
+            }
+          })
+        } yield Ok(Json.toJson(rootHeaderAdapted))
       }
     }
 

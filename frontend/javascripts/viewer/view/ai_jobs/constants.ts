@@ -21,6 +21,19 @@ export const jobNameToImagePath = {
   infer_with_model: "",
 } as const;
 
+// Jobs that store their results in the organization’s WEBKNOSSOS storage. The backend refuses to
+// start these while the organization’s storage quota is exceeded. Keep in sync with
+// JobCommand.jobsWritingToStorage in the backend.
+export const JOB_COMMANDS_WRITING_TO_STORAGE: ReadonlySet<APIJobCommand> = new Set([
+  APIJobCommand.ALIGN_SECTIONS,
+  APIJobCommand.COMPUTE_MESH_FILE,
+  APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
+  APIJobCommand.INFER_INSTANCES,
+  APIJobCommand.INFER_MITOCHONDRIA,
+  APIJobCommand.INFER_NEURONS,
+  APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION,
+]);
+
 // The following minimal bounding box extents are based on the default model that is used for neuron and mitochondria segmentation.
 // Thus when changing the default model, consider changing these values as well.
 // See https://github.com/scalableminds/webknossos/issues/8198#issuecomment-2782684436

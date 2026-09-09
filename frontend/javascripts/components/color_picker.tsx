@@ -1,56 +1,97 @@
-import { InputNumber, Popover } from "antd";
+import { ColorPicker } from "antd";
+import type { Color } from "antd/es/color-picker";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
-import { hexToRgb, map3, rgbToHex } from "libs/utils";
-import type { CSSProperties, ReactElement } from "react";
-import { useEffect, useRef, useState } from "react";
-import { HexColorInput, HexColorPicker, type RgbaColor, RgbaColorPicker } from "react-colorful";
+import { map3 } from "libs/utils";
+import type { CSSProperties, ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Vector3, Vector4 } from "viewer/constants";
 
-const COLOR_PICKER_WIDTH = 200;
-const RELATIVE_OPACITY_INPUT_WIDTH = 0.25;
+type RgbaColor = { r: number; g: number; b: number; a: number };
 
-const getPopover = (title: string, content: ReactElement | null) => {
-  return (
-    <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>
-      <div style={{ position: "relative", display: "inline-block", width: "100%" }}>{title}</div>
-    </Popover>
-  );
+// The channels need to be rounded because antd cannot handle fractional rgb values.
+const toCssColor = ({ r, g, b, a }: RgbaColor) =>
+  `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`;
+
+// The pickers are usually rendered as the label of a context menu item, so the
+// popup needs to be placed on top of that menu.
+const pickerStyles = { popup: { root: { zIndex: 10000 } } };
+
+const triggerStyle: CSSProperties = {
+  position: "relative",
+  display: "inline-block",
+  width: "100%",
 };
 
-const inputStyle: CSSProperties = {
-  background: "var(--ant-component-background)",
-  textAlign: "center",
-  marginTop: 12,
-  color: "var(--ant-color-text)",
-  borderRadius: 4,
-  border: "1px solid var(--ant-border-radius)",
+const descriptionStyle: CSSProperties = {
+  wordBreak: "break-word",
+  fontSize: 12,
+  lineHeight: 1.2,
+  marginTop: 8,
 };
 
-// If adjusting this component, also consider adjusting the ThrottledRGBAColorPicker component
 const ThrottledColorPicker = ({
   color,
-  onChange,
+  onChangeColor,
+  title,
+  isDisabled,
+  disabledAlpha,
+  description,
 }: {
-  color: string;
-  onChange: (color: string) => void;
+  color: RgbaColor;
+  onChangeColor: (color: RgbaColor) => void;
+  title: string;
+  isDisabled?: boolean;
+  disabledAlpha?: boolean;
+  description?: ReactNode;
 }) => {
   const [value, localSetValue] = useState(color);
-  const throttledSetValue = useThrottledCallback(onChange, [onChange], 20);
+  // The call sites pass inline callbacks, so onChangeColor has a new identity on every
+  // render. Routing it through a ref keeps the throttled function stable - otherwise it
+  // would be re-created on each render and its 20ms window would never take effect.
+  const onChangeColorRef = useRef(onChangeColor);
+  onChangeColorRef.current = onChangeColor;
+  const callLatestOnChangeColor = useCallback(
+    (newColor: RgbaColor) => onChangeColorRef.current(newColor),
+    [],
+  );
+  const throttledSetValue = useThrottledCallback(
+    callLatestOnChangeColor,
+    [callLatestOnChangeColor],
+    20,
+  );
 
-  // Sync local state when external color prop changes
+  // Sync local state when the external color changes. The individual components are
+  // used as dependencies because the color object is re-created on each render.
   useEffect(() => {
-    localSetValue(color);
-  }, [color]);
+    localSetValue({ r: color.r, g: color.g, b: color.b, a: color.a });
+  }, [color.r, color.g, color.b, color.a]);
 
-  const setValue = (newValue: string) => {
+  const setValue = (newColor: Color) => {
+    const newValue = newColor.toRgb();
     localSetValue(newValue);
     throttledSetValue(newValue);
   };
+
   return (
-    <div style={{ marginRight: 10 }}>
-      <HexColorPicker color={value} onChange={setValue} />
-      <HexColorInput color={value} onChange={setValue} style={inputStyle} />
-    </div>
+    <ColorPicker
+      value={toCssColor(value)}
+      onChange={setValue}
+      disabled={isDisabled}
+      disabledAlpha={disabledAlpha}
+      styles={pickerStyles}
+      panelRender={
+        description == null
+          ? undefined
+          : (panel) => (
+              <>
+                {panel}
+                <div style={descriptionStyle}>{description}</div>
+              </>
+            )
+      }
+    >
+      <div style={triggerStyle}>{title}</div>
+    </ColorPicker>
   );
 };
 
@@ -66,13 +107,12 @@ export function ChangeColorMenuItemContent({
   rgb: Vector3;
 }) {
   const isFirstColorChange = useRef(true);
-  const color = rgbToHex(map3((value) => value * 255, rgb));
-  const onChangeColor = (colorStr: string) => {
+  const [r, g, b] = map3((value) => value * 255, rgb);
+  const onChangeColor = (color: RgbaColor) => {
     if (isDisabled) {
       return;
     }
-    const colorRgb = hexToRgb(colorStr);
-    const newColor = map3((component) => component / 255, colorRgb);
+    const newColor = map3((component) => component / 255, [color.r, color.g, color.b]);
 
     // Only create a new undo state on the first color change event.
     // All following color change events should mutate the most recent undo
@@ -81,78 +121,16 @@ export function ChangeColorMenuItemContent({
     isFirstColorChange.current = false;
   };
 
-  const content = isDisabled ? null : (
-    <ThrottledColorPicker color={color} onChange={onChangeColor} />
-  );
-  return getPopover(title, content);
-}
-
-const ThrottledRGBAColorPicker = ({
-  color,
-  onChangeColor,
-}: {
-  color: RgbaColor;
-  onChangeColor: (color: RgbaColor) => void;
-}) => {
-  const [value, localSetValue] = useState(color);
-  const throttledSetValue = useThrottledCallback(onChangeColor, [onChangeColor, value], 20);
-
-  // Sync local state when external color prop changes
-  useEffect(() => {
-    localSetValue(color);
-  }, [color]);
-
-  const setValue = (newValue: RgbaColor) => {
-    localSetValue(newValue);
-    throttledSetValue(newValue);
-  };
-  const setValueFromHex = (color: string) => {
-    const colorRgb = hexToRgb(color);
-    setValue({ r: colorRgb[0], g: colorRgb[1], b: colorRgb[2], a: value.a });
-  };
-
-  const getInfoText = () => {
-    return (
-      <div style={{ wordBreak: "break-word", fontSize: 12, lineHeight: 1, marginTop: 8 }}>
-        Note that the opacity will only affect the mesh in the 3D viewport.
-      </div>
-    );
-  };
-
-  const getOpacityInput = () => {
-    return (
-      <InputNumber
-        style={{ width: COLOR_PICKER_WIDTH * RELATIVE_OPACITY_INPUT_WIDTH, ...inputStyle }}
-        size="small"
-        variant="borderless"
-        type="number"
-        min={0}
-        max={1}
-        step={0.1}
-        value={value.a}
-        onChange={(newOpacity) => {
-          setValue({ r: value.r, g: value.g, b: value.b, a: newOpacity || 0 });
-        }}
-      />
-    );
-  };
-  const valueAsHex = rgbToHex([value.r, value.g, value.b]);
-  const hexInputWidth = COLOR_PICKER_WIDTH * (1 - RELATIVE_OPACITY_INPUT_WIDTH);
   return (
-    <div style={{ marginRight: 10, width: COLOR_PICKER_WIDTH }}>
-      <RgbaColorPicker color={value} onChange={setValue} style={{ width: "100%" }} />
-      <div>
-        <HexColorInput
-          color={valueAsHex}
-          onChange={setValueFromHex}
-          style={{ width: hexInputWidth, ...inputStyle }}
-        />
-        {getOpacityInput()}
-      </div>
-      {getInfoText()}
-    </div>
+    <ThrottledColorPicker
+      title={title}
+      color={{ r, g, b, a: 1 }}
+      onChangeColor={onChangeColor}
+      isDisabled={isDisabled}
+      disabledAlpha
+    />
   );
-};
+}
 
 export function ChangeRGBAColorMenuItemContent({
   title,
@@ -171,8 +149,10 @@ export function ChangeRGBAColorMenuItemContent({
     a: rgba[3],
   };
   const onChangeColor = (color: RgbaColor) => {
-    const colorRgb: Vector3 = [color.r, color.g, color.b];
-    const newColor: Vector4 = [...map3((component) => component / 255, colorRgb), color.a];
+    const newColor: Vector4 = [
+      ...map3((component) => component / 255, [color.r, color.g, color.b]),
+      color.a,
+    ];
 
     // Only create a new undo state on the first color change event.
     // All following color change events should mutate the most recent undo
@@ -181,7 +161,12 @@ export function ChangeRGBAColorMenuItemContent({
     isFirstColorChange.current = false;
   };
 
-  const content = <ThrottledRGBAColorPicker color={color} onChangeColor={onChangeColor} />;
-
-  return getPopover(title, content);
+  return (
+    <ThrottledColorPicker
+      title={title}
+      color={color}
+      onChangeColor={onChangeColor}
+      description="Note that the opacity will only affect the mesh in the 3D viewport."
+    />
+  );
 }

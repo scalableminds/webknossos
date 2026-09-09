@@ -62,7 +62,7 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
             style={{
               marginTop: 16,
             }}
-            tip={`${Math.round(progress)} %`}
+            description={`${Math.round(progress)} %`}
           />
         </Flex>
       ) : null}

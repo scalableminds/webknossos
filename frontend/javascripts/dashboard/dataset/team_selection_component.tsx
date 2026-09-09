@@ -8,10 +8,8 @@ import { isUserAdminOrManager } from "libs/utils";
 import compact from "lodash-es/compact";
 import unionBy from "lodash-es/unionBy";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { APITeam } from "types/api_types";
-
-const { Option } = Select;
 
 type TeamSelectionComponentProps = {
   value?: APITeam | Array<APITeam>;
@@ -71,6 +69,16 @@ function TeamSelectionComponent({
     return unionBy(possibleTeams, selectedTeams, (t) => t.id);
   }, [possibleTeams, selectedTeams]);
 
+  const teamOptions = useMemo(
+    () =>
+      getAllTeams().map((team) => ({
+        value: team.id,
+        label: team.name,
+        disabled: possibleTeams.find((t) => t.id === team.id) == null,
+      })),
+    [getAllTeams, possibleTeams],
+  );
+
   const onSelectTeams = (selectedTeamIdsOrId: string | Array<string>) => {
     const selectedTeamIds = Array.isArray(selectedTeamIdsOrId)
       ? selectedTeamIdsOrId
@@ -100,7 +108,7 @@ function TeamSelectionComponent({
         mode={mode}
         style={{ width: "100%" }}
         placeholder={mode && mode === "multiple" ? "Select Teams" : "Select a Team"}
-        showSearch={{ optionFilterProp: "children", filterOption: true }}
+        showSearch={{ optionFilterProp: "label", filterOption: true }}
         onChange={onSelectTeams}
         value={selectedTeams.map((t) => t.id)}
         disabled={disabled ?? false}
@@ -136,13 +144,8 @@ function TeamSelectionComponent({
               )
             : undefined
         }
-      >
-        {getAllTeams().map((team) => (
-          <Option disabled={possibleTeams.find((t) => t.id === team.id) == null} key={team.id}>
-            {team.name}
-          </Option>
-        ))}
-      </Select>
+        options={teamOptions}
+      />
       {canCreateTeams && (
         <CreateTeamModalView
           isOpen={isCreateTeamModalOpen}

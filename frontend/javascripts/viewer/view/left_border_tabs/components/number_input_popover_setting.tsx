@@ -1,25 +1,37 @@
 import { EditOutlined } from "@ant-design/icons";
 import { InputNumber, Popover, type PopoverProps } from "antd";
 
-type NumberInputPopoverSettingProps = {
-  onChange: (value: number) => void;
-  value: number | null | undefined;
+type NumberInputPopoverSettingProps<T extends number | bigint> = {
+  onChange: (value: T) => void;
+  value: T | null | undefined;
   label: string | React.ReactNode;
   detailedLabel: string | React.ReactNode;
   placement?: PopoverProps["placement"];
-  max?: number;
-  min?: number;
+  max?: T;
+  min?: T;
   step?: number;
 };
 
-export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps) {
+export function NumberInputPopoverSetting<T extends number | bigint>(
+  props: NumberInputPopoverSettingProps<T>,
+) {
   const { min, max, onChange, step, value, label, detailedLabel } = props;
   const placement: PopoverProps["placement"] = props.placement || "top";
-  const onChangeGuarded = (val: number | null) => {
-    if (val != null) {
-      onChange(val);
+  // Detect whether we operate on bigint (uint64 segment ids). In that case the input uses antd's
+  // high-precision stringMode instead of JS numbers, which would truncate ids above 2**53.
+  const isBigInt = typeof value === "bigint" || typeof min === "bigint" || typeof max === "bigint";
+
+  const onChangeGuarded = (val: string | null) => {
+    if (val == null || val === "") {
+      return;
+    }
+    try {
+      onChange((isBigInt ? BigInt(val) : Number(val)) as T);
+    } catch {
+      // Ignore intermediate, non-integer input (e.g. while the user is still typing).
     }
   };
+
   const numberInput = (
     <div>
       <div
@@ -29,15 +41,17 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
       >
         {detailedLabel}:
       </div>
-      <InputNumber
+      <InputNumber<string>
         controls={false}
         style={{
           width: 140,
         }}
-        min={min}
-        max={max}
+        stringMode
+        precision={0}
+        min={min != null ? min.toString() : undefined}
+        max={max != null ? max.toString() : undefined}
         onChange={onChangeGuarded}
-        value={value}
+        value={value != null ? value.toString() : null}
         step={step}
         size="small"
         variant="borderless"
@@ -51,7 +65,7 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
           cursor: "pointer",
         }}
       >
-        {label} {value != null ? value : "-"}
+        {label} {value != null ? value.toString() : "-"}
         <EditOutlined
           style={{
             fontSize: 11,

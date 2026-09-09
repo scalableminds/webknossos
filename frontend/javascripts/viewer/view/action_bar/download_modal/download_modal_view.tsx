@@ -17,7 +17,7 @@ type Props = {
   initialBoundingBoxId?: number;
 };
 
-function _DownloadModalView({
+function DownloadModalViewInner({
   isOpen,
   onClose,
   isAnnotation,
@@ -73,5 +73,5 @@ function _DownloadModalView({
   );
 }
 
-const DownloadModalView = makeComponentLazy(_DownloadModalView);
+const DownloadModalView = makeComponentLazy(DownloadModalViewInner);
 export default DownloadModalView;

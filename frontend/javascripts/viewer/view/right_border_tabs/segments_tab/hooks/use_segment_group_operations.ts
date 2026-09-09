@@ -31,7 +31,7 @@ export type SegmentGroupOperations = {
   requestGroupDeletion: (groupId: number) => void;
   confirmGroupDeletion: (deleteChildren: boolean) => void;
   cancelGroupDeletion: () => void;
-  moveSegmentsToGroup: (segmentIds: number[], targetGroupId: number | null | undefined) => void;
+  moveSegmentsToGroup: (segmentIds: bigint[], targetGroupId: number | null | undefined) => void;
   moveGroupToGroup: (groupId: number, targetGroupId: number | null | undefined) => void;
   // Resolves all segments of a group and its subgroups (all segments for the root group).
   getSegmentsOfGroupRecursively: (groupId: number) => Segment[];
@@ -115,7 +115,7 @@ export function useSegmentGroupOperations(): SegmentGroupOperations {
   }, []);
 
   const moveSegmentsToGroup = useCallback(
-    (segmentIds: number[], targetGroupId: number | null | undefined) => {
+    (segmentIds: bigint[], targetGroupId: number | null | undefined) => {
       if (visibleSegmentationLayer == null || segmentIds.length === 0) {
         return;
       }

@@ -44,7 +44,7 @@ export function CheckTermsOfServices() {
   useEffect(() => {
     // Show ToS modal when the acceptance is needed and it wasn't snoozed
     // (unless the deadline is exceeded).
-    if (!acceptanceInfo || !acceptanceInfo.acceptanceNeeded) {
+    if (!acceptanceInfo?.acceptanceNeeded) {
       return;
     }
     if (acceptanceInfo.acceptanceNeeded && acceptanceInfo.acceptanceDeadlinePassed) {

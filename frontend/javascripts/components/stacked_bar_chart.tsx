@@ -1,9 +1,11 @@
 import sum from "lodash-es/sum";
 
+// Semantic status colors. Using the antd tokens instead of literals keeps the bars legible in
+// the dark theme, where antd darkens/desaturates these hues.
 export const colors = {
-  finished: "#52c41a",
-  active: "#1890ff",
-  open: "rgb(255, 85, 0)",
+  finished: "var(--ant-color-success)",
+  active: "var(--ant-color-info)",
+  open: "var(--ant-color-warning)",
 };
 const indexToType = ["finished", "active", "open"];
 
@@ -38,7 +40,8 @@ export default function StackedBarChart({ a, b, c }: { a: number; b: number; c: 
               background: colors[type],
               minWidth: `${renderedPercentages[index]}%`,
               display: percentages[index] === 0 ? "none" : "inline-block",
-              color: "#ffffff",
+              // Text sits on a solid, saturated bar in both themes.
+              color: "var(--ant-color-text-light-solid)",
             }}
           >
             {number.toLocaleString()}

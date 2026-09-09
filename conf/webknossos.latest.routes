@@ -88,7 +88,7 @@ GET           /teams/:id/projectProgressReport                                  
 # Datasets
 POST          /datasets/:datasetId/createExplorational                                          controllers.AnnotationController.createExplorational(datasetId: ObjectId)
 GET           /datasets/:datasetId/sandbox/:typ                                                 controllers.AnnotationController.getSandbox(datasetId: ObjectId, typ: String, sharingToken: Option[String])
-GET           /datasets                                                                         controllers.DatasetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
+GET           /datasets                                                                         controllers.DatasetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int])
 POST          /datasets/exploreRemote                                                           controllers.DatasetController.exploreRemoteDataset()
 POST          /datasets/exploreAndAddRemote                                                     controllers.DatasetController.exploreAndAddRemoteDataset()
 POST          /datasets/addVirtualDataset/:name                                                 controllers.DatasetController.addVirtualDataset(name: String)
@@ -338,11 +338,6 @@ GET           /publications/:id                                                 
 # Shortlinks
 POST          /shortLinks                                                                       controllers.ShortLinkController.create()
 GET           /shortLinks/byKey/:key                                                            controllers.ShortLinkController.getByKey(key: String)
-
-# Remote Dataset Credentials
-POST          /credentials/httpBasicAuth                                                        controllers.CredentialController.createHttpBasicAuthCredential()
-POST          /credentials/s3AccessKey                                                          controllers.CredentialController.createS3AccessKeyCredential()
-POST          /credentials/googleServiceAccount                                                 controllers.CredentialController.createGoogleServiceAccountCredential()
 
 # Email verification
 POST          /verifyEmail/:key                                                                 controllers.EmailVerificationController.verify(key: String)

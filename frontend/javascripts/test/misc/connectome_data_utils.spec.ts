@@ -28,23 +28,21 @@ const connectomeFileBWithMappingA: APIConnectomeFile = {
   mappingName: "mapping_a",
 };
 
-const inSynapse = (id: number, src: number): Synapse =>
-  ({
-    id,
-    src,
-    dst: undefined,
-    position: [0, 0, 0],
-    type: "synaptic",
-  }) as unknown as Synapse;
+const inSynapse = (id: number, src: bigint): Synapse => ({
+  id,
+  src,
+  dst: undefined,
+  position: [0, 0, 0],
+  type: "synaptic",
+});
 
-const outSynapse = (id: number, dst: number): Synapse =>
-  ({
-    id,
-    src: undefined,
-    dst,
-    position: [0, 0, 0],
-    type: "synaptic",
-  }) as unknown as Synapse;
+const outSynapse = (id: number, dst: bigint): Synapse => ({
+  id,
+  src: undefined,
+  dst,
+  position: [0, 0, 0],
+  type: "synaptic",
+});
 
 // Agglomerate 10 has incoming synapses 1 (from 20) and 2 (from 21),
 // and outgoing synapse 3 (to 22).
@@ -56,9 +54,9 @@ const connectomeData: ConnectomeData = {
     },
   },
   synapses: {
-    1: inSynapse(1, 20),
-    2: inSynapse(2, 21),
-    3: outSynapse(3, 22),
+    1: inSynapse(1, 20n),
+    2: inSynapse(2, 21n),
+    3: outSynapse(3, 22n),
   },
   connectomeFile: connectomeFileA,
 };
@@ -97,11 +95,11 @@ describe("getSynapseIdsFromConnectomeData", () => {
 
 describe("getAgglomerateIdsFromConnectomeData", () => {
   it("returns the top-level agglomerates and all synaptic partners", () => {
-    expect(getAgglomerateIdsFromConnectomeData(connectomeData)).toEqual([10, 20, 21, 22]);
+    expect(getAgglomerateIdsFromConnectomeData(connectomeData)).toEqual([10n, 20n, 21n, 22n]);
   });
 
   it("omits partners whose synapses were filtered out", () => {
-    expect(getAgglomerateIdsFromConnectomeData(filteredConnectomeData)).toEqual([10, 20, 22]);
+    expect(getAgglomerateIdsFromConnectomeData(filteredConnectomeData)).toEqual([10n, 20n, 22n]);
   });
 });
 
@@ -109,7 +107,7 @@ describe("getAgglomerateIdsFromKeys", () => {
   it("extracts the unique agglomerate ids from tree keys", () => {
     expect(
       getAgglomerateIdsFromKeys(["segment;10;", "segment;20;in;10;", "segment;10;out;22;"]),
-    ).toEqual([10, 20]);
+    ).toEqual([10n, 20n]);
   });
 });
 
@@ -221,7 +219,7 @@ describe("computeAgglomerateTreeDiff", () => {
     ).toEqual({
       deletedAgglomerateIds: [],
       hiddenAgglomerateIds: [],
-      addedAgglomerateIds: [10, 20, 21, 22],
+      addedAgglomerateIds: [10n, 20n, 21n, 22n],
     });
   });
 
@@ -234,7 +232,7 @@ describe("computeAgglomerateTreeDiff", () => {
     ).toEqual({
       deletedAgglomerateIds: [],
       hiddenAgglomerateIds: [],
-      addedAgglomerateIds: [10, 20, 22],
+      addedAgglomerateIds: [10n, 20n, 22n],
     });
   });
 
@@ -242,10 +240,10 @@ describe("computeAgglomerateTreeDiff", () => {
     expect(
       computeAgglomerateTreeDiff(snapshot(connectomeData, connectomeData, allKeys), emptySnapshot),
     ).toEqual({
-      deletedAgglomerateIds: [10, 20, 21, 22],
+      deletedAgglomerateIds: [10n, 20n, 21n, 22n],
       // Deleted agglomerates are also reported as hidden. This is harmless because
       // the deletion is dispatched before the visibility update, which then no-ops.
-      hiddenAgglomerateIds: [10, 20, 21, 22],
+      hiddenAgglomerateIds: [10n, 20n, 21n, 22n],
       addedAgglomerateIds: [],
     });
   });
@@ -259,7 +257,7 @@ describe("computeAgglomerateTreeDiff", () => {
       ),
     ).toEqual({
       deletedAgglomerateIds: [],
-      hiddenAgglomerateIds: [21],
+      hiddenAgglomerateIds: [21n],
       addedAgglomerateIds: [],
     });
   });
@@ -272,7 +270,7 @@ describe("computeAgglomerateTreeDiff", () => {
       ),
     ).toEqual({
       deletedAgglomerateIds: [],
-      hiddenAgglomerateIds: [21],
+      hiddenAgglomerateIds: [21n],
       addedAgglomerateIds: [],
     });
   });
@@ -288,9 +286,9 @@ describe("computeAgglomerateTreeDiff", () => {
         snapshot(otherMappingData, otherMappingData, allKeys),
       ),
     ).toEqual({
-      deletedAgglomerateIds: [10, 20, 21, 22],
+      deletedAgglomerateIds: [10n, 20n, 21n, 22n],
       hiddenAgglomerateIds: [],
-      addedAgglomerateIds: [10, 20, 21, 22],
+      addedAgglomerateIds: [10n, 20n, 21n, 22n],
     });
   });
 

@@ -1,5 +1,5 @@
 import { Space, Tag, Tooltip } from "antd";
-import { stringToColor } from "libs/format_utils";
+import { stringToTagColor } from "libs/colors";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import { type MouseEventHandler, useEffect } from "react";
@@ -21,7 +21,7 @@ type FilterProps = {
 const LOCKED_TAG_COLOR = "var(--ant-color-warning)";
 
 export default function CategorizationLabel({ tag, kind, onClick, onClose, closable }: LabelProps) {
-  const color = tag === "locked" ? LOCKED_TAG_COLOR : stringToColor(tag);
+  const color = tag === "locked" ? LOCKED_TAG_COLOR : stringToTagColor(tag);
   return (
     <Tooltip title={`Click to only show ${kind} with this tag.`}>
       <Tag
@@ -82,7 +82,7 @@ export function CategorizationSearch({
           {searchTags.map((tag) => (
             <Tag
               key={tag}
-              color={stringToColor(tag)}
+              color={stringToTagColor(tag)}
               onClose={() => {
                 removeTag(tag);
               }}

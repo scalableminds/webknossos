@@ -151,7 +151,7 @@ describe("API Skeleton", () => {
     // Workaround: This is usually called after the mapping textures were created successfully
     // and can be rendered, which doesn't happen in this test scenario
     Store.dispatch(setMappingEnabledAction("segmentation", true));
-    expect(cube.mapId(1)).toBe(3);
+    expect(cube.mapId(1n)).toBe(3n);
   });
 
   it<WebknossosTestContext>("Data Api: getBoundingBox should throw an error if the layer name is not valid", ({

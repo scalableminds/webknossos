@@ -253,34 +253,30 @@ function DatasetView({
     searchBox
   );
 
-  const adminHeader = (
+  const adminHeader = isUserAdminOrDatasetManagerOrTeamManager ? (
     <Space>
-      {isUserAdminOrDatasetManagerOrTeamManager ? (
-        <Fragment>
-          <DatasetRefreshButton context={context} />
-          <DatasetAddButton context={context} />
-          {context.activeFolderId != null && (
-            <PricingEnforcedButton
-              disabled={folder != null && !folder.isEditable}
-              icon={<PlusOutlined />}
-              onClick={() =>
-                context.activeFolderId != null &&
-                context.setFolderModalState({
-                  mode: "create",
-                  parentFolderId: context.activeFolderId,
-                })
-              }
-              requiredPricingPlan={PricingPlanEnum.Team}
-            >
-              Add Folder
-            </PricingEnforcedButton>
-          )}
-          {search}
-        </Fragment>
-      ) : (
-        search
+      <DatasetRefreshButton context={context} />
+      <DatasetAddButton context={context} />
+      {context.activeFolderId != null && (
+        <PricingEnforcedButton
+          disabled={folder != null && !folder.isEditable}
+          icon={<PlusOutlined />}
+          onClick={() =>
+            context.activeFolderId != null &&
+            context.setFolderModalState({
+              mode: "create",
+              parentFolderId: context.activeFolderId,
+            })
+          }
+          requiredPricingPlan={PricingPlanEnum.Team}
+        >
+          Add Folder
+        </PricingEnforcedButton>
       )}
+      {search}
     </Space>
+  ) : (
+    search
   );
 
   const datasets = context.datasets;

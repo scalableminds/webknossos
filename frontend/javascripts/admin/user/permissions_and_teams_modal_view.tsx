@@ -333,9 +333,8 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
         const newUser = { ...user, ...permissions, teams: newTeams };
 
         // server-side validation can reject a user's new teams
-        return updateUser(newUser).then(
-          (serverUser) => Promise.resolve(serverUser),
-          () => Promise.reject(user),
+        return updateUser(newUser).then((result) =>
+          result.ok ? Promise.resolve(result.value) : Promise.reject(user),
         );
       }
 

@@ -2,16 +2,21 @@ import cloneDeep from "lodash-es/cloneDeep";
 import uniq from "lodash-es/uniq";
 
 type VersionSnapshot = {
-  map: Map<number, number>;
-  adjacencyList: Map<number, Set<number>>;
+  map: Map<bigint, bigint>;
+  adjacencyList: Map<bigint, Set<bigint>>;
 };
 
-export function serializeAdjacencyList(map: Map<number, Set<number>>): string {
-  return JSON.stringify([...map.entries()].map(([key, set]) => [key, [...set]]));
+export function serializeAdjacencyList(map: Map<bigint, Set<bigint>>): string {
+  return JSON.stringify(
+    [...map.entries()].map(([key, set]) => [
+      key.toString(),
+      [...set].map((value) => value.toString()),
+    ]),
+  );
 }
 
 function getShallowCopyOfAdjacencyList(adjacencyList: VersionSnapshot["adjacencyList"]) {
-  const nextAdjacencyList = new Map<number, Set<number>>();
+  const nextAdjacencyList = new Map<bigint, Set<bigint>>();
   for (const [k, v] of adjacencyList) {
     nextAdjacencyList.set(k, new Set(v));
   }
@@ -29,24 +34,24 @@ export class AgglomerateMapping {
    * with the version.
    */
 
-  public segmentIds: number[];
+  public segmentIds: bigint[];
 
   // snapshot of (component-ID map + adjacency list) after every operation
   // versions[0] = initial state
   private versions: VersionSnapshot[] = [];
 
   public currentVersion = -1; // newest version index
-  private largestMappedId: number; // monotone counter for fresh IDs
+  private largestMappedId: bigint; // monotone counter for fresh IDs
 
   constructor(
-    public readonly edges: Array<[number, number]>,
+    public readonly edges: Array<[bigint, bigint]>,
     initialVersion: number = 0,
   ) {
     this.segmentIds = uniq(edges.flat());
-    this.largestMappedId = Math.max(...this.segmentIds);
+    this.largestMappedId = this.segmentIds.reduce((a, b) => (a > b ? a : b));
 
-    const initialAdjacencyList = new Map<number, Set<number>>();
-    const initialVersionMap = new Map<number, number>();
+    const initialAdjacencyList = new Map<bigint, Set<bigint>>();
+    const initialVersionMap = new Map<bigint, bigint>();
 
     for (const segmentId of this.segmentIds) {
       initialAdjacencyList.set(segmentId, new Set());
@@ -68,7 +73,7 @@ export class AgglomerateMapping {
     this.resetVersionCounter(initialVersion);
   }
 
-  addEdge(segmentIdA: number, segmentIdB: number, bumpVersion: boolean): void {
+  addEdge(segmentIdA: bigint, segmentIdB: bigint, bumpVersion: boolean): void {
     /*
      * Add an edge and record the new version. All segment ids
      * that are present in the component defined by segmentIdB
@@ -105,7 +110,7 @@ export class AgglomerateMapping {
     );
   }
 
-  removeEdge(segmentIdA: number, segmentIdB: number, bumpVersion: boolean): void {
+  removeEdge(segmentIdA: bigint, segmentIdB: bigint, bumpVersion: boolean): void {
     /*
      * Remove an edge, possibly splitting a component, and record the new version.
      * The source component (defined by segmentIdA) will keep its mapped id.
@@ -134,15 +139,15 @@ export class AgglomerateMapping {
     const previousVersionMap = previous.map;
     const keepComponentId = previousVersionMap.get(segmentIdA)!;
 
-    const nextVersionMap = new Map<number, number>();
-    const visitedSegmentIds = new Set<number>();
+    const nextVersionMap = new Map<bigint, bigint>();
+    const visitedSegmentIds = new Set<bigint>();
 
     for (const startSegmentId of this.segmentIds) {
       if (visitedSegmentIds.has(startSegmentId)) continue;
 
       // BFS to collect this component
       const bfsStack = [startSegmentId];
-      const componentSegmentIds: number[] = [];
+      const componentSegmentIds: bigint[] = [];
       visitedSegmentIds.add(startSegmentId);
 
       while (bfsStack.length) {
@@ -150,7 +155,7 @@ export class AgglomerateMapping {
         componentSegmentIds.push(currentSegmentId);
 
         // Get neighbors in both directions (outgoing and incoming edges)
-        const neighbors = new Set<number>();
+        const neighbors = new Set<bigint>();
         // Outgoing edges
         for (const neighbor of nextAdjacencyList.get(currentSegmentId) ?? []) {
           neighbors.add(neighbor);
@@ -170,7 +175,7 @@ export class AgglomerateMapping {
         }
       }
 
-      let newComponentId: number;
+      let newComponentId: bigint;
 
       if (
         componentSegmentIds.some(
@@ -187,7 +192,8 @@ export class AgglomerateMapping {
         newComponentId = keepComponentId;
       } else {
         // split-off component → new ID
-        newComponentId = ++this.largestMappedId;
+        this.largestMappedId += 1n;
+        newComponentId = this.largestMappedId;
       }
 
       for (const segmentId of componentSegmentIds) {
@@ -204,7 +210,7 @@ export class AgglomerateMapping {
     );
   }
 
-  mapSegment(segmentId: number, version: number): number {
+  mapSegment(segmentId: bigint, version: number): bigint {
     /*
      * Look up the component-ID of `segmentId` at an arbitrary version.
      */
@@ -216,7 +222,7 @@ export class AgglomerateMapping {
     return componentId;
   }
 
-  getMap(version: number): Map<number, number> {
+  getMap(version: number): Map<bigint, bigint> {
     /*
      * Get the entire mapping for a specific version.
      * It is a deep clone to avoid direct manipulation from outside.
@@ -224,7 +230,7 @@ export class AgglomerateMapping {
     return cloneDeep(this.getSnapshot(version).map);
   }
 
-  getAdjacencyList(version: number): Map<number, Set<number>> {
+  getAdjacencyList(version: number): Map<bigint, Set<bigint>> {
     /*
      * Get the adjacency list for a specific version.
      * It is a deep clone to avoid direct manipulation from outside.
@@ -269,7 +275,7 @@ export class AgglomerateMapping {
 
   /* Helpers */
 
-  private ensureNode(segmentId: number, adjacencyList: Map<number, Set<number>>): void {
+  private ensureNode(segmentId: bigint, adjacencyList: Map<bigint, Set<bigint>>): void {
     if (!adjacencyList.has(segmentId)) {
       throw new Error(`Segment ${segmentId} was not in the original set`);
     }

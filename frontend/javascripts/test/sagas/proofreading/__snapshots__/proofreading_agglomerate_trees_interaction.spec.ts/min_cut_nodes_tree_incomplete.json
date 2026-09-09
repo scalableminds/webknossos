@@ -15,9 +15,9 @@
       "name": "splitAgglomerate",
       "value": {
         "actionTracingId": "volumeTracingId",
-        "agglomerateId": 1,
-        "segmentId1": 3,
-        "segmentId2": 2,
+        "agglomerateId": 1n,
+        "segmentId1": 3n,
+        "segmentId2": 2n,
       },
     },
   ],

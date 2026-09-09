@@ -44,6 +44,9 @@ The `Segments` tab is for managing volume annotations. It lists all the segments
 
 The `BBoxes` tab lists all the bounding boxes in the annotation and is the central place to manage them. It provides an alternative to drawing boxes with the `Bounding Box` tool from the [toolbar](./toolbar.md).
 
+Watch this short video for an overview of the bounding box tool:
+![youtube-video](https://www.youtube.com/embed/2mgqDvUZ9Dk)
+
 ### Creating Bounding Boxes
 
 The buttons at the top of the tab let you:
@@ -55,7 +58,7 @@ The buttons at the top of the tab let you:
 
 Each entry in the list provides inline controls to:
 
-- **Adjust the bounds:** Edit the six values defining the box — the top-left corner (x, y, z) followed by its width, height, and depth in voxels.
+- **Adjust the bounds:** Edit the six values defining the box — the top-left corner (x, y, z) followed by its width, height, and depth in voxels. Alternatively, click the sliders icon next to the bounds field to fine-tune the position and size with sliders.
 - **Change the color:** Click the color swatch to assign a new color to the box.
 - **Toggle visibility:** Use the checkbox to show or hide the box in the viewports.
 - **Rename:** Give the box a descriptive name.

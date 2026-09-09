@@ -13,6 +13,7 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { unwrapOrThrow } from "admin/api/api_result";
 import ChangeUsernameView from "admin/auth/change_username_view";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
@@ -34,13 +35,14 @@ import {
   Table,
   Tag,
   Tooltip,
+  Typography,
 } from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import features from "features";
 import { copyToClipboard } from "libs/clipboard";
 import Persistence from "libs/persistence";
-import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { useApi, useWkSelector } from "libs/react_hooks";
 import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
 import { location } from "libs/window";
 import keyBy from "lodash-es/keyBy";
@@ -78,7 +80,7 @@ function UserListView() {
     enforceActiveOrganization(state.activeOrganization),
   );
 
-  const { data: users = [], isFetching: isLoading } = useQueryWithErrorHandling({
+  const { data: users = [], isFetching: isLoading } = useApi({
     queryKey: ["editableUsers"],
     queryFn: getEditableUsers,
     refetchOnWindowFocus: false,
@@ -98,7 +100,7 @@ function UserListView() {
   const [editNameModalOpen, setEditNameModalOpen] = useState(false);
 
   async function activateUser(selectedUser: APIUser, isActive: boolean = true) {
-    const newUser = await updateUser({ ...selectedUser, isActive });
+    const newUser = unwrapOrThrow(await updateUser({ ...selectedUser, isActive }));
     queryClient.setQueryData(["editableUsers"], (currentUsers: APIUser[]) =>
       currentUsers.map((user) => (selectedUser.id === user.id ? newUser : user)),
     );
@@ -500,13 +502,14 @@ function UserListView() {
                 </Tooltip>
               ) : (
                 <Tooltip title="Account is not activated">
-                  <CloseCircleOutlined
-                    className="icon-margin-right"
-                    style={{
-                      fontSize: 20,
-                      color: "#e84749",
-                    }}
-                  />
+                  <Typography.Text type="danger">
+                    <CloseCircleOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Typography.Text>
                 </Tooltip>
               );
 
@@ -521,13 +524,14 @@ function UserListView() {
                 </Tooltip>
               ) : (
                 <Tooltip title="Email is not verified">
-                  <MailOutlined
-                    className="icon-margin-right"
-                    style={{
-                      fontSize: 20,
-                      color: "#e84749",
-                    }}
-                  />
+                  <Typography.Text type="danger">
+                    <MailOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Typography.Text>
                 </Tooltip>
               );
 

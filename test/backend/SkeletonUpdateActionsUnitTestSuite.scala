@@ -2,7 +2,7 @@ package backend
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.*
-import com.scalableminds.webknossos.datastore.helpers.TreeAgglomerateInfo
+import com.scalableminds.webknossos.datastore.helpers.{TreeAgglomerateInfo, UnsignedLong}
 import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.*
 import org.scalatest.wordspec.AsyncWordSpec
@@ -39,7 +39,7 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
             MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there")))
           )
         ),
-        agglomerateInfo = Some(TreeAgglomerateInfo(1, Some(Dummies.tracingId), None))
+        agglomerateInfo = Some(TreeAgglomerateInfo(UnsignedLong(1), Some(Dummies.tracingId), None))
       )
       val result = applyUpdateAction(createTreeAction)
 
@@ -85,7 +85,7 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
           )
         ),
         actionTracingId = Dummies.tracingId,
-        agglomerateInfo = Some(TreeAgglomerateInfo(1, Some(Dummies.tracingId), None))
+        agglomerateInfo = Some(TreeAgglomerateInfo(UnsignedLong(1), Some(Dummies.tracingId), None))
       )
       val result = applyUpdateAction(updateTreeAction)
 

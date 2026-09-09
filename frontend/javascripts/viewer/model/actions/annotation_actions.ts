@@ -11,11 +11,10 @@ import type {
   APIMeshFileInfo,
   EditableLayerProperties,
 } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import type { MappingType, Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
 import type {
   Annotation,
-  MappingType,
   MipLayerConfig,
   UserBoundingBox,
   UserBoundingBoxWithoutId,
@@ -132,6 +131,15 @@ export const AllUserBoundingBoxActions: Action["type"][] = [
   "DELETE_USER_BOUNDING_BOX",
   "ADD_USER_BOUNDING_BOXES",
 ];
+
+// Actions whose effect on annotation-level metadata (layer names, description) should be
+// diffed into the save queue, mirroring SkeletonTracingSaveRelevantActions /
+// VolumeTracingSaveRelevantActions.
+export const AnnotationMetadataSaveRelevantActions: Action["type"][] = [
+  "EDIT_ANNOTATION_LAYER",
+  "SET_ANNOTATION_DESCRIPTION",
+];
+
 export const initializeAnnotationAction = (annotation: Annotation) =>
   ({
     type: "INITIALIZE_ANNOTATION",
@@ -261,7 +269,7 @@ export const addUserBoundingBoxesAction = (
 
 export const updateMeshVisibilityAction = (
   layerName: string,
-  id: number,
+  id: bigint,
   visibility: boolean,
   additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
 ) =>
@@ -273,7 +281,7 @@ export const updateMeshVisibilityAction = (
     additionalCoordinates,
   }) as const;
 
-export const updateMeshOpacityAction = (layerName: string, id: number, opacity: number) =>
+export const updateMeshOpacityAction = (layerName: string, id: bigint, opacity: number) =>
   ({
     type: "UPDATE_MESH_OPACITY",
     id,
@@ -299,7 +307,7 @@ export const maybeFetchMeshFilesAction = (
 
 export const triggerMeshDownloadAction = (
   segmentName: string,
-  segmentId: number,
+  segmentId: bigint,
   layerName: string,
 ) =>
   ({
@@ -310,7 +318,7 @@ export const triggerMeshDownloadAction = (
   }) as const;
 
 export const triggerMeshesDownloadAction = (
-  segmentsArray: Array<{ segmentName: string; segmentId: number; layerName: string }>,
+  segmentsArray: Array<{ segmentName: string; segmentId: bigint; layerName: string }>,
 ) =>
   ({
     type: "TRIGGER_MESHES_DOWNLOAD",
@@ -322,21 +330,21 @@ export const refreshMeshesAction = () =>
     type: "REFRESH_MESHES",
   }) as const;
 
-export const refreshMeshAction = (layerName: string, segmentId: number) =>
+export const refreshMeshAction = (layerName: string, segmentId: bigint) =>
   ({
     type: "REFRESH_MESH",
     layerName,
     segmentId,
   }) as const;
 
-export const startedLoadingMeshAction = (layerName: string, segmentId: number) =>
+export const startedLoadingMeshAction = (layerName: string, segmentId: bigint) =>
   ({
     type: "STARTED_LOADING_MESH",
     layerName,
     segmentId,
   }) as const;
 
-export const finishedLoadingMeshAction = (layerName: string, segmentId: number) =>
+export const finishedLoadingMeshAction = (layerName: string, segmentId: bigint) =>
   ({
     type: "FINISHED_LOADING_MESH",
     layerName,
@@ -360,7 +368,7 @@ export const updateCurrentMeshFileAction = (
     meshFileName,
   }) as const;
 
-export const removeMeshAction = (layerName: string, segmentId: number) =>
+export const removeMeshAction = (layerName: string, segmentId: bigint) =>
   ({
     type: "REMOVE_MESH",
     layerName,
@@ -369,7 +377,7 @@ export const removeMeshAction = (layerName: string, segmentId: number) =>
 
 export const addAdHocMeshAction = (
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
@@ -391,7 +399,7 @@ export const addAdHocMeshAction = (
 
 export const addPrecomputedMeshAction = (
   layerName: string,
-  segmentId: number,
+  segmentId: bigint,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,

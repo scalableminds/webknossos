@@ -81,7 +81,9 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
     } else {
       val idMapsBuffer = mutable.ListBuffer[mutable.HashMap[Long, Long]]()
       var currentSegmentId: Long = 0
-      if (initialLargestSegmentId > 0) {
+      // Deliberately != rather than >: initialLargestSegmentId can be a uint64 id >= 2^63, which
+      // is negative as a signed Long, so > 0 would wrongly treat a real, large id as "unset".
+      if (initialLargestSegmentId != 0) {
         idMapsBuffer += mutable.HashMap.empty[Long, Long]
         currentSegmentId = initialLargestSegmentId
       }
@@ -115,7 +117,8 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
 
   def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
     prepareIdMaps()
-    val skipMapping = idMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
+    // Deliberately != rather than >, see the comment on the analogous check in prepareIdMaps above.
+    val skipMapping = idMaps.isEmpty || (initialLargestSegmentId != 0 && sourceVolumeIndex == 0)
     if (mergedVolume.contains(bucketPosition)) {
       val previousBucketData = mergedVolume(bucketPosition)
       val idMap = if (skipMapping) (Array.empty[Long], Array.empty[Long]) else idMaps(sourceVolumeIndex)

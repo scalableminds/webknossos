@@ -50,6 +50,10 @@ class Startup @Inject() (
     tokenAuthenticatorService.removeExpiredTokens()
   }
 
+  cleanUpService.register("hard-deletion of old soft-deleted tokens", 1 day) {
+    tokenAuthenticatorService.hardDeleteOldTokens()
+  }
+
   cleanUpService.register("deletion of expired invites", 1 day) {
     inviteService.removeExpiredInvites()
   }

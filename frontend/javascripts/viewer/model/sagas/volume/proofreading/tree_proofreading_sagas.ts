@@ -497,11 +497,7 @@ export function* handleSplitViaTree(
           )?.name,
       )) ?? `Agglomerate ${newTargetAgglomerateId}`;
     yield* put(
-      updateSegmentAction(
-        Number(newTargetAgglomerateId),
-        { name: newSegmentName },
-        volumeTracingId,
-      ),
+      updateSegmentAction(newTargetAgglomerateId, { name: newSegmentName }, volumeTracingId),
     );
 
     /* Ensure segment items exist for affected segments and reload affected meshes */

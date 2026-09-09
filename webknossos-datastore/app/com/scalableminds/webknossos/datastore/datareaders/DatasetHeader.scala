@@ -67,7 +67,7 @@ trait DatasetHeader {
   // Note that in DatasetArray, this is adapted for 2d datasets
   lazy val rank: Int = chunkShape.length
 
-  def chunkShapeAtIndex(chunkIndex: Array[Int]): Array[Int] = chunkShape
+  def chunkShapeAtIndex(chunkIndex: Array[Long]): Array[Int] = chunkShape
 
   def isSharded = false
 

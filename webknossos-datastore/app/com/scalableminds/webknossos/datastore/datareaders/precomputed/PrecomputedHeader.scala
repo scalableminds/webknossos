@@ -74,18 +74,19 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
 
   lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(this)
 
-  override def chunkShapeAtIndex(chunkIndex: Array[Int]): Array[Int] =
+  override def chunkShapeAtIndex(chunkIndex: Array[Long]): Array[Int] =
     chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
 
   override def voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
-  def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Int]): Array[(Int, Int)] =
+  // Neuroglancer precomputed chunk grids are bounded spatial voxel coordinates, so narrowing back to Int here is safe.
+  def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Long]): Array[(Int, Int)] =
     chunkIndex.zipWithIndex.map { chunkIndexWithDim =>
       val (chunkIndexAtDim, dim) = chunkIndexWithDim
       val beginOffset = voxelOffset(dim) + chunkIndexAtDim * precomputedScale.primaryChunkShape(dim)
       val endOffset = voxelOffset(dim) + ((chunkIndexAtDim + 1) * precomputedScale.primaryChunkShape(dim))
-        .min(precomputedScale.size(dim).toInt)
-      (beginOffset, endOffset)
+        .min(precomputedScale.size(dim))
+      (beginOffset.toInt, endOffset.toInt)
     }
 
   def gridSize: Array[Int] = chunkShape.zip(precomputedScale.size).map { case (c, s) => (s.toDouble / c).ceil.toInt }
@@ -130,7 +131,10 @@ case class ShardingSpecification(
   }
 
   def getMinishardInfo(chunkHash: Long): (Long, Long) = {
-    val rawChunkIdentifier = chunkHash >> preshift_bits
+    // Neuroglancer sharded ids are unsigned 64-bit, so this must be an unsigned shift: chunkHash can be
+    // a uint64 segment id >= 2^63, and a signed >> would sign-extend garbage bits into rawChunkIdentifier,
+    // which (for a non-identity hash function) then propagates into a wrong shard/minishard.
+    val rawChunkIdentifier = chunkHash >>> preshift_bits
     val chunkIdentifier = hashFunction(rawChunkIdentifier)
     val minishardNumber = chunkIdentifier & minishardMask
     val shardNumber = (chunkIdentifier & shardMask) >> minishard_bits

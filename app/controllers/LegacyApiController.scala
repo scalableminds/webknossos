@@ -1,19 +1,17 @@
 package controllers
 
 import com.scalableminds.util.Msg
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import play.silhouette.api.Silhouette
-import play.silhouette.api.actions.SecuredRequest
+import play.silhouette.api.actions.UserAwareRequest
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.models.VoxelSize
-import models.dataset.{DatasetDAO, DatasetService}
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
+import models.dataset.{DataStoreDAO, Dataset, DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
+import models.user.{User, UserDAO, UserService}
 
 import javax.inject.Inject
-import models.task.{BaseAnnotation, TaskParameters}
-import models.user.{Experience, User}
-import com.scalableminds.util.box.Box.tryo
 import play.api.http.HttpEntity
 import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
@@ -29,38 +27,114 @@ import utils.MetadataAssertions
 
 import scala.concurrent.ExecutionContext
 
-case class LegacyTaskParameters(
-    taskTypeId: ObjectId,
-    neededExperience: Experience,
-    pendingInstances: Int,
-    projectName: String,
-    scriptId: Option[ObjectId],
-    boundingBox: Option[BoundingBox],
-    dataSet: String,
-    datasetId: Option[ObjectId],
-    editPosition: Vec3Int,
-    editRotation: Vec3Double,
-    creationInfo: Option[String],
-    description: Option[String],
-    baseAnnotation: Option[BaseAnnotation]
-)
-
-object LegacyTaskParameters {
-  implicit val taskParametersFormat: Format[LegacyTaskParameters] = Json.format[LegacyTaskParameters]
-}
-
 class LegacyApiController @Inject() (
     datasetController: DatasetController,
-    projectController: ProjectController,
-    taskController: TaskController,
-    organizationDAO: OrganizationDAO,
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
+    dataStoreDAO: DataStoreDAO,
+    organizationDAO: OrganizationDAO,
+    userService: UserService,
+    userDAO: UserDAO,
     analyticsService: AnalyticsService,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MetadataAssertions {
+
+  /* provide v15 */
+
+  def listV15(
+      isActive: Option[Boolean],
+      isUnreported: Option[Boolean],
+      organizationId: Option[String],
+      onlyMyOrganization: Option[Boolean],
+      uploaderId: Option[ObjectId],
+      folderId: Option[ObjectId],
+      includeSubfolders: Option[Boolean],
+      searchQuery: Option[String],
+      limit: Option[Int],
+      compact: Option[Boolean]
+  ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
+    dispatchListByCompact(
+      isActive,
+      isUnreported,
+      organizationId,
+      onlyMyOrganization,
+      uploaderId,
+      folderId,
+      includeSubfolders,
+      searchQuery,
+      limit,
+      compact
+    )
+  }
+
+  /* provide v14 */
+
+  def readV14(datasetId: ObjectId, sharingToken: Option[String]): Action[AnyContent] =
+    sil.UserAwareAction.fox { implicit request =>
+      for {
+        result <- Fox.fromFuture(datasetController.read(datasetId, sharingToken)(request))
+        adaptedResult <- replaceInResult(downgradeLargestSegmentIdsIfSafeFox)(result)
+      } yield adaptedResult
+    }
+
+  def listV14(
+      isActive: Option[Boolean],
+      isUnreported: Option[Boolean],
+      organizationId: Option[String],
+      onlyMyOrganization: Option[Boolean],
+      uploaderId: Option[ObjectId],
+      folderId: Option[ObjectId],
+      includeSubfolders: Option[Boolean],
+      searchQuery: Option[String],
+      limit: Option[Int],
+      compact: Option[Boolean]
+  ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
+    for {
+      result <- dispatchListByCompact(
+        isActive,
+        isUnreported,
+        organizationId,
+        onlyMyOrganization,
+        uploaderId,
+        folderId,
+        includeSubfolders,
+        searchQuery,
+        limit,
+        compact
+      )
+      adaptedResult <- replaceInResult(downgradeLargestSegmentIdsIfSafeFox)(result)
+    } yield adaptedResult
+  }
+
+  def updatePartialV14(datasetId: ObjectId): Action[DatasetUpdatePartialParameters] =
+    sil.SecuredAction.fox(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
+      for {
+        result <- Fox.fromFuture(datasetController.updatePartial(datasetId)(request))
+        adaptedResult <- replaceInResult(downgradeLargestSegmentIdsIfSafeFox)(result)
+      } yield adaptedResult
+    }
+
+  def reserveUploadToPathsV14(): Action[ReserveDatasetUploadToPathsRequest] =
+    sil.SecuredAction.fox(validateJson[ReserveDatasetUploadToPathsRequest]) { implicit request =>
+      for {
+        result <- Fox.fromFuture(datasetController.reserveUploadToPaths()(request))
+        adaptedResult <- replaceInResult(downgradeLargestSegmentIdsIfSafeFox)(result)
+      } yield adaptedResult
+    }
+
+  def reserveUploadToPathsForPreliminaryV14(
+      datasetId: ObjectId
+  ): Action[ReserveDatasetUploadToPathsForPreliminaryRequest] =
+    sil.SecuredAction.fox(validateJson[ReserveDatasetUploadToPathsForPreliminaryRequest]) { implicit request =>
+      for {
+        result <- Fox.fromFuture(datasetController.reserveUploadToPathsForPreliminary(datasetId)(request))
+        adaptedResult <- replaceInResult(downgradeLargestSegmentIdsIfSafeFox)(result)
+      } yield adaptedResult
+    }
+
+  /* provide v12 */
 
   def updatePartialV12(datasetId: ObjectId): Action[DatasetUpdatePartialParameters] =
     sil.SecuredAction.fox(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
@@ -100,100 +174,20 @@ class LegacyApiController @Inject() (
         }
         updated <- datasetDAO.findOne(datasetId)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
-        js <- datasetService.publicWrites(updated, Some(request.identity))
-      } yield Ok(js)
+        jsRaw <- datasetService.publicWrites(updated, Some(request.identity))
+        jsAdapted = downgradeLargestSegmentIdsIfSafe(jsRaw)
+      } yield Ok(jsAdapted)
     }
 
-  /* provide v8 */
+  /* private helper methods for legacy adaptation */
 
-  def isValidNewNameV8(datasetName: String, organizationId: String): Action[AnyContent] = sil.SecuredAction.fox {
-    implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- Fox.fromFuture(datasetController.isValidNewName(datasetName)(request))
-      } yield result
-  }
-
-  def readDatasetV8(organizationId: String, datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
-    sil.UserAwareAction.fox { implicit request =>
-      for {
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken)(request))
-        adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
-      } yield adaptedResult
-    }
-
-  def updateDatasetV8(organizationId: String, datasetName: String): Action[DatasetUpdateParameters] =
-    sil.SecuredAction.fox(validateJson[DatasetUpdateParameters]) { implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- Fox.fromFuture(datasetController.update(dataset._id)(request))
-        adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
-      } yield adaptedResult
-    }
-
-  def updateDatasetTeamsV8(organizationId: String, datasetName: String): Action[List[ObjectId]] =
-    sil.SecuredAction.fox(validateJson[List[ObjectId]]) { implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- Fox.fromFuture(datasetController.updateTeams(dataset._id)(request))
-      } yield result
-    }
-
-  def getDatasetSharingTokenV8(organizationId: String, datasetName: String): Action[AnyContent] =
-    sil.SecuredAction.fox { implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        sharingToken <- Fox.fromFuture(datasetController.getSharingToken(dataset._id)(request))
-      } yield sharingToken
-    }
-
-  def readTaskV8(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
-    for {
-      _ <- Fox.successful(logVersioned(request))
-      result <- Fox.fromFuture(taskController.read(taskId)(request))
-      adaptedResult <- replaceInResult(addLegacyDataSetFieldToTask)(result)
-    } yield adaptedResult
-  }
-
-  def createTaskV8: Action[List[LegacyTaskParameters]] =
-    sil.SecuredAction.fox(validateJson[List[LegacyTaskParameters]]) { implicit request =>
-      for {
-        taskParametersWithDatasetId <- Fox.serialCombined(request.body)(params =>
-          for {
-            dataset <- datasetDAO
-              .findOneByIdOrNameAndOrganization(params.datasetId, params.dataSet, request.identity._organization)
-          } yield TaskParameters.fromLegacyTaskParameters(params, dataset._id)
-        )
-        requestWithUpdatedBody = request.withBody(taskParametersWithDatasetId)
-        result <- Fox.fromFuture(taskController.create()(requestWithUpdatedBody))
-        adaptedResult <- replaceInResult(addLegacyDataSetFieldToTaskCreationResult)(result)
-      } yield adaptedResult
-    }
-
-  def tasksForProjectV8(
-      id: ObjectId,
-      limit: Option[Int] = None,
-      pageNumber: Option[Int] = None,
-      includeTotalCount: Option[Boolean]
-  ): Action[AnyContent] =
-    sil.SecuredAction.fox { implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- Fox.fromFuture(projectController.tasksForProject(id, limit, pageNumber, includeTotalCount)(request))
-        replacedResults <- replaceInResult(addLegacyDataSetFieldToTask)(result)
-      } yield replacedResults
-    }
-
-  /* provide v7 */
-
-  def listDatasetsV7(
+  // For legacy API versions (v10-v15), replicates the pre-v16 compact-param dispatch that used
+  // to live in DatasetController.list: compact=true uses the (now default) compact format,
+  // anything else uses the old full/grouped format via listFull below.
+  private def dispatchListByCompact(
       isActive: Option[Boolean],
       isUnreported: Option[Boolean],
-      organizationName: Option[String],
+      organizationId: Option[String],
       onlyMyOrganization: Option[Boolean],
       uploaderId: Option[ObjectId],
       folderId: Option[ObjectId],
@@ -201,123 +195,104 @@ class LegacyApiController @Inject() (
       searchQuery: Option[String],
       limit: Option[Int],
       compact: Option[Boolean]
-  ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    datasetController.list(
-      isActive,
-      isUnreported,
-      organizationName,
-      onlyMyOrganization,
-      uploaderId,
-      folderId,
-      includeSubfolders,
-      searchQuery,
-      limit,
-      compact
-    )(request)
-  }
-
-  /* provide v6 */
-
-  def listDatasetsV6(
-      isActive: Option[Boolean],
-      isUnreported: Option[Boolean],
-      organizationName: Option[String],
-      onlyMyOrganization: Option[Boolean],
-      uploaderId: Option[ObjectId],
-      folderId: Option[ObjectId],
-      includeSubfolders: Option[Boolean],
-      searchQuery: Option[String],
-      limit: Option[Int],
-      compact: Option[Boolean]
-  ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
-    for {
-      result <- Fox.fromFuture(
+  )(implicit request: UserAwareRequest[WkEnv, AnyContent]): Fox[Result] =
+    if (compact.getOrElse(false))
+      Fox.fromFuture(
         datasetController.list(
           isActive,
           isUnreported,
-          organizationName,
+          organizationId,
           onlyMyOrganization,
           uploaderId,
           folderId,
           includeSubfolders,
           searchQuery,
-          limit,
-          compact
+          limit
         )(request)
       )
-      adaptedResult <- replaceInResult(replaceVoxelSize)(result)
-    } yield adaptedResult
-  }
-
-  def readDatasetV6(organizationName: String, datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
-    sil.UserAwareAction.fox { implicit request =>
-      for {
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationName)
-        result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken)(request))
-        adaptedResult <- replaceInResult(replaceVoxelSize)(result)
-      } yield adaptedResult
-    }
-
-  /* provide v5 */
-
-  def assertValidNewNameV5(organizationName: String, datasetName: String): Action[AnyContent] =
-    sil.SecuredAction.fox { implicit request =>
-      for {
-        organization <- organizationDAO.findOne(organizationName) // the old organizationName is now the organization id
-        _ <- Fox.fromBool(organization._id == request.identity._organization) ~> FORBIDDEN
-        _ <- datasetService.assertValidDatasetName(datasetName)
-      } yield Ok
-    }
-
-  /* private helper methods for legacy adaptation */
-
-  private def migrateDatasetJsonToOldFormat(jsResult: JsObject): Fox[JsObject] = {
-    val datasetName = (jsResult \ "name").asOpt[String]
-    val directoryName = (jsResult \ "directoryName").asOpt[String]
-    datasetName.zip(directoryName) match {
-      case Some((name, dirName)) =>
-        for {
-          dsWithOldNameField <- tryo(jsResult - "directoryName" + ("name" -> Json.toJson(dirName))).toFox
-          dsWithOldDisplayNameField <- tryo(dsWithOldNameField + ("displayName" -> Json.toJson(name))).toFox
-        } yield dsWithOldDisplayNameField
-      case _ => Fox.successful(jsResult)
-    }
-  }
-
-  private def addLegacyDataSetFieldToTaskCreationResult(jsResult: JsObject) =
-    for {
-      tasksResults <- tryo((jsResult \ "tasks").as[List[JsObject]]).toFox
-      adaptedTasks <- Fox.serialCombined(tasksResults)(taskResult =>
-        (taskResult \ "status").asOpt[JsNumber] match {
-          case Some(JsNumber(value)) if value == BigDecimal(200) =>
-            for {
-              task <- tryo((taskResult \ "success").as[JsObject]).toFox
-              adaptedTask <- addLegacyDataSetFieldToTask(task)
-              adaptedTaskResult <- tryo(taskResult - "success" + ("success" -> adaptedTask)).toFox
-            } yield adaptedTaskResult
-          case _ => Fox.successful(taskResult)
-        }
+    else
+      listFull(
+        isActive,
+        isUnreported,
+        organizationId,
+        onlyMyOrganization,
+        uploaderId,
+        folderId,
+        includeSubfolders,
+        searchQuery,
+        limit
       )
-      adaptedJsResult <- tryo(jsResult - "tasks" + ("tasks" -> Json.toJson(adaptedTasks))).toFox
-    } yield adaptedJsResult
 
-  private def addLegacyDataSetFieldToTask(js: JsObject): Fox[JsObject] =
-    tryo(js + ("dataSet" -> (js \ "datasetName").as[JsString])).toFox
+  private def listFull(
+      isActive: Option[Boolean],
+      isUnreported: Option[Boolean],
+      organizationId: Option[String],
+      onlyMyOrganization: Option[Boolean],
+      uploaderId: Option[ObjectId],
+      folderId: Option[ObjectId],
+      recursive: Option[Boolean],
+      searchQuery: Option[String],
+      limit: Option[Int]
+  )(implicit request: UserAwareRequest[WkEnv, AnyContent]): Fox[Result] =
+    for {
+      organizationIdOpt =
+        if (onlyMyOrganization.getOrElse(false))
+          request.identity.map(_._organization)
+        else
+          organizationId
+      datasets <- datasetDAO.findAllWithSearch(
+        isActive,
+        isUnreported,
+        organizationIdOpt,
+        folderId,
+        uploaderId,
+        searchQuery,
+        recursive.getOrElse(false),
+        limit
+      ) ?~> Msg.Dataset.List.failed
+      js <- listGrouped(datasets, request.identity) ?~> Msg.Dataset.List.groupingFailed
+      _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
+    } yield addRemoteOriginHeaders(Ok(Json.toJson(js)))
 
-  private def replaceVoxelSize(jsObject: JsObject) = {
-    val voxelSizeOpt = (jsObject \ "dataSource" \ "scale").asOpt[VoxelSize]
-    voxelSizeOpt match {
-      case None            => Fox.successful(jsObject)
-      case Some(voxelSize) =>
-        val inNanometer = voxelSize.toNanometer
+  private def listGrouped(datasets: List[Dataset], requestingUser: Option[User])(using
+      ctx: DBAccessContext
+  ): Fox[List[JsObject]] =
+    for {
+      requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
+        userService.teamManagerMembershipsFor(user._id)
+      )
+      groupedByOrga = datasets.groupBy(_._organization).toList
+      js <- Fox.serialCombined(groupedByOrga) { (byOrgaTuple: (String, List[Dataset])) =>
         for {
-          newDataSource <- tryo(
-            (jsObject \ "dataSource").as[JsObject] - "scale" + ("scale" -> Json.toJson(inNanometer))
-          ).toFox
-          newValue <- tryo(jsObject - "dataSource" + ("dataSource" -> newDataSource)).toFox
-        } yield newValue
-    }
-  }
+          organization <- organizationDAO.findOne(byOrgaTuple._1)(using GlobalAccessContext) ?~> Msg.Organization
+            .notFound(byOrgaTuple._1)
+          groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
+          result <- Fox.serialCombined(groupedByDataStore) { (byDataStoreTuple: (String, List[Dataset])) =>
+            for {
+              dataStore <- dataStoreDAO.findOneByName(byDataStoreTuple._1.trim)(using GlobalAccessContext)
+              resultByDataStore: Seq[JsObject] <- Fox.serialCombined(byDataStoreTuple._2) { d =>
+                datasetService.publicWrites(
+                  d,
+                  requestingUser,
+                  Some(organization),
+                  Some(dataStore),
+                  requestingUserTeamManagerMemberships
+                ) ?~> Msg.Dataset.publicWritesFailed(d._id)
+              }
+            } yield resultByDataStore
+          }
+        } yield result.flatten
+      }
+    } yield js.flatten
+
+  // For API versions <= 14, largestSegmentId must keep being written as a plain JsNumber
+  // whenever that does not lose precision, for backwards compatibility with clients that
+  // do not understand the newer UnsignedLong bigint envelope (see UnsignedLong.scala).
+  private def downgradeLargestSegmentIdsIfSafe(jsObject: JsObject): JsObject =
+    JsonHelper.patchKeyRecursively(jsObject, "largestSegmentId")(UnsignedLong.downgradeToPlainNumberIfSafe).as[JsObject]
+
+  private def downgradeLargestSegmentIdsIfSafeFox(jsObject: JsObject): Fox[JsObject] =
+    Fox.successful(downgradeLargestSegmentIdsIfSafe(jsObject))
 
   private def replaceInResult(replacement: JsObject => Fox[JsObject])(result: Result): Fox[Result] =
     if (result.header.status == 200) {
@@ -336,11 +311,5 @@ class LegacyApiController @Inject() (
         case _ => Fox.successful(BadRequest)
       }
     } else Fox.successful(result)
-
-  private def logVersioned(request: SecuredRequest[WkEnv, ?]): Unit =
-    logVersioned(request.identity, request.uri)
-
-  private def logVersioned(user: User, uri: String): Unit =
-    logger.info(s"Noted usage of legacy route $uri by user ${user._id}")
 
 }

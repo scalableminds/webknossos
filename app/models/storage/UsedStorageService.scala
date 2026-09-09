@@ -105,7 +105,7 @@ class UsedStorageService @Inject() (
       dataStore: DataStore,
       organization: Organization,
       datasetIdOpt: Option[ObjectId] = None
-  ): Fox[(List[DatasetMagStorageReport], List[DataLayerAttachmentStorageReport])] =
+  ): Fox[(Seq[DatasetMagStorageReport], Seq[DataLayerAttachmentStorageReport])] =
     for {
       relevantMagsForStorageReporting <- datasetMagDAO.findAllStorageRelevantMags(
         organization._id,
@@ -163,16 +163,16 @@ class UsedStorageService @Inject() (
   }
 
   private def buildPathToStorageArtifactMap(
-      magsWithValidPaths: List[(DataSourceMagRow, List[String])],
-      relevantAttachments: List[StorageRelevantDataLayerAttachment]
+      magsWithValidPaths: Seq[(DataSourceMagRow, List[String])],
+      relevantAttachments: Seq[StorageRelevantDataLayerAttachment]
   ): Map[String, Either[DataSourceMagRow, StorageRelevantDataLayerAttachment]] = {
 
-    val magEntries: List[(String, Either[DataSourceMagRow, StorageRelevantDataLayerAttachment])] =
+    val magEntries: Seq[(String, Either[DataSourceMagRow, StorageRelevantDataLayerAttachment])] =
       magsWithValidPaths.flatMap { case (mag, paths) =>
         paths.map(path => path -> Left(mag))
       }
 
-    val attachmentEntries: List[(String, Either[DataSourceMagRow, StorageRelevantDataLayerAttachment])] =
+    val attachmentEntries: Seq[(String, Either[DataSourceMagRow, StorageRelevantDataLayerAttachment])] =
       relevantAttachments.map(att => att.path -> Right(att))
 
     (magEntries ++ attachmentEntries).toMap
@@ -180,9 +180,9 @@ class UsedStorageService @Inject() (
 
   private def fetchAllStorageReportsForPaths(
       organizationId: String,
-      relevantPaths: List[String],
+      relevantPaths: Seq[String],
       dataStore: DataStore
-  ): Fox[List[PathStorageReport]] = {
+  ): Fox[Seq[PathStorageReport]] = {
     val dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
     for {
       storageReportAnswers <- Fox.serialCombined(relevantPaths.grouped(MaxStoragePathRequestsPerRequest).toList)(
@@ -195,10 +195,10 @@ class UsedStorageService @Inject() (
 
   private def buildStorageReportsForPathReports(
       organizationId: String,
-      pathReports: List[PathStorageReport],
+      pathReports: Seq[PathStorageReport],
       pathToArtifactMap: Map[String, Either[DataSourceMagRow, StorageRelevantDataLayerAttachment]]
-  ): (List[DatasetMagStorageReport], List[DataLayerAttachmentStorageReport]) = {
-    val reports: List[Either[DatasetMagStorageReport, DataLayerAttachmentStorageReport]] =
+  ): (Seq[DatasetMagStorageReport], Seq[DataLayerAttachmentStorageReport]) = {
+    val reports: Seq[Either[DatasetMagStorageReport, DataLayerAttachmentStorageReport]] =
       pathReports.flatMap { pathReport =>
         pathToArtifactMap.get(pathReport.path).map {
           case Left(mag) =>

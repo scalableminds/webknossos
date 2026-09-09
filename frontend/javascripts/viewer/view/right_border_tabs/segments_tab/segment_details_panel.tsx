@@ -16,7 +16,7 @@ import {
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 export interface SegmentDetailsPanelProps {
-  selectedIds: { segments: number[]; group: number | null };
+  selectedIds: { segments: bigint[]; group: number | null };
   segments: SegmentMap | null | undefined;
   segmentGroups: SegmentGroup[];
   visibleSegmentationLayer: APIDataLayer | null | undefined;

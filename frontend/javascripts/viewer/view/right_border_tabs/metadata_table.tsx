@@ -14,7 +14,7 @@ import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 
 const getKeyInputIdForIndex = (index: number) => `metadata-key-input-id-${index}`;
 
-function _MetadataTableRows<ItemType extends { metadata: MetadataEntryProto[] }>({
+function MetadataTableRowsInner<ItemType extends { metadata: MetadataEntryProto[] }>({
   item,
   setMetadata,
   readOnly,
@@ -59,14 +59,7 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntryProto[] }>
         type="text"
         disabled={readOnly}
         style={{ width: 16, height: 19 }}
-        icon={
-          <CloseOutlined
-            style={{
-              color: "var(--ant-color-text-tertiary)",
-              width: 16,
-            }}
-          />
-        }
+        icon={<CloseOutlined />}
         onClick={() => {
           removeMetadataEntryByIndex(item, index);
         }}
@@ -166,4 +159,4 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntryProto[] }>
   );
 }
 
-export const MetadataEntryTableRows = memo(_MetadataTableRows) as typeof _MetadataTableRows;
+export const MetadataEntryTableRows = memo(MetadataTableRowsInner) as typeof MetadataTableRowsInner;

@@ -21,6 +21,13 @@ type NumberSliderSettingProps = {
   defaultValue?: number;
   wheelFactor?: number;
   postComponent?: React.ReactNode;
+  // Allow the InputNumber to accept (and report via onChange) values below/above min/max.
+  // The slider itself still only visually covers [min, max], since it needs bounded endpoints
+  // to render a draggable track. Useful when min/max are derived from something other than a
+  // hard limit (e.g. the current viewport) and users might reasonably want to type a value
+  // outside of that range.
+  ignoreMin?: boolean;
+  ignoreMax?: boolean;
 };
 
 export default function NumberSliderSetting({
@@ -35,6 +42,8 @@ export default function NumberSliderSetting({
   wheelFactor: stepSize,
   spans = [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
   postComponent,
+  ignoreMin = false,
+  ignoreMax = false,
 }: NumberSliderSettingProps) {
   const maybeCorrectedSpans =
     postComponent != null && spans.length < 4
@@ -42,7 +51,7 @@ export default function NumberSliderSetting({
       : spans;
 
   const isValueValid = (_value: number | null) =>
-    isNumber(_value) && _value >= min && _value <= max;
+    isNumber(_value) && (ignoreMin || _value >= min) && (ignoreMax || _value <= max);
 
   const _onChange = (_value: number | null) => {
     if (_value != null && isValueValid(_value)) {
@@ -74,8 +83,8 @@ export default function NumberSliderSetting({
       <Col span={maybeCorrectedSpans[2]}>
         <InputNumber
           controls={false}
-          min={min}
-          max={max}
+          min={ignoreMin ? undefined : min}
+          max={ignoreMax ? undefined : max}
           style={{
             width: "100%",
           }}

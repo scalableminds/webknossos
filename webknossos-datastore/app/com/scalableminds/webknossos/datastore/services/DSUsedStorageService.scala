@@ -2,34 +2,24 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.Full
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class PathStorageUsageRequest(paths: List[String])
-object PathStorageUsageRequest {
-  implicit val jsonFormat: OFormat[PathStorageUsageRequest] = Json.format[PathStorageUsageRequest]
-}
+case class PathStorageUsageRequest(paths: Seq[String]) derives JsonAutoFormat
 
 case class PathStorageReport(
     path: String,
     usedStorageBytes: Long
-)
-object PathStorageReport {
-  implicit val jsonFormat: OFormat[PathStorageReport] = Json.format[PathStorageReport]
-}
+) derives JsonAutoFormat
 
-case class PathStorageUsageResponse(reports: List[PathStorageReport])
-object PathStorageUsageResponse {
-  implicit val jsonFormat: OFormat[PathStorageUsageResponse] = Json.format[PathStorageUsageResponse]
-}
+case class PathStorageUsageResponse(reports: Seq[PathStorageReport]) derives JsonAutoFormat
 
 case class PathPair(original: String, upath: UPath)
 
@@ -39,10 +29,10 @@ class DSUsedStorageService @Inject() (
     managedS3Service: ManagedS3Service
 ) extends LazyLogging {
 
-  def measureStorageForPaths(paths: List[String], organizationId: String)(implicit
+  def measureStorageForPaths(paths: Seq[String], organizationId: String)(implicit
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[List[PathStorageReport]] =
+  ): Fox[Seq[PathStorageReport]] =
     for {
       // Keep track of original path as its UPath might be normalized and turned into an absolute path.
       // The original path is needed in the returned storage reports to enable the core backend matching with the

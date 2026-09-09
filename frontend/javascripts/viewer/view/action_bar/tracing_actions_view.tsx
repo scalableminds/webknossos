@@ -62,7 +62,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
       <Typography.Title
         level={5}
         style={{
-          color: "#fff",
+          color: "var(--ant-color-text-light-solid)",
         }}
       >
         Where is my layout?

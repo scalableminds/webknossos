@@ -5,7 +5,7 @@ import com.scalableminds.util.image.Color
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalCoordinateProto, Vec3IntProto}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, UnsignedLong}
 import com.scalableminds.webknossos.tracingstore.tracings.MetadataEntry
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ApplyableVolumeUpdateAction,
@@ -112,7 +112,14 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
   "MergeSegmentItemsVolumeAction" should {
 
     "merge two segments (both segments exist; source should take precedence)" in {
-      val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
+      val action =
+        MergeSegmentItemsVolumeAction(
+          UnsignedLong(1),
+          UnsignedLong(2),
+          UnsignedLong(1),
+          UnsignedLong(2),
+          Dummies.tracingId
+        )
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata1, segmentWithMetadata2)))
 
       assert(
@@ -135,7 +142,14 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
     }
 
     "should merge two segments (both segments exist, but source lacks some properties)" in {
-      val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
+      val action =
+        MergeSegmentItemsVolumeAction(
+          UnsignedLong(1),
+          UnsignedLong(2),
+          UnsignedLong(1),
+          UnsignedLong(2),
+          Dummies.tracingId
+        )
       val result = action.applyOn(
         Dummies.volumeTracing.withSegments(Seq(segment1WithoutAdditionalProps, segment2WithAdditionalProps))
       )
@@ -157,7 +171,14 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
     }
 
     "merge two segments (segment 1 doesn't exist, though)" in {
-      val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
+      val action =
+        MergeSegmentItemsVolumeAction(
+          UnsignedLong(1),
+          UnsignedLong(2),
+          UnsignedLong(1),
+          UnsignedLong(2),
+          Dummies.tracingId
+        )
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata2)))
 
       assert(
@@ -178,7 +199,14 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
     }
 
     "merge two segments (segment 2 doesn't exist, though)" in {
-      val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
+      val action =
+        MergeSegmentItemsVolumeAction(
+          UnsignedLong(1),
+          UnsignedLong(2),
+          UnsignedLong(1),
+          UnsignedLong(2),
+          Dummies.tracingId
+        )
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata1)))
 
       assert(result.segments == Seq(segmentWithMetadata1))
@@ -189,7 +217,7 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
   "CreateSegmentVolumeAction" should {
     "add the specified segment" in {
       val createSegmentAction = CreateSegmentVolumeAction(
-        id = 1000,
+        id = UnsignedLong(1000),
         anchorPosition = Some(Vec3Int(5, 5, 5)),
         color = None,
         name = Some("aSegment"),
@@ -200,26 +228,26 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
       val result = applyUpdateAction(createSegmentAction)
 
       assert(result.segments.length == Dummies.volumeTracing.segments.length + 1)
-      val segment = result.segments.find(_.segmentId == createSegmentAction.id).get
-      assert(segment.segmentId == createSegmentAction.id)
+      val segment = result.segments.find(_.segmentId == createSegmentAction.id.toLong).get
+      assert(segment.segmentId == createSegmentAction.id.toLong)
       assert(segment.creationTime.contains(Dummies.timestampLong))
     }
   }
 
   "DeleteSegmentVolumeAction" should {
     "delete the specified segment" in {
-      val deleteSegmentAction = DeleteSegmentVolumeAction(id = 5, actionTracingId = Dummies.tracingId)
+      val deleteSegmentAction = DeleteSegmentVolumeAction(id = UnsignedLong(5), actionTracingId = Dummies.tracingId)
       val result = applyUpdateAction(deleteSegmentAction)
 
       assert(result.segments.length == Dummies.volumeTracing.segments.length - 1)
-      assert(!result.segments.exists(_.segmentId == deleteSegmentAction.id))
+      assert(!result.segments.exists(_.segmentId == deleteSegmentAction.id.toLong))
     }
   }
 
   "LEGACY_UpdateSegmentVolumeAction" should {
     "update the specified segment" in {
       val updateSegmentAction = LegacyUpdateSegmentVolumeAction(
-        id = 5,
+        id = UnsignedLong(5),
         anchorPosition = Some(Vec3Int(8, 8, 8)),
         name = Some("aRenamedSegment"),
         color = None,
@@ -230,9 +258,9 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
       val result = applyUpdateAction(updateSegmentAction)
 
       assert(result.segments.length == Dummies.volumeTracing.segments.length)
-      val segment = result.segments.find(_.segmentId == updateSegmentAction.id).get
+      val segment = result.segments.find(_.segmentId == updateSegmentAction.id.toLong).get
 
-      assert(segment.segmentId == updateSegmentAction.id)
+      assert(segment.segmentId == updateSegmentAction.id.toLong)
       assert(segment.anchorPosition.contains(vec3IntToProto(Vec3Int(8, 8, 8))))
       assert(segment.name.contains("aRenamedSegment"))
       assert(segment.creationTime.contains(Dummies.timestampLong))
@@ -244,7 +272,7 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
       val segmentId = 5
       val initialSegment = Dummies.volumeTracing.segments.find(_.segmentId == segmentId).get
       val updateSegmentPartialAction = UpdateSegmentPartialVolumeAction(
-        id = segmentId,
+        id = UnsignedLong(segmentId),
         anchorPosition = Some(Some(Vec3Int(8, 8, 8))),
         name = Some(Some("aRenamedSegment")),
         color = None,
@@ -255,9 +283,9 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
       val result = applyUpdateAction(updateSegmentPartialAction)
 
       assert(result.segments.length == Dummies.volumeTracing.segments.length)
-      val segment = result.segments.find(_.segmentId == updateSegmentPartialAction.id).get
+      val segment = result.segments.find(_.segmentId == updateSegmentPartialAction.id.toLong).get
 
-      assert(segment.segmentId == updateSegmentPartialAction.id)
+      assert(segment.segmentId == updateSegmentPartialAction.id.toLong)
       assert(segment.anchorPosition.contains(vec3IntToProto(Vec3Int(8, 8, 8))))
       assert(segment.name.contains("aRenamedSegment"))
       assert(segment.color == initialSegment.color)
@@ -267,7 +295,7 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
 
     "update the specified segment fully" in {
       val updateSegmentPartialAction = UpdateSegmentPartialVolumeAction(
-        id = 5,
+        id = UnsignedLong(5),
         anchorPosition = Some(Some(Vec3Int(8, 8, 8))),
         name = Some(Some("aRenamedSegment")),
         color = Some(Some(Color(1.0, 1.0, 0.0, 1.0))),
@@ -278,9 +306,9 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
       val result = applyUpdateAction(updateSegmentPartialAction)
 
       assert(result.segments.length == Dummies.volumeTracing.segments.length)
-      val segment = result.segments.find(_.segmentId == updateSegmentPartialAction.id).get
+      val segment = result.segments.find(_.segmentId == updateSegmentPartialAction.id.toLong).get
 
-      assert(segment.segmentId == updateSegmentPartialAction.id)
+      assert(segment.segmentId == updateSegmentPartialAction.id.toLong)
       assert(segment.anchorPosition.contains(vec3IntToProto(Vec3Int(8, 8, 8))))
       assert(segment.name.contains("aRenamedSegment"))
       assert(updateSegmentPartialAction.color.contains(segment.color.map(colorFromProto)))
@@ -295,7 +323,7 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
       // insert
       val updateMetadataAction =
         UpdateMetadataOfSegmentVolumeAction(
-          id = 5,
+          id = UnsignedLong(5),
           upsertEntriesByKey = Seq(
             MetadataEntry(key = "testString", stringValue = Some("string")),
             MetadataEntry(key = "testNumber", numberValue = Some(6)),
@@ -308,10 +336,10 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
       val result = applyUpdateAction(updateMetadataAction)
 
       assert(result.segments.length == Dummies.volumeTracing.segments.length)
-      val segment = result.segments.find(_.segmentId == updateMetadataAction.id).get
+      val segment = result.segments.find(_.segmentId == updateMetadataAction.id.toLong).get
       val segmentMetadata = segment.metadata.map(MetadataEntry.fromProto)
 
-      assert(segment.segmentId == updateMetadataAction.id)
+      assert(segment.segmentId == updateMetadataAction.id.toLong)
       assert(segmentMetadata.length == updateMetadataAction.upsertEntriesByKey.length)
       assert(segmentMetadata.head == updateMetadataAction.upsertEntriesByKey.head)
       assert(segmentMetadata(1) == updateMetadataAction.upsertEntriesByKey(1))
@@ -320,16 +348,16 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
       // delete
       val deleteMetadataAction =
         UpdateMetadataOfSegmentVolumeAction(
-          id = 5,
+          id = UnsignedLong(5),
           upsertEntriesByKey = Seq(),
           removeEntriesByKey = Seq("testString", "testNumber"),
           actionTracingId = Dummies.tracingId
         )
       val result2 = deleteMetadataAction.applyOn(result)
       assert(result2.segments.length == Dummies.volumeTracing.segments.length)
-      val segment2 = result2.segments.find(_.segmentId == updateMetadataAction.id).get
+      val segment2 = result2.segments.find(_.segmentId == updateMetadataAction.id.toLong).get
       val segmentMetadata2 = segment2.metadata.map(MetadataEntry.fromProto)
-      assert(segment.segmentId == updateMetadataAction.id)
+      assert(segment.segmentId == updateMetadataAction.id.toLong)
       assert(
         segmentMetadata2.length == updateMetadataAction.upsertEntriesByKey.length - deleteMetadataAction.removeEntriesByKey.length
       )

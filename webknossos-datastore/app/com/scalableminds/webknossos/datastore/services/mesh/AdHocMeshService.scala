@@ -37,7 +37,7 @@ case class AdHocMeshRequest(
     voxelSizeFactor: Vec3Double, // assumed to be in dataset’s unit
     tokenContext: TokenContext,
     mapping: Option[String] = None,
-    mappingType: Option[String] = None,
+    mappingType: Option[MappingType.Value] = None,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     annotationVersion: Option[Long],
     findNeighbors: Boolean = true
@@ -118,7 +118,7 @@ class AdHocMeshService(
       request.mapping match {
         case Some(mappingName) =>
           request.mappingType match {
-            case Some("JSON") =>
+            case Some(MappingType.JSON) =>
               mappingService.applyMapping(
                 DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName),
                 data,
@@ -134,7 +134,7 @@ class AdHocMeshService(
       request.mapping match {
         case Some(_) =>
           request.mappingType match {
-            case Some("HDF5") =>
+            case Some(MappingType.AGGLOMERATE) =>
               binaryDataService.agglomerateServiceOpt.map { agglomerateService =>
                 val dataRequest = DataServiceDataRequest(
                   request.datasetId,

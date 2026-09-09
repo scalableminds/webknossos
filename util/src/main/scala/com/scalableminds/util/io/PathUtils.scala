@@ -155,54 +155,68 @@ object PathUtils extends LazyLogging {
         Failure(errorMsg)
     }
 
-  /*
-   * removes the end of a path, after the last occurrence of any of excludeFromPrefix
-   * example:  /path/to/color/layer/that/is/named/color/and/has/files
-   *    becomes  /path/to/color/layer/that/is/named/color
-   *    if "color" is in excludeFromPrefix
-   */
-  def cutOffPathAtLastOccurrenceOf(path: Path, cutOffList: List[String]): Path = {
-    var lastCutOffIndex = -1
-    path.iterator().asScala.zipWithIndex.foreach { case (subPath, idx) =>
-      cutOffList.foreach { e =>
-        if (subPath.toString.contains(e)) {
-          lastCutOffIndex = idx
-        }
-      }
-    }
-    lastCutOffIndex match {
+  // Longest common prefix of paths, truncated so it doesn't reach past a boundaryDirNames match,
+  // with a lone remaining filename stripped off.
+  def findCommonRootDirectory(paths: List[Path], boundaryDirNames: List[String]): Path = {
+    val longestCommonPrefix = commonPrefix(paths)
+    val truncatedAtLastBoundary = cutOffPathAtLastOccurrenceOf(longestCommonPrefix, boundaryDirNames)
+    removeSingleFileNameFromPrefix(truncatedAtLastBoundary, paths)
+  }
+
+  // Cuts path off right before the last element that exactly matches a name in boundaryDirNames (path
+  // should be relative to the directory the search is limited to, so unrelated elements can't accidentally match).
+  private def cutOffPathAtLastOccurrenceOf(path: Path, boundaryDirNames: List[String]): Path = {
+    val lastMatchingIndex = path
+      .iterator()
+      .asScala
+      .zipWithIndex
+      .collect { case (subPath, idx) if boundaryDirNames.contains(subPath.toString) => idx }
+      .toList
+      .lastOption
+      .getOrElse(-1)
+    lastMatchingIndex match {
       case -1 => path
       // subpath(0, 0) is forbidden, therefore we handle this special case ourselves
       case 0 => Path.of("")
-      case i => path.subpath(0, i)
+      case i =>
+        val cutOff = path.subpath(0, i)
+        // subpath drops the root element, so re-add it for absolute paths
+        Option(path.getRoot).map(_.resolve(cutOff)).getOrElse(cutOff)
     }
   }
 
-  // Remove a single file name from previously computed common prefix
-  def removeSingleFileNameFromPrefix(prefix: Path, fileNames: List[String]): Path = {
-    def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Path.of(fileName).getFileName)
-
-    fileNames match {
-      case head :: tail if tail.isEmpty && isFileNameInPrefix(prefix, head) =>
-        removeOneName(prefix)
-      case _ => prefix
+  // Strips prefix's last name if it is in fact paths' one lone entry's file name (i.e. commonPrefix of a single file).
+  private def removeSingleFileNameFromPrefix(prefix: Path, paths: List[Path]): Path =
+    paths match {
+      case singlePath :: Nil if prefix.endsWith(singlePath.getFileName) => removeOneName(prefix)
+      case _                                                            => prefix
     }
-  }
 
   private def removeOneName(path: Path): Path =
     if (path.getNameCount == 1) {
       Path.of("")
     } else path.getParent
 
-  def deleteDirectoryRecursively(path: Path): Box[Unit] =
-    try {
-      if (Files.exists(path)) {
-        FileUtils.deleteDirectory(path.toFile) // Using Apache Commons IO
+  def deleteDirectoryRecursively(path: Path, enforceContainedIn: Option[Path] = None): Box[Unit] =
+    try
+      enforceContainedIn match {
+        case Some(ancestor) if !isContainedIn(path, ancestor) =>
+          Failure(s"Refusing to delete $path: it is not contained within expected parent directory $ancestor")
+        case _ =>
+          if (Files.exists(path)) {
+            FileUtils.deleteDirectory(path.toFile) // Using Apache Commons IO
+          }
+          Full(())
       }
-      Full(())
-    } catch {
+    catch {
       case ex: Exception => Failure(s"Failed to delete directory $path: ${ex.getMessage}")
     }
+
+  private def isContainedIn(path: Path, parent: Path): Boolean = {
+    val normalizedParent = parent.normalize()
+    val normalizedPath = path.normalize()
+    normalizedPath.startsWith(normalizedParent) && normalizedPath != normalizedParent
+  }
 
   // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory
   def moveDirectoryViaTemp(source: Path, dst: Path): Box[Unit] = tryo {

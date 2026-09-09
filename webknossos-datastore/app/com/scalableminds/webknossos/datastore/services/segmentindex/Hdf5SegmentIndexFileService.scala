@@ -21,7 +21,7 @@ class Hdf5SegmentIndexFileService @Inject() () extends SegmentIndexFileUtils {
       segmentIndex <- fileHandleCache.getCachedHdf5File(segmentIndexFileKey)(CachedHdf5File.fromPath).toFox
       nBuckets = segmentIndex.uint64Reader.getAttr("/", attrKeyNHashBuckets)
 
-      bucketIndex = segmentIndex.hashFunction(segmentId) % nBuckets
+      bucketIndex = java.lang.Long.remainderUnsigned(segmentIndex.hashFunction(segmentId), nBuckets)
       bucketOffsets = segmentIndex.uint64Reader.readArrayBlockWithOffset(keyHashBucketOffsets, 2, bucketIndex)
       bucketStart = bucketOffsets(0)
       bucketEnd = bucketOffsets(1)

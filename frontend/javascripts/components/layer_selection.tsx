@@ -38,25 +38,19 @@ export function LayerSelection<L extends { name: string }>({
     <Select
       showSearch
       placeholder={`Select a ${maybeLayerType}${maybeSpace}layer`}
-      optionFilterProp="children"
+      optionFilterProp="label"
       filterOption={(input, option) =>
-        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+        (option?.label ?? "").toLowerCase().indexOf(input.toLowerCase()) >= 0
       }
       disabled={fixedLayerName != null}
       onSelect={onSelect}
       style={style}
       value={value}
-    >
-      {layers.map((layer) => {
-        const readableName = getReadableNameForLayer(layer);
-        return (
-          <Select.Option key={layer.name} value={layer.name}>
-            {readableName}
-          </Select.Option>
-        );
-      })}
-    </Select>
+      options={layers.map((layer) => ({
+        value: layer.name,
+        label: getReadableNameForLayer(layer),
+      }))}
+    />
   );
 }
 

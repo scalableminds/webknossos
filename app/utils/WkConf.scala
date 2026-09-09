@@ -79,6 +79,13 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val children: List[User.type] = List(User)
     }
 
+    object PricingPlanExpiryReminder {
+      val enabled: Boolean = get[Boolean]("webKnossos.pricingPlanExpiryReminder.enabled")
+      val leadTimesDays: List[Int] = getList[Int]("webKnossos.pricingPlanExpiryReminder.leadTimesDays")
+      val trialLeadTimesDays: List[Int] = getList[Int]("webKnossos.pricingPlanExpiryReminder.trialLeadTimesDays")
+      val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.pricingPlanExpiryReminder.tickerInterval")
+    }
+
     object SampleOrganization {
       val enabled: Boolean = get[Boolean]("webKnossos.sampleOrganization.enabled")
 
@@ -124,7 +131,16 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val children: List[UploadToPaths.type] = List(UploadToPaths)
     }
     val children: List[Object] =
-      List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService, Datasets)
+      List(
+        User,
+        Tasks,
+        Cache,
+        PricingPlanExpiryReminder,
+        SampleOrganization,
+        FetchUsedStorage,
+        TermsOfService,
+        Datasets
+      )
   }
 
   object SingleSignOn {
@@ -209,6 +225,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     object TokenAuthenticator {
       val resetPasswordExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
       val dataStoreExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.dataStoreExpiry")
+      val jobExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.jobExpiry")
       val authenticatorExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorExpiry")
       val authenticatorIdleTimeout: FiniteDuration =
         get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")

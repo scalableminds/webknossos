@@ -372,4 +372,4 @@ const V4 = {
   },
 };
 
-export { M4x4, V2, V3, V4, type Matrix4x4 };
+export { M4x4, type Matrix4x4, V2, V3, V4 };

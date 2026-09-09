@@ -4,6 +4,7 @@ import java.util
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.cache.LRUConcurrentCache
+import com.scalableminds.util.tools.MathUtils
 import com.scalableminds.webknossos.datastore.dataformats.SafeCacheable
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
@@ -58,7 +59,8 @@ class AgglomerateIdCache(val maxEntries: Int, val standardBlockSize: Int) extend
 
     def handleUncachedAgglomerate(): Long = {
       val minId =
-        if (segmentId < standardBlockSize / 2) 0L else segmentId - standardBlockSize / 2
+        if (java.lang.Long.compareUnsigned(segmentId, standardBlockSize / 2) < 0) 0L
+        else segmentId - standardBlockSize / 2
 
       val agglomerateIds = readFromFile(reader, hdf5DataSet, minId, standardBlockSize)
 
@@ -148,7 +150,8 @@ class BoundingBoxCache(
         while (z < requestedCuboidBottomRight.voxelZInMag && z < dataLayerBoxBottomRight.z) {
           // get cached values for current bb and update the reader range by extending if necessary
           cache.get((x, y, z)).foreach { value =>
-            range = (Math.min(range._1, value.idRange._1), Math.max(range._2, value.idRange._2))
+            range =
+              (MathUtils.minUnsigned(range._1, value.idRange._1), MathUtils.maxUnsigned(range._2, value.idRange._2))
             currDimensions = value.dimensions
           }
           z = z + currDimensions._3
@@ -167,7 +170,7 @@ class BoundingBoxCache(
       readHDF: (IHDF5Reader, Long, Long) => Array[Long]
   ): Array[Long] = {
     val readerRange = getReaderRange(request)
-    if (readerRange._2 - readerRange._1 < maxReaderRange) {
+    if (java.lang.Long.compareUnsigned(readerRange._2 - readerRange._1, maxReaderRange) < 0) {
       val agglomerateIds = readHDF(reader, readerRange._1, (readerRange._2 - readerRange._1) + 1)
       input.map(i => if (i == 0L) 0L else agglomerateIds((i - readerRange._1).toInt))
     } else {
@@ -175,12 +178,14 @@ class BoundingBoxCache(
       var offset = readerRange._1
       val result = Array.ofDim[Long](input.length)
       val isTransformed = Array.fill(input.length)(false)
-      while (offset <= readerRange._2) {
+      while (java.lang.Long.compareUnsigned(offset, readerRange._2) <= 0) {
         val agglomerateIds: Array[Long] =
           readHDF(reader, offset, Math.min(maxReaderRange, readerRange._2 - offset) + 1)
         for (i <- input.indices) {
           val inputElement = input(i)
-          if (!isTransformed(i) && inputElement >= offset && inputElement < offset + maxReaderRange) {
+          val isInCurrentChunk = java.lang.Long.compareUnsigned(inputElement, offset) >= 0 &&
+            java.lang.Long.compareUnsigned(inputElement, offset + maxReaderRange) < 0
+          if (!isTransformed(i) && isInCurrentChunk) {
             result(i) = if (inputElement == 0L) 0L else agglomerateIds((inputElement - offset).toInt)
             isTransformed(i) = true
           }

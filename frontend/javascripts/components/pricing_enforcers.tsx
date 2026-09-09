@@ -17,8 +17,8 @@ import {
   Row,
 } from "antd";
 import type { TooltipPlacement } from "antd/es/tooltip";
+import { rgbToHex } from "libs/colors";
 import { useWkSelector } from "libs/react_hooks";
-import { rgbToHex } from "libs/utils";
 import noop from "lodash-es/noop";
 import React from "react";
 import { Link } from "react-router-dom";

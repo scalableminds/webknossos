@@ -308,9 +308,7 @@ class JpegCompressor() extends Compressor {
     val bi: BufferedImage = ImageIO.read(iis: ImageInputStream)
     val raster = bi.getRaster
     val dbb: DataBufferByte = raster.getDataBuffer.asInstanceOf[DataBufferByte]
-    val width = raster.getWidth
-    val data = dbb.getData.grouped(width).toList
-    data.flatten.toArray
+    dbb.getData
   }
 }
 

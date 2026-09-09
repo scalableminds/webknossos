@@ -245,12 +245,28 @@ export enum TDViewDisplayModeEnum {
   DATA = "DATA",
 }
 export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
+// This name can be used to retrieve the perspective camera of the 3D viewport
+// from the scene (the orthographic camera is named after the viewport itself).
+export const TDViewPerspectiveCameraName = "TDView_perspective";
+export const TDViewPerspectiveFov = 45;
 export enum MappingStatusEnum {
   DISABLED = "DISABLED",
   ACTIVATING = "ACTIVATING",
   ENABLED = "ENABLED",
 }
 export type MappingStatus = keyof typeof MappingStatusEnum;
+export type MappingType = "JSON" | "AGGLOMERATE";
+
+// The agglomerate mapping type used to be called "HDF5". Persisted mapping types (e.g., in
+// sharing links or in the default view configuration of a dataset) can still contain that
+// legacy value, so it needs to be migrated whenever a mapping type is read from such a source.
+export function normalizeMappingType(mappingType: unknown): MappingType {
+  // Only JSON mappings are treated specially. Everything else (including the legacy
+  // "HDF5" value) refers to an agglomerate mapping.
+  return typeof mappingType === "string" && mappingType.toUpperCase() === "JSON"
+    ? "JSON"
+    : "AGGLOMERATE";
+}
 export enum TreeTypeEnum {
   DEFAULT = "DEFAULT",
   AGGLOMERATE = "AGGLOMERATE",

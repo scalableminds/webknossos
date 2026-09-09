@@ -178,9 +178,8 @@ export default function DatasetCollectionContextProvider({
   }
 
   async function clearCacheAndReloadDataset(datasetId: string) {
-    const dataset = await getDataset(datasetId);
+    const dataset = await updateDatasetMutation.mutateAsync(datasetId);
     await clearCache(dataset);
-    await updateDatasetMutation.mutateAsync(datasetId);
   }
 
   async function updateCachedDataset(datasetId: string, updater: DatasetUpdater) {

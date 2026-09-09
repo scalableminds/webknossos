@@ -101,7 +101,15 @@ const shortCutDictForTools: Record<string, string> = {
   [AnnotationTool.PROOFREAD.id]: "Ctrl + K, O",
 };
 
-export const CommandPalette = () => {
+export type CommandPaletteProps = {
+  // Forces the palette open as soon as it mounts. Used by CommandPaletteLoader, which mounts
+  // this component in response to the very keypress that should open it. react-command-palette
+  // only reads `open` on mount and on change, so passing a constant true here is safe: the
+  // palette closes normally and its own mousetrap binding handles every later keypress.
+  openOnMount?: boolean;
+};
+
+export const CommandPalette = ({ openOnMount }: CommandPaletteProps) => {
   const dispatch = useDispatch();
 
   const userConfig = useWkSelector((state) => state.userConfiguration);
@@ -472,6 +480,7 @@ export const CommandPalette = () => {
       commands={commandsWithIds}
       key={paletteKey}
       hotKeys={["ctrl+p", "command+p"]}
+      open={openOnMount}
       trigger={null}
       maxDisplayed={100}
       theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}

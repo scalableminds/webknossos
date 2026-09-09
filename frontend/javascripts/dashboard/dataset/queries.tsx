@@ -23,6 +23,7 @@ import { useEffect, useRef } from "react";
 import {
   type APIDataset,
   type APIDatasetCompact,
+  APIMaybeUnimportedDataset,
   convertDatasetToCompact,
   type FlatFolderTreeItem,
   type Folder,
@@ -399,10 +400,10 @@ export function useUpdateDatasetMutation(folderId: string | null) {
         return updateDatasetPartial(id, updater);
       }
       const datasetId = params;
-      return getImportedDataset(datasetId);
+      return getDataset(datasetId);
     },
     mutationKey,
-    onSuccess: (updatedDataset: APIDataset) => {
+    onSuccess: (updatedDataset: APIMaybeUnimportedDataset) => {
       queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
         (oldItems || [])
           .map((oldDataset: APIDatasetCompact) => {

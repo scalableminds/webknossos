@@ -218,6 +218,40 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     expect(getBucketHeightInTexture(4096, packingDegree, constants.BUCKET_SIZE)).toBe(2);
   });
 
+  it("sizes the atlas to actually hold requiredBucketCapacity buckets, despite whole-row padding", () => {
+    // Regression guard: sizing used to divide required voxels by the texture's voxel
+    // area, which counts a shrunk bucket's row padding as usable space. The halving loop
+    // then shrank the texture past the point where the rows run out, so a 2D layer ended
+    // up holding only half the requested buckets — and getSmallestCommonBucketCapacity
+    // propagates that shortfall to every other layer in the dataset.
+    const shrunkBucketVoxelCount = constants.BUCKET_WIDTH ** 2 * 1;
+    for (const specs of [minSpecs, midSpecs, betterSpecs]) {
+      for (const elementClass of ["uint8", "uint16", "uint32"] as ElementClass[]) {
+        for (const bucketVoxelCount of [shrunkBucketVoxelCount, constants.BUCKET_SIZE]) {
+          for (const requiredBucketCapacity of [512, 1024, DEFAULT_REQUIRED_BUCKET_CAPACITY]) {
+            const { textureSize, textureCount, packingDegree } =
+              calculateTextureSizeAndCountForLayer(
+                specs,
+                elementClass,
+                requiredBucketCapacity,
+                bucketVoxelCount,
+              );
+            const capacity = getBucketCapacity(
+              textureCount,
+              textureSize,
+              packingDegree,
+              bucketVoxelCount,
+            );
+            expect(
+              capacity,
+              `${elementClass}, bucketVoxelCount=${bucketVoxelCount}, required=${requiredBucketCapacity}, maxTex=${specs.supportedTextureSize}`,
+            ).toBeGreaterThanOrEqual(requiredBucketCapacity);
+          }
+        }
+      }
+    }
+  });
+
   it("wantsTRecycling requires a degenerate depth, a t axis, and a non-editable layer", () => {
     // The happy case: 2D + t, read-only.
     expect(wantsTRecycling(1, true, false)).toBe(true);

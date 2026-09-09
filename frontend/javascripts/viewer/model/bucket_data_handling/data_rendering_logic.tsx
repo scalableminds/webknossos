@@ -171,17 +171,13 @@ export function getBucketCapacity(
   return Math.min(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, theoreticalBucketCapacity);
 }
 
-function getNecessaryVoxelCount(
-  requiredBucketCapacity: number,
-  bucketVoxelCount: number = constants.BUCKET_SIZE,
-) {
-  return requiredBucketCapacity * bucketVoxelCount;
-}
-
-function getAvailableVoxelCount(textureSize: number, packingDegree: number) {
-  return packingDegree * textureSize ** 2;
-}
-
+// Note that this has to go through getBucketsPerTexture rather than dividing the
+// required voxels by the texture's voxel area: a bucket occupies a whole number of
+// texture rows, so for layers whose packed bucket is smaller than one row (see
+// getBucketHeightInTexture) part of that row is padding that cannot hold another
+// bucket. Sizing by raw area would count that padding as usable and pick a texture
+// too small to actually hold requiredBucketCapacity buckets — which getBucketCapacity,
+// computing the same thing row-aware, would then report as a shortfall.
 function getDataTextureCount(
   textureSize: number,
   packingDegree: number,
@@ -189,8 +185,7 @@ function getDataTextureCount(
   bucketVoxelCount: number = constants.BUCKET_SIZE,
 ) {
   return Math.ceil(
-    getNecessaryVoxelCount(requiredBucketCapacity, bucketVoxelCount) /
-      getAvailableVoxelCount(textureSize, packingDegree),
+    requiredBucketCapacity / getBucketsPerTexture(textureSize, packingDegree, bucketVoxelCount),
   );
 }
 

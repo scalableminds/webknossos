@@ -465,9 +465,9 @@ class EditableMappingUpdater(
       )
       _ <- Fox.serialCombined(segmentToAgglomerateChunkNewestStream) { case (chunkKey, _, version) =>
         if (version > sourceVersion) {
-          editableMappingService.getSegmentToAgglomerateChunk(chunkKey, Some(sourceVersion)).shiftBox.map {
-            case Full(chunkData)        => segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false))
-            case Empty                  => segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true))
+          editableMappingService.getSegmentToAgglomerateChunk(chunkKey, Some(sourceVersion)).shiftBox.flatMap {
+            case Full(chunkData) => Fox.successful(segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false)))
+            case Empty           => Fox.successful(segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true)))
             case Failure(msg, _, chain) =>
               Fox.failure(msg, Empty, chain)
           }

@@ -948,6 +948,26 @@ case class UpdateSegmentGroupVisibilityVolumeAction(
     this.copy(actionTracingId = newTracingId)
 }
 
+case class UpdateBucketPartialVolumeAction(
+    actionTracingId: String,
+    bucketPosition: Vec3Int,
+    mag: Vec3Int,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+    voxelRunsBase64: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends VolumeUpdateAction derives JsonAutoFormat {
+
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+
+}
+
 // Only used to represent legacy update actions from the db where not all fields are set
 // This is from a time when volume actions were not applied lazily
 // (Before https://github.com/scalableminds/webknossos/pull/7917)

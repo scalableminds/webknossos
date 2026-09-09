@@ -1,5 +1,5 @@
 import { WarningOutlined } from "@ant-design/icons";
-import { Divider, Empty, Modal, Spin, Tooltip } from "antd";
+import { Divider, Empty, Modal, Spin, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
 import { useRef } from "react";
@@ -14,19 +14,15 @@ import { SkeletonToolbar, skeletonTabId } from "./skeleton_toolbar";
 import { SkeletonTreeView } from "./skeleton_tree_view";
 
 function SkeletonsHiddenWarning() {
-  const showSkeletons = useWkSelector(
-    (state) => enforceSkeletonTracing(state.annotation).showSkeletons,
-  );
+  const showSkeletons = useWkSelector((state) => state.localSkeletonState.showSkeletons);
   if (showSkeletons) {
     return null;
   }
   return (
     <Tooltip title={messages["tracing.skeletons_are_hidden_warning"]}>
-      <WarningOutlined
-        style={{
-          color: "var(--ant-color-warning)",
-        }}
-      />
+      <Typography.Text type="warning">
+        <WarningOutlined />
+      </Typography.Text>
     </Tooltip>
   );
 }

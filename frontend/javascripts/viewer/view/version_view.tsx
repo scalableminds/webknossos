@@ -1,5 +1,5 @@
 import { CloseOutlined } from "@ant-design/icons";
-import { Alert, Button } from "antd";
+import { Alert, Button, Typography } from "antd";
 import { Fragment } from "react";
 import VersionList, { handleCloseRestoreView } from "viewer/view/version_list";
 
@@ -18,14 +18,15 @@ function VersionView() {
           padding: "0px 5px",
         }}
       >
-        <h4
+        <Typography.Title
+          level={4}
           style={{
             display: "inline-block",
             marginLeft: 4,
           }}
         >
           Version History
-        </h4>
+        </Typography.Title>
         <Button
           className="close-button"
           style={{

@@ -10,10 +10,11 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.{PathUtils, ZipIO}
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.box.Box.tryo
-import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -47,7 +48,6 @@ import com.scalableminds.webknossos.datastore.services.{
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
-import play.api.libs.json.{Json, OFormat}
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
 import java.io.{File, RandomAccessFile}
@@ -60,10 +60,7 @@ case class ResumableUploadInfo(
     totalFileCount: Long,
     filePaths: Option[Seq[String]],
     totalFileSizeInBytes: Option[Long]
-)
-object ResumableUploadInfo {
-  implicit val jsonFormat: OFormat[ResumableUploadInfo] = Json.format[ResumableUploadInfo]
-}
+) derives JsonAutoFormat
 
 case class DatasetUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
@@ -77,10 +74,7 @@ case class DatasetUploadInfo(
     needsConversion: Option[Boolean], // None means false
     voxelSizeFactor: Option[Vec3Double],
     voxelSizeUnit: Option[LengthUnit]
-)
-object DatasetUploadInfo {
-  implicit val jsonFormat: OFormat[DatasetUploadInfo] = Json.format[DatasetUploadInfo]
-}
+) derives JsonAutoFormat
 
 case class MagUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
@@ -88,10 +82,7 @@ case class MagUploadInfo(
     layerName: String,
     mag: MagLocator,
     overwritePending: Boolean
-)
-object MagUploadInfo {
-  implicit val jsonFormat: OFormat[MagUploadInfo] = Json.format[MagUploadInfo]
-}
+) derives JsonAutoFormat
 
 case class AttachmentUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
@@ -100,28 +91,13 @@ case class AttachmentUploadInfo(
     attachmentType: LayerAttachmentType,
     attachment: LayerAttachment,
     overwritePending: Boolean
-)
-object AttachmentUploadInfo {
-  implicit val jsonFormat: OFormat[AttachmentUploadInfo] = Json.format[AttachmentUploadInfo]
-}
+) derives JsonAutoFormat
 
-case class DatasetUploadAdditionalInfo(newDatasetId: ObjectId, directoryName: String)
-object DatasetUploadAdditionalInfo {
-  implicit val jsonFormat: OFormat[DatasetUploadAdditionalInfo] =
-    Json.format[DatasetUploadAdditionalInfo]
-}
+case class DatasetUploadAdditionalInfo(newDatasetId: ObjectId, directoryName: String) derives JsonAutoFormat
 
-case class MagUploadAdditionalInfo(dataSourceId: DataSourceId)
-object MagUploadAdditionalInfo {
-  implicit val jsonFormat: OFormat[MagUploadAdditionalInfo] =
-    Json.format[MagUploadAdditionalInfo]
-}
+case class MagUploadAdditionalInfo(dataSourceId: DataSourceId) derives JsonAutoFormat
 
-case class AttachmentUploadAdditionalInfo(dataSourceId: DataSourceId)
-object AttachmentUploadAdditionalInfo {
-  implicit val jsonFormat: OFormat[AttachmentUploadAdditionalInfo] =
-    Json.format[AttachmentUploadAdditionalInfo]
-}
+case class AttachmentUploadAdditionalInfo(dataSourceId: DataSourceId) derives JsonAutoFormat
 
 case class ReportDatasetUploadParameters(
     needsConversion: Boolean,
@@ -129,41 +105,25 @@ case class ReportDatasetUploadParameters(
     dataSourceOpt: Option[UsableDataSource], // must be set if needsConversion is false
     layersToLink: Seq[LinkedLayerIdentifier],
     voxelSize: Option[VoxelSize]
-)
-object ReportDatasetUploadParameters {
-  implicit val jsonFormat: OFormat[ReportDatasetUploadParameters] =
-    Json.format[ReportDatasetUploadParameters]
-}
+) derives JsonAutoFormat
+
 case class ReportMagUploadParameters(
     datasetId: ObjectId,
     layerName: String,
     mag: MagLocator,
     magSizeBytes: Long
-)
-object ReportMagUploadParameters {
-  implicit val jsonFormat: OFormat[ReportMagUploadParameters] = Json.format[ReportMagUploadParameters]
-}
+) derives JsonAutoFormat
+
 case class ReportAttachmentUploadParameters(
     datasetId: ObjectId,
     layerName: String,
     attachmentType: LayerAttachmentType,
     attachment: LayerAttachment,
     attachmentSizeBytes: Long
-)
-object ReportAttachmentUploadParameters {
-  implicit val jsonFormat: OFormat[ReportAttachmentUploadParameters] = Json.format[ReportAttachmentUploadParameters]
-}
+) derives JsonAutoFormat
 
 case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
-
-object LinkedLayerIdentifier {
-  implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
-}
-
-case class CancelUploadInformation(uploadId: String)
-object CancelUploadInformation {
-  implicit val jsonFormat: OFormat[CancelUploadInformation] = Json.format[CancelUploadInformation]
-}
+    derives JsonAutoFormat
 
 class UploadService @Inject() (
     dataSourceService: DataSourceService,
@@ -181,6 +141,7 @@ class UploadService @Inject() (
 )(implicit ec: ExecutionContext)
     extends DirectoryConstants
     with WKWDataFormatHelper
+    with Formatter
     with LazyLogging {
 
   actorSystem.scheduler.scheduleOnce(10 seconds)(cleanUpOrphanUploads())
@@ -211,6 +172,20 @@ class UploadService @Inject() (
     for {
       orgaDir <- baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true)
     } yield orgaDir.resolve(trashDir).resolve(s"uploadBackup__$uploadId")
+
+  def cleanUpUploadFilesAfterConvertJob(organizationId: String, directoryName: String, jobId: String): Unit =
+    if (dataStoreConfig.Datastore.Upload.deleteTemporaryFilesAfterUpload) {
+      baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true).foreach { orgaDir =>
+        PathUtils.deleteDirectoryRecursively(
+          orgaDir.resolve(forConversionDir).resolve(directoryName),
+          enforceContainedIn = Some(orgaDir)
+        )
+        PathUtils.deleteDirectoryRecursively(
+          orgaDir.resolve(convertingDir).resolve(jobId),
+          enforceContainedIn = Some(orgaDir)
+        )
+      }
+    }
 
   def reserveDatasetUpload(
       datasetUploadInfo: DatasetUploadInfo,
@@ -420,8 +395,12 @@ class UploadService @Inject() (
       _ = logger.info(s"Finishing ${uploadFullName(UploadDomain.dataset, uploadId, datasetId, dataSourceId)}...")
       linkedLayerIdentifiers <- datasetUploadMetadataStore.findLinkedLayerIdentifiers(uploadId)
       uploadDir <- uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.dataset).toFox
-      uploadBackupDir <- uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId).toFox
-      _ <- backupRawUploadedData(uploadDir, uploadBackupDir, datasetId).toFox
+      _ <- Fox.runIf(!dataStoreConfig.Datastore.Upload.deleteTemporaryFilesAfterUpload) {
+        for {
+          uploadBackupDir <- uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId).toFox
+          _ <- backupRawUploadedData(uploadDir, uploadBackupDir, datasetId).toFox
+        } yield ()
+      }
       _ <- checkWithinRequestedFileSize(
         uploadDir,
         uploadId,
@@ -810,6 +789,25 @@ class UploadService @Inject() (
     } yield filesToDelete
   }
 
+  private def deleteFailedUploadDir(
+      datasetId: ObjectId,
+      unpackToDir: Path,
+      dataSourceId: DataSourceId,
+      reason: String
+  ): Unit =
+    if (dataStoreConfig.Datastore.Upload.deleteTemporaryFilesAfterUpload) {
+      logger.info(s"Deleting failed-upload directory $unpackToDir because $reason.")
+      PathUtils.deleteDirectoryRecursively(unpackToDir)
+    } else {
+      localDatasetDeletionService.moveToTrash(
+        datasetId,
+        unpackToDir,
+        dataSourceId.organizationId,
+        dataSourceId.directoryName,
+        Some(reason)
+      )
+    }
+
   private def cleanUpOnFailure[T](
       domain: UploadDomain,
       result: Box[T],
@@ -822,23 +820,11 @@ class UploadService @Inject() (
       case Full(_) =>
         Full(())
       case Empty =>
-        localDatasetDeletionService.deleteOnDisk(
-          datasetId,
-          unpackToDir,
-          dataSourceId.organizationId,
-          dataSourceId.directoryName,
-          Some("the upload failed")
-        )
+        deleteFailedUploadDir(datasetId, unpackToDir, dataSourceId, "the upload failed")
         Failure(s"Unknown error $label")
-      case Failure(msg, e, _) =>
-        logger.warn(s"Error while $label: $msg, $e")
-        localDatasetDeletionService.deleteOnDisk(
-          datasetId,
-          unpackToDir,
-          dataSourceId.organizationId,
-          dataSourceId.directoryName,
-          Some("the upload failed")
-        )
+      case f: Failure =>
+        logger.warn(s"Error while $label: ${formatFailureChain(f, includeStackTraces = true)}")
+        deleteFailedUploadDir(datasetId, unpackToDir, dataSourceId, "the upload failed")
         if (domain == UploadDomain.dataset) {
           remoteWebknossosClient.deleteDataset(datasetId)
         }
@@ -1036,7 +1022,7 @@ class UploadService @Inject() (
     for {
       _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
-      excludeFromPrefix = LayerCategory.values.map(_.toString).toList
+      layerDirNames = LayerCategory.values.map(_.toString).toList
       isSingleZip = shallowFileList.length == 1 && shallowFileList.headOption.exists(f =>
         ZipEntryUPath.relevantFileExtensions.exists(f.toString.toLowerCase.endsWith)
       )
@@ -1052,7 +1038,7 @@ class UploadService @Inject() (
                 includeHiddenFiles = false,
                 hiddenFilesWhitelist = List(".zarray", ".zattrs"),
                 truncateCommonPrefix = true,
-                Some(excludeFromPrefix)
+                boundaryDirNames = Some(layerDirNames)
               )
               .toFox
             _ <- Fox.fromBool(unpackToDir.toFile.exists()) ?~> Msg.Dataset.Upload.noFiles
@@ -1065,13 +1051,10 @@ class UploadService @Inject() (
             _ = logger.info(
               s"Detected $uploadDomain root during finishUpload of $datasetId from ${deepFileList.length} files in $uploadDir with commonPrefixPreliminary=$commonPrefixPreliminary"
             )
-            strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
-            commonPrefix = PathUtils.removeSingleFileNameFromPrefix(
-              strippedPrefix,
-              deepFileList.map(_.getFileName.toString)
-            )
+            commonRootDir = PathUtils.findCommonRootDirectory(deepFileList, layerDirNames)
+            _ <- Fox.fromBool(commonRootDir.startsWith(uploadDir)) ?~> Msg.Dataset.Upload.datasetRootDetectionFailed
             _ <- tryo(
-              FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))
+              FileUtils.moveDirectory(new File(commonRootDir.toString), new File(unpackToDir.toString))
             ).toFox ?~> Msg.Dataset.Upload.moveToTargetFailed
           } yield ()
         }

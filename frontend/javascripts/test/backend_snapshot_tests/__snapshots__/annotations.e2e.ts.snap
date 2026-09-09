@@ -2968,7 +2968,7 @@ exports[`Annotation API (E2E) > getTracingsForAnnotation() for hybrid 1`] = `
     "elementClass": "uint32",
     "hasSegmentIndex": true,
     "id": "id",
-    "largestSegmentId": 0,
+    "largestSegmentId": 0n,
     "mags": [
       {
         "x": 1,
@@ -3035,7 +3035,7 @@ exports[`Annotation API (E2E) > getTracingsForAnnotation() for volume 1`] = `
   "elementClass": "uint32",
   "hasSegmentIndex": true,
   "id": "id",
-  "largestSegmentId": 0,
+  "largestSegmentId": 0n,
   "mags": [
     {
       "x": 1,

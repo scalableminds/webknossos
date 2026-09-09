@@ -349,7 +349,7 @@ const _getDisabledInfoForTools = (
     isFlycamRotated,
     isConcurrentCollabMode,
     hasSkeleton,
-    areSkeletonsVisible: isSkeletonLayerVisible(annotation),
+    areSkeletonsVisible: isSkeletonLayerVisible(state),
     areGeometriesTransformed: areGeometriesTransformed(state),
     zoomStateForBrushing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.BRUSH, state),
     zoomStateForTracing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.TRACE, state),

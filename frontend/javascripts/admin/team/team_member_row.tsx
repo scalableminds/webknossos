@@ -1,10 +1,11 @@
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { updateUser } from "admin/rest_api";
 import { Button, Select, Tag, Tooltip } from "antd";
 import { Flex } from "antd/lib";
+import { stringToTagColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
-import { stringToColor } from "libs/format_utils";
 import messages from "messages";
 import { useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
@@ -22,7 +23,7 @@ function TeamRolesForUser({ user, highlightedTeam }: { user: APIUser; highlighte
         .filter((team) => team.id === highlightedTeam.id)
         .map((team) => {
           const roleName = team.isTeamManager ? "Team Manager" : "Member";
-          return [`${roleName}`, stringToColor(roleName)];
+          return [`${roleName}`, stringToTagColor(roleName)];
         });
 
   return tags.map(([text, color]) => (
@@ -67,7 +68,7 @@ export function TeamMembersRow({ team, users }: { team: APITeam; users: APIUser[
 
   async function updateTeamMembership(user: APIUser, newTeams: APITeamMembership[]) {
     try {
-      await updateUser({ ...user, teams: newTeams });
+      unwrapOrThrow(await updateUser({ ...user, teams: newTeams }));
       await queryClient.invalidateQueries({ queryKey: ["editableUsers"] });
     } catch (error) {
       handleGenericError(error as Error);

@@ -27,13 +27,47 @@ type Entry = [Key, Value];
 */
 type CompressedEntry = Vector4;
 
-const EMPTY_KEY = [
+function compressEntry(key: Key, value: Value): CompressedEntry {
+  const compressedBytes =
+    ((key[3] & (2 ** 5 - 1)) << (32 - 5)) +
+    ((key[4] & (2 ** 6 - 1)) << (32 - 5 - 6)) +
+    (value & (2 ** 21 - 1));
+
+  return [key[0], key[1], key[2], compressedBytes];
+}
+
+function decompressEntry(compressedEntry: CompressedEntry): Entry {
+  const compressedBytes = compressedEntry[3];
+  const magIndex = compressedBytes >>> (32 - 5);
+  const layerIndex = (compressedBytes >>> (32 - 5 - 6)) & (2 ** 6 - 1);
+  const address = compressedBytes & (2 ** 21 - 1);
+
+  return [
+    [compressedEntry[0], compressedEntry[1], compressedEntry[2], magIndex, layerIndex],
+    address,
+  ];
+}
+
+// A key whose first component is EMPTY_KEY_VALUE; the remaining components are irrelevant here
+// since checkValidKey/canDisplacedEntryBeIgnored below only ever inspect key[0]. Used solely to
+// construct the canonical empty entry's bit pattern below.
+const RAW_EMPTY_KEY = [
   EMPTY_KEY_VALUE,
   EMPTY_KEY_VALUE,
   EMPTY_KEY_VALUE,
   EMPTY_KEY_VALUE,
   EMPTY_KEY_VALUE,
 ] as Key;
+
+// magIdx (key[3]) and layerIdx (key[4]) are packed into 5 and 6 bits respectively by
+// compressEntry, so EMPTY_KEY_VALUE (2**32 - 1) can't round-trip through them losslessly --
+// compressing then decompressing RAW_EMPTY_KEY yields 31/63 (all-ones within those bit widths)
+// for those two fields, not EMPTY_KEY_VALUE. getEmptyKey() must return that exact round-tripped
+// value: AbstractCuckooTable.rehash recognizes an untouched (tiled-empty) slot by comparing its
+// *decompressed* key against getEmptyKey() via _areKeysEqual, so any mismatch there means
+// genuinely-empty slots are never recognized as empty, causing checkValidKey to spuriously
+// reject them as real, invalid entries during rehashing.
+const EMPTY_KEY: Key = decompressEntry(compressEntry(RAW_EMPTY_KEY, EMPTY_KEY_VALUE))[0];
 
 export class CuckooTableVec5 extends AbstractCuckooTable<Key, Value, Entry> {
   static fromCapacity(requestedCapacity: number): CuckooTableVec5 {
@@ -86,24 +120,11 @@ export class CuckooTableVec5 extends AbstractCuckooTable<Key, Value, Entry> {
   }
 
   compressEntry(key: Key, value: Value): CompressedEntry {
-    const compressedBytes =
-      ((key[3] & (2 ** 5 - 1)) << (32 - 5)) +
-      ((key[4] & (2 ** 6 - 1)) << (32 - 5 - 6)) +
-      (value & (2 ** 21 - 1));
-
-    return [key[0], key[1], key[2], compressedBytes];
+    return compressEntry(key, value);
   }
 
   decompressEntry(compressedEntry: CompressedEntry): Entry {
-    const compressedBytes = compressedEntry[3];
-    const magIndex = compressedBytes >>> (32 - 5);
-    const layerIndex = (compressedBytes >>> (32 - 5 - 6)) & (2 ** 6 - 1);
-    const address = compressedBytes & (2 ** 21 - 1);
-
-    return [
-      [compressedEntry[0], compressedEntry[1], compressedEntry[2], magIndex, layerIndex],
-      address,
-    ];
+    return decompressEntry(compressedEntry);
   }
 
   writeEntryToTable(key: Key, value: Value, hashedAddress: number) {

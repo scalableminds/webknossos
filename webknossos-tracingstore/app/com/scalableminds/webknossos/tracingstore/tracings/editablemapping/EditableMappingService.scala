@@ -8,7 +8,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
@@ -20,7 +20,8 @@ import com.scalableminds.webknossos.datastore.helpers.{
   NativeBucketScanner,
   NodeDefaults,
   ProtoGeometryConversions,
-  SkeletonTracingDefaults
+  SkeletonTracingDefaults,
+  UnsignedLong
 }
 import com.scalableminds.webknossos.datastore.models.*
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -42,7 +43,7 @@ import Box.tryo
 import com.scalableminds.webknossos.tracingstore.annotation.{UpdateAction, UpdateGroupHandling}
 import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsObject, Json}
 
 import java.util
 import scala.concurrent.ExecutionContext
@@ -56,42 +57,27 @@ case class FallbackDataKey(
 )
 
 case class MinCutParameters(
-    partition1: List[Long],
-    partition2: List[Long],
+    partition1: List[UnsignedLong],
+    partition2: List[UnsignedLong],
     mag: Vec3Int,
-    agglomerateId: Long,
+    agglomerateId: UnsignedLong,
     version: Long
-)
+) derives JsonAutoFormat
 
-object MinCutParameters {
-  implicit val jsonFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
-}
-
-case class NeighborsParameters(segmentId: Long, mag: Vec3Int, agglomerateId: Long, version: Long)
-
-object NeighborsParameters {
-  implicit val jsonFormat: OFormat[NeighborsParameters] = Json.format[NeighborsParameters]
-}
+case class NeighborsParameters(segmentId: UnsignedLong, mag: Vec3Int, agglomerateId: UnsignedLong, version: Long)
+    derives JsonAutoFormat
 
 case class EdgeWithPositions(
-    segmentId1: Long,
-    segmentId2: Long,
+    segmentId1: UnsignedLong,
+    segmentId2: UnsignedLong,
     position1: Vec3Int,
     position2: Vec3Int
-)
-
-object EdgeWithPositions {
-  implicit val jsonFormat: OFormat[EdgeWithPositions] = Json.format[EdgeWithPositions]
-}
+) derives JsonAutoFormat
 
 case class NodeWithPosition(
-    segmentId: Long,
+    segmentId: UnsignedLong,
     position: Vec3Int
-)
-
-object NodeWithPosition {
-  implicit val jsonFormat: OFormat[NodeWithPosition] = Json.format[NodeWithPosition]
-}
+) derives JsonAutoFormat
 
 class EditableMappingService @Inject() (
     datasetErrorLoggingService: TSDatasetErrorLoggingService,
@@ -127,7 +113,7 @@ class EditableMappingService @Inject() (
     Json.obj(
       "tracingId" -> tracingId,
       "baseMappingName" -> editableMappingInfo.baseMappingName,
-      "largestAgglomerateId" -> editableMappingInfo.largestAgglomerateId,
+      "largestAgglomerateId" -> UnsignedLong(editableMappingInfo.largestAgglomerateId),
       "createdTimestamp" -> editableMappingInfo.createdTimestamp
     )
 
@@ -459,7 +445,7 @@ class EditableMappingService @Inject() (
       dataSourceId = None,
       dataLayer = editableMappingLayer,
       cuboid = request.cuboid,
-      segmentId = request.segmentId,
+      segmentId = request.segmentId.toLong,
       voxelSizeFactor = request.voxelSizeFactorInUnit,
       tokenContext = tc,
       mapping = None,
@@ -515,13 +501,13 @@ class EditableMappingService @Inject() (
         editableMappingInfo,
         tracingId,
         version,
-        parameters.agglomerateId,
+        parameters.agglomerateId.toLong,
         remoteFallbackLayer
       ) ?~> Msg.AgglomerateGraph.failed
       edgesToCut <- minCut(
         agglomerateGraph,
-        parameters.partition1,
-        parameters.partition2
+        parameters.partition1.map(_.toLong),
+        parameters.partition2.map(_.toLong)
       ).toFox ?~> "Could not calculate min-cut on agglomerate graph."
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
     } yield edgesWithPositions
@@ -553,9 +539,18 @@ class EditableMappingService @Inject() (
         g.setEdgeWeight(e, affinity)
       }
 
-      // Add artificial root nodes which will force the two given partitions to stay connected during the min-cut.
-      val partition1RootId = -1
-      val partition2RootId = -2
+      // Add artificial root nodes that will force the two given partitions to stay connected during the min-cut.
+      // Their ids must not collide with any real segment id. Since any number can be valid now, we need to find a free value.
+      val realSegmentIds = agglomerateGraph.segments.toSet
+      def freshRootId(start: Long): Long = {
+        var candidate = start
+        while (realSegmentIds.contains(candidate)) candidate -= 1
+        candidate
+      }
+      // -1L is the highest number in an unsigned long. Since the JVM doesn't have unsigned longs,
+      // -1L is used here as the starting point to search for a free root id downwards.
+      val partition1RootId = freshRootId(-1L)
+      val partition2RootId = freshRootId(partition1RootId - 1L)
       g.addVertex(partition1RootId)
       g.addVertex(partition2RootId)
       partition1Unique.foreach { segmentId =>
@@ -592,8 +587,8 @@ class EditableMappingService @Inject() (
       val position1 = agglomerateGraph.positions(index1)
       val position2 = agglomerateGraph.positions(index2)
       EdgeWithPositions(
-        segmentId1,
-        segmentId2,
+        UnsignedLong(segmentId1),
+        UnsignedLong(segmentId2),
         vec3IntFromProto(position1),
         vec3IntFromProto(position2)
       )
@@ -604,7 +599,7 @@ class EditableMappingService @Inject() (
       val index = agglomerateGraph.segments.indexOf(segmentId)
       val position = agglomerateGraph.positions(index)
       NodeWithPosition(
-        segmentId,
+        UnsignedLong(segmentId),
         vec3IntFromProto(position)
       )
     }
@@ -621,12 +616,12 @@ class EditableMappingService @Inject() (
         editableMappingInfo,
         tracingId,
         version,
-        parameters.agglomerateId,
+        parameters.agglomerateId.toLong,
         remoteFallbackLayer
       )
-      neighborNodes = neighbors(agglomerateGraph, parameters.segmentId)
+      neighborNodes = neighbors(agglomerateGraph, parameters.segmentId.toLong)
       nodesWithPositions = annotateNodesWithPositions(neighborNodes, agglomerateGraph)
-    } yield (parameters.segmentId, nodesWithPositions)
+    } yield (parameters.segmentId.toLong, nodesWithPositions)
 
   private def neighbors(agglomerateGraph: AgglomerateGraph, segmentId: Long): Seq[Long] = {
     val relevantEdges = agglomerateGraph.edges.filter { edge =>
@@ -656,13 +651,13 @@ class EditableMappingService @Inject() (
             segmentId1 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition1,
-              update.segmentId1,
+              update.segmentId1.map(_.toLong),
               update.mag
             )
             segmentId2 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition2,
-              update.segmentId2,
+              update.segmentId2.map(_.toLong),
               update.mag
             )
           } yield Some(segmentId1, segmentId2, false)
@@ -671,13 +666,13 @@ class EditableMappingService @Inject() (
             segmentId1 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition1,
-              update.segmentId1,
+              update.segmentId1.map(_.toLong),
               update.mag
             )
             segmentId2 <- findSegmentIdAtPositionIfNeeded(
               remoteFallbackLayer,
               update.segmentPosition2,
-              update.segmentId2,
+              update.segmentId2.map(_.toLong),
               update.mag
             )
           } yield Some(segmentId1, segmentId2, true)

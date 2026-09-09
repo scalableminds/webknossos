@@ -3,7 +3,7 @@ import InvertIcon from "@images/icons/icon-invert.svg?react";
 import { Col, Row } from "antd";
 import classnames from "classnames";
 import FastTooltip from "components/fast_tooltip";
-import { rgbToHex } from "libs/utils";
+import { rgbToHex } from "libs/colors";
 import { layerViewConfigurations, layerViewConfigurationTooltips } from "messages";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";

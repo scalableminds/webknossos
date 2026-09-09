@@ -1,17 +1,12 @@
 import {
   type BrowserKeyComboEventProps,
-  type BrowserKeyEvent,
   bindKeyCombo,
-  browserOnKeyPressedBinder,
-  browserOnKeyReleasedBinder,
   type KeyEvent,
-  setGlobalKeystrokesOptions,
   unbindKeyCombo,
 } from "@rwh/keystrokes";
 import Hammer from "hammerjs";
-import { Keyboard } from "keyboardjs";
-import { us } from "keyboardjs/locales/us";
 import Date from "libs/date";
+import { initializeKeystrokes } from "libs/keystrokes_options";
 import window, { document } from "libs/window";
 import extend from "lodash-es/extend";
 import { createNanoEvents, type Emitter } from "nanoevents";
@@ -21,27 +16,9 @@ import constants from "viewer/constants";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { addEventListenerWithDelegation, isNoEditableElementFocused } from "./utils";
 
-// Normalizes digit key events so that modifiers don't change the reported key name.
-// e.g. Shift+2 on a US keyboard fires event.key="@", but we always want key="2".
-function normalizeDigitKeyEvent(event: BrowserKeyEvent): BrowserKeyEvent {
-  const code = event.originalEvent?.code ?? "";
-  const match = code.match(/^Digit([0-9])$/);
-  if (match) {
-    return { ...event, key: match[1] };
-  }
-  return event;
-}
-
-// Must be called in order for keystrokes to detect the spacebar as via "space" and not as " ".
-// The custom onKeyPressed/onKeyReleased adapters normalize digit keys so that modifier combinations
-// like "shift + 2" work regardless of keyboard layout.
-setGlobalKeystrokesOptions({
-  keyRemap: { " ": "space" },
-  onKeyPressed: (handler) =>
-    browserOnKeyPressedBinder((event) => handler(normalizeDigitKeyEvent(event))),
-  onKeyReleased: (handler) =>
-    browserOnKeyReleasedBinder((event) => handler(normalizeDigitKeyEvent(event))),
-});
+// Must run before anything binds a key combo: the global Keystrokes instance is
+// created lazily on the first bind and picks up the options set at that point.
+initializeKeystrokes();
 
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
@@ -136,20 +113,17 @@ type FullMouseBindingMap = Record<MouseClickEvents, MouseClickEventHandler> &
 export type MouseEventHandler = ValueOf<FullMouseBindingMap>;
 export type MouseBindingMap = Partial<FullMouseBindingMap>;
 
-// Workaround: KeyboardJS fires event for "C" even if you press
-// "Ctrl + C".
+// A binding without a modifier must not fire when that modifier is held, so that
+// e.g. "c" does not trigger while the user presses "Ctrl + C".
 function shouldIgnore(event: KeyboardEvent, key: KeystrokesKeyComboStr) {
-  const bindingHasCtrl = key.toLowerCase().indexOf("control") !== -1;
-  const bindingHasShift = key.toLowerCase().indexOf("shift") !== -1;
-  const bindingHasSuper = key.toLowerCase().indexOf("super") !== -1;
-  const bindingHasCommand = key.toLowerCase().indexOf("command") !== -1;
-  const eventHasCtrl = event.ctrlKey;
-  const eventHasShift = event.shiftKey;
-  const eventHasSuper = event.metaKey;
+  const normalizedKey = key.toLowerCase();
+  const bindingHasCtrl = normalizedKey.includes("control");
+  const bindingHasShift = normalizedKey.includes("shift");
+  const bindingHasMeta = normalizedKey.includes("meta");
   return (
-    (eventHasCtrl && !bindingHasCtrl) ||
-    (eventHasShift && !bindingHasShift) ||
-    (eventHasSuper && !(bindingHasSuper || bindingHasCommand))
+    (event.ctrlKey && !bindingHasCtrl) ||
+    (event.shiftKey && !bindingHasShift) ||
+    (event.metaKey && !bindingHasMeta)
   );
 }
 
@@ -157,15 +131,6 @@ function shouldIgnore(event: KeyboardEvent, key: KeystrokesKeyComboStr) {
 // Dispatch is implicit: handlers with `onPressed` fire once per key press; handlers with
 // `onPressedWithRepeat` fire continuously at ~60 fps while the key is held.
 // Loop handlers with `delayed: true` apply the user-configured keyboard delay from the store.
-
-const keyboard = new Keyboard(
-  window,
-  document,
-  window.navigator?.platform,
-  window.navigator?.userAgent,
-);
-keyboard.setLocale("us", us);
-keyboard.setContext("default"); // do not use global context as that is shared between all keycombos
 
 function findEventInKeystrokeComboEvent(
   keyEvents: KeyEvent<KeyboardEvent, BrowserKeyComboEventProps>[],

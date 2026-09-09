@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(176);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(183);
 COMMIT TRANSACTION;
 
 
@@ -179,7 +179,7 @@ CREATE TABLE webknossos.dataset_layer_additionalAxes(
    index INT NOT NULL
 );
 
-CREATE TYPE webknossos.LAYER_ATTACHMENT_TYPE AS ENUM ('agglomerate', 'connectome', 'segmentIndex', 'mesh', 'cumsum');
+CREATE TYPE webknossos.LAYER_ATTACHMENT_TYPE AS ENUM ('agglomerate', 'connectome', 'segmentIndex', 'mesh', 'cumsum', 'segmentStatistics');
 CREATE TYPE webknossos.LAYER_ATTACHMENT_DATAFORMAT AS ENUM ('hdf5', 'zarr3', 'json', 'neuroglancerPrecomputed');
 CREATE TABLE webknossos.dataset_layer_attachments(
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
@@ -190,6 +190,7 @@ CREATE TABLE webknossos.dataset_layer_attachments(
   hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
   type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
   dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
+  credentialId TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY(_dataset, layerName, name, type)
@@ -397,6 +398,15 @@ CREATE TABLE webknossos.organization_plan_updates(
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
+CREATE TABLE webknossos.organization_planExpiryReminders(
+  _organization TEXT NOT NULL,
+  paidUntil TIMESTAMPTZ NOT NULL, -- the expiry date the reminder was sent for, so that extending the plan re-arms the reminders
+  leadTimeDays INT NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (_organization, paidUntil, leadTimeDays),
+  CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
+);
+
 CREATE TABLE webknossos.organization_usedStorage_mags (
     _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
     layerName TEXT NOT NULL,
@@ -559,13 +569,11 @@ CREATE TABLE webknossos.webauthnCredentials(
 );
 
 
-CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
-CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
+CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword', 'Job');
 CREATE TABLE webknossos.tokens(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   value TEXT NOT NULL,
-  loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
-  loginInfo_providerKey TEXT NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   lastUsedDateTime TIMESTAMPTZ NOT NULL,
   expirationDateTime TIMESTAMPTZ NOT NULL,
   idleTimeout BIGINT,
@@ -613,12 +621,14 @@ CREATE TABLE webknossos.jobs(
   _voxelytics_workflowHash TEXT,
   latestRunId TEXT,
   returnValue Text,
+  latestRunErrorDetails JSONB,
   retriedBySuperUser BOOLEAN NOT NULL DEFAULT FALSE,
   started TIMESTAMPTZ,
   ended TIMESTAMPTZ,
   lastRetry TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  CONSTRAINT latestRunErrorDetailsIsJsonObject CHECK(jsonb_typeof(latestRunErrorDetails) = 'object')
 );
 
 
@@ -898,6 +908,8 @@ CREATE INDEX ON webknossos.annotations(typ, state, isDeleted);
 CREATE INDEX ON webknossos.annotations(_user, _task, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, typ, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, isDeleted);
+CREATE INDEX ON webknossos.annotations(_dataset);
+CREATE INDEX ON webknossos.annotation_contributors(_user);
 CREATE INDEX ON webknossos.datasets(directoryName);
 CREATE INDEX ON webknossos.datasets(_folder);
 CREATE INDEX ON webknossos.tasks(_project);
@@ -922,6 +934,9 @@ CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
 CREATE INDEX ON webknossos.shortLinks(key);
 CREATE INDEX ON webknossos.credit_transactions(credit_state);
 CREATE INDEX ON webknossos.dataset_mags(COALESCE(realPath, path));
+CREATE INDEX ON webknossos.tokens(value);
+CREATE INDEX ON webknossos.tokens(_user, tokenType);
+CREATE INDEX ON webknossos.tokens(expirationDateTime);
 CREATE INDEX ON webknossos.dataset_layer_attachments(path);
 CREATE INDEX ON webknossos.organization_usedStorage_mags(_organization);
 CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);
@@ -1027,6 +1042,8 @@ ALTER TABLE webknossos.organization_usedStorage_mags
 ALTER TABLE webknossos.organization_usedStorage_attachments
   ADD CONSTRAINT attachments_ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organization_plan_updates
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organization_planExpiryReminders
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;

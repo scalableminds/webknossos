@@ -1,8 +1,9 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import { cachedGetPricingPlanStatus } from "admin/api/organization";
 import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
 import { getUser, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
-import { Spin, Tabs } from "antd";
+import { Spin, Tabs, Typography } from "antd";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import { PublicationViewWithHeader } from "dashboard/publication_view";
@@ -21,7 +22,9 @@ import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import type { WebknossosState } from "viewer/store";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
-import NmlUploadZoneContainer from "viewer/view/nml_upload/nml_upload_zone_container";
+import NmlUploadZoneContainer, {
+  type NmlImportOptions,
+} from "viewer/view/nml_upload/nml_upload_zone_container";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetFolderView } from "./dataset_folder_view";
 
@@ -112,7 +115,9 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
   async fetchData(): Promise<void> {
     const user =
-      this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;
+      this.props.userId != null
+        ? unwrapOrThrow(await getUser(this.props.userId))
+        : this.props.activeUser;
 
     // Use a cached version of this route to avoid that a tab switch in the dashboard
     // causes a whole-page spinner. Since the different tabs are controlled by the
@@ -125,7 +130,10 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     });
   }
 
-  uploadNmls = async (files: Array<File>, createGroupForEachFile: boolean): Promise<void> => {
+  uploadNmls = async (
+    files: Array<File>,
+    { createGroupForEachFile }: NmlImportOptions,
+  ): Promise<void> => {
     const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
       data: {
         nmlFile: files,
@@ -248,9 +256,9 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     };
 
     const userHeader = this.props.isAdminView ? (
-      <h3>
+      <Typography.Title level={3}>
         User: {user.firstName} {user.lastName}
-      </h3>
+      </Typography.Title>
     ) : null;
 
     const whatsNextBanner =

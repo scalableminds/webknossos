@@ -99,7 +99,7 @@ class SegmentIndexFileService @Inject() (
       .map(_ / Vec3Int.full(DataLayer.bucketLength)) // map positions to cube indices
       .distinct
 
-  def getSegmentVolume(
+  def getSegmentVolumeViaSegmentIndex(
       datasetId: ObjectId,
       dataSourceId: DataSourceId,
       dataLayer: DataLayer,
@@ -220,7 +220,7 @@ class SegmentIndexFileService @Inject() (
         for {
           largestAgglomerateId <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
           segmentIds <-
-            if (segmentOrAgglomerateId <= largestAgglomerateId) {
+            if (java.lang.Long.compareUnsigned(segmentOrAgglomerateId, largestAgglomerateId) <= 0) {
               agglomerateService.segmentIdsForAgglomerateId(
                 agglomerateFileKey,
                 segmentOrAgglomerateId

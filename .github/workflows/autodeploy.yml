@@ -9,6 +9,10 @@ on:
         description: "Branch name to deploy"
         required: true
         type: string
+      ref:
+        description: "Commit sha to attach the GitHub deployment to. Must be the PR head sha, otherwise the deployment does not show up on the PR."
+        required: true
+        type: string
       dynamic_env:
         description: "Dynamic GitHub deployment environment name"
         required: true
@@ -35,6 +39,11 @@ jobs:
           step: start
           token: ${{ secrets.GITHUB_TOKEN }}
           env: ${{ inputs.dynamic_env }}
+          # Without this, the action defaults to `github.ref`, which is the ephemeral
+          # merge commit (`refs/pull/N/merge`) for pull_request events and the default
+          # branch for workflow_run events — neither is part of the PR, so GitHub would
+          # not render the deployment on the PR.
+          ref: ${{ inputs.ref }}
 
       - name: Trigger autodeployment hook
         id: trigger_hook

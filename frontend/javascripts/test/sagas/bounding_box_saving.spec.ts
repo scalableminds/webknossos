@@ -262,7 +262,7 @@ describe("Bounding box diffing and compaction", () => {
     expect(volumeActionBatch.actions[0].name).toBe("updateUserBoundingBoxInVolumeTracing");
 
     const volumeActionValue = (
-      volumeActionBatch?.actions[0] as UpdateUserBoundingBoxInVolumeTracingAction
+      volumeActionBatch.actions[0] as UpdateUserBoundingBoxInVolumeTracingAction
     ).value;
     expect(volumeActionValue).not.toBeNull();
     if (volumeActionValue == null) {
@@ -277,7 +277,7 @@ describe("Bounding box diffing and compaction", () => {
     });
 
     const skeletonActionValue = (
-      skeletonActionBatch?.actions[0] as UpdateUserBoundingBoxInSkeletonTracingAction
+      skeletonActionBatch.actions[0] as UpdateUserBoundingBoxInSkeletonTracingAction
     ).value;
     expect(skeletonActionValue).not.toBeNull();
     if (skeletonActionValue == null) {

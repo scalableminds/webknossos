@@ -233,7 +233,7 @@ export function PlaneNavigationMouseShortcutsTable() {
         },
         {
           shortcuts: [<MouseWheel key="1" />],
-          action: "Move One Slice Forward or Backward",
+          action: "Move One Slice Forward or Backward (Bounded by Dataset)",
         },
         {
           shortcuts: [<MouseLeftDrag key="1" />],

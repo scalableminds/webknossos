@@ -19,6 +19,7 @@ import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
+import type { ModalApi } from "libs/with_modal_hoc";
 import messages from "messages";
 import type React from "react";
 import { useRef, useState } from "react";
@@ -48,10 +49,12 @@ const ModalInformationFooter = (
   </>
 );
 
-function extendPricingPlan(organization: APIOrganization) {
+// Takes the themed modal API (obtained via App.useApp()), since the static Modal.confirm
+// doesn't pick up the surrounding ConfigProvider theme.
+function extendPricingPlan(modal: ModalApi, organization: APIOrganization) {
   const extendedDate = dayjs(organization.paidUntil).add(1, "year");
 
-  Modal.confirm({
+  modal.confirm({
     title: "Extend Current Plan",
     okText: "Request an Email Quote",
     onOk: () => {

@@ -1,4 +1,5 @@
 import { UserOutlined } from "@ant-design/icons";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { updateUser } from "admin/rest_api";
 import { Button, Form, Input, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
@@ -28,7 +29,7 @@ function ChangeUsernameView({
       firstName: newFirstName,
       lastName: newLastName,
     };
-    return updateUser(newUser);
+    return unwrapOrThrow(await updateUser(newUser));
   }
 
   async function onFinish() {

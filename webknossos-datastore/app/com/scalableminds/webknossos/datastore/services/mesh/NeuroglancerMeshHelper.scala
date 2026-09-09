@@ -3,8 +3,9 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
+import com.scalableminds.util.tools.JsonAutoFormat
 import Box.tryo
-import play.api.libs.json.{Json, OFormat}
+import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 
 import java.io.ByteArrayInputStream
 import scala.collection.mutable.ListBuffer
@@ -87,25 +88,23 @@ object NeuroglancerSegmentManifest {
   }
 }
 
-case class MeshChunk(position: Vec3Float, byteOffset: Long, byteSize: Int, unmappedSegmentId: Option[Long] = None)
+case class MeshChunk(
+    position: Vec3Float,
+    byteOffset: Long,
+    byteSize: Int,
+    unmappedSegmentId: UnsignedLong
+) derives JsonAutoFormat
 
-object MeshChunk {
-  implicit val jsonFormat: OFormat[MeshChunk] = Json.format[MeshChunk]
-}
-case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]])
+case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]]) derives JsonAutoFormat
 
-object MeshLodInfo {
-  implicit val jsonFormat: OFormat[MeshLodInfo] = Json.format[MeshLodInfo]
-}
 case class WebknossosSegmentInfo(
     meshFormat: String,
     lods: List[MeshLodInfo],
     chunkScale: Array[Double] =
       Array(1.0, 1.0, 1.0) // Used for Neuroglancer Precomputed Meshes to account for vertex quantization
-)
+) derives JsonAutoFormat
 
 object WebknossosSegmentInfo {
-  implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]
 
   def fromMeshInfosAndMetadata(
       chunkInfos: List[List[MeshLodInfo]],
@@ -168,7 +167,7 @@ trait NeuroglancerMeshHelper {
         position = globalPosition, // This position is in Voxel Space
         byteOffset = meshByteStartOffset + getChunkByteOffset(lod, currentChunk),
         byteSize = segmentInfo.chunkByteSizes(lod)(currentChunk).toInt, // size must be int32 to fit in java array
-        unmappedSegmentId = Some(segmentId)
+        unmappedSegmentId = UnsignedLong(segmentId)
       )
     }
 

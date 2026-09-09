@@ -5,7 +5,10 @@
  */
 import { buffers } from "redux-saga";
 import { actionChannel, call, flush, put, race, take } from "typed-redux-saga";
-import { mayAddToSaveQueue } from "viewer/model/accessors/annotation_accessor";
+import {
+  mayAddToSaveQueue,
+  mayEditAnnotationProperties,
+} from "viewer/model/accessors/annotation_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
@@ -20,6 +23,7 @@ import {
   VolumeTracingSaveRelevantActions,
 } from "viewer/model/actions/volumetracing_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
+import { diffAnnotationMetadata } from "viewer/model/sagas/diffing/annotation_metadata_diffing";
 import { diffVolumeTracing } from "viewer/model/sagas/diffing/volume_diffing";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
@@ -39,7 +43,10 @@ import type {
 } from "viewer/store";
 import { getFlooredPosition, getRotationInDegrees } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
-import type { BatchedAnnotationInitializationAction } from "../../actions/annotation_actions";
+import {
+  AnnotationMetadataSaveRelevantActions,
+  type BatchedAnnotationInitializationAction,
+} from "../../actions/annotation_actions";
 
 export function* setupSavingForAnnotation(
   _action: BatchedAnnotationInitializationAction,
@@ -54,6 +61,7 @@ export function* setupSavingForAnnotation(
       ...ViewModeSaveRelevantActions,
       ...SkeletonTracingSaveRelevantActions,
     ]);
+
     const shouldDiff = yield* select(mayAddToSaveQueue);
     if (!shouldDiff) {
       // Note that we completely ignore changes if adding to save queue
@@ -73,6 +81,64 @@ export function* setupSavingForAnnotation(
 
     prevFlycam = flycam;
     prevTdCamera = tdCamera;
+  }
+}
+
+export function* setupSavingForAnnotationMetadata(
+  _action: BatchedAnnotationInitializationAction,
+): Saga<never> {
+  yield* call(ensureWkInitialized);
+
+  let prevAnnotation = yield* select((state) => state.annotation);
+
+  const annotationActionBuffer = buffers.expanding<Action>();
+  const annotationActionChannel = yield* actionChannel(
+    AnnotationMetadataSaveRelevantActions,
+    annotationActionBuffer,
+  );
+
+  // Listen to rebasing / forwarding finishing actions to reset the annotation and don't diff changes
+  // created due to applying foreign update actions.
+  const finishedRebaseActionBuffer = buffers.expanding<Action>();
+  const finishedRebaseActionChannel = yield* actionChannel(
+    ["FINISHED_REBASING", "FINISH_FORWARDING_UPDATE_ACTIONS"],
+    finishedRebaseActionBuffer,
+  );
+
+  while (true) {
+    // See setupSavingForTracingType below for why a finished rebase/forwarding round is
+    // prioritized: it needs to reset prevAnnotation before any further diffing happens.
+    const [finishedRebaseAction] = yield* race([
+      take(finishedRebaseActionChannel),
+      take(annotationActionChannel),
+    ]);
+    if (finishedRebaseAction != null) {
+      yield* flush(finishedRebaseActionChannel);
+      prevAnnotation = yield* select((state) => state.annotation);
+      continue;
+    }
+
+    // We are about to diff old and new annotation metadata. All buffered actions in
+    // annotationActionBuffer can be flushed away, because it won't make sense to diff
+    // again when the annotation cannot have changed without a new channel entry.
+    annotationActionBuffer.flush();
+
+    const allowSave = yield* select(mayAddToSaveQueue);
+    if (!allowSave) {
+      // Note that we completely ignore changes if adding to save queue is not allowed
+      // (e.g. while a rebase/forwarding round is incorporating a replayed change).
+      continue;
+    }
+
+    const annotation = yield* select((state) => state.annotation);
+    const mayEditProperties = yield* select(mayEditAnnotationProperties);
+    const items = Array.from(diffAnnotationMetadata(prevAnnotation, annotation, mayEditProperties));
+
+    if (items.length > 0) {
+      yield* put(pushSaveQueueTransaction(items));
+    }
+
+    prevAnnotation = annotation;
   }
 }
 
@@ -221,22 +287,34 @@ function performDiffAnnotation(
   prevTdCamera: CameraData,
   tdCamera: CameraData,
 ): Array<UpdateActionWithoutIsolationRequirement> {
-  let actions: Array<UpdateActionWithoutIsolationRequirement> = [];
-
   if (prevFlycam !== flycam) {
-    actions = actions.concat(
+    return [
       updateCameraAnnotation(
         getFlooredPosition(flycam),
         flycam.additionalCoordinates,
         getRotationInDegrees(flycam),
         flycam.zoomStep,
       ),
-    );
+    ];
+  } else if (prevTdCamera !== tdCamera) {
+    // We only emit updateTdCamera actions when the flycam properties did *not* change.
+    // The update action itself doesn't contain any properties (so, nothing is actually
+    // mutated in the database). The action only exists for time tracking (if users
+    // interact with the 3D viewport, this should be time-tracked).
+    // When updateCameraAnnotation is already emitted, an additional updateTdCamera
+    // doesn't provide any value.
+    // Additional background:
+    // The reason why we don't want to emit both actions is that the current compaction
+    // mechanism for update actions (see compact_save_queue.ts) only compacts version
+    // groups where *either* one updateCamera OR one updateTdCamera action exists.
+    // The compaction could be adapted, but as stated before: there is no value in
+    // emitting an additional updateTdCamera action here.
+    // This change became necessary with the introduction of the perspective camera,
+    // with which each movement of the current position (the flycam) also triggers
+    // a subtle update to the 3D camera properties (because of how the perspective
+    // camera is anchored/re-positioned).
+    return [updateTdCamera()];
   }
 
-  if (prevTdCamera !== tdCamera) {
-    actions = actions.concat(updateTdCamera());
-  }
-
-  return actions;
+  return [];
 }

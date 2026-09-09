@@ -1,7 +1,7 @@
 import type { APIAiModelCategory } from "admin/api/jobs";
 import type { AiPlanEnum, PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import partition from "lodash-es/partition";
-import type { BoundingBoxProto } from "types/bounding_box";
+import type { BoundingBoxObject, BoundingBoxProto } from "types/bounding_box";
 import type {
   AdditionalCoordinate,
   ColorObject,
@@ -20,12 +20,7 @@ import type {
 } from "viewer/model/accessors/annotation_accessor";
 import type { ServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { CommentType, Edge, TreeGroup } from "viewer/model/types/tree_types";
-import type {
-  BoundingBoxObject,
-  MeshInformation,
-  RecommendedConfiguration,
-  SegmentGroup,
-} from "viewer/store";
+import type { MeshInformation, RecommendedConfiguration, SegmentGroup } from "viewer/store";
 import type { EmptyObject } from "./type_utils";
 
 // Re-export
@@ -103,7 +98,7 @@ export type APIColorLayer = APIDataLayerBase & {
 };
 export type APISegmentationLayer = APIDataLayerBase & {
   readonly category: "segmentation";
-  readonly largestSegmentId: number | undefined;
+  readonly largestSegmentId: bigint | undefined;
   readonly mappings?: Array<string>;
   readonly agglomerates?: Array<string>;
   readonly fallbackLayer?: string | null | undefined;
@@ -748,7 +743,6 @@ export type APIBuildInfoWk = {
     ciTag: string;
     ciBuild: string;
     gitTag?: string;
-    datastoreApiVersion: string;
   };
   "webknossos-wrap": {
     builtAtMillis: string;
@@ -763,33 +757,6 @@ export type APIBuildInfoWk = {
   httpApiVersioning: { currentApiVersion: number; oldestSupportedApiVersion: number };
   localDataStoreEnabled: boolean;
   localTracingStoreEnabled: boolean;
-};
-
-export type APIBuildInfoDatastore = {
-  webknossosDatastore: {
-    name: string;
-    commitHash: string;
-    scalaVersion: string;
-    version: string;
-    sbtVersion: string;
-    commitDate: string;
-    ciTag: string;
-    ciBuild: string;
-    datastoreApiVersion: string;
-  };
-};
-
-export type APIBuildInfoTracingstore = {
-  webknossosTracingstore: {
-    name: string;
-    commitHash: string;
-    scalaVersion: string;
-    version: string;
-    sbtVersion: string;
-    commitDate: string;
-    ciTag: string;
-    ciBuild: string;
-  };
 };
 
 export type APIFeatureToggles = {
@@ -874,6 +841,7 @@ export type APIJob = {
   readonly ownerEmail: string;
   readonly args: ApiJobArgs;
   readonly state: APIJobState;
+  readonly errorDetails: Record<string, unknown> | null | undefined;
   readonly resultLink: string | null | undefined;
   readonly returnValue: string | null | undefined;
   readonly voxelyticsWorkflowHash: string | null | undefined;
@@ -933,7 +901,7 @@ export type ServerBoundingBoxMinMaxTypeTuple = {
 };
 
 export type TreeAgglomerateInfo = {
-  agglomerateId: number;
+  agglomerateId: bigint;
   // Note: The editable mapping's id is always equal to the id of it associated volume tracing.
   tracingId?: string | undefined;
   mappingName?: string | undefined;
@@ -969,7 +937,7 @@ export type MetadataEntryProto = {
   stringListValue?: string[];
 };
 type ServerSegment = {
-  segmentId: number;
+  segmentId: bigint;
   name: string | null | undefined;
   anchorPosition: Point3 | null | undefined;
   additionalCoordinates: AdditionalCoordinate[] | null;
@@ -998,7 +966,7 @@ export type ServerTracingBase = {
   zoomLevel: number;
 };
 
-export type MapEntries<K extends number | string | symbol, V> = Array<{ id: K; value: V }>;
+export type MapEntries<K extends number | string | symbol | bigint, V> = Array<{ id: K; value: V }>;
 
 export type SkeletonUserState = {
   userId: string;
@@ -1024,10 +992,10 @@ export type ServerSkeletonTracing = ServerTracingBase & {
 
 export type VolumeUserState = {
   userId: string;
-  activeSegmentId?: number;
+  activeSegmentId?: bigint;
   // The following properties are the values of a
   // id->boolean dictionary.
-  segmentVisibilities: MapEntries<number, boolean>;
+  segmentVisibilities: MapEntries<bigint, boolean>;
   segmentGroupExpandedStates: MapEntries<number, boolean>;
   boundingBoxVisibilities: MapEntries<number, boolean>;
 };
@@ -1037,13 +1005,13 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // tracing from the back-end (by `getTracingForAnnotationType`)
   // This is done to simplify the selection for the type.
   typ: "Volume";
-  activeSegmentId?: number; // only use as a fallback if userStates is empty
+  activeSegmentId?: bigint; // only use as a fallback if userStates is empty
   boundingBox: BoundingBoxProto;
   elementClass: ElementClass;
   fallbackLayer?: string;
   segments: Array<ServerSegment>;
   segmentGroups: Array<SegmentGroup> | null | undefined;
-  largestSegmentId: number;
+  largestSegmentId: bigint;
   // `mags` will be undefined for legacy annotations
   // which were created before the multi-magnification capabilities
   // were added to volume tracings. Also see:
@@ -1393,7 +1361,34 @@ export type ServerErrorMessage = {
   error: string;
 };
 
-export type LayerAttachmentType = "mesh" | "agglomerate" | "segmentIndex" | "connectome" | "cumsum";
+export type LayerAttachmentType =
+  | "mesh"
+  | "agglomerate"
+  | "segmentIndex"
+  | "connectome"
+  | "cumsum"
+  | "segmentStatistics";
+
+// Names of the arrays within a segment statistics attachment. `positions` has no route to query it
+// yet, and `ids` is used internally by the backend but never reported as available.
+export type SegmentStatisticsMetric =
+  | "positions"
+  | "ids"
+  | "max_distances"
+  | "volumes"
+  | "center_of_mass"
+  | "covariance_matrix"
+  | "surfaces"
+  | "sphericities";
+
+/** Row-major 3×3 matrix, i.e. `matrix[row][column]`. */
+export type SegmentCovarianceMatrix = [Vector3, Vector3, Vector3];
+
+export type SegmentStatisticsFileInfo = {
+  mag: Vector3;
+  availableMetrics: SegmentStatisticsMetric[];
+  mappingName?: string | null;
+};
 
 export type APIStorageDetailEntry = {
   layerName: string;

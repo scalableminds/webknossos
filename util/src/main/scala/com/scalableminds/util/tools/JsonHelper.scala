@@ -110,4 +110,19 @@ object JsonHelper extends LazyLogging {
         Json.toJson(fields.map(value => removeKeyRecursively(value, keysToRemove)))
       case _ => jsValue
     }
+
+  // Applies patch to the value of every field named key, anywhere in the json tree (not recursing into
+  // the patched value itself, since it is expected to be a leaf/terminal value for that key).
+  def patchKeyRecursively(jsValue: JsValue, key: String)(patch: JsValue => JsValue): JsValue =
+    jsValue match {
+      case JsObject(fields) =>
+        val processedAsMap = fields.view.map {
+          case (k, value) if k == key => k -> patch(value)
+          case (k, value)             => k -> patchKeyRecursively(value, key)(patch)
+        }.toMap
+        Json.toJson(processedAsMap)
+      case JsArray(fields) =>
+        Json.toJson(fields.map(value => patchKeyRecursively(value, key)(patch)))
+      case _ => jsValue
+    }
 }

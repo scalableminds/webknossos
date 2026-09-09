@@ -19,8 +19,6 @@ import ButtonComponent from "viewer/view/components/button_component";
 import NumberSliderSetting from "viewer/view/left_border_tabs/components/number_slider_setting";
 import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 
-const { Option } = Select;
-
 type Props = {
   segmentationLayer: APISegmentationLayer | null | undefined;
 };
@@ -106,6 +104,12 @@ function ConnectomeSettings({ segmentationLayer }: Props) {
   const renderConnectomeFileSettings = () => {
     const currentConnectomeFileName =
       currentConnectomeFile != null ? currentConnectomeFile.connectomeFileName : null;
+    const connectomeFileOptions = availableConnectomeFiles?.length
+      ? availableConnectomeFiles.map((connectomeFile) => ({
+          value: connectomeFile.connectomeFileName,
+          label: connectomeFile.connectomeFileName,
+        }))
+      : [{ value: "", label: "No files available", disabled: true }];
     return (
       <>
         <Row
@@ -130,22 +134,8 @@ function ConnectomeSettings({ segmentationLayer }: Props) {
                 style={{
                   width: "100%",
                 }}
-              >
-                {availableConnectomeFiles?.length ? (
-                  availableConnectomeFiles.map((connectomeFile) => (
-                    <Option
-                      key={connectomeFile.connectomeFileName}
-                      value={connectomeFile.connectomeFileName}
-                    >
-                      {connectomeFile.connectomeFileName}
-                    </Option>
-                  ))
-                ) : (
-                  <Option value="" disabled>
-                    No files available
-                  </Option>
-                )}
-              </Select>
+                options={connectomeFileOptions}
+              />
             </Tooltip>
           </Col>
         </Row>

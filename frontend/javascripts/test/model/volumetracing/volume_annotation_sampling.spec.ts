@@ -665,7 +665,7 @@ describe("Volume Annotation Sampling", () => {
       const addr = cube.getVoxelIndex([firstDim, secondDim, Z], 0);
       expectedBucketData[addr] = 1;
     });
-    applyVoxelMap(labeledVoxelsMap, cube, 1, get3DAddress, 1, 2, true);
+    applyVoxelMap(labeledVoxelsMap, cube, 1n, get3DAddress, 1, 2, true);
     const labeledBucketData = bucket.getOrCreateData();
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
@@ -717,7 +717,7 @@ describe("Volume Annotation Sampling", () => {
       const addr = cube.getVoxelIndex([firstDim, secondDim, Z], 0);
       expectedBucketData[addr] = 1;
     });
-    applyVoxelMap(labeledVoxelsMap, cube, 1, get3DAddress, 1, 2, true);
+    applyVoxelMap(labeledVoxelsMap, cube, 1n, get3DAddress, 1, 2, true);
     const labeledBucketData = bucket.getOrCreateData();
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
@@ -757,7 +757,7 @@ describe("Volume Annotation Sampling", () => {
     };
 
     const expectedBucketData = new Uint32Array(Constants.BUCKET_SIZE).fill(0);
-    applyVoxelMap(labeledVoxelsMap, cube, 1, get3DAddress, 1, 2, true);
+    applyVoxelMap(labeledVoxelsMap, cube, 1n, get3DAddress, 1, 2, true);
     const labeledBucketData = bucket.getOrCreateData();
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {

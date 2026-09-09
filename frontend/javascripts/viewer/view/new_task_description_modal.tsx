@@ -37,7 +37,7 @@ const NewTaskDescriptionModal: React.FC<Props> = ({ description, destroy, title 
 
   return (
     <Modal
-      maskClosable={false}
+      mask={{ closable: false }}
       open={isOpen}
       title={title}
       onOk={handleOk}

@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { getSystemColorTheme, getThemeFromUser } from "theme";
+import { ColorWKBlue, getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ViewModeValues } from "viewer/constants";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
@@ -38,7 +38,8 @@ import { viewDatasetMenu } from "../action_bar/view_dataset_actions_view";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
-const commandEntryColor = "#5660ff";
+// than a theme token.
+const commandEntryColor = ColorWKBlue;
 
 type ExtendedCommand = Command & {
   shortcut?: string;
@@ -448,10 +449,10 @@ export const CommandPalette = () => {
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: rerun when inputs that the
-  // static commands close over change. userConfig is included so the "Toggle …" commands
-  // capture the current boolean value and actually flip it instead of repeatedly applying
-  // the value that was current when the palette mounted.
+  // Rerun when inputs that the static commands close over change. userConfig is included so
+  // the "Toggle …" commands capture the current boolean value and actually flip it instead of
+  // repeatedly applying the value that was current when the palette mounted.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
   useEffect(() => {
     setCommands(allStaticCommands);
   }, [allowUpdate, userConfig]);

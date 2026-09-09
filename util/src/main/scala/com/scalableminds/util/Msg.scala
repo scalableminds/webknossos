@@ -363,6 +363,8 @@ object Msg {
     val updateStatusFailed: String = "Could not update job status."
     val workerNotFound: String = "Could not find this worker in the database."
     val submitFailed: String = "Could not submit job."
+    val storageExceeded: String =
+      "Cannot start this job because the storage quota of the organization is exceeded, so its results could not be stored. Please free up storage or upgrade your plan."
     object TrainModel {
       val wrongOrga: String = "Training AI models is only allowed for datasets of your own organization."
       val submitFailed: String = "Could not start the AI model training job."
@@ -432,7 +434,8 @@ object Msg {
     val allowedTeamsNotFound: String = "Could not find allowed teams for dataset."
     val voxelSizeFailedToFetch: String = "Could not fetch voxel size for annotation."
     val additionalCoordinatesDiffer: String = "Additional coordinates differ in merged units."
-    val findByImportURLFailed = "Failed to look up whether a dataset with the import url already exists."
+    val findByImportURLFailed = "Could not look up whether a dataset with the import url already exists."
+    val deleteFromDbFailed = "Could not delete dataset from the database."
     object Compose {
       val failed: String = "Could not compose dataset."
       val addAttachmentFailed: String = "Could not add attachment to composed dataset."
@@ -476,6 +479,7 @@ object Msg {
     object Layer {
       def notFound(layerName: String): String = s"Could not find layer “$layerName” in dataset."
       def magNotFound(layer: String, mag: String): String = s"Data layer “$layer” does not have mag “$mag”."
+      def zeroMags(layer: String) = s"Data layer “$layer” has zero mags."
       def attachmentNotFound(layer: String, attachment: String): String =
         s"Data layer “$layer” does not have attachment “$attachment”."
       val attachmentSingletonAlreadyFilled: String =
@@ -534,6 +538,8 @@ object Msg {
         "Could not verify that all chunks have been uploaded."
       val couldNotLoadUnfinishedUploads: String = "Could not load unfinished uploads of user."
       val createFailed: String = "Could not create dataset."
+      val datasetRootDetectionFailed: String =
+        "Could not determine the dataset root directory in the uploaded files. Please check the folder structure of your upload and try again."
       val datastoreRestricted: String =
         "Your organization does not have permission to upload datasets to this data store. Please choose another data store."
       val disallowedPaths: String =
@@ -801,6 +807,30 @@ object Msg {
   object SegmentIndexFile {
     val pathNotAbsolute = "Path of segment index file is ambiguous, must be absolute."
   }
+  object SegmentStatisticsFile {
+    val notFound = "Could not find a registered segment statistics file for this layer."
+    val pathNotAbsolute = "Path of segment statistics file is ambiguous, must be absolute."
+    val readGroupHeaderFailed = "Could not read segment statistics file zarr group file."
+    val parseAttributesFailed = "Could not parse segment statistics file attributes from zarr group file."
+    val combinedCenterOfMassZeroVolume =
+      "Cannot compute combined center of mass, total volume of segments is zero."
+    val combinedCovarianceMatrixZeroVolume =
+      "Cannot compute combined covariance matrix, total volume of segments is zero."
+    def magTooFine(requestedMag: String, fileMag: String): String =
+      s"Requested mag $requestedMag is finer than mag $fileMag of segment statistics file. Only the same mag or coarser mags are supported."
+    def mappingNameMismatch(requestedMappingName: String, fileMappingName: String): String =
+      s"Requested mapping name “$requestedMappingName” does not match mapping name “$fileMappingName” of segment statistics file."
+    def remappingRequiresUnmappedFile(fileMappingName: String): String =
+      s"Requesting a different mapping is only supported for segment statistics files calculated on unmapped data, but this file was computed for mapping “$fileMappingName”."
+    def formatVersionTooOld(formatVersion: Long, minimumSupportedVersion: Long): String =
+      s"Segment statistics file has format version $formatVersion, but at least $minimumSupportedVersion is required."
+    val idsNotDense: String =
+      "Segment statistics file does not have dense ids. Only files with dense ids are supported."
+    val idsLengthUnavailable: String = "Could not determine length of ids array in segment statistics file"
+    def metricNotAvailable(metric: String): String =
+      s"Segment statistics file does not contain the metric “$metric”."
+    val cannotDetermineMag: String = "Could not determine mag for segment statistics file, layer has no mags."
+  }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =
       s"Invalid chunk coordinates $coordinates. Expected dot-separated coordinates like “c.<additional_axes.>x.y.z”."
@@ -821,7 +851,6 @@ object Msg {
   }
   object DataVault {
     val setupFailed: String = "Could not set up remote file system access."
-    val createCredentialFailed: String = "Could not set up remote file system credential."
     val credentialInsertFailed: String = "Could not store credential for remote file system access."
   }
   object Voxelytics {

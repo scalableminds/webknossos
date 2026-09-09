@@ -70,10 +70,9 @@ class SimpleSQLDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContex
     new String(os.toByteArray, StandardCharsets.UTF_8)
   }
 
-  /* Runs the queries in a single serializable transaction, so that either all or none of them are applied.
-   * Serializable isolation also guards against concurrent transactions inserting rows that the queries here
-   * were supposed to remove (or vice versa); such conflicts are reported by postgres and retried. */
-  def runAsTransaction(queries: Seq[SqlAction[Int, NoStream, Effect]]): Fox[Unit] =
+  /* Runs queries in a single serializable transaction, so that either all or none of them are applied.
+   * Serializable isolation also guards against concurrent transactions. */
+  protected def runAsSerializableTransaction(queries: Seq[SqlAction[Int, NoStream, Effect]]): Fox[Unit] =
     for {
       _ <- run(
         DBIO.sequence(queries.toList).transactionally.withTransactionIsolation(Serializable),
@@ -82,9 +81,15 @@ class SimpleSQLDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContex
       )
     } yield ()
 
-  def replaceSequentiallyAsTransaction(
-      clearQuery: SqlAction[Int, NoStream, Effect],
-      insertQueries: Seq[SqlAction[Int, NoStream, Effect]]
-  ): Fox[Unit] =
-    runAsTransaction(List(clearQuery) ++ insertQueries)
+  /* Runs queries in a single serializable transaction, so that either all or none of them are applied.
+   * Serializable isolation also guards against concurrent transactions. */
+  protected def runAsSerializableTransaction(query: SqlAction[Int, NoStream, Effect]): Fox[Unit] =
+    for {
+      _ <- run(
+        query.transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError, cacheLookupFailedForTypeError)
+      )
+    } yield ()
+
 }

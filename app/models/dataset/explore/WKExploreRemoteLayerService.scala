@@ -3,7 +3,7 @@ package models.dataset.explore
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.collections.SequenceUtils
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreLayerUtils,
@@ -18,7 +18,6 @@ import models.dataset.credential.CredentialService
 import models.organization.OrganizationDAO
 import models.user.User
 import com.scalableminds.util.box.Box.tryo
-import play.api.libs.json.{Json, OFormat}
 import security.WkSilhouetteEnvironment
 import com.scalableminds.util.objectid.ObjectId
 
@@ -32,11 +31,7 @@ case class WKExploreRemoteLayerParameters(
     credentialSecret: Option[String],
     preferredVoxelSize: Option[VoxelSize],
     dataStoreName: Option[String]
-)
-
-object WKExploreRemoteLayerParameters {
-  implicit val jsonFormat: OFormat[WKExploreRemoteLayerParameters] = Json.format[WKExploreRemoteLayerParameters]
-}
+) derives JsonAutoFormat
 
 case class ExploreAndAddRemoteDatasetParameters(
     remoteUri: String,
@@ -46,12 +41,7 @@ case class ExploreAndAddRemoteDatasetParameters(
     folderId: Option[ObjectId],
     folderPath: Option[String],
     dataStoreName: Option[String]
-)
-
-object ExploreAndAddRemoteDatasetParameters {
-  implicit val jsonFormat: OFormat[ExploreAndAddRemoteDatasetParameters] =
-    Json.format[ExploreAndAddRemoteDatasetParameters]
-}
+) derives JsonAutoFormat
 
 class WKExploreRemoteLayerService @Inject() (
     credentialService: CredentialService,
@@ -110,7 +100,7 @@ class WKExploreRemoteLayerService @Inject() (
     for {
       // For zip entry paths (e.g. s3://…/archive.zip|zip:inner/path), credentials apply to the whole zip file.
       uri <- tryo(
-        new URI(removeHeaderFileNamesFromUriSuffix(layerUri.takeWhile(_ != '|')))
+        new URI(escapeExtraFragmentHashes(removeHeaderFileNamesFromUriSuffix(layerUri.takeWhile(_ != '|'))))
       ).toFox ?~> s"Received invalid URI: $layerUri"
       credentialOpt = credentialService.createCredentialOpt(
         uri,

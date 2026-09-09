@@ -1,10 +1,9 @@
 import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
 import range from "lodash-es/range";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 import type { OrthoView, Vector2, Vector3, Vector4 } from "viewer/constants";
 import constants from "viewer/constants";
-import type { BoundingBoxObject } from "viewer/store";
 import Dimensions from "../dimensions";
 
 class BoundingBox {
@@ -262,6 +261,20 @@ class BoundingBox {
       min: V3.add(this.min, offset),
       max: V3.add(this.max, offset),
     });
+  }
+
+  getCorners(): Vector3[] {
+    const { min, max } = this;
+    return [
+      [min[0], min[1], min[2]],
+      [max[0], min[1], min[2]],
+      [min[0], max[1], min[2]],
+      [max[0], max[1], min[2]],
+      [min[0], min[1], max[2]],
+      [max[0], min[1], max[2]],
+      [min[0], max[1], max[2]],
+      [max[0], max[1], max[2]],
+    ];
   }
 }
 

@@ -6,10 +6,7 @@ import { OrthoViews, TreeTypeEnum } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
-import {
-  enforceSkeletonTracing,
-  getTreeAndNode,
-} from "viewer/model/accessors/skeletontracing_accessor";
+import { getTreeAndNode } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
@@ -153,7 +150,7 @@ function* clearActiveSegmentIfTdViewportIsActive(): Saga<void> {
     activeTool === AnnotationTool.PROOFREAD &&
     activeViewport === OrthoViews.TDView
   ) {
-    yield* put(setActiveCellAction(activeVolumeTracing?.activeCellId, undefined, undefined, null));
+    yield* put(setActiveCellAction(activeVolumeTracing!.activeCellId, undefined, undefined, null));
   }
 }
 
@@ -166,13 +163,13 @@ function* showToastIfSegmentOfOtherAgglomerateWasSelected(
     return;
   }
   const layerData = yield* select((state) => state.localSegmentationStateByLayer[layerName]);
-  if (!layerData || !layerData.minCutPartitions) {
+  if (!layerData?.minCutPartitions) {
     return;
   }
   const minCutPartitions = layerData.minCutPartitions;
   if (
     minCutPartitions.agglomerateId != null &&
-    minCutPartitions.agglomerateId !== action.agglomerateId
+    minCutPartitions.agglomerateId !== BigInt(action.agglomerateId)
   ) {
     Toast.info(messages["proofreading.multi_cut.different_agglomerate_selected"]);
   }
@@ -189,9 +186,17 @@ function* checkForAgglomerateTreeModification(
     ({ nodeId, treeId } = action);
   }
 
-  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
+  const state = yield* select((_state) => _state);
 
-  if (getTreeAndNode(skeletonTracing, nodeId, treeId, TreeTypeEnum.AGGLOMERATE)) {
+  if (
+    getTreeAndNode(
+      state.annotation.skeleton,
+      state.localSkeletonState.activeTreeId,
+      nodeId,
+      treeId,
+      TreeTypeEnum.AGGLOMERATE,
+    )
+  ) {
     Toast.warning(
       "Agglomerate trees can only be modified when using the proofreading tool to add or delete edges. Consider switching to the proofreading tool or converting the agglomerate tree to a normal tree via right-click in the Skeleton tab.",
       { timeout: 10000 },

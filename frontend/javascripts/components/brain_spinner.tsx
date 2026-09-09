@@ -1,7 +1,7 @@
 import brainImage from "@images/brain.svg";
 import { switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
-import { Button, Card, Col, Row } from "antd";
+import { Button, Card, Col, Row, Typography } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import messages from "messages";
 import type * as React from "react";
@@ -104,7 +104,7 @@ export function CoverWithLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
     <Row justify="center" align="middle" className="login-view">
       <Col xs={22} sm={20} md={16} lg={12} xl={8}>
         <Card className="login-content">
-          <h3>Try logging in to view the dataset.</h3>
+          <Typography.Title level={3}>Try logging in to view the dataset.</Typography.Title>
           <LoginForm layout="horizontal" onLoggedIn={onLoggedIn} />
         </Card>
       </Col>

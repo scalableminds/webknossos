@@ -18,9 +18,10 @@ import type { WebknossosState } from "viewer/store";
 type Reducer = (state: WebknossosState, action: Action) => WebknossosState;
 
 // Actions that the rebase machinery dispatches itself while isRebasingOrForwarding is true
-// (see save_saga.tsx `tryToIncorporateActions`). They live in the save-relevant action lists
-// (because a user editing them should be diffed to the save queue), so they would be caught by
-// the guard below — but they must keep being applied during a rebase to replay the incoming
+// (see `tryToIncorporateActions` in incorporate_update_actions_sagas.ts). They live in the
+// save-relevant action lists (because a user editing them should be diffed to the save queue),
+// so they would be caught by the guard below — but they must keep being applied during a rebase
+// to replay the incoming
 // server changes. They are therefore removed from ACTIONS_DROPPED_DURING_REBASE below.
 const REBASE_REPLAY_ACTIONS: ReadonlySet<Action["type"]> = new Set<Action["type"]>([
   // Mapping (re-)activation replayed from the server during a rebase.

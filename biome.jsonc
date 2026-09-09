@@ -23,6 +23,7 @@
       "!binaryData"
     ]
   },
+  "plugins": ["frontend/lint-plugins/noRawHeading.grit"],
   "assist": {
     "actions": {
       "source": {
@@ -33,7 +34,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "style": {
         "useBlockStatements": "off",
         "noNegationElse": "off",
@@ -82,7 +83,8 @@
         "useIframeTitle": "off",
         "noAriaHiddenOnFocusable": "off",
         "noLabelWithoutControl": "off",
-        "noStaticElementInteractions": "off"
+        "noStaticElementInteractions": "off",
+        "noAmbiguousAnchorText": "off"
       },
       "performance": {
         "noDelete": "off",
@@ -109,9 +111,7 @@
         "noRedeclare": "off",
         "noFallthroughSwitchClause": "off",
         "noFocusedTests": "error",
-        "noAssignInExpressions": "off"
-      },
-      "nursery": {
+        "noAssignInExpressions": "off",
         "noReactForwardRef": "error"
       }
     }

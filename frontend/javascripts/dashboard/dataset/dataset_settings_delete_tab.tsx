@@ -2,26 +2,26 @@ import { useQueryClient } from "@tanstack/react-query";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteDatasetOnDisk } from "admin/rest_api";
-import { Button, Col, Row } from "antd";
+import { App, Button, Col, Row } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
-import { confirmAsync } from "./helper_components";
 
 const DatasetSettingsDeleteTab = () => {
   const { dataset } = useDatasetSettingsContext();
   const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { modal } = App.useApp();
 
   const handleDeleteButtonClicked = useCallback(async () => {
     if (!dataset) {
       return;
     }
 
-    const deleteDataset = await confirmAsync({
+    const deleteDataset = await modal.confirm({
       title: `Deleting a dataset on disk cannot be undone. Are you certain to delete dataset ${dataset.name}? Note that the name of a dataset is not guaranteed to be free to use afterwards.`,
       okText: "Yes, Delete Dataset on Disk now",
     });
@@ -45,7 +45,7 @@ const DatasetSettingsDeleteTab = () => {
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
 
     navigate("/dashboard");
-  }, [dataset, navigate, queryClient]);
+  }, [dataset, navigate, queryClient, modal]);
 
   return (
     <div>

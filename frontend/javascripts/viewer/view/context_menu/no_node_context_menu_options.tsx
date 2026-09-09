@@ -1,11 +1,11 @@
 import { WarningOutlined } from "@ant-design/icons";
-import { Empty, Modal } from "antd";
+import { App, Empty, Typography } from "antd";
 import type { ItemType, MenuItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import React from "react";
-import { useDispatch } from "react-redux";
+import { shallowEqual, useDispatch } from "react-redux";
 import { CtrlOrCmdKey } from "viewer/constants";
 import {
   loadAgglomerateTreeAtPosition,
@@ -68,11 +68,12 @@ import { useMultiCutToolOptions } from "./min_cut_item";
 
 export function useNoNodeContextMenuOptions(
   contextInfo: ContextMenuInfo,
-  segmentIdAtPosition: number,
+  segmentIdAtPosition: bigint,
   infoRows: ItemType[],
 ): ItemType[] {
   const { globalPosition } = contextInfo;
 
+  const { modal } = App.useApp();
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
   const volumeTracing = useWkSelector(getActiveSegmentationTracing);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
@@ -126,7 +127,7 @@ export function useNoNodeContextMenuOptions(
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
 
   const proofreadingMultiSplitToolActions = useMultiCutToolOptions(
-    maybeUnmappedSegmentId ?? 0,
+    maybeUnmappedSegmentId ?? 0n,
     segmentIdAtPosition,
     segmentOrSuperVoxel,
     segmentIdLabel,
@@ -149,15 +150,17 @@ export function useNoNodeContextMenuOptions(
     dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
   }, [dispatch, visibleSegmentationLayer, dataset]);
 
-  const positionInLayerSpace = useWkSelector((state) =>
-    globalPosition != null && visibleSegmentationLayer != null
-      ? globalToLayerTransformedPosition(
-          globalPosition,
-          visibleSegmentationLayer.name,
-          "segmentation",
-          state,
-        )
-      : null,
+  const positionInLayerSpace = useWkSelector(
+    (state) =>
+      globalPosition != null && visibleSegmentationLayer != null
+        ? globalToLayerTransformedPosition(
+            globalPosition,
+            visibleSegmentationLayer.name,
+            "segmentation",
+            state,
+          )
+        : null,
+    shallowEqual,
   );
 
   const loadPrecomputedMesh = async () => {
@@ -172,7 +175,7 @@ export function useNoNodeContextMenuOptions(
 
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
-    if (segmentId === 0) {
+    if (segmentId === 0n) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -196,7 +199,7 @@ export function useNoNodeContextMenuOptions(
     }
     const clickedSegmentId = getSegmentIdForPosition(globalPosition);
     const layerName = visibleSegmentationLayer.name;
-    if (clickedSegmentId === 0) {
+    if (clickedSegmentId === 0n) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -213,7 +216,7 @@ export function useNoNodeContextMenuOptions(
       return;
     }
     const clickedSegmentId = getSegmentIdForPosition(globalPosition);
-    if (clickedSegmentId === 0) {
+    if (clickedSegmentId === 0n) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -249,7 +252,7 @@ export function useNoNodeContextMenuOptions(
       return;
     }
     const clickedSegmentId = getSegmentIdForPosition(globalPosition);
-    if (clickedSegmentId === 0) {
+    if (clickedSegmentId === 0n) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -272,7 +275,7 @@ export function useNoNodeContextMenuOptions(
 
     const segmentId = getSegmentIdForPosition(globalPosition);
 
-    if (segmentId === 0) {
+    if (segmentId === 0n) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -281,7 +284,7 @@ export function useNoNodeContextMenuOptions(
   };
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>
-    Modal.info({
+    modal.info({
       title: "Get More out of WEBKNOSSOS",
       content: (
         <>
@@ -356,7 +359,9 @@ export function useNoNodeContextMenuOptions(
                 <span>
                   Import Agglomerate Tree{" "}
                   {!isAgglomerateMappingEnabled.value ? (
-                    <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
+                    <Typography.Text disabled>
+                      <WarningOutlined />
+                    </Typography.Text>
                   ) : null}{" "}
                   {shortcutBuilder(["Shift", "middleMouse"])}
                 </span>
@@ -461,7 +466,9 @@ export function useNoNodeContextMenuOptions(
         <FastTooltip title={isConnectomeMappingEnabled.reason}>
           Import Synapses{" "}
           {!isConnectomeMappingEnabled.value ? (
-            <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
+            <Typography.Text disabled>
+              <WarningOutlined />
+            </Typography.Text>
           ) : null}{" "}
         </FastTooltip>
       ),
@@ -515,7 +522,7 @@ export function useNoNodeContextMenuOptions(
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          segmentIdAtPosition !== 0 && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
+          segmentIdAtPosition !== 0n && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
             ? {
                 key: "select-cell",
                 onClick: () => {
@@ -537,9 +544,9 @@ export function useNoNodeContextMenuOptions(
                 ),
               }
             : null,
-          segmentIdAtPosition !== 0 ? onlyShowThisSegmentItem : null,
-          segmentIdAtPosition !== 0 ? toggleSegmentVisibilityItem : null,
-          segmentIdAtPosition !== 0 ? showAllSegmentsItem : null,
+          segmentIdAtPosition !== 0n ? onlyShowThisSegmentItem : null,
+          segmentIdAtPosition !== 0n ? toggleSegmentVisibilityItem : null,
+          segmentIdAtPosition !== 0n ? showAllSegmentsItem : null,
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,

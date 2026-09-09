@@ -17,7 +17,8 @@ From there you can:
 - **Edit** any shortcut by clicking the pencil icon next to it and recording a new key combination.
 - **Add** additional alternative bindings for any action (useful if you want two different keys or key combinations to trigger the same action).
 - **Remove** bindings you never use.
-- **Reset** individual shortcuts or all shortcuts to their defaults at any time.
+- **Reset** all shortcuts to their defaults at any time, or restore an individual shortcut's default after you removed all of its bindings.
+- A few actions ship **without a default binding** and stay inactive until you assign a key yourself. They are marked with *"No default binding — set your own"* and offer no restore button.
 - **Multi-stroke sequences**: Shortcuts can consist of more than one consecutive keystroke. For example, a two-stroke binding like ++ctrl+k++ followed by ++b++ is recorded just like any other shortcut — press and release the first chord, then the second. The recorder captures the full sequence automatically.
 
 Shortcut changes are saved to your user account and persist across devices and browsers.
@@ -51,6 +52,9 @@ Shortcut changes are saved to your user account and persist across devices and b
 | ++shift++ + ++2++                                  | Switch to Flight View Mode            |
 | ++k++ , ++l++                                      | Toggle left/right Sidebars            |
 | ++ctrl++ / ++cmd++ + ++p++                         | Open command palette                  |
+
+!!! info "n-dimensional datasets"
+    Datasets with additional axes (e.g. a time axis `t`) can be navigated along their **first additional axis** with the actions *"Move Forward/Backward Along the First Additional Axis"*. They work in both plane and flight mode and ship **without a default binding**, so you have to assign your own keys via [Customizing Shortcuts](#customizing-shortcuts) first. Because most single keys are already taken, a combination such as ++shift++ + ++t++ is a good choice. Alternatively, use the coordinate input and its sliders in the action bar.
 
 ## Skeleton Annotation Mode
 

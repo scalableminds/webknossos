@@ -10,43 +10,43 @@ class AxisOrderPermutationTestSuite extends AsyncWordSpec {
 
   private def orderFromStringChars(str: String) = FullAxisOrder(str.map(char => Axis(name = char.toString)))
 
-  private def permuteAxisOrderArrayCtoWkC(str: String) = {
+  private def permuteAxisOrderPhysicalCtoWkC(str: String) = {
     val axisOrder = orderFromStringChars(str)
-    permute(axisOrder.arrayToWkPermutation, axisOrder.toString)
+    permute(axisOrder.physicalToWkPermutation, axisOrder.toString)
   }
 
-  private def permuteAxisOrderArrayFtoWkF(str: String) = {
+  private def permuteAxisOrderPhysicalFtoWkF(str: String) = {
     val axisOrder = orderFromStringChars(str)
     val axisOrderFStr = axisOrder.toString.reverse
-    permute(axisOrder.arrayFToWkFPermutation, axisOrderFStr)
+    permute(axisOrder.physicalFToWkFPermutation, axisOrderFStr)
   }
 
-  private def permuteAxisOrderArrayCtoWkF(str: String) = {
+  private def permuteAxisOrderPhysicalCtoWkF(str: String) = {
     val axisOrder = orderFromStringChars(str)
-    permute(axisOrder.arrayCToWkFPermutation, axisOrder.toString)
+    permute(axisOrder.physicalCToWkFPermutation, axisOrder.toString)
   }
 
   "AxisOrderPermutation" should {
-    "correctly permute from C (array) to C (wk)" in {
-      assert(permuteAxisOrderArrayCtoWkC("xyz") == "xyz")
-      assert(permuteAxisOrderArrayCtoWkC("cxyz") == "cxyz")
-      assert(permuteAxisOrderArrayCtoWkC("xycz") == "cxyz")
-      assert(permuteAxisOrderArrayCtoWkC("xasdfczy") == "asdfcxyz")
+    "correctly permute from C (physical) to C (wk)" in {
+      assert(permuteAxisOrderPhysicalCtoWkC("xyz") == "xyz")
+      assert(permuteAxisOrderPhysicalCtoWkC("cxyz") == "cxyz")
+      assert(permuteAxisOrderPhysicalCtoWkC("xycz") == "cxyz")
+      assert(permuteAxisOrderPhysicalCtoWkC("xasdfczy") == "asdfcxyz")
     }
 
-    "correctly permute from F (array) to F (wk)" in {
-      assert(permuteAxisOrderArrayFtoWkF("xyz") == "zyx")
-      assert(permuteAxisOrderArrayFtoWkF("cxyz") == "zyxc")
-      assert(permuteAxisOrderArrayFtoWkF("xycz") == "zyxc")
-      assert(permuteAxisOrderArrayFtoWkF("xasdfczy") == "zyxcfdsa")
+    "correctly permute from F (physical) to F (wk)" in {
+      assert(permuteAxisOrderPhysicalFtoWkF("xyz") == "zyx")
+      assert(permuteAxisOrderPhysicalFtoWkF("cxyz") == "zyxc")
+      assert(permuteAxisOrderPhysicalFtoWkF("xycz") == "zyxc")
+      assert(permuteAxisOrderPhysicalFtoWkF("xasdfczy") == "zyxcfdsa")
     }
 
-    "correctly permute from C (array) to F (wk)" in {
-      assert(permuteAxisOrderArrayCtoWkF("xyz") == "zyx")
-      assert(permuteAxisOrderArrayCtoWkF("cxyz") == "zyxc")
-      assert(permuteAxisOrderArrayCtoWkF("xycz") == "zyxc")
-      assert(permuteAxisOrderArrayCtoWkF("xasdfczy") == "zyxcfdsa")
-      assert(permuteAxisOrderArrayCtoWkF("tasxdfczy") == "zyxcfdsat")
+    "correctly permute from C (physical) to F (wk)" in {
+      assert(permuteAxisOrderPhysicalCtoWkF("xyz") == "zyx")
+      assert(permuteAxisOrderPhysicalCtoWkF("cxyz") == "zyxc")
+      assert(permuteAxisOrderPhysicalCtoWkF("xycz") == "zyxc")
+      assert(permuteAxisOrderPhysicalCtoWkF("xasdfczy") == "zyxcfdsa")
+      assert(permuteAxisOrderPhysicalCtoWkF("tasxdfczy") == "zyxcfdsat")
     }
   }
 

@@ -56,7 +56,7 @@ function ConnectomeView() {
   useAgglomerateTreeSync(layerName, connectomeData, filteredConnectomeData, checkedKeys);
 
   const setActiveConnectomeAgglomerateIds = useCallback(
-    (agglomerateIds: Array<number>) => {
+    (agglomerateIds: Array<bigint>) => {
       if (layerName == null) return;
       Store.dispatch(setActiveConnectomeAgglomerateIdsAction(layerName, agglomerateIds));
     },

@@ -8,6 +8,7 @@ import {
   LoadingOutlined,
   PlayCircleOutlined,
   QuestionCircleTwoTone,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +19,6 @@ import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
-import { confirmAsync } from "dashboard/dataset/helper_components";
 import features from "features";
 import { formatMilliCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
@@ -38,8 +38,9 @@ import { Link } from "react-router-dom";
 import { type APIJob, APIJobCommand } from "types/api_types";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
-// Unfortunately, the twoToneColor (nor the style) prop don't support
-// CSS variables.
+// Kept as literals: antd derives the second tone from the first via a color library at render
+// time, so neither the twoToneColor nor the style prop can resolve a CSS variable here. These
+// values are antd's dark-algorithm status colors, which are legible on both backgrounds.
 export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:
@@ -85,7 +86,7 @@ export const getShowTrainingDataLink = (
         modal.info({
           title: "Training Data",
           closable: true,
-          maskClosable: true,
+          mask: { closable: true },
           content: (
             <div>
               The following annotations were used during training:
@@ -375,7 +376,7 @@ function JobListView() {
       return (
         <AsyncLink
           onClick={async () => {
-            const isDeleteConfirmed = await confirmAsync({
+            const isDeleteConfirmed = await modal.confirm({
               title: <p>Are you sure you want to cancel job {job.id}?</p>,
               okText: "Yes, cancel job",
               cancelText: "No, keep it",
@@ -393,25 +394,51 @@ function JobListView() {
     } else if (job.state === "FAILURE" || job.state === "CANCELLED") {
       // Regular users may retry a job once. Super users may always retry.
       const canRetry = isCurrentUserSuperUser || job.lastRetry == null;
+      const message =
+        job.errorDetails?.message != null ? (
+          <p>{job.errorDetails.message as string}</p>
+        ) : (
+          <pre style={{ maxHeight: 400, overflow: "auto" }}>
+            {JSON.stringify(job.errorDetails, null, 2)}
+          </pre>
+        );
+      const showErrorLink =
+        job.errorDetails != null ? (
+          <a
+            onClick={() =>
+              modal.error({
+                title: "Job Error Details",
+                width: 600,
+                content: message,
+              })
+            }
+          >
+            <WarningOutlined className="icon-margin-right" />
+            Show Error
+          </a>
+        ) : null;
       if (canRetry) {
         return (
-          <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
-            <AsyncLink
-              onClick={async () => {
-                try {
-                  await retryJob(job.id);
-                  await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-                  Toast.success("Job is being retried");
-                } catch (e) {
-                  console.error("Could not retry job", e);
-                  Toast.error("Failed to start retrying the job");
-                }
-              }}
-              icon={<PlayCircleOutlined className="icon-margin-right" />}
-            >
-              Retry
-            </AsyncLink>
-          </Tooltip>
+          <Space direction="vertical" size={4}>
+            <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
+              <AsyncLink
+                onClick={async () => {
+                  try {
+                    await retryJob(job.id);
+                    await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+                    Toast.success("Job is being retried");
+                  } catch (e) {
+                    console.error("Could not retry job", e);
+                    Toast.error("Failed to start retrying the job");
+                  }
+                }}
+                icon={<PlayCircleOutlined className="icon-margin-right" />}
+              >
+                Retry
+              </AsyncLink>
+            </Tooltip>
+            {showErrorLink}
+          </Space>
         );
       }
       if (job.state === "FAILURE") {
@@ -423,12 +450,15 @@ function JobListView() {
           "Please contact an administrator for help."
         );
         return (
-          <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
-            <span>{failureMessage}</span>
-          </Tooltip>
+          <Space direction="vertical" size={4}>
+            <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
+              <span>{failureMessage}</span>
+            </Tooltip>
+            {showErrorLink}
+          </Space>
         );
       }
-      return null;
+      return showErrorLink;
     } else if (
       job.command === APIJobCommand.CONVERT_TO_WKW ||
       job.command === APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE ||

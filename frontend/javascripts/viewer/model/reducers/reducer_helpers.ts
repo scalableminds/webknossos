@@ -1,8 +1,7 @@
+import { colorObjectToRGBArray, getRandomColor } from "libs/colors";
 import {
-  colorObjectToRGBArray,
   computeBoundingBoxFromBoundingBoxObject,
   computeBoundingBoxObjectFromBoundingBox,
-  getRandomColor,
   mapEntriesToMap,
   mapGroupsDeep,
   point3ToVector3,
@@ -16,14 +15,13 @@ import type {
   UserBoundingBoxProto,
   VolumeUserState,
 } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 import type { Vector3 } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateKey } from "viewer/model/helpers/deep_update";
 import type {
   Annotation,
-  BoundingBoxObject,
   SegmentGroup,
   UserBoundingBox,
   UserBoundingBoxForServer,

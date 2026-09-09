@@ -3,13 +3,12 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.ShardingSpecification
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -19,10 +18,7 @@ case class NeuroglancerPrecomputedMeshInfo(
     transform: Array[Double],
     sharding: Option[ShardingSpecification],
     vertex_quantization_bits: Int
-)
-object NeuroglancerPrecomputedMeshInfo {
-  implicit val jsonFormat: OFormat[NeuroglancerPrecomputedMeshInfo] = Json.format[NeuroglancerPrecomputedMeshInfo]
-}
+) derives JsonAutoFormat
 
 class NeuroglancerPrecomputedMeshFileService @Inject() (dataVaultService: DataVaultService)(implicit
     ec: ExecutionContext
@@ -114,7 +110,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject() (dataVaultService: DataVa
   ): Fox[(Array[Byte], String)] =
     for {
       vaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
-      segmentId <- meshChunkDataRequests.head.segmentId.toFox ?~> "Segment id parameter is required"
+      segmentId <- meshChunkDataRequests.head.segmentId.map(_.toLong).toFox ?~> "Segment id parameter is required"
       _ <- Fox.fromBool(
         meshChunkDataRequests.flatMap(_.segmentId).distinct.length == 1
       ) ?~> "All requests must have the same segment id"

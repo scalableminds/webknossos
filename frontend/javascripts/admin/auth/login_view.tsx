@@ -1,4 +1,4 @@
-import { Card, Col, Row } from "antd";
+import { Card, Col, Row, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { getUrlParamValue, hasUrlParam } from "libs/utils";
 import window from "libs/window";
@@ -37,7 +37,7 @@ function LoginView({ redirect }: Props) {
     <Row justify="center" align="middle" className="login-view">
       <Col xs={22} sm={20} md={16} lg={12} xl={8}>
         <Card className="login-content" style={{ margin: "0 auto" }}>
-          <h3>Login</h3>
+          <Typography.Title level={3}>Login</Typography.Title>
           <LoginForm layout="horizontal" onLoggedIn={onLoggedIn} />
         </Card>
       </Col>

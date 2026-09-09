@@ -64,7 +64,7 @@ describe("withRebaseEditGuard (integrated into the real store)", () => {
 
   it("drops another save-relevant edit (segment update) while rebasing and applies it once finished", () => {
     const { tracingId: volumeTracingId } = Store.getState().annotation.volumes[0];
-    const segmentId = 777;
+    const segmentId = 777n;
     const getSegment = () => Store.getState().annotation.volumes[0].segments.getNullable(segmentId);
     expect(getSegment()).toBeUndefined();
 
@@ -85,7 +85,8 @@ describe("withRebaseEditGuard (integrated into the real store)", () => {
 
     Store.dispatch(startForwardingUpdateActionsAction());
 
-    // A mapping action is dispatched by the rebase itself (see save_saga.tsx) -> must be applied.
+    // A mapping action is dispatched by the rebase itself
+    // (see incorporate_update_actions_sagas.ts) -> must be applied.
     expect(Store.getState().annotation.volumes[0].mappingIsLocked).toBeFalsy();
     Store.dispatch(setMappingIsLockedAction(volumeTracingId));
     expect(Store.getState().annotation.volumes[0].mappingIsLocked).toBe(true);

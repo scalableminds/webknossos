@@ -85,7 +85,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
 
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")
 
-  def fetchStorageReports(organizationId: String, paths: List[String]): Fox[PathStorageUsageResponse] =
+  def fetchStorageReports(organizationId: String, paths: Seq[String]): Fox[PathStorageUsageResponse] =
     rpc(s"${dataStore.url}/data/datasets/measureUsedStorage/${urlEncode(organizationId)}")
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .silent
@@ -139,6 +139,16 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId/deleteOnDisk")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .addQueryParam("rootPath", rootPath)
+        .delete()
+    } yield ()
+
+  def cleanUpUploadFiles(organizationId: String, directoryName: String, jobId: String): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/datasets/upload/dataset/cleanUpUploadFiles")
+        .addQueryParam("organizationId", organizationId)
+        .addQueryParam("directoryName", directoryName)
+        .addQueryParam("jobId", jobId)
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .delete()
     } yield ()
 

@@ -244,7 +244,7 @@ class FlightModeController extends React.PureComponent<Props> {
             return;
           }
 
-          const activeNode = getActiveNode(skeletonTracing);
+          const activeNode = getActiveNode(skeletonTracing, state.localSkeletonState.activeTreeId);
           if (activeNode) {
             api.tracing.centerPositionAnimated(
               getNodePosition(activeNode, state),
@@ -300,13 +300,14 @@ class FlightModeController extends React.PureComponent<Props> {
   }
 
   nextNode(nextOne: boolean): void {
-    const skeletonTracing = Store.getState().annotation.skeleton;
+    const state = Store.getState();
+    const skeletonTracing = state.annotation.skeleton;
 
     if (!skeletonTracing) {
       return;
     }
 
-    const activeNode = getActiveNode(skeletonTracing);
+    const activeNode = getActiveNode(skeletonTracing, state.localSkeletonState.activeTreeId);
     const maxNodeId = getMaxNodeId(skeletonTracing);
     if (activeNode == null || maxNodeId == null) {
       return;

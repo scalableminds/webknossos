@@ -57,6 +57,7 @@ import {
   handlePickCell,
 } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { isSkeletonLayerVisible } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   AnnotationTool,
   type AnnotationToolId,
@@ -162,7 +163,7 @@ export class MoveToolController extends ToolController {
       scroll: (delta: number, type: ModifierKeys | null | undefined) => {
         switch (type) {
           case null: {
-            moveW(delta, true);
+            moveW(delta, true, false, true);
             break;
           }
 
@@ -423,7 +424,7 @@ export class SkeletonToolController extends ToolController {
     allowNodeCreation: boolean = true,
   ): void {
     const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
-    const showSkeleton = Store.getState().annotation.skeleton?.showSkeletons ?? false;
+    const showSkeleton = isSkeletonLayerVisible(Store.getState());
     if (!showSkeleton) {
       // Don't do anything in case the skeleton layer is disabled or does not exist.
       return;
@@ -789,6 +790,8 @@ export class EraseToolController extends VolumeToolController {
   static onToolDeselected() {}
 }
 
+// Not inheriting from VolumeToolController by design as no shortcuts like
+// `c` -> create new cell should be supported in this tool for now.
 export class VoxelPipetteToolController extends ToolController {
   static getPlaneMouseControls(_planeId: OrthoView): MouseBindingMap {
     return {
@@ -1420,11 +1423,11 @@ export class ProofreadToolController extends ToolController {
     if (isMultiSplitActive && ctrlOrMetaKey) {
       const unmappedSegmentId = getUnmappedSegmentIdForPosition(globalPosition);
       const mappedSegmentId = getSegmentIdForPosition(globalPosition);
-      if (unmappedSegmentId === 0 || mappedSegmentId === 0) {
+      if (unmappedSegmentId === 0n || mappedSegmentId === 0n) {
         // No valid ids were found, ignore action.
         return;
       }
-      const partition = event.shiftKey ? 2 : 1;
+      const partition = event.shiftKey ? "partitionB" : "partitionA";
       Store.dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, partition, mappedSegmentId));
       return;
     }

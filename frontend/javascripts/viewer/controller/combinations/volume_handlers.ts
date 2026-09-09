@@ -1,5 +1,4 @@
-import { V3 } from "libs/mjs";
-import memoizeOne from "memoize-one";
+import { toBigInt } from "libs/bigint_helpers";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
 import { ContourModeEnum } from "viewer/constants";
@@ -101,7 +100,7 @@ const _getSegmentIdForPosition = (mapped: boolean) => (globalPos: Vector3) => {
   const { additionalCoordinates } = Store.getState().flycam;
 
   if (!layer) {
-    return 0;
+    return 0n;
   }
   const posInLayerSpace = globalToLayerTransformedPosition(
     globalPos,
@@ -117,28 +116,30 @@ const _getSegmentIdForPosition = (mapped: boolean) => (globalPos: Vector3) => {
     posInLayerSpace,
   );
 
-  return mapped
-    ? segmentationCube.getMappedDataValue(
-        posInLayerSpace,
-        additionalCoordinates,
-        renderedZoomStepForCameraPosition,
-      )
-    : segmentationCube.getDataValue(
-        posInLayerSpace,
-        additionalCoordinates,
-        null,
-        renderedZoomStepForCameraPosition,
-      );
+  return toBigInt(
+    mapped
+      ? segmentationCube.getMappedDataValue(
+          posInLayerSpace,
+          additionalCoordinates,
+          renderedZoomStepForCameraPosition,
+        )
+      : segmentationCube.getDataValue(
+          posInLayerSpace,
+          additionalCoordinates,
+          null,
+          renderedZoomStepForCameraPosition,
+        ),
+  );
 };
 
-export const getSegmentIdForPosition = memoizeOne(_getSegmentIdForPosition(true), ([a], [b]) =>
-  V3.isEqual(a, b),
-);
+// This must not be memoized: the mapped segment id at a given position can change
+// even when the position stays the same e.g. due to a foreign proofreading action.
+export const getSegmentIdForPosition = _getSegmentIdForPosition(true);
 
-export const getUnmappedSegmentIdForPosition = memoizeOne(
-  _getSegmentIdForPosition(false),
-  ([a], [b]) => V3.isEqual(a, b),
-);
+// This must not be memoized on the position either: the looked-up value still depends on live
+// state that is read inside the function (visible segmentation layer, additional coordinates,
+// rendered zoom step) and can change while the queried position stays the same.
+export const getUnmappedSegmentIdForPosition = _getSegmentIdForPosition(false);
 
 const _getSegmentIdInfoForPosition = (globalPos: Vector3) => {
   // This function will return the currently loaded segment ID for a given position.
@@ -148,7 +149,7 @@ const _getSegmentIdInfoForPosition = (globalPos: Vector3) => {
   const { additionalCoordinates } = Store.getState().flycam;
 
   if (!layer) {
-    return { mapped: 0, unmapped: 0 };
+    return { mapped: 0n, unmapped: 0n };
   }
   const posInLayerSpace = globalToLayerTransformedPosition(
     globalPos,
@@ -165,23 +166,27 @@ const _getSegmentIdInfoForPosition = (globalPos: Vector3) => {
   );
 
   return {
-    mapped: segmentationCube.getMappedDataValue(
-      posInLayerSpace,
-      additionalCoordinates,
-      renderedZoomStepForCameraPosition,
+    mapped: toBigInt(
+      segmentationCube.getMappedDataValue(
+        posInLayerSpace,
+        additionalCoordinates,
+        renderedZoomStepForCameraPosition,
+      ),
     ),
-    unmapped: segmentationCube.getDataValue(
-      posInLayerSpace,
-      additionalCoordinates,
-      null,
-      renderedZoomStepForCameraPosition,
+    unmapped: toBigInt(
+      segmentationCube.getDataValue(
+        posInLayerSpace,
+        additionalCoordinates,
+        null,
+        renderedZoomStepForCameraPosition,
+      ),
     ),
   };
 };
 
-export const getSegmentIdInfoForPosition = memoizeOne(_getSegmentIdInfoForPosition, ([a], [b]) =>
-  V3.isEqual(a, b),
-);
+// Not memoized for the same reasons as above: the returned mapped id can change due to foreign
+// proofreading actions and the lookup depends on live state, so caching on the position can go stale.
+export const getSegmentIdInfoForPosition = _getSegmentIdInfoForPosition;
 
 export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
   // This function will return the segment ID for a given position, awaiting the loading
@@ -191,7 +196,7 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
   const { additionalCoordinates } = Store.getState().flycam;
 
   if (!layer) {
-    return 0;
+    return 0n;
   }
   const posInLayerSpace = globalToLayerTransformedPosition(
     globalPos,
@@ -213,10 +218,12 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
     renderedZoomStepForCameraPosition,
     additionalCoordinates,
   );
-  return segmentationCube.getMappedDataValue(
-    posInLayerSpace,
-    additionalCoordinates,
-    renderedZoomStepForCameraPosition,
+  return toBigInt(
+    segmentationCube.getMappedDataValue(
+      posInLayerSpace,
+      additionalCoordinates,
+      renderedZoomStepForCameraPosition,
+    ),
   );
 }
 
@@ -226,7 +233,7 @@ function handlePickCellFromGlobalPosition(
 ) {
   const segmentId = getSegmentIdForPosition(globalPos.rounded);
 
-  if (segmentId === 0) {
+  if (segmentId < 0n) {
     return;
   }
   const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());

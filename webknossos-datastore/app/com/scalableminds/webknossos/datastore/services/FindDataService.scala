@@ -4,20 +4,19 @@ import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.Full
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{DataRequest, VoxelPosition}
-import play.api.libs.json.{Json, OFormat}
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-case class Histogram(elementCounts: Array[Long], min: Double, max: Double)
-object Histogram { implicit val jsonFormat: OFormat[Histogram] = Json.format[Histogram] }
+case class Histogram(elementCounts: Array[Long], min: Double, max: Double) derives JsonAutoFormat
 
 class FindDataService @Inject() (dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
     extends DataConverter
@@ -56,11 +55,6 @@ class FindDataService @Inject() (dataServicesHolder: BinaryDataServiceHolder)(im
     )
   }
 
-  private def concatenateBuckets(buckets: Seq[Array[Byte]]): Array[Byte] =
-    buckets.foldLeft(Array[Byte]()) { (acc, i) =>
-      acc ++ i
-    }
-
   private def getConcatenatedDataFor(
       datasetId: ObjectId,
       dataSourceId: DataSourceId,
@@ -73,7 +67,7 @@ class FindDataService @Inject() (dataServicesHolder: BinaryDataServiceHolder)(im
         Fox.sequenceOfFulls(positions.map(getDataFor(datasetId, dataSourceId, dataLayer, _, mag)))
       )
       _ <- Fox.fromBool(dataBucketWise.nonEmpty) ?~> Msg.Dataset.loadingDataFailed
-      dataConcatenated = concatenateBuckets(dataBucketWise)
+      dataConcatenated = SequenceUtils.concatArrays(dataBucketWise)
     } yield dataConcatenated
 
   private def createPositions(dataLayer: DataLayer, iterationCount: Int = 4) = {
@@ -229,7 +223,7 @@ class FindDataService @Inject() (dataServicesHolder: BinaryDataServiceHolder)(im
     if (isUint24) {
       val listOfCounts = counts.grouped(256).toList
       listOfCounts.map { counts =>
-        counts(0) = 0;
+        counts(0) = 0
         Histogram(counts, extrema._1, extrema._2)
       }
     } else

@@ -267,6 +267,11 @@ function EditModelSharedOrganizationsModal({
           placeholder="Please select"
           onChange={handleChange}
           options={options}
+          filterOption={(input, option) =>
+            option != null &&
+            (option.label.toLowerCase().includes(input.toLowerCase()) ||
+              option.value.toLowerCase().includes(input.toLowerCase()))
+          }
           value={selectedOrganizationIds}
         />
       </Flex>

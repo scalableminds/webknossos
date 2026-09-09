@@ -3,13 +3,14 @@ import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { clearCache, updateDatasetDefaultConfiguration } from "admin/rest_api";
-import { Button, Divider, Modal, Row } from "antd";
+import { Button, Divider, Row } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import update from "immutability-helper";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager } from "libs/utils";
+import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import partial from "lodash-es/partial";
 import { type RecommendedConfiguration, settings, settingsTooltips } from "messages";
 import React from "react";
@@ -19,6 +20,7 @@ import { APIAnnotationTypeEnum, type APIDataLayer } from "types/api_types";
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
 import type { ValueOf } from "types/type_utils";
 import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
+import { isEditingAnnotationLayerSetDisabled } from "viewer/model/accessors/annotation_accessor";
 import {
   getDefaultValueRangeOfLayer,
   getElementClass,
@@ -49,7 +51,8 @@ import Histogram, { isHistogramSupported } from "./histogram_view";
 import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
 
 type DatasetSettingsProps = ReturnType<typeof mapStateToProps> &
-  ReturnType<typeof mapDispatchToProps>;
+  ReturnType<typeof mapDispatchToProps> &
+  WithModalProps;
 
 type State = {
   isAddVolumeLayerModalVisible: boolean;
@@ -231,7 +234,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       description: settingsTooltips[key],
     }));
     dataSource.push(...additionalData);
-    Modal.confirm({
+    this.props.modal.confirm({
       title: "Save current view configuration as default?",
       width: 700,
       content: (
@@ -397,24 +400,33 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <>
             <Divider />
             <Row justify="center" align="middle">
-              <Button onClick={this.showAddVolumeLayerModal} icon={<PlusOutlined />}>
-                Add Volume Annotation Layer
-              </Button>
+              <FastTooltip title={this.props.changeLayerSetDisabledInfo.explanation}>
+                <Button
+                  onClick={this.showAddVolumeLayerModal}
+                  icon={<PlusOutlined />}
+                  disabled={this.props.changeLayerSetDisabledInfo.isDisabled}
+                >
+                  Add Volume Annotation Layer
+                </Button>
+              </FastTooltip>
             </Row>
           </>
         ) : null}
 
         {this.props.isUpdatingCurrentlyAllowed && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
-            <Button
-              onClick={this.addSkeletonAnnotationLayer}
-              style={{
-                marginTop: 10,
-              }}
-              icon={<PlusOutlined />}
-            >
-              Add Skeleton Annotation Layer
-            </Button>
+            <FastTooltip title={this.props.changeLayerSetDisabledInfo.explanation}>
+              <Button
+                onClick={this.addSkeletonAnnotationLayer}
+                style={{
+                  marginTop: 10,
+                }}
+                icon={<PlusOutlined />}
+                disabled={this.props.changeLayerSetDisabledInfo.isDisabled}
+              >
+                Add Skeleton Annotation Layer
+              </Button>
+            </FastTooltip>
           </Row>
         ) : null}
 
@@ -456,6 +468,7 @@ const mapStateToProps = (state: WebknossosState) => ({
   // the whole annotation would re-render the entire settings panel on every
   // skeleton/volume mutation (e.g., each placed node or brush stroke).
   isUpdatingCurrentlyAllowed: state.annotation.isUpdatingCurrentlyAllowed,
+  changeLayerSetDisabledInfo: isEditingAnnotationLayerSetDisabled(state),
   annotationType: state.annotation.annotationType,
   hasSkeletonLayer: state.annotation.skeleton != null,
   controlMode: state.temporaryConfiguration.controlMode,
@@ -494,4 +507,4 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 });
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(DatasetSettings);
+export default connector(withModal(DatasetSettings));

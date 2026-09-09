@@ -10,6 +10,7 @@ import Icon, {
   UserOutlined,
 } from "@ant-design/icons";
 import WkLogoIcon from "@images/wk-logo.svg?react";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -99,6 +100,8 @@ function useOlvy() {
         showHeader: true,
         // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
         showUnreadIndicator: false,
+        // Kept as a literal: this is configuration handed to the third-party Olvy widget, which
+        // renders in its own iframe and cannot resolve our CSS variables.
         unreadIndicatorColor: "#cc1919",
         unreadIndicatorPosition: "top-right",
       },
@@ -848,7 +851,7 @@ function Navbar() {
 
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
-    const redirectUrl = await logoutUser();
+    const redirectUrl = unwrapOrThrow(await logoutUser());
     dispatch(logoutUserAction());
     // Hard navigation
     location.href = redirectUrl;

@@ -82,6 +82,7 @@ const defaultState: WebknossosState = {
     sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
     tdViewDisplayPlanes: TDViewDisplayModeEnum.DATA,
     tdViewDisplayDatasetBorders: true,
+    tdViewUsePerspectiveCamera: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
     fillMode: FillModeEnum._2D,
@@ -131,8 +132,8 @@ const defaultState: WebknossosState = {
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
-    hoveredSegmentId: 0,
-    hoveredUnmappedSegmentId: 0,
+    hoveredSegmentId: 0n,
+    hoveredUnmappedSegmentId: 0n,
     activeMappingByLayer: {},
     isMergerModeEnabled: false,
     gpuSetup: {
@@ -322,6 +323,15 @@ const defaultState: WebknossosState = {
     mipBBoxSettings: {},
   },
   localSegmentationStateByLayer: {},
+  localSkeletonState: {
+    activeTreeId: null,
+    activeGroupId: null,
+    navigationList: {
+      list: [],
+      activeIndex: -1,
+    },
+    showSkeletons: true,
+  },
   localAnnotationState: {
     idReservationsForBoundingBoxes: [],
   },

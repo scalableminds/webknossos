@@ -1,4 +1,4 @@
-import { hexToRgb } from "libs/utils";
+import { hexToRgb } from "libs/colors";
 import type { Vector3 } from "viewer/constants";
 
 type ColorSettingPropTypes = {

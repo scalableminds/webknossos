@@ -49,12 +49,8 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
   const dispatch = useDispatch();
   const allowUpdate = useWkSelector(mayEditAnnotation);
   const trees = useWkSelector((state) => enforceSkeletonTracing(state.annotation).trees);
-  const activeTreeId = useWkSelector(
-    (state) => enforceSkeletonTracing(state.annotation).activeTreeId,
-  );
-  const activeGroupId = useWkSelector(
-    (state) => enforceSkeletonTracing(state.annotation).activeGroupId,
-  );
+  const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
+  const activeGroupId = useWkSelector((state) => state.localSkeletonState.activeGroupId);
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
   const {

@@ -1,8 +1,7 @@
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteOrganization } from "admin/api/organization";
-import { Button, Typography } from "antd";
-import { confirmAsync } from "dashboard/dataset/helper_components";
+import { App, Button, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
@@ -12,9 +11,10 @@ export function OrganizationDangerZoneView() {
     enforceActiveOrganization(state.activeOrganization),
   );
   const [isDeleting, setIsDeleting] = useState(false);
+  const { modal } = App.useApp();
 
   async function handleDeleteButtonClicked(): Promise<void> {
-    const isDeleteConfirmed = await confirmAsync({
+    const isDeleteConfirmed = await modal.confirm({
       title: "Danger Zone",
       content: (
         <div>

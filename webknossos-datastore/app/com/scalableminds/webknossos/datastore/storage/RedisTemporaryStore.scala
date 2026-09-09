@@ -4,7 +4,15 @@ import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
-import io.lettuce.core.{ClientOptions, RedisURI, SocketOptions, TimeoutOptions, RedisClient as LettuceClient}
+import io.lettuce.core.{
+  ClientOptions,
+  RedisURI,
+  ScanArgs,
+  ScanCursor,
+  SocketOptions,
+  TimeoutOptions,
+  RedisClient as LettuceClient
+}
 import io.lettuce.core.codec.StringCodec
 import io.lettuce.core.api.StatefulRedisConnection
 import io.lettuce.core.api.async.RedisAsyncCommands
@@ -87,10 +95,25 @@ trait RedisTemporaryStore extends LazyLogging {
       }
     }
 
+  private val scanBatchSize = 1000L
+
+  // Uses SCAN instead of KEYS, since KEYS blocks the (single-threaded) Redis server for O(keyspace size),
+  // while SCAN only does O(scanBatchSize) work per call and yields to other clients in between.
+  private def scanKeys(cmd: RedisAsyncCommands[String, String], pattern: String): Fox[Seq[String]] = {
+    val scanArgs = ScanArgs.Builder.matches(pattern).limit(scanBatchSize)
+    val buffer = scala.collection.mutable.ArrayBuffer.empty[String]
+    def scanNextRecursive(cursor: ScanCursor): Fox[Seq[String]] =
+      Fox.fromFuture(cmd.scan(cursor, scanArgs).asScala).flatMap { result =>
+        buffer ++= result.getKeys.asScala
+        if (result.isFinished) Fox.successful(buffer.toSeq) else scanNextRecursive(result)
+      }
+    scanNextRecursive(ScanCursor.INITIAL)
+  }
+
   def removeAllConditional(pattern: String): Fox[Unit] =
     withCommands { cmd =>
       for {
-        keysList <- Fox.fromFuture(cmd.keys(pattern).asScala.map(_.asScala.toSeq))
+        keysList <- scanKeys(cmd, pattern)
         _ <- Fox.runIf(keysList.nonEmpty)(Fox.fromFuture(cmd.del(keysList*).asScala))
       } yield ()
     }
@@ -98,7 +121,7 @@ trait RedisTemporaryStore extends LazyLogging {
   def findAllConditional(pattern: String): Fox[Seq[String]] =
     withCommands { cmd =>
       for {
-        keysList <- Fox.fromFuture(cmd.keys(pattern).asScala.map(_.asScala.toSeq))
+        keysList <- scanKeys(cmd, pattern)
         values <-
           if (keysList.isEmpty)
             Fox.successful(Seq.empty)
@@ -110,7 +133,7 @@ trait RedisTemporaryStore extends LazyLogging {
     }
 
   def keys(pattern: String): Fox[Seq[String]] =
-    withCommands(cmd => Fox.fromFuture(cmd.keys(pattern).asScala.map(_.asScala.toSeq)))
+    withCommands(cmd => scanKeys(cmd, pattern))
 
   def insertKey(id: String, expiryOpt: Option[FiniteDuration] = None): Fox[Unit] =
     insert(id, "", expiryOpt)

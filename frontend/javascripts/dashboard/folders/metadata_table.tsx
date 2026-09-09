@@ -438,14 +438,7 @@ export default function MetadataTable({
       <Button
         type="text"
         disabled={isSaving}
-        icon={
-          <CloseOutlined
-            style={{
-              color: "var(--ant-color-text-tertiary)",
-              width: 16,
-            }}
-          />
-        }
+        icon={<CloseOutlined />}
         style={{ width: 16, height: 19 }}
         onClick={() => deleteKey(index)}
       />
@@ -514,12 +507,9 @@ export function InnerMetadataTable({
                 >
                   <Button
                     className="add-property-button"
-                    ghost
+                    type="text"
                     size="small"
-                    style={{ border: "none" }}
-                    icon={
-                      <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
-                    }
+                    icon={<PlusOutlined />}
                   />
                 </Dropdown>
               </FastTooltip>

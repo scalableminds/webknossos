@@ -56,6 +56,8 @@ class Mappings {
   layerName: string;
   mappingTexture!: UpdatableTexture;
   mappingLookupTexture!: UpdatableTexture;
+  // cuckooTable stores a map from unmapped to mapped segment ids (keys and values
+  // are either both 32-bit or 64-bit). This table is accessed from the GPU during rendering.
   cuckooTable: CuckooTableUint64 | CuckooTableUint32 | null = null;
   previousMapping: Mapping | null | undefined = null;
   currentKeyCount: number = 0;

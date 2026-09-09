@@ -9,9 +9,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { memo } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector4 } from "viewer/constants";
-import { getSegmentIdForPosition } from "viewer/controller/combinations/volume_handlers";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
-import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
   getMeshesForCurrentAdditionalCoordinates,
@@ -38,7 +36,7 @@ type TitleProps<NodeType extends SegmentsUiNode> = {
   onRenameEnd: () => void;
 };
 
-function SegmentIdAddendum({ id }: { id: number }) {
+function SegmentIdAddendum({ id }: { id: bigint }) {
   return (
     <FastTooltip title="Segment ID">
       <span className="deemphasized italic" style={{ marginLeft: 4 }}>
@@ -51,11 +49,15 @@ function SegmentIdAddendum({ id }: { id: number }) {
 export const SegmentNodeTitle = memo(
   ({
     node,
+    isCentered,
     onContextMenu,
     onRenameStart,
     onRenameEnd,
     onSelectSegment,
-  }: TitleProps<SegmentUiNode> & { onSelectSegment: (segment: Segment) => void }) => {
+  }: TitleProps<SegmentUiNode> & {
+    isCentered: boolean;
+    onSelectSegment: (segment: Segment) => void;
+  }) => {
     const dispatch = useDispatch();
     const { segment } = node;
 
@@ -70,7 +72,7 @@ export const SegmentNodeTitle = memo(
     const mesh = useWkSelector((state) =>
       visibleSegmentationLayer != null
         ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer.name)?.[
-            segment.id
+            segment.id.toString()
           ]
         : undefined,
     );
@@ -81,11 +83,8 @@ export const SegmentNodeTitle = memo(
     const isHovered = useWkSelector(
       (state) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
     );
-    const isCentered = useWkSelector(
-      (state) => getSegmentIdForPosition(getPosition(state.flycam)) === segment.id,
-    );
 
-    const setHoveredSegmentId = (segmentId: number | null) =>
+    const setHoveredSegmentId = (segmentId: bigint | null) =>
       dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
 
     return (

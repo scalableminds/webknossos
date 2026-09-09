@@ -1,7 +1,7 @@
 import type { ItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
-import { useDispatch } from "react-redux";
+import { shallowEqual, useDispatch } from "react-redux";
 import { AltOrOptionKey, CtrlOrCmdKey } from "viewer/constants";
 import { mayEditSkeletonTree } from "viewer/model/accessors/annotation_accessor";
 import { getTreeAndNodeOrNull } from "viewer/model/accessors/skeletontracing_accessor";
@@ -39,12 +39,16 @@ export function useNodeContextMenuOptions(
   const { clickedNodeId } = contextInfo;
 
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
+  const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const useLegacyBindings = useWkSelector((state) => state.userConfiguration.useLegacyBindings);
-  const { node: clickedNode, tree: clickedTree } =
-    skeletonTracing && clickedNodeId != null
-      ? getTreeAndNodeOrNull(skeletonTracing, clickedNodeId)
-      : { node: null, tree: null };
+  const { node: clickedNode, tree: clickedTree } = useWkSelector(
+    (state) =>
+      clickedNodeId != null
+        ? getTreeAndNodeOrNull(state, clickedNodeId)
+        : { node: null, tree: null },
+    shallowEqual,
+  );
   // Whether the clicked tree may be edited. In concurrent collaboration mode, only agglomerate
   // trees (proofreading) may be mutated.
   const mayEditClickedTree = useWkSelector((state) => mayEditSkeletonTree(state, clickedTree));
@@ -66,7 +70,7 @@ export function useNodeContextMenuOptions(
     return [{ key: "disabled-error", disabled: true, label: "Error: Could not find clicked node" }];
   }
 
-  const { activeTreeId, activeNodeId } = skeletonTracing;
+  const { activeNodeId } = skeletonTracing;
 
   const areInSameTree = activeTreeId === clickedTree.treeId;
   const isBranchpoint = clickedTree.branchPoints.find((bp) => bp.nodeId === clickedNodeId) != null;

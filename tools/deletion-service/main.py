@@ -20,7 +20,7 @@ import s3fs
 
 logger = logging.getLogger(__name__)
 
-WK_API_VERSION = 12
+WK_API_VERSION = 15
 NUM_REQUEST_RETRIES = 10
 
 

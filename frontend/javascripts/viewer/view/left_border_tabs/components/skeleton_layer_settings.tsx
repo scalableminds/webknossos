@@ -1,5 +1,5 @@
 import { DeleteOutlined } from "@ant-design/icons";
-import { Flex, Switch } from "antd";
+import { App, Flex, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { location } from "libs/window";
@@ -11,6 +11,7 @@ import { AnnotationLayerEnum } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import defaultState from "viewer/default_state";
+import { isEditingAnnotationLayerSetDisabled } from "viewer/model/accessors/annotation_accessor";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import {
   areGeometriesTransformed,
@@ -26,7 +27,6 @@ import {
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { Model } from "viewer/singletons";
 import ButtonComponent from "viewer/view/components/button_component";
-import { confirmAsync } from "../../../../dashboard/dataset/helper_components";
 import { DummyDragHandle } from "./drag_handle";
 import LayerTransformationIcon from "./layer_transformation_icon";
 import { LogSliderSetting } from "./log_slider_setting";
@@ -35,7 +35,13 @@ import SwitchSetting from "./switch_setting";
 
 export default function SkeletonLayerSettings() {
   const dispatch = useDispatch();
+  const { modal } = App.useApp();
   const annotation = useWkSelector((state) => state.annotation);
+  const showSkeletons = useWkSelector((state) => state.localSkeletonState.showSkeletons);
+  const activeNodeRadius = useWkSelector(
+    (state) =>
+      getActiveNode(state.annotation.skeleton, state.localSkeletonState.activeTreeId)?.radius ?? 0,
+  );
   const userConfiguration = useWkSelector((state) => state.userConfiguration);
   const dataset = useWkSelector((state) => state.dataset);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
@@ -45,6 +51,9 @@ export default function SkeletonLayerSettings() {
   // Section clipping requires an axis-aligned, untransformed scene.
   const isSectionClippingAvailable = useWkSelector(
     (state) => !isRotated(state.flycam) && !areGeometriesTransformed(state),
+  );
+  const { isDisabled: mayNotEditLayerSet, explanation: reasonForCantEditLayerSet } = useWkSelector(
+    (state) => isEditingAnnotationLayerSetDisabled(state),
   );
 
   const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
@@ -76,7 +85,7 @@ export default function SkeletonLayerSettings() {
       type: AnnotationLayerType,
       layerTracingId: string,
     ) => {
-      const shouldDelete = await confirmAsync({
+      const shouldDelete = await modal.confirm({
         title: `Deleting an annotation layer makes its content and history inaccessible. This cannot be undone. Are you sure you want to delete this layer?`,
         okText: `Yes, delete annotation layer "${readableAnnotationLayerName}"`,
         cancelText: "Cancel",
@@ -98,7 +107,7 @@ export default function SkeletonLayerSettings() {
       await Model.ensureSavedState();
       location.reload();
     },
-    [dispatch],
+    [dispatch, modal],
   );
 
   const onChangeParticleSize = useCallback(
@@ -148,8 +157,7 @@ export default function SkeletonLayerSettings() {
   const readableName = "Skeleton";
   const skeletonTracing = enforceSkeletonTracing(annotation);
   const isOnlyAnnotationLayer = annotation.annotationLayers.length === 1;
-  const { showSkeletons, tracingId } = skeletonTracing;
-  const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
+  const { tracingId } = skeletonTracing;
   const unit = LongUnitToShortUnitMap[dataset.dataSource.scale.unit];
   const isClippingDistanceDisabled =
     userConfiguration.clipSkeletonToCurrentSection && isSectionClippingAvailable;
@@ -209,6 +217,7 @@ export default function SkeletonLayerSettings() {
               variant="text"
               color="default"
               size="small"
+              disabled={mayNotEditLayerSet}
               onClick={() =>
                 deleteAnnotationLayerIfConfirmed(
                   readableName,
@@ -217,7 +226,9 @@ export default function SkeletonLayerSettings() {
                 )
               }
               icon={<DeleteOutlined />}
-              title="Delete this annotation layer."
+              title={
+                mayNotEditLayerSet ? reasonForCantEditLayerSet : "Delete this annotation layer."
+              }
             />
           ) : null}
         </Flex>

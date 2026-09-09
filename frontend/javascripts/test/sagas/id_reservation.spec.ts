@@ -138,75 +138,75 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
     await task.toPromise();
   });
 
-  it.for([
-    [0],
-    [20],
-  ])("should replenish the buffer after an ID is returned when the remaining count falls below the threshold (delay=%i)", async ([
-    // We use an artificial delay to also test whether dispatchGetNewIdAsync correctly
-    // awaits ongoing replenishment requests
-    delay,
-  ], context: TestContext) => {
-    const { mocks } = context as WebknossosTestContext;
-    const { tracingId } = Store.getState().annotation.volumes[0];
+  it.for([[0], [20]])(
+    "should replenish the buffer after an ID is returned when the remaining count falls below the threshold (delay=%i)",
+    async ([
+      // We use an artificial delay to also test whether dispatchGetNewIdAsync correctly
+      // awaits ongoing replenishment requests
+      delay,
+    ], context: TestContext) => {
+      const { mocks } = context as WebknossosTestContext;
+      const { tracingId } = Store.getState().annotation.volumes[0];
 
-    // 2 usable reservations: 2 < IDEAL_ID_BUFFER_SIZE / 2 (2.5), so replenishment fires after the
-    // first use. But replenishment is async — it runs concurrently with the next request.
-    Store.dispatch(
-      setIdReservationsAction(tracingId, "SegmentGroup", [
-        { id: 199, used: true },
-        { id: 200, used: false },
-        { id: 201, used: false },
-      ]),
-    );
-
-    mockReserveIdsEndpoint(mocks, [300, 301, 302, 303], delay);
-
-    const task = startSaga(function* task() {
-      const id1 = yield call(() =>
-        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      // 2 usable reservations: 2 < IDEAL_ID_BUFFER_SIZE / 2 (2.5), so replenishment fires after the
+      // first use. But replenishment is async — it runs concurrently with the next request.
+      Store.dispatch(
+        setIdReservationsAction(tracingId, "SegmentGroup", [
+          { id: 199, used: true },
+          { id: 200, used: false },
+          { id: 201, used: false },
+        ]),
       );
-      expect(id1).toBe(200);
 
-      const id2 = yield call(() =>
-        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
-      );
-      expect(id2).toBe(201);
+      mockReserveIdsEndpoint(mocks, [300, 301, 302, 303], delay);
 
-      // Buffer is now empty; this request must wait for the replenishment saga to complete.
-      // After it returns, we are guaranteed that the replenishment has finished.
-      const id3 = yield call(() =>
-        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
-      );
-      expect(id3).toBe(300);
-
-      const reservations = getIdReservationsForSegmentationLayer(
-        Store.getState(),
-        tracingId,
-      ).SegmentGroup;
-      expect(reservations).toEqual([
-        { id: 201, used: true },
-        { id: 300, used: true },
-        { id: 301, used: false },
-        { id: 302, used: false },
-        { id: 303, used: false },
-      ]);
-
-      const reserveIdsCalls = vi
-        .mocked(mocks.Request.sendJSONReceiveJSON)
-        .mock.calls.filter(([url]) => url.includes("/reserveIds"));
-      expect(reserveIdsCalls).toHaveLength(1);
-
-      const allReleasedIds = vi
-        .mocked(mocks.Request.sendJSONReceiveJSON)
-        .mock.calls.filter(([url]) => url.includes("/reserveIds"))
-        .flatMap(
-          ([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[],
+      const task = startSaga(function* task() {
+        const id1 = yield call(() =>
+          dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
         );
-      expect(allReleasedIds).toEqual([199, 200]);
-    });
+        expect(id1).toBe(200);
 
-    await task.toPromise();
-  });
+        const id2 = yield call(() =>
+          dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+        );
+        expect(id2).toBe(201);
+
+        // Buffer is now empty; this request must wait for the replenishment saga to complete.
+        // After it returns, we are guaranteed that the replenishment has finished.
+        const id3 = yield call(() =>
+          dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+        );
+        expect(id3).toBe(300);
+
+        const reservations = getIdReservationsForSegmentationLayer(
+          Store.getState(),
+          tracingId,
+        ).SegmentGroup;
+        expect(reservations).toEqual([
+          { id: 201, used: true },
+          { id: 300, used: true },
+          { id: 301, used: false },
+          { id: 302, used: false },
+          { id: 303, used: false },
+        ]);
+
+        const reserveIdsCalls = vi
+          .mocked(mocks.Request.sendJSONReceiveJSON)
+          .mock.calls.filter(([url]) => url.includes("/reserveIds"));
+        expect(reserveIdsCalls).toHaveLength(1);
+
+        const allReleasedIds = vi
+          .mocked(mocks.Request.sendJSONReceiveJSON)
+          .mock.calls.filter(([url]) => url.includes("/reserveIds"))
+          .flatMap(
+            ([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[],
+          );
+        expect(allReleasedIds).toEqual([199, 200]);
+      });
+
+      await task.toPromise();
+    },
+  );
 
   it("should include pre-existing used IDs in idsToRelease", async (context: WebknossosTestContext) => {
     const { mocks } = context;

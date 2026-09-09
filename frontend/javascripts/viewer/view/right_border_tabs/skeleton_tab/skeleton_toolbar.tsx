@@ -15,8 +15,9 @@ import Icon, {
 } from "@ant-design/icons";
 import ToggleOffIcon from "@images/icons/icon-toggle-off.svg?react";
 import ToggleOnIcon from "@images/icons/icon-toggle-on.svg?react";
-import { Dropdown, type MenuProps, Modal, Space } from "antd";
+import { App, Dropdown, type MenuProps, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
+import type { ModalApi } from "libs/with_modal_hoc";
 import messages from "messages";
 import { useDispatch } from "react-redux";
 import {
@@ -62,8 +63,13 @@ import { showAllSkeletonsLengthNotification } from "./measurements";
 
 export const skeletonTabId = "tree-list";
 
-function showConfirmWarningModal(title: string, content: string, onConfirm: () => void) {
-  Modal.confirm({
+function showConfirmWarningModal(
+  modal: ModalApi,
+  title: string,
+  content: string,
+  onConfirm: () => void,
+) {
+  modal.confirm({
     title,
     content,
     okText: "Ok",
@@ -84,13 +90,12 @@ type Props = {
 
 export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeletonExport }: Props) {
   const dispatch = useDispatch();
+  const { modal } = App.useApp();
   const allowUpdate = useWkSelector(mayEditAnnotation);
   const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
   const trees = useWkSelector((state) => enforceSkeletonTracing(state.annotation).trees);
   const treeGroups = useWkSelector((state) => enforceSkeletonTracing(state.annotation).treeGroups);
-  const activeGroupId = useWkSelector(
-    (state) => enforceSkeletonTracing(state.annotation).activeGroupId,
-  );
+  const activeGroupId = useWkSelector((state) => state.localSkeletonState.activeGroupId);
   const sortTreesByName = useWkSelector((state) => state.userConfiguration.sortTreesByName);
   const isSkeletonLayerTransformed = useWkSelector(areGeometriesTransformed);
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
@@ -151,12 +156,14 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
 
     if (selectedTreeIds.length > 1) {
       showConfirmWarningModal(
+        modal,
         "Delete all selected trees?",
         messages["tracing.delete_multiple_trees"]({
           countOfTrees: selectedTreeIds.length,
         }),
         () => {
-          checkAndConfirmDeletingInitialNode(selectedTreeIds).then(() => {
+          checkAndConfirmDeletingInitialNode(modal, selectedTreeIds).then((isConfirmed) => {
+            if (!isConfirmed) return;
             dispatch(deleteTreesAction(selectedTreeIds));
             selection.deselectAllTrees();
           });
@@ -164,7 +171,7 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
       );
     } else {
       // Just delete the active tree.
-      handleDeleteTreeByUser();
+      handleDeleteTreeByUser(modal);
     }
 
     // If there is an active group, ask the user whether to delete it or not.

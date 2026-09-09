@@ -215,8 +215,8 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
     } yield ()
 
   def upsertUsedStorage(
-      datasetMagReports: List[DatasetMagStorageReport],
-      dataLayerAttachmentReports: List[DataLayerAttachmentStorageReport]
+      datasetMagReports: Seq[DatasetMagStorageReport],
+      dataLayerAttachmentReports: Seq[DataLayerAttachmentStorageReport]
   ): Fox[Unit] = {
     val datasetMagReportsQueries = datasetMagReports.map(r =>
       q"""
@@ -423,5 +423,32 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
       )
       parsed <- Fox.serialCombined(rows)(parsePlanUpdate)
     } yield parsed
+
+  def findAllWithPlanExpiringBefore(expiryThreshold: Instant): Fox[List[Organization]] =
+    for {
+      rows <- run(q"""SELECT $columns
+                      FROM $existingCollectionName
+                      WHERE paidUntil IS NOT NULL
+                      AND paidUntil > NOW()
+                      AND paidUntil <= $expiryThreshold
+                      AND pricingPlan <> ${PricingPlan.Personal}
+                      ORDER BY paidUntil""".as[OrganizationsRow])
+      parsed <- parseAll(rows)
+    } yield parsed
+
+  /* Records that the organization was reminded about the given paidUntil date for the given lead times.
+     Rows that are already present are skipped, so the returned count is the number of lead times that
+     were not recorded before. Callers use it to decide whether a reminder mail still needs to be sent. */
+  def insertPlanExpiryReminders(organizationId: String, paidUntil: Instant, leadTimesDays: Seq[Int]): Fox[Int] =
+    if (leadTimesDays.isEmpty) Fox.successful(0)
+    else {
+      val values = SqlToken.joinBySeparator(
+        leadTimesDays.map(leadTimeDays => q"($organizationId, $paidUntil, $leadTimeDays)"),
+        ", "
+      )
+      run(q"""INSERT INTO webknossos.organization_planExpiryReminders(_organization, paidUntil, leadTimeDays)
+              VALUES $values
+              ON CONFLICT DO NOTHING""".asUpdate)
+    }
 
 }

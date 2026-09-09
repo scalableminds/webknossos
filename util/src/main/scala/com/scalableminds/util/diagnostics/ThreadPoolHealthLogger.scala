@@ -14,17 +14,14 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 
-/** Periodically logs thread-pool health, to help notice starvation or unbounded thread growth (e.g. from blocking I/O
-  * sharing the default dispatcher) before it becomes an outage. See SYNC_IO_AUDIT.md.
-  */
 object ThreadPoolHealthLogger extends LazyLogging {
 
   private val threadMxBean = ManagementFactory.getThreadMXBean
 
-  // Datastore, tracingstore and the main webknossos app each register logging against the (plain,
-  // unqualified) default ActorSystem independently, since any of them may run standalone. In a combined
-  // deployment they all share the very same ActorSystem instance, so this dedupes by identity to avoid
-  // scheduling the same periodic log three times over.
+  // Datastore, tracingstore and the main webknossos app each register logging against the
+  // default ActorSystem independently, since any of them may run standalone. In a combined
+  // deployment they all share the very same ActorSystem instance, so this deduplicates by identity to avoid
+  // scheduling the same periodic log three times.
   private val registeredSystems = TrieMap.empty[ActorSystem, Unit]
 
   def registerPeriodicLogging(
@@ -64,9 +61,6 @@ object ThreadPoolHealthLogger extends LazyLogging {
       s"runningThreads=${pool.getRunningThreadCount}, queuedTasks=${pool.getQueuedTaskCount}, " +
       s"queuedSubmissions=${pool.getQueuedSubmissionCount}, steals=${pool.getStealCount}."
 
-  // Dispatcher#executorService is Pekko-internal (protected[pekko], even though public at the bytecode level),
-  // so it's reached via reflection. Best-effort: if anything here breaks (Pekko internals changed, or
-  // dispatcherId is not a fork-join Dispatcher), the caller falls back to logging just the JVM summary above.
   private lazy val executorServiceMethod: Box[Method] = tryo {
     val method = classOf[Dispatcher].getDeclaredMethod("executorService")
     method.setAccessible(true)

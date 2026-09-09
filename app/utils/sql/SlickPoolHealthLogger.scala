@@ -10,29 +10,24 @@ import slick.jdbc.hikaricp.HikariCPJdbcDataSource
 import java.util.concurrent.ThreadPoolExecutor
 
 /** Periodically logs the health of Slick's two pools: the JDBC-blocking-call executor (numThreads/queueSize in
-  * slick.conf) and the underlying HikariCP connection pool (maxConnections/minConnections). Both are separate
-  * from the Pekko dispatcher pools ThreadPoolHealthLogger watches. See SYNC_IO_AUDIT.md.
+  * slick.conf) and the underlying HikariCP connection pool (maxConnections/minConnections).
   */
 object SlickPoolHealthLogger extends LazyLogging {
 
   def logHealth(db: PostgresProfile.backend.Database): Unit = {
     val executorSummary = jdbcExecutorSummary(db) match {
-      case Full(summary) => summary
+      case Full(summary)      => summary
       case Failure(msg, _, _) => s"could not introspect JDBC executor: $msg"
-      case Empty => "could not introspect JDBC executor"
+      case Empty              => "could not introspect JDBC executor"
     }
     val connectionPoolSummary = hikariPoolSummary(db) match {
-      case Full(summary) => summary
+      case Full(summary)      => summary
       case Failure(msg, _, _) => s"could not introspect HikariCP pool: $msg"
-      case Empty => "could not introspect HikariCP pool"
+      case Empty              => "could not introspect HikariCP pool"
     }
     logger.info(s"Slick pool health: $executorSummary, $connectionPoolSummary")
   }
 
-  // AsyncExecutor.DefaultAsyncExecutor is `private[slick]` (public at the bytecode level, like Pekko's
-  // Dispatcher#executorService), so its type can't be named here, and its `executor` getter is reached via
-  // reflection on the runtime instance. Best-effort: falls back to a warning in logHealth if this ever breaks
-  // (Slick internals changed, or a non-default AsyncExecutor is configured).
   private def jdbcExecutorSummary(db: PostgresProfile.backend.Database): Box[String] =
     for {
       executor <- tryo(db.executor)

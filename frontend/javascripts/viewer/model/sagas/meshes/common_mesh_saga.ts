@@ -144,6 +144,12 @@ function* downloadMeshCells(action: TriggerMeshesDownloadAction): Saga<void> {
 }
 
 function* handleRemoveSegment(action: RemoveSegmentAction) {
+  if (action.preserveMesh) {
+    // The caller (e.g. updateAffectedSegmentItems) is about to hand this id to
+    // syncAffectedAndLoadMissingMeshes, which will either merge the mesh locally or remove it
+    // itself as part of its reload fallback - so don't dispose of it here.
+    return;
+  }
   // The dispatched action will make sure that the mesh entry is removed from the
   // store and from the scene.
   yield* put(removeMeshAction(action.layerName, action.segmentId));

@@ -32,11 +32,9 @@ import {
   pushPendingProofreadingOperationInfo,
   subscribeToAnnotationMutexInLiveCollab,
   syncAndUpdatePostProcessingInfo,
-  syncWithBackend,
 } from "./backend_sync_helper_sagas";
 import { performCutFromNeighbors, performMinCut } from "./cut_operation_helper_sagas";
 import { splitAgglomerateInMapping, updateMappingWithMerge } from "./local_mapping_update_sagas";
-import { scheduleMeshUpdate } from "./mesh_update_registry_saga";
 import {
   gatherInfoForOperation,
   getAgglomerateInfos,
@@ -46,11 +44,7 @@ import {
   prepareSplitOrMerge,
   reloadMappingAndAggloIds,
 } from "./preparation_sagas";
-import {
-  syncAffectedAndMaybeLoadMissingMeshes,
-  updateAffectedSegmentItems,
-  updateProofreadingSegmentsAndScheduleSyncMeshes,
-} from "./segment_and_mesh_refresh_sagas";
+import { updateProofreadingSegmentsAndScheduleSyncMeshes } from "./segment_and_mesh_refresh_sagas";
 
 export function* performPartitionedMinCut(
   action: MinCutPartitionsAction | EnterAction,
@@ -220,21 +214,12 @@ export function* performPartitionedMinCut(
         nodePosition: meshLoadingPositionForPartition2,
       },
     ];
-    yield* call(updateAffectedSegmentItems, volumeTracingId, refreshInfos);
-
-    // Now that the segment items are up-to-date we can sync with the back-end
-    // and release the mutex.
-    yield* call(syncWithBackend, ctx);
-
-    // Refreshing the meshes might take a while and won't block the saga here. A still-running
-    // mesh update for an overlapping agglomerate id is superseded - see
-    // mesh_update_registry_saga.ts.
-    const meshUpdateEffect = call(
-      syncAffectedAndMaybeLoadMissingMeshes,
+    yield* call(
+      updateProofreadingSegmentsAndScheduleSyncMeshes,
       volumeTracingId,
       refreshInfos,
+      ctx,
     );
-    yield* call(scheduleMeshUpdate, meshUpdateEffect, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -348,13 +333,28 @@ export function* handleProofreadMerge(action: ProofreadMergeAction, ctx: Operati
       volumeTracingId,
     );
 
+    /* Ensure segment items exist for affected segments and reload affected meshes */
+    const refreshInfos = [
+      {
+        oldAgglomerateId: sourceInfo.agglomerateId,
+        newAgglomerateId: sourceAgglomerateId,
+        nodePosition: sourceInfo.position,
+      },
+      {
+        oldAgglomerateId: targetInfo.agglomerateId,
+        newAgglomerateId: targetAgglomerateId,
+        nodePosition:
+          // targetInfo.position can only be undefined in case of
+          // a merge (see idInfos.type). In that case,
+          // this element was merged into another element.
+          // Therefore, sourceInfo.position is a valid replacement.
+          targetInfo.position ?? sourceInfo.position,
+      },
+    ];
     yield* call(
       updateProofreadingSegmentsAndScheduleSyncMeshes,
       volumeTracingId,
-      sourceInfo,
-      targetInfo,
-      sourceAgglomerateId,
-      targetAgglomerateId,
+      refreshInfos,
       ctx,
     );
   } finally {
@@ -509,13 +509,28 @@ export function* handleMinCutAgglomerate(
     sourceAgglomerateId = newInfo.sourceAgglomerateId;
     targetAgglomerateId = newInfo.targetAgglomerateId;
 
+    /* Ensure segment items exist for affected segments and reload affected meshes */
+    const refreshInfos = [
+      {
+        oldAgglomerateId: sourceInfo.agglomerateId,
+        newAgglomerateId: sourceAgglomerateId,
+        nodePosition: sourceInfo.position,
+      },
+      {
+        oldAgglomerateId: targetInfo.agglomerateId,
+        newAgglomerateId: targetAgglomerateId,
+        nodePosition:
+          // targetInfo.position can only be undefined in case of
+          // a merge (see idInfos.type). In that case,
+          // this element was merged into another element.
+          // Therefore, sourceInfo.position is a valid replacement.
+          targetInfo.position ?? sourceInfo.position,
+      },
+    ];
     yield* call(
       updateProofreadingSegmentsAndScheduleSyncMeshes,
       volumeTracingId,
-      sourceInfo,
-      targetInfo,
-      sourceAgglomerateId,
-      targetAgglomerateId,
+      refreshInfos,
       ctx,
     );
   } finally {
@@ -663,18 +678,12 @@ export function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationC
         nodePosition: neighbor.position,
       })),
     ];
-    yield* call(updateAffectedSegmentItems, volumeTracingId, refreshInfos);
-
-    yield* call(syncWithBackend, ctx);
-
-    // Refreshing the meshes might take a while and won't block the saga here.
-    // mesh_update_registry_saga.ts.
-    const meshUpdateEffect = call(
-      syncAffectedAndMaybeLoadMissingMeshes,
+    yield* call(
+      updateProofreadingSegmentsAndScheduleSyncMeshes,
       volumeTracingId,
       refreshInfos,
+      ctx,
     );
-    yield* call(scheduleMeshUpdate, meshUpdateEffect, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);

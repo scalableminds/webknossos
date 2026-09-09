@@ -1,5 +1,7 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
+  Checkbox,
+  type CheckboxChangeEvent,
   Col,
   Form,
   type FormInstance,
@@ -11,7 +13,6 @@ import {
   Typography,
 } from "antd";
 import FormItem from "antd/es/form/FormItem";
-import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import { useCallback, useEffect, useMemo } from "react";
 import type { AffineTransformation, APIDataLayer } from "types/api_types";
 import {

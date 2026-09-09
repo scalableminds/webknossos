@@ -1,6 +1,5 @@
 import { downloadAnnotation } from "admin/rest_api";
-import { Alert, Button, Col, Divider, Flex, Radio, Row, Tooltip, Typography } from "antd";
-import Space from "antd/lib/space";
+import { Alert, Button, Col, Divider, Flex, Radio, Row, Space, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
 import { useState } from "react";

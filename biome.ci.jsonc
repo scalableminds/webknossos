@@ -6,6 +6,7 @@
   "extends": ["./biome.jsonc"],
   "plugins": [
     "frontend/lint-plugins/noRawHeading.grit",
-    "frontend/lint-plugins/noRawModalWidth.grit"
+    "frontend/lint-plugins/noRawModalWidth.grit",
+    "frontend/lint-plugins/noFlexDiv.grit"
   ]
 }

@@ -18,7 +18,7 @@ import {
   Switch,
   Tooltip,
 } from "antd";
-import type { SwitchChangeEventHandler } from "antd/lib/switch";
+import type { SwitchChangeEventHandler } from "antd/es/switch";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { TDViewDisplayMode } from "viewer/constants";

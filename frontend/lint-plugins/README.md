@@ -7,6 +7,7 @@ used to catch antd anti-patterns that Biome's built-in rules cannot express.
 | --- | --- | --- |
 | `noRawHeading.grit` | error | Raw `<h1>`–`<h5>` tags; use `<Typography.Title level={n}>` |
 | `noFlexDiv.grit` | warn | `<div style={{ display: "flex" }}>`; prefer antd `<Flex>` |
+| `noRawModalWidth.grit` | error | Raw `<Modal width={...}>`; use a `ModalWidth` value from theme.ts |
 
 ## These only run in CI
 

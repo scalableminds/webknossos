@@ -18,19 +18,26 @@
 @import "command_palette.less";
 @import "_voxelytics.less";
 
+// Nunito is a variable font with a wght axis spanning 200-1000. The font-weight range has to be
+// declared, otherwise the browser treats each face as a single normal-weight font and synthesizes
+// bold instead of using the axis.
 @font-face {
   font-family: "Nunito";
   src:
     local("Nunito"),
-    url("Nunito-VariableFont_wght.ttf") format("truetype");
+    url("Nunito-VariableFont_wght.woff2") format("woff2");
+  font-weight: 200 1000;
+  font-display: swap;
 }
 
 @font-face {
   font-family: "Nunito";
   src:
     local("Nunito"),
-    url("Nunito-Italic-VariableFont_wght.ttf") format("truetype");
+    url("Nunito-Italic-VariableFont_wght.woff2") format("woff2");
+  font-weight: 200 1000;
   font-style: italic;
+  font-display: swap;
 }
 
 // ----------------------- MAIN STYLES

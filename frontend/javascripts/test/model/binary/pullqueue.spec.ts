@@ -1,12 +1,13 @@
 import ErrorHandling from "libs/error_handling";
+import { sleep } from "libs/utils";
 import range from "lodash-es/range";
+import type { BucketAddress } from "viewer/constants";
+import Constants from "viewer/constants";
+import "viewer/model";
+import { BucketStateEnum, DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import "viewer/model";
-import { sleep } from "libs/utils";
-import type { BucketAddress } from "viewer/constants";
-import { BucketStateEnum, DataBucket } from "viewer/model/bucket_data_handling/bucket";
 
 vi.mock("viewer/model/sagas/root_saga", function () {
   return function* () {
@@ -138,15 +139,11 @@ function createMockedCubeAndQueue(
   };
 }
 
-// A z-degenerate layer with a t axis, i.e. one whose buckets are fetched in aligned
-// 32-timepoint batches. One t-slice is 32*32 voxels, so a single 32^3 wire buffer holds
-// exactly BUCKET_WIDTH of them.
-const T_SLICE_VOXEL_COUNT = 32 * 32;
 function createTRecyclingCubeAndQueue(tBounds: [number, number] = [0, 1000]) {
   return createMockedCubeAndQueue({
     isTRecyclingEligible: true,
     additionalAxes: { t: { name: "t", bounds: tBounds, index: 3 } },
-    effectiveBucketVoxelCount: T_SLICE_VOXEL_COUNT,
+    effectiveBucketVoxelCount: Constants.BUCKET_SIZE_2D,
   });
 }
 
@@ -238,7 +235,7 @@ describe("PullQueue", () => {
     function makeBatchBuffer() {
       const buffer = new Uint8Array(32 ** 3);
       for (let t = 0; t < 32; t++) {
-        buffer[t * T_SLICE_VOXEL_COUNT] = t + 1;
+        buffer[t * Constants.BUCKET_SIZE_2D] = t + 1;
       }
       return buffer;
     }

@@ -111,7 +111,7 @@ class DataCube {
   // ever holds real data in its first z-slice. In that case, storage for the bucket's
   // typed array (and, on the GPU, the atlas footprint) can be shrunk to this depth,
   // since the addressing/picking machinery still treats buckets as 32^3 for bookkeeping.
-  readonly effectiveBucketDepth: number;
+  readonly effectiveBucketDepth: 1 | typeof Constants.BUCKET_WIDTH;
   // Whether this layer's buckets should always be fetched/cached in aligned 32-t batches
   // instead of one t at a time (Z is degenerate and a t axis exists), so that a whole
   // batch's data is fetched together and shared (see PullQueue.pullBatch and

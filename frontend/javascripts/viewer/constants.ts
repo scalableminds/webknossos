@@ -402,7 +402,7 @@ export default Constants;
 // (see DataCube.getVoxelIndexByVoxelOffset). For such layers, bucket storage (CPU
 // typed arrays and the GPU texture atlas) can be shrunk to this depth while the
 // addressing/picking machinery keeps treating buckets as BUCKET_WIDTH^3 for bookkeeping.
-export function getEffectiveBucketDepth(layerDepthInMag1: number): number {
+export function getEffectiveBucketDepth(layerDepthInMag1: number): 1 | typeof Constants.BUCKET_WIDTH {
   return layerDepthInMag1 <= 1 ? 1 : Constants.BUCKET_WIDTH;
 }
 
@@ -421,7 +421,7 @@ export function getEffectiveBucketDepth(layerDepthInMag1: number): number {
 // would re-upload on a same-batch t change (see LayerRenderingManager.updateDataTextures),
 // so one t's labels would show up at every t in the batch. Note that read-only segmentation
 // layers are fine; it's editability that breaks the assumption.
-// todop: clarify wording. "wants" vs "eligible" vs "supported" vs isTRecyclingEnabledPerLaye
+// todop: clarify wording. "wants" vs "eligible" vs "supported" vs enabled vs isTRecyclingEnabledPerLaye
 export function wantsTRecycling(
   layerDepthInMag1: number,
   hasTAxis: boolean,

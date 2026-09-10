@@ -297,11 +297,11 @@ class PullQueue {
         }
 
         const voxelOffsetInWireData = isBatched
-          ? (sibling.getT() % constants.BUCKET_WIDTH) * this.cube.getEffectiveBucketVoxelCount()
+          ? (sibling.getT() % constants.BUCKET_WIDTH)
           : 0;
         this.handleBucket(sibling, bucketData, voxelOffsetInWireData);
       } catch (error) {
-        // receiveData can throw — most plainly on a malformed wire buffer, which, since that
+        // handleBucket can throw — most plainly on a malformed wire buffer, which, since that
         // buffer is shared across the whole batch, fails for every sibling. Undoing the
         // transition above is ours to do: pullBatch's failedBucketAddresses only knows about
         // the address that was originally requested, and a bucket left in REQUESTED is stuck

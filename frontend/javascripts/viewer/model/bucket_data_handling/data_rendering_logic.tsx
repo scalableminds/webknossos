@@ -324,14 +324,16 @@ function getRenderSupportedLayerCount<
   };
 }
 
+export type LayerLike = {
+  elementClass: ElementClass;
+  category: "color" | "segmentation";
+  boundingBox: { depth: number };
+  additionalAxes: Array<AdditionalAxis> | null;
+  tracingId?: string;
+};
+
 export function computeDataTexturesSetup<
-  Layer extends {
-    elementClass: ElementClass;
-    category: "color" | "segmentation";
-    boundingBox: { depth: number };
-    additionalAxes: Array<AdditionalAxis> | null;
-    tracingId?: string;
-  },
+  Layer extends LayerLike,
 >(specs: GpuSpecs, layers: Array<Layer>, hasSegmentation: boolean, requiredBucketCapacity: number) {
   const textureInformationPerLayer = buildTextureInformationMap(
     layers,

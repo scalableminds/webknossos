@@ -6,6 +6,7 @@ import {
   computeDataTexturesSetup,
   getBucketCapacity,
   getBucketHeightInTexture,
+  LayerLike,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { describe, expect, it } from "vitest";
 
@@ -24,9 +25,9 @@ const betterSpecs = {
   maxTextureCount: 32,
 };
 const grayscaleByteCount = 1;
-const grayscaleElementClass = "uint8";
+const grayscaleElementClass = "uint8" as const;
 const volumeByteCount = 4;
-const volumeElementClass = "uint32";
+const volumeElementClass = "uint32" as const;
 
 /*
  * The current rendering logic in WK only allows
@@ -267,14 +268,13 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
   it("buildTextureInformationMap sizes the atlas for full-depth buckets only for t-recycling-eligible layers", () => {
     const shrunkBucketVoxelCount = constants.BUCKET_WIDTH ** 2 * 1;
     const tAxis = [{ name: "t", bounds: [0, 100] as [number, number], index: 3 }];
-    const sizeFor = (layer: object) =>
-      // biome-ignore lint/suspicious/noExplicitAny: the fixtures only carry the fields the sizing reads.
-      computeDataTexturesSetup(midSpecs, [layer as any], false, DEFAULT_REQUIRED_BUCKET_CAPACITY)
+    const sizeFor = (layer: LayerLike) =>
+      computeDataTexturesSetup(midSpecs, [layer], false, DEFAULT_REQUIRED_BUCKET_CAPACITY)
         .textureInformationPerLayer.values()
         .next().value?.bucketVoxelCount;
 
     const base = { elementClass: grayscaleElementClass, category: "color" as const };
-    // 2D + t, read-only: recycles, so the atlas keeps the full footprint.
+    // 2D + t, read-only: recycles, so the atlas keeps the full bucket footprint.
     expect(sizeFor({ ...base, boundingBox: { depth: 1 }, additionalAxes: tAxis })).toBe(
       constants.BUCKET_SIZE,
     );
@@ -305,7 +305,9 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     const capacity = getBucketCapacity(1, textureWidth, packingDegree, twoDBucketVoxelCount);
     // With clamping, each bucket occupies one full row, so capacity is bounded by
     // the number of rows (textureWidth), not by the much larger naive division
-    // (textureWidth**2 / packedBucketSize), which would overcommit the atlas.
+    // (textureWidth**2 / packedBucketSize = 16_384), which would overcommit the atlas.
+    // In case we add support for multiple buckets per texture row, this would be a great increase
+    // for the capacity.
     expect(capacity).toBe(textureWidth);
   });
 });

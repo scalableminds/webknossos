@@ -309,8 +309,12 @@ export default class TextureBucketManager {
     const bucketsPerTexture = this.textureWidth / bucketHeightInTexture;
 
     while (this.writerQueue.length > 0 && performance.now() - startingTime < maxTimePerFrame) {
-      // @ts-expect-error pop cannot return null due to the while condition
-      const { bucket, _index } = this.writerQueue.pop();
+      const poppedElement = this.writerQueue.pop();
+      if (!poppedElement) {
+        // Satisfy TS
+        throw new Error("writerQueue.length > 0 but no entry was found in it.");
+      }
+      const { bucket, _index } = poppedElement;
 
       if (!this.activeBucketToIndexMap.has(bucket)) {
         // This bucket is not needed anymore
@@ -367,8 +371,8 @@ export default class TextureBucketManager {
       );
       // If t-recycling is enabled, but no raw bucket data is available for some reason
       // (e.g., volume tracings should not use t-recycling currently, but if we decide to
-      // add support for that, this scenario can quickly occur), we ensure that the single
-      // t-slice is written into the correct t-slot.
+      // add support for that, this scenario could occur when an if-check is wrong
+      // somewhere), we ensure that the single t-slice is written into the correct t-slot.
       // In the happy case, the value will simply be 0.
       const destElementOffset =
         this.usesTRecycling && !useRawBatchData

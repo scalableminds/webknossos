@@ -255,7 +255,8 @@ function buildTextureInformationMap<
       layer.tracingId != null,
     )
       ? constants.BUCKET_SIZE
-      : constants.BUCKET_SIZE_2D * getEffectiveBucketDepth(layer.boundingBox.depth);
+      : constants.BUCKET_SIZE_2D *
+        getEffectiveBucketDepth(layer.boundingBox.depth, layer.tracingId != null);
     const sizeAndCount = calculateTextureSizeAndCountForLayer(
       specs,
       layer.elementClass,

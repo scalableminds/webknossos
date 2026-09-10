@@ -402,10 +402,19 @@ export default Constants;
 // (see DataCube.getVoxelIndexByVoxelOffset). For such layers, bucket storage (CPU
 // typed arrays and the GPU texture atlas) can be shrunk to this depth while the
 // addressing/picking machinery keeps treating buckets as BUCKET_WIDTH^3 for bookkeeping.
+//
+// Editable (volume-tracing) layers are excluded, because for them a bucket is not just
+// rendered but also sent *back*: PushQueue compresses DataBucket.data verbatim (see
+// createCompressedUpdateBucketActions), and the tracingstore's storage format is fixed at
+// bucketLength^3 voxels per bucket (VolumeTracingLayer.expectedUncompressedBucketSize).
+// A shrunk bucket therefore arrives as a too-short LZ4 block and fails to decompress.
+// Shrinking those would mean padding on upload, or teaching the tracingstore a second
+// bucket size — neither is worth it, since 2D annotations have few buckets to begin with.
 export function getEffectiveBucketDepth(
   layerDepthInMag1: number,
+  isEditableVolumeLayer: boolean,
 ): 1 | typeof Constants.BUCKET_WIDTH {
-  return layerDepthInMag1 <= 1 ? 1 : Constants.BUCKET_WIDTH;
+  return layerDepthInMag1 <= 1 && !isEditableVolumeLayer ? 1 : Constants.BUCKET_WIDTH;
 }
 
 // For a z-degenerate layer that also has a time ("t") axis, the otherwise-unused
@@ -422,7 +431,10 @@ export function getEffectiveBucketDepth(
 // bucket with its own array, all of them collide on one t-batch cuckoo key, and nothing
 // would re-upload on a same-batch t change (see LayerRenderingManager.updateDataTextures),
 // so one t's labels would show up at every t in the batch. Note that read-only segmentation
-// layers are fine; it's editability that breaks the assumption.
+// layers are fine; it's editability that breaks the assumption. The depth check below already
+// rules these out today, but the exclusion is repeated explicitly on purpose: that one exists
+// for an unrelated reason (the upload wire format, see getEffectiveBucketDepth) and could be
+// lifted independently, which must not silently re-enable t-recycling here.
 //
 // This is the single definition of whether a layer is t-recycled. Everything downstream
 // (DataCube.usesTRecycling, TextureBucketManager.usesTRecycling, the usesTRecyclingPerLayer
@@ -434,7 +446,11 @@ export function usesTRecycling(
   hasTAxis: boolean,
   isEditableVolumeLayer: boolean,
 ): boolean {
-  return getEffectiveBucketDepth(layerDepthInMag1) === 1 && hasTAxis && !isEditableVolumeLayer;
+  return (
+    getEffectiveBucketDepth(layerDepthInMag1, isEditableVolumeLayer) === 1 &&
+    hasTAxis &&
+    !isEditableVolumeLayer
+  );
 }
 
 export type TypedArray =

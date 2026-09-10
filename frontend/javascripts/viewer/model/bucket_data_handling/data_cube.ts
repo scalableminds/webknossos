@@ -168,7 +168,10 @@ class DataCube {
     this.layerName = layerName;
     this.additionalAxes = keyBy(additionalAxes, "name");
     this.emitter = createNanoEvents();
-    this.effectiveBucketDepth = getEffectiveBucketDepth(layerBBox.getSize()[2]);
+    this.effectiveBucketDepth = getEffectiveBucketDepth(
+      layerBBox.getSize()[2],
+      isEditableVolumeLayer,
+    );
     this.usesTRecycling = usesTRecycling(
       layerBBox.getSize()[2],
       this.additionalAxes.t != null,

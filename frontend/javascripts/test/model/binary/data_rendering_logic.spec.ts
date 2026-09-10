@@ -173,15 +173,19 @@ describe("computeDataTexturesSetup", () => {
 });
 
 describe("2D (degenerate-depth) layer bucket sizing", () => {
-  it("getEffectiveBucketDepth returns 1 for a degenerate depth, BUCKET_WIDTH otherwise", () => {
-    expect(getEffectiveBucketDepth(1)).toBe(1);
-    expect(getEffectiveBucketDepth(0)).toBe(1);
-    expect(getEffectiveBucketDepth(2)).toBe(constants.BUCKET_WIDTH);
-    expect(getEffectiveBucketDepth(1000)).toBe(constants.BUCKET_WIDTH);
+  it("getEffectiveBucketDepth shrinks only non-editable degenerate-depth layers", () => {
+    expect(getEffectiveBucketDepth(1, false)).toBe(1);
+    expect(getEffectiveBucketDepth(0, false)).toBe(1);
+    expect(getEffectiveBucketDepth(2, false)).toBe(constants.BUCKET_WIDTH);
+    expect(getEffectiveBucketDepth(1000, false)).toBe(constants.BUCKET_WIDTH);
+    // An editable layer's buckets are sent back to the tracingstore, whose storage format
+    // is fixed at bucketLength^3, so they must keep the full depth.
+    expect(getEffectiveBucketDepth(1, true)).toBe(constants.BUCKET_WIDTH);
+    expect(getEffectiveBucketDepth(1000, true)).toBe(constants.BUCKET_WIDTH);
   });
 
   it("calculateTextureSizeAndCountForLayer never needs more total texture area for a 2D layer than for a regular layer", () => {
-    const shrunkBucketVoxelCount = constants.BUCKET_SIZE_2D * getEffectiveBucketDepth(1);
+    const shrunkBucketVoxelCount = constants.BUCKET_SIZE_2D * getEffectiveBucketDepth(1, false);
     const shrunk = calculateTextureSizeAndCountForLayer(
       midSpecs,
       grayscaleElementClass,
@@ -268,7 +272,8 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     expect(sizeFor({ ...base, boundingBox: { depth: 1 }, additionalAxes: tAxis })).toBe(
       constants.BUCKET_SIZE,
     );
-    // 2D + t, but editable: falls back to the plain shrink.
+    // 2D + t, but editable: neither t-recycling nor the shrink applies, because its buckets
+    // are sent back to the tracingstore at the full bucketLength^3.
     expect(
       sizeFor({
         ...base,
@@ -277,8 +282,18 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
         additionalAxes: tAxis,
         tracingId: "some-tracing-id",
       }),
-    ).toBe(shrunkBucketVoxelCount);
-    // 2D without a t axis: plain shrink.
+    ).toBe(constants.BUCKET_SIZE);
+    // Plain 2D, editable: same reason, no shrink.
+    expect(
+      sizeFor({
+        ...base,
+        category: "segmentation" as const,
+        boundingBox: { depth: 1 },
+        additionalAxes: null,
+        tracingId: "some-tracing-id",
+      }),
+    ).toBe(constants.BUCKET_SIZE);
+    // 2D without a t axis, read-only: plain shrink.
     expect(sizeFor({ ...base, boundingBox: { depth: 1 }, additionalAxes: null })).toBe(
       shrunkBucketVoxelCount,
     );

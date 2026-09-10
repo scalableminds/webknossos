@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis,
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
-import com.scalableminds.webknossos.tracingstore.annotation.UpdateTimingStats
+import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationWithTracings, UpdateTimingStats}
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.*
@@ -109,6 +109,21 @@ class VolumeTracingService @Inject() (
       previousBucketBytesBox,
       editableMappingTracingId
     ) ?~> Msg.Annotation.Volume.SegmentIndex.updateFailed
+
+  def applyUpdateBucketPartialVolumeAction(
+      a: UpdateBucketPartialVolumeAction,
+      annotationWithTracings: AnnotationWithTracings,
+      annotationId: ObjectId
+  ): Fox[AnnotationWithTracings] = ???
+  // TODO delegate this to here with only the tracing and a buffer from AnnotationWithTracings?
+
+  def createVolumeBucketBuffer(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing, version: Long)(using
+      tc: TokenContext,
+      ec: ExecutionContext
+  ): VolumeBucketBuffer = {
+    val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing, includeFallbackDataIfAvailable = true)
+    new VolumeBucketBuffer(version, volumeLayer, volumeDataStore, temporaryTracingService, toTemporaryStore = false)
+  }
 
   def applyBucketMutatingActions(
       tracingId: String,

@@ -41,6 +41,8 @@ export interface BucketWriter {
 export class VolumeTransaction {
   private readonly bucketWrites: BucketWriteMap = new Map();
   /** Pre-transaction values, first touch only, resident buckets only. */
+  // todop: how about Map<BucketKey, Map<SegmentId, VoxelIndex[]>>
+  // what about buckets that arent downloaded yet?
   private readonly beforeAccumulating = new Map<BucketKey, Map<VoxelIndex, SegmentId>>();
   private committed = false;
 

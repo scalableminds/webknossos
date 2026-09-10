@@ -84,6 +84,7 @@ export function voxelOffsetInBucket(voxel: Vector3): Vector3 {
   ];
 }
 
+// todop: DRY this
 export type BoundingBox = { min: Vector3; max: Vector3 }; // max is exclusive
 
 export function isInBoundingBox(voxel: Vector3, box: BoundingBox | null): boolean {

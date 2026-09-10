@@ -2,7 +2,7 @@ import { Card, Col, Row, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { getUrlParamValue, hasUrlParam } from "libs/utils";
 import window from "libs/window";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import LoginForm from "./login_form";
 
 type Props = {

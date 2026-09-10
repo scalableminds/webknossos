@@ -28,7 +28,7 @@ import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import messages from "messages";
 import { PureComponent, useContext } from "react";
 import { connect } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
 import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";

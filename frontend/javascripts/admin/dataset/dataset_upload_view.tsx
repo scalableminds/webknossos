@@ -67,7 +67,7 @@ import messages from "messages";
 import React from "react";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { connect } from "react-redux";
-import { type BlockerFunction, Link } from "react-router-dom";
+import { type BlockerFunction, Link } from "react-router";
 import {
   type APIDataStore,
   APIJobCommand,

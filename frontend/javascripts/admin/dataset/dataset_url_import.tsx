@@ -1,7 +1,7 @@
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import { findDatasetByImportUrl, getDatastores } from "admin/rest_api";
-import type { LoaderFunctionArgs } from "react-router-dom";
-import { redirect, useLoaderData, useNavigate } from "react-router-dom";
+import type { LoaderFunctionArgs } from "react-router";
+import { redirect, useLoaderData, useNavigate } from "react-router";
 import type { APIDataStore } from "types/api_types";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 

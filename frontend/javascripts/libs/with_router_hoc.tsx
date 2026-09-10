@@ -1,5 +1,5 @@
 import type React from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router";
 
 export type RouteComponentProps = {
   location: ReturnType<typeof useLocation>;
@@ -8,11 +8,11 @@ export type RouteComponentProps = {
 };
 
 /**
- * A higher-order component (HOC) that injects React Router v6 hooks
+ * A higher-order component (HOC) that injects React Router hooks
  * (`location`, `navigate`, and `params`) into class-based components
  * via props.
  *
- * React Router v6 has removed the withRouter HOC entirely. This is a workaround for class-based components.
+ * React Router removed the withRouter HOC in v6. This is a workaround for class-based components.
  *
  * @param Component - The class or function component to wrap.
  * @returns A function component that passes router props to the wrapped component.

@@ -4,7 +4,7 @@ import { Button, Card, message } from "antd";
 import { copyToClipboard } from "libs/clipboard";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { JSONTree } from "react-json-tree";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { VoxelyticsArtifactConfig } from "types/api_types";
 import { isObjectEmpty, useTheme } from "./utils";
 

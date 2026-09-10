@@ -3,7 +3,7 @@ import { Button, Card, Col, Form, Input, Row, Typography } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 
 const FormItem = Form.Item;
 

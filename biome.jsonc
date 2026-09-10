@@ -68,6 +68,10 @@
               {
                 "group": ["antd/lib", "antd/lib/**"],
                 "message": "Import from 'antd' or 'antd/es/...'; 'antd/lib' is the CJS build and can duplicate antd modules in the bundle."
+              },
+              {
+                "group": ["react-router-dom", "react-router-dom/**"],
+                "message": "Import from 'react-router' (or 'react-router/dom' for RouterProvider); 'react-router-dom' is a deprecated re-export shim that is removed in react-router v8."
               }
             ]
           }

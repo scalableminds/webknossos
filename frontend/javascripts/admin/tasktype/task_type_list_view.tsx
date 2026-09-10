@@ -28,7 +28,7 @@ import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
 import { Fragment, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import type { APITaskType } from "types/api_types";
 
 const { Column } = Table;

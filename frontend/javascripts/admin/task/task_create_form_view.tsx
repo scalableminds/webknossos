@@ -43,7 +43,7 @@ import omitBy from "lodash-es/omitBy";
 import uniq from "lodash-es/uniq";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { ModalWidth } from "theme";
 import type {
   APIDatasetCompact,

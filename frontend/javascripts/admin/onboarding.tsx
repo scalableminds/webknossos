@@ -42,7 +42,7 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import { ModalWidth } from "theme";
 import type { APITeamMembership } from "types/api_types";
 import Store from "viewer/store";

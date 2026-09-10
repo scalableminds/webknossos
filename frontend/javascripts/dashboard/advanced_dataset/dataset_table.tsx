@@ -50,7 +50,7 @@ import type React from "react";
 import { Fragment, PureComponent, useCallback, useContext } from "react";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { Unicode } from "viewer/constants";

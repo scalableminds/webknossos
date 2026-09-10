@@ -41,7 +41,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import {
   type APIDatasetCompact,
   type APIJob,

@@ -13,6 +13,8 @@ import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, 
 import com.scalableminds.webknossos.tracingstore.tracings.{GroupUtils, MetadataEntry, NamedBoundingBox}
 import play.api.libs.json.*
 
+import java.util.Base64
+
 trait VolumeUpdateActionHelper {
 
   protected def mapSegments(
@@ -968,6 +970,8 @@ case class UpdateBucketPartialVolumeAction(
 
   def bucketPosition =
     BucketPosition(position.x, position.y, position.z, mag, additionalCoordinates)
+
+  def voxelRunsBinary: Array[Byte] = Base64.getDecoder.decode(voxelRunsBase64)
 }
 
 // Only used to represent legacy update actions from the db where not all fields are set

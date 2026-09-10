@@ -196,6 +196,7 @@ case class AnnotationWithTracings(
       (mapping, updater.newWithTargetVersion(materializedVersion, targetVersion))
     }
     this.copy(editableMappingsByTracingId = editableMappingsUpdated.toMap)
+    // TODO also mutate VolumeBucketbuffers
   }
 
   def addEditableMapping(
@@ -247,11 +248,16 @@ case class AnnotationWithTracings(
     )
 
   def flushEditableMappingUpdaterBuffers()(implicit ec: ExecutionContext): Fox[Unit] = {
-    val updaters = editableMappingsByTracingId.values.map(_._2).toList
+    val updaters = editableMappingsByTracingId.values.map(_._2)
     for {
       _ <- Fox.serialCombined(updaters)(updater => updater.flushBuffersToFossil())
     } yield ()
   }
+
+  def flushVolumeBucketBuffers()(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(volumeBucketBuffersById.values)(bucketBuffer => bucketBuffer.flush())
+    } yield ()
 
   def markAllTreeBodiesAsChanged: AnnotationWithTracings = {
     val newTracingsById = tracingsById.view.map {

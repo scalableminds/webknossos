@@ -110,6 +110,50 @@ class VolumeSegmentIndexService @Inject() (
       ) ?~> Msg.Annotation.Volume.SegmentIndex.updateAddBucketFailed
     } yield ()
 
+  def updateFromBucketRemovalsAndAdditions(
+      tracingId: String,
+      tracing: VolumeTracing,
+      fallbackLayer: Option[RemoteFallbackLayer],
+      version: Long,
+      additions: Map[BucketPosition, Set[Long]],
+      removals: Map[BucketPosition, Set[Long]]
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    for {
+      segmentIndexBuffer = new VolumeSegmentIndexBuffer(
+        tracingId,
+        elementClassFromProto(tracing.elementClass),
+        tracing.mappingName,
+        volumeSegmentIndexClient,
+        version,
+        remoteDatastoreClient,
+        fallbackLayer,
+        AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+        temporaryTracingService,
+        tc
+      )
+      _ <- Fox.serialCombined(removals.toList) { case (bucketPosition, segmentIds) =>
+        Fox.runIf(segmentIds.nonEmpty)(
+          removeBucketFromSegmentIndex(
+            segmentIndexBuffer,
+            segmentIds.toList,
+            bucketPosition,
+            editableMappingTracingId = None
+          )
+        )
+      }
+      _ <- Fox.serialCombined(additions.toList) { case (bucketPosition, segmentIds) =>
+        Fox.runIf(segmentIds.nonEmpty)(
+          addBucketToSegmentIndex(
+            segmentIndexBuffer,
+            segmentIds.toList,
+            bucketPosition,
+            editableMappingTracingId = None
+          )
+        )
+      }
+      _ <- segmentIndexBuffer.flush()
+    } yield ()
+
   private def removeBucketFromSegmentIndex(
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
       segmentIds: List[Long],

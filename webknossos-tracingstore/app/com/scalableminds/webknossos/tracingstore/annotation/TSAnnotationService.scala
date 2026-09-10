@@ -44,6 +44,7 @@ class TSAnnotationService @Inject() (
     val remoteWebknossosClient: TSRemoteWebknossosClient,
     editableMappingService: EditableMappingService,
     val volumeTracingService: VolumeTracingService,
+    volumeSegmentIndexService: VolumeSegmentIndexService,
     skeletonTracingService: SkeletonTracingService,
     skeletonTracingMigrationService: SkeletonTracingMigrationService,
     volumeTracingMigrationService: VolumeTracingMigrationService,
@@ -707,7 +708,8 @@ class TSAnnotationService @Inject() (
           .flushEditableMappingUpdaterBuffers() ?~> Msg.Annotation.flushEditableMappingUpdaterBuffersFailed
         _ <- flushUpdatedTracings(updatedWithNewVersion, updates) ?~> Msg.Annotation.flushUpdatedTracingsFailed
         _ <- updatedWithNewVersion.flushVolumeBucketBuffers()
-        // TODO update segment index from volumeBucketBuffers
+        _ <- updateSegmentIndicesFromBucketBuffers(updatedWithNewVersion, annotationId) ?~>
+          "Failed to update segment index from volume bucket buffers."
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion) ?~> Msg.Annotation.flushAnnotationInfoFailed
         _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation)(
           remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVersion.annotation)
@@ -774,6 +776,31 @@ class TSAnnotationService @Inject() (
 
   private def flushAnnotationInfo(annotationId: ObjectId, annotationWithTracings: AnnotationWithTracings) =
     saveAnnotationProto(annotationId, annotationWithTracings.version, annotationWithTracings.annotation)
+
+  private def updateSegmentIndicesFromBucketBuffers(
+      annotationWithTracings: AnnotationWithTracings,
+      annotationId: ObjectId
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    Fox
+      .serialCombined(annotationWithTracings.volumeBucketBuffersByTracingId.toList) { case (tracingId, bucketBuffer) =>
+        for {
+          tracing <- annotationWithTracings.getVolume(tracingId).toFox
+          _ <- Fox.runIf(tracing.getHasSegmentIndex) {
+            for {
+              fallbackLayerOpt <- volumeTracingService.getFallbackLayer(annotationId, tracing)
+              _ <- volumeSegmentIndexService.updateFromBucketRemovalsAndAdditions(
+                tracingId,
+                tracing,
+                fallbackLayerOpt,
+                annotationWithTracings.version,
+                bucketBuffer.segmentAdditions,
+                bucketBuffer.segmentRemovals
+              )
+            } yield ()
+          }
+        } yield ()
+      }
+      .map(_ => ())
 
   private def determineTargetVersion(
       annotationId: ObjectId,

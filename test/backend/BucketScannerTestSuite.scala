@@ -24,6 +24,19 @@ class BucketScannerTestSuite extends AsyncWordSpec {
     Seq.fill(bytes.length / 8)(buffer.getLong)
   }
 
+  // Binary voxel run encoding: little-endian uint64 value, uint32 runCount,
+  // then runCount times (uint16 startIndex, uint16 length).
+  private def voxelRunsBytes(value: Long, runs: Seq[(Int, Int)]): Array[Byte] = {
+    val buffer = ByteBuffer.allocate(12 + runs.length * 4).order(ByteOrder.LITTLE_ENDIAN)
+    buffer.putLong(value)
+    buffer.putInt(runs.length)
+    runs.foreach { case (startIndex, length) =>
+      buffer.putShort(startIndex.toShort)
+      buffer.putShort(length.toShort)
+    }
+    buffer.array()
+  }
+
   "NativeBucketScanner" should {
     "collect segment ids in a byte array with ElementClass uint16" in {
       val elementClass = ElementClass.uint16
@@ -207,6 +220,52 @@ class BucketScannerTestSuite extends AsyncWordSpec {
         Int.MinValue
       )
       assert(boundingBox.sameElements(Array[Long](5, 1, 0, 8, 1, 0)))
+    }
+
+    "apply voxel runs correctly in a byte array with ElementClass uint16" in {
+      val elementClass = ElementClass.uint16
+      // little endian uint16 representation of 1, 2, 3, 4
+      val array = Array[Byte](1, 0, 2, 0, 3, 0, 4, 0)
+      val scanner = new NativeBucketScanner()
+      val runs = voxelRunsBytes(value = 99, runs = Seq((1, 2)))
+      val updated = scanner.applyVoxelRuns(
+        array,
+        ElementClass.bytesPerElement(elementClass),
+        ElementClass.isSigned(elementClass),
+        runs
+      )
+      // little endian uint16 representation of 1, 99, 99, 4: element 0 and 3 untouched, 1 and 2 overwritten
+      assert(updated.sameElements(Array[Byte](1, 0, 99, 0, 99, 0, 4, 0)))
+    }
+
+    "apply voxel runs correctly in a byte array with ElementClass uint64, with a topmost-bit-set segment id" in {
+      val elementClass = ElementClass.uint64
+      val array = littleEndianBytes(Seq(1L, 2L, 3L, 4L))
+      val scanner = new NativeBucketScanner()
+      val runs = voxelRunsBytes(value = topBitSetHigh, runs = Seq((0, 1), (2, 1)))
+      val updated = scanner.applyVoxelRuns(
+        array,
+        ElementClass.bytesPerElement(elementClass),
+        ElementClass.isSigned(elementClass),
+        runs
+      )
+      assert(readLongsLittleEndian(updated) == Seq(topBitSetHigh, 2L, topBitSetHigh, 4L))
+    }
+
+    "fail to apply voxel runs that exceed the bucket bounds" in {
+      val elementClass = ElementClass.uint16
+      val array = Array[Byte](1, 0, 2, 0, 3, 0, 4, 0) // 4 elements
+      val scanner = new NativeBucketScanner()
+      // run starting at index 3 with length 2 reaches index 4, which is out of bounds for a 4-element bucket
+      val runs = voxelRunsBytes(value = 99, runs = Seq((3, 2)))
+      assertThrows[RuntimeException] {
+        scanner.applyVoxelRuns(
+          array,
+          ElementClass.bytesPerElement(elementClass),
+          ElementClass.isSigned(elementClass),
+          runs
+        )
+      }
     }
 
   }

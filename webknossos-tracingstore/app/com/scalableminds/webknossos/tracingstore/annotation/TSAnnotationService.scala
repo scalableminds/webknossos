@@ -706,6 +706,7 @@ class TSAnnotationService @Inject() (
         _ <- updatedWithNewVersion
           .flushEditableMappingUpdaterBuffers() ?~> Msg.Annotation.flushEditableMappingUpdaterBuffersFailed
         _ <- flushUpdatedTracings(updatedWithNewVersion, updates) ?~> Msg.Annotation.flushUpdatedTracingsFailed
+        _ <- updatedWithNewVersion.flushVolumeBucketBuffers()
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion) ?~> Msg.Annotation.flushAnnotationInfoFailed
         _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation)(
           remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVersion.annotation)

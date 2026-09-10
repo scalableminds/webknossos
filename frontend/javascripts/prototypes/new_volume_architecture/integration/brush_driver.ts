@@ -9,6 +9,7 @@
 
 import type { AdditionalCoordinate } from "viewer/constants";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import type { BucketDiff } from "../diff";
 import { rasterize } from "../rasterizer";
 import { VolumeTransaction } from "../transaction";
 import type { EditContext, MagIndex, OverwriteMode, SegmentId, Vector3 } from "../types";
@@ -87,7 +88,7 @@ export class BrushDriver {
    * Pointer-up: run mag propagation once over the coalesced write set, apply
    * it, and report what happened. The returned diff is *not* saved.
    */
-  finish(): { voxels: number; buckets: number; mags: number[]; durationMs: number } {
+  finish(): { voxels: number; bucketDiffs: BucketDiff[]; mags: number[]; durationMs: number } {
     const diff = this.transaction.commit(0, "brush");
     this.adapter.flush();
 
@@ -97,7 +98,7 @@ export class BrushDriver {
     }
     return {
       voxels,
-      buckets: diff.bucketDiffs.length,
+      bucketDiffs: diff.bucketDiffs,
       mags: [...new Set(diff.bucketDiffs.map((d) => d.address[3]))].sort((a, b) => a - b),
       durationMs: performance.now() - this.startedAt,
     };

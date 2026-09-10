@@ -117,11 +117,11 @@ class VolumeTracingService @Inject() (
     new VolumeBucketBuffer(version, volumeLayer, volumeDataStore, temporaryTracingService, toTemporaryStore = false)
   }
 
-  def applyBucketMutatingActions(
+  def applyEagerUpdateBucketActions(
       tracingId: String,
       annotationId: ObjectId,
       tracing: VolumeTracing,
-      updateActions: List[EagerBucketMutatingVolumeUpdateAction],
+      updateActions: Seq[EagerUpdateBucketVolumeAction],
       newVersion: Long
   )(using tc: TokenContext, stats: UpdateTimingStats): Fox[Unit] =
     for {
@@ -153,26 +153,25 @@ class VolumeTracingService @Inject() (
         false
       )(using ec)
       _ <- stats.time("volume.prefillBucketBuffer")(
-        Fox.runIf(volumeLayer.tracing.getHasSegmentIndex)(volumeBucketBuffer.prefill(updateActions.flatMap {
-          case a: UpdateBucketVolumeAction => Some(a.bucketPosition)
-          case _                           => None
-        }) ?~> Msg.Annotation.ApplyUpdate.prefillBucketBufferFailed)
+        Fox.runIf(volumeLayer.tracing.getHasSegmentIndex)(
+          volumeBucketBuffer.prefill(
+            updateActions.map(_.bucketPosition)
+          ) ?~> Msg.Annotation.ApplyUpdate.prefillBucketBufferFailed
+        )
       )
-      _ <- stats.time("volume.bucketLoop")(Fox.serialCombined(updateActions) {
-        case a: UpdateBucketVolumeAction =>
-          if (tracing.getHasEditableMapping) {
-            Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
-          } else
-            stats.time("volume.updateBucket")(
-              updateBucket(
-                tracingId,
-                volumeLayer,
-                a,
-                segmentIndexBuffer,
-                volumeBucketBuffer
-              )
-            ) ?~> "Failed to save volume data."
-        case _ => Fox.failure("Unknown bucket-mutating action.")
+      _ <- stats.time("volume.bucketLoop")(Fox.serialCombined(updateActions) { action =>
+        if (tracing.getHasEditableMapping) {
+          Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
+        } else
+          stats.time("volume.updateBucket")(
+            updateBucket(
+              tracingId,
+              volumeLayer,
+              action,
+              segmentIndexBuffer,
+              volumeBucketBuffer
+            )
+          ) ?~> "Failed to save volume data."
       })
       _ <- stats.time("volume.bucketBufferFlush")(volumeBucketBuffer.flush())
       _ <- stats.time("volume.segmentIndexBufferFlush")(segmentIndexBuffer.flush())
@@ -181,7 +180,7 @@ class VolumeTracingService @Inject() (
   private def updateBucket(
       tracingId: String,
       volumeLayer: VolumeTracingLayer,
-      action: UpdateBucketVolumeAction,
+      action: EagerUpdateBucketVolumeAction,
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
       volumeBucketBuffer: VolumeBucketBuffer
   )(using stats: UpdateTimingStats): Fox[Unit] =

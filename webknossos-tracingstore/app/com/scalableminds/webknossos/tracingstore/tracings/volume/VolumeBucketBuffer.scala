@@ -38,7 +38,7 @@ class VolumeBucketBuffer(
   private lazy val bucketScanner = new NativeBucketScanner()
 
   // TODO make use of prefill
-  def prefill(bucketPositions: List[BucketPosition]): Fox[Unit] =
+  def prefill(bucketPositions: Seq[BucketPosition]): Fox[Unit] =
     for {
       _ <- getMultipleFromFossilOrFallbackLayer(bucketPositions)
     } yield ()

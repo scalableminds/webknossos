@@ -755,10 +755,7 @@ class DataCube {
         thirdCoord *= currentMag[w];
 
         if (!currentLabeledVoxelMap.has(thirdCoord)) {
-          currentLabeledVoxelMap.set(
-            thirdCoord,
-            new Uint8Array(constants.BUCKET_SIZE_2D).fill(0),
-          );
+          currentLabeledVoxelMap.set(thirdCoord, new Uint8Array(constants.BUCKET_SIZE_2D).fill(0));
         }
 
         const dataArray = currentLabeledVoxelMap.get(thirdCoord);

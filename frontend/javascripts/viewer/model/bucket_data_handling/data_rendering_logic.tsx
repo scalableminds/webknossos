@@ -332,9 +332,12 @@ export type LayerLike = {
   tracingId?: string;
 };
 
-export function computeDataTexturesSetup<
-  Layer extends LayerLike,
->(specs: GpuSpecs, layers: Array<Layer>, hasSegmentation: boolean, requiredBucketCapacity: number) {
+export function computeDataTexturesSetup<Layer extends LayerLike>(
+  specs: GpuSpecs,
+  layers: Array<Layer>,
+  hasSegmentation: boolean,
+  requiredBucketCapacity: number,
+) {
   const textureInformationPerLayer = buildTextureInformationMap(
     layers,
     specs,

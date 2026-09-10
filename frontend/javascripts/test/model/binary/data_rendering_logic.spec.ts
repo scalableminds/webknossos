@@ -6,7 +6,7 @@ import {
   computeDataTexturesSetup,
   getBucketCapacity,
   getBucketHeightInTexture,
-  LayerLike,
+  type LayerLike,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { describe, expect, it } from "vitest";
 

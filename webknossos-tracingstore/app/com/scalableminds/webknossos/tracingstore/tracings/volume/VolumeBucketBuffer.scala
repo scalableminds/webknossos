@@ -76,9 +76,9 @@ class VolumeBucketBuffer(
   def applyUpdateBucketPartialAction(action: UpdateBucketPartialVolumeAction): Fox[Unit] = for {
     previousBucketBytesBox <- getWithFallback(action.bucketPosition).shiftBox
     previousBucketBytesOrEmpty <- bytesWithEmptyFallback(previousBucketBytesBox).toFox
-    (updated, additions, removals) <- applyVoxelRuns(previousBucketBytesOrEmpty, action.voxelRunsBinary).toFox
-    // TODO pass additions,removals to segment index
-    _ = bucketDataBuffer.put(action.bucketPosition, (Full(updated), true))
+    updatedBucketBytes <- applyVoxelRuns(previousBucketBytesOrEmpty, action.voxelRunsBinary).toFox
+    _ = bucketDataBuffer.put(action.bucketPosition, (Full(updatedBucketBytes), true))
+    (additions, removals) <- scanSegmentAdditionsAndRemovals(previousBucketBytesOrEmpty, updatedBucketBytes).toFox
     _ = incorporateAdditionsAndRemovals(action.bucketPosition, additions, removals)
   } yield ()
 
@@ -104,21 +104,27 @@ class VolumeBucketBuffer(
   private def applyVoxelRuns(
       previousBucketBytes: Array[Byte],
       voxelRunsBinary: Array[Byte]
-  ): Box[(Array[Byte], Set[Long], Set[Long])] =
-    for {
-      updated <- tryo(
-        bucketScanner.applyVoxelRuns(
-          previousBucketBytes,
-          ElementClass.bytesPerElement(volumeLayer.elementClass),
-          ElementClass.isSigned(volumeLayer.elementClass),
-          voxelRunsBinary
-        )
+  ): Box[Array[Byte]] =
+    tryo(
+      bucketScanner.applyVoxelRuns(
+        previousBucketBytes,
+        ElementClass.bytesPerElement(volumeLayer.elementClass),
+        ElementClass.isSigned(volumeLayer.elementClass),
+        voxelRunsBinary
       )
-      previousSegmentIds <- collectSegmentIds(previousBucketBytes)
-      segmentIds <- collectSegmentIds(updated)
+    )
+
+  private def scanSegmentAdditionsAndRemovals(
+      oldBucketBytes: Array[Byte],
+      newBucketBytes: Array[Byte]
+  ): Box[(Set[Long], Set[Long])] =
+    for {
+
+      previousSegmentIds <- collectSegmentIds(oldBucketBytes)
+      segmentIds <- collectSegmentIds(newBucketBytes)
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
-    } yield (updated, additions, removals)
+    } yield (additions, removals)
 
   private def collectSegmentIds(bytes: Array[Byte]): Box[Set[Long]] =
     tryo(

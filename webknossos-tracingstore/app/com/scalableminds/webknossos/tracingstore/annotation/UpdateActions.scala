@@ -69,7 +69,7 @@ object UpdateAction {
           case "updateActiveNode" => deserialize[UpdateActiveNodeSkeletonAction](jsonValue)
 
           // Volume
-          case "updateBucket"                     => deserialize[UpdateBucketVolumeAction](jsonValue)
+          case "updateBucket"                     => deserialize[EagerUpdateBucketVolumeAction](jsonValue)
           case "updateVolumeTracing"              => deserialize[UpdateTracingVolumeAction](jsonValue)
           case "updateLargestSegmentId"           => deserialize[UpdateLargestSegmentIdVolumeAction](jsonValue)
           case "updateVolumeBucketDataHasChanged" =>
@@ -219,7 +219,7 @@ object UpdateAction {
         )
 
       // Volume
-      case s: UpdateBucketVolumeAction =>
+      case s: EagerUpdateBucketVolumeAction =>
         Json.obj("name" -> "updateBucket", "value" -> Json.toJson(s))
       case s: UpdateTracingVolumeAction =>
         Json.obj("name" -> "updateVolumeTracing", "value" -> Json.toJson(s))

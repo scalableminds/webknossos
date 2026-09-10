@@ -42,18 +42,6 @@ trait ApplyableVolumeUpdateAction extends VolumeUpdateAction {
   def applyOn(tracing: VolumeTracing): VolumeTracing
 }
 
-trait EagerBucketMutatingVolumeUpdateAction extends ApplyableVolumeUpdateAction {
-  // Upon the first Bucket-mutating action the volumeBucketDataHasChanged flag of the
-  // volume tracing proto should be set to true. This is done by the  action
-  // UpdateVolumeBucketDataHasChangedVolumeAction which needs to be sent by the frontend.
-  override def applyOn(tracing: VolumeTracing): VolumeTracing = tracing
-}
-
-// Unlike EagerBucketMutatingVolumeUpdateAction, these are not applied at commit time. Instead they are
-// replayed lazily (like all other, non-bucket-mutating actions), going through the per-update-group
-// VolumeBucketBuffer for their tracing. AnnotationTransactionService.handleUpdateGroup asserts that the two
-// kinds are never mixed within the same update group, since eager actions are already durably applied by the
-// time a lazy one in the same group would be replayed.
 trait LazyBucketMutatingVolumeUpdateAction extends VolumeUpdateAction
 
 trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserStateUpdateAction {
@@ -80,7 +68,7 @@ trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserS
   }
 }
 
-case class UpdateBucketVolumeAction(
+case class EagerUpdateBucketVolumeAction(
     position: Vec3Int,
     cubeSize: Int,
     mag: Vec3Int,
@@ -90,7 +78,7 @@ case class UpdateBucketVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends EagerBucketMutatingVolumeUpdateAction derives JsonAutoFormat {
+) extends ApplyableVolumeUpdateAction derives JsonAutoFormat {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
@@ -99,7 +87,7 @@ case class UpdateBucketVolumeAction(
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
-  def withoutBase64Data: UpdateBucketVolumeAction =
+  def withoutBase64Data: EagerUpdateBucketVolumeAction =
     this.copy(base64Data = None)
 
   def bucketPosition: BucketPosition = BucketPosition(
@@ -109,6 +97,8 @@ case class UpdateBucketVolumeAction(
     mag,
     additionalCoordinates
   )
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing = tracing
 }
 
 case class UpdateTracingVolumeAction(

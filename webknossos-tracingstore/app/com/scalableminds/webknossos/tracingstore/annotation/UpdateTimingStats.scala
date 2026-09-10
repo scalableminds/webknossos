@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.tracingstore.tracings.volume.EagerBucketMutatingVolumeUpdateAction
+import com.scalableminds.webknossos.tracingstore.tracings.volume.EagerUpdateBucketVolumeAction
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -23,8 +23,8 @@ class UpdateTimingStats {
       .mkString(", ")
     val versions = updateGroups.map(_.version)
     val bucketMutatingActionCountsPerGroup: List[Int] = updateGroups.map(_.actions.count {
-      case _: EagerBucketMutatingVolumeUpdateAction => true
-      case _                                        => false
+      case _: EagerUpdateBucketVolumeAction => true
+      case _                                => false
     })
     val groupsWithBucketMutatingActions = bucketMutatingActionCountsPerGroup.count(_ > 0)
     requestShapeSummary = s"groups=${updateGroups.length}, " +

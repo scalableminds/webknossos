@@ -265,8 +265,8 @@ class TSAnnotationService @Inject() (
 
       withNewLayerAndBuffer = newTracing match {
         case Right(volumeTracing) if !volumeTracing.getHasEditableMapping =>
-          withNewLayer.copy(volumeBucketBuffersById =
-            withNewLayer.volumeBucketBuffersById.updated(
+          withNewLayer.copy(volumeBucketBuffersByTracingId =
+            withNewLayer.volumeBucketBuffersByTracingId.updated(
               tracingId,
               volumeTracingService.createVolumeBucketBuffer(annotationId, tracingId, volumeTracing, targetVersion)
             )
@@ -596,7 +596,7 @@ class TSAnnotationService @Inject() (
         targetVersion
       )
     }.toMap
-    annotationWithTracings.copy(volumeBucketBuffersById = bucketBuffersById)
+    annotationWithTracings.copy(volumeBucketBuffersByTracingId = bucketBuffersById)
   }
 
   protected def getEditableMappingInfoRaw(
@@ -707,6 +707,7 @@ class TSAnnotationService @Inject() (
           .flushEditableMappingUpdaterBuffers() ?~> Msg.Annotation.flushEditableMappingUpdaterBuffersFailed
         _ <- flushUpdatedTracings(updatedWithNewVersion, updates) ?~> Msg.Annotation.flushUpdatedTracingsFailed
         _ <- updatedWithNewVersion.flushVolumeBucketBuffers()
+        // TODO update segment index from volumeBucketBuffers
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion) ?~> Msg.Annotation.flushAnnotationInfoFailed
         _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation)(
           remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVersion.annotation)

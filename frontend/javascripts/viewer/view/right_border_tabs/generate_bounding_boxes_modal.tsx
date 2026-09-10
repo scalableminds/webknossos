@@ -260,7 +260,6 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
       onOk={handleGenerate}
       okText="Generate"
       okButtonProps={{ disabled: hasSizeError || isGenerating, loading: isGenerating }}
-      width={520}
     >
       <Typography.Paragraph type="secondary">
         Bounding boxes mark the regions used for AI model training. This tool places non-overlapping

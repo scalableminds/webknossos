@@ -1,6 +1,6 @@
 import { transferTask } from "admin/api/tasks";
 import UserSelectionComponent from "admin/user/user_selection_component";
-import { Button, Modal } from "antd";
+import { Modal } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import type React from "react";
 import { memo, useCallback, useState } from "react";
@@ -43,14 +43,10 @@ const TransferTaskModal: React.FC<Props> = ({ isOpen, onCancel, annotationId, on
       title="Transfer a Task"
       open={isOpen}
       onCancel={onCancel}
-      footer={() => (
-        <>
-          <Button type="primary" onClick={transfer} disabled={currentUserIdValue === ""}>
-            Transfer
-          </Button>
-          <Button onClick={onCancel}>Close</Button>
-        </>
-      )}
+      onOk={transfer}
+      okText="Transfer"
+      okButtonProps={{ disabled: currentUserIdValue === "" }}
+      cancelText="Close"
     >
       <div className="control-group">
         <div className="form-group">

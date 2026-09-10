@@ -43,6 +43,7 @@ import Toast from "libs/toast";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ModalWidth } from "theme";
 import type { APITeamMembership } from "types/api_types";
 import Store from "viewer/store";
 import { sendInvitesForOrganization } from "./api/organization";
@@ -381,7 +382,6 @@ export function InviteUsersModal({
           setSelectedPermission={setSelectedPermission}
           userIsAdmin={true}
           onlyEditingSingleUser={true}
-          renderSubtitlesWithDivider={true}
         />
       </Fragment>
     );
@@ -403,7 +403,7 @@ export function InviteUsersModal({
           <UserAddOutlined /> Invite {isOrganizationLimitAlreadyReached ? "Guests" : "Users"}
         </>
       }
-      width={600}
+      width={ModalWidth.Medium}
       footer={
         <Button onClick={sendInvite} type="primary">
           Send Invite Emails
@@ -604,7 +604,7 @@ function OnboardingView() {
         {isDatasetUploadModalVisible && (
           <Modal
             open
-            width="85%"
+            width={ModalWidth.Full}
             footer={null}
             mask={{ closable: false }}
             onCancel={hideDatasetUploadModal}
@@ -613,7 +613,13 @@ function OnboardingView() {
           </Modal>
         )}
         {datasetIdToImport != null && (
-          <Modal open width="85%" footer={null} mask={{ closable: false }} onCancel={advanceStep}>
+          <Modal
+            open
+            width={ModalWidth.Full}
+            footer={null}
+            mask={{ closable: false }}
+            onCancel={advanceStep}
+          >
             <DatasetSettingsProvider
               isEditingMode={false}
               datasetId={datasetIdToImport}

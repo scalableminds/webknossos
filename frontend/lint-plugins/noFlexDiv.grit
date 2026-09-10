@@ -1,0 +1,10 @@
+language js
+
+`<div style={{$props}}>$...</div>` where {
+  $props <: contains `display: "flex"`,
+  register_diagnostic(
+    span = $props,
+    message = "Prefer antd `<Flex>` over a hand-rolled flex `<div>`.",
+    severity = "warn"
+  )
+}

@@ -234,6 +234,7 @@ function CreateAnnotationButton() {
       </ButtonWithAuthentication>
 
       <Modal
+        title="Select Segmentation Layer"
         open={isLayerSelectionModalVisible}
         onCancel={() => setLayerSelectionModalVisible(false)}
         onOk={handleLayerSelected}

@@ -14,7 +14,6 @@ import {
   Button,
   Col,
   Divider,
-  Flex,
   Form,
   Input,
   InputNumber,
@@ -22,6 +21,7 @@ import {
   type RadioChangeEvent,
   Row,
   Select,
+  Space,
   Spin,
   Tooltip,
   Typography,
@@ -44,6 +44,7 @@ import uniq from "lodash-es/uniq";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ModalWidth } from "theme";
 import type {
   APIDatasetCompact,
   APIProject,
@@ -202,22 +203,37 @@ export function handleTaskCreationResponse(
       "Too many failed tasks to show, please use the CSV download for a full list."
     );
 
+  const downloadFailedTasksButton = (
+    <Button
+      onClick={() => {
+        const blob = new Blob([failedTasksAsString], {
+          type: "text/plain;charset=utf-8",
+        });
+        saveAs(blob, "failed-tasks.csv");
+      }}
+      icon={<DownloadOutlined />}
+    >
+      Download failed task info as CSV
+    </Button>
+  );
+
+  const downloadSuccessfulTasksButton = (
+    <Button
+      onClick={() => downloadTasksAsCSV(successfulTasks)}
+      type="primary"
+      icon={<DownloadOutlined />}
+    >
+      Download task info as CSV
+    </Button>
+  );
+
   modal.info({
     title: `${successfulTasks.length} ${pluralize("task", successfulTasks.length)} successfully created, ${failedTasks.length} ${pluralize("task", failedTasks.length)} failed. ${warnings.length} ${pluralize("warning", warnings.length)}.`,
     content: (
-      <div>
+      <Space orientation="vertical">
         {warningsContent}
         {successfulTasks.length > 0 ? (
           <div>
-            <Flex justify="center" style={{ margin: 20 }}>
-              <Button
-                onClick={() => downloadTasksAsCSV(successfulTasks)}
-                type="primary"
-                icon={<DownloadOutlined />}
-              >
-                Download task info as CSV
-              </Button>
-            </Flex>
             <Typography.Text strong>Successful Tasks:</Typography.Text>
             <div style={displayResultsStyle}>{successfulTasksContent}</div>
           </div>
@@ -226,32 +242,24 @@ export function handleTaskCreationResponse(
           <React.Fragment>
             <Divider />
             <div>
-              <Flex
-                justify="center"
-                style={{
-                  margin: 20,
-                }}
-              >
-                <Button
-                  onClick={() => {
-                    const blob = new Blob([failedTasksAsString], {
-                      type: "text/plain;charset=utf-8",
-                    });
-                    saveAs(blob, "failed-tasks.csv");
-                  }}
-                  icon={<DownloadOutlined />}
-                >
-                  Download failed task info as CSV
-                </Button>
-              </Flex>
               <Typography.Text strong>Failed Tasks:</Typography.Text>
               <div style={displayResultsStyle}> {failedTasksContent}</div>
             </div>
           </React.Fragment>
         ) : null}
-      </div>
+      </Space>
     ),
-    width: 600,
+    footer:
+      successfulTasks.length > 0 || failedTasks.length > 0
+        ? (_, { OkBtn }) => (
+            <Space>
+              {successfulTasks.length > 0 ? downloadSuccessfulTasksButton : null}
+              {failedTasks.length > 0 ? downloadFailedTasksButton : null}
+              <OkBtn />
+            </Space>
+          )
+        : undefined,
+    width: ModalWidth.Large,
   });
 }
 

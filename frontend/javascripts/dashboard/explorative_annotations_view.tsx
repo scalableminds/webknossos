@@ -23,7 +23,7 @@ import {
 } from "admin/rest_api";
 import { Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/es/input";
-import type { ColumnType } from "antd/lib/table/interface";
+import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
@@ -399,6 +399,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     }
 
     this.props.modal.confirm({
+      title: "Archive Annotations",
       content: `Are you sure you want to archive ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that annotations that you don't own are ignored.`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);

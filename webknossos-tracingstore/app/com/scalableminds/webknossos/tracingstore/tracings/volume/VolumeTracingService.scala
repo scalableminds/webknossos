@@ -122,7 +122,7 @@ class VolumeTracingService @Inject() (
       tracingId: String,
       annotationId: ObjectId,
       tracing: VolumeTracing,
-      updateActions: List[BucketMutatingVolumeUpdateAction],
+      updateActions: List[EagerBucketMutatingVolumeUpdateAction],
       newVersion: Long
   )(using tc: TokenContext, stats: UpdateTimingStats): Fox[Unit] =
     for {

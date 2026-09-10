@@ -5,7 +5,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  BucketMutatingVolumeUpdateAction,
+  EagerBucketMutatingVolumeUpdateAction,
   UpdateBucketPartialVolumeAction,
   UpdateBucketVolumeAction,
   VolumeTracingService
@@ -300,7 +300,7 @@ class AnnotationTransactionService @Inject() (
         )
       ) ?~> "Cannot mix eager bucket mutating actions with UpdateBucketPartialVolumeAction in the same update group"
       _ = stats.count("volumeBucketMutatingActions", bucketMutatingActions.length)
-      actionsGrouped: Map[String, List[BucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(
+      actionsGrouped: Map[String, List[EagerBucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(
         _.actionTracingId
       )
       _ <- Fox.serialCombined(actionsGrouped.keys.toList) { volumeTracingId =>
@@ -329,10 +329,12 @@ class AnnotationTransactionService @Inject() (
       )
     } yield ()
 
-  private def findBucketMutatingActions(updateActionGroup: UpdateActionGroup): List[BucketMutatingVolumeUpdateAction] =
+  private def findBucketMutatingActions(
+      updateActionGroup: UpdateActionGroup
+  ): List[EagerBucketMutatingVolumeUpdateAction] =
     updateActionGroup.actions.flatMap {
-      case a: BucketMutatingVolumeUpdateAction => Some(a)
-      case _                                   => None
+      case a: EagerBucketMutatingVolumeUpdateAction => Some(a)
+      case _                                        => None
     }
 
   private def preprocessActionsForStorage(updateActionGroup: UpdateActionGroup): List[UpdateAction] = {

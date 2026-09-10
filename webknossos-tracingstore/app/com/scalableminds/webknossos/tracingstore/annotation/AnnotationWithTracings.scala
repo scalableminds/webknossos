@@ -34,7 +34,7 @@ case class AnnotationWithTracings(
     annotation: AnnotationProto,
     tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
     editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)],
-    volumeBucketBuffersById: Map[String, VolumeBucketBuffer]
+    volumeBucketBuffersByTracingId: Map[String, VolumeBucketBuffer]
 ) extends LazyLogging
     with ProtoGeometryConversions {
 
@@ -193,10 +193,14 @@ case class AnnotationWithTracings(
 
   def withNewUpdaters(materializedVersion: Long, targetVersion: Long): AnnotationWithTracings = {
     val editableMappingsUpdated = editableMappingsByTracingId.view.mapValues { case (mapping, updater) =>
-      (mapping, updater.newWithTargetVersion(materializedVersion, targetVersion))
+      (mapping, updater.resetForNextUpdateGroup(materializedVersion, targetVersion))
     }
-    this.copy(editableMappingsByTracingId = editableMappingsUpdated.toMap)
-    // TODO also mutate VolumeBucketbuffers
+    val volumeBucketBuffersUpdated =
+      volumeBucketBuffersByTracingId.view.mapValues(buffer => buffer.resetForNextUpdateGroup(targetVersion))
+    this.copy(
+      editableMappingsByTracingId = editableMappingsUpdated.toMap,
+      volumeBucketBuffersByTracingId = volumeBucketBuffersUpdated.toMap
+    )
   }
 
   def addEditableMapping(
@@ -232,7 +236,7 @@ case class AnnotationWithTracings(
   )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       volumeTracing <- getVolume(a.actionTracingId).toFox
-      bucketBuffer <- volumeBucketBuffersById.get(a.actionTracingId).toFox
+      bucketBuffer <- volumeBucketBuffersByTracingId.get(a.actionTracingId).toFox
       _ = bucketBuffer.applyUpdateBucketPartialAction(a)
     } yield this
 
@@ -256,7 +260,7 @@ case class AnnotationWithTracings(
 
   def flushVolumeBucketBuffers()(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- Fox.serialCombined(volumeBucketBuffersById.values)(bucketBuffer => bucketBuffer.flush())
+      _ <- Fox.serialCombined(volumeBucketBuffersByTracingId.values)(bucketBuffer => bucketBuffer.flush())
     } yield ()
 
   def markAllTreeBodiesAsChanged: AnnotationWithTracings = {

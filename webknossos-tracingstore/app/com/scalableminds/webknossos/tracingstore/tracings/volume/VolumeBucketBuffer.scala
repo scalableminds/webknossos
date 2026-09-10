@@ -28,6 +28,7 @@ class VolumeBucketBuffer(
 
   private lazy val bucketScanner = new NativeBucketScanner()
 
+  // TODO make use of prefill
   def prefill(bucketPositions: List[BucketPosition]): Fox[Unit] =
     for {
       _ <- getMultipleFromFossilOrFallbackLayer(bucketPositions)
@@ -124,4 +125,14 @@ class VolumeBucketBuffer(
     }.toSeq
     saveBuckets(volumeLayer, fullDirtyBuckets.map(_._1), fullDirtyBuckets.map(_._2), version, toTemporaryStore)
   }
+
+  // Caution, this returns a new VolumeBucketBuffer but also mutates the collections! Do not use the old copy afterwards
+  def resetForNextUpdateGroup(newTargetVersion: Long): VolumeBucketBuffer =
+    new VolumeBucketBuffer(
+      version = newTargetVersion,
+      volumeLayer,
+      volumeDataStore,
+      temporaryTracingService,
+      toTemporaryStore
+    )
 }

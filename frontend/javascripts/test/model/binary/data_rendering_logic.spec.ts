@@ -46,21 +46,23 @@ const NON_DEGENERATE_DEPTH = 1000;
 const createGrayscaleLayer = () => ({
   byteCount: grayscaleByteCount,
   elementClass: grayscaleElementClass,
-  category: "color",
+  category: "color" as const,
   boundingBox: { depth: NON_DEGENERATE_DEPTH },
   additionalAxes: null,
 });
 const createVolumeLayer = () => ({
   byteCount: volumeByteCount,
   elementClass: volumeElementClass,
-  category: "segmentation",
+  category: "segmentation" as const,
   boundingBox: { depth: NON_DEGENERATE_DEPTH },
   additionalAxes: null,
 });
 
-function createLayers(grayscaleCount: number, volumeCount: number) {
-  const grayscaleLayers = range(0, grayscaleCount).map(() => createGrayscaleLayer());
-  const volumeLayers = range(0, volumeCount).map(() => createVolumeLayer());
+function createLayers(grayscaleCount: number, volumeCount: number): LayerLike[] {
+  // Annotated so that the two factories' `elementClass` literal types are widened before
+  // concat has to unify them.
+  const grayscaleLayers: LayerLike[] = range(0, grayscaleCount).map(() => createGrayscaleLayer());
+  const volumeLayers: LayerLike[] = range(0, volumeCount).map(() => createVolumeLayer());
   return grayscaleLayers.concat(volumeLayers);
 }
 
@@ -126,8 +128,6 @@ describe("calculateTextureSizeAndCountForLayer", () => {
   });
 });
 
-type Layer = ReturnType<typeof createGrayscaleLayer>;
-
 function testSupportFlags(
   supportFlags: ReturnType<typeof computeDataTexturesSetup>,
   expectedMaximumLayerCountToRender: number,
@@ -136,18 +136,8 @@ function testSupportFlags(
 }
 
 function computeDataTexturesSetupCurried(spec: typeof minSpecs, hasSegmentation: boolean) {
-  return (layers: Layer[]) =>
-    computeDataTexturesSetup(
-      spec,
-      layers as {
-        elementClass: ElementClass;
-        category: "color" | "segmentation";
-        boundingBox: { depth: number };
-        additionalAxes: null;
-      }[],
-      hasSegmentation,
-      DEFAULT_REQUIRED_BUCKET_CAPACITY,
-    );
+  return (layers: LayerLike[]) =>
+    computeDataTexturesSetup(spec, layers, hasSegmentation, DEFAULT_REQUIRED_BUCKET_CAPACITY);
 }
 
 describe("computeDataTexturesSetup", () => {

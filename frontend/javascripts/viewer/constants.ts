@@ -402,7 +402,9 @@ export default Constants;
 // (see DataCube.getVoxelIndexByVoxelOffset). For such layers, bucket storage (CPU
 // typed arrays and the GPU texture atlas) can be shrunk to this depth while the
 // addressing/picking machinery keeps treating buckets as BUCKET_WIDTH^3 for bookkeeping.
-export function getEffectiveBucketDepth(layerDepthInMag1: number): 1 | typeof Constants.BUCKET_WIDTH {
+export function getEffectiveBucketDepth(
+  layerDepthInMag1: number,
+): 1 | typeof Constants.BUCKET_WIDTH {
   return layerDepthInMag1 <= 1 ? 1 : Constants.BUCKET_WIDTH;
 }
 

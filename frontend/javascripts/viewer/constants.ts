@@ -197,6 +197,11 @@ export const BorderTabs: Record<string, BorderTabType> = {
     name: "BBoxes",
     description: "Bounding Boxes - Add and organize bounding boxes",
   },
+  BookmarksTab: {
+    id: "BookmarksTab",
+    name: "Bookmarks",
+    description: "Saved viewpoints",
+  },
   LayerSettingsTab: {
     id: "LayerSettingsTab",
     name: "Layers",

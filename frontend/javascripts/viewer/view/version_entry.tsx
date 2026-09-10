@@ -27,6 +27,7 @@ import { isConcurrentCollaborationMode } from "viewer/model/accessors/annotation
 import { formatUserName, getContributorById } from "viewer/model/accessors/user_accessor";
 import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 import type {
+  AddBookmarkUpdateAction,
   AddLayerToAnnotationUpdateAction,
   AddSegmentIndexUpdateAction,
   AddUserBoundingBoxInSkeletonTracingAction,
@@ -501,6 +502,10 @@ const descriptionFns: Record<
       icon: <EditOutlined />,
     };
   },
+  addBookmark: (action: AsServerAction<AddBookmarkUpdateAction>): Description => ({
+    description: `Added the bookmark ${action.value.name ?? action.value.id}.`,
+    icon: <PlusOutlined />,
+  }),
   updateActiveNode: (action: AsServerAction<UpdateActiveNodeUpdateAction>): Description => {
     return {
       description: `Updated the active node id to ${action.value.activeNode}`,

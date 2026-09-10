@@ -190,6 +190,12 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
+    case "ADD_BOOKMARK": {
+      return updateAnnotation(state, {
+        bookmarks: [...state.annotation.bookmarks, action.bookmark],
+      });
+    }
+
     case "SET_ANNOTATION_ALLOW_UPDATE": {
       const { currentlyAllowUpdate } = action;
       return updateKey(state, "annotation", {

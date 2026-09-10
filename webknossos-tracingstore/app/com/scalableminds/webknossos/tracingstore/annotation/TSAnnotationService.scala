@@ -126,8 +126,13 @@ class TSAnnotationService @Inject() (
         materializedAnnotation.version,
         targetVersion // Note: this targetVersion is used for the updater buffers, and is overwritten for each update group, see annotation.withNewUpdaters
       ) ?~> Msg.Annotation.findEditableMappingsFailed
-      updated <- applyPendingUpdates(
+      annotationWithTracingsAndBuffers = findVolumeBucketBuffersForAnnotation(
+        annotationId,
         annotationWithTracingsAndMappings,
+        targetVersion
+      )
+      updated <- applyPendingUpdates(
+        annotationWithTracingsAndBuffers,
         annotationId,
         targetVersion,
         reportChangesToWk
@@ -205,6 +210,12 @@ class TSAnnotationService @Inject() (
         // volumeBucketDataHasChanged can only ever be set to true (once bucket data was
         // mutated) and never back to false. A false value indicates a frontend bug.
         Fox.failure("Received updateVolumeBucketDataHasChanged action with value=false, which is not allowed.")
+      case a: UpdateBucketPartialVolumeAction =>
+        volumeTracingService.applyUpdateBucketPartialVolumeAction(
+          a,
+          annotationWithTracings,
+          annotationId
+        )
       case a: ApplyableVolumeUpdateAction =>
         annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.volumeActionFailed
       case a: EditableMappingUpdateAction =>
@@ -250,6 +261,7 @@ class TSAnnotationService @Inject() (
         action.layerParameters,
         previousVersion = targetVersion - 1
       )
+      // TODO also add new bucket buffer if the new layer is a volume tracing
       updated = annotationWithTracings.addLayer(action, tracingId, tracing)
     } yield updated
 
@@ -530,7 +542,7 @@ class TSAnnotationService @Inject() (
       volumeTracingsMap: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]] = volumeTracingIds
         .zip(volumeTracings.map(versioned => Right[SkeletonTracingWithUpdatedTreeIds, VolumeTracing](versioned.value)))
         .toMap
-    } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty)
+    } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty, Map.empty)
   }
 
   private def findEditableMappingsForAnnotation(
@@ -558,6 +570,23 @@ class TSAnnotationService @Inject() (
         } yield (editableMappingInfo.key, (editableMappingInfo.value, updater))
       }
     } yield annotationWithTracings.copy(editableMappingsByTracingId = idInfoUpdaterTuples.toMap)
+  }
+
+  private def findVolumeBucketBuffersForAnnotation(
+      annotationId: ObjectId,
+      annotationWithTracings: AnnotationWithTracings,
+      targetVersion: Long
+  )(using ec: ExecutionContext, tc: TokenContext): AnnotationWithTracings = {
+    val volumesWithoutEditableMapping = annotationWithTracings.volumesThatDoNotHaveEditableMapping
+    val bucketBuffersById = volumesWithoutEditableMapping.map { case (volumeTracing, volumeTracingId) =>
+      volumeTracingId -> volumeTracingService.createVolumeBucketBuffer(
+        annotationId,
+        volumeTracingId,
+        volumeTracing,
+        targetVersion
+      )
+    }.toMap
+    annotationWithTracings.copy(volumeBucketBuffersById = bucketBuffersById)
   }
 
   protected def getEditableMappingInfoRaw(

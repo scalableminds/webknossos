@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.box.{Box, Failure, Full}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerProto,
   AnnotationProto,
@@ -20,7 +21,11 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingWithUpdatedTreeIds
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ApplyableVolumeUpdateAction,
+  UpdateBucketPartialVolumeAction,
+  VolumeBucketBuffer
+}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
@@ -28,7 +33,8 @@ import scala.concurrent.ExecutionContext
 case class AnnotationWithTracings(
     annotation: AnnotationProto,
     tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
-    editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)]
+    editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)],
+    volumeBucketBuffersById: Map[String, VolumeBucketBuffer]
 ) extends LazyLogging
     with ProtoGeometryConversions {
 
@@ -75,11 +81,17 @@ case class AnnotationWithTracings(
       }
     } yield volumeTracing
 
-  def volumesThatHaveEditableMapping: List[(VolumeTracing, String)] =
+  def volumesThatHaveEditableMapping: Seq[(VolumeTracing, String)] =
     tracingsById.view.flatMap {
       case (id, Right(vt: VolumeTracing)) if vt.getHasEditableMapping => Some((vt, id))
       case _                                                          => None
-    }.toList
+    }.toSeq
+
+  def volumesThatDoNotHaveEditableMapping: Seq[(VolumeTracing, String)] =
+    tracingsById.view.flatMap {
+      case (id, Right(vt: VolumeTracing)) if !vt.getHasEditableMapping => Some((vt, id))
+      case _                                                           => None
+    }.toSeq
 
   def getEditableMappingTracingIds: List[String] = editableMappingsByTracingId.keys.toList
 
@@ -211,6 +223,15 @@ case class AnnotationWithTracings(
       volumeTracing <- getVolume(a.actionTracingId)
       updated = a.applyOn(volumeTracing)
     } yield this.copy(tracingsById = tracingsById.updated(a.actionTracingId, Right(updated)))
+
+  def applyUpdateBucketPartialVolumeAction(
+      a: UpdateBucketPartialVolumeAction,
+      annotationWithTracings: AnnotationWithTracings,
+      annotationId: ObjectId
+  )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+    for {
+      volumeTracing <- getVolume(a.actionTracingId).toFox
+    } yield this
 
   def applyEditableMappingAction(
       a: EditableMappingUpdateAction

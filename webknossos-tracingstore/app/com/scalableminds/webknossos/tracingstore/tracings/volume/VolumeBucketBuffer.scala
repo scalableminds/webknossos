@@ -1,10 +1,10 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import com.google.common.primitives.UnsignedInteger
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
+import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
@@ -25,6 +25,8 @@ class VolumeBucketBuffer(
   // bucketPos → (bucketData, isChanged)
   private lazy val bucketDataBuffer: mutable.Map[BucketPosition, (Box[Array[Byte]], Boolean)] =
     new mutable.HashMap[BucketPosition, (Box[Array[Byte]], Boolean)]()
+
+  private lazy val bucketScanner = new NativeBucketScanner()
 
   def prefill(bucketPositions: List[BucketPosition]): Fox[Unit] =
     for {
@@ -64,14 +66,41 @@ class VolumeBucketBuffer(
   def applyUpdateBucketPartialAction(action: UpdateBucketPartialVolumeAction): Fox[Unit] = for {
     previousBucketBytesBox <- getWithFallback(action.bucketPosition).shiftBox
     previousBucketBytesOrEmpty <- bytesWithEmptyFallback(previousBucketBytesBox).toFox
-    (updated, additions, removals) <- applyVoxelRuns(previousBucketBytesOrEmpty, action.voxelRunsBase64).toFox
+    (updated, additions, removals) <- applyVoxelRuns(previousBucketBytesOrEmpty, action.voxelRunsBinary).toFox
+    // TODO pass additions,removals to segment index
     _ = bucketDataBuffer.put(action.bucketPosition, (Full(updated), true))
   } yield ()
 
   private def applyVoxelRuns(
-      previousBucketBytesOrEmpty: Array[Byte],
-      voxelRunsBase64: String
-  ): Box[(Array[Byte], Set[UnsignedInteger], Set[UnsignedInteger])] = ???
+      previousBucketBytes: Array[Byte],
+      voxelRunsBinary: Array[Byte]
+  ): Box[(Array[Byte], Set[Long], Set[Long])] =
+    for {
+      updated <- tryo(
+        bucketScanner.applyVoxelRuns(
+          previousBucketBytes,
+          ElementClass.bytesPerElement(volumeLayer.elementClass),
+          ElementClass.isSigned(volumeLayer.elementClass),
+          voxelRunsBinary
+        )
+      )
+      previousSegmentIds <- collectSegmentIds(previousBucketBytes)
+      segmentIds <- collectSegmentIds(updated)
+      additions = segmentIds.diff(previousSegmentIds)
+      removals = previousSegmentIds.diff(segmentIds)
+    } yield (updated, additions, removals)
+
+  private def collectSegmentIds(bytes: Array[Byte]): Box[Set[Long]] =
+    tryo(
+      bucketScanner
+        .collectSegmentIds(
+          bytes,
+          ElementClass.bytesPerElement(volumeLayer.elementClass),
+          ElementClass.isSigned(volumeLayer.elementClass),
+          skipZeroes = true
+        )
+        .toSet
+    )
 
   // TODO deduplicate from segment index buffer
   def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]]): Box[Array[Byte]] =

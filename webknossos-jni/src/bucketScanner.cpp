@@ -103,6 +103,19 @@ inline int64_t typedValueAtIndex(const jbyte *bucketBytes, size_t index) {
 }
 
 template <typename T>
+inline T readLittleEndian(const jbyte *bytes, size_t byteOffset) {
+    // The voxel run wire format (see UpdateBucketPartialVolumeAction / VolumeBucketBuffer.applyVoxelRuns
+    // on the Scala side) is little-endian by contract. This native library is only ever built for
+    // little-endian targets (x86_64, arm64 in their default mode - see CMakeLists.txt and the
+    // uname-based platform resolution in NativeLoaderUtils), so a plain memcpy of the raw bytes into
+    // the target integer type is correct here without any byte-swapping. memcpy (rather than
+    // reinterpret_cast) avoids alignment UB, matching typedValueAtIndex above.
+    T value;
+    std::memcpy(&value, bytes + byteOffset, sizeof(T));
+    return value;
+}
+
+template <typename T>
 void collectSegmentIdsTyped(const jbyte *bucketBytes, size_t elementCount, bool skipZeroes,
                             std::unordered_set<int64_t> &uniqueSegmentIds) {
     bool lastValueIsKnown = false;
@@ -383,6 +396,74 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
     } catch (...) {
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner deleteSegmentFromBucket");
+        return nullptr;
+    }
+}
+
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applyVoxelRuns
+    (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jbyteArray voxelRunsJavaArray) {
+
+    jsize bucketLengthBytes = env->GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env->GetByteArrayElements(bucketBytesJavaArray, nullptr);
+    jsize voxelRunsLengthBytes = env->GetArrayLength(voxelRunsJavaArray);
+    jbyte * voxelRuns = env->GetByteArrayElements(voxelRunsJavaArray, nullptr);
+
+    try {
+        const size_t elementCount = getElementCount(bucketLengthBytes, bytesPerElement);
+
+        // Header: uint64 value (8 bytes) + uint32 runCount (4 bytes).
+        const size_t headerSizeBytes = 12;
+        if (static_cast<size_t>(voxelRunsLengthBytes) < headerSizeBytes) {
+            throw std::invalid_argument("voxelRuns buffer is smaller than the mandatory 12-byte header");
+        }
+
+        const uint64_t value = readLittleEndian<uint64_t>(voxelRuns, 0);
+        const uint32_t runCount = readLittleEndian<uint32_t>(voxelRuns, 8);
+
+        // Each run entry: uint16 startIndex + uint16 length.
+        const size_t runEntrySizeBytes = 4;
+        const size_t expectedLengthBytes = headerSizeBytes + static_cast<size_t>(runCount) * runEntrySizeBytes;
+        if (static_cast<size_t>(voxelRunsLengthBytes) != expectedLengthBytes) {
+            throw std::invalid_argument("voxelRuns buffer length does not match declared runCount");
+        }
+
+        // Validate all runs up front, before allocating/mutating the output array.
+        for (uint32_t i = 0; i < runCount; ++i) {
+            const size_t runOffset = headerSizeBytes + static_cast<size_t>(i) * runEntrySizeBytes;
+            const uint16_t startIndex = readLittleEndian<uint16_t>(voxelRuns, runOffset);
+            const uint16_t length = readLittleEndian<uint16_t>(voxelRuns, runOffset + 2);
+            if (static_cast<size_t>(startIndex) + static_cast<size_t>(length) > elementCount) {
+                throw std::invalid_argument("voxel run exceeds bucket bounds");
+            }
+        }
+
+        jbyteArray outputJavaArray = env->NewByteArray(bucketLengthBytes);
+        jbyte *outputBytes = env->GetByteArrayElements(outputJavaArray, nullptr);
+        memcpy(outputBytes, bucketBytes, bucketLengthBytes);
+
+        for (uint32_t i = 0; i < runCount; ++i) {
+            const size_t runOffset = headerSizeBytes + static_cast<size_t>(i) * runEntrySizeBytes;
+            const uint16_t startIndex = readLittleEndian<uint16_t>(voxelRuns, runOffset);
+            const uint16_t length = readLittleEndian<uint16_t>(voxelRuns, runOffset + 2);
+            for (uint16_t offset = 0; offset < length; ++offset) {
+                writeSegmentIdAtIndex(outputBytes, static_cast<size_t>(startIndex) + offset,
+                                      static_cast<int64_t>(value), bytesPerElement, isSigned);
+            }
+        }
+
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseByteArrayElements(voxelRunsJavaArray, voxelRuns, JNI_ABORT);
+        env->ReleaseByteArrayElements(outputJavaArray, outputBytes, 0);
+        return outputJavaArray;
+    } catch (const std::exception &e) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseByteArrayElements(voxelRunsJavaArray, voxelRuns, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception in BucketScanner applyVoxelRuns: " + std::string(e.what()));
+        return nullptr;
+    } catch (...) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseByteArrayElements(voxelRunsJavaArray, voxelRuns, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception in BucketScanner applyVoxelRuns");
         return nullptr;
     }
 }

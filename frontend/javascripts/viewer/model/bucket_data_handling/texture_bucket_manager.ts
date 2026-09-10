@@ -131,10 +131,15 @@ export default class TextureBucketManager {
   maximumCapacity: number;
   packingDegree: number;
   elementClass: ElementClass;
-  // The number of voxels a single bucket occupies in this layer's atlas. Equal to
-  // constants.BUCKET_SIZE, unless the layer has a degenerate (e.g., z-extent-1) axis.
-  // See DataCube.effectiveBucketDepth / getEffectiveBucketDepth. For a t-recycling
-  // layer, this is the full BUCKET_SIZE (see usesTRecycling below).
+  // How many voxels one bucket occupies in this layer's atlas — its "footprint", the term
+  // the surrounding comments use. Note that a layer has two of these numbers and they can
+  // disagree:
+  //   * the CPU-side one, DataCube.getEffectiveBucketVoxelCount(), i.e. how much a single
+  //     DataBucket.data holds — 32^3 normally, or 32*32*1 for a z-degenerate (2D) layer;
+  //   * this one, the atlas slot size, which is what the shader addresses.
+  // They match everywhere except on a t-recycling layer, where one atlas slot holds a whole
+  // 32-timepoint batch of shrunk slices and so needs the full 32^3 even though each
+  // individual bucket only holds 32*32*1. See usesTRecycling below.
   bucketVoxelCount: number;
   // When true, this layer's (always-0) z-addressing slot is repurposed to cache
   // several t (time) slices of a z-degenerate layer simultaneously on the GPU,

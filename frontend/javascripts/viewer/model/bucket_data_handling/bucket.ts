@@ -267,7 +267,10 @@ export class DataBucket {
   // Convenience accessor for the "t" (time) additional coordinate, used by
   // TextureBucketManager's t-recycling support. Returns 0 if the layer has no
   // t-axis (matching the addressing default used elsewhere for missing coordinates).
-  // todop: memoize?
+  // Deliberately not cached, even though the value is immutable for a bucket's lifetime:
+  // the array it scans holds a handful of entries at most, and each of the three callers
+  // (getCuckooKey, processWriterQueue, PullQueue's batch fan-out) already allocates more
+  // per call than this scan costs.
   getT(): number {
     return this.getAdditionalCoordinates()?.find((coord) => coord.name === "t")?.value ?? 0;
   }

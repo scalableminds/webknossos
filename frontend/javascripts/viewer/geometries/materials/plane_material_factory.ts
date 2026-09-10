@@ -356,11 +356,13 @@ class PlaneMaterialFactory {
     // textureBucketManager is only guaranteed to exist once getDataTextures() below
     // has triggered its lazy setup.
     const usesTRecyclingPerLayer: number[] = [];
-    // todop: make this comment clearer. also, what is footprint exactly?
-    // Note that this must be the *atlas* footprint of a bucket, which is not the same as
-    // the cube's effective (CPU-side) bucket voxel count for a t-recycling layer: there,
-    // one atlas slot holds a whole batch of shrunk t-slices. The shader derives its
-    // row/texture addressing from this, so it has to match TextureBucketManager exactly.
+    // How many voxels one bucket occupies in each layer's data texture. Read off the
+    // TextureBucketManager rather than the DataCube on purpose: those two numbers disagree
+    // for a t-recycling layer (the cube stores 32*32*1 voxels per bucket, while one atlas
+    // slot holds a whole 32-timepoint batch, i.e. the full 32^3 — see
+    // TextureBucketManager.bucketVoxelCount). The shader derives its row and texture
+    // indices from this, so it has to be exactly the number the upload side used, or it
+    // reads from the wrong place in the atlas.
     const bucketVoxelCountPerLayer: number[] = [];
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {

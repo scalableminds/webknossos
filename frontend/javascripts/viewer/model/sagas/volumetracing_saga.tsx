@@ -1,6 +1,7 @@
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import messages from "messages";
+import { encodeBucketDiffBase64 } from "prototypes/new_volume_architecture/diff";
 import { BrushDriver } from "prototypes/new_volume_architecture/integration/brush_driver";
 import { USE_NEW_VOLUME_ARCHITECTURE } from "prototypes/new_volume_architecture/integration/feature_flag";
 import type { Channel } from "redux-saga";
@@ -59,7 +60,9 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { createSendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import Dimensions from "viewer/model/dimensions";
+import type { MagInfo } from "viewer/model/helpers/mag_info";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
@@ -70,7 +73,10 @@ import {
 } from "viewer/model/sagas/saga_helpers";
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
-import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
+import {
+  deleteSegmentDataVolumeAction,
+  updateBucketPartial,
+} from "viewer/model/sagas/volume/update_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/section_labeling";
@@ -88,9 +94,13 @@ const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 // VoxelBuffer2D path. See feature_flag.ts for the full rationale — the same
 // toggle also gates flood fill in floodfill_saga.tsx.
 //
-// Dirty on purpose: buckets are mutated in place, nothing reaches the save
-// queue or the undo stack. The trace tool is unaffected (it still uses the
-// old path).
+// Buckets are mutated in place, same as the old path, so undo/redo keeps
+// working via the existing bucket-snapshot mechanism (it doesn't care which
+// code did the writing). On commit, one lightweight updateBucketPartial
+// action per touched bucket is pushed to the save queue (see update_actions.ts)
+// — there is no backend support for it yet and no per-bucket journal on the
+// frontend either, so this is only the wire shape, not a working save path.
+// The trace tool is unaffected (it still uses the old path).
 
 /** Global (mag-1) layer-space position -> source-mag voxel coordinates. */
 function toMagVoxel(position: Vector3, mag: Vector3): Vector3 {
@@ -262,7 +272,9 @@ export function* editVolumeLayerAsync(): Saga<never> {
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
     // ── SPIKE: new volume architecture, brush only ───────────────────────────
-    let spikeDriver: BrushDriver | null = null;
+    // magInfo is kept alongside the driver (rather than re-derived at commit
+    // time) because the layer lookup above is only in scope inside this block.
+    let spike: { driver: BrushDriver; magInfo: MagInfo } | null = null;
 
     if (USE_NEW_VOLUME_ARCHITECTURE && isBrushTool(activeTool)) {
       const spikeLayer = yield* call(
@@ -282,7 +294,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       const radius: Vector3 = [0, 1, 2].map(
         (axis) => (unzoomedRadius * baseVoxelFactors[axis]) / labeledMag[axis],
       ) as Vector3;
-      spikeDriver = new BrushDriver(
+      const driver = new BrushDriver(
         {
           cube: spikeLayer.cube,
           denseMags: spikeLayer.cube.magInfo.getDenseMags(),
@@ -298,6 +310,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
         },
         toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
       );
+      spike = { driver, magInfo: spikeLayer.cube.magInfo };
       wroteVoxelsBox.value = true;
     } else if (isBrushTool(activeTool)) {
       yield* call(
@@ -351,10 +364,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
         currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
       }
 
-      if (spikeDriver != null) {
+      if (spike != null) {
         // One incremental capsule per pointer-move; the transaction's write set
         // coalesces overlap, and mag propagation is deferred to pointer-up.
-        spikeDriver.extend(toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag));
+        spike.driver.extend(toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag));
         lastPosition = addToContourListAction.positionInLayerSpace;
         continue;
       }
@@ -391,11 +404,32 @@ export function* editVolumeLayerAsync(): Saga<never> {
       lastPosition = addToContourListAction.positionInLayerSpace;
     }
 
-    if (spikeDriver != null) {
+    if (spike != null) {
+      const { driver, magInfo } = spike;
       // Pointer-up: mag propagation runs once over the coalesced write set.
-      const stats = spikeDriver.finish();
+      const stats = driver.finish();
       console.info(
-        `[spike] brush: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
+        `[spike] brush: ${stats.voxels} voxels across ${stats.bucketDiffs.length} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
+      );
+      yield* put(
+        pushSaveQueueTransaction(
+          stats.bucketDiffs.map((diff) =>
+            updateBucketPartial(
+              createSendBucketInfo(
+                [
+                  diff.address[0],
+                  diff.address[1],
+                  diff.address[2],
+                  diff.address[3],
+                  additionalCoordinates,
+                ],
+                magInfo,
+              ),
+              encodeBucketDiffBase64(diff),
+              volumeTracing.tracingId,
+            ),
+          ),
+        ),
       );
       // currentSectionLabeler.updateArea(...) above ran regardless of which
       // path drew the stroke, so its centroid tracking is accurate here too.

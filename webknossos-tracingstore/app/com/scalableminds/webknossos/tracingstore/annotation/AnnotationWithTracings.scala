@@ -231,6 +231,8 @@ case class AnnotationWithTracings(
   )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       volumeTracing <- getVolume(a.actionTracingId).toFox
+      bucketBuffer <- volumeBucketBuffersById.get(a.actionTracingId).toFox
+      _ = bucketBuffer.applyUpdateBucketPartialAction(a)
     } yield this
 
   def applyEditableMappingAction(

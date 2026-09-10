@@ -26,6 +26,15 @@ class VolumeBucketBuffer(
   private lazy val bucketDataBuffer: mutable.Map[BucketPosition, (Box[Array[Byte]], Boolean)] =
     new mutable.HashMap[BucketPosition, (Box[Array[Byte]], Boolean)]()
 
+  private lazy val segmentAdditionsBuffer: mutable.Map[BucketPosition, Set[Long]] =
+    new mutable.HashMap[BucketPosition, Set[Long]]()
+
+  private lazy val segmentRemovalsBuffer: mutable.Map[BucketPosition, Set[Long]] =
+    new mutable.HashMap[BucketPosition, Set[Long]]()
+
+  def segmentAdditions: Map[BucketPosition, Set[Long]] = segmentAdditionsBuffer.toMap
+  def segmentRemovals: Map[BucketPosition, Set[Long]] = segmentRemovalsBuffer.toMap
+
   private lazy val bucketScanner = new NativeBucketScanner()
 
   // TODO make use of prefill
@@ -70,7 +79,27 @@ class VolumeBucketBuffer(
     (updated, additions, removals) <- applyVoxelRuns(previousBucketBytesOrEmpty, action.voxelRunsBinary).toFox
     // TODO pass additions,removals to segment index
     _ = bucketDataBuffer.put(action.bucketPosition, (Full(updated), true))
+    _ = incorporateAdditionsAndRemovals(action.bucketPosition, additions, removals)
   } yield ()
+
+  private def incorporateAdditionsAndRemovals(
+      bucketPosition: BucketPosition,
+      additions: Set[Long],
+      removals: Set[Long]
+  ): Unit = {
+    val previousAdditions = segmentAdditionsBuffer.getOrElse(bucketPosition, Set.empty[Long])
+    val previousRemovals = segmentRemovalsBuffer.getOrElse(bucketPosition, Set.empty[Long])
+
+    // A segment id that is first removed and then added, or first added and then removed is cancelled out.
+    val cancelledFromRemovals = additions.intersect(previousRemovals)
+    val cancelledFromAdditions = removals.intersect(previousAdditions)
+
+    val combinedAdditions = (previousAdditions ++ (additions -- previousRemovals)) -- cancelledFromAdditions
+    val combinedRemovals = (previousRemovals ++ (removals -- previousAdditions)) -- cancelledFromRemovals
+
+    segmentAdditionsBuffer.put(bucketPosition, combinedAdditions)
+    segmentRemovalsBuffer.put(bucketPosition, combinedRemovals)
+  }
 
   private def applyVoxelRuns(
       previousBucketBytes: Array[Byte],

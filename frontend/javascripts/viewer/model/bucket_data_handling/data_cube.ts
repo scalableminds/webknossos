@@ -757,7 +757,7 @@ class DataCube {
         if (!currentLabeledVoxelMap.has(thirdCoord)) {
           currentLabeledVoxelMap.set(
             thirdCoord,
-            new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0),
+            new Uint8Array(constants.BUCKET_SIZE_2D).fill(0),
           );
         }
 

@@ -191,7 +191,7 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
   });
 
   it("calculateTextureSizeAndCountForLayer never needs more total texture area for a 2D layer than for a regular layer", () => {
-    const shrunkBucketVoxelCount = constants.BUCKET_WIDTH ** 2 * getEffectiveBucketDepth(1);
+    const shrunkBucketVoxelCount = constants.BUCKET_SIZE_2D * getEffectiveBucketDepth(1);
     const shrunk = calculateTextureSizeAndCountForLayer(
       midSpecs,
       grayscaleElementClass,
@@ -225,7 +225,7 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     // then shrank the texture past the point where the rows run out, so a 2D layer ended
     // up holding only half the requested buckets — and getSmallestCommonBucketCapacity
     // propagates that shortfall to every other layer in the dataset.
-    const shrunkBucketVoxelCount = constants.BUCKET_WIDTH ** 2 * 1;
+    const shrunkBucketVoxelCount = constants.BUCKET_SIZE_2D;
     for (const specs of [minSpecs, midSpecs, betterSpecs]) {
       for (const elementClass of ["uint8", "uint16", "uint32"] as ElementClass[]) {
         for (const bucketVoxelCount of [shrunkBucketVoxelCount, constants.BUCKET_SIZE]) {
@@ -266,7 +266,7 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
   });
 
   it("buildTextureInformationMap sizes the atlas for full-depth buckets only for t-recycling-eligible layers", () => {
-    const shrunkBucketVoxelCount = constants.BUCKET_WIDTH ** 2 * 1;
+    const shrunkBucketVoxelCount = constants.BUCKET_SIZE_2D;
     const tAxis = [{ name: "t", bounds: [0, 100] as [number, number], index: 3 }];
     const sizeFor = (layer: LayerLike) =>
       computeDataTexturesSetup(midSpecs, [layer], false, DEFAULT_REQUIRED_BUCKET_CAPACITY)

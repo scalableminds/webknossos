@@ -161,6 +161,11 @@ export const Toolkit = {
   VOLUME_TOOLS: "VOLUME_TOOLS",
   READ_ONLY_TOOLS: "READ_ONLY_TOOLS",
   SPLIT_SEGMENTS: "SPLIT_SEGMENTS",
+  // Used by the BigWarp-style dataset alignment feature's worker iframes (see
+  // viewer/view/layouting/align_datasets_view.tsx) to restrict landmark-clicking
+  // workers to just the two tools they need. Deliberately not listed in
+  // toolkit_switcher_view.tsx's toolkitOptions - it's not meant to be picked by hand.
+  BIGWARP_LANDMARKS: "BIGWARP_LANDMARKS",
 } as const;
 export type Toolkit = (typeof Toolkit)[keyof typeof Toolkit];
 
@@ -189,6 +194,7 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
     AnnotationTool.VOXEL_PIPETTE,
     AnnotationTool.BOUNDING_BOX,
   ] as AnnotationTool[],
+  BIGWARP_LANDMARKS: [AnnotationTool.MOVE, AnnotationTool.SKELETON] as AnnotationTool[],
 };
 
 export const WRITE_TOOLS = without(Toolkits.ALL_TOOLS, ...Toolkits.READ_ONLY_TOOLS);

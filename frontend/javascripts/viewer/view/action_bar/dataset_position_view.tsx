@@ -5,6 +5,7 @@ import { copyToClipboard } from "libs/clipboard";
 import { formatNumberToLength, formatVoxelsForHighNumbers } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
+import { hasUrlParam } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type React from "react";
@@ -34,6 +35,7 @@ const positionInputErrorStyle: React.CSSProperties = {
 };
 
 function DatasetPositionView() {
+  const isBigWarpWorker = hasUrlParam("bigwarpWorker");
   const flycam = useWkSelector((state) => state.flycam);
   const dataset = useWkSelector((state) => state.dataset);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
@@ -149,7 +151,10 @@ function DatasetPositionView() {
           />
         </FastTooltip>
         <DatasetRotationPopoverButtonView style={iconColoringStyle} />
-        <ShareButton dataset={dataset} style={iconColoringStyle} />
+        {/* Sharing a link to a BigWarp worker's throw-away sandbox annotation isn't
+        meaningful - the shared link would drop the coordinator around it (see
+        BIGWARP_ALIGNMENT_PLAN.md §0.19). */}
+        {isBigWarpWorker ? null : <ShareButton dataset={dataset} style={iconColoringStyle} />}
       </Space.Compact>
     </FastTooltip>
   );

@@ -2,6 +2,7 @@ import { requestTask } from "admin/api/tasks";
 import {
   doWithToken,
   finishAnnotation,
+  getBuildInfo,
   getMappingsForDatasetLayer,
   sendAnalyticsEvent,
 } from "admin/rest_api";
@@ -65,7 +66,10 @@ import {
   getMappingInfoOrNull,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  flatToNestedMatrix,
+  getTransformsForLayer,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
@@ -170,7 +174,7 @@ import type DataLayer from "viewer/model/data_layer";
 import Dimensions from "viewer/model/dimensions";
 import dimensions from "viewer/model/dimensions";
 import { MagInfo } from "viewer/model/helpers/mag_info";
-import { parseNml } from "viewer/model/helpers/nml_helpers";
+import { parseNml, serializeToNml } from "viewer/model/helpers/nml_helpers";
 import { overwriteAction } from "viewer/model/helpers/overwrite_action_middleware";
 import {
   bucketPositionToGlobalAddress,
@@ -184,7 +188,14 @@ import type { OperationContext } from "viewer/model/sagas/operation_context_saga
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
 import { fetchAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
-import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
+import type {
+  MutableNode,
+  MutableTreeGroup,
+  Node,
+  Tree,
+  TreeGroupTypeFlat,
+} from "viewer/model/types/tree_types";
+import { MutableTreeMap, TreeMap } from "viewer/model/types/tree_types";
 import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
 import { api, Model } from "viewer/singletons";
 import type {
@@ -623,6 +634,129 @@ class TracingApi {
   async importNmlAsString(nmlString: string) {
     const { treeGroups, trees } = await parseNml(nmlString);
     Store.dispatch(addTreesAndGroupsAction(trees, treeGroups));
+  }
+
+  /**
+   * Like importNmlAsString, but nests the imported trees/groups into an existing
+   * tree group (see ensureLandmarkGroups) instead of adding them at the root, and
+   * resolves with the freshly assigned tree ids (in the same order as the parsed
+   * trees) so callers can track which persisted tree corresponds to which
+   * originally-imported one. Used by the BigWarp-style dataset alignment coordinator
+   * to merge a worker's newly placed landmarks into the persisted landmark
+   * annotation. See BIGWARP_ALIGNMENT_PLAN.md §3/§5.4.
+   */
+  importNmlAsStringIntoGroup(nmlString: string, targetGroupId: number): Promise<number[]> {
+    return new Promise((resolve, reject) => {
+      parseNml(nmlString)
+        .then(({ treeGroups, trees }) => {
+          Store.dispatch(addTreesAndGroupsAction(trees, treeGroups, resolve, true, targetGroupId));
+        })
+        .catch(reject);
+    });
+  }
+
+  /**
+   * Finds (by name, creating if missing) the nested tree-group hierarchy used by the
+   * BigWarp-style dataset alignment coordinator to keep one side's landmarks apart
+   * from the other's within the single, shared "landmark annotation" (see
+   * BIGWARP_ALIGNMENT_PLAN.md §3): a top-level group for the layer pair, with one
+   * child group per side. Idempotent - safe to call on every coordinator (re)load.
+   */
+  ensureLandmarkGroups(
+    pairGroupName: string,
+    sideAGroupName: string,
+    sideBGroupName: string,
+  ): { pairGroupId: number; sideAGroupId: number; sideBGroupId: number } {
+    const findByName = (name: string): TreeGroupTypeFlat | undefined => {
+      const skeletonTracing = assertSkeleton(Store.getState().annotation);
+      return Array.from(getFlatTreeGroups(skeletonTracing)).find((group) => group.name === name);
+    };
+
+    const existingPair = findByName(pairGroupName);
+    const existingSideA = findByName(sideAGroupName);
+    const existingSideB = findByName(sideBGroupName);
+    if (existingPair != null && existingSideA != null && existingSideB != null) {
+      return {
+        pairGroupId: existingPair.groupId,
+        sideAGroupId: existingSideA.groupId,
+        sideBGroupId: existingSideB.groupId,
+      };
+    }
+
+    // The concrete numbers below are placeholders only - addTreesAndGroupsAction
+    // reassigns every group id to avoid clashing with already-existing groups. Only
+    // the nesting (via `children`) needs to be internally consistent here.
+    const newGroups: MutableTreeGroup[] = [
+      {
+        groupId: 1,
+        name: pairGroupName,
+        children: [
+          { groupId: 2, name: sideAGroupName, children: [] },
+          { groupId: 3, name: sideBGroupName, children: [] },
+        ],
+      },
+    ];
+    Store.dispatch(
+      addTreesAndGroupsAction(new MutableTreeMap(), newGroups, undefined, true, MISSING_GROUP_ID),
+    );
+
+    const pairGroupId = findByName(pairGroupName)?.groupId;
+    const sideAGroupId = findByName(sideAGroupName)?.groupId;
+    const sideBGroupId = findByName(sideBGroupName)?.groupId;
+    if (pairGroupId == null || sideAGroupId == null || sideBGroupId == null) {
+      throw new Error("Failed to create landmark tree groups.");
+    }
+    return { pairGroupId, sideAGroupId, sideBGroupId };
+  }
+
+  async exportTreesAsNmlString(applyTransform: boolean = false) {
+    const buildInfo = await getBuildInfo();
+    const state = Store.getState();
+    const nml = serializeToNml(
+      state,
+      state.annotation,
+      state.annotation.skeleton!,
+      buildInfo,
+      applyTransform,
+    );
+
+    return nml;
+  }
+
+  /**
+   * Like exportTreesAsNmlString, but restricted to the trees directly belonging to
+   * one tree group. Used by the BigWarp-style dataset alignment coordinator to read
+   * back just one side's previously-persisted landmarks (see ensureLandmarkGroups)
+   * when (re-)pushing them into a freshly (re)loaded worker sandbox. See
+   * BIGWARP_ALIGNMENT_PLAN.md §3/§5.4.
+   */
+  async exportTreesInGroupAsNmlString(groupId: number, applyTransform: boolean = false) {
+    const buildInfo = await getBuildInfo();
+    const state = Store.getState();
+    const skeletonTracing = assertSkeleton(state.annotation);
+    const filteredTrees = new TreeMap(
+      Array.from(skeletonTracing.trees.entries()).filter(([, tree]) => tree.groupId === groupId),
+    );
+    const filteredTracing = { ...skeletonTracing, trees: filteredTrees };
+    return serializeToNml(state, state.annotation, filteredTracing, buildInfo, applyTransform);
+  }
+
+  /**
+   * Like exportTreesAsNmlString, but restricted to a specific set of tree ids. Used
+   * by the BigWarp-style dataset alignment coordinator to export only the
+   * newly-placed landmarks from a worker (i.e. not yet merged into the persisted
+   * landmark annotation) on each sync tick. See BIGWARP_ALIGNMENT_PLAN.md §5.4.
+   */
+  async exportTreesByIdsAsNmlString(treeIds: number[], applyTransform: boolean = false) {
+    const buildInfo = await getBuildInfo();
+    const state = Store.getState();
+    const skeletonTracing = assertSkeleton(state.annotation);
+    const idsToKeep = new Set(treeIds);
+    const filteredTrees = new TreeMap(
+      Array.from(skeletonTracing.trees.entries()).filter(([id]) => idsToKeep.has(id)),
+    );
+    const filteredTracing = { ...skeletonTracing, trees: filteredTrees };
+    return serializeToNml(state, state.annotation, filteredTracing, buildInfo, applyTransform);
   }
 
   /**
@@ -2871,6 +3005,16 @@ class DataApi {
     Store.dispatch(setLayerTransformsAction(layerName, coordinateTransforms));
   }
 
+  getTransformsForLayer(layerName: string) {
+    const state = Store.getState();
+    const layer = getLayerByName(state.dataset, layerName);
+    return getTransformsForLayer(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+  }
+
   /*
    * _Experimental_ API for creating transformation matrices based on an array of TransformerSpecs.
    * Can be used in combination with _setLayerTransforms.
@@ -2992,6 +3136,10 @@ class DataApi {
         );
       }
     }
+  }
+
+  setLayerVisibility(layerName: string, isVisible: boolean) {
+    Store.dispatch(updateLayerSettingAction(layerName, "isDisabled", !isVisible));
   }
 
   /**

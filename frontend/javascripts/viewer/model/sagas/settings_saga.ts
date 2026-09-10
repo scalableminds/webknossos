@@ -23,6 +23,14 @@ import { ensureWkInitialized } from "./ready_sagas";
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
+  const controlMode = yield* select((state) => state.temporaryConfiguration.controlMode);
+  if (controlMode === ControlModeEnum.SANDBOX) {
+    // Sandbox annotations are disposable and explicitly not meant to be persisted
+    // (see RestrictionsAndSettings.allowSave docs). Don't leak session-local
+    // preference changes (e.g. a tool/toolkit forced by an embedding tool) into the
+    // user's account-wide settings.
+    return;
+  }
   const userConfiguration = yield* select((state) => state.userConfiguration);
   yield* retry(
     SETTINGS_MAX_RETRY_COUNT,
@@ -36,6 +44,12 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
   yield* delay(Constants.SETTING_SAVE_DEBOUNCE_MS);
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
+  const controlMode = yield* select((state) => state.temporaryConfiguration.controlMode);
+  if (controlMode === ControlModeEnum.SANDBOX) {
+    // Same reasoning as pushUserSettingsAsync: don't persist per-dataset view
+    // configuration changes made during a disposable sandbox session.
+    return;
+  }
   const dataset = yield* select((state) => state.dataset);
   const layerNamesOfDatasetToFallbackNameMaybe =
     getMappingFromLayerNameToBaseDatasetLayerName(dataset);

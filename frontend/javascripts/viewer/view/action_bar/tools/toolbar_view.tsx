@@ -23,6 +23,7 @@ import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_cr
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import { ToolDropdown } from "../tool_dropdown";
+import { BigWarpAlignmentButtons } from "./bigwarp_specific_ui";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
@@ -76,7 +77,13 @@ export default function ToolbarView() {
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
-  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
+  // BigWarp-style alignment workers are always narrow (two iframes side by side) but
+  // their toolkit only holds two tools anyway, so there is no reason to fold them into
+  // the "more tools" dropdown - which is dropped for workers below. See
+  // BIGWARP_ALIGNMENT_PLAN.md §0.19.
+  const isBigWarpWorker = hasUrlParam("bigwarpWorker");
+  const showAllTools =
+    isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode || isBigWarpWorker;
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -126,7 +133,7 @@ export default function ToolbarView() {
           const ToolButton = ToolIdToComponent[tool.id];
           return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
         })}
-        <ToolDropdown />
+        {isBigWarpWorker ? null : <ToolDropdown />}
       </Radio.Group>
 
       <ToolSpecificSettings
@@ -175,6 +182,10 @@ function ToolSpecificSettings({
   const isBigWarpWorker = hasUrlParam("bigwarpWorker");
   const showSkeletonButtons =
     hasSkeleton && adaptedActiveTool === AnnotationTool.SKELETON && !isBigWarpWorker;
+  // The coordinator's alignment actions are hosted by the *primary* (left) worker only,
+  // so they don't show up twice. Unlike the buttons below they are not tied to a
+  // specific tool - aligning/saving is meaningful with either of the worker's two tools.
+  const isBigWarpPrimaryWorker = isBigWarpWorker && hasUrlParam("bigwarpPrimary");
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationTool.BOUNDING_BOX;
   const showCreateCellButton = hasVolume && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =
@@ -185,6 +196,8 @@ function ToolSpecificSettings({
 
   return (
     <>
+      {isBigWarpPrimaryWorker ? <BigWarpAlignmentButtons /> : null}
+
       {showSkeletonButtons ? <SkeletonSpecificButtons /> : null}
 
       {showNewBoundingBoxButton ? (

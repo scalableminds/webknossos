@@ -516,9 +516,11 @@ body {
 
 
 
-// BigWarp-style dataset alignment coordinator (align_datasets_view.tsx): the two
-// worker iframes side by side. The tool UI itself lives in an antd Drawer, which is
-// positioned independently and doesn't need a dedicated grid column.
+// BigWarp-style dataset alignment coordinator (align_datasets_view.tsx): the
+// collapsible landmark panel, its resize divider and the two worker iframes, all in one
+// row. The panel is part of the layout flow, so opening it pushes the iframes to the
+// right rather than covering them. The iframes' own separating border is set inline in
+// the TSX. See BIGWARP_ALIGNMENT_PLAN.md §0.19.
 .adv-parent {
   display: flex;
   height: 100%;
@@ -527,13 +529,36 @@ body {
     flex: 1 1 0;
     min-width: 0;
   }
-  
-  .adv-worker {
-  &:nth-of-type(1) iframe {
-    border-right: 2px solid var(--ant-color-primary, #5660ff);
+
+  .adv-panel {
+    flex: 0 0 auto;
+    overflow: auto;
+    padding: 8px;
+    background-color: var(--ant-color-bg-base);
   }
-  &:nth-of-type(2) iframe {
-    border-left: 2px solid var(--ant-color-primary, #5660ff);
+
+  .adv-divider {
+    flex: 0 0 5px;
+    cursor: col-resize;
+    background-color: var(--ant-color-border);
+    // Undo the browser's default button styling - this is a resize handle, not a button
+    // to look at (see the comment in the TSX for why it is a <button> nonetheless).
+    padding: 0;
+    border: none;
+    appearance: none;
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--ant-color-primary);
+    }
   }
 }
+
+// Only present while the divider above is being dragged: keeps the mouse events inside
+// the coordinator document instead of letting the worker iframes swallow them.
+.adv-resize-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  cursor: col-resize;
 }

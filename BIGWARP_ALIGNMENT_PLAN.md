@@ -2,7 +2,7 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-09-02 (v10 — XY-maximized via flexlayout's own mechanism instead of a restricted layout, see §0.18)
+Last updated: 2026-09-09 (v12 — alignment actions moved into the primary worker's toolbar, drawer replaced by a resizable in-flow panel, see §0.19; redo button unhidden in the workers, §0.20)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
@@ -739,6 +739,66 @@ reversed, it's the right tool. Implemented:
   may not exist) is now dead for BigWarp workers specifically (the right border is back),
   but left in place since it's a correct guard regardless of layout shape.
 
+### 0.19 Alignment tools moved into the primary worker's toolbar + drawer replaced by a resizable in-flow panel (2026-09-09, per Michael's request after a team discussion)
+
+The full-height antd `Drawer` from §0.8/§0.13 was criticized in a colleague round for taking
+away too much screen space with no control over *how much* (it either covers a fixed
+420px-wide, window-height strip or is closed - nothing in between). A floating, draggable
+window was floated as an alternative; the team instead picked the "slim persistent toolbar +
+table on demand" option: the frequently used actions live permanently in the worker's
+toolbar (where they cost no extra space at all), and only the bulky table gets a panel that
+the user can size themselves.
+
+- **New `action_bar/tools/bigwarp_specific_ui.tsx`** with `BigWarpAlignmentButtons`: three
+  icon buttons (align / force save / show table) rendered by `toolbar_view.tsx`'s
+  `ToolSpecificSettings`, i.e. exactly where a tool's own sub-options appear, and styled
+  like them (`ButtonComponent`/`ToggleButton` + `NARROW_BUTTON_STYLE` inside a
+  `Space.Compact`, each with a tooltip). They are shown only in the **primary** (left)
+  worker, so they don't appear twice, and - unlike the neighbouring buttons - are not tied
+  to a specific tool, since aligning/saving is meaningful with either of the worker's two
+  tools. The coordinator implements all three actions, so the buttons just relay them up via
+  `postMessage({ type: "bigwarpCommand", command })`; the coordinator's existing message
+  listener dispatches them through a new `handleCommand` (the old, single-purpose
+  `bigwarpToggleDrawer` message is gone). The "show table" button mirrors the panel's
+  open/closed state locally for on/off feedback - it is the only thing that toggles it.
+- **`navbar.tsx`**: the "Alignment Tools" button added in §0.13 is removed - it is replaced
+  by the toolbar's "show table" toggle. The primary worker's navbar still hosts the
+  dashboard link.
+- **`align_datasets_view.tsx`**: the `Drawer` is replaced by an `.adv-panel` div that is a
+  normal flex child of `.adv-parent`, so opening it *pushes* the iframes right instead of
+  covering them. Its width lives in component state (`DEFAULT_PANEL_WIDTH` 380, clamped to
+  `[MIN_PANEL_WIDTH, 70% of the window]`) and is dragged via an `.adv-divider` handle. The
+  drag listeners sit on `window` (so the drag survives leaving the 5px handle) and a
+  `.adv-resize-overlay` is rendered while dragging, because **mouse events that happen
+  inside an iframe never reach the embedding document** - without the overlay the drag would
+  die the moment the cursor entered a worker. The handle is a `<button>` (not a `div`) so
+  it's focusable and the arrow keys resize too - biome's a11y lint also rejects a
+  `role="separator"` div here.
+- **Panel content slimmed down**: the buttons that moved to the toolbar are gone (no
+  duplicates), leaving the two "overlay the other layer in this view" toggles plus the rarer
+  `Reset` / `Store as Default`, a one-line shortcut hint, and the table (now
+  `scroll={{ x: "max-content" }}` with no fixed position-column widths, so it stays usable
+  in a narrow panel). The `Sync: workers ✅ ...` debug line and its `lastSyncedAt`/
+  `lastSyncError` state are removed (sync failures still hit the console), as is the
+  `isForceSaving` spinner state (the force-save button now lives in the worker's toolbar and
+  reports via Toast).
+- **Two worker chrome cleanups** in the same round, both applying to *both* iframes:
+  `toolbar_view.tsx` no longer renders the "more tools" `ToolDropdown` for workers (their
+  toolkit only has Move + Skeleton anyway, so `showAllTools` is forced on and both fit), and
+  `dataset_position_view.tsx` drops the `ShareButton` from the position/rotation group (a
+  link to a worker's throw-away sandbox annotation would lose the coordinator around it).
+
+### 0.20 Redo button invisible in the workers (2026-09-09, reported by Michael)
+
+Michael noticed that the workers show the undo but not the redo button. Nothing
+BigWarp-specific was disabling it: `undo_redo_actions.tsx` gives the redo button (only the
+redo one) the generic `hide-on-small-screen` class, which `main.less` turns into
+`display: none` below a 1200px **viewport** width. A worker iframe has its own viewport of
+roughly half the window, so it is always below that breakpoint and redo could never appear -
+even though it works fine. Fixed by dropping that class for `bigwarpWorker` mode: the
+worker's toolbar is stripped down to the landmark-clicking essentials anyway, so both
+buttons fit comfortably.
+
 ### 0.3 Not started / explicitly out of scope for this pass
 
 - **Manual browser QA in progress** (started 2026-08-31, see §0.4) - the single bug
@@ -1167,8 +1227,12 @@ Resolved: XY-only viewport restriction (§0.1, done via a dedicated single-tab F
 
 ## 11. File index (for quick navigation next session)
 
-- `frontend/javascripts/viewer/view/layouting/align_datasets_view.tsx` — the coordinator (§0.1 v1 rewrite; correspondence table redesigned in §0.6, `x`/`y` shortcut rename + landmark colors in §0.11; drawer now toggled via a `"bigwarpToggleDrawer"` postMessage from worker A's navbar instead of a portal-rendered button, §0.13).
-- `frontend/javascripts/viewer/view/action_bar/tools/toolbar_view.tsx` — `ToolSpecificSettings` hides `SkeletonSpecificButtons` for `bigwarpWorker` mode (§0.6).
+- `frontend/javascripts/viewer/view/layouting/align_datasets_view.tsx` — the coordinator (§0.1 v1 rewrite; correspondence table redesigned in §0.6, `x`/`y` shortcut rename + landmark colors in §0.11; residual-error column in §0.15). As of §0.19 the antd `Drawer` is gone: the tools live in a resizable, in-flow `.adv-panel` (drag handle + `window`-level drag listeners + an overlay so the iframes don't swallow the drag), toggled by a `"bigwarpCommand"` postMessage from worker A's *toolbar*.
+- `frontend/javascripts/viewer/view/action_bar/tools/bigwarp_specific_ui.tsx` — `BigWarpAlignmentButtons`: the align / force-save / show-table toolbar buttons shown in the primary worker only, relaying `"bigwarpCommand"` messages to the coordinator (§0.19).
+- `frontend/javascripts/viewer/view/action_bar/tools/toolbar_view.tsx` — `ToolSpecificSettings` hides `SkeletonSpecificButtons` for `bigwarpWorker` mode (§0.6) and renders `BigWarpAlignmentButtons` for the primary worker; the "more tools" `ToolDropdown` is dropped for workers (§0.19).
+- `frontend/javascripts/viewer/view/action_bar/dataset_position_view.tsx` — hides the `ShareButton` in the position/rotation group for `bigwarpWorker` mode (§0.19).
+- `frontend/stylesheets/main.less` — the coordinator's layout: `.adv-parent` (flex row) with `.adv-worker`, plus `.adv-panel`/`.adv-divider`/`.adv-resize-overlay` for the resizable landmark panel (§0.19).
+- `frontend/javascripts/viewer/view/action_bar/undo_redo_actions.tsx` — drops the redo button's `hide-on-small-screen` class for `bigwarpWorker` mode, since a worker iframe is always below that breakpoint (§0.20).
 - `frontend/javascripts/viewer/view/action_bar/save_actions.tsx` — `SaveActions` hides `SandboxActions` ("Sandbox" tag + "Copy To My Account") for `bigwarpWorker` mode, keeping `UndoRedoActions` (§0.11).
 - `frontend/javascripts/viewer/api/cross_origin_api.ts` — iframe postMessage bridge; has the v1 additions (`ensureLandmarkGroups`, `importNmlIntoGroup`, `exportTreesInGroupAsNmlString`, `exportTreesByIdsAsNmlString`, the `bigwarpShortcut` keydown relay, now `x`/`y` instead of `f`/`q` per §0.11) plus `save` (§0.9, backs the "Force Save" button); the "init" handshake itself was rewritten in §0.10 (general WK correctness fix, not BigWarp-specific).
 - `frontend/javascripts/viewer/api/api_latest.ts` — backing implementations of the above cross-origin commands.
@@ -1177,7 +1241,7 @@ Resolved: XY-only viewport restriction (§0.1, done via a dedicated single-tab F
 - `frontend/javascripts/viewer/view/layouting/flex_layout_wrapper.tsx` — `loadCurrentModel()` actually applies `getBigWarpWorkerLayoutConfig()` for `bigwarpWorker` mode as of §0.16 (this, not `tracing_layout_view.tsx`, is where the rendered FlexLayout `Model` is built - §0.1's original wiring into `TracingLayoutView.state.model` was dead code, since that state is never read by the renderer); `adaptModelToConditionalTabs` guarded against a missing right border in §0.17 (no longer hit by BigWarp workers after §0.18, but a correct guard regardless).
 - `frontend/javascripts/viewer/view/layouting/tracing_layout_view.tsx` — no longer branches on `bigwarpWorker` itself as of §0.16; its `state.model` is just `FlexLayoutWrapper`'s pre-mount placeholder.
 - `frontend/javascripts/router/router.tsx` — the `/align-datasets/:datasetNameAndId` route. `RootLayout` rendered `<Navbar />` unconditionally as of §0.5, but as of §0.13 skips it entirely for that one route (the coordinator's own top-level navbar) - worker iframes' own navbars are a separate thing, unaffected.
-- `frontend/javascripts/navbar.tsx` — restricts navigation-away affordances for `bigwarpWorker` mode while keeping the `navbarTracingSlot` portal target (§0.5); drops the WK logo entirely for `bigwarpWorker` mode as of §0.11 (previously kept as a non-clickable label), then as of §0.13 brings it back **just for the left/"primary" worker** as a real `target="_top"` link, plus a "bigwarpToggleDrawer"-postMessage-sending "Alignment Tools" button - the `navbarAlignToolsSlot` portal target from §0.8 is gone (dead once the coordinator's own navbar stopped rendering).
+- `frontend/javascripts/navbar.tsx` — restricts navigation-away affordances for `bigwarpWorker` mode while keeping the `navbarTracingSlot` portal target (§0.5); drops the WK logo entirely for `bigwarpWorker` mode as of §0.11 (previously kept as a non-clickable label), then as of §0.13 brings it back **just for the left/"primary" worker** as a real `target="_top"` link - the `navbarAlignToolsSlot` portal target from §0.8 is gone (dead once the coordinator's own navbar stopped rendering), and §0.13's "Alignment Tools" button is gone too as of §0.19 (replaced by the toolbar's "show table" toggle).
 - `frontend/javascripts/viewer/model/accessors/tool_accessor.ts` — `Toolkit.BIGWARP_LANDMARKS` (§0.5).
 - `frontend/javascripts/viewer/view/action_bar_view.tsx` — `ModesView` hides the toolkit switcher for `bigwarpWorker` mode (§0.5).
 - `frontend/javascripts/viewer/model/sagas/settings_saga.ts` — `pushUserSettingsAsync`/`pushDatasetSettingsAsync` SANDBOX guards (§0.5, general WK bug fix, same class as §0.4's).

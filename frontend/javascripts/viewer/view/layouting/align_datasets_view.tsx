@@ -1,9 +1,10 @@
 import { EyeOutlined } from "@ant-design/icons";
 import { createExplorational, getDataset, updateDatasetPartial } from "admin/rest_api";
-import { Button, Drawer, Select, Space, Spin, Table, Typography } from "antd";
+import { Button, Select, Space, Spin, Table, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import Deferred from "libs/async/deferred";
 import Toast from "libs/toast";
+import { clamp } from "libs/utils";
 import { zip } from "lodash-es";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
@@ -38,6 +39,14 @@ type IframeRole = Side | "store";
 const ALL_ROLES: IframeRole[] = ["A", "B", "store"];
 
 const LANDMARK_ANNOTATION_STORAGE_PREFIX = "bigwarp-landmark-annotation:";
+
+// Sizing of the collapsible landmark panel on the left. It is part of the normal
+// layout flow (it pushes the worker iframes to the right instead of covering them) and
+// can be resized by dragging its right-hand divider. See BIGWARP_ALIGNMENT_PLAN.md §0.19.
+const MIN_PANEL_WIDTH = 260;
+const DEFAULT_PANEL_WIDTH = 380;
+const MAX_PANEL_WIDTH_RATIO = 0.7;
+const PANEL_WIDTH_KEYBOARD_STEP = 16;
 
 function getLandmarkAnnotationStorageKey(
   datasetId: string,
@@ -165,7 +174,9 @@ function AlignDatasetsView() {
     A: false,
     B: false,
   });
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH);
+  const [isResizingPanel, setIsResizingPanel] = useState(false);
   const [correspondencesA, setCorrespondencesA] = useState<CorrespondenceEntry[]>([]);
   const [correspondencesB, setCorrespondencesB] = useState<CorrespondenceEntry[]>([]);
   const [transformBtoA, setTransformBtoA] = useState<Transform | null>(null);
@@ -173,13 +184,6 @@ function AlignDatasetsView() {
     A: false,
     B: false,
   });
-  // Surfaces the sync loop's progress/health directly in the drawer instead of only
-  // logging to the console - the sync loop only starts once both workers *and* the
-  // store's tree-group bootstrap are ready (see the two effects below), and each tick
-  // can fail independently, so this is the quickest way to see where things are stuck.
-  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
-  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
-  const [isForceSaving, setIsForceSaving] = useState(false);
 
   const iframeRefs = useRef<Record<IframeRole, HTMLIFrameElement | null>>({
     A: null,
@@ -203,6 +207,7 @@ function AlignDatasetsView() {
   // the window message listener) can call the current onAlign/toggleShowOtherLayer/
   // syncOtherViewToFocused without needing to re-subscribe that listener every render.
   const onAlignRef = useRef<() => void>(() => {});
+  const onForceSaveRef = useRef<() => void>(() => {});
   const toggleShowOtherLayerRef = useRef<(side: Side) => void>(() => {});
   const syncOtherViewToFocusedRef = useRef<(side: Side) => void>(() => {});
 
@@ -225,6 +230,19 @@ function AlignDatasetsView() {
       toggleShowOtherLayerRef.current(side);
     } else if (key === "y") {
       syncOtherViewToFocusedRef.current(side);
+    }
+  }, []);
+
+  // The counterpart of the alignment buttons in the primary worker's toolbar (see
+  // action_bar/tools/bigwarp_specific_ui.tsx) - the coordinator owns all of these
+  // actions, the worker just asks for them.
+  const handleCommand = useCallback((command: string) => {
+    if (command === "align") {
+      onAlignRef.current();
+    } else if (command === "forceSave") {
+      onForceSaveRef.current();
+    } else if (command === "toggleTable") {
+      setIsPanelOpen((isOpen) => !isOpen);
     }
   }, []);
 
@@ -256,12 +274,13 @@ function AlignDatasetsView() {
         return;
       }
 
-      // Sent by the "Alignment Tools" button in worker A's own navbar - the
-      // coordinator's top-level navbar is gone (router.tsx's RootLayout), so this is
-      // now the only way to reach that toggle. See BIGWARP_ALIGNMENT_PLAN.md §0.13.
-      if (data.type === "bigwarpToggleDrawer") {
+      // Sent by the alignment buttons in worker A's own toolbar - the coordinator's
+      // top-level navbar is gone (router.tsx's RootLayout) and the coordinator has no
+      // chrome of its own, so this is the only way to reach these actions. See
+      // BIGWARP_ALIGNMENT_PLAN.md §0.13/§0.19.
+      if (data.type === "bigwarpCommand") {
         if (event.source === iframeRefs.current.A?.contentWindow) {
-          setDrawerOpen((open) => !open);
+          handleCommand(data.command);
         }
         return;
       }
@@ -282,7 +301,32 @@ function AlignDatasetsView() {
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [handleShortcut]);
+  }, [handleShortcut, handleCommand]);
+
+  // Dragging the landmark panel's divider. The listeners have to live on the window
+  // rather than on the divider itself so that the drag keeps working once the cursor
+  // has left the (narrow) divider, and the transparent overlay rendered while dragging
+  // keeps the worker iframes from swallowing those events - mouse events that happen
+  // inside an iframe never reach the embedding document.
+  useEffect(() => {
+    if (!isResizingPanel) {
+      return;
+    }
+    const onMouseMove = (event: MouseEvent) => {
+      // The coordinator page has no chrome of its own, so the panel starts at x = 0 and
+      // the cursor's x position *is* the panel width the user is dragging for.
+      setPanelWidth(
+        clamp(MIN_PANEL_WIDTH, event.clientX, window.innerWidth * MAX_PANEL_WIDTH_RATIO),
+      );
+    };
+    const stopResizing = () => setIsResizingPanel(false);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", stopResizing);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, [isResizingPanel]);
 
   // Fetch the dataset once, to resolve its layers (for the picker) and to patch its
   // default transforms later ("Store as Default").
@@ -424,8 +468,6 @@ function AlignDatasetsView() {
         }
         setCorrespondencesA(getCorrespondenceEntries(treesA));
         setCorrespondencesB(getCorrespondenceEntries(treesB));
-        setLastSyncedAt(Date.now());
-        setLastSyncError(null);
 
         for (const [side, trees] of [
           ["A", treesA],
@@ -448,7 +490,6 @@ function AlignDatasetsView() {
         }
       } catch (error) {
         console.error("BigWarp sync tick failed:", error);
-        setLastSyncError(error instanceof Error ? error.message : String(error));
       }
     }, 500);
     return () => {
@@ -542,17 +583,16 @@ function AlignDatasetsView() {
   // all three iframes close together, which may not leave the store's own
   // beforeunload-triggered save enough time to actually finish.
   const onForceSave = useCallback(async () => {
-    setIsForceSaving(true);
     try {
       await sendMessage("store", "save", []);
       Toast.success("Saved the landmark annotation.");
     } catch (error) {
       console.error(error);
       Toast.error("Could not save the landmark annotation.");
-    } finally {
-      setIsForceSaving(false);
     }
   }, [sendMessage]);
+
+  onForceSaveRef.current = onForceSave;
 
   const onStoreAsDefault = useCallback(async () => {
     if (transformBtoA == null || dataset == null || layerBName == null) {
@@ -639,7 +679,6 @@ function AlignDatasetsView() {
     {
       title: layerAName,
       key: "posA",
-      width: 180,
       align: "center",
       render: (_value, row) =>
         row.posA != null ? (
@@ -664,7 +703,6 @@ function AlignDatasetsView() {
     {
       title: layerBName,
       key: "posB",
-      width: 180,
       align: "center",
       render: (_value, row) =>
         row.posB != null ? (
@@ -691,7 +729,7 @@ function AlignDatasetsView() {
     {
       title: "Error",
       key: "residual",
-      width: 70,
+      width: 56,
       align: "center",
       render: (_value, row) => (row.residual != null ? row.residual.toFixed(1) : "–"),
     },
@@ -718,63 +756,87 @@ function AlignDatasetsView() {
 
   return (
     <div className="adv-parent">
-      <Drawer
-        title="Align Layers"
-        placement="left"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        mask={false}
-        size={420}
-      >
-        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
-          <Typography.Text>
-            Fixed: <b>{layerAName}</b> &nbsp;→&nbsp; Moving: <b>{layerBName}</b>
-          </Typography.Text>
-          <Space wrap>
-            <Button onClick={onReset}>Reset</Button>
-            <Button type="primary" onClick={onAlign}>
-              Align (t)
-            </Button>
-            <Button onClick={onStoreAsDefault} disabled={transformBtoA == null}>
-              Store as Default
-            </Button>
-            <Button onClick={onForceSave} loading={isForceSaving}>
-              Force Save
-            </Button>
-          </Space>
-          <Space wrap>
-            <Button onClick={() => toggleShowOtherLayer("A")}>
-              {otherLayerVisible.A ? "Hide" : "Show"} {layerBName} in {layerAName} view (x)
-            </Button>
-            <Button onClick={() => toggleShowOtherLayer("B")}>
-              {otherLayerVisible.B ? "Hide" : "Show"} {layerAName} in {layerBName} view (x)
-            </Button>
-          </Space>
-          <Typography.Text type="secondary">
-            While a view has keyboard focus: <b>t</b> aligns, <b>x</b> toggles the other layer in
-            that view, <b>y</b> syncs the other view to that view's position.
-          </Typography.Text>
-          <Typography.Text
-            type={lastSyncError != null ? "danger" : "secondary"}
-            style={{ fontSize: 12 }}
-          >
-            Sync: workers {workersReady.A ? "✅" : "⏳"} A / {workersReady.B ? "✅" : "⏳"} B ·
-            groups {groupIds != null ? "✅" : "⏳"} ·{" "}
-            {lastSyncError != null
-              ? `error: ${lastSyncError}`
-              : lastSyncedAt != null
-                ? `last synced ${new Date(lastSyncedAt).toLocaleTimeString()}`
-                : "not synced yet"}
-          </Typography.Text>
-          <Table<CorrespondenceRow>
-            size="small"
-            pagination={false}
-            columns={columns}
-            dataSource={tableData}
-            style={{ width: "fit-content" }}
+      {/* The landmark panel is toggled by the "show table" button in the primary
+      worker's toolbar (see action_bar/tools/bigwarp_specific_ui.tsx). It only holds
+      what isn't already reachable from there, to keep it as slim as possible. */}
+      {isPanelOpen ? (
+        <>
+          <div className="adv-panel" style={{ width: panelWidth }}>
+            <Space orientation="vertical" style={{ width: "100%" }} size="small">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Fixed <b>{layerAName}</b> &nbsp;→&nbsp; moving <b>{layerBName}</b>
+              </Typography.Text>
+              <Space size={4} wrap>
+                <Tooltip title={`Show/hide "${layerBName}" in the ${layerAName} view (x)`}>
+                  <Button
+                    size="small"
+                    type={otherLayerVisible.A ? "primary" : "default"}
+                    onClick={() => toggleShowOtherLayer("A")}
+                  >
+                    Overlay in {layerAName}
+                  </Button>
+                </Tooltip>
+                <Tooltip title={`Show/hide "${layerAName}" in the ${layerBName} view (x)`}>
+                  <Button
+                    size="small"
+                    type={otherLayerVisible.B ? "primary" : "default"}
+                    onClick={() => toggleShowOtherLayer("B")}
+                  >
+                    Overlay in {layerBName}
+                  </Button>
+                </Tooltip>
+              </Space>
+              <Space size={4} wrap>
+                <Tooltip title="Drop the current alignment and show both layers untransformed again">
+                  <Button size="small" onClick={onReset}>
+                    Reset
+                  </Button>
+                </Tooltip>
+                <Tooltip
+                  title={`Store the current alignment as "${layerBName}"'s default transform in the dataset`}
+                >
+                  <Button size="small" onClick={onStoreAsDefault} disabled={transformBtoA == null}>
+                    Store as Default
+                  </Button>
+                </Tooltip>
+              </Space>
+              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                While a view has keyboard focus: <b>t</b> aligns, <b>x</b> toggles the other layer
+                in that view, <b>y</b> syncs the other view to that view's position.
+              </Typography.Text>
+              <Table<CorrespondenceRow>
+                size="small"
+                pagination={false}
+                columns={columns}
+                dataSource={tableData}
+                scroll={{ x: "max-content" }}
+              />
+            </Space>
+          </div>
+          {/* A <button> rather than a plain <div> so that dragging isn't the only way
+          to resize the panel (the arrow keys work while it is focused, too). */}
+          <button
+            type="button"
+            className="adv-divider"
+            aria-label="Resize the landmark panel"
+            title="Drag (or use the arrow keys) to resize the landmark panel"
+            onMouseDown={() => setIsResizingPanel(true)}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+                return;
+              }
+              const delta =
+                event.key === "ArrowLeft" ? -PANEL_WIDTH_KEYBOARD_STEP : PANEL_WIDTH_KEYBOARD_STEP;
+              setPanelWidth((width) =>
+                clamp(MIN_PANEL_WIDTH, width + delta, window.innerWidth * MAX_PANEL_WIDTH_RATIO),
+              );
+            }}
           />
-        </Space>
-      </Drawer>
+        </>
+      ) : null}
+      {/* While dragging the divider, this catches the mouse events that would
+      otherwise be swallowed by the iframes below it. */}
+      {isResizingPanel ? <div className="adv-resize-overlay" /> : null}
       <div className="adv-worker">
         <iframe
           ref={(el) => {

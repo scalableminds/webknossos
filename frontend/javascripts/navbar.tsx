@@ -24,7 +24,6 @@ import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
-  Button,
   ConfigProvider,
   Flex,
   Input,
@@ -888,8 +887,9 @@ function Navbar() {
   // The coordinator's own top-level navbar is dropped entirely for the
   // /align-datasets route (router.tsx's RootLayout), to avoid stacking it on top of
   // each worker iframe's own navbar - so the *left* ("primary") worker's navbar is now
-  // the only place left to reach the dashboard and to toggle the coordinator's
-  // alignment-tools drawer. See BIGWARP_ALIGNMENT_PLAN.md §0.13.
+  // the only place left to reach the dashboard. The alignment actions themselves live
+  // in that worker's toolbar (see action_bar/tools/bigwarp_specific_ui.tsx) instead.
+  // See BIGWARP_ALIGNMENT_PLAN.md §0.13/§0.19.
   const isBigWarpPrimaryWorker = isBigWarpWorker && hasUrlParam("bigwarpPrimary");
   // The right worker still drops the logo entirely - it isn't useful there, and
   // showing it on both sides would just reintroduce the "double chrome" feeling this
@@ -934,19 +934,6 @@ function Navbar() {
           },
         ];
   const trailingNavItems = [];
-
-  if (isBigWarpPrimaryWorker) {
-    trailingNavItems.push(
-      <Button
-        key="bigwarp-toggle-drawer"
-        type="primary"
-        size="small"
-        onClick={() => window.parent.postMessage({ type: "bigwarpToggleDrawer" }, "*")}
-      >
-        Alignment Tools
-      </Button>,
-    );
-  }
 
   if (isAuthenticated && !isBigWarpWorker) {
     const loggedInUser: APIUser = activeUser;

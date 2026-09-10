@@ -79,7 +79,10 @@ const createRequestBucketInfo = (
     : {}),
 });
 
-function createSendBucketInfo(zoomedAddress: BucketAddress, magInfo: MagInfo): SendBucketInfo {
+export function createSendBucketInfo(
+  zoomedAddress: BucketAddress,
+  magInfo: MagInfo,
+): SendBucketInfo {
   return {
     position: bucketPositionToGlobalAddress(zoomedAddress, magInfo),
     additionalCoordinates: zoomedAddress[4],

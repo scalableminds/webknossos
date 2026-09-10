@@ -141,7 +141,13 @@ export function* tryToIncorporateActions(
         /////////////
         // Volume
         /////////////
-        case "updateBucket": {
+        // SPIKE: new volume architecture. updateBucketPartial has no backend
+        // support yet (design/volume_annotation_architecture.md §7.1) and is
+        // therefore never actually sent by the server, but it carries the
+        // same bucket-addressing fields as updateBucket, so the same
+        // "drop the local cache, force a re-fetch" handling is correct for it.
+        case "updateBucket":
+        case "updateBucketPartial": {
           const { value } = action;
           const cube = Model.getCubeByLayerName(value.actionTracingId);
 

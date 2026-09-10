@@ -73,14 +73,27 @@ class VolumeBucketBuffer(
   def put(bucketPosition: BucketPosition, bucketBytes: Array[Byte]): Unit =
     bucketDataBuffer.put(bucketPosition, (Full(bucketBytes), true))
 
-  def applyUpdateBucketPartialAction(action: UpdateBucketPartialVolumeAction): Fox[Unit] = for {
-    previousBucketBytesBox <- getWithFallback(action.bucketPosition).shiftBox
-    previousBucketBytesOrEmpty <- bytesWithEmptyFallback(previousBucketBytesBox).toFox
-    updatedBucketBytes <- applyVoxelRuns(previousBucketBytesOrEmpty, action.voxelRunsBinary).toFox
-    _ = bucketDataBuffer.put(action.bucketPosition, (Full(updatedBucketBytes), true))
-    (additions, removals) <- scanSegmentAdditionsAndRemovals(previousBucketBytesOrEmpty, updatedBucketBytes).toFox
-    _ = incorporateAdditionsAndRemovals(action.bucketPosition, additions, removals)
-  } yield ()
+  private def applyBucketMutation(
+      bucketPosition: BucketPosition
+  )(transform: Array[Byte] => Box[Array[Byte]]): Fox[Unit] =
+    for {
+      previousBucketBytesBox <- getWithFallback(bucketPosition).shiftBox
+      previousBucketBytesOrEmpty <- bytesWithEmptyFallback(previousBucketBytesBox).toFox
+      updatedBucketBytes <- transform(previousBucketBytesOrEmpty).toFox
+      _ = put(bucketPosition, updatedBucketBytes)
+      (additions, removals) <- scanSegmentAdditionsAndRemovals(previousBucketBytesOrEmpty, updatedBucketBytes).toFox
+      _ = incorporateAdditionsAndRemovals(bucketPosition, additions, removals)
+    } yield ()
+
+  def applyUpdateBucketPartialAction(action: UpdateBucketPartialVolumeAction): Fox[Unit] =
+    applyBucketMutation(action.bucketPosition)(previous => applyVoxelRuns(previous, action.voxelRunsBinary))
+
+  def applyDeleteSegmentDataAction(bucketPositions: List[BucketPosition], segmentId: Long): Fox[Unit] =
+    Fox
+      .serialCombined(bucketPositions)(bucketPosition =>
+        applyBucketMutation(bucketPosition)(previous => deleteSegmentFromBucket(previous, segmentId))
+      )
+      .map(_ => ())
 
   private def incorporateAdditionsAndRemovals(
       bucketPosition: BucketPosition,
@@ -111,6 +124,16 @@ class VolumeBucketBuffer(
         ElementClass.bytesPerElement(volumeLayer.elementClass),
         ElementClass.isSigned(volumeLayer.elementClass),
         voxelRunsBinary
+      )
+    )
+
+  private def deleteSegmentFromBucket(bucketBytes: Array[Byte], segmentId: Long): Box[Array[Byte]] =
+    tryo(
+      bucketScanner.deleteSegmentFromBucket(
+        bucketBytes,
+        ElementClass.bytesPerElement(volumeLayer.elementClass),
+        ElementClass.isSigned(volumeLayer.elementClass),
+        segmentId
       )
     )
 

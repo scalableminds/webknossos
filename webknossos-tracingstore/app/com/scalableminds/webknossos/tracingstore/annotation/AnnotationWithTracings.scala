@@ -229,13 +229,12 @@ case class AnnotationWithTracings(
     } yield this.copy(tracingsById = tracingsById.updated(a.actionTracingId, Right(updated)))
 
   def applyUpdateBucketPartialVolumeAction(
-      a: UpdateBucketPartialVolumeAction,
-      annotationWithTracings: AnnotationWithTracings
+      a: UpdateBucketPartialVolumeAction
   )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
-      volumeTracing <- getVolume(a.actionTracingId).toFox
+      _ <- getVolume(a.actionTracingId).toFox
       bucketBuffer <- volumeBucketBuffersByTracingId.get(a.actionTracingId).toFox
-      _ = bucketBuffer.applyUpdateBucketPartialAction(a)
+      _ <- bucketBuffer.applyUpdateBucketPartialAction(a)
     } yield this
 
   def applyEditableMappingAction(

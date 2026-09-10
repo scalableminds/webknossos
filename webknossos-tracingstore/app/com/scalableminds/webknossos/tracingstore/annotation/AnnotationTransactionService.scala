@@ -6,7 +6,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   EagerBucketMutatingVolumeUpdateAction,
-  UpdateBucketPartialVolumeAction,
+  LazyBucketMutatingVolumeUpdateAction,
   UpdateBucketVolumeAction,
   VolumeTracingService
 }
@@ -296,9 +296,9 @@ class AnnotationTransactionService @Inject() (
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
       _ <- Fox.fromBool(
         bucketMutatingActions.isEmpty || !updateActionGroup.actions.exists(
-          _.isInstanceOf[UpdateBucketPartialVolumeAction]
+          _.isInstanceOf[LazyBucketMutatingVolumeUpdateAction]
         )
-      ) ?~> "Cannot mix eager bucket mutating actions with UpdateBucketPartialVolumeAction in the same update group"
+      ) ?~> "Cannot mix eager bucket mutating actions with lazily applied bucket mutating actions in the same update group"
       _ = stats.count("volumeBucketMutatingActions", bucketMutatingActions.length)
       actionsGrouped: Map[String, List[EagerBucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(
         _.actionTracingId
@@ -306,7 +306,7 @@ class AnnotationTransactionService @Inject() (
       _ <- Fox.serialCombined(actionsGrouped.keys.toList) { volumeTracingId =>
         for {
           // findVolume here also materializes all update actions up to here, which is necessary to guarantee version ordering
-          // when mixing eager bucketMutatingActions with updateBucketPartial.
+          // when mixing eager bucket mutating actions with lazily applied ones (see LazyBucketMutatingVolumeUpdateAction).
           tracing <- stats.time("findVolume")(annotationService.findVolume(annotationId, volumeTracingId))
           _ <- stats.time("applyBucketMutatingActions")(
             volumeTracingService.applyBucketMutatingActions(

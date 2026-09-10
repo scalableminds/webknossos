@@ -10,16 +10,15 @@ import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{Fox, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
-import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions}
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.*
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
@@ -173,18 +172,6 @@ class VolumeTracingService @Inject() (
                 volumeBucketBuffer
               )
             ) ?~> "Failed to save volume data."
-        case a: DeleteSegmentDataVolumeAction =>
-          if (!tracing.getHasSegmentIndex) {
-            Fox.failure("Cannot delete segment data for annotations without segment index.")
-          } else
-            deleteSegmentData(
-              tracingId,
-              annotationId,
-              tracing,
-              a,
-              segmentIndexBuffer,
-              newVersion
-            ) ?~> "Failed to delete segment data."
         case _ => Fox.failure("Unknown bucket-mutating action.")
       })
       _ <- stats.time("volume.bucketBufferFlush")(volumeBucketBuffer.flush())
@@ -235,73 +222,6 @@ class VolumeTracingService @Inject() (
     if (tracing.getHasEditableMapping)
       Fox.failure("getMappingNameUnlessEditable called on volumeTracing with editableMapping!")
     else Fox.successful(tracing.mappingName)
-
-  private lazy val bucketScanner = new NativeBucketScanner()
-
-  private def deleteSegmentData(
-      tracingId: String,
-      annotationId: ObjectId,
-      volumeTracing: VolumeTracing,
-      a: DeleteSegmentDataVolumeAction,
-      segmentIndexBuffer: VolumeSegmentIndexBuffer,
-      version: Long
-  )(using tc: TokenContext): Fox[Unit] =
-    for {
-      _ <- Fox.successful(())
-      volumeLayer = volumeTracingLayer(annotationId, tracingId, volumeTracing)
-      fallbackLayer <- getFallbackLayer(annotationId, volumeTracing)
-      possibleAdditionalCoordinates = AdditionalAxis.coordinateSpace(volumeLayer.additionalAxes).map(Some(_))
-      additionalCoordinateList =
-        if (possibleAdditionalCoordinates.isEmpty) {
-          List(None)
-        } else {
-          possibleAdditionalCoordinates.toList
-        }
-      mappingName <- getMappingNameUnlessEditable(volumeTracing)
-      _ <- Fox.serialCombined(volumeTracing.mags.toList)(magProto =>
-        Fox.serialCombined(additionalCoordinateList) { additionalCoordinates =>
-          val mag = vec3IntFromProto(magProto)
-          for {
-            bucketPositionsRaw <- volumeSegmentIndexService.getSegmentToBucketIndex(
-              volumeTracing,
-              fallbackLayer,
-              tracingId,
-              a.id.toLong,
-              mag,
-              mappingName,
-              editableMappingTracingId(volumeTracing, tracingId),
-              volumeTracing.version,
-              additionalCoordinates
-            )
-            bucketPositions = bucketPositionsRaw.toSeq
-              .map(vec3IntFromProto)
-              .map(_ * mag * DataLayer.bucketLength)
-              .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, additionalCoordinates))
-              .toList
-            bytesPerElement = ElementClass.bytesPerElement(ElementClass.fromProto(volumeTracing.elementClass))
-            isSigned = ElementClass.isSigned(ElementClass.fromProto(volumeTracing.elementClass))
-            _ <- Fox.serialCombined(bucketPositions) { bucketPosition =>
-              for {
-                bucketBytes <- loadBucket(volumeLayer, bucketPosition)
-                filteredBucketBytes <- tryo(
-                  bucketScanner.deleteSegmentFromBucket(bucketBytes, bytesPerElement, isSigned, a.id.toLong)
-                ).toFox
-                _ <- saveBucket(volumeLayer, bucketPosition, filteredBucketBytes, version)
-                _ <- updateSegmentIndex(
-                  volumeLayer,
-                  segmentIndexBuffer,
-                  bucketPosition,
-                  filteredBucketBytes,
-                  Full(bucketBytes),
-                  editableMappingTracingId(volumeTracing, tracingId)
-                )
-              } yield ()
-            }
-          } yield ()
-        }
-      )
-      _ <- segmentIndexBuffer.flush()
-    } yield ()
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
     if (tracing.mags.nonEmpty) {

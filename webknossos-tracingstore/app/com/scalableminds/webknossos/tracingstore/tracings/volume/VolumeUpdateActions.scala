@@ -49,6 +49,13 @@ trait EagerBucketMutatingVolumeUpdateAction extends ApplyableVolumeUpdateAction 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = tracing
 }
 
+// Unlike EagerBucketMutatingVolumeUpdateAction, these are not applied at commit time. Instead they are
+// replayed lazily (like all other, non-bucket-mutating actions), going through the per-update-group
+// VolumeBucketBuffer for their tracing. AnnotationTransactionService.handleUpdateGroup asserts that the two
+// kinds are never mixed within the same update group, since eager actions are already durably applied by the
+// time a lazy one in the same group would be replayed.
+trait LazyBucketMutatingVolumeUpdateAction extends VolumeUpdateAction
+
 trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserStateUpdateAction {
   def actionAuthorId: Option[ObjectId]
   def applyOnUserState(
@@ -571,7 +578,7 @@ case class DeleteSegmentDataVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends EagerBucketMutatingVolumeUpdateAction derives JsonAutoFormat {
+) extends LazyBucketMutatingVolumeUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -959,7 +966,7 @@ case class UpdateBucketPartialVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends VolumeUpdateAction derives JsonAutoFormat {
+) extends LazyBucketMutatingVolumeUpdateAction derives JsonAutoFormat {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =

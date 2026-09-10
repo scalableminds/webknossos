@@ -212,11 +212,7 @@ class TSAnnotationService @Inject() (
         // mutated) and never back to false. A false value indicates a frontend bug.
         Fox.failure("Received updateVolumeBucketDataHasChanged action with value=false, which is not allowed.")
       case a: UpdateBucketPartialVolumeAction =>
-        annotationWithTracings.applyUpdateBucketPartialVolumeAction(
-          a,
-          annotationWithTracings,
-          annotationId
-        )
+        annotationWithTracings.applyUpdateBucketPartialVolumeAction(a, annotationWithTracings)
       case a: ApplyableVolumeUpdateAction =>
         annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.volumeActionFailed
       case a: EditableMappingUpdateAction =>

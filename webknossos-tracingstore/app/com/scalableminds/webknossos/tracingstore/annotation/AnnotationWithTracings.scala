@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.box.{Box, Failure, Full}
-import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerProto,
   AnnotationProto,
@@ -231,8 +230,7 @@ case class AnnotationWithTracings(
 
   def applyUpdateBucketPartialVolumeAction(
       a: UpdateBucketPartialVolumeAction,
-      annotationWithTracings: AnnotationWithTracings,
-      annotationId: ObjectId
+      annotationWithTracings: AnnotationWithTracings
   )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       volumeTracing <- getVolume(a.actionTracingId).toFox

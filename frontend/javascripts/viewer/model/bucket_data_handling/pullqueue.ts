@@ -296,8 +296,10 @@ class PullQueue {
           continue;
         }
 
+        // Note that this is a voxel offset, not a slice index: receiveData slices the wire
+        // buffer at [channelCount * offset, channelCount * (offset + effectiveVoxelCount)).
         const voxelOffsetInWireData = isBatched
-          ? (sibling.getT() % constants.BUCKET_WIDTH)
+          ? (sibling.getT() % constants.BUCKET_WIDTH) * this.cube.getEffectiveBucketVoxelCount()
           : 0;
         this.handleBucket(sibling, bucketData, voxelOffsetInWireData);
       } catch (error) {

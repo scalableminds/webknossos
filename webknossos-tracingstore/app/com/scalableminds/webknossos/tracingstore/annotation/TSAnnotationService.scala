@@ -211,7 +211,7 @@ class TSAnnotationService @Inject() (
         // mutated) and never back to false. A false value indicates a frontend bug.
         Fox.failure("Received updateVolumeBucketDataHasChanged action with value=false, which is not allowed.")
       case a: UpdateBucketPartialVolumeAction =>
-        volumeTracingService.applyUpdateBucketPartialVolumeAction(
+        annotationWithTracings.applyUpdateBucketPartialVolumeAction(
           a,
           annotationWithTracings,
           annotationId
@@ -245,7 +245,7 @@ class TSAnnotationService @Inject() (
       annotationWithTracings: AnnotationWithTracings,
       action: AddLayerAnnotationAction,
       targetVersion: Long
-  )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       tracingId <- action.tracingId.toFox ?~> "add layer action has no tracingId"
       _ <- Fox.fromBool(
@@ -256,14 +256,24 @@ class TSAnnotationService @Inject() (
           _.typ == AnnotationLayerTypeProto.Skeleton && action.layerParameters.typ == AnnotationLayerType.Skeleton
         )
       ) ?~> Msg.Annotation.ApplyUpdate.onlyOneSkeletonAllowed
-      tracing <- remoteWebknossosClient.createTracingFor(
+      newTracing <- remoteWebknossosClient.createTracingFor(
         annotationId,
         action.layerParameters,
         previousVersion = targetVersion - 1
       )
-      // TODO also add new bucket buffer if the new layer is a volume tracing
-      updated = annotationWithTracings.addLayer(action, tracingId, tracing)
-    } yield updated
+      withNewLayer = annotationWithTracings.addLayer(action, tracingId, newTracing)
+
+      withNewLayerAndBuffer = newTracing match {
+        case Right(volumeTracing) if !volumeTracing.getHasEditableMapping =>
+          withNewLayer.copy(volumeBucketBuffersById =
+            withNewLayer.volumeBucketBuffersById.updated(
+              tracingId,
+              volumeTracingService.createVolumeBucketBuffer(annotationId, tracingId, volumeTracing, targetVersion)
+            )
+          )
+        case _ => withNewLayer
+      }
+    } yield withNewLayerAndBuffer
 
   private def revertToVersion(
       annotationId: ObjectId,

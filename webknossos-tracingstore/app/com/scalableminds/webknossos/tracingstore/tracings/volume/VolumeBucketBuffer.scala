@@ -1,10 +1,12 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.google.common.primitives.UnsignedInteger
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
 
 import scala.collection.mutable
@@ -58,6 +60,30 @@ class VolumeBucketBuffer(
 
   def put(bucketPosition: BucketPosition, bucketBytes: Array[Byte]): Unit =
     bucketDataBuffer.put(bucketPosition, (Full(bucketBytes), true))
+
+  def applyUpdateBucketPartialAction(action: UpdateBucketPartialVolumeAction): Fox[Unit] = for {
+    previousBucketBytesBox <- getWithFallback(action.bucketPosition).shiftBox
+    previousBucketBytesOrEmpty <- bytesWithEmptyFallback(previousBucketBytesBox).toFox
+    (updated, additions, removals) <- applyVoxelRuns(previousBucketBytesOrEmpty, action.voxelRunsBase64).toFox
+    _ = bucketDataBuffer.put(action.bucketPosition, (Full(updated), true))
+  } yield ()
+
+  private def applyVoxelRuns(
+      previousBucketBytesOrEmpty: Array[Byte],
+      voxelRunsBase64: String
+  ): Box[(Array[Byte], Set[UnsignedInteger], Set[UnsignedInteger])] = ???
+
+  // TODO deduplicate from segment index buffer
+  def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]]): Box[Array[Byte]] =
+    bytesBox match {
+      case Empty       => Full(emptyBucketArrayForElementClass)
+      case Full(bytes) => Full(bytes)
+      case f: Failure  => f
+    }
+
+  // TODO deduplicate from segment index buffer
+  lazy val emptyBucketArrayForElementClass: Array[Byte] =
+    Array.fill[Byte](ElementClass.bytesPerElement(volumeLayer.elementClass))(0)
 
   def flush(): Fox[Unit] = {
     val fullDirtyBuckets = bucketDataBuffer.keys.flatMap { bucketPosition =>

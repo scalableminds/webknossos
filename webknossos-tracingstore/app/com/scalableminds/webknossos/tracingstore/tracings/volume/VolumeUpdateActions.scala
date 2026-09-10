@@ -950,7 +950,7 @@ case class UpdateSegmentGroupVisibilityVolumeAction(
 
 case class UpdateBucketPartialVolumeAction(
     actionTracingId: String,
-    bucketPosition: Vec3Int,
+    position: Vec3Int,
     mag: Vec3Int,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     voxelRunsBase64: String,
@@ -966,6 +966,8 @@ case class UpdateBucketPartialVolumeAction(
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
+  def bucketPosition =
+    BucketPosition(position.x, position.y, position.z, mag, additionalCoordinates)
 }
 
 // Only used to represent legacy update actions from the db where not all fields are set

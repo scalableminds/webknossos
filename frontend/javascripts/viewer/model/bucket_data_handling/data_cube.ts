@@ -21,7 +21,7 @@ import Constants from "viewer/constants";
 import constants, {
   getEffectiveBucketDepth,
   MappingStatusEnum,
-  wantsTRecycling,
+  usesTRecycling,
 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
@@ -117,7 +117,7 @@ class DataCube {
   // batch's data is fetched together and shared (see PullQueue.pullBatch and
   // DataBucket.rawBucketData) rather than in per-t network requests. See TextureBucketManager
   // for how the GPU atlas reuses one shared upload for a whole batch.
-  readonly isTRecyclingEligible: boolean;
+  readonly usesTRecycling: boolean;
   additionalAxes: Record<string, AdditionalAxis>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;
@@ -158,7 +158,7 @@ class DataCube {
     isSegmentation: boolean,
     layerName: string,
     // Whether this layer is backed by a volume tracing, i.e. can be edited. Only relevant
-    // for the t-recycling eligibility check below (see wantsTRecycling).
+    // for the t-recycling check below (see usesTRecycling).
     isEditableVolumeLayer: boolean = false,
   ) {
     this.elementClass = elementClass;
@@ -169,7 +169,7 @@ class DataCube {
     this.additionalAxes = keyBy(additionalAxes, "name");
     this.emitter = createNanoEvents();
     this.effectiveBucketDepth = getEffectiveBucketDepth(layerBBox.getSize()[2]);
-    this.isTRecyclingEligible = wantsTRecycling(
+    this.usesTRecycling = usesTRecycling(
       layerBBox.getSize()[2],
       this.additionalAxes.t != null,
       isEditableVolumeLayer,

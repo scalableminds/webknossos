@@ -264,7 +264,7 @@ export default class LayerRenderingManager {
     if (
       !otherThingsChanged &&
       additionalCoordinatesChanged &&
-      this.textureBucketManager.isTRecyclingEnabled &&
+      this.textureBucketManager.usesTRecycling &&
       isWithinSameTBatch(this.additionalCoordinates, additionalCoordinates)
     ) {
       // Pure t-scrubbing within an already-resident t-batch on an otherwise-unchanged

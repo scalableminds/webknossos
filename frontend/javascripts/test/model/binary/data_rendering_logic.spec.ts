@@ -1,6 +1,6 @@
 import range from "lodash-es/range";
 import type { ElementClass } from "types/api_types";
-import constants, { getEffectiveBucketDepth, wantsTRecycling } from "viewer/constants";
+import constants, { getEffectiveBucketDepth, usesTRecycling } from "viewer/constants";
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
@@ -243,19 +243,19 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     }
   });
 
-  it("wantsTRecycling requires a degenerate depth, a t axis, and a non-editable layer", () => {
+  it("usesTRecycling requires a degenerate depth, a t axis, and a non-editable layer", () => {
     // The happy case: 2D + t, read-only.
-    expect(wantsTRecycling(1, true, false)).toBe(true);
+    expect(usesTRecycling(1, true, false)).toBe(true);
     // A real z extent leaves no dimension to recycle.
-    expect(wantsTRecycling(1000, true, false)).toBe(false);
+    expect(usesTRecycling(1000, true, false)).toBe(false);
     // Without a t axis there is nothing to cache; the plain shrink applies instead.
-    expect(wantsTRecycling(1, false, false)).toBe(false);
+    expect(usesTRecycling(1, false, false)).toBe(false);
     // An editable (volume tracing) layer's locally created data has no shared batch
     // buffer to render a whole batch out of, so it must keep one bucket per t.
-    expect(wantsTRecycling(1, true, true)).toBe(false);
+    expect(usesTRecycling(1, true, true)).toBe(false);
   });
 
-  it("buildTextureInformationMap sizes the atlas for full-depth buckets only for t-recycling-eligible layers", () => {
+  it("buildTextureInformationMap sizes the atlas for full-depth buckets only for t-recycling layers", () => {
     const shrunkBucketVoxelCount = constants.BUCKET_SIZE_2D;
     const tAxis = [{ name: "t", bounds: [0, 100] as [number, number], index: 3 }];
     const sizeFor = (layer: LayerLike) =>

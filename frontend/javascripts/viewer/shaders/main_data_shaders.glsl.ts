@@ -82,11 +82,11 @@ uniform float activeMagIndices[<%= globalLayerCount %>];
 // The number of voxels a single bucket occupies in each layer's atlas. Mirrors
 // TextureBucketManager.bucketVoxelCount exactly.
 uniform float bucketVoxelCountPerLayer[<%= globalLayerCount %>];
-// See TextureBucketManager.isTRecyclingEnabled
-uniform float isTRecyclingEnabledPerLayer[<%= globalLayerCount %>];
+// See TextureBucketManager.usesTRecycling
+uniform float usesTRecyclingPerLayer[<%= globalLayerCount %>];
 // The current value of the flycam's "t" additional coordinate (global, not per-layer,
 // since additionalCoordinates is flycam-global). Only meaningful for layers where
-// isTRecyclingEnabledPerLayer is set.
+// usesTRecyclingPerLayer is set.
 uniform float currentAdditionalCoordinateValue;
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
 uniform vec3 allMagnifications[<%= magnificationsCount %>];

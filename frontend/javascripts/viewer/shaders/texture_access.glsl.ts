@@ -172,21 +172,21 @@ export const getColorForCoords: ShaderModule = {
       return bucketAddressInTexture;
     }
 
-    // For t-recycling-enabled layers (see TextureBucketManager.isTRecyclingEnabled),
+    // For t-recycling layers (see TextureBucketManager.usesTRecycling),
     // the bucket's (always-0) real z-addressing is repurposed: the cuckoo lookup key
     // uses a "t-batch index" (floor(t/32)) instead of real z, and the in-bucket voxel
     // offset uses t%32 instead of real offsetInBucket.z, since up to 32 t-slices of a
     // z-degenerate layer share one atlas region (one z-sub-slot each). See
     // TextureBucketManager.getCuckooKey / processWriterQueue's zSlot on the JS side.
     float maybeOverrideBucketPositionZ(uint globalLayerIndex, float realZ) {
-      if (isTRecyclingEnabledPerLayer[globalLayerIndex] > 0.5) {
+      if (usesTRecyclingPerLayer[globalLayerIndex] > 0.5) {
         return floor(currentAdditionalCoordinateValue / bucketWidth);
       }
       return realZ;
     }
 
     float maybeOverrideOffsetInBucketZ(uint globalLayerIndex, float realOffsetZ) {
-      if (isTRecyclingEnabledPerLayer[globalLayerIndex] > 0.5) {
+      if (usesTRecyclingPerLayer[globalLayerIndex] > 0.5) {
         return mod(currentAdditionalCoordinateValue, bucketWidth);
       }
       return realOffsetZ;

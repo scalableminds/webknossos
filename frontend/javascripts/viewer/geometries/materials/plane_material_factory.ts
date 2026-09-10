@@ -206,7 +206,7 @@ class PlaneMaterialFactory {
         value: [0, 0],
       },
       // The flycam's current "t" (time) additional coordinate. Only meaningful for
-      // layers with isTRecyclingEnabledPerLayer set. See startListeningForUniforms
+      // layers with usesTRecyclingPerLayer set. See startListeningForUniforms
       // for how this is kept in sync.
       currentAdditionalCoordinateValue: {
         value: 0,
@@ -355,7 +355,7 @@ class PlaneMaterialFactory {
     // globalLayerIndex. Built up here (rather than in setupUniforms) because
     // textureBucketManager is only guaranteed to exist once getDataTextures() below
     // has triggered its lazy setup.
-    const isTRecyclingEnabledPerLayer: number[] = [];
+    const usesTRecyclingPerLayer: number[] = [];
     // todop: make this comment clearer. also, what is footprint exactly?
     // Note that this must be the *atlas* footprint of a bucket, which is not the same as
     // the cube's effective (CPU-side) bucket voxel count for a t-recycling layer: there,
@@ -376,11 +376,11 @@ class PlaneMaterialFactory {
         value: dataLayer.layerRenderingManager.textureWidth,
       };
       const { textureBucketManager } = dataLayer.layerRenderingManager;
-      isTRecyclingEnabledPerLayer.push(textureBucketManager.isTRecyclingEnabled ? 1 : 0);
+      usesTRecyclingPerLayer.push(textureBucketManager.usesTRecycling ? 1 : 0);
       bucketVoxelCountPerLayer.push(textureBucketManager.bucketVoxelCount);
     }
-    this.uniforms.isTRecyclingEnabledPerLayer = {
-      value: isTRecyclingEnabledPerLayer,
+    this.uniforms.usesTRecyclingPerLayer = {
+      value: usesTRecyclingPerLayer,
     };
     this.uniforms.bucketVoxelCountPerLayer = {
       value: bucketVoxelCountPerLayer,

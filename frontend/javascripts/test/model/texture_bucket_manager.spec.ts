@@ -35,7 +35,7 @@ function makeMockCubeBase() {
     triggerRenderedBucketDataChanged: () => {},
     effectiveBucketDepth: 32,
     additionalAxes: {} as Record<string, { bounds: [number, number]; index: number; name: string }>,
-    isTRecyclingEligible: false,
+    usesTRecycling: false,
     getEffectiveBucketVoxelCount: () => 32 ** 3,
   };
 }
@@ -200,8 +200,8 @@ describe("TextureBucketManager", () => {
     const tRecyclingMockedCube = makeMockCube({
       effectiveBucketDepth: 1,
       additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
-      isTRecyclingEligible: true,
-      // CPU-side data for a t-recycling-eligible layer stays shrunk to one z-slice.
+      usesTRecycling: true,
+      // CPU-side data for a t-recycling layer stays shrunk to one z-slice.
       getEffectiveBucketVoxelCount: () => sliceVoxelCount,
     });
 
@@ -223,7 +223,7 @@ describe("TextureBucketManager", () => {
     bucket.receiveData(rawBatchBuffer, false, zSlot * sliceVoxelCount);
 
     const tbm = new TextureBucketManager(textureWidth, 1, "uint8", tRecyclingMockedCube as any);
-    expect(tbm.isTRecyclingEnabled).toBe(true);
+    expect(tbm.usesTRecycling).toBe(true);
     tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     setActiveBucketsAndWait(tbm, [bucket]);
@@ -258,7 +258,7 @@ describe("TextureBucketManager", () => {
     const tRecyclingMockedCube = makeMockCube({
       effectiveBucketDepth: 1,
       additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
-      isTRecyclingEligible: true,
+      usesTRecycling: true,
       getEffectiveBucketVoxelCount: () => sliceVoxelCount,
     });
 
@@ -318,7 +318,7 @@ describe("TextureBucketManager", () => {
 
   it("t-recycling: a lone slice without a batch buffer lands in its own t-slot", () => {
     // Not reachable in practice now that editable layers are excluded from t-recycling
-    // (see wantsTRecycling), since eligible layers always upload a whole shared batch
+    // (see usesTRecycling), since such layers always upload a whole shared batch
     // buffer. Guards the placement arithmetic against silently rendering at t=0 anyway.
     const textureWidth = 256;
     const t = 45; // batch 1, zSlot 13
@@ -326,7 +326,7 @@ describe("TextureBucketManager", () => {
     const tRecyclingMockedCube = makeMockCube({
       effectiveBucketDepth: 1,
       additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
-      isTRecyclingEligible: true,
+      usesTRecycling: true,
       getEffectiveBucketVoxelCount: () => sliceVoxelCount,
     });
 
@@ -375,7 +375,7 @@ describe("TextureBucketManager", () => {
     const tRecyclingMockedCube = makeMockCube({
       effectiveBucketDepth: 1,
       additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
-      isTRecyclingEligible: true,
+      usesTRecycling: true,
       getEffectiveBucketVoxelCount: () => sliceVoxelCount,
     });
 

@@ -81,7 +81,7 @@ function bucketKey(address: BucketAddress): string {
 // bounds filtering in getTBatchSiblingAddresses is what the bounds test actually pins.
 function createMockedCubeAndQueue(
   options: {
-    isTRecyclingEligible?: boolean;
+    usesTRecycling?: boolean;
     additionalAxes?: AdditionalAxesMock;
     effectiveBucketVoxelCount?: number;
   } = {},
@@ -100,7 +100,7 @@ function createMockedCubeAndQueue(
     },
     shouldEagerlyMaintainUsedValueSet: () => false,
     getEffectiveBucketVoxelCount: () => options.effectiveBucketVoxelCount ?? 32 ** 3,
-    isTRecyclingEligible: options.isTRecyclingEligible ?? false,
+    usesTRecycling: options.usesTRecycling ?? false,
     additionalAxes: options.additionalAxes ?? ({} as AdditionalAxesMock),
     // Will be set later:
     pullQueue: null as PullQueue | null,
@@ -141,7 +141,7 @@ function createMockedCubeAndQueue(
 
 function createTRecyclingCubeAndQueue(tBounds: [number, number] = [0, 1000]) {
   return createMockedCubeAndQueue({
-    isTRecyclingEligible: true,
+    usesTRecycling: true,
     additionalAxes: { t: { name: "t", bounds: tBounds, index: 3 } },
     effectiveBucketVoxelCount: Constants.BUCKET_SIZE_2D,
   });
@@ -151,7 +151,7 @@ const tAddress = (t: number): BucketAddress => [0, 0, 0, 0, [{ name: "t", value:
 
 describe("PullQueue", () => {
   beforeEach<TestContext>(async (context) => {
-    // The default cube is *not* t-recycling-eligible, so these buckets exercise the plain,
+    // The default cube does *not* use t-recycling, so these buckets exercise the plain,
     // non-batched path.
     const { pullQueue, buckets, createBucket } = createMockedCubeAndQueue();
 
@@ -228,7 +228,7 @@ describe("PullQueue", () => {
     expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
   });
 
-  describe("t-batched requests (see DataCube.isTRecyclingEligible)", () => {
+  describe("t-batched requests (see DataCube.usesTRecycling)", () => {
     // Fills a whole-batch wire buffer so that each t-slice starts with a distinguishable
     // marker, which pins the (t % BUCKET_WIDTH) * effectiveVoxelCount offset each sibling
     // is handed.

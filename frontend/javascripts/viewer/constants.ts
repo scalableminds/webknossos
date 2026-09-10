@@ -2,7 +2,7 @@ import type { Matrix4x4 } from "mjs";
 import { Euler, Matrix4 } from "three";
 // `length`: number of consecutive values starting at `value` to request along this axis,
 // instead of just one (e.g. for a 32-t-batch request against a Z-degenerate layer — see
-// DataCube.isTRecyclingEligible and PullQueue.pullBatch). Only meaningful on requests sent
+// DataCube.usesTRecycling and PullQueue.pullBatch). Only meaningful on requests sent
 // to the backend; a bucket's own address always carries a single-point `value`.
 export type AdditionalCoordinate = { name: string; value: number; length?: number };
 
@@ -423,8 +423,13 @@ export function getEffectiveBucketDepth(
 // would re-upload on a same-batch t change (see LayerRenderingManager.updateDataTextures),
 // so one t's labels would show up at every t in the batch. Note that read-only segmentation
 // layers are fine; it's editability that breaks the assumption.
-// todop: clarify wording. "wants" vs "eligible" vs "supported" vs enabled vs isTRecyclingEnabledPerLaye
-export function wantsTRecycling(
+//
+// This is the single definition of whether a layer is t-recycled. Everything downstream
+// (DataCube.usesTRecycling, TextureBucketManager.usesTRecycling, the usesTRecyclingPerLayer
+// shader uniform) just forwards the answer, under the same name on purpose: nothing decides
+// this a second time, so a differently named copy would only invite the two to drift apart.
+// It is answered once from static layer metadata and never toggled afterwards.
+export function usesTRecycling(
   layerDepthInMag1: number,
   hasTAxis: boolean,
   isEditableVolumeLayer: boolean,

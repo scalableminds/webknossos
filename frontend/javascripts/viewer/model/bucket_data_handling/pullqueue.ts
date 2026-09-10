@@ -10,12 +10,12 @@ import type { DataStoreInfo } from "viewer/store";
 import Store from "viewer/store";
 import type { DataBucket } from "./bucket";
 
-// For a layer where t should be treated like z (see DataCube.isTRecyclingEligible), widens
+// For a layer where t should be treated like z (see DataCube.usesTRecycling), widens
 // a single-t request address into a full 32-t-aligned-batch request address, so that the
 // wire request always fetches a whole batch instead of one t-slice at a time (see
 // getTBatchSiblingAddresses for how the response is then fanned out to every t within it).
 function snapToTBatchAddress(cube: DataCube, address: BucketAddress): BucketAddress {
-  if (!cube.isTRecyclingEligible) {
+  if (!cube.usesTRecycling) {
     return address;
   }
   const additionalCoordinates = address[4] ?? [];
@@ -28,10 +28,10 @@ function snapToTBatchAddress(cube: DataCube, address: BucketAddress): BucketAddr
 }
 
 // The addresses of every bucket whose data is present in the response for `address` (see
-// snapToTBatchAddress): just `address` itself for a non-t-recycling-eligible layer, or every
+// snapToTBatchAddress): just `address` itself for a layer without t-recycling, or every
 // valid t within the aligned 32-batch `address` belongs to otherwise.
 function getTBatchSiblingAddresses(cube: DataCube, address: BucketAddress): Array<BucketAddress> {
-  if (!cube.isTRecyclingEligible) {
+  if (!cube.usesTRecycling) {
     return [address];
   }
   const additionalCoordinates = address[4] ?? [];
@@ -128,7 +128,7 @@ class PullQueue {
     const { dataset } = Store.getState();
     const layerInfo = getLayerByName(dataset, this.layerName);
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
-    // For a t-recycling-eligible layer, always request a whole aligned 32-t batch instead
+    // For a t-recycling layer, always request a whole aligned 32-t batch instead
     // of a single t (see snapToTBatchAddress) — never just the one t-slice that happens to
     // be needed right now. The response is then fanned out to every valid t within it (see
     // getTBatchSiblingAddresses/handleBatchedBucketResult), so scrubbing through t within an

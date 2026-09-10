@@ -17,7 +17,7 @@ import {
   UnsignedShortType,
 } from "three";
 import type { AdditionalAxis, ElementClass } from "types/api_types";
-import constants, { getEffectiveBucketDepth, wantsTRecycling } from "viewer/constants";
+import constants, { getEffectiveBucketDepth, usesTRecycling } from "viewer/constants";
 import type { TypedArrayConstructor } from "../helpers/typed_buffer";
 
 type GpuSpecs = {
@@ -249,7 +249,7 @@ function buildTextureInformationMap<
     // Volume tracing layers are already merged into the dataset's layers (with their
     // tracingId set) by preprocessDataset before this runs, so the editability check
     // here sees the same thing DataCube's constructor later will.
-    const bucketVoxelCount = wantsTRecycling(
+    const bucketVoxelCount = usesTRecycling(
       layer.boundingBox.depth,
       hasTAxis,
       layer.tracingId != null,

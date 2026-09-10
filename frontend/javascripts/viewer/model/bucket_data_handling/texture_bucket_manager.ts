@@ -134,13 +134,13 @@ export default class TextureBucketManager {
   // The number of voxels a single bucket occupies in this layer's atlas. Equal to
   // constants.BUCKET_SIZE, unless the layer has a degenerate (e.g., z-extent-1) axis.
   // See DataCube.effectiveBucketDepth / getEffectiveBucketDepth. For a t-recycling
-  // layer, this is the full BUCKET_SIZE (see isTRecyclingEnabled below).
+  // layer, this is the full BUCKET_SIZE (see usesTRecycling below).
   bucketVoxelCount: number;
   // When true, this layer's (always-0) z-addressing slot is repurposed to cache
   // several t (time) slices of a z-degenerate layer simultaneously on the GPU,
   // instead of shrinking the bucket footprint to depth 1. See getCuckooKey and
   // DataBucket.getT().
-  isTRecyclingEnabled: boolean;
+  usesTRecycling: boolean;
   private cube: DataCube;
   isDestroyed: boolean = false;
   private areTexturesReady: boolean = false;
@@ -158,9 +158,9 @@ export default class TextureBucketManager {
     this.elementClass = elementClass;
     this.cube = cube;
 
-    this.isTRecyclingEnabled = cube.isTRecyclingEligible;
+    this.usesTRecycling = cube.usesTRecycling;
 
-    this.bucketVoxelCount = this.isTRecyclingEnabled
+    this.bucketVoxelCount = this.usesTRecycling
       ? constants.BUCKET_SIZE
       : cube.getEffectiveBucketVoxelCount();
     this.maximumCapacity = getBucketCapacity(
@@ -203,14 +203,14 @@ export default class TextureBucketManager {
     this.setActiveBuckets([]);
   }
 
-  // For t-recycling-enabled layers, the (always-0) real z-addressing slot is
+  // For t-recycling layers, the (always-0) real z-addressing slot is
   // repurposed to encode a "t-batch index" (floor(t/32)) instead, since up to 32
   // t-slices of a z-degenerate layer share one atlas region/upload (see
   // processWriterQueue and DataBucket.rawBucketData). This keeps the cuckoo table's
   // key format/structure completely unchanged; the GLSL shader looks up by the same
   // floor(t/32) to find the batch, then t%32 within it (see texture_access.glsl.ts).
   private getCuckooKey(bucket: DataBucket): [number, number, number, number, number] {
-    const z = this.isTRecyclingEnabled
+    const z = this.usesTRecycling
       ? Math.floor(bucket.getT() / constants.BUCKET_WIDTH)
       : bucket.zoomedAddress[2];
     return [
@@ -333,7 +333,7 @@ export default class TextureBucketManager {
       // correct z-sub-slot in one call, since the batch buffer's byte layout already
       // matches the atlas's z-major layout (see DataBucket.rawBucketData/receiveData).
       // This is why bucketVoxelCount is the full BUCKET_SIZE for t-recycling layers.
-      const useRawBatchData = this.isTRecyclingEnabled && bucket.rawBucketData != null;
+      const useRawBatchData = this.usesTRecycling && bucket.rawBucketData != null;
       const uploadSource = useRawBatchData ? (bucket.rawBucketData as BucketDataArray) : data;
       // How many voxels the source covers: the full atlas footprint for a batch buffer,
       // and the layer's (possibly shrunk) per-bucket footprint otherwise.
@@ -366,7 +366,7 @@ export default class TextureBucketManager {
       // t-slice is written into the correct t-slot.
       // In the happy case, the value will simply be 0.
       const destElementOffset =
-        this.isTRecyclingEnabled && !useRawBatchData
+        this.usesTRecycling && !useRawBatchData
           ? (bucket.getT() % constants.BUCKET_WIDTH) * rgbPaddedSrc.length
           : 0;
       const src = padToUploadRegion(rgbPaddedSrc, requiredElementCount, destElementOffset);

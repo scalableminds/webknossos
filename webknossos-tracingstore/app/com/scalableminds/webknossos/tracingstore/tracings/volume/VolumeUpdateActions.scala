@@ -968,7 +968,7 @@ case class UpdateBucketPartialVolumeAction(
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
-  def bucketPosition =
+  lazy val bucketPosition =
     BucketPosition(position.x, position.y, position.z, mag, additionalCoordinates)
 
   def voxelRunsBinary: Array[Byte] = Base64.getDecoder.decode(voxelRunsBase64)

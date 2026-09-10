@@ -6,6 +6,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   BucketMutatingVolumeUpdateAction,
+  UpdateBucketPartialVolumeAction,
   UpdateBucketVolumeAction,
   VolumeTracingService
 }
@@ -293,12 +294,19 @@ class AnnotationTransactionService @Inject() (
         updateActionsProcessed.length <= 1000000
       ) ?~> "Annotation update transactions with more than 1M update actions are not currently supported"
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
+      _ <- Fox.fromBool(
+        bucketMutatingActions.isEmpty || !updateActionGroup.actions.exists(
+          _.isInstanceOf[UpdateBucketPartialVolumeAction]
+        )
+      ) ?~> "Cannot mix eager bucket mutating actions with UpdateBucketPartialVolumeAction in the same update group"
       _ = stats.count("volumeBucketMutatingActions", bucketMutatingActions.length)
       actionsGrouped: Map[String, List[BucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(
         _.actionTracingId
       )
       _ <- Fox.serialCombined(actionsGrouped.keys.toList) { volumeTracingId =>
         for {
+          // findVolume here also materializes all update actions up to here, which is necessary to guarantee version ordering
+          // when mixing eager bucketMutatingActions with updateBucketPartial.
           tracing <- stats.time("findVolume")(annotationService.findVolume(annotationId, volumeTracingId))
           _ <- stats.time("applyBucketMutatingActions")(
             volumeTracingService.applyBucketMutatingActions(

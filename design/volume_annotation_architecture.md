@@ -291,6 +291,272 @@ A sparse form (a short index list) would beat a 4 KB mask for buckets the stroke
 └──────────────┘
 ```
 
+The diagram above is the *data flow* — what a brush stroke passes through, in order. The one below is the *static structure* — every type in `prototypes/new_volume_architecture` (interfaces, plain records like `BucketDiff`, and real classes alike, all drawn as classes) and how they reference each other. `integration/` (the WK-specific adapters) is deliberately left out; it is thin glue over this structure, not part of it.
+
+Reading the arrows: a filled diamond (`*--`) is "owns/contains", a dashed arrow (`..>`) is "reads/calls", a solid arrow (`-->`) is "produces/returns", a hollow triangle (`<|--`) is "is a variant of", and a dashed hollow triangle (`..|>`) is "implements".
+
+```mermaid
+classDiagram
+    direction TB
+
+    %% ── Shared value types (§4) ───────────────────────────────────────
+    class EditContext {
+        +sourceMagIndex : MagIndex
+        +activeSegmentId : SegmentId
+        +overwriteMode : OverwriteMode
+        +editableBoundingBox : BoundingBox, optional
+    }
+    class BoundingBox {
+        +min : Vector3
+        +max : Vector3, exclusive
+    }
+    class MagList {
+        +mags : Mag list, finest first
+        +get(index) Mag
+        +factorBetween(finerIndex, coarserIndex) Mag
+    }
+    EditContext *-- BoundingBox : editableBoundingBox
+
+    %% ── Edit intents (§5.1) ────────────────────────────────────────────
+    class EditIntent {
+        <<union>>
+    }
+    class RasterizableShape {
+        <<union, known region>>
+    }
+    class DataDependentShape {
+        <<kind = floodFill>>
+        +seed : Vector3
+        +is3D : boolean
+        +bounds : BoundingBox, optional
+        +isBlocked : edge predicate, optional
+    }
+    class AnalyticShape {
+        <<union, kind = brush or box>>
+    }
+    class MaskShape {
+        <<kind = mask>>
+        +origin : Vector3
+        +size : Vector3
+        +selected : byte per voxel
+    }
+    EditIntent <|-- RasterizableShape
+    EditIntent <|-- DataDependentShape
+    RasterizableShape <|-- AnalyticShape
+    RasterizableShape <|-- MaskShape
+    DataDependentShape *-- BoundingBox : bounds
+
+    %% ── Rasterizer & ShapeResolver (§5.1, §5.3) ─────────────────────────
+    class Rasterizer {
+        <<pure functions>>
+        +rasterize(shape, ctx, tx)
+    }
+    class ShapeResolver {
+        <<the only awaiter>>
+        +resolve(shape, ctx, cube, signal) BucketWriteMap
+        +resolveFloodFill(shape, ctx, cube, signal) FloodFillResolution
+    }
+    class FloodFillResolution {
+        +bucketWrites : BucketWriteMap
+        +wasBoundingBoxExceeded : boolean
+        +coveredBoundingBox : BoundingBox, optional
+    }
+    Rasterizer ..> RasterizableShape : consumes
+    Rasterizer ..> BucketWriter : writes through
+    ShapeResolver ..> DataDependentShape : consumes
+    ShapeResolver ..> LoadingVoxelCube : ensureLoaded
+    ShapeResolver --> FloodFillResolution : produces
+    FloodFillResolution *-- BucketWriteMap : bucketWrites
+    FloodFillResolution *-- BoundingBox : coveredBoundingBox
+
+    %% ── The write set (§4) ───────────────────────────────────────────
+    class BucketVoxelMask {
+        one bucket's bitset, 32 cubed bits
+        +mark(index)
+        +markRun(start, length)
+        +has(index) boolean
+        +runs() runs of set bits
+        +count : number
+    }
+    class BucketWrite {
+        one bucket's write instruction
+        +mask : BucketVoxelMask
+        +value : SegmentId
+    }
+    class BucketWriteMapEntry {
+        +address : BucketAddress
+        +write : BucketWrite
+    }
+    class BucketWriteMap {
+        <<Map, BucketKey to BucketWriteMapEntry>>
+    }
+    class BucketWriteMapBuilder {
+        accumulates writes for one mag
+        +mark(voxel)
+        +markRun(voxel, length)
+        +has(voxel) boolean
+        +build() BucketWriteMap
+    }
+    BucketWrite *-- BucketVoxelMask : mask
+    BucketWriteMapEntry *-- BucketWrite : write
+    BucketWriteMap "1" *-- "*" BucketWriteMapEntry
+    BucketWriteMapBuilder ..> BucketVoxelMask : creates
+    BucketWriteMapBuilder --> BucketWriteMap : build creates
+
+    %% ── VolumeTransaction (§5.2) ───────────────────────────────────────
+    class BucketWriter {
+        <<interface, one bucket write cursor>>
+        +mark(index)
+        +markRun(start, length)
+        +isBackground : predicate, optional
+    }
+    class VolumeTransaction {
+        +id : TransactionId
+        +ctx : EditContext
+        +writerFor(address, value) BucketWriter
+        +recordAll(bucketWrites)
+        +flushToCube()
+        +commit(sequence, toolName) TransactionDiff
+        +abort()
+        +previewMagIndices() MagIndex list
+    }
+    VolumeTransaction *-- EditContext : ctx
+    VolumeTransaction "1" *-- "*" BucketWriteMapEntry : bucketWrites
+    VolumeTransaction ..> BucketWriter : writerFor creates
+    VolumeTransaction ..> TransactionCube : applyWrites, getResident
+    VolumeTransaction ..> MagPropagation : commit calls propagate
+    VolumeTransaction --> TransactionDiff : commit produces
+
+    %% ── MagPropagation (§5.4) ──────────────────────────────────────────
+    class MagPropagation {
+        <<pure functions, no I/O>>
+        +propagate(sourceWrites, ctx, mags) one BucketWriteMap per mag
+        +upsampleOneLevel(bucketWrites, factor, targetMagIndex, value) BucketWriteMap
+        +downsampleOneLevel(bucketWrites, factor, targetMagIndex, value) BucketWriteMap
+    }
+    MagPropagation ..> BucketWriteMapBuilder : uses
+    MagPropagation ..> MagList : factorBetween
+    MagPropagation --> BucketWriteMap : produces per mag
+
+    %% ── Diff types (§5.6) ──────────────────────────────────────────────
+    class VoxelRun {
+        +start : VoxelIndex
+        +length : number
+        +value : SegmentId
+    }
+    class BucketDiff {
+        +address : BucketAddress
+        +runs : VoxelRun list
+    }
+    class TransactionDiff {
+        +id : TransactionId
+        +sequence : number
+        +sourceMagIndex : MagIndex
+        +toolName : string
+        +bucketDiffs : BucketDiff list
+    }
+    BucketDiff "1" *-- "*" VoxelRun : runs
+    TransactionDiff "1" *-- "*" BucketDiff : bucketDiffs
+    BucketDiff ..> BucketWrite : toRuns derives from
+
+    %% ── WorkingDataCube (§5.5) ─────────────────────────────────────────
+    class TransactionCube {
+        <<interface>>
+        +getResident(address) resident data, optional
+        +applyWrites(address, write)
+        +backgroundProbe(address) predicate, optional
+    }
+    class LoadingVoxelCube {
+        <<interface, extends TransactionCube>>
+        +ensureLoaded(address) awaited bucket data
+    }
+    class BackendLike {
+        <<interface, what the cube fetches from>>
+        +fetchBucket(address) data and version
+    }
+    class CubeEntry {
+        one materialized bucket
+        +address : BucketAddress
+        +state : BucketState
+        +data : BigUint64Array
+        +fetch : Promise, optional
+    }
+    class WorkingDataCube {
+        +state(address) BucketState
+        +getResident(address) resident data, optional
+        +materialize(address) Promise
+        +receiveData(address, backendData, version)
+        +ensureLoaded(address) awaited bucket data
+        +applyWrites(address, write)
+        +install(address, data)
+    }
+    class FakeBackend {
+        <<test-only>>
+        +seed(address, data)
+        +fetchBucket(address) Promise
+    }
+    LoadingVoxelCube --|> TransactionCube
+    WorkingDataCube ..|> LoadingVoxelCube
+    WorkingDataCube "1" *-- "*" CubeEntry : buckets
+    WorkingDataCube ..> BackendLike : fetchBucket
+    WorkingDataCube ..> BucketJournal : setBase, foldOntoFetched
+    FakeBackend ..|> BackendLike
+
+    %% ── BucketJournal (§5.7) ───────────────────────────────────────────
+    class BucketLogEntry {
+        +sequence : number
+        +transactionId : TransactionId
+        +runs : VoxelRun list
+        +skipped : boolean
+        +acknowledgedAtVersion : number, optional
+    }
+    class BucketLog {
+        +address : BucketAddress
+        +base : version and data, optional
+        +entries : BucketLogEntry list, by sequence
+    }
+    class BucketJournal {
+        the truth; the array is a fold of it
+        +logFor(address) BucketLog
+        +setBase(address, data, version)
+        +append(diff)
+        +acknowledge(transactionId, version)
+        +foldOntoFetched(address, backendData, dataVersion) folded data
+        +rebuild(address) folded data
+        +undo(transactionId) affected BucketAddress list
+        +redo(transactionId) affected BucketAddress list
+        +unsavedBucketDiffs() BucketDiff list
+    }
+    BucketLogEntry "1" *-- "*" VoxelRun : runs
+    BucketLog "1" *-- "*" BucketLogEntry : entries
+    BucketJournal "1" *-- "*" BucketLog : logs, by BucketKey
+    BucketJournal ..> TransactionDiff : append reads
+    BucketJournal --> BucketDiff : unsavedBucketDiffs produces
+
+    %% ── VolumeEditingSession — the orchestrator ─────────────────────────
+    class VolumeEditingSession {
+        framework-free: no store, no sagas, no React
+        +emitted : TransactionDiff list
+        +beginBrushStroke(ctx, start, radius, planeAxis)
+        +extendBrushStroke(point)
+        +endBrushStroke() TransactionDiff
+        +abortBrushStroke()
+        +floodFill(shape, ctx, signal) TransactionDiff, awaited
+        +applyMask(shape, ctx) TransactionDiff
+        +undo() TransactionId, optional
+        +redo() TransactionId, optional
+        +undoById(id)
+        +redoById(id)
+    }
+    VolumeEditingSession "1" *-- "1" WorkingDataCube : cube
+    VolumeEditingSession "1" *-- "1" BucketJournal : journal
+    VolumeEditingSession "1" *-- "1" MagList : mags
+    VolumeEditingSession "1" o-- "0..1" VolumeTransaction : open stroke
+    VolumeEditingSession ..> Rasterizer : begin/extendBrushStroke, applyMask
+    VolumeEditingSession ..> ShapeResolver : floodFill
+    VolumeEditingSession --> TransactionDiff : emitted
+```
+
 ### 5.1 Tools → `EditIntent`
 
 A tool's only job is to turn input events plus viewer state into a declarative description of the edit. It never touches a `Bucket`.

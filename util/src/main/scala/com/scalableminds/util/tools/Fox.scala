@@ -106,6 +106,25 @@ object Fox {
     runNext(Nil)
   }
 
+  // Run serially, fail on the first failure. Pulls elements asynchronously via FoxIterator#next(); Fox.empty ends the loop.
+  def serialCombined[A, B](it: FoxIterator[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {
+    def runNext(results: List[B]): Fox[List[B]] =
+      for {
+        itemBox <- it.next().shiftBox
+        results <- itemBox match {
+          case Full(item) =>
+            for {
+              currentResult <- f(item)
+              results <- runNext(currentResult :: results)
+            } yield results
+          case Empty      => Fox.successful(results.reverse)
+          case f: Failure => f.toFox
+        }
+      } yield results
+
+    runNext(Nil)
+  }
+
   // Run batches in parallel. Sequentially run the elements within each batch.
   def batchCombined[A, B](seq: Seq[A], parallelity: Int)(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
     if (parallelity <= 0)

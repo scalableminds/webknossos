@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBPutBuffer,
   KeyValueStoreConversions,
   RemoteFallbackLayer,
+  ReversionAwareVersionedFossilDbIterator,
   TracingDataStore
 }
 import com.typesafe.scalalogging.LazyLogging
@@ -455,23 +456,30 @@ class EditableMappingUpdater(
       ) ?~> "trying to revert editable mapping to a version not yet present in the database"
       _ = segmentToAgglomerateBuffer.clear()
       _ = agglomerateToGraphBuffer.clear()
-      segmentToAgglomerateChunkNewestStream = new VersionedSegmentToAgglomerateChunkIterator(
-        tracingId,
-        tracingDataStore.editableMappingsSegmentToAgglomerate
+      segmentToAgglomerateChunkNewestStream = new ReversionAwareVersionedFossilDbIterator[
+        (String, SegmentToAgglomerateChunkProto, Long)
+      ](tracingId, tracingDataStore.editableMappingsSegmentToAgglomerate)(keyValuePair =>
+        fromProtoBytes[SegmentToAgglomerateChunkProto](keyValuePair.value).toOption.map(chunk =>
+          (keyValuePair.key, chunk, keyValuePair.version)
+        )
       )
       _ <- Fox.serialCombined(segmentToAgglomerateChunkNewestStream) { case (chunkKey, _, version) =>
         if (version > sourceVersion) {
-          editableMappingService.getSegmentToAgglomerateChunk(chunkKey, Some(sourceVersion)).shiftBox.map {
-            case Full(chunkData)        => segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false))
-            case Empty                  => segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true))
+          editableMappingService.getSegmentToAgglomerateChunk(chunkKey, Some(sourceVersion)).shiftBox.flatMap {
+            case Full(chunkData) => Fox.successful(segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false)))
+            case Empty           => Fox.successful(segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true)))
             case Failure(msg, _, chain) =>
               Fox.failure(msg, Empty, chain)
           }
         } else Fox.successful(())
       }
-      agglomerateToGraphNewestStream = new VersionedAgglomerateToGraphIterator(
+      agglomerateToGraphNewestStream = new ReversionAwareVersionedFossilDbIterator[(String, AgglomerateGraph, Long)](
         tracingId,
         tracingDataStore.editableMappingsAgglomerateToGraph
+      )(keyValuePair =>
+        fromProtoBytes[AgglomerateGraph](keyValuePair.value).toOption.map(graph =>
+          (keyValuePair.key, graph, keyValuePair.version)
+        )
       )
       _ <- Fox.serialCombined(agglomerateToGraphNewestStream) { case (graphKey, _, version) =>
         if (version > sourceVersion) {

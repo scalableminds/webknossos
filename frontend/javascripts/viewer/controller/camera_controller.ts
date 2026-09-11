@@ -12,12 +12,7 @@ import {
 } from "three";
 import TWEEN from "tween.js";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
-import {
-  OrthoCamerasBaseRotations,
-  OrthoViews,
-  OrthoViewValuesWithoutTDView,
-  TDViewPerspectiveFov,
-} from "viewer/constants";
+import { OrthoViews, OrthoViewValuesWithoutTDView, TDViewPerspectiveFov } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
 import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
@@ -30,6 +25,7 @@ import { setTDCameraWithoutTimeTrackingAction } from "viewer/model/actions/view_
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { getBaseVoxelInUnit, voxelToUnit } from "viewer/model/scaleinfo";
+import { OrthoCamerasBaseRotations } from "viewer/ortho_base_rotations";
 import { api } from "viewer/singletons";
 import type { CameraData } from "viewer/store";
 import Store from "viewer/store";

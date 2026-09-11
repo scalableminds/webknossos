@@ -49,28 +49,10 @@ export class WkDataCubeAdapter implements TransactionCube {
   }
 
   /**
-   * The prototype expects a BigUint64Array, but real buckets may hold any
-   * element class. 64-bit data (signed or unsigned) is handed back as a
-   * BigUint64Array view over the same bytes — a reinterpretation, not a
-   * conversion, since segment ids are only ever compared for equality, never
-   * interpreted as signed magnitudes. Everything else reports "no
-   * authoritative content", which the rasterizer treats exactly like an
-   * unloaded bucket. Required by `TransactionCube`, but nothing currently
-   * calls it: this iteration doesn't capture pre-transaction values, so
-   * nothing depends on reading residents.
-   */
-  getResident(address: BucketAddress): BigUint64Array | undefined {
-    const data = this.rawData(address);
-    if (data instanceof BigUint64Array) return data;
-    if (data instanceof BigInt64Array) {
-      return new BigUint64Array(data.buffer, data.byteOffset, data.length);
-    }
-    return undefined;
-  }
-
-  /**
-   * Unlike getResident this works for every element class, because comparing
-   * against background does not require a common representation.
+   * Comparing against background does not require a common representation
+   * across element classes, unlike a hypothetical "give me the dense resident
+   * array" method would — which is exactly why `TransactionCube` has no such
+   * method: nothing in this iteration needs one (see cube.ts).
    */
   backgroundProbe(address: BucketAddress): ((index: number) => boolean) | null {
     const data = this.rawData(address);
@@ -146,8 +128,7 @@ export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVo
    * Load a bucket and return its dense content, converted to segment ids. Real
    * buckets may hold any element class, but the resolver only ever compares
    * values for equality (it never writes through this array), so a lossless
-   * per-voxel bigint cast is enough — no shared representation is needed the
-   * way `WkDataCubeAdapter.getResident` would need one to be writable.
+   * per-voxel bigint cast is enough.
    */
   async ensureLoaded(address: BucketAddress): Promise<BigUint64Array> {
     const bucket = this.cube.getOrCreateBucket(this.toWkAddress(address));

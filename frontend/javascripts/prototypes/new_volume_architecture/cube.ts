@@ -19,8 +19,6 @@ export type BucketState = "absent" | "pending" | "resident";
  * `integration/wk_cube_adapter.ts`.
  */
 export interface TransactionCube {
-  /** Dense content of a resident bucket, or undefined. Never fetches. */
-  getResident(address: BucketAddress): BigUint64Array | undefined;
   /** Apply a bucket's writes at once, walking the mask's runs. */
   applyWrites(address: BucketAddress, write: BucketWrite): void;
   /**

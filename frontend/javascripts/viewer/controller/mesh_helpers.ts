@@ -246,13 +246,10 @@ export function extractSubGeometry(
 /**
  * Merges several already-tagged (vertexSegmentMapping-carrying) geometries into one, with a fresh
  * VertexSegmentMapping sorted globally by unmapped/supervoxel id. Unlike three.js's mergeGeometries
- * + `new VertexSegmentMapping(...)` (which only works when every input geometry has exactly one
- * unmapped id each, e.g. the individual chunks a fresh load decodes - see
- * precomputed_mesh_saga.ts), this handles inputs that each already bundle several ids, such as the
- * sibling mesh nodes a local proofreading merge leaves behind (see
- * SegmentMeshController.consolidateMeshGroups) - by reading each input's own vertexSegmentMapping
- * directly instead of re-deriving one id at a time via extractSubGeometry. Returns null if none of
- * the inputs have any ids.
+ * + `new VertexSegmentMapping(...)`, which needs every input to hold exactly one unmapped id, this
+ * also handles inputs bundling several ids, such as the sibling mesh nodes a local proofreading
+ * merge leaves behind (see SegmentMeshController.mergeMeshSiblingsIntoOneGeometry).
+ * Returns null if none of the inputs have any ids.
  */
 export function mergeGeometriesByUnmappedSegmentId(
   geometries: BufferGeometryWithInfo[],

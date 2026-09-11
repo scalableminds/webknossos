@@ -1,7 +1,6 @@
 import type { Task } from "redux-saga";
 import type { CallEffect } from "redux-saga/effects";
 import { call, cancel, join, put, type SagaGenerator } from "typed-redux-saga";
-import type { Vector3 } from "viewer/constants";
 import {
   getMeshInfoForSegment,
   getSegmentsForLayer,
@@ -10,15 +9,9 @@ import { removeMeshAction } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { spawnEffectUntilCanceled, spawnUntilCanceled } from "../../saga_helpers";
+import type { AgglomerateChangeItem } from "./proofreading_types";
 
 // A small module orchestrating background mesh syncing (with potential fallback to a full reload).
-type MeshRefreshItem = {
-  oldAgglomerateId?: bigint;
-  newAgglomerateId: bigint;
-  nodePosition: Vector3;
-  opacity?: number;
-  isVisible?: boolean;
-};
 type MeshUpdateEffect = SagaGenerator<void, CallEffect<void>>;
 
 // A local registry storing ongoing operations per agglomerate id because new scheduled
@@ -32,7 +25,7 @@ const activeMeshUpdateTasksRegistry = new Map<string, Map<bigint, Task>>();
 export function* scheduleMeshUpdate(
   meshUpdateEffect: MeshUpdateEffect,
   layerName: string,
-  refreshInfos: MeshRefreshItem[],
+  refreshInfos: AgglomerateChangeItem[],
 ): Saga<void> {
   const deduplicatedAgglomerateIds = refreshInfos
     .flatMap((info) =>
@@ -82,7 +75,7 @@ export function* scheduleMeshUpdate(
 function* runEffectWithOrphanCleanup(
   effect: MeshUpdateEffect,
   layerName: string,
-  refreshInfos: MeshRefreshItem[],
+  refreshInfos: AgglomerateChangeItem[],
 ): Saga<void> {
   try {
     yield* effect;
@@ -91,7 +84,10 @@ function* runEffectWithOrphanCleanup(
   }
 }
 
-function* cleanUpOrphanedMeshes(layerName: string, refreshInfos: MeshRefreshItem[]): Saga<void> {
+function* cleanUpOrphanedMeshes(
+  layerName: string,
+  refreshInfos: AgglomerateChangeItem[],
+): Saga<void> {
   const oldIds = new Set(
     refreshInfos.map((info) => info.oldAgglomerateId).filter((id): id is bigint => id != null),
   );

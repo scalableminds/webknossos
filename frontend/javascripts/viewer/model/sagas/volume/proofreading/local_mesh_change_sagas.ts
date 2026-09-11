@@ -52,10 +52,7 @@ export function* waitForMeshFullyLoaded(
 }
 
 /*
- * Thin wrapper around _getChunkLoadingDescriptors that turns a failure (e.g. the backend
- * couldn't resolve the agglomerate, or a network error) into a null return instead of a thrown
- * exception, so callers can use plain type inference on the result instead of having to spell
- * out the generator's return type themselves.
+ * Wraps getChunkLoadingDescriptors so that a failure becomes a null return instead of an exception.
  */
 function* safeGetChunkLoadingDescriptors(...args: Parameters<typeof getChunkLoadingDescriptors>) {
   try {
@@ -144,10 +141,9 @@ function* fetchAndAppendChunksToMesh(
 }
 
 /*
- * Fetches only the mesh-file chunks that are missing from oldId's already-loaded geometry.
- * Done by fetching the newIds chunks and checking whether all are present in the scene.
- * If some are missing, these are fetched and added to the oldId's scene group.
- * Used to prepare a local merge of meshes cause by a proofreading interaction.
+ * Prepares a local merge in which only oldId has a mesh: lists the chunks of the merged agglomerate
+ * newId, fetches those that are not part of oldId's geometry yet and appends them to oldId's group.
+ * Returns false if the mesh cannot be completed, in which case a full reload is needed.
  */
 function* fetchAndAppendMissingPrecomputedMergeChunks(
   layerName: string,
@@ -270,6 +266,9 @@ export function* tryLocalMeshMerge(
 
   if (oldIdsWithMeshInfo.length === 1) {
     const { oldId, meshInfo } = oldIdsWithMeshInfo[0];
+    // Only one side has a mesh. A precomputed one is completed by fetching the other side's chunks.
+    // An ad-hoc mesh has no supervoxel tagging, so there is nothing to fetch and its geometry is
+    // only relabeled onto the merged id below.
     if (meshInfo.isPrecomputed) {
       const handled = yield* call(
         fetchAndAppendMissingPrecomputedMergeChunks,
@@ -284,24 +283,17 @@ export function* tryLocalMeshMerge(
         return false;
       }
     }
-    // Ad-hoc mesh (no supervoxel tagging, so there's no delta to fetch): still avoid a full
-    // reload by just relabeling what's loaded onto the merged id.
-    segmentMeshController.moveMeshesToNewSegmentId(oldId, newId, layerName, additionalCoordinates);
-    yield* put(mergeMeshesAction(layerName, oldId, newId, additionalCoordinates));
-    segmentMeshController.setMeshColor(newId, layerName);
-    yield* call(mergeMeshSiblingsIntoOneGeometry, layerName, newId, additionalCoordinates);
-    return true;
+  } else {
+    // Meshes of different kinds cannot be merged into one geometry.
+    const allSameType = oldIdsWithMeshInfo.every(
+      (entry) => entry.meshInfo.isPrecomputed === oldIdsWithMeshInfo[0].meshInfo.isPrecomputed,
+    );
+    if (!allSameType) {
+      return false;
+    }
   }
 
-  // We can only merge precomputed meshes locally.
-  const allSameType = oldIdsWithMeshInfo.every(
-    (entry) => entry.meshInfo.isPrecomputed === oldIdsWithMeshInfo[0].meshInfo.isPrecomputed,
-  );
-  if (!allSameType) {
-    return false;
-  }
-
-  // Move mesh into new parent agglomerate id group and then merge them together into one geometry.
+  // Move every loaded mesh into the merged id's group and then fold them into one geometry.
   for (const { oldId } of oldIdsWithMeshInfo) {
     segmentMeshController.moveMeshesToNewSegmentId(oldId, newId, layerName, additionalCoordinates);
     yield* put(mergeMeshesAction(layerName, oldId, newId, additionalCoordinates));
@@ -479,11 +471,12 @@ export function* trySplitMeshLocally(
     segmentIdsByNewId,
     additionalCoordinates,
   );
-  const idsToSplit = newIds.filter((newId) => !idsNeedingReload.includes(newId));
+  const idsNeedingReloadSet = new Set(idsNeedingReload);
+  const idsToSplit = newIds.filter((newId) => !idsNeedingReloadSet.has(newId));
   if (idsToSplit.length === 0) return NOT_HANDLED_LOCALLY;
 
   const segmentIdsByIdToSplit = new Map(
-    [...segmentIdsByNewId].filter(([newId]) => !idsNeedingReload.includes(newId)),
+    [...segmentIdsByNewId].filter(([newId]) => !idsNeedingReloadSet.has(newId)),
   );
 
   // Update Redux (and thus the new ids' isVisible, which addMeshFromGeometry reads when creating
@@ -534,30 +527,17 @@ export type SplitGroup = {
   items: AgglomerateChangeItem[];
 };
 
-// Detects merge- and split-shaped groups within a single batch of change items.
-//
-// Merge shape: 2+ distinct old agglomerate ids collapsing into the same new id (grouped by
-// newAgglomerateId) - the pattern a proofreading merge produces.
-// Split shape: 1 old agglomerate id fanning out into 2+ distinct new ids (grouped by
-// oldAgglomerateId, among whatever isn't already part of a merge group) - the pattern a
-// proofreading split produces, including N-way splits like "split from all neighbours".
-//
-// A single batch can legitimately contain both shapes at once - e.g. a local split's refreshInfos
-// incorporating an interfering foreign merge action from the backend - so both are always detected
-// together here, rather than being picked ahead of time based on which top-level proofreading
-// action triggered the refresh (a boolean flag can't represent "this batch has both shapes").
-//
-// Known limitation: an item belonging to a merge group is never reconsidered for a split group,
-// even if that merge later fails to apply locally (see syncAffectedAndLoadMissingMeshes in
-// segment_and_mesh_refresh_sagas.ts) and a sibling item shares its old id with a different new id -
-// that combination falls back to a plain reload instead of a local split. This should be rare
-// enough in practice (it needs a failed merge *and* an unrelated split sharing the same old id, in
-// the same batch) that it isn't worth re-running detection on the merge fallback's leftovers.
 /*
- * Detects the underlying merges and split based on the passed AgglomerateChangeItems.
- * A merge means multiple old ids now share the same new id and a split has multiple items
- * that have new ids but share old ones. Both patterns are detected and returned together with
- * left over items that could not be sorted into any case.
+ * Detects merge- and split-shaped groups within one batch of change items.
+ * Merge shape: two or more old ids collapse into the same new id.
+ * Split shape: one old id fans out into two or more new ids, e.g. a "split from all neighbours".
+ * Items fitting neither shape are returned as remainingItems.
+ *
+ * One batch can contain both shapes at once, e.g. a local split whose items incorporate an
+ * interfering foreign merge, so both are always detected together.
+ *
+ * Known limitation: an item of a merge group is never reconsidered for a split group, even if that
+ * merge later fails to apply locally. Such a batch falls back to a plain reload.
  */
 export function detectMergeAndSplitChanges(changeInfoItems: AgglomerateChangeItem[]): {
   mergeGroups: MergeGroup[];

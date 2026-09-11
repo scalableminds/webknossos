@@ -647,7 +647,8 @@ export default class SegmentMeshController {
    * The function maintains vertexSegmentMappings and moves the split off mesh chunks
    * to the new scene graph group.
    *
-   * Note: Callers must dispatch the Redux mesh-info entries for every id in newIdToKeepIds *before*
+   * Note: Callers must dispatch the Redux mesh-info entries for every id in
+   * newAgglomerateIdToSegmentIds *before*
    * calling this (mirroring how addPrecomputedMeshAction/addAdHocMeshAction are always dispatched
    * before the corresponding addMeshFromGeometry call elsewhere), since addMeshFromGeometry reads
    * the new segment's isVisible from the store when first creating its target group.

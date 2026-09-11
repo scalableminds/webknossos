@@ -10,8 +10,8 @@
  *   - Layers are implicit; there is exactly one.
  */
 
-import { BoundingBoxMinMaxType } from "types/bounding_box";
-import { Vector3 } from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { Vector3 } from "viewer/constants";
 
 export type { Vector3 };
 

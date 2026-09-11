@@ -1,7 +1,7 @@
 /**
  * Core types for the volume-annotation architecture spike.
  *
- * This module is deliberately self-contained: nothing here is imported from the
+ * This module is deliberately self-contained: almost nothing here is imported from the
  * production `viewer/` code, so the prototype cannot drift with it. A few small
  * things (Vector3, BUCKET_WIDTH) are therefore redeclared rather than shared.
  *
@@ -10,7 +10,8 @@
  *   - Layers are implicit; there is exactly one.
  */
 
-export type Vector3 = [number, number, number];
+import { BoundingBoxMinMaxType } from "types/bounding_box";
+import { Vector3 } from "viewer/constants";
 
 /** Downsampling factor per axis relative to the finest mag, e.g. [2, 2, 1]. */
 export type Mag = Vector3;
@@ -84,8 +85,7 @@ export function voxelOffsetInBucket(voxel: Vector3): Vector3 {
   ];
 }
 
-// todop: DRY this
-export type BoundingBox = { min: Vector3; max: Vector3 }; // max is exclusive
+export type BoundingBox = BoundingBoxMinMaxType;
 
 export function isInBoundingBox(voxel: Vector3, box: BoundingBox | null): boolean {
   if (box == null) return true;

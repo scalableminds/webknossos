@@ -18,7 +18,11 @@ import type {
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { BucketAddress, LabelMasksByBucketAndW, Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
-import constants, { MappingStatusEnum } from "viewer/constants";
+import constants, {
+  getEffectiveBucketDepth,
+  MappingStatusEnum,
+  usesTRecycling,
+} from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -103,6 +107,17 @@ class DataCube {
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
   boundingBox: BoundingBox;
+  // For layers whose z-extent is a single voxel (e.g., 2D datasets), every bucket only
+  // ever holds real data in its first z-slice. In that case, storage for the bucket's
+  // typed array (and, on the GPU, the atlas footprint) can be shrunk to this depth,
+  // since the addressing/picking machinery still treats buckets as 32^3 for bookkeeping.
+  readonly effectiveBucketDepth: 1 | typeof Constants.BUCKET_WIDTH;
+  // Whether this layer's buckets should always be fetched/cached in aligned 32-t batches
+  // instead of one t at a time (Z is degenerate and a t axis exists), so that a whole
+  // batch's data is fetched together and shared (see PullQueue.pullBatch and
+  // DataBucket.rawBucketData) rather than in per-t network requests. See TextureBucketManager
+  // for how the GPU atlas reuses one shared upload for a whole batch.
+  readonly usesTRecycling: boolean;
   additionalAxes: Record<string, AdditionalAxis>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;
@@ -142,6 +157,9 @@ class DataCube {
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
+    // Whether this layer is backed by a volume tracing, i.e. can be edited. Only relevant
+    // for the t-recycling check below (see usesTRecycling).
+    isEditableVolumeLayer: boolean = false,
   ) {
     this.elementClass = elementClass;
     this.channelCount = getConstructorForElementClass(this.elementClass)[1];
@@ -150,6 +168,15 @@ class DataCube {
     this.layerName = layerName;
     this.additionalAxes = keyBy(additionalAxes, "name");
     this.emitter = createNanoEvents();
+    this.effectiveBucketDepth = getEffectiveBucketDepth(
+      layerBBox.getSize()[2],
+      isEditableVolumeLayer,
+    );
+    this.usesTRecycling = usesTRecycling(
+      layerBBox.getSize()[2],
+      this.additionalAxes.t != null,
+      isEditableVolumeLayer,
+    );
 
     this.cubes = {};
     this.buckets = [];
@@ -187,6 +214,10 @@ class DataCube {
 
   getNullBucket(): Bucket {
     return NULL_BUCKET;
+  }
+
+  getEffectiveBucketVoxelCount(): number {
+    return constants.BUCKET_WIDTH * constants.BUCKET_WIDTH * this.effectiveBucketDepth;
   }
 
   isMappingEnabled(): boolean {
@@ -727,10 +758,7 @@ class DataCube {
         thirdCoord *= currentMag[w];
 
         if (!currentLabeledVoxelMap.has(thirdCoord)) {
-          currentLabeledVoxelMap.set(
-            thirdCoord,
-            new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0),
-          );
+          currentLabeledVoxelMap.set(thirdCoord, new Uint8Array(constants.BUCKET_SIZE_2D).fill(0));
         }
 
         const dataArray = currentLabeledVoxelMap.get(thirdCoord);

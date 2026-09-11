@@ -205,6 +205,12 @@ class PlaneMaterialFactory {
       viewportExtent: {
         value: [0, 0],
       },
+      // The flycam's current "t" (time) additional coordinate. Only meaningful for
+      // layers with usesTRecyclingPerLayer set. See startListeningForUniforms
+      // for how this is kept in sync.
+      currentAdditionalCoordinateValue: {
+        value: 0,
+      },
       shouldApplyMappingOnGPU: {
         value: false,
       },
@@ -345,6 +351,19 @@ class PlaneMaterialFactory {
   attachTextures(): void {
     let sharedLookUpTexture;
     let sharedLookUpCuckooTable;
+    // Same ordering as activeMagIndices (all iterate Model.getAllLayers()), matching
+    // globalLayerIndex. Built up here (rather than in setupUniforms) because
+    // textureBucketManager is only guaranteed to exist once getDataTextures() below
+    // has triggered its lazy setup.
+    const usesTRecyclingPerLayer: number[] = [];
+    // How many voxels one bucket occupies in each layer's data texture. Read off the
+    // TextureBucketManager rather than the DataCube on purpose: those two numbers disagree
+    // for a t-recycling layer (the cube stores 32*32*1 voxels per bucket, while one atlas
+    // slot holds a whole 32-timepoint batch, i.e. the full 32^3 — see
+    // TextureBucketManager.bucketVoxelCount). The shader derives its row and texture
+    // indices from this, so it has to be exactly the number the upload side used, or it
+    // reads from the wrong place in the atlas.
+    const bucketVoxelCountPerLayer: number[] = [];
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
@@ -358,7 +377,16 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_data_texture_width`] = {
         value: dataLayer.layerRenderingManager.textureWidth,
       };
+      const { textureBucketManager } = dataLayer.layerRenderingManager;
+      usesTRecyclingPerLayer.push(textureBucketManager.usesTRecycling ? 1 : 0);
+      bucketVoxelCountPerLayer.push(textureBucketManager.bucketVoxelCount);
     }
+    this.uniforms.usesTRecyclingPerLayer = {
+      value: usesTRecyclingPerLayer,
+    };
+    this.uniforms.bucketVoxelCountPerLayer = {
+      value: bucketVoxelCountPerLayer,
+    };
 
     if (!sharedLookUpCuckooTable) {
       throw new Error("Empty layer list at unexpected point.");
@@ -513,6 +541,14 @@ class PlaneMaterialFactory {
         (storeState) => getViewportExtents(storeState),
         (extents) => {
           this.uniforms.viewportExtent.value = extents[this.planeID];
+        },
+        true,
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.flycam.additionalCoordinates,
+        (additionalCoordinates) => {
+          this.uniforms.currentAdditionalCoordinateValue.value =
+            additionalCoordinates?.find((coord) => coord.name === "t")?.value ?? 0;
         },
         true,
       ),

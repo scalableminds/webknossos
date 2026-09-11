@@ -275,7 +275,7 @@ function _getUntransformedDatasetBoundingBox(dataset: APIDataset): BoundingBox {
 
 export const getUntransformedDatasetBoundingBox = memoizeOne(_getUntransformedDatasetBoundingBox);
 
-export function getDatasetExtentInVoxel(dataset: APIDataset) {
+export const getDatasetExtentInVoxel = memoizeOne((dataset: APIDataset) => {
   const datasetLayers = dataset.dataSource.dataLayers;
   const allBoundingBoxes = datasetLayers.map((layer) => layer.boundingBox);
   const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);
@@ -289,7 +289,8 @@ export function getDatasetExtentInVoxel(dataset: APIDataset) {
     max,
   };
   return extent;
-}
+});
+
 export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
   const scaleFactor = dataset.dataSource.scale.factor;

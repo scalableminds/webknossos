@@ -16,8 +16,8 @@ import {
   UnsignedByteType,
   UnsignedShortType,
 } from "three";
-import type { ElementClass } from "types/api_types";
-import constants from "viewer/constants";
+import type { AdditionalAxis, ElementClass } from "types/api_types";
+import constants, { getEffectiveBucketDepth, usesTRecycling } from "viewer/constants";
 import type { TypedArrayConstructor } from "../helpers/typed_buffer";
 
 type GpuSpecs = {
@@ -129,36 +129,65 @@ export type DataTextureSizeAndCount = {
   textureSize: number;
   textureCount: number;
   packingDegree: number;
+  // The number of voxels a single bucket occupies in this layer's atlas. Equal to
+  // constants.BUCKET_SIZE, unless the layer has a degenerate (e.g., z-extent-1) axis,
+  // in which case buckets are packed with a smaller footprint. See getEffectiveBucketDepth.
+  bucketVoxelCount: number;
 };
+
+// A data texture is a flat 2D atlas in which each bucket occupies a whole number of
+// texture rows (a row cannot be shared by two buckets). For most (non-degenerate)
+// layers, a bucket's packed data is larger than one texture row, so this height is
+// simply the natural (possibly multi-row) value. For layers with a much smaller
+// bucket footprint (e.g., 2D datasets), a bucket may pack into less than one row;
+// the height is then rounded up to one full row, at the cost of some unused padding.
+// In the future, we might want to rethink this so that multiple buckets in one texture
+// row are also supported.
+export function getBucketHeightInTexture(
+  textureWidth: number,
+  packingDegree: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
+): number {
+  const packedBucketSize = bucketVoxelCount / packingDegree;
+  return Math.max(1, packedBucketSize / textureWidth);
+}
+
+export function getBucketsPerTexture(
+  textureWidth: number,
+  packingDegree: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
+): number {
+  return textureWidth / getBucketHeightInTexture(textureWidth, packingDegree, bucketVoxelCount);
+}
 
 export function getBucketCapacity(
   dataTextureCount: number,
   textureWidth: number,
   packingDegree: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
 ): number {
   const theoreticalBucketCapacity =
-    (packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
+    dataTextureCount * getBucketsPerTexture(textureWidth, packingDegree, bucketVoxelCount);
   // RAM-wise we already impose a limit of how many buckets should be held. This limit
   // should not be exceeded.
   return Math.min(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, theoreticalBucketCapacity);
 }
 
-function getNecessaryVoxelCount(requiredBucketCapacity: number) {
-  return requiredBucketCapacity * constants.BUCKET_SIZE;
-}
-
-function getAvailableVoxelCount(textureSize: number, packingDegree: number) {
-  return packingDegree * textureSize ** 2;
-}
-
+// Note that this has to go through getBucketsPerTexture rather than dividing the
+// required voxels by the texture's voxel area: a bucket occupies a whole number of
+// texture rows, so for layers whose packed bucket is smaller than one row (see
+// getBucketHeightInTexture) part of that row is padding that cannot hold another
+// bucket. Sizing by raw area would count that padding as usable and pick a texture
+// too small to actually hold requiredBucketCapacity buckets — which getBucketCapacity,
+// computing the same thing row-aware, would then report as a shortfall.
 function getDataTextureCount(
   textureSize: number,
   packingDegree: number,
   requiredBucketCapacity: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
 ) {
   return Math.ceil(
-    getNecessaryVoxelCount(requiredBucketCapacity) /
-      getAvailableVoxelCount(textureSize, packingDegree),
+    requiredBucketCapacity / getBucketsPerTexture(textureSize, packingDegree, bucketVoxelCount),
   );
 }
 
@@ -167,6 +196,7 @@ export function calculateTextureSizeAndCountForLayer(
   specs: GpuSpecs,
   elementClass: ElementClass,
   requiredBucketCapacity: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
 ): DataTextureSizeAndCount {
   let textureSize = specs.supportedTextureSize;
   const { packingDegree } = getDtypeConfigForElementClass(elementClass);
@@ -175,17 +205,23 @@ export function calculateTextureSizeAndCountForLayer(
   // data textures. This ensures that we maximize the number of simultaneously
   // renderable layers.
   while (
-    getDataTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity) <=
-    getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity)
+    getDataTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity, bucketVoxelCount) <=
+    getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity, bucketVoxelCount)
   ) {
     textureSize /= 2;
   }
 
-  const textureCount = getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity);
+  const textureCount = getDataTextureCount(
+    textureSize,
+    packingDegree,
+    requiredBucketCapacity,
+    bucketVoxelCount,
+  );
   return {
     textureSize,
     textureCount,
     packingDegree,
+    bucketVoxelCount,
   };
 }
 
@@ -193,6 +229,11 @@ function buildTextureInformationMap<
   Layer extends {
     elementClass: ElementClass;
     category: "color" | "segmentation";
+    boundingBox: { depth: number };
+    additionalAxes: Array<AdditionalAxis> | null;
+    // Set for layers backed by a volume tracing (see APISegmentationLayer). Needed here
+    // because atlas sizing has to make the same t-recycling decision the runtime does.
+    tracingId?: string;
   },
 >(
   layers: Array<Layer>,
@@ -201,10 +242,26 @@ function buildTextureInformationMap<
 ): Map<Layer, DataTextureSizeAndCount> {
   const textureInformationPerLayer = new Map();
   layers.forEach((layer) => {
+    const hasTAxis = layer.additionalAxes?.some((axis) => axis.name === "t") ?? false;
+    // A layer that will use t-recycling (see TextureBucketManager) needs its atlas
+    // sized for full-depth buckets, not the shrunk depth, even though it's
+    // z-degenerate. Both decisions must stay in sync, hence the shared helper.
+    // Volume tracing layers are already merged into the dataset's layers (with their
+    // tracingId set) by preprocessDataset before this runs, so the editability check
+    // here sees the same thing DataCube's constructor later will.
+    const bucketVoxelCount = usesTRecycling(
+      layer.boundingBox.depth,
+      hasTAxis,
+      layer.tracingId != null,
+    )
+      ? constants.BUCKET_SIZE
+      : constants.BUCKET_SIZE_2D *
+        getEffectiveBucketDepth(layer.boundingBox.depth, layer.tracingId != null);
     const sizeAndCount = calculateTextureSizeAndCountForLayer(
       specs,
       layer.elementClass,
       requiredBucketCapacity,
+      bucketVoxelCount,
     );
     textureInformationPerLayer.set(layer, sizeAndCount);
   });
@@ -221,6 +278,7 @@ function getSmallestCommonBucketCapacity<
       sizeAndCount.textureCount,
       sizeAndCount.textureSize,
       sizeAndCount.packingDegree,
+      sizeAndCount.bucketVoxelCount,
     ),
   );
   return min(capacities) || 0;
@@ -267,12 +325,20 @@ function getRenderSupportedLayerCount<
   };
 }
 
-export function computeDataTexturesSetup<
-  Layer extends {
-    elementClass: ElementClass;
-    category: "color" | "segmentation";
-  },
->(specs: GpuSpecs, layers: Array<Layer>, hasSegmentation: boolean, requiredBucketCapacity: number) {
+export type LayerLike = {
+  elementClass: ElementClass;
+  category: "color" | "segmentation";
+  boundingBox: { depth: number };
+  additionalAxes: Array<AdditionalAxis> | null;
+  tracingId?: string;
+};
+
+export function computeDataTexturesSetup<Layer extends LayerLike>(
+  specs: GpuSpecs,
+  layers: Array<Layer>,
+  hasSegmentation: boolean,
+  requiredBucketCapacity: number,
+) {
   const textureInformationPerLayer = buildTextureInformationMap(
     layers,
     specs,

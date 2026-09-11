@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
+import assertWorkerPurity from "./frontend/vite/vite-plugin-assert-worker-purity";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import replaceSvgColorWithCurrentColor from "./frontend/vite/vite-plugin-replace-svg-color";
 
@@ -56,6 +57,9 @@ export const viteConfig = {
   },
   worker: {
     format: "es" as const,
+    // Vite bundles workers in a separate rolldown pass, so plugins that need to inspect
+    // worker chunks have to be registered here rather than in `plugins` above.
+    plugins: () => [assertWorkerPurity()],
   },
   server: {
     port: 9000,

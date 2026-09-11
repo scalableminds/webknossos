@@ -12,6 +12,7 @@
 
 import type { BucketDataArray } from "types/api_types";
 import type { AdditionalCoordinate, BucketAddress as WkBucketAddress } from "viewer/constants";
+import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import type { BucketWrite } from "../bucket_write_map";
 import type { LoadingVoxelCube, TransactionCube } from "../cube";
@@ -36,8 +37,8 @@ function writeRuns(data: BucketDataArray, write: BucketWrite): void {
 }
 
 export class WkDataCubeAdapter implements TransactionCube {
-  /** Buckets touched during the current stroke, so mutations can be flushed. */
-  private readonly touched = new Set<string>();
+  // Buckets touched during the current stroke, so mutations can be flushed.
+  private readonly touched = new Set<DataBucket>();
 
   constructor(
     protected readonly cube: DataCube,
@@ -71,11 +72,9 @@ export class WkDataCubeAdapter implements TransactionCube {
     // gets a zero-filled array plus temporal-bucket bookkeeping, which is how
     // the existing code paints over unloaded data too.
     const data = bucket.getOrCreateData();
-    const key = bucket.zoomedAddress.join(",");
-    if (!this.touched.has(key)) {
+    if (!this.touched.has(bucket)) {
       bucket.startDataMutation();
-      // todop: maybe add the buckets directly (instead of the key) because we will later iterate over them anyway?
-      this.touched.add(key);
+      this.touched.add(bucket);
     }
 
     writeRuns(data, write);
@@ -93,17 +92,8 @@ export class WkDataCubeAdapter implements TransactionCube {
 
   /** Ends the mutation on every touched bucket, triggering a GPU refresh. */
   flush(): void {
-    for (const key of this.touched) {
-      const parts = key.split(",").map(Number);
-      const address: WkBucketAddress = [
-        parts[0],
-        parts[1],
-        parts[2],
-        parts[3],
-        this.additionalCoordinates,
-      ];
-      const bucket = this.cube.getOrCreateBucket(address);
-      if (bucket.type !== "null") bucket.endDataMutation();
+    for (const bucket of this.touched) {
+      bucket.endDataMutation();
     }
     this.touched.clear();
   }

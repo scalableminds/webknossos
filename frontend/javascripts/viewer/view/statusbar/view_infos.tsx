@@ -35,12 +35,6 @@ import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import { Store } from "viewer/singletons";
 import { NumberInputPopoverSetting } from "../left_border_tabs/components/number_input_popover_setting";
 
-// Reserve a stable width to keep the statusbar from jittering.
-const POSITION_MIN_WIDTH = "18ch";
-const SEGMENT_MIN_WIDTH = "13ch";
-const MAPPED_SEGMENT_MIN_WIDTH = "22ch";
-const DOWNLOAD_SPEED_MIN_WIDTH = "9ch";
-
 function getPosString(
   pos: Vector3,
   optAdditionalCoordinates: AdditionalCoordinate[] | null | undefined,
@@ -64,22 +58,14 @@ function SegmentInfo() {
     return null;
   }
 
-  const isMappingEnabled = activeMappingInfo?.mappingStatus === MappingStatusEnum.ENABLED;
   const idString =
     hoveredSegmentId == null
       ? "-"
-      : isMappingEnabled
+      : activeMappingInfo?.mappingStatus === MappingStatusEnum.ENABLED
         ? `${hoveredSegmentId} (mapped)`
         : `${hoveredSegmentId}`;
 
-  return (
-    <span
-      className="info-element"
-      style={{ minWidth: isMappingEnabled ? MAPPED_SEGMENT_MIN_WIDTH : SEGMENT_MIN_WIDTH }}
-    >
-      Segment {idString}
-    </span>
-  );
+  return <span className="info-element">Segment {idString}</span>;
 }
 
 function DownloadSpeedometer() {
@@ -158,7 +144,7 @@ function SegmentAndMousePosition() {
     <>
       {isPlaneMode ? <SegmentInfo /> : null}
       {isPlaneMode ? (
-        <span className="info-element" style={{ minWidth: POSITION_MIN_WIDTH }}>
+        <span className="info-element">
           Pos [
           {globalMousePositionRounded
             ? getPosString(globalMousePositionRounded, additionalCoordinates)
@@ -196,7 +182,7 @@ export default function ViewInfos() {
   return (
     <React.Fragment>
       <SegmentAndMousePosition />
-      <span className="info-element" style={{ minWidth: DOWNLOAD_SPEED_MIN_WIDTH }}>
+      <span className="info-element">
         <DownloadSpeedometer />
       </span>
       {activeVolumeTracing != null && validSegmentIdRange != null ? (

@@ -1,4 +1,5 @@
 import { Notifier } from "@airbrake/browser";
+import { setAssertionReporter } from "libs/assertion";
 import Toast from "libs/toast";
 import window, { document, location } from "libs/window";
 import pick from "lodash-es/pick";
@@ -344,5 +345,11 @@ class ErrorHandling {
 }
 
 const errorHandling: ErrorHandling = new ErrorHandling();
+
+// Let worker-safe modules (which cannot import this one, see libs/assertion) report assertion
+// violations through the full main-thread path: toast, Airbrake and throwAssertions.
+setAssertionReporter((message, assertionContext) =>
+  errorHandling.assert(false, message, assertionContext),
+);
 
 export default errorHandling;

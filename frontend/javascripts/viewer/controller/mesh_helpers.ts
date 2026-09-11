@@ -109,10 +109,12 @@ export class VertexSegmentMapping {
 // geometry in a single pass (see mergeGeometriesByUnmappedSegmentId), not just ranges of one.
 type GeometryRange = { geometry: BufferGeometry; start: number; end: number };
 
-// Copies every attribute (position, normal, ...) except color from each range's source geometry
-// into targetGeometry, concatenated in the given order. Assumes every source shares the same
-// attribute names and typed-array types, which holds for all geometries this module deals with
-// (they're all produced by the same precomputed-mesh pipeline).
+/*
+ * Copies every attribute (position, normal, ...) except color from each range's source geometry
+ * into targetGeometry, concatenated in the given order. Assumes every source shares the same
+ * attribute names and typed-array types, which holds for all geometries this module deals with
+ * (they're all produced by the same precomputed-mesh pipeline).
+ */
 function copyAttributesForRanges(
   targetGeometry: BufferGeometry,
   ranges: GeometryRange[],

@@ -418,15 +418,17 @@ function extractScaleFromMatrix(transform: [Vector4, Vector4, Vector4]): Vector3
   return [transform[0][0], transform[1][1], transform[2][2]];
 }
 
-// Fetches and decodes one batch of mesh-file chunks for segmentIdForRequest, tagging each
-// resulting geometry with its unmappedSegmentId and applying the scale/translate/
-// computeVertexNormals steps every precomputed-mesh consumer needs. `onDecoded`, if given, is
-// invoked right after each geometry is ready (used by loadPrecomputedMeshesInChunksForLod below
-// to eagerly add chunks to the scene while still progressively loading; omitted by
-// fetchAndMergePrecomputedChunks, which only wants the final merged result). Every per-chunk
-// failure (a null chunk/data pair from the zip, or a decode error) is collected rather than
-// aborting the batch outright; if any occurred, the first is re-thrown once every chunk has been
-// attempted, so the batch task fails exactly once regardless of how many chunks in it failed.
+/*
+ * Fetches and decodes one batch of mesh-file chunks for segmentIdForRequest, tagging each
+ * resulting geometry with its unmappedSegmentId and applying the scale/translate/
+ * computeVertexNormals steps every precomputed-mesh consumer needs. `onDecoded`, if given, is
+ * invoked right after each geometry is ready (used by loadPrecomputedMeshesInChunksForLod below
+ * to eagerly add chunks to the scene while still progressively loading; omitted by
+ * fetchAndMergePrecomputedChunks, which only wants the final merged result). Every per-chunk
+ * failure (a null chunk/data pair from the zip, or a decode error) is collected rather than
+ * aborting the batch outright; if any occurred, the first is re-thrown once every chunk has been
+ * attempted, so the batch task fails exactly once regardless of how many chunks in it failed.
+ */
 function* fetchAndDecodeMeshChunkBatch(
   dataset: APIDataset,
   meshFile: APIMeshFileInfo,

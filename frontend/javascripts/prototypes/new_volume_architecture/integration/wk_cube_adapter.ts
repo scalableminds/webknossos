@@ -20,7 +20,7 @@ import { BUCKET_VOXEL_COUNT, type BucketAddress, type Mag, MagList, type Vector3
 /** Fill the runs of `write` into `data`, whatever element class it is. */
 function writeRuns(data: BucketDataArray, write: BucketWrite): void {
   // todop: similar to WkDataCubeAdapter.applyWrites ?
-  if (data instanceof BigUint64Array) {
+  if (data instanceof BigUint64Array || data instanceof BigInt64Array) {
     for (const { start, length } of write.mask.runs()) {
       data.fill(write.value, start, start + length);
     }
@@ -50,15 +50,22 @@ export class WkDataCubeAdapter implements TransactionCube {
 
   /**
    * The prototype expects a BigUint64Array, but real buckets may hold any
-   * element class. Rather than convert, we only hand back genuinely 64-bit
-   * data; everything else reports "no authoritative content", which the
-   * rasterizer treats exactly like an unloaded bucket. Required by
-   * `TransactionCube`, but nothing currently calls it: this iteration doesn't
-   * capture pre-transaction values, so nothing depends on reading residents.
+   * element class. 64-bit data (signed or unsigned) is handed back as a
+   * BigUint64Array view over the same bytes — a reinterpretation, not a
+   * conversion, since segment ids are only ever compared for equality, never
+   * interpreted as signed magnitudes. Everything else reports "no
+   * authoritative content", which the rasterizer treats exactly like an
+   * unloaded bucket. Required by `TransactionCube`, but nothing currently
+   * calls it: this iteration doesn't capture pre-transaction values, so
+   * nothing depends on reading residents.
    */
   getResident(address: BucketAddress): BigUint64Array | undefined {
     const data = this.rawData(address);
-    return data instanceof BigUint64Array ? data : undefined;
+    if (data instanceof BigUint64Array) return data;
+    if (data instanceof BigInt64Array) {
+      return new BigUint64Array(data.buffer, data.byteOffset, data.length);
+    }
+    return undefined;
   }
 
   /**
@@ -68,7 +75,9 @@ export class WkDataCubeAdapter implements TransactionCube {
   backgroundProbe(address: BucketAddress): ((index: number) => boolean) | null {
     const data = this.rawData(address);
     if (data == null) return null;
-    if (data instanceof BigUint64Array) return (index) => data[index] === 0n;
+    if (data instanceof BigUint64Array || data instanceof BigInt64Array) {
+      return (index) => data[index] === 0n;
+    }
     return (index) => data[index] === 0;
   }
 
@@ -152,6 +161,9 @@ export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVo
 
     const data = await bucket.getDataForMutation();
     if (data instanceof BigUint64Array) return data;
+    if (data instanceof BigInt64Array) {
+      return new BigUint64Array(data.buffer, data.byteOffset, data.length);
+    }
 
     const converted = new BigUint64Array(BUCKET_VOXEL_COUNT);
     for (let i = 0; i < data.length; i++) converted[i] = BigInt(data[i]);

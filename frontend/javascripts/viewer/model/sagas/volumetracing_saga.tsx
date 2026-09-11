@@ -397,6 +397,13 @@ export function* editVolumeLayerAsync(): Saga<never> {
       console.info(
         `[spike] brush: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
       );
+      // currentSectionLabeler.updateArea(...) above ran regardless of which
+      // path drew the stroke, so its centroid tracking is accurate here too.
+      // Without this, volume interpolation (which reads this via
+      // getLastLabelAction/getLabelActionFromPreviousSlice) never sees a
+      // previous slice and always reports "all recent label actions were
+      // performed on the current slice" — mirrors finishSectionLabeler below.
+      yield* put(registerLabelPointAction(currentSectionLabeler.getUnzoomedCentroid()));
     } else {
       yield* call(
         finishSectionLabeler,

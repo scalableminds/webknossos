@@ -1007,16 +1007,19 @@ export function updateBucketPartial(
   runsBase64: string,
   actionTracingId: string,
 ) {
+  const { position, additionalCoordinates, mag, cubeSize: _cubeSize } = bucketInfo;
   return {
     name: "updateBucketPartial",
     value: {
       actionTracingId,
-      ...bucketInfo,
+      position,
+      additionalCoordinates,
+      mag,
       // Base64 of the binary run encoding (encodeBucketDiff in
       // prototypes/new_volume_architecture/diff.ts). Deliberately not LZ4'd:
       // RLE is already a compression, and a few hundred (start, length) pairs
       // give LZ4 almost nothing to work with.
-      runs: runsBase64,
+      voxelRunsBase64: runsBase64,
     },
   } as const;
 }

@@ -29,6 +29,30 @@ type UseOverflowMeasurementResult = {
   setItemRefFactory: (key: string) => (el: HTMLElement | null) => void;
 };
 
+// How long a fixed-siblings width is remembered (see recordWidthSample).
+export const FIXED_WIDTH_MEMORY_MS = 3000;
+
+export type WidthSample = { timestampMs: number; width: number };
+
+/**
+ * Records a width sample for a sliding-window maximum, so that fixed siblings which
+ * change width on their own (e.g., the mouse position) can't make the visible item
+ * count oscillate too quickly.
+ *
+ * Only samples that could still become the maximum are kept: anything no wider than a
+ * newer sample is dropped immediately, and anything older than FIXED_WIDTH_MEMORY_MS is
+ * dropped as it expires. The result is therefore sorted widest-first, and once the
+ * widest sample ages out, the next-widest one takes over.
+ */
+export function recordWidthSample(samples: WidthSample[], newSample: WidthSample): WidthSample[] {
+  const stillRelevant = samples.filter(
+    (sample) =>
+      sample.width > newSample.width &&
+      sample.timestampMs > newSample.timestampMs - FIXED_WIDTH_MEMORY_MS,
+  );
+  return [...stillRelevant, newSample];
+}
+
 /**
  * Determines how many of `itemKeys` (in order) fit into the space that's left over in
  * `containerRef` after `fixedRefs` and `minGap`, reserving room for an overflow trigger
@@ -45,6 +69,8 @@ export function useOverflowMeasurement({
   const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
   const itemKeysRef = useRef(itemKeys);
   itemKeysRef.current = itemKeys;
+  const fixedWidthSamplesRef = useRef<WidthSample[]>([]);
+  const decayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visibleCount, setVisibleCount] = useState(itemKeys.length);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only; refs are stable and content changes are picked up by the ResizeObserver (itemKeys is read via itemKeysRef).
@@ -69,7 +95,32 @@ export function useOverflowMeasurement({
       // container.scrollWidth would equal clientWidth whenever there's no overflow,
       // regardless of how many items are currently shown, making it impossible to
       // detect that there's enough room to show more of them.
-      const fixedWidth = fixedRefs.reduce((sum, ref) => sum + (ref.current?.offsetWidth ?? 0), 0);
+      const currentFixedWidth = fixedRefs.reduce(
+        (sum, ref) => sum + (ref.current?.offsetWidth ?? 0),
+        0,
+      );
+      // Use the widest width seen recently rather than the current one, so that readouts
+      // which change width on their own don't make items appear and disappear.
+      const now = performance.now();
+      const samples = recordWidthSample(fixedWidthSamplesRef.current, {
+        timestampMs: now,
+        width: currentFixedWidth,
+      });
+      fixedWidthSamplesRef.current = samples;
+      const fixedWidth = samples[0].width;
+
+      // The ResizeObserver only fires while widths actually change, so once they settle,
+      // the expiry of the widest sample has to be scheduled explicitly -- otherwise the
+      // reserved width would never shrink back.
+      if (decayTimeoutRef.current != null) {
+        clearTimeout(decayTimeoutRef.current);
+        decayTimeoutRef.current = null;
+      }
+      if (samples.length > 1) {
+        const msUntilWidestExpires = samples[0].timestampMs + FIXED_WIDTH_MEMORY_MS - now;
+        decayTimeoutRef.current = setTimeout(() => recompute(), Math.max(msUntilWidestExpires, 0));
+      }
+
       const availableForItems = container.clientWidth - fixedWidth - minGap;
       const triggerWidth = Math.max(
         ...triggerMeasureRefs.map((ref) => ref.current?.offsetWidth ?? 0),
@@ -113,7 +164,12 @@ export function useOverflowMeasurement({
     for (const element of elementsToObserve) {
       resizeObserver.observe(element);
     }
-    return () => resizeObserver.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+      if (decayTimeoutRef.current != null) {
+        clearTimeout(decayTimeoutRef.current);
+      }
+    };
   }, []);
 
   const setItemRefFactory = (key: string) => (el: HTMLElement | null) => {

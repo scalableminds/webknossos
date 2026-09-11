@@ -1,0 +1,354 @@
+import Icon, { FileTextOutlined } from "@ant-design/icons";
+import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
+import IconStatusbarMouseLeftDrag from "@images/icons/icon-statusbar-mouse-left-drag.svg?react";
+import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
+import IconStatusbarMouseRightDrag from "@images/icons/icon-statusbar-mouse-right-drag.svg?react";
+import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
+import { Popover, Space, Typography } from "antd";
+import { useKeyPress, useWkSelector } from "libs/react_hooks";
+import React from "react";
+import { AltOrOptionKey, OrthoViews } from "viewer/constants";
+import {
+  type ActionDescriptor,
+  getToolControllerForAnnotationTool,
+} from "viewer/controller/combinations/tool_controls";
+import { AnnotationTool, adaptActiveToolToShortcuts } from "viewer/model/accessors/tool_accessor";
+import { isPlaneMode as getIsPlaneMode } from "viewer/model/accessors/view_mode_accessor";
+import type { UserConfiguration } from "viewer/store";
+
+const { Text } = Typography;
+
+const lineColor = "rgba(255, 255, 255, 0.67)";
+const moreIconStyle = {
+  height: 14,
+  color: lineColor,
+};
+
+export type ShortcutItem = {
+  key: string;
+  node: React.ReactNode;
+};
+
+function getZoomShortcutItem(): ShortcutItem {
+  return {
+    key: "zoom",
+    node: (
+      <span className="shortcut-info-element">
+        <Text keyboard>{AltOrOptionKey}</Text>
+        +
+        <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" /> Zoom in/out
+      </span>
+    ),
+  };
+}
+
+function getLeftClickItems(actionDescriptor: ActionDescriptor): ShortcutItem[] {
+  const items: ShortcutItem[] = [];
+  if (actionDescriptor.leftClick != null) {
+    items.push({
+      key: "left-click",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon component={IconStatusbarMouseLeft} aria-label="Mouse Left Click" />
+          {actionDescriptor.leftClick}
+        </Space>
+      ),
+    });
+  }
+  if (actionDescriptor.leftDrag != null) {
+    items.push({
+      key: "left-drag",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon
+            className="statusbar-drag-icon"
+            component={IconStatusbarMouseLeftDrag}
+            aria-label="Mouse Left Drag"
+          />
+          {actionDescriptor.leftDrag}
+        </Space>
+      ),
+    });
+  }
+  return items;
+}
+
+function getRightClickItems(actionDescriptor: ActionDescriptor): ShortcutItem[] {
+  const items: ShortcutItem[] = [];
+  if (actionDescriptor.rightClick != null) {
+    items.push({
+      key: "right-click",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon component={IconStatusbarMouseRight} aria-label="Mouse Right Click" />
+          {actionDescriptor.rightClick}
+        </Space>
+      ),
+    });
+  }
+  if (actionDescriptor.rightDrag != null) {
+    items.push({
+      key: "right-drag",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon
+            className="statusbar-drag-icon"
+            component={IconStatusbarMouseRightDrag}
+            aria-label="Mouse Right Drag"
+          />
+          {actionDescriptor.rightDrag}
+        </Space>
+      ),
+    });
+  }
+  return items;
+}
+
+function getMoreShortcutsItems(): ShortcutItem[] {
+  return [
+    {
+      key: "commands",
+      node: (
+        <div className="shortcut-info-element">
+          <Text keyboard>Ctrl + P</Text> Commands
+        </div>
+      ),
+    },
+    {
+      key: "more-link",
+      node: moreShortcutsLink,
+    },
+  ];
+}
+
+// The margin of `.shortcut-info-element` is scoped to `.statusbar`, so this item (and
+// the "commands" one above) renders flush-left in the "More" popover. That's intended.
+const moreShortcutsLink = (
+  <a
+    target="_blank"
+    href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
+    rel="noopener noreferrer"
+    className="shortcut-info-element statusbar-doc-link"
+  >
+    <FileTextOutlined style={moreIconStyle} /> Shortcut Documentation
+  </a>
+);
+
+// Read once in useShortcutItems so that the builders below can stay plain functions.
+type ShortcutItemContext = {
+  activeTool: AnnotationTool;
+  userConfiguration: UserConfiguration;
+  isShiftPressed: boolean;
+  isControlOrMetaPressed: boolean;
+  isAltPressed: boolean;
+  hasSkeleton: boolean;
+  isTDViewportActive: boolean;
+};
+
+// Hints for the arbitrary modes (flight/oblique).
+function getArbitraryModeItems({
+  userConfiguration,
+  isShiftPressed,
+  isControlOrMetaPressed,
+  isAltPressed,
+  hasSkeleton,
+  isTDViewportActive,
+}: ShortcutItemContext): ShortcutItem[] {
+  let actionDescriptor: ActionDescriptor | null = null;
+  if (hasSkeleton && isShiftPressed) {
+    actionDescriptor = getToolControllerForAnnotationTool(
+      AnnotationTool.SKELETON,
+    ).getActionDescriptors(
+      AnnotationTool.SKELETON,
+      userConfiguration,
+      isShiftPressed,
+      isControlOrMetaPressed,
+      isAltPressed,
+      isTDViewportActive,
+    );
+  }
+
+  const items: ShortcutItem[] =
+    actionDescriptor != null
+      ? getLeftClickItems(actionDescriptor)
+      : [
+          {
+            key: "move",
+            node: (
+              <span className="shortcut-info-element">
+                <Icon
+                  className="statusbar-drag-icon"
+                  component={IconStatusbarMouseLeftDrag}
+                  aria-label="Mouse Left Drag"
+                />
+                Move
+              </span>
+            ),
+          },
+        ];
+  items.push(
+    {
+      key: "trace-forward",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>Space</Text>
+          Trace forward
+        </Space>
+      ),
+    },
+    {
+      key: "trace-backward",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>Ctrl + Space</Text>
+          Trace backward
+        </Space>
+      ),
+    },
+    {
+      key: "rotation",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>◀ / ▶</Text>
+          Rotation
+        </Space>
+      ),
+    },
+    ...getMoreShortcutsItems(),
+  );
+  return items;
+}
+
+function getPlaneModeItems({
+  activeTool,
+  userConfiguration,
+  isShiftPressed,
+  isControlOrMetaPressed,
+  isAltPressed,
+  isTDViewportActive,
+}: ShortcutItemContext): ShortcutItem[] {
+  const adaptedTool = adaptActiveToolToShortcuts(
+    activeTool,
+    isShiftPressed,
+    isControlOrMetaPressed,
+    isAltPressed,
+  );
+  const toolController = getToolControllerForAnnotationTool(adaptedTool);
+  const actionDescriptor = toolController.getActionDescriptors(
+    adaptedTool,
+    userConfiguration,
+    isShiftPressed,
+    isControlOrMetaPressed,
+    isAltPressed,
+    isTDViewportActive,
+  );
+
+  return [
+    ...getLeftClickItems(actionDescriptor),
+    ...getRightClickItems(actionDescriptor),
+    {
+      key: "wheel",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" />
+          {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
+        </Space>
+      ),
+    },
+    {
+      key: "rotate-3d",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Icon
+            className="statusbar-drag-icon"
+            component={IconStatusbarMouseRightDrag}
+            aria-label="Mouse Right"
+          />
+          Rotate 3D View
+        </Space>
+      ),
+    },
+    getZoomShortcutItem(),
+    ...getMoreShortcutsItems(),
+  ];
+}
+
+// Exposes shortcut/control hints that are shown in the status bar (left side)
+export function useShortcutItems(): ShortcutItem[] {
+  const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
+  const userConfiguration = useWkSelector((state) => state.userConfiguration);
+  const isShiftPressed = useKeyPress("Shift");
+  const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
+  const isAltPressed = useKeyPress("Alt");
+  const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
+  const isTDViewportActive = useWkSelector(
+    (state) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
+  );
+
+  const context: ShortcutItemContext = {
+    activeTool,
+    userConfiguration,
+    isShiftPressed,
+    isControlOrMetaPressed,
+    isAltPressed,
+    hasSkeleton,
+    isTDViewportActive,
+  };
+
+  return isPlaneMode ? getPlaneModeItems(context) : getArbitraryModeItems(context);
+}
+
+// ...props and ref have to be forwarded: antd's Popover injects its click handler and
+// positioning ref into this child, and dropping them leaves the trigger unclickable.
+export function MoreButtonLabel({
+  label,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLSpanElement> & {
+  label: string;
+  ref?: React.Ref<HTMLSpanElement>;
+}) {
+  return (
+    <span {...props} ref={ref} className="shortcut-info-element" style={{ cursor: "pointer" }}>
+      <FileTextOutlined /> {label}
+    </span>
+  );
+}
+
+// "More" would be misleading when no hint is visible at all -- then the trigger is the
+// only way to reach them.
+export const MORE_LABEL = "More";
+export const ALL_HIDDEN_LABEL = "Controls";
+
+export function MoreShortcutsButton({
+  hiddenItems,
+  allHidden,
+}: {
+  hiddenItems: ShortcutItem[];
+  allHidden: boolean;
+}) {
+  return (
+    <Popover
+      trigger="click"
+      placement="top"
+      content={
+        <div
+          className="statusbar-overflow-content"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            maxWidth: 280,
+          }}
+        >
+          {hiddenItems.map((item) => (
+            <React.Fragment key={item.key}>{item.node}</React.Fragment>
+          ))}
+        </div>
+      }
+    >
+      <MoreButtonLabel label={allHidden ? ALL_HIDDEN_LABEL : MORE_LABEL} />
+    </Popover>
+  );
+}

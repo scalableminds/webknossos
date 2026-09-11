@@ -426,6 +426,7 @@ classDiagram
     VolumeTransaction ..> TransactionCube : applyWrites, getResident
     VolumeTransaction ..> MagPropagation : commit calls propagate
     VolumeTransaction --> TransactionDiff : commit produces
+    VolumeTransaction ..> BeforeRun : commit builds beforeCommitted, reusing mask runs
 
     %% ── MagPropagation (§5.4) ──────────────────────────────────────────
     class MagPropagation {
@@ -444,9 +445,16 @@ classDiagram
         +length : number
         +value : SegmentId
     }
+    class BeforeRun {
+        prior values, arbitrary per voxel
+        +start : VoxelIndex
+        +length : number
+        +values : BigUint64Array
+    }
     class BucketDiff {
         +address : BucketAddress
         +runs : VoxelRun list
+        +beforeCommitted : BeforeRun list, optional
     }
     class TransactionDiff {
         +id : TransactionId
@@ -456,6 +464,7 @@ classDiagram
         +bucketDiffs : BucketDiff list
     }
     BucketDiff "1" *-- "*" VoxelRun : runs
+    BucketDiff "1" *-- "*" BeforeRun : beforeCommitted, optional
     TransactionDiff "1" *-- "*" BucketDiff : bucketDiffs
     BucketDiff ..> BucketWrite : toRuns derives from
 
@@ -747,11 +756,11 @@ Why a write set at all, rather than "snapshot the bucket, mutate freely, diff at
 | | accumulating (live, in the transaction) | committed (frozen, on the diff) |
 |---|---|---|
 | new values | `BucketWrite` — mask + one value | `BucketDiff.runs` |
-| old values | `beforeAccumulating` — `Map<VoxelIndex, SegmentId>` | `BucketDiff.beforeCommitted` — `VoxelRun[]` |
+| old values | `beforeAccumulating` — `Map<VoxelIndex, SegmentId>` | `BucketDiff.beforeCommitted` — `BeforeRun[]` |
 
-The shapes differ because the stages have different access patterns. While the stroke is open, values are recorded lazily on first touch of each voxel and arrive in whatever order the brush wanders, so the accumulator needs O(1) "have I already recorded this one?" checks — a `Map`. At commit the same run-grouping pass that builds `runs` freezes it into `beforeCommitted`, which from then on is only iterated in order.
+The shapes differ because the stages have different access patterns. While the stroke is open, values are recorded lazily on first touch of each voxel and arrive in whatever order the brush wanders, so the accumulator needs O(1) "have I already recorded this one?" checks — a `Map`. At commit, a second pass walks the *same* mask runs that produce `runs` and looks each voxel up in `beforeAccumulating`, freezing the result into `beforeCommitted` — which from then on is only iterated in order, never looked up by index again.
 
-The rows differ from each other because new values are single-valued and compress to mask-plus-value, whereas old values are arbitrary (`3, 5, 0`, …) and need one per voxel. That is the sole reason `VoxelRun.values` has a `BigUint64Array` arm.
+The rows differ from each other because new values are single-valued and compress to mask-plus-value, whereas old values are arbitrary (`3, 5, 0`, …) and need one per voxel. That is why `beforeCommitted` is a `BeforeRun[]` — a distinct type from `VoxelRun`, carrying a `BigUint64Array` of values per run — rather than reusing `VoxelRun` with a union field (§5.6).
 
 Both are populated only for resident buckets, and **neither is required for correctness** — forward replay never reads them (§5.7). `beforeAccumulating` exists so `abort()` is cheap; `beforeCommitted` exists so the common case of undoing your most recent action can skip a checkpoint replay.
 
@@ -1087,22 +1096,36 @@ This also means the fetch response must carry the version its data reflects, and
 ### 5.6 Diff types
 
 ```ts
-/** A run of consecutive voxel indices. `values` is a single SegmentId when the
- *  run is constant (the common case for painting), otherwise one per voxel. */
+/** A run of consecutive voxel indices sharing one value. Every run a
+ *  transaction produces is constant-valued, since transactions are
+ *  single-valued (§4). */
 interface VoxelRun {
   start: VoxelIndex;
   length: number;
-  /** A single SegmentId for a constant run — which is every run a transaction
-   *  produces, since transactions are single-valued (§4). The per-voxel array
-   *  is reached for only by `beforeCommitted`, which holds prior values. */
-  values: SegmentId | BigUint64Array;
+  value: SegmentId;
+}
+
+/**
+ * A run of consecutive voxel indices' *prior* values — what they held right
+ * before the transaction. Deliberately a different type from `VoxelRun`
+ * rather than a `SegmentId | BigUint64Array` union on `VoxelRun.values`: old
+ * values are arbitrary, not constant, so every consumer of a plain
+ * `VoxelRun` (mag propagation, `applyRun`, the binary run encoding, which
+ * hoists one value into the header per §5.8) would otherwise have to
+ * narrow a case that, for them, never happens. Keeping the two types apart
+ * means neither has to know the other exists.
+ */
+interface BeforeRun {
+  start: VoxelIndex;
+  length: number;
+  values: BigUint64Array;
 }
 
 interface BucketDiff {
   address: BucketAddress;
   runs: VoxelRun[];
   /** Pre-transaction values, if known. Optional — see §5.7. */
-  beforeCommitted?: VoxelRun[];
+  beforeCommitted?: BeforeRun[];
 }
 
 interface TransactionDiff {
@@ -1131,7 +1154,7 @@ Building the diff from the write set falls out of the representation — a word 
 function toRuns(write: BucketWrite): VoxelRun[] {
   // BucketVoxelMask.runs() walks 1024 words, emitting per-row spans of set bits.
   return [...write.mask.runs()].map(({ start, length }) => ({
-    start, length, values: write.value,            // constant run: one value
+    start, length, value: write.value,
   }));
 }
 ```

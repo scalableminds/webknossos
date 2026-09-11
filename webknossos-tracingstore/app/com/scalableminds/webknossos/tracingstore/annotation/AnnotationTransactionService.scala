@@ -5,8 +5,8 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  BucketMutatingVolumeUpdateAction,
-  UpdateBucketVolumeAction,
+  EagerUpdateBucketVolumeAction,
+  LazyBucketMutatingVolumeUpdateAction,
   VolumeTracingService
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreConversions, TracingDataStore, TracingId}
@@ -289,28 +289,10 @@ class AnnotationTransactionService @Inject() (
   ): Fox[Unit] =
     for {
       updateActionsProcessed <- Fox.successful(preprocessActionsForStorage(updateActionGroup))
-      _ <- Fox.fromBool(
-        updateActionsProcessed.length <= 1000000
-      ) ?~> "Annotation update transactions with more than 1M update actions are not currently supported"
-      bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
-      _ = stats.count("volumeBucketMutatingActions", bucketMutatingActions.length)
-      actionsGrouped: Map[String, List[BucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(
-        _.actionTracingId
-      )
-      _ <- Fox.serialCombined(actionsGrouped.keys.toList) { volumeTracingId =>
-        for {
-          tracing <- stats.time("findVolume")(annotationService.findVolume(annotationId, volumeTracingId))
-          _ <- stats.time("applyBucketMutatingActions")(
-            volumeTracingService.applyBucketMutatingActions(
-              volumeTracingId,
-              annotationId,
-              tracing,
-              actionsGrouped(volumeTracingId),
-              updateActionGroup.version
-            )
-          )
-        } yield ()
-      }
+      eagerUpdateBucketActions = findEagerUpdateBucketActions(updateActionGroup)
+      _ = stats.count("eagerUpdateBucketActions", eagerUpdateBucketActions.length)
+      _ <- assertNoInvalidUpdateGroupCombinations(updateActionGroup, eagerUpdateBucketActions)
+      _ <- applyEagerUpdateBucketActions(eagerUpdateBucketActions, annotationId, updateActionGroup.version)
       updateActionsJson = Json.toJson(updateActionsProcessed)
       _ <- stats.time("annotationUpdates.put")(
         tracingDataStore.annotationUpdates.put(
@@ -321,10 +303,64 @@ class AnnotationTransactionService @Inject() (
       )
     } yield ()
 
-  private def findBucketMutatingActions(updateActionGroup: UpdateActionGroup): List[BucketMutatingVolumeUpdateAction] =
+  private def applyEagerUpdateBucketActions(
+      actions: Seq[EagerUpdateBucketVolumeAction],
+      annotationId: ObjectId,
+      version: Long
+  )(implicit ec: ExecutionContext, tc: TokenContext, stats: UpdateTimingStats): Fox[Unit] = {
+    val actionsGrouped: Map[String, Seq[EagerUpdateBucketVolumeAction]] = actions.groupBy(
+      _.actionTracingId
+    )
+    Fox
+      .serialCombined(actionsGrouped.keys) { volumeTracingId =>
+        for {
+          // findVolume here also materializes all update actions up to here, which is necessary to guarantee version ordering
+          // when mixing eager bucket mutating actions with lazily applied ones (see LazyBucketMutatingVolumeUpdateAction).
+          tracing <- stats.time("findVolume")(annotationService.findVolume(annotationId, volumeTracingId))
+          _ <- stats.time("applyBucketMutatingActions")(
+            volumeTracingService.applyEagerUpdateBucketActions(
+              volumeTracingId,
+              annotationId,
+              tracing,
+              actionsGrouped(volumeTracingId),
+              version
+            )
+          )
+        } yield ()
+      }
+      .map(_ => ())
+  }
+
+  private def assertNoInvalidUpdateGroupCombinations(
+      updateGroup: UpdateActionGroup,
+      eagerBucketMutatingActions: Seq[EagerUpdateBucketVolumeAction]
+  )(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- Fox.fromBool(
+        updateGroup.actions.length <= 1000000
+      ) ?~> "Annotation update transactions with more than 1M update actions are not currently supported"
+      // Reverts, resets and add-layer actions are assumed, by the replay-time regrouping in
+      // UpdateGroupHandling, to always be the only update in their update group. That assumption is only
+      // ever established here, at commit time, since nothing re-validates or restores it during replay.
+      _ <- Fox.fromBool(
+        updateGroup.actions.length <= 1 || !updateGroup.actions.exists(
+          UpdateGroupHandling.isIsolationSensitiveAction
+        )
+      ) ?~> "An update group containing a revert, reset-to-base, or add-layer action must not contain any other actions"
+
+      _ <- Fox.fromBool(
+        eagerBucketMutatingActions.isEmpty || !updateGroup.actions.exists(
+          _.isInstanceOf[LazyBucketMutatingVolumeUpdateAction]
+        )
+      ) ?~> "Cannot mix eager bucket mutating actions with lazily applied bucket mutating actions in the same update group"
+    } yield ()
+
+  private def findEagerUpdateBucketActions(
+      updateActionGroup: UpdateActionGroup
+  ): List[EagerUpdateBucketVolumeAction] =
     updateActionGroup.actions.flatMap {
-      case a: BucketMutatingVolumeUpdateAction => Some(a)
-      case _                                   => None
+      case a: EagerUpdateBucketVolumeAction => Some(a)
+      case _                                => None
     }
 
   private def preprocessActionsForStorage(updateActionGroup: UpdateActionGroup): List[UpdateAction] = {
@@ -336,8 +372,8 @@ class AnnotationTransactionService @Inject() (
       case first :: rest => first.addInfo(updateActionGroup.info) :: rest
     }
     actionsWithInfo.map {
-      case a: UpdateBucketVolumeAction => a.withoutBase64Data
-      case a: AddLayerAnnotationAction =>
+      case a: EagerUpdateBucketVolumeAction => a.withoutBase64Data
+      case a: AddLayerAnnotationAction      =>
         // Note: this generated tracingId must not be read from this action before it was committed to fossildb,
         // to keep save retries idempotent.
         a.copy(tracingId = Some(TracingId.generate))

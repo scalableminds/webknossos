@@ -13,6 +13,8 @@ import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, 
 import com.scalableminds.webknossos.tracingstore.tracings.{GroupUtils, MetadataEntry, NamedBoundingBox}
 import play.api.libs.json.*
 
+import java.util.Base64
+
 trait VolumeUpdateActionHelper {
 
   protected def mapSegments(
@@ -40,12 +42,7 @@ trait ApplyableVolumeUpdateAction extends VolumeUpdateAction {
   def applyOn(tracing: VolumeTracing): VolumeTracing
 }
 
-trait BucketMutatingVolumeUpdateAction extends ApplyableVolumeUpdateAction {
-  // Upon the first Bucket-mutating action the volumeBucketDataHasChanged flag of the
-  // volume tracing proto should be set to true. This is done by the  action
-  // UpdateVolumeBucketDataHasChangedVolumeAction which needs to be sent by the frontend.
-  override def applyOn(tracing: VolumeTracing): VolumeTracing = tracing
-}
+trait LazyBucketMutatingVolumeUpdateAction extends VolumeUpdateAction
 
 trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserStateUpdateAction {
   def actionAuthorId: Option[ObjectId]
@@ -71,7 +68,7 @@ trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserS
   }
 }
 
-case class UpdateBucketVolumeAction(
+case class EagerUpdateBucketVolumeAction(
     position: Vec3Int,
     cubeSize: Int,
     mag: Vec3Int,
@@ -81,7 +78,7 @@ case class UpdateBucketVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends BucketMutatingVolumeUpdateAction derives JsonAutoFormat {
+) extends ApplyableVolumeUpdateAction derives JsonAutoFormat {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
@@ -90,7 +87,7 @@ case class UpdateBucketVolumeAction(
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
-  def withoutBase64Data: UpdateBucketVolumeAction =
+  def withoutBase64Data: EagerUpdateBucketVolumeAction =
     this.copy(base64Data = None)
 
   def bucketPosition: BucketPosition = BucketPosition(
@@ -100,6 +97,8 @@ case class UpdateBucketVolumeAction(
     mag,
     additionalCoordinates
   )
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing = tracing
 }
 
 case class UpdateTracingVolumeAction(
@@ -569,7 +568,7 @@ case class DeleteSegmentDataVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends BucketMutatingVolumeUpdateAction derives JsonAutoFormat {
+) extends LazyBucketMutatingVolumeUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
@@ -946,6 +945,30 @@ case class UpdateSegmentGroupVisibilityVolumeAction(
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+}
+
+case class UpdateBucketPartialVolumeAction(
+    actionTracingId: String,
+    position: Vec3Int,
+    mag: Vec3Int,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+    voxelRunsBase64: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends LazyBucketMutatingVolumeUpdateAction derives JsonAutoFormat {
+
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+
+  lazy val bucketPosition =
+    BucketPosition(position.x, position.y, position.z, mag, additionalCoordinates)
+
+  def voxelRunsBinary: Array[Byte] = Base64.getDecoder.decode(voxelRunsBase64)
 }
 
 // Only used to represent legacy update actions from the db where not all fields are set

@@ -1081,7 +1081,7 @@ class DataCube {
 
 export default DataCube;
 
-function checkLineIntersection(bentMesh: Mesh, pointAVec3: Vector3, pointBVec3: Vector3) {
+export function checkLineIntersection(bentMesh: Mesh, pointAVec3: Vector3, pointBVec3: Vector3) {
   /* Returns true if an intersection is found */
 
   const geometry = bentMesh.geometry;

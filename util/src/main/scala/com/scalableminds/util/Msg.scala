@@ -391,7 +391,8 @@ object Msg {
       val submitFailed: String = "Could not start segment index file computation job."
     }
     object ExportTiff {
-      val submitFailed: String = "Could not start Tiff export job."
+      val submitFailed: String = "Could not start data export job."
+      val invalidFormat: String = "Invalid export format. Must be one of ome_tiff, tiff_stack, ome_zarr."
     }
     object ConvertToWkw {
       val submitFailed: String = "Could not start image conversion/import job."

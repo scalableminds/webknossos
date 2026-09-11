@@ -18,6 +18,7 @@ import {
   type AdditionalAxis,
   type APIDataLayer,
   type APIDataset,
+  APIExportFormat,
   APIJobCommand,
   type VoxelSize,
 } from "types/api_types";
@@ -49,22 +50,29 @@ type ExportLayerInfos = {
   additionalAxes?: AdditionalAxis[] | null;
 };
 
-enum ExportFormat {
-  OME_TIFF = "OME_TIFF",
-  TIFF_STACK = "TIFF_STACK",
-}
 const ExportFormatOptions: SegmentedOptions = [
   {
     label: "OME TIFF",
-    value: ExportFormat.OME_TIFF,
+    value: APIExportFormat.OME_TIFF,
   },
   {
     label: "TIFF Stack (as .zip)",
-    value: ExportFormat.TIFF_STACK,
+    value: APIExportFormat.TIFF_STACK,
+  },
+  {
+    label: "OME-Zarr (as .ozx)",
+    value: APIExportFormat.OME_ZARR,
   },
 ];
 
 const EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR = 1.33;
+
+// OME-Zarr is written compressed, so its estimate is an upper bound.
+const FILE_SIZE_FACTOR_BY_FORMAT: Record<APIExportFormat, number> = {
+  [APIExportFormat.OME_TIFF]: EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR,
+  [APIExportFormat.TIFF_STACK]: 1,
+  [APIExportFormat.OME_ZARR]: 1,
+};
 
 const exportKey = (layerInfos: ExportLayerInfos, mag: Vector3) =>
   `${layerInfos.layerName || ""}__${layerInfos.tracingId || ""}__${mag.join("-")}`;
@@ -145,15 +153,13 @@ function estimateFileSize(
   selectedLayer: APIDataLayer,
   mag: Vector3,
   boundingBox: BoundingBoxMinMaxType,
-  exportFormat: ExportFormat,
+  exportFormat: APIExportFormat,
 ) {
   const shape = computeShapeFromBoundingBox(boundingBox);
   const volume =
     Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
   return formatCountToDataAmountUnit(
-    volume *
-      getByteCountFromLayer(selectedLayer) *
-      (exportFormat === ExportFormat.OME_TIFF ? EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR : 1),
+    volume * getByteCountFromLayer(selectedLayer) * FILE_SIZE_FACTOR_BY_FORMAT[exportFormat],
   );
 }
 
@@ -185,7 +191,7 @@ export function DownloadTiffTab({
   const [selectedLayerName, setSelectedLayerName] = useState<string>(
     dataset.dataSource.dataLayers[0].name,
   );
-  const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
+  const [exportFormat, setExportFormat] = useState<APIExportFormat>(APIExportFormat.OME_TIFF);
 
   const { runningJobs: runningExportJobs, startJob } = useStartAndPollJob({
     async onSuccess(job) {
@@ -242,7 +248,7 @@ export function DownloadTiffTab({
 
   const handleExport = async () => {
     if (startJob == null) {
-      console.error("Could not start Tiff export.");
+      console.error("Could not start data export.");
       return;
     }
 
@@ -256,7 +262,7 @@ export function DownloadTiffTab({
         mag.join("-"),
         selectedLayerInfos.annotationId,
         selectedLayerInfos.displayName,
-        exportFormat === ExportFormat.OME_TIFF,
+        exportFormat,
       );
       return [exportKey(selectedLayerInfos, mag), job.id];
     });
@@ -283,7 +289,7 @@ export function DownloadTiffTab({
           <Flex justify="center">
             <Segmented
               value={exportFormat}
-              onChange={(value) => setExportFormat(value as ExportFormat)}
+              onChange={(value) => setExportFormat(value as APIExportFormat)}
               options={ExportFormatOptions}
               size="large"
             />
@@ -341,7 +347,8 @@ export function DownloadTiffTab({
           )}
           <Typography.Paragraph>
             {onlyOneMagAvailable && <div>{mag.join("-")}</div>}
-            Estimated file size:{" "}
+            Estimated file size
+            {exportFormat === APIExportFormat.OME_ZARR ? " (uncompressed)" : ""}:{" "}
             {estimateFileSize(selectedLayer, mag, selectedBoundingBox.boundingBox, exportFormat)}
             <br />
             Magnification: {formatSelectedScale(dataset, mag)}

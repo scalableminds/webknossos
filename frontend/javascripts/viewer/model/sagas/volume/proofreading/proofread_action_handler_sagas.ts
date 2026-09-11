@@ -212,6 +212,7 @@ export function* performPartitionedMinCut(
       volumeTracingId,
       refreshInfos,
       ctx,
+      currentVersion,
     );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
@@ -344,11 +345,13 @@ export function* handleProofreadMerge(action: ProofreadMergeAction, ctx: Operati
           targetInfo.position ?? sourceInfo.position,
       },
     ];
+    const currentVersion = yield* select((state) => state.annotation.version);
     yield* call(
       updateProofreadingSegmentsAndScheduleSyncMeshes,
       volumeTracingId,
       refreshInfos,
       ctx,
+      currentVersion,
     );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
@@ -525,6 +528,7 @@ export function* handleMinCutAgglomerate(
       volumeTracingId,
       refreshInfos,
       ctx,
+      annotationVersion,
     );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
@@ -676,6 +680,7 @@ export function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationC
       volumeTracingId,
       refreshInfos,
       ctx,
+      newAnnotationVersion,
     );
   } finally {
     if (unsubscribeFromAnnotationMutex) {

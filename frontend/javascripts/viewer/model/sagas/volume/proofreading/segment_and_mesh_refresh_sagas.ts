@@ -140,6 +140,9 @@ export function* updateProofreadingSegmentsAndScheduleSyncMeshes(
   volumeTracingId: string,
   refreshInfos: AgglomerateChangeItem[],
   ctx: OperationContext,
+  // Version the operation was saved at. The mesh syncing runs detached and must not read the
+  // annotation version again, as an unrelated action might have raised it in the meantime.
+  annotationVersion: number,
 ): Saga<void> {
   yield* call(updateAffectedSegmentItems, volumeTracingId, refreshInfos);
   yield* call(syncWithBackend, ctx);
@@ -152,6 +155,7 @@ export function* updateProofreadingSegmentsAndScheduleSyncMeshes(
     syncAffectedAndMaybeLoadMissingMeshes,
     volumeTracingId,
     refreshInfos,
+    annotationVersion,
   );
   yield* call(scheduleMeshUpdate, meshUpdateEffect, volumeTracingId, refreshInfos);
 }
@@ -238,6 +242,7 @@ export function* getMeshDisplayPropsByOldAgglomerateId(
 export function* syncAffectedAndMaybeLoadMissingMeshes(
   layerName: string,
   items: AgglomerateChangeItem[],
+  annotationVersion: number,
 ): Saga<void> {
   const oldAgglomerateIds = items.map((item) => item.oldAgglomerateId).filter((id) => id != null);
   const shouldDoMeshRefreshing = yield* call(
@@ -248,7 +253,7 @@ export function* syncAffectedAndMaybeLoadMissingMeshes(
   if (shouldDoMeshRefreshing) {
     // syncAffectedAndMaybeLoadMissingMeshes is itself always invoked as a detached, cancellable task via
     // scheduleMeshUpdate (see callers), so no separate spawn is needed here to avoid blocking.
-    yield* call(syncAffectedAndLoadMissingMeshes, layerName, items);
+    yield* call(syncAffectedAndLoadMissingMeshes, layerName, items, annotationVersion);
   }
 }
 
@@ -326,6 +331,7 @@ export function* reloadMeshes(
 export function* syncAffectedAndLoadMissingMeshes(
   layerName: string,
   changeInfoItems: AgglomerateChangeItem[],
+  annotationVersion: number,
 ): Saga<void> {
   const additionalCoordinates = undefined;
 
@@ -359,6 +365,7 @@ export function* syncAffectedAndLoadMissingMeshes(
       oldIds,
       newAgglomerateId,
       additionalCoordinates,
+      annotationVersion,
     );
     if (handledLocally) {
       locallyHandledNewIds.add(newAgglomerateId);
@@ -369,15 +376,22 @@ export function* syncAffectedAndLoadMissingMeshes(
 
   // Try to locally split the meshes whose agglomerates were split.
   for (const { oldAgglomerateId, newIds, items } of splitGroups) {
-    const handledLocally = yield* call(
+    const { handledLocally, idsNeedingReload } = yield* call(
       trySplitMeshLocally,
       layerName,
       oldAgglomerateId,
       newIds,
       additionalCoordinates,
+      annotationVersion,
     );
     if (handledLocally) {
-      for (const newId of newIds) locallyHandledNewIds.add(newId);
+      // A split can be applied locally and still leave single new ids without geometry.
+      // Only those are reloaded, the others keep their spliced mesh.
+      const idsToReload = new Set(idsNeedingReload);
+      for (const newId of newIds) {
+        if (!idsToReload.has(newId)) locallyHandledNewIds.add(newId);
+      }
+      itemsToReload.push(...items.filter((item) => idsToReload.has(item.newAgglomerateId)));
     } else {
       itemsToReload.push(...items);
     }

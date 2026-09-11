@@ -502,7 +502,7 @@ export default class SegmentMeshController {
 
   /**
    * Collects every chunk node of oldSegmentId's mesh, grouped by LOD, and validates that all of
-   * them carry a vertexSegmentMapping. If at least one has no vertexSegmentMapping, null is returned.
+   * them have a vertexSegmentMapping. If at least one has no vertexSegmentMapping, null is returned.
    */
   private collectSplittableNodesByLod(
     oldSegmentId: bigint,
@@ -546,23 +546,23 @@ export default class SegmentMeshController {
   }
 
   /*
-   * Checks whether splitMeshByNewMapping would produce geometry for *every* new agglomerate id.
-   * It skips a (new id, node) pair whose supervoxels aren't in that node, so a new id with no
-   * loaded geometry at all would get a store entry but nothing in the scene.
-   * Must be called before any store state is mutated so that a false result can still fall back.
+   * Returns the new agglomerate ids splitMeshByNewMapping would not produce any geometry for,
+   * because none of their segments is part of oldSegmentId's loaded geometry.
+   * All new ids are reported if the mesh cannot be split at all.
    */
-  canSplitMeshByNewMapping(
+  getNewAgglomerateIdsWithoutGeometry(
     oldSegmentId: bigint,
     layerName: string,
     newAgglomerateIdToSegmentIds: Map<bigint, Set<bigint>>,
     additionalCoordinates?: AdditionalCoordinate[] | null,
-  ): boolean {
+  ): bigint[] {
+    const newIds = Array.from(newAgglomerateIdToSegmentIds.keys());
     const nodesByLod = this.collectSplittableNodesByLod(
       oldSegmentId,
       layerName,
       additionalCoordinates,
     );
-    if (nodesByLod == null) return false;
+    if (nodesByLod == null) return newIds;
 
     const newIdsWithGeometry = new Set<bigint>();
     for (const { nodes } of nodesByLod) {
@@ -578,16 +578,7 @@ export default class SegmentMeshController {
       }
     }
 
-    const missingIds = Array.from(newAgglomerateIdToSegmentIds.keys()).filter(
-      (newSegmentId) => !newIdsWithGeometry.has(newSegmentId),
-    );
-    if (missingIds.length > 0) {
-      console.warn(
-        `Cannot split mesh ${oldSegmentId} locally: no loaded geometry for new agglomerate id(s) ${missingIds.join(", ")}.`,
-      );
-      return false;
-    }
-    return true;
+    return newIds.filter((newId) => !newIdsWithGeometry.has(newId));
   }
 
   /**
@@ -675,18 +666,6 @@ export default class SegmentMeshController {
       additionalCoordinates,
     );
     if (nodesByLodOfOriginalMesh == null) return false;
-    // Re-check before touching the scene graph, so a split that would drop one of the new ids
-    // bails out while everything is still in its original state (see canSplitMeshByNewMapping).
-    if (
-      !this.canSplitMeshByNewMapping(
-        oldSegmentId,
-        layerName,
-        newAgglomerateIdToSegmentIds,
-        additionalCoordinates,
-      )
-    ) {
-      return false;
-    }
 
     for (const { lod, scale, nodes } of nodesByLodOfOriginalMesh) {
       for (const [newSegmentId, keepIds] of newAgglomerateIdToSegmentIds) {

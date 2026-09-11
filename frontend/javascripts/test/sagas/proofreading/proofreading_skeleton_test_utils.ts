@@ -249,9 +249,6 @@ export function* performMergeTreesProofreading(
   context: WebknossosTestContext,
   shouldSaveAfterLoadingTrees: boolean,
   loadMeshes: boolean,
-  // Invoked after the initial meshes are loaded and before the merge is triggered. That is the
-  // only point at which a caller can register a mesh listener that neither picks up the initial
-  // load's settle events nor misses the merge's - which is spawned detached and can settle early.
   afterLoadingMeshes?: () => Saga<void>,
 ): Saga<void> {
   const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);

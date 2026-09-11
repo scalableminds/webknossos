@@ -5,11 +5,12 @@
 // since this is a cohesive, self-contained algorithm - detection, merge, and split - that doesn't
 // otherwise touch initial mesh loading or segment-item bookkeeping.
 
-import { getAgglomeratesForSegmentsFromTracingstore, type meshApi } from "admin/rest_api";
+import { getSegmentsForAgglomerateFromTracingStore, type meshApi } from "admin/rest_api";
 import { uniq } from "lodash-es";
 import type { ActionPattern } from "redux-saga/effects";
 import { call, put, take } from "typed-redux-saga";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, APIMeshFileInfo } from "types/api_types";
+import type { Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import { getMeshInfoForSegment } from "viewer/model/accessors/volumetracing_accessor";
@@ -25,15 +26,10 @@ import { select } from "viewer/model/sagas/effect_generators";
 import {
   fetchAndMergePrecomputedChunks,
   getChunkLoadingDescriptors,
+  getChunksForUnmappedSegments,
 } from "viewer/model/sagas/meshes/precomputed_mesh_saga";
 import { Store } from "viewer/singletons";
-import type {
-  ActiveMappingInfo,
-  Mapping,
-  MeshInformation,
-  PrecomputedMeshInformation,
-} from "viewer/store";
-import { getMappedIdAsBigInt } from "./preparation_sagas";
+import type { MeshInformation, PrecomputedMeshInformation } from "viewer/store";
 import type { AgglomerateChangeItem } from "./proofreading_types";
 
 export function* waitForMeshFullyLoaded(
@@ -71,6 +67,83 @@ function* safeGetChunkLoadingDescriptors(...args: Parameters<typeof getChunkLoad
 }
 
 /*
+ * Resolves the mesh file a mesh was actually loaded from. Falling back to the currently selected
+ * file could mix geometry that was computed differently.
+ */
+function* getMeshFileOfLoadedMesh(
+  layerName: string,
+  meshInfo: PrecomputedMeshInformation,
+): Saga<APIMeshFileInfo | null> {
+  const dataset = yield* select((state) => state.dataset);
+  const segmentationLayer = yield* select((state) =>
+    getSegmentationLayerByName(state.dataset, layerName),
+  );
+  if (segmentationLayer == null) return null;
+
+  const availableMeshFiles = yield* call(
+    dispatchMaybeFetchMeshFilesAsync,
+    Store.dispatch,
+    segmentationLayer,
+    dataset,
+    false,
+    false,
+  );
+  return availableMeshFiles.find((file) => file.name === meshInfo.meshFileName) ?? null;
+}
+
+/*
+ * Fetches the given mesh chunks and adds them to targetId's scene group as a second geometry next
+ * to the existing one. The two are folded into one by mergeMeshSiblingsIntoOneGeometry after a
+ * merge, or taken apart again by splitMeshByNewMapping after a split.
+ */
+function* fetchAndAppendChunksToMesh(
+  layerName: string,
+  targetId: bigint,
+  segmentIdForRequest: bigint,
+  lod: number,
+  chunks: meshApi.MeshChunk[],
+  chunkScale: Vector3 | null,
+  meshFile: APIMeshFileInfo,
+  opacity: number | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
+): Saga<void> {
+  if (chunks.length === 0) return;
+
+  const dataset = yield* select((state) => state.dataset);
+  const segmentationLayer = yield* select((state) =>
+    getSegmentationLayerByName(state.dataset, layerName),
+  );
+  if (segmentationLayer == null) return;
+
+  const mergedGeometry = yield* call(
+    fetchAndMergePrecomputedChunks,
+    dataset,
+    meshFile,
+    segmentationLayer,
+    segmentIdForRequest,
+    chunks,
+    chunkScale,
+  );
+  if (mergedGeometry == null) return;
+
+  const { segmentMeshController } = yield* call(getSceneController);
+  yield* call(
+    {
+      context: segmentMeshController,
+      fn: segmentMeshController.addMeshFromGeometry,
+    },
+    mergedGeometry,
+    targetId,
+    null,
+    lod,
+    layerName,
+    additionalCoordinates,
+    opacity,
+    true,
+  );
+}
+
+/*
  * Fetches only the mesh-file chunks that are missing from oldId's already-loaded geometry.
  * Done by fetching the newIds chunks and checking whether all are present in the scene.
  * If some are missing, these are fetched and added to the oldId's scene group.
@@ -82,6 +155,7 @@ function* fetchAndAppendMissingPrecomputedMergeChunks(
   newId: bigint,
   meshInfo: PrecomputedMeshInformation,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
+  annotationVersion: number,
 ): Saga<boolean> {
   const { segmentMeshController } = yield* call(getSceneController);
   if (!segmentMeshController.hasFullyMergedMesh(oldId, layerName, additionalCoordinates)) {
@@ -94,18 +168,9 @@ function* fetchAndAppendMissingPrecomputedMergeChunks(
   );
   if (segmentationLayer == null) return false;
 
-  const availableMeshFiles = yield* call(
-    dispatchMaybeFetchMeshFilesAsync,
-    Store.dispatch,
-    segmentationLayer,
-    dataset,
-    false,
-    false,
-  );
-  const meshFile = availableMeshFiles.find((file) => file.name === meshInfo.meshFileName);
+  const meshFile = yield* call(getMeshFileOfLoadedMesh, layerName, meshInfo);
   if (meshFile == null) return false;
 
-  const annotationVersion = yield* select((state) => state.annotation.version);
   const chunkDescriptors = yield* call(
     safeGetChunkLoadingDescriptors,
     newId,
@@ -132,35 +197,17 @@ function* fetchAndAppendMissingPrecomputedMergeChunks(
     const deltaChunks = allChunksForLod.filter(
       (chunk) => !alreadyLoadedIds.has(chunk.unmappedSegmentId),
     );
-    if (deltaChunks.length === 0) continue;
-
-    const mergedDeltaGeometry = yield* call(
-      fetchAndMergePrecomputedChunks,
-      dataset,
-      meshFile,
-      segmentationLayer,
+    yield* call(
+      fetchAndAppendChunksToMesh,
+      layerName,
+      oldId,
       newId,
+      lod,
       deltaChunks,
       chunkDescriptors.segmentInfo.chunkScale,
-    );
-    if (mergedDeltaGeometry == null) continue;
-
-    // This adds the delta as a second sibling node next to oldId's existing merged node instead
-    // of folding them into one - tryLocalMeshMerge merges them back down to one geometry (see
-    // consolidateMergedMesh below) once oldId has been relabeled to newId.
-    yield* call(
-      {
-        context: segmentMeshController,
-        fn: segmentMeshController.addMeshFromGeometry,
-      },
-      mergedDeltaGeometry,
-      oldId,
-      null,
-      lod,
-      layerName,
-      additionalCoordinates,
+      meshFile,
       meshInfo.opacity,
-      true,
+      additionalCoordinates,
     );
   }
   return true;
@@ -197,6 +244,7 @@ export function* tryLocalMeshMerge(
   oldIds: bigint[],
   newId: bigint,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
+  annotationVersion: number,
 ): Saga<boolean> {
   for (const oldId of oldIds) {
     yield* call(waitForMeshFullyLoaded, layerName, oldId, additionalCoordinates);
@@ -230,6 +278,7 @@ export function* tryLocalMeshMerge(
         newId,
         meshInfo,
         additionalCoordinates,
+        annotationVersion,
       );
       if (!handled) {
         return false;
@@ -262,91 +311,133 @@ export function* tryLocalMeshMerge(
   return true;
 }
 
+// Beyond this many missing segments, loading a new agglomerate's mesh as a whole is cheaper than
+// requesting the chunks of its segments one by one.
+const MAX_SEGMENTS_TO_COMPLETE_PER_AGGLOMERATE = 50;
+
+export type LocalSplitResult = {
+  handledLocally: boolean;
+  // New ids the split could not give any geometry to. These need a full reload.
+  idsNeedingReload: bigint[];
+};
+
+const NOT_HANDLED_LOCALLY: LocalSplitResult = { handledLocally: false, idsNeedingReload: [] };
+
 /*
- * After a proofread split, this function loads the new agglomerate ids of affected segments loaded
- * by the mesh that was splitted. The new ids are put into a map which is returned.
- * If mapping information is missing, it is requested from the backend.
+ * Asks the back-end which segments each agglomerate created by a split consists of.
+ * Returns null if that information is unavailable, in which case no local split must be attempted.
  */
-function* getNewAgglomerateIdsToSegmentIdsMap(
+function* fetchSegmentIdsByNewAgglomerateId(
   layerName: string,
-  segmentIds: bigint[],
-  newAgglomerateIds: Set<bigint>,
+  newIds: bigint[],
+  annotationVersion: number,
 ): Saga<Map<bigint, Set<bigint>> | null> {
-  const newAgglomerateIdToSegmentIds = new Map<bigint, Set<bigint>>();
-  for (const newId of newAgglomerateIds) {
-    newAgglomerateIdToSegmentIds.set(newId, new Set());
-  }
-
-  const activeMapping = yield* select(
-    (state): ActiveMappingInfo => state.temporaryConfiguration.activeMappingByLayer[layerName],
-  );
-  const unresolvedIds: bigint[] = [];
-  for (const supervoxelId of segmentIds) {
-    const mappedId =
-      activeMapping.mapping != null
-        ? getMappedIdAsBigInt(activeMapping.mapping, supervoxelId)
-        : undefined;
-    if (mappedId != null && newAgglomerateIdToSegmentIds.has(mappedId)) {
-      newAgglomerateIdToSegmentIds.get(mappedId)?.add(supervoxelId);
-    } else {
-      unresolvedIds.push(supervoxelId);
-    }
-  }
-
-  if (unresolvedIds.length > 0) {
-    const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
-    const annotationId = yield* select((state) => state.annotation.annotationId);
-    const annotationVersion = yield* select((state) => state.annotation.version);
-    let resolvedMapping: Mapping;
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
+  const segmentIdsByNewId = new Map<bigint, Set<bigint>>();
+  for (const newId of newIds) {
+    let segmentIds: bigint[];
     try {
-      resolvedMapping = yield* call(
-        getAgglomeratesForSegmentsFromTracingstore,
+      segmentIds = yield* call(
+        getSegmentsForAgglomerateFromTracingStore,
         tracingStoreUrl,
         layerName,
-        new Set(unresolvedIds),
-        annotationId,
+        newId,
         annotationVersion,
       );
     } catch (exception) {
-      console.warn(
-        `Could not resolve post-split agglomerate ids for ${unresolvedIds.length} supervoxel(s):`,
-        exception,
-      );
+      console.warn(`Could not fetch the segments of agglomerate ${newId}:`, exception);
       return null;
     }
-    for (const supervoxelId of unresolvedIds) {
-      const mappedId = getMappedIdAsBigInt(resolvedMapping, supervoxelId);
-      if (mappedId == null || !newAgglomerateIdToSegmentIds.has(mappedId)) {
-        // Couldn't confidently map the segment ids to their respective new agglomerate ids.
-        // -> Abort rather than produce a mesh with missing/misplaced chunks.
-        return null;
-      }
-      newAgglomerateIdToSegmentIds.get(mappedId)?.add(supervoxelId);
-    }
+    if (segmentIds.length === 0) return null;
+    segmentIdsByNewId.set(newId, new Set(segmentIds));
   }
-
-  for (const keepIds of newAgglomerateIdToSegmentIds.values()) {
-    // If any new agglomerate doesn't get any of the segment ids, things might be weird. Thus, better fallback to full reload.
-    if (keepIds.size === 0) return null;
-  }
-
-  return newAgglomerateIdToSegmentIds;
+  return segmentIdsByNewId;
 }
 
 /*
- * Tries to split a local mesh by separating it into sub geometries based on the latest mapping info
- * retrieved via getNewAgglomerateIdsToSegmentIdsMap. The split off meshes get assigned to their own
- * scene graph mesh group and the old one is kept with its designated sub geometry only if the split
- * left over some parts of the mesh for the old agglomerate id.
- * Returns true if the local split worked and false if not. False means a full reload of the meshes
- * is needed.
+ * Loads the chunks of segments that belong to the mesh but have no geometry in the scene yet, so
+ * that the split can hand each new agglomerate all of its geometry. New agglomerates that miss most
+ * of their segments are skipped here, because reloading their whole mesh is cheaper.
+ */
+function* completeMeshBeforeSplit(
+  layerName: string,
+  oldId: bigint,
+  meshInfo: PrecomputedMeshInformation,
+  segmentIdsByNewId: Map<bigint, Set<bigint>>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
+  annotationVersion: number,
+): Saga<void> {
+  const { segmentMeshController } = yield* call(getSceneController);
+  const loadedSegmentIds = segmentMeshController.getAllLoadedUnmappedSegmentIds(
+    oldId,
+    layerName,
+    additionalCoordinates,
+  );
+
+  const missingSegmentIdsByNewId = new Map<bigint, bigint[]>();
+  for (const [newId, segmentIds] of segmentIdsByNewId) {
+    const missingSegmentIds = [...segmentIds].filter((id) => !loadedSegmentIds.has(id));
+    if (
+      missingSegmentIds.length > 0 &&
+      missingSegmentIds.length < segmentIds.size &&
+      missingSegmentIds.length <= MAX_SEGMENTS_TO_COMPLETE_PER_AGGLOMERATE
+    ) {
+      missingSegmentIdsByNewId.set(newId, missingSegmentIds);
+    }
+  }
+  if (missingSegmentIdsByNewId.size === 0) return;
+
+  const dataset = yield* select((state) => state.dataset);
+  const segmentationLayer = yield* select((state) =>
+    getSegmentationLayerByName(state.dataset, layerName),
+  );
+  if (segmentationLayer == null) return;
+  const meshFile = yield* call(getMeshFileOfLoadedMesh, layerName, meshInfo);
+  if (meshFile == null) return;
+
+  const loadedLods = segmentMeshController.getLoadedLods(oldId, layerName, additionalCoordinates);
+  for (const [newId, missingSegmentIds] of missingSegmentIdsByNewId) {
+    const chunkInfo = yield* call(
+      getChunksForUnmappedSegments,
+      missingSegmentIds,
+      dataset,
+      segmentationLayer,
+      meshFile,
+      annotationVersion,
+    );
+    if (chunkInfo == null) continue;
+    for (const lod of loadedLods) {
+      yield* call(
+        fetchAndAppendChunksToMesh,
+        layerName,
+        oldId,
+        newId,
+        lod,
+        chunkInfo.chunksByLod.get(lod) ?? [],
+        chunkInfo.chunkScale,
+        meshFile,
+        meshInfo.opacity,
+        additionalCoordinates,
+      );
+    }
+  }
+}
+
+/*
+ * Tries to split a local mesh by separating it into sub geometries based on the segments the
+ * back-end reports for each new agglomerate. The split off meshes get assigned to their own scene
+ * graph mesh group and the old one is kept with its designated sub geometry only if the split left
+ * over some parts of the mesh for the old agglomerate id.
+ * handledLocally is false if the whole split needs a full reload of the meshes. Otherwise
+ * idsNeedingReload lists the new ids that got no geometry and thus still need to be loaded.
  */
 export function* trySplitMeshLocally(
   layerName: string,
   oldId: bigint,
   newIds: bigint[],
   additionalCoordinates: AdditionalCoordinate[] | undefined,
-): Saga<boolean> {
+  annotationVersion: number,
+): Saga<LocalSplitResult> {
   yield* call(waitForMeshFullyLoaded, layerName, oldId, additionalCoordinates);
 
   const meshInfo = yield* select((state) =>
@@ -354,49 +445,56 @@ export function* trySplitMeshLocally(
   );
   if (meshInfo == null || !meshInfo.isPrecomputed) {
     // No mesh loaded, or an ad-hoc mesh (no supervoxel tagging): can't split locally.
-    return false;
+    return NOT_HANDLED_LOCALLY;
   }
 
   const { segmentMeshController } = yield* call(getSceneController);
   if (!segmentMeshController.hasFullyMergedMesh(oldId, layerName, additionalCoordinates)) {
-    return false;
+    return NOT_HANDLED_LOCALLY;
   }
 
-  const supervoxelIds = segmentMeshController.getAllLoadedUnmappedSegmentIds(
-    oldId,
+  const segmentIdsByNewId = yield* call(
+    fetchSegmentIdsByNewAgglomerateId,
     layerName,
-    additionalCoordinates,
+    newIds,
+    annotationVersion,
   );
-  const newAgglomerateIdToSegmentIds = yield* call(
-    getNewAgglomerateIdsToSegmentIdsMap,
-    layerName,
-    [...supervoxelIds],
-    new Set(newIds),
-  );
-  if (newAgglomerateIdToSegmentIds == null) return false;
+  if (segmentIdsByNewId == null) return NOT_HANDLED_LOCALLY;
 
-  // hasFullyMergedMesh only says the mesh can be sliced at all; this confirms that every new id
-  // actually receives geometry. Without it the reload fallback would skip a geometry-less new id,
-  // because loadCoarseMesh treats its store entry as "already loaded".
-  const canSplitLocally = segmentMeshController.canSplitMeshByNewMapping(
+  yield* call(
+    completeMeshBeforeSplit,
+    layerName,
+    oldId,
+    meshInfo,
+    segmentIdsByNewId,
+    additionalCoordinates,
+    annotationVersion,
+  );
+
+  // A new id without geometry would get a store entry but nothing in the scene, and the reload
+  // fallback would then skip it as already loaded. So it is left out of the split and reloaded.
+  const idsNeedingReload = segmentMeshController.getNewAgglomerateIdsWithoutGeometry(
     oldId,
     layerName,
-    newAgglomerateIdToSegmentIds,
+    segmentIdsByNewId,
     additionalCoordinates,
   );
-  if (!canSplitLocally) return false;
+  const idsToSplit = newIds.filter((newId) => !idsNeedingReload.includes(newId));
+  if (idsToSplit.length === 0) return NOT_HANDLED_LOCALLY;
+
+  const segmentIdsByIdToSplit = new Map(
+    [...segmentIdsByNewId].filter(([newId]) => !idsNeedingReload.includes(newId)),
+  );
 
   // Update Redux (and thus the new ids' isVisible, which addMeshFromGeometry reads when creating
-  // their target groups) before touching the scene graph - the check above already confirmed the
-  // split itself will succeed, so there's no window where Redux and the scene could end up
-  // inconsistent.
-  yield* put(splitMeshAction(layerName, oldId, newIds, additionalCoordinates));
+  // their target groups) before touching the scene graph.
+  yield* put(splitMeshAction(layerName, oldId, idsToSplit, additionalCoordinates));
 
   const succeeded = yield* call(
     { context: segmentMeshController, fn: segmentMeshController.splitMeshByNewMapping },
     oldId,
     layerName,
-    newAgglomerateIdToSegmentIds,
+    segmentIdsByIdToSplit,
     meshInfo.opacity,
     additionalCoordinates,
   );
@@ -404,16 +502,21 @@ export function* trySplitMeshLocally(
     // Shouldn't happen given the checks above. The store entries splitMeshAction created must be
     // dropped again, else the caller's reload fallback would skip all new ids as already loaded.
     console.error(`splitMeshByNewMapping unexpectedly failed for segment ${oldId}.`);
-    for (const newId of new Set([oldId, ...newIds])) {
+    for (const newId of new Set([oldId, ...idsToSplit])) {
       yield* put(removeMeshAction(layerName, newId));
     }
-    return false;
+    return NOT_HANDLED_LOCALLY;
   }
 
-  for (const newId of newIds) {
+  for (const newId of idsToSplit) {
     segmentMeshController.setMeshColor(newId, layerName);
   }
-  return true;
+  if (idsNeedingReload.length > 0) {
+    console.warn(
+      `No loaded geometry for new agglomerate id(s) ${idsNeedingReload.join(", ")}. Reloading these meshes.`,
+    );
+  }
+  return { handledLocally: true, idsNeedingReload };
 }
 
 // Exported so the parked, currently-unused pooled/dependency-aware scheduler in

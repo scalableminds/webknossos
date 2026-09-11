@@ -361,6 +361,52 @@ export function* getChunkLoadingDescriptors(
     segmentInfo,
   };
 }
+/*
+ * Lists the mesh-file chunks of plain, unmapped segment ids, grouped by LOD.
+ * Passing neither a mapping name nor an editable mapping tracing id makes the back-end take each id
+ * as it is instead of expanding it into all segments of an agglomerate. That keeps the response
+ * small, which matters because agglomerates can be huge. Segments without any chunk are skipped.
+ */
+export function* getChunksForUnmappedSegments(
+  segmentIds: bigint[],
+  dataset: APIDataset,
+  segmentationLayer: APISegmentationLayer,
+  meshFile: APIMeshFileInfo,
+  annotationVersion: number,
+): Saga<{ chunksByLod: Map<number, meshApi.MeshChunk[]>; chunkScale: Vector3 } | null> {
+  const chunksByLod = new Map<number, meshApi.MeshChunk[]>();
+  let chunkScale: Vector3 | null = null;
+  for (const segmentId of segmentIds) {
+    let segmentInfo: meshApi.MeshSegmentInfo;
+    try {
+      segmentInfo = yield* call(
+        meshApi.getMeshFileChunksForSegment,
+        dataset.dataStore.url,
+        dataset.id,
+        getBaseSegmentationName(segmentationLayer),
+        meshFile,
+        segmentId,
+        null,
+        null,
+        annotationVersion,
+      );
+    } catch (exception) {
+      console.warn(`Could not list mesh chunks for segment ${segmentId}:`, exception);
+      continue;
+    }
+    chunkScale = segmentInfo.chunkScale;
+    segmentInfo.lods.forEach((lodInfo, lod) => {
+      const chunksOfLod = chunksByLod.get(lod);
+      if (chunksOfLod != null) {
+        chunksOfLod.push(...lodInfo.chunks);
+      } else {
+        chunksByLod.set(lod, [...lodInfo.chunks]);
+      }
+    });
+  }
+  return chunkScale == null ? null : { chunksByLod, chunkScale };
+}
+
 function extractScaleFromMatrix(transform: [Vector4, Vector4, Vector4]): Vector3 {
   return [transform[0][0], transform[1][1], transform[2][2]];
 }

@@ -125,6 +125,7 @@ export function* scheduleLocalMeshChangesRespectingDependencies(
 export function* syncAffectedAndLoadMissingMeshesWithPooledLocalChanges(
   layerName: string,
   changeInfoItems: AgglomerateChangeItem[],
+  annotationVersion: number,
 ): Saga<void> {
   const additionalCoordinates: AdditionalCoordinate[] | undefined = undefined;
 
@@ -153,6 +154,7 @@ export function* syncAffectedAndLoadMissingMeshesWithPooledLocalChanges(
             oldIds,
             newAgglomerateId,
             additionalCoordinates,
+            annotationVersion,
           );
         },
       }),
@@ -163,13 +165,15 @@ export function* syncAffectedAndLoadMissingMeshesWithPooledLocalChanges(
         consumedIds: [oldAgglomerateId],
         items,
         run: function* (): Saga<boolean> {
-          return yield* call(
+          const { handledLocally } = yield* call(
             trySplitMeshLocally,
             layerName,
             oldAgglomerateId,
             newIds,
             additionalCoordinates,
+            annotationVersion,
           );
+          return handledLocally;
         },
       }),
     ),

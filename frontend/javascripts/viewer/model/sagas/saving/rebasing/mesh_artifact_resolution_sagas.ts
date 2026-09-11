@@ -43,6 +43,9 @@ function* reloadMeshes(
 ): Saga<void> {
   // First wait in case an operation is running (e.g. proofreading) until it finishes.
   yield call(waitUntilNoActiveOperations);
+  // Unused here: these items carry no oldAgglomerateId, so no local merge or split is attempted
+  // and every mesh is reloaded.
+  const annotationVersion = yield* select((state) => state.annotation.version);
   const syncAffectedAndLoadMissingMeshesEffects = [];
   for (const [tracingId, displayPropsByAgglomerateId] of meshesToReloadPerLayer.entries()) {
     const refreshList: Array<{
@@ -70,7 +73,7 @@ function* reloadMeshes(
       }
     }
     syncAffectedAndLoadMissingMeshesEffects.push(
-      call(syncAffectedAndLoadMissingMeshes, tracingId, refreshList),
+      call(syncAffectedAndLoadMissingMeshes, tracingId, refreshList, annotationVersion),
     );
   }
   yield* all(syncAffectedAndLoadMissingMeshesEffects);

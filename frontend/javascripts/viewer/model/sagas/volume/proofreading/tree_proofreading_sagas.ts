@@ -295,11 +295,13 @@ export function* handleMergeViaTree(action: MergeTreesAction, ctx: OperationCont
         nodePosition: targetNodePosition,
       },
     ];
+    const currentAnnotationVersion = yield* select((state) => state.annotation.version);
     yield* call(
       updateProofreadingSegmentsAndScheduleSyncMeshes,
       volumeTracingId,
       refreshInfos,
       ctx,
+      currentAnnotationVersion,
     );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
@@ -514,6 +516,7 @@ export function* handleSplitViaTree(
       volumeTracingId,
       refreshInfos,
       ctx,
+      currentAnnotationVersion,
     );
   } finally {
     if (unsubscribeFromAnnotationMutex) {

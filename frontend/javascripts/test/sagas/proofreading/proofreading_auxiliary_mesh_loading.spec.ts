@@ -1,12 +1,18 @@
-import type { ActionPattern, Task } from "@redux-saga/types";
-import type { MinCutTargetEdge } from "admin/rest_api";
-import sortBy from "lodash-es/sortBy";
-import { all, call, put, race, take } from "redux-saga/effects";
-import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
+// biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import type { ActionPattern, Task } from "@redux-saga/types";
+import type { MeshSegmentInfo } from "admin/api/mesh";
+import {
+  getSegmentsForAgglomerateFromTracingStore,
+  type MinCutTargetEdge,
+  meshApi,
+} from "admin/rest_api";
+import sortBy from "lodash-es/sortBy";
+import { all, call, put, race, take } from "redux-saga/effects";
+import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
 import { actionChannel, cancel, delay, takeEvery, call as typedCall } from "typed-redux-saga";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -20,6 +26,7 @@ import {
   proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
 import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   removeSegmentAction,
   setActiveCellAction,
@@ -307,8 +314,10 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           loadedMeshIds: loadedMeshIdsAfterMerge,
         } = meshTracker.getMeshInfos();
         expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 4n, 1339n]);
-        expect(sortBy([...removedMeshes])).toEqual([1n, 1339n]); // Although 1339 is not loaded it is tried to be removed by the proofreading saga to refresh it.
-        expect(sortBy([...addedMeshes])).toEqual([1n, 1339n]);
+        // Agglomerate 1 keeps the geometry it already had, so it is neither removed nor added
+        // again. Only 1339 is refreshed.
+        expect(sortBy([...removedMeshes])).toEqual([1339n]);
+        expect(sortBy([...addedMeshes])).toEqual([1339n]);
         yield* meshTracker.cleanUp();
         yield expectSegmentList(tracingId, [
           {
@@ -327,6 +336,155 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       });
       await task.toPromise();
     });
+  });
+
+  function buildMeshSegmentInfo(unmappedSegmentIds: bigint[]): MeshSegmentInfo {
+    return {
+      meshFormat: "draco",
+      lods: [
+        {
+          chunks: unmappedSegmentIds.map((unmappedSegmentId) => ({
+            position: [0, 0, 0],
+            byteOffset: 0,
+            byteSize: 666,
+            unmappedSegmentId,
+          })),
+          transform: [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+          ],
+        },
+      ],
+      chunkScale: [1, 1, 1],
+    };
+  }
+
+  it("should load a missing segment's chunk before splitting a mesh locally", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    // Agglomerate 1 consists of the segments 1, 2 and 3, but its mesh only holds chunks for 1 and
+    // 3. Splitting it locally thus requires loading segment 2's chunk first.
+    const chunksMock = vi.mocked(meshApi.getMeshFileChunksForSegment);
+    const previousChunksImpl = chunksMock.getMockImplementation();
+    chunksMock.mockImplementation(
+      async (
+        _dataStoreUrl,
+        _datasetId,
+        _layerName,
+        _meshFile,
+        segmentId,
+        targetMappingName,
+        editableMappingTracingId,
+      ) => {
+        const isAgglomerateRequest = targetMappingName != null || editableMappingTracingId != null;
+        if (isAgglomerateRequest && segmentId === 1n) {
+          return buildMeshSegmentInfo([1n, 3n]);
+        }
+        return buildMeshSegmentInfo([segmentId]);
+      },
+    );
+
+    try {
+      const task = startSaga(function* task(): Saga<void> {
+        yield call(initializeMappingAndTool, context, tracingId);
+        yield loadAgglomerateMeshes([1]);
+        yield put(
+          updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+        );
+        yield put(setActiveCellAction(1n));
+
+        // Cutting the edge 2-3 keeps the segments 1 and 2 at the original agglomerate id and moves
+        // segment 3 to a new one.
+        vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
+          Promise.resolve([
+            {
+              position1: getPositionForSegmentId(2),
+              position2: getPositionForSegmentId(3),
+              segmentId1: 2n,
+              segmentId2: 3n,
+            },
+          ]),
+        );
+
+        const meshTracker = yield* trackMeshes(context, tracingId);
+        yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(3), 3n, 1n));
+        yield take(operationFinished("PROOFREADING"));
+        yield* meshTracker.consumeFinishedLoadingActions(1);
+
+        const { removedMeshes, addedMeshes, locallySplitIntoIds, loadedMeshIds } =
+          meshTracker.getMeshInfos();
+        expect(sortBy([...loadedMeshIds])).toEqual([1n, 1339n]);
+        // Both parts got their geometry from the completed mesh, so nothing was reloaded.
+        expect([...removedMeshes]).toEqual([]);
+        expect([...addedMeshes]).toEqual([]);
+        expect(sortBy([...locallySplitIntoIds])).toEqual([1n, 1339n]);
+
+        // Only the one missing segment was requested, and without a mapping so that the back-end
+        // does not expand it into a whole agglomerate.
+        const unmappedChunkRequests = chunksMock.mock.calls.filter(
+          ([, , , , , targetMappingName, editableMappingTracingId]) =>
+            targetMappingName == null && editableMappingTracingId == null,
+        );
+        expect(unmappedChunkRequests.map(([, , , , segmentId]) => segmentId)).toEqual([2n]);
+
+        yield* meshTracker.cleanUp();
+      });
+      await task.toPromise();
+    } finally {
+      if (previousChunksImpl != null) chunksMock.mockImplementation(previousChunksImpl);
+    }
+  });
+
+  it("should not request the segments of new agglomerates when no mesh is affected", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+    const segmentsMock = vi.mocked(getSegmentsForAgglomerateFromTracingStore);
+    segmentsMock.mockClear();
+
+    const task = startSaga(function* task(): Saga<void> {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(updateUserSettingAction("autoRenderMeshInProofreading", false));
+      yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+      yield put(setActiveCellAction(1n));
+
+      vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
+        Promise.resolve([
+          {
+            position1: getPositionForSegmentId(1),
+            position2: getPositionForSegmentId(2),
+            segmentId1: 1n,
+            segmentId2: 2n,
+          },
+        ]),
+      );
+
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2n, 1n));
+      yield take(operationFinished("PROOFREADING"));
+      yield delay(50);
+
+      // The split happened, but no mesh work was needed for it.
+      const finalMapping = yield* select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1],
+          [2, 1339],
+          [3, 1339],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
+        ]),
+      );
+      expect(segmentsMock).not.toHaveBeenCalled();
+    });
+    await task.toPromise();
   });
 
   it("should reload auxiliary meshes after applying foreign merge action (no rebase)", async (context: WebknossosTestContext) => {
@@ -1086,6 +1244,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Wait for both the foreign merge (4 <- 6) and the local split (1 -> 1, 1339) to settle.
       // The local split can settle via SPLIT_MESH instead of a reload, and does so much faster, so
       // waiting on id 4 alone is not a reliable proxy for "every affected mesh has settled".
+      // The split gives its loaded geometry to 1339 and leaves 1 without any, so 1 is reloaded and
+      // settles last.
       yield all([
         take(
           ((action: Action) =>
@@ -1097,6 +1257,10 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
             (action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339n) ||
             (action.type === "SPLIT_MESH" &&
               action.newSegmentIds.includes(1339n))) as ActionPattern,
+        ),
+        take(
+          ((action: Action) =>
+            action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1n) as ActionPattern,
         ),
       ]);
       // Then check auxiliary meshes.

@@ -152,7 +152,7 @@ export function JobState({ job }: { job: APIJob }) {
 export function getJobTypeName(command: APIJobCommand): string {
   const jobTypeNames: Record<string, string> = {
     [APIJobCommand.CONVERT_TO_WKW]: "Convert to WKW",
-    [APIJobCommand.EXPORT_TIFF]: "Export TIFF",
+    [APIJobCommand.EXPORT_TIFF]: "TIFF / OME-Zarr Export",
     [APIJobCommand.RENDER_ANIMATION]: "Render Animation",
     [APIJobCommand.COMPUTE_MESH_FILE]: "Compute Mesh",
     [APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE]: "Compute Segment Index",
@@ -227,7 +227,7 @@ function JobListView() {
         );
       return (
         <span>
-          Tiff export of layer {layerName} from {labelToAnnotationOrDataset} (Bounding Box{" "}
+          TIFF/OME-Zarr export of layer {layerName} from {labelToAnnotationOrDataset} (Bounding Box{" "}
           {job.args.ndBoundingBox
             ? formatWkLibsNdBBox(job.args.ndBoundingBox)
             : job.args.boundingBox}
@@ -533,7 +533,8 @@ function JobListView() {
       descriptionURI="https://docs.webknossos.org/webknossos/automation/jobs.html"
       description={
         <>
-          Some actions such as dataset conversions or TIFF exports require background processing.
+          Some actions such as dataset conversions or TIFF and OME-Zarr exports require background
+          processing.
           <br />
           WEBKNOSSOS notifies you by email once background jobs finish.
         </>

@@ -790,6 +790,12 @@ export type APIFeatureToggles = {
 
 export type APIJobState = "PENDING" | "STARTED" | "SUCCESS" | "FAILURE" | "CANCELLED";
 
+export enum APIExportFormat {
+  OME_TIFF = "ome_tiff",
+  TIFF_STACK = "tiff_stack",
+  OME_ZARR = "ome_zarr",
+}
+
 export enum APIJobCommand {
   ALIGN_SECTIONS = "align_sections",
   CONVERT_TO_WKW = "convert_to_wkw",

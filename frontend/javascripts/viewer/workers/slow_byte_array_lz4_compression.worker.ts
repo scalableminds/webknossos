@@ -2,8 +2,19 @@
  * and is ONLY meant for mocking during tests. This implementation
  * allows to introduce an artificial delay for compression/decompression.
  */
-import { sleep } from "libs/utils";
 import { compress, decompress } from "lz4-wasm";
+
+// `sleep` is inlined rather than imported from libs/utils on purpose. This module is
+// substituted for the real compression worker by a global vi.mock factory (see
+// test/global_mocks.ts), so everything it imports has to be loaded before the mock
+// resolves. libs/utils drags in chalk, dayjs, lodash-es and libs/window for one four-line
+// helper, which widened that window enough to lose a race against Vitest's environment
+// teardown and surface as an intermittent unhandled rejection.
+function sleep(timeout: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, timeout);
+  });
+}
 
 let isSleepEnabled = false;
 

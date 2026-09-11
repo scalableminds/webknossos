@@ -1,7 +1,7 @@
 import { BucketVoxelMask } from "./bucket_voxel_mask";
 import type { BucketWriteMap, BucketWriteMapEntry } from "./bucket_write_map";
 import type { TransactionCube } from "./cube";
-import { type BeforeRun, bucketDiffsOf, type TransactionDiff, type TransactionId } from "./diff";
+import { bucketDiffsOf, type TransactionDiff, type TransactionId } from "./diff";
 import { propagate } from "./mag_propagation";
 import {
   type BucketAddress,
@@ -42,7 +42,7 @@ export class VolumeTransaction {
   private readonly bucketWrites: BucketWriteMap = new Map();
   /** Pre-transaction values, first touch only, resident buckets only. */
   // todop: how about Map<BucketKey, Map<SegmentId, VoxelIndex[]>>
-  // todop: what about buckets that arent downloaded yet?
+  // what about buckets that arent downloaded yet?
   private readonly beforeAccumulating = new Map<BucketKey, Map<VoxelIndex, SegmentId>>();
   private committed = false;
 
@@ -122,46 +122,6 @@ export class VolumeTransaction {
   }
 
   /**
-   * Pre-transaction values for every bucket in `bucketWrites` that has a
-   * `beforeAccumulating` entry (i.e. was resident when first touched) — never
-   * for buckets mag propagation touches, since `beforeAccumulating` is only
-   * ever populated at the source mag (writerFor is only called from the
-   * rasterizer and recordAll, both source-mag-only).
-   *
-   * Reuses the exact same runs `toRuns` walks off the mask, rather than
-   * recomputing run boundaries independently: old values have no structure of
-   * their own worth preserving (§5.6 — they're arbitrary per voxel), so there
-   * is nothing to gain from splitting them differently than the new write is
-   * split, and reusing the boundaries keeps the two arrays trivially zippable.
-   */
-  private buildBeforeCommitted(): Map<BucketKey, BeforeRun[]> {
-    const result = new Map<BucketKey, BeforeRun[]>();
-    for (const entry of this.bucketWrites.values()) {
-      const key = bucketKey(entry.address);
-      const before = this.beforeAccumulating.get(key);
-      if (before == null) continue;
-
-      const runs: BeforeRun[] = [];
-      for (const { start, length } of entry.write.mask.runs()) {
-        const values = new BigUint64Array(length);
-        for (let i = 0; i < length; i++) {
-          const value = before.get(start + i);
-          if (value === undefined) {
-            throw new Error(
-              `beforeAccumulating is missing voxel ${start + i} of bucket ${key}, ` +
-                "even though it was captured on first touch by the same writer.",
-            );
-          }
-          values[i] = value;
-        }
-        runs.push({ start, length, values });
-      }
-      result.set(key, runs);
-    }
-    return result;
-  }
-
-  /**
    * Finalize: run mag propagation over the coalesced write set, apply the
    * derived mags to the cube, and build the diff.
    */
@@ -181,19 +141,12 @@ export class VolumeTransaction {
       }
     }
 
-    const beforeCommittedByBucket = this.buildBeforeCommitted();
-    const bucketDiffs = bucketDiffsOf(perMag.values());
-    for (const diff of bucketDiffs) {
-      const beforeCommitted = beforeCommittedByBucket.get(bucketKey(diff.address));
-      if (beforeCommitted != null) diff.beforeCommitted = beforeCommitted;
-    }
-
     return {
       id: this.id,
       sequence,
       sourceMagIndex: this.ctx.sourceMagIndex,
       toolName,
-      bucketDiffs,
+      bucketDiffs: bucketDiffsOf(perMag.values()),
     };
   }
 

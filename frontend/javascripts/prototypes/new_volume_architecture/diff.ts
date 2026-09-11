@@ -11,32 +11,9 @@ export interface VoxelRun {
   value: SegmentId;
 }
 
-/**
- * A run of consecutive voxel indices' *prior* values, i.e. what they held
- * immediately before this transaction. Unlike VoxelRun these are not
- * constant-valued: what the run has in common is only that it was touched by
- * one contiguous write, not that the old content was uniform.
- */
-export interface BeforeRun {
-  start: VoxelIndex;
-  length: number;
-  values: BigUint64Array;
-}
-
 export interface BucketDiff {
   address: BucketAddress;
   runs: VoxelRun[];
-  /**
-   * Pre-transaction values, one array per resident-at-first-touch bucket
-   * (transaction.ts's beforeAccumulating). Absent for buckets that were not
-   * resident when first touched, since there is nothing to have captured.
-   *
-   * Not required for correctness — forward replay (BucketJournal) never
-   * reads it — but it is what makes undoing the newest transaction on a
-   * bucket O(voxels changed) instead of a checkpoint replay (design doc
-   * §5.7). Not wired up to undo/redo yet.
-   */
-  beforeCommitted?: BeforeRun[];
 }
 
 export type TransactionId = string;

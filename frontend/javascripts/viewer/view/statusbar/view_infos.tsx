@@ -170,21 +170,6 @@ export default function ViewInfos() {
   );
   const dispatch = useDispatch();
 
-  const onChangeActiveCellId = useCallback(
-    (id: bigint) => dispatch(setActiveCellAction(id)),
-    [dispatch],
-  );
-  const onChangeActiveNodeId = useCallback(
-    (id: number) => {
-      dispatch(setActiveNodeAction(id));
-    },
-    [dispatch],
-  );
-  const onChangeActiveTreeId = useCallback(
-    (id: number) => dispatch(setActiveTreeAction(id)),
-    [dispatch],
-  );
-
   const validSegmentIdRange = useWkSelector((state) => {
     if (!activeVolumeTracing) {
       return null;
@@ -208,7 +193,7 @@ export default function ViewInfos() {
             min={validSegmentIdRange[0]}
             max={validSegmentIdRange[1]}
             detailedLabel="Change Active Segment ID"
-            onChange={onChangeActiveCellId}
+            onChange={(id: bigint) => dispatch(setActiveCellAction(id))}
           />
         </span>
       ) : null}
@@ -218,7 +203,7 @@ export default function ViewInfos() {
             value={activeNodeId}
             label="Active Node"
             detailedLabel="Change Active Node ID"
-            onChange={onChangeActiveNodeId}
+            onChange={(id: number) => dispatch(setActiveNodeAction(id))}
           />
         </span>
       ) : null}
@@ -228,7 +213,7 @@ export default function ViewInfos() {
             value={activeTreeId}
             label="Active Tree"
             detailedLabel="Change Active Tree ID"
-            onChange={onChangeActiveTreeId}
+            onChange={(id: number) => dispatch(setActiveTreeAction(id))}
           />
         </span>
       ) : null}

@@ -47,6 +47,7 @@ export function useOverflowMeasurement({
   itemKeysRef.current = itemKeys;
   const [visibleCount, setVisibleCount] = useState(itemKeys.length);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only; refs are stable and content changes are picked up by the ResizeObserver (itemKeys is read via itemKeysRef).
   useLayoutEffect(() => {
     const container = containerRef.current;
     const measureRow = measureRowRef.current;
@@ -113,9 +114,6 @@ export function useOverflowMeasurement({
       resizeObserver.observe(element);
     }
     return () => resizeObserver.disconnect();
-    // biome-ignore lint/correctness/useExhaustiveDependencies: refs are stable across
-    // renders, and item/content changes are picked up via the ResizeObserver instead
-    // (itemKeys is read through itemKeysRef so this can stay mount-only).
   }, []);
 
   const setItemRefFactory = (key: string) => (el: HTMLElement | null) => {

@@ -14,6 +14,7 @@ import {
 } from "viewer/controller/combinations/tool_controls";
 import { AnnotationTool, adaptActiveToolToShortcuts } from "viewer/model/accessors/tool_accessor";
 import { isPlaneMode as getIsPlaneMode } from "viewer/model/accessors/view_mode_accessor";
+import type { UserConfiguration } from "viewer/store";
 
 const { Text } = Typography;
 
@@ -136,85 +137,100 @@ const moreShortcutsLink = (
   </a>
 );
 
-export function useShortcutItems(): ShortcutItem[] {
-  /* Exposes shortcut/control hints that are shown in the status bar (left side) */
-  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
-  const userConfiguration = useWkSelector((state) => state.userConfiguration);
-  const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));
-  const isShiftPressed = useKeyPress("Shift");
-  const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
-  const isAltPressed = useKeyPress("Alt");
-  const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
-  const isTDViewportActive = useWkSelector(
-    (state) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
-  );
+// State that both mode-specific item builders below need. It's read once in
+// useShortcutItems so that the builders themselves stay plain functions.
+type ShortcutItemContext = {
+  activeTool: AnnotationTool;
+  userConfiguration: UserConfiguration;
+  isShiftPressed: boolean;
+  isControlOrMetaPressed: boolean;
+  isAltPressed: boolean;
+  hasSkeleton: boolean;
+  isTDViewportActive: boolean;
+};
 
-  if (!isPlaneMode) {
-    let actionDescriptor: ActionDescriptor | null = null;
-    if (hasSkeleton && isShiftPressed) {
-      actionDescriptor = getToolControllerForAnnotationTool(
-        AnnotationTool.SKELETON,
-      ).getActionDescriptors(
-        AnnotationTool.SKELETON,
-        userConfiguration,
-        isShiftPressed,
-        isControlOrMetaPressed,
-        isAltPressed,
-        isTDViewportActive,
-      );
-    }
-
-    const items: ShortcutItem[] =
-      actionDescriptor != null
-        ? getLeftClickItems(actionDescriptor)
-        : [
-            {
-              key: "move",
-              node: (
-                <span className="shortcut-info-element">
-                  <Icon
-                    className="statusbar-drag-icon"
-                    component={IconStatusbarMouseLeftDrag}
-                    aria-label="Mouse Left Drag"
-                  />
-                  Move
-                </span>
-              ),
-            },
-          ];
-    items.push(
-      {
-        key: "trace-forward",
-        node: (
-          <Space size="small" className="shortcut-info-element">
-            <Text keyboard>Space</Text>
-            Trace forward
-          </Space>
-        ),
-      },
-      {
-        key: "trace-backward",
-        node: (
-          <Space size="small" className="shortcut-info-element">
-            <Text keyboard>Ctrl + Space</Text>
-            Trace backward
-          </Space>
-        ),
-      },
-      {
-        key: "rotation",
-        node: (
-          <Space size="small" className="shortcut-info-element">
-            <Text keyboard>◀ / ▶</Text>
-            Rotation
-          </Space>
-        ),
-      },
-      ...getMoreShortcutsItems(),
+// Hints for the arbitrary modes (flight/oblique).
+function getArbitraryModeItems({
+  userConfiguration,
+  isShiftPressed,
+  isControlOrMetaPressed,
+  isAltPressed,
+  hasSkeleton,
+  isTDViewportActive,
+}: ShortcutItemContext): ShortcutItem[] {
+  let actionDescriptor: ActionDescriptor | null = null;
+  if (hasSkeleton && isShiftPressed) {
+    actionDescriptor = getToolControllerForAnnotationTool(
+      AnnotationTool.SKELETON,
+    ).getActionDescriptors(
+      AnnotationTool.SKELETON,
+      userConfiguration,
+      isShiftPressed,
+      isControlOrMetaPressed,
+      isAltPressed,
+      isTDViewportActive,
     );
-    return items;
   }
 
+  const items: ShortcutItem[] =
+    actionDescriptor != null
+      ? getLeftClickItems(actionDescriptor)
+      : [
+          {
+            key: "move",
+            node: (
+              <span className="shortcut-info-element">
+                <Icon
+                  className="statusbar-drag-icon"
+                  component={IconStatusbarMouseLeftDrag}
+                  aria-label="Mouse Left Drag"
+                />
+                Move
+              </span>
+            ),
+          },
+        ];
+  items.push(
+    {
+      key: "trace-forward",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>Space</Text>
+          Trace forward
+        </Space>
+      ),
+    },
+    {
+      key: "trace-backward",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>Ctrl + Space</Text>
+          Trace backward
+        </Space>
+      ),
+    },
+    {
+      key: "rotation",
+      node: (
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>◀ / ▶</Text>
+          Rotation
+        </Space>
+      ),
+    },
+    ...getMoreShortcutsItems(),
+  );
+  return items;
+}
+
+function getPlaneModeItems({
+  activeTool,
+  userConfiguration,
+  isShiftPressed,
+  isControlOrMetaPressed,
+  isAltPressed,
+  isTDViewportActive,
+}: ShortcutItemContext): ShortcutItem[] {
   const adaptedTool = adaptActiveToolToShortcuts(
     activeTool,
     isShiftPressed,
@@ -259,6 +275,32 @@ export function useShortcutItems(): ShortcutItem[] {
     getZoomShortcutItem(),
     ...getMoreShortcutsItems(),
   ];
+}
+
+// Exposes shortcut/control hints that are shown in the status bar (left side)
+export function useShortcutItems(): ShortcutItem[] {
+  const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
+  const userConfiguration = useWkSelector((state) => state.userConfiguration);
+  const isShiftPressed = useKeyPress("Shift");
+  const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
+  const isAltPressed = useKeyPress("Alt");
+  const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
+  const isTDViewportActive = useWkSelector(
+    (state) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
+  );
+
+  const context: ShortcutItemContext = {
+    activeTool,
+    userConfiguration,
+    isShiftPressed,
+    isControlOrMetaPressed,
+    isAltPressed,
+    hasSkeleton,
+    isTDViewportActive,
+  };
+
+  return isPlaneMode ? getPlaneModeItems(context) : getArbitraryModeItems(context);
 }
 
 // Forwarding ...props and ref is required here because antd's Popover clones its child

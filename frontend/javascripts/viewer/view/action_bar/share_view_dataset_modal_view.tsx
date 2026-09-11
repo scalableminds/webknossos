@@ -3,6 +3,7 @@ import { Button, Col, Dropdown, Input, Modal, Row, Space } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
+import { ModalWidth } from "theme";
 import { useZarrLinkMenu } from "./private_links_view";
 import { CopyableSharingLink, getUrl, useDatasetSharingToken } from "./share_modal_view";
 
@@ -31,8 +32,7 @@ function ShareViewDatasetModalViewInner(props: Props) {
     <Modal
       title="Share this Dataset"
       open={isOpen}
-      width={800}
-      okText="Ok"
+      width={ModalWidth.Large}
       onOk={onOk}
       onCancel={onOk}
     >

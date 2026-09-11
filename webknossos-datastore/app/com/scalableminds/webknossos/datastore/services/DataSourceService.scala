@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.services
 
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
-import com.google.inject.name.Named
 import com.scalableminds.util.Msg
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.mvc.Formatter
@@ -30,7 +29,7 @@ class DataSourceService @Inject() (
     baseDirService: BaseDirService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
-    @Named("webknossos-datastore") val actorSystem: ActorSystem
+    val actorSystem: ActorSystem
 )(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging

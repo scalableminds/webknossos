@@ -4,7 +4,7 @@ import { extractServerErrorMessage } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
 import { useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { Store } from "viewer/singletons";
 
 const VERIFICATION_ERROR_TOAST_KEY = "verificationError";

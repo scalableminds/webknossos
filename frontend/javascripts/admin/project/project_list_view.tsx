@@ -43,7 +43,7 @@ import partial from "lodash-es/partial";
 import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import React, { useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router";
 import {
   type APIProject,
   type APIProjectWithStatus,

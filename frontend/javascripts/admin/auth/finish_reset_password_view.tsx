@@ -4,7 +4,7 @@ import Request from "libs/request";
 import Toast from "libs/toast";
 import { getUrlParamsObjectFromString } from "libs/utils";
 import messages from "messages";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 
 const FormItem = Form.Item;
 const { Password } = Input;

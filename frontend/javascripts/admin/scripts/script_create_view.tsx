@@ -4,7 +4,7 @@ import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } fro
 import { Button, Col, Form, Input, Row, Select, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import type { APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 

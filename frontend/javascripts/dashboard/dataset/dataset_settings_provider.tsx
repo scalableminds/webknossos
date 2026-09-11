@@ -17,7 +17,7 @@ import isEqual from "lodash-es/isEqual";
 import size from "lodash-es/size";
 import messages from "messages";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import type {
   APIDataLayer,
   APIDataSource,

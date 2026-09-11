@@ -36,6 +36,7 @@ import {
   Tag,
   Tooltip,
   Typography,
+  theme,
 } from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
@@ -48,7 +49,7 @@ import { location } from "libs/window";
 import keyBy from "lodash-es/keyBy";
 import React, { type Key, useState } from "react";
 import { useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -72,6 +73,7 @@ const persistence = new Persistence<{
 
 function UserListView() {
   const { modal } = App.useApp();
+  const { token } = theme.useToken();
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
 
@@ -115,7 +117,7 @@ function UserListView() {
         "If the user was activated for the first time, they will only be able to see datasets that belong to the Default team. Do you want to configure the teams and permissions of the user?",
       okText: "Configure teams and permissions",
       cancelText: "Close",
-      icon: <CheckCircleOutlined style={{ color: "green" }} />,
+      icon: <CheckCircleOutlined style={{ color: token.colorSuccess }} />,
       onOk: () => {
         setSelectedUserIds([selectedUser.id]);
         setIsTeamRoleModalOpen(isActive);

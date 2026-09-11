@@ -21,14 +21,14 @@ import {
   updateDatasetTeams,
 } from "admin/rest_api";
 import sortBy from "lodash-es/sortBy";
-import type { APIDataset } from "types/api_types";
+import type { APIMaybeUnimportedDataset } from "types/api_types";
 import { beforeAll, describe, expect, it } from "vitest";
 
-async function getFirstDataset(): Promise<APIDataset> {
+async function getFirstDataset(): Promise<APIMaybeUnimportedDataset> {
   const datasets = await getActiveDatasetsOfMyOrganization();
-  const dataset = sortBy(datasets, (d) => d.name)[0];
+  const compactDataset = sortBy(datasets, (d) => d.name)[0];
 
-  return dataset;
+  return getDataset(compactDataset.id);
 }
 
 describe("Dataset API (E2E)", () => {

@@ -21,8 +21,8 @@ import window from "libs/window";
 import messages from "messages";
 import type * as React from "react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import type { APIDatasetCompact } from "types/api_types";
+import { Link } from "react-router";
+import type { APIDataset, APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
 

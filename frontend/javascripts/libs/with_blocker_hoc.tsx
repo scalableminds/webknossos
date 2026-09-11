@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import { type Blocker, type BlockerFunction, useBlocker } from "react-router-dom";
+import { type Blocker, type BlockerFunction, useBlocker } from "react-router";
 
 export type WithBlockerProps = {
   setBlocking: ({ shouldBlock }: { shouldBlock: boolean | BlockerFunction }) => void;

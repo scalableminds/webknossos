@@ -5,7 +5,7 @@ import { Alert, Button, Form, Input, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import { handleResendVerificationEmail } from "./verify_email_view";
 

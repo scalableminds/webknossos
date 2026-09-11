@@ -6,7 +6,7 @@ import { App, Button, Col, Row } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 const DatasetSettingsDeleteTab = () => {

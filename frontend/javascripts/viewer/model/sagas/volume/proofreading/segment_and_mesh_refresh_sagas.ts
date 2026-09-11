@@ -335,10 +335,7 @@ export function* syncAffectedAndLoadMissingMeshes(
 ): Saga<void> {
   const additionalCoordinates = undefined;
 
-  // Capture the opacity and visibility of all old meshes up front, i.e. before any of them are
-  // removed below, so that reloaded meshes keep the user-chosen opacity and visibility. This must
-  // happen before the removal loop because removing one item's old mesh must not prevent another
-  // item from reading the original properties.
+  // Capture the opacity and visibility of all old meshes up front for changing any of them.
   const oldAgglomerateIds = changeInfoItems
     .map((item) => item.oldAgglomerateId)
     .filter((id) => id != null);

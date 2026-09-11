@@ -268,6 +268,8 @@ export function* tryLocalMeshMerge(
   annotationVersion: number,
 ): Saga<boolean> {
   for (const oldId of oldIds) {
+    // If one of the meshes is still in the process of being loaded, wait for this to complete.
+    // Else merging incompletely loaded meshes locally would create an inconsistent state.
     const isFullyLoaded = yield* call(
       waitForMeshFullyLoaded,
       layerName,
@@ -322,7 +324,7 @@ export function* tryLocalMeshMerge(
     }
   }
 
-  // Move every loaded mesh into the merged id's group and then fold them into one geometry.
+  // Move every loaded mesh into the merged id's group, set the color and then fold them into one geometry.
   for (const { oldId } of oldIdsWithMeshInfo) {
     segmentMeshController.moveMeshesToNewSegmentId(oldId, newId, layerName, additionalCoordinates);
     yield* put(mergeMeshesAction(layerName, oldId, newId, additionalCoordinates));

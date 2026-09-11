@@ -10,36 +10,23 @@ import {
 import { useOverflowMeasurement } from "./use_overflow_measurement";
 import ViewInfos from "./view_infos";
 
-// Keeps a visible gap between the (right-aligned) shortcut hints and Infos, matching
-// the existing spacing convention of .info-element/.shortcut-info-element.
 const MIN_GAP_BEFORE_INFOS = 20;
 
 function Statusbar() {
-  // The statusbar can run out of horizontal space (e.g. on 13" laptops). Since the
-  // shortcut hints are the least essential elements (as opposed to e.g. the "Active
-  // Segment" input, which is not just informational), as many of them as fit are shown
-  // individually, with the rest tucked behind a "More" popover, so that all other
-  // elements remain reachable.
+  // When space runs out (e.g. on 13" laptops), only as many hints as fit are shown; the
+  // rest move into the "More" popover so that everything stays reachable.
   const items = useShortcutItems();
 
   // The following refs will be used to measure the available space for the shortcut hints.
-  // - containerRef: the full status bar
-  // - leftRef: for the "left sidebar toggle")
-  // - infosRef: for the dataset/annotation-specific infos)
-  // - rightRef: for the "right sidebar toggle")
-  const containerRef = useRef<HTMLSpanElement>(null);
-  const leftRef = useRef<HTMLSpanElement>(null);
-  const infosRef = useRef<HTMLSpanElement>(null);
-  const rightRef = useRef<HTMLSpanElement>(null);
+  const containerRef = useRef<HTMLSpanElement>(null); // the full statusbar
+  const leftRef = useRef<HTMLSpanElement>(null); // left sidebar toggle
+  const infosRef = useRef<HTMLSpanElement>(null); // dataset/annotation infos
+  const rightRef = useRef<HTMLSpanElement>(null); // right sidebar toggle
   // The following refs will be used to measure the needed space for the shortcut hints.
-  // The corresponding dom elements will be hidden to the user (the actual visibility depends
-  // on the available space).
-  // - fullShortcutRowRef: the actual shortcut hints
-  // - showMoreShortcutsRef: the "more shortcuts" button
-  // - showAllShortcutsRef: the "show shortcuts" button
-  const fullShortcutRowRef = useRef<HTMLSpanElement>(null);
-  const showMoreShortcutsRef = useRef<HTMLSpanElement>(null);
-  const showAllShortcutsRef = useRef<HTMLSpanElement>(null);
+  // The corresponding dom elements will be hidden to the user.
+  const fullShortcutRowRef = useRef<HTMLSpanElement>(null); // the actual shortcut hints
+  const showMoreShortcutsRef = useRef<HTMLSpanElement>(null); // the "more shortcuts" button
+  const showAllShortcutsRef = useRef<HTMLSpanElement>(null); // the "show shortcuts" button
 
   const { visibleCount, setItemRefFactory } = useOverflowMeasurement({
     containerRef,
@@ -69,7 +56,7 @@ function Statusbar() {
       <span ref={rightRef} style={{ display: "inline-flex" }}>
         <BorderToggleButton side="right" inFooter />
       </span>
-      {/* The following span is completely invisible to the user and only used for measurement. */}
+      {/* Invisible to the user; only used for measurement. */}
       <span ref={fullShortcutRowRef} className="statusbar-measurer" aria-hidden="true">
         {items.map((item) => (
           <span key={item.key} ref={setItemRefFactory(item.key)} style={{ display: "inline-flex" }}>

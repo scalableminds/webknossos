@@ -3,12 +3,8 @@
   margin-right: 25px;
   font-size: 14px;
   display: flex;
-  // Kept as nowrap (rather than wrap), and with white-space: nowrap below, so that
-  // overflow can be measured reliably via scrollWidth/clientWidth (see statusbar.tsx),
-  // which drives collapsing the shortcut hints into an overflow menu once they don't
-  // fit anymore. Without white-space: nowrap, flex items would shrink and their text
-  // would wrap onto multiple lines instead of producing a measurable horizontal
-  // overflow, breaking both the layout and the overflow measurement.
+  // Both nowrap rules keep everything on one line. Otherwise, items would wrap instead
+  // of overflowing, which the measurement in statusbar.tsx relies on.
   flex-wrap: nowrap;
   white-space: nowrap;
   overflow: hidden;
@@ -35,11 +31,8 @@
   }
 
   .statusbar-measurer {
-    // display: inline-flex (rather than the default block) is essential here: it makes
-    // the hidden measurer's children lay out exactly like the visible shortcutsSlot
-    // (also inline-flex), so that flex items (e.g. the "Ctrl+P" hint's <div>) hug their
-    // content instead of stretching to fill the block container, which would otherwise
-    // throw off the measured width.
+    // inline-flex (instead of the default block) makes the children lay out like the
+    // visible row, so that the measured widths match.
     display: inline-flex;
     position: absolute;
     visibility: hidden;
@@ -51,8 +44,7 @@
 }
 
 // Not scoped under .statusbar: antd's Popover renders its content into a portal
-// (typically appended to document.body), so this needs to apply regardless of where
-// in the DOM the link ends up.
+// (typically appended to document.body).
 .statusbar-doc-link,
 .statusbar-doc-link:visited {
   color: rgba(255, 255, 255, 0.67);
@@ -66,10 +58,8 @@
 }
 
 .statusbar-overflow-content {
-  // The left/right-drag icons have their mouse glyph off-center (to make room for the
-  // drag arrow), which reads fine inline in the statusbar but looks visually
-  // mis-aligned against the other icons when stacked in this vertical list -- nudge
-  // them back towards center here only.
+  // The drag icons' mouse glyph sits off-center (to make room for the arrow), which
+  // only looks misaligned in this vertical list.
   .statusbar-drag-icon {
     transform: translateX(2px);
   }

@@ -2,24 +2,19 @@ import { compact } from "lodash-es";
 import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 
 type UseOverflowMeasurementParams = {
-  // Determines the available width.
+  // Provides the available width.
   containerRef: RefObject<HTMLElement | null>;
-  // Always-shown siblings (e.g. the left border button, Infos, the right border
-  // button) whose (margin-excluding) widths are summed and subtracted from the
-  // container's width to get the width available for the measured items.
+  // Always-shown siblings whose widths are subtracted from the available width.
   fixedRefs: RefObject<HTMLElement | null>[];
-  // Hidden row wrapping a full-size (never collapsed) measurement of every item, keyed
-  // via setItemRefFactory below. Observed as a whole so that content changes (e.g. item text
-  // changing) trigger a re-measurement without needing one observer per item.
+  // Hidden row holding a full-size measurement of every item (keyed via
+  // setItemRefFactory). Observed as a whole, so that content changes trigger a
+  // re-measurement without needing one observer per item.
   measureRowRef: RefObject<HTMLElement | null>;
-  // Candidate widths for the overflow trigger (e.g. a "More" vs. an "everything is
-  // hidden" label) -- the widest of these is reserved, since the actual trigger width
-  // depends on the very outcome this hook computes.
+  // Possible widths of the overflow trigger; the widest one is reserved, since the
+  // actual label depends on this hook's outcome.
   triggerMeasureRefs: RefObject<HTMLElement | null>[];
   // Keys of the items to measure, in display order.
   itemKeys: string[];
-  // Reserved so that the measured items (or the trigger, once shown) never end up
-  // directly touching whatever follows them.
   minGap: number;
 };
 
@@ -29,20 +24,15 @@ type UseOverflowMeasurementResult = {
   setItemRefFactory: (key: string) => (el: HTMLElement | null) => void;
 };
 
-// How long a fixed-siblings width is remembered (see recordWidthSample).
 export const FIXED_WIDTH_MEMORY_MS = 3000;
 
 export type WidthSample = { timestampMs: number; width: number };
 
 /**
- * Records a width sample for a sliding-window maximum, so that fixed siblings which
- * change width on their own (e.g., the mouse position) can't make the visible item
- * count oscillate too quickly.
- *
- * Only samples that could still become the maximum are kept: anything no wider than a
- * newer sample is dropped immediately, and anything older than FIXED_WIDTH_MEMORY_MS is
- * dropped as it expires. The result is therefore sorted widest-first, and once the
- * widest sample ages out, the next-widest one takes over.
+ * Records a width sample for a sliding-window maximum, so that siblings which change
+ * width on their own (e.g. the mouse position) don't make the item count oscillate.
+ * Samples that can no longer become the maximum are dropped right away, so the result
+ * is sorted widest-first and the next-widest takes over once the widest expires.
  */
 export function recordWidthSample(samples: WidthSample[], newSample: WidthSample): WidthSample[] {
   const stillRelevant = samples.filter(
@@ -88,19 +78,14 @@ export function useOverflowMeasurement({
     }
 
     const recompute = () => {
-      // Each fixed sibling's own (margin-excluding) offsetWidth is summed up here,
-      // rather than e.g. deriving the available width from container.scrollWidth minus
-      // the items' width. That's because a right-aligned sibling using
-      // `margin-left: auto` always expands to fill any free space -- so
-      // container.scrollWidth would equal clientWidth whenever there's no overflow,
-      // regardless of how many items are currently shown, making it impossible to
-      // detect that there's enough room to show more of them.
+      // The widths are summed up manually instead of using container.scrollWidth: a
+      // right-aligned sibling with `margin-left: auto` always fills the free space, so
+      // scrollWidth would equal clientWidth no matter how many items are shown.
       const currentFixedWidth = fixedRefs.reduce(
         (sum, ref) => sum + (ref.current?.offsetWidth ?? 0),
         0,
       );
-      // Use the widest width seen recently rather than the current one, so that readouts
-      // which change width on their own don't make items appear and disappear.
+      // Use the widest recent width so that self-changing readouts don't toggle items.
       const now = performance.now();
       const samples = recordWidthSample(fixedWidthSamplesRef.current, {
         timestampMs: now,
@@ -109,9 +94,8 @@ export function useOverflowMeasurement({
       fixedWidthSamplesRef.current = samples;
       const fixedWidth = samples[0].width;
 
-      // The ResizeObserver only fires while widths actually change, so once they settle,
-      // the expiry of the widest sample has to be scheduled explicitly -- otherwise the
-      // reserved width would never shrink back.
+      // The ResizeObserver only fires on actual changes, so the expiry has to be
+      // scheduled explicitly -- otherwise the width would never shrink back.
       if (decayTimeoutRef.current != null) {
         clearTimeout(decayTimeoutRef.current);
         decayTimeoutRef.current = null;
@@ -136,10 +120,8 @@ export function useOverflowMeasurement({
         // Everything fits -- no overflow trigger needed.
         count = currentItemKeys.length;
       } else {
-        // An overflow trigger will be shown, so its width is reserved up front (rather
-        // than only between individual items) -- otherwise, if zero items end up
-        // fitting, nothing would have verified that the trigger alone still leaves the
-        // minimum gap.
+        // Reserve the trigger width up front: otherwise, when no item fits at all,
+        // nothing would have checked that the trigger still leaves the minimum gap.
         const budget = availableForItems - triggerWidth;
         let usedWidth = 0;
         count = 0;

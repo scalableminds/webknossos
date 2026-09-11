@@ -121,11 +121,8 @@ function getMoreShortcutsItems(): ShortcutItem[] {
   ];
 }
 
-// Note: this item's spacing (and that of the "commands" item above) relies on the
-// scoped `.statusbar .shortcut-info-element` CSS rule, which only applies to elements
-// that are actual DOM descendants of `.statusbar`. When shown inside the "More" popover
-// (which antd renders into a portal outside of `.statusbar`), that rule doesn't apply,
-// so these items render flush-left there instead of picking up stray margin.
+// The margin of `.shortcut-info-element` is scoped to `.statusbar`, so this item (and
+// the "commands" one above) renders flush-left in the "More" popover. That's intended.
 const moreShortcutsLink = (
   <a
     target="_blank"
@@ -137,8 +134,7 @@ const moreShortcutsLink = (
   </a>
 );
 
-// State that both mode-specific item builders below need. It's read once in
-// useShortcutItems so that the builders themselves stay plain functions.
+// Read once in useShortcutItems so that the builders below can stay plain functions.
 type ShortcutItemContext = {
   activeTool: AnnotationTool;
   userConfiguration: UserConfiguration;
@@ -303,9 +299,8 @@ export function useShortcutItems(): ShortcutItem[] {
   return isPlaneMode ? getPlaneModeItems(context) : getArbitraryModeItems(context);
 }
 
-// Forwarding ...props and ref is required here because antd's Popover clones its child
-// to inject the click handler and a positioning ref directly onto it -- a component that
-// doesn't forward both would silently drop them, leaving the trigger unclickable.
+// ...props and ref have to be forwarded: antd's Popover injects its click handler and
+// positioning ref into this child, and dropping them leaves the trigger unclickable.
 export function MoreButtonLabel({
   label,
   ref,
@@ -321,9 +316,8 @@ export function MoreButtonLabel({
   );
 }
 
-// "More" implies there's something in addition to what's already visible, which is
-// misleading once every hint has been hidden -- in that case, the trigger IS the only
-// way to reach the hints, so it's labeled to describe its content instead.
+// "More" would be misleading when no hint is visible at all -- then the trigger is the
+// only way to reach them.
 export const MORE_LABEL = "More";
 export const ALL_HIDDEN_LABEL = "Controls";
 

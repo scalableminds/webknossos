@@ -52,8 +52,9 @@ export class WkDataCubeAdapter implements TransactionCube {
    * The prototype expects a BigUint64Array, but real buckets may hold any
    * element class. Rather than convert, we only hand back genuinely 64-bit
    * data; everything else reports "no authoritative content", which the
-   * rasterizer treats exactly like an unloaded bucket. Only `beforeAccumulating`
-   * uses this, and the spike does not wire up undo, so nothing depends on it.
+   * rasterizer treats exactly like an unloaded bucket. Required by
+   * `TransactionCube`, but nothing currently calls it: this iteration doesn't
+   * capture pre-transaction values, so nothing depends on reading residents.
    */
   getResident(address: BucketAddress): BigUint64Array | undefined {
     const data = this.rawData(address);

@@ -5,7 +5,6 @@ import { bucketDiffsOf, type TransactionDiff, type TransactionId } from "./diff"
 import { propagate } from "./mag_propagation";
 import {
   type BucketAddress,
-  type BucketKey,
   bucketKey,
   type EditContext,
   type MagIndex,
@@ -40,10 +39,6 @@ export interface BucketWriter {
  */
 export class VolumeTransaction {
   private readonly bucketWrites: BucketWriteMap = new Map();
-  /** Pre-transaction values, first touch only, resident buckets only. */
-  // todop: how about Map<BucketKey, Map<SegmentId, VoxelIndex[]>>
-  // what about buckets that arent downloaded yet?
-  private readonly beforeAccumulating = new Map<BucketKey, Map<VoxelIndex, SegmentId>>();
   private committed = false;
 
   constructor(
@@ -70,30 +65,14 @@ export class VolumeTransaction {
    */
   writerFor(address: BucketAddress, value: SegmentId): BucketWriter {
     const entry = this.entryFor(address, value);
-    const key = bucketKey(address);
-    const current = this.cube.getResident(address);
     const isBackground = this.cube.backgroundProbe(address);
-
-    let before = this.beforeAccumulating.get(key);
-    if (before == null && current != null) {
-      before = new Map();
-      this.beforeAccumulating.set(key, before);
-    }
-
-    const captureBefore = (index: VoxelIndex) => {
-      if (before == null || current == null) return;
-      if (!before.has(index)) before.set(index, current[index]);
-    };
 
     return {
       isBackground,
       mark(index: VoxelIndex) {
-        captureBefore(index);
         entry.write.mask.mark(index);
       },
       markRun(start: VoxelIndex, length: number) {
-        // todop: can we make this more efficient?
-        for (let i = start; i < start + length; i++) captureBefore(i);
         entry.write.mask.markRun(start, length);
       },
     };
@@ -150,17 +129,14 @@ export class VolumeTransaction {
     };
   }
 
-  /** Restore every touched resident bucket. Used to cancel an open stroke. */
+  /**
+   * Discard the open transaction. Used to cancel a stroke. Does not restore
+   * buckets that were already painted live — that would need capturing
+   * pre-transaction values (beforeAccumulating), which this iteration
+   * intentionally leaves out along with the rest of undo support.
+   */
   abort(): void {
-    for (const [key, before] of this.beforeAccumulating) {
-      const entry = this.bucketWrites.get(key);
-      if (entry == null) continue;
-      const data = this.cube.getResident(entry.address);
-      if (data == null) continue;
-      for (const [index, value] of before) data[index] = value;
-    }
     this.bucketWrites.clear();
-    this.beforeAccumulating.clear();
     this.committed = true;
   }
 

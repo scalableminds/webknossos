@@ -100,7 +100,11 @@ export class VolumeEditingSession {
     return this.finish(stroke.tx, "brush");
   }
 
-  /** Escape. Restores the touched resident buckets and emits nothing. */
+  /**
+   * Escape. Discards the open transaction and emits nothing. Buckets already
+   * painted live for this stroke are left as they are (see
+   * VolumeTransaction.abort).
+   */
   abortBrushStroke(): void {
     const stroke = this.stroke;
     if (stroke == null) return;

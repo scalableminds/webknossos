@@ -250,10 +250,11 @@ vi.mock("admin/rest_api.ts", async () => {
       _tracingId: string,
       agglomerateId: NumberLike,
       version?: number | null | undefined,
-    ): Promise<bigint[]> => {
-      return getCurrentMappingEntriesFromServer(version)
+    ): Promise<{ segmentIds: bigint[]; agglomerateIdIsPresent: boolean }> => {
+      const segmentIds = getCurrentMappingEntriesFromServer(version)
         .filter(([_segmentId, mappedId]) => toBigInt(mappedId) === toBigInt(agglomerateId))
         .map(([segmentId]) => toBigInt(segmentId));
+      return { segmentIds, agglomerateIdIsPresent: segmentIds.length > 0 };
     },
   );
 

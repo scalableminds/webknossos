@@ -386,6 +386,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         return buildMeshSegmentInfo([segmentId]);
       },
     );
+    // vi.mock factories run once per file, so the call history is shared across tests.
+    chunksMock.mockClear();
 
     try {
       const task = startSaga(function* task(): Saga<void> {

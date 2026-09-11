@@ -642,6 +642,53 @@ export default class SegmentMeshController {
     }
   }
 
+  /*
+   * Extracts one sub geometry per new agglomerate id from the original mesh's nodes and adds it to
+   * that id's scene group. Throws if a sub geometry cannot be built or added.
+   */
+  private async addSplitOffGeometries(
+    nodesByLodOfOriginalMesh: Array<{ lod: number; scale: ThreeVector3; nodes: MeshSceneNode[] }>,
+    newAgglomerateIdToSegmentIds: Map<bigint, Set<bigint>>,
+    layerName: string,
+    opacity: number | undefined,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): Promise<void> {
+    for (const { lod, scale, nodes } of nodesByLodOfOriginalMesh) {
+      for (const [newSegmentId, keepIds] of newAgglomerateIdToSegmentIds) {
+        for (const node of nodes) {
+          const subGeometry = extractSubGeometry(node.geometry, keepIds);
+          if (subGeometry == null) continue;
+          subGeometry.boundsTree = await computeBvhAsync(subGeometry);
+          this.addMeshFromGeometry(
+            subGeometry,
+            newSegmentId,
+            null,
+            lod,
+            layerName,
+            additionalCoordinates,
+            opacity,
+            true,
+          );
+          const newTargetGroup = this.getMeshGroupsByLOD(
+            additionalCoordinates,
+            layerName,
+            newSegmentId,
+            lod,
+          );
+          if (newTargetGroup == null) {
+            throw new Error(
+              `Meshes added to scene for ${additionalCoordinates}, ${layerName}, ${newSegmentId}, ${lod} could not be found.`,
+            );
+          }
+          // Need to set scale manually as addMeshFromGeometry takes the scale and adapts it to the
+          // dataset scale. Thus, changing the original input scale. But we want the potentially new
+          // mesh group to have the same scale as its previous group had. The plain copy achieves this.
+          newTargetGroup.scale.copy(scale);
+        }
+      }
+    }
+  }
+
   /**
    * Locally splits oldSegmentId's mesh based on newAgglomerateIdToSegmentIds entries.
    * The function maintains vertexSegmentMappings and moves the split off mesh chunks
@@ -668,40 +715,19 @@ export default class SegmentMeshController {
     );
     if (nodesByLodOfOriginalMesh == null) return false;
 
-    for (const { lod, scale, nodes } of nodesByLodOfOriginalMesh) {
-      for (const [newSegmentId, keepIds] of newAgglomerateIdToSegmentIds) {
-        for (const node of nodes) {
-          const subGeometry = extractSubGeometry(node.geometry, keepIds);
-          if (subGeometry == null) continue;
-          subGeometry.boundsTree = await computeBvhAsync(subGeometry);
-          this.addMeshFromGeometry(
-            subGeometry,
-            newSegmentId,
-            null,
-            lod,
-            layerName,
-            additionalCoordinates,
-            opacity,
-            true,
-          );
-          const newTargetGroup = this.getMeshGroupsByLOD(
-            additionalCoordinates,
-            layerName,
-            newSegmentId,
-            lod,
-          );
-          if (newTargetGroup) {
-            // Need to set scale manually as addMeshFromGeometry takes the scale and adapts it to the
-            // dataset scale. Thus, changing the original input scale. But we want the potentially new
-            // mesh group to have the same scale as its previous group had. The plain copy achieves this.
-            newTargetGroup.scale.copy(scale);
-          } else {
-            throw new Error(
-              `Meshes added to scene for ${additionalCoordinates}, ${layerName}, ${newSegmentId}, ${lod} could not be found.`,
-            );
-          }
-        }
-      }
+    try {
+      await this.addSplitOffGeometries(
+        nodesByLodOfOriginalMesh,
+        newAgglomerateIdToSegmentIds,
+        layerName,
+        opacity,
+        additionalCoordinates,
+      );
+    } catch (exception) {
+      // Leaves the scene as it is. The caller drops the store entries it created and falls back to
+      // reloading the meshes.
+      console.error(`Failed to split mesh ${oldSegmentId} locally:`, exception);
+      return false;
     }
 
     // Remove all old nodes and remove now empty scene groups.
@@ -710,7 +736,10 @@ export default class SegmentMeshController {
     const layerLODGroup = this.getLODGroupOfLayer(layerName);
     for (const { lod, nodes } of nodesByLodOfOriginalMesh) {
       for (const node of nodes) {
+        // The nodes were collected before the awaits above, so a concurrent scene change may
+        // already have detached them.
         const chunkGroup = node.parent;
+        if (chunkGroup == null) continue;
         this.disposeMeshGroup(chunkGroup);
         chunkGroup.parent?.remove(chunkGroup);
       }

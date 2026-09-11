@@ -2344,8 +2344,10 @@ export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bi
   );
 }
 
-type AgglomerateRequest = {
+export type SegmentsOfAgglomerate = {
   segmentIds: bigint[];
+  // False if the agglomerate has no graph at the requested version, e.g. because it does not exist
+  // (any more). segmentIds is empty then.
   agglomerateIdIsPresent: boolean;
 };
 export async function getSegmentsForAgglomerateFromTracingStore<T extends number | bigint>(
@@ -2353,8 +2355,8 @@ export async function getSegmentsForAgglomerateFromTracingStore<T extends number
   tracingId: string,
   agglomerateId: T,
   version: number,
-): Promise<bigint[]> {
-  const result: AgglomerateRequest = await doWithToken((token) => {
+): Promise<SegmentsOfAgglomerate> {
+  const result: SegmentsOfAgglomerate = await doWithToken((token) => {
     const params = new URLSearchParams({
       agglomerateId: agglomerateId.toString(),
       version: version.toString(),
@@ -2370,7 +2372,7 @@ export async function getSegmentsForAgglomerateFromTracingStore<T extends number
       ),
     );
   });
-  return result.segmentIds;
+  return result;
 }
 
 export function getEditableAgglomerateTreeAsSkeletonTracing(

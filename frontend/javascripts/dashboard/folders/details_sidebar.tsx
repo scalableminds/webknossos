@@ -133,7 +133,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         {selectedDataset.isActive && (
           <div>
             <div className="sidebar-label">Dimensions</div>
-            {fullDataset && (
+            {fullDataset?.isActive && (
               <div className="info-tab-block" style={{ marginTop: -3 }}>
                 <table
                   style={{

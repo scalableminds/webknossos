@@ -15,8 +15,8 @@ import isEqualWith from "lodash-es/isEqualWith";
 import keyBy from "lodash-es/keyBy";
 import { useEffect, useRef } from "react";
 import {
-  type APIDataset,
   type APIDatasetCompact,
+  type APIMaybeUnimportedDataset,
   convertDatasetToCompact,
   type FlatFolderTreeItem,
   type Folder,
@@ -396,7 +396,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
       return getDataset(datasetId);
     },
     mutationKey,
-    onSuccess: (updatedDataset: APIDataset) => {
+    onSuccess: (updatedDataset: APIMaybeUnimportedDataset) => {
       queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
         (oldItems || [])
           .map((oldDataset: APIDatasetCompact) => {

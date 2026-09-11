@@ -5,10 +5,10 @@ import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
 import type React from "react";
 import { useState } from "react";
-import type { APIDataset, APIUser } from "types/api_types";
+import type { APIMaybeUnimportedDataset, APIUser } from "types/api_types";
 
 type Props = {
-  dataset: APIDataset;
+  dataset: APIMaybeUnimportedDataset;
 };
 
 const DatasetAccessListView = ({ dataset }: Props) => {

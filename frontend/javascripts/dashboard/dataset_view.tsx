@@ -188,7 +188,6 @@ function DatasetView({
         isUserAdminOrDatasetManager={isUserAdminOrDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
         updateDataset={context.updateCachedDataset}
-        reloadDataset={context.reloadDataset}
         addTagToSearch={addTagToSearch}
         scrollContainerRef={scrollContainerRef}
       />

@@ -1,7 +1,7 @@
 import { unwrapOrThrow } from "admin/api/api_result";
 import { getAnnotationsForTask } from "admin/api/tasks";
 import {
-  getDataset,
+  getImportedDataset,
   getShortLink,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
@@ -183,7 +183,7 @@ export async function fetchAnnotationInfo(
       showErrorToast: false,
     }),
   );
-  const dataset = await getDataset(annotation.datasetId);
+  const dataset = await getImportedDataset(annotation.datasetId);
 
   const volumeServerTracings = await getVolumeServerTracings(annotation);
   const volumeTracings = volumeServerTracings.map((tracing) =>

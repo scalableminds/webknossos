@@ -13,6 +13,8 @@
 import { BoundingBoxMinMaxType } from "types/bounding_box";
 import { Vector3 } from "viewer/constants";
 
+export type { Vector3 };
+
 /** Downsampling factor per axis relative to the finest mag, e.g. [2, 2, 1]. */
 export type Mag = Vector3;
 

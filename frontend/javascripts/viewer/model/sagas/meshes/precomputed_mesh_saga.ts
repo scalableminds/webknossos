@@ -376,34 +376,41 @@ export function* getChunksForUnmappedSegments(
 ): Saga<{ chunksByLod: Map<number, meshApi.MeshChunk[]>; chunkScale: Vector3 } | null> {
   const chunksByLod = new Map<number, meshApi.MeshChunk[]>();
   let chunkScale: Vector3 | null = null;
-  for (const segmentId of segmentIds) {
-    let segmentInfo: meshApi.MeshSegmentInfo;
-    try {
-      segmentInfo = yield* call(
-        meshApi.getMeshFileChunksForSegment,
-        dataset.dataStore.url,
-        dataset.id,
-        getBaseSegmentationName(segmentationLayer),
-        meshFile,
-        segmentId,
-        null,
-        null,
-        annotationVersion,
-      );
-    } catch (exception) {
-      console.warn(`Could not list mesh chunks for segment ${segmentId}:`, exception);
-      continue;
-    }
-    chunkScale = segmentInfo.chunkScale;
-    segmentInfo.lods.forEach((lodInfo, lod) => {
-      const chunksOfLod = chunksByLod.get(lod);
-      if (chunksOfLod != null) {
-        chunksOfLod.push(...lodInfo.chunks);
-      } else {
-        chunksByLod.set(lod, [...lodInfo.chunks]);
-      }
-    });
-  }
+  // The chunks of one LOD end up in request completion order, which is fine because
+  // fetchAndMergePrecomputedChunks sorts them by unmapped segment id before merging.
+  const listingTasks = segmentIds.map(
+    (segmentId) =>
+      function* listChunksOfSegment(): Saga<void> {
+        let segmentInfo: meshApi.MeshSegmentInfo;
+        try {
+          segmentInfo = yield* call(
+            meshApi.getMeshFileChunksForSegment,
+            dataset.dataStore.url,
+            dataset.id,
+            getBaseSegmentationName(segmentationLayer),
+            meshFile,
+            segmentId,
+            null,
+            null,
+            annotationVersion,
+          );
+        } catch (exception) {
+          console.warn(`Could not list mesh chunks for segment ${segmentId}:`, exception);
+          return;
+        }
+        chunkScale = segmentInfo.chunkScale;
+        segmentInfo.lods.forEach((lodInfo, lod) => {
+          const chunksOfLod = chunksByLod.get(lod);
+          if (chunksOfLod != null) {
+            chunksOfLod.push(...lodInfo.chunks);
+          } else {
+            chunksByLod.set(lod, [...lodInfo.chunks]);
+          }
+        });
+      },
+  );
+  yield* call(processTaskWithPool, listingTasks, Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+
   return chunkScale == null ? null : { chunksByLod, chunkScale };
 }
 

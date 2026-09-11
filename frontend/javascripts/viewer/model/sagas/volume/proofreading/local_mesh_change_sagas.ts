@@ -6,11 +6,12 @@
 // otherwise touch initial mesh loading or segment-item bookkeeping.
 
 import { getSegmentsForAgglomerateFromTracingStore, type meshApi } from "admin/rest_api";
+import processTaskWithPool from "libs/async/task_pool";
 import { uniq } from "lodash-es";
 import type { ActionPattern } from "redux-saga/effects";
 import { call, put, take } from "typed-redux-saga";
 import type { AdditionalCoordinate, APIMeshFileInfo } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import Constants, { type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import { getMeshInfoForSegment } from "viewer/model/accessors/volumetracing_accessor";
@@ -326,24 +327,29 @@ function* fetchSegmentIdsByNewAgglomerateId(
 ): Saga<Map<bigint, Set<bigint>> | null> {
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   const segmentIdsByNewId = new Map<bigint, Set<bigint>>();
-  for (const newId of newIds) {
-    let segmentIds: bigint[];
-    try {
-      segmentIds = yield* call(
-        getSegmentsForAgglomerateFromTracingStore,
-        tracingStoreUrl,
-        layerName,
-        newId,
-        annotationVersion,
-      );
-    } catch (exception) {
-      console.warn(`Could not fetch the segments of agglomerate ${newId}:`, exception);
-      return null;
-    }
-    if (segmentIds.length === 0) return null;
-    segmentIdsByNewId.set(newId, new Set(segmentIds));
-  }
-  return segmentIdsByNewId;
+  const fetchTasks = newIds.map(
+    (newId) =>
+      function* fetchSegmentIdsOfAgglomerate(): Saga<void> {
+        try {
+          const segmentIds = yield* call(
+            getSegmentsForAgglomerateFromTracingStore,
+            tracingStoreUrl,
+            layerName,
+            newId,
+            annotationVersion,
+          );
+          if (segmentIds.length > 0) {
+            segmentIdsByNewId.set(newId, new Set(segmentIds));
+          }
+        } catch (exception) {
+          console.warn(`Could not fetch the segments of agglomerate ${newId}:`, exception);
+        }
+      },
+  );
+  yield* call(processTaskWithPool, fetchTasks, Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+
+  // Without the segments of every new agglomerate the mesh cannot be split correctly.
+  return segmentIdsByNewId.size === newIds.length ? segmentIdsByNewId : null;
 }
 
 /*
@@ -503,11 +509,6 @@ export function* trySplitMeshLocally(
 
   for (const newId of idsToSplit) {
     segmentMeshController.setMeshColor(newId, layerName);
-  }
-  if (idsNeedingReload.length > 0) {
-    console.warn(
-      `No loaded geometry for new agglomerate id(s) ${idsNeedingReload.join(", ")}. Reloading these meshes.`,
-    );
   }
   return { handledLocally: true, idsNeedingReload };
 }

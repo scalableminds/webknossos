@@ -185,13 +185,13 @@ export function* takeWithBatchActionSupport(actionType: Action["type"]) {
 export function* spawnUntilCanceled<Fn extends (...args: any[]) => Saga<unknown>>(
   sagaFn: Fn,
   ...params: Parameters<Fn>
-): Saga<Task<any>> {
+): Saga<Task> {
   return yield* spawnEffectUntilCanceled(call(sagaFn, ...params));
 }
 
 export function* spawnEffectUntilCanceled<T>(
   sagaEffect: SagaGenerator<T, CallEffect<T>>,
-): Saga<Task<any>> {
+): Saga<Task> {
   /*
    * Spawns the given saga with the given parameters in a non-blocking manner.
    * The saga is automatically canceled if a RESTART_SAGA or CANCEL_SAGA action

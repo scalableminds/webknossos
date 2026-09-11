@@ -78,13 +78,25 @@ export class VolumeTransaction {
     };
   }
 
-  /** Merge a whole write set (from the resolver, or a remote peer). */
-  // todop: could this be cheaper in case the current transaction is empty?
+  /**
+   * Merge a whole write set (from the resolver, or a remote peer).
+   */
   recordAll(bucketWriteMap: BucketWriteMap): void {
+    if (this.bucketWrites.size === 0) {
+      // For an empty transaction, we can simply adopt the incoming entries.
+      for (const [key, entry] of bucketWriteMap) {
+        this.bucketWrites.set(key, entry);
+      }
+      return;
+    }
+
     for (const incoming of bucketWriteMap.values()) {
-      const writer = this.writerFor(incoming.address, incoming.write.value);
+      // entryFor rather than writerFor: unlike a rasterizer write cursor,
+      // recordAll never reads isBackground, so there is no reason to pay for
+      // a backgroundProbe call per bucket here.
+      const entry = this.entryFor(incoming.address, incoming.write.value);
       for (const { start, length } of incoming.write.mask.runs()) {
-        writer.markRun(start, length);
+        entry.write.mask.markRun(start, length);
       }
     }
   }

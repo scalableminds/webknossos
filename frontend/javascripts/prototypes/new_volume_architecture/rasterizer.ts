@@ -65,25 +65,7 @@ function rasterizeCapsule(
   const box = clipBox(capsuleBoundingBox(from, to, radius, planeAxis), ctx.editableBoundingBox);
   if (box == null) return;
 
-  /* todop:
-  the design doc wrote this which only gets one writer per bucket. seems better?
-
-  for (const { address, localBox } of bucketsIntersecting(bbox, ctx)) {
-    const w = tx.writerFor(address, ctx.activeSegmentId);   // once per bucket
-
-    for (const { y, z } of rowsOf(localBox, shape.planeAxis)) {
-      const rowStart = y * BUCKET_WIDTH + z * BUCKET_WIDTH ** 2;  // x === 0
-
-      for (const [x0, x1] of capsuleRowSpans(a, b, shape.radius, y, z, localBox)) {
-        emitSpan(w, rowStart + x0, x1 - x0 + 1, ctx);
-      }
-    }
-  }
-
-   */
-
-  forEachBucketRow(box, ctx, (address, rowY, rowZ, xStart, xEnd) => {
-    const writer = tx.writerFor(address, ctx.activeSegmentId);
+  forEachBucketRow(box, ctx, tx, (writer, address, rowY, rowZ, xStart, xEnd) => {
     const rowBase = rowBaseIndex(address, rowY, rowZ);
     emitSpansAlongRow(writer, rowBase, address, xStart, xEnd, ctx, (x) =>
       isInsideCapsule([x + 0.5, rowY + 0.5, rowZ + 0.5], from, to, radius, planeAxis),
@@ -94,8 +76,7 @@ function rasterizeCapsule(
 function rasterizeBox(min: Vector3, max: Vector3, ctx: EditContext, tx: VolumeTransaction): void {
   const box = clipBox({ min, max }, ctx.editableBoundingBox);
   if (box == null) return;
-  forEachBucketRow(box, ctx, (address, rowY, rowZ, xStart, xEnd) => {
-    const writer = tx.writerFor(address, ctx.activeSegmentId);
+  forEachBucketRow(box, ctx, tx, (writer, address, rowY, rowZ, xStart, xEnd) => {
     const rowBase = rowBaseIndex(address, rowY, rowZ);
     emitSpansAlongRow(writer, rowBase, address, xStart, xEnd, ctx, () => true);
   });
@@ -113,8 +94,7 @@ function rasterizeMask(shape: MaskShape, ctx: EditContext, tx: VolumeTransaction
   );
   if (box == null) return;
 
-  forEachBucketRow(box, ctx, (address, rowY, rowZ, xStart, xEnd) => {
-    const writer = tx.writerFor(address, ctx.activeSegmentId);
+  forEachBucketRow(box, ctx, tx, (writer, address, rowY, rowZ, xStart, xEnd) => {
     const rowBase = rowBaseIndex(address, rowY, rowZ);
     const localY = rowY - shape.origin[1];
     const localZ = rowZ - shape.origin[2];
@@ -127,13 +107,21 @@ function rasterizeMask(shape: MaskShape, ctx: EditContext, tx: VolumeTransaction
 
 /**
  * Walk the box bucket by bucket, then row by row within each bucket. Bucket
- * address and writer are resolved once per bucket; the inner loop touches
+ * address and writer are resolved once per bucket. The inner loop touches
  * nothing but integers.
  */
 function forEachBucketRow(
   box: BoundingBox,
   ctx: EditContext,
-  visit: (address: BucketAddress, rowY: number, rowZ: number, xStart: number, xEnd: number) => void,
+  tx: VolumeTransaction,
+  visit: (
+    writer: BucketWriter,
+    address: BucketAddress,
+    rowY: number,
+    rowZ: number,
+    xStart: number,
+    xEnd: number,
+  ) => void,
 ): void {
   const bucketMin: Vector3 = [
     floorDiv(box.min[0], BUCKET_WIDTH),
@@ -156,10 +144,15 @@ function forEachBucketRow(
         const yEnd = Math.min(box.max[1], (by + 1) * BUCKET_WIDTH);
         const xStart = Math.max(box.min[0], bx * BUCKET_WIDTH);
         const xEnd = Math.min(box.max[0], (bx + 1) * BUCKET_WIDTH);
+        // Bail before resolving a writer: a bucket this box doesn't actually
+        // reach must not get an empty entry in the transaction's write set
+        // (spurious startDataMutation/GPU-refresh on flush for no real edit).
         if (xStart >= xEnd) continue;
+
+        const writer = tx.writerFor(address, ctx.activeSegmentId);
         for (let z = zStart; z < zEnd; z++) {
           for (let y = yStart; y < yEnd; y++) {
-            visit(address, y, z, xStart, xEnd);
+            visit(writer, address, y, z, xStart, xEnd);
           }
         }
       }

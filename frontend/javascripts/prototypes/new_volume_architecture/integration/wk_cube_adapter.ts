@@ -14,17 +14,14 @@
 import type { BucketDataArray } from "types/api_types";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
-import type { BucketWrite } from "../bucket_write_map";
+import { applyBucketWriteToData, type BucketWrite } from "../bucket_write_map";
 import type { LoadingVoxelCube, TransactionCube } from "../cube";
 import { BUCKET_VOXEL_COUNT, type BucketAddress, type Mag, MagList, type Vector3 } from "../types";
 
 /** Fill the runs of `write` into `data`, whatever element class it is. */
 function writeRuns(data: BucketDataArray, write: BucketWrite): void {
-  // todop: similar to WkDataCubeAdapter.applyWrites ?
   if (data instanceof BigUint64Array || data instanceof BigInt64Array) {
-    for (const { start, length } of write.mask.runs()) {
-      data.fill(write.value, start, start + length);
-    }
+    applyBucketWriteToData(data, write);
   } else {
     // Every non-64-bit variant of BucketDataArray takes a number; TypeScript
     // cannot narrow the union's `fill` overloads, hence the single cast.

@@ -30,6 +30,20 @@ export interface BucketWriteMapEntry {
 }
 
 /**
+ * Apply `write`'s runs onto a dense bigint bucket array. Real buckets may
+ * additionally hold a non-64-bit element class, which is why `writeRuns`
+ * still has a second branch of its own on top of this.
+ */
+export function applyBucketWriteToData(
+  data: BigUint64Array | BigInt64Array,
+  write: BucketWrite,
+): void {
+  for (const { start, length } of write.mask.runs()) {
+    data.fill(write.value, start, start + length);
+  }
+}
+
+/**
  * Voxel writes across buckets. This is the one currency exchanged between the
  * rasterizer, the resolver, mag propagation and the transaction.
  */

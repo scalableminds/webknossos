@@ -1,4 +1,4 @@
-import type { BucketWrite } from "./bucket_write_map";
+import { applyBucketWriteToData, type BucketWrite } from "./bucket_write_map";
 import type { BucketJournal } from "./journal";
 import {
   type AdditionalCoordinate,
@@ -162,9 +162,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
   applyWrites(address: BucketAddress, write: BucketWrite): void {
     const data = this.materializedData(address);
     if (data == null) return;
-    for (const { start, length } of write.mask.runs()) {
-      data.fill(write.value, start, start + length);
-    }
+    applyBucketWriteToData(data, write);
     this.gpuDirty.add(bucketKey(address));
   }
 

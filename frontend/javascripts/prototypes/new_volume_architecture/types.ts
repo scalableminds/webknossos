@@ -4,16 +4,19 @@
  * This module is deliberately self-contained: almost nothing here is imported from the
  * production `viewer/` code, so the prototype cannot drift with it. A few small
  * things (Vector3, BUCKET_WIDTH) are therefore redeclared rather than shared.
+ * AdditionalCoordinate is the exception: it's reused as-is (see BucketAddress
+ * below), rather than redeclared, since a structural mismatch there would
+ * silently break the zero-conversion boundary crossing into the real
+ * `viewer/` DataCube (see integration/wk_cube_adapter.ts).
  *
  * Simplifications versus the design doc:
- *   - No additional coordinates (4D/5D datasets). A BucketAddress is xyz + mag.
  *   - Layers are implicit; there is exactly one.
  */
 
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { Vector3 } from "viewer/constants";
+import type { AdditionalCoordinate, Vector3 } from "viewer/constants";
 
-export type { Vector3 };
+export type { AdditionalCoordinate, Vector3 };
 
 /** Downsampling factor per axis relative to the finest mag, e.g. [2, 2, 1]. */
 export type Mag = Vector3;
@@ -28,8 +31,19 @@ export const BUCKET_WIDTH = 32;
 export const BUCKET_VOXEL_COUNT = BUCKET_WIDTH ** 3; // 32_768
 export const FINEST_MAG_INDEX = 0;
 
-/** [bucketX, bucketY, bucketZ, magIndex] */
-export type BucketAddress = readonly [number, number, number, MagIndex];
+/**
+ * [bucketX, bucketY, bucketZ, magIndex, additionalCoordinates]. The 5th slot
+ * is always present (rather than the optional 5th element the real
+ * `viewer/constants` BucketAddress allows) so every construction site has to
+ * decide what it is, instead of quietly defaulting to "none" by omission.
+ */
+export type BucketAddress = readonly [
+  number,
+  number,
+  number,
+  MagIndex,
+  AdditionalCoordinate[] | null,
+];
 
 /** Stable string form so a BucketAddress can be used as a Map key. */
 export type BucketKey = string & { readonly __brand: "BucketKey" };
@@ -41,7 +55,14 @@ export type BucketKey = string & { readonly __brand: "BucketKey" };
 export type VoxelIndex = number;
 
 export function bucketKey(address: BucketAddress): BucketKey {
-  return `${address[0]},${address[1]},${address[2]},${address[3]}` as BucketKey;
+  const additionalCoordinates = address[4];
+  // Empty and null both mean "no additional axes"; treated identically so
+  // the two never accidentally address different buckets.
+  const coordinateSuffix =
+    additionalCoordinates == null || additionalCoordinates.length === 0
+      ? ""
+      : `;${additionalCoordinates.map((coord) => `${coord.name}=${coord.value}`).join(",")}`;
+  return `${address[0]},${address[1]},${address[2]},${address[3]}${coordinateSuffix}` as BucketKey;
 }
 
 /** Flat index from an offset *within* a bucket. All components must be 0..31. */
@@ -64,12 +85,17 @@ export function floorDiv(a: number, b: number): number {
 }
 
 /** The bucket containing a voxel, where the voxel is in `magIndex`'s own grid. */
-export function bucketAddressOfVoxel(voxel: Vector3, magIndex: MagIndex): BucketAddress {
+export function bucketAddressOfVoxel(
+  voxel: Vector3,
+  magIndex: MagIndex,
+  additionalCoordinates: AdditionalCoordinate[] | null,
+): BucketAddress {
   return [
     floorDiv(voxel[0], BUCKET_WIDTH),
     floorDiv(voxel[1], BUCKET_WIDTH),
     floorDiv(voxel[2], BUCKET_WIDTH),
     magIndex,
+    additionalCoordinates,
   ];
 }
 
@@ -155,4 +181,12 @@ export interface EditContext {
   overwriteMode: OverwriteMode;
   /** Annotation-level restriction; the rasterizer clips against it. */
   editableBoundingBox: BoundingBox | null;
+  /**
+   * Which point in the dataset's extra axes (time, channel, ...) this
+   * interaction edits. Constant for the whole transaction — a single stroke
+   * or fill never spans more than one point in additional-coordinate space —
+   * so every BucketAddress this interaction produces carries this same value
+   * in its own 5th slot; this field is the one place that value comes from.
+   */
+  additionalCoordinates: AdditionalCoordinate[] | null;
 }

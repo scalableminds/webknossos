@@ -2,6 +2,7 @@ import { type BucketWriteMap, BucketWriteMapBuilder } from "./bucket_write_map";
 import type { LoadingVoxelCube } from "./cube";
 import type { DataDependentShape } from "./intents";
 import {
+  type AdditionalCoordinate,
   type BoundingBox,
   type BucketAddress,
   bucketAddressOfVoxel,
@@ -70,9 +71,18 @@ async function resolveFloodFill(
   options: FloodFillOptions = {},
 ): Promise<FloodFillResolution> {
   const maxVisited = options.maxVisitedVoxels ?? DEFAULT_MAX_VISITED_VOXELS;
-  const out = new BucketWriteMapBuilder(ctx.sourceMagIndex, ctx.activeSegmentId);
+  const out = new BucketWriteMapBuilder(
+    ctx.sourceMagIndex,
+    ctx.activeSegmentId,
+    ctx.additionalCoordinates,
+  );
 
-  const seedValue = await readVoxel(cube, shape.seed, ctx.sourceMagIndex);
+  const seedValue = await readVoxel(
+    cube,
+    shape.seed,
+    ctx.sourceMagIndex,
+    ctx.additionalCoordinates,
+  );
   if (seedValue === ctx.activeSegmentId) {
     // Nothing to do: the region already carries the target value, and treating
     // it as a fill would traverse it only to write what is already there.
@@ -105,7 +115,7 @@ async function resolveFloodFill(
     if (!isInBoundingBox(voxel, ctx.editableBoundingBox)) continue;
     if (out.has(voxel)) continue; // the mask doubles as the visited set
 
-    const address = bucketAddressOfVoxel(voxel, ctx.sourceMagIndex);
+    const address = bucketAddressOfVoxel(voxel, ctx.sourceMagIndex, ctx.additionalCoordinates);
     if (cachedAddress == null || !sameAddress(cachedAddress, address)) {
       cachedData = await cube.ensureLoaded(address); // the only await
       cachedAddress = address;
@@ -166,8 +176,9 @@ async function readVoxel(
   cube: LoadingVoxelCube,
   voxel: Vector3,
   magIndex: number,
+  additionalCoordinates: AdditionalCoordinate[] | null,
 ): Promise<bigint> {
-  const address = bucketAddressOfVoxel(voxel, magIndex);
+  const address = bucketAddressOfVoxel(voxel, magIndex, additionalCoordinates);
   const data = await cube.ensureLoaded(address);
   const offset = voxelOffsetInBucket(voxel);
   return data[voxelIndexOf(offset[0], offset[1], offset[2])];

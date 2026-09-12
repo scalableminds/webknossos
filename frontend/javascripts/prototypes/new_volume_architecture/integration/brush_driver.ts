@@ -43,12 +43,13 @@ export class BrushDriver {
     private readonly options: BrushDriverOptions,
     start: Vector3,
   ) {
-    this.adapter = new WkDataCubeAdapter(options.cube, options.additionalCoordinates);
+    this.adapter = new WkDataCubeAdapter(options.cube);
     this.ctx = {
       sourceMagIndex: options.magIndex,
       activeSegmentId: options.segmentId,
       overwriteMode: options.overwriteMode,
       editableBoundingBox: null,
+      additionalCoordinates: options.additionalCoordinates,
     };
     this.transaction = new VolumeTransaction(
       `spike-${Date.now()}`,

@@ -1,6 +1,7 @@
 import type { BucketWrite } from "./bucket_write_map";
 import type { BucketJournal } from "./journal";
 import {
+  type AdditionalCoordinate,
   BUCKET_VOXEL_COUNT,
   type BucketAddress,
   type BucketKey,
@@ -183,12 +184,17 @@ export class WorkingDataCube implements LoadingVoxelCube {
   }
 
   /** Read one voxel of a resident bucket. Test helper, not a hot path. */
-  peek(voxel: Vector3, magIndex: number): SegmentId | undefined {
+  peek(
+    voxel: Vector3,
+    magIndex: number,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
+  ): SegmentId | undefined {
     const address: BucketAddress = [
       Math.floor(voxel[0] / 32),
       Math.floor(voxel[1] / 32),
       Math.floor(voxel[2] / 32),
       magIndex,
+      additionalCoordinates,
     ];
     const data = this.getResident(address);
     if (data == null) return undefined;

@@ -2,10 +2,11 @@
  * Spike implementation of the volume-annotation architecture described in
  * `design/volume_annotation_architecture.md`.
  *
- * Standalone on purpose: it imports nothing from `viewer/`, is wired into no
- * part of the running app, and is exercised only by unit tests. Scope is the
- * MVP — brush and flood fill, no proofreading, no interpolation, no additional
- * coordinates, no save/backend transport beyond an in-memory fake.
+ * Standalone on purpose: almost nothing here is imported from `viewer/` (see
+ * types.ts), it is wired into no part of the running app, and is exercised
+ * only by unit tests. Scope is the MVP — brush and flood fill, no
+ * proofreading, no interpolation, no save/backend transport beyond an
+ * in-memory fake.
  */
 
 export { BucketVoxelMask } from "./bucket_voxel_mask";
@@ -42,6 +43,7 @@ export { resolve, resolveFloodFill } from "./resolver";
 export { VolumeEditingSession } from "./session";
 export { type BucketWriter, VolumeTransaction } from "./transaction";
 export {
+  type AdditionalCoordinate,
   type BoundingBox,
   BUCKET_VOXEL_COUNT,
   BUCKET_WIDTH,

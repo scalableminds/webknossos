@@ -71,7 +71,7 @@ export interface FloodFillResult {
  */
 export async function runFloodFill(options: FloodFillDriverOptions): Promise<FloodFillResult> {
   const startedAt = performance.now();
-  const adapter = new WkLoadingCubeAdapter(options.cube, options.additionalCoordinates);
+  const adapter = new WkLoadingCubeAdapter(options.cube);
   const ctx: EditContext = {
     sourceMagIndex: options.magIndex,
     activeSegmentId: options.segmentId,
@@ -80,6 +80,7 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     // "overwrite-all" semantics as far as the rasterizing write set goes.
     overwriteMode: "overwrite-all",
     editableBoundingBox: null,
+    additionalCoordinates: options.additionalCoordinates,
   };
 
   // checkLineIntersection expects mag1 voxel coordinates; a source-mag voxel

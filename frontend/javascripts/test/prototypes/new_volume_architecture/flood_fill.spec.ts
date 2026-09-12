@@ -49,8 +49,8 @@ describe("new volume architecture — flood fill", () => {
     // Coarser mags must be resident to be read back; the fill loads mag 0
     // itself as it traverses.
     await materialize(cube, [
-      [0, 0, 0, 1],
-      [0, 0, 0, 2],
+      [0, 0, 0, 1, null],
+      [0, 0, 0, 2, null],
     ]);
 
     const ctx = editContext({ sourceMagIndex: 0, activeSegmentId: FILL });
@@ -73,7 +73,7 @@ describe("new volume architecture — flood fill", () => {
     }
 
     // The traversal genuinely crossed a bucket boundary.
-    const fetchedKeys = backend.fetched.map((address) => address.join(","));
+    const fetchedKeys = backend.fetched.map((address) => address.slice(0, 4).join(","));
     expect(fetchedKeys).toContain("0,0,0,0");
     expect(fetchedKeys).toContain("1,0,0,0");
 
@@ -97,8 +97,8 @@ describe("new volume architecture — flood fill", () => {
     const { cube, session, backend } = createHarness();
     seedRegion(backend);
     await materialize(cube, [
-      [0, 0, 0, 1],
-      [0, 0, 0, 2],
+      [0, 0, 0, 1, null],
+      [0, 0, 0, 2, null],
     ]);
 
     await session.floodFill(
@@ -121,8 +121,8 @@ describe("new volume architecture — flood fill", () => {
     const { cube, session, backend } = createHarness();
     seedRegion(backend);
     await materialize(cube, [
-      [0, 0, 0, 1],
-      [0, 0, 0, 2],
+      [0, 0, 0, 1, null],
+      [0, 0, 0, 2, null],
     ]);
 
     const isBlocked = (from: Vector3, to: Vector3) =>
@@ -161,12 +161,12 @@ describe("new volume architecture — flood fill", () => {
 
     // Left of the boundary is filled, right of it is untouched.
     expect(cube.peek([31, 12, 3], 0)).toBe(FILL);
-    await cube.materialize([1, 0, 0, 0]);
+    await cube.materialize([1, 0, 0, 0, null]);
     expect(cube.peek([32, 12, 3], 0)).toBe(EXISTING);
 
     const mag0 = diff.bucketDiffs.filter((d) => d.address[3] === 0);
     expect(mag0).toHaveLength(1);
-    expect(mag0[0].address).toEqual([0, 0, 0, 0]);
+    expect(mag0[0].address).toEqual([0, 0, 0, 0, null]);
     // 4 columns (28..31) × 5 rows (10..14) × 1 slice
     expect(countDiffVoxels({ ...diff, bucketDiffs: mag0 })).toBe(4 * 5);
   });
@@ -190,7 +190,7 @@ describe("new volume architecture — flood fill", () => {
     for (const voxel of voxelsInBox([10, 10, 5], [14, 14, 7])) {
       backend.seedVoxel(bucketOf(voxel, 0), [voxel[0], voxel[1], voxel[2]], EXISTING);
     }
-    await materialize(cube, [[0, 0, 0, 0]]);
+    await materialize(cube, [[0, 0, 0, 0, null]]);
 
     await session.floodFill(
       { kind: "floodFill", seed: [11, 11, 5], is3D: false, bounds: null },
@@ -209,7 +209,7 @@ describe("new volume architecture — flood fill", () => {
   it("writes the mask through to the bucket data verbatim", async () => {
     const { cube, session, backend } = createHarness();
     seedRegion(backend);
-    await materialize(cube, [[0, 0, 0, 0]]);
+    await materialize(cube, [[0, 0, 0, 0, null]]);
 
     await session.floodFill(
       {
@@ -222,7 +222,7 @@ describe("new volume architecture — flood fill", () => {
     );
 
     // Spot-check the raw array rather than going through peek().
-    const data = cube.getResident([0, 0, 0, 0]);
+    const data = cube.getResident([0, 0, 0, 0, null]);
     expect(data).toBeDefined();
     expect(data?.[voxelIndexOf(28, 10, 3)]).toBe(FILL);
     expect(data?.[voxelIndexOf(31, 14, 3)]).toBe(FILL);

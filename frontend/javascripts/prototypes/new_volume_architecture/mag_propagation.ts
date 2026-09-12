@@ -1,5 +1,6 @@
 import { type BucketWriteMap, BucketWriteMapBuilder } from "./bucket_write_map";
 import {
+  type AdditionalCoordinate,
   type EditContext,
   FINEST_MAG_INDEX,
   floorDiv,
@@ -35,7 +36,13 @@ export function propagate(
   let writes = sourceWrites;
   for (let index = ctx.sourceMagIndex; index > FINEST_MAG_INDEX; index--) {
     const factor = mags.factorBetween(index - 1, index);
-    writes = upsampleOneLevel(writes, factor, index - 1, ctx.activeSegmentId);
+    writes = upsampleOneLevel(
+      writes,
+      factor,
+      index - 1,
+      ctx.activeSegmentId,
+      ctx.additionalCoordinates,
+    );
     result.set(index - 1, writes);
   }
 
@@ -43,7 +50,13 @@ export function propagate(
   writes = sourceWrites;
   for (let index = ctx.sourceMagIndex; index < mags.length - 1; index++) {
     const factor = mags.factorBetween(index, index + 1);
-    writes = downsampleOneLevel(writes, factor, index + 1, ctx.activeSegmentId);
+    writes = downsampleOneLevel(
+      writes,
+      factor,
+      index + 1,
+      ctx.activeSegmentId,
+      ctx.additionalCoordinates,
+    );
     result.set(index + 1, writes);
   }
 
@@ -60,8 +73,9 @@ export function upsampleOneLevel(
   factor: Mag,
   targetMagIndex: MagIndex,
   value: bigint,
+  additionalCoordinates: AdditionalCoordinate[] | null,
 ): BucketWriteMap {
-  const out = new BucketWriteMapBuilder(targetMagIndex, value);
+  const out = new BucketWriteMapBuilder(targetMagIndex, value, additionalCoordinates);
 
   for (const entry of bucketWrites.values()) {
     const origin = originVoxelOf(entry.address);
@@ -92,8 +106,9 @@ export function downsampleOneLevel(
   factor: Mag,
   targetMagIndex: MagIndex,
   value: bigint,
+  additionalCoordinates: AdditionalCoordinate[] | null,
 ): BucketWriteMap {
-  const out = new BucketWriteMapBuilder(targetMagIndex, value);
+  const out = new BucketWriteMapBuilder(targetMagIndex, value, additionalCoordinates);
 
   for (const entry of bucketWrites.values()) {
     const origin = originVoxelOf(entry.address);

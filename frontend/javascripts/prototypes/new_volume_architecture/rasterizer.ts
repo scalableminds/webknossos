@@ -149,7 +149,7 @@ function forEachBucketRow(
   for (let bz = bucketMin[2]; bz <= bucketMax[2]; bz++) {
     for (let by = bucketMin[1]; by <= bucketMax[1]; by++) {
       for (let bx = bucketMin[0]; bx <= bucketMax[0]; bx++) {
-        const address: BucketAddress = [bx, by, bz, ctx.sourceMagIndex];
+        const address: BucketAddress = [bx, by, bz, ctx.sourceMagIndex, ctx.additionalCoordinates];
         const zStart = Math.max(box.min[2], bz * BUCKET_WIDTH);
         const zEnd = Math.min(box.max[2], (bz + 1) * BUCKET_WIDTH);
         const yStart = Math.max(box.min[1], by * BUCKET_WIDTH);

@@ -5,13 +5,13 @@
  * DataCube, so the brush can be tried in the browser. Deliberately dirty:
  *   - Buckets are mutated in place. Nothing is pushed to the save queue, no
  *     update actions are emitted, and undo is not wired up.
- *   - `additionalCoordinates` are threaded through but otherwise ignored.
- *   - The prototype's BucketAddress is xyz+mag; the real one carries a fifth
- *     element, so addresses are converted at this boundary.
+ *   - The prototype's BucketAddress (types.ts) is structurally identical to
+ *     the real one (xyz, magIndex, additionalCoordinates) on purpose, so
+ *     addresses cross this boundary as-is — no conversion, no separate
+ *     adapter-level additionalCoordinates override to keep in sync.
  */
 
 import type { BucketDataArray } from "types/api_types";
-import type { AdditionalCoordinate, BucketAddress as WkBucketAddress } from "viewer/constants";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import type { BucketWrite } from "../bucket_write_map";
@@ -40,14 +40,7 @@ export class WkDataCubeAdapter implements TransactionCube {
   // Buckets touched during the current stroke, so mutations can be flushed.
   private readonly touched = new Set<DataBucket>();
 
-  constructor(
-    protected readonly cube: DataCube,
-    protected readonly additionalCoordinates: AdditionalCoordinate[] | null,
-  ) {}
-
-  protected toWkAddress(address: BucketAddress): WkBucketAddress {
-    return [address[0], address[1], address[2], address[3], this.additionalCoordinates];
-  }
+  constructor(protected readonly cube: DataCube) {}
 
   /**
    * Comparing against background does not require a common representation
@@ -65,7 +58,7 @@ export class WkDataCubeAdapter implements TransactionCube {
   }
 
   applyWrites(address: BucketAddress, write: BucketWrite): void {
-    const bucket = this.cube.getOrCreateBucket(this.toWkAddress(address));
+    const bucket = this.cube.getOrCreateBucket(address);
     if (bucket.type === "null") return;
 
     // getOrCreateData rather than getData: a bucket that has not loaded yet
@@ -99,7 +92,7 @@ export class WkDataCubeAdapter implements TransactionCube {
   }
 
   private rawData(address: BucketAddress): BucketDataArray | null {
-    const bucket = this.cube.getBucket(this.toWkAddress(address));
+    const bucket = this.cube.getBucket(address);
     if (bucket.type === "null" || !bucket.hasData()) return null;
     return bucket.getData();
   }
@@ -121,7 +114,7 @@ export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVo
    * per-voxel bigint cast is enough.
    */
   async ensureLoaded(address: BucketAddress): Promise<BigUint64Array> {
-    const bucket = this.cube.getOrCreateBucket(this.toWkAddress(address));
+    const bucket = this.cube.getOrCreateBucket(address);
     if (bucket.type === "null") {
       // Out of the dataset's bounds. `ctx.editableBoundingBox` / `shape.bounds`
       // (§5.1) should already keep the traversal from reaching here in the

@@ -46,6 +46,7 @@ export function editContext(overrides: Partial<EditContext> = {}): EditContext {
     activeSegmentId: 7n,
     overwriteMode: "overwrite-all",
     editableBoundingBox: null,
+    additionalCoordinates: null,
     ...overrides,
   };
 }
@@ -60,7 +61,10 @@ export async function materialize(
 
 /** Bucket (0,0,0) at each mag — enough for edits confined near the origin. */
 export function originBuckets(magCount: number): BucketAddress[] {
-  return Array.from({ length: magCount }, (_, magIndex) => [0, 0, 0, magIndex] as BucketAddress);
+  return Array.from(
+    { length: magCount },
+    (_, magIndex) => [0, 0, 0, magIndex, null] as BucketAddress,
+  );
 }
 
 /** Map a finest-mag voxel into the grid of `mag`. */
@@ -108,5 +112,5 @@ export function magIndicesOf(addresses: BucketAddress[]): number[] {
 }
 
 export function bucketOf(voxel: Vector3, magIndex: number): BucketAddress {
-  return bucketAddressOfVoxel(voxel, magIndex);
+  return bucketAddressOfVoxel(voxel, magIndex, null);
 }

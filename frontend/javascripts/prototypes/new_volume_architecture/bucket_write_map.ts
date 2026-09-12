@@ -1,5 +1,6 @@
 import { BucketVoxelMask } from "./bucket_voxel_mask";
 import {
+  type AdditionalCoordinate,
   BUCKET_WIDTH,
   type BucketAddress,
   type BucketKey,
@@ -47,6 +48,7 @@ export class BucketWriteMapBuilder {
   constructor(
     private readonly magIndex: MagIndex,
     private readonly value: SegmentId,
+    private readonly additionalCoordinates: AdditionalCoordinate[] | null,
   ) {}
 
   private entryFor(address: BucketAddress): BucketWriteMapEntry {
@@ -65,7 +67,9 @@ export class BucketWriteMapBuilder {
 
   /** Mark one voxel, given in this builder's mag grid. */
   mark(voxel: Vector3): void {
-    const entry = this.entryFor(bucketAddressOfVoxel(voxel, this.magIndex));
+    const entry = this.entryFor(
+      bucketAddressOfVoxel(voxel, this.magIndex, this.additionalCoordinates),
+    );
     const [x, y, z] = voxelOffsetInBucket(voxel);
     entry.write.mask.mark(voxelIndexOf(x, y, z));
   }
@@ -80,7 +84,7 @@ export class BucketWriteMapBuilder {
     const [, y, z] = voxel;
 
     while (remaining > 0) {
-      const address = bucketAddressOfVoxel([x, y, z], this.magIndex);
+      const address = bucketAddressOfVoxel([x, y, z], this.magIndex, this.additionalCoordinates);
       const offset = voxelOffsetInBucket([x, y, z]);
       const lengthInBucket = Math.min(remaining, BUCKET_WIDTH - offset[0]);
       const entry = this.entryFor(address);
@@ -92,7 +96,7 @@ export class BucketWriteMapBuilder {
 
   /** Whether a voxel has already been marked. Doubles as a "visited" test. */
   has(voxel: Vector3): boolean {
-    const key = bucketKey(bucketAddressOfVoxel(voxel, this.magIndex));
+    const key = bucketKey(bucketAddressOfVoxel(voxel, this.magIndex, this.additionalCoordinates));
     const entry = this.entries.get(key);
     if (entry == null) return false;
     const [x, y, z] = voxelOffsetInBucket(voxel);

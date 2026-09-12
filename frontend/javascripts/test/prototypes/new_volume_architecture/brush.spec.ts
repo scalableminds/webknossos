@@ -125,7 +125,7 @@ describe("new volume architecture — brush", () => {
     const buckets: BucketAddress[] = [];
     for (let magIndex = 0; magIndex < MAGS.length; magIndex++) {
       for (let bx = 0; bx < 4; bx++) {
-        for (let by = 0; by < 4; by++) buckets.push([bx, by, 0, magIndex]);
+        for (let by = 0; by < 4; by++) buckets.push([bx, by, 0, magIndex, null]);
       }
     }
     await materialize(cube, buckets);
@@ -159,7 +159,7 @@ describe("new volume architecture — brush", () => {
     const { cube, session } = createHarness();
     const buckets: BucketAddress[] = [];
     for (let magIndex = 0; magIndex < MAGS.length; magIndex++) {
-      for (let bz = 0; bz < 2; bz++) buckets.push([0, 0, bz, magIndex]);
+      for (let bz = 0; bz < 2; bz++) buckets.push([0, 0, bz, magIndex, null]);
     }
     await materialize(cube, buckets);
 
@@ -258,14 +258,14 @@ describe("new volume architecture — brush", () => {
     expect(magIndicesOf(diff.bucketDiffs.map((d) => d.address))).toEqual([0, 1, 2]);
 
     // Loading afterwards must surface the edit: the journal folds it in.
-    const address: BucketAddress = [0, 0, 0, 0];
+    const address: BucketAddress = [0, 0, 0, 0, null];
     await cube.materialize(address);
     expect(cube.peek([16, 16, 5], 0)).toBe(SEGMENT);
   });
 
   it("honours overwrite-empty-only against resident data", async () => {
     const { cube, session, backend } = createHarness();
-    const address: BucketAddress = [0, 0, 0, 0];
+    const address: BucketAddress = [0, 0, 0, 0, null];
     // Pre-existing segment 3 at one voxel the brush will cover.
     backend.seedVoxel(address, [16, 16, 5], 3n);
     await materialize(cube, originBuckets(MAGS.length));

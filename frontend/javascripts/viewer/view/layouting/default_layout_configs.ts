@@ -75,6 +75,7 @@ function Tab(
   id: string,
   component: string,
   enableRenderOnDemand: boolean = true,
+  className?: string,
 ): TabNode {
   return {
     type: "tab",
@@ -82,16 +83,18 @@ function Tab(
     component,
     id,
     enableRenderOnDemand,
+    className,
   };
 }
 
-function Tabset(children: Array<TabNode>, weight?: number): TabsetNode {
+function Tabset(children: Array<TabNode>, weight?: number, classNameTabStrip?: string): TabsetNode {
   weight = weight != null ? weight : 100;
   return {
     type: "tabset",
     weight,
     selected: 0,
     children,
+    classNameTabStrip,
   };
 }
 
@@ -113,15 +116,21 @@ const borderTabs: Record<keyof typeof BorderTabs, TabNode> = {};
 entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
   borderTabs[tabKey] = getTabDescriptorForBorderTab(borderTab);
 });
+// Distinguishes the tab handles/tab bars of the four main viewports (XY/YZ/XZ/3D and their
+// flight-mode equivalents) from the visually identical .flexlayout__tab_button and
+// .flexlayout__tabset_tabbar_outer used by the left/right border tabs (Layers/Settings,
+// Info/Skeleton/...), so they can be styled separately -- see flex_layout_overwrites.less.
+const viewportTabClassName = "viewport-tab-button";
+const viewportTabbarClassName = "viewport-tabbar-outer";
 const OrthoViewports = {} as Record<keyof typeof OrthoViews, TabNode>;
 keys(OrthoViews).forEach((viewportId) => {
   const name = OrthoViewsToName[viewportId];
-  OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
+  OrthoViewports[viewportId] = Tab(name, viewportId, "viewport", undefined, viewportTabClassName);
 });
 const FlightViewports = {} as Record<keyof typeof FlightViews, TabNode>;
 keys(FlightViews).forEach((viewportId) => {
   const name = FlightViewsToName[viewportId];
-  FlightViewports[viewportId] = Tab(name, viewportId, "viewport");
+  FlightViewports[viewportId] = Tab(name, viewportId, "viewport", undefined, viewportTabClassName);
 });
 const globalLayoutSettings: GlobalConfig = {
   splitterSize: defaultSplitterSize,
@@ -140,7 +149,9 @@ const subLayoutGlobalSettings: GlobalConfig = {
 
 function buildTabsets(setsOfTabs: Array<Array<TabNode>>): Array<TabsetNode> {
   const tabsetWeight = 100 / setsOfTabs.length;
-  const tabsets = setsOfTabs.map((tabs) => Tabset(tabs, tabsetWeight));
+  // Only used for the main viewport grid (see buildMainLayout below) -- buildBorder builds the
+  // left/right border's own Tabset separately, so this doesn't reach those.
+  const tabsets = setsOfTabs.map((tabs) => Tabset(tabs, tabsetWeight, viewportTabbarClassName));
   return tabsets;
 }
 

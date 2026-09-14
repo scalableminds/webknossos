@@ -46,6 +46,22 @@ const ColorDarkBg = "#383d48";
 const ColorDarkBorder = "#4e4e4e";
 const ColorDarkDisabledBg = "#313131";
 
+// Seed for the dark theme's generic surface/border ramp (antd derives colorBgContainer,
+// colorBgElevated, colorBgLayout, colorBorder, colorSplit, etc. from colorBgBase), giving dark
+// mode a navy tint instead of antd's default neutral grey. Only used when the *user* has actually
+// selected dark mode -- see `getAntdTheme`.
+const ColorWKDarkNavyBg = "#12131f";
+
+// Navy equivalents of ColorWKDarkGrey/ColorDarkBg/ColorDarkBorder/ColorDarkDisabledBg above, used
+// for the navbar/status bar only when the user has selected dark mode (see getNavAndStatusBarTheme
+// and getAntdTheme's getNavbarChromeBg below) -- the navbar/status bar is otherwise always styled
+// dark regardless of the user's theme, so these navy variants keep that "always dark" chrome in
+// sync with the new navy dark theme without changing its (grey) look for light-mode users.
+const ColorNavbarNavyBg = "#141629";
+const ColorNavbarNavyContainerBg = "#242850";
+const ColorNavbarNavyBorder = "#353861";
+const ColorNavbarNavyDisabledBg = "#1c1e33";
+
 // Ant Design Customizations
 const globalDesignToken: Partial<AliasToken> = {
   colorPrimary: ColorWKBlue,
@@ -55,17 +71,12 @@ const globalDesignToken: Partial<AliasToken> = {
   blue: ColorWKBlue,
   borderRadius: 4,
   fontFamily:
-    '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif',
+    '"Hanken Grotesk", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif',
 };
 
 const lightGlobalToken = theme.getDesignToken({
   token: globalDesignToken,
   algorithm: theme.defaultAlgorithm,
-});
-
-const darkGlobalToken = theme.getDesignToken({
-  token: globalDesignToken,
-  algorithm: theme.darkAlgorithm,
 });
 
 // The heading scale WEBKNOSSOS has always used. It used to be enforced by global
@@ -137,30 +148,57 @@ export const ModalWidth = {
   Full: "85%",
 } as const;
 
-const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
-  components: {
-    Radio: {
-      buttonCheckedBg: darkGlobalToken.colorPrimary,
-      buttonSolidCheckedBg: darkGlobalToken.colorPrimary,
-      buttonBg: ColorDarkBg,
+// The navbar/status bar is always rendered with the dark antd algorithm, regardless of the site
+// theme the user picked (see getAntdTheme's headerBg/footerBg/darkItemBg/darkPopupBg below) --
+// but which *color* that dark chrome uses (neutral grey, or the navy tone from the new dark-mode
+// design) still depends on the user's real theme choice, so this stays a function of userTheme
+// rather than a frozen constant.
+function getNavbarChromeBg(userTheme: Theme) {
+  return userTheme === "dark" ? ColorNavbarNavyBg : ColorWKDarkGrey;
+}
+
+function getOverridesForNavbarAndStatusBarTheme(userTheme: Theme): ThemeConfig {
+  const isDark = userTheme === "dark";
+  const chromeBg = getNavbarChromeBg(userTheme);
+  return {
+    components: {
+      Layout: {
+        headerBg: chromeBg,
+        footerBg: chromeBg,
+      },
+      Menu: {
+        darkItemBg: chromeBg,
+        darkPopupBg: chromeBg,
+      },
+      Radio: {
+        // Not derived from colorPrimary via the dark algorithm (see getAntdTheme's dark token
+        // override below for why that would be a duller, less saturated purple) -- this is the
+        // navbar's own active-tool/mode-button accent, and should match the same vivid brand blue
+        // used everywhere else in the navbar.
+        buttonCheckedBg: ColorWKBlue,
+        buttonSolidCheckedBg: ColorWKBlue,
+        buttonBg: isDark ? ColorNavbarNavyContainerBg : ColorDarkBg,
+      },
+      Button: {
+        primaryShadow: "none",
+      },
     },
-    Button: {
-      primaryShadow: "none",
+    token: {
+      colorBgContainer: isDark ? ColorNavbarNavyContainerBg : ColorDarkBg,
+      colorBorder: isDark ? ColorNavbarNavyBorder : ColorDarkBorder,
+      colorPrimaryBorder: isDark ? ColorNavbarNavyBorder : ColorDarkBorder,
+      // Use a non-transparent color for disabled backgrounds. Otherwise the
+      // erase-buttons which hide under their neighbors would not hide properly.
+      colorBgContainerDisabled: isDark ? ColorNavbarNavyDisabledBg : ColorDarkDisabledBg,
     },
-  },
-  token: {
-    colorBgContainer: ColorDarkBg,
-    colorBorder: ColorDarkBorder,
-    colorPrimaryBorder: ColorDarkBorder,
-    // Use a non-transparent color for disabled backgrounds. Otherwise the
-    // erase-buttons which hide under their neighbors would not hide properly.
-    colorBgContainerDisabled: ColorDarkDisabledBg,
-  },
-};
-export const NavAndStatusBarTheme = merge(
-  getAntdTheme("dark"),
-  OverridesForNavbarAndStatusBarTheme,
-);
+  };
+}
+
+// Used for both the top navbar's action bar and the bottom status bar, so they stay in sync:
+// grey for light-mode users, navy for dark-mode users.
+export function getNavAndStatusBarTheme(userTheme: Theme) {
+  return merge(getAntdTheme("dark"), getOverridesForNavbarAndStatusBarTheme(userTheme));
+}
 
 export function getSystemColorTheme(): Theme {
   return window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
@@ -177,15 +215,16 @@ export function getThemeFromUser(activeUser: APIUser | null | undefined): Theme 
 
 export function getAntdTheme(userTheme: Theme) {
   let algorithm = theme.defaultAlgorithm;
+  const chromeBg = getNavbarChromeBg(userTheme);
   const components: OverrideToken = {
     Layout: {
-      headerBg: ColorWKDarkGrey,
-      footerBg: ColorWKDarkGrey,
+      headerBg: chromeBg,
+      footerBg: chromeBg,
       siderBg: userTheme === "dark" ? ColorBlack : ColorWhite,
     },
     Menu: {
-      darkItemBg: ColorWKDarkGrey,
-      darkPopupBg: ColorWKDarkGrey,
+      darkItemBg: chromeBg,
+      darkPopupBg: chromeBg,
     },
     Tree: {
       colorBgContainer: "transparent",
@@ -202,14 +241,33 @@ export function getAntdTheme(userTheme: Theme) {
     components.Tree = {
       ...components.Tree,
       nodeSelectedBg: ColorWKBlue,
-      nodeHoverBg: ColorWKDarkGrey,
+      nodeHoverBg: ColorWKDarkNavyBg,
     };
   }
   return {
     algorithm,
     // Without the clone(), the default theme shows dark backgrounds in various components.
     // Apparently, antd mutates this variable?
-    token: clone(globalDesignToken),
+    token:
+      userTheme === "dark"
+        ? {
+            ...clone(globalDesignToken),
+            // Seeds antd's generic surface/border ramp (colorBgContainer, colorBgElevated,
+            // colorBgLayout, colorBorder, colorSplit, ...) with a navy tint for dark mode, instead
+            // of antd's neutral-grey default.
+            //
+            // Note: colorPrimary/colorInfo/colorLink are *not* listed here on purpose, even
+            // though antd's dark algorithm mutes ColorWKBlue into a duller #4c55dc for them
+            // (verified against antd's own color-generation code) -- colorPrimary, colorInfo and
+            // colorLink are themselves seed tokens, so antd always recomputes them through that
+            // same algorithm and silently ignores a literal override here, unlike alias tokens
+            // such as colorBgContainer/colorBorder above. Getting the exact brand blue back for
+            // Button/Switch/etc. would need a `components.<Name>.colorPrimary`-style override per
+            // component (as already done for the navbar's Radio below) -- left as a follow-up
+            // since it touches many components, rather than attempted here silently.
+            colorBgBase: ColorWKDarkNavyBg,
+          }
+        : clone(globalDesignToken),
     components,
     // Disable inheriting from the parent theme, in case we are nesting dark and light mode components
     inherit: false,

@@ -32,7 +32,7 @@ const getNodeWidth = (() => {
       throw new Error("Could not create measuring canvas");
     }
     ctx.font =
-      '12px "Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif';
+      '12px "Hanken Grotesk", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif';
     return ctx;
   });
 

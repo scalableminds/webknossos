@@ -206,10 +206,12 @@ label.ant-checkbox-wrapper {
 .action-bar {
 
   // UI for additional coordinates should always be in dark mode
-  // since it is located in the navbar's action bar.
+  // since it is located in the navbar's action bar. Reuses the navbar's own theme tokens
+  // (grey for light-mode users, navy for dark-mode users, see getNavAndStatusBarTheme in theme.ts)
+  // instead of hardcoding a color, so it doesn't drift from the navbar's other buttons/inputs.
   .ant-input-group-addon {
-    background-color: rgb(58, 61, 72);
-    border-color: #585867;
+    background-color: var(--ant-color-bg-container);
+    border-color: var(--ant-color-border);
     color: #f1f1f1 !important;
   }
 }

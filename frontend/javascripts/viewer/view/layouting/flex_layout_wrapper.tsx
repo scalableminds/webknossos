@@ -11,7 +11,7 @@ import type React from "react";
 import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { getAntdTheme } from "theme";
+import { getNavAndStatusBarTheme, type Theme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
 import { BorderTabs, FlightViews, OrthoViews } from "viewer/constants";
 import {
@@ -65,6 +65,7 @@ type StateProps = {
   displayScalebars: boolean;
   isUpdateTracingAllowed: boolean;
   isBlocked: boolean;
+  UITheme: Theme;
 };
 type OwnProps = {
   layoutKey: LayoutKeys;
@@ -583,7 +584,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
             classNameMapper={this.classNameMapper}
           />
         </div>
-        <ConfigProvider theme={getAntdTheme("dark")}>
+        <ConfigProvider theme={getNavAndStatusBarTheme(this.props.UITheme)}>
           <Footer className="statusbar-footer">
             <Statusbar />
           </Footer>
@@ -598,6 +599,7 @@ function mapStateToProps(state: WebknossosState): StateProps {
     displayScalebars: state.userConfiguration.displayScalebars,
     isUpdateTracingAllowed: mayEditAnnotation(state),
     isBlocked: isUserInterfaceBlocked(state),
+    UITheme: state.uiInformation.theme,
   };
 }
 

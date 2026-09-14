@@ -18,19 +18,19 @@ export const WkDevFlags = {
   },
   bucketDebugging: {
     // For visualizing buckets which are passed to the GPU
-    visualizeBucketsOnGPU: true,
+    visualizeBucketsOnGPU: false,
     // For visualizing buckets which are prefetched
     visualizePrefetchedBuckets: false,
     // For visualizing the scan lines / flood-fill traversal that are used to determine
     // which buckets to load for oblique (non-axis-aligned) planes
-    visualizeScanLines: true,
+    visualizeScanLines: false,
     // Which strategy to use for picking the buckets of an oblique (non-axis-aligned) plane.
     // "scanLines" samples the plane with a set of parallel lines; "floodFill" walks
     // neighbouring buckets outwards from the camera position, keeping only the ones whose
     // box actually intersects the plane; "wasm" / "floodFillWasm" are the same two
     // algorithms, ported to C/WASM(SIMD) modules. See
     // oblique_bucket_picker(_flood_fill)?(_wasm)?.ts.
-    obliquePickerStrategy: "floodFillWasm" as "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
+    obliquePickerStrategy: "scanLines" as "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
     // If true, the "scanLines" and "floodFill" oblique picker strategies additionally pick
     // buckets slightly in front of and behind the plane (simulating the flycam having moved
     // along its view axis), so that data is already loading by the time the user actually

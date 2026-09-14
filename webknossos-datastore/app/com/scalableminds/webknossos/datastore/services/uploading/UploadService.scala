@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.scalableminds.util.Msg
 import com.google.inject.Inject
-import com.google.inject.name.Named
 import org.apache.pekko.actor.ActorSystem
 
 import scala.concurrent.duration.*
@@ -137,7 +136,7 @@ class UploadService @Inject() (
     managedS3Service: ManagedS3Service,
     localDatasetDeletionService: LocalDatasetDeletionService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
-    @Named("webknossos-datastore") actorSystem: ActorSystem
+    actorSystem: ActorSystem
 )(implicit ec: ExecutionContext)
     extends DirectoryConstants
     with WKWDataFormatHelper

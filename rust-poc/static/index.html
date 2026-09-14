@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>wk-auth-poc</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
+  label { display: block; margin-top: 12px; font-size: 0.9em; color: #444; }
+  input { display: block; width: 100%; margin-top: 4px; padding: 6px; box-sizing: border-box; }
+  button { margin-top: 16px; padding: 6px 14px; margin-right: 8px; }
+  pre { background: #f4f4f4; padding: 12px; white-space: pre-wrap; word-break: break-all; border-radius: 4px; }
+</style>
+</head>
+<body>
+  <h1>wk rust proof of concept</h1>
+  <p>Rust/axum proof-of-concept talking to the real WEBKNOSSOS Postgres and FossilDB.</p>
+
+  <form id="login-form">
+    <label>Email <input id="email" type="email" value="poc-user@example.com"></label>
+    <label>Password <input id="password" type="password" value="poc-password123"></label>
+    <button type="submit">POST /login</button>
+  </form>
+
+  <button id="me-btn" disabled>GET /me</button>
+
+  <hr>
+
+  <label>Annotation id <input id="annotation-id" type="text" placeholder="e.g. 507f1f77bcf86cd799439011"></label>
+  <button id="download-btn">Download annotation</button>
+
+  <pre id="output">(no requests yet)</pre>
+
+  <script>
+    let token = null;
+    const output = document.getElementById('output');
+    const meBtn = document.getElementById('me-btn');
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const body = await res.json();
+      output.textContent = `POST /login -> ${res.status}\n` + JSON.stringify(body, null, 2);
+      token = res.ok ? body.token : null;
+      meBtn.disabled = !res.ok;
+    });
+
+    meBtn.addEventListener('click', async () => {
+      const res = await fetch('/me', { headers: { Authorization: `Bearer ${token}` } });
+      const body = await res.json();
+      output.textContent = `GET /me -> ${res.status}\n` + JSON.stringify(body, null, 2);
+    });
+
+    document.getElementById('download-btn').addEventListener('click', async () => {
+      const id = document.getElementById('annotation-id').value.trim();
+      if (!id) {
+        output.textContent = 'Enter an annotation id first.';
+        return;
+      }
+      const url = `/annotation/${encodeURIComponent(id)}/proto`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        const body = await res.json();
+        output.textContent = `GET ${url} -> ${res.status}\n` + JSON.stringify(body, null, 2);
+        return;
+      }
+      // Fetch + blob (rather than just navigating the browser to `url`) so a failed
+      // request shows its error above instead of replacing this page.
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `${id}.proto`;
+      link.click();
+      URL.revokeObjectURL(objectUrl);
+      output.textContent = `GET ${url} -> ${res.status}\nDownloaded ${blob.size} bytes.`;
+    });
+  </script>
+</body>
+</html>

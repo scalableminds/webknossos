@@ -43,6 +43,21 @@ function createEmptyTypedArrayForTextureType(type: TextureDataType | undefined):
   }
 }
 
+// The pixel-source data is always the *last* argument to texSubImage(2|3)D,
+// regardless of which overload is used (e.g. an explicit width/height/pixels
+// call vs. an implicit-size image-source call) -- either as a bare TypedArray
+// (three.js' own internal upload path passes image.data directly) or as an
+// object with a nested .data array. Checking the last argument's effective
+// length this way -- rather than a hardcoded argument index -- is what
+// should have been done from the start; a previous version of this check
+// looked at the wrong index (the `type` GLenum, not the source data) and so
+// never actually matched anything.
+function isEmptyPixelSource(args: unknown[]): boolean {
+  const last = args[args.length - 1] as { length?: number; data?: { length?: number } } | undefined;
+  const length = last?.length ?? last?.data?.length;
+  return length === 0;
+}
+
 /* The UpdatableTexture class exposes a way to partially update a texture.
  * Since we use this class for data which is usually only available in chunks,
  * the default ThreeJS way of initializing the texture with an appropriately
@@ -121,8 +136,7 @@ class UpdatableTexture extends Texture {
       originalTexSubImage2D = this.gl.texSubImage2D.bind(this.gl);
       // @ts-expect-error
       this.gl.texSubImage2D = (...args) => {
-        // @ts-expect-error
-        if (args.length >= 7 && args[6]?.data?.length === 0) {
+        if (isEmptyPixelSource(args)) {
           return;
         }
         // @ts-expect-error
@@ -246,8 +260,7 @@ class UpdatableTextureArray extends Texture {
       // declaration of originalTexSubImage3D.
       originalTexSubImage3D = this.gl.texSubImage3D.bind(this.gl);
       this.gl.texSubImage3D = (...args) => {
-        // @ts-expect-error
-        if (args.length >= 10 && args[9]?.data?.length === 0) {
+        if (isEmptyPixelSource(args)) {
           return;
         }
         // @ts-expect-error

@@ -45,21 +45,6 @@ const ROTATIONS = {
 
 const hashPosition = ([x, y, z]: Vector3): number => 2 ** 32 * x + 2 ** 16 * y + z;
 
-// The 6 face (Manhattan) neighbours of a bucket in the 3D bucket grid. Cheaper than the full
-// 26-neighbourhood (3x less branching per visited bucket), at the cost of relying on the
-// three orthogonal plane sheets (tested together below) to cover any single sheet's
-// diagonal-only connections -- a lone, steeply tilted plane is only guaranteed to be
-// 26-connected, not 6-connected, the same way a digital line is only guaranteed to be
-// 8-connected in 2D, not 4-connected.
-const NEIGHBOR_OFFSETS: Array<Vector3> = [
-  [1, 0, 0],
-  [-1, 0, 0],
-  [0, 1, 0],
-  [0, -1, 0],
-  [0, 0, 1],
-  [0, 0, -1],
-];
-
 export default function determineBucketsForPlane(
   loadingStrategy: LoadingStrategy,
   denseMags: Array<Vector3>,
@@ -211,50 +196,79 @@ function addNecessaryBucketsToPriorityQueuePlane(
   const visited = new Set<number>([hashPosition(seedAddress)]);
   const queue: Array<Vector3> = [seedAddress];
 
+  // Tries a single face-neighbour (cx,cy,cz) -> (nx,ny,nz). Written as an explicitly-called
+  // function (see the 6 call sites below) rather than a loop over NEIGHBOR_OFFSETS, to avoid
+  // destructuring an offset tuple and indexing into an array on every one of the 6 slots
+  // tried per bucket.
+  const tryNeighbor = (
+    cx: number,
+    cy: number,
+    cz: number,
+    nx: number,
+    ny: number,
+    nz: number,
+  ): void => {
+    // The neighbour's Vector3 is only allocated once it's confirmed new *and* accepted below
+    // -- most of the 6 slots tried per bucket are either already visited or rejected by
+    // intersectsAnyPlane, so building (and immediately discarding) an array for every one of
+    // them was pure garbage. The hash is computed straight from the scalar coordinates
+    // instead of via hashPosition(), for the same reason.
+    const neighborHash = 2 ** 32 * nx + 2 ** 16 * ny + nz;
+    if (visited.has(neighborHash)) {
+      return;
+    }
+    visited.add(neighborHash);
+
+    const worldX = nx * voxelSize[0] + bucketHalfSize[0];
+    const worldY = ny * voxelSize[1] + bucketHalfSize[1];
+    const worldZ = nz * voxelSize[2] + bucketHalfSize[2];
+
+    if (!intersectsAnyPlane(worldX, worldY, worldZ)) {
+      return;
+    }
+
+    if (onScanLine != null) {
+      // Visualizes the flood fill's traversal edges, reusing the same debug-line plumbing
+      // that oblique_bucket_picker.ts uses for its scan lines. Guarded by an explicit null
+      // check (instead of `onScanLine?.(...)`) so the two Vector3 array allocations below
+      // are skipped entirely outside of debugging.
+      const currentCenter: Vector3 = [
+        cx * voxelSize[0] + bucketHalfSize[0],
+        cy * voxelSize[1] + bucketHalfSize[1],
+        cz * voxelSize[2] + bucketHalfSize[2],
+      ];
+      onScanLine(currentCenter, [worldX, worldY, worldZ]);
+    }
+    queue.push([nx, ny, nz]);
+  };
+
   for (let head = 0; head < queue.length; head++) {
     const current = queue[head];
+    const cx = current[0];
+    const cy = current[1];
+    const cz = current[2];
 
     const priority =
-      Math.abs(current[0] - centerAddress[0]) +
-      Math.abs(current[1] - centerAddress[1]) +
-      Math.abs(current[2] - centerAddress[2]);
-    enqueueFunction(
-      [current[0], current[1], current[2], logZoomStep],
-      priority + additionalPriorityWeight,
-    );
+      Math.abs(cx - centerAddress[0]) +
+      Math.abs(cy - centerAddress[1]) +
+      Math.abs(cz - centerAddress[2]);
+    enqueueFunction([cx, cy, cz, logZoomStep], priority + additionalPriorityWeight);
 
     if (abortLimit != null && visited.size > abortLimit) {
       return;
     }
 
-    for (const [dx, dy, dz] of NEIGHBOR_OFFSETS) {
-      const neighbor: Vector3 = [current[0] + dx, current[1] + dy, current[2] + dz];
-      const neighborHash = hashPosition(neighbor);
-
-      if (visited.has(neighborHash)) {
-        continue;
-      }
-      visited.add(neighborHash);
-
-      const worldX = neighbor[0] * voxelSize[0] + bucketHalfSize[0];
-      const worldY = neighbor[1] * voxelSize[1] + bucketHalfSize[1];
-      const worldZ = neighbor[2] * voxelSize[2] + bucketHalfSize[2];
-
-      if (intersectsAnyPlane(worldX, worldY, worldZ)) {
-        if (onScanLine != null) {
-          // Visualizes the flood fill's traversal edges, reusing the same debug-line
-          // plumbing that oblique_bucket_picker.ts uses for its scan lines. Guarded by an
-          // explicit null check (instead of `onScanLine?.(...)`) so the two Vector3 array
-          // allocations below are skipped entirely outside of debugging.
-          const currentCenter: Vector3 = [
-            current[0] * voxelSize[0] + bucketHalfSize[0],
-            current[1] * voxelSize[1] + bucketHalfSize[1],
-            current[2] * voxelSize[2] + bucketHalfSize[2],
-          ];
-          onScanLine(currentCenter, [worldX, worldY, worldZ]);
-        }
-        queue.push(neighbor);
-      }
-    }
+    // The 6 face (Manhattan) neighbours of this bucket. Cheaper than the full
+    // 26-neighbourhood (3x less branching per visited bucket), at the cost of relying on the
+    // three orthogonal plane sheets (tested together via intersectsAnyPlane) to cover any
+    // single sheet's diagonal-only connections -- a lone, steeply tilted plane is only
+    // guaranteed to be 26-connected, not 6-connected, the same way a digital line is only
+    // guaranteed to be 8-connected in 2D, not 4-connected.
+    tryNeighbor(cx, cy, cz, cx + 1, cy, cz);
+    tryNeighbor(cx, cy, cz, cx - 1, cy, cz);
+    tryNeighbor(cx, cy, cz, cx, cy + 1, cz);
+    tryNeighbor(cx, cy, cz, cx, cy - 1, cz);
+    tryNeighbor(cx, cy, cz, cx, cy, cz + 1);
+    tryNeighbor(cx, cy, cz, cx, cy, cz - 1);
   }
 }

@@ -15,7 +15,7 @@ import {
   FrontSide,
   Group,
   Mesh,
-  MeshLambertMaterial,
+  MeshStandardMaterial,
   Vector3 as ThreeVector3,
 } from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
@@ -52,7 +52,7 @@ export const PARTITION_COLORS = {
 const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
 const HOVERED_COLOR_VEC3 = HOVERED_COLOR.toArray() as Vector3;
 
-type MeshMaterial = MeshLambertMaterial & { originalColor: Vector3 };
+type MeshMaterial = MeshStandardMaterial & { originalColor: Vector3 };
 type HighlightEntry = { range: Vector2; color?: Vector3 };
 type HighlightState = HighlightEntry[] | "full" | null;
 export type MeshSceneNode = Mesh<BufferGeometryWithInfo, MeshMaterial> & {
@@ -168,8 +168,13 @@ export default class SegmentMeshController {
     isMerged: boolean,
   ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
-    const meshMaterial = new MeshLambertMaterial({
+    const meshMaterial = new MeshStandardMaterial({
       vertexColors: true,
+      // A mid-range roughness gives the mesh a soft specular highlight (unlike the
+      // purely-diffuse Lambert material used previously), which helps the eye read
+      // curved/cylindrical surfaces like dendrites as three-dimensional.
+      roughness: 0.55,
+      metalness: 0.05,
     }) as MeshMaterial;
     meshMaterial.side = FrontSide;
     meshMaterial.transparent = true;
@@ -446,46 +451,28 @@ export default class SegmentMeshController {
   }
 
   addLights(): void {
-    const settings = {
-      ambientIntensity: 0.41,
-      dirLight1Intensity: 0.54,
-      dirLight2Intensity: 0.29,
-      dirLight3Intensity: 0.29,
-      dirLight4Intensity: 0.17,
-      dirLight5Intensity: 1.03,
-      dirLight6Intensity: 0.29,
-      dirLight7Intensity: 0.17,
-      dirLight8Intensity: 0.54,
-    };
-
-    // Note that the PlaneView also attaches a directional light directly to the TD camera,
-    // so that the light moves along the cam.
-    const ambientLight = new AmbientLight("white", settings.ambientIntensity);
+    // Note that the PlaneView also attaches a key/fill light pair directly to the TD
+    // camera, so that light always moves along with the current viewing angle. The
+    // lights added here stay fixed in world space and are only meant to keep the
+    // mesh from ever going fully unlit/black, not to provide the main shading —
+    // having many lights of similar intensity coming from (almost) every direction
+    // (the previous approach) cancels out the shading gradients that make a surface
+    // read as three-dimensional, so we deliberately keep this to a low-intensity
+    // ambient plus two faint, distinctly-colored world-space lights instead.
+    const ambientLight = new AmbientLight("white", 0.3);
     this.lightsGroup.add(ambientLight);
 
-    const lightPositions: Vector3[] = [
-      [1, 1, 1],
-      [-1, 1, 1],
-      [1, -1, 1],
-      [-1, -1, 1],
-      [1, 1, -1],
-      [-1, 1, -1],
-      [1, -1, -1],
-      [-1, -1, -1],
-    ];
+    // Subtle, cool-toned rim/back light so overlapping branches keep an edge of
+    // separation even when the camera-attached key light above is grazing or
+    // pointing away from them.
+    const rimLight = new DirectionalLight(0xcfe0ff, 0.5);
+    rimLight.position.set(-1, 0.5, -1).normalize();
+    this.lightsGroup.add(rimLight);
 
-    const directionalLights: DirectionalLight[] = [];
-
-    lightPositions.forEach((pos, index) => {
-      const light = new DirectionalLight(
-        WHITE,
-        // @ts-expect-error
-        settings[`dirLight${index + 1}Intensity`] || 1,
-      );
-      light.position.set(...pos).normalize();
-      directionalLights.push(light);
-      this.lightsGroup.add(light);
-    });
+    // Faint, warm-toned bounce light from below so undersides never go pure black.
+    const bounceLight = new DirectionalLight(0xffe9cf, 0.2);
+    bounceLight.position.set(0.4, -1, 0.5).normalize();
+    this.lightsGroup.add(bounceLight);
   }
 
   private getMeshGroupsByLOD(

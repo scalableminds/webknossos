@@ -177,13 +177,26 @@ void set_scalars(
 // or the fixed output buffer is full), 0 otherwise. Mirrors the dedup/abort placement in
 // oblique_bucket_picker.ts's addNecessaryBucketsToPriorityQueuePlane (checked once per
 // *newly seen* bucket, not per traversal step).
+// hash_position's value is later masked down to HASH_CAPACITY (currently 2^18) slots. Since
+// 2^32 is itself a multiple of 2^18, `hash & HASH_MASK` alone would discard x's contribution
+// entirely (and keep only y mod 4 from y) -- every bucket sharing (y mod 4, z) would collide
+// into the same slot regardless of x. This finalizer (splitmix64) mixes all bits of the hash
+// together before masking, so the slot depends on x, y and z alike. The unmixed hash is still
+// what's stored/compared for equality below -- only the slot index goes through this.
+static inline unsigned long long mix64(unsigned long long z) {
+  z += 0x9E3779B97F4A7C15ULL;
+  z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+  z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+  return z ^ (z >> 31);
+}
+
 static int emit_bucket(int x, int y, int z) {
   // Matches hashPosition()'s `2**32*x + 2**16*y + z` (computed the same way, via doubles, so
   // negative coordinates are handled identically to the JS version).
   unsigned long long hash =
       (unsigned long long)(4294967296.0 * (double)x + 65536.0 * (double)y + (double)z);
 
-  unsigned int slot = (unsigned int)(hash & HASH_MASK);
+  unsigned int slot = (unsigned int)(mix64(hash) & HASH_MASK);
   for (;;) {
     unsigned long long existing = g_hashSlots[slot];
     if (existing == hash) {

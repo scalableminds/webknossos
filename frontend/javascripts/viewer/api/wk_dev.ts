@@ -27,9 +27,10 @@ export const WkDevFlags = {
     // Which strategy to use for picking the buckets of an oblique (non-axis-aligned) plane.
     // "scanLines" samples the plane with a set of parallel lines; "floodFill" walks
     // neighbouring buckets outwards from the camera position, keeping only the ones whose
-    // box actually intersects the plane; "wasm" is the same algorithm as "scanLines", ported
-    // to a C/WASM(SIMD) module. See oblique_bucket_picker(_flood_fill|_wasm).ts.
-    obliquePickerStrategy: "floodFill" as "scanLines" | "floodFill" | "wasm",
+    // box actually intersects the plane; "wasm" / "floodFillWasm" are the same two
+    // algorithms, ported to C/WASM(SIMD) modules. See
+    // oblique_bucket_picker(_flood_fill)?(_wasm)?.ts.
+    obliquePickerStrategy: "floodFill" as "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,

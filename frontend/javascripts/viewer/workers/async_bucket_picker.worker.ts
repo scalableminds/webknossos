@@ -5,6 +5,7 @@ import constants from "viewer/constants";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForPlaneWithScanLines from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForPlaneWithFloodFill from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_flood_fill";
+import determineBucketsForPlaneWithFloodFillWasm from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_flood_fill_wasm";
 import determineBucketsForPlaneWithWasm from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_wasm";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { expose } from "./comlink_core";
@@ -50,9 +51,9 @@ async function pick(
   loadingStrategy: LoadingStrategy,
   rects: PlaneRects,
   collectScanLines?: boolean,
-  obliquePickerStrategy?: "scanLines" | "floodFill" | "wasm",
+  obliquePickerStrategy?: "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
 ): Promise<{ buffer: ArrayBuffer; scanLines: Array<[Vector3, Vector3]> }> {
-  console.time("bucketPick")
+  console.time("bucketPick");
   const bucketQueue = new PriorityQueue({
     // small priorities take precedence
     comparator,
@@ -91,6 +92,18 @@ async function pick(
       undefined,
       onScanLine,
     );
+  } else if (obliquePickerStrategy === "floodFillWasm") {
+    await determineBucketsForPlaneWithFloodFillWasm(
+      loadingStrategy,
+      denseMags,
+      position,
+      enqueueFunction,
+      matrix,
+      logZoomStep,
+      rects,
+      undefined,
+      onScanLine,
+    );
   } else {
     const determineBucketsForPlane =
       obliquePickerStrategy === "floodFill"
@@ -110,7 +123,7 @@ async function pick(
   }
 
   const retval = { buffer: dequeueToArrayBuffer(bucketQueue), scanLines };
-  console.timeEnd("bucketPick")
+  console.timeEnd("bucketPick");
   return retval;
 }
 

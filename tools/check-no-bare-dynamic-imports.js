@@ -28,6 +28,8 @@ const WHITELIST = [
   // time regardless of any runtime guard, since this file is part of the browser
   // bundle too.
   "frontend/javascripts/viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_wasm.ts",
+  // Same reasoning as oblique_bucket_picker_wasm.ts above.
+  "frontend/javascripts/viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_flood_fill_wasm.ts",
 ];
 
 // A dynamic import() call that is wrapped by importDynamic(() => …) or

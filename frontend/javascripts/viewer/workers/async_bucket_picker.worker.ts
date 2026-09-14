@@ -17,6 +17,26 @@ type PriorityItem = {
 
 const comparator = (b: PriorityItem, a: PriorityItem) => b.priority - a.priority;
 
+type ObliquePickerStrategy = "scanLines" | "floodFill" | "wasm" | "floodFillWasm";
+
+// Dev-only production instrumentation: accumulated across all pick() calls (not reset), so
+// the logged averages are all-time, growing more stable the longer the session runs. Logged
+// every 100 calls rather than every call, to avoid flooding the console on fast camera moves.
+let totalPickDurationMs = 0;
+let pickCallCount = 0;
+let totalBucketsPicked = 0;
+
+// Dev-only "shadow mode" instrumentation: when shadowObliquePickerStrategy is set, every real
+// pick() also (redundantly) runs that strategy against identical parameters purely to time it,
+// so the two strategies get compared on the exact same per-call workload (same camera position/
+// zoom/bucket count) instead of drifting apart across two separately-navigated sessions. Only
+// covers non-flight picks, since flight mode has just one strategy to begin with.
+let totalRealDurationMs = 0;
+let totalRealBucketsPicked = 0;
+let totalShadowDurationMs = 0;
+let totalShadowBucketsPicked = 0;
+let shadowComparisonCount = 0;
+
 function dequeueToArrayBuffer(bucketQueue: PriorityQueue<PriorityItem>): ArrayBuffer {
   const itemCount = bucketQueue.length;
   const intsPerItem = 5; // [x, y, z, zoomStep, priority]
@@ -41,6 +61,64 @@ function dequeueToArrayBuffer(bucketQueue: PriorityQueue<PriorityItem>): ArrayBu
   return buffer;
 }
 
+async function runObliquePicker(
+  strategy: ObliquePickerStrategy | undefined,
+  loadingStrategy: LoadingStrategy,
+  denseMags: Array<Vector3>,
+  position: Vector3,
+  enqueueFunction: (bucketAddress: Vector4, priority: number) => void,
+  matrix: Matrix4x4,
+  logZoomStep: number,
+  rects: PlaneRects,
+  onScanLine: ((a: Vector3, b: Vector3) => void) | undefined,
+  prefetchAlongViewAxis: boolean | undefined,
+): Promise<void> {
+  if (strategy === "wasm") {
+    await determineBucketsForPlaneWithWasm(
+      loadingStrategy,
+      denseMags,
+      position,
+      enqueueFunction,
+      matrix,
+      logZoomStep,
+      rects,
+      undefined,
+      onScanLine,
+      prefetchAlongViewAxis,
+    );
+  } else if (strategy === "floodFillWasm") {
+    await determineBucketsForPlaneWithFloodFillWasm(
+      loadingStrategy,
+      denseMags,
+      position,
+      enqueueFunction,
+      matrix,
+      logZoomStep,
+      rects,
+      undefined,
+      onScanLine,
+      prefetchAlongViewAxis,
+    );
+  } else {
+    const determineBucketsForPlane =
+      strategy === "floodFill"
+        ? determineBucketsForPlaneWithFloodFill
+        : determineBucketsForPlaneWithScanLines;
+    determineBucketsForPlane(
+      loadingStrategy,
+      denseMags,
+      position,
+      enqueueFunction,
+      matrix,
+      logZoomStep,
+      rects,
+      undefined,
+      onScanLine,
+      prefetchAlongViewAxis,
+    );
+  }
+}
+
 async function pick(
   viewMode: ViewMode,
   denseMags: Array<Vector3>,
@@ -51,10 +129,11 @@ async function pick(
   loadingStrategy: LoadingStrategy,
   rects: PlaneRects,
   collectScanLines?: boolean,
-  obliquePickerStrategy?: "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
+  obliquePickerStrategy?: ObliquePickerStrategy,
   prefetchAlongViewAxis?: boolean,
+  shadowObliquePickerStrategy?: ObliquePickerStrategy,
 ): Promise<{ buffer: ArrayBuffer; scanLines: Array<[Vector3, Vector3]> }> {
-  // console.time("bucketPick");
+  const startTime = performance.now();
   const bucketQueue = new PriorityQueue({
     // small priorities take precedence
     comparator,
@@ -81,38 +160,10 @@ async function pick(
       matrix,
       logZoomStep,
     );
-  } else if (obliquePickerStrategy === "wasm") {
-    await determineBucketsForPlaneWithWasm(
-      loadingStrategy,
-      denseMags,
-      position,
-      enqueueFunction,
-      matrix,
-      logZoomStep,
-      rects,
-      undefined,
-      onScanLine,
-      prefetchAlongViewAxis,
-    );
-  } else if (obliquePickerStrategy === "floodFillWasm") {
-    await determineBucketsForPlaneWithFloodFillWasm(
-      loadingStrategy,
-      denseMags,
-      position,
-      enqueueFunction,
-      matrix,
-      logZoomStep,
-      rects,
-      undefined,
-      onScanLine,
-      prefetchAlongViewAxis,
-    );
   } else {
-    const determineBucketsForPlane =
-      obliquePickerStrategy === "floodFill"
-        ? determineBucketsForPlaneWithFloodFill
-        : determineBucketsForPlaneWithScanLines;
-    determineBucketsForPlane(
+    const realPickStart = performance.now();
+    await runObliquePicker(
+      obliquePickerStrategy,
       loadingStrategy,
       denseMags,
       position,
@@ -120,14 +171,75 @@ async function pick(
       matrix,
       logZoomStep,
       rects,
-      undefined,
       onScanLine,
       prefetchAlongViewAxis,
+    );
+    const realPickDuration = performance.now() - realPickStart;
+    // Captured here (rather than after dequeueToArrayBuffer below): dequeueToArrayBuffer()
+    // empties the queue as it reads it.
+    const realBucketCount = bucketQueue.length;
+
+    if (
+      shadowObliquePickerStrategy != null &&
+      shadowObliquePickerStrategy !== obliquePickerStrategy
+    ) {
+      // The shadow run's picks are only counted, never enqueued -- it must not affect the
+      // actual buckets returned/rendered, only be timed for comparison.
+      let shadowBucketCount = 0;
+      const shadowEnqueueFunction = () => {
+        shadowBucketCount++;
+      };
+      const shadowStart = performance.now();
+      await runObliquePicker(
+        shadowObliquePickerStrategy,
+        loadingStrategy,
+        denseMags,
+        position,
+        shadowEnqueueFunction,
+        matrix,
+        logZoomStep,
+        rects,
+        undefined,
+        prefetchAlongViewAxis,
+      );
+      const shadowDuration = performance.now() - shadowStart;
+
+      totalRealDurationMs += realPickDuration;
+      totalRealBucketsPicked += realBucketCount;
+      totalShadowDurationMs += shadowDuration;
+      totalShadowBucketsPicked += shadowBucketCount;
+      shadowComparisonCount++;
+
+      if (shadowComparisonCount % 100 === 0) {
+        const realPerCall = totalRealDurationMs / shadowComparisonCount;
+        const realPerBucket = totalRealDurationMs / totalRealBucketsPicked;
+        const shadowPerCall = totalShadowDurationMs / shadowComparisonCount;
+        const shadowPerBucket = totalShadowDurationMs / totalShadowBucketsPicked;
+        console.log(
+          `[bucketPick:shadow] comparisonCount=${shadowComparisonCount} ` +
+            `real(${obliquePickerStrategy})=${realPerCall.toFixed(3)}ms/call,${realPerBucket.toFixed(5)}ms/bucket ` +
+            `shadow(${shadowObliquePickerStrategy})=${shadowPerCall.toFixed(3)}ms/call,${shadowPerBucket.toFixed(5)}ms/bucket ` +
+            `shadowIsXFasterPerBucket=${(realPerBucket / shadowPerBucket).toFixed(2)}`,
+        );
+      }
+    }
+  }
+
+  const bucketCount = bucketQueue.length;
+  const retval = { buffer: dequeueToArrayBuffer(bucketQueue), scanLines };
+
+  totalPickDurationMs += performance.now() - startTime;
+  pickCallCount++;
+  totalBucketsPicked += bucketCount;
+
+  if (pickCallCount % 100 === 0) {
+    console.log(
+      `[bucketPick] callCount=${pickCallCount} ` +
+        `durationPerCall=${(totalPickDurationMs / pickCallCount).toFixed(3)}ms ` +
+        `durationPerBucket=${(totalPickDurationMs / totalBucketsPicked).toFixed(5)}ms`,
     );
   }
 
-  const retval = { buffer: dequeueToArrayBuffer(bucketQueue), scanLines };
-  // console.timeEnd("bucketPick");
   return retval;
 }
 

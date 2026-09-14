@@ -18,21 +18,21 @@ async function asyncGetMaximumZoomForAllMags(
 ) {
   // Dev-only: logs the exact parameters of this call as JSON, so they can be pasted
   // elsewhere (e.g. into a benchmark reproducing this specific real-world scenario).
-  console.log(
-    "getMaximumZoomForAllMags params:",
-    JSON.stringify({
-      viewMode,
-      loadingStrategy,
-      voxelSizeFactor,
-      mags,
-      viewportRects,
-      maximumCapacity,
-      layerMatrix,
-      flycamMatrix,
-      obliquePickerStrategy,
-      prefetchAlongViewAxis,
-    }),
-  );
+  // console.log(
+  //   "getMaximumZoomForAllMags params:",
+  //   JSON.stringify({
+  //     viewMode,
+  //     loadingStrategy,
+  //     voxelSizeFactor,
+  //     mags,
+  //     viewportRects,
+  //     maximumCapacity,
+  //     layerMatrix,
+  //     flycamMatrix,
+  //     obliquePickerStrategy,
+  //     prefetchAlongViewAxis,
+  //   }),
+  // );
   console.time("getMaximumZoomForAllMags");
   const retval = await _getMaximumZoomForAllMags(
     viewMode,

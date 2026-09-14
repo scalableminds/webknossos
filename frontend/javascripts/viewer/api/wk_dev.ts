@@ -30,12 +30,25 @@ export const WkDevFlags = {
     // box actually intersects the plane; "wasm" / "floodFillWasm" are the same two
     // algorithms, ported to C/WASM(SIMD) modules. See
     // oblique_bucket_picker(_flood_fill)?(_wasm)?.ts.
-    obliquePickerStrategy: "scanLines" as "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
+    obliquePickerStrategy: "wasm" as "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
     // If true, the "scanLines" and "floodFill" oblique picker strategies additionally pick
     // buckets slightly in front of and behind the plane (simulating the flycam having moved
     // along its view axis), so that data is already loading by the time the user actually
     // moves there. See PREFETCH_Z_DIFF / zDiff in oblique_bucket_picker(_flood_fill).ts.
     prefetchAlongViewAxis: true,
+    // Dev-only: if set, every real pick() call additionally (and redundantly) runs this
+    // strategy against the exact same parameters, purely to measure its duration for
+    // comparison against obliquePickerStrategy. Its result is discarded -- it never affects
+    // rendering. Useful for a paired, confound-free production comparison of two strategies,
+    // since both then see identical camera positions/zoom levels/bucket counts per call
+    // (unlike comparing two separately-navigated sessions). Logged every 100 calls alongside
+    // the regular instrumentation in async_bucket_picker.worker.ts. undefined disables this.
+    shadowObliquePickerStrategy: "scanLines" as
+      | "scanLines"
+      | "floodFill"
+      | "wasm"
+      | "floodFillWasm"
+      | undefined,
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,

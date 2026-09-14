@@ -391,6 +391,30 @@ function _getSegmentIdRangeForElementClass(elementClass: ElementClass): readonly
 // Use memoization to ensure that the returned tuples always have the same identity.
 export const getSegmentIdRangeForElementClass = memoize(_getSegmentIdRangeForElementClass);
 
+// Identifies which runtime byte-decoding branch the color-blending loop in
+// main_data_shaders.glsl.ts should take for a given elementClass. Used both
+// to bake a per-layer const array into the generated shader and, on the JS
+// side, to know whether a layer's min/max needs to be bit-punned (see
+// reinterpretIntAsFloatBits in plane_material_factory.ts) before being
+// written into the layerMin/layerMax uniform arrays.
+export const DTYPE_TAG_DEFAULT = 0;
+export const DTYPE_TAG_UINT24 = 1;
+export const DTYPE_TAG_INT32 = 2;
+export const DTYPE_TAG_UINT32 = 3;
+
+export function getDtypeTagForElementClass(elementClass: ElementClass): number {
+  if (elementClass === "int32") {
+    return DTYPE_TAG_INT32;
+  }
+  if (elementClass === "uint32") {
+    return DTYPE_TAG_UINT32;
+  }
+  if (elementClass === "uint24") {
+    return DTYPE_TAG_UINT24;
+  }
+  return DTYPE_TAG_DEFAULT;
+}
+
 export function getDtypeConfigForElementClass(elementClass: ElementClass): {
   textureType: TextureDataType;
   TypedArrayClass: TypedArrayConstructor;

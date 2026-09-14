@@ -1,6 +1,6 @@
 import app from "app";
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
-import { V3 } from "libs/mjs";
+import { type Matrix4x4, V3 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
 import {
   computeBoundingBoxFromBoundingBoxObject,
@@ -16,6 +16,7 @@ import mapValues from "lodash-es/mapValues";
 import partition from "lodash-es/partition";
 import throttle from "lodash-es/throttle";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
+import type { ElementClass } from "types/api_types";
 import type { ValueOf } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import {
@@ -65,7 +66,12 @@ import {
   isZoomThresholdExceededForAgglomerateMapping,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import {
+  DTYPE_TAG_INT32,
+  DTYPE_TAG_UINT32,
+  getDtypeConfigForElementClass,
+  getDtypeTagForElementClass,
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalLayerIndexForLayerName } from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
@@ -95,6 +101,44 @@ export type Uniforms = Record<
 >;
 
 const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
+
+// Fixed, compile-time upper bound (see Params.maxActiveColorLayers in
+// main_data_shaders.glsl.ts) for how many color layers can be simultaneously
+// blended, independent of how many color layers the dataset actually has.
+const MAX_ACTIVE_COLOR_LAYERS = 8;
+
+const float32BitPunBuffer = new ArrayBuffer(4);
+const float32BitPunAsFloat = new Float32Array(float32BitPunBuffer);
+const float32BitPunAsInt = new Int32Array(float32BitPunBuffer);
+const float32BitPunAsUint = new Uint32Array(float32BitPunBuffer);
+
+// layerMin/layerMax are plain float uniform arrays (see SHARED_UNIFORM_DECLARATIONS
+// in main_data_shaders.glsl.ts), but int32/uint32 layers need their exact integer
+// min/max preserved without float's 24-bit exact-integer precision loss. We bit-pun
+// the integer value into the float uniform's bit pattern here; the shader reverses
+// this via floatBitsToInt/floatBitsToUint for those dtypes only.
+// three.js's array-uniform uploader (flatten() in WebGLUniforms) requires
+// every element of a mat4[]/vec3[] uniform array to be an object with
+// .toArray() (or the whole array to already be fully-flattened primitives) --
+// plain number tuples like Matrix4x4/Vector3 crash it. Scalar (non-array)
+// mat4/vec3 uniforms don't have this restriction, which is why this wasn't
+// an issue for the old per-layer-named uniforms.
+function toThreeMatrix4(matrix: Matrix4x4): Matrix4 {
+  return new Matrix4().fromArray(matrix);
+}
+
+function reinterpretIntAsFloatBits(value: number, elementClass: ElementClass): number {
+  const dtypeTag = getDtypeTagForElementClass(elementClass);
+  if (dtypeTag === DTYPE_TAG_INT32) {
+    float32BitPunAsInt[0] = value;
+    return float32BitPunAsFloat[0];
+  }
+  if (dtypeTag === DTYPE_TAG_UINT32) {
+    float32BitPunAsUint[0] = value;
+    return float32BitPunAsFloat[0];
+  }
+  return value;
+}
 
 function sanitizeName(name: string | null | undefined): string {
   if (WkDevFlags.bucketDebugging.disableLayerNameSanitization) {
@@ -152,6 +196,13 @@ class PlaneMaterialFactory {
 
   scaledTpsInvPerLayer: Record<string, TPS3D> = {};
 
+  // The currently *declared* (compiled-into-the-shader) layer names, in the
+  // exact order the shader's layerAlpha/layerMin/.../colorRenderOrder arrays
+  // are indexed by. Kept in sync with getLayersToRender()'s result every time
+  // the shader is (re)computed; see refreshCompiledLayerNames.
+  compiledColorLayerNames: Array<string> = [];
+  compiledSegmentationLayerNames: Array<string> = [];
+
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
@@ -160,10 +211,36 @@ class PlaneMaterialFactory {
   }
 
   setup() {
+    this.refreshCompiledLayerNames();
     this.setupUniforms();
     this.makeMaterial();
     this.attachTextures();
     return this;
+  }
+
+  refreshCompiledLayerNames(): void {
+    const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
+    const [colorLayerNames, segmentationLayerNames] =
+      this.getLayersToRender(maximumLayerCountToRender);
+    this.compiledColorLayerNames = colorLayerNames;
+    this.compiledSegmentationLayerNames = segmentationLayerNames;
+  }
+
+  // All layers currently declared in the shader, color layers first -- the
+  // exact index space that layerAlpha/layerMin/layerTransform/... and
+  // getRgbaAtXYIndex's per-layer dispatch are indexed by.
+  getCompiledLayerNames(): Array<string> {
+    return this.compiledColorLayerNames.concat(this.compiledSegmentationLayerNames);
+  }
+
+  getDataLayerForSanitizedName(layerName: string) {
+    const dataLayer = Model.getAllLayers().find(
+      (candidate) => sanitizeName(candidate.name) === layerName,
+    );
+    if (dataLayer == null) {
+      throw new Error(`Could not find data layer for sanitized name ${layerName}.`);
+    }
+    return dataLayer;
   }
 
   stopListening() {
@@ -285,56 +362,90 @@ class PlaneMaterialFactory {
     };
     const { nativelyRenderedLayerName } = Store.getState().datasetConfiguration;
     const dataset = Store.getState().dataset;
-    for (const dataLayer of Model.getAllLayers()) {
-      const layerName = sanitizeName(dataLayer.name);
 
-      this.uniforms[`${layerName}_alpha`] = {
-        value: 1,
-      };
-      this.uniforms[`${layerName}_gammaCorrectionValue`] = {
-        value: 1,
-      };
-      // If the `_unrenderable` uniform is true, the layer
-      // cannot (and should not) be rendered in the
-      // current mag.
-      this.uniforms[`${layerName}_unrenderable`] = {
-        value: 0,
-      };
+    // Per-layer rendering metadata, indexed by compiled index (position in
+    // this.getCompiledLayerNames() == colorLayerNames.concat(segmentationLayerNames)
+    // as declared in the shader). See SHARED_UNIFORM_DECLARATIONS in
+    // main_data_shaders.glsl.ts for how these are consumed.
+    const compiledLayerNames = this.getCompiledLayerNames();
+    const layerAlpha: number[] = [];
+    const layerGammaCorrectionValue: number[] = [];
+    const layerUnrenderable: number[] = [];
+    const layerTransform: Matrix4[] = [];
+    const layerHasTransformInt: number[] = [];
+    const layerBboxMin: ThreeVector3[] = [];
+    const layerBboxMax: ThreeVector3[] = [];
+    const layerDataTextureWidth: number[] = [];
+    const layerColor: ThreeVector3[] = [];
+    const layerMin: number[] = [];
+    const layerMax: number[] = [];
+    const layerIsInverted: number[] = [];
+
+    for (const layerName of compiledLayerNames) {
+      const dataLayer = this.getDataLayerForSanitizedName(layerName);
+      layerAlpha.push(1);
+      layerGammaCorrectionValue.push(1);
+      // If `_unrenderable` is true, the layer cannot (and should not) be
+      // rendered in the current mag.
+      layerUnrenderable.push(0);
+
       const layer = getLayerByName(dataset, dataLayer.name);
+      const affineMatrix = getTransformsForLayer(
+        dataset,
+        layer,
+        nativelyRenderedLayerName,
+      ).affineMatrix;
+      layerTransform.push(toThreeMatrix4(invertAndTranspose(affineMatrix)));
+      layerHasTransformInt.push(isEqual(affineMatrix, Identity4x4) ? 0 : 1);
 
-      this.uniforms[`${layerName}_transform`] = {
-        value: invertAndTranspose(
-          getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
-        ),
-      };
-      this.uniforms[`${layerName}_has_transform`] = {
-        value: !isEqual(
-          getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
-          Identity4x4,
-        ),
-      };
       const bbox = computeBoundingBoxFromBoundingBoxObject(layer.boundingBox);
-      this.uniforms[`${layerName}_bboxMin`] = {
-        value: bbox.min,
-      };
-      this.uniforms[`${layerName}_bboxMax`] = {
-        value: bbox.max,
-      };
+      layerBboxMin.push(new ThreeVector3(...bbox.min));
+      layerBboxMax.push(new ThreeVector3(...bbox.max));
+      layerDataTextureWidth.push(0);
+
+      layerColor.push(DEFAULT_COLOR);
+      layerMin.push(0.0);
+      layerMax.push(1.0);
+      layerIsInverted.push(0);
     }
 
-    for (const name of getSanitizedColorLayerNames()) {
-      this.uniforms[`${name}_color`] = {
-        value: DEFAULT_COLOR,
+    this.uniforms.layerAlpha = { value: layerAlpha };
+    this.uniforms.layerGammaCorrectionValue = { value: layerGammaCorrectionValue };
+    this.uniforms.layerUnrenderable = { value: layerUnrenderable };
+    this.uniforms.layerTransform = { value: layerTransform };
+    this.uniforms.layerHasTransformInt = { value: layerHasTransformInt };
+    this.uniforms.layerBboxMin = { value: layerBboxMin };
+    this.uniforms.layerBboxMax = { value: layerBboxMax };
+    this.uniforms.layerDataTextureWidth = { value: layerDataTextureWidth };
+    this.uniforms.layerColor = { value: layerColor };
+    this.uniforms.layerMin = { value: layerMin };
+    this.uniforms.layerMax = { value: layerMax };
+    this.uniforms.layerIsInverted = { value: layerIsInverted };
+
+    const { colorRenderOrder, activeColorLayerCount } = this.getColorRenderOrder();
+    this.uniforms.colorRenderOrder = { value: colorRenderOrder };
+    this.uniforms.activeColorLayerCount = { value: activeColorLayerCount };
+
+    // getSegmentId_<name> in segmentation.glsl.ts is still generated per
+    // layer name (deferred, see main_data_shaders.glsl.ts), so segmentation
+    // layers keep their own named _transform/_has_transform/_bboxMin/_bboxMax/
+    // _data_texture_width uniforms in addition to the arrays above.
+    for (const layerName of this.compiledSegmentationLayerNames) {
+      const dataLayer = this.getDataLayerForSanitizedName(layerName);
+      const layer = getLayerByName(dataset, dataLayer.name);
+      const affineMatrix = getTransformsForLayer(
+        dataset,
+        layer,
+        nativelyRenderedLayerName,
+      ).affineMatrix;
+      const bbox = computeBoundingBoxFromBoundingBoxObject(layer.boundingBox);
+      this.uniforms[`${layerName}_transform`] = { value: invertAndTranspose(affineMatrix) };
+      this.uniforms[`${layerName}_has_transform`] = {
+        value: !isEqual(affineMatrix, Identity4x4),
       };
-      this.uniforms[`${name}_min`] = {
-        value: 0.0,
-      };
-      this.uniforms[`${name}_max`] = {
-        value: 1.0,
-      };
-      this.uniforms[`${name}_is_inverted`] = {
-        value: 0,
-      };
+      this.uniforms[`${layerName}_bboxMin`] = { value: bbox.min };
+      this.uniforms[`${layerName}_bboxMax`] = { value: bbox.max };
+      this.uniforms[`${layerName}_data_texture_width`] = { value: 0 };
     }
   }
 
@@ -345,6 +456,11 @@ class PlaneMaterialFactory {
   attachTextures(): void {
     let sharedLookUpTexture;
     let sharedLookUpCuckooTable;
+    // compiledIdx lookup for the layerDataTextureWidth[] array (only declared
+    // layers have a slot there; see setupUniforms).
+    const compiledIdxByName = new Map(
+      this.getCompiledLayerNames().map((layerName, idx) => [layerName, idx]),
+    );
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
@@ -355,9 +471,17 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_textures`] = {
         value: dataTextures,
       };
+      // Segmentation layers still have their own named _data_texture_width
+      // uniform too (see setupUniforms); harmless to also set it here for
+      // color layers even though it's unused by the shader.
       this.uniforms[`${layerName}_data_texture_width`] = {
         value: dataLayer.layerRenderingManager.textureWidth,
       };
+      const compiledIdx = compiledIdxByName.get(layerName);
+      if (compiledIdx != null) {
+        this.uniforms.layerDataTextureWidth.value[compiledIdx] =
+          dataLayer.layerRenderingManager.textureWidth;
+      }
     }
 
     if (!sharedLookUpCuckooTable) {
@@ -521,13 +645,14 @@ class PlaneMaterialFactory {
           getUnrenderableLayerInfosForCurrentZoom(storeState).map(({ layer }) => layer),
         (unrenderableLayers) => {
           const unrenderableLayerNames = unrenderableLayers.map((l) => l.name);
+          const compiledLayerNames = this.getCompiledLayerNames();
 
-          for (const dataLayer of Model.getAllLayers()) {
-            const sanitizedName = sanitizeName(dataLayer.name);
-            this.uniforms[`${sanitizedName}_unrenderable`].value = unrenderableLayerNames.includes(
+          compiledLayerNames.forEach((layerName, idx) => {
+            const dataLayer = this.getDataLayerForSanitizedName(layerName);
+            this.uniforms.layerUnrenderable.value[idx] = unrenderableLayerNames.includes(
               dataLayer.name,
             );
-          }
+          });
         },
         true,
       ),
@@ -651,6 +776,9 @@ class PlaneMaterialFactory {
         (state) => state.datasetConfiguration.layers,
         (layerSettings) => {
           let updatedLayerVisibility = false;
+          const compiledIdxByName = new Map(
+            this.getCompiledLayerNames().map((name, idx) => [name, idx]),
+          );
           for (const dataLayer of Model.getAllLayers()) {
             const settings = layerSettings[dataLayer.name];
 
@@ -671,31 +799,42 @@ class PlaneMaterialFactory {
               }
 
               oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
-              const name = sanitizeName(dataLayer.name);
-              this.updateUniformsForLayer(settings, name, isSegmentationLayer);
+              const compiledIdx = compiledIdxByName.get(sanitizeName(dataLayer.name));
+              if (compiledIdx != null) {
+                this.updateUniformsForLayer(
+                  settings,
+                  compiledIdx,
+                  dataLayer.name,
+                  isSegmentationLayer,
+                );
+              }
             }
           }
           if (updatedLayerVisibility) {
+            // The *declared* set of layers might have changed (only relevant
+            // when there are more layers than fit on the GPU simultaneously);
+            // recomputeShaders no-ops via string-equality otherwise.
             this.recomputeShaders();
           }
+          // Toggling visibility never needs to change which layers are
+          // declared in the shader (see above) -- just which (up to
+          // MAX_ACTIVE_COLOR_LAYERS) of them are actively blended, which is a
+          // pure uniform update.
+          this.updateColorRenderOrderUniform();
           app.vent.emit("rerender");
         },
         true,
       ),
     );
 
-    let oldLayerOrder: Array<string> = [];
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (state) => state.datasetConfiguration.colorLayerOrder,
-        (colorLayerOrder) => {
-          const changedLayerOrder =
-            colorLayerOrder.length !== oldLayerOrder.length ||
-            colorLayerOrder.some((layerName, index) => layerName !== oldLayerOrder[index]);
-          if (changedLayerOrder) {
-            oldLayerOrder = [...colorLayerOrder];
-            this.recomputeShaders();
-          }
+        () => {
+          // Reordering color layers never changes which layers are declared
+          // in the shader, only their blend order -- a pure uniform update,
+          // no recompile needed.
+          this.updateColorRenderOrderUniform();
           app.vent.emit("rerender");
         },
         false,
@@ -884,6 +1023,10 @@ class PlaneMaterialFactory {
           this.scaledTpsInvPerLayer = {};
           const state = Store.getState();
           const layers = state.dataset.dataSource.dataLayers;
+          const compiledIdxByName = new Map(
+            this.getCompiledLayerNames().map((name, idx) => [name, idx]),
+          );
+          const segmentationNameSet = new Set(this.compiledSegmentationLayerNames);
           let countOfLayersWithTransforms = 0;
           for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
             const layer = layers[layerIdx];
@@ -899,18 +1042,35 @@ class PlaneMaterialFactory {
               delete this.scaledTpsInvPerLayer[name];
             }
 
-            this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
             const hasTransform = !isEqual(affineMatrix, Identity4x4);
-            this.uniforms[`${name}_has_transform`] = {
-              value: hasTransform,
-            };
             if (hasTransform) {
               countOfLayersWithTransforms++;
+            }
+
+            const compiledIdx = compiledIdxByName.get(name);
+            if (compiledIdx != null) {
+              this.uniforms.layerTransform.value[compiledIdx] = toThreeMatrix4(
+                invertAndTranspose(affineMatrix),
+              );
+              this.uniforms.layerHasTransformInt.value[compiledIdx] = hasTransform ? 1 : 0;
+            }
+            // Segmentation layers additionally keep their own named uniform
+            // (see setupUniforms) since getSegmentId_<name> is still
+            // generated per layer name.
+            if (segmentationNameSet.has(name)) {
+              this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
+              this.uniforms[`${name}_has_transform`] = { value: hasTransform };
             }
           }
           this.uniforms.doAllLayersHaveTransforms = {
             value: countOfLayersWithTransforms === layers.length,
           };
+          // Presence of a TPS transform is still baked into the shader text
+          // (layerHasTpsTransform / tpsOffsetXYZ_<name>, see
+          // main_data_shaders.glsl.ts), so this still needs a recompile --
+          // recomputeShaders() no-ops via string-equality if the generated
+          // source didn't actually change (e.g. only the affine matrix
+          // values changed, not which layers have a transform at all).
           this.recomputeShaders();
         },
         true,
@@ -994,26 +1154,34 @@ class PlaneMaterialFactory {
 
   updateUniformsForLayer(
     settings: DatasetLayerConfiguration,
-    name: string,
+    compiledIdx: number,
+    rawLayerName: string,
     isSegmentationLayer: boolean,
   ): void {
     const { alpha, intensityRange, isDisabled, isInverted, gammaCorrectionValue } = settings;
 
     if (!isSegmentationLayer) {
       if (intensityRange) {
-        this.uniforms[`${name}_min`].value = intensityRange[0];
-        this.uniforms[`${name}_max`].value = intensityRange[1];
+        const elementClass = getElementClass(Store.getState().dataset, rawLayerName);
+        this.uniforms.layerMin.value[compiledIdx] = reinterpretIntAsFloatBits(
+          intensityRange[0],
+          elementClass,
+        );
+        this.uniforms.layerMax.value[compiledIdx] = reinterpretIntAsFloatBits(
+          intensityRange[1],
+          elementClass,
+        );
       }
-      this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
+      this.uniforms.layerIsInverted.value[compiledIdx] = isInverted ? 1.0 : 0;
 
       if (settings.color != null) {
         const color = this.convertColor(settings.color);
-        this.uniforms[`${name}_color`].value = new ThreeVector3(...color);
+        this.uniforms.layerColor.value[compiledIdx] = new ThreeVector3(...color);
       }
     }
 
-    this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
-    this.uniforms[`${name}_gammaCorrectionValue`].value = gammaCorrectionValue;
+    this.uniforms.layerAlpha.value[compiledIdx] = isDisabled ? 0 : alpha / 100;
+    this.uniforms.layerGammaCorrectionValue.value[compiledIdx] = gammaCorrectionValue;
   }
 
   getMaterial(): PlaneShaderMaterial {
@@ -1053,38 +1221,31 @@ class PlaneMaterialFactory {
     app.vent.emit("rerender");
   }, RECOMPILATION_THROTTLE_TIME);
 
-  getLayersToRender(
-    maximumLayerCountToRender: number,
-  ): [Array<string>, Array<string>, Array<string>, number] {
+  getLayersToRender(maximumLayerCountToRender: number): [Array<string>, Array<string>, number] {
     // This function determines for which layers
-    // the shader code should be compiled. If the GPU supports
-    // all layers, we can simply return all layers here.
-    // Otherwise, we prioritize layers to render by taking
+    // the shader code should be compiled/declared. If the GPU supports
+    // all layers, we can simply declare all layers here -- which (up to
+    // maxActiveColorLayers) of them are actually blended each frame is a
+    // separate, purely uniform-driven concern (see getColorRenderOrder).
+    // Otherwise, we prioritize layers to declare by taking
     // into account (a) which layers are activated and (b) which
     // layers were least-recently activated (but are now disabled).
     // The first array contains the color layer names and the second the segmentation layer names.
     // The third parameter returns the number of globally available layers (this is not always equal
-    // to the sum of the lengths of the first two arrays, as not all layers might be rendered.)
+    // to the sum of the lengths of the first two arrays, as not all layers might be declared.)
     const state = Store.getState();
-    const allSanitizedOrderedColorLayerNames: string[] =
-      state.datasetConfiguration.colorLayerOrder.map(sanitizeName);
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
       sanitizeName(layer.name),
     );
     const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;
     if (maximumLayerCountToRender <= 0) {
-      return [[], [], [], globalLayerCount];
+      return [[], [], globalLayerCount];
     }
 
     if (maximumLayerCountToRender >= globalLayerCount) {
-      // We can simply render all available layers.
-      return [
-        colorLayerNames,
-        segmentationLayerNames,
-        allSanitizedOrderedColorLayerNames,
-        globalLayerCount,
-      ];
+      // We can simply declare all available layers.
+      return [colorLayerNames, segmentationLayerNames, globalLayerCount];
     }
 
     const enabledLayers = getEnabledLayers(state.dataset, state.datasetConfiguration, {}).map(
@@ -1115,14 +1276,52 @@ class PlaneMaterialFactory {
       names,
       ({ isSegmentationLayer }) => !isSegmentationLayer,
     ).map((layers) => layers.map(({ name }) => sanitizeName(name)));
-    const colorNameSet = new Set(sanitizedColorLayerNames);
 
-    return [
-      sanitizedColorLayerNames,
-      sanitizedSegmentationLayerNames,
-      allSanitizedOrderedColorLayerNames.filter((name) => colorNameSet.has(name)),
-      globalLayerCount,
-    ];
+    return [sanitizedColorLayerNames, sanitizedSegmentationLayerNames, globalLayerCount];
+  }
+
+  // Computes, from the currently *declared* color layers (this.compiledColorLayerNames),
+  // which (up to MAX_ACTIVE_COLOR_LAYERS) are enabled and in what order they should be
+  // blended, based on the user's configured colorLayerOrder. This is entirely separate
+  // from getLayersToRender/recomputeShaders: toggling visibility or reordering layers
+  // only ever changes the result of this function, which is written directly into the
+  // colorRenderOrder/activeColorLayerCount uniforms -- never requiring a shader recompile
+  // (unless the declared set itself also happens to change, e.g. in the GPU-constrained
+  // case; see the datasetConfiguration.layers listener in startListeningForUniforms).
+  getColorRenderOrder(): { colorRenderOrder: number[]; activeColorLayerCount: number } {
+    const state = Store.getState();
+    const { colorLayerOrder, layers } = state.datasetConfiguration;
+    const compiledIndexByName = new Map(
+      this.compiledColorLayerNames.map((name, idx) => [name, idx]),
+    );
+
+    const activeIndices: number[] = [];
+    for (const rawName of colorLayerOrder) {
+      if (activeIndices.length >= MAX_ACTIVE_COLOR_LAYERS) {
+        break;
+      }
+      const settings = layers[rawName];
+      if (settings == null || settings.isDisabled) {
+        continue;
+      }
+      const idx = compiledIndexByName.get(sanitizeName(rawName));
+      if (idx != null) {
+        activeIndices.push(idx);
+      }
+    }
+
+    const colorRenderOrder = new Array(MAX_ACTIVE_COLOR_LAYERS).fill(0);
+    activeIndices.forEach((idx, i) => {
+      colorRenderOrder[i] = idx;
+    });
+    return { colorRenderOrder, activeColorLayerCount: activeIndices.length };
+  }
+
+  updateColorRenderOrderUniform(): void {
+    const { colorRenderOrder, activeColorLayerCount } = this.getColorRenderOrder();
+    this.uniforms.colorRenderOrder.value = colorRenderOrder;
+    this.uniforms.activeColorLayerCount.value = activeColorLayerCount;
+    app.vent.emit("rerender");
   }
 
   onDisableLayer = (layerName: string, isSegmentationLayer: boolean) => {
@@ -1143,11 +1342,12 @@ class PlaneMaterialFactory {
 
   getFragmentShaderWithUniforms(): [string, Uniforms] {
     const state = Store.getState();
-    const { maximumLayerCountToRender } = state.temporaryConfiguration.gpuSetup;
-    const [colorLayerNames, segmentationLayerNames, orderedColorLayerNames, globalLayerCount] =
-      this.getLayersToRender(maximumLayerCountToRender);
+    this.refreshCompiledLayerNames();
+    const colorLayerNames = this.compiledColorLayerNames;
+    const segmentationLayerNames = this.compiledSegmentationLayerNames;
+    const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;
 
-    const availableLayerNames = colorLayerNames.concat(segmentationLayerNames);
+    const availableLayerNames = this.getCompiledLayerNames();
 
     const availableLayerIndexToGlobalLayerIndex = availableLayerNames.map((layerName) =>
       getGlobalLayerIndexForLayerName(layerName, sanitizeName),
@@ -1160,7 +1360,6 @@ class PlaneMaterialFactory {
     const { interpolation } = state.datasetConfiguration;
     const code = getMainFragmentShader({
       globalLayerCount,
-      orderedColorLayerNames,
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
@@ -1171,6 +1370,7 @@ class PlaneMaterialFactory {
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
       isWindows: isWindows(),
+      maxActiveColorLayers: MAX_ACTIVE_COLOR_LAYERS,
     });
     return [
       code,
@@ -1189,9 +1389,10 @@ class PlaneMaterialFactory {
 
   getVertexShader(): string {
     const state = Store.getState();
-    const { maximumLayerCountToRender } = state.temporaryConfiguration.gpuSetup;
-    const [colorLayerNames, segmentationLayerNames, orderedColorLayerNames, globalLayerCount] =
-      this.getLayersToRender(maximumLayerCountToRender);
+    this.refreshCompiledLayerNames();
+    const colorLayerNames = this.compiledColorLayerNames;
+    const segmentationLayerNames = this.compiledSegmentationLayerNames;
+    const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;
 
     const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = state;
@@ -1201,7 +1402,6 @@ class PlaneMaterialFactory {
 
     return getMainVertexShader({
       globalLayerCount,
-      orderedColorLayerNames,
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
@@ -1212,6 +1412,7 @@ class PlaneMaterialFactory {
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
       isWindows: isWindows(),
+      maxActiveColorLayers: MAX_ACTIVE_COLOR_LAYERS,
     });
   }
 

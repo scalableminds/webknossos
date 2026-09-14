@@ -392,7 +392,7 @@ object Msg {
     }
     object ExportTiff {
       val submitFailed: String = "Could not start data export job."
-      val invalidFormat: String = "Invalid export format. Must be one of ome_tiff, tiff_stack, ome_zarr."
+      val invalidFormat: String = "Invalid export format. Must be one of ome_tiff, tiff_stack, ozx."
     }
     object ConvertToWkw {
       val submitFailed: String = "Could not start image conversion/import job."

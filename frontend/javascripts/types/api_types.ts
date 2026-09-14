@@ -793,7 +793,7 @@ export type APIJobState = "PENDING" | "STARTED" | "SUCCESS" | "FAILURE" | "CANCE
 export enum APIExportFormat {
   OME_TIFF = "ome_tiff",
   TIFF_STACK = "tiff_stack",
-  OME_ZARR = "ome_zarr",
+  OZX = "ozx",
 }
 
 export enum APIJobCommand {

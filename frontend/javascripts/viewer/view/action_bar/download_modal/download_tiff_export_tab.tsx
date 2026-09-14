@@ -61,7 +61,7 @@ const ExportFormatOptions: SegmentedOptions = [
   },
   {
     label: "OME-Zarr (as .ozx)",
-    value: APIExportFormat.OME_ZARR,
+    value: APIExportFormat.OZX,
   },
 ];
 
@@ -71,7 +71,7 @@ const EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR = 1.33;
 const FILE_SIZE_FACTOR_BY_FORMAT: Record<APIExportFormat, number> = {
   [APIExportFormat.OME_TIFF]: EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR,
   [APIExportFormat.TIFF_STACK]: 1,
-  [APIExportFormat.OME_ZARR]: 1,
+  [APIExportFormat.OZX]: 1,
 };
 
 const exportKey = (layerInfos: ExportLayerInfos, mag: Vector3) =>
@@ -348,7 +348,7 @@ export function DownloadTiffTab({
           <Typography.Paragraph>
             {onlyOneMagAvailable && <div>{mag.join("-")}</div>}
             Estimated file size
-            {exportFormat === APIExportFormat.OME_ZARR ? " (uncompressed)" : ""}:{" "}
+            {exportFormat === APIExportFormat.OZX ? " (uncompressed)" : ""}:{" "}
             {estimateFileSize(selectedLayer, mag, selectedBoundingBox.boundingBox, exportFormat)}
             <br />
             Magnification: {formatSelectedScale(dataset, mag)}

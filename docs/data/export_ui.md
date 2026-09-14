@@ -19,7 +19,7 @@ The "Download" dialog for exporting and downloading annotations and dataset laye
 
 To export skeleton trees, nodes, and edges as CSV files, use the `Skeleton` (Trees) tab in the right-hand sidebar rather than the `Download` dialog.
 
-## Exporting TIFF / OME-TIFF / OME-Zarr cutouts
+## Exporting TIFF / OME-Zarr cutouts
 
 To export a cutout of your data as a TIFF stack, OME-TIFF, or OME-Zarr:
 

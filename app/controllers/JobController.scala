@@ -301,7 +301,7 @@ class JobController @Inject() (
   private def exportFileExtensionFor(exportFormat: String): Option[String] = exportFormat match {
     case "ome_tiff"   => Some("ome.tif")
     case "tiff_stack" => Some("zip")
-    case "ome_zarr"   => Some("ozx")
+    case "ozx"        => Some("ozx")
     case _            => None
   }
 

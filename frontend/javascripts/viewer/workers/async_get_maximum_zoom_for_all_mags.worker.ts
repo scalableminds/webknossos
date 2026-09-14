@@ -14,7 +14,18 @@ function asyncGetMaximumZoomForAllMags(
   layerMatrix: Matrix4x4,
   flycamMatrix: Matrix4x4,
 ) {
-  return _getMaximumZoomForAllMags(
+  console.time("getMaximumZoomForAllMags")
+  console.log(
+    viewMode,
+    loadingStrategy,
+    voxelSizeFactor,
+    mags,
+    viewportRects,
+    maximumCapacity,
+    layerMatrix,
+    flycamMatrix,
+  )
+  const retval = _getMaximumZoomForAllMags(
     viewMode,
     loadingStrategy,
     voxelSizeFactor,
@@ -24,6 +35,8 @@ function asyncGetMaximumZoomForAllMags(
     layerMatrix,
     flycamMatrix,
   );
+  console.timeEnd("getMaximumZoomForAllMags")
+  return retval;
 }
 
 export default expose(asyncGetMaximumZoomForAllMags);

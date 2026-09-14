@@ -5,6 +5,7 @@ import constants from "viewer/constants";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForPlaneWithScanLines from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForPlaneWithFloodFill from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_flood_fill";
+import determineBucketsForPlaneWithWasm from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_wasm";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { expose } from "./comlink_core";
 
@@ -39,7 +40,7 @@ function dequeueToArrayBuffer(bucketQueue: PriorityQueue<PriorityItem>): ArrayBu
   return buffer;
 }
 
-function pick(
+async function pick(
   viewMode: ViewMode,
   denseMags: Array<Vector3>,
   position: Vector3,
@@ -49,8 +50,9 @@ function pick(
   loadingStrategy: LoadingStrategy,
   rects: PlaneRects,
   collectScanLines?: boolean,
-  obliquePickerStrategy?: "scanLines" | "floodFill",
-): { buffer: ArrayBuffer; scanLines: Array<[Vector3, Vector3]> } {
+  obliquePickerStrategy?: "scanLines" | "floodFill" | "wasm",
+): Promise<{ buffer: ArrayBuffer; scanLines: Array<[Vector3, Vector3]> }> {
+  console.time("bucketPick")
   const bucketQueue = new PriorityQueue({
     // small priorities take precedence
     comparator,
@@ -77,6 +79,18 @@ function pick(
       matrix,
       logZoomStep,
     );
+  } else if (obliquePickerStrategy === "wasm") {
+    await determineBucketsForPlaneWithWasm(
+      loadingStrategy,
+      denseMags,
+      position,
+      enqueueFunction,
+      matrix,
+      logZoomStep,
+      rects,
+      undefined,
+      onScanLine,
+    );
   } else {
     const determineBucketsForPlane =
       obliquePickerStrategy === "floodFill"
@@ -95,7 +109,9 @@ function pick(
     );
   }
 
-  return { buffer: dequeueToArrayBuffer(bucketQueue), scanLines };
+  const retval = { buffer: dequeueToArrayBuffer(bucketQueue), scanLines };
+  console.timeEnd("bucketPick")
+  return retval;
 }
 
 export default expose(pick);

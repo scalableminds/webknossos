@@ -60,7 +60,6 @@ export default function determineBucketsForPlane(
       onScanLine,
     );
     zoomStepDiff++;
-    return;
   }
 }
 

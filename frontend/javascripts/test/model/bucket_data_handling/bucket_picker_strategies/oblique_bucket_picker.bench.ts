@@ -4,13 +4,17 @@ import type { Vector3, Vector4 } from "viewer/constants";
 import { Identity4x4 } from "viewer/constants";
 import determineBucketsForPlaneWithScanLines from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForPlaneWithFloodFill from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_flood_fill";
+import determineBucketsForPlaneWithWasm from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_wasm";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
-import { bench, describe } from "vitest";
+import { beforeAll, bench, describe } from "vitest";
 
-// Compares the two oblique bucket picker strategies (scan lines vs. flood fill, see
-// oblique_bucket_picker.ts / oblique_bucket_picker_flood_fill.ts) across a number of
+// Compares the three oblique bucket picker strategies (scan lines, flood fill, and a
+// C/WASM(SIMD) port of the scan-line algorithm -- see oblique_bucket_picker.ts /
+// oblique_bucket_picker_flood_fill.ts / oblique_bucket_picker_wasm.ts) across a number of
 // rotation/zoom/viewport scenarios. This is a performance comparison, not a correctness
-// check -- there are intentionally no assertions. Run with `yarn test-bench`.
+// check -- there are intentionally no assertions (see oblique_bucket_picker_wasm.spec.ts for
+// the correctness check that the wasm port matches the scan-line picker exactly). Run with
+// `yarn test-bench`.
 
 const LOADING_STRATEGY: LoadingStrategy = "BEST_QUALITY_FIRST";
 const POSITION: Vector3 = [1223, 3218, 518];
@@ -124,15 +128,19 @@ const SCENARIOS: Scenario[] = [
   },
 ];
 
-function countBuckets(
-  determineBucketsForPlane: typeof determineBucketsForPlaneWithScanLines,
+async function countBuckets(
+  determineBucketsForPlane:
+    | typeof determineBucketsForPlaneWithScanLines
+    | typeof determineBucketsForPlaneWithWasm,
   scenario: Scenario,
-): number {
+): Promise<number> {
   let count = 0;
   const enqueueFunction = (_bucketAddress: Vector4, _priority: number) => {
     count++;
   };
-  determineBucketsForPlane(
+  // wasm's determineBucketsForPlane is async (see oblique_bucket_picker_wasm.ts); awaiting the
+  // scan-line/flood-fill pickers' plain (non-promise) return value is a no-op.
+  await determineBucketsForPlane(
     LOADING_STRATEGY,
     scenario.denseMags,
     POSITION,
@@ -148,13 +156,18 @@ const noopEnqueue = (_bucketAddress: Vector4, _priority: number) => {};
 
 for (const scenario of SCENARIOS) {
   describe(`oblique bucket picker: ${scenario.name}`, () => {
-    // Logged once during collection (not part of the timed benchmark) to give some context
-    // on how many buckets each strategy actually picks for this scenario.
-    const scanLineCount = countBuckets(determineBucketsForPlaneWithScanLines, scenario);
-    const floodFillCount = countBuckets(determineBucketsForPlaneWithFloodFill, scenario);
-    console.log(
-      `  [${scenario.name}] buckets picked - scanLines: ${scanLineCount}, floodFill: ${floodFillCount}`,
-    );
+    // Logged once before the timed benchmarks run, to give some context on how many buckets
+    // each strategy actually picks for this scenario. Wrapped in beforeAll() (rather than
+    // computed directly in this describe callback) since determineBucketsForPlaneWithWasm is
+    // async, and describe() callbacks themselves can't be.
+    beforeAll(async () => {
+      const scanLineCount = await countBuckets(determineBucketsForPlaneWithScanLines, scenario);
+      const floodFillCount = await countBuckets(determineBucketsForPlaneWithFloodFill, scenario);
+      const wasmCount = await countBuckets(determineBucketsForPlaneWithWasm, scenario);
+      console.log(
+        `  [${scenario.name}] buckets picked - scanLines: ${scanLineCount}, floodFill: ${floodFillCount}, wasm: ${wasmCount}`,
+      );
+    });
 
     bench("scan lines", () => {
       determineBucketsForPlaneWithScanLines(
@@ -170,6 +183,18 @@ for (const scenario of SCENARIOS) {
 
     bench("flood fill", () => {
       determineBucketsForPlaneWithFloodFill(
+        LOADING_STRATEGY,
+        scenario.denseMags,
+        POSITION,
+        noopEnqueue,
+        scenario.matrix,
+        scenario.logZoomStep,
+        scenario.rects,
+      );
+    });
+
+    bench("wasm (scan lines, C/SIMD)", async () => {
+      await determineBucketsForPlaneWithWasm(
         LOADING_STRATEGY,
         scenario.denseMags,
         POSITION,

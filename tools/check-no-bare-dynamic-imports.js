@@ -19,6 +19,15 @@ const WHITELIST = [
   // propagates to the main-thread caller.
   "frontend/javascripts/viewer/workers/byte_array_lz4_compression.worker.ts",
   "frontend/javascripts/viewer/workers/byte_arrays_to_lz4_base64.worker.ts",
+  // Loads node:fs/node:url dynamically, only reached in a real Node context
+  // (isNodeContext check) to read the wasm binary from disk; in the browser/worker
+  // it's never called (fetch() is used instead). This file is imported by a worker
+  // module, so it must not use importDynamic(), which would pull antd/Toast into
+  // every worker bundle. A static top-level `import ... from "node:fs"` would also
+  // not work here: Vite's browser externalization touches it at module-evaluation
+  // time regardless of any runtime guard, since this file is part of the browser
+  // bundle too.
+  "frontend/javascripts/viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_wasm.ts",
 ];
 
 // A dynamic import() call that is wrapped by importDynamic(() => …) or

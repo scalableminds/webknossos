@@ -1,6 +1,5 @@
 import { defineConfig } from "vite";
-import babel from "@rolldown/plugin-babel";
-import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import replaceSvgColorWithCurrentColor from "./frontend/vite/vite-plugin-replace-svg-color";
@@ -16,10 +15,9 @@ const alias = {
 export const viteConfig = {
   resolve: { alias, tsconfigPaths: true },
   plugins: [
-    react(),
-    babel({
-      presets: [reactCompilerPreset()],
-    }),
+    // `compiler: true` enables the Rust port of the React Compiler (oxc-transform-react),
+    // which replaces the previous Babel-based setup.
+    react({ compiler: true }),
     svgr({
       svgrOptions: {
         plugins: ["@svgr/plugin-svgo", "@svgr/plugin-jsx"],

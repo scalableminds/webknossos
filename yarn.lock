@@ -296,7 +296,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/types@npm:^7.18.10, @babel/types@npm:^7.21.3, @babel/types@npm:^7.26.0, @babel/types@npm:^7.28.6, @babel/types@npm:^7.29.0, @babel/types@npm:^7.29.7":
+"@babel/types@npm:^7.18.10, @babel/types@npm:^7.21.3, @babel/types@npm:^7.28.6, @babel/types@npm:^7.29.0, @babel/types@npm:^7.29.7":
   version: 7.29.7
   resolution: "@babel/types@npm:7.29.7"
   dependencies:
@@ -1610,6 +1610,139 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@oxc-transform-react/binding-android-arm-eabi@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-android-arm-eabi@npm:0.145.0"
+  conditions: os=android & cpu=arm
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-android-arm64@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-android-arm64@npm:0.145.0"
+  conditions: os=android & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-darwin-arm64@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-darwin-arm64@npm:0.145.0"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-darwin-x64@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-darwin-x64@npm:0.145.0"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-freebsd-x64@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-freebsd-x64@npm:0.145.0"
+  conditions: os=freebsd & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-linux-arm-gnueabihf@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-linux-arm-gnueabihf@npm:0.145.0"
+  conditions: os=linux & cpu=arm
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-linux-arm-musleabihf@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-linux-arm-musleabihf@npm:0.145.0"
+  conditions: os=linux & cpu=arm
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-linux-arm64-gnu@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-linux-arm64-gnu@npm:0.145.0"
+  conditions: os=linux & cpu=arm64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-linux-arm64-musl@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-linux-arm64-musl@npm:0.145.0"
+  conditions: os=linux & cpu=arm64 & libc=musl
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-linux-ppc64-gnu@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-linux-ppc64-gnu@npm:0.145.0"
+  conditions: os=linux & cpu=ppc64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-linux-riscv64-gnu@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-linux-riscv64-gnu@npm:0.145.0"
+  conditions: os=linux & cpu=riscv64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-linux-riscv64-musl@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-linux-riscv64-musl@npm:0.145.0"
+  conditions: os=linux & cpu=riscv64 & libc=musl
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-linux-s390x-gnu@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-linux-s390x-gnu@npm:0.145.0"
+  conditions: os=linux & cpu=s390x & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-linux-x64-gnu@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-linux-x64-gnu@npm:0.145.0"
+  conditions: os=linux & cpu=x64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-linux-x64-musl@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-linux-x64-musl@npm:0.145.0"
+  conditions: os=linux & cpu=x64 & libc=musl
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-openharmony-arm64@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-openharmony-arm64@npm:0.145.0"
+  conditions: os=openharmony & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-win32-arm64-msvc@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-win32-arm64-msvc@npm:0.145.0"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-win32-ia32-msvc@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-win32-ia32-msvc@npm:0.145.0"
+  conditions: os=win32 & cpu=ia32
+  languageName: node
+  linkType: hard
+
+"@oxc-transform-react/binding-win32-x64-msvc@npm:0.145.0":
+  version: 0.145.0
+  resolution: "@oxc-transform-react/binding-win32-x64-msvc@npm:0.145.0"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
 "@pkgjs/parseargs@npm:^0.11.0":
   version: 0.11.0
   resolution: "@pkgjs/parseargs@npm:0.11.0"
@@ -2640,28 +2773,6 @@ __metadata:
   version: 1.1.3
   resolution: "@rolldown/debug@npm:1.1.3"
   checksum: 10c0/2840c24cb0d12ff2adb9733fe93e47367e6751f895263835d646564057b912637ab8fdee916b01690583abbdc60eee3f416c86f22ed9d67b269b7dd998f32099
-  languageName: node
-  linkType: hard
-
-"@rolldown/plugin-babel@npm:^0.2.3":
-  version: 0.2.3
-  resolution: "@rolldown/plugin-babel@npm:0.2.3"
-  dependencies:
-    picomatch: "npm:^4.0.4"
-  peerDependencies:
-    "@babel/core": ^7.29.0 || ^8.0.0-rc.1
-    "@babel/plugin-transform-runtime": ^7.29.0 || ^8.0.0-rc.1
-    "@babel/runtime": ^7.27.0 || ^8.0.0-rc.1
-    rolldown: ^1.0.0-rc.5
-    vite: ^8.0.0
-  peerDependenciesMeta:
-    "@babel/plugin-transform-runtime":
-      optional: true
-    "@babel/runtime":
-      optional: true
-    vite:
-      optional: true
-  checksum: 10c0/84afe9854137b576f963f4fd11080dc0b8afe6243d565513d33ddfed9ea9149652110def881a3911b5e889f5fa505df036c6839f4d0fd01d4222297d7f2baa21
   languageName: node
   linkType: hard
 
@@ -3891,21 +4002,24 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitejs/plugin-react@npm:^6.0.3":
-  version: 6.0.3
-  resolution: "@vitejs/plugin-react@npm:6.0.3"
+"@vitejs/plugin-react@npm:^6.1.1":
+  version: 6.1.1
+  resolution: "@vitejs/plugin-react@npm:6.1.1"
   dependencies:
     "@rolldown/pluginutils": "npm:^1.0.1"
   peerDependencies:
     "@rolldown/plugin-babel": ^0.1.7 || ^0.2.0
     babel-plugin-react-compiler: ^1.0.0
+    oxc-transform-react: ^0.145.0
     vite: ^8.0.0
   peerDependenciesMeta:
     "@rolldown/plugin-babel":
       optional: true
     babel-plugin-react-compiler:
       optional: true
-  checksum: 10c0/592a93178c0eec420759d529a2c964a7103860808f549f72993b96a38c287c929a0d371cacbd932c37ee2118b830348db752cc01a31d688c71d19d74567251fa
+    oxc-transform-react:
+      optional: true
+  checksum: 10c0/4599b37ee19ebee289782b177642e3002afa9b74cb57a2c0e2a601053c7ebb47f9ef178ab605ff1217de1d23069948a8d366447bfac0d9fb2f17afee5368acd0
   languageName: node
   linkType: hard
 
@@ -4499,15 +4613,6 @@ __metadata:
     cosmiconfig: "npm:^7.0.0"
     resolve: "npm:^1.19.0"
   checksum: 10c0/c6dfb15de96f67871d95bd2e8c58b0c81edc08b9b087dc16755e7157f357dc1090a8dc60ebab955e92587a9101f02eba07e730adc253a1e4cf593ca3ebd3839c
-  languageName: node
-  linkType: hard
-
-"babel-plugin-react-compiler@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "babel-plugin-react-compiler@npm:1.0.0"
-  dependencies:
-    "@babel/types": "npm:^7.26.0"
-  checksum: 10c0/9406267ada8d7dbdfe8906b40ecadb816a5f4cee2922bee23f7729293b369624ee135b5a9b0f263851c263c9787522ac5d97016c9a2b82d1668300e42b18aff8
   languageName: node
   linkType: hard
 
@@ -10115,6 +10220,72 @@ __metadata:
   languageName: node
   linkType: hard
 
+"oxc-transform-react@npm:^0.145.0":
+  version: 0.145.0
+  resolution: "oxc-transform-react@npm:0.145.0"
+  dependencies:
+    "@oxc-transform-react/binding-android-arm-eabi": "npm:0.145.0"
+    "@oxc-transform-react/binding-android-arm64": "npm:0.145.0"
+    "@oxc-transform-react/binding-darwin-arm64": "npm:0.145.0"
+    "@oxc-transform-react/binding-darwin-x64": "npm:0.145.0"
+    "@oxc-transform-react/binding-freebsd-x64": "npm:0.145.0"
+    "@oxc-transform-react/binding-linux-arm-gnueabihf": "npm:0.145.0"
+    "@oxc-transform-react/binding-linux-arm-musleabihf": "npm:0.145.0"
+    "@oxc-transform-react/binding-linux-arm64-gnu": "npm:0.145.0"
+    "@oxc-transform-react/binding-linux-arm64-musl": "npm:0.145.0"
+    "@oxc-transform-react/binding-linux-ppc64-gnu": "npm:0.145.0"
+    "@oxc-transform-react/binding-linux-riscv64-gnu": "npm:0.145.0"
+    "@oxc-transform-react/binding-linux-riscv64-musl": "npm:0.145.0"
+    "@oxc-transform-react/binding-linux-s390x-gnu": "npm:0.145.0"
+    "@oxc-transform-react/binding-linux-x64-gnu": "npm:0.145.0"
+    "@oxc-transform-react/binding-linux-x64-musl": "npm:0.145.0"
+    "@oxc-transform-react/binding-openharmony-arm64": "npm:0.145.0"
+    "@oxc-transform-react/binding-win32-arm64-msvc": "npm:0.145.0"
+    "@oxc-transform-react/binding-win32-ia32-msvc": "npm:0.145.0"
+    "@oxc-transform-react/binding-win32-x64-msvc": "npm:0.145.0"
+  dependenciesMeta:
+    "@oxc-transform-react/binding-android-arm-eabi":
+      optional: true
+    "@oxc-transform-react/binding-android-arm64":
+      optional: true
+    "@oxc-transform-react/binding-darwin-arm64":
+      optional: true
+    "@oxc-transform-react/binding-darwin-x64":
+      optional: true
+    "@oxc-transform-react/binding-freebsd-x64":
+      optional: true
+    "@oxc-transform-react/binding-linux-arm-gnueabihf":
+      optional: true
+    "@oxc-transform-react/binding-linux-arm-musleabihf":
+      optional: true
+    "@oxc-transform-react/binding-linux-arm64-gnu":
+      optional: true
+    "@oxc-transform-react/binding-linux-arm64-musl":
+      optional: true
+    "@oxc-transform-react/binding-linux-ppc64-gnu":
+      optional: true
+    "@oxc-transform-react/binding-linux-riscv64-gnu":
+      optional: true
+    "@oxc-transform-react/binding-linux-riscv64-musl":
+      optional: true
+    "@oxc-transform-react/binding-linux-s390x-gnu":
+      optional: true
+    "@oxc-transform-react/binding-linux-x64-gnu":
+      optional: true
+    "@oxc-transform-react/binding-linux-x64-musl":
+      optional: true
+    "@oxc-transform-react/binding-openharmony-arm64":
+      optional: true
+    "@oxc-transform-react/binding-win32-arm64-msvc":
+      optional: true
+    "@oxc-transform-react/binding-win32-ia32-msvc":
+      optional: true
+    "@oxc-transform-react/binding-win32-x64-msvc":
+      optional: true
+  checksum: 10c0/a0fddc9f78811f8ba8f20fb44e0a45e96831c275ff636047ec01a99e96204aa2560085c52f8791ac705662d94f88fc3617fdab052aa2621a6b518b302fc0324c
+  languageName: node
+  linkType: hard
+
 "p-limit@npm:^4.0.0":
   version: 4.0.0
   resolution: "p-limit@npm:4.0.0"
@@ -13820,7 +13991,6 @@ __metadata:
     "@github/webauthn-json": "npm:^2.1.1"
     "@rc-component/virtual-list": "npm:^1.0.2"
     "@redux-saga/testing-utils": "npm:^1.1.5"
-    "@rolldown/plugin-babel": "npm:^0.2.3"
     "@rwh/keystrokes": "github:scalableminds/Keystrokes#dist/keystrokes"
     "@scalableminds/prop-types": "npm:^15.8.1"
     "@shaderfrog/glsl-parser": "npm:^0.3.0"
@@ -13850,13 +14020,12 @@ __metadata:
     "@types/three": "npm:^0.169.0"
     "@types/url-join": "npm:^4.0.0"
     "@vitejs/devtools": "npm:^0.3.3"
-    "@vitejs/plugin-react": "npm:^6.0.3"
+    "@vitejs/plugin-react": "npm:^6.1.1"
     "@vitest/coverage-v8": "npm:^4.1.9"
     "@zip.js/zip.js": "npm:^2.7.32"
     abort-controller: "npm:^3.0.0"
     ansi-to-react: "npm:^6.1.6"
     antd: "npm:^6.5.3"
-    babel-plugin-react-compiler: "npm:^1.0.0"
     ball-morphology: "npm:^0.1.0"
     base64-js: "npm:^1.2.1"
     beautiful-react-hooks: "npm:^5.0.3"
@@ -13903,6 +14072,7 @@ __metadata:
     ndarray: "npm:^1.0.19"
     ndarray-moments: "npm:^1.0.0"
     ndarray-ops: "npm:^1.2.2"
+    oxc-transform-react: "npm:^0.145.0"
     pako: "npm:^2.1.0"
     pg: "npm:^7.4.1"
     pixelmatch: "npm:^5.2.0"

@@ -119,7 +119,7 @@ async function runObliquePicker(
   }
 }
 
-async function pick(
+export async function pick(
   viewMode: ViewMode,
   denseMags: Array<Vector3>,
   position: Vector3,

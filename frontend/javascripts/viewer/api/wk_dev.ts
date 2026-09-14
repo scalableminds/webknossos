@@ -17,6 +17,11 @@ export const WkDevFlags = {
     useLocalMask: true,
   },
   bucketDebugging: {
+    // If false, bucket picking is run synchronously on the main thread instead of being
+    // dispatched to a web worker. Useful for manually comparing the two, given picking
+    // itself has been measured to take well under 1ms, while the worker round trip
+    // (scheduling + postMessage/Comlink + thread hop) has been measured to cost much more.
+    useWebWorkerForBucketPicking: false,
     // For visualizing buckets which are passed to the GPU
     visualizeBucketsOnGPU: false,
     // For visualizing buckets which are prefetched

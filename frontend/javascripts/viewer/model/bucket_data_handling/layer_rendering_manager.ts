@@ -29,6 +29,7 @@ import shaderEditor from "viewer/model/helpers/shader_editor";
 import Store, { type PlaneRects, type SegmentMap } from "viewer/store";
 import { createWorker } from "viewer/workers/comlink_wrapper";
 import type AsyncBucketPicker from "../../workers/async_bucket_picker.worker";
+import { pick as pickBucketsOnMainThread } from "../../workers/async_bucket_picker.worker";
 import {
   getTransformsForLayer,
   invertAndTranspose,
@@ -269,9 +270,12 @@ export default class LayerRenderingManager {
 
       if (isVisible) {
         scheduleTime = performance.now();
+        const pickFn = WkDevFlags.bucketDebugging.useWebWorkerForBucketPicking
+          ? asyncBucketPick
+          : pickBucketsOnMainThread;
         pickingPromise = this.latestTaskExecutor.schedule(() => {
           workerCallStartTime = performance.now();
-          return asyncBucketPick(
+          return pickFn(
             viewMode,
             mags,
             position,

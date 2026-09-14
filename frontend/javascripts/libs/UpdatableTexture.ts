@@ -1,5 +1,6 @@
 import {
   ByteType,
+  ClampToEdgeWrapping,
   FloatType,
   LinearFilter,
   LinearMipMapLinearFilter,
@@ -105,15 +106,18 @@ class UpdatableTexture extends Texture {
     this.renderer = renderer;
     this.gl = this.renderer.getContext() as WebGL2RenderingContext;
     this.utils = new WebGLUtils(this.gl, this.renderer.extensions);
-  }
-
-  isInitialized() {
-    return (this.renderer.properties.get(this) as any).__webglTexture != null;
-  }
-
-  update(src: TypedArray, x: number, y: number, width: number, height: number) {
     if (originalTexSubImage2D == null) {
-      // See explanation at declaration of originalTexSubImage2D.
+      // Installed here (rather than lazily in update(), as it used to be)
+      // so the override is guaranteed to be in place before three.js' own
+      // internal upload path (WebGLTextures.uploadTexture) can ever run --
+      // which it does the first time this texture is bound by the normal
+      // per-frame render path, and that can happen before update() is ever
+      // called (e.g. before any bucket data has loaded yet). Without the
+      // override already installed by then, that internal upload attempts
+      // to write the (correctly-typed but zero-length) dummy image data
+      // into the full texture region, which WebGL rejects as
+      // "ArrayBufferView not big enough for request". See explanation at
+      // declaration of originalTexSubImage2D.
       originalTexSubImage2D = this.gl.texSubImage2D.bind(this.gl);
       // @ts-expect-error
       this.gl.texSubImage2D = (...args) => {
@@ -125,6 +129,13 @@ class UpdatableTexture extends Texture {
         return originalTexSubImage2D(...args);
       };
     }
+  }
+
+  isInitialized() {
+    return (this.renderer.properties.get(this) as any).__webglTexture != null;
+  }
+
+  update(src: TypedArray, x: number, y: number, width: number, height: number) {
     if (!this.isInitialized()) {
       this.renderer.initTexture(this);
     }
@@ -132,7 +143,8 @@ class UpdatableTexture extends Texture {
     const textureProperties = this.renderer.properties.get(this) as any;
     this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
 
-    originalTexSubImage2D(
+    // Guaranteed non-null: installed in setRenderer(), always called before update().
+    originalTexSubImage2D!(
       this.gl.TEXTURE_2D,
       0,
       x,
@@ -172,6 +184,10 @@ class UpdatableTextureArray extends Texture {
   // texture is bound (which happens via the normal per-frame render path,
   // not through update()).
   layerUpdates: Set<number> = new Set();
+  // Plain Texture has no wrapR field (only DataArrayTexture/Data3DTexture
+  // declare one); see the assignment in the constructor for why this is
+  // needed.
+  wrapR: Wrapping | undefined;
   renderer!: WebGLRenderer;
   gl!: WebGL2RenderingContext;
   utils!: WebGLUtils;
@@ -204,21 +220,30 @@ class UpdatableTextureArray extends Texture {
     this.flipY = false;
     this.unpackAlignment = 1;
     this.needsUpdate = true;
+    // Plain Texture (unlike DataArrayTexture, which we intentionally don't
+    // extend -- see class comment above) has no wrapR field at all, so it's
+    // `undefined` by default. Three.js unconditionally sets TEXTURE_WRAP_R
+    // for any TEXTURE_2D_ARRAY (WebGLTextures.setTextureParameters), and
+    // wrappingToGL[undefined] is undefined, which is an invalid enum value.
+    this.wrapR = ClampToEdgeWrapping;
   }
 
   setRenderer(renderer: WebGLRenderer) {
     this.renderer = renderer;
     this.gl = this.renderer.getContext() as WebGL2RenderingContext;
     this.utils = new WebGLUtils(this.gl, this.renderer.extensions);
-  }
-
-  isInitialized() {
-    return (this.renderer.properties.get(this) as any).__webglTexture != null;
-  }
-
-  update(src: TypedArray, x: number, y: number, width: number, height: number, zOffset: number) {
     if (originalTexSubImage3D == null) {
-      // See explanation at declaration of originalTexSubImage3D.
+      // Installed here (rather than lazily in update(), as it used to be)
+      // so the override is guaranteed to be in place before three.js' own
+      // internal upload path (WebGLTextures.uploadTexture) can ever run --
+      // which it does the first time this texture is bound by the normal
+      // per-frame render path, and that can happen before update() is ever
+      // called (e.g. before any bucket data has loaded yet). Without the
+      // override already installed by then, that internal upload attempts
+      // to write the (correctly-typed but zero-length) dummy image data
+      // into the full texture region, which WebGL rejects as
+      // "ArrayBufferView not big enough for request". See explanation at
+      // declaration of originalTexSubImage3D.
       originalTexSubImage3D = this.gl.texSubImage3D.bind(this.gl);
       this.gl.texSubImage3D = (...args) => {
         // @ts-expect-error
@@ -229,6 +254,13 @@ class UpdatableTextureArray extends Texture {
         return originalTexSubImage3D(...args);
       };
     }
+  }
+
+  isInitialized() {
+    return (this.renderer.properties.get(this) as any).__webglTexture != null;
+  }
+
+  update(src: TypedArray, x: number, y: number, width: number, height: number, zOffset: number) {
     if (!this.isInitialized()) {
       this.renderer.initTexture(this);
     }
@@ -236,7 +268,8 @@ class UpdatableTextureArray extends Texture {
     const textureProperties = this.renderer.properties.get(this) as any;
     this.gl.bindTexture(this.gl.TEXTURE_2D_ARRAY, textureProperties.__webglTexture);
 
-    originalTexSubImage3D(
+    // Guaranteed non-null: installed in setRenderer(), always called before update().
+    originalTexSubImage3D!(
       this.gl.TEXTURE_2D_ARRAY,
       0,
       x,

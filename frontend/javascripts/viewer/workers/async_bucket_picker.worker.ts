@@ -52,8 +52,9 @@ async function pick(
   rects: PlaneRects,
   collectScanLines?: boolean,
   obliquePickerStrategy?: "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
+  prefetchAlongViewAxis?: boolean,
 ): Promise<{ buffer: ArrayBuffer; scanLines: Array<[Vector3, Vector3]> }> {
-  console.time("bucketPick");
+  // console.time("bucketPick");
   const bucketQueue = new PriorityQueue({
     // small priorities take precedence
     comparator,
@@ -91,6 +92,7 @@ async function pick(
       rects,
       undefined,
       onScanLine,
+      prefetchAlongViewAxis,
     );
   } else if (obliquePickerStrategy === "floodFillWasm") {
     await determineBucketsForPlaneWithFloodFillWasm(
@@ -103,6 +105,7 @@ async function pick(
       rects,
       undefined,
       onScanLine,
+      prefetchAlongViewAxis,
     );
   } else {
     const determineBucketsForPlane =
@@ -119,11 +122,12 @@ async function pick(
       rects,
       undefined,
       onScanLine,
+      prefetchAlongViewAxis,
     );
   }
 
   const retval = { buffer: dequeueToArrayBuffer(bucketQueue), scanLines };
-  console.timeEnd("bucketPick");
+  // console.timeEnd("bucketPick");
   return retval;
 }
 

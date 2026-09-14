@@ -108,6 +108,13 @@ static const Mat4 ROTATION_XZ = {
 // Fixed-capacity, no-heap storage.
 // ---------------------------------------------------------------------------------------
 
+// When g_prefetchAlongViewAxis is set, buckets are additionally picked up to this many units
+// (same units as bucket/voxel sizes) in front of and behind the plane, simulating the user
+// having moved the flycam along its view axis. Matches PREFETCH_Z_DIFF in
+// oblique_bucket_picker_flood_fill.ts and zDiff / PREFETCH_Z_DIFF in
+// wasm/oblique_bucket_picker/oblique_bucket_picker.c.
+#define PREFETCH_Z_DIFF 10.0
+
 #define MAX_OUTPUT 65536
 #define HASH_CAPACITY 262144u // power of two, ~4x MAX_OUTPUT to keep load factor low
 #define HASH_MASK (HASH_CAPACITY - 1u)
@@ -122,6 +129,7 @@ static int g_centerAddress[3];
 static int g_additionalPriorityWeight;
 static int g_logZoomStep;
 static int g_abortLimit; // < 0 means "no limit"
+static int g_prefetchAlongViewAxis; // 0/1; see PREFETCH_Z_DIFF below
 
 static int g_output[MAX_OUTPUT * 5];
 static int g_outputCount;
@@ -151,13 +159,15 @@ int* get_output_ptr(void) { return g_output; }
 __attribute__((export_name("set_scalars")))
 void set_scalars(
     int centerX, int centerY, int centerZ,
-    int additionalPriorityWeight, int logZoomStep, int abortLimit) {
+    int additionalPriorityWeight, int logZoomStep, int abortLimit,
+    int prefetchAlongViewAxis) {
   g_centerAddress[0] = centerX;
   g_centerAddress[1] = centerY;
   g_centerAddress[2] = centerZ;
   g_additionalPriorityWeight = additionalPriorityWeight;
   g_logZoomStep = logZoomStep;
   g_abortLimit = abortLimit;
+  g_prefetchAlongViewAxis = prefetchAlongViewAxis;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -227,7 +237,8 @@ static void build_plane_test(int planeId, PlaneTest* test) {
   test->radiusZ =
       g_bucketHalfSize[0] * d_fabs(test->zx) +
       g_bucketHalfSize[1] * d_fabs(test->zy) +
-      g_bucketHalfSize[2] * d_fabs(test->zz);
+      g_bucketHalfSize[2] * d_fabs(test->zz) +
+      (g_prefetchAlongViewAxis ? PREFETCH_Z_DIFF : 0.0);
 
   test->halfExtentX = __builtin_ceil(g_rectWidth[planeId] / 2.0);
   test->halfExtentY = __builtin_ceil(g_rectHeight[planeId] / 2.0);

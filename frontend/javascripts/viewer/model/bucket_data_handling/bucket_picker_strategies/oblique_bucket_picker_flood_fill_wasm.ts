@@ -43,6 +43,7 @@ type WasmExports = {
     additionalPriorityWeight: number,
     logZoomStep: number,
     abortLimit: number,
+    prefetchAlongViewAxis: number,
   ) => void;
   get_output_ptr: () => number;
   pick_buckets_for_plane: () => number;
@@ -85,6 +86,7 @@ export default async function determineBucketsForPlane(
   rects: PlaneRects,
   abortLimit?: number,
   _onScanLine?: ScanLineCallback,
+  prefetchAlongViewAxis?: boolean,
 ): Promise<void> {
   const wasm = await getWasmExports();
 
@@ -128,6 +130,7 @@ export default async function determineBucketsForPlane(
       additionalPriorityWeight,
       thisLogZoomStep,
       abortLimit ?? -1,
+      prefetchAlongViewAxis ? 1 : 0,
     );
 
     const outputCount = wasm.pick_buckets_for_plane();

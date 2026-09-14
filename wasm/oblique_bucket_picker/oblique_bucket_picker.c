@@ -120,6 +120,13 @@ static const Mat4 ROTATION_XZ = {
 // combinations; see pick_buckets_for_plane for the overflow/abort behaviour.
 // ---------------------------------------------------------------------------------------
 
+// When g_prefetchAlongViewAxis is set, additional scan lines are also cast this far (in the
+// same local, per-plane units as everything else here) in front of and behind the plane,
+// simulating the user having moved the flycam along its view axis -- so that data is already
+// loading by the time they actually do. Matches zDiff in oblique_bucket_picker.ts and
+// PREFETCH_Z_DIFF in oblique_bucket_picker_flood_fill.ts.
+#define PREFETCH_Z_DIFF 10.0
+
 #define MAX_OUTPUT 65536
 #define HASH_CAPACITY 262144u // power of two, ~4x MAX_OUTPUT to keep load factor low
 #define HASH_MASK (HASH_CAPACITY - 1u)
@@ -134,6 +141,7 @@ static int g_centerAddress[3];
 static int g_additionalPriorityWeight;
 static int g_logZoomStep;
 static int g_abortLimit; // < 0 means "no limit"
+static int g_prefetchAlongViewAxis; // 0/1; see PREFETCH_Z_DIFF below
 
 // Output: packed as 5 int32 per bucket: [x, y, z, zoomStep, priority].
 static int g_output[MAX_OUTPUT * 5];
@@ -159,13 +167,15 @@ int* get_output_ptr(void) { return g_output; }
 __attribute__((export_name("set_scalars")))
 void set_scalars(
     int centerX, int centerY, int centerZ,
-    int additionalPriorityWeight, int logZoomStep, int abortLimit) {
+    int additionalPriorityWeight, int logZoomStep, int abortLimit,
+    int prefetchAlongViewAxis) {
   g_centerAddress[0] = centerX;
   g_centerAddress[1] = centerY;
   g_centerAddress[2] = centerZ;
   g_additionalPriorityWeight = additionalPriorityWeight;
   g_logZoomStep = logZoomStep;
   g_abortLimit = abortLimit;
+  g_prefetchAlongViewAxis = prefetchAlongViewAxis;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -433,6 +443,22 @@ int pick_buckets_for_plane(void) {
       transform_scanline_endpoints(queryMatrix, halfX, y, 0.0, &ax, &ay, &az, &bx, &by, &bz);
       if (traverse_line(ax, ay, az, bx, by, bz, 0, 0)) {
         return g_outputCount;
+      }
+
+      if (g_prefetchAlongViewAxis) {
+        double a2x, a2y, a2z, b2x, b2y, b2z;
+        transform_scanline_endpoints(
+            queryMatrix, halfX, y, -PREFETCH_Z_DIFF, &a2x, &a2y, &a2z, &b2x, &b2y, &b2z);
+        if (traverse_line(a2x, a2y, a2z, b2x, b2y, b2z, 0, 0)) {
+          return g_outputCount;
+        }
+
+        double a3x, a3y, a3z, b3x, b3y, b3z;
+        transform_scanline_endpoints(
+            queryMatrix, halfX, y, PREFETCH_Z_DIFF, &a3x, &a3y, &a3z, &b3x, &b3y, &b3z);
+        if (traverse_line(a3x, a3y, a3z, b3x, b3y, b3z, 0, 0)) {
+          return g_outputCount;
+        }
       }
     }
   }

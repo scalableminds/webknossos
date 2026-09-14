@@ -25,6 +25,13 @@ import type { ScanLineCallback } from "./oblique_bucket_picker";
 // coefficients rather than going through M4x4.transformVectorsAffine, which allocates a
 // handful of arrays (input wrapper, flattened copy, output, re-chunked result) per call.
 
+// When prefetchAlongViewAxis is set, buckets are additionally picked up to this many units
+// (in the same unit as bucket/voxel sizes) in front of and behind the plane, simulating the
+// user moving the flycam forward/backward along the view axis -- so that data is already
+// loading by the time they actually do. Mirrors oblique_bucket_picker.ts's zDiff constant, for
+// a comparable amount of "lookahead" between the two strategies.
+const PREFETCH_Z_DIFF = 10;
+
 const ALPHA = Math.PI / 2;
 
 // biome-ignore format: don't format array
@@ -55,6 +62,7 @@ export default function determineBucketsForPlane(
   rects: PlaneRects,
   abortLimit?: number,
   onScanLine?: ScanLineCallback,
+  prefetchAlongViewAxis?: boolean,
 ): void {
   let zoomStepDiff = 0;
 
@@ -70,6 +78,7 @@ export default function determineBucketsForPlane(
       rects,
       abortLimit,
       onScanLine,
+      prefetchAlongViewAxis,
     );
     zoomStepDiff++;
   }
@@ -88,6 +97,7 @@ function buildIntersectsPlaneTest(
   matrix: Matrix4x4,
   rects: PlaneRects,
   bucketHalfSize: Vector3,
+  prefetchAlongViewAxis: boolean,
 ): IntersectsPlaneTest {
   const queryMatrix = [...matrix] as Matrix4x4;
 
@@ -129,7 +139,8 @@ function buildIntersectsPlaneTest(
   const radiusLocalZ =
     bucketHalfSize[0] * Math.abs(zx) +
     bucketHalfSize[1] * Math.abs(zy) +
-    bucketHalfSize[2] * Math.abs(zz);
+    bucketHalfSize[2] * Math.abs(zz) +
+    (prefetchAlongViewAxis ? PREFETCH_Z_DIFF : 0);
 
   return (worldX: number, worldY: number, worldZ: number): boolean => {
     // Local z (the plane's thickness axis) is checked first, as it's usually the cheapest
@@ -158,6 +169,7 @@ function addNecessaryBucketsToPriorityQueuePlane(
   rects: PlaneRects,
   abortLimit?: number,
   onScanLine?: ScanLineCallback,
+  prefetchAlongViewAxis?: boolean,
 ): void {
   const logZoomStep = nonFallbackLogZoomStep + zoomStepDiff;
   const planeIds: Array<OrthoViewWithoutTD> = ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"];
@@ -177,7 +189,13 @@ function addNecessaryBucketsToPriorityQueuePlane(
   // through the shared seed bucket) and roughly 3x cheaper than flood-filling each plane
   // separately with its own traversal and visited set.
   const intersectsPlaneTests = planeIds.map((planeId) =>
-    buildIntersectsPlaneTest(planeId, matrix, rects, bucketHalfSize),
+    buildIntersectsPlaneTest(
+      planeId,
+      matrix,
+      rects,
+      bucketHalfSize,
+      prefetchAlongViewAxis ?? false,
+    ),
   );
   // The bucket's world-space center is computed once per candidate (not once per plane test,
   // which would triple the redundant arithmetic for no reason -- all three tests operate on

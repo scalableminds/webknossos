@@ -260,6 +260,7 @@ export default class LayerRenderingManager {
             rects,
             WkDevFlags.bucketDebugging.visualizeScanLines,
             WkDevFlags.bucketDebugging.obliquePickerStrategy,
+            WkDevFlags.bucketDebugging.prefetchAlongViewAxis,
           ),
         );
       }

@@ -162,6 +162,189 @@ function getDataTextureCount(
   );
 }
 
+// Color layer texture pooling: instead of giving every color layer its own
+// dedicated sampler2D texture array (which scales the shader's texture-unit
+// usage with the number of *declared* layers, not just the *active* ones),
+// buckets of all color layers sharing the same physical GPU texture format
+// are written into one shared sampler2DArray per pool. There are only as
+// many pools as there are distinct physical formats, independent of how many
+// layers/datasets use them. Segmentation layers are not pooled (yet) -- see
+// getSegmentId_<name> in segmentation.glsl.ts, which is still generated per
+// layer name.
+export enum ColorLayerPool {
+  F32 = 0,
+  U8 = 1,
+  S8 = 2,
+  U16 = 3,
+  S16 = 4,
+}
+export const COLOR_LAYER_POOL_COUNT = 5;
+export const COLOR_LAYER_POOLS = [
+  ColorLayerPool.F32,
+  ColorLayerPool.U8,
+  ColorLayerPool.S8,
+  ColorLayerPool.U16,
+  ColorLayerPool.S16,
+] as const;
+
+// Fixed width/height for every pool's sampler2DArray. Since pooling amortizes
+// GPU memory across many layers, there's no need to optimize this per layer
+// the way calculateTextureSizeAndCountForLayer does for segmentation layers;
+// only the depth (array-layer count) needs to vary, and is computed by
+// getColorLayerPoolDepths below.
+export const COLOR_LAYER_POOL_TEXTURE_WIDTH = 2048;
+
+export function getColorLayerPoolForElementClass(elementClass: ElementClass): ColorLayerPool {
+  switch (elementClass) {
+    case "float":
+      return ColorLayerPool.F32;
+    case "int8":
+      return ColorLayerPool.S8;
+    case "uint16":
+      return ColorLayerPool.U16;
+    case "int16":
+      return ColorLayerPool.S16;
+    // uint8, uint24, uint32, int32, uint64, int64, double: all stored as raw
+    // bytes (UnsignedByteType/RGBA), decoded manually in the shader (see
+    // layerDtypeTag in main_data_shaders.glsl.ts), same as today.
+    default:
+      return ColorLayerPool.U8;
+  }
+}
+
+export function getColorLayerPoolGpuConfig(pool: ColorLayerPool): {
+  textureType: TextureDataType;
+  pixelFormat: PixelFormat;
+  internalFormat: PixelFormatGPU | undefined;
+  glslPrefix: "" | "u" | "i";
+} {
+  switch (pool) {
+    case ColorLayerPool.F32:
+      return {
+        textureType: FloatType,
+        pixelFormat: RGBAFormat,
+        internalFormat: undefined,
+        glslPrefix: "",
+      };
+    case ColorLayerPool.U8:
+      return {
+        textureType: UnsignedByteType,
+        pixelFormat: RGBAFormat,
+        internalFormat: undefined,
+        glslPrefix: "",
+      };
+    case ColorLayerPool.S8:
+      return {
+        textureType: ByteType,
+        pixelFormat: RGBAFormat,
+        internalFormat: "RGBA8_SNORM",
+        glslPrefix: "",
+      };
+    case ColorLayerPool.U16:
+      return {
+        textureType: UnsignedShortType,
+        pixelFormat: RGIntegerFormat,
+        internalFormat: "RG16UI",
+        glslPrefix: "u",
+      };
+    case ColorLayerPool.S16:
+      return {
+        textureType: ShortType,
+        pixelFormat: RGIntegerFormat,
+        internalFormat: "RG16I",
+        glslPrefix: "i",
+      };
+    default:
+      throw new Error(`Unknown color layer pool: ${pool}`);
+  }
+}
+
+// How many fixed-width texture-array slices a layer with the given packing
+// degree needs to hold requiredBucketCapacity buckets. Mirrors
+// getDataTextureCount, just exported for use by the pool depth/base-slice
+// bookkeeping in pool_texture_manager.ts.
+// How a raw texel fetched from a layer's texture needs to be rescaled to
+// reach that layer's *native* value range (e.g. 0-255 for uint8, -128..127
+// for int8, no-op for float). Depends only on (isColor, isSigned,
+// elementClass), which are static per-layer properties -- baked as a
+// per-layer const array (layerDtypeNormalizer) into the shader, mirroring
+// what used to be computed inline, per generated getRgbaAtXYIndex_<name>
+// function, in texture_access.glsl.ts.
+export function getDtypeNormalizerForLayer(textureLayerInfo: {
+  isColor: boolean;
+  isSigned: boolean;
+  elementClass: ElementClass;
+}): number {
+  const { isColor, isSigned, elementClass } = textureLayerInfo;
+  if (isColor && !elementClass.endsWith("int8")) {
+    return 1;
+  } else if (isSigned && !elementClass.endsWith("int32") && !elementClass.endsWith("int64")) {
+    return 127;
+  } else {
+    return 255;
+  }
+}
+
+export function getDataTextureCountForFixedWidth(
+  packingDegree: number,
+  requiredBucketCapacity: number,
+): number {
+  return getDataTextureCount(COLOR_LAYER_POOL_TEXTURE_WIDTH, packingDegree, requiredBucketCapacity);
+}
+
+export type ColorLayerPoolAssignment = {
+  pool: ColorLayerPool;
+  baseSlice: number;
+  dataTextureCount: number;
+  packingDegree: number;
+};
+
+// Computes, for every *color* layer, which pool it belongs to and which
+// contiguous range of that pool's texture-array slices ([baseSlice,
+// baseSlice + dataTextureCount)) is reserved for it, plus the resulting
+// total depth needed for each pool. Called once per dataset load (see
+// getColorLayerPoolPlan in layer_rendering_manager.ts) so that every pool's
+// sampler2DArray can be allocated with its final size immediately --
+// WebGL2's texStorage3D allocates immutable storage, so the depth can't
+// grow incrementally as layers are lazily set up. Segmentation layers are
+// not included; they keep their own dedicated per-layer textures (see
+// calculateTextureSizeAndCountForLayer), unaffected by this pooling.
+export function computeColorLayerPoolAssignments<
+  Layer extends { name: string; elementClass: ElementClass; category: "color" | "segmentation" },
+>(
+  layers: Array<Layer>,
+  requiredBucketCapacity: number,
+): {
+  assignmentByLayerName: Map<string, ColorLayerPoolAssignment>;
+  poolDepths: Record<ColorLayerPool, number>;
+} {
+  const poolDepths: Record<ColorLayerPool, number> = {
+    [ColorLayerPool.F32]: 0,
+    [ColorLayerPool.U8]: 0,
+    [ColorLayerPool.S8]: 0,
+    [ColorLayerPool.U16]: 0,
+    [ColorLayerPool.S16]: 0,
+  };
+  const assignmentByLayerName = new Map<string, ColorLayerPoolAssignment>();
+
+  for (const layer of layers) {
+    if (layer.category !== "color") {
+      continue;
+    }
+    const pool = getColorLayerPoolForElementClass(layer.elementClass);
+    const { packingDegree } = getDtypeConfigForElementClass(layer.elementClass);
+    const dataTextureCount = getDataTextureCountForFixedWidth(
+      packingDegree,
+      requiredBucketCapacity,
+    );
+    const baseSlice = poolDepths[pool];
+    poolDepths[pool] += dataTextureCount;
+    assignmentByLayerName.set(layer.name, { pool, baseSlice, dataTextureCount, packingDegree });
+  }
+
+  return { assignmentByLayerName, poolDepths };
+}
+
 // Only exported for testing
 export function calculateTextureSizeAndCountForLayer(
   specs: GpuSpecs,

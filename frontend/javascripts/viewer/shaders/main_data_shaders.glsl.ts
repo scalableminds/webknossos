@@ -15,6 +15,8 @@ import {
   DTYPE_TAG_INT32,
   DTYPE_TAG_UINT24,
   DTYPE_TAG_UINT32,
+  getColorLayerPoolForElementClass,
+  getDtypeNormalizerForLayer,
   getDtypeTagForElementClass,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
@@ -143,15 +145,21 @@ uniform float layerIsInverted[<%= globalLayerCount %>];
 uniform int colorRenderOrder[<%= maxActiveColorLayers %>];
 uniform int activeColorLayerCount;
 
-<% each(layerNamesWithSegmentation, function(name) { %>
-  uniform highp <%= textureLayerInfos[name].glslPrefix %>sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
-<% }) %>
+// Color layers read from 5 shared, dtype-keyed texture-array pools instead
+// of a dedicated sampler per layer -- see getRgbaAtXYIndex in
+// texture_access.glsl.ts. There are always exactly 5 of these regardless of
+// how many color layers the dataset has.
+uniform highp sampler2DArray pool_f32_textures;
+uniform highp sampler2DArray pool_u8_textures;
+uniform highp sampler2DArray pool_s8_textures;
+uniform highp usampler2DArray pool_u16_textures;
+uniform highp isampler2DArray pool_s16_textures;
 
-// Segmentation layers are not yet part of the generic layerTransform/layerBboxMin/
-// layerBboxMax/layerDataTextureWidth arrays above (getSegmentId_<name> in
+// Segmentation layers are not pooled yet (getSegmentId_<name> in
 // segmentation.glsl.ts is still generated per layer name, deferred to a
-// follow-up), so they keep their own named uniforms for now.
+// follow-up), so they keep their own dedicated per-layer textures/uniforms.
 <% each(segmentationLayerNames, function(name) { %>
+  uniform highp <%= textureLayerInfos[name].glslPrefix %>sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
   uniform float <%= name %>_data_texture_width;
   uniform mat4 <%= name %>_transform;
   uniform bool <%= name %>_has_transform;
@@ -225,6 +233,10 @@ const float bucketSize = <%= bucketSize %>;
 const float layerPackingDegree[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree); }).join(", ") %>);
 const uint layerDtypeTag[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getDtypeTagForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
 const bool layerHasTpsTransform[<%= globalLayerCount %>] = bool[](<%= layerNamesWithSegmentation.map(function(name) { return tpsTransformPerLayer[name] != null ? "true" : "false"; }).join(", ") %>);
+// Only meaningful for color layers (indices [0, colorLayerNames.length)); see
+// getRgbaAtXYIndex in texture_access.glsl.ts.
+const uint layerPoolId[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getColorLayerPoolForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
+const float layerDtypeNormalizer[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(getDtypeNormalizerForLayer(textureLayerInfos[name])); }).join(", ") %>);
 `;
 
 export default function getMainFragmentShader(params: Params) {
@@ -489,6 +501,8 @@ void main() {
     isFragment: true,
     glslTypeForElementClass,
     getDtypeTagForElementClass,
+    getColorLayerPoolForElementClass,
+    getDtypeNormalizerForLayer,
     each,
     range,
   });
@@ -709,6 +723,8 @@ void main() {
     generateCalculateTpsOffsetFunction,
     glslTypeForElementClass,
     getDtypeTagForElementClass,
+    getColorLayerPoolForElementClass,
+    getDtypeNormalizerForLayer,
     each,
     range,
   });

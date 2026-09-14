@@ -67,12 +67,16 @@ import {
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
+  ColorLayerPool,
   DTYPE_TAG_INT32,
   DTYPE_TAG_UINT32,
   getDtypeConfigForElementClass,
   getDtypeTagForElementClass,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
-import { getGlobalLayerIndexForLayerName } from "viewer/model/bucket_data_handling/layer_rendering_manager";
+import {
+  getColorLayerPoolTextureManagers,
+  getGlobalLayerIndexForLayerName,
+} from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
 import getMainFragmentShader, {
@@ -106,6 +110,16 @@ const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
 // main_data_shaders.glsl.ts) for how many color layers can be simultaneously
 // blended, independent of how many color layers the dataset actually has.
 const MAX_ACTIVE_COLOR_LAYERS = 8;
+
+// Must match the pool_*_textures uniform names declared in
+// SHARED_UNIFORM_DECLARATIONS (main_data_shaders.glsl.ts).
+const COLOR_LAYER_POOL_UNIFORM_NAME_BY_POOL: Array<[ColorLayerPool, string]> = [
+  [ColorLayerPool.F32, "pool_f32_textures"],
+  [ColorLayerPool.U8, "pool_u8_textures"],
+  [ColorLayerPool.S8, "pool_s8_textures"],
+  [ColorLayerPool.U16, "pool_u16_textures"],
+  [ColorLayerPool.S16, "pool_s16_textures"],
+];
 
 const float32BitPunBuffer = new ArrayBuffer(4);
 const float32BitPunAsFloat = new Float32Array(float32BitPunBuffer);
@@ -464,23 +478,33 @@ class PlaneMaterialFactory {
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
+      // getDataTextures() lazily sets up dataLayer.layerRenderingManager.textureBucketManager
+      // if needed -- must be called before reading .textureBucketManager below.
       const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
       sharedLookUpTexture = lookUpTexture;
       sharedLookUpCuckooTable = dataLayer.layerRenderingManager.getSharedLookUpCuckooTable();
       const layerName = sanitizeName(name);
-      this.uniforms[`${layerName}_textures`] = {
-        value: dataTextures,
-      };
-      // Segmentation layers still have their own named _data_texture_width
-      // uniform too (see setupUniforms); harmless to also set it here for
-      // color layers even though it's unused by the shader.
-      this.uniforms[`${layerName}_data_texture_width`] = {
-        value: dataLayer.layerRenderingManager.textureWidth,
-      };
+      // The *actual* texture width in use: layerRenderingManager.textureWidth
+      // is stale for pooled color layers (it holds the legacy, per-layer-
+      // optimized width computed at dataset load, before pooling), whereas
+      // textureBucketManager.textureWidth reflects the real value (the fixed
+      // COLOR_LAYER_POOL_TEXTURE_WIDTH for color layers, the legacy value for
+      // segmentation layers).
+      const actualTextureWidth = dataLayer.layerRenderingManager.textureBucketManager.textureWidth;
+      if (dataLayer.isSegmentation) {
+        // Color layers no longer have a dedicated <name>_textures uniform
+        // (see pool_*_textures in main_data_shaders.glsl.ts); only
+        // segmentation layers still need this.
+        this.uniforms[`${layerName}_textures`] = {
+          value: dataTextures,
+        };
+        this.uniforms[`${layerName}_data_texture_width`] = {
+          value: actualTextureWidth,
+        };
+      }
       const compiledIdx = compiledIdxByName.get(layerName);
       if (compiledIdx != null) {
-        this.uniforms.layerDataTextureWidth.value[compiledIdx] =
-          dataLayer.layerRenderingManager.textureWidth;
+        this.uniforms.layerDataTextureWidth.value[compiledIdx] = actualTextureWidth;
       }
     }
 
@@ -491,6 +515,15 @@ class PlaneMaterialFactory {
     this.uniforms.lookup_texture = {
       value: sharedLookUpTexture,
     };
+
+    const poolTextureManagers = getColorLayerPoolTextureManagers();
+    for (const [pool, poolName] of COLOR_LAYER_POOL_UNIFORM_NAME_BY_POOL) {
+      const poolTextureManager = poolTextureManagers.get(pool);
+      if (poolTextureManager == null) {
+        throw new Error(`No PoolTextureManager found for pool ${pool}.`);
+      }
+      this.uniforms[poolName] = { value: poolTextureManager.textureArray };
+    }
 
     this.unsubscribeColorSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {
       this.uniforms.lookup_seeds = {
@@ -1223,16 +1256,20 @@ class PlaneMaterialFactory {
 
   getLayersToRender(maximumLayerCountToRender: number): [Array<string>, Array<string>, number] {
     // This function determines for which layers
-    // the shader code should be compiled/declared. If the GPU supports
-    // all layers, we can simply declare all layers here -- which (up to
+    // the shader code should be compiled/declared. Color layers are always
+    // fully declared: they're backed by 5 shared, fixed-cost texture-array
+    // pools (see PoolTextureManager), so declaring more of them doesn't
+    // consume additional GPU texture units -- which (up to
     // maxActiveColorLayers) of them are actually blended each frame is a
     // separate, purely uniform-driven concern (see getColorRenderOrder).
-    // Otherwise, we prioritize layers to declare by taking
-    // into account (a) which layers are activated and (b) which
-    // layers were least-recently activated (but are now disabled).
+    // Segmentation layers still use dedicated per-layer textures (deferred,
+    // see getSegmentId_<name> in segmentation.glsl.ts), so if the GPU can't
+    // fit all of them, we prioritize which to declare by taking into account
+    // (a) which layers are activated and (b) which layers were
+    // least-recently activated (but are now disabled).
     // The first array contains the color layer names and the second the segmentation layer names.
     // The third parameter returns the number of globally available layers (this is not always equal
-    // to the sum of the lengths of the first two arrays, as not all layers might be declared.)
+    // to the sum of the lengths of the first two arrays, as not all segmentation layers might be declared.)
     const state = Store.getState();
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
@@ -1240,7 +1277,7 @@ class PlaneMaterialFactory {
     );
     const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;
     if (maximumLayerCountToRender <= 0) {
-      return [[], [], globalLayerCount];
+      return [colorLayerNames, [], globalLayerCount];
     }
 
     if (maximumLayerCountToRender >= globalLayerCount) {
@@ -1272,12 +1309,12 @@ class PlaneMaterialFactory {
       .slice(0, maximumLayerCountToRender)
       .sort();
 
-    const [sanitizedColorLayerNames, sanitizedSegmentationLayerNames] = partition(
+    const [, sanitizedSegmentationLayerNames] = partition(
       names,
       ({ isSegmentationLayer }) => !isSegmentationLayer,
     ).map((layers) => layers.map(({ name }) => sanitizeName(name)));
 
-    return [sanitizedColorLayerNames, sanitizedSegmentationLayerNames, globalLayerCount];
+    return [colorLayerNames, sanitizedSegmentationLayerNames, globalLayerCount];
   }
 
   // Computes, from the currently *declared* color layers (this.compiledColorLayerNames),

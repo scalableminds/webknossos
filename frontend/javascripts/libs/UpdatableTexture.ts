@@ -4,6 +4,7 @@ import {
   type MagnificationTextureFilter,
   type Mapping,
   type MinificationTextureFilter,
+  NearestFilter,
   type PixelFormat,
   Texture,
   type TextureDataType,
@@ -118,8 +119,106 @@ class UpdatableTexture extends Texture {
   }
 }
 
-export function notifyAboutDisposedRenderer() {
-  originalTexSubImage2D = null;
+/* Array-texture (sampler2DArray) analogue of UpdatableTexture above, used to
+ * back a color-layer texture pool (see pool_texture_manager.ts): many
+ * layers' buckets are written into (sub-rectangle, single-slice) regions of
+ * one shared depth-many-layers 3D texture, addressed by (x, y, zOffset).
+ * Mirrors UpdatableTexture's approach of allocating once via texStorage3D
+ * (through three.js' renderer.initTexture) and then bypassing three.js'
+ * normal update path with direct gl.texSubImage3D calls for every partial
+ * write, since three.js' own DataArrayTexture only supports replacing whole
+ * width x height slices (via layerUpdates), not sub-rectangles within one.
+ */
+let originalTexSubImage3D: WebGL2RenderingContext["texSubImage3D"] | null = null;
+
+class UpdatableTextureArray extends Texture {
+  isUpdatableTexture: boolean = true;
+  isDataArrayTexture: boolean = true;
+  renderer!: WebGLRenderer;
+  gl!: WebGL2RenderingContext;
+  utils!: WebGLUtils;
+  width: number | undefined;
+  height: number | undefined;
+  depth: number | undefined;
+
+  constructor(
+    width: number,
+    height: number,
+    depth: number,
+    format?: PixelFormat,
+    type?: TextureDataType,
+  ) {
+    const imageData = { width, height, depth, data: new Uint32Array(0) };
+
+    super(
+      // @ts-expect-error
+      imageData,
+    );
+    this.format = format ?? this.format;
+    this.type = type ?? this.type;
+
+    // NearestFilter (not the Texture default of Linear*) since these
+    // textures are only ever read via texelFetch, and Linear filtering
+    // without a generated mipmap chain risks an incomplete-texture sampler.
+    this.magFilter = NearestFilter;
+    this.minFilter = NearestFilter;
+    this.generateMipmaps = false;
+    this.flipY = false;
+    this.unpackAlignment = 1;
+    this.needsUpdate = true;
+  }
+
+  setRenderer(renderer: WebGLRenderer) {
+    this.renderer = renderer;
+    this.gl = this.renderer.getContext() as WebGL2RenderingContext;
+    this.utils = new WebGLUtils(this.gl, this.renderer.extensions);
+  }
+
+  isInitialized() {
+    return (this.renderer.properties.get(this) as any).__webglTexture != null;
+  }
+
+  update(src: TypedArray, x: number, y: number, width: number, height: number, zOffset: number) {
+    if (originalTexSubImage3D == null) {
+      // See explanation at declaration of originalTexSubImage3D.
+      originalTexSubImage3D = this.gl.texSubImage3D.bind(this.gl);
+      this.gl.texSubImage3D = (...args) => {
+        // @ts-expect-error
+        if (args.length >= 10 && args[9]?.data?.length === 0) {
+          return;
+        }
+        // @ts-expect-error
+        return originalTexSubImage3D(...args);
+      };
+    }
+    if (!this.isInitialized()) {
+      this.renderer.initTexture(this);
+    }
+    const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D_ARRAY);
+    const textureProperties = this.renderer.properties.get(this) as any;
+    this.gl.bindTexture(this.gl.TEXTURE_2D_ARRAY, textureProperties.__webglTexture);
+
+    originalTexSubImage3D(
+      this.gl.TEXTURE_2D_ARRAY,
+      0,
+      x,
+      y,
+      zOffset,
+      width,
+      height,
+      1,
+      this.utils.convert(this.format) as number,
+      this.utils.convert(this.type) as number,
+      src,
+    );
+    this.gl.bindTexture(this.gl.TEXTURE_2D_ARRAY, activeTexture);
+  }
 }
 
+export function notifyAboutDisposedRenderer() {
+  originalTexSubImage2D = null;
+  originalTexSubImage3D = null;
+}
+
+export { UpdatableTextureArray };
 export default UpdatableTexture;

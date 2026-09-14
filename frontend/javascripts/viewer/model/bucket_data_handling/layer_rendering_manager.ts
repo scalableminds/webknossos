@@ -12,7 +12,12 @@ import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
 import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
-import type { BucketAddress, Vector3, Vector4, ViewMode } from "viewer/constants";
+import constants, {
+  type BucketAddress,
+  type Vector3,
+  type Vector4,
+  type ViewMode,
+} from "viewer/constants";
 import {
   getElementClass,
   getLayerByName,
@@ -21,6 +26,13 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import {
+  COLOR_LAYER_POOL_TEXTURE_WIDTH,
+  COLOR_LAYER_POOLS,
+  type ColorLayerPool,
+  computeColorLayerPoolAssignments,
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
+import PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
 import shaderEditor from "viewer/model/helpers/shader_editor";
@@ -57,6 +69,33 @@ export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
 const getSharedLookUpCuckooTable = memoizeOne(
   () => new CuckooTableVec5(LOOKUP_CUCKOO_TEXTURE_WIDTH),
 );
+
+// Lazily-initialized singleton, computed once per dataset (see
+// computeColorLayerPoolAssignments for why the pool depths -- and therefore
+// the pools themselves -- can't be grown incrementally afterwards). Maps
+// every *color* layer to a reserved slice range within one of the 5 shared
+// dtype pools; segmentation layers keep their own dedicated textures.
+const getColorLayerPoolPlan = memoizeOne(() => {
+  const { dataset, userConfiguration } = Store.getState();
+  const requiredBucketCapacity =
+    constants.GPU_FACTOR_MULTIPLIER *
+    (userConfiguration.gpuMemoryFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR);
+  const { assignmentByLayerName, poolDepths } = computeColorLayerPoolAssignments(
+    dataset.dataSource.dataLayers,
+    requiredBucketCapacity,
+  );
+  const poolTextureManagers = new Map<ColorLayerPool, PoolTextureManager>(
+    COLOR_LAYER_POOLS.map((pool) => [pool, new PoolTextureManager(pool, poolDepths[pool])]),
+  );
+  return { assignmentByLayerName, poolTextureManagers };
+});
+
+// Used by PlaneMaterialFactory to attach the (dataset-wide, shared) pool
+// textures as uniforms -- unlike per-layer textures, these aren't reached via
+// any single layer's LayerRenderingManager.
+export function getColorLayerPoolTextureManagers(): Map<ColorLayerPool, PoolTextureManager> {
+  return getColorLayerPoolPlan().poolTextureManagers;
+}
 
 function consumeBucketsFromArrayBuffer(
   buffer: ArrayBuffer,
@@ -161,11 +200,33 @@ export default class LayerRenderingManager {
   setupDataTextures(): void {
     const { dataset } = Store.getState();
     const elementClass = getElementClass(dataset, this.name);
-    this.textureBucketManager = new TextureBucketManager(
-      this.textureWidth,
-      this.dataTextureCount,
-      elementClass,
-    );
+
+    if (this.cube.isSegmentation) {
+      // Segmentation layers keep their own dedicated per-layer textures for
+      // now (see getSegmentId_<name> in segmentation.glsl.ts, which is still
+      // generated per layer name).
+      this.textureBucketManager = new TextureBucketManager(
+        this.textureWidth,
+        this.dataTextureCount,
+        elementClass,
+      );
+    } else {
+      const { assignmentByLayerName, poolTextureManagers } = getColorLayerPoolPlan();
+      const assignment = assignmentByLayerName.get(this.name);
+      if (assignment == null) {
+        throw new Error(`No color layer pool assignment found for layer ${this.name}.`);
+      }
+      const poolTextureManager = poolTextureManagers.get(assignment.pool);
+      if (poolTextureManager == null) {
+        throw new Error(`No PoolTextureManager found for pool ${assignment.pool}.`);
+      }
+      this.textureBucketManager = new TextureBucketManager(
+        COLOR_LAYER_POOL_TEXTURE_WIDTH,
+        assignment.dataTextureCount,
+        elementClass,
+        { poolTextureManager, baseSlice: assignment.baseSlice },
+      );
+    }
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);
 
@@ -300,6 +361,7 @@ export default class LayerRenderingManager {
       this.textureBucketManager.destroy();
     }
     getSharedLookUpCuckooTable.clear();
+    getColorLayerPoolPlan.clear();
     asyncBucketPick.clear();
     shaderEditor.destroy();
     this.colorCuckooTable = undefined;

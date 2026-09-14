@@ -162,15 +162,13 @@ function getDataTextureCount(
   );
 }
 
-// Color layer texture pooling: instead of giving every color layer its own
-// dedicated sampler2D texture array (which scales the shader's texture-unit
-// usage with the number of *declared* layers, not just the *active* ones),
-// buckets of all color layers sharing the same physical GPU texture format
-// are written into one shared sampler2DArray per pool. There are only as
-// many pools as there are distinct physical formats, independent of how many
-// layers/datasets use them. Segmentation layers are not pooled (yet) -- see
-// getSegmentId_<name> in segmentation.glsl.ts, which is still generated per
-// layer name.
+// Layer texture pooling: instead of giving every layer (color or
+// segmentation) its own dedicated sampler2D texture array (which scales the
+// shader's texture-unit usage with the number of *declared* layers, not just
+// the *active* ones), buckets of all layers sharing the same physical GPU
+// texture format are written into one shared sampler2DArray per pool. There
+// are only as many pools as there are distinct physical formats, independent
+// of how many layers/datasets use them.
 export enum ColorLayerPool {
   F32 = 0,
   U8 = 1,
@@ -290,6 +288,59 @@ export function getDataTextureCountForFixedWidth(
   requiredBucketCapacity: number,
 ): number {
   return getDataTextureCount(COLOR_LAYER_POOL_TEXTURE_WIDTH, packingDegree, requiredBucketCapacity);
+}
+
+// Every layer is now pool-backed regardless of whether it's actively
+// rendered (see computeColorLayerPoolAssignments), so a *fixed* per-layer
+// bucket budget would make total GPU memory scale linearly with the
+// dataset's total layer count -- fine for a handful of layers, but with
+// e.g. 22 layers this can exceed the GPU's texture-array memory budget and
+// crash/lose the WebGL context. Instead, treat gpuMemoryFactor as sizing a
+// *total* budget for BASELINE_LAYER_COUNT layers, and divide that budget
+// across however many layers actually exist -- unchanged behavior up to
+// BASELINE_LAYER_COUNT layers, shrinking per-layer capacity gracefully
+// beyond that. MINIMUM_BUCKET_CAPACITY_PER_LAYER keeps a floor so pathological
+// layer counts don't starve buckets to the point of constant reloading.
+const BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY = 4;
+const MINIMUM_BUCKET_CAPACITY_PER_LAYER = 128;
+
+// Shared by getRequiredBucketCapacityPerLayer (GPU texture-pool depth) and
+// getBucketCountSoftLimitPerLayer (DataCube's RAM bucket cache size): both
+// budgets were originally sized as a fixed per-layer constant, which is fine
+// up to BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY layers but scales memory
+// linearly with total layer count beyond that -- with e.g. 22 layers this
+// can exceed available VRAM/RAM. Treat perLayerBudgetAtBaseline as sizing a
+// *total* budget for BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY layers, and
+// divide that budget across however many layers actually exist.
+function scalePerLayerBudgetByLayerCount(
+  perLayerBudgetAtBaseline: number,
+  layerCount: number,
+): number {
+  if (layerCount <= BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY) {
+    return perLayerBudgetAtBaseline;
+  }
+  const totalBudget = perLayerBudgetAtBaseline * BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY;
+  return Math.max(MINIMUM_BUCKET_CAPACITY_PER_LAYER, Math.floor(totalBudget / layerCount));
+}
+
+export function getRequiredBucketCapacityPerLayer(
+  gpuMemoryFactor: number,
+  layerCount: number,
+): number {
+  return scalePerLayerBudgetByLayerCount(
+    constants.GPU_FACTOR_MULTIPLIER * gpuMemoryFactor,
+    layerCount,
+  );
+}
+
+// Analogous scaling for DataCube.BUCKET_COUNT_SOFT_LIMIT (the number of
+// buckets a layer's cube keeps resident in CPU RAM before garbage-collecting
+// older ones) -- without this, a dataset with many layers could keep
+// MAXIMUM_BUCKET_COUNT_PER_LAYER buckets per layer all in RAM simultaneously,
+// which scales linearly with layer count the same way the GPU-side capacity
+// used to.
+export function getBucketCountSoftLimitPerLayer(layerCount: number): number {
+  return scalePerLayerBudgetByLayerCount(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, layerCount);
 }
 
 export type ColorLayerPoolAssignment = {

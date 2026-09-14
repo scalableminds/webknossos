@@ -107,7 +107,12 @@ const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
 // Fixed, compile-time upper bound (see Params.maxActiveColorLayers in
 // main_data_shaders.glsl.ts) for how many color layers can be simultaneously
 // blended, independent of how many color layers the dataset actually has.
-const MAX_ACTIVE_COLOR_LAYERS = 8;
+// Cheap to raise (the blend loop's runtime cost scales with
+// activeColorLayerCount, not this constant; see getColorRenderOrder) -- the
+// real constraint on how many layers a dataset can comfortably use is GPU
+// memory (see getRequiredBucketCapacityPerLayer in data_rendering_logic.ts),
+// not this cap.
+const MAX_ACTIVE_COLOR_LAYERS = 32;
 
 // Must match the pool_*_textures uniform names declared in
 // SHARED_UNIFORM_DECLARATIONS (main_data_shaders.glsl.ts).

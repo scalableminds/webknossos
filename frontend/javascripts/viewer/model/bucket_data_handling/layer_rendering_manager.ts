@@ -31,6 +31,7 @@ import {
   COLOR_LAYER_POOLS,
   type ColorLayerPool,
   computeColorLayerPoolAssignments,
+  getRequiredBucketCapacityPerLayer,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
@@ -77,9 +78,10 @@ const getSharedLookUpCuckooTable = memoizeOne(
 // dtype pools; segmentation layers keep their own dedicated textures.
 const getColorLayerPoolPlan = memoizeOne(() => {
   const { dataset, userConfiguration } = Store.getState();
-  const requiredBucketCapacity =
-    constants.GPU_FACTOR_MULTIPLIER *
-    (userConfiguration.gpuMemoryFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR);
+  const requiredBucketCapacity = getRequiredBucketCapacityPerLayer(
+    userConfiguration.gpuMemoryFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
+    dataset.dataSource.dataLayers.length,
+  );
   const { assignmentByLayerName, poolDepths } = computeColorLayerPoolAssignments(
     dataset.dataSource.dataLayers,
     requiredBucketCapacity,

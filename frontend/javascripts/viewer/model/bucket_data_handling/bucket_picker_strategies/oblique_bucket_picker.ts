@@ -31,6 +31,8 @@ const ROTATIONS = {
   ] as Matrix4x4,
 };
 
+export type ScanLineCallback = (a: Vector3, b: Vector3) => void;
+
 export default function determineBucketsForPlane(
   loadingStrategy: LoadingStrategy,
   denseMags: Array<Vector3>,
@@ -40,6 +42,7 @@ export default function determineBucketsForPlane(
   logZoomStep: number,
   rects: PlaneRects,
   abortLimit?: number,
+  onScanLine?: ScanLineCallback,
 ): void {
   let zoomStepDiff = 0;
 
@@ -54,8 +57,10 @@ export default function determineBucketsForPlane(
       zoomStepDiff,
       rects,
       abortLimit,
+      onScanLine,
     );
     zoomStepDiff++;
+    return;
   }
 }
 
@@ -69,6 +74,7 @@ function addNecessaryBucketsToPriorityQueuePlane(
   zoomStepDiff: number,
   rects: PlaneRects,
   abortLimit?: number,
+  onScanLine?: ScanLineCallback,
 ): void {
   const logZoomStep = nonFallbackLogZoomStep + zoomStepDiff;
 
@@ -114,18 +120,19 @@ function addNecessaryBucketsToPriorityQueuePlane(
       queryMatrix,
       range(steps + 1).flatMap((idx) => [
         // Cast lines at z=-10
-        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
-        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
+        // [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
+        // [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
         // Cast lines at z=0
         [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
         [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
         // Cast lines at z=10
-        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
-        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
+        // [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
+        // [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
       ]),
     );
 
     for (const [a, b] of chunk2(scanLinesPoints)) {
+      onScanLine?.(a, b);
       for (const bucketAddress of traverse(a, b, denseMags, logZoomStep)) {
         const bucketHash = hashPosition(bucketAddress);
         if (seenBucketHashes.has(bucketHash)) {

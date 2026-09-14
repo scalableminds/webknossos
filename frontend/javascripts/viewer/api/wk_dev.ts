@@ -18,9 +18,12 @@ export const WkDevFlags = {
   },
   bucketDebugging: {
     // For visualizing buckets which are passed to the GPU
-    visualizeBucketsOnGPU: false,
+    visualizeBucketsOnGPU: true,
     // For visualizing buckets which are prefetched
     visualizePrefetchedBuckets: false,
+    // For visualizing the scan lines that are used to determine which buckets
+    // to load for oblique (non-axis-aligned) planes
+    visualizeScanLines: true,
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,

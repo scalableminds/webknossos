@@ -47,7 +47,8 @@ function pick(
   logZoomStep: number,
   loadingStrategy: LoadingStrategy,
   rects: PlaneRects,
-): ArrayBuffer {
+  collectScanLines?: boolean,
+): { buffer: ArrayBuffer; scanLines: Array<[Vector3, Vector3]> } {
   const bucketQueue = new PriorityQueue({
     // small priorities take precedence
     comparator,
@@ -59,6 +60,11 @@ function pick(
       priority,
     });
   };
+
+  const scanLines: Array<[Vector3, Vector3]> = [];
+  const onScanLine = collectScanLines
+    ? (a: Vector3, b: Vector3) => scanLines.push([a, b])
+    : undefined;
 
   if (viewMode === constants.MODE_FLIGHT) {
     determineBucketsForFlight(
@@ -78,10 +84,12 @@ function pick(
       matrix,
       logZoomStep,
       rects,
+      undefined,
+      onScanLine,
     );
   }
 
-  return dequeueToArrayBuffer(bucketQueue);
+  return { buffer: dequeueToArrayBuffer(bucketQueue), scanLines };
 }
 
 export default expose(pick);

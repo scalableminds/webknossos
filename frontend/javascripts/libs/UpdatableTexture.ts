@@ -1,4 +1,6 @@
 import {
+  ByteType,
+  FloatType,
   LinearFilter,
   LinearMipMapLinearFilter,
   type MagnificationTextureFilter,
@@ -6,13 +8,39 @@ import {
   type MinificationTextureFilter,
   NearestFilter,
   type PixelFormat,
+  ShortType,
   Texture,
   type TextureDataType,
+  UnsignedShortType,
   type WebGLRenderer,
   WebGLUtils,
   type Wrapping,
 } from "three";
 import type { TypedArray } from "viewer/constants";
+
+// The placeholder "dummy" image data these classes construct with is always
+// zero-length (see the comment below), but WebGL still validates that the
+// ArrayBufferView's class matches the texture's declared type, even for a
+// zero-length buffer. Passing a mismatched TypedArray (e.g. Uint32Array for
+// a FloatType texture) causes three.js' own internal upload path (which
+// unavoidably runs once, the first time the texture is bound, before any
+// real data has been written via update() below) to log a
+// "texSubImage(2|3)D: type X but ArrayBufferView not Y" WebGL error.
+function createEmptyTypedArrayForTextureType(type: TextureDataType | undefined): TypedArray {
+  switch (type) {
+    case FloatType:
+      return new Float32Array(0);
+    case ByteType:
+      return new Int8Array(0);
+    case ShortType:
+      return new Int16Array(0);
+    case UnsignedShortType:
+      return new Uint16Array(0);
+    default:
+      // Covers UnsignedByteType, three.js' own default texture type.
+      return new Uint8Array(0);
+  }
+}
 
 /* The UpdatableTexture class exposes a way to partially update a texture.
  * Since we use this class for data which is usually only available in chunks,
@@ -50,7 +78,7 @@ class UpdatableTexture extends Texture {
     minFilter?: MinificationTextureFilter,
     anisotropy?: number,
   ) {
-    const imageData = { width, height, data: new Uint32Array(0) };
+    const imageData = { width, height, data: createEmptyTypedArrayForTextureType(type) };
 
     super(
       // @ts-expect-error
@@ -158,7 +186,7 @@ class UpdatableTextureArray extends Texture {
     format?: PixelFormat,
     type?: TextureDataType,
   ) {
-    const imageData = { width, height, depth, data: new Uint32Array(0) };
+    const imageData = { width, height, depth, data: createEmptyTypedArrayForTextureType(type) };
 
     super(
       // @ts-expect-error

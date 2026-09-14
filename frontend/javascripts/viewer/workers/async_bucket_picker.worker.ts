@@ -3,7 +3,8 @@ import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
+import determineBucketsForPlaneWithScanLines from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
+import determineBucketsForPlaneWithFloodFill from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_flood_fill";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { expose } from "./comlink_core";
 
@@ -48,6 +49,7 @@ function pick(
   loadingStrategy: LoadingStrategy,
   rects: PlaneRects,
   collectScanLines?: boolean,
+  obliquePickerStrategy?: "scanLines" | "floodFill",
 ): { buffer: ArrayBuffer; scanLines: Array<[Vector3, Vector3]> } {
   const bucketQueue = new PriorityQueue({
     // small priorities take precedence
@@ -76,6 +78,10 @@ function pick(
       logZoomStep,
     );
   } else {
+    const determineBucketsForPlane =
+      obliquePickerStrategy === "floodFill"
+        ? determineBucketsForPlaneWithFloodFill
+        : determineBucketsForPlaneWithScanLines;
     determineBucketsForPlane(
       loadingStrategy,
       denseMags,

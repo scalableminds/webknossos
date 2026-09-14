@@ -21,9 +21,14 @@ export const WkDevFlags = {
     visualizeBucketsOnGPU: true,
     // For visualizing buckets which are prefetched
     visualizePrefetchedBuckets: false,
-    // For visualizing the scan lines that are used to determine which buckets
-    // to load for oblique (non-axis-aligned) planes
+    // For visualizing the scan lines / flood-fill traversal that are used to determine
+    // which buckets to load for oblique (non-axis-aligned) planes
     visualizeScanLines: true,
+    // Which strategy to use for picking the buckets of an oblique (non-axis-aligned) plane.
+    // "scanLines" samples the plane with a set of parallel lines; "floodFill" walks
+    // neighbouring buckets outwards from the camera position, keeping only the ones whose
+    // box actually intersects the plane. See oblique_bucket_picker(_flood_fill).ts.
+    obliquePickerStrategy: "floodFill" as "scanLines" | "floodFill",
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,

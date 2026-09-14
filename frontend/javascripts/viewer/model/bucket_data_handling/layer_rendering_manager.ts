@@ -259,6 +259,7 @@ export default class LayerRenderingManager {
             datasetConfiguration.loadingStrategy,
             rects,
             WkDevFlags.bucketDebugging.visualizeScanLines,
+            WkDevFlags.bucketDebugging.obliquePickerStrategy,
           ),
         );
       }

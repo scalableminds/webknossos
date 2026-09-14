@@ -29,7 +29,7 @@ import shaderEditor from "viewer/model/helpers/shader_editor";
 import Store, { type PlaneRects, type SegmentMap } from "viewer/store";
 import { createWorker } from "viewer/workers/comlink_wrapper";
 import type AsyncBucketPicker from "../../workers/async_bucket_picker.worker";
-import { pick as pickBucketsOnMainThread } from "../../workers/async_bucket_picker.worker";
+import { pick as pickBucketsOnMainThread } from "../../workers/async_bucket_picker_core";
 import {
   getTransformsForLayer,
   invertAndTranspose,

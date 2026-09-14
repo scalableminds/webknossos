@@ -201,32 +201,24 @@ export default class LayerRenderingManager {
     const { dataset } = Store.getState();
     const elementClass = getElementClass(dataset, this.name);
 
-    if (this.cube.isSegmentation) {
-      // Segmentation layers keep their own dedicated per-layer textures for
-      // now (see getSegmentId_<name> in segmentation.glsl.ts, which is still
-      // generated per layer name).
-      this.textureBucketManager = new TextureBucketManager(
-        this.textureWidth,
-        this.dataTextureCount,
-        elementClass,
-      );
-    } else {
-      const { assignmentByLayerName, poolTextureManagers } = getColorLayerPoolPlan();
-      const assignment = assignmentByLayerName.get(this.name);
-      if (assignment == null) {
-        throw new Error(`No color layer pool assignment found for layer ${this.name}.`);
-      }
-      const poolTextureManager = poolTextureManagers.get(assignment.pool);
-      if (poolTextureManager == null) {
-        throw new Error(`No PoolTextureManager found for pool ${assignment.pool}.`);
-      }
-      this.textureBucketManager = new TextureBucketManager(
-        COLOR_LAYER_POOL_TEXTURE_WIDTH,
-        assignment.dataTextureCount,
-        elementClass,
-        { poolTextureManager, baseSlice: assignment.baseSlice },
-      );
+    // Both color and segmentation layers write their buckets into the
+    // shared, dtype-keyed texture-array pools (see getSegmentId/
+    // getRgbaAtXYIndex in segmentation.glsl.ts/texture_access.glsl.ts).
+    const { assignmentByLayerName, poolTextureManagers } = getColorLayerPoolPlan();
+    const assignment = assignmentByLayerName.get(this.name);
+    if (assignment == null) {
+      throw new Error(`No layer pool assignment found for layer ${this.name}.`);
     }
+    const poolTextureManager = poolTextureManagers.get(assignment.pool);
+    if (poolTextureManager == null) {
+      throw new Error(`No PoolTextureManager found for pool ${assignment.pool}.`);
+    }
+    this.textureBucketManager = new TextureBucketManager(
+      COLOR_LAYER_POOL_TEXTURE_WIDTH,
+      assignment.dataTextureCount,
+      elementClass,
+      { poolTextureManager, baseSlice: assignment.baseSlice },
+    );
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);
 

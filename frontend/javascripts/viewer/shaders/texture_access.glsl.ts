@@ -30,59 +30,17 @@ const linearizeVec3ToIndexWithMod: ShaderModule = {
 
 const getRgbaAtXYIndex: ShaderModule = {
   code: `
-    // Color layers read from one of 5 shared, dtype-keyed sampler2DArray
-    // pools (see layerPoolId/COLOR_LAYER_POOL_* in
+    // Every layer -- color or segmentation -- reads from one of 5 shared,
+    // dtype-keyed sampler2DArray pools (see layerPoolId/ColorLayerPool in
     // main_data_shaders.glsl.ts / data_rendering_logic.ts) via a single,
     // layer-count-independent dispatch -- no per-layer function/uniform
     // needed, since a texture array's slice index is a dynamic texture
-    // coordinate, not a compile-time sampler-array index.
-    //
-    // Segmentation layers are not pooled yet (deferred; see
-    // getSegmentId_<name> in segmentation.glsl.ts) and still get one
-    // generated function each, since iOS cannot handle
-    // sampler2D textures[dataTextureCountPerLayer] as a function parameter
-    // properly.
-
-    <% each(segmentationLayerNames, (name) => { %>
-      vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
-        // Since WebGL 1 doesn't allow dynamic texture indexing, we use an exhaustive if-else-construct
-        // here which checks for each case individually. The else-if-branches are constructed via
-        // lodash templates.
-
-        <%
-          const textureLayerInfo = textureLayerInfos[name];
-          const elementClass = textureLayerInfo.elementClass;
-        %>
-
-        <%= textureLayerInfo.glslPrefix %>vec4 val;
-        float dtype_normalizer = <%= formatNumberAsGLSLFloat(getDtypeNormalizerForLayer(textureLayerInfo)) %>;
-
-        <% if (textureLayerInfo.dataTextureCount === 1) { %>
-            // Don't use if-else when there is only one data texture anyway
-            val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
-
-            <% if (elementClass.endsWith("int16")) { %>
-              return vec4(val.x, 0., val.y, 0.);
-            <% } else { %>
-              return dtype_normalizer * vec4(val);
-            <% }%>
-        <% } else { %>
-          <% range(0, textureLayerInfo.dataTextureCount).forEach(textureIndex => { %>
-          <%= textureIndex > 0 ? "else" : "" %> if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-            val = texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0);
-            <% if (elementClass.endsWith("int16")) { %>
-              return vec4(val.x, 0., val.y, 0.);
-            <% } else { %>
-              return dtype_normalizer * vec4(val);
-            <% }%>
-          }
-          <% }) %>
-          return vec4(0.5, 0.0, 0.0, 0.0);
-        <% } %>
-      }
-    <% }); %>
-
-    vec4 getRgbaAtXYIndexPooled(uint poolId, float dtypeNormalizer, float textureIdx, float x, float y) {
+    // coordinate, not a compile-time sampler-array index (which is what
+    // used to require one generated function per layer here).
+    vec4 getRgbaAtXYIndex(float localLayerIndex, float textureIdx, float x, float y) {
+      uint idx = uint(localLayerIndex);
+      uint poolId = layerPoolId[idx];
+      float dtypeNormalizer = layerDtypeNormalizer[idx];
       ivec3 coord = ivec3(int(x), int(y), int(textureIdx));
       if (poolId == 0u) {
         // F32 pool: native float values, no rescaling.
@@ -101,33 +59,6 @@ const getRgbaAtXYIndex: ShaderModule = {
       }
       // U8 pool: hardware UNORM-decoded to [0, 1] already.
       return dtypeNormalizer * texelFetch(pool_u8_textures, coord, 0);
-    }
-
-    vec4 getRgbaAtXYIndex(float localLayerIndex, float textureIdx, float x, float y) {
-      uint idx = uint(localLayerIndex);
-      <% if (colorLayerNames.length > 0) { %>
-      if (idx < <%= colorLayerNames.length %>u) {
-        return getRgbaAtXYIndexPooled(
-          layerPoolId[idx],
-          layerDtypeNormalizer[idx],
-          textureIdx,
-          x,
-          y
-        );
-      }
-      <% } %>
-      <% if (segmentationLayerNames.length === 0) { %>
-      return vec4(0.0);
-      <% } else { %>
-      if (idx == <%= colorLayerNames.length %>u) {
-        return getRgbaAtXYIndex_<%= segmentationLayerNames[0] %>(textureIdx, x, y);
-      } <% each(segmentationLayerNames.slice(1), (name, index) => { %>
-        else if (idx == <%= colorLayerNames.length + index + 1 %>u) {
-          return getRgbaAtXYIndex_<%= name %>(textureIdx, x, y);
-        }
-      <% }); %>
-      return vec4(0.0);
-      <% } %>
     }
   `,
 };

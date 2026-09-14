@@ -12,12 +12,14 @@ import constants, {
   ViewModeValuesIndices,
 } from "viewer/constants";
 import {
+  COLOR_LAYER_POOL_TEXTURE_WIDTH,
   DTYPE_TAG_INT32,
   DTYPE_TAG_UINT24,
   DTYPE_TAG_UINT32,
   getColorLayerPoolForElementClass,
   getDtypeNormalizerForLayer,
   getDtypeTagForElementClass,
+  getSegmentIdDecodeTagForLayer,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { MAPPING_TEXTURE_WIDTH } from "viewer/model/bucket_data_handling/mappings";
@@ -123,7 +125,6 @@ uniform mat4 layerTransform[<%= globalLayerCount %>];
 uniform int layerHasTransformInt[<%= globalLayerCount %>];
 uniform vec3 layerBboxMin[<%= globalLayerCount %>];
 uniform vec3 layerBboxMax[<%= globalLayerCount %>];
-uniform float layerDataTextureWidth[<%= globalLayerCount %>];
 
 // Only the first colorLayerNames.length entries are meaningful; the
 // remaining (segmentation) entries are unused.
@@ -145,27 +146,15 @@ uniform float layerIsInverted[<%= globalLayerCount %>];
 uniform int colorRenderOrder[<%= maxActiveColorLayers %>];
 uniform int activeColorLayerCount;
 
-// Color layers read from 5 shared, dtype-keyed texture-array pools instead
-// of a dedicated sampler per layer -- see getRgbaAtXYIndex in
-// texture_access.glsl.ts. There are always exactly 5 of these regardless of
-// how many color layers the dataset has.
+// Every layer -- color or segmentation -- reads from one of 5 shared,
+// dtype-keyed texture-array pools instead of a dedicated sampler per layer
+// -- see getRgbaAtXYIndex in texture_access.glsl.ts. There are always
+// exactly 5 of these regardless of how many layers the dataset has.
 uniform highp sampler2DArray pool_f32_textures;
 uniform highp sampler2DArray pool_u8_textures;
 uniform highp sampler2DArray pool_s8_textures;
 uniform highp usampler2DArray pool_u16_textures;
 uniform highp isampler2DArray pool_s16_textures;
-
-// Segmentation layers are not pooled yet (getSegmentId_<name> in
-// segmentation.glsl.ts is still generated per layer name, deferred to a
-// follow-up), so they keep their own dedicated per-layer textures/uniforms.
-<% each(segmentationLayerNames, function(name) { %>
-  uniform highp <%= textureLayerInfos[name].glslPrefix %>sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
-  uniform float <%= name %>_data_texture_width;
-  uniform mat4 <%= name %>_transform;
-  uniform bool <%= name %>_has_transform;
-  uniform vec3 <%= name %>_bboxMin;
-  uniform vec3 <%= name %>_bboxMax;
-<% }) %>
 
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table
@@ -226,6 +215,11 @@ const vec3 voxelSizeFactorInverted = <%= formatVector3AsVec3(voxelSizeFactorInve
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
+// Fixed width/height shared by every color/segmentation-layer texture pool
+// (see COLOR_LAYER_POOL_TEXTURE_WIDTH in data_rendering_logic.ts); replaces
+// what used to be a per-layer d_texture_width uniform now that every layer
+// is pool-backed.
+const float POOL_TEXTURE_WIDTH = ${formatNumberAsGLSLFloat(COLOR_LAYER_POOL_TEXTURE_WIDTH)};
 
 // Static per-(always-declared)-layer metadata that only changes when the set
 // of dataset layers itself changes (i.e., exactly when a recompile already
@@ -237,6 +231,9 @@ const bool layerHasTpsTransform[<%= globalLayerCount %>] = bool[](<%= layerNames
 // getRgbaAtXYIndex in texture_access.glsl.ts.
 const uint layerPoolId[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getColorLayerPoolForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
 const float layerDtypeNormalizer[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(getDtypeNormalizerForLayer(textureLayerInfos[name])); }).join(", ") %>);
+// Only meaningful for segmentation layers (indices [colorLayerNames.length,
+// globalLayerCount)); see decodeSegmentId in segmentation.glsl.ts.
+const uint layerSegmentIdDecodeTag[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getSegmentIdDecodeTagForLayer(textureLayerInfos[name].elementClass, textureLayerInfos[name].isSigned) + "u"; }).join(", ") %>);
 `;
 
 export default function getMainFragmentShader(params: Params) {
@@ -297,44 +294,45 @@ void main() {
   }
   vec4 data_color = vec4(0.0);
 
-  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    uint <%= segmentationName %>_id_low = 0u;
-    uint <%= segmentationName %>_id_high = 0u;
-    uint <%= segmentationName %>_unmapped_id_low = 0u;
-    uint <%= segmentationName %>_unmapped_id_high = 0u;
-    float <%= segmentationName %>_effective_alpha = layerAlpha[<%= colorLayerNames.length + layerIndex %>] * (1. - layerUnrenderable[<%= colorLayerNames.length + layerIndex %>]);
+  <% if (segmentationLayerNames.length > 0) { %>
+  uint segmentIdLow[<%= segmentationLayerNames.length %>];
+  uint segmentIdHigh[<%= segmentationLayerNames.length %>];
+  uint unmappedIdLow[<%= segmentationLayerNames.length %>];
+  uint unmappedIdHigh[<%= segmentationLayerNames.length %>];
+
+  for (int segSlot = 0; segSlot < <%= segmentationLayerNames.length %>; segSlot++) {
+    segmentIdLow[segSlot] = 0u;
+    segmentIdHigh[segSlot] = 0u;
+    unmappedIdLow[segSlot] = 0u;
+    unmappedIdHigh[segSlot] = 0u;
+
+    int globalIdx = <%= colorLayerNames.length %> + segSlot;
+    float effectiveAlpha = layerAlpha[globalIdx] * (1. - layerUnrenderable[globalIdx]);
 
     // If the opacity is > 0, the segment id for the current voxel is read.
     // Since a segmentation might be mapped, the unmapped and (potentially mapped) id
     // is read.
-    if (<%= segmentationName %>_effective_alpha > 0.) {
+    if (effectiveAlpha > 0.) {
       vec4[2] unmapped_segment_id;
       vec4[2] segment_id;
-      getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
+      getSegmentId(globalIdx, worldCoordUVW, unmapped_segment_id, segment_id);
 
-      <%
-        // For 64-bit ids, signed and unsigned values are handled identically: the raw bit
-        // pattern is reinterpreted as unsigned (see uint64ToUint64 for why sign doesn't matter).
-        const vec4ToSomeIntFn =
-          textureLayerInfos[segmentationName].elementClass.endsWith("int64")
-            ? "uint64ToUint64"
-            : textureLayerInfos[segmentationName].isSigned ? "int32ToUint64" : "uint32ToUint64"
-      %>
+      uint decodeTag = layerSegmentIdDecodeTag[globalIdx];
 
-      // Temporary vars to which vec4ToSomeIntFn will write
+      // Temporary vars to which decodeSegmentId will write
       highp uint hpv_low;
       highp uint hpv_high;
 
-      <%= vec4ToSomeIntFn %>(unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
-      <%= segmentationName %>_unmapped_id_low = uint(hpv_low);
-      <%= segmentationName %>_unmapped_id_high = uint(hpv_high);
+      decodeSegmentId(decodeTag, unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
+      unmappedIdLow[segSlot] = hpv_low;
+      unmappedIdHigh[segSlot] = hpv_high;
 
-      <%= vec4ToSomeIntFn %>(segment_id[1], segment_id[0], hpv_low, hpv_high);
-      <%= segmentationName %>_id_low = uint(hpv_low);
-      <%= segmentationName %>_id_high = uint(hpv_high);
+      decodeSegmentId(decodeTag, segment_id[1], segment_id[0], hpv_low, hpv_high);
+      segmentIdLow[segSlot] = hpv_low;
+      segmentIdHigh[segSlot] = hpv_high;
     }
-
-  <% }) %>
+  }
+  <% } %>
 
   // Get Color Value(s). Which (up to maxActiveColorLayers) layers participate
   // and in what order is entirely uniform-driven (colorRenderOrder /
@@ -363,7 +361,7 @@ void main() {
         MaybeFilteredColor maybe_filtered_color =
           getMaybeFilteredColorOrFallback(
             float(layerIdx),
-            layerDataTextureWidth[layerIdx],
+            POOL_TEXTURE_WIDTH,
             layerPackingDegree[layerIdx],
             layerCoordUVW,
             fallbackGray,
@@ -446,37 +444,37 @@ void main() {
   gl_FragColor = data_color;
 
   <% if (hasSegmentation) { %>
-  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
+  for (int segSlot = 0; segSlot < <%= segmentationLayerNames.length %>; segSlot++) {
+    int globalIdx = <%= colorLayerNames.length %> + segSlot;
 
     // Color map (<= to fight rounding mistakes)
-    if ( <%= segmentationName %>_id_low != 0u || <%= segmentationName %>_id_high != 0u ) {
+    if ( segmentIdLow[segSlot] != 0u || segmentIdHigh[segSlot] != 0u ) {
       // Increase cell opacity when cell is hovered or if it is the active activeCell
-      bool isHoveredSegment = hoveredSegmentIdLow == <%= segmentationName %>_id_low
-        && hoveredSegmentIdHigh == <%= segmentationName %>_id_high;
-      bool isHoveredUnmappedSegment = hoveredUnmappedSegmentIdLow == <%= segmentationName %>_unmapped_id_low
-        && hoveredUnmappedSegmentIdHigh == <%= segmentationName %>_unmapped_id_high;
-      bool isActiveCell = activeCellIdLow == <%= segmentationName %>_id_low
-         && activeCellIdHigh == <%= segmentationName %>_id_high;
+      bool isHoveredSegment = hoveredSegmentIdLow == segmentIdLow[segSlot]
+        && hoveredSegmentIdHigh == segmentIdHigh[segSlot];
+      bool isHoveredUnmappedSegment = hoveredUnmappedSegmentIdLow == unmappedIdLow[segSlot]
+        && hoveredUnmappedSegmentIdHigh == unmappedIdHigh[segSlot];
+      bool isActiveCell = activeCellIdLow == segmentIdLow[segSlot]
+         && activeCellIdHigh == segmentIdHigh[segSlot];
       float alphaIncrement = getSegmentationAlphaIncrement(
-        layerAlpha[<%= colorLayerNames.length + layerIndex %>],
+        layerAlpha[globalIdx],
         isHoveredSegment,
         isHoveredUnmappedSegment,
         isActiveCell
       );
 
-      vec4 segmentColor = convertCellIdToRGB(<%= segmentationName %>_id_high, <%= segmentationName %>_id_low);
+      vec4 segmentColor = convertCellIdToRGB(segmentIdHigh[segSlot], segmentIdLow[segSlot]);
       gl_FragColor = vec4(mix(
         data_color.rgb,
         segmentColor.rgb,
-        layerAlpha[<%= colorLayerNames.length + layerIndex %>]  * segmentColor.a + alphaIncrement
+        layerAlpha[globalIdx]  * segmentColor.a + alphaIncrement
       ), 1.0);
     }
-    vec4 <%= segmentationName %>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
-    <%= segmentationName %>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow).rgb;
-    gl_FragColor = mix(gl_FragColor, <%= segmentationName %>_brushOverlayColor, <%= segmentationName %>_brushOverlayColor.a);
+    vec4 brushOverlayColor = getBrushOverlay(worldCoordUVW);
+    brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow).rgb;
+    gl_FragColor = mix(gl_FragColor, brushOverlayColor, brushOverlayColor.a);
     gl_FragColor.a = 1.0;
-
-  <% }) %>
+  }
 
   // This will only have an effect in proofreading mode
   vec4 crossHairOverlayColor = getProofreadingCrossHairOverlay(worldCoordUVW);
@@ -503,6 +501,7 @@ void main() {
     getDtypeTagForElementClass,
     getColorLayerPoolForElementClass,
     getDtypeNormalizerForLayer,
+    getSegmentIdDecodeTagForLayer,
     each,
     range,
   });
@@ -725,6 +724,7 @@ void main() {
     getDtypeTagForElementClass,
     getColorLayerPoolForElementClass,
     getDtypeNormalizerForLayer,
+    getSegmentIdDecodeTagForLayer,
     each,
     range,
   });

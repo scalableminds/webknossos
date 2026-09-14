@@ -299,18 +299,18 @@ export type ColorLayerPoolAssignment = {
   packingDegree: number;
 };
 
-// Computes, for every *color* layer, which pool it belongs to and which
-// contiguous range of that pool's texture-array slices ([baseSlice,
-// baseSlice + dataTextureCount)) is reserved for it, plus the resulting
-// total depth needed for each pool. Called once per dataset load (see
-// getColorLayerPoolPlan in layer_rendering_manager.ts) so that every pool's
-// sampler2DArray can be allocated with its final size immediately --
-// WebGL2's texStorage3D allocates immutable storage, so the depth can't
-// grow incrementally as layers are lazily set up. Segmentation layers are
-// not included; they keep their own dedicated per-layer textures (see
-// calculateTextureSizeAndCountForLayer), unaffected by this pooling.
+// Computes, for every layer (color AND segmentation -- both are pooled the
+// same way; only *how many* function/uniform generations a layer needs
+// differs, see getSegmentId in segmentation.glsl.ts), which pool it belongs
+// to and which contiguous range of that pool's texture-array slices
+// ([baseSlice, baseSlice + dataTextureCount)) is reserved for it, plus the
+// resulting total depth needed for each pool. Called once per dataset load
+// (see getColorLayerPoolPlan in layer_rendering_manager.ts) so that every
+// pool's sampler2DArray can be allocated with its final size immediately --
+// WebGL2's texStorage3D allocates immutable storage, so the depth can't grow
+// incrementally as layers are lazily set up.
 export function computeColorLayerPoolAssignments<
-  Layer extends { name: string; elementClass: ElementClass; category: "color" | "segmentation" },
+  Layer extends { name: string; elementClass: ElementClass },
 >(
   layers: Array<Layer>,
   requiredBucketCapacity: number,
@@ -328,9 +328,6 @@ export function computeColorLayerPoolAssignments<
   const assignmentByLayerName = new Map<string, ColorLayerPoolAssignment>();
 
   for (const layer of layers) {
-    if (layer.category !== "color") {
-      continue;
-    }
     const pool = getColorLayerPoolForElementClass(layer.elementClass);
     const { packingDegree } = getDtypeConfigForElementClass(layer.elementClass);
     const dataTextureCount = getDataTextureCountForFixedWidth(
@@ -343,6 +340,25 @@ export function computeColorLayerPoolAssignments<
   }
 
   return { assignmentByLayerName, poolDepths };
+}
+
+// Which decode function main_data_shaders.glsl.ts's segmentation-id loop
+// should call for a given segmentation layer's raw fetched bytes, mirroring
+// uint64ToUint64/int32ToUint64/uint32ToUint64 in segmentation.glsl.ts. For
+// 64-bit ids, signed and unsigned values are handled identically (the raw
+// bit pattern is reinterpreted as unsigned).
+export const SEGMENT_ID_DECODE_TAG_64BIT = 0;
+export const SEGMENT_ID_DECODE_TAG_SIGNED = 1;
+export const SEGMENT_ID_DECODE_TAG_UNSIGNED = 2;
+
+export function getSegmentIdDecodeTagForLayer(
+  elementClass: ElementClass,
+  isSigned: boolean,
+): number {
+  if (elementClass.endsWith("int64")) {
+    return SEGMENT_ID_DECODE_TAG_64BIT;
+  }
+  return isSigned ? SEGMENT_ID_DECODE_TAG_SIGNED : SEGMENT_ID_DECODE_TAG_UNSIGNED;
 }
 
 // Only exported for testing

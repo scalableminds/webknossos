@@ -13,7 +13,6 @@ import flattenDeep from "lodash-es/flattenDeep";
 import isEqual from "lodash-es/isEqual";
 import keyBy from "lodash-es/keyBy";
 import mapValues from "lodash-es/mapValues";
-import partition from "lodash-es/partition";
 import throttle from "lodash-es/throttle";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
 import type { ElementClass } from "types/api_types";
@@ -33,7 +32,6 @@ import {
   getColorLayers,
   getDataLayers,
   getElementClass,
-  getEnabledLayers,
   getLayerByName,
   getMagInfo,
   getMagInfoByLayer,
@@ -202,7 +200,6 @@ class PlaneMaterialFactory {
   attributes: Record<string, any> = {};
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
-  leastRecentlyVisibleLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
   oldFragmentShaderCode: string | null | undefined;
   oldVertexShaderCode: string | null | undefined;
   unsubscribeColorSeedsFn: (() => void) | null = null;
@@ -221,7 +218,6 @@ class PlaneMaterialFactory {
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
-    this.leastRecentlyVisibleLayers = [];
   }
 
   setup() {
@@ -233,9 +229,7 @@ class PlaneMaterialFactory {
   }
 
   refreshCompiledLayerNames(): void {
-    const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
-    const [colorLayerNames, segmentationLayerNames] =
-      this.getLayersToRender(maximumLayerCountToRender);
+    const [colorLayerNames, segmentationLayerNames] = this.getLayersToRender();
     this.compiledColorLayerNames = colorLayerNames;
     this.compiledSegmentationLayerNames = segmentationLayerNames;
   }
@@ -389,7 +383,6 @@ class PlaneMaterialFactory {
     const layerHasTransformInt: number[] = [];
     const layerBboxMin: ThreeVector3[] = [];
     const layerBboxMax: ThreeVector3[] = [];
-    const layerDataTextureWidth: number[] = [];
     const layerColor: ThreeVector3[] = [];
     const layerMin: number[] = [];
     const layerMax: number[] = [];
@@ -415,7 +408,6 @@ class PlaneMaterialFactory {
       const bbox = computeBoundingBoxFromBoundingBoxObject(layer.boundingBox);
       layerBboxMin.push(new ThreeVector3(...bbox.min));
       layerBboxMax.push(new ThreeVector3(...bbox.max));
-      layerDataTextureWidth.push(0);
 
       layerColor.push(DEFAULT_COLOR);
       layerMin.push(0.0);
@@ -430,7 +422,6 @@ class PlaneMaterialFactory {
     this.uniforms.layerHasTransformInt = { value: layerHasTransformInt };
     this.uniforms.layerBboxMin = { value: layerBboxMin };
     this.uniforms.layerBboxMax = { value: layerBboxMax };
-    this.uniforms.layerDataTextureWidth = { value: layerDataTextureWidth };
     this.uniforms.layerColor = { value: layerColor };
     this.uniforms.layerMin = { value: layerMin };
     this.uniforms.layerMax = { value: layerMax };
@@ -439,28 +430,6 @@ class PlaneMaterialFactory {
     const { colorRenderOrder, activeColorLayerCount } = this.getColorRenderOrder();
     this.uniforms.colorRenderOrder = { value: colorRenderOrder };
     this.uniforms.activeColorLayerCount = { value: activeColorLayerCount };
-
-    // getSegmentId_<name> in segmentation.glsl.ts is still generated per
-    // layer name (deferred, see main_data_shaders.glsl.ts), so segmentation
-    // layers keep their own named _transform/_has_transform/_bboxMin/_bboxMax/
-    // _data_texture_width uniforms in addition to the arrays above.
-    for (const layerName of this.compiledSegmentationLayerNames) {
-      const dataLayer = this.getDataLayerForSanitizedName(layerName);
-      const layer = getLayerByName(dataset, dataLayer.name);
-      const affineMatrix = getTransformsForLayer(
-        dataset,
-        layer,
-        nativelyRenderedLayerName,
-      ).affineMatrix;
-      const bbox = computeBoundingBoxFromBoundingBoxObject(layer.boundingBox);
-      this.uniforms[`${layerName}_transform`] = { value: invertAndTranspose(affineMatrix) };
-      this.uniforms[`${layerName}_has_transform`] = {
-        value: !isEqual(affineMatrix, Identity4x4),
-      };
-      this.uniforms[`${layerName}_bboxMin`] = { value: bbox.min };
-      this.uniforms[`${layerName}_bboxMax`] = { value: bbox.max };
-      this.uniforms[`${layerName}_data_texture_width`] = { value: 0 };
-    }
   }
 
   convertColor(color: Vector3): Vector3 {
@@ -470,42 +439,17 @@ class PlaneMaterialFactory {
   attachTextures(): void {
     let sharedLookUpTexture;
     let sharedLookUpCuckooTable;
-    // compiledIdx lookup for the layerDataTextureWidth[] array (only declared
-    // layers have a slot there; see setupUniforms).
-    const compiledIdxByName = new Map(
-      this.getCompiledLayerNames().map((layerName, idx) => [layerName, idx]),
-    );
-    // Add data and look up textures for each layer
+    // Every layer (color and segmentation alike) now writes into one of the
+    // shared pool_*_textures below, so there's nothing left to attach
+    // per-layer here -- just extract the shared lookup texture/cuckoo table
+    // (identical no matter which layer we ask).
     for (const dataLayer of Model.getAllLayers()) {
-      const { name } = dataLayer;
       // getDataTextures() lazily sets up dataLayer.layerRenderingManager.textureBucketManager
-      // if needed -- must be called before reading .textureBucketManager below.
-      const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
+      // if needed; the returned per-layer dataTextures are always empty now
+      // (pooled mode), only the shared lookup texture is used.
+      const [lookUpTexture] = dataLayer.layerRenderingManager.getDataTextures();
       sharedLookUpTexture = lookUpTexture;
       sharedLookUpCuckooTable = dataLayer.layerRenderingManager.getSharedLookUpCuckooTable();
-      const layerName = sanitizeName(name);
-      // The *actual* texture width in use: layerRenderingManager.textureWidth
-      // is stale for pooled color layers (it holds the legacy, per-layer-
-      // optimized width computed at dataset load, before pooling), whereas
-      // textureBucketManager.textureWidth reflects the real value (the fixed
-      // COLOR_LAYER_POOL_TEXTURE_WIDTH for color layers, the legacy value for
-      // segmentation layers).
-      const actualTextureWidth = dataLayer.layerRenderingManager.textureBucketManager.textureWidth;
-      if (dataLayer.isSegmentation) {
-        // Color layers no longer have a dedicated <name>_textures uniform
-        // (see pool_*_textures in main_data_shaders.glsl.ts); only
-        // segmentation layers still need this.
-        this.uniforms[`${layerName}_textures`] = {
-          value: dataTextures,
-        };
-        this.uniforms[`${layerName}_data_texture_width`] = {
-          value: actualTextureWidth,
-        };
-      }
-      const compiledIdx = compiledIdxByName.get(layerName);
-      if (compiledIdx != null) {
-        this.uniforms.layerDataTextureWidth.value[compiledIdx] = actualTextureWidth;
-      }
     }
 
     if (!sharedLookUpCuckooTable) {
@@ -803,12 +747,10 @@ class PlaneMaterialFactory {
         },
       ),
     );
-    const oldVisibilityPerLayer: Record<string, boolean> = {};
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (state) => state.datasetConfiguration.layers,
         (layerSettings) => {
-          let updatedLayerVisibility = false;
           const compiledIdxByName = new Map(
             this.getCompiledLayerNames().map((name, idx) => [name, idx]),
           );
@@ -816,43 +758,22 @@ class PlaneMaterialFactory {
             const settings = layerSettings[dataLayer.name];
 
             if (settings != null) {
-              const isLayerEnabled = !settings.isDisabled;
-              const isSegmentationLayer = dataLayer.isSegmentation;
-
-              if (
-                oldVisibilityPerLayer[dataLayer.name] != null &&
-                oldVisibilityPerLayer[dataLayer.name] !== isLayerEnabled
-              ) {
-                if (settings.isDisabled) {
-                  this.onDisableLayer(dataLayer.name, isSegmentationLayer);
-                } else {
-                  this.onEnableLayer(dataLayer.name);
-                }
-                updatedLayerVisibility = true;
-              }
-
-              oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
               const compiledIdx = compiledIdxByName.get(sanitizeName(dataLayer.name));
               if (compiledIdx != null) {
                 this.updateUniformsForLayer(
                   settings,
                   compiledIdx,
                   dataLayer.name,
-                  isSegmentationLayer,
+                  dataLayer.isSegmentation,
                 );
               }
             }
           }
-          if (updatedLayerVisibility) {
-            // The *declared* set of layers might have changed (only relevant
-            // when there are more layers than fit on the GPU simultaneously);
-            // recomputeShaders no-ops via string-equality otherwise.
-            this.recomputeShaders();
-          }
-          // Toggling visibility never needs to change which layers are
-          // declared in the shader (see above) -- just which (up to
-          // MAX_ACTIVE_COLOR_LAYERS) of them are actively blended, which is a
-          // pure uniform update.
+          // Every layer (color and segmentation) is always declared in the
+          // shader now (both are pool-backed, see getLayersToRender), so
+          // toggling visibility never needs a recompile -- just which (up to
+          // MAX_ACTIVE_COLOR_LAYERS) color layers are actively blended, which
+          // is a pure uniform update.
           this.updateColorRenderOrderUniform();
           app.vent.emit("rerender");
         },
@@ -1059,7 +980,6 @@ class PlaneMaterialFactory {
           const compiledIdxByName = new Map(
             this.getCompiledLayerNames().map((name, idx) => [name, idx]),
           );
-          const segmentationNameSet = new Set(this.compiledSegmentationLayerNames);
           let countOfLayersWithTransforms = 0;
           for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
             const layer = layers[layerIdx];
@@ -1086,13 +1006,6 @@ class PlaneMaterialFactory {
                 invertAndTranspose(affineMatrix),
               );
               this.uniforms.layerHasTransformInt.value[compiledIdx] = hasTransform ? 1 : 0;
-            }
-            // Segmentation layers additionally keep their own named uniform
-            // (see setupUniforms) since getSegmentId_<name> is still
-            // generated per layer name.
-            if (segmentationNameSet.has(name)) {
-              this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
-              this.uniforms[`${name}_has_transform`] = { value: hasTransform };
             }
           }
           this.uniforms.doAllLayersHaveTransforms = {
@@ -1254,67 +1167,20 @@ class PlaneMaterialFactory {
     app.vent.emit("rerender");
   }, RECOMPILATION_THROTTLE_TIME);
 
-  getLayersToRender(maximumLayerCountToRender: number): [Array<string>, Array<string>, number] {
-    // This function determines for which layers
-    // the shader code should be compiled/declared. Color layers are always
-    // fully declared: they're backed by 5 shared, fixed-cost texture-array
-    // pools (see PoolTextureManager), so declaring more of them doesn't
-    // consume additional GPU texture units -- which (up to
-    // maxActiveColorLayers) of them are actually blended each frame is a
-    // separate, purely uniform-driven concern (see getColorRenderOrder).
-    // Segmentation layers still use dedicated per-layer textures (deferred,
-    // see getSegmentId_<name> in segmentation.glsl.ts), so if the GPU can't
-    // fit all of them, we prioritize which to declare by taking into account
-    // (a) which layers are activated and (b) which layers were
-    // least-recently activated (but are now disabled).
-    // The first array contains the color layer names and the second the segmentation layer names.
-    // The third parameter returns the number of globally available layers (this is not always equal
-    // to the sum of the lengths of the first two arrays, as not all segmentation layers might be declared.)
-    const state = Store.getState();
+  getLayersToRender(): [Array<string>, Array<string>, number] {
+    // Every layer -- color or segmentation -- is backed by one of 5 shared,
+    // fixed-cost texture-array pools (see PoolTextureManager), so declaring
+    // more of them never consumes additional GPU texture units. There's
+    // therefore no reason to ever hold any layer back from being declared;
+    // which (up to maxActiveColorLayers) color layers are actually blended
+    // each frame is a separate, purely uniform-driven concern (see
+    // getColorRenderOrder).
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
       sanitizeName(layer.name),
     );
     const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;
-    if (maximumLayerCountToRender <= 0) {
-      return [colorLayerNames, [], globalLayerCount];
-    }
-
-    if (maximumLayerCountToRender >= globalLayerCount) {
-      // We can simply declare all available layers.
-      return [colorLayerNames, segmentationLayerNames, globalLayerCount];
-    }
-
-    const enabledLayers = getEnabledLayers(state.dataset, state.datasetConfiguration, {}).map(
-      ({ name, category }) => ({ name, isSegmentationLayer: category === "segmentation" }),
-    );
-    const disabledLayers = getEnabledLayers(state.dataset, state.datasetConfiguration, {
-      invert: true,
-    }).map(({ name, category }) => ({ name, isSegmentationLayer: category === "segmentation" }));
-    // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers
-    // because they were already disabled on page load), append the disabled layers
-    // which are not already in that array.
-    // Note that the order of this array is important (earlier elements are more "recently used")
-    // which is why it is important how this operation is done.
-    this.leastRecentlyVisibleLayers = [
-      ...this.leastRecentlyVisibleLayers,
-      ...disabledLayers.filter(
-        ({ name }) =>
-          !this.leastRecentlyVisibleLayers.some((otherLayer) => otherLayer.name === name),
-      ),
-    ];
-
-    const names = enabledLayers
-      .concat(this.leastRecentlyVisibleLayers)
-      .slice(0, maximumLayerCountToRender)
-      .sort();
-
-    const [, sanitizedSegmentationLayerNames] = partition(
-      names,
-      ({ isSegmentationLayer }) => !isSegmentationLayer,
-    ).map((layers) => layers.map(({ name }) => sanitizeName(name)));
-
-    return [colorLayerNames, sanitizedSegmentationLayerNames, globalLayerCount];
+    return [colorLayerNames, segmentationLayerNames, globalLayerCount];
   }
 
   // Computes, from the currently *declared* color layers (this.compiledColorLayerNames),
@@ -1360,22 +1226,6 @@ class PlaneMaterialFactory {
     this.uniforms.activeColorLayerCount.value = activeColorLayerCount;
     app.vent.emit("rerender");
   }
-
-  onDisableLayer = (layerName: string, isSegmentationLayer: boolean) => {
-    this.leastRecentlyVisibleLayers = this.leastRecentlyVisibleLayers.filter(
-      (entry) => entry.name !== layerName,
-    );
-    this.leastRecentlyVisibleLayers = [
-      { name: layerName, isSegmentationLayer },
-      ...this.leastRecentlyVisibleLayers,
-    ];
-  };
-
-  onEnableLayer = (layerName: string) => {
-    this.leastRecentlyVisibleLayers = this.leastRecentlyVisibleLayers.filter(
-      (entry) => entry.name !== layerName,
-    );
-  };
 
   getFragmentShaderWithUniforms(): [string, Uniforms] {
     const state = Store.getState();

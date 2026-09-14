@@ -53,6 +53,7 @@ import { getGroundTruthLayoutRect } from "viewer/view/layouting/default_layout_c
 import {
   clearCanvas,
   getActiveTDViewCameraName,
+  getBackgroundColor,
   setupRenderArea,
 } from "viewer/view/rendering_utils";
 
@@ -63,6 +64,14 @@ import {
 // from the viewing angle.
 const KEY_LIGHT_INTENSITY = 6;
 const FILL_LIGHT_INTENSITY = 1.5;
+
+// Lets the key light cast shadows from meshes onto each other in the TD viewport, which
+// is by far the strongest depth cue for telling overlapping/crossing branches apart (see
+// updateTDDepthCueing() for how the shadow camera frustum is kept in sync with the
+// current view). Flip this off if it turns out to be too costly on large meshes, or if
+// the shadow tuning below needs to be revisited.
+const ENABLE_MESH_SHADOWS = true;
+const SHADOW_MAP_SIZE = 1024;
 
 type RaycasterHit = {
   node: MeshSceneNode;
@@ -105,6 +114,9 @@ class PlaneView {
   // Combined view of the orthographic cameras, handed to the camera controllers as a
   // prop. Kept as a stable reference so the PureComponents don't re-render each frame.
   private cameras: OrthoViewMap<OrthographicCamera>;
+  // The TD viewport's key light, kept around so its shadow camera frustum can be
+  // resized every frame to match the current view (see updateTDDepthCueing()).
+  private keyLight: DirectionalLight;
   isRunning: boolean = false;
   needsRerender: boolean;
   private isRerenderScheduled: boolean = false;
@@ -139,13 +151,28 @@ class PlaneView {
     this.cameras = { ...this.nonTdCameras, [OrthoViews.TDView]: this.tdCameras.ORTHOGRAPHIC };
 
     // Key light: raking in from up/right so curved surfaces show a clear gradient.
-    createDirLight([18, 22, 8], [0, 0, 10], KEY_LIGHT_INTENSITY, tdOrthographicCamera);
+    this.keyLight = createDirLight(
+      [18, 22, 8],
+      [0, 0, 10],
+      KEY_LIGHT_INTENSITY,
+      tdOrthographicCamera,
+    );
     // Fill light: faint, from the opposite side, so shadow-facing surfaces don't go black.
     createDirLight([-10, 3, -12], [0, 0, 10], FILL_LIGHT_INTENSITY, tdOrthographicCamera);
+
+    if (ENABLE_MESH_SHADOWS) {
+      this.keyLight.castShadow = true;
+      this.keyLight.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+      // A small negative bias avoids shadow acne without introducing noticeable
+      // peter-panning; the exact frustum is recomputed every frame in
+      // updateTDDepthCueing() since world-space scale varies wildly across datasets.
+      this.keyLight.shadow.bias = -0.0005;
+    }
+
     // Placeholder fog for the TD viewport, giving distant mesh parts a subtle fade for
-    // depth cueing. near/far are meaningless here and get recomputed every frame in
-    // updateTDFog() to bracket whatever is currently in view (see call site below).
-    scene.fog = new Fog(OrthoViewColors[OrthoViews.TDView], 1, 2);
+    // depth cueing. Values are meaningless here and get recomputed every frame in
+    // updateTDDepthCueing() to bracket whatever is currently in view (see call site below).
+    scene.fog = new Fog(getBackgroundColor(), 1, 2);
     this.nonTdCameras[OrthoViews.PLANE_XY].position.z = -1;
     this.nonTdCameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.nonTdCameras[OrthoViews.PLANE_XZ].position.y = 1;
@@ -222,7 +249,14 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           if (plane === OrthoViews.TDView) {
-            this.updateTDFog(scene, storeState);
+            this.updateTDDepthCueing(scene, storeState);
+            // shadowMap.autoUpdate is disabled (see renderer.ts) since the mesh-casting
+            // shadow only matters for this one pass out of the four per frame; ask for
+            // exactly one shadow map update here rather than recomputing it for (and
+            // discarding it after) every viewport.
+            if (ENABLE_MESH_SHADOWS) {
+              renderer.shadowMap.needsUpdate = true;
+            }
           }
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
           renderer.render(scene, this.getCameraForPlane(plane));
@@ -240,20 +274,33 @@ class PlaneView {
   // Fog distances aren't meaningful as fixed world units here: the TD camera can sit
   // arbitrarily far from the dataset (to avoid near/far clipping issues) while still
   // being zoomed in/out via its orthographic frustum, so a fixed near/far would either
-  // have no visible effect or fog out the whole mesh depending on zoom. Instead, the fog
-  // band is re-centered every frame on the camera's actual distance to its orbit target
-  // (the current flycam position) and sized relative to the current frustum width, so it
-  // tracks both panning and zooming.
-  private updateTDFog(scene: Scene, storeState: WebknossosState): void {
-    if (!(scene.fog instanceof Fog)) {
-      return;
-    }
+  // have no visible effect or fog out the whole mesh depending on zoom. The key light's
+  // shadow camera frustum has the same problem. Both are re-centered every frame on the
+  // camera's actual distance to its orbit target (the current flycam position) and sized
+  // relative to the current frustum width, so they track both panning and zooming.
+  private updateTDDepthCueing(scene: Scene, storeState: WebknossosState): void {
     const tdCamera = this.tdCameras.ORTHOGRAPHIC;
     const target = getPosition(storeState.flycam);
     const distance = tdCamera.position.distanceTo(new ThreeVector3(...target));
     const width = tdCamera.right - tdCamera.left;
-    scene.fog.near = Math.max(0, distance - width * 1.5);
-    scene.fog.far = distance + width * 3;
+
+    if (scene.fog instanceof Fog) {
+      // Keep the fog color in sync in case the theme was toggled at runtime.
+      scene.fog.color.setHex(getBackgroundColor());
+      scene.fog.near = Math.max(0, distance - width * 1.5);
+      scene.fog.far = distance + width * 3;
+    }
+
+    if (ENABLE_MESH_SHADOWS) {
+      const shadowCamera = this.keyLight.shadow.camera;
+      shadowCamera.left = -width;
+      shadowCamera.right = width;
+      shadowCamera.top = width;
+      shadowCamera.bottom = -width;
+      shadowCamera.near = Math.max(0.1, distance - width * 2);
+      shadowCamera.far = distance + width * 2;
+      shadowCamera.updateProjectionMatrix();
+    }
   }
 
   // Converts a TDView mouse position to NDC coordinates and points the shared

@@ -15,7 +15,7 @@ import {
   FrontSide,
   Group,
   Mesh,
-  MeshStandardMaterial,
+  MeshPhysicalMaterial,
   Vector3 as ThreeVector3,
 } from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
@@ -52,7 +52,7 @@ export const PARTITION_COLORS = {
 const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
 const HOVERED_COLOR_VEC3 = HOVERED_COLOR.toArray() as Vector3;
 
-type MeshMaterial = MeshStandardMaterial & { originalColor: Vector3 };
+type MeshMaterial = MeshPhysicalMaterial & { originalColor: Vector3 };
 type HighlightEntry = { range: Vector2; color?: Vector3 };
 type HighlightState = HighlightEntry[] | "full" | null;
 export type MeshSceneNode = Mesh<BufferGeometryWithInfo, MeshMaterial> & {
@@ -168,13 +168,20 @@ export default class SegmentMeshController {
     isMerged: boolean,
   ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
-    const meshMaterial = new MeshStandardMaterial({
+    const meshMaterial = new MeshPhysicalMaterial({
       vertexColors: true,
       // A mid-range roughness gives the mesh a soft specular highlight (unlike the
       // purely-diffuse Lambert material used previously), which helps the eye read
       // curved/cylindrical surfaces like dendrites as three-dimensional.
       roughness: 0.55,
       metalness: 0.05,
+      // Sheen adds a soft, view-dependent brightening at grazing angles (a "rim
+      // light" effect), which helps define silhouette edges where branches overlap
+      // — otherwise same-colored crossing branches tend to visually merge. sheenColor
+      // must be non-black, since it's what the sheen lobe is tinted with.
+      sheen: 0.6,
+      sheenRoughness: 0.6,
+      sheenColor: WHITE,
     }) as MeshMaterial;
     meshMaterial.side = FrontSide;
     meshMaterial.transparent = true;
@@ -195,6 +202,10 @@ export default class SegmentMeshController {
     // this detail for now via the casting.
     const mesh = new Mesh(geometry, meshMaterial) as any as MeshSceneNode;
     mesh.isMerged = isMerged;
+    // Lets meshes occlude the key light from one another (see PlaneView), which is a much
+    // stronger depth cue for crossing/overlapping branches than shading alone.
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
 
     const tweenAnimation = new TWEEN.Tween({
       opacity: 0,
@@ -444,7 +455,17 @@ export default class SegmentMeshController {
 
   getColorObjectForSegment(segmentId: bigint, layerName: string) {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
-    const color = new Color().setHSL(hue, saturation, light);
+    // The colormap segment IDs are hashed into (jsConvertCellIdToRGBA) is deliberately
+    // vivid/high-contrast so segments stay distinguishable in the 2D data view. On a lit
+    // 3D mesh, though, those same fully-saturated colors leave little headroom for
+    // shading (highlights/shadow) to actually show, which is part of why meshes tend to
+    // look like flat, poster-like silhouettes. Pulling saturation and lightness in
+    // towards the midtones only for the mesh material (not the shared color function,
+    // which also drives the 2D view) leaves that headroom while keeping each segment's
+    // hue - and thus its identity - unchanged.
+    const meshSaturation = saturation * 0.7;
+    const meshLight = 0.5 + (light - 0.5) * 0.6;
+    const color = new Color().setHSL(hue, meshSaturation, meshLight);
     color.convertSRGBToLinear();
 
     return color;

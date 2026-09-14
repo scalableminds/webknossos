@@ -134,6 +134,16 @@ let originalTexSubImage3D: WebGL2RenderingContext["texSubImage3D"] | null = null
 class UpdatableTextureArray extends Texture {
   isUpdatableTexture: boolean = true;
   isDataArrayTexture: boolean = true;
+  // Three.js' own upload path (WebGLTextures.uploadTexture) reads
+  // layerUpdates.size unconditionally for any isDataArrayTexture, even
+  // though we bypass that mechanism entirely with our own manual
+  // gl.texSubImage3D calls in update() below. DataArrayTexture (which we
+  // don't extend, since it doesn't support sub-rectangle-within-a-slice
+  // updates) initializes this in its constructor; we just need the field to
+  // exist so three.js doesn't crash on undefined.size the first time this
+  // texture is bound (which happens via the normal per-frame render path,
+  // not through update()).
+  layerUpdates: Set<number> = new Set();
   renderer!: WebGLRenderer;
   gl!: WebGL2RenderingContext;
   utils!: WebGLUtils;

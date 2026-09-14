@@ -33,6 +33,7 @@ import {
 } from "libs/utils";
 import type React from "react";
 import { useState } from "react";
+import { ModalWidth } from "theme";
 import type { Mesh } from "three";
 import {
   type APIDataLayer,
@@ -140,7 +141,7 @@ export default function CreateAnimationModalWrapper(props: Props) {
   if (colorLayers.length === 0) {
     const { isOpen, onClose } = props;
     return (
-      <Modal open={isOpen} onOk={onClose} onCancel={onClose} title="Create animation">
+      <Modal open={isOpen} onOk={onClose} onCancel={onClose} title="Create Animation">
         WEBKNOSSOS cannot create animations for datasets without color layers.
       </Modal>
     );
@@ -391,7 +392,7 @@ function CreateAnimationModal(props: Props) {
     <Modal
       title="Create Animation"
       open={isOpen}
-      width={900}
+      width={ModalWidth.Large}
       onCancel={onClose}
       footer={
         <Flex justify="space-between" align="center" gap={12}>
@@ -422,6 +423,7 @@ function CreateAnimationModal(props: Props) {
           </Space>
         </Flex>
       }
+      mask={{ closable: false }}
     >
       <Row gutter={32} style={{ marginBottom: 24 }}>
         {/* Left column: preview & description */}

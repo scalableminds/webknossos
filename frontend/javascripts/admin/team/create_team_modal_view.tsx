@@ -38,7 +38,7 @@ function CreateTeamModalForm({ onOk: onOkCallback, onCancel: onCancelCallback, i
   };
 
   return (
-    <Modal open={isOpen} title="Add a New Team" okText="Ok" onCancel={onCancel} onOk={onOk}>
+    <Modal open={isOpen} title="Add a New Team" onCancel={onCancel} onOk={onOk}>
       <Shortcut keys="enter" onTrigger={onOk} supportInputElements />
 
       <Form layout="vertical" form={form}>

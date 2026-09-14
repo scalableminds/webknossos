@@ -1,6 +1,7 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 # Version log in webknossos.versioned.routes
 
+->  /v16/ datastore.latest.Routes
 ->  /v15/ datastore.latest.Routes
 
 GET           /v14/datasets/:datasetId/proxy/datasource-properties.json                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.proxyDatasourceV14(datasetId: ObjectId)

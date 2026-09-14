@@ -6,7 +6,7 @@ import features from "features";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import { SettingsTitle } from "./helpers/settings_title";
 

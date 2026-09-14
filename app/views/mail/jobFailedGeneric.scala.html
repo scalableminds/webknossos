@@ -1,11 +1,23 @@
-@(name: String, datasetName: String, jobTitle: String, additionalFooter: String)
+@(name: String, datasetName: String, jobTitle: String, errorMessage: Option[String], additionalFooter: String)
 
 @emailBaseTemplate(additionalFooter) {
 <p>Hi @{name},</p>
 
+@errorMessage match {
+  case Some(message) => {
+<p>
+  Unfortunately, your @{jobTitle} job for the @{datasetName} dataset failed with the following error:
+</p>
+<p style="background-color: #f5f5f5; border-left: 3px solid #d9d9d9; border-radius: 4px; padding: 12px 16px; color: #555555; white-space: pre-wrap;">
+  @message
+</p>
+  }
+  case None => {
 <p>
   Something unexpected went wrong while processing your @{jobTitle} job for the @{datasetName} dataset. This should not have happened, and we apologize for the inconvenience.
 </p>
+  }
+}
 <p>
   Any compute credits used for this job have been fully refunded. 
 </p>

@@ -9,15 +9,14 @@ import security.WkEnv
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-/**
-  * Model Context Protocol (MCP) server, so that AI agents can work with this WEBKNOSSOS instance.
+/** Model Context Protocol (MCP) server, so that AI agents can work with this WEBKNOSSOS instance.
   *
   * The transport is Streamable HTTP without server-to-client streaming: every POST carries a single JSON-RPC message
-  * and is answered with a single JSON response. The server is stateless, so no Mcp-Session-Id is issued and GET
-  * (which clients use to open an SSE stream) is answered with 405, as allowed by the spec.
+  * and is answered with a single JSON response. The server is stateless, so no Mcp-Session-Id is issued and GET (which
+  * clients use to open an SSE stream) is answered with 405, as allowed by the spec.
   *
-  * Authentication is the regular WEBKNOSSOS token auth, via the X-Auth-Token or the Authorization: Bearer header.
-  * Note that unauthenticated requests are answered by silhouette's default error handler, which does not send a
+  * Authentication is the regular WEBKNOSSOS token auth, via the X-Auth-Token or the Authorization: Bearer header. Note
+  * that unauthenticated requests are answered by silhouette's default error handler, which does not send a
   * WWW-Authenticate challenge header, so clients need to be configured with the token explicitly.
   */
 class McpController @Inject() (mcpService: McpService, sil: Silhouette[WkEnv])(implicit

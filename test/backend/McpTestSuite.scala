@@ -42,9 +42,8 @@ class McpTestSuite extends AnyWordSpec {
       assert(parsed.swap.exists(_.code == JsonRpcError.invalidRequestCode))
     }
 
-    "reject a non-object request" in {
+    "reject a non-object request" in
       assert(JsonRpc.parseRequest(Json.toJson("ping")).isLeft)
-    }
   }
 
   "JsonRpc.error" should {

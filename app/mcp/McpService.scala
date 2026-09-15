@@ -11,9 +11,8 @@ import utils.WkConf
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-/**
-  * Implements the parts of the Model Context Protocol (MCP) that a stateless, tools-only server needs.
-  * The transport (Streamable HTTP without server-to-client streaming) lives in McpController.
+/** Implements the parts of the Model Context Protocol (MCP) that a stateless, tools-only server needs. The transport
+  * (Streamable HTTP without server-to-client streaming) lives in McpController.
   */
 @Singleton
 class McpService @Inject() (
@@ -104,8 +103,7 @@ class McpService @Inject() (
       |   dependencies are not touched. Pass the token via an environment variable rather than writing it into
       |   the script.""".stripMargin
 
-  /**
-    * Handles one JSON-RPC message. Returns None for notifications, which must not be answered.
+  /** Handles one JSON-RPC message. Returns None for notifications, which must not be answered.
     */
   def handle(body: JsValue, user: User): Future[Option[JsObject]] =
     JsonRpc.parseRequest(body) match {
@@ -123,12 +121,12 @@ class McpService @Inject() (
 
   private def handleRequest(request: JsonRpcRequest, user: User): Future[Either[JsonRpcError, JsValue]] =
     request.method match {
-      case "initialize"                 => Future.successful(Right(initializeResult(request.params)))
-      case "ping"                       => Future.successful(Right(Json.obj()))
-      case "tools/list"                 => Future.successful(Right(Json.obj("tools" -> tools)))
-      case "tools/call"                 => callTool(request.params, user)
+      case "initialize"                     => Future.successful(Right(initializeResult(request.params)))
+      case "ping"                           => Future.successful(Right(Json.obj()))
+      case "tools/list"                     => Future.successful(Right(Json.obj("tools" -> tools)))
+      case "tools/call"                     => callTool(request.params, user)
       case method if isNotification(method) => Future.successful(Right(Json.obj()))
-      case method                       => Future.successful(Left(JsonRpcError.methodNotFound(method)))
+      case method                           => Future.successful(Left(JsonRpcError.methodNotFound(method)))
     }
 
   private def isNotification(method: String): Boolean = method.startsWith("notifications/")
@@ -146,13 +144,13 @@ class McpService @Inject() (
 
   private def callTool(params: JsObject, user: User): Future[Either[JsonRpcError, JsValue]] =
     (params \ "name").asOpt[String] match {
-      case None => Future.successful(Left(JsonRpcError.invalidParams("Missing or invalid field: name")))
+      case None       => Future.successful(Left(JsonRpcError.invalidParams("Missing or invalid field: name")))
       case Some(name) =>
         val arguments = (params \ "arguments").asOpt[JsObject].getOrElse(Json.obj())
         name match {
-          case `getTokenToolName`  => asToolResult(Fox.successful(shortLivedTokenFor(user)))
-          case `listDocsToolName`  => asToolResult(pythonDocsService.getIndex)
-          case `readDocsToolName`  =>
+          case `getTokenToolName` => asToolResult(Fox.successful(shortLivedTokenFor(user)))
+          case `listDocsToolName` => asToolResult(pythonDocsService.getIndex)
+          case `readDocsToolName` =>
             (arguments \ "url").asOpt[String] match {
               case None      => Future.successful(Left(JsonRpcError.invalidParams("Missing or invalid argument: url")))
               case Some(url) => asToolResult(pythonDocsService.getPage(url))

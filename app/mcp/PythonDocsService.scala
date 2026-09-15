@@ -10,8 +10,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.Try
 
-/**
-  * Serves the documentation of the WEBKNOSSOS Python library to MCP clients. The docs are hosted externally, so they
+/** Serves the documentation of the WEBKNOSSOS Python library to MCP clients. The docs are hosted externally, so they
   * are fetched on demand and cached for a while.
   */
 @Singleton

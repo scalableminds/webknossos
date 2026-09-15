@@ -11,8 +11,7 @@ case class ShortLivedToken(value: String, userId: ObjectId, expiresAt: Instant) 
   def isValid: Boolean = expiresAt > Instant.now
 }
 
-/**
-  * Short-lived tokens are handed out to external tools (e.g. the WEBKNOSSOS Python library, driven by an AI agent via
+/** Short-lived tokens are handed out to external tools (e.g. the WEBKNOSSOS Python library, driven by an AI agent via
   * the MCP server). They grant the full permissions of the user they were created for, but expire after a short time.
   *
   * In contrast to the other token types, these are not persisted in the database, but held in memory only. They

@@ -2,9 +2,8 @@ package mcp
 
 import play.api.libs.json.*
 
-/**
-  * Minimal JSON-RPC 2.0 envelope, as used by the MCP Streamable HTTP transport.
-  * Note that JSON-RPC batching is deliberately not supported, it was removed in MCP revision 2025-06-18.
+/** Minimal JSON-RPC 2.0 envelope, as used by the MCP Streamable HTTP transport. Note that JSON-RPC batching is
+  * deliberately not supported, it was removed in MCP revision 2025-06-18.
   */
 case class JsonRpcRequest(id: Option[JsValue], method: String, params: JsObject) {
   // A request without an id is a notification: the client does not expect a response.

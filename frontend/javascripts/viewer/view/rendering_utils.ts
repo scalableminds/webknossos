@@ -23,7 +23,7 @@ import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import Store from "viewer/store";
 
-export const getBackgroundColor = (): number =>
+const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
 
 // Shared with PlaneView.getActiveTDViewCamera so both places agree on which

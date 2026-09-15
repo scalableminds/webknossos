@@ -7,10 +7,8 @@ import window from "libs/window";
 import throttle from "lodash-es/throttle";
 import {
   DirectionalLight,
-  Fog,
   OrthographicCamera,
   PerspectiveCamera,
-  type Scene,
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
 } from "three";
@@ -38,7 +36,6 @@ import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
 import type { MeshSceneNode, SceneGroupForMeshes } from "viewer/controller/segment_mesh_controller";
-import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import {
@@ -48,12 +45,11 @@ import {
 import { uiReadyAction } from "viewer/model/actions/actions";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import Store, { type WebknossosState } from "viewer/store";
+import Store from "viewer/store";
 import { getGroundTruthLayoutRect } from "viewer/view/layouting/default_layout_configs";
 import {
   clearCanvas,
   getActiveTDViewCameraName,
-  getBackgroundColor,
   setupRenderArea,
 } from "viewer/view/rendering_utils";
 
@@ -175,10 +171,6 @@ class PlaneView {
     // elevation/depth, so left-facing surfaces get their own highlight/falloff too.
     createDirLight([-18, 14, 9], [0, 0, 10], SIDE_LIGHT_INTENSITY, tdOrthographicCamera);
 
-    // Placeholder fog for the TD viewport, giving distant mesh parts a subtle fade for
-    // depth cueing. Values are meaningless here and get recomputed every frame in
-    // updateTDDepthCueing() to bracket whatever is currently in view (see call site below).
-    scene.fog = new Fog(getBackgroundColor(), 1, 2);
     this.nonTdCameras[OrthoViews.PLANE_XY].position.z = -1;
     this.nonTdCameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.nonTdCameras[OrthoViews.PLANE_XZ].position.y = 1;
@@ -254,9 +246,6 @@ class PlaneView {
         const { left, top, width, height } = viewport[plane];
 
         if (width > 0 && height > 0) {
-          if (plane === OrthoViews.TDView) {
-            this.updateTDFog(scene, storeState);
-          }
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
           renderer.render(scene, this.getCameraForPlane(plane));
 
@@ -268,27 +257,6 @@ class PlaneView {
 
       this.needsRerender = false;
     }
-  }
-
-  // Fog distances aren't meaningful as fixed world units here: the TD camera can sit
-  // arbitrarily far from the dataset (to avoid near/far clipping issues) while still
-  // being zoomed in/out via its orthographic frustum, so a fixed near/far would either
-  // have no visible effect or fog out the whole mesh depending on zoom. Instead, the fog
-  // band is re-centered every frame on the camera's actual distance to its orbit target
-  // (the current flycam position) and sized relative to the current frustum width, so it
-  // tracks both panning and zooming.
-  private updateTDFog(scene: Scene, storeState: WebknossosState): void {
-    if (!(scene.fog instanceof Fog)) {
-      return;
-    }
-    const tdCamera = this.tdCameras.ORTHOGRAPHIC;
-    const target = getPosition(storeState.flycam);
-    const distance = tdCamera.position.distanceTo(new ThreeVector3(...target));
-    const width = tdCamera.right - tdCamera.left;
-    // Keep the fog color in sync in case the theme was toggled at runtime.
-    scene.fog.color.setHex(getBackgroundColor());
-    scene.fog.near = Math.max(0, distance - width * 1.5);
-    scene.fog.far = distance + width * 3;
   }
 
   // Converts a TDView mouse position to NDC coordinates and points the shared

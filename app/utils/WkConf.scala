@@ -226,6 +226,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val resetPasswordExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
       val dataStoreExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.dataStoreExpiry")
       val jobExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.jobExpiry")
+      val shortLivedExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.shortLivedExpiry")
       val authenticatorExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorExpiry")
       val authenticatorIdleTimeout: FiniteDuration =
         get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")

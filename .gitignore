@@ -130,3 +130,6 @@ tsconfig.tsbuildinfo
 diffy-report.html
 
 local.sbt
+
+# MCP bundles are build artifacts, built with tools/mcpb/build.sh
+*.mcpb

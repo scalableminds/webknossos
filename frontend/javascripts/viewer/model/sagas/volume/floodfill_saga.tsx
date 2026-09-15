@@ -6,6 +6,8 @@ import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
 import sortBy from "lodash-es/sortBy";
+import { USE_NEW_VOLUME_ARCHITECTURE } from "prototypes/new_volume_architecture/integration/feature_flag";
+import { runFloodFill } from "prototypes/new_volume_architecture/integration/flood_fill_driver";
 import { call, put, takeEvery } from "typed-redux-saga";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { FillMode, LabeledVoxelsMap, OrthoView, Vector2, Vector3 } from "viewer/constants";
@@ -258,14 +260,74 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     } else {
       Toast.close(NO_FLOODFILL_BBOX_TOAST_KEY);
     }
+    const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
       successMessageDelay: 2000,
     });
     yield* call(progressCallback, false, "Performing floodfill...");
-    console.time("cube.floodFill");
     const startTimeOfFloodfill = performance.now();
-    const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+
+    // ── SPIKE: new volume architecture ────────────────────────────────────
+    if (USE_NEW_VOLUME_ARCHITECTURE) {
+      const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
+      // Floored, unlike brush's toMagVoxel: a flood-fill seed is used for direct
+      // array indexing (resolveFloodFill), so it must land exactly on a
+      // source-mag voxel. A mag1 position is only guaranteed to divide evenly
+      // by the mag factor when it happens to be mag-aligned (e.g. z=43 at
+      // mag-factor 2 is not), so this floor is required, not just tidiness.
+      const toSourceMagVoxel = (position: Vector3): Vector3 => [
+        Math.floor(position[0] / labeledMag[0]),
+        Math.floor(position[1] / labeledMag[1]),
+        Math.floor(position[2] / labeledMag[2]),
+      ];
+      const stats = yield* call(runFloodFill, {
+        cube,
+        denseMags: magInfo.getDenseMags(),
+        magIndex: labeledZoomStep,
+        segmentId: activeCellId,
+        additionalCoordinates: additionalCoordinates ?? null,
+        seed: toSourceMagVoxel(seedPosition),
+        is3D: fillMode === FillModeEnum._3D,
+        bounds: {
+          min: toSourceMagVoxel(boundingBoxForFloodFill.min),
+          max: toSourceMagVoxel(boundingBoxForFloodFill.max),
+        },
+        splitBoundaryMesh,
+      });
+      console.info(
+        `[spike] floodFill: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
+      );
+      yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+      yield* put(
+        updateSegmentAction(
+          volumeTracing.activeCellId,
+          {
+            anchorPosition: seedPosition,
+            additionalCoordinates: additionalCoordinates || undefined,
+          },
+          volumeTracing.tracingId,
+        ),
+      );
+      yield* call(
+        notifyUserAboutResult,
+        stats.wasBoundingBoxExceeded,
+        startTimeOfFloodfill,
+        progressCallback,
+        fillMode,
+        // Only read by notifyUserAboutResult when wasBoundingBoxExceeded is
+        // true, in which case coveredBoundingBox is never null (see
+        // FloodFillResult's doc comment) — the fallback here is unreachable.
+        stats.coveredBoundingBox ?? { min: [0, 0, 0], max: [0, 0, 0] },
+        oldSegmentIdAtSeed,
+        activeCellId,
+        seedPosition,
+      );
+      return;
+    }
+
+    console.time("cube.floodFill");
 
     const {
       bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
@@ -283,7 +345,6 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
       fillMode === FillModeEnum._3D,
       splitBoundaryMesh,
     );
-    console.timeEnd("cube.floodFill");
     yield* call(progressCallback, false, "Finalizing floodfill...");
     const indexSet: Set<number> = new Set();
 
@@ -331,6 +392,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     );
 
     console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
+    console.timeEnd("cube.floodFill");
 
     yield* call(
       notifyUserAboutResult,

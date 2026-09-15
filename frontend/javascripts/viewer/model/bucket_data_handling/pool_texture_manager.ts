@@ -28,13 +28,21 @@ export default class PoolTextureManager {
     this.pool = pool;
     // Depth 0 would be a degenerate (and invalid) texture array; clamp to 1
     // so pools that happen to be unused by the current dataset still get a
-    // valid (if tiny) texture, since the pool's sampler uniform is always
-    // declared in the shader regardless of whether any layer uses it.
+    // valid texture, since the pool's sampler uniform is always declared in
+    // the shader regardless of whether any layer uses it. A dataset that
+    // only uses e.g. uint8 layers leaves the other 4 pools unused, so it's
+    // worth shrinking those to a 1x1 placeholder instead of the full
+    // COLOR_LAYER_POOL_TEXTURE_WIDTH^2 (tens of MB each) -- the shader's
+    // POOL_TEXTURE_WIDTH addressing constant only matters for pools that
+    // some layer actually maps into; an unused pool's sampler is never
+    // reached by any slot's poolId, so its real backing size is irrelevant.
+    const isUnused = depth === 0;
     this.depth = Math.max(1, depth);
+    const width = isUnused ? 1 : COLOR_LAYER_POOL_TEXTURE_WIDTH;
     const { textureType, pixelFormat, internalFormat } = getColorLayerPoolGpuConfig(pool);
     this.textureArray = createUpdatableTextureArray(
-      COLOR_LAYER_POOL_TEXTURE_WIDTH,
-      COLOR_LAYER_POOL_TEXTURE_WIDTH,
+      width,
+      width,
       this.depth,
       textureType,
       getRenderer(),

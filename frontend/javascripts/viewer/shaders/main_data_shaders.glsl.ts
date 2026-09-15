@@ -91,6 +91,14 @@ export type Params = {
   // simultaneously blended. Toggling/reordering which (up to this many) of
   // the declared color layers are active is a pure uniform update.
   maxActiveColorLayers: number;
+  // Hardware-derived (see getVertexBucketAlignmentLayerCap in
+  // plane_material_factory.ts) upper bound on how many layers' worth of
+  // outputMagIdx/outputSeed/outputAddress *varyings* can be declared without
+  // exceeding the driver's varying budget. Layers whose global layer index is
+  // >= min(globalLayerCount, this) don't get the vertex-precomputed bucket
+  // address optimization and always take the slower-but-correct full
+  // per-fragment lookup path.
+  vertexBucketAlignmentLayerCap: number;
 };
 
 const SHARED_UNIFORM_DECLARATIONS = `
@@ -221,6 +229,13 @@ const float bucketSize = <%= bucketSize %>;
 // is pool-backed.
 const float POOL_TEXTURE_WIDTH = ${formatNumberAsGLSLFloat(COLOR_LAYER_POOL_TEXTURE_WIDTH)};
 
+// See vertexBucketAlignmentLayerCap in Params -- only layers whose *global*
+// layer index is below this bound get an entry in the
+// outputMagIdx/outputSeed/outputAddress varyings (sized by this same
+// constant, not globalLayerCount) and thus the vertex-precomputed bucket
+// address optimization; see getColorForCoords64 in texture_access.glsl.ts.
+const uint VERTEX_ALIGNMENT_LAYER_CAP = <%= vertexAlignmentLayerCap %>u;
+
 // Static per-(always-declared)-layer metadata that only changes when the set
 // of dataset layers itself changes (i.e., exactly when a recompile already
 // happens), so it's baked as compile-time constants rather than uniforms.
@@ -244,9 +259,9 @@ precision highp float;
 ${SHARED_UNIFORM_DECLARATIONS}
 
 flat in vec2 index;
-flat in uint outputMagIdx[<%= globalLayerCount %>];
-flat in uint outputSeed[<%= globalLayerCount %>];
-flat in float outputAddress[<%= globalLayerCount %>];
+flat in uint outputMagIdx[<%= vertexAlignmentLayerCap %>];
+flat in uint outputSeed[<%= vertexAlignmentLayerCap %>];
+flat in float outputAddress[<%= vertexAlignmentLayerCap %>];
 flat in float useBucketBorderVertexOptimization;
 in vec4 worldCoord;
 in vec4 modelCoord;
@@ -487,6 +502,10 @@ void main() {
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
+    vertexAlignmentLayerCap: Math.max(
+      1,
+      Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
+    ),
     ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
@@ -524,9 +543,9 @@ out mat4 savedModelMatrix;
 }) %>
 
 flat out vec2 index;
-flat out uint outputMagIdx[<%= globalLayerCount %>];
-flat out uint outputSeed[<%= globalLayerCount %>];
-flat out float outputAddress[<%= globalLayerCount %>];
+flat out uint outputMagIdx[<%= vertexAlignmentLayerCap %>];
+flat out uint outputSeed[<%= vertexAlignmentLayerCap %>];
+flat out float outputAddress[<%= vertexAlignmentLayerCap %>];
 // bool varyings are not supported
 flat out float useBucketBorderVertexOptimization;
 
@@ -679,10 +698,16 @@ void main() {
   // segmentation) that doesn't have a transform. Which layers actually get
   // rendered/blended this frame is decided purely via uniforms elsewhere, so
   // this loop can be a genuine runtime loop instead of one unrolled per layer.
+  // Only layers whose *global* layer index is below VERTEX_ALIGNMENT_LAYER_CAP
+  // get an outputMagIdx/outputSeed/outputAddress entry at all -- those arrays
+  // are varyings, sized by that same cap rather than globalLayerCount (see
+  // its declaration for why); layers beyond the cap always take the slower
+  // full per-fragment lookup path in getColorForCoords64, just like
+  // transformed layers already do.
   for (uint layerIndex = 0u; layerIndex < uint(<%= globalLayerCount %>); layerIndex++) {
-    if (layerHasTransformInt[layerIndex] == 0) {
+    uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[layerIndex];
+    if (layerHasTransformInt[layerIndex] == 0 && globalLayerIndex < VERTEX_ALIGNMENT_LAYER_CAP) {
       float bucketAddress;
-      uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[layerIndex];
       uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
 
       uint renderedMagIdx;
@@ -708,6 +733,10 @@ void main() {
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
+    vertexAlignmentLayerCap: Math.max(
+      1,
+      Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
+    ),
     ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),

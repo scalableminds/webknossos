@@ -165,22 +165,29 @@ export const getColorForCoords: ShaderModule = {
 
       float bucketAddress;
       vec3 offsetInBucket;
-      uint renderedMagIdx;
+      uint renderedMagIdx = activeMagIdx;
 
-      // To avoid rare rendering artifacts, don't use the precomputed
-      // bucket address when being at the border of buckets.
-      bool beSafe = useBucketBorderVertexOptimization < 0.5;
-      renderedMagIdx = outputMagIdx[globalLayerIndex];
-      vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
-      vec3 absoluteBucketPosition = div(coords, bucketWidth);
-      offsetInBucket = mod(coords, bucketWidth);
-      vec3 offsetInBucketUVW = transDim(offsetInBucket);
-      if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
-          || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
-          || isnan(offsetInBucketUVW.x) || isnan(offsetInBucketUVW.y)
-          || isnan(offsetInBucketUVW.z)
-        ) {
-        beSafe = true;
+      // outputMagIdx/outputSeed/outputAddress only have entries for layers
+      // below VERTEX_ALIGNMENT_LAYER_CAP (see its declaration and the
+      // vertex shader's bucket-alignment loop) -- layers beyond that always
+      // take the full per-fragment lookup path below, just like transformed
+      // layers already do. For layers within the cap, also don't use the
+      // precomputed bucket address when being at the border of buckets, to
+      // avoid rare rendering artifacts.
+      bool beSafe = globalLayerIndex >= VERTEX_ALIGNMENT_LAYER_CAP || useBucketBorderVertexOptimization < 0.5;
+      if (!beSafe) {
+        renderedMagIdx = outputMagIdx[globalLayerIndex];
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
+        vec3 absoluteBucketPosition = div(coords, bucketWidth);
+        offsetInBucket = mod(coords, bucketWidth);
+        vec3 offsetInBucketUVW = transDim(offsetInBucket);
+        if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
+            || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
+            || isnan(offsetInBucketUVW.x) || isnan(offsetInBucketUVW.y)
+            || isnan(offsetInBucketUVW.z)
+          ) {
+          beSafe = true;
+        }
       }
 
 

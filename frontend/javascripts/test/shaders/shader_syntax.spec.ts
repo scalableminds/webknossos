@@ -57,6 +57,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         useInterpolation: false,
         tpsTransformPerLayer: {},
         maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 8,
         isWindows: false,
       });
 
@@ -111,6 +112,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 8,
         isWindows: true,
       });
       parser.parse(code);
@@ -158,6 +160,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 8,
         isWindows: true,
       });
 
@@ -197,6 +200,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 8,
         isWindows: true,
       });
       parser.parse(code);
@@ -244,6 +248,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 8,
         isWindows: false,
       });
       parser.parse(code);
@@ -282,6 +287,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 8,
         isWindows: true,
       });
       parser.parse(code);
@@ -322,6 +328,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 8,
         isWindows: false,
       });
       parser.parse(code);
@@ -362,6 +369,50 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 8,
+        isWindows: false,
+      });
+      parser.parse(code);
+      expect(warningEmittedCount).toBe(0);
+    });
+
+    it<TestContext>("Ortho Mode (vertexBucketAlignmentLayerCap smaller than 1, worst-case hardware)", ({
+      warningEmittedCount,
+    }) => {
+      // Regression test: outputMagIdx/outputSeed/outputAddress used to be
+      // varyings sized by globalLayerCount, which could exceed the driver's
+      // varying budget ("Could not pack varying") on datasets with many
+      // layers -- see vertexAlignmentLayerCap in main_data_shaders.glsl.ts.
+      // Exercise the smallest possible cap (matching the WebGL2-guaranteed
+      // worst case) with more declared layers than that.
+      const colorLayerNames = Array.from({ length: 5 }, (_, i) => `color_layer_${i}`);
+      const textureLayerInfos: Params["textureLayerInfos"] = Object.fromEntries(
+        colorLayerNames.map((name) => [
+          name,
+          {
+            isColor: true,
+            packingDegree: 4.0,
+            dataTextureCount: 1,
+            isSigned: false,
+            glslPrefix: "" as const,
+            unsanitizedName: name,
+            elementClass: "uint8" as const,
+          },
+        ]),
+      );
+      const code = getShader({
+        globalLayerCount: colorLayerNames.length,
+        colorLayerNames,
+        textureLayerInfos,
+        segmentationLayerNames: [],
+        magnificationsCount: mags.length,
+        voxelSizeFactor: [1, 1, 1],
+        isOrthogonal: true,
+        useInterpolation: false,
+        voxelSizeFactorInverted: [1, 1, 1],
+        tpsTransformPerLayer: {},
+        maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 1,
         isWindows: false,
       });
       parser.parse(code);

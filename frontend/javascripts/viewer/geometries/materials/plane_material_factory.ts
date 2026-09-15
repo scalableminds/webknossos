@@ -14,6 +14,7 @@ import isEqual from "lodash-es/isEqual";
 import keyBy from "lodash-es/keyBy";
 import mapValues from "lodash-es/mapValues";
 import throttle from "lodash-es/throttle";
+import memoizeOne from "memoize-one";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
 import type { ElementClass } from "types/api_types";
 import type { ValueOf } from "types/type_utils";
@@ -28,6 +29,7 @@ import {
   type Vector3,
   ViewModeValues,
 } from "viewer/constants";
+import { getRenderer } from "viewer/controller/renderer";
 import {
   getColorLayers,
   getDataLayers,
@@ -114,6 +116,29 @@ const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
 // not this cap. Exported since dataset_saga.ts's "too many active layers"
 // warning needs to compare against the same number.
 export const MAX_ACTIVE_COLOR_LAYERS = 32;
+
+// outputMagIdx/outputSeed/outputAddress (main_data_shaders.glsl.ts) are
+// *varyings* used to let the vertex shader precompute a bucket-border-aligned
+// address per layer, sparing the fragment shader from redoing the lookup per
+// pixel. Unlike uniforms, varyings are a scarce GPU resource -- WebGL2 only
+// guarantees a minimum of gl.MAX_VARYING_VECTORS = 15 -- so sizing these
+// arrays by the dataset's full (now uncapped, see getLayersToRender) layer
+// count can exceed the driver's varying budget and fail to link ("Could not
+// pack varying"). Query the real hardware limit and derive a safe cap
+// instead; layers beyond the cap (by global layer index, see
+// VERTEX_ALIGNMENT_LAYER_CAP in main_data_shaders.glsl.ts) just always take
+// the slower-but-correct full per-fragment lookup path that already exists
+// for transformed/TPS layers.
+const RESERVED_BASELINE_VARYING_ROWS = 12;
+const VARYING_ROWS_PER_LAYER = 3;
+const getVertexBucketAlignmentLayerCap = memoizeOne((): number => {
+  const gl = getRenderer().getContext() as WebGL2RenderingContext;
+  const maxVaryingVectors: number = gl.getParameter(gl.MAX_VARYING_VECTORS);
+  return Math.max(
+    1,
+    Math.floor((maxVaryingVectors - RESERVED_BASELINE_VARYING_ROWS) / VARYING_ROWS_PER_LAYER),
+  );
+});
 
 // Must match the pool_*_textures uniform names declared in
 // SHARED_UNIFORM_DECLARATIONS (main_data_shaders.glsl.ts).
@@ -1264,6 +1289,7 @@ class PlaneMaterialFactory {
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
       isWindows: isWindows(),
       maxActiveColorLayers: MAX_ACTIVE_COLOR_LAYERS,
+      vertexBucketAlignmentLayerCap: getVertexBucketAlignmentLayerCap(),
     });
     return [
       code,
@@ -1306,6 +1332,7 @@ class PlaneMaterialFactory {
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
       isWindows: isWindows(),
       maxActiveColorLayers: MAX_ACTIVE_COLOR_LAYERS,
+      vertexBucketAlignmentLayerCap: getVertexBucketAlignmentLayerCap(),
     });
   }
 

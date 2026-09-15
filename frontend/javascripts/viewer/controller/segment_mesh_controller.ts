@@ -62,7 +62,43 @@ const HOVERED_COLOR_VEC3 = hslToSRGB([0.65, 0.9, 0.75]).toArray() as Vector3;
 // frame, toggling the camera's layers each time, which isn't worth the extra cost of a
 // 5th full-scene render pass just for a hover effect here). emissive is a genuine
 // per-mesh material property instead, so it doesn't have that problem.
-const HOVER_EMISSIVE_INTENSITY = 0.35;
+//
+// The glow is tinted with the segment's own color, which means a dark/muddy color
+// (e.g. #0000bd - fully saturated, but not very light) barely shows it: a dark tint
+// added on top of an already-dark surface stays dark. getHoverGlowColor below brightens
+// and re-saturates that tint - and boosts its intensity - proportionally to how far the
+// color already is from looking vivid, so an already-bright/saturated color (which
+// already pops on hover) is left close to untouched.
+const HOVER_GLOW_TARGET_LIGHTNESS = 0.65;
+const HOVER_GLOW_TARGET_SATURATION = 0.8;
+const HOVER_GLOW_MAX_LIGHTNESS_BLEND = 0.85;
+const HOVER_GLOW_MAX_SATURATION_BLEND = 0.5;
+const HOVER_EMISSIVE_INTENSITY_BASE = 0.3;
+const HOVER_EMISSIVE_INTENSITY_DARK_BONUS = 0.45;
+
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+
+const getHoverGlowColor = (originalColor: Vector3): { color: Color; darkness: number } => {
+  // originalColor is stored in linear space (see getColorObjectForSegment); undo that
+  // to get the perceptual HSL values matching how the color would read as a hex code.
+  const srgbColor = new Color(...originalColor).convertLinearToSRGB();
+  const hsl = { h: 0, s: 0, l: 0 };
+  srgbColor.getHSL(hsl);
+
+  // 0 once the color is already at/above the target lightness/saturation, ramping up to
+  // 1 the darker/duller it is.
+  const darkness = clamp01(1 - hsl.l / HOVER_GLOW_TARGET_LIGHTNESS);
+  const dullness = clamp01(1 - hsl.s / HOVER_GLOW_TARGET_SATURATION);
+
+  const boostedLightness =
+    hsl.l + (HOVER_GLOW_TARGET_LIGHTNESS - hsl.l) * darkness * HOVER_GLOW_MAX_LIGHTNESS_BLEND;
+  const boostedSaturation =
+    hsl.s + (HOVER_GLOW_TARGET_SATURATION - hsl.s) * dullness * HOVER_GLOW_MAX_SATURATION_BLEND;
+
+  const color = new Color().setHSL(hsl.h, boostedSaturation, boostedLightness);
+  color.convertSRGBToLinear();
+  return { color, darkness };
+};
 
 type MeshMaterial = MeshPhysicalMaterial & { originalColor: Vector3 };
 type HighlightEntry = { range: Vector2; color?: Vector3 };
@@ -654,8 +690,10 @@ export default class SegmentMeshController {
       parent.traverse((child) => {
         if (child instanceof Mesh) {
           if (isWholeMeshHovered) {
-            child.material.emissive.set(...child.material.originalColor);
-            child.material.emissiveIntensity = HOVER_EMISSIVE_INTENSITY;
+            const { color, darkness } = getHoverGlowColor(child.material.originalColor);
+            child.material.emissive.copy(color);
+            child.material.emissiveIntensity =
+              HOVER_EMISSIVE_INTENSITY_BASE + darkness * HOVER_EMISSIVE_INTENSITY_DARK_BONUS;
           } else {
             child.material.emissiveIntensity = 0;
           }

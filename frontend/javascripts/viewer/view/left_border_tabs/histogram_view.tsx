@@ -41,7 +41,7 @@ const uint24Colors = [
   [255, 65, 54],
   [46, 204, 64],
   [24, 144, 255],
-];
+] as Vector3[];
 const CANVAS_HEIGHT = 100;
 const CANVAS_WIDTH = 318;
 
@@ -173,7 +173,6 @@ class Histogram extends PureComponent<HistogramProps, HistogramState> {
 
     for (const [i, histogram] of data.entries()) {
       const color = data.length > 1 ? uint24Colors[i] : PRIMARY_COLOR;
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       this.drawHistogram(ctx, histogram, maxValue, color, min, max);
     }
   }
@@ -194,33 +193,59 @@ class Histogram extends PureComponent<HistogramProps, HistogramState> {
     const histogramLength = histogramMax - histogramMin;
     const fullLength = maxRange - minRange;
     const xOffset = histogramMin - minRange;
-    ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
+    ctx.fillStyle = `rgba(255, 0, 128, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
+
+    const toCanvasX = (x: number) => x / fullLength * CANVAS_WIDTH;
+
+    const activeRegionLeftLimit = Math.max(histogramMin, intensityRangeMin) - minRange;
+    const activeRegionRightLimit = Math.min(histogramMax, intensityRangeMax) - minRange;
+    const activeRegionStartX = toCanvasX(activeRegionLeftLimit);
+    const activeRegionEndX = toCanvasX(activeRegionRightLimit);
+
     ctx.beginPath();
     // Scale data to the height of the histogram canvas.
     const downscaledData = elementCounts.map((value) => (value / maxValue) * CANVAS_HEIGHT);
+    // activeRegion is the highlighted "area under the curve" in the configured min/max range.
     const activeRegion = new Path2D();
     ctx.moveTo(0, 0);
-    activeRegion.moveTo(((intensityRangeMin - minRange) / fullLength) * CANVAS_WIDTH, 0);
+    activeRegion.moveTo(activeRegionStartX, 0);
+    let hasActiveRegionStartMovedToTop = false;
+    let hasActiveRegionEndMovedToTop = false;
 
+    let lastXInCanvasScale = 0;
     for (let i = 0; i < downscaledData.length; i++) {
       const xInHistogramScale = (i * histogramLength) / downscaledData.length;
-      const xInCanvasScale = ((xOffset + xInHistogramScale) * CANVAS_WIDTH) / fullLength;
+      const xInCanvasScale = toCanvasX(xOffset + xInHistogramScale);
       const xValue = histogramMin + xInHistogramScale;
 
       if (xValue >= intensityRangeMin && xValue <= intensityRangeMax) {
+        if (!hasActiveRegionStartMovedToTop) {
+          const f = (activeRegionStartX - lastXInCanvasScale) / ((xInCanvasScale - lastXInCanvasScale) || 1);
+          activeRegion.lineTo(
+            activeRegionStartX,
+            (1 - f) * downscaledData[i - 1] + (f) * downscaledData[i],
+          );
+          hasActiveRegionStartMovedToTop = true;
+        }
+
         activeRegion.lineTo(xInCanvasScale, downscaledData[i]);
+      } else if (xValue > intensityRangeMax && !hasActiveRegionEndMovedToTop) {
+        const f = (activeRegionEndX - lastXInCanvasScale) / ((xInCanvasScale - lastXInCanvasScale) || 1);
+        activeRegion.lineTo(
+          toCanvasX(activeRegionRightLimit),
+          (1 - f) * downscaledData[i - 1] + (f) * downscaledData[i]
+        );
       }
 
       ctx.lineTo(xInCanvasScale, downscaledData[i]);
+      lastXInCanvasScale = xInCanvasScale;
     }
 
     ctx.stroke();
     ctx.closePath();
-    const activeRegionRightLimit = Math.min(histogramMax, intensityRangeMax);
-    const activeRegionLeftLimit = Math.max(histogramMin, intensityRangeMin);
-    activeRegion.lineTo(((activeRegionRightLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
-    activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
+    activeRegion.lineTo(toCanvasX(activeRegionRightLimit), 0);
+    activeRegion.lineTo(toCanvasX(activeRegionLeftLimit), 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
   };

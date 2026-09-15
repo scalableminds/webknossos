@@ -11,14 +11,13 @@ import javax.inject.{Inject, Singleton}
 import scala.io.Source
 import scala.util.Using
 
-/**
-  * Builds the MCP Bundle (.mcpb) for this instance, which users can download and install into Claude Desktop and
-  * other MCPB hosts with a double click.
+/** Builds the MCP Bundle (.mcpb) for this instance, which users can download and install into Claude Desktop and other
+  * MCPB hosts with a double click.
   *
-  * A bundle is a zip of a manifest.json and a local MCP server. Since MCPB cannot describe a remote server, the
-  * bundled server is the thin stdio-to-HTTP bridge in conf/mcpb/index.js, and the manifest points it at this
-  * instance. Generating the bundle here rather than shipping a static file means the URL of this instance and the
-  * list of tools are always in sync with what the server actually offers.
+  * A bundle is a zip of a manifest.json and a local MCP server. Since MCPB cannot describe a remote server, the bundled
+  * server is the thin stdio-to-HTTP bridge in conf/mcpb/index.js, and the manifest points it at this instance.
+  * Generating the bundle here rather than shipping a static file means the URL of this instance and the list of tools
+  * are always in sync with what the server actually offers.
   */
 @Singleton
 class McpBundleService @Inject() (mcpService: McpService, conf: WkConf) extends LazyLogging {
@@ -33,10 +32,8 @@ class McpBundleService @Inject() (mcpService: McpService, conf: WkConf) extends 
   lazy val bundleBytes: Array[Byte] = build()
 
   def warmUp(): Unit =
-    try
-      logger.info(s"Generated MCP bundle $fileName (${bundleBytes.length} bytes) for ${mcpUrl}")
-    catch
-      case e: Exception => logger.error(s"Could not generate the MCP bundle: ${e.getMessage}", e)
+    try logger.info(s"Generated MCP bundle $fileName (${bundleBytes.length} bytes) for $mcpUrl")
+    catch case e: Exception => logger.error(s"Could not generate the MCP bundle: ${e.getMessage}", e)
 
   private def mcpUrl: String = s"${conf.Http.uri.stripSuffix("/")}/api/mcp"
 

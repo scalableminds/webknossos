@@ -185,6 +185,14 @@ export default class SegmentMeshController {
       sheen: 0.2,
       sheenRoughness: 0.25,
       sheenColor: WHITE,
+      // A thin, glossy clearcoat layer on top of the base material - reads as a "wet
+      // tissue" look, and gives a second, tighter specular highlight independent of the
+      // (fairly soft) base roughness above. Unlike sheen, clearcoat's reflectance is
+      // Fresnel-based and close to colorless, concentrated in a sharp highlight rather
+      // than broadly tinting the diffuse color, so it doesn't reintroduce the washed-out
+      // look sheen caused at higher values.
+      clearcoat: 0.15,
+      clearcoatRoughness: 0.1,
     }) as MeshMaterial;
     meshMaterial.side = FrontSide;
     meshMaterial.transparent = true;

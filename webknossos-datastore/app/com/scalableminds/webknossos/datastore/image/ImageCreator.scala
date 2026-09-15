@@ -30,7 +30,12 @@ case class ImageCreatorParameters(
     blackAndWhite: Boolean,
     isSegmentation: Boolean = false,
     color: Option[Color] = None,
-    invertColor: Option[Boolean] = None
+    invertColor: Option[Boolean] = None,
+    // When true, render into an alpha-capable image: segmentation id 0 becomes fully transparent
+    // and every other pixel's alpha is derived from `opacity`, instead of always being fully opaque.
+    // Used when compositing multiple layers on top of each other (see BinaryDataController.thumbnailCombinedJpeg).
+    preserveAlpha: Boolean = false,
+    opacity: Double = 100
 )
 
 object ImageCreator extends LazyLogging {
@@ -38,7 +43,7 @@ object ImageCreator extends LazyLogging {
   private val defaultTargetType = BufferedImage.TYPE_3BYTE_BGR
 
   def spriteSheetFor(data: Array[Byte], params: ImageCreatorParameters): Option[CombinedImage] = {
-    val targetType = defaultTargetType
+    val targetType = if (params.preserveAlpha) BufferedImage.TYPE_INT_ARGB else defaultTargetType
     val images = calculateSprites(data, params, targetType)
     createSpriteSheet(images, params, targetType)
   }
@@ -110,17 +115,21 @@ object ImageCreator extends LazyLogging {
       isSegmentation: Boolean,
       intensityRangeOpt: Option[(Double, Double)],
       color: Option[Color],
-      invertColor: Boolean
+      invertColor: Boolean,
+      preserveAlpha: Boolean,
+      opacity: Double
   ) = {
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val colored = new Array[Int](b.length / bytesPerElement)
     var idx = 0
     val l = b.length
     val intensityRange = intensityRangeOpt.getOrElse(ElementClass.defaultIntensityRange(elementClass))
+    val opacityAlphaByte =
+      Math.round(com.scalableminds.util.tools.MathUtils.clamp(opacity, 0d, 100d) / 100.0 * 255).toInt & 0xff
     while (idx + bytesPerElement <= l) {
       colored(idx / bytesPerElement) =
         if (isSegmentation)
-          idToRGB(b(idx))
+          idToRGB(readSegmentId(b, idx, bytesPerElement), preserveAlpha, opacityAlphaByte)
         else {
           val colorRed = applyColor(color.map(_.r).getOrElse(1d), invertColor)
           val colorGreen = applyColor(color.map(_.g).getOrElse(1d), invertColor)
@@ -171,11 +180,13 @@ object ImageCreator extends LazyLogging {
           }
           elementClass match {
             case ElementClass.uint24 => // assume uint24 rgb color data
-              (0xff << 24) | ((b(idx) & 0xff) << 16) | ((b(idx + 1) & 0xff) << 8) | ((b(idx + 2) & 0xff) << 0)
+              (opacityAlphaByte << 24) | ((b(idx) & 0xff) << 16) | ((b(idx + 1) & 0xff) << 8) | ((b(
+                idx + 2
+              ) & 0xff) << 0)
             case _ =>
-              (0xff << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
-                grayNormalized
-              ) << 0)
+              (opacityAlphaByte << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (
+                colorBlue(grayNormalized) << 0
+              )
           }
         }
       idx += bytesPerElement
@@ -296,35 +307,76 @@ object ImageCreator extends LazyLogging {
       )
       .toInt
 
-  private def idToRGB(b: Byte) = {
-    def hueToRGB(h: Double): Int = {
-
-      val i: Double = Math.floor(h * 6f)
-      val f: Double = h * 6f - i
-
-      val (r, g, b) = i % 6 match {
-        case 0 => (1.0, f, 0.0)
-        case 1 => (1.0 - f, 1.0, 0.0)
-        case 2 => (0.0, 1.0, f)
-        case 3 => (0.0, 1.0 - f, 1.0)
-        case 4 => (f, 0.0, 1.0)
-        case 5 => (1.0, 0.0, 1.0 - f)
-      }
-
-      val rByte = (r * 255).toByte
-      val gByte = (g * 255).toByte
-      val bByte = (b * 255).toByte
-      (0xff << 24) | ((rByte & 0xff) << 16) | ((gByte & 0xff) << 8) | ((bByte & 0xff) << 0)
+  // Reads the full (little-endian) segment id at `idx`, up to 8 bytes. Kept as a raw 64-bit bit
+  // pattern (not sign-extended/interpreted) since idToRGB only ever extracts sub-ranges of bits from
+  // it, mirroring how the frontend treats segment ids as unsigned 64-bit values.
+  private def readSegmentId(b: Array[Byte], idx: Int, bytesPerElement: Int): Long = {
+    var result = 0L
+    var i = 0
+    while (i < bytesPerElement) {
+      result |= (b(idx + i) & 0xffL) << (8 * i)
+      i += 1
     }
-
-    b match {
-      case 0 => (0x64 << 24) | (0x64 << 16) | (0x64 << 8) | (0x64 << 0)
-      case _ =>
-        val golden_ratio = 0.618033988749895
-        val hue = ((b & 0xff) * golden_ratio) % 1.0
-        hueToRGB(hue)
-    }
+    result
   }
+
+  // Segment color permutation table parameters, matching the frontend exactly
+  // (frontend/javascripts/viewer/shaders/segmentation.glsl.ts, `color: buildPermutation(19, 2)`).
+  private val ColorPermutationSequenceLength = 19
+  private val ColorPermutationPrimitiveRoot = 2
+
+  // Rounds to float32 precision, mirroring the frontend's `imprecise` helper
+  // (frontend/javascripts/viewer/shaders/utils.glsl.ts), which keeps this JS/Scala port consistent
+  // with the GLSL shader's own (32-bit float) arithmetic.
+  private def imprecise(x: Double): Double = x.toFloat.toDouble
+
+  private def glslPow(x: Double, y: Double): Double = {
+    val log2x = imprecise(Math.log(x) / Math.log(2))
+    imprecise(Math.pow(2, y * log2x))
+  }
+
+  // Port of jsGetElementOfPermutation (frontend/javascripts/viewer/shaders/utils.glsl.ts): a
+  // pseudo-random permutation of 1..sequenceLength, built from powers of a primitive root modulo
+  // sequenceLength.
+  private def getElementOfPermutation(index: Int, sequenceLength: Int, primitiveRoot: Int): Int = {
+    val oneBasedIndex = (index % sequenceLength) + 1
+    if (oneBasedIndex == 1) sequenceLength
+    else (Math.floor(glslPow(primitiveRoot, oneBasedIndex)).toLong % sequenceLength).toInt
+  }
+
+  // Port of jsColormapJet (frontend/javascripts/viewer/shaders/utils.glsl.ts): the "jet" colormap,
+  // input and output channels in [0, 1].
+  private def colormapJet(x: Double): (Double, Double, Double) = {
+    def clamp01(v: Double): Double = Math.max(0d, Math.min(1d, v))
+    val r = clamp01(if (x < 0.89) (x - 0.35) / 0.31 else 1.0 - ((x - 0.89) / 0.11) * 0.5)
+    val g = clamp01(if (x < 0.64) (x - 0.125) * 4.0 else 1.0 - (x - 0.64) / 0.27)
+    val bl = clamp01(if (x < 0.34) 0.5 + (x * 0.5) / 0.11 else 1.0 - (x - 0.34) / 0.31)
+    (r, g, bl)
+  }
+
+  // Port of jsConvertCellIdToRGBA (frontend/javascripts/viewer/shaders/segmentation.glsl.ts), the
+  // same formula the frontend uses to color segments in the viewer, segment list, and meshes, so
+  // that thumbnails use matching colors. Does not replicate the GLSL dataviewport shader's
+  // additional stripe/grid pattern overlay, which is a purely visual GPU feature with no JS/color
+  // equivalent.
+  private def idToRGB(id: Long, preserveAlpha: Boolean, opacityAlphaByte: Int): Int =
+    if (id == 0L) {
+      // Background/unlabeled segment id: transparent when compositing multiple layers, otherwise the
+      // established solid-gray look of the standalone per-layer segmentation thumbnail.
+      if (preserveAlpha) 0
+      else (0x64 << 24) | (0x64 << 16) | (0x64 << 8) | (0x64 << 0)
+    } else {
+      val significantSegmentIndex = ((id & 0xffffL) + ((id >>> 32) & 0xffffL)).toInt
+      val colorIndex =
+        getElementOfPermutation(significantSegmentIndex, ColorPermutationSequenceLength, ColorPermutationPrimitiveRoot)
+      val colorValueDecimal = colorIndex.toDouble / ColorPermutationSequenceLength.toDouble
+      val (r, g, b) = colormapJet(colorValueDecimal)
+      val rByte = Math.round(r * 255).toInt & 0xff
+      val gByte = Math.round(g * 255).toInt & 0xff
+      val bByte = Math.round(b * 255).toInt & 0xff
+      val alphaByte = if (preserveAlpha) opacityAlphaByte else 0xff
+      (alphaByte << 24) | (rByte << 16) | (gByte << 8) | (bByte << 0)
+    }
 
   private def createBufferedImageFromBytes(
       b: Array[Byte],
@@ -344,7 +396,9 @@ object ImageCreator extends LazyLogging {
           params.isSegmentation,
           params.intensityRange,
           params.color,
-          params.invertColor.getOrElse(false)
+          params.invertColor.getOrElse(false),
+          params.preserveAlpha,
+          params.opacity
         ),
         0,
         params.slideWidth

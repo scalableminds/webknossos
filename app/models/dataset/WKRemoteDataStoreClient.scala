@@ -4,7 +4,11 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.controllers.{GetEffectiveVoxelSizeParameters, PathValidationResult}
+import com.scalableminds.webknossos.datastore.controllers.{
+  CombinedThumbnailRequest,
+  GetEffectiveVoxelSizeParameters,
+  PathValidationResult
+}
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
   ExploreRemoteDatasetResponse,
@@ -62,6 +66,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryParam("invertColor", colorSettingsOpt.map(_.isInverted))
       .getWithBytesResponse
   }
+
+  def getCombinedThumbnail(dataset: Dataset, combinedThumbnailRequest: CombinedThumbnailRequest): Fox[Array[Byte]] =
+    rpc(s"${dataStore.url}/data/datasets/${dataset._id}/thumbnailCombined.jpg")
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
+      .postJsonWithBytesResponse(combinedThumbnailRequest)
 
   def getLayerData(
       dataset: Dataset,

@@ -30,70 +30,35 @@ const linearizeVec3ToIndexWithMod: ShaderModule = {
 
 const getRgbaAtXYIndex: ShaderModule = {
   code: `
-    // Define this function for each segmentation and color layer, since iOS cannot handle
-    // sampler2D textures[dataTextureCountPerLayer]
-    // as a function parameter properly
-
-    <% each(layerNamesWithSegmentation, (name) => { %>
-      vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
-        // Since WebGL 1 doesn't allow dynamic texture indexing, we use an exhaustive if-else-construct
-        // here which checks for each case individually. The else-if-branches are constructed via
-        // lodash templates.
-
-        <%
-          const textureLayerInfo = textureLayerInfos[name];
-          const elementClass = textureLayerInfo.elementClass;
-        %>
-
-        <%= textureLayerInfo.glslPrefix %>vec4 val;
-        float dtype_normalizer = <%=
-          formatNumberAsGLSLFloat((() => {
-            if (textureLayerInfo.isColor && !elementClass.endsWith("int8")) {
-              return 1;
-            } else if (
-              textureLayerInfo.isSigned && !elementClass.endsWith("int32") && !elementClass.endsWith("int64")
-            ) {
-              return 127;
-            } else {
-              return 255;
-            }
-          })())
-        %>;
-
-        <% if (textureLayerInfo.dataTextureCount === 1) { %>
-            // Don't use if-else when there is only one data texture anyway
-            val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
-
-            <% if (elementClass.endsWith("int16")) { %>
-              return vec4(val.x, 0., val.y, 0.);
-            <% } else { %>
-              return dtype_normalizer * vec4(val);
-            <% }%>
-        <% } else { %>
-          <% range(0, textureLayerInfo.dataTextureCount).forEach(textureIndex => { %>
-          <%= textureIndex > 0 ? "else" : "" %> if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-            val = texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0);
-            <% if (elementClass.endsWith("int16")) { %>
-              return vec4(val.x, 0., val.y, 0.);
-            <% } else { %>
-              return dtype_normalizer * vec4(val);
-            <% }%>
-          }
-          <% }) %>
-          return vec4(0.5, 0.0, 0.0, 0.0);
-        <% } %>
-      }
-    <% }); %>
-
+    // Every layer -- color or segmentation -- reads from one of 5 shared,
+    // dtype-keyed sampler2DArray pools (see layerPoolId/ColorLayerPool in
+    // main_data_shaders.glsl.ts / data_rendering_logic.ts) via a single,
+    // layer-count-independent dispatch -- no per-layer function/uniform
+    // needed, since a texture array's slice index is a dynamic texture
+    // coordinate, not a compile-time sampler-array index (which is what
+    // used to require one generated function per layer here).
     vec4 getRgbaAtXYIndex(float localLayerIndex, float textureIdx, float x, float y) {
-      if (localLayerIndex == 0.0) {
-        return getRgbaAtXYIndex_<%= layerNamesWithSegmentation[0] %>(textureIdx, x, y);
-      } <% each(layerNamesWithSegmentation.slice(1), (name, index) => { %>
-        else if (localLayerIndex == <%= formatNumberAsGLSLFloat(index + 1) %>) {
-          return getRgbaAtXYIndex_<%= name %>(textureIdx, x, y);
-        }
-      <% }); %>
-      return vec4(0.0);
+      uint idx = uint(localLayerIndex);
+      uint poolId = layerPoolId[idx];
+      float dtypeNormalizer = layerDtypeNormalizer[idx];
+      ivec3 coord = ivec3(int(x), int(y), int(textureIdx));
+      if (poolId == 0u) {
+        // F32 pool: native float values, no rescaling.
+        return texelFetch(pool_f32_textures, coord, 0);
+      } else if (poolId == 2u) {
+        // S8 pool: hardware SNORM-decoded to [-1, 1] already.
+        return dtypeNormalizer * texelFetch(pool_s8_textures, coord, 0);
+      } else if (poolId == 3u) {
+        // U16 pool: integer sampler, raw component values (no normalizer).
+        uvec4 val = texelFetch(pool_u16_textures, coord, 0);
+        return vec4(val.x, 0., val.y, 0.);
+      } else if (poolId == 4u) {
+        // S16 pool: integer sampler, raw component values (no normalizer).
+        ivec4 val = texelFetch(pool_s16_textures, coord, 0);
+        return vec4(val.x, 0., val.y, 0.);
+      }
+      // U8 pool: hardware UNORM-decoded to [0, 1] already.
+      return dtypeNormalizer * texelFetch(pool_u8_textures, coord, 0);
     }
   `,
 };
@@ -200,22 +165,29 @@ export const getColorForCoords: ShaderModule = {
 
       float bucketAddress;
       vec3 offsetInBucket;
-      uint renderedMagIdx;
+      uint renderedMagIdx = activeMagIdx;
 
-      // To avoid rare rendering artifacts, don't use the precomputed
-      // bucket address when being at the border of buckets.
-      bool beSafe = useBucketBorderVertexOptimization < 0.5;
-      renderedMagIdx = outputMagIdx[globalLayerIndex];
-      vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
-      vec3 absoluteBucketPosition = div(coords, bucketWidth);
-      offsetInBucket = mod(coords, bucketWidth);
-      vec3 offsetInBucketUVW = transDim(offsetInBucket);
-      if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
-          || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
-          || isnan(offsetInBucketUVW.x) || isnan(offsetInBucketUVW.y)
-          || isnan(offsetInBucketUVW.z)
-        ) {
-        beSafe = true;
+      // outputMagIdx/outputSeed/outputAddress only have entries for layers
+      // below VERTEX_ALIGNMENT_LAYER_CAP (see its declaration and the
+      // vertex shader's bucket-alignment loop) -- layers beyond that always
+      // take the full per-fragment lookup path below, just like transformed
+      // layers already do. For layers within the cap, also don't use the
+      // precomputed bucket address when being at the border of buckets, to
+      // avoid rare rendering artifacts.
+      bool beSafe = globalLayerIndex >= VERTEX_ALIGNMENT_LAYER_CAP || useBucketBorderVertexOptimization < 0.5;
+      if (!beSafe) {
+        renderedMagIdx = outputMagIdx[globalLayerIndex];
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
+        vec3 absoluteBucketPosition = div(coords, bucketWidth);
+        offsetInBucket = mod(coords, bucketWidth);
+        vec3 offsetInBucketUVW = transDim(offsetInBucket);
+        if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
+            || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
+            || isnan(offsetInBucketUVW.x) || isnan(offsetInBucketUVW.y)
+            || isnan(offsetInBucketUVW.z)
+          ) {
+          beSafe = true;
+        }
       }
 
 

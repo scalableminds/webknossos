@@ -26,6 +26,7 @@ class DataLayer {
     textureWidth: number,
     dataTextureCount: number,
     tracingId: string,
+    totalLayerCount: number,
   ) {
     this.name = layerInfo.name;
     this.fallbackLayer =
@@ -49,6 +50,7 @@ class DataLayer {
       layerInfo.elementClass,
       this.isSegmentation,
       this.name,
+      totalLayerCount,
     );
     this.pullQueue = new PullQueue(this.cube, layerInfo.name, dataset.dataStore);
     this.pushQueue = new PushQueue(this.cube, tracingId);

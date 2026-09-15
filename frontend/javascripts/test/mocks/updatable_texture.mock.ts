@@ -49,8 +49,45 @@ class MockUpdatableTexture {
   }
 }
 
+class MockUpdatableTextureArray {
+  texture: Uint8Array = new Uint8Array();
+  width: number = 0;
+  height: number = 0;
+  depth: number = 0;
+  channelCount: number;
+
+  constructor(width: number, height: number, depth: number, format: any) {
+    this.channelCount = formatToChannelCount.get(format) || 0;
+    if (this.channelCount === 0) {
+      throw new Error("Format could not be converted to channel count");
+    }
+    this.texture = new Uint8Array(width * height * depth * this.channelCount);
+    this.width = width;
+    this.height = height;
+    this.depth = depth;
+  }
+
+  update(
+    src: Float32Array | Uint8Array,
+    x: number,
+    y: number,
+    _width: number,
+    _height: number,
+    zOffset: number,
+  ) {
+    this.texture.set(src, (zOffset * this.height + y) * this.width + x);
+  }
+
+  setRenderer() {}
+
+  isInitialized() {
+    return true;
+  }
+}
+
 vi.mock("libs/UpdatableTexture", () => {
   return {
     default: MockUpdatableTexture,
+    UpdatableTextureArray: MockUpdatableTextureArray,
   };
 });

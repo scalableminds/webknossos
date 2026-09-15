@@ -1,17 +1,62 @@
 import {
+  ByteType,
+  ClampToEdgeWrapping,
+  FloatType,
   LinearFilter,
   LinearMipMapLinearFilter,
   type MagnificationTextureFilter,
   type Mapping,
   type MinificationTextureFilter,
+  NearestFilter,
   type PixelFormat,
+  ShortType,
   Texture,
   type TextureDataType,
+  UnsignedShortType,
   type WebGLRenderer,
   WebGLUtils,
   type Wrapping,
 } from "three";
 import type { TypedArray } from "viewer/constants";
+
+// The placeholder "dummy" image data these classes construct with is always
+// zero-length (see the comment below), but WebGL still validates that the
+// ArrayBufferView's class matches the texture's declared type, even for a
+// zero-length buffer. Passing a mismatched TypedArray (e.g. Uint32Array for
+// a FloatType texture) causes three.js' own internal upload path (which
+// unavoidably runs once, the first time the texture is bound, before any
+// real data has been written via update() below) to log a
+// "texSubImage(2|3)D: type X but ArrayBufferView not Y" WebGL error.
+function createEmptyTypedArrayForTextureType(type: TextureDataType | undefined): TypedArray {
+  switch (type) {
+    case FloatType:
+      return new Float32Array(0);
+    case ByteType:
+      return new Int8Array(0);
+    case ShortType:
+      return new Int16Array(0);
+    case UnsignedShortType:
+      return new Uint16Array(0);
+    default:
+      // Covers UnsignedByteType, three.js' own default texture type.
+      return new Uint8Array(0);
+  }
+}
+
+// The pixel-source data is always the *last* argument to texSubImage(2|3)D,
+// regardless of which overload is used (e.g. an explicit width/height/pixels
+// call vs. an implicit-size image-source call) -- either as a bare TypedArray
+// (three.js' own internal upload path passes image.data directly) or as an
+// object with a nested .data array. Checking the last argument's effective
+// length this way -- rather than a hardcoded argument index -- is what
+// should have been done from the start; a previous version of this check
+// looked at the wrong index (the `type` GLenum, not the source data) and so
+// never actually matched anything.
+function isEmptyPixelSource(args: unknown[]): boolean {
+  const last = args[args.length - 1] as { length?: number; data?: { length?: number } } | undefined;
+  const length = last?.length ?? last?.data?.length;
+  return length === 0;
+}
 
 /* The UpdatableTexture class exposes a way to partially update a texture.
  * Since we use this class for data which is usually only available in chunks,
@@ -49,7 +94,7 @@ class UpdatableTexture extends Texture {
     minFilter?: MinificationTextureFilter,
     anisotropy?: number,
   ) {
-    const imageData = { width, height, data: new Uint32Array(0) };
+    const imageData = { width, height, data: createEmptyTypedArrayForTextureType(type) };
 
     super(
       // @ts-expect-error
@@ -76,6 +121,28 @@ class UpdatableTexture extends Texture {
     this.renderer = renderer;
     this.gl = this.renderer.getContext() as WebGL2RenderingContext;
     this.utils = new WebGLUtils(this.gl, this.renderer.extensions);
+    if (originalTexSubImage2D == null) {
+      // Installed here (rather than lazily in update(), as it used to be)
+      // so the override is guaranteed to be in place before three.js' own
+      // internal upload path (WebGLTextures.uploadTexture) can ever run --
+      // which it does the first time this texture is bound by the normal
+      // per-frame render path, and that can happen before update() is ever
+      // called (e.g. before any bucket data has loaded yet). Without the
+      // override already installed by then, that internal upload attempts
+      // to write the (correctly-typed but zero-length) dummy image data
+      // into the full texture region, which WebGL rejects as
+      // "ArrayBufferView not big enough for request". See explanation at
+      // declaration of originalTexSubImage2D.
+      originalTexSubImage2D = this.gl.texSubImage2D.bind(this.gl);
+      // @ts-expect-error
+      this.gl.texSubImage2D = (...args) => {
+        if (isEmptyPixelSource(args)) {
+          return;
+        }
+        // @ts-expect-error
+        return originalTexSubImage2D(...args);
+      };
+    }
   }
 
   isInitialized() {
@@ -83,19 +150,6 @@ class UpdatableTexture extends Texture {
   }
 
   update(src: TypedArray, x: number, y: number, width: number, height: number) {
-    if (originalTexSubImage2D == null) {
-      // See explanation at declaration of originalTexSubImage2D.
-      originalTexSubImage2D = this.gl.texSubImage2D.bind(this.gl);
-      // @ts-expect-error
-      this.gl.texSubImage2D = (...args) => {
-        // @ts-expect-error
-        if (args.length >= 7 && args[6]?.data?.length === 0) {
-          return;
-        }
-        // @ts-expect-error
-        return originalTexSubImage2D(...args);
-      };
-    }
     if (!this.isInitialized()) {
       this.renderer.initTexture(this);
     }
@@ -103,7 +157,8 @@ class UpdatableTexture extends Texture {
     const textureProperties = this.renderer.properties.get(this) as any;
     this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
 
-    originalTexSubImage2D(
+    // Guaranteed non-null: installed in setRenderer(), always called before update().
+    originalTexSubImage2D!(
       this.gl.TEXTURE_2D,
       0,
       x,
@@ -118,8 +173,136 @@ class UpdatableTexture extends Texture {
   }
 }
 
-export function notifyAboutDisposedRenderer() {
-  originalTexSubImage2D = null;
+/* Array-texture (sampler2DArray) analogue of UpdatableTexture above, used to
+ * back a color-layer texture pool (see pool_texture_manager.ts): many
+ * layers' buckets are written into (sub-rectangle, single-slice) regions of
+ * one shared depth-many-layers 3D texture, addressed by (x, y, zOffset).
+ * Mirrors UpdatableTexture's approach of allocating once via texStorage3D
+ * (through three.js' renderer.initTexture) and then bypassing three.js'
+ * normal update path with direct gl.texSubImage3D calls for every partial
+ * write, since three.js' own DataArrayTexture only supports replacing whole
+ * width x height slices (via layerUpdates), not sub-rectangles within one.
+ */
+let originalTexSubImage3D: WebGL2RenderingContext["texSubImage3D"] | null = null;
+
+class UpdatableTextureArray extends Texture {
+  isUpdatableTexture: boolean = true;
+  isDataArrayTexture: boolean = true;
+  // Three.js' own upload path (WebGLTextures.uploadTexture) reads
+  // layerUpdates.size unconditionally for any isDataArrayTexture, even
+  // though we bypass that mechanism entirely with our own manual
+  // gl.texSubImage3D calls in update() below. DataArrayTexture (which we
+  // don't extend, since it doesn't support sub-rectangle-within-a-slice
+  // updates) initializes this in its constructor; we just need the field to
+  // exist so three.js doesn't crash on undefined.size the first time this
+  // texture is bound (which happens via the normal per-frame render path,
+  // not through update()).
+  layerUpdates: Set<number> = new Set();
+  // Plain Texture has no wrapR field (only DataArrayTexture/Data3DTexture
+  // declare one); see the assignment in the constructor for why this is
+  // needed.
+  wrapR: Wrapping | undefined;
+  renderer!: WebGLRenderer;
+  gl!: WebGL2RenderingContext;
+  utils!: WebGLUtils;
+  width: number | undefined;
+  height: number | undefined;
+  depth: number | undefined;
+
+  constructor(
+    width: number,
+    height: number,
+    depth: number,
+    format?: PixelFormat,
+    type?: TextureDataType,
+  ) {
+    const imageData = { width, height, depth, data: createEmptyTypedArrayForTextureType(type) };
+
+    super(
+      // @ts-expect-error
+      imageData,
+    );
+    this.format = format ?? this.format;
+    this.type = type ?? this.type;
+
+    // NearestFilter (not the Texture default of Linear*) since these
+    // textures are only ever read via texelFetch, and Linear filtering
+    // without a generated mipmap chain risks an incomplete-texture sampler.
+    this.magFilter = NearestFilter;
+    this.minFilter = NearestFilter;
+    this.generateMipmaps = false;
+    this.flipY = false;
+    this.unpackAlignment = 1;
+    this.needsUpdate = true;
+    // Plain Texture (unlike DataArrayTexture, which we intentionally don't
+    // extend -- see class comment above) has no wrapR field at all, so it's
+    // `undefined` by default. Three.js unconditionally sets TEXTURE_WRAP_R
+    // for any TEXTURE_2D_ARRAY (WebGLTextures.setTextureParameters), and
+    // wrappingToGL[undefined] is undefined, which is an invalid enum value.
+    this.wrapR = ClampToEdgeWrapping;
+  }
+
+  setRenderer(renderer: WebGLRenderer) {
+    this.renderer = renderer;
+    this.gl = this.renderer.getContext() as WebGL2RenderingContext;
+    this.utils = new WebGLUtils(this.gl, this.renderer.extensions);
+    if (originalTexSubImage3D == null) {
+      // Installed here (rather than lazily in update(), as it used to be)
+      // so the override is guaranteed to be in place before three.js' own
+      // internal upload path (WebGLTextures.uploadTexture) can ever run --
+      // which it does the first time this texture is bound by the normal
+      // per-frame render path, and that can happen before update() is ever
+      // called (e.g. before any bucket data has loaded yet). Without the
+      // override already installed by then, that internal upload attempts
+      // to write the (correctly-typed but zero-length) dummy image data
+      // into the full texture region, which WebGL rejects as
+      // "ArrayBufferView not big enough for request". See explanation at
+      // declaration of originalTexSubImage3D.
+      originalTexSubImage3D = this.gl.texSubImage3D.bind(this.gl);
+      this.gl.texSubImage3D = (...args) => {
+        if (isEmptyPixelSource(args)) {
+          return;
+        }
+        // @ts-expect-error
+        return originalTexSubImage3D(...args);
+      };
+    }
+  }
+
+  isInitialized() {
+    return (this.renderer.properties.get(this) as any).__webglTexture != null;
+  }
+
+  update(src: TypedArray, x: number, y: number, width: number, height: number, zOffset: number) {
+    if (!this.isInitialized()) {
+      this.renderer.initTexture(this);
+    }
+    const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D_ARRAY);
+    const textureProperties = this.renderer.properties.get(this) as any;
+    this.gl.bindTexture(this.gl.TEXTURE_2D_ARRAY, textureProperties.__webglTexture);
+
+    // Guaranteed non-null: installed in setRenderer(), always called before update().
+    originalTexSubImage3D!(
+      this.gl.TEXTURE_2D_ARRAY,
+      0,
+      x,
+      y,
+      zOffset,
+      width,
+      height,
+      1,
+      this.utils.convert(this.format) as number,
+      this.utils.convert(this.type) as number,
+      src,
+    );
+    this.gl.bindTexture(this.gl.TEXTURE_2D_ARRAY, activeTexture);
+  }
 }
 
+export function notifyAboutDisposedRenderer() {
+  originalTexSubImage2D = null;
+  originalTexSubImage3D = null;
+}
+
+export { UpdatableTextureArray };
 export default UpdatableTexture;

@@ -28,6 +28,7 @@ import type {
   SomeContainment,
 } from "viewer/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "viewer/model/bucket_data_handling/bucket";
+import { getBucketCountSoftLimitPerLayer } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import type PushQueue from "viewer/model/bucket_data_handling/pushqueue";
 import TemporalBucketManager from "viewer/model/bucket_data_handling/temporal_bucket_manager";
@@ -142,7 +143,16 @@ class DataCube {
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
+    // Total number of layers in the dataset, used to scale down
+    // BUCKET_COUNT_SOFT_LIMIT so RAM usage doesn't grow linearly with layer
+    // count (see getBucketCountSoftLimitPerLayer). Optional and defaults to
+    // the un-scaled limit so existing test call sites (which construct a
+    // DataCube in isolation) are unaffected.
+    totalLayerCount?: number,
   ) {
+    if (totalLayerCount != null) {
+      this.BUCKET_COUNT_SOFT_LIMIT = getBucketCountSoftLimitPerLayer(totalLayerCount);
+    }
     this.elementClass = elementClass;
     this.channelCount = getConstructorForElementClass(this.elementClass)[1];
     this.isSegmentation = isSegmentation;

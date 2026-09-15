@@ -44,13 +44,25 @@ const hslToSRGB = (hsl: Vector3) => new Color().setHSL(...hsl).convertSRGBToLine
 
 const WHITE = new Color(1, 1, 1);
 const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
-const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
 export const PARTITION_COLORS = {
   partitionA: [0.2, 0.2, 0.2] as Vector3,
   partitionB: [0.7, 0.7, 0.7] as Vector3,
 };
 const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
-const HOVERED_COLOR_VEC3 = HOVERED_COLOR.toArray() as Vector3;
+// Still used for the proofreading-only case where just part of a merged, multi-segment
+// mesh is hovered (see updateMeshAppearance) - a specific sub-range can only be
+// distinguished by recoloring it, since a light can't target part of one mesh object.
+const HOVERED_COLOR_VEC3 = hslToSRGB([0.65, 0.9, 0.75]).toArray() as Vector3;
+// Used to give a hovered mesh a glow instead of recoloring it (see updateMeshAppearance):
+// tried scoping an extra light to just the hovered mesh via a dedicated three.js render
+// layer first, but Light.layers only gates whether a light is active for the *camera*
+// (light.layers.test(camera.layers)) - it doesn't test a light against each individual
+// mesh's own layers, so it can't target one specific mesh within a single render pass
+// (the true "selective lighting" example does this via multiple render passes per
+// frame, toggling the camera's layers each time, which isn't worth the extra cost of a
+// 5th full-scene render pass just for a hover effect here). emissive is a genuine
+// per-mesh material property instead, so it doesn't have that problem.
+const HOVER_EMISSIVE_INTENSITY = 0.35;
 
 type MeshMaterial = MeshPhysicalMaterial & { originalColor: Vector3 };
 type HighlightEntry = { range: Vector2; color?: Vector3 };
@@ -629,6 +641,28 @@ export default class SegmentMeshController {
       }
     }
 
+    if (isHovered != null) {
+      // Whole-mesh hover (the common case, and the only kind possible for a non-merged
+      // mesh) is shown via an emissive glow, tinted to the segment's own color, rather
+      // than a color change - the segment's own color/shading stays legible, just
+      // brighter, while hovered. This can't represent hovering just part of a merged,
+      // multi-segment mesh though (e.g. one specific unmapped segment while
+      // proofreading) - emissive is a whole-material property, not a per-range one - so
+      // that case is left to the vertex-range recoloring below instead, same as before.
+      const isWholeMeshHovered =
+        mesh.hoveredState != null && (mesh.hoveredState === "full" || !mesh.isMerged);
+      parent.traverse((child) => {
+        if (child instanceof Mesh) {
+          if (isWholeMeshHovered) {
+            child.material.emissive.set(...child.material.originalColor);
+            child.material.emissiveIntensity = HOVER_EMISSIVE_INTENSITY;
+          } else {
+            child.material.emissiveIntensity = 0;
+          }
+        }
+      });
+    }
+
     const setMaterialToUniformColor = (material: MeshMaterial, color: Color) => {
       material.vertexColors = false;
       material.color = color;
@@ -642,10 +676,10 @@ export default class SegmentMeshController {
       material.needsUpdate = true;
     };
 
-    const isUniformColor = (mesh.activeState || mesh.hoveredState) === "full" || !mesh.isMerged;
+    const isUniformColor = mesh.activeState === "full" || !mesh.isMerged;
 
     if (isUniformColor) {
-      let newColor = mesh.hoveredState ? HOVERED_COLOR : new Color(...mesh.material.originalColor);
+      const newColor = new Color(...mesh.material.originalColor);
 
       // Update the material for all meshes that belong to the current
       // segment ID. Only for adhoc meshes, these will contain multiple

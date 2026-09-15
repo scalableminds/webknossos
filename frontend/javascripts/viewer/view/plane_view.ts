@@ -62,15 +62,15 @@ import {
 // previous setup used two equally-bright, near-frontal lights, which behaves like an
 // on-camera flash: shading gets flattened out because the light source barely differs
 // from the viewing angle.
-const KEY_LIGHT_INTENSITY = 6;
-const FILL_LIGHT_INTENSITY = 1.5;
+const KEY_LIGHT_INTENSITY = 7.5;
+const FILL_LIGHT_INTENSITY = 2;
 
 // Lets the key light cast shadows from meshes onto each other in the TD viewport, which
 // is by far the strongest depth cue for telling overlapping/crossing branches apart (see
 // updateTDDepthCueing() for how the shadow camera frustum is kept in sync with the
 // current view). Flip this off if it turns out to be too costly on large meshes, or if
 // the shadow tuning below needs to be revisited.
-const ENABLE_MESH_SHADOWS = true;
+const ENABLE_MESH_SHADOWS = false;
 const SHADOW_MAP_SIZE = 1024;
 
 type RaycasterHit = {

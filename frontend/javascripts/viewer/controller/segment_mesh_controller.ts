@@ -178,8 +178,10 @@ export default class SegmentMeshController {
       // Sheen adds a soft, view-dependent brightening at grazing angles (a "rim
       // light" effect), which helps define silhouette edges where branches overlap
       // — otherwise same-colored crossing branches tend to visually merge. sheenColor
-      // must be non-black, since it's what the sheen lobe is tinted with.
-      sheen: 0.6,
+      // must be non-black, since it's what the sheen lobe is tinted with. Kept fairly
+      // low: sheen also eats into the diffuse response, which was making meshes read
+      // darker overall than intended.
+      sheen: 0.8,
       sheenRoughness: 0.6,
       sheenColor: WHITE,
     }) as MeshMaterial;
@@ -457,14 +459,13 @@ export default class SegmentMeshController {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
     // The colormap segment IDs are hashed into (jsConvertCellIdToRGBA) is deliberately
     // vivid/high-contrast so segments stay distinguishable in the 2D data view. On a lit
-    // 3D mesh, though, those same fully-saturated colors leave little headroom for
-    // shading (highlights/shadow) to actually show, which is part of why meshes tend to
-    // look like flat, poster-like silhouettes. Pulling saturation and lightness in
-    // towards the midtones only for the mesh material (not the shared color function,
-    // which also drives the 2D view) leaves that headroom while keeping each segment's
-    // hue - and thus its identity - unchanged.
-    const meshSaturation = saturation * 0.7;
-    const meshLight = 0.5 + (light - 0.5) * 0.6;
+    // 3D mesh, fully-saturated colors leave a little less headroom for shading
+    // (highlights/shadow) to show, so we pull saturation/lightness in only slightly here
+    // (not in the shared color function, which also drives the 2D view) - just enough to
+    // leave room for the material's own shading, without muting each segment's color
+    // identity, which is otherwise informative on its own.
+    const meshSaturation = saturation * 1.5;
+    const meshLight = 0.5 + (light - 0.5) * 1;
     const color = new Color().setHSL(hue, meshSaturation, meshLight);
     color.convertSRGBToLinear();
 
@@ -480,7 +481,7 @@ export default class SegmentMeshController {
     // (the previous approach) cancels out the shading gradients that make a surface
     // read as three-dimensional, so we deliberately keep this to a low-intensity
     // ambient plus two faint, distinctly-colored world-space lights instead.
-    const ambientLight = new AmbientLight("white", 0.3);
+    const ambientLight = new AmbientLight("white", 0.42);
     this.lightsGroup.add(ambientLight);
 
     // Subtle, cool-toned rim/back light so overlapping branches keep an edge of

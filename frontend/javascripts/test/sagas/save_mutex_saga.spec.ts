@@ -15,6 +15,7 @@ import { setCollaborationModeAction } from "viewer/model/actions/annotation_acti
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
+import { disableSavingAction } from "viewer/model/actions/save_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
   setActiveCellAction,
@@ -27,13 +28,32 @@ import {
   getMutexLogicState,
   subscribeToAnnotationMutex,
 } from "viewer/model/sagas/saving/save_mutex_saga";
+import { ACQUIRE_MUTEX_INTERVAL } from "viewer/model/sagas/saving/save_saga_constants";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getPositionForSegmentId,
   mockInitialBucketAndAgglomerateData,
+  operationFinished,
+  operationStarted,
 } from "./proofreading/proofreading_test_utils";
+
+// Mocked here (rather than reducing the real values in save_saga_constants.ts) because
+// the mutex-acquiring saga runs in the background for every test via the root saga, not
+// just here — shrinking the real constants made unrelated test files flaky. The other
+// constants from this module (e.g. PUSH_THROTTLE_TIME) are spread through unchanged
+// since other sagas running in the background during these tests rely on them too.
+vi.mock("viewer/model/sagas/saving/save_saga_constants", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("viewer/model/sagas/saving/save_saga_constants")>();
+  return {
+    ...actual,
+    ACQUIRE_MUTEX_INTERVAL: 100,
+    DELAY_AFTER_FAILED_MUTEX_FETCH: 100,
+    INITIAL_BACKOFF_TIME: 75,
+  };
+});
 
 const blockingUser: APIUserCompact = { firstName: "Sample", lastName: "User", id: "1111" };
 
@@ -55,18 +75,20 @@ async function makeProofreadMerge(
     // is only maintained for loaded buckets). => Forces loading of mapping.
     const valueAt444 = yield call(() => context.api.data.getDataValue(tracingId, [4, 4, 4], 0));
     expect(valueAt444).toBe(4);
-    yield take("SET_MAPPING");
+    // The local HDF5 mapping data is loaded and dispatched via SET_MAPPING_DATA (phase 2 of
+    // mapping activation).
+    yield take("SET_MAPPING_DATA");
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
-    yield put(setActiveCellAction(1));
+    yield put(updateSegmentAction(1n, { anchorPosition: [1, 1, 1] }, tracingId));
+    yield put(setActiveCellAction(1n));
     // Execute the actual merge and wait for the finished mapping.
-    yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
-    yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+    yield put(proofreadMergeAction(getPositionForSegmentId(4), 4n));
+    yield take(operationStarted("PROOFREADING"));
     if (waitTillFinished) {
-      // Wait for UI made busy and back to idle again to ensure saving of the whole sagas is done.
+      // Wait for proofreading operation to start and then finish to ensure saving of the whole saga is done.
       yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+      yield take(operationFinished("PROOFREADING"));
     }
   });
   await task.toPromise();
@@ -113,14 +135,14 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
       const _unsubscribe = yield call(subscribeToAnnotationMutex, "Test");
-      yield delay(1000);
+      yield delay(ACQUIRE_MUTEX_INTERVAL);
       expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
       yield call(clearAllSubscriptions);
       yield delay(10);
       expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
       context.mocks.acquireAnnotationMutex.mockClear();
       context.mocks.releaseAnnotationMutex.mockClear();
-      yield delay(1000);
+      yield delay(ACQUIRE_MUTEX_INTERVAL);
       expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
       expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     });
@@ -132,7 +154,7 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
       const unsubscribe = yield call(subscribeToAnnotationMutex, "Test");
-      yield delay(1000);
+      yield delay(ACQUIRE_MUTEX_INTERVAL);
       expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
       yield call(unsubscribe);
       yield delay(10);
@@ -142,7 +164,7 @@ describe("Save Mutex Saga", () => {
       yield call(unsubscribe);
       yield call(unsubscribe);
       yield call(unsubscribe);
-      yield delay(1000);
+      yield delay(ACQUIRE_MUTEX_INTERVAL);
       expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
       expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     });
@@ -209,12 +231,71 @@ describe("Save Mutex Saga", () => {
     await task.toPromise();
   });
 
+  it<WebknossosTestContext>("After the first successful mutex acquisition, editing should remain allowed during subsequent refreshes (regression test).", async (context: WebknossosTestContext) => {
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true);
+    // After setup, the initial mutex acquisition has already completed.
+    expect(Store.getState().annotation.isUpdatingCurrentlyAllowed).toBe(true);
+    const task = startSaga(function* task() {
+      // SET_USER_HOLDING_MUTEX is dispatched on every loop iteration of tryAcquireMutexContinuously.
+      // The initial dispatch happened during setup, so this take waits for the second iteration.
+      yield take("SET_USER_HOLDING_MUTEX");
+      // Before the fix, isUpdatingCurrentlyAllowed was incorrectly set to false at the start of
+      // every non-initial loop iteration and never restored (setIsUpdatingAnnotationCurrentlyAllowedAction
+      // is only called when isInitialRequest || !canEdit, both false when we already hold the mutex).
+      yield assertMutexStoreProperties({
+        hasAnnotationMutex: true,
+        blockingUser: null,
+        isUpdatingCurrentlyAllowed: true,
+      });
+    });
+    await task.toPromise();
+  });
+
+  it<WebknossosTestContext>("After the first mutex acquisition was unsuccessful, editing should remain disabled even when the second mutex acquisition succeeds.", async (context: WebknossosTestContext) => {
+    await setupWebknossosForTesting(context, "hybrid");
+    // Mock fails on the first attempt so we can observe what happens when it later succeeds.
+    context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
+      canEdit: false,
+      blockedByUser: blockingUser,
+      blockedBySessionId: null,
+    }));
+    const task = startSaga(function* task() {
+      yield put(setCollaborationModeAction("Exclusive"));
+      // Wait for the initial (failed) acquisition.
+      yield take("SET_USER_HOLDING_MUTEX");
+      yield assertMutexStoreProperties({
+        hasAnnotationMutex: false,
+        blockingUser: blockingUser,
+        isUpdatingCurrentlyAllowed: false,
+      });
+      // Let the next acquisition succeed.
+      context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
+        canEdit: true,
+        blockedByUser: null,
+        blockedBySessionId: null,
+      }));
+      // SET_IS_MUTEX_ACQUIRED fires when hasAnnotationMutex changes (false → true).
+      yield take("SET_IS_MUTEX_ACQUIRED");
+      // Editing must remain disabled — the user has to refresh the page.
+      // setIsUpdatingAnnotationCurrentlyAllowedAction is only dispatched when
+      // isInitialRequest || !canEdit; on subsequent successful refreshes both are false,
+      // so the false set by the initial failure is never restored.
+      yield assertMutexStoreProperties({
+        hasAnnotationMutex: true,
+        blockingUser: null,
+        isUpdatingCurrentlyAllowed: false,
+      });
+    });
+    await task.toPromise();
+  });
+
   it<WebknossosTestContext>("An annotation where othersMayEdit is turned on should try to acquire the annotation mutex and not allow editing if mutex is not returned as can edit.", async (context: WebknossosTestContext) => {
     await setupWebknossosForTesting(context, "hybrid");
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
       canEdit: false,
       blockedByUser: blockingUser,
+      blockedBySessionId: null,
     }));
     const task = startSaga(function* task() {
       yield put(setCollaborationModeAction("Exclusive"));
@@ -241,7 +322,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, "OwnerOnly", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     await makeProofreadMerge(context, true);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
@@ -251,7 +332,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     await makeProofreadMerge(context, true);
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
@@ -261,7 +342,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
   });
 
@@ -272,12 +353,13 @@ describe("Save Mutex Saga", () => {
 
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen as ad hoc mutex fetching should be active!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     // Block first acquiring mutex try.
     context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
       canEdit: false,
       blockedByUser: blockingUser,
+      blockedBySessionId: null,
     }));
     const task = startSaga(function* task() {
       const hasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
@@ -302,6 +384,7 @@ describe("Save Mutex Saga", () => {
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: true,
         blockedByUser: null,
+        blockedBySessionId: null,
       }));
       yield take("SET_IS_MUTEX_ACQUIRED");
       // Check if mutex was successfully received.
@@ -321,7 +404,7 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen as ad hoc mutex fetching should be active!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
@@ -341,13 +424,13 @@ describe("Save Mutex Saga", () => {
         blockingUser: null,
         isUpdatingCurrentlyAllowed,
       });
-      // Wait two more fetching cycles (1 second each in testing env)
+      // Wait two more fetching cycles (ACQUIRE_MUTEX_INTERVAL each in testing env)
       yield take("SET_IS_MUTEX_ACQUIRED");
       yield take("SET_IS_MUTEX_ACQUIRED");
       expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
       // Simulate saving finished so the mutex is released.
       yield call(unsubscribeFromMutex);
-      yield sleep(100);
+      yield sleep(20);
       expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
       // Check whether the mutex was stored as released.
       hasAnnotationMutex = false;
@@ -366,7 +449,7 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen as ad hoc mutex fetching should be active!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
@@ -388,7 +471,7 @@ describe("Save Mutex Saga", () => {
         blockingUser: null,
         isUpdatingCurrentlyAllowed,
       });
-      // Wait two more fetching cycles (1 second each in testing env)
+      // Wait two more fetching cycles (ACQUIRE_MUTEX_INTERVAL each in testing env)
       yield take("SET_IS_MUTEX_ACQUIRED");
       yield take("SET_IS_MUTEX_ACQUIRED");
       expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
@@ -417,14 +500,14 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     await makeProofreadMerge(context, true);
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
     expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
     context.mocks.acquireAnnotationMutex.mockClear();
     // Give time to potentially try to acquire the mutex again.
-    await sleep(2000);
+    await sleep(ACQUIRE_MUTEX_INTERVAL * 2);
     // But there shouldn't be a try to fetch the mutex again.
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
   });
@@ -433,7 +516,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
       // Manually trigger mutex fetching for ad hoc strategy to have more control in test.
@@ -470,6 +553,7 @@ describe("Save Mutex Saga", () => {
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: true,
         blockedByUser: null,
+        blockedBySessionId: null,
       }));
       yield take("SET_IS_MUTEX_ACQUIRED");
       hasAnnotationMutex = true;
@@ -481,28 +565,69 @@ describe("Save Mutex Saga", () => {
       expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
       // Simulate saving finished so the mutex is released.
       yield call(unsubscribeFromMutex);
-      yield sleep(100);
+      yield sleep(20);
       expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
     });
     await task.toPromise();
   });
 
-  const ToolsAllowedInProofreadingModeWithoutLiveCollabSupport = [
-    { tool: AnnotationTool.SKELETON },
-    { tool: AnnotationTool.BOUNDING_BOX },
-  ];
-  describe.each(
-    ToolsAllowedInProofreadingModeWithoutLiveCollabSupport,
-  )("[With AnnotationTool=$tool.id]:", (annotationToolWithoutLiveCollabSupport) => {
-    it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with collaborationMode=OwnerOnly should not try to acquire the mutex despite the user switching a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.tool.id}.`, async (context: WebknossosTestContext) => {
-      await setupWebknossosForTestingWithRestrictions(context, "OwnerOnly", true, true);
-      mockInitialBucketAndAgglomerateData(context);
-      // Give mutex saga time to potentially acquire the mutex. This should not happen!
-      await sleep(100);
-      expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
-      Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport.tool));
-      await sleep(100);
-      expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+  describe("When disableSavingAction is dispatched", () => {
+    describe.each([
+      { collaborationMode: "Exclusive" as const },
+      { collaborationMode: "Concurrent" as const },
+    ])("collaborationMode=$collaborationMode", ({ collaborationMode }) => {
+      it<WebknossosTestContext>("the mutex acquiring saga should be cancelled", async (context: WebknossosTestContext) => {
+        await setupWebknossosForTestingWithRestrictions(context, collaborationMode, true);
+        const task = startSaga(function* task() {
+          // subscribeToAnnotationMutex blocks until the mutex is acquired.
+          // For Exclusive, the continuous saga is already acquiring; for Concurrent,
+          // subscribing triggers the ad-hoc saga.
+          yield call(subscribeToAnnotationMutex, "Test");
+          expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+          context.mocks.acquireAnnotationMutex.mockClear();
+          Store.dispatch(disableSavingAction());
+          yield sleep(20);
+          context.mocks.acquireAnnotationMutex.mockClear();
+          // Wait longer than one acquire interval to confirm no retries.
+          yield sleep(ACQUIRE_MUTEX_INTERVAL * 2);
+          expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+        });
+        await task.toPromise();
+      });
+
+      it<WebknossosTestContext>("a held mutex should be released", async (context: WebknossosTestContext) => {
+        await setupWebknossosForTestingWithRestrictions(context, collaborationMode, true);
+        const task = startSaga(function* task() {
+          yield call(subscribeToAnnotationMutex, "Test");
+          expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+          expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
+          Store.dispatch(disableSavingAction());
+          yield sleep(20);
+          expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
+          yield assertMutexStoreProperties({
+            hasAnnotationMutex: false,
+            blockingUser: null,
+            isUpdatingCurrentlyAllowed: true,
+          });
+        });
+        await task.toPromise();
+      });
+
+      it<WebknossosTestContext>("the saga should not restart after a collaboration mode change following disableSavingAction", async (context: WebknossosTestContext) => {
+        await setupWebknossosForTestingWithRestrictions(context, collaborationMode, true);
+        const task = startSaga(function* task() {
+          yield call(subscribeToAnnotationMutex, "Test");
+          Store.dispatch(disableSavingAction());
+          yield sleep(20);
+          context.mocks.acquireAnnotationMutex.mockClear();
+          // Switching collaboration mode would normally restart the acquiring saga.
+          yield put(setCollaborationModeAction("Exclusive"));
+          yield put(setCollaborationModeAction("Concurrent"));
+          yield sleep(ACQUIRE_MUTEX_INTERVAL * 2);
+          expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+        });
+        await task.toPromise();
+      });
     });
   });
 });
@@ -519,7 +644,7 @@ describe("Save Mutex Saga should crash", () => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(100);
+    await sleep(20);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
       // Manually trigger mutex fetching for ad hoc strategy to have more control in test.
@@ -556,9 +681,10 @@ describe("Save Mutex Saga should crash", () => {
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: false,
         blockedByUser: blockingUser,
+        blockedBySessionId: null,
       }));
       yield take("SET_IS_MUTEX_ACQUIRED");
-      yield sleep(100);
+      yield sleep(30);
       // Checking whether the spawned mutex fetching saga did indeed crash.
       const annotationMutexLogicState = yield call(getMutexLogicState);
       expect(annotationMutexLogicState.runningAdHocMutexAcquiringSaga?.error()).toBeDefined();

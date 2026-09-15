@@ -6,6 +6,7 @@ import reduce from "lodash-es/reduce";
 import sum from "lodash-es/sum";
 import type { APICompoundType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import { isSaving, isSavingOrRebasing } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerByName,
   getSegmentationLayerWithMappingSupport,
@@ -22,6 +23,7 @@ import type LayerRenderingManager from "viewer/model/bucket_data_handling/layer_
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import type DataLayer from "viewer/model/data_layer";
 import { getTotalSaveQueueLength } from "viewer/model/reducers/save_reducer";
+import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import type { TraceOrViewCommand } from "viewer/store";
 import Store from "viewer/store";
 import { initialize } from "./model_initialization";
@@ -245,7 +247,7 @@ export class WebKnossosModel {
 
   stateSaved() {
     const state = Store.getState();
-    const storeStateSaved = !state.save.isBusy && getTotalSaveQueueLength(state.save.queue) === 0;
+    const storeStateSaved = !isSaving(state) && getTotalSaveQueueLength(state.save.queue) === 0;
 
     const pushQueuesSaved = reduce(
       this.dataLayers,
@@ -297,7 +299,7 @@ export class WebKnossosModel {
     Store.dispatch(saveNowAction());
   };
 
-  ensureSavedState = async () => {
+  ensureSavedState = async (operationContext?: OperationContext) => {
     /* This function will only return once all state is saved
      * even if new updates are pushed to the save queue during saving
      */
@@ -315,17 +317,20 @@ export class WebKnossosModel {
       return true;
     }
 
-    while (
-      // Wait while rebasing is in progress.
-      Store.getState().save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding ||
-      // If no rebasing is in progress enforce diffed state to save queue.
-      ((await waitForDifferResponses()) && !this.stateSaved())
-    ) {
-      // The dispatch of the saveNowAction IN the while loop is deliberate.
-      // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
-      // the while loop would continue running until the next save would be triggered.
-      if (!Store.getState().save.isBusy) {
-        Store.dispatch(saveNowAction());
+    while (true) {
+      // If saving or rebasing is in progress, we always need to keep waiting.
+      if (!isSavingOrRebasing(Store.getState())) {
+        // Only when neither is in progress, we enforce the diffed state to the
+        // save queue and check whether everything is saved.
+        await waitForDifferResponses();
+        if (this.stateSaved()) {
+          break;
+        }
+      }
+      // This isSavingOrRebasing should NOT be combined with the previous if
+      // because Store.getState() may have changed after the await.
+      if (!isSavingOrRebasing(Store.getState())) {
+        Store.dispatch(saveNowAction(operationContext));
       }
 
       await sleep(WAIT_AFTER_SAVE_TRIGGER);

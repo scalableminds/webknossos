@@ -41,7 +41,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import {
   type APIDatasetCompact,
   type APIJob,
@@ -67,7 +67,7 @@ type Props = {
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
-  setFolderIdForEditModal: (arg0: string | null) => void;
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -109,7 +109,7 @@ function DatasetView({
   onSelectDataset,
   selectedDatasets,
   onSelectFolder,
-  setFolderIdForEditModal,
+  scrollContainerRef,
 }: Props) {
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
@@ -190,7 +190,7 @@ function DatasetView({
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
         addTagToSearch={addTagToSearch}
-        setFolderIdForEditModal={setFolderIdForEditModal}
+        scrollContainerRef={scrollContainerRef}
       />
     );
   }
@@ -253,31 +253,30 @@ function DatasetView({
     searchBox
   );
 
-  const adminHeader = (
+  const adminHeader = isUserAdminOrDatasetManagerOrTeamManager ? (
     <Space>
-      {isUserAdminOrDatasetManagerOrTeamManager ? (
-        <Fragment>
-          <DatasetRefreshButton context={context} />
-          <DatasetAddButton context={context} />
-          {context.activeFolderId != null && (
-            <PricingEnforcedButton
-              disabled={folder != null && !folder.isEditable}
-              icon={<PlusOutlined />}
-              onClick={() =>
-                context.activeFolderId != null &&
-                context.showCreateFolderPrompt(context.activeFolderId)
-              }
-              requiredPricingPlan={PricingPlanEnum.Team}
-            >
-              Add Folder
-            </PricingEnforcedButton>
-          )}
-          {search}
-        </Fragment>
-      ) : (
-        search
+      <DatasetRefreshButton context={context} />
+      <DatasetAddButton context={context} />
+      {context.activeFolderId != null && (
+        <PricingEnforcedButton
+          disabled={folder != null && !folder.isEditable}
+          icon={<PlusOutlined />}
+          onClick={() =>
+            context.activeFolderId != null &&
+            context.setFolderModalState({
+              mode: "create",
+              parentFolderId: context.activeFolderId,
+            })
+          }
+          requiredPricingPlan={PricingPlanEnum.Team}
+        >
+          Add Folder
+        </PricingEnforcedButton>
       )}
+      {search}
     </Space>
+  ) : (
+    search
   );
 
   const datasets = context.datasets;

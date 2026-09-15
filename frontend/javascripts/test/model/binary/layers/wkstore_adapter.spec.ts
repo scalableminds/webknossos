@@ -109,6 +109,8 @@ describe("wkstore_adapter", () => {
         Promise.resolve({
           buffer: responseBuffer.buffer,
           headers: {
+            "empty-bucket-indices": "[]",
+            "failure-bucket-indices": "[]",
             "missing-buckets": "[]",
           },
         }),
@@ -141,6 +143,8 @@ describe("wkstore_adapter", () => {
         Promise.resolve({
           buffer: responseBuffer.buffer,
           headers: {
+            "empty-bucket-indices": "[]",
+            "failure-bucket-indices": "[]",
             "missing-buckets": "[]",
           },
         }),
@@ -155,10 +159,9 @@ describe("wkstore_adapter", () => {
         }),
       );
 
-    const buffers = await requestWithFallback(colorLayer, batch);
-    const [buffer1, buffer2] = buffers;
-    expect(buffer1).toEqual(bucketData1);
-    expect(buffer2).toEqual(bucketData2);
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "data", data: bucketData2 });
     expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledTimes(2);
 
     expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
@@ -251,7 +254,56 @@ describe("wkstore_adapter", () => {
     setFourBit(false);
   });
 
-  it<TestContext>("sendToStore: Request Handling should send the correct request parameters", () => {
+  function mockResponse(buffer: ArrayBuffer, headers: Record<string, string>) {
+    vi.mocked(Request)
+      .sendJSONReceiveArraybufferWithHeaders.mockReset()
+      .mockReturnValue(Promise.resolve({ buffer, headers }));
+  }
+
+  it<TestContext>("requestWithFallback: marks buckets reported as empty", async ({
+    colorLayer,
+  }) => {
+    const { batch, bucketData1 } = prepare(colorLayer);
+    // Only the first bucket has data; the second one is empty.
+    mockResponse(bucketData1.buffer, {
+      "empty-bucket-indices": "[1]",
+      "failure-bucket-indices": "[]",
+      "missing-buckets": "[1]",
+    });
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "empty" });
+  });
+
+  it<TestContext>("requestWithFallback: marks buckets reported as failures", async ({
+    colorLayer,
+  }) => {
+    const { batch, bucketData1 } = prepare(colorLayer);
+    // Only the first bucket has data; the second one could not be read.
+    mockResponse(bucketData1.buffer, {
+      "empty-bucket-indices": "[]",
+      "failure-bucket-indices": "[1]",
+      "missing-buckets": "[1]",
+    });
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "failure" });
+  });
+
+  it<TestContext>("requestWithFallback: treats legacy missing-buckets header as empty", async ({
+    colorLayer,
+  }) => {
+    const { batch, bucketData1 } = prepare(colorLayer);
+    // Older datastores only send the combined legacy header.
+    mockResponse(bucketData1.buffer, {
+      "missing-buckets": "[1]",
+    });
+    const [buffer1, buffer2] = await requestWithFallback(colorLayer, batch);
+    expect(buffer1).toEqual({ type: "data", data: bucketData1 });
+    expect(buffer2).toEqual({ type: "empty" });
+  });
+
+  it<TestContext>("sendToStore: Request Handling should send the correct request parameters", async () => {
     const data = new Uint8Array(Constants.BUCKET_SIZE);
     const bucket1 = new DataBucket(
       "uint8",
@@ -279,6 +331,8 @@ describe("wkstore_adapter", () => {
 
     getBucketData.mockReturnValue(data);
 
+    const base64Data = (await byteArraysToLz4Base64([data]))[0];
+
     const expectedSaveQueueItems: PushSaveQueueTransaction = {
       type: "PUSH_SAVE_QUEUE_TRANSACTION",
       items: [
@@ -290,7 +344,7 @@ describe("wkstore_adapter", () => {
             additionalCoordinates: undefined,
             mag: [1, 1, 1],
             cubeSize: 32,
-            base64Data: byteArraysToLz4Base64([data])[0],
+            base64Data,
           },
         },
         {
@@ -301,7 +355,7 @@ describe("wkstore_adapter", () => {
             additionalCoordinates: undefined,
             mag: [2, 2, 2],
             cubeSize: 32,
-            base64Data: byteArraysToLz4Base64([data])[0],
+            base64Data,
           },
         },
       ],

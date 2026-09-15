@@ -2,8 +2,10 @@ package com.scalableminds.webknossos.datastore.storage
 
 import java.util
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
+import com.scalableminds.util.tools.MathUtils
+import com.scalableminds.webknossos.datastore.dataformats.SafeCacheable
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
@@ -11,12 +13,14 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.collection.mutable
 
 case class AgglomerateFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
+    extends AttachmentKey
 
-case class CachedAgglomerateFile(reader: IHDF5Reader,
-                                 dataset: HDF5DataSet,
-                                 agglomerateIdCache: AgglomerateIdCache,
-                                 cache: Either[AgglomerateIdCache, BoundingBoxCache])
-    extends SafeCachable {
+case class CachedAgglomerateFile(
+    reader: IHDF5Reader,
+    dataset: HDF5DataSet,
+    agglomerateIdCache: AgglomerateIdCache,
+    cache: Either[AgglomerateIdCache, BoundingBoxCache]
+) extends SafeCacheable {
   override protected def onFinalize(): Unit = { dataset.close(); reader.close() }
 }
 
@@ -24,21 +28,22 @@ class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[Agglo
   override def onElementRemoval(key: AgglomerateFileKey, value: CachedAgglomerateFile): Unit =
     value.scheduleForRemoval()
 
-  def withCache(agglomerateFileKey: AgglomerateFileKey)(
-      loadFn: AgglomerateFileKey => CachedAgglomerateFile): CachedAgglomerateFile = {
+  def withCache(
+      agglomerateFileKey: AgglomerateFileKey
+  )(loadFn: AgglomerateFileKey => Box[CachedAgglomerateFile]): Box[CachedAgglomerateFile] = {
 
-    def handleUncachedAgglomerateFile() = {
-      val agglomerateFile = loadFn(agglomerateFileKey)
-      // We don't need to check the return value of the `tryAccess` call as we just created the agglomerate file and use it only to increase the access counter.
-      agglomerateFile.tryAccess()
-      put(agglomerateFileKey, agglomerateFile)
-      agglomerateFile
-    }
+    def handleUncachedAgglomerateFile(): Box[CachedAgglomerateFile] =
+      for {
+        agglomerateFile <- loadFn(agglomerateFileKey)
+        // We don't need to check the return value of the `tryAccess` call as we just created the agglomerate file and use it only to increase the access counter.
+        _ = agglomerateFile.tryAccess()
+        _ = put(agglomerateFileKey, agglomerateFile)
+      } yield agglomerateFile
 
     this.synchronized {
       get(agglomerateFileKey) match {
         case Some(agglomerateFile) =>
-          if (agglomerateFile.tryAccess()) agglomerateFile else handleUncachedAgglomerateFile()
+          if (agglomerateFile.tryAccess()) Full(agglomerateFile) else handleUncachedAgglomerateFile()
         case _ => handleUncachedAgglomerateFile()
       }
     }
@@ -49,16 +54,18 @@ class AgglomerateIdCache(val maxEntries: Int, val standardBlockSize: Int) extend
   // On cache miss, reads whole blocks of IDs (number of elements is standardBlockSize)
 
   def withCache(segmentId: Long, reader: IHDF5Reader, hdf5DataSet: HDF5DataSet)(
-      readFromFile: (IHDF5Reader, HDF5DataSet, Long, Long) => Array[Long]): Long = {
+      readFromFile: (IHDF5Reader, HDF5DataSet, Long, Long) => Array[Long]
+  ): Long = {
 
     def handleUncachedAgglomerate(): Long = {
       val minId =
-        if (segmentId < standardBlockSize / 2) 0L else segmentId - standardBlockSize / 2
+        if (java.lang.Long.compareUnsigned(segmentId, standardBlockSize / 2) < 0) 0L
+        else segmentId - standardBlockSize / 2
 
       val agglomerateIds = readFromFile(reader, hdf5DataSet, minId, standardBlockSize)
 
-      agglomerateIds.zipWithIndex.foreach {
-        case (id, index) => put(index + minId, id)
+      agglomerateIds.zipWithIndex.foreach { case (id, index) =>
+        put(index + minId, id)
       }
 
       agglomerateIds((segmentId - minId).toInt)
@@ -71,15 +78,22 @@ class AgglomerateIdCache(val maxEntries: Int, val standardBlockSize: Int) extend
 case class BoundingBoxValues(idRange: (Long, Long), dimensions: (Long, Long, Long))
 
 case class BoundingBoxFinder(
-    xCoordinates: util.TreeSet[Long], // TreeSets allow us to find the largest coordinate, which is smaller than the requested cuboid
+    xCoordinates: util.TreeSet[
+      Long
+    ], // TreeSets allow us to find the largest coordinate, which is smaller than the requested cuboid
     yCoordinates: util.TreeSet[Long],
     zCoordinates: util.TreeSet[Long],
-    minBoundingBox: (Long, Long, Long)) {
+    minBoundingBox: (Long, Long, Long)
+) {
   def findInitialBoundingBox(cuboid: Cuboid): (Long, Long, Long) = {
     val x = Option(xCoordinates.floor(cuboid.topLeft.voxelXInMag))
     val y = Option(yCoordinates.floor(cuboid.topLeft.voxelYInMag))
     val z = Option(zCoordinates.floor(cuboid.topLeft.voxelZInMag))
-    (x.getOrElse(minBoundingBox._1), y.getOrElse(minBoundingBox._2), z.getOrElse(minBoundingBox._3)) // if the request is outside the layer box, use the minimal bb as start point
+    (
+      x.getOrElse(minBoundingBox._1),
+      y.getOrElse(minBoundingBox._2),
+      z.getOrElse(minBoundingBox._3)
+    ) // if the request is outside the layer box, use the minimal bb as start point
   }
 }
 
@@ -89,9 +103,13 @@ case class BoundingBoxFinder(
 // One special case is an input value of 0, which is automatically mapped to 0.
 
 class BoundingBoxCache(
-    val cache: mutable.HashMap[(Long, Long, Long), BoundingBoxValues], // maps bounding box top left to range and bb dimensions
+    val cache: mutable.HashMap[
+      (Long, Long, Long),
+      BoundingBoxValues
+    ], // maps bounding box top left to range and bb dimensions
     val boundingBoxFinder: BoundingBoxFinder, // saves the bb top left positions
-    val maxReaderRange: Long) // config value for maximum amount of elements that are allowed to be read as once
+    val maxReaderRange: Long
+) // config value for maximum amount of elements that are allowed to be read as once
     extends LazyLogging {
 
   // get the segment id range for one cuboid
@@ -117,14 +135,23 @@ class BoundingBoxCache(
     // step through each bb, but save starting coordinates to reset iteration once the outer bound is reached
     while (x < requestedCuboidBottomRight.voxelXInMag && x < dataLayerBoxBottomRight.x) {
       val nextBBinX = (x + currDimensions._1, y, z)
-      currDimensions = (currDimensions._1, initialValues.dimensions._2, currDimensions._3) // reset currDimensions y to start next loop at beginning
+      currDimensions = (
+        currDimensions._1,
+        initialValues.dimensions._2,
+        currDimensions._3
+      ) // reset currDimensions y to start next loop at beginning
       while (y < requestedCuboidBottomRight.voxelYInMag && y < dataLayerBoxBottomRight.y) {
         val nextBBinY = (x, y + currDimensions._2, z)
-        currDimensions = (currDimensions._1, currDimensions._2, initialValues.dimensions._3) // reset currDimensions z to start next loop at beginning
+        currDimensions = (
+          currDimensions._1,
+          currDimensions._2,
+          initialValues.dimensions._3
+        ) // reset currDimensions z to start next loop at beginning
         while (z < requestedCuboidBottomRight.voxelZInMag && z < dataLayerBoxBottomRight.z) {
           // get cached values for current bb and update the reader range by extending if necessary
           cache.get((x, y, z)).foreach { value =>
-            range = (Math.min(range._1, value.idRange._1), Math.max(range._2, value.idRange._2))
+            range =
+              (MathUtils.minUnsigned(range._1, value.idRange._1), MathUtils.maxUnsigned(range._2, value.idRange._2))
             currDimensions = value.dimensions
           }
           z = z + currDimensions._3
@@ -140,9 +167,10 @@ class BoundingBoxCache(
   }
 
   def withCache(request: DataServiceDataRequest, input: Array[Long], reader: IHDF5Reader)(
-      readHDF: (IHDF5Reader, Long, Long) => Array[Long]): Array[Long] = {
+      readHDF: (IHDF5Reader, Long, Long) => Array[Long]
+  ): Array[Long] = {
     val readerRange = getReaderRange(request)
-    if (readerRange._2 - readerRange._1 < maxReaderRange) {
+    if (java.lang.Long.compareUnsigned(readerRange._2 - readerRange._1, maxReaderRange) < 0) {
       val agglomerateIds = readHDF(reader, readerRange._1, (readerRange._2 - readerRange._1) + 1)
       input.map(i => if (i == 0L) 0L else agglomerateIds((i - readerRange._1).toInt))
     } else {
@@ -150,12 +178,14 @@ class BoundingBoxCache(
       var offset = readerRange._1
       val result = Array.ofDim[Long](input.length)
       val isTransformed = Array.fill(input.length)(false)
-      while (offset <= readerRange._2) {
+      while (java.lang.Long.compareUnsigned(offset, readerRange._2) <= 0) {
         val agglomerateIds: Array[Long] =
           readHDF(reader, offset, Math.min(maxReaderRange, readerRange._2 - offset) + 1)
         for (i <- input.indices) {
           val inputElement = input(i)
-          if (!isTransformed(i) && inputElement >= offset && inputElement < offset + maxReaderRange) {
+          val isInCurrentChunk = java.lang.Long.compareUnsigned(inputElement, offset) >= 0 &&
+            java.lang.Long.compareUnsigned(inputElement, offset + maxReaderRange) < 0
+          if (!isTransformed(i) && isInCurrentChunk) {
             result(i) = if (inputElement == 0L) 0L else agglomerateIds((inputElement - offset).toInt)
             isTransformed(i) = true
           }

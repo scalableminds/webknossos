@@ -18,7 +18,19 @@ import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { maxIncludedUsersInPersonalPlan } from "admin/organization/pricing_plan_utils";
 import { getDatastores, getEditableTeams } from "admin/rest_api";
-import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
+import {
+  Alert,
+  AutoComplete,
+  Button,
+  Card,
+  Col,
+  Form,
+  Input,
+  Modal,
+  Row,
+  Steps,
+  Typography,
+} from "antd";
 import CreditsFooter from "components/credits_footer";
 import LinkButton from "components/link_button";
 import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
@@ -30,7 +42,8 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
+import { ModalWidth } from "theme";
 import type { APITeamMembership } from "types/api_types";
 import Store from "viewer/store";
 import { sendInvitesForOrganization } from "./api/organization";
@@ -184,7 +197,8 @@ function OptionCard({ icon, header, children, action, height }: OptionCardProps)
         >
           {icon}
         </div>
-        <h1
+        <Typography.Title
+          level={1}
           style={{
             fontSize: 20,
             lineHeight: "22px",
@@ -192,7 +206,7 @@ function OptionCard({ icon, header, children, action, height }: OptionCardProps)
           }}
         >
           {header}
-        </h1>
+        </Typography.Title>
         <p
           style={{
             fontSize: 14,
@@ -233,7 +247,7 @@ export function InviteUsersModal({
     [currentUserCount, maxUserCountPerOrganization],
   );
 
-  const defaultTeam = useMemo(() => teams.find((t) => t.name === "Default"), [teams]);
+  const defaultTeam = useMemo(() => teams.find((t) => t.isOrganizationTeam), [teams]);
 
   const setDefaultTeam = useCallback(() => {
     if (defaultTeam != null) {
@@ -345,9 +359,9 @@ export function InviteUsersModal({
         ) : null}
         {exceedingUserLimitAlert}
         <DividerWithSubtitle>
-          <h5>
+          <Typography.Title level={5}>
             <b>Invitee Email Addresses</b>
-          </h5>
+          </Typography.Title>
         </DividerWithSubtitle>
         <p style={{ marginTop: -10 }}>
           Multiple email addresses should be separated with a comma, a space or a new line.
@@ -368,7 +382,6 @@ export function InviteUsersModal({
           setSelectedPermission={setSelectedPermission}
           userIsAdmin={true}
           onlyEditingSingleUser={true}
-          renderSubtitlesWithDivider={true}
         />
       </Fragment>
     );
@@ -390,7 +403,7 @@ export function InviteUsersModal({
           <UserAddOutlined /> Invite {isOrganizationLimitAlreadyReached ? "Guests" : "Users"}
         </>
       }
-      width={600}
+      width={ModalWidth.Medium}
       footer={
         <Button onClick={sendInvite} type="primary">
           Send Invite Emails
@@ -591,16 +604,22 @@ function OnboardingView() {
         {isDatasetUploadModalVisible && (
           <Modal
             open
-            width="85%"
+            width={ModalWidth.Full}
             footer={null}
-            maskClosable={false}
+            mask={{ closable: false }}
             onCancel={hideDatasetUploadModal}
           >
             <DatasetUploadView datastores={datastores} onUploaded={onDatasetUploaded} withoutCard />
           </Modal>
         )}
         {datasetIdToImport != null && (
-          <Modal open width="85%" footer={null} maskClosable={false} onCancel={advanceStep}>
+          <Modal
+            open
+            width={ModalWidth.Full}
+            footer={null}
+            mask={{ closable: false }}
+            onCancel={advanceStep}
+          >
             <DatasetSettingsProvider
               isEditingMode={false}
               datasetId={datasetIdToImport}
@@ -695,7 +714,7 @@ function OnboardingView() {
             learn more.
           </FeatureCard>
           <FeatureCard header="Contact Us" icon={<CustomerServiceOutlined />}>
-            <a href="mailto:hello@webknossos.org">Get in touch</a> or{" "}
+            <a href="mailto:support@webknossos.org">Get in touch</a> or{" "}
             <a
               href="https://forum.image.sc/tag/webknossos"
               target="_blank"

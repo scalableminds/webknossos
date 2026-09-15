@@ -12,11 +12,12 @@ type Props = {
   initialAllowUpdate: boolean;
   newestVersion: number;
   activeVersion: number;
+  // The expansion state is controlled by the parent so that it survives the
+  // virtualized list unmounting off-screen groups.
+  expanded: boolean;
+  onSetExpanded: (expanded: boolean) => void;
   onRestoreVersion: (arg0: number) => Promise<void>;
   onPreviewVersion: (arg0: number) => Promise<void>;
-};
-type State = {
-  expanded: boolean;
 };
 
 function GroupHeader({
@@ -52,29 +53,26 @@ function GroupHeader({
     </List.Item>
   );
 }
-export default class VersionEntryGroup extends Component<Props, State> {
-  state: State = {
-    expanded: false,
-  };
+// Returns whether the given group contains the active version. Used by the
+// parent to decide the default expansion state for a group.
+export function isActiveVersionInGroup(
+  batches: APIUpdateActionBatch[],
+  activeVersion: number,
+): boolean {
+  const newestBatch = batches.at(0);
+  const oldestBatch = batches.at(-1);
+  return (
+    newestBatch != null &&
+    oldestBatch != null &&
+    oldestBatch.version <= activeVersion &&
+    activeVersion <= newestBatch.version
+  );
+}
 
+export default class VersionEntryGroup extends Component<Props> {
   toggleExpand = () => {
-    this.setState((prevState) => ({
-      expanded: !prevState.expanded,
-    }));
+    this.props.onSetExpanded(!this.props.expanded);
   };
-
-  componentDidMount() {
-    const newestBatch = this.props.batches.at(0);
-    const oldestBatch = this.props.batches.at(-1);
-    if (
-      newestBatch &&
-      oldestBatch &&
-      oldestBatch.version <= this.props.activeVersion &&
-      this.props.activeVersion <= newestBatch.version
-    ) {
-      this.setState({ expanded: true });
-    }
-  }
 
   render() {
     const {
@@ -82,6 +80,7 @@ export default class VersionEntryGroup extends Component<Props, State> {
       initialAllowUpdate,
       newestVersion,
       activeVersion,
+      expanded,
       onRestoreVersion,
       onPreviewVersion,
     } = this.props;
@@ -90,13 +89,9 @@ export default class VersionEntryGroup extends Component<Props, State> {
     return (
       <Fragment>
         {containsMultipleBatches ? (
-          <GroupHeader
-            toggleExpand={this.toggleExpand}
-            expanded={this.state.expanded}
-            batches={batches}
-          />
+          <GroupHeader toggleExpand={this.toggleExpand} expanded={expanded} batches={batches} />
         ) : null}
-        {this.state.expanded || !containsMultipleBatches
+        {expanded || !containsMultipleBatches
           ? batches.map((batch) => (
               <VersionEntry
                 initialAllowUpdate={initialAllowUpdate}

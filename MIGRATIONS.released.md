@@ -6,6 +6,84 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [26.09.1](https://github.com/scalableminds/webknossos/releases/tag/26.09.1) - 2026-08-27
+[Commits](https://github.com/scalableminds/webknossos/compare/26.09.0...26.09.1)
+
+### Postgres Evolutions
+None.
+
+## [26.09.0](https://github.com/scalableminds/webknossos/releases/tag/26.09.0) - 2026-08-21
+[Commits](https://github.com/scalableminds/webknossos/compare/26.08.1...26.09.0)
+
+### Postgres Evolutions
+- [177-attachment-credential-id.sql](schema/evolutions/177-attachment-credential-id.sql)
+- [178-token-type-job.sql](schema/evolutions/178-token-type-job.sql)
+- [179-plan-expiry-reminders.sql](schema/evolutions/179-plan-expiry-reminders.sql)
+
+## [26.08.1](https://github.com/scalableminds/webknossos/releases/tag/26.08.1) - 2026-08-03
+[Commits](https://github.com/scalableminds/webknossos/compare/26.08.0...26.08.1)
+
+### Postgres Evolutions
+None.
+
+## [26.08.0](https://github.com/scalableminds/webknossos/releases/tag/26.08.0) - 2026-07-22
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.03...26.08.0)
+
+- The base directory and s3 upload configuration have changed:
+  - Config keys `datastore.baseDirectory`, `s3Upload.enabled`, `s3Upload.credentialName` and `s3Upload.objectKeyPrefix` were removed.
+  - New key `datastore.baseDirectories` is an array of entries with the following structure:
+    - `path`: can be a local path, relative or absolute, or a remote S3 path in the style `s3://my.endpoint/bucket/sub/path`.
+    - `organizationId`: can be null, which makes this entry an organization-agnostic base directory (individual orga ids will be created as subdirectories on upload and for scanning), or th
+e id of an organization, which makes this an organization-specific base directory (datasets for this organization are placed directly at this path)
+    - `allowsUpload`: if true, dataset uploads will be placed there (if the organization matches)
+    - `doScan`: if true, a periodic scan of this directory looks for newly created datasets. Only available for local, not s3 paths.
+  - If an orga has an organization-specific entry, it has precedence before the orga-agnostic one, but both will be scanned.
+  - If an orga has multiple matching entries, the first in the list will be used, but all will be scanned.
+  - Note that the config key `webknossos.datasets.uploadToPaths.prefixes` used to default to the local datastore’s baseDirectory. It will now take the first local entry of `datastore.baseDirectories` instead. If you start the datastore module separately, note that this config has to be present on the webknossos side as well to use this default.
+
+### Postgres Evolutions
+- [172-update-generate-object-id.sql](schema/evolutions/172-update-generate-object-id.sql)
+- [173-remove-oblique-mode.sql](schema/evolutions/173-remove-oblique-mode.sql)
+- [174-add-created-to-folders.sql](schema/evolutions/174-add-created-to-folders.sql)
+- [175-team-and-job-indices.sql](schema/evolutions/175-team-and-job-indices.sql)
+- [176-backfill-folders-created.sql](schema/evolutions/176-backfill-folders-created.sql)
+
+## [26.07.03](https://github.com/scalableminds/webknossos/releases/tag/26.07.03) - 2026-07-13
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.2...26.07.03)
+
+### Postgres Evolutions
+None.
+
+## [26.07.2](https://github.com/scalableminds/webknossos/releases/tag/26.07.2) - 2026-06-29
+[Commits](https://github.com/scalableminds/webknossos/compare/26.07.0...26.07.2)
+
+### Postgres Evolutions
+None.
+
+## [26.07.1]
+This release was skipped for technical reasons.
+
+## [26.07.0](https://github.com/scalableminds/webknossos/releases/tag/26.07.0) - 2026-06-23
+[Commits](https://github.com/scalableminds/webknossos/compare/26.06.0...26.07.0)
+
+### Postgres Evolutions
+- [162-pretrained-ai-models.sql](schema/evolutions/162-pretrained-ai-models.sql)
+- [163-aimodel-nullable-user-and-organization.sql](schema/evolutions/163-aimodel-nullable-user-and-organization.sql)
+- [164-import-url.sql](schema/evolutions/164-import-url.sql)
+- [165-annotation-mutex-sessionid.sql](schema/evolutions/165-annotation-mutex-sessionid.sql)
+- [166-keyboard-shortcuts.sql](schema/evolutions/166-keyboard-shortcuts.sql)
+- [167-upload-mags-attachments.sql](schema/evolutions/167-upload-mags-attachments.sql)
+- [168-remove-annotation-team.sql](schema/evolutions/168-remove-annotation-team.sql)
+- [169-per-user-annotation-view-config.sql](schema/evolutions/169-per-user-annotation-view-config.sql)
+- [170-dataset-storage-paths.sql](schema/evolutions/170-dataset-storage-paths.sql)
+- [171-remove-hasDiscardedHelpButton.sql](schema/evolutions/171-remove-hasDiscardedHelpButton.sql)
+
+## [26.06.0](https://github.com/scalableminds/webknossos/releases/tag/26.06.0) - 2026-05-27
+[Commits](https://github.com/scalableminds/webknossos/compare/26.05.2...26.06.0)
+
+### Postgres Evolutions
+- [161-reserve-ids.sql](schema/evolutions/161-reserve-ids.sql)
+
 ## [26.05.2](https://github.com/scalableminds/webknossos/releases/tag/26.05.2) - 2026-05-07
 [Commits](https://github.com/scalableminds/webknossos/compare/26.05.1...26.05.2)
 

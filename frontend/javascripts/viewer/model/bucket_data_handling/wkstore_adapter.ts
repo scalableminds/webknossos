@@ -88,14 +88,18 @@ function createSendBucketInfo(zoomedAddress: BucketAddress, magInfo: MagInfo): S
   };
 }
 
-function getNullIndices<T>(arr: Array<T | null | undefined>): Array<number> {
-  return arr.map((el, idx) => (el != null ? -1 : idx)).filter((idx) => idx > -1);
-}
+// The outcome of requesting a single bucket. Empty buckets don't contain
+// any data (e.g., a volume bucket that wasn't annotated). "Failure" means
+// that the bucket data could not be read (a retry is necessary).
+export type BucketRequestResult =
+  | { type: "data"; data: Uint8Array<ArrayBuffer> }
+  | { type: "empty" }
+  | { type: "failure" };
 
 export async function requestWithFallback(
   layerInfo: DataLayerType,
   batch: Array<BucketAddress>,
-): Promise<Array<Uint8Array<ArrayBuffer> | null | undefined>> {
+): Promise<Array<BucketRequestResult>> {
   const state = Store.getState();
   const datasetId = state.dataset.id;
   const dataStoreHost = state.dataset.dataStore.url;
@@ -120,14 +124,18 @@ export async function requestWithFallback(
   const requestUrl = shouldUseDataStore
     ? getDataStoreUrl(maybeVolumeTracing?.fallbackLayer)
     : getTracingStoreUrl();
-  const bucketBuffers = await requestFromStore(
+  const bucketResults = await requestFromStore(
     requestUrl,
     layerInfo,
     batch,
     maybeVolumeTracing,
     maybeVolumeTracing != null ? state.annotation.annotationId : undefined,
   );
-  const missingBucketIndices = getNullIndices(bucketBuffers);
+  // Only empty buckets are eligible for the fallback lookup below. A failure must not be
+  // replaced by fallback-layer data, since that data would lack the annotated changes.
+  const emptyBucketIndices = bucketResults
+    .map((result, idx) => (result.type === "empty" ? idx : -1))
+    .filter((idx) => idx > -1);
 
   // If buckets could not be found on the tracing store (e.g. this happens when the buckets
   // were not annotated yet), they are instead looked up in the fallback layer
@@ -135,23 +143,18 @@ export async function requestWithFallback(
   // This retry mechanism is only active for volume tracings with fallback layers without
   // editable mappings (aka proofreading).
   const retry =
-    missingBucketIndices.length > 0 &&
+    emptyBucketIndices.length > 0 &&
     maybeVolumeTracing != null &&
     maybeVolumeTracing.fallbackLayer != null &&
     !maybeVolumeTracing.hasEditableMapping;
 
   if (!retry) {
-    return bucketBuffers;
+    return bucketResults;
   }
 
-  if (maybeVolumeTracing == null) {
-    // Satisfy typescript
-    return bucketBuffers;
-  }
-
-  // Request missing buckets from the datastore as a fallback
-  const fallbackBatch = missingBucketIndices.map((idx) => batch[idx]);
-  const fallbackBuffers = await requestFromStore(
+  // Request empty buckets from the datastore as a fallback
+  const fallbackBatch = emptyBucketIndices.map((idx) => batch[idx]);
+  const fallbackResults = await requestFromStore(
     getDataStoreUrl(maybeVolumeTracing.fallbackLayer),
     layerInfo,
     fallbackBatch,
@@ -159,12 +162,13 @@ export async function requestWithFallback(
     maybeVolumeTracing != null ? state.annotation.annotationId : undefined,
     true,
   );
-  return bucketBuffers.map((bucket, idx) => {
-    if (bucket != null) {
-      return bucket;
+  return bucketResults.map((result, idx) => {
+    if (result.type === "empty") {
+      const fallbackIdx = emptyBucketIndices.indexOf(idx);
+      return fallbackResults[fallbackIdx];
     } else {
-      const fallbackIdx = missingBucketIndices.indexOf(idx);
-      return fallbackBuffers[fallbackIdx];
+      // data and failure results are kept as they are
+      return result;
     }
   });
 }
@@ -175,7 +179,7 @@ async function requestFromStore(
   maybeVolumeTracing: VolumeTracing | null | undefined,
   maybeAnnotationId: string | undefined,
   isVolumeFallback: boolean = false,
-): Promise<Array<Uint8Array<ArrayBuffer> | null | undefined>> {
+): Promise<Array<BucketRequestResult>> {
   const state = Store.getState();
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
@@ -230,8 +234,18 @@ async function requestFromStore(
           showErrorToast: false,
         });
       const endTime = window.performance.now();
-      const missingBuckets = (parseMaybe(headers["missing-buckets"]) || []) as number[];
-      const receivedBucketsCount = batch.length - missingBuckets.length;
+      // The backend reports empty buckets (no data) and failure buckets (could not be read)
+      // in separate headers. Older datastores only send the combined legacy header, in which
+      // case all reported indices are treated as empty (the previous behavior).
+      const emptyHeader = parseMaybe(headers["empty-bucket-indices"]) as number[] | null;
+      const failureHeader = parseMaybe(headers["failure-bucket-indices"]) as number[] | null;
+      const usesLegacyHeader = emptyHeader == null && failureHeader == null;
+      const emptyBuckets = usesLegacyHeader
+        ? ((parseMaybe(headers["missing-buckets"]) || []) as number[])
+        : emptyHeader || [];
+      const failureBuckets = usesLegacyHeader ? [] : failureHeader || [];
+
+      const receivedBucketsCount = batch.length - emptyBuckets.length - failureBuckets.length;
       const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
       getGlobalDataConnectionInfo().log(
         startingTime,
@@ -244,7 +258,13 @@ async function requestFromStore(
         resultBuffer = await decodeFourBit(resultBuffer);
       }
 
-      return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
+      return sliceBufferIntoPieces(
+        layerInfo,
+        batch,
+        emptyBuckets,
+        failureBuckets,
+        new Uint8Array(resultBuffer),
+      );
     });
   } catch (errorResponse) {
     const errorMessage = `Requesting data from layer "${layerInfo.name}" failed. Some rendered areas might remain empty. Retrying...`;
@@ -268,24 +288,32 @@ async function requestFromStore(
 function sliceBufferIntoPieces(
   layerInfo: DataLayerType,
   batch: Array<BucketAddress>,
-  missingBuckets: Array<number>,
+  emptyBuckets: Array<number>,
+  failureBuckets: Array<number>,
   buffer: Uint8Array<ArrayBuffer>,
-): Array<Uint8Array<ArrayBuffer> | null | undefined> {
+): Array<BucketRequestResult> {
   const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
-  const availableBucketCount = batch.length - missingBuckets.length;
+  // Both empty and failure buckets are excluded from the byte stream by the backend.
+  const availableBucketCount = batch.length - emptyBuckets.length - failureBuckets.length;
   const expectedTotalByteLength = availableBucketCount * BUCKET_BYTE_LENGTH;
   if (expectedTotalByteLength !== buffer.length) {
     throw new Error(
       `Expected ${expectedTotalByteLength} bytes, but received ${buffer.length}. Rejecting buckets.`,
     );
   }
+  const emptySet = new Set(emptyBuckets);
+  const failureSet = new Set(failureBuckets);
   let offset = 0;
-  const bucketBuffers = batch.map((_bucketAddress, index) => {
-    const isMissing = missingBuckets.indexOf(index) > -1;
-    const subbuffer = isMissing ? null : buffer.subarray(offset, (offset += BUCKET_BYTE_LENGTH));
-    return subbuffer;
+  const bucketResults = batch.map((_bucketAddress, index): BucketRequestResult => {
+    if (failureSet.has(index)) {
+      return { type: "failure" };
+    }
+    if (emptySet.has(index)) {
+      return { type: "empty" };
+    }
+    return { type: "data", data: buffer.subarray(offset, (offset += BUCKET_BYTE_LENGTH)) };
   });
-  return bucketBuffers;
+  return bucketResults;
 }
 
 export async function createCompressedUpdateBucketActions(

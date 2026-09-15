@@ -32,7 +32,12 @@ export default function DatasetSettingsMetadataTab() {
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         {metadataItems.map((item) => (
           <Col span={12} key={item.title}>
-            <SettingsCard title={item.title} content={item.content} tooltip={item.tooltip} />
+            <SettingsCard
+              title={item.title}
+              content={item.content}
+              tooltip={item.tooltip}
+              style={{ height: "100%" }}
+            />
           </Col>
         ))}
       </Row>

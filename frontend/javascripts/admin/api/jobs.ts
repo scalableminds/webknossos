@@ -181,13 +181,12 @@ type RunNeuronInferenceParameters = {
   maskAnnotationLayerName?: string;
   newDatasetName: string;
   workflowYaml?: string;
-  invertColorLayer?: boolean;
   doSplitMergerEvaluation: boolean;
   evalUseSparseTracing?: boolean;
   evalMaxEdgeLength?: number;
   evalSparseTubeThresholdNm?: number;
   evalMinMergerPathLengthNm?: number;
-  customConfiguration?: Record<string, JsonPrimitive>;
+  customConfiguration?: Record<string, JsonValue>;
 };
 
 type RunInstanceInferenceParameters = {
@@ -199,9 +198,8 @@ type RunInstanceInferenceParameters = {
   maskAnnotationLayerName?: string;
   newDatasetName: string;
   workflowYaml?: string;
-  invertColorLayer?: boolean;
   seedGeneratorDistanceThreshold?: number | null;
-  customConfiguration?: Record<string, JsonPrimitive>;
+  customConfiguration?: Record<string, JsonValue>;
 };
 
 export function runNeuronModelInference(params: RunNeuronInferenceParameters): Promise<APIJob> {
@@ -312,7 +310,7 @@ export function startAlignSectionsJob(
   layerName: string,
   newDatasetName: string,
   annotationId?: string,
-  customConfiguration?: Record<string, JsonPrimitive>,
+  customConfiguration?: Record<string, JsonValue>,
 ): Promise<APIJob> {
   return Request.sendJSONReceiveJSON(`/api/jobs/run/alignSections/${datasetId}`, {
     method: "POST",
@@ -324,6 +322,12 @@ export function startAlignSectionsJob(
 export enum APIAiModelCategory {
   EM_NEURONS = "em_neurons",
   EM_NUCLEI = "em_nuclei",
+  EM_SYNAPSES = "em_synapses",
+  EM_NEURON_TYPES = "em_neuron_types",
+  EM_CELL_ORGANELLES = "em_cell_organelles",
+  EM_GENERIC = "em_generic",
+  EM_SOMATA = "em_somata",
+  EM_MITOCHONDRIA = "em_mitochondria",
 }
 
 export type AiModelTrainingAnnotationSpecification = {
@@ -339,7 +343,7 @@ type RunNeuronModelTrainingParameters = {
   aiModelCategory: APIAiModelCategory.EM_NEURONS;
   comment?: string;
   workflowYaml?: string;
-  customConfiguration?: Record<string, JsonPrimitive>;
+  customConfiguration?: Record<string, JsonValue>;
 };
 
 export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
@@ -350,14 +354,18 @@ export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
 }
 
 export type JsonPrimitive = string | number | boolean;
+// A configuration value may also be a list of values or a list of value groups
+// (e.g. a set of coordinates or bounding boxes).
+export type JsonValue = JsonPrimitive | JsonValue[];
+
 type RunInstanceModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
-  aiModelCategory: APIAiModelCategory.EM_NUCLEI;
+  aiModelCategory: APIAiModelCategory.EM_GENERIC;
   instanceDiameterNm: number;
   comment?: string;
   workflowYaml?: string;
-  customConfiguration?: Record<string, JsonPrimitive>;
+  customConfiguration?: Record<string, JsonValue>;
 };
 
 export function runInstanceModelTraining(params: RunInstanceModelTrainingParameters) {

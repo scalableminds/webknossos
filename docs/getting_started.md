@@ -4,7 +4,7 @@ Welcome to the WEBKNOSSOS documentation.
 WEBKNOSSOS is a platform for [exploring large-scale 3D image datasets](./ui/index.md), [creating skeleton annotations](./skeleton_annotation/index.md) and [3D volume segmentations](./volume_annotation/index.md).
 Since it is a web app, you can easily [collaborate](./sharing/index.md), [crowdsource](./tasks_projects/tasks.md) and [publish](https://webknossos.org) your work.
 
-[Contact us](mailto:hello@webknossos.org) or create a [pull request](https://github.com/scalableminds/webknossos/pulls) to suggest improvements to the documentation.
+[Contact us](mailto:support@webknossos.org) or create a [pull request](https://github.com/scalableminds/webknossos/pulls) to suggest improvements to the documentation.
 
 Check out this video to get started!
 ![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4)
@@ -41,18 +41,19 @@ The WEBKNOSSOS user interface consisting of three orthogonal viewports slicing t
 ///
 
 You can use the following shortcuts to navigate the data.
-See the full list of [gestures and keyboard shortcuts](./ui/keyboard_shortcuts.md) for advanced use.
+These are the default bindings — keyboard shortcuts can be customized per user via the **navbar menu → "Keyboard Shortcuts"**.
+See the full list of [gestures and keyboard shortcuts](./ui/keyboard_shortcuts.md) for all available shortcuts and customization details.
 
 | Shortcut                      | Operation                    |
 | ----------------------------- | ---------------------------- |
-| Left Mouse Drag or Arrow Keys | Move In-Plane                |
-| SPACE or Mousewheel           | Move Forward                 |
-| SHIFT + SPACE or Mousewheel   | Move Backward                |
-| I or ALT + Mousewheel         | Zoom In                      |
-| O or ALT + Mousewheel         | Zoom Out                     |
-| Scroll Mousewheel (3D View)   | Zoom In And Out              |
-| Right Click Drag (3D View)    | Rotate 3D View               |
-| . (Dot)                       | Toggle Viewport Maximization |
+| Left Mouse Drag or Arrow Keys      | Move In-Plane                |
+| ++space++ or Mousewheel            | Move Forward                 |
+| ++shift++ + ++space++ or Mousewheel | Move Backward                |
+| ++i++ or ++alt++ + Mousewheel      | Zoom In                      |
+| ++o++ or ++alt++ + Mousewheel      | Zoom Out                     |
+| Scroll Mousewheel (3D View)        | Zoom In And Out              |
+| Right Click Drag (3D View)         | Rotate 3D View               |
+| ++period++                         | Toggle Viewport Maximization |
 
 
 ## Your First Annotation
@@ -69,7 +70,7 @@ The _Brush_ and _Trace_ tools allow to "paint" voxels to create volumetric annot
 For a full rundown on the other annotations tools, such as _Eraser_, _Segment Picker_, _Fill_ please refer to documentation on [skeleton](./skeleton_annotation/tools.md) and [volume](./volume_annotation/tools.md) annotations.
 
 To open a context-sensitive menu with various actions, such as merging two trees or flood-filling a segment, use a right mouse click.
-Use the mouse wheel or press the spacebar keyboard shortcut to move along the 3rd axis.
+Use the mouse wheel or press ++space++ to move along the 3rd axis.
 
 Read the guides about the [annotation UI](./ui/index.md), [skeleton annotation](./skeleton_annotation/index.md), or [volume annotation](./volume_annotation/index.md) for more details.
 
@@ -103,7 +104,7 @@ Feel free to explore more features of WEBKNOSSOS in this documentation.
 - [Task and Project Management](./tasks_projects/index.md)
 - [FAQ](./faq.md)
 
-Please contact us at [hello@webknossos.org](mailto:hello@webknossos.org) or [write a post in the WEBKNOSSOS support forum](https://forum.image.sc/tag/webknossos) if you need help with WEBKNOSSOS.
+Please contact us at [support@webknossos.org](mailto:support@webknossos.org) or [write a post in the WEBKNOSSOS support forum](https://forum.image.sc/tag/webknossos) if you need help with WEBKNOSSOS.
 scalable minds also offers [commercial support, managed hosting, and feature development services](https://webknossos.org/pricing).
 
 [Read the installation tutorial](./open_source/installation.md) if you wish to install the open source version of WEBKNOSSOS on your server.

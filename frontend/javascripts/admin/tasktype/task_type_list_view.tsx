@@ -23,12 +23,12 @@ import { handleGenericError } from "libs/error_handling";
 import Markdown from "libs/markdown_adapter";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
-import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
 import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
 import { Fragment, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import type { APITaskType } from "types/api_types";
 
 const { Column } = Table;
@@ -128,6 +128,7 @@ function TaskTypeListView() {
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
           locale={{
             emptyText: renderPlaceholder(),

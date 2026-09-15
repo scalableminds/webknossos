@@ -1,8 +1,9 @@
 import update from "immutability-helper";
+import { colorObjectToRGBArray } from "libs/colors";
 import DiffableMap from "libs/diffable_map";
-import { colorObjectToRGBArray, mapEntriesToMap, point3ToVector3, replaceOrAdd } from "libs/utils";
+import { point3ToVector3, replaceOrAdd } from "libs/utils";
 import type { APIUserBase, ServerVolumeTracing } from "types/api_types";
-import { ContourModeEnum } from "viewer/constants";
+import type { BigIntAsKey } from "types/type_utils";
 import {
   getLayerByName,
   getMappingInfo,
@@ -39,6 +40,7 @@ import {
   setSegmentGroups,
   toggleSegmentGroupReducer,
   updateDirectionReducer,
+  updateLocalSegmentationState,
   updateSegments,
   updateVolumeTracing,
   type VolumeTracingReducerAction,
@@ -47,7 +49,7 @@ import type { EditableMapping, Segment, VolumeTracing, WebknossosState } from "v
 import {
   getGroupNodeKey,
   mapGroups,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { applyVolumeUpdateActionsFromServer } from "./update_action_application/volume";
 
@@ -66,8 +68,10 @@ export function serverVolumeToClientVolumeTracing(
     userState,
   );
   const segmentGroups = applyUserStateToGroups(tracing.segmentGroups || [], userState);
-  const segmentVisibilityMap: Record<number, boolean> = userState
-    ? mapEntriesToMap(userState.segmentVisibilities)
+  const segmentVisibilityMap: Record<BigIntAsKey, boolean> = userState
+    ? Object.fromEntries(
+        userState.segmentVisibilities.map((entry) => [entry.id.toString(), entry.value]),
+      )
     : {};
 
   const volumeTracing = {
@@ -83,17 +87,15 @@ export function serverVolumeToClientVolumeTracing(
             : undefined,
           additionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? colorObjectToRGBArray(segment.color) : null,
-          isVisible: segmentVisibilityMap[segment.segmentId] ?? segment.isVisible ?? true,
+          isVisible:
+            segmentVisibilityMap[segment.segmentId.toString()] ?? segment.isVisible ?? true,
           groupId: segment.groupId ?? null,
         };
         return [segment.segmentId, clientSegment];
       }),
     ),
     segmentGroups,
-    activeCellId: userState?.activeSegmentId ?? tracing.activeSegmentId ?? 0,
-    lastLabelActions: [],
-    contourTracingMode: ContourModeEnum.DRAW,
-    contourList: [],
+    activeCellId: userState?.activeSegmentId ?? tracing.activeSegmentId ?? 0n,
     largestSegmentId,
     tracingId: tracing.id,
     boundingBox: convertServerBoundingBoxToFrontend(tracing.boundingBox),
@@ -102,20 +104,22 @@ export function serverVolumeToClientVolumeTracing(
     mappingName: tracing.mappingName,
     hasEditableMapping: tracing.hasEditableMapping,
     mappingIsLocked: tracing.mappingIsLocked,
-    volumeBucketDataHasChanged: tracing.volumeBucketDataHasChanged,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
-    hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
-    proofreadingMarkerPosition: undefined,
+    // Note that this value can be undefined for older annotations
+    // (also see LoadMeshMenuItemLabel which depends on this).
+    volumeBucketDataHasChanged: tracing.volumeBucketDataHasChanged,
     segmentJournal: [],
-    idReservations: { SegmentGroup: [], Segment: [] },
   };
   return volumeTracing;
 }
 
 function getVolumeTracingFromAction(state: WebknossosState, action: VolumeTracingReducerAction) {
   if ("tracingId" in action && action.tracingId != null) {
-    return getVolumeTracingById(state.annotation, action.tracingId);
+    // Unlike getVolumeTracingById, look up the tracing gracefully (returning null instead of
+    // throwing) because some actions (e.g., the BoundingBox id reservation actions) carry a
+    // tracingId that can refer to a skeleton tracing instead of a volume tracing.
+    return state.annotation.volumes.find((t) => t.tracingId === action.tracingId) ?? null;
   }
   const maybeVolumeLayer =
     "layerName" in action && action.layerName != null
@@ -182,15 +186,29 @@ function VolumeTracingReducer(
             $set: null,
           },
         },
+        // The server provides the initial value for this local-only field. The
+        // entry for the tracing layer was already created by SET_DATASET (its
+        // layer name is the tracingId).
+        localSegmentationStateByLayer: {
+          [volumeTracing.tracingId]: {
+            hideUnregisteredSegments: {
+              $set: action.tracing.hideUnregisteredSegments ?? false,
+            },
+          },
+        },
       });
 
-      if (volumeTracing.largestSegmentId != null && volumeTracing.activeCellId === 0) {
+      if (volumeTracing.largestSegmentId != null && volumeTracing.activeCellId === 0n) {
         // If a largest segment id is known but the active cell is 0,
         // and does not overflow the segmentation layers maximum possible segment id,
         // we can automatically create a new segment ID for the user.
         const segmentationLayer = getSegmentationLayerForTracing(newState, volumeTracing);
-        const newSegmentId = volumeTracing.largestSegmentId + 1;
-        if (newSegmentId > getMaximumSegmentIdForLayer(newState.dataset, segmentationLayer.name)) {
+        const newSegmentId = volumeTracing.largestSegmentId + 1n;
+        const maximumSegmentId = getMaximumSegmentIdForLayer(
+          newState.dataset,
+          segmentationLayer.name,
+        );
+        if (newSegmentId > maximumSegmentId) {
           // If the new segment ID would overflow the maximum segment ID, simply set the active cell to largestSegmentId.
           newState = setActiveCellReducer(
             newState,
@@ -199,7 +217,7 @@ function VolumeTracingReducer(
             null,
           );
         } else {
-          newState = createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId + 1);
+          newState = createCellReducer(newState, volumeTracing, newSegmentId);
         }
       }
 
@@ -260,13 +278,10 @@ function VolumeTracingReducer(
     }
 
     case "UPDATE_PROOFREADING_MARKER_POSITION": {
-      const volumeTracing = getVolumeTracingFromAction(state, action);
-      if (volumeTracing) {
-        return updateVolumeTracing(state, volumeTracing.tracingId, {
-          proofreadingMarkerPosition: action.position,
-        });
-      }
-      return state;
+      const layerName = action.layerName;
+      return updateLocalSegmentationState(state, layerName, {
+        proofreadingMarkerPosition: action.position,
+      });
     }
 
     case "SET_EXPANDED_SEGMENT_GROUPS": {
@@ -310,28 +325,14 @@ function VolumeTracingReducer(
     }
 
     case "SET_HIDE_UNREGISTERED_SEGMENTS": {
-      const volumeTracing = getVolumeTracingFromAction(state, action);
-      if (volumeTracing) {
-        return updateVolumeTracing(state, volumeTracing.tracingId, {
-          hideUnregisteredSegments: action.value,
-        });
-      } else {
-        const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-        const layerName = action.layerName ?? visibleSegmentationLayer?.name;
-        if (layerName == null) {
-          return state;
-        }
-
-        return update(state, {
-          localSegmentationData: {
-            [layerName]: {
-              hideUnregisteredSegments: {
-                $set: action.value,
-              },
-            },
-          },
-        });
+      const layerName = action.layerName ?? getVisibleSegmentationLayer(state)?.name;
+      if (layerName == null) {
+        return state;
       }
+
+      return updateLocalSegmentationState(state, layerName, {
+        hideUnregisteredSegments: action.value,
+      });
     }
 
     case "CLICK_SEGMENT": {
@@ -364,7 +365,7 @@ function VolumeTracingReducer(
         state,
         volumeTracing,
         action.segmentId,
-        action.activeUnmappedSegmentId,
+        action.activeUnmappedSegmentId != null ? action.activeUnmappedSegmentId : null,
       );
     }
 
@@ -407,13 +408,13 @@ function VolumeTracingReducer(
       return setLargestSegmentIdReducer(
         state,
         volumeTracing,
-        Math.max(activeCellId, largestSegmentId),
+        activeCellId > largestSegmentId ? activeCellId : largestSegmentId,
       );
     }
 
     case "SET_MAPPING": {
       // We only need to store the name of the mapping here. Also see the settings_reducer where
-      // SET_MAPPING is also handled.
+      // SET_MAPPING / SET_MAPPING_DATA are also handled.
       return setMappingNameReducer(state, volumeTracing, action.mappingName, action.mappingType);
     }
     case "FINISH_MAPPING_INITIALIZATION": {
@@ -464,14 +465,23 @@ function VolumeTracingReducer(
       });
     }
 
+    case "SET_HAS_SEGMENT_INDEX": {
+      if (volumeTracing.hasSegmentIndex) return state;
+
+      return updateVolumeTracing(state, volumeTracing.tracingId, {
+        hasSegmentIndex: true,
+      });
+    }
+
     case "SET_ID_RESERVATIONS": {
-      const volumeTracing = getVolumeTracingFromAction(state, action);
-      if (!volumeTracing) {
-        return state;
-      }
-      return updateVolumeTracing(state, action.tracingId, {
+      // BoundingBox reservations are handled in annotation_reducer.ts, as they are not
+      // scoped to a single segmentation layer.
+      if (action.domain === "BoundingBox") return state;
+
+      const { idReservations } = state.localSegmentationStateByLayer[action.tracingId];
+      return updateLocalSegmentationState(state, action.tracingId, {
         idReservations: {
-          ...volumeTracing.idReservations,
+          ...idReservations,
           [action.domain]: action.reservations,
         },
       });

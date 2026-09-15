@@ -9,6 +9,7 @@ import {
   getDatasetViewConfiguration,
   getEditableMappingInfo,
   getEmptySandboxAnnotationInformation,
+  getKeyboardShortcutsConfig,
   getSharingTokenFromUrlParameters,
   getTracingsForAnnotation,
   getUnversionedAnnotationInformation,
@@ -21,6 +22,7 @@ import { location } from "libs/window";
 import cloneDeep from "lodash-es/cloneDeep";
 import extend from "lodash-es/extend";
 import first from "lodash-es/first";
+import isEmpty from "lodash-es/isEmpty";
 import isEqual from "lodash-es/isEqual";
 import merge from "lodash-es/merge";
 import messages from "messages";
@@ -37,13 +39,11 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { Mutable } from "types/type_utils";
-import constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
-import type {
-  DirectLayerSpecificProps,
-  PartialUrlManagerState,
-  UrlStateByLayer,
-} from "viewer/controller/url_manager";
+import constants, { ControlModeEnum, normalizeMappingType, type Vector3 } from "viewer/constants";
+import { applyState, getIsNativelyRenderedNamePresent } from "viewer/controller/apply_url_state";
+import type { PartialUrlManagerState } from "viewer/controller/url_manager";
 import UrlManager, {
   getDatasetNameFromLocation,
   getUpdatedPathnameWithNewDatasetName,
@@ -51,9 +51,6 @@ import UrlManager, {
 import {
   determineAllowedModes,
   getDataLayers,
-  getDatasetCenter,
-  getLayerByName,
-  getSegmentationLayerByName,
   getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
   hasSegmentation,
@@ -65,41 +62,21 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getServerVolumeTracings } from "viewer/model/accessors/volumetracing_accessor";
 import {
   batchedAnnotationInitializationAction,
-  dispatchMaybeFetchMeshFilesAsync,
   initializeAnnotationAction,
-  updateCurrentMeshFileAction,
 } from "viewer/model/actions/annotation_actions";
-import {
-  setActiveConnectomeAgglomerateIdsAction,
-  updateCurrentConnectomeFileAction,
-} from "viewer/model/actions/connectome_actions";
 import { setDatasetAction } from "viewer/model/actions/dataset_actions";
 import {
   setAdditionalCoordinatesAction,
-  setPositionAction,
-  setRotationAction,
   setZoomStepAction,
 } from "viewer/model/actions/flycam_actions";
-import {
-  loadAdHocMeshAction,
-  loadPrecomputedMeshAction,
-} from "viewer/model/actions/segmentation_actions";
 import {
   initializeGpuSetupAction,
   initializeSettingsAction,
   setControlModeAction,
-  setMappingAction,
-  setMappingEnabledAction,
+  setKeyboardShortcutsConfigAction,
   setViewModeAction,
-  updateDatasetSettingAction,
-  updateLayerSettingAction,
 } from "viewer/model/actions/settings_actions";
-import {
-  initializeSkeletonTracingAction,
-  loadAgglomerateTreeFromIdAction,
-  setActiveNodeAction,
-  setShowSkeletonsAction,
-} from "viewer/model/actions/skeletontracing_actions";
+import { initializeSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
 import { setTaskAction } from "viewer/model/actions/task_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
@@ -120,12 +97,19 @@ import type {
   UserConfiguration,
 } from "viewer/store";
 import Store from "viewer/store";
-import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
-import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
+import { initializeKeyboardLayoutMap } from "viewer/view/keyboard_shortcuts/keyboard_layout_utils";
+import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {
-  setVersionNumberAction,
-  snapshotMappingDataForNextRebaseAction,
-} from "./model/actions/save_actions";
+  sanitizeKeyboardShortcuts,
+  validateShortcutMapText,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
+import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
+import {
+  doAllLayersHaveTheSameRotation,
+  getTransformedDatasetCenter,
+} from "./model/accessors/dataset_layer_transformation_accessor";
+import { setVersionNumberAction } from "./model/actions/save_actions";
 import {
   convertBoundingBoxProtoToObject,
   convertServerAdditionalAxesToFrontEnd,
@@ -159,7 +143,11 @@ export async function initialize(
     if (initialMaybeCompoundType != null) {
       annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
     } else {
-      let unversionedAnnotation = await getUnversionedAnnotationInformation(annotationId);
+      const unversionedAnnotationResult = await getUnversionedAnnotationInformation(annotationId);
+      if (!unversionedAnnotationResult.ok) {
+        throw new Error(`Could not load annotation: ${unversionedAnnotationResult.error.message}`);
+      }
+      let unversionedAnnotation = unversionedAnnotationResult.value;
       annotationProto = await getAnnotationProto(
         unversionedAnnotation.tracingStore.url,
         unversionedAnnotation.id,
@@ -214,11 +202,8 @@ export async function initialize(
     datasetId = initialCommandType.datasetId;
   }
 
-  const [apiDataset, initialUserSettings, serverTracings] = await fetchParallel(
-    annotation,
-    datasetId,
-    version,
-  );
+  const [apiDataset, initialUserSettings, serverTracings, keyboardShortcutsConfig] =
+    await fetchParallel(annotation, datasetId, version);
   assertUsableDataset(apiDataset as StoreDataset, initialCommandType);
   maybeFixDatasetNameInURL(apiDataset, initialCommandType);
 
@@ -231,18 +216,41 @@ export async function initialize(
     serverVolumeTracingIds,
     getSharingTokenFromUrlParameters(),
   );
+  if (annotation?.viewConfiguration) {
+    const isPartial = true;
+    enforceValidatedDatasetViewConfiguration(annotation?.viewConfiguration, dataset, isPartial);
+  }
   const annotationSpecificDatasetSettings = applyAnnotationSpecificViewConfiguration(
     annotation,
     dataset,
     initialDatasetSettings,
   );
+  const migratedUserSettings = migrateUserConfiguration(initialUserSettings);
   const enforcedInitialUserSettings =
-    enforcePricingRestrictionsOnUserConfiguration(initialUserSettings);
+    enforcePricingRestrictionsOnUserConfiguration(migratedUserSettings);
   initializeSettings(
     enforcedInitialUserSettings,
     annotationSpecificDatasetSettings,
     initialDatasetSettings,
   );
+
+  // Load keyboard shortcuts from backend. Schema errors (malformed values) are
+  // warned about but don't discard the whole config — sanitizeKeyboardShortcuts
+  // keeps each valid entry and falls back to the default for malformed ones.
+  // Unknown keys (from newer clients) are dropped; missing keys (from older
+  // saved configs) are filled in with defaults.
+  const { valid, parsed, errors } = validateShortcutMapText(
+    JSON.stringify(keyboardShortcutsConfig),
+  );
+  if (!valid && !isEmpty(keyboardShortcutsConfig)) {
+    Toast.warning(messages["users.failed_parsing_keyboard_shortcuts_config"]);
+    console.warn("Found errors while parsing user's keyboard shortcut configurations:", errors);
+  }
+  const shortcuts: KeyboardShortcutsMap =
+    parsed != null ? sanitizeKeyboardShortcuts(parsed) : getAllDefaultKeyboardShortcuts();
+  Store.dispatch(setKeyboardShortcutsConfigAction(shortcuts));
+  initializeKeyboardLayoutMap();
+
   let initializationInformation = null;
 
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
@@ -262,7 +270,7 @@ export async function initialize(
     );
   }
 
-  // There is no need to initialize the tracing if there is no tracing (View mode).
+  // There is no need to initialize the annotation if there is no annotation (View mode).
   if (annotation != null) {
     const editableMappings = await fetchEditableMappings(
       annotation.tracingStore.url,
@@ -278,7 +286,7 @@ export async function initialize(
       editableMappings,
     );
   } else {
-    // In view only tracings we need to set the view mode too.
+    // In dataset view mode (no annotation) we need to set the view mode too.
     const { allowedModes } = determineAllowedModes();
     const mode = UrlManager.initialState.mode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
@@ -315,11 +323,12 @@ async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
   datasetId: string,
   version: number | undefined | null,
-): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
+): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>, Partial<KeyboardShortcutsMap>]> {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     annotation ? getTracingsForAnnotation(annotation, version) : [],
+    getKeyboardShortcutsConfig(),
   ]);
 }
 
@@ -370,7 +379,7 @@ function initializeAnnotation(
   editableMappings: Array<ServerEditableMapping>,
 ) {
   // This method is not called for the View mode
-  const { dataset } = Store.getState();
+  const { dataset, save: saveState } = Store.getState();
   let annotation = _annotation;
   const { allowedModes, preferredMode } = determineAllowedModes(annotation.settings);
 
@@ -396,7 +405,10 @@ function initializeAnnotation(
         ...annotation,
         restrictions: {
           ...annotation.restrictions,
-          allowSave: annotation.restrictions.allowUpdate,
+          // If saving was disabled at some point, we don't want this to ever be reset.
+          // For example, when switching between versions in the version restore view,
+          // api.tracing.restart is called which calls Model.fetch here.
+          allowSave: annotation.restrictions.allowUpdate && !saveState.isSavingDisabled,
         },
       };
     }
@@ -429,14 +441,13 @@ function initializeAnnotation(
     Store.dispatch(setVersionNumberAction(version));
   }
 
-  // Initialize 'flight', 'oblique' or 'orthogonal' mode
+  // Initialize 'orthogonal' or 'flight' mode
   if (allowedModes.length === 0) {
-    Toast.error(messages["tracing.no_allowed_mode"]);
-  } else {
-    const maybeUrlViewMode = UrlManager.initialState.mode;
-    const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
-    Store.dispatch(setViewModeAction(mode));
+    Toast.warning(messages["tracing.no_allowed_mode"]);
   }
+  const maybeUrlViewMode = UrlManager.initialState.mode;
+  const mode = preferredMode || maybeUrlViewMode || allowedModes[0] || "orthogonal";
+  Store.dispatch(setViewModeAction(mode));
 }
 
 function setInitialTool() {
@@ -695,7 +706,10 @@ function determineDefaultState(
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
   const defaultPosition = datasetConfiguration.position;
-  let position = getDatasetCenter(dataset);
+  let position = getTransformedDatasetCenter(
+    dataset,
+    datasetConfiguration.nativelyRenderedLayerName,
+  );
   let additionalCoordinates = null;
 
   // someTracing should only be used if no userState exists (this is the case
@@ -753,7 +767,8 @@ function determineDefaultState(
     if (stateByLayer[layerName].mappingInfo == null && mapping != null) {
       stateByLayer[layerName].mappingInfo = {
         mappingName: mapping.name,
-        mappingType: mapping.type,
+        // View configurations that were stored before the rename can still contain "HDF5".
+        mappingType: normalizeMappingType(mapping.type),
       };
     }
   }
@@ -778,7 +793,7 @@ function determineDefaultState(
       } else {
         stateByLayer[layerName].mappingInfo = {
           mappingName,
-          mappingType: "HDF5",
+          mappingType: "AGGLOMERATE",
         };
       }
     }
@@ -796,188 +811,15 @@ function determineDefaultState(
   };
 }
 
-export function applyState(
-  state: PartialUrlManagerState,
-  ignoreZoom: boolean = false,
-  dataset?: APIDataset,
-) {
-  if (state.activeNode != null) {
-    // Set the active node (without animating to its position) before setting the
-    // position, since the position should take precedence.
-    Store.dispatch(setActiveNodeAction(state.activeNode, true));
+function migrateUserConfiguration(userConfiguration: UserConfiguration): UserConfiguration {
+  // clippingDistanceArbitrary was renamed to clippingDistanceFlight. Carry over the stored
+  // value so users don't silently lose their saved setting after the upgrade.
+  const { clippingDistanceArbitrary, clippingDistanceFlight, ...remainingConfig } =
+    userConfiguration as UserConfiguration & { clippingDistanceArbitrary?: number };
+  if (clippingDistanceArbitrary != null && clippingDistanceFlight == null) {
+    return { ...remainingConfig, clippingDistanceFlight: clippingDistanceArbitrary as number };
   }
-
-  if (state.position != null) {
-    Store.dispatch(setPositionAction(state.position));
-  }
-
-  if (!ignoreZoom && state.zoomStep != null) {
-    Store.dispatch(setZoomStepAction(state.zoomStep));
-  }
-
-  if (state.rotation != null) {
-    Store.dispatch(setRotationAction(state.rotation));
-  }
-
-  if (state.stateByLayer != null) {
-    applyLayerState(state.stateByLayer);
-  }
-
-  if (state.additionalCoordinates != null) {
-    Store.dispatch(setAdditionalCoordinatesAction(state.additionalCoordinates));
-  }
-
-  if ("nativelyRenderedLayerName" in state) {
-    const isNativelyRenderedNamePresent =
-      state.nativelyRenderedLayerName === null ||
-      getIsNativelyRenderedNamePresent(dataset, state.nativelyRenderedLayerName);
-    if (isNativelyRenderedNamePresent) {
-      Store.dispatch(
-        updateDatasetSettingAction(
-          "nativelyRenderedLayerName",
-          state.nativelyRenderedLayerName || null,
-        ),
-      );
-    }
-  }
-}
-
-async function applyLayerState(stateByLayer: UrlStateByLayer) {
-  for (const layerName of Object.keys(stateByLayer)) {
-    const layerState = stateByLayer[layerName];
-    let effectiveLayerName;
-
-    const { dataset } = Store.getState();
-
-    if (layerName === "Skeleton" && "isDisabled" in layerState) {
-      Store.dispatch(setShowSkeletonsAction(!layerState.isDisabled));
-      // The remaining options are only valid for data layers
-      continue;
-    }
-
-    try {
-      // The name of the layer could have changed if a volume tracing was created from a viewed annotation
-      effectiveLayerName = getLayerByName(dataset, layerName, true).name;
-    } catch (e) {
-      Toast.error(
-        // @ts-expect-error
-        `URL configuration values for the layer "${layerName}" are ignored, because: ${e.message}`,
-      );
-      console.error(e);
-      // @ts-expect-error
-      ErrorHandling.notify(e, {
-        urlLayerState: stateByLayer,
-      });
-      continue;
-    }
-
-    const layerSettingsKeys = [
-      "isDisabled",
-      "intensityRange",
-      "color",
-      "isInverted",
-      "gammaCorrectionValue",
-    ] as (keyof DirectLayerSpecificProps)[];
-    layerSettingsKeys.forEach((key) => {
-      if (key in layerState) {
-        Store.dispatch(updateLayerSettingAction(effectiveLayerName, key, layerState[key]));
-      }
-    });
-
-    if (!isSegmentationLayer(dataset, effectiveLayerName)) {
-      // The remaining options are only valid for segmentation layers
-      continue;
-    }
-
-    if (layerState.mappingInfo != null) {
-      const { mappingName, mappingType, agglomerateIdsToImport } = layerState.mappingInfo;
-      Store.dispatch(
-        setMappingAction(effectiveLayerName, mappingName, mappingType, true, {
-          showLoadingIndicator: true,
-        }),
-      );
-      Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
-      // Store initial changes of setMappingAction and setMappingEnabledAction in RebaseRelevantAnnotationState.
-      Store.dispatch(snapshotMappingDataForNextRebaseAction(layerName));
-
-      if (agglomerateIdsToImport != null) {
-        const { annotation } = Store.getState();
-
-        if (annotation.skeleton == null) {
-          Toast.error(messages["tracing.agglomerate_tree.no_skeleton_tracing"]);
-          continue;
-        }
-
-        if (mappingType !== "HDF5") {
-          Toast.error(messages["tracing.agglomerate_tree.no_agglomerate_file_active"]);
-          continue;
-        }
-
-        for (const agglomerateId of agglomerateIdsToImport) {
-          Store.dispatch(
-            loadAgglomerateTreeFromIdAction(effectiveLayerName, mappingName, agglomerateId),
-          );
-        }
-      }
-    }
-
-    if (layerState.meshInfo) {
-      const { meshFileName: currentMeshFileName, meshes } = layerState.meshInfo;
-
-      if (currentMeshFileName != null) {
-        const segmentationLayer = getSegmentationLayerByName(dataset, effectiveLayerName);
-        // Ensure mesh files are loaded, so that the given mesh file name can be activated.
-        // Doing this in a loop is fine, since it can only happen once (maximum) and there
-        // are not many other iterations (== layers) which are blocked by this.
-
-        await dispatchMaybeFetchMeshFilesAsync(Store.dispatch, segmentationLayer, dataset, false);
-        Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, currentMeshFileName));
-      }
-
-      for (const mesh of meshes) {
-        const { segmentId, seedPosition, seedAdditionalCoordinates } = mesh;
-
-        if (mesh.isPrecomputed) {
-          const { meshFileName } = mesh;
-          Store.dispatch(
-            loadPrecomputedMeshAction(
-              segmentId,
-              seedPosition,
-              seedAdditionalCoordinates,
-              meshFileName,
-              undefined,
-              effectiveLayerName,
-            ),
-          );
-        } else {
-          const { mappingName, mappingType } = mesh;
-          Store.dispatch(
-            loadAdHocMeshAction(
-              segmentId,
-              seedPosition,
-              seedAdditionalCoordinates,
-              {
-                mappingName,
-                mappingType,
-              },
-              effectiveLayerName,
-            ),
-          );
-        }
-      }
-    }
-
-    if (layerState.connectomeInfo != null) {
-      const { connectomeName, agglomerateIdsToImport } = layerState.connectomeInfo;
-      Store.dispatch(updateCurrentConnectomeFileAction(effectiveLayerName, connectomeName));
-
-      if (agglomerateIdsToImport != null) {
-        Store.dispatch(
-          setActiveConnectomeAgglomerateIdsAction(effectiveLayerName, agglomerateIdsToImport),
-        );
-      }
-    }
-  }
+  return userConfiguration;
 }
 
 function enforcePricingRestrictionsOnUserConfiguration(
@@ -993,21 +835,6 @@ function enforcePricingRestrictionsOnUserConfiguration(
   return userConfiguration;
 }
 
-const getIsNativelyRenderedNamePresent = (
-  dataset: APIDataset | null | undefined,
-  nativelyRenderedLayerName: string | null | undefined,
-  maybeAnnotation?: APIAnnotation | null,
-) => {
-  if (dataset == null) return false;
-  return (
-    dataset.dataSource.dataLayers.some(
-      (layer) =>
-        layer.name === nativelyRenderedLayerName ||
-        (layer.category === "segmentation" && layer.fallbackLayer === nativelyRenderedLayerName),
-    ) || maybeAnnotation?.annotationLayers.some((layer) => layer.name === nativelyRenderedLayerName)
-  );
-};
-
 function applyAnnotationSpecificViewConfiguration(
   annotation: APIAnnotation | null | undefined,
   dataset: StoreDataset,
@@ -1022,11 +849,21 @@ function applyAnnotationSpecificViewConfiguration(
    */
 
   const initialDatasetSettings: Mutable<DatasetConfiguration> = cloneDeep(originalDatasetSettings);
+  if (!annotation) {
+    return initialDatasetSettings;
+  }
 
-  if (originalDatasetSettings.nativelyRenderedLayerName) {
+  if (annotation.viewConfiguration) {
+    // The annotation already contains a user specific viewConfiguration. Merge that into the
+    // dataset settings.
+    merge(initialDatasetSettings, annotation.viewConfiguration);
+  }
+
+  // Ensure configured nativelyRenderedLayerName is actually present in the dataset.
+  if (initialDatasetSettings.nativelyRenderedLayerName) {
     const isNativelyRenderedNamePresent = getIsNativelyRenderedNamePresent(
       dataset,
-      originalDatasetSettings.nativelyRenderedLayerName,
+      initialDatasetSettings.nativelyRenderedLayerName,
       annotation,
     );
     if (!isNativelyRenderedNamePresent) {
@@ -1034,19 +871,8 @@ function applyAnnotationSpecificViewConfiguration(
     }
   }
 
-  if (!annotation) {
-    return initialDatasetSettings;
-  }
-
   if (annotation.viewConfiguration) {
-    // The annotation already contains a viewConfiguration. Merge that into the
-    // dataset settings.
-    for (const layerName of Object.keys(annotation.viewConfiguration.layers)) {
-      merge(
-        initialDatasetSettings.layers[layerName],
-        annotation.viewConfiguration.layers[layerName],
-      );
-    }
+    // If the annotation had a view configuration it is now applied and nativelyRenderedLayerName has a correct value.
     return initialDatasetSettings;
   }
 

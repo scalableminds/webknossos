@@ -1,14 +1,16 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
-import play.api.libs.json.{Format, JsResult, JsValue, Json}
+import play.api.libs.json.{Format, JsObject, JsResult, JsValue, Json, Reads, Writes}
 
 object DatasetViewConfiguration {
   type DatasetViewConfiguration = Map[String, JsValue]
-  implicit val jsonFormat: Format[DatasetViewConfiguration] = Format.of[DatasetViewConfiguration]
+  implicit val jsonFormat: Format[DatasetViewConfiguration] =
+    Format(Reads.mapReads[JsValue], Writes(JsObject(_)))
 }
 
 trait DataSource {
@@ -32,22 +34,23 @@ object DataSource {
   implicit def dataSourceFormat: Format[DataSource] =
     new Format[DataSource] {
       def reads(json: JsValue): JsResult[DataSource] =
-        UnusableDataSource.jsonFormat.reads(json).orElse(UsableDataSource.jsonFormat.reads(json))
+        Json.fromJson[UnusableDataSource](json).orElse(Json.fromJson[UsableDataSource](json))
 
       def writes(ds: DataSource): JsValue =
         ds match {
-          case ds: UsableDataSource   => UsableDataSource.jsonFormat.writes(ds)
-          case ds: UnusableDataSource => UnusableDataSource.jsonFormat.writes(ds)
+          case ds: UsableDataSource   => Json.toJson(ds)
+          case ds: UnusableDataSource => Json.toJson(ds)
         }
     }
 }
 
-case class UnusableDataSource(id: DataSourceId,
-                              dataLayers: Option[List[StaticLayer]] = None,
-                              status: String,
-                              scale: Option[VoxelSize] = None,
-                              existingDataSourceProperties: Option[JsValue] = None)
-    extends DataSource {
+case class UnusableDataSource(
+    id: DataSourceId,
+    dataLayers: Option[List[StaticLayer]] = None,
+    status: String,
+    scale: Option[VoxelSize] = None,
+    existingDataSourceProperties: Option[JsValue] = None
+) extends DataSource derives JsonAutoFormat {
   val toUsable: Option[UsableDataSource] = None
 
   val voxelSizeOpt: Option[VoxelSize] = scale
@@ -61,16 +64,13 @@ case class UnusableDataSource(id: DataSourceId,
   def allLayers: List[StaticLayer] = dataLayers.getOrElse(List.empty)
 }
 
-object UnusableDataSource {
-  implicit def jsonFormat: Format[UnusableDataSource] = Json.format[UnusableDataSource]
-}
-
-case class UsableDataSource(id: DataSourceId,
-                            dataLayers: List[StaticLayer],
-                            scale: VoxelSize,
-                            defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
-                            statusOpt: Option[String] = None)
-    extends DataSource {
+case class UsableDataSource(
+    id: DataSourceId,
+    dataLayers: List[StaticLayer],
+    scale: VoxelSize,
+    defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
+    statusOpt: Option[String] = None
+) extends DataSource derives JsonAutoFormat {
 
   val toUsable: Option[UsableDataSource] = Some(this)
 
@@ -107,7 +107,5 @@ case class UsableDataSource(id: DataSourceId,
 }
 
 object UsableDataSource {
-  implicit def jsonFormat: Format[UsableDataSource] = Json.format[UsableDataSource]
-
   val FILENAME_DATASOURCE_PROPERTIES_JSON: String = "datasource-properties.json"
 }

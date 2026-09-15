@@ -8,10 +8,10 @@ import { entries, getIsInIframe, keys } from "libs/utils";
 import memoize from "lodash-es/memoize";
 import type { BorderTabType, ControlMode, ViewMode } from "viewer/constants";
 import Constants, {
-  ArbitraryViews,
-  ArbitraryViewsToName,
   BorderTabs,
   ControlModeEnum,
+  FlightViews,
+  FlightViewsToName,
   OrthoViews,
   OrthoViewsToName,
 } from "viewer/constants";
@@ -27,10 +27,10 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 15;
+export const currentLayoutVersion = 17;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
-export const show3DViewportInArbitrary = false;
+export const show3DViewportInFlightMode = false;
 const defaultSplitterSize = 1;
 export const DEFAULT_LAYOUT_NAME = "Custom Layout";
 // The border has two parts: The parts that contains the tabs via a sub-layout and the borderBar.
@@ -118,10 +118,10 @@ keys(OrthoViews).forEach((viewportId) => {
   const name = OrthoViewsToName[viewportId];
   OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
-const ArbitraryViewports = {} as Record<keyof typeof ArbitraryViews, TabNode>;
-keys(ArbitraryViews).forEach((viewportId) => {
-  const name = ArbitraryViewsToName[viewportId];
-  ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
+const FlightViewports = {} as Record<keyof typeof FlightViews, TabNode>;
+keys(FlightViews).forEach((viewportId) => {
+  const name = FlightViewsToName[viewportId];
+  FlightViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 const globalLayoutSettings: GlobalConfig = {
   splitterSize: defaultSplitterSize,
@@ -271,29 +271,29 @@ const _getDefaultLayouts = () => {
   const OrthoLayout2d = buildOrthoLayout(true, true);
   const OrthoLayoutView2d = buildOrthoLayout(false, true);
   const VolumeTracingView2d = buildOrthoLayout(false, true);
-  const eventual3DViewportForArbitrary = show3DViewportInArbitrary
+  const eventual3DViewportForFlightMode = show3DViewportInFlightMode
     ? [[[OrthoViewports.TDView]]]
     : [];
-  const ArbitraryMainLayout = buildMainLayout([
-    [[ArbitraryViewports.arbitraryViewport]],
-    ...eventual3DViewportForArbitrary,
+  const FlightModeMainLayout = buildMainLayout([
+    [[FlightViewports.flightViewport]],
+    ...eventual3DViewportForFlightMode,
   ]);
 
-  const buildArbitraryLayout = (withSkeleton: boolean) =>
+  const buildFlightModeLayout = (withSkeleton: boolean) =>
     buildLayout(
       globalLayoutSettings,
       [leftBorder, withSkeleton ? rightBorderWithSkeleton : rightBorderWithoutSkeleton],
-      ArbitraryMainLayout,
+      FlightModeMainLayout,
     );
 
-  const ArbitraryLayoutView = buildArbitraryLayout(false);
-  const ArbitraryLayout = buildArbitraryLayout(true);
+  const FlightModeLayoutView = buildFlightModeLayout(false);
+  const FlightModeLayout = buildFlightModeLayout(true);
   return {
     OrthoLayout,
     OrthoLayoutView,
-    ArbitraryLayoutView,
+    FlightModeLayoutView,
     VolumeTracingView,
-    ArbitraryLayout,
+    FlightModeLayout,
     OrthoLayout2d,
     OrthoLayoutView2d,
     VolumeTracingView2d,
@@ -314,14 +314,14 @@ export const getCurrentDefaultLayoutConfig = () => {
     OrthoLayoutView: {
       [DEFAULT_LAYOUT_NAME]: defaultLayouts.OrthoLayoutView,
     },
-    ArbitraryLayoutView: {
-      [DEFAULT_LAYOUT_NAME]: defaultLayouts.ArbitraryLayoutView,
+    FlightModeLayoutView: {
+      [DEFAULT_LAYOUT_NAME]: defaultLayouts.FlightModeLayoutView,
     },
     VolumeTracingView: {
       [DEFAULT_LAYOUT_NAME]: defaultLayouts.VolumeTracingView,
     },
-    ArbitraryLayout: {
-      [DEFAULT_LAYOUT_NAME]: defaultLayouts.ArbitraryLayout,
+    FlightModeLayout: {
+      [DEFAULT_LAYOUT_NAME]: defaultLayouts.FlightModeLayout,
     },
     OrthoLayout: {
       [DEFAULT_LAYOUT_NAME]: defaultLayouts.OrthoLayout,
@@ -337,9 +337,9 @@ export const getCurrentDefaultLayoutConfig = () => {
     },
     LastActiveLayouts: {
       OrthoLayoutView: DEFAULT_LAYOUT_NAME,
-      ArbitraryLayoutView: DEFAULT_LAYOUT_NAME,
+      FlightModeLayoutView: DEFAULT_LAYOUT_NAME,
       VolumeTracingView: DEFAULT_LAYOUT_NAME,
-      ArbitraryLayout: DEFAULT_LAYOUT_NAME,
+      FlightModeLayout: DEFAULT_LAYOUT_NAME,
       OrthoLayout: DEFAULT_LAYOUT_NAME,
       OrthoLayout2d: DEFAULT_LAYOUT_NAME,
       OrthoLayoutView2d: DEFAULT_LAYOUT_NAME,
@@ -352,11 +352,11 @@ export function determineLayout(
   viewMode: ViewMode,
   is2d: boolean,
 ): Layout {
-  const isArbitraryMode = Constants.MODES_ARBITRARY.includes(viewMode);
+  const isFlightMode = viewMode === Constants.MODE_FLIGHT;
 
   if (controlMode === ControlModeEnum.VIEW) {
-    if (isArbitraryMode) {
-      return "ArbitraryLayoutView";
+    if (isFlightMode) {
+      return "FlightModeLayoutView";
     } else {
       return is2d ? "OrthoLayoutView2d" : "OrthoLayoutView";
     }
@@ -366,17 +366,17 @@ export function determineLayout(
     return is2d ? "VolumeTracingView2d" : "VolumeTracingView";
   }
 
-  if (isArbitraryMode) {
-    return "ArbitraryLayout";
+  if (isFlightMode) {
+    return "FlightModeLayout";
   } else {
     return is2d ? "OrthoLayout2d" : "OrthoLayout";
   }
 }
 export const mapLayoutKeysToLanguage = {
   OrthoLayoutView: "Orthogonal Mode - View Only",
-  ArbitraryLayoutView: "Arbitrary Mode - View Only",
+  FlightModeLayoutView: "Flight Mode - View Only",
   VolumeTracingView: "Volume Mode",
-  ArbitraryLayout: "Arbitrary Mode",
+  FlightModeLayout: "Flight Mode",
   OrthoLayout: "Orthogonal Mode",
   OrthoLayoutView2d: "Orthogonal Mode 2D - View Only",
   VolumeTracingView2d: "Volume Mode 2D",

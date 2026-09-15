@@ -1,5 +1,5 @@
-import type { Vector2 } from "viewer/constants";
-
+// The local mapping is Number-keyed/valued here, since the shared test segmentation layer's
+// element class is uint16 (non-64-bit).
 export const initialMapping = new Map([
   [1, 1],
   [2, 1],
@@ -10,12 +10,15 @@ export const initialMapping = new Map([
   [7, 6],
 ]);
 
-export const edgesForInitialMapping: Vector2[] = [
-  [1, 2], // read as: 1 swallows 2
-  [2, 3],
-  [4, 5],
-  [6, 7],
-  [1337, 1338],
+// This seeds the backend mock's agglomerate graph (AgglomerateMapping), which always operates in
+// bigint (matching the real wire/persistence format for agglomerate graph edges) regardless of the
+// segmentation layer's element class -- unlike the local mapping above, this stays bigint.
+export const edgesForInitialMapping: Array<[bigint, bigint]> = [
+  [1n, 2n], // read as: 1 swallows 2
+  [2n, 3n],
+  [4n, 5n],
+  [6n, 7n],
+  [1337n, 1338n],
 ];
 
 export const expectedMappingAfterMerge = new Map([

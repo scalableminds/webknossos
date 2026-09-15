@@ -1,11 +1,7 @@
 package models.task
 
-import play.api.libs.json.{Json, OFormat}
+import com.scalableminds.util.tools.JsonAutoFormat
 
-case class TaskStatus(pending: Long, active: Long, finished: Long) {
+case class TaskStatus(pending: Long, active: Long, finished: Long) derives JsonAutoFormat {
   def total: Long = pending + active + finished
-}
-
-object TaskStatus {
-  implicit val jsonFormat: OFormat[TaskStatus] = Json.format[TaskStatus]
 }

@@ -7,12 +7,12 @@ import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
-import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
 import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIScript, APIUser } from "types/api_types";
 
 const { Column } = Table;
@@ -111,6 +111,7 @@ function ScriptListView() {
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
           locale={{
             emptyText: renderPlaceholder(),

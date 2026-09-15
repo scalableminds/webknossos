@@ -1,5 +1,6 @@
 import { V3 } from "libs/mjs";
 import { call } from "typed-redux-saga";
+import type { BoundingBoxObject } from "types/bounding_box";
 import Constants, {
   type ContourMode,
   ContourModeEnum,
@@ -9,12 +10,12 @@ import Constants, {
   OverwriteModeEnum,
   type Vector3,
 } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
-  getDatasetBoundingBox,
-  getLayerByName,
-  getMagInfo,
-} from "viewer/model/accessors/dataset_accessor";
-import { getTransformsForLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+  getTransformedDatasetBoundingBox,
+  getTransformsForLayer,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { enforceActiveVolumeTracing } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
@@ -33,7 +34,7 @@ import sampleVoxelMapToMagnification, {
   applyVoxelMap,
 } from "viewer/model/volumetracing/volume_annotation_sampling";
 import { Model } from "viewer/singletons";
-import type { BoundingBoxObject, VolumeTracing } from "viewer/store";
+import type { VolumeTracing } from "viewer/store";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   for (let i = 0; i < arr.length - 1; i++) {
@@ -65,7 +66,12 @@ export function* getBoundingBoxForViewport(
     ),
   };
 
-  const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
+  const datasetBoundingBox = yield* select((state) =>
+    getTransformedDatasetBoundingBox(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
+  );
   return new BoundingBox(currentViewportBounding).intersectedWith(datasetBoundingBox);
 }
 
@@ -88,12 +94,12 @@ export function applyLabeledVoxelMapToAllMissingMags(
   dimensionIndices: DimensionMap,
   magInfo: MagInfo,
   segmentationCube: DataCube,
-  segmentId: number,
+  segmentId: bigint,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
   // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean,
-  overwritableValue: number = 0,
+  overwritableValue: bigint = 0n,
 ): void {
   const thirdDim = dimensionIndices[2];
 
@@ -179,7 +185,7 @@ export function* labelWithVoxelBuffer2D(
   viewport: OrthoView,
   wroteVoxelsBox?: BooleanBox,
 ): Saga<void> {
-  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = yield* select(mayEditAnnotation);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (!allowUpdate) return;
   if (voxelBuffer.isEmpty()) return;
@@ -245,8 +251,8 @@ export function* labelWithVoxelBuffer2D(
   const numberOfSlices = 1;
   const thirdDim = dimensionIndices[2];
   const isDeleting = contourTracingMode === ContourModeEnum.DELETE;
-  const newCellIdValue = isDeleting ? 0 : activeCellId;
-  const overwritableValue = isDeleting ? activeCellId : 0;
+  const newCellIdValue = isDeleting ? 0n : activeCellId;
+  const overwritableValue = isDeleting ? activeCellId : 0n;
   const wroteVoxels = applyVoxelMap(
     currentLabeledVoxelMap,
     cube,

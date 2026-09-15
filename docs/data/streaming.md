@@ -1,7 +1,7 @@
 # Streaming from remote servers and the cloud
 
 WEBKNOSSOS supports loading and remotely streaming [Zarr](https://zarr.dev), [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed), and [N5](https://github.com/saalfeldlab/n5) datasets from remote sources (for example, cloud storage such as S3/GCS or an HTTP server).
-WEBKNOSSOS supports loading Zarr datasets according to the [OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/).
+WEBKNOSSOS supports loading Zarr datasets according to the [OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/specifications/0.4/index.html) and [OME NGFF v0.5 spec](https://ngff.openmicroscopy.org/specifications/0.5/index.html).
 
 WEBKNOSSOS can load several remote sources and assemble them into one dataset with multiple layers, for example one Zarr source for `color` and one for `segmentation`.
 If you create the remote Zarr dataset with the [WEBKNOSSOS Python library](https://docs.webknossos.org/api/webknossos/dataset/dataset.html), all layers will be automatically detected. 

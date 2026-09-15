@@ -5,7 +5,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 
 import java.io.ByteArrayInputStream
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, FetchedAnnotationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
@@ -13,12 +13,11 @@ import models.annotation.SharedParsingParameters
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlWriter}
 import models.dataset.{Dataset, DatasetDAOLike}
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
+import com.scalableminds.util.box.{Empty, Failure, Full}
+import com.scalableminds.util.tools.Fox
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatest.Assertion
 import org.scalatest.wordspec.AsyncWordSpec
-import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
-import play.api.test.FakeRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -26,16 +25,13 @@ class NMLUnitTestSuite extends AsyncWordSpec {
 
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
   implicit private val ctx: DBAccessContext = GlobalAccessContext
-  implicit private val messagesProvider: MessagesProvider = new MessagesProvider {
-    val m = new DefaultMessagesApi()
-    override def messages: Messages = m.preferred({ FakeRequest("GET", "/") })
-  }
 
   private val mockDatasetDAO = new DatasetDAOLike {
     override def findOneByIdOrNameAndOrganization(
         datasetIdOpt: Option[ObjectId],
         datasetName: String,
-        organizationId: String)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Dataset] =
+        organizationId: String
+    )(using ctx: DBAccessContext): Fox[Dataset] =
       Fox.successful(
         Dataset(
           _id = ObjectId.dummyId,
@@ -54,19 +50,23 @@ class NMLUnitTestSuite extends AsyncWordSpec {
           sharingToken = None,
           status = "",
           logoUrl = None
-        ))(scala.concurrent.ExecutionContext.global)
+        )
+      )
   }
 
   private val nmlParser = new NmlParser(mockDatasetDAO)
 
-  def writeAndParseTracing(skeletonTracing: SkeletonTracing): Fox[NmlParseSuccessWithoutFile] = {
+  private def writeToXmlBytes(skeletonTracing: SkeletonTracing): Fox[Array[Byte]] = {
     val annotationLayers = List(
-      FetchedAnnotationLayer("dummySkeletonTracingId",
-                             AnnotationLayer.defaultSkeletonLayerName,
-                             Left(skeletonTracing),
-                             None))
+      FetchedAnnotationLayer(
+        "dummySkeletonTracingId",
+        AnnotationLayer.defaultSkeletonLayerName,
+        Left(skeletonTracing),
+        None
+      )
+    )
     val nmlFunctionStream =
-      new NmlWriter()(scala.concurrent.ExecutionContext.global).toNmlStream(
+      new NmlWriter().toNmlStream(
         "",
         AnnotationProto("", 0L, Seq.empty, 0L),
         annotationLayers,
@@ -86,15 +86,25 @@ class NMLUnitTestSuite extends AsyncWordSpec {
     val os = new ByteArrayOutputStream()
     for {
       _ <- nmlFunctionStream.writeTo(os)
-      array = os.toByteArray
-      is = new ByteArrayInputStream(array)
-      parsingParams = SharedParsingParameters(useZipName = false,
-                                              overwritingDatasetId = None,
-                                              userOrganizationId = "testOrganization",
-                                              isTaskUpload = true)
-      parsed <- nmlParser.parse("", is, parsingParams, basePath = None)
-    } yield parsed
+    } yield os.toByteArray
   }
+
+  private def parseXmlBytes(xmlBytes: Array[Byte]): Fox[NmlParseSuccessWithoutFile] = {
+    val is = new ByteArrayInputStream(xmlBytes)
+    val parsingParams = SharedParsingParameters(
+      useZipName = false,
+      overwritingDatasetId = None,
+      userOrganizationId = "testOrganization",
+      isTaskUpload = true
+    )
+    nmlParser.parse("", is, parsingParams, basePath = None)
+  }
+
+  private def writeAndParseTracing(skeletonTracing: SkeletonTracing): Fox[NmlParseSuccessWithoutFile] =
+    for {
+      xmlBytes <- writeToXmlBytes(skeletonTracing)
+      parsed <- parseXmlBytes(xmlBytes)
+    } yield parsed
 
   def assertParsingFailed(parsedTracingFox: Fox[NmlParseSuccessWithoutFile]): Future[Assertion] =
     parsedTracingFox.futureBox.map {
@@ -107,27 +117,27 @@ class NMLUnitTestSuite extends AsyncWordSpec {
   private val dummyTracing = Dummies.skeletonTracing
 
   "NML writing and parsing" should {
-    "yield the same state" in {
+    "yield the same state" in
       writeAndParseTracing(dummyTracing).futureBox.map {
         case Full(tuple) =>
           tuple match {
             case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
               assert(tracing == dummyTracing)
-            case _ => fail()
           }
         case _ => fail()
       }
-    }
   }
 
   "NML writing and parsing" should {
     "add missing isExpanded props with a default of true" in {
-      val treeGroupsWithOmittedIsExpanded = dummyTracing.treeGroups.map(
-        treeGroup =>
-          new TreeGroup(name = treeGroup.name,
-                        groupId = treeGroup.groupId,
-                        children = treeGroup.children,
-                        isExpanded = if (treeGroup.isExpanded.getOrElse(true)) None else Some(false)))
+      val treeGroupsWithOmittedIsExpanded = dummyTracing.treeGroups.map(treeGroup =>
+        new TreeGroup(
+          name = treeGroup.name,
+          groupId = treeGroup.groupId,
+          children = treeGroup.children,
+          isExpanded = if (treeGroup.isExpanded.getOrElse(true)) None else Some(false)
+        )
+      )
       val dummyTracingWithOmittedIsExpandedTreeGroupProp =
         dummyTracing.copy(treeGroups = treeGroupsWithOmittedIsExpanded)
       writeAndParseTracing(dummyTracingWithOmittedIsExpandedTreeGroupProp).futureBox.map {
@@ -135,7 +145,24 @@ class NMLUnitTestSuite extends AsyncWordSpec {
           tuple match {
             case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
               assert(tracing == dummyTracing)
-            case _ => fail()
+          }
+        case _ => fail()
+      }
+    }
+  }
+
+  "NML writing and parsing" should {
+    "deduplicate nodes with the same id when writing, keeping the rest of the tree intact" in {
+      val duplicatedNode = dummyTracing.trees.head.nodes.head
+      val treeWithDuplicateNode =
+        dummyTracing.trees.head.copy(nodes = dummyTracing.trees.head.nodes :+ duplicatedNode)
+      val newTracing = dummyTracing.copy(trees = treeWithDuplicateNode +: dummyTracing.trees.tail)
+
+      writeAndParseTracing(newTracing).futureBox.map {
+        case Full(tuple) =>
+          tuple match {
+            case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
+              assert(tracing == dummyTracing)
           }
         case _ => fail()
       }
@@ -184,12 +211,20 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       assertParsingFailed(writeAndParseTracing(newTracing))
     }
 
-    "throw an error for duplicate node state" in {
-      val duplicatedNode = dummyTracing.trees(1).nodes.head
-      val wrongTree = dummyTracing.trees(1).copy(nodes = Seq(duplicatedNode, duplicatedNode))
-      val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees.head, wrongTree))
-
-      assertParsingFailed(writeAndParseTracing(newTracing))
+    "throw an error for a raw NML with a duplicated node id" in {
+      // Mutates the XML directly because NmlWriter would deduplicate the nodes while writing.
+      val nodeTagPattern = """<node[^>]*/>""".r
+      writeToXmlBytes(dummyTracing).futureBox.flatMap {
+        case Full(xmlBytes) =>
+          val xml = new String(xmlBytes, "UTF-8")
+          val firstNodeTag = nodeTagPattern.findFirstIn(xml).getOrElse(fail("no <node> tag found in written NML"))
+          val xmlWithDuplicatedNode = xml.replaceFirst(
+            java.util.regex.Pattern.quote(firstNodeTag),
+            java.util.regex.Matcher.quoteReplacement(firstNodeTag + firstNodeTag)
+          )
+          assertParsingFailed(parseXmlBytes(xmlWithDuplicatedNode.getBytes("UTF-8")))
+        case _ => Future.successful(fail("failed to write dummy tracing to XML"))
+      }
     }
 
     "throw an error for missing groupId state" in {
@@ -207,8 +242,11 @@ class NMLUnitTestSuite extends AsyncWordSpec {
 
     "throw an error for multiple additional coordinates of the same name" in {
       val newTracing = dummyTracing.copy(
-        additionalAxes = Seq(new AdditionalAxisProto("t", 0, Vec2IntProto(0, 10)),
-                             new AdditionalAxisProto("t", 1, Vec2IntProto(10, 20))))
+        additionalAxes = Seq(
+          new AdditionalAxisProto("t", 0, Vec2IntProto(0, 10)),
+          new AdditionalAxisProto("t", 1, Vec2IntProto(10, 20))
+        )
+      )
 
       assertParsingFailed(writeAndParseTracing(newTracing))
     }

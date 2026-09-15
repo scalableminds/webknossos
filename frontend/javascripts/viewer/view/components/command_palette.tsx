@@ -5,8 +5,9 @@ import {
   getReadableAnnotations,
   updateSelectedThemeOfUser,
 } from "admin/rest_api";
-import type { ItemType } from "antd/lib/menu/interface";
+import type { ItemType } from "antd/es/menu/interface";
 import DOMPurify from "dompurify";
+import { copyToClipboard } from "libs/clipboard";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
@@ -18,10 +19,11 @@ import { getAdministrationSubMenu, getAnalysisSubMenu, switchTo } from "navbar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { getSystemColorTheme, getThemeFromUser } from "theme";
+import { useNavigate } from "react-router";
+import { ColorWKBlue, getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ViewModeValues } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -36,7 +38,8 @@ import { viewDatasetMenu } from "../action_bar/view_dataset_actions_view";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
-const commandEntryColor = "#5660ff";
+// than a theme token.
+const commandEntryColor = ColorWKBlue;
 
 type ExtendedCommand = Command & {
   shortcut?: string;
@@ -106,7 +109,7 @@ export const CommandPalette = () => {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
 
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
-  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const task = useWkSelector((state) => state.task);
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
@@ -266,8 +269,7 @@ export const CommandPalette = () => {
       {
         name: "Copy Organization ID",
         command: async () => {
-          await navigator.clipboard.writeText(activeUser.organization);
-          Toast.success("Organization ID copied to clipboard");
+          await copyToClipboard(activeUser.organization, "organization ID");
         },
         color: commandEntryColor,
       },
@@ -276,8 +278,7 @@ export const CommandPalette = () => {
         command: async () => {
           try {
             const token = await getAuthToken();
-            await navigator.clipboard.writeText(token);
-            Toast.success("Auth token copied to clipboard");
+            await copyToClipboard(token, "auth token");
           } catch (error) {
             Toast.error("Failed to fetch auth token. Please refresh the page to try again.");
             console.error("Failed to fetch auth token:", error);
@@ -448,10 +449,13 @@ export const CommandPalette = () => {
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only rerun if allowUpdate changes
+  // Rerun when inputs that the static commands close over change. userConfig is included so
+  // the "Toggle …" commands capture the current boolean value and actually flip it instead of
+  // repeatedly applying the value that was current when the palette mounted.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
   useEffect(() => {
     setCommands(allStaticCommands);
-  }, [allowUpdate]);
+  }, [allowUpdate, userConfig]);
 
   const closePalette = () => {
     setPaletteKey((prevKey) => prevKey + 1);

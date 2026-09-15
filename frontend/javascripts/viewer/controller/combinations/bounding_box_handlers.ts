@@ -1,15 +1,18 @@
+import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import { document } from "libs/window";
 import throttle from "lodash-es/throttle";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, Point2, Vector2, Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   calculateGlobalDelta,
   calculateGlobalPos,
   calculateMaybeGlobalPos,
 } from "viewer/model/accessors/view_mode_accessor";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import {
   addUserBoundingBoxAction,
   changeUserBoundingBoxAction,
@@ -230,23 +233,39 @@ export function getClosestHoveredBoundingBox(
   return [primaryEdge, secondaryEdge];
 }
 
-export function createBoundingBoxAndGetEdges(
+export async function createBoundingBoxAndGetEdges(
   pos: Point2,
   plane: OrthoView,
-): [SelectedEdge, SelectedEdge | null | undefined] | null {
+): Promise<[SelectedEdge, SelectedEdge | null | undefined] | null> {
   const state = Store.getState();
+  // A drag-created box cannot be meaningfully deferred, so we simply don't start one while a
+  // rebase/forwarding is active (the add would be dropped by the rebase edit guard anyway).
+  if (getIsRebasingOrForwarding(state)) return null;
   const globalPosition = calculateMaybeGlobalPos(state, pos, plane);
   if (globalPosition == null || globalPosition.rounded == null) return null;
 
+  const tracingId = getSomeTracing(state.annotation).tracingId;
+  let id: number;
+  try {
+    id = await dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox");
+  } catch (error) {
+    handleGenericError(error as Error, "Could not create a new bounding box.");
+    return null;
+  }
+
   Store.dispatch(
-    addUserBoundingBoxAction({
-      boundingBox: {
-        min: globalPosition.rounded,
-        // The last argument ensures that a Vector3 is used and not a
-        // Float32Array.
-        max: V3.add(globalPosition.rounded, [1, 1, 1], [0, 0, 0]),
+    addUserBoundingBoxAction(
+      {
+        boundingBox: {
+          min: globalPosition.rounded,
+          // The last argument ensures that a Vector3 is used and not a
+          // Float32Array.
+          max: V3.add(globalPosition.rounded, [1, 1, 1], [0, 0, 0]),
+        },
       },
-    }),
+      undefined,
+      id,
+    ),
   );
   const { userBoundingBoxes } = getSomeTracing(Store.getState().annotation);
 

@@ -16,6 +16,8 @@ const actionBlacklist = [
   "MOVE_FLYCAM_ABSOLUTE",
   "MOVE_FLYCAM_ORTHO",
   "MOVE_PLANE_FLYCAM_ORTHO",
+  "MOVE_TD_VIEW_BY_VECTOR_WITHOUT_TIME_TRACKING",
+  "SET_TD_CAMERA_WITHOUT_TIME_TRACKING",
   "PUSH_SAVE_QUEUE_TRANSACTION",
   "SET_DIRECTION",
   "SET_INPUT_CATCHER_RECT",
@@ -48,9 +50,9 @@ export default (function actionLoggerMiddleware(_store: MiddlewareAPI) {
         const overflowCount = Math.max(actionLog.length - MAX_ACTION_LOG_LENGTH, 0);
         actionLog = drop(actionLog, overflowCount);
 
-        if (WkDevFlags.logActions) {
+        if (WkDevFlags.logActions || WkDevFlags.logFullActionObjects) {
           console.group(action.type);
-          console.info("dispatching", action);
+          console.info("dispatching", WkDevFlags.logFullActionObjects ? action : action.type);
           let result = next(action);
           console.groupEnd();
           return result;

@@ -1,10 +1,13 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, Encoding}
 import com.scalableminds.webknossos.datastore.datavault.Encoding.Encoding
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -16,37 +19,58 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.{DataStoreAccessTokenService, DatasetCache, UserAccessRequest}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.http.Writeable
-import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ResponseHeader, Result}
 
 import scala.concurrent.ExecutionContext
 
-class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenService,
-                                    dataVaultService: DataVaultService,
-                                    datasetCache: DatasetCache)(implicit ec: ExecutionContext)
-    extends Controller
-    with FoxImplicits {
+class DataProxyController @Inject() (
+    accessTokenService: DataStoreAccessTokenService,
+    dataVaultService: DataVaultService,
+    datasetCache: DatasetCache
+)(implicit ec: ExecutionContext)
+    extends Controller {
 
   def proxyMag(datasetId: ObjectId, dataLayerName: String, mag: String, path: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           _ <- validatePath(path)
-          magValidated <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Messages("dataLayer.invalidMag",
-                                                                                             mag)
-          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
-            "dataLayer.notFound",
-            dataLayerName) ~> NOT_FOUND
-          magLocator <- dataLayer.mags.find(_.mag == magValidated).toFox ?~> Messages("dataLayer.wrongMag",
-                                                                                      dataLayerName,
-                                                                                      mag) ~> NOT_FOUND
-          magPath <- dataVaultService.vaultPathFor(magLocator, dataSource.id, dataLayerName)
+          magValidated <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag)
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Layer
+            .notFound(dataLayerName) ~> NOT_FOUND
+          magLocator <- dataLayer.mags.find(_.mag == magValidated).toFox ?~> Msg.Dataset.Layer
+            .magNotFound(dataLayerName, mag) ~> NOT_FOUND
+          magPath <- dataVaultService.vaultPathFor(magLocator)
           requestedPath = magPath / path
           byteRange <- ByteRange.fromRequest(request)
           (bytes, encoding, rangeHeader) <- requestedPath.readBytesEncodingAndRangeHeader(byteRange)
           headers = buildResponseHeaders(encoding, rangeHeader)
-        } yield resultWithStatus(byteRange.successResponseCode, bytes).withHeaders(headers: _*)
+        } yield resultWithStatus(byteRange.successResponseCode, bytes).withHeaders(headers*)
+      }
+    }
+
+  // Readers of neuroglancerPrecomputed mags also request the info header at the *parent* path of each mag.
+  // We have to serve a valid info header at this path.
+  def proxyPrecomputedInfo(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
+    Action.fox { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+        for {
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Layer
+            .notFound(dataLayerName) ~> NOT_FOUND
+          magLocator <- dataLayer.mags.headOption.toFox ?~> Msg.Dataset.Layer.zeroMags(dataLayerName) ~> NOT_FOUND
+          magPath <- dataVaultService.vaultPathFor(magLocator)
+          requestedPath = magPath.parent / PrecomputedHeader.FILENAME_INFO
+          bytes <- requestedPath.readBytes()
+          rootHeader <- JsonHelper.parseAs[PrecomputedHeader](bytes).toFox ?~> "Could not parse array header"
+          rootHeaderAdapted = rootHeader.copy(scales = rootHeader.scales.flatMap { scale =>
+            val matchingMagOpt = dataLayer.mags.find(_.path.exists(_.basename == scale.key))
+            matchingMagOpt match {
+              case Some(matchingMag) => Some(scale.copy(key = matchingMag.mag.toMagLiteral(allowScalar = true)))
+              case None              => None
+            }
+          })
+        } yield Ok(Json.toJson(rootHeaderAdapted))
       }
     }
 
@@ -57,33 +81,35 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
     Seq(contentEncoding, contentRange, acceptRanges).flatten
   }
 
-  def proxyAttachment(datasetId: ObjectId,
-                      dataLayerName: String,
-                      attachmentType: String,
-                      attachmentName: String,
-                      path: String): Action[AnyContent] = Action.async { implicit request =>
+  def proxyAttachment(
+      datasetId: ObjectId,
+      dataLayerName: String,
+      attachmentType: String,
+      attachmentName: String,
+      path: String
+  ): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         _ <- validatePath(path)
-        (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages("dataLayer.notFound",
-                                                                                           dataLayerName) ~> NOT_FOUND
+        (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Layer
+          .notFound(dataLayerName) ~> NOT_FOUND
         attachmentTypeValidated <- LayerAttachmentType.fromString(attachmentType).toFox
         attachment <- dataLayer.attachments
           .flatMap(_.getByTypeAndName(attachmentTypeValidated, attachmentName))
-          .toFox ?~> Messages("dataLayer.wrongAttachment", dataLayerName, attachmentName) ~> NOT_FOUND
+          .toFox ?~> Msg.Dataset.Layer.attachmentNotFound(dataLayerName, attachmentName) ~> NOT_FOUND
         attachmentPath <- dataVaultService.vaultPathFor(attachment)
         requestedPath = attachmentPath / path
         byteRange <- ByteRange.fromRequest(request)
         (bytes, encoding, rangeHeader) <- requestedPath.readBytesEncodingAndRangeHeader(byteRange)
         headers = buildResponseHeaders(encoding, rangeHeader)
-      } yield resultWithStatus(byteRange.successResponseCode, bytes).withHeaders(headers: _*)
+      } yield resultWithStatus(byteRange.successResponseCode, bytes).withHeaders(headers*)
     }
   }
 
-  def proxyDatasource(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
+  def proxyDatasource(datasetId: ObjectId): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        dataSource <- datasetCache.getById(datasetId) ?~> "dataSource.notFound" ~> NOT_FOUND
+        dataSource <- datasetCache.getById(datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
         dataSourceWithAdaptedPaths = adaptPathsForDataSource(dataSource)
       } yield Ok(Json.toJson(dataSourceWithAdaptedPaths))
     }
@@ -91,22 +117,25 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
 
   private def adaptPathsForDataSource(dataSource: UsableDataSource) =
     dataSource.copy(
-      dataLayers = dataSource.dataLayers.map(
-        layer =>
-          layer.mapped(magMapping = mag => adaptPathForMag(mag, layer.name),
-                       attachmentMapping = attachments => adaptPathsForAttachments(attachments, layer.name)))
+      dataLayers = dataSource.dataLayers.map(layer =>
+        layer.mapped(
+          magMapping = mag => adaptPathForMag(mag, layer.name),
+          attachmentMapping = attachments => adaptPathsForAttachments(attachments, layer.name)
+        )
+      )
     )
 
   private def adaptPathForMag(mag: MagLocator, layerName: String): MagLocator =
     mag.copy(
-      path = Some(UPath.fromStringUnsafe(s"./layers/$layerName/mags/${mag.mag.toMagLiteral(allowScalar = true)}")))
+      path = Some(UPath.fromStringUnsafe(s"./layers/$layerName/mags/${mag.mag.toMagLiteral(allowScalar = true)}"))
+    )
 
   private def adaptPathsForAttachments(attachments: DataLayerAttachments, layerName: String): DataLayerAttachments =
-    attachments.mappedWithType(
-      (attachment, attachmentType) =>
-        attachment.copy(
-          path = UPath.fromStringUnsafe(s"./layers/$layerName/attachments/$attachmentType/${attachment.name}")
-      ))
+    attachments.mappedWithType((attachment, attachmentType) =>
+      attachment.copy(
+        path = UPath.fromStringUnsafe(s"./layers/$layerName/attachments/$attachmentType/${attachment.name}")
+      )
+    )
 
   private def validatePath(path: String): Fox[Unit] =
     for {

@@ -1,4 +1,5 @@
 import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getTermsOfService } from "admin/api/terms_of_service";
 import { loginUser } from "admin/rest_api";
 import { Button, Checkbox, Col, Form, Input, Row } from "antd";
@@ -11,6 +12,7 @@ import type { APIOrganization } from "types/api_types";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setHasOrganizationsAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { HoneypotFormItem } from "./honeypot_form_item";
 import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;
@@ -51,10 +53,12 @@ function RegistrationFormGeneric(props: Props) {
     const tryAutoLogin = props.tryAutoLogin || props.inviteToken != null || autoVerified;
 
     if (tryAutoLogin) {
-      const [user, organization] = await loginUser({
-        email: formValues.email,
-        password: formValues.password.password1,
-      });
+      const [user, organization] = unwrapOrThrow(
+        await loginUser({
+          email: formValues.email,
+          password: formValues.password.password1,
+        }),
+      );
       dispatch(setActiveUserAction(user));
       dispatch(setActiveOrganizationAction(organization));
     }
@@ -115,6 +119,7 @@ function RegistrationFormGeneric(props: Props) {
       <React.Fragment>
         {tokenField}
         {organizationFields}
+        <HoneypotFormItem />
       </React.Fragment>
     );
   };

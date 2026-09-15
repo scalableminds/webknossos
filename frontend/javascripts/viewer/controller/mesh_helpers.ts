@@ -11,7 +11,7 @@ export type BufferGeometryWithInfo = BufferGeometry & {
 };
 
 export type UnmergedBufferGeometryWithInfo = BufferGeometry & {
-  unmappedSegmentId: number;
+  unmappedSegmentId: bigint;
   vertexSegmentMapping?: VertexSegmentMapping;
 };
 
@@ -33,7 +33,7 @@ export class VertexSegmentMapping {
    * and unmapped segment id.
    */
   cumulativeStartPosition: number[];
-  unmappedSegmentIds: number[];
+  unmappedSegmentIds: bigint[];
   constructor(sortedBufferGeometries: UnmergedBufferGeometryWithInfo[]) {
     let cumsum = 0;
     this.cumulativeStartPosition = [];
@@ -71,7 +71,7 @@ export class VertexSegmentMapping {
     return [this.cumulativeStartPosition[index], this.cumulativeStartPosition[index + 1]];
   }
 
-  getRangeForUnmappedSegmentId(segmentId: number): [number, number] | null {
+  getRangeForUnmappedSegmentId(segmentId: bigint): [number, number] | null {
     const index = sortedIndexOf(this.unmappedSegmentIds, segmentId);
     if (index === -1) {
       return null;
@@ -79,7 +79,7 @@ export class VertexSegmentMapping {
     return [this.cumulativeStartPosition[index], this.cumulativeStartPosition[index + 1]];
   }
 
-  containsSegmentId(segmentId: number): boolean {
+  containsSegmentId(segmentId: bigint): boolean {
     return sortedIndexOf(this.unmappedSegmentIds, segmentId) !== -1;
   }
 }

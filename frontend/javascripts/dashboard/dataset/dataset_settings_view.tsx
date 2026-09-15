@@ -4,17 +4,18 @@ import {
   ExclamationCircleOutlined,
   ExportOutlined,
   FileTextOutlined,
+  FolderOutlined,
   SettingOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { Alert, Breadcrumb, Button, Form, Layout, Menu, Space, Tooltip } from "antd";
+import { Alert, Breadcrumb, Button, Form, Layout, Menu, Space, Tooltip, Typography } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import { useDatasetSettingsContext } from "dashboard/dataset/dataset_settings_context";
 import features from "features";
 import messages from "messages";
 import type React from "react";
 import { useCallback } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 
 const { Sider, Content } = Layout;
@@ -26,6 +27,7 @@ const BREADCRUMB_LABELS = {
   sharing: "Sharing & Permissions",
   metadata: "Metadata",
   defaultConfig: "View Configuration",
+  storage: "Storage Details",
   delete: "Delete Dataset",
 };
 
@@ -116,11 +118,9 @@ const DatasetSettingsView: React.FC = () => {
     isEditingMode || (dataset != null && dataset.dataSource.status == null) ? "Save" : "Import";
   const errorIcon = (
     <Tooltip title="Some fields in this tab require your attention.">
-      <ExclamationCircleOutlined
-        style={{
-          color: "var(--ant-color-error)",
-        }}
-      />
+      <Typography.Text type="danger">
+        <ExclamationCircleOutlined />
+      </Typography.Text>
     </Tooltip>
   );
 
@@ -149,6 +149,11 @@ const DatasetSettingsView: React.FC = () => {
           key: "defaultConfig",
           icon: formErrors.defaultConfig ? errorIcon : <SettingOutlined />,
           label: "View Configuration",
+        },
+        {
+          key: "storage",
+          icon: <FolderOutlined />,
+          label: "Storage Details",
         },
         features().allowDeleteDatasets
           ? {

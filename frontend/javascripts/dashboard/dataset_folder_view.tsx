@@ -1,8 +1,8 @@
-import { Button, Card, Col, Flex, Row } from "antd";
+import { Button, Card, Col, Flex, Row, Space } from "antd";
 import features, { getDemoDatasetUrl } from "features";
 import { filterNullValues, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useRef } from "react";
+import { Link } from "react-router";
 import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_types";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import DatasetCollectionContextProvider, {
@@ -11,7 +11,7 @@ import DatasetCollectionContextProvider, {
 import { useDatasetsInFolderQuery, useFolderHierarchyQuery } from "./dataset/queries";
 import DatasetView, { DatasetAddButton, DatasetRefreshButton } from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
-import { EditFolderModal } from "./folders/edit_folder_modal";
+import { FolderModal } from "./folders/folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
 
 type Props = {
@@ -28,9 +28,9 @@ export function DatasetFolderView(props: Props) {
 
 function DatasetFolderViewInner(props: Props) {
   const context = useDatasetCollectionContext();
-  const { selectedDatasets, setSelectedDatasets } = context;
-  const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
+  const { selectedDatasets, setSelectedDatasets, folderModalState, setFolderModalState } = context;
   const { data: hierarchy } = useFolderHierarchyQuery();
+  const mainRef = useRef<HTMLElement>(null);
 
   const setSelectedDataset = (ds: APIDatasetCompact | null, multiSelect?: boolean) => {
     if (!ds) {
@@ -159,10 +159,10 @@ function DatasetFolderViewInner(props: Props) {
 
     const adminHeader =
       isUserAdminOrDatasetManager(props.user) || isUserTeamManager(props.user) ? (
-        <>
+        <Space>
           <DatasetRefreshButton context={context} />
           <DatasetAddButton context={context} />
-        </>
+        </Space>
       ) : null;
 
     return (
@@ -205,11 +205,8 @@ function DatasetFolderViewInner(props: Props) {
         minHeight: 0,
       }}
     >
-      {folderIdForEditModal != null && (
-        <EditFolderModal
-          onClose={() => setFolderIdForEditModal(null)}
-          folderId={folderIdForEditModal}
-        />
+      {folderModalState != null && (
+        <FolderModal {...folderModalState} onClose={() => setFolderModalState(null)} />
       )}
       <div
         style={{
@@ -219,22 +216,21 @@ function DatasetFolderViewInner(props: Props) {
           marginRight: 16,
         }}
       >
-        <FolderTreeSidebar setFolderIdForEditModal={setFolderIdForEditModal} />
+        <FolderTreeSidebar />
       </div>
-      <main style={{ gridColumn: "2 / 3", overflow: "auto", paddingRight: 4 }}>
+      <main ref={mainRef} style={{ gridColumn: "2 / 3", overflow: "auto", paddingRight: 4 }}>
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}
           onSelectFolder={setSelectedFolder}
           selectedDatasets={selectedDatasets}
           context={context}
-          setFolderIdForEditModal={setFolderIdForEditModal}
+          scrollContainerRef={mainRef}
         />
       </main>
       <div
         style={{
           gridColumn: "3 / 4",
-          overflow: "auto",
           borderLeft: "1px solid var(--ant-color-border)",
           marginLeft: 4,
         }}
@@ -244,7 +240,6 @@ function DatasetFolderViewInner(props: Props) {
           setSelectedDataset={setSelectedDataset}
           folderId={folderIdForDetailsSidebar}
           datasetCount={datasetCountForDetailsSidebar}
-          setFolderIdForEditModal={setFolderIdForEditModal}
           searchQuery={context.globalSearchQuery}
           displayedFolderEqualsActiveFolder={context.selectedFolder == null}
         />

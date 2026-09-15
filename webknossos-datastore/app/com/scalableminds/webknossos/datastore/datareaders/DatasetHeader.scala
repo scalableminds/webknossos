@@ -51,10 +51,13 @@ trait DatasetHeader {
       else {
         if (axisOrder.hasZAxis) {
           Some(
-            BoundingBox(Vec3Int.zeros,
-                        shape(axisOrder.x).toInt,
-                        shape(axisOrder.y).toInt,
-                        shape(axisOrder.zWithFallback).toInt))
+            BoundingBox(
+              Vec3Int.zeros,
+              shape(axisOrder.x).toInt,
+              shape(axisOrder.y).toInt,
+              shape(axisOrder.zWithFallback).toInt
+            )
+          )
         } else {
           Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x).toInt, shape(axisOrder.y).toInt, 1))
         }
@@ -64,7 +67,7 @@ trait DatasetHeader {
   // Note that in DatasetArray, this is adapted for 2d datasets
   lazy val rank: Int = chunkShape.length
 
-  def chunkShapeAtIndex(chunkIndex: Array[Int]): Array[Int] = chunkShape
+  def chunkShapeAtIndex(chunkIndex: Array[Long]): Array[Int] = chunkShape
 
   def isSharded = false
 

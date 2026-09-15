@@ -1,4 +1,4 @@
-import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboard } from "libs/input";
 import { useEffect } from "react";
 
 // This component provides a lightweight wrapper around the input library.
@@ -9,21 +9,15 @@ type Props = {
   supportLoop?: boolean;
   supportInputElements?: boolean;
 };
-export default function Shortcut(props: Props) {
+export default function Shortcut({ keys, onTrigger, supportLoop, supportInputElements }: Props) {
   useEffect(() => {
-    const keyboard = new (props.supportLoop ? InputKeyboard : InputKeyboardNoLoop)(
-      {
-        [props.keys]: props.onTrigger,
-      },
-      {
-        supportInputElements: props.supportInputElements,
-      },
-    );
+    const handler = supportLoop ? { onPressedWithRepeat: onTrigger } : { onPressed: onTrigger };
+    const keyboard = new InputKeyboard({ [keys]: handler }, { supportInputElements });
 
     return () => {
       keyboard.destroy();
     };
-  }, [props.keys, props.onTrigger, props.supportLoop, props.supportInputElements]);
+  }, [keys, onTrigger, supportLoop, supportInputElements]);
 
   return null;
 }

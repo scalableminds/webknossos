@@ -33,3 +33,9 @@ export function ensureExactKeys<T>() {
         : ["Missing keys", Exclude<keyof T, K[number]>]),
   ) => keys;
 }
+
+export type LayerNameAsKey = string;
+
+// Records (JS Objects) don't support bigints as keys which is why
+// we convert bigints to string in these cases.
+export type BigIntAsKey = string;

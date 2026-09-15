@@ -38,7 +38,7 @@ export type Props = {
   allowUpdate: boolean;
   isRotated: boolean;
   segments: SegmentMap | null | undefined;
-  maybeUnmappedSegmentId: number | null;
+  maybeUnmappedSegmentId: bigint | null;
 };
 
 export type NodeContextMenuOptionsProps = Props & {
@@ -49,7 +49,7 @@ export type NodeContextMenuOptionsProps = Props & {
 
 export type NoNodeContextMenuProps = Props & {
   viewport: OrthoView;
-  segmentIdAtPosition: number;
+  segmentIdAtPosition: bigint;
   activeTool: AnnotationTool;
   infoRows: ItemType[];
 };

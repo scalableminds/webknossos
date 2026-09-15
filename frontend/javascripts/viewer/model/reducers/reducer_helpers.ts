@@ -1,8 +1,7 @@
+import { colorObjectToRGBArray, getRandomColor } from "libs/colors";
 import {
-  colorObjectToRGBArray,
   computeBoundingBoxFromBoundingBoxObject,
   computeBoundingBoxObjectFromBoundingBox,
-  getRandomColor,
   mapEntriesToMap,
   mapGroupsDeep,
   point3ToVector3,
@@ -16,14 +15,13 @@ import type {
   UserBoundingBoxProto,
   VolumeUserState,
 } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 import type { Vector3 } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateKey } from "viewer/model/helpers/deep_update";
 import type {
   Annotation,
-  BoundingBoxObject,
   SegmentGroup,
   UserBoundingBox,
   UserBoundingBoxForServer,
@@ -182,18 +180,11 @@ export function convertServerAdditionalAxesToFrontEnd(
 }
 
 function isToolAvailable(
-  state: WebknossosState,
   disabledToolInfo: Record<AnnotationToolId, DisabledInfo>,
   tool: AnnotationTool,
 ) {
   const { isDisabled } = disabledToolInfo[tool.id];
-  if (isDisabled) {
-    return false;
-  }
-  if (!state.annotation.isUpdatingCurrentlyAllowed) {
-    return Toolkits.READ_ONLY_TOOLS.includes(tool);
-  }
-  return true;
+  return !isDisabled;
 }
 
 export function getNextTool(state: WebknossosState): AnnotationTool | null {
@@ -209,7 +200,7 @@ export function getNextTool(state: WebknossosState): AnnotationTool | null {
   ) {
     const newTool = tools[newToolIndex % tools.length];
 
-    if (isToolAvailable(state, disabledToolInfo, newTool)) {
+    if (isToolAvailable(disabledToolInfo, newTool)) {
       return newTool;
     }
   }
@@ -230,7 +221,7 @@ export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
   ) {
     const newTool = tools[(tools.length + newToolIndex) % tools.length];
 
-    if (isToolAvailable(state, disabledToolInfo, newTool)) {
+    if (isToolAvailable(disabledToolInfo, newTool)) {
       return newTool;
     }
   }
@@ -244,7 +235,7 @@ export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
   }
 
   const disabledToolInfo = getDisabledInfoForTools(state);
-  if (!isToolAvailable(state, disabledToolInfo, tool)) {
+  if (!isToolAvailable(disabledToolInfo, tool)) {
     console.log(`Cannot switch to ${tool.readableName} because it's not available.`);
     return state;
   }

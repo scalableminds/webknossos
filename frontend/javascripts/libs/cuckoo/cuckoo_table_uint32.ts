@@ -1,9 +1,10 @@
 import { type PixelFormatGPU, RGIntegerFormat } from "three";
 import type { NumberLike } from "viewer/store";
-import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
+import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 
-const EMPTY_KEY = EMPTY_KEY_VALUE;
-const EMPTY_VALUE = EMPTY_KEY_VALUE;
+// See EMPTY_KEY_VALUE definition in abstract super class for an explanation.
+const EMPTY_KEY = 0;
+const EMPTY_VALUE = 0;
 
 // This module defines a cuckoo table that can map from a 32-bit key to 32-bit value.
 type Key = number;

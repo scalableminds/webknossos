@@ -25,13 +25,11 @@ import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
-import type { PretrainedModel } from "./ai_model_selector";
 
 interface RunAiModelJobContextType {
-  selectedModel: AiModel | PretrainedModel | null;
+  selectedModel: AiModel | null;
   selectedJobType:
     | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_NUCLEI
     | APIJobCommand.INFER_MITOCHONDRIA
     | APIJobCommand.INFER_INSTANCES
     | null;
@@ -45,11 +43,10 @@ interface RunAiModelJobContextType {
   setSelectedJobType: (
     jobType:
       | APIJobCommand.INFER_NEURONS
-      | APIJobCommand.INFER_NUCLEI
       | APIJobCommand.INFER_MITOCHONDRIA
       | APIJobCommand.INFER_INSTANCES,
   ) => void;
-  setSelectedModel: (model: AiModel | PretrainedModel) => void;
+  setSelectedModel: (model: AiModel) => void;
   setSelectedBoundingBox: (bbox: UserBoundingBox | null) => void;
   setNewDatasetName: (name: string) => void;
   setSelectedLayer: (layer: APIDataLayer) => void;
@@ -73,10 +70,9 @@ const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>
 export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [selectedModel, setSelectedModel] = useState<AiModel | PretrainedModel | null>(null);
+  const [selectedModel, setSelectedModel] = useState<AiModel | null>(null);
   const [selectedJobType, setSelectedJobType] = useState<
     | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_NUCLEI
     | APIJobCommand.INFER_MITOCHONDRIA
     | APIJobCommand.INFER_INSTANCES
     | null
@@ -105,7 +101,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   const taskBoundingBoxes = useWkSelector(getTaskBoundingBoxes);
   const dataset = useWkSelector((state) => state.dataset);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -178,8 +173,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       }
     }
 
-    const isColorLayerInverted = datasetConfiguration.layers[selectedLayer.name].isInverted;
-    const aiModelId = "trainingJob" in selectedModel ? selectedModel.id : undefined;
+    const aiModelId = selectedModel.id;
 
     try {
       switch (selectedJobType) {
@@ -191,7 +185,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
             colorLayerName: selectedLayer.name,
             boundingBox: boundingBox.join(","),
             newDatasetName,
-            invertColorLayer: isColorLayerInverted,
             doSplitMergerEvaluation: isEvaluationActive,
             ...(isEvaluationActive
               ? {
@@ -205,16 +198,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
             customConfiguration,
           });
           break;
-        case APIJobCommand.INFER_NUCLEI:
-          await runInstanceModelInference({
-            datasetId: dataset.id,
-            colorLayerName: selectedLayer.name,
-            boundingBox: boundingBox.join(","),
-            newDatasetName,
-            invertColorLayer: isColorLayerInverted,
-            customConfiguration,
-          });
-          break;
         case APIJobCommand.INFER_INSTANCES:
           await runInstanceModelInference({
             datasetId: dataset.id,
@@ -222,7 +205,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
             colorLayerName: selectedLayer.name,
             boundingBox: boundingBox.join(","),
             newDatasetName,
-            invertColorLayer: isColorLayerInverted,
             seedGeneratorDistanceThreshold,
             customConfiguration,
           });
@@ -257,10 +239,10 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     seedGeneratorDistanceThreshold,
     isEvaluationActive,
     splitMergerEvaluationSettings,
+    customConfiguration,
     userBoundingBoxCount,
     taskBoundingBoxes,
     skeletonAnnotation,
-    datasetConfiguration,
     dispatch,
   ]);
 

@@ -4,6 +4,7 @@ import Icon, {
   ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import IconBoundingBox from "@images/icons/icon-bounding-box.svg?react";
 import IconDownsampling from "@images/icons/icon-downsampling.svg?react";
 import IconExtent from "@images/icons/icon-extent.svg?react";
 import IconMousewheel from "@images/icons/icon-mousewheel.svg?react";
@@ -14,19 +15,27 @@ import { getOrganization } from "admin/api/organization";
 import { Space, Tag, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { ThemedIcon } from "components/themed_icon";
-import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
+import { copyToClipboard } from "libs/clipboard";
+import {
+  formatNumberToVolume,
+  formatScale,
+  formatScaleForClipboard,
+  formatVoxels,
+} from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
+import memoizeOne from "memoize-one";
 import messages from "messages";
 import React, { type CSSProperties } from "react";
 import { connect, useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { Dispatch } from "redux";
-import type { APIDataset, APIUser } from "types/api_types";
+import type { APIDataset, APIUser, APIUserBase } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
+import constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
+import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import {
   getSkeletonStats,
   getStats,
@@ -37,12 +46,14 @@ import {
 import {
   getDatasetExtentAsString,
   getDatasetExtentInUnitAsProduct,
+  getDatasetExtentInVoxel,
   getDatasetExtentInVoxelAsProduct,
   getMagnificationUnion,
   getReadableURLPart,
   getViewDatasetURL,
 } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
+import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -50,18 +61,31 @@ import {
   setAnnotationNameAction,
 } from "viewer/model/actions/annotation_actions";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
-import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
+import Store, { type Task, type WebknossosState } from "viewer/store";
+import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 import { MarkdownModal } from "../components/markdown_modal";
+import type { KeyboardShortcutId } from "../keyboard_shortcuts/keyboard_shortcut_constants";
+import type {
+  KeyboardShortcutsMap,
+  UnmodifiedLayoutMap,
+} from "../keyboard_shortcuts/keyboard_shortcut_types";
+import { keySequenceToUiElements } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 
 type StateProps = {
-  annotation: StoreAnnotation;
+  annotationName: string;
+  annotationDescription: string;
+  annotationOwner: APIUserBase | null | undefined;
+  annotationContributors: APIUserBase[];
   dataset: APIDataset;
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
-  activeMagInfo: ReturnType<typeof getActiveMagInfo>;
   isDatasetViewMode: boolean;
+  isPlaneMode: boolean;
   mayEditAnnotation: boolean;
+  keyboardShortcutsConfig: KeyboardShortcutsMap;
+  unmodifiedLayoutMap: UnmodifiedLayoutMap;
 };
 type DispatchProps = {
   setAnnotationName: (arg0: string) => void;
@@ -73,73 +97,109 @@ type State = {
   isMarkdownModalOpen: boolean;
 };
 
-const shortcuts = [
-  {
-    key: "1",
-    keybinding: [
-      <KeyboardKeyIcon label="I" key="zoom-1" className="keyboard-key-icon" />,
-      "/",
-      <KeyboardKeyIcon label="O" key="zoom-2" className="keyboard-key-icon" />,
-      "or",
-      <KeyboardKeyIcon label="ALT" key="zoom-3" className="keyboard-key-icon" />,
-      "+",
-      <Icon
-        component={IconMousewheel}
-        key="zoom-4"
-        className="keyboard-mouse-icon"
-        aria-label="Mouse Wheel"
-        title="Mouse Wheel"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-    ],
-    action: "Zoom in/out",
-  },
-  {
-    key: "2",
-    keybinding: [
-      <Icon
-        component={IconMousewheel}
-        key="move-1"
-        className="keyboard-mouse-icon"
-        aria-label="Mouse Wheel"
-        title="Mouse Wheel"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-      "or",
-      <KeyboardKeyIcon label="D" key="move-2" className="keyboard-key-icon" />,
-      "/",
-      <KeyboardKeyIcon label="F" key="move-3" className="keyboard-key-icon" />,
-    ],
-    action: "Move Along 3rd Axis",
-  },
-  {
-    key: "3",
-    keybinding: [
-      <ThemedIcon
-        name="icon-mouse-left"
-        key="move"
-        className="keyboard-mouse-icon"
-        aria-label="Left Mouse Button Drag"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-    ],
-    action: "Move",
-  },
-  {
-    key: "4",
-    keybinding: [
-      <ThemedIcon
-        name="icon-mouse-right"
-        key="rotate"
-        className="keyboard-mouse-icon"
-        aria-label="Right Mouse Button Drag"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-      "in 3D View",
-    ],
-    action: "Rotate 3D View",
-  },
-];
+type ShortcutInfo = {
+  key: string;
+  keybinding: React.ReactNode[];
+  action: string;
+};
+
+const datasetInfoTabId = "dataset-info-tab";
+
+// getStats iterates over all trees which can be expensive for large tracings.
+// memoizeOne avoids recomputing while the annotation is unchanged, and
+// reuseInstanceOnEquality keeps the result instance stable when a mutation
+// did not change any of the counts (to avoid unnecessary re-renders).
+const cachedGetStats = reuseInstanceOnEquality(memoizeOne(getStats));
+
+const getShortcuts = (
+  keyboardShortcutsConfig: KeyboardShortcutsMap,
+  unmodifiedLayoutMap: UnmodifiedLayoutMap,
+  isInPlaneMode: boolean,
+): ShortcutInfo[] => {
+  const toUiElement = (keyboardShortcutId: KeyboardShortcutId) =>
+    (keyboardShortcutsConfig[keyboardShortcutId] ?? []).flatMap((keySeq, comboIndex) => {
+      const capitalizedKeySeq = keySeq.map((keys) => keys.map((key) => key.toUpperCase()));
+      return keySequenceToUiElements(
+        capitalizedKeySeq,
+        true,
+        `${keyboardShortcutId}-${comboIndex}-`,
+        unmodifiedLayoutMap,
+      );
+    });
+  return [
+    {
+      key: "1",
+      keybinding: [
+        isInPlaneMode ? toUiElement("ZOOM_IN_PLANE") : toUiElement("ZOOM_IN_FLIGHT"),
+        "/",
+        isInPlaneMode ? toUiElement("ZOOM_OUT_PLANE") : toUiElement("ZOOM_OUT_FLIGHT"),
+
+        "or",
+        <KeyboardKeyIcon label="ALT" key="zoom-3" className="keyboard-key-icon" />,
+        "+",
+
+        <Icon
+          component={IconMousewheel}
+          key="zoom-4"
+          className="keyboard-mouse-icon"
+          aria-label="Mouse Wheel"
+          title="Mouse Wheel"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+      ],
+      action: "Zoom in/out",
+    },
+    {
+      key: "2",
+      keybinding: [
+        <Icon
+          component={IconMousewheel}
+          key="move-1"
+          className="keyboard-mouse-icon"
+          aria-label="Mouse Wheel"
+          title="Mouse Wheel"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+        "or",
+        isInPlaneMode
+          ? toUiElement("MOVE_ONE_BACKWARD_DIRECTION_AWARE")
+          : toUiElement("MOVE_BACKWARD_WITHOUT_RECORDING"),
+        "/",
+        isInPlaneMode
+          ? toUiElement("MOVE_ONE_FORWARD_DIRECTION_AWARE")
+          : toUiElement("MOVE_FORWARD_WITHOUT_RECORDING"),
+      ],
+      action: "Move Along 3rd Axis",
+    },
+    {
+      key: "3",
+      keybinding: [
+        <ThemedIcon
+          name="icon-mouse-left"
+          key="move"
+          className="keyboard-mouse-icon"
+          aria-label="Left Mouse Button Drag"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+      ],
+      action: "Move",
+    },
+    {
+      key: "4",
+      keybinding: [
+        <ThemedIcon
+          name="icon-mouse-right"
+          key="rotate"
+          className="keyboard-mouse-icon"
+          aria-label="Right Mouse Button Drag"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+        "in 3D View",
+      ],
+      action: "Rotate 3D View",
+    },
+  ];
+};
 
 export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   const extentInVoxel = getDatasetExtentAsString(dataset, true);
@@ -163,6 +223,11 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
     );
   };
 
+  const copyExtentToClipboard = () => {
+    const { width, height, depth } = getDatasetExtentInVoxel(dataset);
+    copyToClipboard(`${width},${height},${depth}`, "dataset extent", true);
+  };
+
   return (
     <FastTooltip
       dynamicRenderer={renderDSExtentTooltip}
@@ -182,6 +247,7 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
         style={{
           paddingTop: 10,
         }}
+        onClick={copyExtentToClipboard}
       >
         {extentInVoxel}
         <br /> {extentInLength}
@@ -191,6 +257,10 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
 }
 
 export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
+  const copyVoxelSizeToClipboard = () => {
+    copyToClipboard(formatScaleForClipboard(dataset.dataSource.scale), "dataset voxel size", true);
+  };
+
   return (
     <FastTooltip title="Dataset voxel size" placement="left" wrapper="tr">
       <td
@@ -200,7 +270,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
       >
         <Icon component={IconVoxelsize} className="info-tab-icon" aria-label="Voxel size" />
       </td>
-      <td>{formatScale(dataset.dataSource.scale)}</td>
+      <td onClick={copyVoxelSizeToClipboard}>{formatScale(dataset.dataSource.scale)}</td>
     </FastTooltip>
   );
 }
@@ -224,12 +294,14 @@ export function AnnotationStats({
   stats,
   asInfoBlock,
   withMargin,
+  boundingBoxCount,
 }: {
   stats: TracingStats | EmptyObject;
   asInfoBlock: boolean;
   withMargin?: boolean | null | undefined;
+  boundingBoxCount?: number;
 }) {
-  if (!stats || Object.keys(stats).length === 0) return null;
+  if ((!stats || Object.keys(stats).length === 0) && !boundingBoxCount) return null;
   const formatLabel = (str: string) => (asInfoBlock ? str : "");
   const useStyleWithMargin = withMargin != null ? withMargin : true;
   const styleWithLargeMarginBottom = { marginBottom: 14 };
@@ -268,8 +340,7 @@ export function AnnotationStats({
           {volumeStats.length > 0 ? (
             <FastTooltip
               placement="left"
-              html={`${totalSegmentCount}
-                      Only segments that were manually registered (either brushed or
+              html={`${totalSegmentCount} – Only segments that were manually registered (either brushed or
                       interacted with) are counted in this statistic. Segmentation layers
                       created from automated workflows (also known as fallback layers) are not
                       considered currently.`}
@@ -283,10 +354,96 @@ export function AnnotationStats({
               </td>
             </FastTooltip>
           ) : null}
+          {boundingBoxCount ? (
+            <FastTooltip
+              placement="left"
+              html={`${boundingBoxCount} – Only user-defined bounding boxes are counted in this statistic. Layer bounding boxes are excluded.`}
+              wrapper="tr"
+            >
+              <td>
+                <Icon
+                  component={IconBoundingBox}
+                  className="info-tab-icon"
+                  aria-label="Bounding Boxes"
+                />
+              </td>
+              <td>
+                {boundingBoxCount}{" "}
+                {formatLabel(pluralize("Bounding Box", boundingBoxCount, "Bounding Boxes"))}
+              </td>
+            </FastTooltip>
+          ) : null}
         </tbody>
       </table>
     </div>
   );
+}
+
+function AnnotationStatisticsSection() {
+  const stats = useWkSelector((state) => cachedGetStats(state.annotation));
+  const boundingBoxCount = useWkSelector(
+    (state) => maybeGetSomeTracing(state.annotation)?.userBoundingBoxes.length ?? 0,
+  );
+  return <AnnotationStats stats={stats} asInfoBlock boundingBoxCount={boundingBoxCount} />;
+}
+
+function MagInfoRow() {
+  const activeMagInfo = useWkSelector(getActiveMagInfo);
+  const dataset = useWkSelector((state) => state.dataset);
+  const { representativeMag, isActiveMagGlobal, activeMagOfEnabledLayers } = activeMagInfo;
+
+  const renderMagsTooltip = () => {
+    // The annotation is read lazily when the tooltip is actually rendered
+    // (i.e., on hover) so that this row doesn't need to subscribe to (and
+    // re-render on) every annotation mutation.
+    const { annotation } = Store.getState();
+    const magUnion = getMagnificationUnion(dataset);
+    return (
+      <div style={{ width: 200 }}>
+        Rendered magnification per layer:
+        <ul>
+          {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+            const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
+
+            return (
+              <li key={layerName}>
+                {readableName}: {mag ? mag.join("-") : "none"}
+              </li>
+            );
+          })}
+        </ul>
+        Available magnifications:
+        <ul>
+          {magUnion.map((mags) => (
+            <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
+          ))}
+        </ul>
+        {messages["dataset.mag_explanation"]}
+      </div>
+    );
+  };
+
+  return representativeMag != null ? (
+    <FastTooltip dynamicRenderer={renderMagsTooltip} placement="left" wrapper="tr">
+      <td
+        style={{
+          paddingRight: 4,
+          paddingTop: 8,
+        }}
+      >
+        <Icon component={IconDownsampling} className="info-tab-icon" aria-label="Magnification" />
+      </td>
+      <td
+        style={{
+          paddingRight: 4,
+          paddingTop: 8,
+        }}
+      >
+        {representativeMag.join("-")}
+        {isActiveMagGlobal ? "" : "*"}{" "}
+      </td>
+    </FastTooltip>
+  ) : null;
 }
 
 class DatasetInfoTabView extends React.PureComponent<Props, State> {
@@ -313,11 +470,13 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationStatistics() {
     if (this.props.isDatasetViewMode) return null;
 
-    return <AnnotationStats stats={getStats(this.props.annotation)} asInfoBlock />;
+    return <AnnotationStatisticsSection />;
   }
 
   getKeyboardShortcuts() {
-    return this.props.isDatasetViewMode ? (
+    const { isDatasetViewMode, keyboardShortcutsConfig, unmodifiedLayoutMap, isPlaneMode } =
+      this.props;
+    return isDatasetViewMode ? (
       <div className="info-tab-block">
         <Typography.Title level={5}>Keyboard Shortcuts</Typography.Title>
         <p>
@@ -331,22 +490,24 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           </a>
           .
         </p>
-        <table className="shortcut-table">
+        <table className="shortcut-table-info-tab">
           <tbody>
-            {shortcuts.map((shortcut) => (
-              <tr key={shortcut.key}>
-                <td
-                  style={{
-                    width: 170,
-                  }}
-                >
-                  <Space size={4} align="center">
-                    {shortcut.keybinding}
-                  </Space>
-                </td>
-                <td>{shortcut.action}</td>
-              </tr>
-            ))}
+            {getShortcuts(keyboardShortcutsConfig, unmodifiedLayoutMap, isPlaneMode).map(
+              (shortcut) => (
+                <tr key={shortcut.key}>
+                  <td
+                    style={{
+                      width: 170,
+                    }}
+                  >
+                    <Space size={4} align="center">
+                      {shortcut.keybinding}
+                    </Space>
+                  </td>
+                  <td>{shortcut.action}</td>
+                </tr>
+              ),
+            )}
           </tbody>
         </table>
       </div>
@@ -354,16 +515,13 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   getDatasetName() {
-    const { name: datasetName, description: datasetDescription } = this.props.dataset;
-    const { activeUser } = this.props;
+    const { activeUser, dataset, isDatasetViewMode } = this.props;
+    const { name: datasetName, description: datasetDescription } = dataset;
 
     const getEditSettingsIcon = () =>
       mayUserEditDataset(activeUser, this.props.dataset) ? (
         <FastTooltip title="Edit dataset settings">
-          <Link
-            to={`/datasets/${getReadableURLPart(this.props.dataset)}/edit`}
-            style={{ paddingLeft: 3 }}
-          >
+          <Link to={`/datasets/${getReadableURLPart(dataset)}/edit`} style={{ paddingLeft: 3 }}>
             <Typography.Text type="secondary">
               <SettingOutlined />
             </Typography.Text>
@@ -371,7 +529,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </FastTooltip>
       ) : null;
 
-    if (this.props.isDatasetViewMode) {
+    if (isDatasetViewMode) {
       return (
         <div className="info-tab-block">
           <div
@@ -401,7 +559,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       <div className="info-tab-block">
         <p className="sidebar-label">Dataset {getEditSettingsIcon()}</p>
         <Link
-          to={getViewDatasetURL(this.props.dataset)}
+          to={getViewDatasetURL(dataset)}
           title={`Click to view dataset ${datasetName} without annotation`}
           style={{
             wordWrap: "break-word",
@@ -416,7 +574,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationName() {
     if (this.props.isDatasetViewMode) return null;
 
-    const annotationName = this.props.annotation.name || "[unnamed]";
+    const annotationName = this.props.annotationName || "[unnamed]";
 
     if (this.props.task != null) {
       // In case we have a task display its id
@@ -451,8 +609,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationDescription() {
     if (this.props.isDatasetViewMode) return null;
 
-    const annotationDescription = this.props.annotation.description || "[no description]";
-    const isDescriptionEmpty = this.props.annotation.description === "";
+    const annotationDescription = this.props.annotationDescription || "[no description]";
+    const isDescriptionEmpty = this.props.annotationDescription === "";
     const description = isDescriptionEmpty ? (
       annotationDescription
     ) : (
@@ -497,7 +655,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           <MarkdownModal
             label="Annotation Description"
             placeholder="[No description]"
-            source={this.props.annotation.description}
+            source={this.props.annotationDescription}
             isOpen={this.state.isMarkdownModalOpen}
             onOk={() => this.setState({ isMarkdownModalOpen: false })}
             onChange={this.props.setAnnotationDescription}
@@ -522,8 +680,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   };
 
   maybePrintOwnerAndContributors() {
-    const { activeUser } = this.props;
-    const { owner, contributors } = this.props.annotation;
+    const { activeUser, annotationOwner: owner, annotationContributors: contributors } = this.props;
 
     if (!owner) {
       return null;
@@ -573,92 +730,50 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderMagsTooltip = () => {
-    const { dataset, annotation, activeMagInfo } = this.props;
-    const { activeMagOfEnabledLayers } = activeMagInfo;
-    const magUnion = getMagnificationUnion(dataset);
-    return (
-      <div style={{ width: 200 }}>
-        Rendered magnification per layer:
-        <ul>
-          {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-            const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
-
-            return (
-              <li key={layerName}>
-                {readableName}: {mag ? mag.join("-") : "none"}
-              </li>
-            );
-          })}
-        </ul>
-        Available magnifications:
-        <ul>
-          {magUnion.map((mags) => (
-            <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
-          ))}
-        </ul>
-        {messages["dataset.mag_explanation"]}
-      </div>
-    );
-  };
-
-  getMagInfo() {
-    const { activeMagInfo } = this.props;
-    const { representativeMag, isActiveMagGlobal } = activeMagInfo;
-
-    return representativeMag != null ? (
-      <FastTooltip dynamicRenderer={this.renderMagsTooltip} placement="left" wrapper="tr">
-        <td
-          style={{
-            paddingRight: 4,
-            paddingTop: 8,
-          }}
-        >
-          <Icon component={IconDownsampling} className="info-tab-icon" aria-label="Magnification" />
-        </td>
-        <td
-          style={{
-            paddingRight: 4,
-            paddingTop: 8,
-          }}
-        >
-          {representativeMag.join("-")}
-          {isActiveMagGlobal ? "" : "*"}{" "}
-        </td>
-      </FastTooltip>
-    ) : null;
-  }
-
   render() {
     const { dataset } = this.props;
 
     return (
-      <div className="flex-overflow padded-tab-content">
-        {WkDevFlags.debugging.showCurrentVersionInInfoTab && <DebugInfo />}
-        {this.getAnnotationName()}
-        {this.getAnnotationDescription()}
-        {this.getDatasetName()}
-        {this.maybePrintOrganization()}
-        {this.maybePrintOwnerAndContributors()}
+      <div id={datasetInfoTabId} className="flex-overflow padded-tab-content">
+        <DomVisibilityObserver targetId={datasetInfoTabId}>
+          {(isVisibleInDom) => {
+            // Skip rendering entirely while the tab is hidden, except when the
+            // markdown modal is open (it would disappear otherwise).
+            if (!isVisibleInDom && !this.state.isMarkdownModalOpen) {
+              return null;
+            }
 
-        <div className="info-tab-block">
-          <p className="sidebar-label">Dimensions</p>
-          <table
-            style={{
-              fontSize: 14,
-              marginLeft: 4,
-            }}
-          >
-            <tbody>
-              <VoxelSizeRow dataset={dataset} />
-              <DatasetExtentRow dataset={dataset} />
-              {this.getMagInfo()}
-            </tbody>
-          </table>
-        </div>
+            return (
+              <React.Fragment>
+                {WkDevFlags.debugging.showCurrentVersionInInfoTab && <DebugInfo />}
+                {this.getAnnotationName()}
+                {this.getAnnotationDescription()}
+                {this.getDatasetName()}
+                {this.maybePrintOrganization()}
+                {this.maybePrintOwnerAndContributors()}
 
-        {this.getAnnotationStatistics()}
-        {this.getKeyboardShortcuts()}
+                <div className="info-tab-block">
+                  <p className="sidebar-label">Dimensions</p>
+                  <table
+                    style={{
+                      fontSize: 14,
+                      marginLeft: 4,
+                    }}
+                  >
+                    <tbody>
+                      <VoxelSizeRow dataset={dataset} />
+                      <DatasetExtentRow dataset={dataset} />
+                      <MagInfoRow />
+                    </tbody>
+                  </table>
+                </div>
+
+                {this.getAnnotationStatistics()}
+                {this.getKeyboardShortcuts()}
+              </React.Fragment>
+            );
+          }}
+        </DomVisibilityObserver>
       </div>
     );
   }
@@ -678,12 +793,17 @@ function DebugInfo() {
 }
 
 const mapStateToProps = (state: WebknossosState): StateProps => ({
-  annotation: state.annotation,
+  annotationName: state.annotation.name,
+  annotationDescription: state.annotation.description,
+  annotationOwner: state.annotation.owner,
+  annotationContributors: state.annotation.contributors,
   dataset: state.dataset,
   task: state.task,
   activeUser: state.activeUser,
   isDatasetViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
-  activeMagInfo: getActiveMagInfo(state),
+  isPlaneMode: constants.MODES_PLANE.includes(state.temporaryConfiguration.viewMode),
+  keyboardShortcutsConfig: state.keyboardConfiguration.shortcutsConfig,
+  unmodifiedLayoutMap: state.keyboardConfiguration.unmodifiedLayoutMap,
   mayEditAnnotation: mayEditAnnotationProperties(state),
 });
 
@@ -692,7 +812,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setAnnotationNameAction(annotationName));
   },
 
-  setAnnotationDescription(comment: string) {
+  async setAnnotationDescription(comment: string) {
+    // Defer the actual update until any active rebase/forwarding has finished, so an edit
+    // submitted mid-rebase isn't lost.
+    await waitUntilRebaseFinished();
     dispatch(setAnnotationDescriptionAction(comment));
   },
 });

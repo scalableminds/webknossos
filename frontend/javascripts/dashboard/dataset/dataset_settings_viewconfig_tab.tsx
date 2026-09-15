@@ -128,7 +128,7 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
     mapping: {
       shortComment: "Active Mapping",
       tooltip:
-        "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'HDF5'}.",
+        "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'AGGLOMERATE'}.",
     },
   };
   const layerViewConfigurationEntries = Object.entries({
@@ -255,10 +255,13 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
       tooltip: settingsTooltips.blendMode,
       content: (
         <Form.Item name={["defaultConfiguration", "blendMode"]}>
-          <Select allowClear>
-            <Select.Option value={BLEND_MODES.Additive}>Additive</Select.Option>
-            <Select.Option value={BLEND_MODES.Cover}>Cover</Select.Option>
-          </Select>
+          <Select
+            allowClear
+            options={[
+              { value: BLEND_MODES.Additive, label: "Additive" },
+              { value: BLEND_MODES.Cover, label: "Cover" },
+            ]}
+          />
         </Form.Item>
       ),
     },
@@ -267,10 +270,13 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
       tooltip: settingsTooltips.loadingStrategy,
       content: (
         <Form.Item name={["defaultConfiguration", "loadingStrategy"]}>
-          <Select allowClear>
-            <Select.Option value={"BEST_QUALITY_FIRST"}>Best quality first</Select.Option>
-            <Select.Option value={"PROGRESSIVE_QUALITY"}>Progressive quality</Select.Option>
-          </Select>
+          <Select
+            allowClear
+            options={[
+              { value: "BEST_QUALITY_FIRST", label: "Best quality first" },
+              { value: "PROGRESSIVE_QUALITY", label: "Progressive quality" },
+            ]}
+          />
         </Form.Item>
       ),
     },

@@ -1,7 +1,13 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  FolderOpenOutlined,
+  FolderOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { Dropdown, type MenuProps, Modal, Tree } from "antd";
-import type { DataNode, DirectoryTreeProps } from "antd/lib/tree";
+import { App, Dropdown, type MenuProps, Tree } from "antd";
+import type { DataNode, DirectoryTreeProps } from "antd/es/tree";
 import classNames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import Toast from "libs/toast";
@@ -11,7 +17,7 @@ import { type Key, useCallback, useEffect, useRef, useState } from "react";
 import { type ConnectDropTarget, type DropTargetMonitor, useDrop } from "react-dnd";
 import type { FolderItem } from "types/api_types";
 import type { ArbitraryObject } from "types/type_utils";
-import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
+import { DraggableDatasetType } from "../advanced_dataset/dnd_types";
 import {
   type DatasetCollectionContextValue,
   useDatasetCollectionContext,
@@ -22,11 +28,7 @@ const { DirectoryTree } = Tree;
 const isNodeDraggable = (node: DataNode): boolean => (node as FolderItem).isEditable;
 const draggableConfig = { icon: false, nodeDraggable: isNodeDraggable };
 
-export function FolderTreeSidebar({
-  setFolderIdForEditModal,
-}: {
-  setFolderIdForEditModal: (value: string | null) => void;
-}) {
+export function FolderTreeSidebar() {
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const context = useDatasetCollectionContext();
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
@@ -108,12 +110,17 @@ export function FolderTreeSidebar({
         <ItemTitle
           context={context}
           folder={nodeData}
-          setFolderIdForEditModal={setFolderIdForEditModal}
+          isExpanded={expandedKeys.includes(nodeData.key)}
         />
       );
     },
-    [context, setFolderIdForEditModal],
+    [context, expandedKeys],
   );
+
+  // When no folder has subfolders, the expand/collapse carets are all no-ops. In that case we
+  // collapse the (otherwise empty) caret column via the folder-tree-flat class so that the
+  // folder icons align to the start of each entry instead of leaving a gap.
+  const isFlatTree = treeData.every((node) => node.children == null || node.children.length === 0);
 
   const onDrop = useCallback(
     ({
@@ -168,6 +175,7 @@ export function FolderTreeSidebar({
     >
       <div
         ref={dropRef}
+        className={classNames("folder-tree-structure", { "folder-tree-flat": isFlatTree })}
         style={{
           marginRight: 4,
           borderRadius: 2,
@@ -185,6 +193,7 @@ export function FolderTreeSidebar({
         ) : null}
         <DirectoryTree
           blockNode
+          showIcon={false}
           expandAction="doubleClick"
           selectedKeys={nullableIdToArray(context.activeFolderId)}
           draggable={isDraggingDataset ? false : draggableConfig}
@@ -216,7 +225,6 @@ export function FolderTreeSidebar({
 export function generateSettingsForFolder(
   folder: FolderItem,
   context: DatasetCollectionContextValue,
-  editFolder: () => void,
   isSubfolder: boolean = false,
 ) {
   const { key: id, isEditable } = folder;
@@ -225,7 +233,11 @@ export function generateSettingsForFolder(
   }
 
   function createFolder(): void {
-    context.showCreateFolderPrompt(id);
+    context.setFolderModalState({ mode: "create", parentFolderId: id });
+  }
+
+  function editFolder(): void {
+    context.setFolderModalState({ mode: "edit", folderId: id });
   }
 
   const newFolderText = isSubfolder ? "New Subfolder" : "New Folder";
@@ -267,18 +279,19 @@ export function generateSettingsForFolder(
 type ItemTitleProps = {
   context: DatasetCollectionContextValue;
   folder: FolderItem;
-  setFolderIdForEditModal: (folderId: string) => void;
+  isExpanded: boolean;
 };
 
 const ItemTitle: React.FC<ItemTitleProps> = (props) => {
-  const { context, folder, setFolderIdForEditModal } = props;
-  const { key: id, title, isEditable } = folder;
+  const { context, folder, isExpanded } = props;
+  const { key: id, title, isEditable, children } = folder;
 
-  function editFolder(): void {
-    setFolderIdForEditModal(id);
-  }
-
-  const menu = generateSettingsForFolder(folder, context, editFolder);
+  const menu = generateSettingsForFolder(folder, context);
+  // We render the folder icon ourselves (instead of relying on DirectoryTree's showIcon) so that
+  // it lives inside the drop target and context-menu trigger. This way right-clicking (and
+  // dropping datasets) works on the icon, too, not just on the folder name.
+  const hasSubfolders = children != null && children.length > 0;
+  const FolderIcon = hasSubfolders && isExpanded ? FolderOpenOutlined : FolderOutlined;
 
   return (
     <Dropdown
@@ -292,9 +305,10 @@ const ItemTitle: React.FC<ItemTitleProps> = (props) => {
       trigger={["contextMenu"]}
     >
       {/* this div is needed to make Dropdown and react-dnd work */}
-      <div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <FolderItemAsDropTarget folderId={id} isEditable={isEditable}>
-          {title}
+          <FolderIcon className="folder-item-icon" />
+          <span className="folder-item-name">{title}</span>
         </FolderItemAsDropTarget>
       </div>
     </Dropdown>
@@ -317,6 +331,7 @@ export function useDatasetDrop(
 ] {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
+  const { modal } = App.useApp();
   const [collectedProps, drop] = useDrop<
     DnDDropItemProps,
     void,
@@ -336,7 +351,7 @@ export function useDatasetDrop(
         }
 
         // Show a modal so that the user cannot do anything else while the datasets are being moved.
-        const modal = Modal.info({
+        const progressModal = modal.info({
           title: "Moving Datasets",
           content: `Preparing to move ${selectedDatasets.length} datasets...`,
           onCancel: (_close) => {},
@@ -349,7 +364,7 @@ export function useDatasetDrop(
           selectedDatasets.map((ds) =>
             context.queries.updateDatasetMutation.mutateAsync([ds.id, { folderId }]).then(() => {
               successCounter++;
-              modal.update({
+              progressModal.update({
                 content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
               });
             }),
@@ -368,7 +383,7 @@ export function useDatasetDrop(
             // The datasets are not in the active folder anymore. Clear the selection to avoid
             // that stale instances are mutated during the next bulk action.
             setSelectedDatasets([]);
-            modal.destroy();
+            progressModal.destroy();
           });
       } else {
         const dataset = context.datasets.find((ds) => ds.id === item.datasetId);

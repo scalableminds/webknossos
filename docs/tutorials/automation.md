@@ -6,7 +6,7 @@ Then, we will learn how to automate this process using Python.
 Additionally, I will guide you through the process of incorporating a remote dataset into WEBKNOSSOS.
 Let’s take a look!
 
-Here is full tutorial video, alternatively continue reading below.
+Here is the full tutorial video, alternatively continue reading below.
 
 ![youtube-video](https://www.youtube.com/embed/Cz98_zO1Z2w)
 

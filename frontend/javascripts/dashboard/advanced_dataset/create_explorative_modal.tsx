@@ -1,10 +1,10 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { getDataset } from "admin/rest_api";
-import { Button, Modal, Radio, Spin, Tooltip } from "antd";
+import { Button, Modal, Radio, Spin, Tooltip, Typography } from "antd";
 import { Slider } from "components/slider";
 import { useFetch } from "libs/react_helpers";
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIDataset, APISegmentationLayer } from "types/api_types";
 import {
   doesSupportVolumeWithFallback,
@@ -56,7 +56,7 @@ export function NewVolumeLayerSelection({
         placement="right"
       >
         <InfoCircleOutlined />
-      </Tooltip>
+      </Tooltip>{" "}
       <Radio.Group
         onChange={(e) => {
           const index = Number.parseInt(e.target.value, 10);
@@ -109,7 +109,8 @@ export function RestrictMagnificationSlider({
 
   return lowestMagIndex < highestMagIndex ? (
     <React.Fragment>
-      <h5
+      <Typography.Title
+        level={5}
         style={{
           marginBottom: 0,
         }}
@@ -121,7 +122,7 @@ export function RestrictMagnificationSlider({
         >
           <InfoCircleOutlined />
         </Tooltip>
-      </h5>
+      </Typography.Title>
       <div
         style={{
           marginBottom: 16,
@@ -181,6 +182,8 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
   }, [dataset]);
 
   let modalContent = <Spin />;
+  // Rendered in the modal footer; stays null while the dataset is still loading.
+  let createAnnotationButton: React.ReactNode = null;
 
   if (dataset !== null) {
     const segmentationLayers = getSegmentationLayers(dataset);
@@ -212,6 +215,18 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           setMagIndices={setUserDefinedMagIndices}
         />
       ) : null;
+    createAnnotationButton = (
+      <Link
+        to={`/datasets/${dataset.id}/createExplorative/${annotationType}/?minMag=${Math.max(
+          ...magInfo.getMagByIndexOrThrow(lowMagIndex),
+        )}&maxMag=${Math.max(
+          ...magInfo.getMagByIndexOrThrow(highMagIndex),
+        )}${fallbackLayerGetParameter}`}
+        title="Create new annotation with selected properties"
+      >
+        <Button type="primary">Create Annotation</Button>
+      </Link>
+    );
     modalContent = (
       <React.Fragment>
         <div
@@ -236,24 +251,6 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
         ) : null}
 
         {magSlider}
-        <div
-          style={{
-            textAlign: "right",
-          }}
-        >
-          <Link
-            to={`/datasets/${dataset.id}/createExplorative/${annotationType}/?minMag=${Math.max(
-              ...magInfo.getMagByIndexOrThrow(lowMagIndex),
-            )}&maxMag=${Math.max(
-              ...magInfo.getMagByIndexOrThrow(highMagIndex),
-            )}${fallbackLayerGetParameter}`}
-            title="Create new annotation with selected properties"
-          >
-            <Button size="large" type="primary">
-              Create Annotation
-            </Button>
-          </Link>
-        </div>
       </React.Fragment>
     );
   }
@@ -262,8 +259,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
     <Modal
       title={`Create New Annotation for Dataset “${dataset?.name || datasetId}”`}
       open
-      width={500}
-      footer={null}
+      footer={createAnnotationButton}
       onCancel={onClose}
     >
       {modalContent}

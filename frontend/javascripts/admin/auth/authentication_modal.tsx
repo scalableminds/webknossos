@@ -48,7 +48,7 @@ export default function AuthenticationModal({
       <RegistrationFormGeneric onRegistered={onRegistered} inviteToken={inviteToken} />
     );
   return (
-    <Modal title={step} onCancel={onCancel} open={isOpen} footer={null} maskClosable={false}>
+    <Modal title={step} onCancel={onCancel} open={isOpen} footer={null} mask={{ closable: false }}>
       <Alert
         title={alertMessage}
         type="info"

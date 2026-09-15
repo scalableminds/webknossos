@@ -3,9 +3,9 @@ name: CI Pipeline
 on:
   push:
     branches:
-      - '*'
+      - "*"
     tags:
-      - '*'
+      - "*"
   workflow_dispatch: {}
 
 env:
@@ -21,11 +21,12 @@ jobs:
   frontend-tests:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 5
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: corepack enable
@@ -33,31 +34,32 @@ jobs:
         run: yarn install --immutable
 
       - name: Lint frontend code and check formatting
-        run: yarn run check-frontend
+        run: yarn run check-frontend-ci
       - name: Typecheck frontend code
         run: yarn typecheck
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests
-        run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true
-      - name: Download Coverage Artifacts
+        run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true --silent=passed-only
+      - name:
+          Download Coverage Artifacts
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
         run: |
-            gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
-            [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
-            gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
+          gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
+          [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
+          gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT_NAME: vitest-coverage-master
           OUTPUT_DIR: coverage-master
-      - name: 'Report Coverage'
-        uses:  davelosert/vitest-coverage-report-action@v2
+      - name: "Report Coverage"
+        uses: davelosert/vitest-coverage-report-action@v2
         with:
           comment-on: none # alternative: pr
           json-summary-compare-path: coverage-master/coverage-summary.json
       - name: "Upload Coverage"
         if: github.ref == 'refs/heads/master'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vitest-coverage-master
           path: coverage
@@ -66,19 +68,20 @@ jobs:
     runs-on: ubuntu-22.04
     if: github.ref != 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 5
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: corepack enable
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
       - uses: sbt/setup-sbt@v1
 
       - name: Start Docker Services Postgres, Redis
@@ -98,13 +101,10 @@ jobs:
         run: tools/assert-complete-migrations.sh
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
-
-
-      - name: Lint backend code and check formatting
-        run: sbt ";scapegoat; util/scapegoat; webknossosTracingstore/scapegoat; webknossosDatastore/scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
-
+      - name: Check backend formatting and lint
+        run: sbt --client "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
       - name: Run backend unit tests
-        run: sbt -v "testOnly backend.*"
+        run: sbt --client -v "testOnly backend.*"
 
       - name: Start Fossildb for e2e tests
         run: docker compose --file .github/docker-compose.yml up -d fossildb
@@ -114,37 +114,37 @@ jobs:
         uses: ./.github/actions/retry
         with:
           run: |
-            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
+            sbt --client "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
       - name: Assert non-empty e2e files
         run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type_check | wc -l) -gt 0 ]'
       - name: Check response types of e2e tests
         run: yarn tsc
 
-
   build-smoketest-push:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 5
+          persist-credentials: false
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
         with:
           driver: docker
 
       - name: Start Docker Services Postgres, Redis
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: corepack enable
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
       - uses: sbt/setup-sbt@v1
 
       - name: "Install System Dependencies"
@@ -181,17 +181,13 @@ jobs:
         env:
           WK_VERSION: ${{ github.run_id }}
 
-      - name: Build webknossos (sbt)
-        run: sbt -DfailOnWarning compile stage
-      - name: Build webknossos-datastore (sbt)
-        run: sbt -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
-      - name: Build webknossos-tracingstore (sbt)
-        run: sbt -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+      - name: Compile and stage webknossos, datastore and tracingstore (sbt)
+        run: sbt -DfailOnWarning "compile; stage; webknossosDatastore/stage; webknossosTracingstore/stage"
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
       - name: Build webknossos docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           file: .github/Dockerfile.webknossos
           context: .
@@ -202,7 +198,7 @@ jobs:
           outputs: |
             type=image
       - name: Build webknossos-datastore docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           file: .github/Dockerfile.datastore
           context: webknossos-datastore
@@ -213,7 +209,7 @@ jobs:
           outputs: |
             type=image
       - name: Build webknossos-tracingstore docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           file: .github/Dockerfile.tracingstore
           context: webknossos-tracingstore
@@ -224,7 +220,7 @@ jobs:
           outputs: |
             type=image
 
-      - name: Start webknossos, datastore and tracingstore for smoke test
+      - name: Start webknossos, datastore and tracingstore via docker for smoke test
         run: |
           set -e
           docker compose --file .github/docker-compose.yml up -d \
@@ -252,52 +248,46 @@ jobs:
       - name: Stop webknossos, datastore and tracingstore
         run: docker compose --file .github/docker-compose.yml down --volumes --remove-orphans
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         if: ${{ github.actor != 'dependabot[bot]' }}
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
 
-      - name: Push webknossos image
+      - name: Push webknossos, datastore and tracingstore images
         if: ${{ ! startsWith(github.ref, 'refs/tags/') && github.actor != 'dependabot[bot]' }}
         uses: ./.github/actions/retry
         with:
-          run: docker push "scalableminds/webknossos:${{ env.DOCKER_TAG }}"
+          # Push all images in parallel. Retry wraps all, so successes may be retried too if one fails. That’s ok, it’s idempotent.
+          run: |
+            set -o pipefail
+            pids=()
+            for image in webknossos webknossos-datastore webknossos-tracingstore; do
+              # with sed, prepend image name for clean logging despite concurrency
+              docker push "scalableminds/$image:${{ env.DOCKER_TAG }}" 2>&1 | sed -u "s/^/[$image] /" &
+              pids+=($!)
+            done
+            fail=0
+            for pid in "${pids[@]}"; do wait "$pid" || fail=1; done
+            exit $fail
           retries: 5
           retry_delay_seconds: 10
-      - name: Push normalized webknossos image
+      - name: Push normalized webknossos, datastore and tracingstore images
         if: ${{ github.actor != 'dependabot[bot]' }}
         uses: ./.github/actions/retry
         with:
-          run: docker push "scalableminds/webknossos:${{ env.NORMALIZED_BRANCH }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Push webknossos-datastore image
-        if: ${{ ! startsWith(github.ref, 'refs/tags/') && github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Push normalized webknossos-datastore image
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Push webknossos-tracingstore image
-        if: ${{ ! startsWith(github.ref, 'refs/tags/') && github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}"
-          retries: 5
-          retry_delay_seconds: 10
-      - name: Push normalized webknossos-tracingstore image
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: ./.github/actions/retry
-        with:
-          run: docker push "scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}"
+          # Push all images in parallel. Retry wraps all, so successes may be retried too if one fails. That’s ok, it’s idempotent.
+          run: |
+            set -o pipefail
+            pids=()
+            for image in webknossos webknossos-datastore webknossos-tracingstore; do
+              # with sed, prepend image name for clean logging despite concurrency
+              docker push "scalableminds/$image:${{ env.NORMALIZED_BRANCH }}" 2>&1 | sed -u "s/^/[$image] /" &
+              pids+=($!)
+            done
+            fail=0
+            for pid in "${pids[@]}"; do wait "$pid" || fail=1; done
+            exit $fail
           retries: 5
           retry_delay_seconds: 10
       - name: Slack Notification

@@ -3,6 +3,7 @@ import { Modal, Tabs, type TabsProps } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
 
 import { type ReactElement, useState } from "react";
+import { ModalWidth } from "theme";
 import { DownloadAnnotationTab } from "./download_annotation_tab";
 import { DownloadPythonTab } from "./download_python_tab";
 import { DownloadTiffTab } from "./download_tiff_export_tab";
@@ -17,7 +18,7 @@ type Props = {
   initialBoundingBoxId?: number;
 };
 
-function _DownloadModalView({
+function DownloadModalViewInner({
   isOpen,
   onClose,
   isAnnotation,
@@ -63,7 +64,7 @@ function _DownloadModalView({
     <Modal
       title={`Download this ${typeName}`}
       open={isOpen}
-      width={700}
+      width={ModalWidth.Large}
       footer={null}
       onCancel={onClose}
       style={{ overflow: "visible" }}
@@ -73,5 +74,5 @@ function _DownloadModalView({
   );
 }
 
-const DownloadModalView = makeComponentLazy(_DownloadModalView);
+const DownloadModalView = makeComponentLazy(DownloadModalViewInner);
 export default DownloadModalView;

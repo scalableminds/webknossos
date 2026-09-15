@@ -24,9 +24,9 @@ import type { ContextMenuInfo } from "viewer/store";
 import Store from "viewer/store";
 import { CopyIconWithTooltip } from "./copy_icon_with_tooltip";
 import { getInfoMenuItem, positionToString } from "./helpers";
-import { useSegmentStatistics } from "./use_segment_statistics";
+import { useSegmentStatisticsLabels } from "./use_segment_statistics_labels";
 
-export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAtPosition: number) {
+export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAtPosition: bigint) {
   const {
     globalPosition,
     contextMenuPosition,
@@ -47,10 +47,11 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
   // Thus the segment id is always unambiguous / clearly defined.
   const clickedSegmentOrMeshId =
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
-  const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0;
+  const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0n;
 
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
+  const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
   const additionalCoordinates = useWkSelector(
     (state) => state.flycam.additionalCoordinates || undefined,
   );
@@ -65,8 +66,11 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
     segmentVolumeLabel,
     boundingBoxInfoLabel,
     segmentSurfaceAreaLabel,
-    isSegmentIndexAvailable,
-  } = useSegmentStatistics(
+    areSegmentStatisticsAvailable,
+    isBoundingBoxAvailable,
+    isVolumeAvailable,
+    isSurfaceAreaAvailable,
+  } = useSegmentStatisticsLabels(
     clickedSegmentOrMeshId,
     segmentStatsTriggerDate,
     contextMenuPosition,
@@ -77,7 +81,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
   let nodeContextMenuNode: MutableNode | null = null;
 
   if (skeletonTracing != null && maybeClickedNodeId != null) {
-    const treeAndNode = getTreeAndNode(skeletonTracing, maybeClickedNodeId);
+    const treeAndNode = getTreeAndNode(skeletonTracing, activeTreeId, maybeClickedNodeId);
     if (treeAndNode) {
       nodeContextMenuTree = treeAndNode[0];
       nodeContextMenuNode = treeAndNode[1];
@@ -89,7 +93,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
 
   const positionToMeasureDistanceTo =
     nodeContextMenuNode != null ? clickedNodesPosition : globalPosition;
-  const activeNode = skeletonTracing != null ? getActiveNode(skeletonTracing) : null;
+  const activeNode = skeletonTracing != null ? getActiveNode(skeletonTracing, activeTreeId) : null;
 
   const getActiveNodePosition = () => {
     if (activeNode == null) {
@@ -116,8 +120,9 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
 
   const infoRows: ItemType[] = [];
 
-  const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && isSegmentIndexAvailable;
-  if (areSegmentStatisticsAvailable) {
+  const isSegmentActionAndAreStatisticsAvailable =
+    wasSegmentOrMeshClicked && areSegmentStatisticsAvailable;
+  if (isSegmentActionAndAreStatisticsAvailable) {
     infoRows.push({
       key: "load-stats",
       icon: <BarChartOutlined />,
@@ -145,7 +150,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
         <Space size="small">
           <PushpinOutlined rotate={-45} />
           {`Position: ${nodePositionAsString}`}
-          <CopyIconWithTooltip value={nodePositionAsString} title="Copy node position" />
+          <CopyIconWithTooltip value={nodePositionAsString} label="node position" />
         </Space>,
       ),
     );
@@ -157,7 +162,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
         <Space size="small">
           <PushpinOutlined rotate={-45} />
           {`Position: ${positionAsString}`}
-          <CopyIconWithTooltip value={positionAsString} title="Copy position" />
+          <CopyIconWithTooltip value={positionAsString} label="position" />
         </Space>,
       ),
     );
@@ -173,7 +178,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
             {`${distanceToSelection[0]} (${distanceToSelection[1]}) to this
             ${maybeClickedNodeId != null ? "Node" : "Position"}`}
           </FastTooltip>
-          <CopyIconWithTooltip value={distanceToSelection[0]} title="Copy the distance" />
+          <CopyIconWithTooltip value={distanceToSelection[0]} label="distance" />
         </Space>,
       ),
     );
@@ -186,7 +191,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
         <Space size="small">
           <Icon component={IconCell} />
           {`Segment ID: ${clickedSegmentOrMeshId}`}
-          <CopyIconWithTooltip value={clickedSegmentOrMeshId} title="Copy Segment ID" />
+          <CopyIconWithTooltip value={clickedSegmentOrMeshId.toString()} label="segment ID" />
         </Space>,
       ),
     );
@@ -206,49 +211,57 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
           <Space size="small">
             <TagOutlined />
             {`Segment Name: ${segmentNameLabel}`}
-            <CopyIconWithTooltip value={segmentName} title="Copy Segment Name" />
+            <CopyIconWithTooltip value={segmentName} label="segment name" />
           </Space>,
         ),
       );
     }
   }
 
-  if (areSegmentStatisticsAvailable && segmentStatsTriggerDate != null) {
-    infoRows.push(
-      getInfoMenuItem(
-        "surfaceInfo",
-        <Space size="small">
-          <i>m²</i>
-          {`Surface Area: ${segmentSurfaceAreaLabel}`}
-          <CopyIconWithTooltip value={segmentSurfaceAreaLabel} title="Copy surface area" />
-        </Space>,
-      ),
-    );
+  if (isSegmentActionAndAreStatisticsAvailable && segmentStatsTriggerDate != null) {
+    // Each statistic is only shown when this layer can actually answer it — otherwise the row would
+    // be permanently stuck on an error message.
+    if (isSurfaceAreaAvailable) {
+      infoRows.push(
+        getInfoMenuItem(
+          "surfaceInfo",
+          <Space size="small">
+            <i>m²</i>
+            {`Surface Area: ${segmentSurfaceAreaLabel}`}
+            <CopyIconWithTooltip value={segmentSurfaceAreaLabel} label="surface area" />
+          </Space>,
+        ),
+      );
+    }
 
-    infoRows.push(
-      getInfoMenuItem(
-        "volumeInfo",
-        <Space size="small">
-          <i>m³</i>
-          {`Volume: ${segmentVolumeLabel}`}
-          <CopyIconWithTooltip value={segmentVolumeLabel} title="Copy volume" />
-        </Space>,
-      ),
-    );
+    if (isVolumeAvailable) {
+      infoRows.push(
+        getInfoMenuItem(
+          "volumeInfo",
+          <Space size="small">
+            <i>m³</i>
+            {`Volume: ${segmentVolumeLabel}`}
+            <CopyIconWithTooltip value={segmentVolumeLabel} label="segment volume" />
+          </Space>,
+        ),
+      );
+    }
 
-    infoRows.push(
-      getInfoMenuItem(
-        "boundingBoxPositionInfo",
-        <Space size="small">
-          <Icon component={BoundingBoxIcon} />
-          {`Bounding Box: ${boundingBoxInfoLabel}`}
-          <CopyIconWithTooltip
-            value={boundingBoxInfoLabel}
-            title="Copy BBox top left point and extent"
-          />
-        </Space>,
-      ),
-    );
+    if (isBoundingBoxAvailable) {
+      infoRows.push(
+        getInfoMenuItem(
+          "boundingBoxPositionInfo",
+          <Space size="small">
+            <Icon component={BoundingBoxIcon} />
+            {`Bounding Box: ${boundingBoxInfoLabel}`}
+            <CopyIconWithTooltip
+              value={boundingBoxInfoLabel}
+              label="Bbox top left point and extent"
+            />
+          </Space>,
+        ),
+      );
+    }
   }
 
   if (infoRows.length > 0) {

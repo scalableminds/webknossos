@@ -97,7 +97,7 @@ describe("UrlManager", () => {
   });
 
   it("should build csv url hash and parse it again", () => {
-    const mode = Constants.MODE_ARBITRARY;
+    const mode = Constants.MODE_FLIGHT;
     const urlState = {
       position: [0, 0, 0] as Vector3,
       mode,
@@ -117,7 +117,7 @@ describe("UrlManager", () => {
   });
 
   it("should build csv url hash with additional coordinates and parse it again", () => {
-    const mode = Constants.MODE_ARBITRARY;
+    const mode = Constants.MODE_FLIGHT;
     const urlState = {
       position: [0, 0, 0] as Vector3,
       mode,
@@ -187,9 +187,11 @@ describe("UrlManager", () => {
   });
 
   it("should build json url hash and parse it again", () => {
-    const mode = Constants.MODE_ARBITRARY;
+    const mode = Constants.MODE_FLIGHT;
     const urlState = {
       position: [0, 0, 0] as Vector3,
+      clippingDistance: 50,
+      clipSkeletonToCurrentSection: false,
       additionalCoordinates: [],
       mode,
       nativelyRenderedLayerName: null,
@@ -200,6 +202,46 @@ describe("UrlManager", () => {
       temporaryConfiguration: {
         viewMode: {
           $set: mode,
+        },
+      },
+    });
+    const hash = UrlManager.buildUrlHashJson(initialState);
+    location.hash = `#${hash}`;
+    expect(UrlManager.parseUrlHash()).toEqual(urlState as Partial<UrlManagerState>);
+  });
+
+  it("should build json url hash with the td camera and parse it again", () => {
+    const mode = Constants.MODE_FLIGHT;
+    const tdCamera = {
+      position: [12.5, -3, 100] as Vector3,
+      up: [0, -1, 0] as Vector3,
+      left: -500,
+      right: 500,
+      top: 250,
+      bottom: -250,
+    };
+    const urlState = {
+      position: [0, 0, 0] as Vector3,
+      clippingDistance: 50,
+      clipSkeletonToCurrentSection: false,
+      additionalCoordinates: [],
+      mode,
+      nativelyRenderedLayerName: null,
+      zoomStep: 1.3,
+      rotation: [0, 0, 180] as Vector3,
+      tdCamera,
+    };
+    const initialState = update(defaultState, {
+      temporaryConfiguration: {
+        viewMode: {
+          $set: mode,
+        },
+      },
+      viewModeData: {
+        plane: {
+          tdCamera: {
+            $merge: tdCamera,
+          },
         },
       },
     });

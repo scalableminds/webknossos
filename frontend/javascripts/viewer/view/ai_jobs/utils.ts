@@ -4,19 +4,19 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import type { APIAnnotation, APIDataLayer, APIDataset, VoxelSize } from "types/api_types";
-import { APIJobCommand } from "types/api_types";
+import { AnnotationLayerEnum, APIJobCommand } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import { UnitShort } from "viewer/constants";
 import { getColorLayers, getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import type { UserBoundingBox, VolumeTracing } from "viewer/store";
-import { MEAN_VX_SIZE, MIN_BBOX_EXTENT } from "./constants";
+import { MIN_BBOX_EXTENT } from "./constants";
 
 const getMinimumDSSize = (jobType: APIJobCommand) => {
   switch (jobType) {
     case APIJobCommand.INFER_NEURONS:
-    case APIJobCommand.INFER_NUCLEI:
     case APIJobCommand.INFER_INSTANCES:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim * 2);
     case APIJobCommand.INFER_MITOCHONDRIA:
@@ -38,6 +38,49 @@ export function getBoundingBoxesForLayers(layers: APIDataLayer[]): UserBoundingB
   });
 }
 
+/**
+ * Returns the bounding box of the volume (ground truth) layer selected for training, or null if it
+ * cannot be determined (e.g. no ground truth layer selected yet or the tracing has no restricting
+ * bounding box, in which case it covers the whole layer). The training only reads ground truth data
+ * within this bounding box, so user bounding boxes outside of it would lead to a failing training.
+ */
+export function getGroundTruthLayerBoundingBox(
+  annotation: APIAnnotation,
+  groundTruthLayerName: string | undefined,
+  volumeTracings: VolumeTracing[] | undefined,
+): BoundingBox | null {
+  if (!groundTruthLayerName || !volumeTracings) {
+    return null;
+  }
+  const layer = annotation.annotationLayers.find(
+    (l) => l.typ === AnnotationLayerEnum.Volume && l.name === groundTruthLayerName,
+  );
+  if (layer?.tracingId == null) {
+    return null;
+  }
+  const tracing = volumeTracings.find((t) => t.tracingId === layer.tracingId);
+  if (tracing?.boundingBox == null) {
+    return null;
+  }
+  return new BoundingBox(tracing.boundingBox);
+}
+
+/**
+ * Returns the subset of user bounding boxes that are not fully contained within the given volume
+ * layer bounding box. If no layer bounding box is given, no boxes are considered out of bounds.
+ */
+export function getOutOfBoundsBoundingBoxes(
+  userBoundingBoxes: UserBoundingBox[],
+  layerBoundingBox: BoundingBox | null,
+): UserBoundingBox[] {
+  if (layerBoundingBox == null) {
+    return [];
+  }
+  return userBoundingBoxes.filter(
+    (box) => !layerBoundingBox.containsBoundingBox(new BoundingBox(box.boundingBox)),
+  );
+}
+
 // This function mirrors the selection of the mag
 // in voxelytics/worker/job_utils/voxelytics_utils.py select_mag_for_model_prediction
 // Make sure to keep it in sync
@@ -47,7 +90,6 @@ export const getBestFittingMagComparedToTrainingDS = async (
   jobType:
     | APIJobCommand.INFER_MITOCHONDRIA
     | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_NUCLEI
     | APIJobCommand.INFER_INSTANCES,
   aiModelId?: string,
   showToast = true,
@@ -62,11 +104,8 @@ export const getBestFittingMagComparedToTrainingDS = async (
   if (aiModelId) {
     const voxelSize = await getAiModelVoxelSize(aiModelId);
     modelScale = convertVoxelSizeToUnit(voxelSize, UnitShort.nm);
-  } else if (jobType === APIJobCommand.INFER_INSTANCES) {
-    // Pretrained instance inferral uses the nuclei model
-    modelScale = MEAN_VX_SIZE[APIJobCommand.INFER_NUCLEI];
   } else {
-    modelScale = MEAN_VX_SIZE[jobType];
+    throw new Error(`Expected aiModelId for job type: ${jobType}`);
   }
 
   let closestMagOfCurrentDS = colorLayer.mags[0].mag;
@@ -107,8 +146,7 @@ const isBBoxTooSmall = (
   segmentationType:
     | APIJobCommand.INFER_INSTANCES
     | APIJobCommand.INFER_MITOCHONDRIA
-    | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_NUCLEI,
+    | APIJobCommand.INFER_NEURONS,
   mag: Vector3,
   bboxOrDS: "bbox" | "dataset" = "bbox",
 ) => {
@@ -136,8 +174,7 @@ export const isDatasetOrBoundingBoxTooSmall = (
   segmentationType:
     | APIJobCommand.INFER_INSTANCES
     | APIJobCommand.INFER_MITOCHONDRIA
-    | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_NUCLEI,
+    | APIJobCommand.INFER_NEURONS,
 ): boolean => {
   const datasetExtent: Vector3 = [
     colorLayer.boundingBox.width,

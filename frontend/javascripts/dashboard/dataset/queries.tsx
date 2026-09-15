@@ -576,6 +576,7 @@ function getFolderHierarchy(folderTree: FlatFolderTreeItem[]): FolderHierarchy {
       isEditable: folderTreeItem.isEditable,
       parent: folderTreeItem.parent,
       metadata: folderTreeItem.metadata,
+      created: folderTreeItem.created,
       children: [],
     };
     if (folderTreeItem.parent == null) {

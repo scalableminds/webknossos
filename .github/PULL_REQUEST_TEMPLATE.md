@@ -1,11 +1,9 @@
-### URL of deployed dev instance (used for testing):
-- https://___.webknossos.xyz
+### Summary
+
 
 ### Steps to test:
 - abc
 
-### TODOs:
-- [ ] ...
 
 ### Issues:
 - fixes #

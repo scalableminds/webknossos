@@ -5,16 +5,12 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, SegmentationLayer}
 
-import java.nio.file.Path
-
-case class DataServiceRequestSettings(halfByte: Boolean = false,
-                                      appliedAgglomerate: Option[String] = None,
-                                      version: Option[Long] = None,
-                                      additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
-
-object DataServiceRequestSettings {
-  val default: DataServiceRequestSettings = DataServiceRequestSettings(halfByte = false)
-}
+case class DataServiceRequestSettings(
+    halfByte: Boolean = false,
+    appliedAgglomerate: Option[String] = None,
+    version: Option[Long] = None,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+)
 
 case class DataServiceDataRequest(
     datasetId: Option[ObjectId], // None in case of volume tracings
@@ -32,7 +28,6 @@ case class DataServiceDataRequest(
 }
 
 case class DataReadInstruction(
-    baseDir: Path,
     dataSourceId: DataSourceId, // Dummy value in case of volume tracings
     dataLayer: DataLayer,
     bucket: BucketPosition,
@@ -50,9 +45,3 @@ case class DataServiceMappingRequest(
   // (also unused in that case, except for logging and bucket provider cache key)
   def dataSourceIdOrVolumeDummy: DataSourceId = dataSourceId.getOrElse(DataSourceId("VolumeTracing", dataLayer.name))
 }
-
-case class MappingReadInstruction(
-    baseDir: Path,
-    dataSourceId: DataSourceId, // Dummy value in case of volume tracings
-    mapping: String
-)

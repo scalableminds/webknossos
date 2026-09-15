@@ -8,6 +8,6 @@ message Id32WithBool {
 }
 
 message Id64WithBool {
-  required int64 id = 1;
+  required uint64 id = 1;
   required bool value = 2;
 }

@@ -1,19 +1,17 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders._
+import com.scalableminds.webknossos.datastore.datareaders.*
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import play.api.libs.json.Json.WithDefaultValues
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import java.nio.ByteOrder
 
-case class N5BlockHeader(blockSize: Array[Int], numElements: Int)
-object N5BlockHeader {
-  implicit val jsonFormat: OFormat[N5BlockHeader] = Json.format[N5BlockHeader]
-}
+case class N5BlockHeader(blockSize: Array[Int], numElements: Int) derives JsonAutoFormat
 
 case class N5Header(
     dimensions: Array[Long], // shape of the entire array
@@ -38,7 +36,8 @@ case class N5Header(
     N5DataType.toArrayDataType(
       N5DataType
         .fromString(dataType)
-        .getOrElse(throw new IllegalArgumentException(s"Unsupported N5 dataType: $dataType")))
+        .getOrElse(throw new IllegalArgumentException(s"Unsupported N5 dataType: $dataType"))
+    )
 
   lazy val voxelOffset: Array[Int] = Array.fill(rank)(0)
 }

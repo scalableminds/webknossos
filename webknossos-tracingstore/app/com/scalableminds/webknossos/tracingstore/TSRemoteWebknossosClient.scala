@@ -1,11 +1,13 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -23,28 +25,26 @@ import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParam
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingWithUpdatedTreeIds
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.WSResponse
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-case class AnnotationUpdatesReport(annotationId: ObjectId,
-                                   timestamps: List[Instant],
-                                   statistics: Option[JsObject],
-                                   significantChangesCount: Int,
-                                   viewChangesCount: Int,
-                                   userToken: Option[String])
-object AnnotationUpdatesReport {
-  implicit val jsonFormat: OFormat[AnnotationUpdatesReport] = Json.format[AnnotationUpdatesReport]
-}
+case class AnnotationUpdatesReport(
+    annotationId: ObjectId,
+    timestamps: List[Instant],
+    statistics: Option[JsObject],
+    significantChangesCount: Int,
+    viewChangesCount: Int,
+    userToken: Option[String]
+) derives JsonAutoFormat
 
-class TSRemoteWebknossosClient @Inject()(
+class TSRemoteWebknossosClient @Inject() (
     rpc: RPC,
     config: TracingStoreConfig,
     val lifecycle: ApplicationLifecycle
 ) extends RemoteWebknossosClient
-    with FoxImplicits
     with LazyLogging {
 
   private val tracingStoreKey: String = config.Tracingstore.key
@@ -63,7 +63,7 @@ class TSRemoteWebknossosClient @Inject()(
       .silent
       .postJson(Json.toJson(tracingUpdatesReport))
 
-  def getDataSourceForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext): Fox[UsableDataSource] =
+  def getDataSourceForAnnotation(annotationId: ObjectId)(using tc: TokenContext): Fox[UsableDataSource] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataSource")
       .addQueryParam("annotationId", annotationId)
       .addQueryParam("key", tracingStoreKey)
@@ -97,7 +97,7 @@ class TSRemoteWebknossosClient @Inject()(
           .addQueryParam("key", tracingStoreKey)
           .silent
           .getWithJsonResponse[ObjectId]
-    ) ?~> "annotation.idForTracing.failed"
+    ) ?~> Msg.Annotation.idForTracingFailed(tracingId)
 
   def updateAnnotation(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/updateAnnotation")
@@ -106,9 +106,11 @@ class TSRemoteWebknossosClient @Inject()(
       .silent
       .postProto(annotationProto)
 
-  def createTracingFor(annotationId: ObjectId,
-                       layerParameters: AnnotationLayerParameters,
-                       previousVersion: Long): Fox[Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]] = {
+  def createTracingFor(
+      annotationId: ObjectId,
+      layerParameters: AnnotationLayerParameters,
+      previousVersion: Long
+  ): Fox[Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]] = {
     val req = rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/createTracing")
       .addQueryParam("annotationId", annotationId)
       .addQueryParam("previousVersion", previousVersion) // used for fetching old precedence layers
@@ -121,19 +123,22 @@ class TSRemoteWebknossosClient @Inject()(
       case AnnotationLayerType.Skeleton =>
         for {
           skeletonTracing <- req.postJsonWithProtoResponse[AnnotationLayerParameters, SkeletonTracing](layerParameters)(
-            SkeletonTracing)
-        } yield
-          Left[SkeletonTracingWithUpdatedTreeIds, VolumeTracing](
-            SkeletonTracingWithUpdatedTreeIds(skeletonTracing, Set.empty))
+            SkeletonTracing
+          )
+        } yield Left[SkeletonTracingWithUpdatedTreeIds, VolumeTracing](
+          SkeletonTracingWithUpdatedTreeIds(skeletonTracing, Set.empty)
+        )
     }
   }
 
-  def voxelSizeForAnnotationWithCache(annotationId: ObjectId)(implicit tc: TokenContext,
-                                                              ec: ExecutionContext): Fox[VoxelSize] =
+  def voxelSizeForAnnotationWithCache(
+      annotationId: ObjectId
+  )(using tc: TokenContext, ec: ExecutionContext): Fox[VoxelSize] =
     voxelSizeCache.getOrLoad(annotationId, aId => voxelSizeForAnnotation(aId))
 
-  private def voxelSizeForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext,
-                                                             ec: ExecutionContext): Fox[VoxelSize] =
+  private def voxelSizeForAnnotation(
+      annotationId: ObjectId
+  )(using tc: TokenContext, ec: ExecutionContext): Fox[VoxelSize] =
     for {
       datasetId <- getDatasetIdForAnnotation(annotationId)
       result <- rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/datasources/$datasetId")
@@ -144,12 +149,12 @@ class TSRemoteWebknossosClient @Inject()(
       scale <- result.voxelSizeOpt.toFox ?~> "Could not determine voxel size of dataset"
     } yield scale
 
-  override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
+  override def requestUserAccess(accessRequest: UserAccessRequest)(using tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/validateUserAccess")
       .addQueryParam("key", tracingStoreKey)
       .withTokenFromContext
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }
 
-class TracingStoreAccessTokenService @Inject()(val remoteWebknossosClient: TSRemoteWebknossosClient)
+class TracingStoreAccessTokenService @Inject() (val remoteWebknossosClient: TSRemoteWebknossosClient)
     extends AccessTokenService

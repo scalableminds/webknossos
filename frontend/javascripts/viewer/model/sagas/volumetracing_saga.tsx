@@ -10,7 +10,11 @@ import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volu
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
 import {
-  getSupportedValueRangeOfLayer,
+  isUserInterfaceBlocked,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
+import {
+  getElementClass,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -23,6 +27,7 @@ import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
+  getContourTracingMode,
   getMaximumBrushSize,
   getRenderableMagForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
@@ -38,7 +43,6 @@ import {
   updateTemporarySettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { setBusyBlockingInfoAction, setToolAction } from "viewer/model/actions/ui_actions";
 import type {
   ClickSegmentAction,
   CreateCellAction,
@@ -52,11 +56,13 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
+import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
+import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import {
   requestBucketModificationInVolumeTracing,
-  takeEveryUnlessBusy,
+  takeEveryInOperationContext,
   takeWithBatchActionSupport,
 } from "viewer/model/sagas/saga_helpers";
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
@@ -75,11 +81,16 @@ const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
 function* watchVolumeTracingAsync(): Saga<void> {
   yield* call(ensureWkInitialized);
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     "INTERPOLATE_SEGMENTATION_LAYER",
     maybeInterpolateSegmentationLayer,
-    "Interpolating segment",
+    { id: "INTERPOLATE_SEGMENTATION_LAYER", description: "Interpolating segment" },
   );
+  yield* takeEveryInOperationContext("DELETE_SEGMENT_DATA", handleDeleteSegmentData, {
+    id: "DELETE_SEGMENT",
+    description: "Segment is being deleted.",
+  });
+
   yield* fork(warnOfTooLowOpacity);
 }
 
@@ -130,7 +141,8 @@ function* warnAboutInvalidSegmentId(): Saga<void> {
       volumeTracing.tracingId,
     );
     if (!isInSupportedValueRangeForLayer(dataset, segmentationLayer.name, requestedSegmentId)) {
-      const validRange = getSupportedValueRangeOfLayer(dataset, segmentationLayer.name);
+      const elementClass = getElementClass(dataset, segmentationLayer.name);
+      const validRange = getSegmentIdRangeForElementClass(elementClass);
       Toast.warning(messages["tracing.segment_id_out_of_bounds"](requestedSegmentId, validRange));
     }
   }
@@ -143,15 +155,15 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
   while (true) {
     const startEditingAction = yield* take("START_EDITING");
-    const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+    const allowUpdate = yield* select(mayEditAnnotation);
     if (!allowUpdate) {
       continue;
     }
     const wroteVoxelsBox = { value: false };
-    const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
+    const isBlocked = yield* select(isUserInterfaceBlocked);
 
-    if (busyBlockingInfo.isBusy) {
-      console.warn(`Ignoring brush request (reason: ${busyBlockingInfo.reason || "null"})`);
+    if (isBlocked) {
+      console.warn("Ignoring brush request: An operation is currently running.");
       continue;
     }
 
@@ -160,16 +172,18 @@ export function* editVolumeLayerAsync(): Saga<never> {
     }
 
     const volumeTracing = yield* select(enforceActiveVolumeTracing);
-    const contourTracingMode = volumeTracing.contourTracingMode;
+    const contourTracingMode = yield* select((state) =>
+      getContourTracingMode(state, volumeTracing),
+    );
     const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
     const activeTool = yield* select((state) => state.uiInformation.activeTool);
     // Depending on the tool, annotation in higher zoom steps might be disallowed.
-    const isZoomStepTooHighForAnnotating = yield* select((state) =>
+    const zoomStateForAnnotating = yield* select((state) =>
       isVolumeAnnotationDisallowedForZoom(activeTool, state),
     );
 
-    if (isZoomStepTooHighForAnnotating) {
+    if (zoomStateForAnnotating.isDisabled) {
       continue;
     }
 
@@ -198,7 +212,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       continue;
     }
 
-    if (isDrawing && activeCellId === 0) {
+    if (isDrawing && activeCellId === 0n) {
       yield* call(
         [Toast, Toast.warning],
         "The current segment ID is 0. Please change the active segment ID via the status bar, by creating a new segment from the toolbar or by selecting an existing one via context menu.",
@@ -253,9 +267,12 @@ export function* editVolumeLayerAsync(): Saga<never> {
         addToContourListAction: currentAction.type === "ADD_TO_CONTOUR_LIST" ? currentAction : null,
         finishEditingAction: currentAction.type === "FINISH_EDITING" ? currentAction : null,
       };
-      if (finishEditingAction) break;
+      if (finishEditingAction) {
+        channel.close();
+        break;
+      }
 
-      if (!addToContourListAction || addToContourListAction.type !== "ADD_TO_CONTOUR_LIST") {
+      if (addToContourListAction?.type !== "ADD_TO_CONTOUR_LIST") {
         throw new Error("Unexpected action. Satisfy typescript.");
       }
 
@@ -374,22 +391,6 @@ export function* finishSectionLabeler(
   yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
 }
 
-function* ensureToolIsAllowedInMag(): Saga<void> {
-  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
-
-  while (true) {
-    yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
-    const isMagTooLow = yield* select((state) => {
-      const { activeTool } = state.uiInformation;
-      return isVolumeAnnotationDisallowedForZoom(activeTool, state);
-    });
-
-    if (isMagTooLow) {
-      yield* put(setToolAction(AnnotationTool.MOVE));
-    }
-  }
-}
-
 function* ensureSegmentExists(
   action: AddAdHocMeshAction | AddPrecomputedMeshAction | SetActiveCellAction | ClickSegmentAction,
 ): Saga<void> {
@@ -404,7 +405,7 @@ function* ensureSegmentExists(
   const layerName = layer.name;
   const segmentId = action.segmentId;
 
-  if (segmentId === 0 || segmentId == null) {
+  if (segmentId === 0n || segmentId == null) {
     return;
   }
 
@@ -476,7 +477,7 @@ function* updateHoveredSegmentId(): Saga<void> {
   const { mapped: id, unmapped: unmappedId } =
     globalMousePosition != null
       ? getSegmentIdInfoForPosition(globalMousePosition)
-      : { mapped: 0, unmapped: 0 };
+      : { mapped: 0n, unmapped: 0n };
 
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,
@@ -502,7 +503,7 @@ function* updateClickedSegments(action: ClickSegmentAction | SetActiveCellAction
   if (layerName == null) return;
   const clickedSegmentId = segmentId;
   const selectedSegmentsOrGroup = yield* select(
-    (state) => state.localSegmentationData[layerName]?.selectedIds,
+    (state) => state.localSegmentationStateByLayer[layerName]?.selectedIds,
   );
   const numberOfSelectedSegments = selectedSegmentsOrGroup.segments.length;
   if (numberOfSelectedSegments < 2) {
@@ -528,13 +529,13 @@ function* maintainContourGeometry(): Saga<void> {
       continue;
     }
 
-    const contourList = volumeTracing.contourList;
+    const { contourList, contourTracingMode } = yield* select(
+      (state) => state.localSegmentationStateByLayer[volumeTracing.tracingId],
+    );
     // Update meshes according to the new contourList
     contour.reset();
     contour.color =
-      volumeTracing.contourTracingMode === ContourModeEnum.DELETE
-        ? CONTOUR_COLOR_DELETE
-        : CONTOUR_COLOR_NORMAL;
+      contourTracingMode === ContourModeEnum.DELETE ? CONTOUR_COLOR_DELETE : CONTOUR_COLOR_NORMAL;
     contourList.forEach((p) => {
       contour.addEdgePoint(p);
     });
@@ -578,32 +579,28 @@ function* ensureValidBrushSize(): Saga<void> {
   );
 }
 
-function* handleDeleteSegmentData(): Saga<void> {
-  yield* take("WK_INITIALIZED");
-  while (true) {
-    const action = (yield* take("DELETE_SEGMENT_DATA")) as DeleteSegmentDataAction;
+function* handleDeleteSegmentData(
+  action: DeleteSegmentDataAction,
+  ctx: OperationContext,
+): Saga<void> {
+  yield* put(
+    pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId, action.layerName)]),
+  );
+  yield* call([Model, Model.ensureSavedState], ctx);
 
-    yield* put(setBusyBlockingInfoAction(true, "Segment is being deleted."));
-    yield* put(
-      pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId, action.layerName)]),
-    );
-    yield* call([Model, Model.ensureSavedState]);
-
-    yield* call([api.data, api.data.reloadBuckets], action.layerName, (bucket) =>
-      bucket.containsValue(action.segmentId),
-    );
-
-    yield* put(setBusyBlockingInfoAction(false));
-    if (action.callback) {
-      action.callback();
-    }
+  yield* call(
+    [api.data, api.data.reloadBuckets],
+    action.layerName,
+    (bucket) => bucket.containsValue(action.segmentId),
+    ctx,
+  );
+  if (action.callback) {
+    action.callback();
   }
 }
 
 export default [
   editVolumeLayerAsync,
-  handleDeleteSegmentData,
-  ensureToolIsAllowedInMag,
   floodFill,
   watchVolumeTracingAsync,
   maintainSegmentsMap,

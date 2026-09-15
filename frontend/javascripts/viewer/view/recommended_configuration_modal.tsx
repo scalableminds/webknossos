@@ -3,6 +3,7 @@ import { Modal, Table } from "antd";
 import messages, { settings } from "messages";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
+import { ModalWidth } from "theme";
 import type { RecommendedConfiguration } from "viewer/store";
 
 const columns = [
@@ -54,14 +55,14 @@ const RecommendedConfigurationModal: React.FC<Props> = ({ config, onOk, destroy 
 
   return (
     <Modal
-      maskClosable={false}
+      mask={{ closable: false }}
       open={isOpen}
       title="Recommended Configuration"
       okText="Accept"
       cancelText="Decline"
       onOk={handleOk}
       onCancel={hide}
-      width={750}
+      width={ModalWidth.Large}
     >
       {messages["task.recommended_configuration"]}
       <Table

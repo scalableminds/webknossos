@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getUsers } from "admin/rest_api";
 import { Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
@@ -16,7 +17,7 @@ export default function UserSelectionComponent({ handleSelection }: Props) {
   const users = useFetch(
     async () => {
       try {
-        const users = await getUsers();
+        const users = unwrapOrThrow(await getUsers());
         const activeUsers = users.filter((u) => u.isActive);
 
         return sortBy(activeUsers, "lastName");

@@ -15,7 +15,7 @@ import Icon, {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import HideSkeletonEdgesIcon from "@images/icons/icon-hide-skeleton-edges.svg?react";
-import { Avatar, Button, List } from "antd";
+import { App, Avatar, Button, List } from "antd";
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
 import { useWkSelector } from "libs/react_hooks";
@@ -23,6 +23,7 @@ import groupBy from "lodash-es/groupBy";
 import max from "lodash-es/max";
 import type React from "react";
 import { Fragment } from "react";
+import { isConcurrentCollaborationMode } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName, getContributorById } from "viewer/model/accessors/user_accessor";
 import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 import type {
@@ -56,7 +57,6 @@ import type {
   SplitAgglomerateUpdateAction,
   UpdateActiveNodeUpdateAction,
   UpdateActiveSegmentIdUpdateAction,
-  UpdateActiveTreeUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
@@ -78,10 +78,11 @@ import type {
   UpdateUserBoundingBoxInVolumeTracingAction,
   UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
   UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
+  UpdateVolumeBucketDataHasChangedUpdateAction,
   UpsertSegmentGroupUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
-import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 type Description = {
   description: string;
@@ -506,13 +507,6 @@ const descriptionFns: Record<
       icon: <EditOutlined />,
     };
   },
-  // Should never be sent to the backend as the backend does not understand this action. Is filtered out before sending to backend.
-  updateActiveTree: (_action: AsServerAction<UpdateActiveTreeUpdateAction>): Description => {
-    return {
-      description: "",
-      icon: <div />,
-    };
-  },
   updateCamera: (_action: AsServerAction<UpdateCameraAnnotationAction>): Description => {
     return {
       description: "Adjusted the camera",
@@ -525,6 +519,16 @@ const descriptionFns: Record<
     return {
       description: `Set largest segment id to ${action.value.largestSegmentId}`,
       icon: <NumberOutlined />,
+    };
+  },
+  updateVolumeBucketDataHasChanged: (
+    action: AsServerAction<UpdateVolumeBucketDataHasChangedUpdateAction>,
+  ): Description => {
+    return {
+      description: action.value.volumeBucketDataHasChanged
+        ? "Edited the volume data."
+        : "Reset volume data to an unmodified state.",
+      icon: <EditOutlined />,
     };
   },
   updateSegmentGroupsExpandedState: (
@@ -675,18 +679,31 @@ export default function VersionEntry({
   const activeUser = useWkSelector((state) => state.activeUser);
   const owner = useWkSelector((state) => state.annotation.owner);
   const annotation = useWkSelector((state) => state.annotation);
+  const isInConcurrentCollabMode = useWkSelector((state) => isConcurrentCollaborationMode(state));
+  const { modal } = App.useApp();
 
   const liClassName = classNames("version-entry", {
     "active-version-entry": isActive,
     "version-entry-indented": isIndented,
   });
+  async function handleRestoreClick() {
+    // In a live collab scenario let the user confirm the restoring of an older version.
+    if (initialAllowUpdate && isInConcurrentCollabMode) {
+      const confirmed = await modal.confirm({
+        title: "Restore this version?",
+        content:
+          "This annotation is being edited collaboratively. Restoring this version will force a hard reload " +
+          "of WEBKNOSSOS for all users currently editing it -- including you -- and any unsaved changes will be lost. " +
+          "Do you want to continue?",
+        okText: "Yes, restore this version",
+        okType: "danger",
+      });
+      if (!confirmed) return;
+    }
+    onRestoreVersion(version);
+  }
   const restoreButton = (
-    <Button
-      size="small"
-      key="restore-button"
-      type="primary"
-      onClick={() => onRestoreVersion(version)}
-    >
+    <Button size="small" key="restore-button" type="primary" onClick={handleRestoreClick}>
       {initialAllowUpdate ? "Restore" : "Download"}
     </Button>
   );

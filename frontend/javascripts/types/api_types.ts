@@ -1,7 +1,7 @@
 import type { APIAiModelCategory } from "admin/api/jobs";
 import type { AiPlanEnum, PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import partition from "lodash-es/partition";
-import type { BoundingBoxProto } from "types/bounding_box";
+import type { BoundingBoxObject, BoundingBoxProto } from "types/bounding_box";
 import type {
   AdditionalCoordinate,
   ColorObject,
@@ -20,12 +20,7 @@ import type {
 } from "viewer/model/accessors/annotation_accessor";
 import type { ServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { CommentType, Edge, TreeGroup } from "viewer/model/types/tree_types";
-import type {
-  BoundingBoxObject,
-  MeshInformation,
-  RecommendedConfiguration,
-  SegmentGroup,
-} from "viewer/store";
+import type { MeshInformation, RecommendedConfiguration, SegmentGroup } from "viewer/store";
 import type { EmptyObject } from "./type_utils";
 
 // Re-export
@@ -103,7 +98,7 @@ export type APIColorLayer = APIDataLayerBase & {
 };
 export type APISegmentationLayer = APIDataLayerBase & {
   readonly category: "segmentation";
-  readonly largestSegmentId: number | undefined;
+  readonly largestSegmentId: bigint | undefined;
   readonly mappings?: Array<string>;
   readonly agglomerates?: Array<string>;
   readonly fallbackLayer?: string | null | undefined;
@@ -225,6 +220,18 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   isEditable: boolean;
   isPublic: boolean;
   directoryName: string;
+  isVirtual: boolean;
+  creationType?:
+    | "Upload"
+    | "DiskScan"
+    | "UploadToPaths"
+    | "ExploreAndAdd"
+    | "Compose"
+    | "DuplicateToOrga"
+    | null;
+  rootPath?: string | null;
+  rootRealPath?: string | null;
+  mirrorPath?: string | null;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
   sortingKey: number;
@@ -232,6 +239,7 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   publication: null | undefined;
   tags: Array<string>;
   usedStorageBytes: number;
+  uploaderFullName: string | null | undefined;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {
@@ -327,7 +335,6 @@ export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
   hasSeenSegmentAnythingWithDepth?: boolean;
   lastViewedWhatsNewTimestamp?: number;
-  hasDiscardedHelpButton?: boolean;
   latestAcknowledgedMaintenanceInfo?: string;
   suppressManyBucketUpdatesWarning?: boolean;
 };
@@ -374,7 +381,7 @@ export type APIRestrictions = {
   // allowSave might be false even though allowUpdate and isUpdatingCurrentlyAllowed are true (e.g., see sandbox annotations)
   readonly allowSave?: boolean;
 };
-export type APIAllowedMode = "orthogonal" | "oblique" | "flight";
+export type APIAllowedMode = "orthogonal" | "flight";
 export type APIMagRestrictions = {
   min?: number;
   max?: number;
@@ -736,7 +743,6 @@ export type APIBuildInfoWk = {
     ciTag: string;
     ciBuild: string;
     gitTag?: string;
-    datastoreApiVersion: string;
   };
   "webknossos-wrap": {
     builtAtMillis: string;
@@ -751,33 +757,6 @@ export type APIBuildInfoWk = {
   httpApiVersioning: { currentApiVersion: number; oldestSupportedApiVersion: number };
   localDataStoreEnabled: boolean;
   localTracingStoreEnabled: boolean;
-};
-
-export type APIBuildInfoDatastore = {
-  webknossosDatastore: {
-    name: string;
-    commitHash: string;
-    scalaVersion: string;
-    version: string;
-    sbtVersion: string;
-    commitDate: string;
-    ciTag: string;
-    ciBuild: string;
-    datastoreApiVersion: string;
-  };
-};
-
-export type APIBuildInfoTracingstore = {
-  webknossosTracingstore: {
-    name: string;
-    commitHash: string;
-    scalaVersion: string;
-    version: string;
-    sbtVersion: string;
-    commitDate: string;
-    ciTag: string;
-    ciBuild: string;
-  };
 };
 
 export type APIFeatureToggles = {
@@ -819,7 +798,6 @@ export enum APIJobCommand {
   COMPUTE_MESH_FILE = "compute_mesh_file",
   COMPUTE_SEGMENT_INDEX_FILE = "compute_segment_index_file",
   FIND_LARGEST_SEGMENT_ID = "find_largest_segment_id",
-  INFER_NUCLEI = "infer_nuclei",
   INFER_NEURONS = "infer_neurons",
   INFER_MITOCHONDRIA = "infer_mitochondria",
   INFER_INSTANCES = "infer_instances",
@@ -827,6 +805,7 @@ export enum APIJobCommand {
   TRAIN_NEURON_MODEL = "train_neuron_model",
   TRAIN_INSTANCE_MODEL = "train_instance_model",
   // Only used for backwards compatibility, e.g. to display results.
+  DEPRECATED_INFER_NUCLEI = "infer_nuclei",
   DEPRECATED_INFER_WITH_MODEL = "infer_with_model",
   DEPRECATED_TRAIN_MODEL = "train_model",
 }
@@ -862,10 +841,12 @@ export type APIJob = {
   readonly ownerEmail: string;
   readonly args: ApiJobArgs;
   readonly state: APIJobState;
+  readonly errorDetails: Record<string, unknown> | null | undefined;
   readonly resultLink: string | null | undefined;
   readonly returnValue: string | null | undefined;
   readonly voxelyticsWorkflowHash: string | null | undefined;
   readonly created: number;
+  readonly lastRetry: number | null | undefined;
   readonly costInMilliCredits: number | null | undefined;
 };
 
@@ -880,6 +861,8 @@ export type AiModel = {
   readonly created: number;
   readonly trainingJob: APIJob | null;
   readonly category: APIAiModelCategory;
+  readonly isSuperUserOnly: boolean;
+  readonly isPretrained: boolean;
 };
 
 // Tracing related datatypes
@@ -918,7 +901,7 @@ export type ServerBoundingBoxMinMaxTypeTuple = {
 };
 
 export type TreeAgglomerateInfo = {
-  agglomerateId: number;
+  agglomerateId: bigint;
   // Note: The editable mapping's id is always equal to the id of it associated volume tracing.
   tracingId?: string | undefined;
   mappingName?: string | undefined;
@@ -954,7 +937,7 @@ export type MetadataEntryProto = {
   stringListValue?: string[];
 };
 type ServerSegment = {
-  segmentId: number;
+  segmentId: bigint;
   name: string | null | undefined;
   anchorPosition: Point3 | null | undefined;
   additionalCoordinates: AdditionalCoordinate[] | null;
@@ -983,7 +966,7 @@ export type ServerTracingBase = {
   zoomLevel: number;
 };
 
-export type MapEntries<K extends number | string | symbol, V> = Array<{ id: K; value: V }>;
+export type MapEntries<K extends number | string | symbol | bigint, V> = Array<{ id: K; value: V }>;
 
 export type SkeletonUserState = {
   userId: string;
@@ -1009,10 +992,10 @@ export type ServerSkeletonTracing = ServerTracingBase & {
 
 export type VolumeUserState = {
   userId: string;
-  activeSegmentId?: number;
+  activeSegmentId?: bigint;
   // The following properties are the values of a
   // id->boolean dictionary.
-  segmentVisibilities: MapEntries<number, boolean>;
+  segmentVisibilities: MapEntries<bigint, boolean>;
   segmentGroupExpandedStates: MapEntries<number, boolean>;
   boundingBoxVisibilities: MapEntries<number, boolean>;
 };
@@ -1022,13 +1005,13 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // tracing from the back-end (by `getTracingForAnnotationType`)
   // This is done to simplify the selection for the type.
   typ: "Volume";
-  activeSegmentId?: number; // only use as a fallback if userStates is empty
+  activeSegmentId?: bigint; // only use as a fallback if userStates is empty
   boundingBox: BoundingBoxProto;
   elementClass: ElementClass;
   fallbackLayer?: string;
   segments: Array<ServerSegment>;
   segmentGroups: Array<SegmentGroup> | null | undefined;
-  largestSegmentId: number;
+  largestSegmentId: bigint;
   // `mags` will be undefined for legacy annotations
   // which were created before the multi-magnification capabilities
   // were added to volume tracings. Also see:
@@ -1038,9 +1021,10 @@ export type ServerVolumeTracing = ServerTracingBase & {
   hasEditableMapping?: boolean;
   mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
-  // volumeBucketDataHasChanged is automatically set to true by the back-end
-  // once a bucket was mutated. There is no need to send an explicit UpdateAction
-  // for that.
+  // volumeBucketDataHasChanged is set to true once a bucket was mutated. The
+  // frontend tracks this and syncs it via the updateVolumeBucketDataHasChanged
+  // update action (so that it survives rebasing in live collab mode and
+  // collaborators notice it).
   volumeBucketDataHasChanged?: boolean;
   userStates: VolumeUserState[];
   hideUnregisteredSegments?: boolean;
@@ -1301,6 +1285,7 @@ export type FlatFolderTreeItem = {
   parent: string | null;
   metadata: APIMetadataEntry[];
   isEditable: boolean;
+  created: number;
 };
 
 // Frontend type of FlatFolderTreeItem with inferred nested structure.
@@ -1311,6 +1296,7 @@ export type FolderItem = {
   children: FolderItem[];
   isEditable: boolean;
   metadata: APIMetadataEntry[];
+  created: number;
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1323,6 +1309,7 @@ export type Folder = {
   allowedTeamsCumulative: APITeam[];
   metadata: APIMetadataEntry[];
   isEditable: boolean;
+  created: number;
 };
 
 export type FolderUpdater = {
@@ -1345,6 +1332,12 @@ export enum MOVIE_RESOLUTIONS {
   HD = "HD",
 }
 
+export enum MOVIE_DURATIONS {
+  SHORT = "SHORT",
+  STANDARD = "STANDARD",
+  LONG = "LONG",
+}
+
 export type RenderAnimationOptions = {
   layerName: string;
   meshes: ({
@@ -1354,16 +1347,53 @@ export type RenderAnimationOptions = {
   } & MeshInformation)[];
   boundingBox: BoundingBoxObject;
   includeWatermark: boolean;
-  intensityMin: number;
-  intensityMax: number;
   magForTextures: Vector3;
   movieResolution: MOVIE_RESOLUTIONS;
+  movieDuration: MOVIE_DURATIONS;
   cameraPosition: CAMERA_POSITIONS;
   annotationId: string | null;
   includeSkeletons: boolean;
+  hideImageData: boolean;
   saveBlenderFile: boolean;
 };
 
 export type ServerErrorMessage = {
   error: string;
+};
+
+export type LayerAttachmentType =
+  | "mesh"
+  | "agglomerate"
+  | "segmentIndex"
+  | "connectome"
+  | "cumsum"
+  | "segmentStatistics";
+
+// Names of the arrays within a segment statistics attachment. `positions` has no route to query it
+// yet, and `ids` is used internally by the backend but never reported as available.
+export type SegmentStatisticsMetric =
+  | "positions"
+  | "ids"
+  | "max_distances"
+  | "volumes"
+  | "center_of_mass"
+  | "covariance_matrix"
+  | "surfaces"
+  | "sphericities";
+
+/** Row-major 3×3 matrix, i.e. `matrix[row][column]`. */
+export type SegmentCovarianceMatrix = [Vector3, Vector3, Vector3];
+
+export type SegmentStatisticsFileInfo = {
+  mag: Vector3;
+  availableMetrics: SegmentStatisticsMetric[];
+  mappingName?: string | null;
+};
+
+export type APIStorageDetailEntry = {
+  layerName: string;
+  name: string;
+  attachmentType: LayerAttachmentType | null;
+  usedStorageBytes: number;
+  lastUpdated: string;
 };

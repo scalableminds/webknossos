@@ -28,6 +28,7 @@ import {
   Space,
   Tag,
   Tooltip,
+  Typography,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -40,7 +41,8 @@ import { useUpdateEvery, useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
 import MiniSearch from "minisearch";
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
+import { ModalWidth } from "theme";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfig,
@@ -374,7 +376,7 @@ export default function TaskListView({
           artifacts={report.artifacts}
         />
       ),
-      width: "75%",
+      width: ModalWidth.Full,
     });
   }
 
@@ -433,7 +435,7 @@ export default function TaskListView({
       content:
         "Are you sure you want to delete this workflow report? This can not be undone. Note that if the workflow is still running, this may cause it to fail.",
       okText: "Delete",
-      okButtonProps: { danger: true },
+      okType: "danger",
       onOk: async () => {
         try {
           await deleteWorkflow(report.workflow.hash);
@@ -627,7 +629,8 @@ export default function TaskListView({
     >
       <Col xs={10}>
         <Flex vertical style={{ height: "100%" }}>
-          <h3
+          <Typography.Title
+            level={3}
             style={{
               marginBottom: 0,
               maxWidth: "100%",
@@ -636,14 +639,19 @@ export default function TaskListView({
             title={readableWorkflowName}
           >
             {readableWorkflowName}
-          </h3>
-          <h4 style={{ color: "#51686e" }}>
+          </Typography.Title>
+          {/* marginTop: 0 keeps the previous spacing; antd would otherwise add a top margin
+              because this heading directly follows another Typography element. */}
+          <Typography.Title
+            level={4}
+            style={{ color: "var(--ant-color-text-secondary)", marginTop: 0 }}
+          >
             {formatDateMedium(new Date(runBeginTimeString))}{" "}
             <Tooltip title={formatDurationStrict(totalRuntime)}>
               <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
               {totalRuntime.humanize()}
             </Tooltip>
-          </h4>
+          </Typography.Title>
           <div style={{ flex: 1, position: "relative" }}>
             <DAGView
               key={filteredTasks.map((t) => t.taskName).join("_")}
@@ -699,14 +707,11 @@ export default function TaskListView({
                     },
                   },
                 }}
-              >
-                <Select.Option value="">Consolidated</Select.Option>
-                {report.runs.map((run) => (
-                  <Select.Option value={run.id} key={run.id}>
-                    {run.name}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={[
+                  { value: "", label: "Consolidated" },
+                  ...report.runs.map((run) => ({ value: run.id, label: run.name })),
+                ]}
+              />
               <Space.Compact>
                 <Button onClick={() => setExpandedTasks([])}>Collapse All</Button>
                 <Dropdown menu={overflowMenu}>

@@ -1,28 +1,28 @@
+import com.scalableminds.util.Msg
 import play.silhouette.api.actions.SecuredErrorHandler
-import javax.inject._
+
+import javax.inject.*
 import play.api.http.DefaultHttpErrorHandler
-import play.api._
-import play.api.i18n.{I18nSupport, Messages, MessagesApi}
+import play.api.*
 import play.api.mvc.Results.{Forbidden, Unauthorized}
-import play.api.mvc._
+import play.api.mvc.*
 import play.api.routing.Router
 
 import scala.concurrent.Future
 
 @Singleton
-class ErrorHandler @Inject()(env: Environment,
-                             config: Configuration,
-                             sourceMapper: OptionalSourceMapper,
-                             router: Provider[Router],
-                             val messagesApi: MessagesApi)
-    extends DefaultHttpErrorHandler(env, config, sourceMapper, router)
-    with SecuredErrorHandler
-    with I18nSupport {
+class ErrorHandler @Inject() (
+    env: Environment,
+    config: Configuration,
+    sourceMapper: OptionalSourceMapper,
+    router: Provider[Router]
+) extends DefaultHttpErrorHandler(env, config, sourceMapper, router)
+    with SecuredErrorHandler {
 
   override def onNotAuthenticated(implicit request: RequestHeader): Future[Result] =
-    Future.successful(Unauthorized(Messages("user.notAuthorised")))
+    Future.successful(Unauthorized(Msg.User.notAuthenticated))
 
   override def onNotAuthorized(implicit request: RequestHeader): Future[Result] =
-    Future.successful(Forbidden(Messages("notAllowed")))
+    Future.successful(Forbidden(Msg.notAllowed))
 
 }

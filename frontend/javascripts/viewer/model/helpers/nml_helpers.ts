@@ -13,7 +13,7 @@ import zip from "lodash-es/zip";
 import messages from "messages";
 import { SAXParser } from "sax-ts";
 import type { AdditionalCoordinate, APIBuildInfoWk, MetadataEntryProto } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 import Constants, {
   IdentityTransform,
   type TreeType,
@@ -35,13 +35,12 @@ import {
   type TreeGroup,
 } from "viewer/model/types/tree_types";
 import type {
-  BoundingBoxObject,
   SkeletonTracing,
   StoreAnnotation,
   UserBoundingBox,
   WebknossosState,
 } from "viewer/store";
-import { findGroup } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import { findGroup } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_transformation_accessor";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 import { min } from "./iterator_utils";

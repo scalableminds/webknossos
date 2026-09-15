@@ -1,4 +1,5 @@
 import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getTermsOfService } from "admin/api/terms_of_service";
 import { loginUser } from "admin/rest_api";
 import { Button, Checkbox, Col, Form, Input, Row } from "antd";
@@ -9,6 +10,7 @@ import { memo, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { HoneypotFormItem } from "./honeypot_form_item";
 import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;
@@ -51,10 +53,12 @@ function RegistrationFormWKOrg(props: Props) {
         acceptedTermsOfService: terms?.version,
       },
     });
-    const [user, organization] = await loginUser({
-      email: formValues.email,
-      password: formValues.password.password1,
-    });
+    const [user, organization] = unwrapOrThrow(
+      await loginUser({
+        email: formValues.email,
+        password: formValues.password.password1,
+      }),
+    );
     dispatch(setActiveUserAction(user));
     dispatch(setActiveOrganizationAction(organization));
     props.onRegistered(true);
@@ -62,6 +66,7 @@ function RegistrationFormWKOrg(props: Props) {
 
   return (
     <Form onFinish={onFinish} form={form}>
+      <HoneypotFormItem />
       <Row gutter={8}>
         <Col span={12}>
           <FormItem

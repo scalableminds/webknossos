@@ -6,6 +6,7 @@ import {
 } from "admin/dataset/dataset_components";
 import { createDatasetComposition, updateDatasetPartial } from "admin/rest_api";
 import {
+  App,
   Button,
   Checkbox,
   Col,
@@ -13,7 +14,6 @@ import {
   type FormInstance,
   Input,
   List,
-  Modal,
   Row,
   Tooltip,
 } from "antd";
@@ -51,6 +51,7 @@ async function guardedWithErrorToast(fn: () => Promise<any>) {
 
 export function ConfigureNewDataset(props: WizardComponentProps) {
   const formRef = React.useRef<FormInstance<any>>(null);
+  const { modal } = App.useApp();
 
   const onPrev = () => {
     props.setWizardContext((oldContext) => ({
@@ -148,7 +149,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       layersWithTransforms = withTransforms(layersWithoutTransforms, sourcePoints, targetPoints);
     } catch (exception) {
       const tryAugmentation = await new Promise((resolve) => {
-        Modal.confirm({
+        modal.confirm({
           title: "Augment landmarks?",
           content:
             "The provided landmarks can't be used for affine estimation, possibly " +

@@ -3,22 +3,19 @@ package com.scalableminds.util.security
 import java.nio.charset.StandardCharsets
 import at.favre.lib.crypto.bcrypt.BCrypt
 
-/**
-  * Making BCrypt look prettier
+/** Making BCrypt look prettier
   */
 object SCrypt {
 
   import java.security.MessageDigest
 
-  /**
-    * For readability.
+  /** For readability.
     */
   private type PlainPassword = String
   private type PasswordHash = String
 
-  /**
-    *
-    * @param rounds this is the base of log2 of the number of salting rounds. Legal values are >=4, sane values are leq 20
+  /** @param rounds
+    *   this is the base of log2 of the number of salting rounds. Legal values are >=4, sane values are leq 20
     */
   def hashPassword(password: PlainPassword, rounds: Int = 10): PasswordHash = {
 

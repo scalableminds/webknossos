@@ -4,9 +4,9 @@
       "name": "splitAgglomerate",
       "value": {
         "actionTracingId": "volumeTracingId",
-        "agglomerateId": 1,
-        "segmentId1": 1,
-        "segmentId2": 2,
+        "agglomerateId": 1n,
+        "segmentId1": 1n,
+        "segmentId2": 2n,
       },
     },
   ],
@@ -24,7 +24,7 @@
         "color": null,
         "creationTime": 1494695001688,
         "groupId": null,
-        "id": 1339,
+        "id": 1339n,
         "metadata": [],
         "name": null,
       },
@@ -36,7 +36,7 @@
       "value": {
         "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
         "agglomerateInfo": {
-          "agglomerateId": 1339,
+          "agglomerateId": 1339n,
           "tracingId": "volumeTracingId",
         },
         "branchPoints": [],

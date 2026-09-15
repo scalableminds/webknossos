@@ -9,9 +9,11 @@ import org.scalatest.wordspec.AsyncWordSpec
 class VolumeBucketKeyTestSuite extends AsyncWordSpec {
 
   private class BucketKeyBuilder extends BucketKeys {
-    def build(dataLayerName: String,
-              bucket: BucketPosition,
-              additionalAxes: Option[Seq[AdditionalAxis]] = None): String =
+    def build(
+        dataLayerName: String,
+        bucket: BucketPosition,
+        additionalAxes: Option[Seq[AdditionalAxis]] = None
+    ): String =
       buildBucketKey(dataLayerName, bucket, additionalAxes)
 
     def parse(key: String, additionalAxes: Option[Seq[AdditionalAxis]]): Option[(String, BucketPosition)] =

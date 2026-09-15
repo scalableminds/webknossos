@@ -3,7 +3,7 @@ import { ConfigProvider, Layout } from "antd";
 import features from "features";
 import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
 import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
@@ -13,10 +13,15 @@ import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { getAntdTheme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
-import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
+import { BorderTabs, FlightViews, OrthoViews } from "viewer/constants";
+import {
+  isUserInterfaceBlocked,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
-import type { BorderOpenStatus, BusyBlockingInfo, WebknossosState } from "viewer/store";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
+import type { BorderOpenStatus, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import InputCatcher from "viewer/view/input_catcher";
 import type { LayoutKeys } from "viewer/view/layouting/default_layout_configs";
@@ -29,15 +34,20 @@ import ControlsAndRenderingSettingsTab from "viewer/view/left_border_tabs/contro
 import LayerSettingsTab from "viewer/view/left_border_tabs/layer_settings_tab";
 import RecordingSwitch from "viewer/view/recording_switch";
 import AbstractTreeTab from "viewer/view/right_border_tabs/abstract_tree_tab";
-import BoundingBoxTab from "viewer/view/right_border_tabs/bounding_box_tab";
+import BoundingBoxTab from "viewer/view/right_border_tabs/bounding_box_tab/bounding_box_tab";
 import CommentTabView from "viewer/view/right_border_tabs/comment_tab/comment_tab_view";
 import ConnectomeView from "viewer/view/right_border_tabs/connectome_tab/connectome_view";
 import DatasetInfoTabView from "viewer/view/right_border_tabs/dataset_info_tab_view";
-import SegmentsView from "viewer/view/right_border_tabs/segments_tab/segments_view";
-import SkeletonTabView from "viewer/view/right_border_tabs/trees_tab/skeleton_tab_view";
+import SegmentsView from "viewer/view/right_border_tabs/segments_tab/segments_tab_view";
+import SkeletonTabView from "viewer/view/right_border_tabs/skeleton_tab/skeleton_tab_view";
 import Statusbar from "viewer/view/statusbar";
 import TDViewControls from "viewer/view/td_view_controls";
 import BorderToggleButton from "../components/border_toggle_button";
+import type {
+  KeyboardShortcutHandlerMap,
+  KeyboardShortcutsMap,
+} from "../keyboard_shortcuts/keyboard_shortcut_types";
+import { buildKeyBindingsFromConfig } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 import {
   adjustModelToBorderOpenStatus,
   getBorderOpenStatus,
@@ -54,7 +64,7 @@ const { Footer } = Layout;
 type StateProps = {
   displayScalebars: boolean;
   isUpdateTracingAllowed: boolean;
-  busyBlockingInfo: BusyBlockingInfo;
+  isBlocked: boolean;
 };
 type OwnProps = {
   layoutKey: LayoutKeys;
@@ -74,6 +84,7 @@ type BorderOpenStatusKeys = keyof BorderOpenStatus;
 
 class FlexLayoutWrapper extends PureComponent<Props, State> {
   unbindListeners: Array<() => void>;
+  keyboard?: InputKeyboard;
   // This variable stores the border open status that should be active, when no main tab is maximized.
   // It is used to compare with the actual border open status that is stored in the store.
   borderOpenStatusWhenNotMaximized: BorderOpenStatus = {
@@ -116,6 +127,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   componentWillUnmount() {
     this.unbindAllListeners();
+    this.keyboard?.destroy();
   }
 
   addListeners() {
@@ -164,7 +176,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   openRightBorderTabById(tabType: BorderTabType) {
     const rightBorderId = "right-border-tab-container";
     const node = this.state.model.getNodeById(rightBorderId);
-    if (!node || node.getType() !== "tab") return;
+    if (node?.getType() !== "tab") return;
 
     const isRightOpen = getBorderOpenStatus(this.state.model).right;
     if (!isRightOpen) this.toggleBorder("right");
@@ -256,18 +268,35 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     this.onAction(toggleMaximiseAction);
   };
 
-  attachKeyboardShortcuts() {
-    const keyboardNoLoop = new InputKeyboardNoLoop(
-      {
-        ".": this.toggleMaximize,
-        k: () => this.toggleBorder("left"),
-        l: () => this.toggleBorder("right"),
+  getLayoutKeyboardShortcuts(): Partial<KeyboardShortcutHandlerMap> {
+    return {
+      MAXIMIZE: { onPressed: this.toggleMaximize },
+      TOGGLE_LEFT_BORDER: {
+        onPressed: () => this.toggleBorder("left"),
       },
-      {
-        supportInputElements: false,
+      TOGGLE_RIGHT_BORDER: {
+        onPressed: () => this.toggleBorder("right"),
       },
+    };
+  }
+
+  reloadLayoutKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap) {
+    if (this.keyboard) {
+      this.keyboard.destroy();
+    }
+    const keyboardControls = buildKeyBindingsFromConfig(
+      keyboardShortcutsConfig,
+      this.getLayoutKeyboardShortcuts(),
     );
-    return () => keyboardNoLoop.destroy();
+    this.keyboard = new InputKeyboard(keyboardControls);
+  }
+
+  attachKeyboardShortcuts() {
+    return listenToStoreProperty(
+      (state) => state.keyboardConfiguration.shortcutsConfig,
+      (keyboardShortcutsConfig) => this.reloadLayoutKeyboardShortcuts(keyboardShortcutsConfig),
+      true,
+    );
   }
 
   // Taken from the FlexLayout examples.
@@ -342,39 +371,28 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   }
 
   renderViewport(id: string): React.ReactNode | null | undefined {
-    const { displayScalebars, isUpdateTracingAllowed, busyBlockingInfo } = this.props;
+    const { displayScalebars, isUpdateTracingAllowed, isBlocked } = this.props;
 
     switch (id) {
       case OrthoViews.PLANE_XY:
       case OrthoViews.PLANE_YZ:
       case OrthoViews.PLANE_XZ: {
         return (
-          <InputCatcher
-            busyBlockingInfo={busyBlockingInfo}
-            viewportID={id}
-            displayScalebars={displayScalebars}
-          />
+          <InputCatcher isBlocked={isBlocked} viewportID={id} displayScalebars={displayScalebars} />
         );
       }
 
       case OrthoViews.TDView: {
         return (
-          <InputCatcher
-            busyBlockingInfo={busyBlockingInfo}
-            viewportID={id}
-            displayScalebars={displayScalebars}
-          >
+          <InputCatcher isBlocked={isBlocked} viewportID={id} displayScalebars={displayScalebars}>
             <TDViewControls />
           </InputCatcher>
         );
       }
 
-      case ArbitraryViews.arbitraryViewport: {
+      case FlightViews.flightViewport: {
         return (
-          <InputCatcher
-            busyBlockingInfo={busyBlockingInfo}
-            viewportID={ArbitraryViews.arbitraryViewport}
-          >
+          <InputCatcher isBlocked={isBlocked} viewportID={FlightViews.flightViewport}>
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
           </InputCatcher>
         );
@@ -531,18 +549,12 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
     if (isTopMost && isRightMost) {
       renderValues.buttons.push(
-        <BorderToggleButton
-          side="right"
-          onClick={() => this.toggleBorder("right")}
-          key="right-border-toggle-button-top"
-        />,
+        <BorderToggleButton side="right" key="right-border-toggle-button-top" />,
       );
     }
 
     if (isTopMost && isLeftMost) {
-      renderValues.leading = (
-        <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} />
-      );
+      renderValues.leading = <BorderToggleButton side="left" />;
     }
   };
 
@@ -573,9 +585,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
         </div>
         <ConfigProvider theme={getAntdTheme("dark")}>
           <Footer className="statusbar-footer">
-            <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} inFooter />
             <Statusbar />
-            <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
           </Footer>
         </ConfigProvider>
       </Fragment>
@@ -586,8 +596,8 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 function mapStateToProps(state: WebknossosState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
-    isUpdateTracingAllowed: state.annotation.isUpdatingCurrentlyAllowed,
-    busyBlockingInfo: state.uiInformation.busyBlockingInfo,
+    isUpdateTracingAllowed: mayEditAnnotation(state),
+    isBlocked: isUserInterfaceBlocked(state),
   };
 }
 

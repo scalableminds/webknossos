@@ -8,19 +8,27 @@ Usage:
 - python increment_ids_in_agglomerate_file.py dataset/segmentation/agglomerates dataset/segmentation/agglomerates-new
 
 Also see the increment_segmentation_layer_ids.py script to adapt the corresponding segmentation layer.
+
+- Put a zarr.json file into the agglomerates folder with the following content:
+{"zarr_format": 3, "node_type": "group", "attributes": {"voxelytics": {"artifact_schema_version": 4, "artifact_class": "AgglomerateViewArtifact", "artifact_attributes": {}}}}
 """
 
 import sys
 from pathlib import Path
-import numpy as np
 
-from voxelytics.connect.artifacts.agglomerate_view_artifact import AgglomerateViewArtifact
+import numpy as np
+from voxelytics.connect.artifacts.agglomerate_view_artifact import (
+    AgglomerateViewArtifact,
+)
 from voxelytics.connect.artifacts.mapping_artifact import (
     MetadataSchema,
 )
 
-ID_OFFSET = 4_300_000_000  # This is greater than 2**32 and produces nice IDs when the original ids are small
-AVAILABLE_MAPPINGS = [50]
+# New 64-bit target: 18400000000000000000
+# Old target: 4_300_000_000
+# Diff:
+ID_OFFSET = 100000000000000000  # 18399999995700000000  # This is greater than 2**32 and produces nice IDs when the original ids are small
+AVAILABLE_MAPPINGS = [45]
 SEGMENTATION_DTYPE = np.uint64
 
 # Arrays that need to be shifted right **and** have IDs incremented
@@ -42,21 +50,26 @@ SHIFT_ONLY_ARRAYS = {
 def increment_ids_in_agglomerate_file(input_path: str, output_path: str) -> None:
     """Copy an agglomerate file while incrementing IDs by ID_OFFSET."""
 
-    input_artifact = AgglomerateViewArtifact(True, Path(input_path), "input", MetadataSchema(
-        available_mappings=AVAILABLE_MAPPINGS,
-        datasource_config=None,
-        segmentation_dtype=SEGMENTATION_DTYPE
-    ))
+    input_artifact = AgglomerateViewArtifact(
+        True,
+        Path(input_path),
+        "input",
+        MetadataSchema(
+            available_mappings=AVAILABLE_MAPPINGS,
+            datasource_config=None,
+            segmentation_dtype=SEGMENTATION_DTYPE,
+        ),
+    )
     output_artifact = AgglomerateViewArtifact(False, Path(output_path), "output")
-    
+
     # Copy metadata
     output_artifact.metadata = input_artifact.metadata
-    
+
     # Copy all arrays for each mapping
     for mapping_id in input_artifact.metadata.available_mappings:
         array_spec = input_artifact.array_spec()
         assert array_spec is not None
-        
+
         for array_name in array_spec.schema.keys():
             reader = input_artifact.get_buffered_reader(
                 array_name, format_params=(("mapping_id", mapping_id),)
@@ -84,15 +97,19 @@ def increment_ids_in_agglomerate_file(input_path: str, output_path: str) -> None
                     format_params=(("mapping_id", mapping_id),),
                 ) as writer:
                     # Write zeros for the first ID_OFFSET positions
-                    zero_chunk = np.zeros((ID_OFFSET,) + input_shape[1:], dtype=input_dtype)
-                    writer.write(zero_chunk)
+                    # zero_chunk = np.zeros(
+                    #     (ID_OFFSET,) + input_shape[1:], dtype=input_dtype
+                    # )
+                    # writer.write(zero_chunk)
+                    writer._file_offset += ID_OFFSET
 
+                    print("write remaining chunks")
                     # Write data from input, with ID increment if needed
                     for chunk in reader:
                         if array_name in INCREMENT_ARRAYS:
                             # Increment IDs by ID_OFFSET
-                            chunk = chunk + ID_OFFSET
-                        writer.write(chunk)
+                            chunk = chunk + np.uint64(ID_OFFSET)
+                        writer.write(chunk.astype(input_dtype))
             else:
                 # Direct copy for other arrays
                 with output_artifact.get_buffered_writer(
@@ -106,8 +123,10 @@ def increment_ids_in_agglomerate_file(input_path: str, output_path: str) -> None
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: python increment_ids_in_agglomerate_file.py dataset/segmentation/agglomerates dataset/segmentation/agglomerates-new")
+        print(
+            "Usage: python increment_ids_in_agglomerate_file.py dataset/segmentation/agglomerates dataset/segmentation/agglomerates-new"
+        )
         sys.exit(1)
-    
+
     increment_ids_in_agglomerate_file(sys.argv[1], sys.argv[2])
     print(f"Copied and mutated agglomerate file from {sys.argv[1]} to {sys.argv[2]}")

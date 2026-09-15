@@ -7,8 +7,8 @@ trait Zarr3OutputHelper {
   protected def reorderAdditionalAxes(additionalAxes: Seq[AdditionalAxis]): Seq[AdditionalAxis] = {
     val additionalAxesStartIndex = 1 // channel comes first
     val sorted = additionalAxes.sortBy(_.index)
-    sorted.zipWithIndex.map {
-      case (axis, index) => axis.copy(index = index + additionalAxesStartIndex)
+    sorted.zipWithIndex.map { case (axis, index) =>
+      axis.copy(index = index + additionalAxesStartIndex)
     }
   }
 

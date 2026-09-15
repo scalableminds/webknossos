@@ -1,15 +1,17 @@
 package mail
 
-import models.organization.Organization
+import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.time.Instant
+import models.organization.{Organization, PricingPlan, PricingPlanFeatures}
 import models.user.MultiUser
 import utils.WkConf
-import views._
+import views.*
 
 import java.net.URI
 import javax.inject.Inject
 import scala.util.Try
 
-class DefaultMails @Inject()(conf: WkConf) {
+class DefaultMails @Inject() (conf: WkConf) extends Formatter {
 
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender
@@ -17,11 +19,13 @@ class DefaultMails @Inject()(conf: WkConf) {
   private val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
   private val additionalFooter = conf.Mail.additionalFooter
 
-  def registerAdminNotifierMail(name: String,
-                                email: String,
-                                organization: Organization,
-                                autoActivate: Boolean,
-                                recipient: String): Mail =
+  def registerAdminNotifierMail(
+      name: String,
+      email: String,
+      organization: Organization,
+      autoActivate: Boolean,
+      recipient: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject =
@@ -30,11 +34,13 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(recipient)
     )
 
-  def overLimitMail(multiUser: MultiUser,
-                    projectName: String,
-                    taskId: String,
-                    annotationId: String,
-                    projectOwner: String): Mail =
+  def overLimitMail(
+      multiUser: MultiUser,
+      projectName: String,
+      taskId: String,
+      annotationId: String,
+      projectOwner: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = s"WEBKNOSSOS | Time limit reached. ${multiUser.abbreviatedName} in $projectName",
@@ -84,12 +90,14 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(newOrganizationMailingList)
     )
 
-  def inviteMail(recipient: String,
-                 inviteTokenValue: String,
-                 autoVerify: Boolean,
-                 organizationName: String,
-                 senderName: String): Mail = {
-    val host = Try { new URI(uri) }.toOption.getOrElse(uri)
+  def inviteMail(
+      recipient: String,
+      inviteTokenValue: String,
+      autoVerify: Boolean,
+      organizationName: String,
+      senderName: String
+  ): Mail = {
+    val host = Try(new URI(uri)).toOption.getOrElse(uri)
     Mail(
       from = defaultSender,
       subject = s"$senderName invited you to join their WEBKNOSSOS organization at $host",
@@ -116,6 +124,33 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(supportEmail, multiUser.email),
       replyTo = List(multiUser.email, supportEmail)
     )
+
+  def pricingPlanExpiryReminderMail(
+      multiUser: MultiUser,
+      organization: Organization,
+      paidUntil: Instant,
+      daysRemaining: Long
+  ): Mail = {
+    val pricingPlanLabel = PricingPlan.label(organization.pricingPlan)
+    val expiryDate = formatDateOnly(paidUntil)
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | Your $pricingPlanLabel plan expires on $expiryDate",
+      bodyHtml = html.mail
+        .pricingPlanExpiryReminder(
+          multiUser.fullName,
+          organization.name,
+          pricingPlanLabel,
+          expiryDate,
+          daysRemaining,
+          s"$uri/organization/overview",
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email),
+      replyTo = List(supportEmail)
+    )
+  }
 
   def upgradePricingPlanToTeamMail(multiUser: MultiUser, organizationName: String): Mail =
     Mail(
@@ -166,6 +201,28 @@ class DefaultMails @Inject()(conf: WkConf) {
       replyTo = List(multiUser.email, supportEmail)
     )
 
+  def pricingPlanUpgradedMail(
+      multiUser: MultiUser,
+      organizationName: String,
+      unlockedFeatures: PricingPlanFeatures
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS Upgrade: Your organization is now on the ${unlockedFeatures.planLabel} plan",
+      bodyHtml = html.mail
+        .pricingPlanUpgraded(
+          multiUser.fullName,
+          organizationName,
+          unlockedFeatures.planLabel,
+          unlockedFeatures.featureHighlights,
+          uri,
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email),
+      replyTo = List(supportEmail)
+    )
+
   def orderCreditsMail(multiUser: MultiUser, requestedCredits: Int): Mail =
     Mail(
       from = defaultSender,
@@ -184,11 +241,13 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(supportEmail)
     )
 
-  def jobSuccessfulGenericMail(multiUser: MultiUser,
-                               datasetName: String,
-                               jobLink: String,
-                               jobTitle: String,
-                               jobDescription: String): Mail =
+  def jobSuccessfulGenericMail(
+      multiUser: MultiUser,
+      datasetName: String,
+      jobLink: String,
+      jobTitle: String,
+      jobDescription: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = s"$jobTitle is ready",
@@ -209,7 +268,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def jobSuccessfulNeuronSegmentationMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your segmentation is ready",
+      subject = "Your segmentation is ready",
       bodyHtml =
         html.mail.jobSuccessfulNeuronSegmentation(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
@@ -218,7 +277,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def jobSuccessfulMitoSegmentationMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your mitochondria segmentation is ready",
+      subject = "Your mitochondria segmentation is ready",
       bodyHtml =
         html.mail.jobSuccessfulMitoSegmentation(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
@@ -227,7 +286,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def jobSuccessfulAlignmentMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your alignment is ready",
+      subject = "Your alignment is ready",
       bodyHtml = html.mail.jobSuccessfulAlignment(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
     )
@@ -235,24 +294,30 @@ class DefaultMails @Inject()(conf: WkConf) {
   def jobSuccessfulModelTrainingMail(multiUser: MultiUser, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your model training is ready",
+      subject = "Your model training is ready",
       bodyHtml = html.mail.jobSuccessfulModelTraining(multiUser.fullName, jobLink, additionalFooter).body,
       recipients = List(multiUser.email)
     )
 
-  def jobFailedGenericMail(multiUser: MultiUser, datasetName: String, jobTitle: String): Mail =
+  def jobFailedGenericMail(
+      multiUser: MultiUser,
+      datasetName: String,
+      jobTitle: String,
+      errorMessage: Option[String]
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = "Oops. Your WEBKNOSSOS job failed",
-      bodyHtml = html.mail.jobFailedGeneric(multiUser.fullName, datasetName, jobTitle, additionalFooter).body,
+      bodyHtml =
+        html.mail.jobFailedGeneric(multiUser.fullName, datasetName, jobTitle, errorMessage, additionalFooter).body,
       recipients = List(multiUser.email)
     )
 
-  def jobFailedUploadConvertMail(multiUser: MultiUser, datasetName: String): Mail =
+  def jobFailedUploadConvertMail(multiUser: MultiUser, datasetName: String, errorMessage: Option[String]): Mail =
     Mail(
       from = defaultSender,
       subject = "Oops. Your dataset upload & conversion failed",
-      bodyHtml = html.mail.jobFailedUploadConvert(multiUser.fullName, datasetName, additionalFooter).body,
+      bodyHtml = html.mail.jobFailedUploadConvert(multiUser.fullName, datasetName, errorMessage, additionalFooter).body,
       recipients = List(multiUser.email)
     )
 

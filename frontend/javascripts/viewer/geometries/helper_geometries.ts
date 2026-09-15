@@ -169,6 +169,13 @@ export class ContourGeometry {
       this.connectingLine.visible = true;
     }
   }
+
+  destroy() {
+    this.line.geometry.dispose();
+    this.line.material.dispose();
+    this.connectingLine.geometry.dispose();
+    this.connectingLine.material.dispose();
+  }
 }
 
 const rotations = {
@@ -327,6 +334,9 @@ export class QuickSelectGeometry {
     texture.needsUpdate = true;
 
     const rectangle = this.rectangle;
+    // Dispose the previous mask texture (if any) as three.js would keep it
+    // on the GPU otherwise.
+    rectangle.material.alphaMap?.dispose();
     rectangle.material.alphaMap = texture;
     rectangle.material.needsUpdate = true;
   }
@@ -335,7 +345,17 @@ export class QuickSelectGeometry {
     // Detach the texture mask, so that the full rectangle is visible again
     // (important while drawing the rectangle).
     const rectangle = this.rectangle;
+    rectangle.material.alphaMap?.dispose();
     rectangle.material.alphaMap = null;
+    rectangle.material.needsUpdate = true;
+  }
+
+  destroy() {
+    this.rectangle.material.alphaMap?.dispose();
+    this.rectangle.geometry.dispose();
+    this.rectangle.material.dispose();
+    this.centerMarker.geometry.dispose();
+    this.centerMarker.material.dispose();
   }
 }
 
@@ -455,5 +475,10 @@ export class LineMeasurementGeometry {
     } else {
       this.line.visible = false;
     }
+  }
+
+  destroy() {
+    this.line.geometry.dispose();
+    this.line.material.dispose();
   }
 }

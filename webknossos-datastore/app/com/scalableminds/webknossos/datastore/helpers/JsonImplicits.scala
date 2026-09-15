@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.{Format, JsNumber, JsResult, JsValue, Json}
 
 trait JsonImplicits {
@@ -14,11 +13,13 @@ trait JsonImplicits {
         .orElse(json.validate[Float].map(_.asInstanceOf[Number]))
         .orElse(json.validate[Double].map(_.asInstanceOf[Number]))
 
-    override def writes(number: Number): JsValue =
-      tryo(number.longValue())
-        .map(JsNumber(_))
-        .or(tryo(number.floatValue()).map(JsNumber(_)))
-        .getOrElse(JsNumber(number.doubleValue()))
+    override def writes(number: Number): JsValue = {
+      val longVal = number.longValue()
+      if (math.abs(number.doubleValue() - longVal.toDouble) < 1e-9)
+        JsNumber(longVal)
+      else
+        JsNumber(BigDecimal(number.doubleValue()))
+    }
   }
 
   implicit object StringOrIntFormat extends Format[Either[String, Int]] {

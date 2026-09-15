@@ -16,13 +16,14 @@ import {
   TreeMap,
 } from "viewer/model/types/tree_types";
 import type { NumberLike, SkeletonTracing, StoreAnnotation, WebknossosState } from "viewer/store";
-import { findGroup } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import { findGroup } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { max } from "../helpers/iterator_utils";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 import {
   getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,
   getTransformsForSkeletonLayer,
 } from "./dataset_layer_transformation_accessor";
+import { isRotated } from "./flycam_accessor";
 
 export function getSkeletonTracing(annotation: StoreAnnotation): SkeletonTracing | null {
   if (annotation.skeleton != null) {
@@ -67,33 +68,35 @@ export function enforceSkeletonTracing(annotation: StoreAnnotation): SkeletonTra
   return skeletonTracing;
 }
 
-export function getActiveNode(skeletonTracing: SkeletonTracing): Node | null {
-  const { activeTreeId, activeNodeId } = skeletonTracing;
+export function getActiveNode(
+  skeletonTracing: SkeletonTracing | null | undefined,
+  activeTreeId: number | null | undefined,
+): Node | null {
+  const activeNodeId = skeletonTracing?.activeNodeId;
 
-  if (activeTreeId != null && activeNodeId != null) {
+  if (skeletonTracing != null && activeTreeId != null && activeNodeId != null) {
     return skeletonTracing.trees.getNullable(activeTreeId)?.nodes.getNullable(activeNodeId) ?? null;
   }
 
   return null;
 }
 
-export function getActiveTree(skeletonTracing: SkeletonTracing | null | undefined): Tree | null {
-  if (skeletonTracing == null) {
-    return null;
-  }
-  const { activeTreeId } = skeletonTracing;
+export function getActiveTree(state: WebknossosState): Tree | null {
+  const skeletonTracing = getSkeletonTracing(state.annotation);
+  const { activeTreeId } = state.localSkeletonState;
 
-  if (activeTreeId != null) {
+  if (skeletonTracing != null && activeTreeId != null) {
     return skeletonTracing.trees.getNullable(activeTreeId) ?? null;
   }
 
   return null;
 }
 
-export function getActiveTreeGroup(skeletonTracing: SkeletonTracing): TreeGroup | null {
-  const { activeGroupId } = skeletonTracing;
+export function getActiveTreeGroup(state: WebknossosState): TreeGroup | null {
+  const skeletonTracing = getSkeletonTracing(state.annotation);
+  const { activeGroupId } = state.localSkeletonState;
 
-  if (activeGroupId != null) {
+  if (skeletonTracing != null && activeGroupId != null) {
     const group = findGroup(skeletonTracing.treeGroups, activeGroupId);
     return group;
   }
@@ -125,7 +128,7 @@ export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefin
 
 export function findTreeByAgglomerateId(
   trees: TreeMap,
-  agglomerateId: number,
+  agglomerateId: bigint,
   editableMappingId: string,
   mappingName: string,
 ): Tree | undefined {
@@ -158,20 +161,24 @@ export function getTreesWithType(
 }
 
 export function getTree(
-  skeletonTracing: SkeletonTracing,
+  state: WebknossosState,
   treeId?: number | null | undefined,
   type?: TreeType | null | undefined,
 ): Tree | null {
   /**
    * Returns a specific tree by ID or the active tree, optionally filtered by type.
    */
+  const skeletonTracing = getSkeletonTracing(state.annotation);
+  if (skeletonTracing == null) {
+    return null;
+  }
   const trees = getTreesWithType(skeletonTracing, type);
 
   if (treeId != null) {
     return trees.getNullable(treeId) || null;
   }
 
-  const { activeTreeId } = skeletonTracing;
+  const { activeTreeId } = state.localSkeletonState;
 
   if (activeTreeId != null) {
     return trees.getNullable(activeTreeId) || null;
@@ -181,7 +188,9 @@ export function getTree(
 }
 
 export function getTreeAndNode(
-  skeletonTracing: SkeletonTracing,
+  skeletonTracing: SkeletonTracing | null | undefined,
+  // used as fallback if no explicit tree / node is passed.
+  activeTreeId: number | null | undefined,
   nodeId?: number | null | undefined,
   treeId?: number | null | undefined,
   type?: TreeType | null | undefined,
@@ -190,6 +199,9 @@ export function getTreeAndNode(
    * Returns a tuple of [tree, node] if the node and tree can be found, otherwise null.
    * If no nodeId is provided, the active node is used. If no treeId is provided, the active tree is used.
    */
+  if (skeletonTracing == null) {
+    return null;
+  }
   let tree: Tree | undefined;
 
   const trees = getTreesWithType(skeletonTracing, type);
@@ -198,12 +210,8 @@ export function getTreeAndNode(
     tree = trees.getNullable(treeId);
   } else if (nodeId != null) {
     tree = trees.values().find((__) => __.nodes.has(nodeId));
-  } else {
-    const { activeTreeId } = skeletonTracing;
-
-    if (activeTreeId != null) {
-      tree = trees.getNullable(activeTreeId);
-    }
+  } else if (activeTreeId != null) {
+    tree = trees.getNullable(activeTreeId);
   }
 
   if (tree != null) {
@@ -228,7 +236,7 @@ export function getTreeAndNode(
 }
 
 export function getTreeAndNodeOrNull(
-  skeletonTracing: SkeletonTracing,
+  state: WebknossosState,
   nodeId?: number | null | undefined,
   treeId?: number | null | undefined,
 ): {
@@ -238,7 +246,12 @@ export function getTreeAndNodeOrNull(
   /**
    * Returns an object with tree and node properties instead of the array tuple [node, tree], which are null if not found.
    */
-  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+  const treeAndNode = getTreeAndNode(
+    state.annotation.skeleton,
+    state.localSkeletonState.activeTreeId,
+    nodeId,
+    treeId,
+  );
   if (treeAndNode == null) {
     return {
       tree: null,
@@ -260,9 +273,21 @@ export function areGeometriesTransformed(state: WebknossosState) {
   return transformation != null && transformation !== IdentityTransform;
 }
 
-export function isSkeletonLayerVisible(annotation: StoreAnnotation) {
-  const skeletonLayer = getSkeletonTracing(annotation);
-  return skeletonLayer == null ? false : skeletonLayer.showSkeletons;
+// Whether skeleton nodes/edges should be clipped to the currently visible section
+// (instead of the distance-based clipping). This is only possible when neither the
+// camera nor the skeleton layer is rotated/transformed, because the section clipping
+// in the shaders operates in axis-aligned voxel space.
+export function isSkeletonSectionClippingActive(state: WebknossosState): boolean {
+  return (
+    state.userConfiguration.clipSkeletonToCurrentSection &&
+    !isRotated(state.flycam) &&
+    !areGeometriesTransformed(state)
+  );
+}
+
+export function isSkeletonLayerVisible(state: WebknossosState) {
+  const skeletonLayer = getSkeletonTracing(state.annotation);
+  return skeletonLayer == null ? false : state.localSkeletonState.showSkeletons;
 }
 
 export function getNodePosition(

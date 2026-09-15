@@ -1,33 +1,32 @@
 package models.dataset
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.webknossos.datastore.services.DataSourceWithRootPathInfo
 import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
 import org.apache.pekko.actor.ActorSystem
-import play.api.i18n.{Lang, MessagesApi, MessagesProvider}
 import play.api.inject.ApplicationLifecycle
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext
 
-class VirtualDatasetsRealPathScanService @Inject()(
+class VirtualDatasetsRealPathScanService @Inject() (
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
-    messagesApi: MessagesApi,
     val actorSystem: ActorSystem,
-    val lifecycle: ApplicationLifecycle)(implicit val ec: ExecutionContext)
+    val lifecycle: ApplicationLifecycle
+)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
-    with LazyLogging
-    with FoxImplicits {
+    with LazyLogging {
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
-  implicit private val mp: MessagesProvider = messagesApi.preferred(Seq(Lang.defaultLang))
 
   override protected def tickerInterval: FiniteDuration = 1 hour
 
-  override protected def tick(): Fox[_] = {
+  override protected def tick(): Fox[?] = {
     logger.info("Scanning realpaths for all virtual datasets...")
     for {
       datasets <- datasetDAO.findAll
@@ -44,11 +43,17 @@ class VirtualDatasetsRealPathScanService @Inject()(
       for {
         firstDataset <- datasets.headOption.toFox
         // we skip unusable datasets
-        dataSourceBoxes <- Fox.fromFuture(
-          Fox.serialSequence(datasets)(datasetService.usableDataSourceFor(_, useRealPaths = false)))
-        dataSources = dataSourceBoxes.flatten
+        dataSourceWithRootPathInfoBoxes <- Fox.fromFuture(
+          Fox.serialSequence(datasets)(d =>
+            datasetService
+              .usableDataSourceFor(d, useRealPaths = false)
+              .map(ds => DataSourceWithRootPathInfo(ds, d.rootPath, d.rootRealPath))
+          )
+        )
+        dataSourcesWithRootPathInfo = dataSourceWithRootPathInfoBoxes.flatten
         client <- datasetService.clientFor(firstDataset)
-        _ <- client.scanRealPathsForVirtual(dataSources)
+        _ <- client.scanRealPathsForVirtual(dataSourcesWithRootPathInfo)
       } yield ()
     }
+
 }

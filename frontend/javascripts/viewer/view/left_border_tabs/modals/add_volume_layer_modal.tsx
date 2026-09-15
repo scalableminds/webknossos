@@ -1,10 +1,12 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { Modal, Row } from "antd";
 import { AsyncButton } from "components/async_clickables";
+import FastTooltip from "components/fast_tooltip";
 import {
   NewVolumeLayerSelection,
   RestrictMagnificationSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import clone from "lodash-es/clone";
 import differenceWith from "lodash-es/differenceWith";
@@ -14,6 +16,7 @@ import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataset, APISegmentationLayer } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
+import { isEditingAnnotationLayerSetDisabled } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerByName,
   getMagInfo,
@@ -28,7 +31,7 @@ import {
 import { pushSaveQueueTransactionIsolated } from "viewer/model/actions/save_actions";
 import { addLayerToAnnotation } from "viewer/model/sagas/volume/update_actions";
 import { api, Model } from "viewer/singletons";
-import Store, { type StoreAnnotation } from "viewer/store";
+import Store from "viewer/store";
 import InputComponent from "viewer/view/components/input_component";
 
 export type ValidationResult = { isValid: boolean; message: string };
@@ -104,13 +107,11 @@ export function validateReadableLayerName(
 export default function AddVolumeLayerModal({
   dataset,
   onCancel,
-  annotation,
   preselectedLayerName,
   disableLayerSelection,
 }: {
   dataset: APIDataset;
   onCancel: () => void;
-  annotation: StoreAnnotation;
   preselectedLayerName: string | undefined;
   disableLayerSelection: boolean | undefined;
 }) {
@@ -118,6 +119,10 @@ export default function AddVolumeLayerModal({
     string | undefined
   >(preselectedLayerName);
   const dispatch = useDispatch();
+  const annotation = useWkSelector((state) => state.annotation);
+  const { isDisabled: mayNotEditLayerSet, explanation: reasonForCantEditLayerSet } = useWkSelector(
+    (state) => isEditingAnnotationLayerSetDisabled(state),
+  );
   const allReadableLayerNames = useMemo(
     () => getAllReadableLayerNames(dataset, annotation),
     [dataset, annotation],
@@ -228,7 +233,7 @@ export default function AddVolumeLayerModal({
   };
 
   return (
-    <Modal title="Add Volume Annotation Layer" footer={null} width={500} onCancel={onCancel} open>
+    <Modal title="Add Volume Annotation Layer" footer={null} onCancel={onCancel} open>
       Layer Name:{" "}
       <InputComponent
         size="small"
@@ -256,9 +261,16 @@ export default function AddVolumeLayerModal({
         setMagIndices={setMagIndices}
       />
       <Row justify="center" align="middle">
-        <AsyncButton onClick={handleAddVolumeLayer} type="primary" icon={<PlusOutlined />}>
-          Add Volume Annotation Layer
-        </AsyncButton>
+        <FastTooltip title={reasonForCantEditLayerSet}>
+          <AsyncButton
+            onClick={handleAddVolumeLayer}
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={mayNotEditLayerSet}
+          >
+            Add Volume Annotation Layer
+          </AsyncButton>
+        </FastTooltip>
       </Row>
     </Modal>
   );

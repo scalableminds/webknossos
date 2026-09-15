@@ -9,12 +9,12 @@ import type { PullQueueItem } from "viewer/model/bucket_data_handling/pullqueue"
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
 import type { MagInfo } from "../helpers/mag_info";
 
-export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
+export class PrefetchStrategyFlight extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
   velocityRangeEnd = Number.POSITIVE_INFINITY;
   roundTripTimeRangeStart = 0;
   roundTripTimeRangeEnd = Number.POSITIVE_INFINITY;
-  name = "ARBITRARY";
+  name = "FLIGHT";
   // @ts-expect-error ts-migrate(2702) FIXME: 'PolyhedronRasterizer' only refers to a type, but ... Remove this comment to see the full error message
   prefetchPolyhedron: PolyhedronRasterizer.Master = PolyhedronRasterizer.Master.squareFrustum(
     7,

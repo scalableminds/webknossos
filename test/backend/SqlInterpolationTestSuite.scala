@@ -6,12 +6,11 @@ import models.job.JobState
 import org.scalatest.wordspec.AsyncWordSpec
 import play.api.libs.json.Json
 import com.scalableminds.util.objectid.ObjectId
-import utils.sql.SqlInterpolation.sqlInterpolation
-import utils.sql._
+import utils.sql.*
 
 import scala.concurrent.duration.DurationInt
 
-class SqlInterpolationTestSuite extends AsyncWordSpec with SqlTypeImplicits {
+class SqlInterpolationTestSuite extends AsyncWordSpec with SqlTypeImplicits with SqlInterpolationSyntax {
 
   "SQL query creation" should {
 
@@ -151,8 +150,11 @@ class SqlInterpolationTestSuite extends AsyncWordSpec with SqlTypeImplicits {
       val list = List(SqlToken.tupleFromValues("Bob", 5), SqlToken.tupleFromValues("Amy", 3))
       val sql = q"""INSERT INTO test(name, age) VALUES ${SqlToken.joinByComma(list)}"""
       assert(
-        sql == SqlToken("INSERT INTO test(name, age) VALUES (?, ?), (?, ?)",
-                        List(StringValue("Bob"), IntValue(5), StringValue("Amy"), IntValue(3))))
+        sql == SqlToken(
+          "INSERT INTO test(name, age) VALUES (?, ?), (?, ?)",
+          List(StringValue("Bob"), IntValue(5), StringValue("Amy"), IntValue(3))
+        )
+      )
     }
 
     "construct an SQLToken with Vec3Double" in {
@@ -180,8 +182,11 @@ class SqlInterpolationTestSuite extends AsyncWordSpec with SqlTypeImplicits {
       val enumVals = List(JobState.PENDING, JobState.STARTED)
       val sql = q"""SELECT * FROM test WHERE state = ${EnumerationArrayValue(enumVals, "webknossos.JOB_STATE")}"""
       assert(
-        sql == SqlToken("SELECT * FROM test WHERE state = ?::webknossos.JOB_STATE[]",
-                        List(EnumerationArrayValue(enumVals, "webknossos.JOB_STATE"))))
+        sql == SqlToken(
+          "SELECT * FROM test WHERE state = ?::webknossos.JOB_STATE[]",
+          List(EnumerationArrayValue(enumVals, "webknossos.JOB_STATE"))
+        )
+      )
       assert(sql.debugInfo == "SELECT * FROM test WHERE state = {PENDING,STARTED}::webknossos.JOB_STATE[]")
     }
 

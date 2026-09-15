@@ -1,6 +1,6 @@
 import update from "immutability-helper";
 import type { Point2, Rect, Viewport } from "viewer/constants";
-import { ArbitraryViewport } from "viewer/constants";
+import { FlightViewport } from "viewer/constants";
 import { getTDViewportSize } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { zoomReducer } from "viewer/model/reducers/flycam_reducer";
@@ -51,7 +51,6 @@ function ViewModeReducer(state: WebknossosState, action: Action): WebknossosStat
 
     case "SET_INPUT_CATCHER_RECTS": {
       const { viewportRects } = action;
-      console.log("viewportRects", viewportRects);
       let newState = state;
 
       for (const viewport of Object.keys(viewportRects)) {
@@ -68,10 +67,10 @@ function ViewModeReducer(state: WebknossosState, action: Action): WebknossosStat
 }
 
 function setInputCatcherRect(state: WebknossosState, viewport: Viewport, rect: Rect) {
-  if (viewport === ArbitraryViewport) {
+  if (viewport === FlightViewport) {
     return update(state, {
       viewModeData: {
-        arbitrary: {
+        flight: {
           inputCatcherRect: {
             $set: rect,
           },

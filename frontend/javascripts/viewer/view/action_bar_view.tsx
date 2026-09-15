@@ -6,12 +6,12 @@ import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
 import { useWkSelector } from "libs/react_hooks";
-import { isUserAdminOrDatasetManager } from "libs/utils";
+import { isUserAdminOrManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import type React from "react";
 import { Fragment, PureComponent, useState } from "react";
 import { connect, useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import type { APIDataset, APIOrganization, APISegmentationLayer, APIUser } from "types/api_types";
 import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
 import constants, {
@@ -20,6 +20,7 @@ import constants, {
   MappingStatusEnum,
   type ViewMode,
 } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   doesSupportVolumeWithFallback,
   getColorLayers,
@@ -51,6 +52,10 @@ import {
 import { ACTIONBAR_MARGIN_LEFT } from "./action_bar/tools/tool_helpers";
 import ToolkitView from "./action_bar/tools/toolkit_switcher_view";
 import NumberSliderSetting from "./left_border_tabs/components/number_slider_setting";
+
+const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
+  AsyncButton,
+);
 
 const VersionRestoreWarning = (
   <Alert
@@ -210,10 +215,6 @@ function CreateAnnotationButton() {
     await continueWithLayer(selectedLayer);
   };
 
-  const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
-    AsyncButton,
-  );
-
   return (
     <div
       onKeyDownCapture={(e: React.KeyboardEvent) => {
@@ -233,6 +234,7 @@ function CreateAnnotationButton() {
       </ButtonWithAuthentication>
 
       <Modal
+        title="Select Segmentation Layer"
         open={isLayerSelectionModalVisible}
         onCancel={() => setLayerSelectionModalVisible(false)}
         onOk={handleLayerSelected}
@@ -251,7 +253,7 @@ function CreateAnnotationButton() {
 function ModesView() {
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
-  const isReadOnly = useWkSelector((state) => !state.annotation.isUpdatingCurrentlyAllowed);
+  const isReadOnly = useWkSelector((state) => !mayEditAnnotation(state));
   const isOrthoMode = useWkSelector(
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );
@@ -371,7 +373,7 @@ class ActionBarView extends PureComponent<Props, State> {
   render() {
     const { dataset, is2d, showVersionRestore, controlMode, layoutProps, viewMode, activeUser } =
       this.props;
-    const isAdminOrDatasetManager = isUserAdminOrDatasetManager(activeUser);
+    const isAdminOrManager = isUserAdminOrManager(activeUser);
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const getIsAIAnalysisEnabled = () => {
       const jobsEnabled =
@@ -379,7 +381,7 @@ class ActionBarView extends PureComponent<Props, State> {
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
           APIJobCommand.INFER_MITOCHONDRIA,
         ) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.INFER_NUCLEI) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.INFER_INSTANCES) ||
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.ALIGN_SECTIONS);
       return jobsEnabled;
     };
@@ -421,7 +423,7 @@ class ActionBarView extends PureComponent<Props, State> {
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionAndRotationView />
           <AdditionalCoordinatesInputView />
-          {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
+          {getIsAIAnalysisEnabled() && isAdminOrManager
             ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
           {isViewMode ? this.renderStartTracingButton() : null}

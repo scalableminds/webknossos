@@ -2,7 +2,7 @@
 
 ## Datasets
 
-A **dataset**, can consist of multiple **layer**s, which may be
+A **dataset** can consist of multiple **layer**s, which may be
 
 * **segmentation layer**s or
 * **color layer**s.

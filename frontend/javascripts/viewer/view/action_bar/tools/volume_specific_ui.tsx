@@ -12,7 +12,16 @@ import OverwriteEverythingIcon from "@images/icons/icon-overwrite-everything.svg
 import RestrictFloodfillToBboxIcon from "@images/icons/icon-restrict-to-bounding-box.svg?react";
 import NewSegmentIcon from "@images/icons/icon-segment-new.svg?react";
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
-import { Badge, Button, Popconfirm, Popover, Radio, type RadioChangeEvent, Space } from "antd";
+import {
+  Badge,
+  Button,
+  Popconfirm,
+  Popover,
+  Radio,
+  type RadioChangeEvent,
+  Space,
+  theme,
+} from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { usePrevious, useWkSelector } from "libs/react_hooks";
 import type React from "react";
@@ -186,7 +195,7 @@ export function VolumeInterpolationButton() {
   );
 }
 
-const mapId = (volumeTracingId: string | null | undefined, id: number) => {
+const mapId = (volumeTracingId: string | null | undefined, id: bigint) => {
   // Note that the return value can be an unmapped id even when
   // a mapping is active, if it is a HDF5 mapping that is partially loaded
   // and no entry exists yet for the input id.
@@ -201,7 +210,7 @@ const mapId = (volumeTracingId: string | null | undefined, id: number) => {
 export function CreateSegmentButton() {
   const volumeTracingId = useWkSelector((state) => getActiveSegmentationTracing(state)?.tracingId);
   const unmappedActiveCellId = useWkSelector(
-    (state) => getActiveSegmentationTracing(state)?.activeCellId || 0,
+    (state) => getActiveSegmentationTracing(state)?.activeCellId || 0n,
   );
   const { mappingStatus } = useWkSelector((state) =>
     getMappingInfoForVolumeTracing(state, volumeTracingId),
@@ -248,6 +257,8 @@ function IdentityComponent({ children }: { children: React.ReactNode }) {
 function NuxPopConfirm({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
+  const { token } = theme.useToken();
+
   return (
     <Popconfirm
       open
@@ -264,7 +275,7 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
       }}
       description="The AI-based Quick Select can now be triggered with a single click. Also, it can be run for multiple sections at once (open the settings here to enable this)."
       styles={{ root: { maxWidth: 400 } }}
-      icon={<InfoCircleOutlined style={{ color: "green" }} />}
+      icon={<InfoCircleOutlined style={{ color: token.colorInfo }} />}
     >
       {children}
     </Popconfirm>

@@ -11,18 +11,19 @@ import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 trait WkEnv extends Env {
   type I = User
   type A = CombinedAuthenticator
 }
 
-class WkSilhouetteEnvironment @Inject()(
+class WkSilhouetteEnvironment @Inject() (
     conf: WkConf,
     tokenDAO: TokenDAO,
     userService: UserService,
-    cookieHeaderEncoding: CookieHeaderEncoding)(implicit val executionContext: ExecutionContext)
+    cookieHeaderEncoding: CookieHeaderEncoding
+)(implicit val executionContext: ExecutionContext)
     extends Environment[WkEnv] {
   private val eventBusObject = EventBus()
 
@@ -36,9 +37,10 @@ class WkSilhouetteEnvironment @Inject()(
       case "Strict" => Some(Cookie.SameSite.Strict)
       case "Lax"    => Some(Cookie.SameSite.Lax)
       case "None"   => None
-      case _ =>
+      case _        =>
         throw new RuntimeException(
-          s"Invalid config setting silhouette.cookieAuthenticator.sameSite. Must be Strict, Lax, or None. Got ${conf.Silhouette.CookieAuthenticator.sameSite}")
+          s"Invalid config setting silhouette.cookieAuthenticator.sameSite. Must be Strict, Lax, or None. Got ${conf.Silhouette.CookieAuthenticator.sameSite}"
+        )
     },
     conf.Silhouette.CookieAuthenticator.useFingerprinting,
     Some(conf.Silhouette.CookieAuthenticator.cookieMaxAge.toMillis millis),

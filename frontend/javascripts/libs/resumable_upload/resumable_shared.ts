@@ -28,22 +28,8 @@ export function formatSize(size: number | undefined): string {
   }
 }
 
-export function getTargetURI(
-  resumable: ResumableUpload,
-  request: string,
-  params: Record<string, any>,
-): string {
-  let target = resumable.getOpt("target");
-  const testTarget = resumable.getOpt("testTarget");
-
-  if (request === "test" && testTarget !== null) {
-    target = testTarget === "/" ? resumable.getOpt("target") : testTarget;
-  }
-
-  if (typeof target === "function") {
-    return target(params);
-  }
-
+export function getTargetURI(resumable: ResumableUpload, params: Record<string, any>): string {
+  const target = resumable.getOpt("target");
   const url = new URL(target as string, window.location.origin);
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.append(key, value);

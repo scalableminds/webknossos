@@ -94,6 +94,7 @@ export function ToolRadioButtonWithDropdown({
   children,
   onMouseEnter,
   dropdownItems,
+  disabledExplanation,
   ...props
 }: {
   disabled?: boolean;
@@ -103,10 +104,26 @@ export function ToolRadioButtonWithDropdown({
   onClick?: (event: React.MouseEvent) => void;
   dropdownItems: MenuItemType[];
   onMouseEnter?: () => void;
+  disabledExplanation?: string;
 }) {
   const dispatch = useDispatch();
-  // See explanation for RadioButtonWithTooltip: Add dropdown into the button and tweak padding so that
-  // the dropdown is triggered when hovering anywhere within the button, not just the icon.
+  // See explanation for RadioButtonWithTooltip: Add dropdown/tooltip into the button and tweak
+  // padding so that it is triggered when hovering anywhere within the button, not just the icon.
+  const innerContent = disabled ? (
+    <FastTooltip title={disabledExplanation}>
+      <div style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</div>
+    </FastTooltip>
+  ) : (
+    <Dropdown
+      menu={{
+        items: dropdownItems,
+        onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
+      }}
+      trigger={["hover"]}
+    >
+      <div style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</div>
+    </Dropdown>
+  );
   return (
     <Radio.Button
       disabled={disabled}
@@ -121,15 +138,7 @@ export function ToolRadioButtonWithDropdown({
       }}
       {...props}
     >
-      <Dropdown
-        menu={{
-          items: dropdownItems,
-          onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
-        }}
-        trigger={["hover"]}
-      >
-        <div style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</div>
-      </Dropdown>
+      {innerContent}
     </Radio.Button>
   );
 }

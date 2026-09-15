@@ -5,7 +5,7 @@ import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import { useSearchParams, useWkSelector } from "libs/react_hooks";
 import sortBy from "lodash-es/sortBy";
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfig,
@@ -335,7 +335,7 @@ export default function WorkflowView() {
 
   const {
     data: report,
-    isLoading,
+    isFetching: isLoading,
     isError,
     refetch,
   } = useQuery({

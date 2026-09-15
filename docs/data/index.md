@@ -1,6 +1,6 @@
 # Data Sources and Upload / Download
 
-WEBKNOSSOS uses several file formats for reading large-scale volumetric image data and storing skeleton and volume annotations. The section will provide technical backgrounds on these file formats, list examples, and explain concepts and details.
+WEBKNOSSOS uses several file formats for reading large-scale volumetric image data and storing skeleton and volume annotations. This section will provide technical background on these file formats, list examples, and explain concepts and details.
 
 WEBKNOSSOS natively supports loading and streaming data in the following formats:
 

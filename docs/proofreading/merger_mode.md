@@ -12,7 +12,9 @@ Please note, `Merger Mode` is a lightweight correction workflow. WEBKNOSSOS does
 
 ![youtube-video](https://www.youtube.com/embed/Sq4AuWanK14)
 
-After finishing the proofreading, a [long-running job](../automation/jobs.md) can be started to apply the merging of segments into a new dataset with the same layers. The job can be started by clicking the "Materialize" button next to the merger mode button in the toolbar.
+Note that `Merger Mode` cannot be enabled while an editable mapping is active or while a mapping is locked.
+
+After finishing the proofreading, a [long-running job](../automation/jobs.md) can be started to apply the merging of segments into a new dataset with the same layers. The job can be started by clicking the "Materialize" button next to the merger mode button in the toolbar. As this is a worker-based (paid) feature, the "Materialize" button only appears for admins and managers when a job worker supporting it is available.
 
 ![Button to open the Merger mode long-running job dialog](../images/start_merger_mode_job_modal_button.jpg)
 /// caption

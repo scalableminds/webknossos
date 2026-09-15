@@ -1,16 +1,11 @@
 import { CopyOutlined } from "@ant-design/icons";
 import FastTooltip from "components/fast_tooltip";
-import Toast from "libs/toast";
+import { copyToClipboard } from "libs/clipboard";
 
-export function CopyIconWithTooltip({ value, title }: { value: string | number; title: string }) {
+export function CopyIconWithTooltip({ value, label }: { value: string | number; label: string }) {
   return (
-    <FastTooltip title={title}>
-      <CopyOutlined
-        onClick={async () => {
-          await navigator.clipboard.writeText(value.toString());
-          Toast.success(`"${value}" copied to clipboard`);
-        }}
-      />
+    <FastTooltip title={`Copy ${label}`}>
+      <CopyOutlined onClick={() => copyToClipboard(value.toString(), label, true)} />
     </FastTooltip>
   );
 }

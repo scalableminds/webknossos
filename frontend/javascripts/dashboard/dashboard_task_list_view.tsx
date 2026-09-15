@@ -11,10 +11,11 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { finishTask, peekNextTasks, requestTask } from "admin/api/tasks";
 import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/rest_api";
-import { Button, Card, Col, List, Modal, Row, Space, Tag, Tooltip } from "antd";
+import { Button, Card, Col, List, Row, Space, Tag, Tooltip, Typography } from "antd";
 import classNames from "classnames";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import { handleGenericError } from "libs/error_handling";
@@ -22,11 +23,12 @@ import Markdown from "libs/markdown_adapter";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import { compareBy } from "libs/utils";
+import { compareBy, scrollToTop } from "libs/utils";
+import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import messages from "messages";
 import { PureComponent, useContext } from "react";
 import { connect } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
 import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -49,7 +51,7 @@ type OwnProps = {
 type StateProps = {
   activeUser: APIUser;
 };
-type Props = OwnProps & StateProps;
+type Props = OwnProps & StateProps & WithModalProps;
 
 type State = {
   showFinishedTasks: boolean;
@@ -142,8 +144,8 @@ class DashboardTaskListView extends PureComponent<Props, State> {
   };
 
   confirmFinish(task: APITaskWithAnnotation) {
-    Modal.confirm({
-      content: messages["annotation.finish"],
+    this.props.modal.confirm({
+      title: messages["annotation.finish"],
       onOk: async () => {
         const { annotation } = task;
         const changedAnnotationWithTask = await finishTask(annotation.id);
@@ -275,8 +277,8 @@ class DashboardTaskListView extends PureComponent<Props, State> {
   };
 
   resetTask(annotation: APIAnnotation) {
-    Modal.confirm({
-      content: messages["task.confirm_reset"],
+    this.props.modal.confirm({
+      title: messages["task.confirm_reset"],
       cancelText: messages.no,
       okText: messages.yes,
       onOk: async () => {
@@ -288,8 +290,8 @@ class DashboardTaskListView extends PureComponent<Props, State> {
 
   cancelAnnotation(annotation: APIAnnotation) {
     const annotationId = annotation.id;
-    Modal.confirm({
-      content: messages["annotation.delete"],
+    this.props.modal.confirm({
+      title: messages["annotation.delete"],
       cancelText: messages.no,
       okText: messages.yes,
       onOk: async () => {
@@ -305,17 +307,14 @@ class DashboardTaskListView extends PureComponent<Props, State> {
     if (this.state.unfinishedModeState.tasks.length === 0) {
       this.getNewTask();
     } else {
-      let modalContent = messages["task.request_new"];
       const likelyNextTask = await peekNextTasks();
 
-      if (likelyNextTask != null) {
-        modalContent += `\n${messages["task.peek_next"]({
-          projectName: likelyNextTask.projectName,
-        })}`;
-      }
-
-      Modal.confirm({
-        content: modalContent,
+      this.props.modal.confirm({
+        title: messages["task.request_new"],
+        content:
+          likelyNextTask != null
+            ? messages["task.peek_next"]({ projectName: likelyNextTask.projectName })
+            : undefined,
         onOk: () => this.getNewTask(),
       });
     }
@@ -423,7 +422,9 @@ class DashboardTaskListView extends PureComponent<Props, State> {
 
     const TaskCardTitle = ({ task }: { task: APITaskWithAnnotation }) => (
       <Space>
-        {task.projectName} (<FormattedDate timestamp={task.created} />)
+        <span>
+          {task.projectName} (<FormattedDate timestamp={task.created} />)
+        </span>
         {getSkeletonDescriptor(task.annotation) == null ? null : (
           <Tag color="green" variant="outlined">
             skeleton
@@ -447,7 +448,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
         <Card key={task.id}>
           <Row gutter={16}>
             <Col span={7}>
-              <b>Task ID:</b> {task.id}
+              <b>Task ID:</b> <FormattedId id={task.id} />
             </Col>
             <Col span={7}>
               <b>Project:</b> {task.projectName}
@@ -472,7 +473,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
                   marginBottom: 14,
                 }}
               >
-                <b>Task ID:</b> {task.id}
+                <b>Task ID:</b> <FormattedId id={task.id} />
                 <br />
                 <b>Task Type:</b> {task.type.summary}
               </p>
@@ -487,6 +488,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
         dataSource={tasks}
         pagination={{
           defaultPageSize: 50,
+          onChange: scrollToTop,
         }}
         loading={this.state.isLoading}
         renderItem={TaskCard}
@@ -507,7 +509,9 @@ class DashboardTaskListView extends PureComponent<Props, State> {
           toggleShowFinished={this.toggleShowFinished}
           getFinishVerb={this.getFinishVerb}
         />
-        {this.state.showFinishedTasks ? <h3>My Finished Tasks</h3> : null}
+        {this.state.showFinishedTasks ? (
+          <Typography.Title level={3}>My Finished Tasks</Typography.Title>
+        ) : null}
         {this.renderTaskList()}
         <div
           style={{
@@ -580,4 +584,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(DashboardTaskListView);
+export default connector(withModal(DashboardTaskListView));

@@ -1,6 +1,6 @@
 package backend
 
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
@@ -58,7 +58,8 @@ object Dummies {
     "Axon 1",
     1,
     Seq(TreeGroup("Blah", 3, Seq.empty, Some(false)), TreeGroup("Blah 2", 4, Seq.empty, Some(false))),
-    Some(true))
+    Some(true)
+  )
   val treeGroup2: TreeGroup = TreeGroup("Axon 2", 2, Seq.empty, Some(true))
 
   val tracingId: String = "dummyTracingId"
@@ -79,7 +80,7 @@ object Dummies {
     Some("testOrganization")
   )
 
-  //tree with two components, from tree1 and tree2
+  // tree with two components, from tree1 and tree2
   val comp1Nodes: Seq[Node] = Seq(createDummyNode(10), createDummyNode(11), createDummyNode(12), createDummyNode(13))
   val comp2Nodes: Seq[Node] = Seq(createDummyNode(20), createDummyNode(21))
   val comp1Edges: Seq[Edge] = Seq(Edge(10, 11), Edge(10, 12), Edge(12, 13))

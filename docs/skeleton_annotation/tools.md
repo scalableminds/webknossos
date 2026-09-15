@@ -37,7 +37,7 @@ The active node is always highlighted with a circle and can be moved by dragging
 
 ### Tool Modes
 
-The following additional modes are available for the skeleton tool beyond the basic functionality:
+The following additional modes are available for the skeleton tool beyond the basic functionality. These modes can be toggled via buttons from the toolbar at the top of the screen when the skeleton tool is active:
 
 ![New Tree Mode](./images/new-tree-modifier.jpg){align=left width="60"} 
 **Create new Tree**

@@ -2,28 +2,28 @@ package utils
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ConfigReader
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 import security.CertificateValidationService
 
 import javax.inject.Inject
-import scala.concurrent.duration._
-import scala.jdk.CollectionConverters._
+import scala.concurrent.duration.*
+import scala.jdk.CollectionConverters.*
 
-class WkConf @Inject()(configuration: Configuration, certificateValidationService: CertificateValidationService)
+class WkConf @Inject() (configuration: Configuration, certificateValidationService: CertificateValidationService)
     extends ConfigReader
     with LazyLogging {
   lazy val featureOverrides: Map[String, Boolean] = certificateValidationService.getFeatureOverrides
-  override val raw: Configuration = {
+  override val raw: Configuration =
     // Applying feature overwrites to the configuration.
     Configuration(
       ConfigFactory
-        .parseMap(featureOverrides.map {
-          case (k, v) => s"features.$k" -> Boolean.box(v && configuration.underlying.getBoolean(s"features.$k"))
+        .parseMap(featureOverrides.map { case (k, v) =>
+          s"features.$k" -> Boolean.box(v && configuration.underlying.getBoolean(s"features.$k"))
         }.asJava)
-        .withFallback(configuration.underlying))
-  }
+        .withFallback(configuration.underlying)
+    )
 
   object Http {
     val uri: String = get[String]("http.uri")
@@ -36,7 +36,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val disabled: Seq[String] = getList[String]("play.modules.disabled")
     }
 
-    val children = List(Modules)
+    val children: List[Modules.type] = List(Modules)
   }
 
   object WebKnossos {
@@ -76,7 +76,14 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
         val timeout: FiniteDuration = get[FiniteDuration]("webKnossos.cache.user.timeout")
       }
 
-      val children = List(User)
+      val children: List[User.type] = List(User)
+    }
+
+    object PricingPlanExpiryReminder {
+      val enabled: Boolean = get[Boolean]("webKnossos.pricingPlanExpiryReminder.enabled")
+      val leadTimesDays: List[Int] = getList[Int]("webKnossos.pricingPlanExpiryReminder.leadTimesDays")
+      val trialLeadTimesDays: List[Int] = getList[Int]("webKnossos.pricingPlanExpiryReminder.trialLeadTimesDays")
+      val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.pricingPlanExpiryReminder.tickerInterval")
     }
 
     object SampleOrganization {
@@ -90,7 +97,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
         val isSuperUser: Boolean = get[Boolean]("webKnossos.sampleOrganization.user.isSuperUser")
       }
 
-      val children = List(User)
+      val children: List[User.type] = List(User)
     }
 
     object FetchUsedStorage {
@@ -121,9 +128,19 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
           get[Boolean]("webKnossos.datasets.uploadToPaths.insertOrganizationDirectory")
         val infix: Option[String] = getOptional[String]("webKnossos.datasets.uploadToPaths.infix")
       }
-      val children = List(UploadToPaths)
+      val children: List[UploadToPaths.type] = List(UploadToPaths)
     }
-    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService, Datasets)
+    val children: List[Object] =
+      List(
+        User,
+        Tasks,
+        Cache,
+        PricingPlanExpiryReminder,
+        SampleOrganization,
+        FetchUsedStorage,
+        TermsOfService,
+        Datasets
+      )
   }
 
   object SingleSignOn {
@@ -133,7 +150,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val clientSecret: String = get[String]("singleSignOn.openIdConnect.clientSecret")
       val scope: String = get[String]("singleSignOn.openIdConnect.scope")
       val verboseLoggingEnabled: Boolean = get[Boolean]("singleSignOn.openIdConnect.verboseLoggingEnabled")
-      val logoutRedirectUrl = getOptional[String]("singleSignOn.openIdConnect.logoutRedirectUrl")
+      val logoutRedirectUrl: Option[String] = getOptional[String]("singleSignOn.openIdConnect.logoutRedirectUrl")
     }
   }
 
@@ -164,7 +181,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val key: String = get[String]("datastore.key")
     val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
-    val baseDirectory: Option[String] = getOptional[String]("datastore.baseDirectory")
+    val baseDirectories: List[Config] = getList[Config]("datastore.baseDirectories")
   }
 
   object Tracingstore {
@@ -201,13 +218,14 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val password: String = get[String]("mail.mailchimp.password")
     }
 
-    val children = List(Smtp, Mailchimp)
+    val children: List[Object] = List(Smtp, Mailchimp)
   }
 
   object Silhouette {
     object TokenAuthenticator {
       val resetPasswordExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
       val dataStoreExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.dataStoreExpiry")
+      val jobExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.jobExpiry")
       val authenticatorExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorExpiry")
       val authenticatorIdleTimeout: FiniteDuration =
         get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
@@ -226,7 +244,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val signerSecret: String = get[String]("silhouette.cookieAuthenticator.signerSecret")
     }
 
-    val children = List(TokenAuthenticator, CookieAuthenticator)
+    val children: List[Object] = List(TokenAuthenticator, CookieAuthenticator)
   }
 
   object Jobs {
@@ -264,7 +282,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val password: String = get[String]("slick.db.password")
     }
 
-    val children = List(Db)
+    val children: List[Db.type] = List(Db)
   }
 
   object Voxelytics {
@@ -272,10 +290,13 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
 
     object Loki {
       val uri: String = get[String]("voxelytics.loki.uri")
+      val tenant: String = get[String]("voxelytics.loki.tenant")
+      val user: String = get[String]("voxelytics.loki.user")
+      val password: String = get[String]("voxelytics.loki.password")
       val startupTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.loki.startupTimeout")
     }
 
-    val children = List(Loki)
+    val children: List[Loki.type] = List(Loki)
   }
 
   object SegmentAnything {
@@ -288,7 +309,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val key: String = get[String]("externalPathDeletionService.key")
   }
 
-  val children =
+  val children: List[Object] =
     List(
       Http,
       WebKnossos,

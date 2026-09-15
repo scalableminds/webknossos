@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(161);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(183);
 COMMIT TRANSACTION;
 
 
@@ -33,13 +33,11 @@ CREATE TABLE webknossos.annotations(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
   _task TEXT CONSTRAINT _task_objectId CHECK (_task ~ '^[0-9a-f]{24}$'),
-  _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   _publication TEXT,
   description TEXT NOT NULL DEFAULT '',
   visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Internal',
   name TEXT NOT NULL DEFAULT '',
-  viewConfiguration JSONB,
   state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
   isLockedByOwner BOOLEAN NOT NULL DEFAULT FALSE,
   tags TEXT[] NOT NULL DEFAULT '{}',
@@ -80,6 +78,7 @@ CREATE TABLE webknossos.annotation_contributors(
 CREATE TABLE webknossos.annotation_mutexes(
   _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  sessionId TEXT NOT NULL,
   expiry TIMESTAMP NOT NULL
 );
 
@@ -130,6 +129,10 @@ CREATE TABLE webknossos.datasets(
   metadata JSONB NOT NULL DEFAULT '[]',
   tags TEXT[] NOT NULL DEFAULT '{}',
   creationType webknossos.DATASET_CREATION_TYPE,
+  importURL TEXT,
+  rootPath TEXT,
+  rootRealPath TEXT,
+  mirrorPath TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (directoryName, _organization),
@@ -176,7 +179,7 @@ CREATE TABLE webknossos.dataset_layer_additionalAxes(
    index INT NOT NULL
 );
 
-CREATE TYPE webknossos.LAYER_ATTACHMENT_TYPE AS ENUM ('agglomerate', 'connectome', 'segmentIndex', 'mesh', 'cumsum');
+CREATE TYPE webknossos.LAYER_ATTACHMENT_TYPE AS ENUM ('agglomerate', 'connectome', 'segmentIndex', 'mesh', 'cumsum', 'segmentStatistics');
 CREATE TYPE webknossos.LAYER_ATTACHMENT_DATAFORMAT AS ENUM ('hdf5', 'zarr3', 'json', 'neuroglancerPrecomputed');
 CREATE TABLE webknossos.dataset_layer_attachments(
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
@@ -187,7 +190,9 @@ CREATE TABLE webknossos.dataset_layer_attachments(
   hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
   type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
   dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
+  credentialId TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
+  uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY(_dataset, layerName, name, type)
 );
 
@@ -208,6 +213,7 @@ CREATE TABLE webknossos.dataset_mags(
   channelIndex INT,
   credentialId TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
+  uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 
@@ -282,7 +288,7 @@ CREATE TABLE webknossos.scripts(
   CHECK (gist ~* '^https?://[a-z0-9\-_\.]+.*$')
 );
 
-CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique', 'volume');
+CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'volume');
 CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
 CREATE TABLE webknossos.taskTypes(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
@@ -290,7 +296,7 @@ CREATE TABLE webknossos.taskTypes(
   _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   summary TEXT NOT NULL,
   description TEXT NOT NULL,
-  settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight, oblique}',
+  settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight}',
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
@@ -389,6 +395,15 @@ CREATE TABLE webknossos.organization_plan_updates(
   includedStorage BIGINT DEFAULT NULL,
   includedStorageChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
+);
+
+CREATE TABLE webknossos.organization_planExpiryReminders(
+  _organization TEXT NOT NULL,
+  paidUntil TIMESTAMPTZ NOT NULL, -- the expiry date the reminder was sent for, so that extending the plan re-arms the reminders
+  leadTimeDays INT NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (_organization, paidUntil, leadTimeDays),
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
@@ -504,7 +519,20 @@ CREATE TABLE webknossos.user_datasetLayerConfigurations(
   CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
 );
 
+CREATE TABLE webknossos.user_annotationViewConfigurations(
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
+  viewConfiguration JSONB NOT NULL,
+  PRIMARY KEY (_user, _annotation),
+  CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
+);
 
+CREATE TABLE webknossos.multiUser_keyboardShortcutsConfigs(
+  _multiUser TEXT CONSTRAINT _multiUser_objectId CHECK (_multiUser ~ '^[0-9a-f]{24}$') NOT NULL,
+  shortcutsConfig JSONB NOT NULL DEFAULT '{}'::json,
+  PRIMARY KEY (_multiUser),
+  CONSTRAINT shortcutsConfigIsJsonObject CHECK(jsonb_typeof(shortcutsConfig) = 'object')
+);
 CREATE TYPE webknossos.THEME AS ENUM ('light', 'dark', 'auto');
 CREATE TABLE webknossos.multiUsers(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
@@ -541,13 +569,11 @@ CREATE TABLE webknossos.webauthnCredentials(
 );
 
 
-CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
-CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
+CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword', 'Job');
 CREATE TABLE webknossos.tokens(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   value TEXT NOT NULL,
-  loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
-  loginInfo_providerKey TEXT NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   lastUsedDateTime TIMESTAMPTZ NOT NULL,
   expirationDateTime TIMESTAMPTZ NOT NULL,
   idleTimeout BIGINT,
@@ -595,12 +621,14 @@ CREATE TABLE webknossos.jobs(
   _voxelytics_workflowHash TEXT,
   latestRunId TEXT,
   returnValue Text,
+  latestRunErrorDetails JSONB,
   retriedBySuperUser BOOLEAN NOT NULL DEFAULT FALSE,
   started TIMESTAMPTZ,
   ended TIMESTAMPTZ,
   lastRetry TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  CONSTRAINT latestRunErrorDetailsIsJsonObject CHECK(jsonb_typeof(latestRunErrorDetails) = 'object')
 );
 
 
@@ -646,8 +674,9 @@ CREATE TABLE webknossos.credentials(
 CREATE TABLE webknossos.folders(
     _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
     name TEXT NOT NULL CHECK (name !~ '/'),
-    isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
     metadata JSONB  NOT NULL DEFAULT '[]',
+    created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array')
 );
 
@@ -673,13 +702,13 @@ CREATE TABLE webknossos.emailVerificationKeys(
   isUsed BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em_synapses', 'em_neuron_types', 'em_cell_organelles');
+CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em_synapses', 'em_neuron_types', 'em_cell_organelles', 'em_generic', 'em_somata', 'em_mitochondria');
 
 CREATE TABLE webknossos.aiModels(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
-  _organization TEXT NOT NULL,
+  _organization TEXT,
   _dataStore TEXT NOT NULL, -- redundant to job, but must be available for jobless models
-  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$'),
   _trainingJob TEXT CONSTRAINT _trainingJob_objectId CHECK (_trainingJob ~ '^[0-9a-f]{24}$'),
   path TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
@@ -689,6 +718,8 @@ CREATE TABLE webknossos.aiModels(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  isSuperUserOnly BOOLEAN NOT NULL DEFAULT FALSE,
+  isPretrained BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (_organization, name)
 );
 
@@ -877,6 +908,8 @@ CREATE INDEX ON webknossos.annotations(typ, state, isDeleted);
 CREATE INDEX ON webknossos.annotations(_user, _task, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, typ, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, isDeleted);
+CREATE INDEX ON webknossos.annotations(_dataset);
+CREATE INDEX ON webknossos.annotation_contributors(_user);
 CREATE INDEX ON webknossos.datasets(directoryName);
 CREATE INDEX ON webknossos.datasets(_folder);
 CREATE INDEX ON webknossos.tasks(_project);
@@ -901,13 +934,24 @@ CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
 CREATE INDEX ON webknossos.shortLinks(key);
 CREATE INDEX ON webknossos.credit_transactions(credit_state);
 CREATE INDEX ON webknossos.dataset_mags(COALESCE(realPath, path));
+CREATE INDEX ON webknossos.tokens(value);
+CREATE INDEX ON webknossos.tokens(_user, tokenType);
+CREATE INDEX ON webknossos.tokens(expirationDateTime);
 CREATE INDEX ON webknossos.dataset_layer_attachments(path);
 CREATE INDEX ON webknossos.organization_usedStorage_mags(_organization);
 CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);
+CREATE INDEX ON webknossos.user_team_roles(_team);
+CREATE INDEX ON webknossos.dataset_allowedTeams(_team);
+CREATE INDEX ON webknossos.folder_allowedTeams(_team);
+CREATE INDEX ON webknossos.annotation_sharedTeams(_team);
+CREATE INDEX ON webknossos.folder_paths(_descendant);
+CREATE INDEX ON webknossos.jobs(state, _dataStore, created);
+CREATE INDEX ON webknossos.jobs(_worker);
+CREATE INDEX ON webknossos.credit_transactions(_paid_job);
+CREATE INDEX ON webknossos.credit_transactions(_organization);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
-  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) DEFERRABLE,
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE,
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE,
   ADD CONSTRAINT publication_ref FOREIGN KEY(_publication) REFERENCES webknossos.publications(_id) DEFERRABLE;
@@ -970,6 +1014,11 @@ ALTER TABLE webknossos.credit_transactions
 ALTER TABLE webknossos.user_datasetLayerConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.user_annotationViewConfigurations
+    ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.multiUser_keyboardShortcutsConfigs
+    ADD CONSTRAINT multiUser_ref FOREIGN KEY(_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.multiUsers
   ADD CONSTRAINT lastLoggedInIdentity_ref FOREIGN KEY(_lastLoggedInIdentity) REFERENCES webknossos.users(_id) ON DELETE SET NULL;
 ALTER TABLE webknossos.experienceDomains
@@ -993,6 +1042,8 @@ ALTER TABLE webknossos.organization_usedStorage_mags
 ALTER TABLE webknossos.organization_usedStorage_attachments
   ADD CONSTRAINT attachments_ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organization_plan_updates
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organization_planExpiryReminders
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;
@@ -1132,21 +1183,17 @@ CREATE SEQUENCE webknossos.objectid_sequence;
 CREATE FUNCTION webknossos.generate_object_id() RETURNS TEXT AS $$
 DECLARE
   time_component TEXT;
-  machine_id TEXT;
-  process_id TEXT;
+  random_component TEXT;
   counter TEXT;
   result TEXT;
 BEGIN
-  -- Extract the current timestamp in seconds since the Unix epoch (4 bytes, 8 hex chars)
+  -- 4 bytes (8 hex chars): seconds since Unix epoch
   SELECT LPAD(TO_HEX(FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::BIGINT), 8, '0') INTO time_component;
-  -- Generate a machine identifier using the hash of the server IP (3 bytes, 6 hex chars)
-  SELECT SUBSTRING(md5(CAST(inet_server_addr() AS TEXT)) FROM 1 FOR 6) INTO machine_id;
-  -- Retrieve the current backend process ID, limited to 2 bytes (4 hex chars)
-  SELECT LPAD(TO_HEX(pg_backend_pid() % 65536), 4, '0') INTO process_id;
-  -- Generate a counter using a sequence, ensuring it's 3 bytes (6 hex chars)
+  -- 5 bytes (10 hex chars): random value. Spec says should be random per process. This is not easily available in postgres, we do random per call instead.
+  SELECT LEFT(REPLACE(gen_random_uuid()::TEXT, '-', ''), 10) INTO random_component;
+  -- 3 bytes (6 hex chars): incrementing counter. Spec says should get randomized start, but we are certain to have just one postgres process running, so the conflict scenario is not plausible.
   SELECT LPAD(TO_HEX(nextval('webknossos.objectid_sequence')::BIGINT % 16777216), 6, '0') INTO counter;
-  -- Concatenate all parts to form a 24-character ObjectId
-  result := time_component || machine_id || process_id || counter;
+  result := time_component || random_component || counter;
 
   RETURN result;
 END;

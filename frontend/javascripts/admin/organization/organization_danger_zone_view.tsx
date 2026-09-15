@@ -1,10 +1,10 @@
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteOrganization } from "admin/api/organization";
-import { Button, Typography } from "antd";
-import { confirmAsync } from "dashboard/dataset/helper_components";
+import { App, Button, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
+import { ModalWidth } from "theme";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 
 export function OrganizationDangerZoneView() {
@@ -12,10 +12,12 @@ export function OrganizationDangerZoneView() {
     enforceActiveOrganization(state.activeOrganization),
   );
   const [isDeleting, setIsDeleting] = useState(false);
+  const { modal } = App.useApp();
 
   async function handleDeleteButtonClicked(): Promise<void> {
-    const isDeleteConfirmed = await confirmAsync({
+    const isDeleteConfirmed = await modal.confirm({
       title: "Danger Zone",
+      width: ModalWidth.Medium,
       content: (
         <div>
           <Typography.Title level={4} type="danger">
@@ -35,7 +37,6 @@ export function OrganizationDangerZoneView() {
       ),
       okText: <>Yes, delete this organization now and log me out.</>,
       okType: "danger",
-      width: 500,
     });
 
     if (isDeleteConfirmed) {

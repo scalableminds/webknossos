@@ -14,6 +14,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import constants from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
+import { isSaving } from "viewer/model/accessors/annotation_accessor";
 import { Model, Store } from "viewer/singletons";
 import type { SaveState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
@@ -44,6 +45,12 @@ const handleSave = (event?: React.MouseEvent<HTMLElement>) => {
 };
 
 function SaveButton() {
+  // Created once per mount (not at module scope, since the Model singleton is not yet
+  // set when this module is first imported). The stable wrapper lets the "last result"
+  // cache survive across polling iterations, so setSaveInfo doesn't receive a fresh
+  // object on every poll and re-render the button even when nothing changed.
+  const getPushQueueStats = useMemo(() => reuseInstanceOnEquality(Model.getPushQueueStats), []);
+
   const progressFraction = useWkSelector((state) => {
     // For a low action count, the progress info would show only for a very short amount of time.
     // Therefore, the progressFraction is set to null, if the count is low.
@@ -53,7 +60,7 @@ function SaveButton() {
       ? progressInfo.processedActionCount / progressInfo.totalActionCount
       : null;
   });
-  const isBusy = useWkSelector((state) => state.save.isBusy);
+  const isBusy = useWkSelector(isSaving);
   const windowWidth = useWindowWidth();
 
   const [isStateSaved, setIsStateSaved] = useState(false);
@@ -78,13 +85,11 @@ function SaveButton() {
       reportUnsavedDurationThresholdExceeded();
     }
 
-    const getPushQueueStats = reuseInstanceOnEquality(Model.getPushQueueStats);
-
     const newSaveInfo = getPushQueueStats();
     setIsStateSaved(isStateSaved);
     setShowUnsavedWarning(showUnsavedWarning);
     setSaveInfo(newSaveInfo);
-  }, []);
+  }, [getPushQueueStats]);
 
   useEffect(() => {
     // Polling can be removed once VolumeMode saving is reactive

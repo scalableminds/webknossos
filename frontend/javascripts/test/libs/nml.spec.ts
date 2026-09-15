@@ -13,7 +13,7 @@ import { getNmlName, parseNml, serializeToNml } from "viewer/model/helpers/nml_h
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
 import type { Node } from "viewer/model/types/tree_types";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
-import { findGroup } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import { findGroup } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { describe, expect, it } from "vitest";
 import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
 import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
@@ -140,9 +140,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       isExpanded: true,
     },
   ],
-  activeTreeId: 1,
   activeNodeId: 1,
-  activeGroupId: null,
   boundingBox: {
     min: [0, 0, 0],
     max: [500, 500, 500],
@@ -159,11 +157,6 @@ const initialSkeletonTracing: SkeletonTracing = {
       isVisible: true,
     },
   ],
-  navigationList: {
-    list: [],
-    activeIndex: -1,
-  },
-  showSkeletons: true,
   additionalAxes: [],
 };
 
@@ -187,6 +180,10 @@ const initialState: WebknossosState = extend({}, defaultState, {
     isUpdatingCurrentlyAllowed: true,
   },
   task: TASK_ANNOTATION.task,
+  localSkeletonState: {
+    ...defaultState.localSkeletonState,
+    activeTreeId: 1,
+  },
 });
 
 async function testThatParserThrowsWithState(invalidState: WebknossosState, key: string) {
@@ -799,7 +796,9 @@ describe("NML", () => {
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     // This should be unchanged / sanity check
     expect(newState.annotation.name).toBe(initialState.annotation.name);
-    expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
+    expect(newState.localSkeletonState.activeTreeId).toBe(
+      initialState.localSkeletonState.activeTreeId,
+    );
 
     // New node and tree ids should have been assigned
     expect(newSkeletonTracing.trees.size()).toBe(4);
@@ -869,7 +868,9 @@ describe("NML", () => {
 
     // This should be unchanged / sanity check
     expect(newState.annotation.name).toBe(initialState.annotation.name);
-    expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
+    expect(newState.localSkeletonState.activeTreeId).toBe(
+      initialState.localSkeletonState.activeTreeId,
+    );
 
     // New node and tree ids should have been assigned
     expect(size(newSkeletonTracing.treeGroups)).toBe(4);
@@ -883,6 +884,98 @@ describe("NML", () => {
     expect(newSkeletonTracing.trees.getOrThrow(4).groupId).toBe(
       newSkeletonTracing.treeGroups[3].groupId,
     );
+  });
+
+  it("addTreesAndGroups reducer should nest newly imported ungrouped trees into the given target group", () => {
+    const newTrees = new DiffableMap([
+      [
+        100,
+        {
+          treeId: 100,
+          name: "ImportedTree",
+          nodes: new DiffableMap([[50, createDummyNode(50)]]),
+          timestamp: 0,
+          branchPoints: [],
+          edges: EdgeCollection.loadFromArray([]),
+          comments: [],
+          color: [0, 0, 0] as [number, number, number],
+          isVisible: true,
+          groupId: null,
+          type: TreeTypeEnum.DEFAULT,
+          edgesAreVisible: true,
+          metadata: [],
+        },
+      ],
+    ]);
+
+    // Target group 1 ("Axon 1") already exists in the initial tracing.
+    const action = addTreesAndGroupsAction(newTrees, [], undefined, true, 1);
+    const newState = SkeletonTracingReducer(initialState, action);
+    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+
+    // No new top-level groups were pushed, since no groups were imported.
+    expect(newSkeletonTracing.treeGroups.map((g) => g.groupId)).toEqual([1, 2]);
+
+    const importedTree = newSkeletonTracing.trees
+      .values()
+      .find((tree) => tree.name === "ImportedTree");
+    expect(importedTree?.groupId).toBe(1);
+  });
+
+  it("addTreesAndGroups reducer should nest newly imported top-level groups into the given target group", () => {
+    const newTrees = new DiffableMap([
+      [
+        100,
+        {
+          treeId: 100,
+          name: "ImportedGroupedTree",
+          nodes: new DiffableMap([[50, createDummyNode(50)]]),
+          timestamp: 0,
+          branchPoints: [],
+          edges: EdgeCollection.loadFromArray([]),
+          comments: [],
+          color: [0, 0, 0] as [number, number, number],
+          isVisible: true,
+          groupId: 10,
+          type: TreeTypeEnum.DEFAULT,
+          edgesAreVisible: true,
+          metadata: [],
+        },
+      ],
+    ]);
+    const newTreeGroups = [{ groupId: 10, name: "ImportedGroup", children: [] }];
+
+    // Target group 1 ("Axon 1") already exists in the initial tracing and already has one child ("Blah").
+    const action = addTreesAndGroupsAction(newTrees, newTreeGroups, undefined, true, 1);
+    const newState = SkeletonTracingReducer(initialState, action);
+    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+
+    // The imported group was nested into group 1 instead of being pushed to the root.
+    expect(newSkeletonTracing.treeGroups.map((g) => g.groupId)).toEqual([1, 2]);
+
+    const targetGroup = findGroup(newSkeletonTracing.treeGroups, 1);
+    expect(targetGroup?.children.map((g) => g.name).sort()).toEqual(["Blah", "ImportedGroup"]);
+
+    const importedGroup = targetGroup?.children.find((g) => g.name === "ImportedGroup");
+    const importedTree = newSkeletonTracing.trees
+      .values()
+      .find((tree) => tree.name === "ImportedGroupedTree");
+    expect(importedTree?.groupId).toBe(importedGroup?.groupId);
+  });
+
+  it("addTreesAndGroups reducer should fall back to the root group if the given target group no longer exists", () => {
+    const action = addTreesAndGroupsAction(
+      cloneDeep(initialSkeletonTracing.trees),
+      cloneDeep(initialSkeletonTracing.treeGroups),
+      undefined,
+      true,
+      999, // does not exist in the initial tracing
+    );
+    const newState = SkeletonTracingReducer(initialState, action);
+    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+
+    // Same as the default (no targetGroupId) behavior: new groups are pushed to the root.
+    expect(size(newSkeletonTracing.treeGroups)).toBe(4);
   });
 
   it("addTreesAndGroups reducer should replace nodeId references in comments when changing nodeIds", () => {

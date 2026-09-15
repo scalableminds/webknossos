@@ -9,7 +9,9 @@ trait MeshFileUtils {
   // B-tree arrays (v10+)
   protected val keyBtreeLeaves = "btree_leaves"
   protected val keyBtreeInternal = "btree_internal"
-  protected val BTREE_NODE_U64S = 32768 // 256 KB node / 8 bytes per u64
+  protected val btreeNodeU64s = 32768 // 256 KB node / 8 bytes per u64
+  // Number of concurrent workers pulling btree leaf nodes in the bulk lookup path
+  protected val btreeLeafReadParallelity = 32
 
   protected val attrKeyLodScaleMultiplier = "lod_scale_multiplier"
   protected val attrKeyTransform = "transform"

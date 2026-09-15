@@ -10,7 +10,7 @@ This subproject provides C++ functions for use in webknossos, using JNI
 
  - Make sure everything currently compiles
  - Stop WEBKNOSSOS
- - Change the scala definition of the native functions, decorated with `@nativeLoader("webknossosNative0")` and `@native`. Compare the existing `NativeDracoToStlConverter` in the datastore module.
+ - Change the scala definition of the native functions, extending `NativeLoader("webknossosJni0")` and decorated with `@native`. Compare the existing `NativeDracoToStlConverter` in the datastore module.
  - run `sbt` in interactive mode
  - in it, run `project webknossosDatastore` to switch to the datastore subproject
  - then, still in sbt, run `javah` to run the header generation

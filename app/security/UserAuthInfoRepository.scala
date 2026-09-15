@@ -11,21 +11,21 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
-class UserAuthInfoRepository @Inject()(userService: UserService, multiUserDAO: MultiUserDAO)(
-    implicit ec: ExecutionContext)
-    extends AuthInfoRepository {
+class UserAuthInfoRepository @Inject() (userService: UserService, multiUserDAO: MultiUserDAO)(implicit
+    ec: ExecutionContext
+) extends AuthInfoRepository {
 
   override def find[T <: AuthInfo](loginInfo: LoginInfo)(implicit tag: ClassTag[T]): Future[Option[T]] =
     for {
       userOpt <- userService.retrieve(loginInfo)
       multiUserBox <- Fox
-        .runOptional(userOpt)(user => multiUserDAO.findOne(user._multiUser)(GlobalAccessContext))
+        .runOptional(userOpt)(user => multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext))
         .futureBox
     } yield multiUserBox.toOption.flatten.map(_.passwordInfo.asInstanceOf[T])
 
   override def update[T <: AuthInfo](loginInfo: LoginInfo, authInfo: T): Future[T] =
     userService
-      .changePasswordInfo(loginInfo, authInfo.asInstanceOf[PasswordInfo])
+      .changePasswordInfo(LoginInfoAdapter.userIdFromLoginInfo(loginInfo), authInfo.asInstanceOf[PasswordInfo])
       .toFutureWithEmptyToFailure
       .map(_.asInstanceOf[T])
 

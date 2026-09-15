@@ -13,6 +13,7 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { unwrapOrThrow } from "admin/api/api_result";
 import ChangeUsernameView from "admin/auth/change_username_view";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
@@ -34,19 +35,21 @@ import {
   Table,
   Tag,
   Tooltip,
+  Typography,
+  theme,
 } from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import features from "features";
+import { copyToClipboard } from "libs/clipboard";
 import Persistence from "libs/persistence";
-import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
-import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
+import { useApi, useWkSelector } from "libs/react_hooks";
+import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
 import { location } from "libs/window";
 import keyBy from "lodash-es/keyBy";
 import React, { type Key, useState } from "react";
 import { useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -70,6 +73,7 @@ const persistence = new Persistence<{
 
 function UserListView() {
   const { modal } = App.useApp();
+  const { token } = theme.useToken();
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
 
@@ -78,7 +82,7 @@ function UserListView() {
     enforceActiveOrganization(state.activeOrganization),
   );
 
-  const { data: users = [], isFetching: isLoading } = useQueryWithErrorHandling({
+  const { data: users = [], isFetching: isLoading } = useApi({
     queryKey: ["editableUsers"],
     queryFn: getEditableUsers,
     refetchOnWindowFocus: false,
@@ -98,7 +102,7 @@ function UserListView() {
   const [editNameModalOpen, setEditNameModalOpen] = useState(false);
 
   async function activateUser(selectedUser: APIUser, isActive: boolean = true) {
-    const newUser = await updateUser({ ...selectedUser, isActive });
+    const newUser = unwrapOrThrow(await updateUser({ ...selectedUser, isActive }));
     queryClient.setQueryData(["editableUsers"], (currentUsers: APIUser[]) =>
       currentUsers.map((user) => (selectedUser.id === user.id ? newUser : user)),
     );
@@ -113,7 +117,7 @@ function UserListView() {
         "If the user was activated for the first time, they will only be able to see datasets that belong to the Default team. Do you want to configure the teams and permissions of the user?",
       okText: "Configure teams and permissions",
       cancelText: "Close",
-      icon: <CheckCircleOutlined style={{ color: "green" }} />,
+      icon: <CheckCircleOutlined style={{ color: token.colorSuccess }} />,
       onOk: () => {
         setSelectedUserIds([selectedUser.id]);
         setIsTeamRoleModalOpen(isActive);
@@ -365,6 +369,7 @@ function UserListView() {
           rowSelection={rowSelection}
           pagination={{
             defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
           onChange={(_pagination, filters) => {
             // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full error(message)
@@ -403,6 +408,15 @@ function UserListView() {
             sorter={localeCompareBy<APIUser>((user) => user.email)}
           />
           <Column
+            title="Teams - Role"
+            dataIndex="teams"
+            key="teams_"
+            width={250}
+            render={(_teams: APITeamMembership[], user: APIUser) =>
+              renderTeamRolesAndPermissionsForUser(user)
+            }
+          />
+          <Column
             title="Experiences"
             dataIndex="experiences"
             key="experiences"
@@ -427,25 +441,15 @@ function UserListView() {
                       style={{
                         margin: "0 0 0 5px",
                       }}
-                      onClick={async (evt) => {
+                      onClick={(evt) => {
                         evt.stopPropagation();
-                        await navigator.clipboard.writeText(domain);
-                        Toast.success(`"${domain}" copied to clipboard`);
+                        copyToClipboard(domain, "experience domain", true);
                       }}
                     />
                   </Tag>
                 ))}
               </Space>
             )}
-          />
-          <Column
-            title="Teams - Role"
-            dataIndex="teams"
-            key="teams_"
-            width={250}
-            render={(_teams: APITeamMembership[], user: APIUser) =>
-              renderTeamRolesAndPermissionsForUser(user)
-            }
           />
           <Column
             title="Status"
@@ -500,13 +504,14 @@ function UserListView() {
                 </Tooltip>
               ) : (
                 <Tooltip title="Account is not activated">
-                  <CloseCircleOutlined
-                    className="icon-margin-right"
-                    style={{
-                      fontSize: 20,
-                      color: "#e84749",
-                    }}
-                  />
+                  <Typography.Text type="danger">
+                    <CloseCircleOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Typography.Text>
                 </Tooltip>
               );
 
@@ -521,13 +526,14 @@ function UserListView() {
                 </Tooltip>
               ) : (
                 <Tooltip title="Email is not verified">
-                  <MailOutlined
-                    className="icon-margin-right"
-                    style={{
-                      fontSize: 20,
-                      color: "#e84749",
-                    }}
-                  />
+                  <Typography.Text type="danger">
+                    <MailOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Typography.Text>
                 </Tooltip>
               );
 

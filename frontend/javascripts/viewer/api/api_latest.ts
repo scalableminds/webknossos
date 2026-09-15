@@ -6,8 +6,10 @@ import {
   sendAnalyticsEvent,
 } from "admin/rest_api";
 import PriorityQueue from "js-priority-queue";
-import { InputKeyboardNoLoop } from "libs/input";
+import { toBigInt } from "libs/bigint_helpers";
+import { InputKeyboard, type KeyboardNoLoopHandler } from "libs/input";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
@@ -29,6 +31,7 @@ import type {
   BucketAddress,
   ControlMode,
   LabeledVoxelsMap,
+  MappingType,
   OrthoView,
   TypedArray,
   Vector3,
@@ -38,6 +41,7 @@ import Constants, {
   ControlModeEnum,
   EMPTY_OBJECT,
   MappingStatusEnum,
+  normalizeMappingType,
   OrthoViews,
   TDViewDisplayModeEnum,
 } from "viewer/constants";
@@ -52,6 +56,7 @@ import {
 } from "viewer/controller/combinations/skeleton_handlers";
 import UrlManager from "viewer/controller/url_manager";
 import type { WebKnossosModel } from "viewer/model";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -74,6 +79,7 @@ import {
   getActiveTreeGroup,
   getFlatTreeGroups,
   getNodePosition,
+  getSkeletonTracing,
   getTree,
   getTreeAndNode,
   getTreeAndNodeOrNull,
@@ -83,6 +89,7 @@ import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/to
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,
+  getEditableMappingForVolumeTracingId,
   getNameOfRequestedOrVisibleSegmentationLayer,
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
@@ -94,6 +101,7 @@ import {
   getVolumeTracingByNameOrActive,
   getVolumeTracings,
   hasVolumeTracings,
+  needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   dispatchGetNewIdAsync,
@@ -117,6 +125,7 @@ import {
 } from "viewer/model/actions/segmentation_actions";
 import {
   setMappingAction,
+  setMappingDataAction,
   setMappingEnabledAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
@@ -171,15 +180,17 @@ import {
   zoomedPositionToZoomedAddress,
 } from "viewer/model/helpers/position_converter";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
+import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
+import { fetchAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
 import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
 import { api, Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   Mapping,
-  MappingType,
+  NumberLike,
   Segment,
   SegmentGroup,
   SkeletonTracing,
@@ -190,12 +201,18 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 import {
+  captureScreenshots,
+  downloadScreenshot,
+  downloadScreenshotsAsZip,
+  type ScreenshotBlob,
+} from "viewer/view/rendering_utils";
+import {
   callDeep,
   createGroupToSegmentsMap,
   MISSING_GROUP_ID,
   mapGroups,
   moveGroupsHelper,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -265,24 +282,27 @@ class TracingApi {
    * Returns the id of the current active node.
    */
   getActiveNodeId(): number | null | undefined {
-    const tracing = assertSkeleton(Store.getState().annotation);
-    return getActiveNode(tracing)?.id ?? null;
+    const state = Store.getState();
+    const tracing = assertSkeleton(state.annotation);
+    return getActiveNode(tracing, state.localSkeletonState.activeTreeId)?.id ?? null;
   }
 
   /**
    * Returns the id of the current active tree.
    */
   getActiveTreeId(): number | null | undefined {
-    const tracing = assertSkeleton(Store.getState().annotation);
-    return getActiveTree(tracing)?.treeId ?? null;
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
+    return getActiveTree(state)?.treeId ?? null;
   }
 
   /**
    * Returns the id of the current active group.
    */
   getActiveTreeGroupId(): number | null | undefined {
-    const tracing = assertSkeleton(Store.getState().annotation);
-    return getActiveTreeGroup(tracing)?.groupId ?? null;
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
+    return getActiveTreeGroup(state)?.groupId ?? null;
   }
 
   /**
@@ -473,10 +493,11 @@ class TracingApi {
    * api.tracing.setTreeName("Special tree", 1);
    */
   setTreeName(name: string, treeId?: number | null | undefined) {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
 
     if (treeId == null) {
-      treeId = skeletonTracing.activeTreeId;
+      treeId = state.localSkeletonState.activeTreeId;
     }
 
     Store.dispatch(setTreeNameAction(name, treeId));
@@ -489,10 +510,11 @@ class TracingApi {
    * api.tracing.setTreeEdgeVisibility(false, 1);
    */
   setTreeEdgeVisibility(edgesAreVisible: boolean, treeId: number | null | undefined) {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
 
     if (treeId == null) {
-      treeId = skeletonTracing.activeTreeId;
+      treeId = state.localSkeletonState.activeTreeId;
     }
 
     Store.dispatch(setTreeEdgeVisibilityAction(treeId, edgesAreVisible));
@@ -655,7 +677,7 @@ class TracingApi {
    * );
    */
   registerSegment(
-    segmentId: number,
+    segmentId: bigint,
     anchorPosition: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
     layerName?: string,
@@ -731,13 +753,13 @@ class TracingApi {
     const boundingBoxInMag1MagAligned = boundingBoxInMag1.alignWithMag(currentMag, "grow");
     const dataMin = boundingBoxInMag1MagAligned.min;
     const dataMax = boundingBoxInMag1MagAligned.max;
-    const segmentIdToPosition = new Map();
+    const segmentIdToPosition = new Map<bigint, Vector3>();
     let idx = 0;
     for (let z = dataMin[2]; z < dataMax[2]; z += dz) {
       for (let y = dataMin[1]; y < dataMax[1]; y += dy) {
         for (let x = dataMin[0]; x < dataMax[0]; x += dx) {
-          const id = data[idx];
-          if (id !== 0 && !segmentIdToPosition.has(id)) {
+          const id = BigInt(data[idx]);
+          if (id !== 0n && !segmentIdToPosition.has(id)) {
             segmentIdToPosition.set(id, [x, y, z]);
           }
           idx++;
@@ -794,7 +816,7 @@ class TracingApi {
    * );
    * console.log(segment.groupId)
    */
-  getSegment(segmentId: number, layerName: string): Segment {
+  getSegment(segmentId: bigint, layerName: string): Segment {
     const segment = getSegmentsForLayer(Store.getState(), layerName).getOrThrow(segmentId);
     // Return a copy to avoid mutations by third-party code.
     return { ...segment };
@@ -817,7 +839,7 @@ class TracingApi {
    *   "volume-layer-id"
    * );
    */
-  updateSegment(segmentId: number, segment: Partial<Segment>, layerName: string) {
+  updateSegment(segmentId: bigint, segment: Partial<Segment>, layerName: string) {
     Store.dispatch(updateSegmentAction(segmentId, { ...segment, id: segmentId }, layerName));
   }
 
@@ -830,7 +852,7 @@ class TracingApi {
    *   "volume-layer-id"
    * );
    */
-  removeSegment(segmentId: number, layerName: string) {
+  removeSegment(segmentId: bigint, layerName: string) {
     Store.dispatch(removeSegmentAction(segmentId, layerName));
   }
 
@@ -936,7 +958,7 @@ class TracingApi {
     let newSegmentGroups = cloneDeep(segmentGroups);
 
     const groupToSegmentsMap = createGroupToSegmentsMap(segments);
-    let segmentIdsToDelete: number[] = [];
+    let segmentIdsToDelete: bigint[] = [];
 
     if (groupId === MISSING_GROUP_ID) {
       // special case: delete Root group and all children (aka everything)
@@ -1016,8 +1038,9 @@ class TracingApi {
    * api.tracing.getTreeName();
    */
   getTreeName(treeId?: number) {
-    const tracing = assertSkeleton(Store.getState().annotation);
-    const treeName = getTree(tracing, treeId)?.name;
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
+    const treeName = getTree(state, treeId)?.name;
 
     if (!treeName) {
       throw new Error(`Tree with id ${treeId} does not exist.`);
@@ -1054,7 +1077,7 @@ class TracingApi {
    * @example
    * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
    */
-  loadAgglomerateSkeletonForSegmentId(segmentId: number) {
+  loadAgglomerateSkeletonForSegmentId(segmentId: bigint) {
     loadAgglomerateTreeFromId(segmentId);
   }
 
@@ -1199,8 +1222,14 @@ class TracingApi {
    * api.tracing.setNodeRadius(1)
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+    const state = Store.getState();
+    const tracing = assertSkeleton(state.annotation);
+    const treeAndNode = getTreeAndNode(
+      tracing,
+      state.localSkeletonState.activeTreeId,
+      nodeId,
+      treeId,
+    );
     if (!treeAndNode) return;
 
     const [_activeTree, node] = treeAndNode;
@@ -1214,8 +1243,16 @@ class TracingApi {
    * api.tracing.centerNode()
    */
   centerNode = (nodeId?: number): void => {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+    const state = Store.getState();
+    const skeletonTracing = getSkeletonTracing(state.annotation);
+    if (!skeletonTracing) {
+      return;
+    }
+    const treeAndNode = getTreeAndNode(
+      skeletonTracing,
+      state.localSkeletonState.activeTreeId,
+      nodeId,
+    );
     if (!treeAndNode) return;
 
     const [_activeTree, node] = treeAndNode;
@@ -1297,15 +1334,10 @@ class TracingApi {
     lengthInVx: number;
     shortestPath: number[];
   } {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    const { node: sourceNode, tree: sourceTree } = getTreeAndNodeOrNull(
-      skeletonTracing,
-      sourceNodeId,
-    );
-    const { node: targetNode, tree: targetTree } = getTreeAndNodeOrNull(
-      skeletonTracing,
-      targetNodeId,
-    );
+    const state = Store.getState();
+    assertSkeleton(state.annotation);
+    const { node: sourceNode, tree: sourceTree } = getTreeAndNodeOrNull(state, sourceNodeId);
+    const { node: targetNode, tree: targetTree } = getTreeAndNodeOrNull(state, targetNodeId);
 
     if (sourceNode == null || targetNode == null) {
       throw new Error(`The node with id ${sourceNodeId} or ${targetNodeId} does not exist.`);
@@ -1339,7 +1371,6 @@ class TracingApi {
     });
     priorityQueue.queue([sourceNodeId, 0]);
 
-    const state = Store.getState();
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
 
     while (priorityQueue.length > 0) {
@@ -1397,7 +1428,7 @@ class TracingApi {
    *        When true, this lets the user still manipulate the "third dimension"
    *        during the animation (important because otherwise the user cannot continue to trace until
    *        the animation is over).
-   * @param rotation - Vector3 (optional) - Will only be noticeable in flight or oblique mode.
+   * @param rotation - Vector3 (optional) - Will only be noticeable in flight mode.
    * @example
    * api.tracing.centerPositionAnimated([0, 0, 0])
    */
@@ -1491,13 +1522,23 @@ class TracingApi {
     Store.dispatch(setPositionAction(position));
   }
 
+  /**
+   * Sets the current camera rotation.
+   *
+   * @example
+   * api.tracing.setCameraRotation([180, 0, 90])
+   */
+  setCameraRotation(rotation: Vector3) {
+    Store.dispatch(setRotationAction(rotation));
+  }
+
   //  VOLUMETRACING API
 
   /**
    * Returns the id of the current active segment.
    * _Volume tracing only!_
    */
-  getActiveCellId(): number | null | undefined {
+  getActiveCellId(): bigint | null | undefined {
     const tracing = assertVolume(Store.getState());
     return getActiveCellId(tracing);
   }
@@ -1507,7 +1548,7 @@ class TracingApi {
    * If a segment with the given id doesn't exist, it is created.
    * _Volume tracing only!_
    */
-  setActiveCell(id: number) {
+  setActiveCell(id: bigint) {
     assertVolume(Store.getState());
     assertExists(id, "Segment id is missing.");
     Store.dispatch(setActiveCellAction(id));
@@ -1653,13 +1694,14 @@ class DataApi {
   async reloadBuckets(
     layerName: string,
     predicateFn?: (bucket: DataBucket) => boolean,
+    ctx?: OperationContext,
   ): Promise<void> {
     const truePredicate = () => true;
     await Promise.all(
       Object.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
           if (dataLayer.cube.isSegmentation) {
-            await Model.ensureSavedState();
+            await Model.ensureSavedState(ctx);
           }
 
           dataLayer.cube.removeBucketsIf(predicateFn || truePredicate);
@@ -1711,31 +1753,33 @@ class DataApi {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
 
-    const {
-      colors: mappingColors,
-      hideUnmappedIds,
-      showLoadingIndicator,
-      isMergerModeMapping,
-    } = options;
+    const { colors: mappingColors, hideUnmappedIds, isMergerModeMapping } = options;
     if (mappingColors != null) {
       // Consider removing custom color support if this event is rarely used
       // (see `mappingColors` handling in mapping_saga.ts)
       sendAnalyticsEvent("setMapping called with custom colors");
     }
-    const mappingProperties = {
-      mapping:
-        mapping instanceof Map
-          ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
-          : new Map(
-              Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]),
-            ),
-      mappingColors,
-      hideUnmappedIds,
-      showLoadingIndicator,
-      isMergerModeMapping,
-    };
+    const mappingObject =
+      mapping instanceof Map
+        ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
+        : new Map(Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]));
+    // The mapping data is supplied directly here, so this is the two-phase activation from
+    // mapping_saga.ts: setMappingAction configures the (synthetic) mapping name/type, with
+    // dataIsProvidedExternally so the mapping saga does NOT try to load it from the server;
+    // setMappingDataAction then supplies the data the caller already holds.
     Store.dispatch(
-      setMappingAction(layerName, "<custom mapping>", "JSON", false, mappingProperties),
+      setMappingAction(layerName, "<custom mapping>", "JSON", false, {
+        hideUnmappedIds,
+        isMergerModeMapping,
+        dataIsProvidedExternally: true,
+      }),
+    );
+    Store.dispatch(
+      setMappingDataAction(layerName, mappingObject, false, {
+        mappingColors,
+        hideUnmappedIds,
+        isMergerModeMapping,
+      }),
     );
   }
 
@@ -1805,7 +1849,15 @@ class DataApi {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
 
-    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType, false));
+    Store.dispatch(
+      setMappingAction(
+        effectiveLayerName,
+        mappingName,
+        // User scripts written before the rename can still pass "HDF5".
+        normalizeMappingType(mappingType),
+        false,
+      ),
+    );
   }
 
   /**
@@ -1869,7 +1921,7 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
     respectMapping: boolean = false,
     channelIndex: number = 0,
-  ): Promise<number> {
+  ): Promise<NumberLike> {
     let zoomStep;
     const state = Store.getState();
 
@@ -1907,6 +1959,65 @@ class DataApi {
       channelIndex,
     );
     return dataValue;
+  }
+
+  /**
+   * Returns the mapped (agglomerate) id for the segment at the given position, respecting the
+   * active HDF5 mapping. For layers without a local HDF5 mapping, delegates to getDataValue
+   * with respectMapping enabled. For layers with a local HDF5 mapping (proofread mode or
+   * editable mapping), looks up the id in the local mapping and fetches from the server if
+   * the id is not cached yet.
+   */
+  async getMappedDataValue(
+    layerName: string,
+    position: Vector3,
+    zoomStep: number | null | undefined = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
+  ): Promise<bigint> {
+    const state = Store.getState();
+
+    if (!needsLocalHdf5Mapping(state, layerName)) {
+      return toBigInt(
+        await this.getDataValue(layerName, position, zoomStep, additionalCoordinates, true),
+      );
+    }
+
+    const unmappedId = toBigInt(
+      await this.getDataValue(layerName, position, zoomStep, additionalCoordinates),
+    );
+
+    const activeMappingInfo = getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      layerName,
+    );
+
+    if (activeMappingInfo.mapping != null) {
+      const mappedId = new NumberLikeMapWrapper(activeMappingInfo.mapping).getAsBigInt(unmappedId);
+      if (mappedId != null) {
+        return mappedId;
+      }
+    }
+
+    const mappingName = activeMappingInfo.mappingName;
+    if (mappingName == null) {
+      throw new Error(`No active mapping for layer ${layerName}`);
+    }
+
+    const fetchedEntries = await fetchAgglomeratesForSegmentIds(
+      state.dataset,
+      state.annotation,
+      getEditableMappingForVolumeTracingId(state, layerName),
+      layerName,
+      getLayerByName(state.dataset, layerName),
+      mappingName,
+      new Set([unmappedId]),
+    );
+
+    const agglomerateId = new NumberLikeMapWrapper(fetchedEntries).getAsBigInt(unmappedId);
+    if (agglomerateId == null) {
+      throw new Error(`Could not map id ${unmappedId} at position ${position}`);
+    }
+    return agglomerateId;
   }
 
   /**
@@ -1974,6 +2085,7 @@ class DataApi {
     mag1Bbox: BoundingBoxMinMaxType,
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
+    signal?: AbortSignal,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
     const magInfo = getMagInfo(layer.mags);
@@ -1986,11 +2098,15 @@ class DataApi {
     }
 
     const mags = magInfo.getDenseMags();
+    // Restrict the requested buckets to the layer's bounding box so that buckets
+    // outside the layer are never requested. Data outside the layer bounds does
+    // not exist, so the returned cuboid is unchanged (those regions stay zero).
     const bucketAddresses = this.getBucketAddressesInCuboid(
       mag1Bbox,
       mags,
       zoomStep,
       additionalCoordinates,
+      BoundingBox.fromBoundBoxObject(layer.boundingBox).toBoundingBoxMinMaxType(),
     );
 
     if (bucketAddresses.length > 15000) {
@@ -1999,9 +2115,25 @@ class DataApi {
       );
     }
 
-    const buckets = await Promise.all(
-      bucketAddresses.map((addr) => this.getLoadedBucket(layerName, addr)),
-    );
+    // Fetch buckets via a worker pool so that
+    // - in case of cancellation, we don't need to await all bucket requests
+    // - a slow request never blocks a free slot (which would happen when fetching
+    //   batch-by-batch).
+    // Note: the abort signal is not forwarded to individual fetches because other parts
+    // of the app may need those same buckets and we don't want to abort their requests.
+    const BUCKET_POOL_SIZE = 10;
+    const buckets = new Array(bucketAddresses.length);
+    let nextIndex = 0;
+    const worker = async () => {
+      while (nextIndex < bucketAddresses.length) {
+        signal?.throwIfAborted();
+        // Claim the next index before any await so no two workers pick the same one.
+        const i = nextIndex++;
+        buckets[i] = await this.getLoadedBucket(layerName, bucketAddresses[i]);
+      }
+    };
+    await Promise.all(Array.from({ length: BUCKET_POOL_SIZE }, worker));
+
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     return this.cutOutCuboid(buckets, mag1Bbox, elementClass, mags, zoomStep);
   }
@@ -2064,11 +2196,23 @@ class DataApi {
     magnifications: Array<Vector3>,
     zoomStep: number,
     additionalCoordinates: AdditionalCoordinate[] | null,
+    // When provided, the iteration is restricted to buckets that intersect this
+    // bounding box.
+    restrictToBoundingBox?: BoundingBoxMinMaxType | null,
   ): Array<BucketAddress> {
-    const buckets = [];
-    const bottomRight = bbox.max;
+    const buckets: Array<BucketAddress> = [];
+    const effectiveBbox =
+      restrictToBoundingBox != null
+        ? new BoundingBox(bbox).intersectedWith(new BoundingBox(restrictToBoundingBox))
+        : new BoundingBox(bbox);
+
+    if (effectiveBbox.getVolume() === 0) {
+      return buckets;
+    }
+
+    const bottomRight = effectiveBbox.max;
     const minBucket = globalPositionToBucketPosition(
-      bbox.min,
+      effectiveBbox.min,
       magnifications,
       zoomStep,
       additionalCoordinates,
@@ -2253,11 +2397,11 @@ class DataApi {
    */
   labelVoxels(
     globalPositionsMag1: Vector3[],
-    segmentId: number,
+    segmentId: bigint,
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
-    const allowUpdate = state.annotation.isUpdatingCurrentlyAllowed;
+    const allowUpdate = mayEditAnnotation(state);
     const additionalCoordinates =
       optAdditionalCoordinates === undefined
         ? state.flycam.additionalCoordinates
@@ -2319,7 +2463,7 @@ class DataApi {
         numberOfSlices,
         thirdDim,
         true,
-        0,
+        0n,
       );
 
       const thirdDimensionOfSlice = w * labeledMag[thirdDim];
@@ -2333,7 +2477,7 @@ class DataApi {
         segmentId,
         thirdDimensionOfSlice,
         true,
-        0,
+        0n,
       );
     }
 
@@ -2484,7 +2628,7 @@ class DataApi {
       return null;
     }
 
-    const { currentMeshFile } = Store.getState().localSegmentationData[effectiveLayer.name];
+    const { currentMeshFile } = Store.getState().localSegmentationStateByLayer[effectiveLayer.name];
     return currentMeshFile != null ? currentMeshFile.name : null;
   }
 
@@ -2516,13 +2660,13 @@ class DataApi {
     const state = Store.getState();
 
     if (
-      state.localSegmentationData[effectiveLayerName].availableMeshFiles == null ||
-      !state.localSegmentationData[effectiveLayerName].availableMeshFiles.find(
+      state.localSegmentationStateByLayer[effectiveLayerName].availableMeshFiles == null ||
+      !state.localSegmentationStateByLayer[effectiveLayerName].availableMeshFiles.find(
         (el) => el.name === meshFileName,
       )
     ) {
       throw new Error(
-        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(state.localSegmentationData[effectiveLayerName].availableMeshFiles || []).join(", ")}`,
+        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(state.localSegmentationStateByLayer[effectiveLayerName].availableMeshFiles || []).join(", ")}`,
       );
     }
 
@@ -2543,7 +2687,7 @@ class DataApi {
    * api.data.loadPrecomputedMesh(segmentId, currentPosition);
    */
   loadPrecomputedMesh(
-    segmentId: number,
+    segmentId: bigint,
     seedPosition: Vector3,
     layerName: string | null | undefined,
     seedAdditionalCoordinates?: AdditionalCoordinate[],
@@ -2556,7 +2700,7 @@ class DataApi {
     }
 
     const { dataset } = state;
-    const currentMeshFile = state.localSegmentationData[effectiveLayerName].currentMeshFile;
+    const currentMeshFile = state.localSegmentationStateByLayer[effectiveLayerName].currentMeshFile;
 
     if (currentMeshFile == null) {
       throw new Error(
@@ -2593,6 +2737,7 @@ class DataApi {
         seedAdditionalCoordinates,
         meshFileName,
         undefined,
+        undefined,
         effectiveLayerName,
       ),
     );
@@ -2607,7 +2752,7 @@ class DataApi {
    * api.data.computeMeshOnDemand(segmentId, currentPosition);
    */
   computeMeshOnDemand(
-    segmentId: number,
+    segmentId: bigint,
     seedPosition: Vector3,
     seedAdditionalCoordinates?: AdditionalCoordinate[],
   ) {
@@ -2621,7 +2766,7 @@ class DataApi {
    * @example
    * api.data.setMeshVisibility(segmentId, false);
    */
-  setMeshVisibility(segmentId: number, isVisible: boolean, layerName?: string) {
+  setMeshVisibility(segmentId: bigint, isVisible: boolean, layerName?: string) {
     const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       state,
@@ -2631,13 +2776,14 @@ class DataApi {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
     if (
-      state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[segmentId] !=
-      null
+      state.localSegmentationStateByLayer[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
+        segmentId.toString()
+      ] != null
     ) {
       Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
     } else {
       throw new Error(
-        `Mesh for segment ${segmentId} was not found in State.localSegmentationData.`,
+        `Mesh for segment ${segmentId} was not found in State.localSegmentationStateByLayer.`,
       );
     }
   }
@@ -2649,7 +2795,7 @@ class DataApi {
    * @example
    * api.data.removeMesh(segmentId, layerName);
    */
-  removeMesh(segmentId: number, layerName?: string): void {
+  removeMesh(segmentId: bigint, layerName?: string): void {
     const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       state,
@@ -2659,13 +2805,14 @@ class DataApi {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
     if (
-      state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[segmentId] !=
-      null
+      state.localSegmentationStateByLayer[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
+        segmentId.toString()
+      ] != null
     ) {
       Store.dispatch(removeMeshAction(effectiveLayerName, segmentId));
     } else {
       throw new Error(
-        `Mesh for segment ${segmentId} was not found in State.localSegmentationData.`,
+        `Mesh for segment ${segmentId} was not found in State.localSegmentationStateByLayer.`,
       );
     }
   }
@@ -2686,12 +2833,13 @@ class DataApi {
     const additionalCoordinates = state.flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const segmentIds = Object.keys(
-      Store.getState().localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey] ||
-        EMPTY_OBJECT,
+      Store.getState().localSegmentationStateByLayer[effectiveLayerName]?.meshes?.[
+        additionalCoordKey
+      ] || EMPTY_OBJECT,
     );
 
     for (const segmentId of segmentIds) {
-      Store.dispatch(removeMeshAction(effectiveLayerName, Number(segmentId)));
+      Store.dispatch(removeMeshAction(effectiveLayerName, BigInt(segmentId)));
     }
   }
 
@@ -2790,7 +2938,7 @@ class DataApi {
    * @example
    * api.data.getSegmentColor(3);
    */
-  getSegmentColor(segmentId: number, layerName?: string): Vector3 {
+  getSegmentColor(segmentId: bigint, layerName?: string): Vector3 {
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       Store.getState(),
       layerName,
@@ -2807,7 +2955,7 @@ class DataApi {
    * @example
    * api.data.setSegmentColor(3, [0, 1, 1], "segmentation", 0.5);
    */
-  setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string, meshOpacity?: number) {
+  setSegmentColor(segmentId: bigint, rgbColor: Vector3, layerName?: string, meshOpacity?: number) {
     const state = Store.getState();
     const additionalCoordinates = state.flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -2833,17 +2981,49 @@ class DataApi {
         throw new Error(`meshOpacity must be between 0 and 1, but got ${meshOpacity}`);
       }
       if (
-        state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
-          segmentId
+        state.localSegmentationStateByLayer[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
+          segmentId.toString()
         ] != null
       ) {
         Store.dispatch(updateMeshOpacityAction(effectiveLayerName, segmentId, meshOpacity));
       } else {
         throw new Error(
-          `Mesh for segment ${segmentId} was not found in State.localSegmentationData.`,
+          `Mesh for segment ${segmentId} was not found in State.localSegmentationStateByLayer.`,
         );
       }
     }
+  }
+
+  /**
+   * Takes a screenshot of the current viewport(s) and immediately downloads each image as a PNG.
+   * In plane mode, one file per visible viewport is downloaded. Use `captureScreenshots` +
+   * `downloadScreenshotsAsZip` instead when calling in a loop to avoid repeated save dialogs.
+   */
+  downloadScreenshot() {
+    return downloadScreenshot();
+  }
+
+  /**
+   * Renders the current viewport(s) and returns the images as an array of `{ name, blob }` objects
+   * without triggering any download. Suitable for collecting frames in a loop.
+   *
+   * @param prefix - Optional string prepended to each filename (e.g. a zero-padded frame index).
+   *   Resulting names follow the pattern `<prefix>__<dataset>__<x>_<y>_<z>__<plane>.png`, which
+   *   makes the files sort correctly when passed to `downloadScreenshotsAsZip`.
+   */
+  captureScreenshots(prefix?: string): Promise<ScreenshotBlob[]> {
+    return captureScreenshots(prefix);
+  }
+
+  /**
+   * Packages an array of `{ name, blob }` entries (as returned by `captureScreenshots`) into a
+   * single ZIP archive and downloads it once.
+   *
+   * @param screenshots - The collected screenshot blobs to include.
+   * @param zipName - Base name for the downloaded file (without `.zip`). Defaults to `"screenshots"`.
+   */
+  downloadScreenshotsAsZip(screenshots: ScreenshotBlob[], zipName?: string): Promise<void> {
+    return downloadScreenshotsAsZip(screenshots, zipName);
   }
 }
 /**
@@ -2872,14 +3052,13 @@ class UserApi {
     - crosshairSize
     - mouseRotateValue
     - clippingDistance
-    - clippingDistanceArbitrary
+    - clippingDistanceFlight
     - dynamicSpaceDirection
     - displayCrosshair
     - displayScalebars
     - scale
     - tdViewDisplayPlanes
     - tdViewDisplayDatasetBorders
-    - tdViewDisplayLayerBorders
     - newNodeNewTree
     - centerNewNode
     - highlightCommentedNodes
@@ -3019,9 +3198,32 @@ class UtilsApi {
 
   /**
    * Sets a custom handler function for a keyboard shortcut.
+   *
+   * @param key - The key combo to bind, using the `@rwh/keystrokes` syntax
+   *   (e.g. `"a"`, `"shift + a"`, `"control > y, r"`). See the keystrokes
+   *   docs/InputKeyboard usages in this codebase for more syntax examples.
+   * @param handler - Either a plain function, which is invoked once when the
+   *   key combo is pressed (there is no release callback in that case), or a
+   *   `{ onPressed, onReleased? }` object if you also need to react when the
+   *   key combo is released.
+   * @returns An object with an `unregister()` method that removes the handler
+   *   again.
+   *
+   * @example
+   * const handler = api.utils.registerKeyHandler("g", () => {
+   *   console.log("g was pressed");
+   * });
+   * // later
+   * handler.unregister();
    */
-  registerKeyHandler(key: string, handler: () => void): UnregisterHandler {
-    const keyboard = new InputKeyboardNoLoop({
+  registerKeyHandler(
+    key: string,
+    handler: KeyboardNoLoopHandler | (() => void),
+  ): UnregisterHandler {
+    if (typeof handler === "function") {
+      handler = { onPressed: handler, onReleased: () => {} };
+    }
+    const keyboard = new InputKeyboard({
       [key]: handler,
     });
     return {

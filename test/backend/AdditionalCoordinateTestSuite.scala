@@ -1,10 +1,10 @@
 package backend
 
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import org.scalatest.wordspec.AsyncWordSpec
 
-class AdditionalCoordinateTestSuite extends AsyncWordSpec with ProtoGeometryImplicits {
+class AdditionalCoordinateTestSuite extends AsyncWordSpec with ProtoGeometryConversions {
 
   private def definitionsEqual(a: AdditionalAxis, b: AdditionalAxis) =
     a.name == b.name && a.index == b.index && a.lowerBound == b.lowerBound && a.upperBound == b.upperBound
@@ -36,7 +36,8 @@ class AdditionalCoordinateTestSuite extends AsyncWordSpec with ProtoGeometryImpl
         assert(
           definitionsEqual(merged(0), axisT) &&
             definitionsEqual(merged(1), axisA) &&
-            definitionsEqual(merged(2), axisB))
+            definitionsEqual(merged(2), axisB)
+        )
       }
       "merge bounds" in {
         val merged = AdditionalAxis.merge(Seq(Some(Seq(axisT2)), Some(Seq(axisT)))).get
@@ -50,7 +51,7 @@ class AdditionalCoordinateTestSuite extends AsyncWordSpec with ProtoGeometryImpl
         "succeed when coordinates are the same" in {
           val merged = AdditionalAxis.mergeAndAssertSameAdditionalAxes(Seq(Some(Seq(axisT)), Some(Seq(axisT2))))
           assert(!merged.isEmpty)
-          assert(merged.getOrThrow("test").get.head.name == "t")
+          assert(merged.get("test").get.head.name == "t")
         }
       }
 

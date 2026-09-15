@@ -25,13 +25,14 @@ import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_fo
 import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
 import { Alert, App, Button, Input, Modal, Spin, Tag } from "antd";
-import type { ColumnType } from "antd/lib/table/interface";
+import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import features from "features";
+import { copyToClipboard } from "libs/clipboard";
 import { handleGenericError } from "libs/error_handling";
 import { formatSeconds, formatTuple } from "libs/format_utils";
 import Persistence from "libs/persistence";
@@ -42,13 +43,14 @@ import {
   getUrlParamValue,
   hasUrlParam,
   localeCompareBy,
+  scrollToTop,
 } from "libs/utils";
 import isEmpty from "lodash-es/isEmpty";
 import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 import type { APITask, APITaskType, TaskStatus } from "types/api_types";
 
 const { Search, TextArea } = Input;
@@ -135,7 +137,6 @@ function TaskListView({ initialFieldValues }: Props) {
     modal.confirm({
       title: "Manual Task Assignment",
       icon: <UserAddOutlined />,
-      width: 500,
       content: (
         <>
           <div>Please, select a user to manually assign this task to:</div>
@@ -214,9 +215,7 @@ function TaskListView({ initialFieldValues }: Props) {
         title={`Anonymous Task Links for Task ${anonymousTaskId}`}
         open={isAnonymousTaskLinkModalOpen}
         onOk={() => {
-          navigator.clipboard
-            .writeText(tasksString)
-            .then(() => Toast.success("Links copied to clipboard"));
+          copyToClipboard(tasksString, "links");
           setIsAnonymousTaskLinkModalOpen(false);
         }}
         onCancel={() => setIsAnonymousTaskLinkModalOpen(false)}
@@ -450,6 +449,7 @@ function TaskListView({ initialFieldValues }: Props) {
           columns={columns}
           pagination={{
             defaultPageSize: 50,
+            onChange: scrollToTop,
           }}
           expandable={{
             expandedRowRender: (task) => <TaskAnnotationView task={task} />,

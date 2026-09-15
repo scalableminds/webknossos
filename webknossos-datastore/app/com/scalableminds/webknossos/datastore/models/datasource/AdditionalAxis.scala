@@ -1,12 +1,13 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.Msg
+import com.scalableminds.util.box.{Box, Failure, Full}
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import play.api.libs.json.{Format, Json}
 
 // bounds: lower bound inclusive, upper bound exclusive
-case class AdditionalAxis(name: String, bounds: Seq[Int], index: Int) {
+case class AdditionalAxis(name: String, bounds: Seq[Int], index: Int) derives JsonAutoFormat {
   lazy val lowerBound: Int = bounds(0)
   lazy val upperBound: Int = bounds(1)
   lazy val highestValue: Int = upperBound - 1
@@ -27,23 +28,22 @@ case class AdditionalAxis(name: String, bounds: Seq[Int], index: Int) {
 }
 
 object AdditionalAxis {
-  implicit val jsonFormat: Format[AdditionalAxis] = Json.format[AdditionalAxis]
 
   def toProto(additionalAxesOpt: Option[Seq[AdditionalAxis]]): Seq[AdditionalAxisProto] =
     additionalAxesOpt match {
       case Some(additionalCoordinates) =>
-        additionalCoordinates.map(
-          additionalCoordinate =>
-            AdditionalAxisProto(additionalCoordinate.name,
-                                additionalCoordinate.index,
-                                Vec2IntProto(additionalCoordinate.lowerBound, additionalCoordinate.upperBound)))
+        additionalCoordinates.map(additionalCoordinate =>
+          AdditionalAxisProto(
+            additionalCoordinate.name,
+            additionalCoordinate.index,
+            Vec2IntProto(additionalCoordinate.lowerBound, additionalCoordinate.upperBound)
+          )
+        )
       case None => Seq()
     }
 
   def fromProtos(additionalAxisProtos: Seq[AdditionalAxisProto]): Seq[AdditionalAxis] =
-    additionalAxisProtos.map(
-      p => AdditionalAxis(p.name, Seq(p.bounds.x, p.bounds.y), p.index)
-    )
+    additionalAxisProtos.map(p => AdditionalAxis(p.name, Seq(p.bounds.x, p.bounds.y), p.index))
 
   def fromProtosAsOpt(additionalAxisProtos: Seq[AdditionalAxisProto]): Option[Seq[AdditionalAxis]] = {
     val axes = fromProtos(additionalAxisProtos)
@@ -66,9 +66,11 @@ object AdditionalAxis {
               but merging additional coordinates describing data on a remote server with different indices is not
               supported by this.
                */
-              (existingIndex,
-               math.min(existingLowerBound, additionalAxis.lowerBound),
-               math.max(existingUpperBound, additionalAxis.upperBound))
+              (
+                existingIndex,
+                math.min(existingLowerBound, additionalAxis.lowerBound),
+                math.max(existingUpperBound, additionalAxis.upperBound)
+              )
             case None =>
               (additionalAxis.index, additionalAxis.lowerBound, additionalAxis.upperBound)
           }
@@ -76,9 +78,8 @@ object AdditionalAxis {
         }
       case None =>
     }
-    val additionalAxes = additionalAxesMap.iterator.map {
-      case (name, (index, lowerBound, upperBound)) =>
-        AdditionalAxis(name, Seq(lowerBound, upperBound), index)
+    val additionalAxes = additionalAxesMap.iterator.map { case (name, (index, lowerBound, upperBound)) =>
+      AdditionalAxis(name, Seq(lowerBound, upperBound), index)
     }.toSeq
     if (additionalAxes.isEmpty) {
       None
@@ -88,7 +89,8 @@ object AdditionalAxis {
   }
 
   def mergeAndAssertSameAdditionalAxes(
-      additionalAxeses: Seq[Option[Seq[AdditionalAxis]]]): Box[Option[Seq[AdditionalAxis]]] = {
+      additionalAxeses: Seq[Option[Seq[AdditionalAxis]]]
+  ): Box[Option[Seq[AdditionalAxis]]] = {
     val merged = merge(additionalAxeses)
     val mergedCount = merged match {
       case Some(axes) => axes.size
@@ -101,7 +103,7 @@ object AdditionalAxis {
     if (sameAdditionalAxes) {
       Full(merged)
     } else {
-      Failure("dataset.additionalCoordinates.different")
+      Failure(Msg.Dataset.additionalCoordinatesDiffer)
     }
   }
 
@@ -119,9 +121,8 @@ object AdditionalAxis {
           } yield a :+ b
         }
         coordinateSpace.map { coordinates =>
-          coordinates.zipWithIndex.map {
-            case (coordinate, index) =>
-              AdditionalCoordinate(axes(index).name, coordinate)
+          coordinates.zipWithIndex.map { case (coordinate, index) =>
+            AdditionalCoordinate(axes(index).name, coordinate)
           }
         }
       case None => Seq.empty

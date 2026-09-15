@@ -74,37 +74,13 @@ export interface ConfigurationHash {
     | Record<string, string>
     | ((file: ResumableFile, chunk?: ResumableChunk) => Record<string, string>);
   /**
-   * Optional function to process each chunk before testing & sending. Function is passed the chunk as parameter, and should call the `preprocessFinished` method on the chunk when finished. (Default: `null`)
-   */
-  preprocess?: ((chunk: ResumableChunk) => Promise<void> | void) | null;
-  /**
-   * Optional function to process each file before testing & sending the corresponding chunks. Function is passed the file as parameter, and should call the `preprocessFinished` method on the file when finished. (Default: `null`)
-   */
-  preprocessFile?: ((file: ResumableFile) => Promise<void> | void) | null;
-  /**
-   * Method to use when sending chunks to the server (`multipart` or `octet`) (Default: `multipart`)
-   */
-  method?: "multipart" | "octet";
-  /**
-   * HTTP method to use when sending chunks to the server (`POST`, `PUT`, `PATCH`) (Default: `POST`)
-   */
-  uploadMethod?: string;
-  /**
-   * Method for chunk test request. (Default: `'GET'`)
-   */
-  testMethod?: string;
-  /**
    * Prioritize first and last chunks of all files. This can be handy if you can determine if a file is valid for your service from only the first or last chunk. For example, photo or video meta data is usually located in the first part of a file, making it easy to test support from only the first chunk. (Default: `false`)
    */
   prioritizeFirstAndLastChunk?: boolean;
   /**
-   * The target URL for the multipart POST request. This can be a `string` or a `function` that allows you you to construct and return a value, based on supplied `params`. (Default: `/`)
+   * The target URL for the multipart POST request. This can be a `string`. (Default: `/`)
    */
-  target?: string | ((params?: any) => string);
-  /**
-   * The target URL for the GET request to the server for each chunk to see if it already exists. This can be a `string` or a `function` that allows you you to construct and return a value, based on supplied `params`. (Default: `null`)
-   */
-  testTarget?: string | null;
+  target?: string;
   /**
    * Make a GET request to the server for each chunks to see if it already exists. If implemented on the server-side, this will allow for upload resumes even after a browser crash or even a computer restart. (Default: `true`)
    */
@@ -113,7 +89,6 @@ export interface ConfigurationHash {
    * Override the function that generates unique identifiers for each file.
    */
   generateUniqueIdentifier?: ((file: File, event?: Event) => string | Promise<string>) | null;
-  getTarget?: ((request: string, params: any) => string) | null;
   /**
    * The maximum number of retries for a chunk before the upload is failed. Valid values are any positive integer and `undefined` for no limit. (Default: `undefined`)
    */
@@ -244,18 +219,10 @@ export class ResumableUpload implements EventTarget {
       throttleProgressCallbacks: 0.5,
       query: {},
       headers: {},
-      preprocess: null,
-      preprocessFile: null,
-      method: "multipart",
-      uploadMethod: "POST",
-      testMethod: "GET",
       prioritizeFirstAndLastChunk: false,
       target: "/",
-      testTarget: null,
-
       testChunks: true,
       generateUniqueIdentifier: null,
-      getTarget: null,
       maxChunkRetries: 100,
       chunkRetryInterval: null,
       permanentErrors: [400, 401, 403, 404, 409, 415, 500, 501],
@@ -608,19 +575,11 @@ export class ResumableUpload implements EventTarget {
     // metadata and determine if there's even a point in continuing.
     if (this.getOpt("prioritizeFirstAndLastChunk")) {
       for (const file of this.files) {
-        if (
-          file.chunks.length &&
-          file.chunks[0].status() === "pending" &&
-          file.chunks[0].preprocessState === 0
-        ) {
+        if (file.chunks.length && file.chunks[0].status() === "pending") {
           file.chunks[0].send();
           return true;
         }
-        if (
-          file.chunks.length > 1 &&
-          file.chunks[file.chunks.length - 1].status() === "pending" &&
-          file.chunks[file.chunks.length - 1].preprocessState === 0
-        ) {
+        if (file.chunks.length > 1 && file.chunks[file.chunks.length - 1].status() === "pending") {
           file.chunks[file.chunks.length - 1].send();
           return true;
         }

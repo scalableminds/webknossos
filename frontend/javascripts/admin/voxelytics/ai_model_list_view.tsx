@@ -4,18 +4,34 @@ import AdminPage from "admin/admin_page";
 import { getUsersOrganizations } from "admin/api/organization";
 import { getShowTrainingDataLink, JobState } from "admin/job/job_list_view";
 import { getAiModels, updateAiModel } from "admin/rest_api";
-import { App, Button, Col, Flex, Input, Modal, Row, Select, Space, Table, Typography } from "antd";
+import {
+  App,
+  Button,
+  Col,
+  Flex,
+  Input,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Table,
+  type TableProps,
+  Typography,
+} from "antd";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
+import Markdown from "libs/markdown_adapter";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { filterWithSearchQueryAND } from "libs/utils";
+import { filterWithSearchQueryAND, scrollToTop } from "libs/utils";
 import uniq from "lodash-es/uniq";
 import type { Key } from "react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
+import { ModalWidth } from "theme";
 import type { AiModel } from "types/api_types";
 import { enforceActiveUser, formatUserName } from "viewer/model/accessors/user_accessor";
 
@@ -43,6 +59,59 @@ export default function AiModelListView() {
       }
     },
   });
+
+  const columns: TableProps<AiModel>["columns"] = [
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      render: (name: string, model: AiModel) => (
+        <Space orientation="vertical">
+          {name}
+          <FormattedId id={model.id} />
+        </Space>
+      ),
+    },
+    {
+      title: "Created at",
+      key: "created",
+      defaultSortOrder: "descend",
+      sorter: (a: AiModel, b: AiModel) => a.created - b.created,
+      render: (model: AiModel) => <FormattedDate timestamp={model.created} />,
+    },
+    {
+      title: "User",
+      dataIndex: "user",
+      key: "user",
+      render: (user: AiModel["user"]) => formatUserName(activeUser, user),
+      filters: uniq(aiModels.map((model) => formatUserName(null, model.user))).map((username) => ({
+        text: username,
+        value: username,
+      })),
+      onFilter: (value: Key | boolean, model: AiModel) =>
+        formatUserName(null, model.user).startsWith(String(value)),
+      filterSearch: true,
+    },
+    {
+      title: "Status",
+      dataIndex: "trainingJob",
+      key: "status",
+      render: (trainingJob: AiModel["trainingJob"]) =>
+        trainingJob && <JobState job={trainingJob} />,
+    },
+    {
+      title: "Comment",
+      dataIndex: "comment",
+      key: "comment",
+      render: (comment: AiModel["comment"]) => <Markdown>{comment}</Markdown>,
+    },
+    {
+      title: "Actions",
+      render: (aiModel: AiModel) =>
+        renderActionsForModel(modal, aiModel, () => setCurrentlyEditedModel(aiModel)),
+      key: "actions",
+    },
+  ];
 
   return (
     <>
@@ -73,73 +142,23 @@ export default function AiModelListView() {
           />
         }
       >
-        <Table
-          rowKey={(run: AiModel) => `${run.id}`}
-          pagination={{ pageSize: 100 }}
-          columns={[
-            {
-              title: "Name",
-              dataIndex: "name",
-              key: "name",
-              render: (name: string, model: AiModel) => (
-                <Space orientation="vertical">
-                  {name}
-                  <FormattedId id={model.id} />
-                </Space>
-              ),
-            },
-            {
-              title: "Created at",
-              key: "created",
-              defaultSortOrder: "descend",
-              sorter: (a: AiModel, b: AiModel) => a.created - b.created,
-              render: (model: AiModel) => <FormattedDate timestamp={model.created} />,
-            },
-            {
-              title: "User",
-              dataIndex: "user",
-              key: "user",
-              render: (user: AiModel["user"]) => formatUserName(activeUser, user),
-              filters: uniq(aiModels.map((model) => formatUserName(null, model.user))).map(
-                (username) => ({
-                  text: username,
-                  value: username,
-                }),
-              ),
-              onFilter: (value: Key | boolean, model: AiModel) =>
-                formatUserName(null, model.user).startsWith(String(value)),
-              filterSearch: true,
-            },
-            {
-              title: "Status",
-              dataIndex: "trainingJob",
-              key: "status",
-              render: (trainingJob: AiModel["trainingJob"]) =>
-                trainingJob && <JobState job={trainingJob} />,
-            },
-            {
-              title: "Comment",
-              dataIndex: "comment",
-              key: "comment",
-            },
-            {
-              title: "Actions",
-              render: (aiModel: AiModel) =>
-                renderActionsForModel(modal, aiModel, () => setCurrentlyEditedModel(aiModel)),
-              key: "actions",
-            },
-          ]}
-          dataSource={filterWithSearchQueryAND(
-            aiModels,
-            [
-              "name",
-              "comment",
-              (model) => formatUserName(null, model.user),
-              (model) => model.trainingJob?.state || "",
-            ],
-            searchQuery,
-          )}
-        />
+        <Spin spinning={isFetching} size="large">
+          <Table
+            rowKey={(run: AiModel) => `${run.id}`}
+            pagination={{ pageSize: 100, onChange: scrollToTop }}
+            columns={columns}
+            dataSource={filterWithSearchQueryAND(
+              aiModels,
+              [
+                "name",
+                "comment",
+                (model) => formatUserName(null, model.user),
+                (model) => model.trainingJob?.state || "",
+              ],
+              searchQuery,
+            )}
+          />
+        </Spin>
       </AdminPage>
     </>
   );
@@ -150,11 +169,12 @@ const renderActionsForModel = (
   model: AiModel,
   onChangeSharedOrganizations: () => void,
 ) => {
-  const organizationSharingButton = model.isOwnedByUsersOrganization ? (
-    <LinkButton onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
-      Manage Access
-    </LinkButton>
-  ) : null;
+  const organizationSharingButton =
+    model.isOwnedByUsersOrganization && !model.isPretrained ? (
+      <LinkButton onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
+        Manage Access
+      </LinkButton>
+    ) : null;
   if (model.trainingJob == null) {
     return organizationSharingButton;
   }
@@ -226,8 +246,8 @@ function EditModelSharedOrganizationsModal({
       open
       onOk={submitNewSharedOrganizations}
       onCancel={onClose}
-      maskClosable={false}
-      width={800}
+      mask={{ closable: false }}
+      width={ModalWidth.Large}
     >
       <p>
         Select all organizations that should have access to the AI model{" "}
@@ -244,10 +264,15 @@ function EditModelSharedOrganizationsModal({
           allowClear
           autoFocus
           style={{ minWidth: 400 }}
-          dropdownMatchSelectWidth={false}
+          popupMatchSelectWidth={false}
           placeholder="Please select"
           onChange={handleChange}
           options={options}
+          filterOption={(input, option) =>
+            option != null &&
+            (option.label.toLowerCase().includes(input.toLowerCase()) ||
+              option.value.toLowerCase().includes(input.toLowerCase()))
+          }
           value={selectedOrganizationIds}
         />
       </Flex>

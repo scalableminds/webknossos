@@ -1,4 +1,5 @@
 import AdminPage from "admin/admin_page";
+import { unwrapOrThrow } from "admin/api/api_result";
 import {
   createProject,
   getEditableTeams,
@@ -9,7 +10,7 @@ import {
 import { Button, Checkbox, Col, Form, Input, InputNumber, Row, Select, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import type { APITeam, APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
@@ -34,7 +35,8 @@ function ProjectCreateView() {
 
   async function fetchData() {
     setIsFetchingData(true);
-    const [fetchedUsers, fetchedTeams] = await Promise.all([getUsers(), getEditableTeams()]);
+    const [fetchedUsersResult, fetchedTeams] = await Promise.all([getUsers(), getEditableTeams()]);
+    const fetchedUsers = unwrapOrThrow(fetchedUsersResult);
     setUsers(fetchedUsers);
     setTeams(fetchedTeams);
     setIsFetchingData(false);

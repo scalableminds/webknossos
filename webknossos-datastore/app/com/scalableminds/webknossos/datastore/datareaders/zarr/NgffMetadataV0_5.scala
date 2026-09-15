@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import play.api.libs.json.{Json, OFormat}
 
 // See suggested changes to version v0.5 here together with an example: https://ngff.openmicroscopy.org/rfc/2/index.html#examples
 case class NgffMultiscalesItemV0_5(
@@ -13,13 +13,12 @@ case class NgffMultiscalesItemV0_5(
       NgffAxis(name = "c", `type` = "channel"),
       NgffAxis(name = "x", `type` = "space", unit = Some("nanometer")),
       NgffAxis(name = "y", `type` = "space", unit = Some("nanometer")),
-      NgffAxis(name = "z", `type` = "space", unit = Some("nanometer")),
+      NgffAxis(name = "z", `type` = "space", unit = Some("nanometer"))
     ),
     datasets: List[NgffDataset]
-)
+) derives JsonAutoFormat
 
 object NgffMultiscalesItemV0_5 {
-  implicit val jsonFormat: OFormat[NgffMultiscalesItemV0_5] = Json.format[NgffMultiscalesItemV0_5]
 
   def asV0_4(multiscalesItemV0_5: NgffMultiscalesItemV0_5): NgffMultiscalesItem =
     NgffMultiscalesItem(
@@ -30,39 +29,46 @@ object NgffMultiscalesItemV0_5 {
     )
 }
 
-case class NgffMetadataV0_5(version: String,
-                            multiscales: List[NgffMultiscalesItemV0_5],
-                            omero: Option[NgffOmeroMetadata])
+case class NgffMetadataV0_5(
+    version: String,
+    multiscales: List[NgffMultiscalesItemV0_5],
+    omero: Option[NgffOmeroMetadata]
+) derives JsonAutoFormat
 
 object NgffMetadataV0_5 {
-  def fromNameVoxelSizeAndMags(dataLayerName: String,
-                               dataSourceVoxelSize: VoxelSize,
-                               mags: Seq[Vec3Int],
-                               additionalAxes: Option[Seq[AdditionalAxis]],
-                               version: String = "0.5"): NgffMetadataV0_5 = {
-    val datasets = mags.map(
-      mag =>
-        NgffDataset(
-          path = mag.toMagLiteral(allowScalar = true),
-          List(
-            NgffCoordinateTransformation(
-              scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList),
-              translation = None))
-      ))
+  def fromNameVoxelSizeAndMags(
+      dataLayerName: String,
+      dataSourceVoxelSize: VoxelSize,
+      mags: Seq[Vec3Int],
+      additionalAxes: Option[Seq[AdditionalAxis]],
+      version: String = "0.5"
+  ): NgffMetadataV0_5 = {
+    val datasets = mags.map(mag =>
+      NgffDataset(
+        path = mag.toMagLiteral(allowScalar = true),
+        List(
+          NgffCoordinateTransformation(
+            scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList),
+            translation = None
+          )
+        )
+      )
+    )
     val lengthUnitStr = dataSourceVoxelSize.unit.toString
     val axes = List(NgffAxis(name = "c", `type` = "channel")) ++ additionalAxes
       .getOrElse(List.empty)
       .zipWithIndex
-      .map(axisAndIndex => NgffAxis(name = s"t${axisAndIndex._2}", `type` = "space", unit = Some(lengthUnitStr))) ++ List(
+      .map(axisAndIndex =>
+        NgffAxis(name = s"t${axisAndIndex._2}", `type` = "space", unit = Some(lengthUnitStr))
+      ) ++ List(
       NgffAxis(name = "x", `type` = "space", unit = Some(lengthUnitStr)),
       NgffAxis(name = "y", `type` = "space", unit = Some(lengthUnitStr)),
-      NgffAxis(name = "z", `type` = "space", unit = Some(lengthUnitStr)),
+      NgffAxis(name = "z", `type` = "space", unit = Some(lengthUnitStr))
     )
     NgffMetadataV0_5(
       version,
       multiscales = List(NgffMultiscalesItemV0_5(name = Some(dataLayerName), datasets = datasets.toList, axes = axes)),
-      None)
+      None
+    )
   }
-
-  implicit val jsonFormat: OFormat[NgffMetadataV0_5] = Json.format[NgffMetadataV0_5]
 }

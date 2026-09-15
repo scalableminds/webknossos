@@ -1,21 +1,22 @@
 import { Checkbox, Form, InputNumber, Modal, Select, Space, Typography } from "antd";
+import { getRandomColor } from "libs/colors";
+import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { getRandomColor } from "libs/utils";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import { APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import {
-  getDatasetBoundingBox,
-  getSomeMagInfoForDataset,
-} from "viewer/model/accessors/dataset_accessor";
+import { getSomeMagInfoForDataset } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 
 // These values should be kept in sync with the documentation:
 // docs/automation/choosing_mags_and_bboxes.md
@@ -63,6 +64,9 @@ type Props = {
 function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobType }: Props) {
   const dispatch = useDispatch();
   const dataset = useWkSelector((state) => state.dataset);
+  const nativelyRenderedLayerName = useWkSelector(
+    (state) => state.datasetConfiguration.nativelyRenderedLayerName,
+  );
   const annotation = useWkSelector((state) => state.annotation);
   const { userBoundingBoxes: existingBoundingBoxes } = getSomeTracing(annotation);
 
@@ -86,6 +90,11 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
   const selectedMag: Vector3 = availableMags[selectedMagIndex] ?? [1, 1, 1];
 
   const [avoidExistingBoxes, setAvoidExistingBoxes] = useState(true);
+
+  // Optionally restrict the sampling space to an existing bounding box. When null, boxes are
+  // sampled across the entire dataset.
+  const [restrictToBoxId, setRestrictToBoxId] = useState<number | null>(null);
+  const restrictToBox = existingBoundingBoxes.find((bb) => bb.id === restrictToBoxId) ?? null;
 
   const handleTrainingTypeChange = (value: string) => {
     setTrainingType(value);
@@ -132,25 +141,33 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
     setIsGenerating(true);
 
     // Defer the loop to allow the loading state to render first.
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const mag = selectedMag;
-        const datasetBbox = getDatasetBoundingBox(dataset);
-        const { min, max } = datasetBbox;
+        // Restrict sampling to a selected bounding box if one is chosen, otherwise the whole dataset.
+        const samplingBbox = restrictToBox
+          ? new BoundingBox(restrictToBox.boundingBox)
+          : getTransformedDatasetBoundingBox(dataset, nativelyRenderedLayerName);
+        const { min, max } = samplingBbox;
 
         const placementMax: Vector3 = V3.sub(max, sizeInMag1);
 
         if (placementMax[0] < min[0] || placementMax[1] < min[1] || placementMax[2] < min[2]) {
           Toast.warning(
-            "The selected box size does not fit into the dataset at the chosen magnification.",
+            restrictToBox
+              ? "The selected box size does not fit into the selected bounding box at the chosen magnification."
+              : "The selected box size does not fit into the dataset at the chosen magnification.",
           );
           return;
         }
 
         const MAX_RETRIES = 500;
-        // Optionally seed with existing boxes so new ones don't overlap them.
+        // Optionally seed with existing boxes so new ones don't overlap them. The bounding box used
+        // to restrict the sampling space is excluded so it doesn't block all placements.
         const placedBoxes: BoundingBox[] = avoidExistingBoxes
-          ? existingBoundingBoxes.map((bb) => new BoundingBox(bb.boundingBox))
+          ? existingBoundingBoxes
+              .filter((bb) => bb.id !== restrictToBoxId)
+              .map((bb) => new BoundingBox(bb.boundingBox))
           : [];
 
         // Sample a position by choosing uniformly from the discrete set of mag-aligned
@@ -171,6 +188,7 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
         let placed = 0;
         let retries = 0;
         const actions: ReturnType<typeof addUserBoundingBoxAction>[] = [];
+        const tracingId = getSomeTracing(annotation).tracingId;
 
         while (placed < numberOfBoxes && retries < MAX_RETRIES) {
           const boxMin = samplePosition();
@@ -188,18 +206,32 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
           }
 
           placedBoxes.push(candidate);
+          // Reserved sequentially so every generated box gets a collision-free id, even in
+          // collaborative annotations where other users might be creating bounding boxes too.
+          // If this turns out to become a bottleneck, we can batch-allocate ID before this
+          // loop. This will only be relevant when generating bounding boxes in a collaborative
+          // context, though.
+          const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
           actions.push(
-            addUserBoundingBoxAction({
-              boundingBox: { min: boxMin, max: boxMax },
-              name: `Generated Bounding Box ${placed + 1}`,
-              color: getRandomColor(),
-              isVisible: true,
-            }),
+            addUserBoundingBoxAction(
+              {
+                boundingBox: { min: boxMin, max: boxMax },
+                name: `Generated Bounding Box ${placed + 1}`,
+                color: getRandomColor(),
+                isVisible: true,
+              },
+              undefined,
+              id,
+            ),
           );
           placed++;
         }
 
         if (actions.length > 0) {
+          // Wait out any active rebase so the batch is not dropped by the rebase edit guard
+          // (see rebase_edit_guard.ts), then dispatch synchronously. Ids were already reserved
+          // above and stay valid across the rebase.
+          await waitUntilRebaseFinished();
           dispatch(batchActions(actions, "ADD_NEW_USER_BOUNDING_BOX") as unknown as Action);
         }
 
@@ -210,6 +242,8 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
         }
 
         onClose();
+      } catch (error) {
+        handleGenericError(error as Error, "Could not generate the bounding boxes.");
       } finally {
         setIsGenerating(false);
       }
@@ -226,7 +260,6 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
       onOk={handleGenerate}
       okText="Generate"
       okButtonProps={{ disabled: hasSizeError || isGenerating, loading: isGenerating }}
-      width={520}
     >
       <Typography.Paragraph type="secondary">
         Bounding boxes mark the regions used for AI model training. This tool places non-overlapping
@@ -265,6 +298,21 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
             options={availableMags.map((mag, index) => ({
               value: index,
               label: `${mag[0]}-${mag[1]}-${mag[2]}`,
+            }))}
+          />
+        </Form.Item>
+        <Form.Item
+          label="Restrict to bounding box"
+          extra="Limit the sampling space to an existing bounding box. By default, boxes are placed across the entire dataset."
+        >
+          <Select
+            value={restrictToBoxId}
+            onChange={setRestrictToBoxId}
+            allowClear
+            placeholder="Entire dataset"
+            options={existingBoundingBoxes.map((bb) => ({
+              value: bb.id,
+              label: bb.name || `Bounding box ${bb.id}`,
             }))}
           />
         </Form.Item>

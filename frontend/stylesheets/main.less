@@ -20,12 +20,16 @@
 
 @font-face {
   font-family: "Nunito";
-  src: local("Nunito"), url("Nunito-VariableFont_wght.ttf") format("truetype");
+  src:
+    local("Nunito"),
+    url("Nunito-VariableFont_wght.ttf") format("truetype");
 }
 
 @font-face {
   font-family: "Nunito";
-  src: local("Nunito"), url("Nunito-Italic-VariableFont_wght.ttf") format("truetype");
+  src:
+    local("Nunito"),
+    url("Nunito-Italic-VariableFont_wght.ttf") format("truetype");
   font-style: italic;
 }
 
@@ -54,8 +58,6 @@ body {
     background-color: var(--ant-color-error) !important;
   }
 }
-
-
 
 /** Navbar related styles for logo, avatar and organization switching elements. */
 .ant-layout-header {
@@ -102,7 +104,6 @@ body {
     color: var(--color-blue-zircon);
   }
 }
-
 
 /** Utility class for inline-block display. */
 .inline-block {
@@ -174,7 +175,9 @@ body {
     background: #f6ff2e9c;
   }
 
-  100% {}
+  100% {
+    // Keep to not have the background color at 100%.
+  }
 }
 
 // Brain loading spinner
@@ -328,8 +331,6 @@ body {
   }
 }
 
-
-
 /** Stylized box for displaying cross-links (e.g. between datasets). */
 .crosslink-box {
   padding: 20px;
@@ -338,7 +339,6 @@ body {
   box-shadow: var(--ant-box-shadow);
   border-radius: 3px;
 }
-
 
 /** Removes borders from nested input and button elements. */
 .no-borders {
@@ -349,8 +349,6 @@ body {
   }
 }
 
-
-
 /** Ensures the React modal portal has a high enough z-index. */
 .ReactModalPortal {
   position: absolute;
@@ -359,10 +357,25 @@ body {
 
 /** Styling for items in a folder-like listing (e.g. sidebar). */
 .folder-item {
-  padding: 0 4px;
+  // Right padding keeps the (potentially truncated) name from touching the entry's edge.
+  padding: 0 8px 0 4px;
   border-radius: 2px;
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-grow: 1;
+  // Allow the name to shrink and show an ellipsis instead of overflowing.
+  min-width: 0;
+
+  .folder-item-icon {
+    flex: 0 0 auto;
+  }
+
+  .folder-item-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /** Highlight background color for valid drag-and-drop targets. */
@@ -416,7 +429,6 @@ body {
     }
   }
 }
-
 
 /** Fixed width for the project and annotation type dropdown. */
 .project-and-annotation-type-dropdown {

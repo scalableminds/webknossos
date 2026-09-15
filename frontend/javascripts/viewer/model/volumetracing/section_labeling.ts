@@ -8,7 +8,6 @@ import type { OrthoView, Vector2, Vector3 } from "viewer/constants";
 import Constants, { OrthoViews, Vector2Indices, Vector3Indices } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { isBrushTool } from "viewer/model/accessors/tool_accessor";
-import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
 import Dimensions from "viewer/model/dimensions";
 import {
   scaleGlobalPositionWithMagnification,
@@ -243,10 +242,8 @@ class SectionLabeler {
      * Otherwise, return layer-space coordinates in `activeMag`.
      */
 
-    const globalContourList = getVolumeTracingById(
-      Store.getState().annotation,
-      this.volumeTracingId,
-    ).contourList;
+    const globalContourList =
+      Store.getState().localSegmentationStateByLayer[this.volumeTracingId].contourList;
 
     if (useActiveMag) {
       return globalContourList;

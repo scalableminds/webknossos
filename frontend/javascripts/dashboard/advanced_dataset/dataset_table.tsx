@@ -10,19 +10,20 @@ import fileLightIcon from "@images/file-light.png";
 import folderThumbnailIcon from "@images/folder-thumbnail.svg";
 import inactiveDatasetThumbnail from "@images/inactive-dataset-thumbnail.svg";
 import type { DatasetUpdater } from "admin/rest_api";
-import { Dropdown, type MenuProps, Space, Table, Tag, Tooltip } from "antd";
+import { App, Dropdown, type MenuProps, Space, Table, Tag, Tooltip } from "antd";
 import type {
   ColumnType,
   FilterValue,
   SorterResult,
   TablePaginationConfig,
-} from "antd/lib/table/interface";
+} from "antd/es/table/interface";
 import classNames from "classnames";
 import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import DatasetActionView, {
   getDatasetActionContextMenu,
 } from "dashboard/advanced_dataset/dataset_action_view";
+import { DraggableDatasetType } from "dashboard/advanced_dataset/dnd_types";
 import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
@@ -31,11 +32,13 @@ import {
   generateSettingsForFolder,
   useDatasetDrop,
 } from "dashboard/folders/folder_tree";
+import { ZeroStorageReasonList } from "dashboard/storage_info";
 import { diceCoefficient as dice } from "dice-coefficient";
-import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
+import { stringToTagColor } from "libs/colors";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
-import { compareBy, localeCompareBy } from "libs/utils";
+import { compareBy, localeCompareBy, scrollContainerToTop } from "libs/utils";
 import difference from "lodash-es/difference";
 import keyBy from "lodash-es/keyBy";
 import minBy from "lodash-es/minBy";
@@ -47,7 +50,7 @@ import type React from "react";
 import { Fragment, PureComponent, useCallback, useContext } from "react";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { Unicode } from "viewer/constants";
@@ -79,9 +82,12 @@ type Props = {
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
-  setFolderIdForEditModal: (arg0: string | null) => void;
   selectedDatasets: APIDatasetCompact[];
   context: DatasetCollectionContextValue;
+  // The table is rendered inside a scrolling container that isn't the window
+  // (see dataset_folder_view.tsx). Passed through so pagination changes can
+  // scroll that container back to the top instead of the (non-scrolling) window.
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 };
 
 type State = {
@@ -96,7 +102,6 @@ type ContextMenuProps = {
   datasetCollectionContext: DatasetCollectionContextValue;
   contextMenuPosition: [number, number] | null | undefined;
   hideContextMenu: () => void;
-  editFolder: () => void;
   datasets: APIDatasetCompact[];
   folder: FolderItemWithName | null;
   reloadDataset: Props["reloadDataset"];
@@ -104,13 +109,13 @@ type ContextMenuProps = {
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = useContext(ContextMenuContext);
+  const { modal } = App.useApp();
   const {
     datasets,
     reloadDataset,
     contextMenuPosition,
     hideContextMenu,
     folder,
-    editFolder,
     datasetCollectionContext,
   } = propsWithInputRef;
   let menu: MenuProps = { items: [] };
@@ -123,9 +128,10 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
         hideContextMenu,
         datasets,
         reloadDataset,
+        modal,
       });
     } else if (folder != null) {
-      menu = generateSettingsForFolder(folder, datasetCollectionContext, editFolder, true);
+      menu = generateSettingsForFolder(folder, datasetCollectionContext, true);
     }
   }
 
@@ -170,7 +176,6 @@ interface DraggableDatasetRowProps extends React.HTMLAttributes<HTMLTableRowElem
   isADataset: boolean;
   rowKey: string;
 }
-export const DraggableDatasetType = "DraggableDatasetRow";
 
 function isRecordADataset(record: DatasetOrFolder): record is APIDatasetCompact {
   return (record as APIDatasetCompact).folderId !== undefined;
@@ -319,13 +324,7 @@ class DatasetRenderer {
         title={
           <>
             The storage may be zero because:
-            <ul>
-              <li>The storage hasn't been scanned yet</li>
-              <li>The data is streamed from external sources</li>
-              <li>The data layers are already counted in other (linked) datasets</li>
-              <li>The dataset belongs to another organization</li>
-              <li>The dataset is empty</li>
-            </ul>
+            {ZeroStorageReasonList}
           </>
         }
       >
@@ -438,7 +437,7 @@ class FolderRenderer {
     return null;
   }
   renderCreationDateColumn(): React.ReactNode {
-    return null;
+    return <FormattedDate timestamp={this.data.created} />;
   }
   renderActionsColumn(): React.ReactNode {
     return this.datasetTable.getFolderSettingsActions(this.data);
@@ -552,19 +551,9 @@ class DatasetTable extends PureComponent<Props, State> {
     );
   };
 
-  editFolder(folder: FolderItemWithName) {
-    const { setFolderIdForEditModal } = this.props;
-    setFolderIdForEditModal(folder.key);
-  }
-
   getFolderSettingsActions(folder: FolderItemWithName): React.ReactNode {
     const { context } = this.props;
-    const folderTreeContextMenuItems = generateSettingsForFolder(
-      folder,
-      context,
-      () => this.editFolder(folder),
-      true,
-    );
+    const folderTreeContextMenuItems = generateSettingsForFolder(folder, context, true);
     const settings = folderTreeContextMenuItems.items
       .filter((item) => !item.disabled)
       .map((item) => {
@@ -647,9 +636,7 @@ class DatasetTable extends PureComponent<Props, State> {
         title: "Creation Date",
         dataIndex: "created",
         key: "created",
-        sorter: compareBy<RowRenderer>((rowRenderer) =>
-          isRecordADataset(rowRenderer.data) ? rowRenderer.data.created : 0,
-        ),
+        sorter: compareBy<RowRenderer>((rowRenderer) => rowRenderer.data.created),
         sortOrder: sortedInfo.columnKey === "created" ? sortedInfo.order : undefined,
         render: (_created, rowRenderer: RowRenderer) => rowRenderer.renderCreationDateColumn(),
       },
@@ -701,9 +688,6 @@ class DatasetTable extends PureComponent<Props, State> {
           reloadDataset={this.props.reloadDataset}
           contextMenuPosition={contextMenuPosition}
           datasetCollectionContext={context}
-          editFolder={
-            folderForContextMenu != null ? () => this.editFolder(folderForContextMenu) : () => {}
-          }
         />
         <Table
           dataSource={sortedDataSourceRenderers}
@@ -712,6 +696,7 @@ class DatasetTable extends PureComponent<Props, State> {
           components={components}
           pagination={{
             defaultPageSize: 50,
+            onChange: () => scrollContainerToTop(this.props.scrollContainerRef?.current),
           }}
           styles={{
             // hide/offset the first column containing the checkbox for row selection
@@ -965,7 +950,7 @@ export function TeamTags({
                 textOverflow: "ellipsis",
               }}
               variant="outlined"
-              color={stringToColor(team.name)}
+              color={stringToTagColor(team.name)}
             >
               {team.name}
               {isCumulative ? "*" : ""}

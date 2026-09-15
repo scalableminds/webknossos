@@ -38,6 +38,11 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
         showVersionRestore: action.active,
       });
     }
+    case "SET_IS_RESTORING_VERSION": {
+      return updateKey(state, "uiInformation", {
+        isRestoringVersion: action.isRestoring,
+      });
+    }
 
     case "SET_STORED_LAYOUTS": {
       const { storedLayouts } = action;
@@ -129,6 +134,12 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_KEYBOARD_SHORTCUT_CONFIG_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showKeyboardShortcutConfigModal: action.visible,
+      });
+    }
+
     case "SET_DUPLICATE_ANNOTATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showDuplicateAnnotationModal: action.visible,
@@ -138,48 +149,6 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
     case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showRenderAnimationModal: action.visible,
-      });
-    }
-
-    case "SET_BUSY_BLOCKING_INFO_ACTION": {
-      if (action.value.isBusy && state.uiInformation.busyBlockingInfo.isBusy) {
-        throw new Error(
-          "Busy-mutex violated. Cannot set isBusy to true, as it is already set to true.",
-        );
-      }
-
-      return updateKey(state, "uiInformation", {
-        busyBlockingInfo: {
-          ...action.value,
-          allowedSagas: [],
-        },
-      });
-    }
-    case "ALLOW_SAGA_WHILE_BUSY_ACTION": {
-      if (!state.uiInformation.busyBlockingInfo.isBusy) {
-        throw new Error(
-          "Busy-mutex violated. Trying to white list a saga but the mutex isn't busy.",
-        );
-      }
-
-      return updateKey2(state, "uiInformation", "busyBlockingInfo", {
-        allowedSagas: state.uiInformation.busyBlockingInfo.allowedSagas.concat(
-          action.value.allowedSaga,
-        ),
-      });
-    }
-
-    case "DISALLOW_SAGA_WHILE_BUSY_ACTION": {
-      if (!state.uiInformation.busyBlockingInfo.isBusy) {
-        throw new Error(
-          "Busy-mutex violated. Trying to remove saga from white list but the mutex isn't busy.",
-        );
-      }
-
-      return updateKey2(state, "uiInformation", "busyBlockingInfo", {
-        allowedSagas: state.uiInformation.busyBlockingInfo.allowedSagas.filter(
-          (s) => s !== action.value.allowedSaga,
-        ),
       });
     }
 

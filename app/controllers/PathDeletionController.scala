@@ -11,18 +11,19 @@ import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
 
 import scala.concurrent.ExecutionContext
 
-class PathDeletionController @Inject()(conf: WkConf, pathDeletionDAO: PathDeletionDAO)(implicit ec: ExecutionContext,
-                                                                                       bodyParsers: PlayBodyParsers)
-    extends Controller {
+class PathDeletionController @Inject() (conf: WkConf, pathDeletionDAO: PathDeletionDAO)(implicit
+    ec: ExecutionContext,
+    bodyParsers: PlayBodyParsers
+) extends Controller {
 
-  def listPathsToDelete(key: String): Action[AnyContent] = Action.async { implicit request =>
+  def listPathsToDelete(key: String): Action[AnyContent] = Action.fox { _ =>
     for {
       _ <- authenticateExternalPathDeletionService(key)
       paths <- pathDeletionDAO.findAll
     } yield Ok(Json.toJson(paths))
   }
 
-  def markAsDeleted(key: String): Action[Seq[String]] = Action.async(validateJson[Seq[String]]) { implicit request =>
+  def markAsDeleted(key: String): Action[Seq[String]] = Action.fox(validateJson[Seq[String]]) { implicit request =>
     for {
       _ <- authenticateExternalPathDeletionService(key)
       _ <- Fox.serialCombined(request.body.grouped(100))(pathDeletionDAO.markAsDeleted)
@@ -30,21 +31,22 @@ class PathDeletionController @Inject()(conf: WkConf, pathDeletionDAO: PathDeleti
   }
 
   private def authenticateExternalPathDeletionService(key: String): Fox[Unit] =
-    Fox.fromBool(key == conf.ExternalPathDeletionService.key) ?~> "externalPathDeletionService.wrongKey"
+    Fox.fromBool(key == conf.ExternalPathDeletionService.key) ?~> "Wrong key for external path deletion service."
 
 }
 
-class PathDeletionService @Inject()(pathDeletionDAO: PathDeletionDAO) {
+class PathDeletionService @Inject() (pathDeletionDAO: PathDeletionDAO) {
 
   def deletePaths(datastoreClient: WKRemoteDataStoreClient, pathsToDelete: Seq[UPath]): Fox[Unit] =
     for {
-      pathsToDeleteExternally <- datastoreClient.deletePaths(pathsToDelete)
+      filtered = pathsToDelete.filter(_.toZipEntryUPath.isEmpty) // Cannot delete paths that reference ZipEntries
+      pathsToDeleteExternally <- datastoreClient.deletePaths(filtered)
       _ <- pathDeletionDAO.insertMultiple(pathsToDeleteExternally)
     } yield ()
 
 }
 
-class PathDeletionDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
+class PathDeletionDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def findAll: Fox[Seq[String]] =
     run(q"""SELECT path from webknossos.remote_paths_to_delete ORDER BY created""".as[String])
@@ -63,7 +65,8 @@ class PathDeletionDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     else
       for {
         _ <- run(
-          q"""DELETE FROM webknossos.remote_paths_to_delete WHERE path in ${SqlToken.tupleFromList(paths)}""".asUpdate)
+          q"""DELETE FROM webknossos.remote_paths_to_delete WHERE path in ${SqlToken.tupleFromList(paths)}""".asUpdate
+        )
       } yield ()
 
 }

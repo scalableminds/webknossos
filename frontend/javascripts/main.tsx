@@ -1,6 +1,7 @@
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { QueryClient } from "@tanstack/react-query";
+import { defaultShouldDehydrateQuery, QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import "admin/datastore_health_check";
 import { getActiveUser } from "admin/rest_api";
 import { message } from "antd";
 import ErrorBoundary from "components/error_boundary";
@@ -31,9 +32,10 @@ import { checkAnyOrganizationExists, getOrganization } from "admin/api/organizat
 import { CheckCertificateModal } from "components/check_certificate_modal";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
-import { RouterProvider } from "react-router-dom";
+import { RouterProvider } from "react-router/dom";
 import router from "router/router";
-import GlobalThemeProvider, { getThemeFromUser } from "theme";
+import { getThemeFromUser } from "theme";
+import GlobalThemeProvider from "theme_provider";
 import HelpButton from "viewer/view/help/help_button";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
@@ -100,6 +102,7 @@ async function initApp() {
   ErrorHandling.initialize({
     throwAssertions: false,
   });
+
   message.config({ top: 30 });
   checkBrowserFeatures();
   const containerElement = document.getElementById("main-container");
@@ -131,7 +134,15 @@ async function initApp() {
         <Provider store={Store}>
           <PersistQueryClientProvider
             client={reactQueryClient}
-            persistOptions={{ persister: localStoragePersister }}
+            persistOptions={{
+              persister: localStoragePersister,
+              dehydrateOptions: {
+                // Queries can opt out of being persisted to localStorage by setting
+                // meta.persist to false, e.g. for large viewer data.
+                shouldDehydrateQuery: (query) =>
+                  defaultShouldDehydrateQuery(query) && query.meta?.persist !== false,
+              },
+            }}
           >
             {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
           certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.

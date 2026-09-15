@@ -1,10 +1,10 @@
 import isEqual from "lodash-es/isEqual";
 import range from "lodash-es/range";
-import runAsync from "test/helpers/run_async";
 import PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "viewer/model";
+import { sleep } from "libs/utils";
 import type { BucketAddress } from "viewer/constants";
 import { BucketStateEnum, DataBucket } from "viewer/model/bucket_data_handling/bucket";
 
@@ -106,7 +106,7 @@ describe("PullQueue", () => {
     context.buckets = buckets;
   });
 
-  it<TestContext>("Successful pulling: should receive the correct data", ({
+  it<TestContext>("Successful pulling: should receive the correct data", async ({
     pullQueue,
     buckets,
   }) => {
@@ -114,25 +114,24 @@ describe("PullQueue", () => {
     const bucketData2 = range(0, 32 * 32 * 32).map((i) => (2 * i) % 256);
 
     vi.mocked(requestWithFallback).mockResolvedValue([
-      new Uint8Array(bucketData1),
-      new Uint8Array(bucketData2),
+      { type: "data", data: new Uint8Array(bucketData1) },
+      { type: "data", data: new Uint8Array(bucketData2) },
     ]);
     pullQueue.pull();
-    return runAsync([
-      () => {
-        expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
-        expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
-        expect(buckets[0].getData()).toEqual(new Uint8Array(bucketData1));
-        expect(buckets[1].getData()).toEqual(new Uint8Array(bucketData2));
-      },
-    ]);
+
+    await sleep(0); // sleep a bit so that the event loop can process the fetches
+
+    expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+    expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
+    expect(buckets[0].getData()).toEqual(new Uint8Array(bucketData1));
+    expect(buckets[1].getData()).toEqual(new Uint8Array(bucketData2));
   });
 
   function prepare() {
     vi.mocked(requestWithFallback)
       .mockReset()
       .mockRejectedValueOnce(new Error("Expected promise rejection in tests. Can be ignored."))
-      .mockResolvedValueOnce([new Uint8Array(32 ** 3)]);
+      .mockResolvedValueOnce([{ type: "data", data: new Uint8Array(32 ** 3) }]);
   }
 
   it<TestContext>("Request Failure: should not request twice if not bucket dirty", async ({
@@ -142,27 +141,45 @@ describe("PullQueue", () => {
     prepare();
     pullQueue.pull();
 
-    return runAsync([
-      async () => {
-        expect(requestWithFallback).toHaveBeenCalledTimes(1);
-        expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
-        expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
-      },
-    ]);
+    await sleep(0); // sleep a bit so that the event loop can process the fetches
+
+    expect(requestWithFallback).toHaveBeenCalledTimes(1);
+    expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
+    expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
   });
 
-  it<TestContext>("Request Failure: should reinsert dirty buckets", ({ pullQueue, buckets }) => {
+  it<TestContext>("Request Failure: should reinsert dirty buckets", async ({
+    pullQueue,
+    buckets,
+  }) => {
     prepare();
     buckets[0].dirty = true;
     buckets[0].data = new Uint8Array(32 * 32 * 32);
     pullQueue.pull();
 
-    return runAsync([
-      async () => {
-        expect(requestWithFallback).toHaveBeenCalledTimes(2);
-        expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
-        expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
-      },
-    ]);
+    await sleep(50); // sleep a bit so that the event loop can process the fetches
+
+    expect(requestWithFallback).toHaveBeenCalledTimes(2);
+    expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+    expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
+  });
+
+  it<TestContext>("Partial failure: failure results are retried, empty results are not", async ({
+    pullQueue,
+    buckets,
+  }) => {
+    // A single response can now contain successfully read data, genuinely empty buckets
+    // and buckets that failed to be read. Failures must be retried (reset to UNREQUESTED),
+    // while empty buckets are terminal (here rendered black because renderMissingDataBlack
+    // is enabled in the mocked store, leading to LOADED).
+    vi.mocked(requestWithFallback)
+      .mockReset()
+      .mockResolvedValueOnce([{ type: "failure" }, { type: "empty" }]);
+    pullQueue.pull();
+
+    await sleep(0); // sleep a bit so that the event loop can process the fetches
+
+    expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
+    expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
   });
 });

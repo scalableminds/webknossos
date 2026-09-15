@@ -35,12 +35,12 @@ function getFirstVolumeTracingOrFail(annotation: StoreAnnotation): VolumeTracing
   throw new Error("Annotation is not of type volume!");
 }
 
-const INITIAL_LARGEST_SEGMENT_ID = initialState.annotation.volumes[0].largestSegmentId ?? 0;
+const INITIAL_LARGEST_SEGMENT_ID = initialState.annotation.volumes[0].largestSegmentId ?? 0n;
 
 describe("VolumeTracing", () => {
   it("should set a new active cell", () => {
-    const createCell = createCellAction(1000, 1000);
-    const setActiveCell = setActiveCellAction(1);
+    const createCell = createCellAction(1000n, 1000n);
+    const setActiveCell = setActiveCellAction(1n);
 
     // Create two cells, then set first one active
     let newState = VolumeTracingReducer(initialState, createCell);
@@ -49,48 +49,48 @@ describe("VolumeTracing", () => {
     expect(newState).not.toBe(initialState);
 
     const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.activeCellId).toBe(1);
+    expect(tracing.activeCellId).toBe(1n);
   });
 
   it("should set a new active cell, which did not exist before", () => {
-    const setActiveCell = setActiveCellAction(10);
+    const setActiveCell = setActiveCellAction(10n);
 
     // Set a cell active which did not exist before
     const newState = VolumeTracingReducer(initialState, setActiveCell);
     expect(newState).not.toBe(initialState);
 
     const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.activeCellId).toBe(10);
+    expect(tracing.activeCellId).toBe(10n);
   });
 
   it("should set active but not create a cell 0", () => {
     const setActiveCell = setActiveCellAction;
 
     // Set activeCellId to 1 and back to 0
-    let newState = VolumeTracingReducer(initialState, setActiveCell(1));
-    newState = VolumeTracingReducer(newState, setActiveCell(0));
+    let newState = VolumeTracingReducer(initialState, setActiveCell(1n));
+    newState = VolumeTracingReducer(newState, setActiveCell(0n));
 
     const tracing = getFirstVolumeTracingOrFail(newState.annotation);
     // There should be no cell with the id 0 as it is reserved for "no annotation"
-    expect(tracing.activeCellId).toBe(0);
+    expect(tracing.activeCellId).toBe(0n);
   });
 
   it("should create a cell and set it as the activeCell", () => {
     const createCell = createCellAction(
-      initialState.annotation.volumes[0].activeCellId as number,
-      initialState.annotation.volumes[0].largestSegmentId as number,
+      initialState.annotation.volumes[0].activeCellId,
+      initialState.annotation.volumes[0].largestSegmentId ?? 0n,
     );
 
     // Create cell
     const newState = VolumeTracingReducer(initialState, createCell);
     const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.activeCellId).toBe(INITIAL_LARGEST_SEGMENT_ID + 1);
+    expect(tracing.activeCellId).toBe(INITIAL_LARGEST_SEGMENT_ID + 1n);
   });
 
   it("should create a non-existing cell id and not update the largestSegmentId", () => {
     const createCell = createCellAction(
-      initialState.annotation.volumes[0].activeCellId as number,
-      initialState.annotation.volumes[0].largestSegmentId as number,
+      initialState.annotation.volumes[0].activeCellId,
+      initialState.annotation.volumes[0].largestSegmentId ?? 0n,
     );
 
     // Create a cell with an id that is higher than the largestSegmentId
@@ -102,15 +102,15 @@ describe("VolumeTracing", () => {
 
   it("should create an existing cell and not update the largestSegmentId", () => {
     const createCell = createCellAction(
-      initialState.annotation.volumes[0].activeCellId as number,
-      initialState.annotation.volumes[0].largestSegmentId as number,
+      initialState.annotation.volumes[0].activeCellId,
+      initialState.annotation.volumes[0].largestSegmentId ?? 0n,
     );
     const alteredState = update(initialState, {
       annotation: {
         volumes: {
           "0": {
             largestSegmentId: {
-              $set: 5,
+              $set: 5n,
             },
           },
         },
@@ -120,13 +120,13 @@ describe("VolumeTracing", () => {
     // Create cell with an id that is lower than the largestSegmentId
     const newState = VolumeTracingReducer(alteredState, createCell);
     const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.largestSegmentId).toBe(5);
+    expect(tracing.largestSegmentId).toBe(5n);
   });
 
   it("should create cells and only update the largestSegmentId after a voxel was annotated", () => {
-    const LARGEST_SEGMENT_ID = 5;
+    const LARGEST_SEGMENT_ID = 5n;
     const getCreateCell = (state: WebknossosState) =>
-      createCellAction(state.annotation.volumes[0].activeCellId as number, LARGEST_SEGMENT_ID);
+      createCellAction(state.annotation.volumes[0].activeCellId, LARGEST_SEGMENT_ID);
     const finishAnnotationStroke = finishAnnotationStrokeAction(VOLUME_TRACING_ID);
     const alteredState = update(initialState, {
       annotation: {
@@ -156,7 +156,7 @@ describe("VolumeTracing", () => {
 
     // The largestSegmentId should be updated, since a voxel was annotated with id 8
     const tracing2 = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing2.largestSegmentId).toBe(8);
+    expect(tracing2.largestSegmentId).toBe(8n);
   });
 
   it("should set trace/view tool", () => {
@@ -227,16 +227,17 @@ describe("VolumeTracing", () => {
     const newState = VolumeTracingReducer(initialState, registerLabelPoint);
     expect(newState).not.toBe(initialState);
 
-    const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.lastLabelActions[0].centroid).toEqual(direction);
+    const { lastLabelActions } = newState.localSegmentationStateByLayer[VOLUME_TRACING_ID];
+    expect(lastLabelActions[0].centroid).toEqual(direction);
   });
 
   it("should add values to the contourList", () => {
     const { newState, contourList } = prepareContourListTest(initialState);
     expect(newState).not.toBe(initialState);
 
-    const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.contourList).toEqual(contourList);
+    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList).toEqual(
+      contourList,
+    );
   });
 
   it("should add values to the contourList even if getActiveMagIndexForLayer(zoomStep, 'tracingId') > 1", () => {
@@ -252,8 +253,9 @@ describe("VolumeTracing", () => {
     const { newState, contourList } = prepareContourListTest(alteredState);
     expect(newState).not.toBe(initialState);
 
-    const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.contourList).toEqual(contourList);
+    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList).toEqual(
+      contourList,
+    );
   });
 
   it("should not add values to the contourList if volumetracing is not allowed", () => {
@@ -295,8 +297,7 @@ describe("VolumeTracing", () => {
     // And reset the list
     newState = VolumeTracingReducer(newState, resetContour);
     expect(newState).not.toBe(initialState);
-    const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.contourList).toEqual([]);
+    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList).toEqual([]);
   });
 
   describe("should merge segments", () => {
@@ -313,7 +314,7 @@ describe("VolumeTracing", () => {
 
       expect(segment1).toMatchObject({
         id: id1,
-        groupId: id1,
+        groupId: Number(id1),
         name: "Name 1 and Name 2",
         metadata: [
           { key: "someKey1-1", stringValue: "someStringValue - segment 1" },
@@ -363,7 +364,7 @@ describe("VolumeTracing", () => {
 
       expect(segment1).toMatchObject({
         id: id1,
-        groupId: id2,
+        groupId: Number(id2),
         name: "Segment 1 and Name 2", // Note that "Segment 1" got used here as a fallback name.
         metadata: [
           { key: "someKey1", stringValue: "someStringValue - segment 2" },

@@ -6,8 +6,11 @@ import template from "lodash-es/template";
 import type { ElementClass } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
-import constants, { OrthoViewIndices, ViewModeValuesIndices } from "viewer/constants";
-import { PLANE_SUBDIVISION } from "viewer/geometries/plane";
+import constants, {
+  OrthoViewIndices,
+  PLANE_SUBDIVISION,
+  ViewModeValuesIndices,
+} from "viewer/constants";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { MAPPING_TEXTURE_WIDTH } from "viewer/model/bucket_data_handling/mappings";
 import {
@@ -160,7 +163,7 @@ uniform uint hoveredUnmappedSegmentIdLow;
 uniform uint hoveredUnmappedSegmentIdHigh;
 
 // For some reason, taking the dataset scale from the uniform results in imprecise
-// rendering of the brush circle (and issues in the arbitrary modes). That's why it
+// rendering of the brush circle (and issues in flight mode). That's why it
 // is directly inserted into the source via templating.
 const vec3 voxelSizeFactor = <%= formatVector3AsVec3(voxelSizeFactor) %>;
 const vec3 voxelSizeFactorInverted = <%= formatVector3AsVec3(voxelSizeFactorInverted) %>;
@@ -244,9 +247,11 @@ void main() {
       getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
 
       <%
+        // For 64-bit ids, signed and unsigned values are handled identically: the raw bit
+        // pattern is reinterpreted as unsigned (see uint64ToUint64 for why sign doesn't matter).
         const vec4ToSomeIntFn =
           textureLayerInfos[segmentationName].elementClass.endsWith("int64")
-            ? textureLayerInfos[segmentationName].isSigned ? "int64ToUint64" : "uint64ToUint64"
+            ? "uint64ToUint64"
             : textureLayerInfos[segmentationName].isSigned ? "int32ToUint64" : "uint32ToUint64"
       %>
 

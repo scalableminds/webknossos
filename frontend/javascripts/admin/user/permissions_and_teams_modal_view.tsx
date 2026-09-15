@@ -1,6 +1,16 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { getEditableTeams, updateUser } from "admin/rest_api";
-import { App, Checkbox, Col, Modal, Radio, type RadioChangeEvent, Row } from "antd";
+import {
+  Alert,
+  App,
+  Checkbox,
+  Col,
+  Modal,
+  Radio,
+  type RadioChangeEvent,
+  Row,
+  Typography,
+} from "antd";
 import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import { useFetch } from "libs/react_helpers";
 import has from "lodash-es/has";
@@ -30,7 +40,6 @@ type TeamRoleComponentProps = {
   setSelectedPermission: (permission: PERMISSIONS) => void;
   userIsAdmin: boolean;
   onlyEditingSingleUser: boolean;
-  renderSubtitlesWithDivider?: boolean;
 };
 
 type TeamRoleModalProps = {
@@ -69,7 +78,6 @@ export function PermissionsAndTeamsComponent({
   setSelectedPermission,
   userIsAdmin,
   onlyEditingSingleUser,
-  renderSubtitlesWithDivider = false,
 }: TeamRoleComponentProps) {
   const teams = useFetch(getEditableTeams, [], []);
 
@@ -143,14 +151,12 @@ export function PermissionsAndTeamsComponent({
   }
 
   function renderSubtitles(title: React.ReactNode) {
-    return renderSubtitlesWithDivider ? (
+    return (
       <DividerWithSubtitle>
-        <h5>
+        <Typography.Title level={5}>
           <b>{title}</b>
-        </h5>
+        </Typography.Title>
       </DividerWithSubtitle>
-    ) : (
-      <h4>{title}</h4>
     );
   }
 
@@ -231,10 +237,10 @@ export function PermissionsAndTeamsComponent({
       <div>
         <Row>
           <Col span={12}>
-            <h5>Teams</h5>
+            <Typography.Title level={5}>Teams</Typography.Title>
           </Col>
           <Col span={12}>
-            <h5>Role</h5>
+            <Typography.Title level={5}>Role</Typography.Title>
           </Col>
         </Row>
         {teamsRoleRows}
@@ -242,10 +248,21 @@ export function PermissionsAndTeamsComponent({
     </>
   );
 
+  const noTeamMembershipWarning =
+    selectedPermission === PERMISSIONS.member && Object.keys(selectedTeams).length === 0 ? (
+      <Alert
+        type="warning"
+        showIcon
+        title="Users with the organization permissions “Member” and zero team permissions will only be able to view public datasets."
+        style={{ marginTop: 12 }}
+      />
+    ) : null;
+
   return (
     <>
       {permissionEditingSection}
       {teamsRoleComponents}
+      {noTeamMembershipWarning}
     </>
   );
 }
@@ -262,7 +279,7 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
   const onlyEditingSingleUser = selectedUserIds.length === 1;
 
   useEffect(() => {
-    // If a single user is selected, pre-select their teams
+    // If a single user is selected, preselect their teams
     const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
 
     if (singleUserMaybe) {
@@ -312,9 +329,8 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
         const newUser = { ...user, ...permissions, teams: newTeams };
 
         // server-side validation can reject a user's new teams
-        return updateUser(newUser).then(
-          (serverUser) => Promise.resolve(serverUser),
-          () => Promise.reject(user),
+        return updateUser(newUser).then((result) =>
+          result.ok ? Promise.resolve(result.value) : Promise.reject(user),
         );
       }
 
@@ -361,7 +377,8 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
 
   return (
     <Modal
-      maskClosable={false}
+      title="Teams & Permissions"
+      mask={{ closable: false }}
       closable={false}
       open={isOpen}
       onCancel={onCancel}

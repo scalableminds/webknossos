@@ -1,13 +1,16 @@
 import type { Vector3 } from "viewer/constants";
-import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
+import { AbstractCuckooTable } from "./abstract_cuckoo_table";
 
-const EMPTY_KEY = EMPTY_KEY_VALUE;
+// See EMPTY_KEY_VALUE definition in abstract super class for an explanation.
+const EMPTY_KEY = 0;
 const EMPTY_VALUE = [EMPTY_KEY, EMPTY_KEY, EMPTY_KEY] as Value;
 
 type Key = number;
 type Value = Vector3;
 type Entry = [Key, Value];
 
+// Keys in this table are segment ids (truncated to 32 bits, see the callers of this class
+// for details).
 export class CuckooTableVec3 extends AbstractCuckooTable<Key, Value, Entry> {
   static fromCapacity(requestedCapacity: number): CuckooTableVec3 {
     return new CuckooTableVec3(this.computeTextureWidthFromCapacity(requestedCapacity));

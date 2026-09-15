@@ -3,8 +3,9 @@ import NewBoundingBoxIcon from "@images/icons/icon-bounding-box-new.svg?react";
 import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
+import { handleGenericError } from "libs/error_handling";
 import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import Constants, { ControlModeEnum } from "viewer/constants";
 import {
@@ -15,8 +16,10 @@ import {
   Toolkits,
   VolumeTools,
 } from "viewer/model/accessors/tool_accessor";
-import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
+import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { setToolAction } from "viewer/model/actions/ui_actions";
+import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
+import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import { ToolDropdown } from "../tool_dropdown";
 import { ChangeBrushSizePopover } from "./brush_presets";
@@ -34,14 +37,24 @@ import {
 
 function CreateNewBoundingBoxButton() {
   const dispatch = useDispatch();
+  const [isCreating, setIsCreating] = useState(false);
 
-  const handleAddNewUserBoundingBox = useCallback(() => {
-    dispatch(addUserBoundingBoxAction());
+  const handleAddNewUserBoundingBox = useCallback(async () => {
+    setIsCreating(true);
+    try {
+      const tracingId = getSomeTracing(Store.getState().annotation).tracingId;
+      await reserveIdAndAddBoundingBox(dispatch, tracingId);
+    } catch (error) {
+      handleGenericError(error as Error, "Could not create a new bounding box.");
+    } finally {
+      setIsCreating(false);
+    }
   }, [dispatch]);
 
   return (
     <ButtonComponent
       onClick={handleAddNewUserBoundingBox}
+      loading={isCreating}
       style={NARROW_BUTTON_STYLE}
       title="Create a new bounding box centered around the current position."
       icon={<Icon component={NewBoundingBoxIcon} aria-label="New Bounding Box Icon" />}

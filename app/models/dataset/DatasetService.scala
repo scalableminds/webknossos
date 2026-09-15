@@ -1,9 +1,12 @@
 package models.dataset
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.box.{Box, Empty, EmptyBox, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerAttachments,
@@ -17,11 +20,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.DataSourcePathInfo
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithRootPathInfo}
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
-import models.team._
+import models.team.*
 import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -34,47 +37,47 @@ import models.dataset.DatasetCreationType.DatasetCreationType
 import models.job.JobDAO
 import models.storage.UsedStorageService
 import play.api.http.Status.NOT_FOUND
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, JsObject, Json}
 import security.RandomIDGenerator
 import telemetry.SlackNotificationService
 import utils.WkConf
 
 import javax.inject.Inject
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext
 
-class DatasetService @Inject()(organizationDAO: OrganizationDAO,
-                               datasetDAO: DatasetDAO,
-                               dataStoreDAO: DataStoreDAO,
-                               datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
-                               datasetDataLayerDAO: DatasetLayerDAO,
-                               datasetMagsDAO: DatasetMagsDAO,
-                               datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
-                               teamDAO: TeamDAO,
-                               folderDAO: FolderDAO,
-                               multiUserDAO: MultiUserDAO,
-                               mailchimpClient: MailchimpClient,
-                               analyticsService: AnalyticsService,
-                               slackNotificationService: SlackNotificationService,
-                               dataStoreService: DataStoreService,
-                               teamService: TeamService,
-                               thumbnailCachingService: ThumbnailCachingService,
-                               userService: UserService,
-                               pathDeletionService: PathDeletionService,
-                               jobDAO: JobDAO,
-                               annotationDAO: AnnotationDAO,
-                               usedStorageService: UsedStorageService,
-                               conf: WkConf,
-                               rpc: RPC)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging {
+class DatasetService @Inject() (
+    organizationDAO: OrganizationDAO,
+    datasetDAO: DatasetDAO,
+    dataStoreDAO: DataStoreDAO,
+    datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
+    datasetDataLayerDAO: DatasetLayerDAO,
+    datasetMagsDAO: DatasetMagDAO,
+    datasetLayerAttachmentsDAO: DatasetLayerAttachmentDAO,
+    teamDAO: TeamDAO,
+    folderDAO: FolderDAO,
+    multiUserDAO: MultiUserDAO,
+    mailchimpClient: MailchimpClient,
+    analyticsService: AnalyticsService,
+    slackNotificationService: SlackNotificationService,
+    dataStoreService: DataStoreService,
+    teamService: TeamService,
+    thumbnailCachingService: ThumbnailCachingService,
+    userService: UserService,
+    pathDeletionService: PathDeletionService,
+    jobDAO: JobDAO,
+    annotationDAO: AnnotationDAO,
+    usedStorageService: UsedStorageService,
+    conf: WkConf,
+    rpc: RPC
+)(implicit ec: ExecutionContext)
+    extends LazyLogging {
 
   def assertValidDatasetName(name: String): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(name.matches("[A-Za-z0-9_\\-\\.]*")) ?~> "dataset.name.invalid.characters"
-      _ <- Fox.fromBool(!name.startsWith(".")) ?~> "dataset.name.invalid.startsWithDot"
-      _ <- Fox.fromBool(name.length >= 3) ?~> "dataset.name.invalid.lessThanThreeCharacters"
+      _ <- Fox.fromBool(name.matches("[A-Za-z0-9_\\-\\.]*")) ?~> Msg.Dataset.Name.invalidCharacters
+      _ <- Fox.fromBool(!name.startsWith(".")) ?~> Msg.Dataset.Name.invalidStartsWithDot
+      _ <- Fox.fromBool(name.length >= 3) ?~> Msg.Dataset.Name.invalidLessThanThreeCharacters
     } yield ()
 
   // Less strict variant than what we want for https://github.com/scalableminds/webknossos/issues/7711
@@ -82,24 +85,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   // but we don’t want to disable features for those now
   def assertValidLayerNameLax(name: String): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(!name.contains("/")) ?~> "dataset.layer.name.invalid.characters"
-      _ <- Fox.fromBool(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
-    } yield ()
-
-  def assertNewDatasetNameUnique(name: String, organizationId: String): Fox[Unit] =
-    for {
-      exists <- datasetDAO.doesDatasetNameExistInOrganization(name, organizationId)
-      _ <- Fox.fromBool(!exists) ?~> "dataset.name.taken"
+      _ <- Fox.fromBool(!name.contains("/")) ?~> Msg.Dataset.Layer.nameInvalidCharacters
+      _ <- Fox.fromBool(!name.startsWith(".")) ?~> Msg.Dataset.Layer.nameInvalidStartsWithDot
     } yield ()
 
   def checkNameAvailable(organizationId: String, datasetName: String): Fox[Unit] =
     for {
-      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetNameExistInOrganization(datasetName, organizationId)
-      _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
+      exists <- datasetDAO.doesDatasetNameExistInOrganization(datasetName, organizationId)
+      _ <- Fox.fromBool(!exists) ?~> Msg.Dataset.Name.taken(datasetName)
     } yield ()
 
-  def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
+  def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(using
+      ctx: DBAccessContext
+  ): Fox[List[DatasetCompactInfo]] =
     datasetDAO.findAllCompactWithSearch(
       uploaderIdOpt = Some(userId),
       organizationIdOpt = Some(organizationId),
@@ -109,20 +107,26 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       // Only list pending uploads since the two last weeks.
       createdSinceOpt = Some(Instant.now - (14 days)),
       requestingUserOrga = Some(organizationId)
-    ) ?~> "dataset.list.fetchFailed"
+    ) ?~> Msg.Dataset.List.fetchFailed
 
-  def createAndSetUpDataset(datasetName: String,
-                            dataStore: DataStore,
-                            dataSource: DataSource,
-                            folderId: Option[ObjectId],
-                            user: User,
-                            isVirtual: Boolean,
-                            creationType: DatasetCreationType)(implicit mp: MessagesProvider): Fox[Dataset] =
+  def createAndSetUpDataset(
+      datasetName: String,
+      dataStore: DataStore,
+      dataSource: DataSource,
+      folderId: Option[ObjectId],
+      user: User,
+      isVirtual: Boolean,
+      creationType: DatasetCreationType,
+      importURLOpt: Option[String]
+  ): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      organization <- organizationDAO.findOne(user._organization)(using GlobalAccessContext) ?~> Msg.Organization
+        .notFound(user._organization)
       folderIdWithFallback = folderId.getOrElse(organization._rootFolder)
-      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
+      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(using
+        AuthorizedAccessContext(user)
+      ) ?~> Msg.Folder.noWriteAccess
       newDatasetId = ObjectId.generate
       directoryName = generateDirectoryName(datasetName, newDatasetId)
       dataset <- createDataset(
@@ -131,11 +135,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         datasetName,
         dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
         isVirtual = isVirtual,
-        creationType = creationType
+        creationType = creationType,
+        importURL = importURLOpt
       )
       datasetId = dataset._id
-      _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(GlobalAccessContext)
-      _ <- addUploader(dataset, user._id)(GlobalAccessContext)
+      _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(using GlobalAccessContext)
+      _ <- addUploader(dataset, user._id)(using GlobalAccessContext)
     } yield dataset
 
   def createDataset(
@@ -146,13 +151,18 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       isVirtual: Boolean = false,
       metadata: JsArray = JsArray.empty,
       description: Option[String] = None,
-      creationType: DatasetCreationType.Value
-  )(implicit mp: MessagesProvider): Fox[Dataset] = {
+      creationType: DatasetCreationType.Value,
+      importURL: Option[String] = None,
+      rootPath: Option[String] = None,
+      rootRealPath: Option[String] = None
+  ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
 
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
-      organization <- organizationDAO.findOne(dataSource.id.organizationId) ?~> "organization.notFound"
+      organization <- organizationDAO.findOne(dataSource.id.organizationId) ?~> Msg.Organization.notFound(
+        dataSource.id.organizationId
+      )
       organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
       dataset = Dataset(
         datasetId,
@@ -176,37 +186,46 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         logoUrl = None,
         metadata = metadata,
         creationType = Some(creationType),
+        importURL = importURL,
+        rootPath = rootPath,
+        rootRealPath = rootRealPath
       )
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
       _ <- teamDAO.updateAllowedTeamsForDataset(datasetId, List())
       _ <- scanRealpathsIfVirtual(dataset)
+      _ <- writeMirrorForVirtual(dataset)
     } yield dataset
   }
 
-  def updateDataSources(dataStore: DataStore, dataSources: List[DataSource])(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[List[ObjectId]] = {
+  def updateDataSources(dataStore: DataStore, dataSourcesWithPathInfo: List[DataSourceWithRootPathInfo])(using
+      ctx: DBAccessContext
+  ): Fox[List[ObjectId]] = {
 
-    val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
+    val groupedByOrga = dataSourcesWithPathInfo.groupBy(_.dataSource.id.organizationId).toList
     Fox
-      .serialCombined(groupedByOrga) { orgaTuple: (String, List[DataSource]) =>
+      .serialCombined(groupedByOrga) { (orgaTuple: (String, List[DataSourceWithRootPathInfo])) =>
         organizationDAO.findOne(orgaTuple._1).shiftBox.flatMap {
           case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
             logger.info(
-              s"Ignoring ${orgaTuple._2.length} reported datasets for forbidden organization ${orgaTuple._1} from organization-specific datastore ${dataStore.name}")
+              s"Ignoring ${orgaTuple._2.length} reported datasets for forbidden organization ${orgaTuple._1} from organization-specific datastore ${dataStore.name}"
+            )
             Fox.successful(List.empty)
           case Full(organization) =>
             for {
-              foundDatasets <- datasetDAO.findAllByDirectoryNamesAndOrganization(orgaTuple._2.map(_.id.directoryName),
-                                                                                 organization._id)
+              foundDatasets <- datasetDAO.findAllByDirectoryNamesAndOrganization(
+                orgaTuple._2.map(_.dataSource.id.directoryName),
+                organization._id
+              )
               foundDatasetsByDirectoryName = foundDatasets.groupBy(_.directoryName)
-              existingIds <- Fox.serialCombined(orgaTuple._2)(dataSource =>
-                updateDataSourceFromDataStore(dataStore, dataSource, foundDatasetsByDirectoryName))
+              existingIds <- Fox.serialCombined(orgaTuple._2)(dataSourceWithPathInfo =>
+                updateDataSourceFromDataStore(dataStore, dataSourceWithPathInfo, foundDatasetsByDirectoryName)
+              )
             } yield existingIds.flatten
           case _ =>
             logger.info(
-              s"Ignoring ${orgaTuple._2.length} reported datasets for non-existing organization ${orgaTuple._1}")
+              s"Ignoring ${orgaTuple._2.length} reported datasets for non-existing organization ${orgaTuple._1}"
+            )
             Fox.successful(List.empty)
         }
       }
@@ -215,9 +234,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def updateDataSourceFromDataStore(
       dataStore: DataStore,
-      dataSource: DataSource,
+      dataSourceWithRootPathInfo: DataSourceWithRootPathInfo,
       foundDatasetsByDirectoryName: Map[String, List[Dataset]]
-  )(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Option[ObjectId]] = {
+  )(using ctx: DBAccessContext): Fox[Option[ObjectId]] = {
+    val dataSource = dataSourceWithRootPathInfo.dataSource
+    val rootPath = dataSourceWithRootPathInfo.rootPath
+    val rootRealPath = dataSourceWithRootPathInfo.rootRealPath
     val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
     val isVirtual = foundDatasetOpt.exists(_.isVirtual)
     if (isVirtual) { // Virtual datasets should not be updated from the datastore, as we do not expect them to exist as data source properties on the datastore.
@@ -225,98 +247,138 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } else {
       foundDatasetOpt match {
         case Some(foundDataset) if foundDataset._dataStore == dataStore.name =>
-          updateKnownDataSource(foundDataset, dataSource, dataStore).map(Some(_))
-        case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
-          updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
+          updateKnownDataSource(foundDataset, dataSource, dataStore, rootPath, rootRealPath).map(Some(_))
+        case Some(
+              foundDataset
+            ) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
+          updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore, rootPath, rootRealPath)
         case _ =>
-          createDataset(dataStore,
-                        ObjectId.generate,
-                        dataSource.id.directoryName,
-                        dataSource,
-                        creationType = DatasetCreationType.DiskScan).map(ds => Some(ds._id))
+          createDataset(
+            dataStore,
+            ObjectId.generate,
+            dataSource.id.directoryName,
+            dataSource,
+            creationType = DatasetCreationType.DiskScan,
+            rootPath = rootPath,
+            rootRealPath = rootRealPath
+          ).map(ds => Some(ds._id))
       }
     }
   }
 
-  private def updateKnownDataSource(foundDataset: Dataset, dataSource: DataSource, dataStore: DataStore)(
-      implicit ctx: DBAccessContext): Fox[ObjectId] =
-    if (foundDataset.inboxSourceHash.contains(dataSource.hashCode))
+  private def updateKnownDataSource(
+      foundDataset: Dataset,
+      dataSource: DataSource,
+      dataStore: DataStore,
+      rootPath: Option[String],
+      rootRealPath: Option[String]
+  )(using ctx: DBAccessContext): Fox[ObjectId] =
+    if (
+      foundDataset.inboxSourceHash.contains(dataSource.hashCode) &&
+      foundDataset.rootPath == rootPath && foundDataset.rootRealPath == rootRealPath
+    )
       Fox.successful(foundDataset._id)
     else
       for {
         _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-        _ <- datasetDAO.updateDataSource(foundDataset._id,
-                                         dataStore.name,
-                                         dataSource.hashCode,
-                                         dataSource,
-                                         dataSource.isUsable)
+        _ <- datasetDAO.updateDataSource(
+          foundDataset._id,
+          dataStore.name,
+          dataSource.hashCode,
+          dataSource,
+          dataSource.isUsable,
+          rootPath,
+          rootRealPath
+        )
         _ <- notifyDatastoreOnUpdate(foundDataset._id)
       } yield foundDataset._id
 
-  private def updateDataSourceDifferentDataStore(foundDataset: Dataset, dataSource: DataSource, dataStore: DataStore)(
-      implicit ctx: DBAccessContext): Fox[Option[ObjectId]] =
+  private def updateDataSourceDifferentDataStore(
+      foundDataset: Dataset,
+      dataSource: DataSource,
+      dataStore: DataStore,
+      rootPath: Option[String],
+      rootRealPath: Option[String]
+  )(using ctx: DBAccessContext): Fox[Option[ObjectId]] =
     // The dataset is already present (belonging to the same organization), but reported from a different datastore
     (for {
       originalDataStore <- dataStoreDAO.findOneByName(foundDataset._dataStore)
-    } yield {
+    } yield
       if (originalDataStore.isScratch && !dataStore.isScratch || isUnreported(foundDataset)) {
         logger.info(
           s"Replacing dataset ${foundDataset.name} (with id ${foundDataset._id} and status: ${foundDataset.status}) from datastore ${originalDataStore.name} by the one from ${dataStore.name}"
         )
         for {
           _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-          _ <- datasetDAO.updateDataSource(foundDataset._id,
-                                           dataStore.name,
-                                           dataSource.hashCode,
-                                           dataSource,
-                                           dataSource.isUsable)(GlobalAccessContext)
+          _ <- datasetDAO.updateDataSource(
+            foundDataset._id,
+            dataStore.name,
+            dataSource.hashCode,
+            dataSource,
+            dataSource.isUsable,
+            rootPath,
+            rootRealPath
+          )(using GlobalAccessContext)
           _ <- notifyDatastoreOnUpdate(foundDataset._id)
         } yield Some(foundDataset._id)
       } else {
         logger.info(
-          s"Dataset ${foundDataset.name}, as reported from ${dataStore.name}, is already present as id ${foundDataset._id} from datastore ${originalDataStore.name} and will not be replaced.")
+          s"Dataset ${foundDataset.name}, as reported from ${dataStore.name}, is already present as id ${foundDataset._id} from datastore ${originalDataStore.name} and will not be replaced."
+        )
         Fox.successful(None)
-      }
-    }).flatten
+      }).flatten
 
   def updateDataSourceFromUserChanges(
       dataset: Dataset,
       dataSourceUpdates: UsableDataSource,
       layerRenamings: Seq[LayerRenaming],
-      attachmentRenamings: Seq[AttachmentRenaming])(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Unit] =
+      attachmentRenamings: Seq[AttachmentRenaming]
+  )(using ctx: DBAccessContext): Fox[Unit] =
     for {
       existingDataSource <- usableDataSourceFor(dataset)
       datasetId = dataset._id
       dataStoreClient <- clientFor(dataset)
-      updatedDataSource <- applyDataSourceUpdates(existingDataSource,
-                                                  dataSourceUpdates,
-                                                  layerRenamings,
-                                                  attachmentRenamings).toFox
+      updatedDataSource <- applyDataSourceUpdates(
+        existingDataSource,
+        dataSourceUpdates,
+        layerRenamings,
+        attachmentRenamings
+      ).toFox
       isChanged = updatedDataSource.hashCode() != existingDataSource.hashCode()
-      _ <- if (isChanged) {
-        logger.info(s"Updating dataSource of $datasetId")
-        for {
-          _ <- Fox.runIf(!dataset.isVirtual)(dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource))
-          datastoreClient <- clientFor(dataset)
-          removedPaths = existingDataSource.allExplicitPaths.diff(updatedDataSource.allExplicitPaths)
-          pathsUsedOnlyByThisDataset <- if (removedPaths.nonEmpty) findPathsUsedOnlyByThisDataset(datasetId)
-          else Fox.successful(List.empty)
-          pathsToDelete = removedPaths.intersect(pathsUsedOnlyByThisDataset)
-          _ <- datasetDAO.updateDataSource(datasetId,
-                                           dataset._dataStore,
-                                           updatedDataSource.hashCode(),
-                                           updatedDataSource,
-                                           isUsable = true)(GlobalAccessContext)
-          _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
-          _ <- pathDeletionService.deletePaths(datastoreClient, pathsToDelete)
-        } yield ()
-      } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))
+      _ <-
+        if (isChanged) {
+          logger.info(s"Updating dataSource of $datasetId")
+          for {
+            _ <- Fox.runIf(!dataset.isVirtual)(
+              Fox.runOptional(dataset.rootPath)(r =>
+                dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource, r)
+              )
+            )
+            datastoreClient <- clientFor(dataset)
+            removedPaths = existingDataSource.allExplicitPaths.diff(updatedDataSource.allExplicitPaths)
+            pathsUsedOnlyByThisDataset <-
+              if (removedPaths.nonEmpty) findPathsUsedOnlyByThisDataset(datasetId)
+              else Fox.successful(List.empty)
+            pathsToDelete = removedPaths.intersect(pathsUsedOnlyByThisDataset)
+            _ <- datasetDAO.updateDataSource(
+              datasetId,
+              dataset._dataStore,
+              updatedDataSource.hashCode(),
+              updatedDataSource,
+              isUsable = true
+            )(using GlobalAccessContext)
+            _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
+            _ <- pathDeletionService.deletePaths(datastoreClient, pathsToDelete)
+          } yield ()
+        } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))
     } yield ()
 
-  private def applyDataSourceUpdates(existingDataSource: UsableDataSource,
-                                     updates: UsableDataSource,
-                                     layerRenamings: Seq[LayerRenaming],
-                                     attachmentRenamings: Seq[AttachmentRenaming]): Box[UsableDataSource] = {
+  private def applyDataSourceUpdates(
+      existingDataSource: UsableDataSource,
+      updates: UsableDataSource,
+      layerRenamings: Seq[LayerRenaming],
+      attachmentRenamings: Seq[AttachmentRenaming]
+  ): Box[UsableDataSource] = {
     val existingDataSourceWithRenamedLayers = applyLayerRenamings(existingDataSource, layerRenamings)
     val existingDataSourceWithRenamedAttachments =
       applyAttachmentRenamings(existingDataSourceWithRenamedLayers, attachmentRenamings)
@@ -324,10 +386,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Box.fromBool(
         existingDataSourceWithRenamedAttachments.dataLayers.length == existingDataSourceWithRenamedAttachments.dataLayers
           .distinctBy(_.name)
-          .length) ?~ "Layer renamings create name collisions."
+          .length
+      ) ?~> "Layer renamings create name collisions."
       _ <- Box.fromBool(
         existingDataSourceWithRenamedAttachments.dataLayers.forall(_.attachments.forall(!_.containsDuplicateNames))
-      ) ?~ "Attachment renamings create name collisions."
+      ) ?~> "Attachment renamings create name collisions."
       updatedLayers = existingDataSourceWithRenamedAttachments.dataLayers.flatMap { existingLayer =>
         val layerUpdatesOpt = updates.dataLayers.find(_.name == existingLayer.name)
         layerUpdatesOpt match {
@@ -336,11 +399,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         }
       }
       addedLayers <- findNewLayers(existingDataSourceWithRenamedAttachments, updates)
-    } yield
-      existingDataSource.copy(
-        dataLayers = updatedLayers ++ addedLayers,
-        scale = updates.scale
-      )
+    } yield existingDataSource.copy(
+      dataLayers = updatedLayers ++ addedLayers,
+      scale = updates.scale
+    )
   }
 
   private def findNewLayers(existingDataSoruce: UsableDataSource, updates: UsableDataSource): Box[Seq[StaticLayer]] = {
@@ -348,13 +410,17 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     val noneHaveMags = newLayers.forall(_.mags.isEmpty)
     val noneHaveAttachments = newLayers.forall(_.attachments.forall(_.isEmpty))
     for {
-      _ <- Box.fromBool(noneHaveMags) ?~ "New layers may not have mags. Add empty layers instead and then add mags."
-      _ <- Box.fromBool(noneHaveAttachments) ?~ "New layers may not have attachments. Add empty layers instead and then add attachments."
+      _ <- Box.fromBool(noneHaveMags) ?~> "New layers may not have mags. Add empty layers instead and then add mags."
+      _ <- Box.fromBool(
+        noneHaveAttachments
+      ) ?~> "New layers may not have attachments. Add empty layers instead and then add attachments."
     } yield newLayers
   }
 
-  private def applyLayerRenamings(existingDataSource: UsableDataSource,
-                                  layerRenamings: Seq[LayerRenaming]): UsableDataSource =
+  private def applyLayerRenamings(
+      existingDataSource: UsableDataSource,
+      layerRenamings: Seq[LayerRenaming]
+  ): UsableDataSource =
     if (layerRenamings.isEmpty) existingDataSource
     else {
       val renamingMap: Map[String, String] = layerRenamings.map(renaming => (renaming.oldName, renaming.newName)).toMap
@@ -366,8 +432,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       existingDataSource.copy(dataLayers = layersRenamed)
     }
 
-  private def applyAttachmentRenamings(existingDataSource: UsableDataSource,
-                                       attachmentRenamings: Seq[AttachmentRenaming]): UsableDataSource =
+  private def applyAttachmentRenamings(
+      existingDataSource: UsableDataSource,
+      attachmentRenamings: Seq[AttachmentRenaming]
+  ): UsableDataSource =
     if (attachmentRenamings.isEmpty) existingDataSource
     else {
       existingDataSource.copy(
@@ -457,22 +525,26 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     // In this context removing mags is the only allowed update
     existingMags.filter(existingMag => magUpdates.exists(_.mag == existingMag.mag))
 
-  private def applyAttachmentUpdates(existingAttachmentsOpt: Option[DataLayerAttachments],
-                                     attachmentUpdatesOpt: Option[DataLayerAttachments]): Option[DataLayerAttachments] =
+  private def applyAttachmentUpdates(
+      existingAttachmentsOpt: Option[DataLayerAttachments],
+      attachmentUpdatesOpt: Option[DataLayerAttachments]
+  ): Option[DataLayerAttachments] =
     (existingAttachmentsOpt, attachmentUpdatesOpt) match {
       case (Some(existingAttachments), Some(attachmentUpdates)) =>
         existingAttachments.dropMissing(attachmentUpdates)
       case _ => None // If existing is empty, none can be added here. If updates is empty, drop all.
     }
 
-  def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId],
-                                      dataStore: DataStore,
-                                      organizationId: Option[String]): Fox[Unit] =
+  def deactivateUnreportedDataSources(
+      reportedDatasetIds: List[ObjectId],
+      dataStore: DataStore,
+      organizationId: Option[String]
+  ): Fox[Unit] =
     datasetDAO.deactivateUnreported(reportedDatasetIds, dataStore.name, organizationId, DataSourceStatus.unreported)
 
-  def getSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
+  def getSharingToken(datasetId: ObjectId)(using ctx: DBAccessContext): Fox[String] = {
 
-    def createAndSaveSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
+    def createAndSaveSharingToken(datasetId: ObjectId)(using ctx: DBAccessContext): Fox[String] = {
       val tokenValue = RandomIDGenerator.generateBlocking()
       for {
         _ <- datasetDAO.updateSharingTokenById(datasetId, Some(tokenValue))
@@ -485,34 +557,32 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def usableDataSourceFor(dataset: Dataset, useRealPaths: Boolean = true)(
-      implicit mp: MessagesProvider): Fox[UsableDataSource] =
+  def usableDataSourceFor(dataset: Dataset, useRealPaths: Boolean = true): Fox[UsableDataSource] =
     for {
-      dataSource <- dataSourceFor(dataset, useRealPaths) ?~> "dataSource.notFound" ~> NOT_FOUND
-      usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataSource.id.directoryName)
+      dataSource <- dataSourceFor(dataset, useRealPaths) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
+      usableDataSource <- dataSource.toUsable.toFox ?~> Msg.Dataset.notUsable(dataset._id)
     } yield usableDataSource
 
   def dataSourceFor(dataset: Dataset, useRealPaths: Boolean = true): Fox[DataSource] = {
     val dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
     if (dataset.isUsable)
       for {
-        voxelSize <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoVoxelSize"
+        voxelSize <- dataset.voxelSize.toFox ?~> Msg.Dataset.DataSource.usableButNoVoxelSize
         dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id, useRealPaths)
       } yield UsableDataSource(dataSourceId, dataLayers, voxelSize)
     else
       Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
   }
 
-  def getDataSourceAndLayerFor(dataset: Dataset, layerName: String)(
-      implicit mp: MessagesProvider): Fox[(UsableDataSource, StaticLayer)] =
+  def getDataSourceAndLayerFor(dataset: Dataset, layerName: String): Fox[(UsableDataSource, StaticLayer)] =
     for {
       usableDataSource <- usableDataSourceFor(dataset)
-      dataLayer <- usableDataSource.getDataLayer(layerName).toFox ?~> Messages("dataLayer.notFound", layerName)
+      dataLayer <- usableDataSource.getDataLayer(layerName).toFox ?~> Msg.Dataset.Layer.notFound(layerName)
     } yield (usableDataSource, dataLayer)
 
-  private def notifyDatastoreOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
+  private def notifyDatastoreOnUpdate(datasetId: ObjectId)(using ctx: DBAccessContext) =
     for {
-      dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.notFound"
+      dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId)
       dataStoreClient <- clientFor(dataset)
       _ <- dataStoreClient.invalidateDatasetInDSCache(dataset._id)
     } yield ()
@@ -520,14 +590,16 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def logoUrlFor(dataset: Dataset, organization: Option[Organization]): Fox[String] =
     dataset.logoUrl match {
       case Some(url) => Fox.successful(url)
-      case None =>
-        Fox.fillOption(organization)(organizationDAO.findOne(dataset._organization)(GlobalAccessContext)).map(_.logoUrl)
+      case None      =>
+        Fox
+          .fillOption(organization)(organizationDAO.findOne(dataset._organization)(using GlobalAccessContext))
+          .map(_.logoUrl)
     }
 
-  def dataStoreFor(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[DataStore] =
-    dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "datastore.notFound"
+  def dataStoreFor(dataset: Dataset)(using ctx: DBAccessContext): Fox[DataStore] =
+    dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> Msg.DataStore.notFound
 
-  def clientFor(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[WKRemoteDataStoreClient] =
+  def clientFor(dataset: Dataset)(using ctx: DBAccessContext): Fox[WKRemoteDataStoreClient] =
     for {
       dataStore <- dataStoreFor(dataset)
     } yield new WKRemoteDataStoreClient(dataStore, rpc)
@@ -547,42 +619,49 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       datasetLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
     } yield datasetLayers
 
-  def isEditableBy(dataset: Dataset,
-                   userOpt: Option[User],
-                   userTeamManagerMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
+  def isEditableBy(
+      dataset: Dataset,
+      userOpt: Option[User],
+      userTeamManagerMemberships: Option[List[TeamMembership]] = None
+  ): Fox[Boolean] =
     userOpt match {
       case Some(user) =>
         for {
           datasetAllowedTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true)
           teamManagerMemberships <- Fox.fillOption(userTeamManagerMemberships)(
-            userService.teamManagerMembershipsFor(user._id))
-        } yield
-          (user.isAdminOf(dataset._organization)
-            || user.isDatasetManager
-            || teamManagerMemberships.map(_.teamId).intersect(datasetAllowedTeams).nonEmpty)
+            userService.teamManagerMembershipsFor(user._id)
+          )
+        } yield user.isAdminOf(dataset._organization)
+          || user.isDatasetManager
+          || teamManagerMemberships.map(_.teamId).intersect(datasetAllowedTeams).nonEmpty
       case _ => Fox.successful(false)
     }
 
   def isUnreported(dataset: Dataset): Boolean = dataset.status == DataSourceStatus.unreported
 
-  def addInitialTeams(dataset: Dataset, teamIds: Seq[ObjectId], user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addInitialTeams(dataset: Dataset, teamIds: Seq[ObjectId], user: User)(using ctx: DBAccessContext): Fox[Unit] =
     for {
-      previousDatasetTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = false) ?~> "allowedTeams.notFound"
-      _ <- Fox.fromBool(previousDatasetTeams.isEmpty) ?~> "dataset.initialTeams.teamsNotEmpty"
+      previousDatasetTeams <- teamService.allowedTeamIdsForDataset(
+        dataset,
+        cumulative = false
+      ) ?~> Msg.Dataset.allowedTeamsNotFound
+      _ <- Fox.fromBool(previousDatasetTeams.isEmpty) ?~> Msg.Dataset.InitialTeams.teamsNotEmpty
       includeMemberOnlyTeams = user.isDatasetManager
       userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
-      _ <- Fox.fromBool(teamIds.forall(teamId => userTeams.map(_._id).contains(teamId))) ?~> "dataset.initialTeams.invalidTeams"
-      _ <- datasetDAO.assertUpdateAccess(dataset._id) ?~> "dataset.initialTeams.forbidden"
+      _ <- Fox.fromBool(
+        teamIds.forall(teamId => userTeams.map(_._id).contains(teamId))
+      ) ?~> Msg.Dataset.InitialTeams.invalidTeams
+      _ <- datasetDAO.assertUpdateAccess(dataset._id) ?~> Msg.Dataset.InitialTeams.forbidden
       _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, teamIds)
     } yield ()
 
-  def addUploader(dataset: Dataset, _uploader: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addUploader(dataset: Dataset, _uploader: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(dataset._uploader.isEmpty) ?~> "dataset.uploader.notEmpty"
-      _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
+      _ <- Fox.fromBool(dataset._uploader.isEmpty) ?~> Msg.Dataset.Upload.uploaderNotEmpty
+      _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> Msg.Dataset.Upload.setUploaderForbidden
     } yield ()
 
-  private def updateRealPathsForDataSource(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  private def updateRealPathsForDataSource(pathInfo: DataSourcePathInfo)(using ctx: DBAccessContext): Fox[Unit] = {
     val datasetBox = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
     datasetBox.flatMap {
       case Full(dataset) =>
@@ -593,11 +672,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case Empty => // Dataset reported but ignored (non-existing/forbidden org)
         Fox.successful(())
       case e: EmptyBox =>
-        Fox.failure("dataset.notFound", e)
+        Fox.failure(Msg.Dataset.notFound(pathInfo.dataSourceId.directoryName), e)
     }
   }
 
-  def updateRealPaths(pathInfos: List[DataSourcePathInfo])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateRealPaths(pathInfos: List[DataSourcePathInfo])(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(pathInfos)(updateRealPathsForDataSource)
     } yield ()
@@ -607,65 +686,79 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.successful(())
       client = new WKRemoteDataStoreClient(dataStore, rpc)
       pathValidationResults <- client.validatePaths(paths)
-      _ <- Fox.serialCombined(pathValidationResults)({
+      _ <- Fox.serialCombined(pathValidationResults) {
         case PathValidationResult(_, true)     => Fox.successful(())
         case PathValidationResult(path, false) => Fox.failure(s"Path validation failed for path: $path")
-      })
+      }
     } yield ()
 
   private def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
     for {
       magPathsUsedOnlyByThisDataset <- datasetMagsDAO.findMagPathsUsedOnlyByThisDataset(datasetId)
       attachmentPathsUsedOnlyByThisDataset <- datasetLayerAttachmentsDAO.findAttachmentPathsUsedOnlyByThisDataset(
-        datasetId)
+        datasetId
+      )
     } yield magPathsUsedOnlyByThisDataset ++ attachmentPathsUsedOnlyByThisDataset
 
-  def deleteDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def deleteDataset(dataset: Dataset)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       datastoreClient <- clientFor(dataset)
-      _ <- if (dataset.isVirtual) {
-        for {
-          pathsUsedOnlyByThisDataset <- findPathsUsedOnlyByThisDataset(dataset._id)
-          // Note that the datastore only deletes local paths and the external deletion service only paths on our managed S3 cloud storage
-          _ <- pathDeletionService.deletePaths(datastoreClient, pathsUsedOnlyByThisDataset)
-        } yield ()
-      } else {
-        for {
-          datastoreBaseDirStr <- datastoreClient.getBaseDirAbsolute
-          datastoreBaseDir <- UPath.fromString(datastoreBaseDirStr).toFox
-          datasetDir = datastoreBaseDir / dataset._organization / dataset.directoryName
-          datastore <- dataStoreFor(dataset)
-          datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(datasetDir, datastore, dataset._id)
-          _ <- Fox.fromBool(datasetsUsingDataFromThisDir.isEmpty) ?~> s"Cannot delete dataset because ${datasetsUsingDataFromThisDir.length} other datasets reference its data: ${datasetsUsingDataFromThisDir
-            .mkString(",")}"
-          _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
-        } yield ()
-      }
+      _ <-
+        if (dataset.isVirtual) {
+          for {
+            pathsUsedOnlyByThisDataset <- findPathsUsedOnlyByThisDataset(dataset._id)
+            // Note that the datastore only deletes local paths and the external deletion service only paths on our managed S3 cloud storage
+            _ <- pathDeletionService.deletePaths(datastoreClient, pathsUsedOnlyByThisDataset)
+          } yield ()
+        } else {
+          dataset.rootPath.orElse(dataset.rootRealPath).match {
+            case Some(rootPath) =>
+              for {
+                datastore <- dataStoreFor(dataset)
+                rootPathValidated <- UPath.fromString(rootPath).toFox
+                _ <- Fox.fromBool(rootPathValidated.isLocal)
+                datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(rootPathValidated, datastore, dataset._id)
+                _ <- Fox.fromBool(
+                  datasetsUsingDataFromThisDir.isEmpty
+                ) ?~> s"Cannot delete dataset because ${datasetsUsingDataFromThisDir.length} other datasets reference its data: ${datasetsUsingDataFromThisDir
+                    .mkString(",")}"
+                _ <- datastoreClient.deleteOnDisk(dataset._id, rootPath) ?~> Msg.Dataset.Delete.failed
+              } yield ()
+            case None =>
+              // Non-Virtual datasets should all have root paths. In case no root path is set, we skip deleting it.
+              Fox.successful(())
+          }
+        }
       _ <- Fox.runIf(
-        conf.Features.jobsEnabled && (dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded)) {
+        conf.Features.jobsEnabled && (dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded)
+      ) {
         logger.info(s"Cancelling any pending conversion jobs for dataset ${dataset._id}...")
         jobDAO.cancelConvertToWkwJobForDataset(dataset._id)
       }
       _ <- deleteDatasetFromDB(dataset._id)
     } yield ()
 
-  private def findDatasetsUsingDataFromDir(directory: UPath,
-                                           dataStore: DataStore,
-                                           ignoredDatasetId: ObjectId): Fox[Seq[ObjectId]] =
+  private def findDatasetsUsingDataFromDir(
+      directory: UPath,
+      dataStore: DataStore,
+      ignoredDatasetId: ObjectId
+  ): Fox[Seq[ObjectId]] =
     for {
       datasetsWithMagsInDir <- datasetMagsDAO.findDatasetsWithMagsInDir(directory, dataStore, ignoredDatasetId)
-      datasetsWithAttachmentsInDir <- datasetLayerAttachmentsDAO.findDatasetsWithAttachmentsInDir(directory,
-                                                                                                  dataStore,
-                                                                                                  ignoredDatasetId)
+      datasetsWithAttachmentsInDir <- datasetLayerAttachmentsDAO.findDatasetsWithAttachmentsInDir(
+        directory,
+        dataStore,
+        ignoredDatasetId
+      )
     } yield (datasetsWithMagsInDir ++ datasetsWithAttachmentsInDir).distinct
 
   def deleteDatasetFromDB(datasetId: ObjectId): Fox[Unit] =
     for {
-      existingDatasetBox <- datasetDAO.findOne(datasetId)(GlobalAccessContext).shiftBox
+      existingDatasetBox <- datasetDAO.findOne(datasetId)(using GlobalAccessContext).shiftBox
       _ <- existingDatasetBox match {
         case Full(dataset) =>
           for {
-            annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
+            annotationCount <- annotationDAO.countAllByDatasetIncludingDeleted(dataset._id)
             _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
             _ <- usedStorageService.refreshStorageReportForDataset(dataset)
           } yield ()
@@ -679,86 +772,137 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case None         => datasetId.toString
     }
 
-  def trackNewDataset(dataset: Dataset,
-                      user: User,
-                      needsConversion: Boolean,
-                      datasetSizeBytes: Long,
-                      addVariantLabel: String): Fox[Unit] =
+  def trackNewDataset(
+      dataset: Dataset,
+      user: User,
+      needsConversion: Boolean,
+      datasetSizeBytes: Long,
+      addVariantLabel: String
+  ): Fox[Unit] =
     for {
       _ <- Fox.runIf(!needsConversion)(logDatasetUploadToSlack(user, dataset._id, addVariantLabel))
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore)(GlobalAccessContext)
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore)(using GlobalAccessContext)
       _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, datasetSizeBytes))
       _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
     } yield ()
 
   private def logDatasetUploadToSlack(user: User, datasetId: ObjectId, addVariantLabel: String): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(using GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       resultLink = s"${conf.Http.uri}/datasets/$datasetId"
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
-      _ = slackNotificationService.info(s"Dataset added ($addVariantLabel)$superUserLabel",
-                                        s"For organization: ${organization.name}. <$resultLink|Result>")
+      _ = slackNotificationService.info(
+        s"Dataset added ($addVariantLabel)$superUserLabel",
+        s"For organization: ${organization.name}. <$resultLink|Result>"
+      )
     } yield ()
 
-  def scanRealpathsIfVirtual(dataset: Dataset)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Unit] =
+  def writeMirrorForVirtual(dataset: Dataset)(using ctx: DBAccessContext): Fox[Unit] =
+    if (dataset.isVirtual && dataset.isUsable) {
+      for {
+        client <- clientFor(dataset)
+        writtenPaths <- client.writeMirror(Seq(dataset._id), failOnError = true)
+        _ <- Fox.runOptional(writtenPaths.headOption) { case (_, path) =>
+          datasetDAO.updateMirrorPath(dataset._id, path)
+        }
+      } yield ()
+    } else Fox.successful(())
+
+  def scanRealpathsIfVirtual(dataset: Dataset)(using ctx: DBAccessContext): Fox[Unit] =
     if (dataset.isVirtual && dataset.isUsable) {
       for {
         dataSource <- usableDataSourceFor(dataset, useRealPaths = false)
         client <- clientFor(dataset)
-        _ <- client.scanRealPathsForVirtual(Seq(dataSource))
+        _ <- client.scanRealPathsForVirtual(
+          Seq(DataSourceWithRootPathInfo(dataSource, dataset.rootPath, dataset.rootRealPath))
+        )
       } yield ()
     } else Fox.successful(())
 
-  def publicWrites(dataset: Dataset,
-                   requestingUserOpt: Option[User],
-                   organization: Option[Organization] = None,
-                   dataStore: Option[DataStore] = None,
-                   requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
-      implicit ctx: DBAccessContext): Fox[JsObject] =
+  // Full name of the dataset's uploader, but only if the requesting user is in the same organization as the uploader.
+  private def uploaderFullNameFor(dataset: Dataset, requestingUserOpt: Option[User]): Fox[String] =
+    (dataset._uploader, requestingUserOpt) match {
+      case (Some(uploaderId), Some(requestingUser)) =>
+        for {
+          uploader <- userService.findOneCached(uploaderId)(using GlobalAccessContext)
+          _ <- Fox.fromBool(uploader._organization == requestingUser._organization)
+          uploaderMultiUser <- multiUserDAO.findOneById(uploader._multiUser)(using GlobalAccessContext)
+        } yield uploaderMultiUser.fullName
+      case _ => Fox.empty
+    }
+
+  def publicWrites(
+      dataset: Dataset,
+      requestingUserOpt: Option[User],
+      organization: Option[Organization] = None,
+      dataStore: Option[DataStore] = None,
+      requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None
+  )(using ctx: DBAccessContext): Fox[JsObject] =
     for {
       organization <- Fox.fillOption(organization) {
-        organizationDAO.findOne(dataset._organization) ?~> "organization.notFound"
+        organizationDAO.findOne(dataset._organization) ?~> Msg.Organization.notFound(dataset._organization)
       }
       dataStore <- Fox.fillOption(dataStore) {
-        dataStoreFor(dataset) ?~> "dataStore.notFound"
+        dataStoreFor(dataset) ?~> Msg.DataStore.notFound
       }
-      teams <- teamService.allowedTeamsForDataset(dataset, cumulative = false, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
-      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, Some(organization))) ?~> "dataset.list.teamWritesFailed"
-      teamsCumulative <- teamService.allowedTeamsForDataset(dataset, cumulative = true, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
-      teamsCumulativeJs <- Fox.serialCombined(teamsCumulative)(t => teamService.publicWrites(t, Some(organization))) ?~> "dataset.list.teamWritesFailed"
-      logoUrl <- logoUrlFor(dataset, Some(organization)) ?~> "dataset.list.fetchLogoUrlFailed"
-      isEditable <- isEditableBy(dataset, requestingUserOpt, requestingUserTeamManagerMemberships) ?~> "dataset.list.isEditableCheckFailed"
-      lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
-      dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
-      dataSource <- dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
-      usedStorageBytes <- if (requestingUserOpt.exists(u => u._organization == dataset._organization))
-        organizationDAO.getUsedStorageForDataset(dataset._id)
-      else Fox.successful(0L)
-    } yield {
-      Json.obj(
-        "id" -> dataset._id,
-        "name" -> dataset.name,
-        "dataSource" -> JsonHelper.removeKeyRecursively(Json.toJson(dataSource), Set("credentialId", "credentials")),
-        "dataStore" -> dataStoreJs,
-        "owningOrganization" -> organization._id,
-        "allowedTeams" -> teamsJs,
-        "allowedTeamsCumulative" -> teamsCumulativeJs,
-        "isActive" -> dataset.isUsable,
-        "isPublic" -> dataset.isPublic,
-        "description" -> dataset.description,
-        "directoryName" -> dataset.directoryName,
-        "created" -> dataset.created,
-        "isEditable" -> isEditable,
-        "lastUsedByUser" -> lastUsedByUser,
-        "logoUrl" -> logoUrl,
-        "sortingKey" -> dataset.sortingKey,
-        "metadata" -> dataset.metadata,
-        "isUnreported" -> Json.toJson(isUnreported(dataset)),
-        "tags" -> dataset.tags,
-        "folderId" -> dataset._folder,
-        "usedStorageBytes" -> usedStorageBytes,
-        "isVirtual" -> dataset.isVirtual
-      )
-    }
+      teams <- teamService.allowedTeamsForDataset(
+        dataset,
+        cumulative = false,
+        requestingUserOpt
+      ) ?~> Msg.Dataset.List.fetchAllowedTeamsFailed
+      teamsJs <- Fox.serialCombined(teams)(t =>
+        teamService.publicWrites(t, Some(organization))
+      ) ?~> Msg.Dataset.List.teamWritesFailed
+      teamsCumulative <- teamService.allowedTeamsForDataset(
+        dataset,
+        cumulative = true,
+        requestingUserOpt
+      ) ?~> Msg.Dataset.List.fetchAllowedTeamsFailed
+      teamsCumulativeJs <- Fox.serialCombined(teamsCumulative)(t =>
+        teamService.publicWrites(t, Some(organization))
+      ) ?~> Msg.Dataset.List.teamWritesFailed
+      logoUrl <- logoUrlFor(dataset, Some(organization)) ?~> Msg.Dataset.List.fetchLogoUrlFailed
+      isEditable <- isEditableBy(
+        dataset,
+        requestingUserOpt,
+        requestingUserTeamManagerMemberships
+      ) ?~> Msg.Dataset.List.isEditableCheckFailed
+      lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> Msg.Dataset.List.fetchLastUsedTimeFailed
+      dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> Msg.Dataset.List.dataStoreWritesFailed
+      dataSource <- dataSourceFor(dataset) ?~> Msg.Dataset.List.fetchDataSourceFailed
+      usedStorageBytes <-
+        if (requestingUserOpt.exists(u => u._organization == dataset._organization))
+          organizationDAO.getUsedStorageForDataset(dataset._id)
+        else Fox.successful(0L)
+      uploaderFullNameBox <- uploaderFullNameFor(dataset, requestingUserOpt).shiftBox
+    } yield Json.obj(
+      "id" -> dataset._id,
+      "name" -> dataset.name,
+      "dataSource" -> JsonHelper.removeKeyRecursively(Json.toJson(dataSource), Set("credentialId", "credentials")),
+      "dataStore" -> dataStoreJs,
+      "owningOrganization" -> organization._id,
+      "uploaderFullName" -> uploaderFullNameBox.toOption,
+      "allowedTeams" -> teamsJs,
+      "allowedTeamsCumulative" -> teamsCumulativeJs,
+      "isActive" -> dataset.isUsable,
+      "isPublic" -> dataset.isPublic,
+      "description" -> dataset.description,
+      "directoryName" -> dataset.directoryName,
+      "created" -> dataset.created,
+      "isEditable" -> isEditable,
+      "lastUsedByUser" -> lastUsedByUser,
+      "logoUrl" -> logoUrl,
+      "sortingKey" -> dataset.sortingKey,
+      "metadata" -> dataset.metadata,
+      "isUnreported" -> Json.toJson(isUnreported(dataset)),
+      "tags" -> dataset.tags,
+      "folderId" -> dataset._folder,
+      "usedStorageBytes" -> usedStorageBytes,
+      "isVirtual" -> dataset.isVirtual,
+      "creationType" -> dataset.creationType,
+      "rootPath" -> dataset.rootPath,
+      "rootRealPath" -> dataset.rootRealPath,
+      "mirrorPath" -> dataset.mirrorPath
+    )
 }

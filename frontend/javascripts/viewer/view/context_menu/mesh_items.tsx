@@ -9,6 +9,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
+  getActiveUnmappedSegmentId,
   getSegmentsForLayer,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -34,7 +35,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
 
   const currentMeshFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
-      ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+      ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile
       : null,
   );
   const meshFileMappingName = currentMeshFile?.mappingName;
@@ -47,8 +48,10 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   );
   const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
 
-  const activeUnmappedSegmentId = volumeTracing?.activeUnmappedSegmentId;
-  const activeCellId = volumeTracing ? getActiveCellId(volumeTracing) : 0;
+  const activeUnmappedSegmentId = useWkSelector((state) =>
+    getActiveUnmappedSegmentId(state, volumeTracing),
+  );
+  const activeCellId = volumeTracing ? getActiveCellId(volumeTracing) : 0n;
 
   const segments = useWkSelector((state) =>
     volumeTracing != null ? getSegmentsForLayer(state, volumeTracing.tracingId) : null,
@@ -57,21 +60,21 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   const minCutPartitions = useWkSelector((state) => {
     if (volumeTracing == null) return undefined;
     const layerId = volumeTracing.tracingId;
-    return layerId in state.localSegmentationData
-      ? state.localSegmentationData[layerId].minCutPartitions
+    return layerId in state.localSegmentationStateByLayer
+      ? state.localSegmentationStateByLayer[layerId].minCutPartitions
       : undefined;
   });
 
   const segmentIdLabel =
     isProofreadingActive && maybeUnmappedSegmentId != null
-      ? `within Segment ${clickedMeshId ?? 0}`
-      : (clickedMeshId ?? 0);
+      ? `within Segment ${clickedMeshId ?? 0n}`
+      : (clickedMeshId ?? 0n);
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
 
   const proofreadingMultiSplitToolActions = useMultiCutToolOptions(
-    maybeUnmappedSegmentId ?? 0,
-    clickedMeshId ?? 0,
+    maybeUnmappedSegmentId ?? 0n,
+    clickedMeshId ?? 0n,
     segmentOrSuperVoxel,
     segmentIdLabel,
   );

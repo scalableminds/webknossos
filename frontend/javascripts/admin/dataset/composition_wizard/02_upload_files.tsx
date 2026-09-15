@@ -1,6 +1,6 @@
 import { FileExcelOutlined } from "@ant-design/icons";
 import { Button, Upload } from "antd";
-import type { UploadChangeParam, UploadFile } from "antd/lib/upload";
+import type { UploadChangeParam, UploadFile } from "antd/es/upload";
 import { AsyncButton } from "components/async_clickables";
 import ErrorHandling from "libs/error_handling";
 import { readFileAsText } from "libs/read_file";

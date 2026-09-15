@@ -3,6 +3,7 @@ import { Col, Modal, Result, Row } from "antd";
 import { useInterval } from "libs/react_helpers";
 import noop from "lodash-es/noop";
 import { useEffect, useState } from "react";
+import { ModalWidth } from "theme";
 import FormattedDate from "./formatted_date";
 
 export function CheckCertificateModal() {
@@ -31,9 +32,9 @@ export function CheckCertificateModal() {
       closable={false}
       footer={null}
       onCancel={noop}
-      width={"max(70%, 600px)"}
+      width={ModalWidth.Full}
       keyboard={false}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Row justify="center" align="middle" style={{ maxHeight: "50%", width: "auto" }}>
         <Col>
@@ -49,7 +50,7 @@ export function CheckCertificateModal() {
                 <a
                   target="_blank"
                   rel="noreferrer"
-                  href="mailto:hello@webknossos.org"
+                  href="mailto:support@webknossos.org"
                   style={{ color: "inherit", textDecoration: "underline" }}
                 >
                   contact us

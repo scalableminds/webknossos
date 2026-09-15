@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.tracingstore.cleanup.TSCleanUpService
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class TsTempFileService @Inject()(val cleanUpService: TSCleanUpService)(implicit val ec: ExecutionContext)
+class TsTempFileService @Inject() (val cleanUpService: TSCleanUpService)(implicit val ec: ExecutionContext)
     extends TempFileService {
   override def moduleName = "webknossos-tracingstore"
 }

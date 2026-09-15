@@ -1,10 +1,4 @@
-import {
-  DatabaseOutlined,
-  FieldTimeOutlined,
-  RobotOutlined,
-  RocketOutlined,
-  UserAddOutlined,
-} from "@ant-design/icons";
+import { FieldTimeOutlined } from "@ant-design/icons";
 import {
   sendExtendPricingPlanEmail,
   sendOrderCreditsEmail,
@@ -13,17 +7,18 @@ import {
   sendUpgradePricingPlanStorageEmail,
   sendUpgradePricingPlanUserEmail,
 } from "admin/api/organization";
-import { Button, Col, Divider, InputNumber, Modal, Row, Typography } from "antd";
-import type { GetRef } from "antd/lib";
-import { formatDateInLocalTimeZone } from "components/formatted_date";
+import { Button, Col, Divider, type GetRef, InputNumber, Modal, Row, Typography } from "antd";
+import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
+import type { ModalApi } from "libs/with_modal_hoc";
 import messages from "messages";
 import type React from "react";
 import { useRef, useState } from "react";
+import { ModalWidth } from "theme";
 import type { APIOrganization } from "types/api_types";
-import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./organization_cards";
+import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./plan_upgrade_cards";
 import {
   aiAddonFeatures,
   PricingPlanEnum,
@@ -48,10 +43,12 @@ const ModalInformationFooter = (
   </>
 );
 
-function extendPricingPlan(organization: APIOrganization) {
+// Takes the themed modal API (obtained via App.useApp()), since the static Modal.confirm
+// doesn't pick up the surrounding ConfigProvider theme.
+function extendPricingPlan(modal: ModalApi, organization: APIOrganization) {
   const extendedDate = dayjs(organization.paidUntil).add(1, "year");
 
-  Modal.confirm({
+  modal.confirm({
     title: "Extend Current Plan",
     okText: "Request an Email Quote",
     onOk: () => {
@@ -59,7 +56,7 @@ function extendPricingPlan(organization: APIOrganization) {
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     },
     icon: <FieldTimeOutlined style={{ color: "var(--ant-color-primary)" }} />,
-    width: 1000,
+    width: ModalWidth.ExtraLarge,
     content: (
       <div>
         <p style={{ marginRight: "30%" }}>
@@ -72,9 +69,11 @@ function extendPricingPlan(organization: APIOrganization) {
         </p>
         <p>
           Your current plan is paid until:{" "}
-          {formatDateInLocalTimeZone(organization.paidUntil, "YYYY-MM-DD")}
+          <FormattedDate timestamp={organization.paidUntil} dateOnly />
         </p>
-        <p>Buy extension until: {extendedDate.format("YYYY-MM-DD")}</p>
+        <p>
+          Buy extension until: <FormattedDate timestamp={extendedDate.valueOf()} dateOnly />
+        </p>
         {ModalInformationFooter}
       </div>
     ),
@@ -100,15 +99,11 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
 
   return (
     <Modal
-      title={
-        <>
-          <UserAddOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade User Quota
-        </>
-      }
+      title="Upgrade User Quota"
       okText={"Buy more Users"}
       onOk={handleUserUpgrade}
       onCancel={destroy}
-      width={800}
+      width={ModalWidth.Large}
       open
     >
       <div className="drawing-upgrade-users">
@@ -144,15 +139,11 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
 
   return (
     <Modal
-      title={
-        <>
-          <DatabaseOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade Storage Space
-        </>
-      }
+      title="Upgrade Storage Space"
       okText={"Buy more Storage Space"}
       onOk={handleStorageUpgrade}
       onCancel={destroy}
-      width={800}
+      width={ModalWidth.Large}
       open
     >
       <div className="drawing-upgrade-storage">
@@ -191,15 +182,11 @@ function UpgradeAiPlanModal({ destroy }: { destroy: () => void }) {
 
   return (
     <Modal
-      title={
-        <>
-          <RobotOutlined style={{ color: "var(--ant-color-primary)" }} /> AI Add-on
-        </>
-      }
+      title="AI Add-on"
       okText="Buy AI Add-on"
       onOk={handleSubmit}
       onCancel={destroy}
-      width={800}
+      width={ModalWidth.Large}
       open
     >
       <div className="drawing-upgrade-ai-addon">
@@ -331,12 +318,8 @@ function UpgradePricingPlanModal({
   return (
     <Modal
       open
-      title={
-        <>
-          <RocketOutlined style={{ color: "var(--ant-color-primary)" }} /> {title}
-        </>
-      }
-      width={800}
+      title={title}
+      width={ModalWidth.Large}
       onCancel={destroy}
       footer={
         <>
@@ -396,7 +379,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
       okText="Request an Email Quote"
       onOk={handleOrderCredits}
       onCancel={destroy}
-      width={800}
+      width={ModalWidth.Large}
       open
     >
       <div className="drawing-upgrade-users">

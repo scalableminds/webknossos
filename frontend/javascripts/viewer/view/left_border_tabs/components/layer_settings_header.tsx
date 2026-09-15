@@ -1,6 +1,7 @@
 import Icon, {
   DatabaseOutlined,
   DeleteOutlined,
+  DragOutlined,
   EditOutlined,
   EllipsisOutlined,
   LockOutlined,
@@ -18,12 +19,11 @@ import {
   findDataPositionForVolumeTracing,
   startComputeSegmentIndexFileJob,
 } from "admin/rest_api";
-import { Dropdown, Flex, type MenuProps, Switch } from "antd";
+import { App, Dropdown, Flex, type MenuProps, Switch, Typography } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import type { SwitchChangeEventHandler } from "antd/es/switch";
 import FastTooltip from "components/fast_tooltip";
 import { HoverIconButton } from "components/hover_icon_button";
-import { confirmAsync } from "dashboard/dataset/helper_components";
 import { M4x4, V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -31,7 +31,7 @@ import { isUserAdminOrManager } from "libs/utils";
 import differenceWith from "lodash-es/differenceWith";
 import isEqual from "lodash-es/isEqual";
 import minBy from "lodash-es/minBy";
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
   AnnotationLayerEnum,
@@ -40,12 +40,16 @@ import {
   APIJobCommand,
 } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import { isEditingAnnotationLayerSetDisabled } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
   getLayerByName,
   getWidestMags,
 } from "viewer/model/accessors/dataset_accessor";
-import { getTransformsForLayerOrNull } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getTransformsForLayerOrNull,
+  isLayerWithoutTransformationConfigSupport,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
@@ -61,6 +65,7 @@ import {
   reloadHistogramAction,
   updateLayerSettingAction,
 } from "viewer/model/actions/settings_actions";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { api, Model } from "viewer/singletons";
 import type { DatasetLayerConfiguration, VolumeTracing } from "viewer/store";
@@ -70,6 +75,7 @@ import EditableTextLabel from "viewer/view/components/editable_text_label";
 import { validateReadableLayerName } from "../modals/add_volume_layer_modal";
 import { DragHandle, DummyDragHandle } from "./drag_handle";
 import LayerInfoIconWithTooltip from "./layer_info_icon_with_tooltip";
+import { LayerTransformSettingsPopover } from "./layer_transform_settings_popover";
 import LayerTransformationIcon from "./layer_transformation_icon";
 
 function EnableDisableLayerSwitch({
@@ -116,6 +122,7 @@ export default function LayerSettingsHeader({
   onSetLayerToMergeWithFallback: (layer: APIDataLayer) => void;
 }) {
   const dispatch = useDispatch();
+  const { modal } = App.useApp();
   const dataset = useWkSelector((state) => state.dataset);
   const annotation = useWkSelector((state) => state.annotation);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
@@ -123,9 +130,14 @@ export default function LayerSettingsHeader({
     state.activeUser != null ? isUserAdminOrManager(state.activeUser) : false,
   );
   const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser || false);
+  const { isDisabled: mayNotEditLayerSet, explanation: reasonForCantEditLayerSet } = useWkSelector(
+    (state) => isEditingAnnotationLayerSetDisabled(state),
+  );
   const histogramData = useWkSelector((state) => state.temporaryConfiguration.histogramData);
   const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const task = useWkSelector((state) => state.task);
+
+  const [isTransformPopoverOpen, setIsTransformPopoverOpen] = useState(false);
 
   const { intensityRange } = layerSettings;
   const layer = getLayerByName(dataset, layerName);
@@ -258,18 +270,12 @@ export default function LayerSettingsHeader({
         targetLayer && targetLayer.category === "segmentation" && targetLayer.fallbackLayer
           ? "Changes to the original segmentation layer will be discarded and the original state will be displayed again. "
           : "";
-      const shouldDelete = await confirmAsync({
-        title: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone. Are you sure you want to delete this layer?`,
-        okText: `Yes, delete annotation layer "${readableAnnotationLayerName}"`,
+      const shouldDelete = await modal.confirm({
+        title: `Delete annotation layer "${readableAnnotationLayerName}"?`,
+        content: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone.`,
+        okText: "Delete",
+        okType: "danger",
         cancelText: "Cancel",
-        okButtonProps: {
-          danger: true,
-          block: true,
-          style: { whiteSpace: "normal", height: "auto", margin: "10px 0 0 0" },
-        },
-        cancelButtonProps: {
-          block: true,
-        },
       });
       if (!shouldDelete) return;
       dispatch(
@@ -280,7 +286,7 @@ export default function LayerSettingsHeader({
       await Model.ensureSavedState();
       location.reload();
     },
-    [dispatch],
+    [dispatch, modal],
   );
 
   const getVolumeMagsToDownsample = (
@@ -315,11 +321,9 @@ export default function LayerSettingsHeader({
 
     return (
       <FastTooltip title="This volume tracing does not have data at all magnifications.">
-        <WarningOutlined
-          style={{
-            color: "var(--ant-color-warning)",
-          }}
-        />
+        <Typography.Text type="warning">
+          <WarningOutlined />
+        </Typography.Text>
       </FastTooltip>
     );
   };
@@ -388,14 +392,24 @@ export default function LayerSettingsHeader({
   const getMergeWithFallbackLayerItem = (): ItemType => ({
     key: "mergeWithFallbackLayerButton",
     icon: <MergeCellsOutlined />,
-    label: "Merge this volume annotation with its fallback layer",
+    disabled: mayNotEditLayerSet,
+    label: (
+      <FastTooltip title={reasonForCantEditLayerSet}>
+        <span>Merge this volume annotation with its fallback layer</span>
+      </FastTooltip>
+    ),
     onClick: () => onSetLayerToMergeWithFallback(layer),
   });
 
   const getDeleteAnnotationLayerItem = (): ItemType => ({
     key: "deleteAnnotationLayer",
     icon: <DeleteOutlined />,
-    label: "Delete this annotation layer",
+    disabled: mayNotEditLayerSet,
+    label: (
+      <FastTooltip title={reasonForCantEditLayerSet}>
+        <span>Delete this annotation layer</span>
+      </FastTooltip>
+    ),
     onClick: () => {
       const tracingId = "tracingId" in layer ? layer.tracingId : null;
       if (tracingId != null) {
@@ -452,6 +466,13 @@ export default function LayerSettingsHeader({
       onClick: triggerComputeSegmentIndexFileJob,
     };
   };
+
+  const getEditLayerTransformsItem = (): ItemType => ({
+    key: "editLayerTransforms",
+    icon: <DragOutlined />,
+    label: "Edit layer transforms",
+    onClick: () => setIsTransformPopoverOpen(true),
+  });
 
   // --- Visibility logic ---
 
@@ -511,6 +532,7 @@ export default function LayerSettingsHeader({
     isAnnotationLayer && !isOnlyAnnotationLayer ? getDeleteAnnotationLayerItem() : null,
     isHistogramAvailable && !isDisabled ? getEditMinMaxItem() : null,
     hasHistogram && !isDisabled ? getClipItem() : null,
+    !isLayerWithoutTransformationConfigSupport(layer) ? getEditLayerTransformsItem() : null,
     dataset.dataStore.jobsEnabled &&
     dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
       APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
@@ -560,7 +582,10 @@ export default function LayerSettingsHeader({
                 value={readableName}
                 isInvalid={!readableLayerNameValidationResult.isValid}
                 trimValue
-                onChange={(newName) => {
+                onChange={async (newName) => {
+                  // Defer the actual rename until any active rebase/forwarding has
+                  // finished, so a rename submitted mid-rebase isn't lost.
+                  await waitUntilRebaseFinished();
                   dispatch(
                     editAnnotationLayerAction(volumeDescriptor.tracingId, {
                       name: newName,
@@ -594,7 +619,11 @@ export default function LayerSettingsHeader({
         <LayerInfoIconWithTooltip layer={layer} dataset={dataset} />
         {canBeMadeEditable ? (
           <FastTooltip
-            title="Make this segmentation editable by adding a Volume Annotation Layer."
+            title={
+              mayNotEditLayerSet
+                ? reasonForCantEditLayerSet
+                : "Make this segmentation editable by adding a Volume Annotation Layer."
+            }
             placement="left"
           >
             <HoverIconButton
@@ -603,6 +632,7 @@ export default function LayerSettingsHeader({
               size="small"
               icon={<LockOutlined />}
               hoveredIcon={<UnlockOutlined />}
+              disabled={mayNotEditLayerSet}
               onClick={() => {
                 onShowAddVolumeLayerModal(layer.name);
               }}
@@ -610,6 +640,13 @@ export default function LayerSettingsHeader({
           </FastTooltip>
         ) : null}
         <LayerTransformationIcon layer={layer} />
+        {!isLayerWithoutTransformationConfigSupport(layer) && (
+          <LayerTransformSettingsPopover
+            layer={layer}
+            open={isTransformPopoverOpen}
+            onClose={() => setIsTransformPopoverOpen(false)}
+          />
+        )}
         {isVolumeTracing ? (
           <ButtonComponent
             variant="text"
@@ -630,11 +667,9 @@ export default function LayerSettingsHeader({
             title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
             If you want to hide this layer, you can also disable it with the switch on the left.`}
           >
-            <WarningOutlined
-              style={{
-                color: "var(--ant-color-warning)",
-              }}
-            />
+            <Typography.Text type="warning">
+              <WarningOutlined />
+            </Typography.Text>
           </FastTooltip>
         ) : null}
         {isColorLayer ? null : getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}

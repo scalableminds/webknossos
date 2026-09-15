@@ -5,11 +5,12 @@ import { getCreditTransactions } from "admin/api/organization";
 import { getJobTypeName } from "admin/job/job_list_view";
 import { Button, DatePicker, Space, Spin, Table, Typography } from "antd";
 import type { RangePickerProps } from "antd/es/date-picker";
-import FastTooltip from "components/fast_tooltip";
+import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import dayjs from "dayjs";
 import { formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
+import { scrollToTop } from "libs/utils";
 import { useMemo } from "react";
 import type { APICreditTransaction, APIJob } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
@@ -143,7 +144,7 @@ export function OrganizationCreditActivityView() {
         <Table
           dataSource={organizationTransactions}
           rowKey="id"
-          pagination={{ defaultPageSize: 50 }}
+          pagination={{ defaultPageSize: 50, onChange: scrollToTop }}
           locale={{ emptyText: "No credit activity recorded yet." }}
           style={{ marginTop: 16 }}
           summary={(pageData) => {
@@ -166,24 +167,9 @@ export function OrganizationCreditActivityView() {
             title="Date"
             key="createdAt"
             width={170}
-            render={(transaction: APICreditTransaction) => {
-              const utcTimestamp = dayjs.utc(transaction.createdAt);
-              const localTimestamp = utcTimestamp.local();
-              return (
-                <FastTooltip
-                  title={`The displayed time refers to your local timezone. In UTC, the time is: ${utcTimestamp.format(
-                    "YYYY-MM-DD HH:mm",
-                  )}`}
-                >
-                  <div>
-                    <div>{localTimestamp.format("YYYY-MM-DD")}</div>
-                    <Typography.Text type="secondary">
-                      {localTimestamp.format("HH:mm")}
-                    </Typography.Text>
-                  </div>
-                </FastTooltip>
-              );
-            }}
+            render={(transaction: APICreditTransaction) => (
+              <FormattedDate timestamp={transaction.createdAt} />
+            )}
             sorter={(left: APICreditTransaction, right: APICreditTransaction) =>
               left.createdAt - right.createdAt
             }
@@ -213,11 +199,9 @@ export function OrganizationCreditActivityView() {
                 </Space>
               );
             }}
-            filterIcon={(filtered) => (
-              <CalendarOutlined
-                style={{ color: filtered ? "var(--ant-color-primary" : undefined }}
-              />
-            )}
+            // antd colors the filter trigger with colorPrimary while a filter is active and
+            // icons inherit it via `fill: currentColor`, so the icon needs no color of its own.
+            filterIcon={<CalendarOutlined />}
             onFilter={(value, record) => {
               const [startDate, endDate] = parseRangeValue(value as string);
               if (startDate == null || endDate == null) {

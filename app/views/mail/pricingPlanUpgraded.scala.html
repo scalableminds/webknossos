@@ -1,0 +1,23 @@
+@(name: String, organizationName: String, newPlanLabel: String, featureHighlights: List[String], uri: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+<p>
+  Your organization <strong>@organizationName</strong> has been upgraded to the WEBKNOSSOS @newPlanLabel plan.
+  The following features are now available to everyone in your organization:
+</p>
+
+<p><strong>@{newPlanLabel} plan</strong></p>
+<ul>
+  @for(feature <- featureHighlights) {
+    <li>@feature</li>
+  }
+</ul>
+
+@emailButton("Open WEBKNOSSOS", uri)
+
+<p>If you have any questions about your new plan, simply reply to this email.</p>
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

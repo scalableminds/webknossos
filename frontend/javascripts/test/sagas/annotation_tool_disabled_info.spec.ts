@@ -52,6 +52,27 @@ const zoomedOutState = update(initialState, {
   },
 });
 
+// No layer has mag 1-1-1. When zooming in far, the finest existing mag (2-2-1)
+// is rendered for all layers and should be annotatable.
+const zoomedInStateWithoutMag1 = update(zoomedInInitialState, {
+  dataset: {
+    dataSource: {
+      dataLayers: {
+        [0]: {
+          mags: {
+            $set: [{ mag: [2, 2, 1] }, { mag: [4, 4, 4] }],
+          },
+        },
+        [1]: {
+          mags: {
+            $set: [{ mag: [2, 2, 1] }, { mag: [4, 4, 1] }],
+          },
+        },
+      },
+    },
+  },
+});
+
 const coordinateTransformations: CoordinateTransformation[] = [
   {
     type: "affine",
@@ -140,6 +161,18 @@ describe("Annotation Tool Disabled Info", () => {
         tool === AnnotationTool.PROOFREAD ||
         zoomSensitiveVolumeTools.includes(tool as AnnotationTool)
       ) {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
+      } else {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
+      }
+    }
+  });
+
+  it("Volume tools should be enabled when zoomed in although mag 1-1-1 does not exist in any layer.", () => {
+    const disabledInfo = getDisabledInfoForTools(zoomedInStateWithoutMag1);
+
+    for (const tool of Object.values(AnnotationTool)) {
+      if (tool === AnnotationTool.PROOFREAD) {
         expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
       } else {
         expect(disabledInfo[tool.id]?.isDisabled).toBe(false);

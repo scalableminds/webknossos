@@ -2,6 +2,13 @@
 // on exponential back-off.
 export const PUSH_THROTTLE_TIME = 30 * 1000; // 30s
 
+// Also refer to application.conf where annotation.mutex.expiryTime is defined
+// (typically, 2 minutes).
+export const ACQUIRE_MUTEX_INTERVAL = import.meta.env.MODE === "test" ? 1 * 1000 : 60 * 1000;
+export const DELAY_AFTER_FAILED_MUTEX_FETCH =
+  import.meta.env.MODE === "test" ? 1 * 1000 : 10 * 1000;
+export const INITIAL_BACKOFF_TIME = 750;
+
 export const SAVE_RETRY_WAITING_TIME = 2000;
 export const MAX_SAVE_RETRY_WAITING_TIME = 300000; // 5m
 

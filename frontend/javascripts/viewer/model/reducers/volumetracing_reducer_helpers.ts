@@ -7,6 +7,7 @@ import uniqWith from "lodash-es/uniqWith";
 import type { Writeable } from "types/type_utils";
 import {
   type ContourMode,
+  type MappingType,
   OrthoViews,
   type OrthoViewWithoutTD,
   type Vector3,
@@ -24,7 +25,7 @@ import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
 import { setDirectionReducer } from "viewer/model/reducers/flycam_reducer";
 import type {
   LabelAction,
-  MappingType,
+  LocalSegmentationState,
   Segment,
   SegmentGroup,
   SegmentMap,
@@ -37,7 +38,7 @@ import {
   findParentIdForGroupId,
   MISSING_GROUP_ID,
   mapGroups,
-} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import {
   getLayerByName,
   getVisibleSegmentationLayer,
@@ -48,6 +49,7 @@ import type { SetIdReservationsAction } from "../actions/actions";
 import type {
   FinishMappingInitializationAction,
   SetMappingAction,
+  SetMappingDataAction,
   SetMappingEnabledAction,
   SetMappingNameAction,
 } from "../actions/settings_actions";
@@ -68,6 +70,7 @@ import { forEachGroups } from "./skeletontracing_reducer_helpers";
 export type VolumeTracingReducerAction =
   | VolumeTracingAction
   | SetMappingAction
+  | SetMappingDataAction
   | FinishMappingInitializationAction
   | SetMappingEnabledAction
   | SetMappingNameAction
@@ -90,27 +93,38 @@ export function updateVolumeTracing(
   });
 }
 
+export function updateLocalSegmentationState(
+  state: WebknossosState,
+  layerName: string,
+  shape: Partial<LocalSegmentationState>,
+) {
+  // Note that for volume tracing layers, the layerName is the tracingId.
+  return updateKey2(state, "localSegmentationStateByLayer", layerName, shape);
+}
+
 export function setActiveCellReducer(
   state: WebknossosState,
   volumeTracing: VolumeTracing,
-  id: number,
-  activeUnmappedSegmentId: number | null | undefined,
+  id: bigint,
+  activeUnmappedSegmentId: bigint | null | undefined,
 ) {
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
 
-  if (!isInSupportedValueRangeForLayer(state.dataset, segmentationLayer.name, id)) {
+  if (!isInSupportedValueRangeForLayer(state.dataset, segmentationLayer.name, id) || id < 0) {
     // Ignore the action if the segment id is not valid for the current elementClass
     return state;
   }
-  return updateVolumeTracing(state, volumeTracing.tracingId, {
+  const newState = updateVolumeTracing(state, volumeTracing.tracingId, {
     activeCellId: id,
+  });
+  return updateLocalSegmentationState(newState, volumeTracing.tracingId, {
     activeUnmappedSegmentId,
   });
 }
 export function createCellReducer(
   state: WebknossosState,
   volumeTracing: VolumeTracing,
-  newSegmentId: number,
+  newSegmentId: bigint,
 ) {
   return setActiveCellReducer(state, volumeTracing, newSegmentId, null);
 }
@@ -123,7 +137,9 @@ export function updateDirectionReducer(
 ) {
   let newState = state;
 
-  const lastCentroid = volumeTracing.lastLabelActions[0]?.centroid;
+  const lastLabelActions =
+    state.localSegmentationStateByLayer[volumeTracing.tracingId]?.lastLabelActions ?? [];
+  const lastCentroid = lastLabelActions[0]?.centroid;
   if (lastCentroid != null) {
     newState = setDirectionReducer(state, [
       centroid[0] - lastCentroid[0],
@@ -139,10 +155,8 @@ export function updateDirectionReducer(
 
   const labelAction: LabelAction = { centroid, plane };
 
-  return updateVolumeTracing(newState, volumeTracing.tracingId, {
-    lastLabelActions: [labelAction]
-      .concat(volumeTracing.lastLabelActions)
-      .slice(0, MAXIMUM_LABEL_ACTIONS_COUNT),
+  return updateLocalSegmentationState(newState, volumeTracing.tracingId, {
+    lastLabelActions: [labelAction].concat(lastLabelActions).slice(0, MAXIMUM_LABEL_ACTIONS_COUNT),
   });
 }
 export function addToContourListReducer(
@@ -154,17 +168,19 @@ export function addToContourListReducer(
 
   if (
     !isUpdatingCurrentlyAllowed ||
-    isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state)
+    isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state).isDisabled
   ) {
     return state;
   }
 
-  return updateVolumeTracing(state, volumeTracing.tracingId, {
-    contourList: [...volumeTracing.contourList, positionInLayerSpace],
+  const contourList =
+    state.localSegmentationStateByLayer[volumeTracing.tracingId]?.contourList ?? [];
+  return updateLocalSegmentationState(state, volumeTracing.tracingId, {
+    contourList: [...contourList, positionInLayerSpace],
   });
 }
 export function resetContourReducer(state: WebknossosState, volumeTracing: VolumeTracing) {
-  return updateVolumeTracing(state, volumeTracing.tracingId, {
+  return updateLocalSegmentationState(state, volumeTracing.tracingId, {
     contourList: [],
   });
 }
@@ -182,14 +198,14 @@ export function setContourTracingModeReducer(
   volumeTracing: VolumeTracing,
   mode: ContourMode,
 ) {
-  return updateVolumeTracing(state, volumeTracing.tracingId, {
+  return updateLocalSegmentationState(state, volumeTracing.tracingId, {
     contourTracingMode: mode,
   });
 }
 export function setLargestSegmentIdReducer(
   state: WebknossosState,
   volumeTracing: VolumeTracing,
-  id: number | null,
+  id: bigint | null,
 ) {
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     largestSegmentId: id,
@@ -207,8 +223,13 @@ export function setMappingNameReducer(
    * tracing object (which is also persisted on the back-end). Only null
    * or the name of a HDF5 mapping is stored there, though.
    */
-  // Editable mappings or locked mappings cannot be disabled or switched for now
+  // Editable mappings or locked mappings cannot be disabled or switched for now.
   if (volumeTracing.hasEditableMapping || volumeTracing.mappingIsLocked) {
+    return state;
+  }
+
+  // If the name wouldn't change there is not need to update.
+  if (volumeTracing.mappingName === mappingName) {
     return state;
   }
 
@@ -254,7 +275,7 @@ type SegmentUpdateInfo =
       readonly segmentGroups: TreeGroup[];
     }
   | {
-      readonly type: "UPDATE_LOCAL_SEGMENTATION_DATA";
+      readonly type: "UPDATE_LOCAL_SEGMENTATION_STATE";
       readonly layerName: string;
       readonly segments: SegmentMap;
       readonly segmentGroups: [];
@@ -286,9 +307,9 @@ export function getSegmentUpdateInfo(
     };
   } else {
     return {
-      type: "UPDATE_LOCAL_SEGMENTATION_DATA",
+      type: "UPDATE_LOCAL_SEGMENTATION_STATE",
       layerName: layer.name,
-      segments: state.localSegmentationData[layer.name].segments,
+      segments: state.localSegmentationStateByLayer[layer.name].segments,
       segmentGroups: [],
     };
   }
@@ -368,7 +389,7 @@ export function updateSegments(
   const { segments } =
     updateInfo.type === "UPDATE_VOLUME_TRACING"
       ? updateInfo.volumeTracing
-      : state.localSegmentationData[updateInfo.layerName];
+      : state.localSegmentationStateByLayer[updateInfo.layerName];
 
   const newSegmentMap = mapFn(segments);
 
@@ -378,8 +399,8 @@ export function updateSegments(
     });
   }
 
-  // Update localSegmentationData
-  return updateKey2(state, "localSegmentationData", updateInfo.layerName, {
+  // Update localSegmentationStateByLayer
+  return updateKey2(state, "localSegmentationStateByLayer", updateInfo.layerName, {
     segments: newSegmentMap,
   });
 }
@@ -437,8 +458,9 @@ export function handleRemoveSegment(state: WebknossosState, action: RemoveSegmen
 
 export function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
-    const { segmentId, segment } = action;
-    if (segmentId === 0) {
+    const segmentId = action.segmentId;
+    const { segment } = action;
+    if (segmentId === 0n) {
       return segments;
     }
     const oldSegment = segments.getNullable(segmentId);
@@ -479,34 +501,38 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
   }
   const { volumeTracing } = updateInfo;
   const { segments } = volumeTracing;
-  const isSameAgglomerate = action.sourceAgglomerateId === action.targetAgglomerateId;
-  const sourceSegment = segments.getNullable(action.sourceAgglomerateId);
-  const targetSegment = segments.getNullable(action.targetAgglomerateId);
+  const sourceAgglomerateId = action.sourceAgglomerateId;
+  const targetAgglomerateId = action.targetAgglomerateId;
+  const sourceSegmentId = action.sourceSegmentId;
+  const targetSegmentId = action.targetSegmentId;
+  const isSameAgglomerate = sourceAgglomerateId === targetAgglomerateId;
+  const sourceSegment = segments.getNullable(sourceAgglomerateId);
+  const targetSegment = segments.getNullable(targetAgglomerateId);
 
   // If the agglomerates are equal, do not remove the entry as this would empty the whole segment information.
   // This can happen in a concurrent editing scenario of the same segment.
   // Usually the later users client would notice a duplicate merge operation, be we do not want to rely on this here.
   let newState = isSameAgglomerate
     ? state
-    : handleRemoveSegment(state, removeSegmentAction(action.targetAgglomerateId, action.layerName));
+    : handleRemoveSegment(state, removeSegmentAction(targetAgglomerateId, action.layerName));
   const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
 
   newState = updateVolumeTracing(newState, volumeTracing.tracingId, {
     segmentJournal: volumeTracing.segmentJournal.concat([
       {
         type: "MERGE_SEGMENTS_ITEMS",
-        agglomerateId1: action.sourceAgglomerateId,
-        agglomerateId2: action.targetAgglomerateId,
-        segmentId1: action.sourceSegmentId,
-        segmentId2: action.targetSegmentId,
+        agglomerateId1: sourceAgglomerateId,
+        agglomerateId2: targetAgglomerateId,
+        segmentId1: sourceSegmentId,
+        segmentId2: targetSegmentId,
         entryIndex,
       },
     ]),
   });
 
   const updatedSourceProps = getUpdatedSourcePropsAfterMerge(
-    action.sourceAgglomerateId,
-    action.targetAgglomerateId,
+    sourceAgglomerateId,
+    targetAgglomerateId,
     sourceSegment,
     targetSegment,
   );
@@ -516,15 +542,15 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
   // it will be created here.
   newState = handleUpdateSegment(
     newState,
-    updateSegmentAction(action.sourceAgglomerateId, updatedSourceProps, action.layerName),
+    updateSegmentAction(sourceAgglomerateId, updatedSourceProps, action.layerName),
   );
 
   return newState;
 }
 
 export function getUpdatedSourcePropsAfterMerge(
-  sourceId: number,
-  targetId: number,
+  sourceId: bigint,
+  targetId: bigint,
   sourceSegment: Segment | undefined,
   targetSegment: Segment | undefined,
 ) {
@@ -548,7 +574,12 @@ export function getUpdatedSourcePropsAfterMerge(
     // id mismatch.
     // The below logic produces this instead:
     // {id: 1, name: "Segment 1 and Segment 2 - Custom String"}.
-    const sourceName = getSegmentName(sourceSegment ?? { id: sourceId, name: undefined }, false);
+    const sourceName = getSegmentName(
+      sourceSegment != null
+        ? { id: sourceSegment.id, name: sourceSegment.name }
+        : { id: sourceId, name: undefined },
+      false,
+    );
     props.name = `${sourceName} and ${targetSegment.name}`;
   }
 
@@ -617,7 +648,7 @@ export function expandSegmentParents(state: WebknossosState, action: ClickSegmen
   const getNewGroups = () => {
     const { segments, segmentGroups } = getVisibleSegments(state);
     if (segments == null) return segmentGroups;
-    const { segmentId } = action;
+    const segmentId = action.segmentId;
     const segmentForId = segments.getNullable(segmentId);
     if (segmentForId == null) return segmentGroups;
     // Expand recursive parents of group too, if necessary

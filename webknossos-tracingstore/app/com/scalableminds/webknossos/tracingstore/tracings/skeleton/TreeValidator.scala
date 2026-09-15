@@ -1,18 +1,20 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.datastructures.UnionFind
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils
-import com.scalableminds.util.tools.{Box, Failure, Full}
 
 import scala.collection.mutable
 
 object TreeValidator {
 
-  def validateTrees(trees: Seq[Tree],
-                    treeGroups: Seq[TreeGroup],
-                    branchPoints: Seq[BranchPoint],
-                    comments: Seq[Comment]): Box[Unit] =
+  def validateTrees(
+      trees: Seq[Tree],
+      treeGroups: Seq[TreeGroup],
+      branchPoints: Seq[BranchPoint],
+      comments: Seq[Comment]
+  ): Box[Unit] =
     for {
       _ <- checkNoDuplicateTreeIds(trees)
       _ <- checkNoDuplicateNodeIds(trees)
@@ -24,7 +26,7 @@ object TreeValidator {
       _ <- checkAllTreeGroupIdsUsedExist(trees, treeGroups)
       _ <- checkAllNodesUsedInBranchPointsExist(trees, branchPoints)
       _ <- checkAllNodesUsedInCommentsExist(trees, comments)
-    } yield Full(())
+    } yield ()
 
   private def checkNoDuplicateTreeIds(trees: Seq[Tree]): Box[Unit] = {
     val treeIds = trees.map(_.treeId)
@@ -59,13 +61,12 @@ object TreeValidator {
   private def findDuplicateEdges(edges: Seq[Edge]): Seq[Edge] = {
     val duplicates = Seq.newBuilder[Edge]
     val seen = mutable.HashSet[Edge]()
-    for (x <- edges) {
+    for (x <- edges)
       if (seen(x) || seen(Edge(x.target, x.source))) {
         duplicates += x
       } else {
         seen += x
       }
-    }
     duplicates.result()
   }
 
@@ -78,7 +79,8 @@ object TreeValidator {
         Full(())
       } else {
         Failure(
-          s"Some edges refer to non-existent nodes. treeId: ${tree.treeId}, nodeIds: ${nodesOnlyInEdges.mkString(", ")}")
+          s"Some edges refer to non-existent nodes. treeId: ${tree.treeId}, nodeIds: ${nodesOnlyInEdges.mkString(", ")}"
+        )
       }
     }
 
@@ -91,7 +93,8 @@ object TreeValidator {
         Full(())
       } else {
         Failure(
-          s"Some edges have the same source and target. treeId: ${tree.treeId}, edges: ${invalidEdges.mkString(", ")}")
+          s"Some edges have the same source and target. treeId: ${tree.treeId}, edges: ${invalidEdges.mkString(", ")}"
+        )
       }
     }
 

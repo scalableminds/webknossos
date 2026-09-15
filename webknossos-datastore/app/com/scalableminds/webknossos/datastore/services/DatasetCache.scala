@@ -1,16 +1,17 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.{UsableDataSource, StaticLayer}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class DatasetCache @Inject()(remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+class DatasetCache @Inject() (remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext) {
 
   lazy val cache: AlfuCache[ObjectId, UsableDataSource] = AlfuCache[ObjectId, UsableDataSource](
     timeToLive = 1 day, // Cache for a longer time, since we invalidate the cache manually
@@ -30,7 +31,7 @@ class DatasetCache @Inject()(remoteWebknossosClient: DSRemoteWebknossosClient)(i
   def getWithLayer(id: ObjectId, dataLayerName: String): Fox[(UsableDataSource, StaticLayer)] =
     for {
       dataSource <- getById(id)
-      dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> "Data layer not found"
+      dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> Msg.Dataset.Layer.notFound(dataLayerName)
     } yield (dataSource, dataLayer)
 
   def invalidateCache(datasetId: ObjectId): Unit = cache.remove(datasetId)

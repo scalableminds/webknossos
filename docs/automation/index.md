@@ -6,6 +6,7 @@ Continue reading on the following pages:
 
 - **[AI Segmentation](ai_segmentation.md)** - Run pre-trained or custom AI models on your datasets
 - **[AI Model Training](ai_training.md)** - Train custom models using your annotations
+- **[Choosing Magnifications and Bounding Boxes](choosing_mags_and_bboxes.md)** - Guidelines for picking magnifications and ground-truth bounding boxes for AI training
 - **[Alignment](alignment.md)** - Align image stacks and stitch tiles
 - **[Animations](animations.md)** - Create video animations of your datasets
 - **[Jobs](jobs.md)** - Monitor background processing jobs and workflows

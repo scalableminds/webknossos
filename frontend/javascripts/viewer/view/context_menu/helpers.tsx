@@ -178,7 +178,7 @@ export function getInfoMenuItem(
 }
 
 export function getContextMenuPositionFromEvent(
-  event: React.MouseEvent<HTMLDivElement>,
+  event: React.MouseEvent<HTMLElement>,
   className: string,
 ): [number, number] {
   const overlayDivs = document.getElementsByClassName(className);

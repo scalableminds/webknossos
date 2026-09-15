@@ -1,10 +1,10 @@
 import { PushpinOutlined } from "@ant-design/icons";
 import { Col, Row, Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { copyToClipboard } from "libs/clipboard";
 import { formatNumberToLength, formatVoxelsForHighNumbers } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
 import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type React from "react";
@@ -41,10 +41,8 @@ function DatasetPositionView() {
   const maybeErrorMessageRef = useRef<string | null>(null);
   const dispatch = useDispatch();
 
-  const copyPositionToClipboard = async () => {
-    const position = V3.floor(getPosition(flycam)).join(", ");
-    await navigator.clipboard.writeText(position);
-    Toast.success("Position copied to clipboard");
+  const copyPositionToClipboard = () => {
+    copyToClipboard(V3.floor(getPosition(flycam)).join(", "), "position");
   };
 
   const handleChangePosition = useCallback(

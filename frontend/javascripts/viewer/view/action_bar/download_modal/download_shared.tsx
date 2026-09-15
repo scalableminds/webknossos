@@ -1,6 +1,6 @@
 import { CopyOutlined } from "@ant-design/icons";
 import { Button, Divider, Flex, Row, Typography } from "antd";
-import Toast from "libs/toast";
+import { copyToClipboard } from "libs/clipboard";
 import messages from "messages";
 
 export function Hint({
@@ -31,11 +31,6 @@ export function MoreInfoHint() {
   );
 }
 
-async function copyToClipboard(code: string) {
-  await navigator.clipboard.writeText(code);
-  Toast.success("Snippet copied to clipboard.");
-}
-
 export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
   return (
     <pre>
@@ -48,7 +43,7 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
           background: "transparent",
         }}
         onClick={() => {
-          copyToClipboard(code);
+          copyToClipboard(code, "code snippet");
           if (onCopy) {
             onCopy();
           }
@@ -66,7 +61,7 @@ export function WorkerInfo() {
       <Divider />
       <Typography.Paragraph type="warning">
         {messages["annotation.export_no_worker"]}
-        <a href="mailto:hello@webknossos.org">hello@webknossos.org.</a>
+        <a href="mailto:support@webknossos.org">support@webknossos.org.</a>
       </Typography.Paragraph>
     </Row>
   );

@@ -5,10 +5,9 @@ import com.scalableminds.util.tools.ConfigReader
 import com.typesafe.config.Config
 import play.api.Configuration
 
-import java.nio.file.Path
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
-class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
+class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigReader {
   override val raw: Configuration = configuration
 
   object Http {
@@ -22,8 +21,9 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val uri: String = get[String]("datastore.webKnossos.uri")
       val pingInterval: FiniteDuration = get[FiniteDuration]("datastore.webKnossos.pingInterval")
     }
-    val baseDirectory: Path = Path.of(get[String]("datastore.baseDirectory")).toAbsolutePath
+    val baseDirectories: List[Config] = getList[Config]("datastore.baseDirectories")
     val localDirectoryWhitelist: List[String] = getList[String]("datastore.localDirectoryWhitelist")
+    val writeVirtualDatasetsMirror: Boolean = get[Boolean]("datastore.writeVirtualDatasetsMirror")
     object WatchFileSystem {
       val enabled: Boolean = get[Boolean]("datastore.watchFileSystem.enabled")
       val interval: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.interval")
@@ -42,7 +42,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
         val blockSize: Int = get[Int]("datastore.cache.agglomerateFile.blockSize")
         val cumsumMaxReaderRange: Long = get[Long]("datastore.cache.agglomerateFile.cumsumMaxReaderRange")
       }
-      val children = List(Mapping, ImageArrayChunks, AgglomerateFile)
+      val children: List[Object] = List(Mapping, ImageArrayChunks, AgglomerateFile)
     }
     object AdHocMesh {
       val timeout: FiniteDuration = get[FiniteDuration]("datastore.adHocMesh.timeout")
@@ -62,20 +62,12 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     object DataVaults {
       val credentials: List[Config] = getList[Config]("datastore.dataVaults.credentials")
     }
-    object S3Upload {
-      val enabled: Boolean = get[Boolean]("datastore.s3Upload.enabled")
-      val objectKeyPrefix: String = get[String]("datastore.s3Upload.objectKeyPrefix")
-      val credentialName: String = get[String]("datastore.s3Upload.credentialName")
+    object Upload {
+      val deleteTemporaryFilesAfterUpload: Boolean =
+        get[Boolean]("datastore.upload.deleteTemporaryFilesAfterUpload")
     }
-    val children = List(WebKnossos,
-                        WatchFileSystem,
-                        Cache,
-                        AdHocMesh,
-                        Redis,
-                        AgglomerateTree,
-                        AgglomerateGraph,
-                        DataVaults,
-                        S3Upload)
+    val children: List[Object] =
+      List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateTree, AgglomerateGraph, DataVaults, Upload)
   }
 
   object SlackNotifications {
@@ -83,5 +75,5 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     val verboseLoggingEnabled: Boolean = get[Boolean]("slackNotifications.verboseLoggingEnabled")
   }
 
-  val children = List(Http, Datastore, SlackNotifications)
+  val children: List[Object] = List(Http, Datastore, SlackNotifications)
 }

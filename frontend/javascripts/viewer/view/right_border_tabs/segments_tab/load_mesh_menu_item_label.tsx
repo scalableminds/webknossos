@@ -1,4 +1,5 @@
 import { WarningOutlined } from "@ant-design/icons";
+import { Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import type { APIMeshFileInfo } from "types/api_types";
 import type { VolumeTracing } from "viewer/store";
@@ -29,7 +30,9 @@ export function LoadMeshMenuItemLabel({ currentMeshFile, volumeTracing }: Props)
       </FastTooltip>
       {showWarning && (
         <FastTooltip title="Warning: The segmentation data has changed since the mesh file was created. The mesh may not match the current data.">
-          <WarningOutlined style={{ color: "var(--ant-color-warning)" }} />
+          <Typography.Text type="warning">
+            <WarningOutlined />
+          </Typography.Text>
         </FastTooltip>
       )}
     </span>

@@ -11,7 +11,7 @@ export const VOLUME_TRACING_ID = "volumeTracingId";
 // this is a uint16 segmentation layer
 export const tracing: ServerVolumeTracing = {
   typ: "Volume",
-  activeSegmentId: 10000,
+  activeSegmentId: 10000n,
   boundingBox: {
     topLeft: {
       x: 0,
@@ -40,7 +40,7 @@ export const tracing: ServerVolumeTracing = {
   additionalAxes: [],
   elementClass: "uint16",
   id: VOLUME_TRACING_ID,
-  largestSegmentId: 21890,
+  largestSegmentId: 21890n,
   zoomLevel: 0,
   mags: [
     { x: 1, y: 1, z: 1 },

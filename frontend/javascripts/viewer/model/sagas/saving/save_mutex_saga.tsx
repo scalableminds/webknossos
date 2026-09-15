@@ -1,14 +1,21 @@
-import { acquireAnnotationMutex, releaseAnnotationMutex } from "admin/rest_api";
+import {
+  acquireAnnotationMutex,
+  releaseAnnotationMutex,
+  releaseAnnotationMutexWithBeacon,
+} from "admin/rest_api";
 import { Button } from "antd";
+import { TAB_SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
 import messages from "messages";
 import {
   call,
   cancel,
+  cancelled,
   delay,
   type FixedTask,
   fork,
   put,
+  race,
   retry,
   take,
   takeEvery,
@@ -24,25 +31,26 @@ import {
   setIsMutexAcquiredAction,
   setUserHoldingMutexAction,
   subscribeToAnnotationMutexAction,
-  type UnsubscribeFromAnnotationMutexAction,
   unsubscribeFromAnnotationMutexAction,
 } from "viewer/model/actions/save_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import { spawnUntilCanceled } from "viewer/model/sagas/saga_helpers";
+import {
+  ACQUIRE_MUTEX_INTERVAL,
+  DELAY_AFTER_FAILED_MUTEX_FETCH,
+  INITIAL_BACKOFF_TIME,
+} from "viewer/model/sagas/saving/save_saga_constants";
 import { ensureWkInitialized } from "../ready_sagas";
 
-// Also refer to application.conf where annotation.mutex.expiryTime is defined
-// (typically, 2 minutes).
-
-const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
-const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
-const ACQUIRE_MUTEX_INTERVAL = import.meta.env.MODE === "test" ? 1 * 1000 : 60 * 1000;
-const DELAY_AFTER_FAILED_MUTEX_FETCH = import.meta.env.MODE === "test" ? 1 * 1000 : 10 * 1000;
+const MUTEX_NOT_ACQUIRED_TOAST_KEY = "MutexCouldNotBeAcquired";
+const MUTEX_ACQUIRED_TOAST_KEY = "AnnotationMutexAcquired";
+const STARVING_FOR_MUTEX_TOAST_KEY = "StarvingForMutex";
+const UNABLE_TO_KEEP_MUTEX_TOAST_KEY = "UnableToKeepMutex";
 const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
-const INITIAL_BACKOFF_TIME = 750;
 const BACKOFF_TIME_MULTIPLIER = 1.2;
 const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
-const MAX_AD_HOC_RETRY_TIME = 10 * 1000;
+const MAX_AD_HOC_RETRY_TIME = 30 * 1000;
 const BACKOFF_JITTER_UPPER_PERCENT = 0.15;
 const MAX_RELEASE_RETRY_INTERVAL = 30 * 1000;
 
@@ -104,7 +112,7 @@ function setMutexLogicSate(state: MutexLogicState): void {
   mutexLogicState = state;
 }
 
-export function* acquireAnnotationMutexMaybe(): Saga<void> {
+export function* annotationMutexSaga(): Saga<void> {
   /*
    * This saga is directly called by the root saga.
    *
@@ -122,14 +130,11 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
 
   yield* fork(watchMutexStateChangesForNotification, mutexLogicState);
   yield* fork(watchForCollaborationModeChange, mutexLogicState);
-  yield* fork(watchForMutexSubscriptionActions, mutexLogicState);
+  yield* fork(watchForDisableSaving, mutexLogicState);
+  yield* fork(watchForAnnotationExit);
   yield* takeEvery(["SUBSCRIBE_TO_ANNOTATION_MUTEX"], autoTimeoutSubscription);
 
-  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
-  if (othersMayEdit) {
-    // Only start initial acquiring of mutex if othersMayEdit is true.
-    yield* call(restartMutexAcquiringSaga, mutexLogicState);
-  }
+  yield* call(ensureCorrectMutexAcquiringSagaIsRunning, mutexLogicState);
 }
 
 function getUnsubscribeFromAnnotationMutexSaga(
@@ -157,9 +162,8 @@ function getUnsubscribeFromAnnotationMutexSaga(
     }
     const hasNoSubscribersLeft = Object.keys(state.subscribersToMutex).length === 0;
     if (hasNoSubscribersLeft && state.runningAdHocMutexAcquiringSaga) {
-      yield* cancel(state.runningAdHocMutexAcquiringSaga);
-      state.runningAdHocMutexAcquiringSaga = null;
-      yield* call(releaseMutex);
+      yield* call(cancelMutexSagaIfRunning, state, MutexFetchingStrategy.AdHoc);
+      yield* call(releaseMutexIfAcquired);
     }
   }
   return unsubscribe;
@@ -167,11 +171,25 @@ function getUnsubscribeFromAnnotationMutexSaga(
 
 const MUTEX_SUBSCRIPTION_TIMEOUT = 5 * 60 * 1000;
 function* autoTimeoutSubscription(action: SubscribeToAnnotationMutexAction): Saga<void> {
+  yield* call(waitUntilMutexIsAcquiredOrUnneeded);
   yield delay(MUTEX_SUBSCRIPTION_TIMEOUT);
   const warnIfAlreadyUnsubscribed = false;
   yield call(
     getUnsubscribeFromAnnotationMutexSaga(action.subscriptionId, warnIfAlreadyUnsubscribed),
   );
+}
+
+function* waitUntilMutexIsAcquiredOrUnneeded(): Saga<void> {
+  while (true) {
+    const doesHaveMutex = yield* call(getDoesHaveMutex);
+    const othersMayEdit = yield* select((state) =>
+      isAnnotationEditableByNonOwners(state.annotation),
+    );
+    if (doesHaveMutex || !othersMayEdit) {
+      return;
+    }
+    yield* take("SET_IS_MUTEX_ACQUIRED");
+  }
 }
 
 export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<void>> {
@@ -190,16 +208,10 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
   state.subscribersToMutex[newId] = callerId;
   yield* put(subscribeToAnnotationMutexAction(newId, callerId));
 
-  while (true) {
-    const doesHaveMutex = yield* call(getDoesHaveMutex);
-    const othersMayEdit = yield* select((state) =>
-      isAnnotationEditableByNonOwners(state.annotation),
-    );
-    if (doesHaveMutex || !othersMayEdit) {
-      return getUnsubscribeFromAnnotationMutexSaga(newId);
-    }
-    yield* take("SET_IS_MUTEX_ACQUIRED");
-  }
+  yield* call(ensureCorrectMutexAcquiringSagaIsRunning, state);
+
+  yield* call(waitUntilMutexIsAcquiredOrUnneeded);
+  return getUnsubscribeFromAnnotationMutexSaga(newId);
 }
 
 // Needed for tests
@@ -211,33 +223,59 @@ export function* clearAllSubscriptions() {
   }
 }
 
-function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void> {
-  const newFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
-  const oldFetchingStrategy = mutexLogicState.fetchingStrategy;
-  const didStrategyChange = newFetchingStrategy !== oldFetchingStrategy;
-  if (didStrategyChange && mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
-    yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
-    mutexLogicState.runningContinuousMutexAcquiringSaga = null;
-  } else if (didStrategyChange && mutexLogicState.runningAdHocMutexAcquiringSaga != null) {
-    yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
-    mutexLogicState.runningAdHocMutexAcquiringSaga = null;
+function* cancelMutexSagaIfRunning(
+  mutexLogicState: MutexLogicState,
+  strategy: MutexFetchingStrategy,
+): Saga<void> {
+  if (strategy === MutexFetchingStrategy.Continuously) {
+    if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
+      yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
+      mutexLogicState.runningContinuousMutexAcquiringSaga = null;
+    }
+  } else {
+    if (mutexLogicState.runningAdHocMutexAcquiringSaga != null) {
+      yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
+      mutexLogicState.runningAdHocMutexAcquiringSaga = null;
+    }
   }
-  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
-  if (!othersMayEdit) {
-    return;
-  }
-  const hasNoRunningMutexAcquiringSaga =
-    mutexLogicState.runningContinuousMutexAcquiringSaga == null &&
-    mutexLogicState.runningAdHocMutexAcquiringSaga == null;
-  if (didStrategyChange || hasNoRunningMutexAcquiringSaga) {
-    mutexLogicState.fetchingStrategy = newFetchingStrategy;
-    yield* call(startSagaWithAppropriateMutexFetchingStrategy, mutexLogicState);
-  }
+}
+
+function* ensureCorrectMutexAcquiringSagaIsRunning(mutexLogicState: MutexLogicState): Saga<void> {
+  // Restarts the correct mutex saga (non-blocking)
+  yield spawnUntilCanceled(function* () {
+    const isSavingDisabled = yield* select((state) => state.save.isSavingDisabled);
+    if (isSavingDisabled) {
+      // Cancellation of running mutex sagas when saving is disabled is handled
+      // by watchForDisableSaving.
+      return;
+    }
+    const newFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
+    const oldFetchingStrategy = mutexLogicState.fetchingStrategy;
+    const didStrategyChange = newFetchingStrategy !== oldFetchingStrategy;
+    if (didStrategyChange) {
+      yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.Continuously);
+      yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.AdHoc);
+    }
+    const othersMayEdit = yield* select((state) =>
+      isAnnotationEditableByNonOwners(state.annotation),
+    );
+    if (!othersMayEdit) {
+      return;
+    }
+    const hasNoRunningMutexAcquiringSaga =
+      mutexLogicState.runningContinuousMutexAcquiringSaga == null &&
+      mutexLogicState.runningAdHocMutexAcquiringSaga == null;
+    if (didStrategyChange || hasNoRunningMutexAcquiringSaga) {
+      mutexLogicState.fetchingStrategy = newFetchingStrategy;
+      yield* call(startSagaWithAppropriateMutexFetchingStrategy, mutexLogicState);
+    }
+  });
 }
 
 function* startSagaWithAppropriateMutexFetchingStrategy(
   mutexLogicState: MutexLogicState,
 ): Saga<void> {
+  // Uses fork to start adhoc or continuous mutex sagas
   if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
     const hasActiveMutexSubscribers = Object.keys(mutexLogicState.subscribersToMutex).length > 0;
     // While the fetching strategy is ad hoc, updating should be allowed.
@@ -247,12 +285,7 @@ function* startSagaWithAppropriateMutexFetchingStrategy(
       mutexLogicState.runningAdHocMutexAcquiringSaga = taskPermanentlyAcquiringMutex;
     } else {
       // If we still have the mutex, release it first as strategy is now ad-hoc.
-      const currentlyHavingMutex = yield* select(
-        (state) => state.save.mutexState.hasAnnotationMutex,
-      );
-      if (currentlyHavingMutex) {
-        yield* call(releaseMutex);
-      }
+      yield* call(releaseMutexIfAcquired);
     }
   } else {
     const continuousSaga = yield* fork(tryAcquireMutexContinuously, mutexLogicState);
@@ -266,28 +299,39 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
    * race).
    */
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
-  const activeUser = yield* select((state) => state.activeUser);
   mutexLogicState.isInitialRequest = true;
 
   // We can simply use an infinite loop here, because the saga will be cancelled by
   // reactToOthersMayEditChanges when collaborationMode changes.
   while (true) {
-    const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
-    if (blockedByUser == null || blockedByUser.id !== activeUser?.id) {
-      // If the annotation is currently not blocked by the active user,
-      // we immediately disallow updating the annotation.
+    if (mutexLogicState.isInitialRequest) {
+      // If the annotation was just opened, we immediately disallow updating the
+      // annotation to prevent the user from editing before having the mutex.
+      // After the initial request, we always refresh the existing mutex
+      // which is why editing should be allowed (at least, until the mutex is lost).
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
     }
     try {
-      const { canEdit, blockedByUser: blockedByUser } = yield* retry(
+      const {
+        canEdit,
+        blockedByUser: blockedByUser,
+        blockedBySessionId,
+      } = yield* retry(
         RETRY_COUNT,
         ACQUIRE_MUTEX_INTERVAL / RETRY_COUNT,
         acquireAnnotationMutex,
         annotationId,
+        TAB_SESSION_ID,
       );
-      yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(canEdit));
-      yield* put(setUserHoldingMutexAction(blockedByUser));
-      yield* put(setIsMutexAcquiredAction(canEdit));
+      if (mutexLogicState.isInitialRequest || !canEdit) {
+        // Only change isUpdatingAnnotationCurrentlyAllowed directly after
+        // the initial request OR when we disable editing.
+        // This forces users to refresh the page once the waiting for the mutex
+        // has succeeded. We do this to be extra safe for now. Will be removed
+        // with further advancements of the live collab feature.
+        yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(canEdit));
+      }
+      yield* put(setUserHoldingMutexAction(blockedByUser, blockedBySessionId));
 
       if (canEdit !== (yield* call(getDoesHaveMutex))) {
         // Only dispatch the action if it changes the store to avoid
@@ -307,13 +351,16 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
       }
     }
     mutexLogicState.isInitialRequest = false;
-    yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
+    yield* race({
+      timeout: call(delay, ACQUIRE_MUTEX_INTERVAL),
+      retry: take("RETRY_MUTEX_ACQUISITION_NOW"),
+    });
   }
 }
 
 function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void> {
   let backoffTime = INITIAL_BACKOFF_TIME;
-  const startingTime = new Date().getMilliseconds();
+  const startingTime = Date.now();
   let canEdit = false;
   let blockedByUser = null;
   let showingToast = false;
@@ -322,13 +369,14 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
   // reactToOthersMayEditChanges when collaborationMode changes.
   while (true) {
     try {
-      const mutexResult = yield* call(acquireAnnotationMutex, annotationId);
+      const mutexResult = yield* call(acquireAnnotationMutex, annotationId, TAB_SESSION_ID);
       canEdit = mutexResult.canEdit;
       blockedByUser = mutexResult.blockedByUser;
 
-      yield* put(setUserHoldingMutexAction(blockedByUser));
+      yield* put(setUserHoldingMutexAction(blockedByUser, mutexResult.blockedBySessionId));
       yield* put(setIsMutexAcquiredAction(canEdit));
       if (canEdit) {
+        Toast.close(STARVING_FOR_MUTEX_TOAST_KEY);
         return;
       }
     } catch (error) {
@@ -341,16 +389,15 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
       }
       console.error("Error while trying to acquire mutex.", error);
     }
-    if (!showingToast && new Date().getMilliseconds() - startingTime > MAX_AD_HOC_RETRY_TIME) {
+    if (!showingToast && Date.now() - startingTime > MAX_AD_HOC_RETRY_TIME) {
       const blockingUserName = blockedByUser
         ? `${blockedByUser.firstName} ${blockedByUser.lastName}`
         : "unknown";
       Toast.warning(
         `Could not get the annotations write-lock for more than ${MAX_AD_HOC_RETRY_TIME / 1000} seconds.
         User ${blockingUserName} is currently blocking the annotation.
-        This might be due to using non-live collab supported features.
-        Ensure they are sticking to tools supporting live collaboration.`,
-        { sticky: true },
+        Retrying...`,
+        { sticky: true, key: STARVING_FOR_MUTEX_TOAST_KEY },
       );
       showingToast = true;
     }
@@ -370,16 +417,19 @@ function* keepAnnotationMutexForAdHocStrategy(annotationId: string): Saga<void> 
   // We got the mutex once, now keep it until this saga is cancelled due to saving finished.
   let canEdit = true;
   let blockedByUser = null;
+  let blockedBySessionId = null;
   // Wait a little since we already just acquired the mutex in acquireMutexInitiallyForAdHocStrategy.
   yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
   while (true) {
     try {
-      const mutexInfo = yield* call(acquireAnnotationMutex, annotationId);
+      const mutexInfo = yield* call(acquireAnnotationMutex, annotationId, TAB_SESSION_ID);
       canEdit = mutexInfo.canEdit;
       blockedByUser = mutexInfo.blockedByUser;
-      yield* put(setUserHoldingMutexAction(blockedByUser));
+      blockedBySessionId = mutexInfo.blockedBySessionId;
+      yield* put(setUserHoldingMutexAction(blockedByUser, mutexInfo.blockedBySessionId));
       yield* put(setIsMutexAcquiredAction(canEdit));
       if (canEdit) {
+        Toast.close(UNABLE_TO_KEEP_MUTEX_TOAST_KEY);
         // Only wait for next refetching of the mutex in case the user can edit.
         // Else directly go to the error case outside the try-catch block below.
         yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
@@ -390,6 +440,7 @@ function* keepAnnotationMutexForAdHocStrategy(annotationId: string): Saga<void> 
       yield* put(setIsMutexAcquiredAction(false));
       Toast.warning(
         "Unable to get write-lock needed to update the annotation. Please check your connection to WEBKNOSSOS. See the console for more information. Retrying soon.",
+        { key: UNABLE_TO_KEEP_MUTEX_TOAST_KEY },
       );
       yield* call(delay, DELAY_AFTER_FAILED_MUTEX_FETCH);
     }
@@ -398,11 +449,15 @@ function* keepAnnotationMutexForAdHocStrategy(annotationId: string): Saga<void> 
       // If this code is reached, the user once already had the mutex, but re-acquiring was needed as saving took quite long.
       // In case of a network error, the catch block should take care of re-trying to acquire the mutex.
       // But if the server replies that the current user cannot edit at the moment, the previously acquired mutex must have
-      // expanded and another user must have it at the moment. This means that there a likely saving and version conflicts now as
+      // expired and another user must have it at the moment. This means that there a likely saving and version conflicts now as
       // this user lost the mutex while still in the process of syncing with the backend. Thus, throwing an error to show a toast and crashing the saga
       // leads the user to having to reload wk to minimize lost work, instead of allowing to continue to edit data.
       throw new Error(
-        `No longer owner of the annotation mutex. Instead user ${blockedByUser ? `${blockedByUser.firstName} ${blockedByUser?.lastName} (${blockedByUser?.id})` : "unknown user"} has the mutex.`,
+        `No longer owner of the annotation mutex. Instead user ${
+          blockedByUser || blockedBySessionId
+            ? `${blockedByUser?.firstName} ${blockedByUser?.lastName} (${blockedByUser?.id}, sessionId=${blockedBySessionId})`
+            : "unknown user"
+        } has the mutex.`,
       );
     }
   }
@@ -423,24 +478,13 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
 function* watchForCollaborationModeChange(mutexLogicState: MutexLogicState): Saga<void> {
   function* onChange({ collaborationMode }: SetCollaborationModeAction): Saga<void> {
     if (collaborationMode !== "OwnerOnly") {
-      yield* call(restartMutexAcquiringSaga, mutexLogicState);
+      yield* call(ensureCorrectMutexAcquiringSagaIsRunning, mutexLogicState);
     } else {
       // Collaboration was turned off by the activeUser. Cancel any running mutex
       // acquisition saga and release the mutex if currently held.
-      if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
-        yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
-        mutexLogicState.runningContinuousMutexAcquiringSaga = null;
-      }
-      if (mutexLogicState.runningAdHocMutexAcquiringSaga != null) {
-        yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
-        mutexLogicState.runningAdHocMutexAcquiringSaga = null;
-      }
-      const stillHasAnnotationMutex = yield* select(
-        (state) => state.save.mutexState.hasAnnotationMutex,
-      );
-      if (stillHasAnnotationMutex) {
-        yield* call(releaseMutex);
-      }
+      yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.Continuously);
+      yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.AdHoc);
+      yield* call(releaseMutexIfAcquired);
       // Since only the owner can turn off collaboration, they should be able to edit, too.
       // Still, let's check that owner === activeUser to be extra safe.
       const owner = yield* select((storeState) => storeState.annotation.owner);
@@ -452,91 +496,120 @@ function* watchForCollaborationModeChange(mutexLogicState: MutexLogicState): Sag
   yield* takeEvery("SET_COLLABORATION_MODE", onChange);
 }
 
-function* watchForMutexSubscriptionActions(mutexLogicState: MutexLogicState): Saga<void> {
-  // If a subscription is added or removed we may need to start/stop the ad-hoc mutex fetching.
-  function* reactToSubscriptionChange(
-    action: SubscribeToAnnotationMutexAction | UnsubscribeFromAnnotationMutexAction,
-  ): Saga<void> {
-    const othersMayEdit = yield* select((state) =>
-      isAnnotationEditableByNonOwners(state.annotation),
-    );
-    if (!othersMayEdit) {
-      return;
-    }
-    if (action.type === "SUBSCRIBE_TO_ANNOTATION_MUTEX") {
-      // Start the ad hoc mutex acquisition if needed.
-      yield* call(restartMutexAcquiringSaga, mutexLogicState);
-    } else {
-      const subscriptionCount = Object.keys(mutexLogicState.subscribersToMutex).length;
-      // Stop the mutex acquisition if needed.
-      if (subscriptionCount === 0) {
-        if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
-          yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
-          mutexLogicState.runningContinuousMutexAcquiringSaga = null;
-        }
-        const stillHasAnnotationMutex = yield* select(
-          (state) => state.save.mutexState.hasAnnotationMutex,
-        );
-        if (stillHasAnnotationMutex) {
-          yield* call(releaseMutex);
-        }
-      }
-    }
-  }
-
-  yield* takeEvery(
-    ["SUBSCRIBE_TO_ANNOTATION_MUTEX", "UNSUBSCRIBE_FROM_ANNOTATION_MUTEX"],
-    reactToSubscriptionChange,
-  );
+function* watchForDisableSaving(mutexLogicState: MutexLogicState): Saga<void> {
+  yield* take("DISABLE_SAVING");
+  yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.Continuously);
+  yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.AdHoc);
+  yield* call(releaseMutexIfAcquired);
 }
 
 function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState): Saga<void> {
   let wasMutexAlreadyAcquiredBefore = yield* select(
     (state) => state.save.mutexState.hasAnnotationMutex,
   );
+
   yield* takeEvery(
     "SET_IS_MUTEX_ACQUIRED",
     function* ({ isMutexAcquired }: SetIsMutexAcquiredAction) {
-      const othersMayEdit = yield* select((state) =>
-        isAnnotationEditableByNonOwners(state.annotation),
-      );
-      if (!othersMayEdit) {
-        return;
-      }
-      if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
-        return;
-      }
-      if (isMutexAcquired) {
-        Toast.close(MUTEX_NOT_ACQUIRED_KEY);
-        if (!mutexLogicState.isInitialRequest && !wasMutexAlreadyAcquiredBefore) {
-          const message = (
-            <>
-              {messages["annotation.acquiringMutexSucceeded"]}
-              <Button onClick={() => location.reload()}>Reload the annotation</Button>
-            </>
-          );
-          Toast.success(message, { sticky: true, key: MUTEX_ACQUIRED_KEY });
+      try {
+        const othersMayEdit = yield* select((state) =>
+          isAnnotationEditableByNonOwners(state.annotation),
+        );
+        const isSavingDisabled = yield* select((state) => state.save.isSavingDisabled);
+        if (
+          !othersMayEdit ||
+          isSavingDisabled ||
+          mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc
+        ) {
+          Toast.close(MUTEX_NOT_ACQUIRED_TOAST_KEY);
+          Toast.close(MUTEX_ACQUIRED_TOAST_KEY);
+          return;
         }
-      } else {
-        Toast.close(MUTEX_ACQUIRED_KEY);
-        const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
-        const message =
-          blockedByUser != null
-            ? messages["annotation.acquiringMutexFailed"]({
-                userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,
-              })
-            : messages["annotation.acquiringMutexFailed.noUser"];
-        Toast.warning(message, { sticky: true, key: MUTEX_NOT_ACQUIRED_KEY });
+        if (isMutexAcquired) {
+          Toast.close(MUTEX_NOT_ACQUIRED_TOAST_KEY);
+          if (!mutexLogicState.isInitialRequest && !wasMutexAlreadyAcquiredBefore) {
+            const message = (
+              <>
+                {messages["annotation.acquiringMutexSucceeded"]}
+                <Button onClick={() => location.reload()}>Reload the annotation</Button>
+              </>
+            );
+            Toast.success(message, { sticky: true, key: MUTEX_ACQUIRED_TOAST_KEY });
+          }
+        } else {
+          Toast.close(MUTEX_ACQUIRED_TOAST_KEY);
+          const activeUser = yield* select((state) => state.activeUser);
+          const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
+          const blockedBySessionId = yield* select(
+            (state) => state.save.mutexState.blockedBySessionId,
+          );
+          let message: string;
+          if (
+            blockedByUser != null &&
+            blockedByUser.id === activeUser?.id &&
+            blockedBySessionId !== TAB_SESSION_ID
+          ) {
+            message = messages["annotation.acquiringMutexFailed.sameUserDifferentSession"];
+          } else if (blockedByUser != null) {
+            message = messages["annotation.acquiringMutexFailed"]({
+              userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,
+            });
+          } else {
+            message = messages["annotation.acquiringMutexFailed.noUser"];
+          }
+          // Wait a bit before showing the toast to the user. Otherwise,
+          // a toast can flash briefly while the user is navigating away (because
+          // the mutex is released when navigating away) which is rather confusing.
+          // Also, we need to delegate back to the saga middleware so that
+          // this saga can be properly cancelled.
+          yield* delay(500);
+          const stillHasNoMutex = !(yield* select(
+            (state) => state.save.mutexState.hasAnnotationMutex,
+          ));
+          if (stillHasNoMutex) {
+            // Only show the warning if there is still no toast. Due to the 500ms delay,
+            // a new mutex acuiqre could have happened theoretically.
+            Toast.warning(message, { key: MUTEX_NOT_ACQUIRED_TOAST_KEY });
+          }
+        }
+        wasMutexAlreadyAcquiredBefore = yield* select(
+          (state) => state.save.mutexState.hasAnnotationMutex,
+        );
+        mutexLogicState.isInitialRequest = false;
+      } finally {
+        if (yield* cancelled()) {
+          Toast.close(MUTEX_NOT_ACQUIRED_TOAST_KEY);
+          Toast.close(MUTEX_ACQUIRED_TOAST_KEY);
+        }
       }
-      wasMutexAlreadyAcquiredBefore = yield* select(
-        (state) => state.save.mutexState.hasAnnotationMutex,
-      );
-      mutexLogicState.isInitialRequest = false;
     },
   );
 }
 
-function* releaseMutex() {
+function* watchForAnnotationExit(): Saga<void> {
+  yield* takeEvery("EXITING_ANNOTATION", function* () {
+    const hasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
+    if (!hasMutex) return;
+
+    const annotationId = yield* select((state) => state.annotation.annotationId);
+    const sent = releaseAnnotationMutexWithBeacon(annotationId, TAB_SESSION_ID);
+    console.log(
+      `[Mutex] Releasing mutex for annotation ${annotationId} on exit via sendBeacon (queued: ${sent}).`,
+    );
+
+    if (sent) {
+      yield* put(setIsMutexAcquiredAction(false));
+      yield* put(setUserHoldingMutexAction(null));
+    }
+  });
+}
+
+function* releaseMutexIfAcquired() {
+  const currentlyHavingMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
+  if (!currentlyHavingMutex) {
+    // Nothing to do.
+    return;
+  }
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   let successfullyReleaseMutex = false;
   let backoffTime = 1000;
@@ -544,7 +617,7 @@ function* releaseMutex() {
   // In case another user got the mutex in meantime, releasing this users mutex still yield a successful request.
   while (!successfullyReleaseMutex) {
     try {
-      yield call(releaseAnnotationMutex, annotationId);
+      yield call(releaseAnnotationMutex, annotationId, TAB_SESSION_ID);
       successfullyReleaseMutex = true;
     } catch (error) {
       console.error("Could not release mutex", error);

@@ -1,14 +1,20 @@
 package com.scalableminds.util.io
 
+import com.scalableminds.util.box.{Box, Failure, Full}
 import java.io.File
-import java.nio.file._
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.util.box.Box.tryo
 import org.apache.commons.io.FileUtils
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
-import scala.reflect.io.Directory
+import java.nio.file.{
+  AccessDeniedException,
+  FileAlreadyExistsException,
+  FileVisitOption,
+  Files,
+  NoSuchFileException,
+  Path
+}
 import scala.util.Random
 
 object PathUtils extends LazyLogging {
@@ -52,11 +58,13 @@ object PathUtils extends LazyLogging {
     else
       None
 
-  private def listDirectoryEntries[A](directory: Path,
-                                      maxDepth: Int,
-                                      dropCount: Int,
-                                      silent: Boolean,
-                                      filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
+  private def listDirectoryEntries[A](
+      directory: Path,
+      maxDepth: Int,
+      dropCount: Int,
+      silent: Boolean,
+      filters: (Path => Boolean)*
+  )(f: Iterator[Path] => Box[A]): Box[A] =
     try {
       val directoryStream = Files.walk(directory, maxDepth, FileVisitOption.FOLLOW_LINKS)
       val r = f(directoryStream.iterator().asScala.drop(dropCount).filter(d => filters.forall(_(d))))
@@ -85,33 +93,39 @@ object PathUtils extends LazyLogging {
     }
 
   def containsFile(directory: Path, maxDepth: Int, silent: Boolean, filters: (Path => Boolean)*): Box[Boolean] =
-    listDirectoryEntries(directory, maxDepth, dropCount = 0, silent, filters :+ fileFilter _: _*)(r => Full(r.nonEmpty))
+    listDirectoryEntries(directory, maxDepth, dropCount = 0, silent, filters :+ fileFilter*)(r => Full(r.nonEmpty))
 
   def listDirectories(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, 1, 1, silent, filters :+ directoryFilter _: _*)(r => Full(r.toList))
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ directoryFilter*)(r => Full(r.toList))
 
-  def listDirectoriesRecursive(directory: Path,
-                               silent: Boolean,
-                               maxDepth: Int,
-                               filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, maxDepth, 0, silent, filters :+ directoryFilter _: _*)(r => Full(r.toList))
+  def listDirectoriesRecursive(
+      directory: Path,
+      silent: Boolean,
+      maxDepth: Int,
+      filters: (Path => Boolean)*
+  ): Box[List[Path]] =
+    listDirectoryEntries(directory, maxDepth, 0, silent, filters :+ directoryFilter*)(r => Full(r.toList))
 
   def listFiles(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter _: _*)(r => Full(r.toList))
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter*)(r => Full(r.toList))
 
-  def listFilesRecursive(directory: Path,
-                         silent: Boolean,
-                         maxDepth: Int,
-                         filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, maxDepth, 1, silent, filters :+ fileFilter _: _*)(r => Full(r.toList))
+  def listFilesRecursive(
+      directory: Path,
+      silent: Boolean,
+      maxDepth: Int,
+      filters: (Path => Boolean)*
+  ): Box[List[Path]] =
+    listDirectoryEntries(directory, maxDepth, 1, silent, filters :+ fileFilter*)(r => Full(r.toList))
 
   def lazyFileStream[A](directory: Path, silent: Boolean, filters: (Path => Boolean)*)(
-      f: Iterator[Path] => Box[A]): Box[A] =
-    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter _: _*)(f)
+      f: Iterator[Path] => Box[A]
+  ): Box[A] =
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter*)(f)
 
   def lazyFileStreamRecursive[A](directory: Path, silent: Boolean, filters: (Path => Boolean)*)(
-      f: Iterator[Path] => Box[A]): Box[A] =
-    listDirectoryEntries(directory, Int.MaxValue, 1, silent, filters :+ fileFilter _: _*)(f)
+      f: Iterator[Path] => Box[A]
+  ): Box[A] =
+    listDirectoryEntries(directory, Int.MaxValue, 1, silent, filters :+ fileFilter*)(f)
 
   def ensureDirectory(path: Path): Path = {
     if (!Files.exists(path) || !Files.isDirectory(path))
@@ -120,9 +134,9 @@ object PathUtils extends LazyLogging {
   }
 
   def ensureDirectoryBox(dir: Path): Box[Path] =
-    try {
+    try
       Full(PathUtils.ensureDirectory(dir))
-    } catch {
+    catch {
       case _: AccessDeniedException => Failure("Could not create directory: Access denied")
     }
 
@@ -141,59 +155,73 @@ object PathUtils extends LazyLogging {
         Failure(errorMsg)
     }
 
-  /*
-   * removes the end of a path, after the last occurrence of any of excludeFromPrefix
-   * example:  /path/to/color/layer/that/is/named/color/and/has/files
-   *    becomes  /path/to/color/layer/that/is/named/color
-   *    if "color" is in excludeFromPrefix
-   */
-  def cutOffPathAtLastOccurrenceOf(path: Path, cutOffList: List[String]): Path = {
-    var lastCutOffIndex = -1
-    path.iterator().asScala.zipWithIndex.foreach {
-      case (subPath, idx) =>
-        cutOffList.foreach(e => {
-          if (subPath.toString.contains(e)) {
-            lastCutOffIndex = idx
-          }
-        })
-    }
-    lastCutOffIndex match {
+  // Longest common prefix of paths, truncated so it doesn't reach past a boundaryDirNames match,
+  // with a lone remaining filename stripped off.
+  def findCommonRootDirectory(paths: List[Path], boundaryDirNames: List[String]): Path = {
+    val longestCommonPrefix = commonPrefix(paths)
+    val truncatedAtLastBoundary = cutOffPathAtLastOccurrenceOf(longestCommonPrefix, boundaryDirNames)
+    removeSingleFileNameFromPrefix(truncatedAtLastBoundary, paths)
+  }
+
+  // Cuts path off right before the last element that exactly matches a name in boundaryDirNames (path
+  // should be relative to the directory the search is limited to, so unrelated elements can't accidentally match).
+  private def cutOffPathAtLastOccurrenceOf(path: Path, boundaryDirNames: List[String]): Path = {
+    val lastMatchingIndex = path
+      .iterator()
+      .asScala
+      .zipWithIndex
+      .collect { case (subPath, idx) if boundaryDirNames.contains(subPath.toString) => idx }
+      .toList
+      .lastOption
+      .getOrElse(-1)
+    lastMatchingIndex match {
       case -1 => path
       // subpath(0, 0) is forbidden, therefore we handle this special case ourselves
       case 0 => Path.of("")
-      case i => path.subpath(0, i)
+      case i =>
+        val cutOff = path.subpath(0, i)
+        // subpath drops the root element, so re-add it for absolute paths
+        Option(path.getRoot).map(_.resolve(cutOff)).getOrElse(cutOff)
     }
   }
 
-  // Remove a single file name from previously computed common prefix
-  def removeSingleFileNameFromPrefix(prefix: Path, fileNames: List[String]): Path = {
-    def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Path.of(fileName).getFileName)
-
-    fileNames match {
-      case head :: tail if tail.isEmpty && isFileNameInPrefix(prefix, head) =>
-        removeOneName(prefix)
-      case _ => prefix
+  // Strips prefix's last name if it is in fact paths' one lone entry's file name (i.e. commonPrefix of a single file).
+  private def removeSingleFileNameFromPrefix(prefix: Path, paths: List[Path]): Path =
+    paths match {
+      case singlePath :: Nil if prefix.endsWith(singlePath.getFileName) => removeOneName(prefix)
+      case _                                                            => prefix
     }
-  }
 
   private def removeOneName(path: Path): Path =
     if (path.getNameCount == 1) {
       Path.of("")
     } else path.getParent
 
-  def deleteDirectoryRecursively(path: Path): Box[Unit] = {
-    val directory = new Directory(new File(path.toString))
-    if (!directory.exists)
-      Full(())
-    else if (directory.deleteRecursively()) {
-      Full(())
-    } else Failure(f"Failed to delete directory $path")
+  def deleteDirectoryRecursively(path: Path, enforceContainedIn: Option[Path] = None): Box[Unit] =
+    try
+      enforceContainedIn match {
+        case Some(ancestor) if !isContainedIn(path, ancestor) =>
+          Failure(s"Refusing to delete $path: it is not contained within expected parent directory $ancestor")
+        case _ =>
+          if (Files.exists(path)) {
+            FileUtils.deleteDirectory(path.toFile) // Using Apache Commons IO
+          }
+          Full(())
+      }
+    catch {
+      case ex: Exception => Failure(s"Failed to delete directory $path: ${ex.getMessage}")
+    }
+
+  private def isContainedIn(path: Path, parent: Path): Boolean = {
+    val normalizedParent = parent.normalize()
+    val normalizedPath = path.normalize()
+    normalizedPath.startsWith(normalizedParent) && normalizedPath != normalizedParent
   }
 
   // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory
   def moveDirectoryViaTemp(source: Path, dst: Path): Box[Unit] = tryo {
     val tmpId = Random.alphanumeric.take(10).mkString("")
-    val tmpPath = source.getParent.resolve(s".${tmpId}")
+    val tmpPath = source.getParent.resolve(s".$tmpId")
     FileUtils.moveDirectory(source.toFile, tmpPath.toFile)
     FileUtils.moveDirectory(tmpPath.toFile, dst.toFile)
   }

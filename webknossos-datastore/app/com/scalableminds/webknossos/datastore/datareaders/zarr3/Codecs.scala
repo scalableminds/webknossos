@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.util.tools.ByteUtils
+import com.scalableminds.util.tools.{JsonAutoFormat, ByteUtils}
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   BoolCompressionSetting,
@@ -13,10 +14,9 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
-import play.api.libs.json.{Format, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
+import play.api.libs.json.{Format, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, Reads, Writes}
 import play.api.libs.json.Json.WithDefaultValues
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.Array as MultiArray
 
 import java.util.zip.CRC32C
 
@@ -28,7 +28,10 @@ object TransposeSetting {
   implicit object TransposeSettingFormat extends Format[TransposeSetting] {
 
     override def reads(json: JsValue): JsResult[TransposeSetting] =
-      json.validate[String].map(StringTransposeSetting).orElse(json.validate[Array[Int]].map(IntArrayTransposeSetting))
+      json
+        .validate[String]
+        .map(StringTransposeSetting(_))
+        .orElse(json.validate[Array[Int]].map(IntArrayTransposeSetting(_)))
 
     override def writes(transposeSetting: TransposeSetting): JsValue =
       transposeSetting match {
@@ -132,11 +135,13 @@ class BloscCodec(cname: String, clevel: Int, shuffle: CompressionSetting, typesi
 
 object BloscCodec {
   def fromConfiguration(configuration: BloscCodecConfiguration): BloscCodec =
-    new BloscCodec(configuration.cname,
-                   configuration.clevel,
-                   configuration.shuffle,
-                   configuration.typesize,
-                   configuration.blocksize)
+    new BloscCodec(
+      configuration.cname,
+      configuration.clevel,
+      configuration.shuffle,
+      configuration.typesize,
+      configuration.blocksize
+    )
 }
 
 class GzipCodec(level: Int) extends BytesToBytesCodec {
@@ -189,11 +194,12 @@ class Crc32CCodec extends BytesToBytesCodec with ByteUtils with LazyLogging {
   }
 }
 
-class ShardingCodec(val chunk_shape: Array[Int],
-                    val codecs: Seq[CodecConfiguration],
-                    val index_codecs: Seq[CodecConfiguration],
-                    val index_location: IndexLocationSetting.IndexLocationSetting = IndexLocationSetting.end)
-    extends ArrayToBytesCodec {
+class ShardingCodec(
+    val chunk_shape: Array[Int],
+    val codecs: Seq[CodecConfiguration],
+    val index_codecs: Seq[CodecConfiguration],
+    val index_location: IndexLocationSetting.IndexLocationSetting = IndexLocationSetting.end
+) extends ArrayToBytesCodec {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/v1.0.html
   // encode, decode not implemented as sharding is done in Zarr3Array
@@ -223,26 +229,25 @@ object BytesCodecConfiguration {
   val name = "bytes"
 }
 
-final case class TransposeCodecConfiguration(order: TransposeSetting) extends CodecConfiguration {
+final case class TransposeCodecConfiguration(order: TransposeSetting) extends CodecConfiguration
+    derives JsonAutoFormat {
   override def name: String = TransposeCodecConfiguration.name
 }
 
 object TransposeCodecConfiguration {
-  implicit val jsonFormat: OFormat[TransposeCodecConfiguration] =
-    Json.format[TransposeCodecConfiguration]
   val name = "transpose"
 }
-final case class BloscCodecConfiguration(cname: String,
-                                         clevel: Int,
-                                         shuffle: CompressionSetting,
-                                         typesize: Option[Int],
-                                         blocksize: Int)
-    extends CodecConfiguration {
+final case class BloscCodecConfiguration(
+    cname: String,
+    clevel: Int,
+    shuffle: CompressionSetting,
+    typesize: Option[Int],
+    blocksize: Int
+) extends CodecConfiguration derives JsonAutoFormat {
   override def name: String = BloscCodecConfiguration.name
 }
 
 object BloscCodecConfiguration {
-  implicit val jsonFormat: OFormat[BloscCodecConfiguration] = Json.format[BloscCodecConfiguration]
   val name = "blosc"
 
   private def shuffleSettingFromInt(shuffle: Int): String = shuffle match {
@@ -262,19 +267,18 @@ object BloscCodecConfiguration {
     )
 }
 
-final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration {
+final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration derives JsonAutoFormat {
   override def name: String = GzipCodecConfiguration.name
 }
 object GzipCodecConfiguration {
-  implicit val jsonFormat: OFormat[GzipCodecConfiguration] = Json.format[GzipCodecConfiguration]
   val name = "gzip"
 }
 
-final case class ZstdCodecConfiguration(level: Int, checksum: Boolean) extends CodecConfiguration {
+final case class ZstdCodecConfiguration(level: Int, checksum: Boolean) extends CodecConfiguration
+    derives JsonAutoFormat {
   override def name: String = ZstdCodecConfiguration.name
 }
 object ZstdCodecConfiguration {
-  implicit val jsonFormat: OFormat[ZstdCodecConfiguration] = Json.format[ZstdCodecConfiguration]
   val name = "zstd"
 }
 
@@ -303,39 +307,37 @@ object CodecConfiguration extends JsonImplicits {
   }
 }
 
-case class CodecSpecification(name: String, configuration: CodecConfiguration)
-object CodecSpecification {
-  implicit val jsonFormat: OFormat[CodecSpecification] = Json.format[CodecSpecification]
-}
+case class CodecSpecification(name: String, configuration: CodecConfiguration) derives JsonAutoFormat
 
-final case class ShardingCodecConfiguration(chunk_shape: Array[Int],
-                                            codecs: Seq[CodecConfiguration],
-                                            index_codecs: Seq[CodecConfiguration],
-                                            index_location: IndexLocationSetting.IndexLocationSetting =
-                                              IndexLocationSetting.end)
-    extends CodecConfiguration {
+final case class ShardingCodecConfiguration(
+    chunk_shape: Array[Int],
+    codecs: Seq[CodecConfiguration],
+    index_codecs: Seq[CodecConfiguration],
+    index_location: IndexLocationSetting.IndexLocationSetting = IndexLocationSetting.end
+) extends CodecConfiguration derives JsonAutoFormat {
   override def name: String = ShardingCodecConfiguration.name
   def isSupported: Box[Unit] =
     for {
-      _ <- Box.fromBool(index_codecs.size <= 2) ?~! s"Maximum of 2 index codecs supported, got ${index_codecs.size}"
-      _ <- Box.fromBool(index_codecs.count(_.name == "bytes") == 1) ?~! s"Exactly one bytes codec supported, got ${index_codecs
-        .count(_.name == "bytes")}"
-      _ <- Box.fromBool(index_codecs.count(_.name == "crc32c") <= 1) ?~! s"Maximum of 1 crc32c codec supported, got ${index_codecs
-        .count(_.name == "crc32c")}"
+      _ <- Box.fromBool(index_codecs.size <= 2) ?~> s"Maximum of 2 index codecs supported, got ${index_codecs.size}"
+      _ <- Box.fromBool(
+        index_codecs.count(_.name == "bytes") == 1
+      ) ?~> s"Exactly one bytes codec supported, got ${index_codecs.count(_.name == "bytes")}"
+      _ <- Box.fromBool(
+        index_codecs.count(_.name == "crc32c") <= 1
+      ) ?~> s"Maximum of 1 crc32c codec supported, got ${index_codecs.count(_.name == "crc32c")}"
     } yield ()
 
 }
 
 object ShardingCodecConfiguration {
-  implicit val jsonFormat: OFormat[ShardingCodecConfiguration] =
-    Json.format[ShardingCodecConfiguration]
   val name = "sharding_indexed"
 }
 
 object CodecTreeExplorer {
 
-  def findOne(condition: Function[CodecConfiguration, Boolean])(
-      codecs: Seq[CodecConfiguration]): Option[CodecConfiguration] = {
+  def findOne(
+      condition: Function[CodecConfiguration, Boolean]
+  )(codecs: Seq[CodecConfiguration]): Option[CodecConfiguration] = {
     val results: Seq[Option[CodecConfiguration]] = codecs.map {
       case s: ShardingCodecConfiguration =>
         if (condition(s)) {

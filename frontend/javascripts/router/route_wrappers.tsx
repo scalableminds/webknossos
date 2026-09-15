@@ -4,6 +4,7 @@ import {
 } from "admin/api/disambiguate_legacy_routes";
 import Onboarding from "admin/onboarding";
 import { createExplorational, getShortLink } from "admin/rest_api";
+import { Typography } from "antd";
 import AsyncRedirect from "components/redirect";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
@@ -14,7 +15,7 @@ import { coalesce, getUrlParamsObjectFromString } from "libs/utils";
 import window from "libs/window";
 import isNumber from "lodash-es/isNumber";
 import { useEffect } from "react";
-import { Navigate, useLocation, useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router";
 import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum, PerformanceMarkEnum } from "viewer/constants";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
@@ -193,7 +194,7 @@ export function TracingSandboxLegacyRouteWrapper() {
 
   const tracingType = coalesce(TracingTypeEnum, type);
   if (tracingType == null) {
-    return <h3>Invalid annotation URL.</h3>;
+    return <Typography.Title level={3}>Invalid annotation URL.</Typography.Title>;
   }
   const getParams = getUrlParamsObjectFromString(location.search);
   return (
@@ -219,7 +220,7 @@ export function TracingSandboxRouteWrapper() {
   const getParams = getUrlParamsObjectFromString(location.search);
 
   if (tracingType == null) {
-    return <h3>Invalid annotation URL.</h3>;
+    return <Typography.Title level={3}>Invalid annotation URL.</Typography.Title>;
   }
   if (datasetName) {
     // Handle very old legacy URLs which neither have a datasetId nor an organizationId.

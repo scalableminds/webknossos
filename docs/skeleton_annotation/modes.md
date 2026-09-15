@@ -19,20 +19,10 @@ You can view your dataset slice by slice.
 
 Most skeleton annotation operations and [keyboard shortcuts](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#orthogonal-mode) are tailored for the Orthogonal Mode.
 
-## Oblique Mode
-
-Oblique mode lets you slice the data at any angle.
-Unlike Orthogonal mode, you can rotate the camera and slice datasets in arbitrary directions. For controls, see the [mouse and keyboard shortcuts](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#flight-oblique-mode).
-
-![Viewport in Oblique Mode showing an arbitrarily-resliced view through the data.](../images/tracing_ui_obliquemode.jpeg)
-/// caption
-Viewport in Oblique Mode showing an arbitrarily-resliced view through the data.
-///
-
 ## Flight Mode
 
 Flight mode gives you another way to slice the data.
-Unlike Oblique mode, Flight mode projects the data onto a sphere around the camera. For controls, see the [mouse and keyboard shortcuts](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#flight-oblique-mode).
+It projects the data onto a sphere around the camera. For controls, see the [mouse and keyboard shortcuts](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#flight-mode).
 
 ![Annotate processes, e.g. neurites, efficiently in Flight mode](../images/tracing_ui_flightmode.jpeg)
 /// caption

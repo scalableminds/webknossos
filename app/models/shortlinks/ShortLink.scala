@@ -1,22 +1,17 @@
 package models.shortlinks
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.webknossos.schema.Tables.{GetResultShortlinksRow, Shortlinks, ShortlinksRow}
-import play.api.libs.json.{Json, OFormat}
 import utils.sql.{SQLDAO, SqlClient}
 import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class ShortLink(_id: ObjectId, key: String, longLink: String)
+case class ShortLink(_id: ObjectId, key: String, longLink: String) derives JsonAutoFormat
 
-object ShortLink {
-  implicit val jsonFormat: OFormat[ShortLink] = Json.format[ShortLink]
-}
-
-class ShortLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class ShortLinkDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[ShortLink, ShortlinksRow, Shortlinks](sqlClient) {
   protected val collection = Shortlinks
   protected def resultConverter = GetResultShortlinksRow
@@ -24,7 +19,7 @@ class ShortLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   protected def parse(r: ShortlinksRow): Fox[ShortLink] =
     Fox.successful(
       ShortLink(
-        ObjectId(r._Id),
+        ObjectId(r._id),
         r.key,
         r.longlink
       )
@@ -43,7 +38,7 @@ class ShortLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     } yield parsed
 
   // shortLink table does not have isDeleted column, so existingCollectionName won’t work
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[ShortLink] =
+  override def findOne(id: ObjectId)(using ctx: DBAccessContext): Fox[ShortLink] =
     for {
       r <- run(q"SELECT $columns FROM $collectionName WHERE _id = $id".as[ShortlinksRow])
       parsed <- parseFirst(r, id)

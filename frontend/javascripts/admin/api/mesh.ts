@@ -8,7 +8,7 @@ export type MeshChunk = {
   position: Vector3;
   byteOffset: number;
   byteSize: number;
-  unmappedSegmentId: number;
+  unmappedSegmentId: bigint;
 };
 
 export type MeshLodInfo = {
@@ -24,7 +24,7 @@ export type MeshSegmentInfo = {
 
 type ListMeshChunksRequest = {
   meshFileName: string;
-  segmentId: number;
+  segmentId: bigint;
   annotationVersion: number | undefined | null;
 };
 
@@ -33,7 +33,7 @@ export function getMeshFileChunksForSegment(
   datasetId: string,
   layerName: string,
   meshFile: APIMeshFileInfo,
-  segmentId: number,
+  segmentId: bigint,
   // targetMappingName is the on-disk mapping name.
   // In case of an editable mapping, this should still be the on-disk base
   // mapping name (so that agglomerates that are untouched by the editable
@@ -74,7 +74,7 @@ export function getMeshFileChunksForSegment(
 type MeshChunkDataRequest = {
   byteOffset: number;
   byteSize: number;
-  segmentId: number | null; // Only relevant for neuroglancer precomputed meshes
+  segmentId: bigint | null; // Only relevant for neuroglancer precomputed meshes
 };
 
 export type MeshChunkDataRequestList = {
@@ -95,6 +95,10 @@ export function getMeshFileChunkData(
         {
           data: batchDescription,
           useWebworkerForArrayBuffer: true,
+          // Failed attempts are retried (see retryAsyncFunction above) and the
+          // callers are responsible for surfacing the final error, so don't
+          // show a toast for each failed attempt.
+          showErrorToast: false,
         },
       );
       const chunkCount = batchDescription.requests.length;

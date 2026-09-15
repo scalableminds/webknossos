@@ -4,7 +4,7 @@
 Signing up for a free account [webknossos.org](https://webknossos.org) is the quickest way to get up and running. Create an account (a new organization is created automatically for you), upload your first dataset to work on, and invite co-workers and collaborators to help you with annotation and analysis.
 
 ## I am unsure if WEBKNOSSOS is for me or how to get started with my data
-Please feel free to reach out to us for help. We are happy to help you get started with WEBKNOSSOS and can assist with dataset uploads and conversations as needed. Email us at [hello@webknossos.org](mailto:hello@webknossos.org).
+Please feel free to reach out to us for help. We are happy to help you get started with WEBKNOSSOS and can assist with dataset uploads and conversions as needed. Email us at [support@webknossos.org](mailto:support@webknossos.org).
 
 We also provide intro calls to answer your questions or walk you through the platform. Don't hesitate to reach out.
 
@@ -32,7 +32,7 @@ If you prefer to run custom machine learning models outside of WEBKNOSSOS, you c
 
 WEBKNOSSOS supports [WKW (optimized), OME-Zarr (NGFF), Neuroglancer Precomputed, N5, KNOSSOS cubes](./data/index.md), and image stacks (converted on upload). You can also connect to Neuroglancer Precomputed, N5, and Zarr datasets hosted in the cloud (Google Cloud Storage, AWS S3).
 
-Smaller datasets (up to multiple GB) can be uploaded directly through the web interface. For larger datasets, we recommend converting them to the standard WKW format using the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli/) CLI tool and uploading it via the [WEBKNOSSOS Python package](https://docs.webknossos.org/webknossos-py/examples/upload_image_data.html).
+Smaller datasets (up to multiple GB) can be uploaded directly through the web interface. For larger datasets, we recommend converting them to the standard WKW format using the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli/) tool and uploading it via the [WEBKNOSSOS Python package](https://docs.webknossos.org/webknossos-py/examples/upload_image_data.html).
 
 ## Can I host the WEBKNOSSOS data in my own compute cluster (on-premise installation)?
 
@@ -47,7 +47,7 @@ Both components need to be publicly accessible via the Internet.
 
 For example, the WEBKNOSSOS main component could be hosted on commercial cloud infrastructure whereas the datastore is hosted directly in your lab's cluster hardware.
 
-[Contact us](mailto:hello@webknossos.org) for commercial support, more information on (private) managed hosting, and custom deployment options.
+[Contact us](mailto:support@webknossos.org) for commercial support, more information on (private) managed hosting, and custom deployment options.
 
 ## Can I further analyze my annotations outside of WEBKNOSSOS with Python?
 Yes, you can. WEBKNOSSOS allows the download and export of skeleton annotations as NML files and segmentations/volume data as binary/wkw files.

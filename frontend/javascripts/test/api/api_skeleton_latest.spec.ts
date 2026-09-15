@@ -1,4 +1,4 @@
-import { Keyboard } from "keyboardjs";
+import { createTestKeystrokes, setGlobalKeystrokes } from "@rwh/keystrokes";
 import { map3 } from "libs/utils";
 import testRotations from "test/fixtures/test_rotations";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
@@ -20,8 +20,8 @@ import {
   reducerInternalMatrixToEulerAngle,
 } from "viewer/model/helpers/rotation_helpers";
 import Store from "viewer/store";
-import { makeBasicGroupObject } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeBasicGroupObject } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const toRadian = (arr: Vector3): Vector3 => [
   MathUtils.degToRad(arr[0]),
@@ -48,6 +48,11 @@ describe("API Skeleton", () => {
     await setupWebknossosForTesting(context, "skeleton", undefined, {
       dontDispatchWkInitialized: true,
     });
+  });
+
+  afterEach(() => {
+    setGlobalKeystrokes(undefined);
+    vi.restoreAllMocks();
   });
 
   it<WebknossosTestContext>("getActiveNodeId should get the active node id", ({ api }) => {
@@ -146,7 +151,7 @@ describe("API Skeleton", () => {
     // Workaround: This is usually called after the mapping textures were created successfully
     // and can be rendered, which doesn't happen in this test scenario
     Store.dispatch(setMappingEnabledAction("segmentation", true));
-    expect(cube.mapId(1)).toBe(3);
+    expect(cube.mapId(1n)).toBe(3n);
   });
 
   it<WebknossosTestContext>("Data Api: getBoundingBox should throw an error if the layer name is not valid", ({
@@ -218,10 +223,12 @@ describe("API Skeleton", () => {
   it<WebknossosTestContext>("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", async ({
     api,
   }) => {
-    const bindSpy = vi.spyOn(Keyboard.prototype, "bind").mockReturnThis();
-    const unbindSpy = vi.spyOn(Keyboard.prototype, "unbind").mockReturnThis();
+    const keystrokes = createTestKeystrokes();
+    setGlobalKeystrokes(keystrokes);
+    const bindSpy = vi.spyOn(keystrokes, "bindKeyCombo").mockReturnThis();
+    const unbindSpy = vi.spyOn(keystrokes, "unbindKeyCombo").mockReturnThis();
 
-    const binding = api.utils.registerKeyHandler("g", () => {});
+    const binding = api.utils.registerKeyHandler("g", { onPressed: () => {} });
     expect(bindSpy).toHaveBeenCalled();
 
     binding.unregister();
@@ -348,7 +355,7 @@ describe("API Skeleton", () => {
       const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
       // Throw error if no node / tree is active by passing -1 as id.
       const newNode = skeletonTracing.trees
-        .getOrThrow(skeletonTracing.activeTreeId || -1)
+        .getOrThrow(Store.getState().localSkeletonState.activeTreeId || -1)
         .nodes.getOrThrow(skeletonTracing.activeNodeId || -1);
       const propsToCheck = {
         untransformedPosition: newNode.untransformedPosition,
@@ -389,7 +396,7 @@ describe("API Skeleton", () => {
         const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
         // Throw error if no node / tree is active by passing -1 as id.
         const newNode = skeletonTracing.trees
-          .getOrThrow(skeletonTracing.activeTreeId || -1)
+          .getOrThrow(Store.getState().localSkeletonState.activeTreeId || -1)
           .nodes.getOrThrow(skeletonTracing.activeNodeId || -1);
         const newNodeQuaternion = new Quaternion().setFromEuler(
           new Euler(...toRadian(newNode.rotation)),

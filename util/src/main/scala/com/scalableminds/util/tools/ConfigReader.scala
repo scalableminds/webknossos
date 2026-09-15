@@ -11,7 +11,8 @@ trait ConfigReader {
     val literal = rootConfig.getString(path)
     Instant.fromString(literal).getOrElse {
       throw new IllegalArgumentException(
-        s"Cannot read config value “$literal” for $path as Instant. Expected ISO date like “2023-01-01T00:00:00Z”")
+        s"Cannot read config value “$literal” for $path as Instant. Expected ISO date like “2023-01-01T00:00:00Z”"
+      )
     }
   }
 

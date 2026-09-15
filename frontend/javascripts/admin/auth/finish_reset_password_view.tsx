@@ -1,10 +1,10 @@
 import { LockOutlined } from "@ant-design/icons";
-import { Button, Card, Col, Form, Input, Row } from "antd";
+import { Button, Card, Col, Form, Input, Row, Typography } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { getUrlParamsObjectFromString } from "libs/utils";
 import messages from "messages";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -52,7 +52,7 @@ function FinishResetPasswordView() {
     <Row className="login-view" justify="center" align="middle">
       <Col>
         <Card className="login-content">
-          <h3>Reset Password</h3>
+          <Typography.Title level={3}>Reset Password</Typography.Title>
           <Form onFinish={onFinish} form={form}>
             <FormItem
               hasFeedback

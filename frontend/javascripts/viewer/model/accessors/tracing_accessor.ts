@@ -1,3 +1,4 @@
+import { stringToNormalizedRgbColor } from "libs/colors";
 import compact from "lodash-es/compact";
 import type { TracingType } from "types/api_types";
 import { TracingTypeEnum } from "types/api_types";
@@ -5,6 +6,8 @@ import type { Vector3 } from "viewer/constants";
 import type { SaveQueueType } from "viewer/model/actions/save_actions";
 import type {
   EditableMapping,
+  IdReservation,
+  MipLayerConfig,
   ReadOnlyTracing,
   SkeletonTracing,
   StoreAnnotation,
@@ -14,6 +17,7 @@ import type {
 } from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getDataLayers, getLayerBoundingBox, getLayerBoundingBoxId } from "./dataset_accessor";
 
 export function maybeGetSomeTracing(
   annotation: StoreAnnotation,
@@ -39,6 +43,16 @@ export function getSomeTracing(
   }
 
   return maybeSomeTracing;
+}
+
+export function hasTracing(annotation: StoreAnnotation): boolean {
+  // This function ignores ReadOnlyTracings. These only exist when essentially
+  // no annotation and no tracing exists. It does NOT mean that the active
+  // annotation is editable (could still be read-only due to permissions).
+  // This is an implementation of the null-pattern, but should be refactored away.
+  // Also see https://github.com/scalableminds/webknossos/issues/9609.
+  const maybeTracing = maybeGetSomeTracing(annotation);
+  return maybeTracing != null && maybeTracing.type !== "readonly";
 }
 
 export function getTracingType(annotation: StoreAnnotation): TracingType {
@@ -126,3 +140,41 @@ export const getUserBoundingBoxesThatContainPosition = (
 
   return bboxes.filter((el) => new BoundingBox(el.boundingBox).containsPoint(position));
 };
+
+export function getIdReservationsForBoundingBoxes(state: WebknossosState): IdReservation[] {
+  return state.localAnnotationState.idReservationsForBoundingBoxes;
+}
+
+export type MipEnabledBBox = { bbox: UserBoundingBox; configs: MipLayerConfig[] };
+
+// Layer bounding boxes are read-only and not part of the annotation's user bounding boxes, so they
+// are represented here as synthetic UserBoundingBox-shaped entries (stable negative id, see
+// getLayerBoundingBoxId) purely to reuse the existing MIP wiring (mipBBoxSettings, scene_controller).
+function getLayerBoundingBoxesAsUserBoundingBoxes(state: WebknossosState): UserBoundingBox[] {
+  return getDataLayers(state.dataset).map((layer, index) => ({
+    id: getLayerBoundingBoxId(index),
+    name: layer.name,
+    boundingBox: getLayerBoundingBox(state.dataset, layer.name),
+    color:
+      state.temporaryConfiguration.layerBoundingBoxColors[layer.name] ??
+      stringToNormalizedRgbColor(layer.name),
+    isVisible: state.temporaryConfiguration.layerBoundingBoxVisibilities[layer.name] ?? false,
+  }));
+}
+
+export const getMipEnabledBBoxes = reuseInstanceOnEquality(
+  (state: WebknossosState): MipEnabledBBox[] => {
+    const { mipBBoxSettings } = state.uiInformation;
+    if (Object.keys(mipBBoxSettings).length === 0) {
+      return [];
+    }
+    const bboxes = [
+      ...getUserBoundingBoxesFromState(state),
+      ...getLayerBoundingBoxesAsUserBoundingBoxes(state),
+    ];
+    return bboxes.flatMap((bbox) => {
+      const configs = mipBBoxSettings[bbox.id];
+      return configs != null && configs.length > 0 ? [{ bbox, configs }] : [];
+    });
+  },
+);

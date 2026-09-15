@@ -12,8 +12,8 @@ trait IdWithBoolUtils {
     }.to(collection.mutable.Map)
 
   protected def mutableMapToId32WithBools(mutableMap: collection.mutable.Map[Int, Boolean]): Seq[Id32WithBool] =
-    mutableMap.toSeq.map {
-      case (id, value) => Id32WithBool(id, value)
+    mutableMap.toSeq.map { case (id, value) =>
+      Id32WithBool(id, value)
     }
 
   protected def id64WithBoolsToMutableMap(idWithBools: Seq[Id64WithBool]): collection.mutable.Map[Long, Boolean] =
@@ -22,8 +22,8 @@ trait IdWithBoolUtils {
     }.to(collection.mutable.Map)
 
   protected def mutableMapToId64WithBools(mutableMap: collection.mutable.Map[Long, Boolean]): Seq[Id64WithBool] =
-    mutableMap.toSeq.map {
-      case (id, value) => Id64WithBool(id, value)
+    mutableMap.toSeq.map { case (id, value) =>
+      Id64WithBool(id, value)
     }
 
   protected def id32WithBoolsToMap(idWithBoolsOpt: Option[Seq[Id32WithBool]]): Map[Int, Boolean] =
@@ -41,12 +41,12 @@ trait IdWithBoolUtils {
     }.getOrElse(Map.empty[Long, Boolean])
 
   protected def mapToId32WithBools(idToBoolMap: Map[Int, Boolean]): Seq[Id32WithBool] =
-    idToBoolMap.toSeq.map {
-      case (id, value) => Id32WithBool(id, value)
+    idToBoolMap.toSeq.map { case (id, value) =>
+      Id32WithBool(id, value)
     }
 
   protected def mapToId64WithBools(idToBoolMap: Map[Long, Boolean]): Seq[Id64WithBool] =
-    idToBoolMap.toSeq.map {
-      case (id, value) => Id64WithBool(id, value)
+    idToBoolMap.toSeq.map { case (id, value) =>
+      Id64WithBool(id, value)
     }
 }

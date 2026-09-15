@@ -2,7 +2,7 @@
 
 In this tutorial, you will discover how to efficiently manage and share your data in WEBKNOSSOS. You will learn how to effortlessly upload your data, securely store it, and easily share it with your collaborators using a simple link. I will also guide you through the process of granting access permissions to designated collaborator teams, and show you how to work collaboratively on annotations. Finally, I will explain how you can make your data publicly available and share it with the wider world. Let’s dive in and unlock the power of data collaboration!
 
-Here is full tutorial video, alternatively continue reading below.
+Here is the full tutorial video, alternatively continue reading below.
 
 ![youtube-video](https://www.youtube.com/embed/ZvUJrv86w8w)
 
@@ -55,6 +55,6 @@ To share your dataset publicly, i.e. without requiring a WEBKNOSSOS account or l
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-data-sharing/10_making_DS_public.mp4){: autoplay loop muted}
 
-If you would like your dataset to be featured on the WEBKNOSSOS publications page, just send us an email at [hello@webknossos.org](mailto:hello@webknossos.org), and we will be happy to upload your data!
+If you would like your dataset to be featured on the WEBKNOSSOS publications page, just send us an email at [support@webknossos.org](mailto:support@webknossos.org), and we will be happy to upload your data!
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-data-sharing/11_open_public_DS.mp4){: autoplay loop muted}

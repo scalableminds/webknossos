@@ -8,13 +8,14 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.user.{MultiUser, MultiUserDAO, User}
 import MailchimpTag.MailchimpTag
-import play.api.libs.json.{Json, OFormat}
+import com.scalableminds.util.tools.JsonAutoFormat
+import play.api.libs.json.Json
 import play.api.libs.ws.WSResponse
 import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUserDAO) extends LazyLogging {
+class MailchimpClient @Inject() (wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUserDAO) extends LazyLogging {
 
   private lazy val conf = wkConf.Mail.Mailchimp
 
@@ -36,7 +37,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
       "status" -> "subscribed",
       "merge_fields" -> Json.obj(
         "FNAME" -> firstName,
-        "LNAME" -> lastName,
+        "LNAME" -> lastName
       )
     )
     rpc(uri).silent.withBasicAuth(conf.user, conf.password).putJson(userBody)
@@ -45,7 +46,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
   def tagUser(user: User, tag: MailchimpTag): Unit =
     if (conf.host.nonEmpty) {
       for {
-        multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+        multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
         _ = tagMultiUser(multiUser, tag)
       } yield ()
       ()
@@ -81,12 +82,5 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
 
 }
 
-case class MailchimpTagsResponse(tags: List[MailchimpTagResponse])
-case class MailchimpTagResponse(name: String, date_added: String)
-
-object MailchimpTagResponse {
-  implicit val jsonFormat: OFormat[MailchimpTagResponse] = Json.format[MailchimpTagResponse]
-}
-object MailchimpTagsResponse {
-  implicit val jsonFormat: OFormat[MailchimpTagsResponse] = Json.format[MailchimpTagsResponse]
-}
+case class MailchimpTagsResponse(tags: List[MailchimpTagResponse]) derives JsonAutoFormat
+case class MailchimpTagResponse(name: String, date_added: String) derives JsonAutoFormat

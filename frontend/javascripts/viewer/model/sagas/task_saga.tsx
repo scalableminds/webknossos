@@ -7,6 +7,7 @@ import messages from "messages";
 import React from "react";
 import { call, delay, put, take } from "typed-redux-saga";
 import type { APITaskType } from "types/api_types";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getSegmentationLayers } from "viewer/model/accessors/dataset_accessor";
 import {
   getValidTaskZoomRange,
@@ -138,7 +139,7 @@ export default function* watchTasksAsync(): Saga<void> {
   yield* call(ensureWkInitialized);
   const task = yield* select((state) => state.task);
   const activeUser = yield* select((state) => state.activeUser);
-  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = yield* select(mayEditAnnotation);
   if (task == null || activeUser == null || !allowUpdate) return;
   yield* call(maybeActivateMergerMode, task.type);
   const { lastTaskTypeId } = activeUser;
@@ -153,7 +154,7 @@ export default function* watchTasksAsync(): Saga<void> {
 }
 export function* warnAboutMagRestriction(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+    const allowUpdate = yield* select(mayEditAnnotation);
 
     if (!allowUpdate) {
       // If updates are not allowed in general, we return here, since we don't

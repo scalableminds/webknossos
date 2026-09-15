@@ -1,5 +1,6 @@
 import {
   getFeatureNotAvailableInPlanMessage,
+  hasPricingPlanExceededStorage,
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
@@ -22,7 +23,6 @@ import { updateTemporarySettingAction } from "viewer/model/actions/settings_acti
 import Store from "viewer/store";
 import { formatMagWithLabel, getBaseSegmentationName } from "./segments_view_helper";
 
-const { Option } = Select;
 const REFRESH_INTERVAL = 5000;
 
 type PrecomputeMeshesPopoverProps = {
@@ -86,6 +86,15 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
           activeOrganization,
           activeUser,
         ),
+      };
+    }
+
+    if (activeOrganization != null && hasPricingPlanExceededStorage(activeOrganization)) {
+      // The backend refuses to start the job in this case, as the mesh file could not be stored.
+      return {
+        disabled: true,
+        title:
+          "Your organization has exceeded the available storage. Therefore, meshes cannot be precomputed.",
       };
     }
 
@@ -164,6 +173,11 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
   const handleQualityChange = (magIndex: number) =>
     dispatch(updateTemporarySettingAction("preferredQualityForMeshPrecomputation", magIndex));
 
+  const qualityOptions = magInfo.getMagsWithIndices().map(([logToIndex, mag], index) => ({
+    value: logToIndex,
+    label: formatMagWithLabel(mag, index),
+  }));
+
   return (
     <div
       style={{
@@ -195,13 +209,8 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
             style={{ width: 220 }}
             value={magInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation)}
             onChange={handleQualityChange}
-          >
-            {magInfo.getMagsWithIndices().map(([logToIndex, mag], index) => (
-              <Option value={logToIndex} key={logToIndex}>
-                {formatMagWithLabel(mag, index)}
-              </Option>
-            ))}
-          </Select>
+            options={qualityOptions}
+          />
         </Space>
       </Typography.Paragraph>
 

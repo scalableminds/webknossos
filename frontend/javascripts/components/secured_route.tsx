@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import LoginView from "admin/auth/login_view";
 import {
   isFeatureAllowedByPricingPlan,
@@ -9,7 +10,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrManager } from "libs/utils";
 import type React from "react";
 import { memo, useCallback, useEffect, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
 type SecuredRouteProps = {
@@ -36,7 +37,9 @@ function SecuredRoute({
   const getIsResourcePublic = useCallback(async () => {
     if (id) {
       try {
-        const annotationInformation = await getUnversionedAnnotationInformation(id || "");
+        const annotationInformation = unwrapOrThrow(
+          await getUnversionedAnnotationInformation(id || ""),
+        );
         return annotationInformation.visibility === "Public";
       } catch (_ex) {
         // Annotation could not be found

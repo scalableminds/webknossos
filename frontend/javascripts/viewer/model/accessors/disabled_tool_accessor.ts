@@ -14,6 +14,7 @@ import {
   getRenderableMagForSegmentationTracing,
   hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
+  type VolumeAnnotationZoomState,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
@@ -25,6 +26,7 @@ import {
   Toolkits,
   VolumeTools,
   VolumeToolsWithProofreading,
+  WRITE_TOOLS,
 } from "./tool_accessor";
 
 export type DisabledInfo = {
@@ -33,8 +35,13 @@ export type DisabledInfo = {
 };
 
 const DISABLED_EXPLANATION = {
+  NO_UPDATE_ALLOWED: "Editing is disabled currently.",
   ZOOM_IN_TO_USE_TOOL:
     "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.",
+  ZOOM_OUT_TO_USE_TOOL:
+    "Please zoom out further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.",
+  ZOOM_TO_USE_TOOL:
+    "Please adjust the zoom to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.",
   ZOOM_INVALID_FOR_TRACING:
     "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level.",
   NO_SKELETONS:
@@ -44,7 +51,7 @@ const DISABLED_EXPLANATION = {
   ROTATION_ACTIVE:
     "The tool is disabled because you are currently viewing the dataset rotated. Please reset the rotation to 0,0,0 to be able to use this tool.",
   LIVE_COLLAB_MODE:
-    "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading is allowed in that mode.",
+    "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading and bounding boxes can be edited in that mode.",
   NO_VISIBLE_SEGMENTATION_TRACING:
     "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.",
   MERGER_MODE_ACTIVE: "Volume annotation is disabled while the merger mode is active.",
@@ -78,13 +85,14 @@ type Params = {
   hasSkeleton: boolean;
   areSkeletonsVisible: boolean;
   areGeometriesTransformed: boolean;
-  isZoomStepTooHighForBrushing: boolean;
-  isZoomStepTooHighForTracing: boolean;
-  isZoomStepTooHighForFilling: boolean;
+  zoomStateForBrushing: VolumeAnnotationZoomState;
+  zoomStateForTracing: VolumeAnnotationZoomState;
+  zoomStateForFilling: VolumeAnnotationZoomState;
   agglomerateState: AgglomerateState;
   isUneditableMappingLocked: boolean;
   activeOrganization: APIOrganization | null;
   activeUser: APIUser | null | undefined;
+  isUpdatingCurrentlyAllowed: boolean;
 };
 
 class DisableRule {
@@ -153,24 +161,35 @@ const jsonMappingActiveRule = new DisableRule(
     isJSONMappingActive ? DISABLED_EXPLANATION.JSON_MAPPING_ACTIVE : null,
 );
 
+function getZoomExplanation(zoomState: VolumeAnnotationZoomState): string | null {
+  if (!zoomState.isDisabled) {
+    return null;
+  }
+  switch (zoomState.reason) {
+    case "needs_zoom_in":
+      return DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL;
+    case "needs_zoom_out":
+      return DISABLED_EXPLANATION.ZOOM_OUT_TO_USE_TOOL;
+    default:
+      return null;
+  }
+}
+
 // Zoom-based rules that only apply per individual tool type when volume is not globally disabled.
 // Ordered according to _getVolumeDisabledWhenVolumeIsEnabled.
 const brushZoomRule = new DisableRule(
   [AnnotationTool.BRUSH, AnnotationTool.ERASE_BRUSH],
-  ({ isZoomStepTooHighForBrushing }) =>
-    isZoomStepTooHighForBrushing ? DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL : null,
+  ({ zoomStateForBrushing }) => getZoomExplanation(zoomStateForBrushing),
 );
 
 const traceZoomRule = new DisableRule(
   [AnnotationTool.TRACE, AnnotationTool.ERASE_TRACE],
-  ({ isZoomStepTooHighForTracing }) =>
-    isZoomStepTooHighForTracing ? DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL : null,
+  ({ zoomStateForTracing }) => getZoomExplanation(zoomStateForTracing),
 );
 
 const fillZoomRule = new DisableRule(
   [AnnotationTool.FILL_CELL, AnnotationTool.QUICK_SELECT],
-  ({ isZoomStepTooHighForFilling }) =>
-    isZoomStepTooHighForFilling ? DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL : null,
+  ({ zoomStateForFilling }) => getZoomExplanation(zoomStateForFilling),
 );
 
 const proofreadRule = new DisableRule([AnnotationTool.PROOFREAD], (params) => {
@@ -213,7 +232,7 @@ const skeletonTransformedRule = new DisableRule(
 );
 
 const concurrentCollabModeRule = new DisableRule(
-  [AnnotationTool.SKELETON, ...VolumeTools, AnnotationTool.BOUNDING_BOX],
+  [AnnotationTool.SKELETON, ...VolumeTools],
   ({ isConcurrentCollabMode }, tool) =>
     isConcurrentCollabMode
       ? `The ${tool.readableName} ${DISABLED_EXPLANATION.LIVE_COLLAB_MODE}`
@@ -240,18 +259,29 @@ const areaMeasurementRotationRule = new DisableRule(
   ({ isFlycamRotated }) => (isFlycamRotated ? DISABLED_EXPLANATION.ROTATION_ACTIVE : null),
 );
 
+const requiresAllowUpdateRule = new DisableRule(WRITE_TOOLS, ({ isUpdatingCurrentlyAllowed }) =>
+  !isUpdatingCurrentlyAllowed ? DISABLED_EXPLANATION.NO_UPDATE_ALLOWED : null,
+);
+
 const rules = [
   // Sorted roughly by descending user-effort to enable a tool.
+  requiresAllowUpdateRule,
   proofreadRule,
   // Volume tool rules
-  noVisibleSegmentationTracingRule,
   rotationVolumeRule,
-  zoomInvalidForTracingVolumeRule,
   mergerModeVolumeRule,
-  noSegmentationForMagRule,
   editableMappingActiveRule,
   segmentationTransformedRule,
   jsonMappingActiveRule,
+  // The volume tool rules can distinguish between zoom-in and zoom-out
+  // which is why they come before the more generic noSegmentation et. al.
+  // rules.
+  brushZoomRule,
+  traceZoomRule,
+  fillZoomRule,
+  noSegmentationForMagRule,
+  noVisibleSegmentationTracingRule,
+  zoomInvalidForTracingVolumeRule,
   // Skeleton rules
   noSkeletonRule,
   skeletonNotVisibleRule,
@@ -262,10 +292,6 @@ const rules = [
   boundingBoxTransformedRule,
   // Area measurement rules
   areaMeasurementRotationRule,
-  // Per-tool zoom rules (only reached when volume is not globally disabled)
-  brushZoomRule,
-  traceZoomRule,
-  fillZoomRule,
 ];
 
 function getToolDisabledReason(tool: AnnotationTool, params: Params): DisabledInfo {
@@ -323,18 +349,16 @@ const _getDisabledInfoForTools = (
     isFlycamRotated,
     isConcurrentCollabMode,
     hasSkeleton,
-    areSkeletonsVisible: isSkeletonLayerVisible(annotation),
+    areSkeletonsVisible: isSkeletonLayerVisible(state),
     areGeometriesTransformed: areGeometriesTransformed(state),
-    isZoomStepTooHighForBrushing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.BRUSH, state),
-    isZoomStepTooHighForTracing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.TRACE, state),
-    isZoomStepTooHighForFilling: isVolumeAnnotationDisallowedForZoom(
-      AnnotationTool.FILL_CELL,
-      state,
-    ),
+    zoomStateForBrushing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.BRUSH, state),
+    zoomStateForTracing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.TRACE, state),
+    zoomStateForFilling: isVolumeAnnotationDisallowedForZoom(AnnotationTool.FILL_CELL, state),
     agglomerateState: hasAgglomerateMapping(state),
     isUneditableMappingLocked,
     activeOrganization: state.activeOrganization,
     activeUser: state.activeUser,
+    isUpdatingCurrentlyAllowed: annotation.isUpdatingCurrentlyAllowed,
   };
 
   const result = {} as Record<AnnotationToolId, DisabledInfo>;

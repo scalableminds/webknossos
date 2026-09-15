@@ -87,7 +87,7 @@ function applySingleAction(
         ...treeRest
       } = withoutServerSpecificFields(ua).value;
       const skeleton = enforceSkeletonTracing(state.annotation);
-      const tree = getTree(skeleton, treeId);
+      const tree = getTree(state, treeId);
       if (tree == null) {
         throw new Error("Could not create node because tree was not found.");
       }
@@ -109,7 +109,7 @@ function applySingleAction(
       const clientNode = { untransformedPosition, mag, ...node };
 
       const skeleton = enforceSkeletonTracing(state.annotation);
-      const tree = getTree(skeleton, treeId);
+      const tree = getTree(state, treeId);
       if (tree == null) {
         throw new Error("Could not create node because tree was not found.");
       }
@@ -137,7 +137,7 @@ function applySingleAction(
       const clientNode = { untransformedPosition, mag, ...node };
 
       const skeleton = enforceSkeletonTracing(state.annotation);
-      const tree = getTree(skeleton, treeId);
+      const tree = getTree(state, treeId);
       if (tree == null) {
         throw new Error("Could not update node because tree was not found.");
       }
@@ -163,15 +163,18 @@ function applySingleAction(
       const skeleton = enforceSkeletonTracing(state.annotation);
       const updatedTrees = skeleton.trees.delete(id);
 
-      const newActiveTreeId = skeleton.activeTreeId === id ? null : skeleton.activeTreeId;
+      const { activeTreeId } = state.localSkeletonState;
+      const newActiveTreeId = activeTreeId === id ? null : activeTreeId;
 
       return update(state, {
         annotation: {
           skeleton: {
             trees: { $set: updatedTrees },
             cachedMaxNodeId: { $set: getMaximumNodeId(updatedTrees) },
-            activeTreeId: { $set: newActiveTreeId },
           },
+        },
+        localSkeletonState: {
+          activeTreeId: { $set: newActiveTreeId },
         },
       });
     }
@@ -182,8 +185,8 @@ function applySingleAction(
       const nodeIdSet = new Set(_nodeIds);
 
       const skeleton = enforceSkeletonTracing(state.annotation);
-      const sourceTree = getTree(skeleton, sourceId);
-      const targetTree = getTree(skeleton, targetId);
+      const sourceTree = getTree(state, sourceId);
+      const targetTree = getTree(state, targetId);
 
       if (!sourceTree || !targetTree) {
         throw new Error("Source or target tree not found.");
@@ -247,7 +250,7 @@ function applySingleAction(
         throw new Error("Could not apply update action because no skeleton exists.");
       }
 
-      const tree = getTree(state.annotation.skeleton, treeId);
+      const tree = getTree(state, treeId);
       if (tree == null) {
         throw new Error(
           `Could not apply update action because tree with id=${treeId} was not found.`,
@@ -275,7 +278,7 @@ function applySingleAction(
       const { treeId, source, target } = ua.value;
 
       const skeleton = enforceSkeletonTracing(state.annotation);
-      const tree = getTree(skeleton, treeId);
+      const tree = getTree(state, treeId);
 
       if (!tree) {
         throw new Error("Source or target tree not found.");
@@ -301,7 +304,7 @@ function applySingleAction(
       const { treeId, nodeId } = ua.value;
 
       const skeleton = enforceSkeletonTracing(state.annotation);
-      const tree = getTree(skeleton, treeId);
+      const tree = getTree(state, treeId);
 
       if (!tree) {
         throw new Error("Source or target tree not found.");
@@ -414,35 +417,18 @@ function applySingleAction(
               activeNodeId: {
                 $set: ua.value.activeNode,
               },
-              activeTreeId: {
-                $set: tree.treeId,
-              },
+            },
+          },
+          // The activeTreeId is user-local state (not part of the rebased
+          // annotation), but it needs to stay consistent with the active node.
+          localSkeletonState: {
+            activeTreeId: {
+              $set: tree.treeId,
             },
           },
         });
       }
       return state;
-    }
-    case "updateActiveTree": {
-      const skeletonTracing = enforceSkeletonTracing(state.annotation);
-      if (ua.value.activeTree) {
-        const tree = getTree(skeletonTracing, ua.value.activeTree);
-        if (!tree) {
-          return state;
-        }
-      }
-      return update(state, {
-        annotation: {
-          skeleton: {
-            activeTreeId: {
-              $set: ua.value.activeTree,
-            },
-            activeNodeId: {
-              $set: ua.value.activeNode,
-            },
-          },
-        },
-      });
     }
     case "updateTreeVisibility": {
       return SkeletonTracingReducer(

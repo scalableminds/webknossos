@@ -18,7 +18,7 @@ const idSymbol = Symbol("id");
  * @template K The key type (must extend number)
  * @template V The value type for each map entry
  */
-class DiffableMap<K extends number, V> implements NotEnumerableByObject {
+class DiffableMap<K extends number | bigint, V> implements NotEnumerableByObject {
   /** Internal array of Map chunks for storing data */
   chunks: Array<Map<K, V>>;
   /** Total number of entries across all chunks */
@@ -64,7 +64,7 @@ class DiffableMap<K extends number, V> implements NotEnumerableByObject {
    * @param mapB Second DiffableMap to merge (its values take precedence on conflicts)
    * @returns A new DiffableMap containing all entries from both maps
    */
-  static merge<K extends number, V>(
+  static merge<K extends number | bigint, V>(
     mapA: DiffableMap<K, V>,
     mapB: DiffableMap<K, V>,
   ): DiffableMap<K, V> {
@@ -389,14 +389,17 @@ class DiffableMap<K extends number, V> implements NotEnumerableByObject {
    *
    * @returns A record object with the same key-value pairs
    */
-  toObject(): Record<K, V> {
-    const result = {} as Record<K, V>;
+  // Only meaningful for DiffableMap<number, V> (e.g. skeleton tree maps) — object/Record keys
+  // cannot be bigint, so this collapses to Record<never, V> for DiffableMap<bigint, V>, which is
+  // fine since no such map is ever converted via toObject().
+  toObject(): Record<K & (string | number | symbol), V> {
+    const result: Record<string, V> = {};
 
     for (const [k, v] of this.entries()) {
-      result[k] = v;
+      result[String(k)] = v;
     }
 
-    return result;
+    return result as Record<K & (string | number | symbol), V>;
   }
   /**
    * Returns a human-readable string representation of this DiffableMap
@@ -444,7 +447,7 @@ class DiffableMap<K extends number, V> implements NotEnumerableByObject {
  * @returns A new DiffableMap with references to the same chunks
  * @private
  */
-function shallowCopy<K extends number, V>(template: DiffableMap<K, V>): DiffableMap<K, V> {
+function shallowCopy<K extends number | bigint, V>(template: DiffableMap<K, V>): DiffableMap<K, V> {
   const newMap = new DiffableMap();
   newMap.setId(template.getId());
   newMap.chunks = template.chunks.slice();
@@ -469,7 +472,7 @@ function shallowCopy<K extends number, V>(template: DiffableMap<K, V>): Diffable
  * { changed: [], onlyA: [], onlyB: []}
  * if mapA === mapB
  */
-export function diffDiffableMaps<K extends number, V>(
+export function diffDiffableMaps<K extends number | bigint, V>(
   mapA: DiffableMap<K, V>,
   mapB: DiffableMap<K, V>,
   useDeepEqualityCheck: boolean = false,
@@ -485,9 +488,9 @@ export function diffDiffableMaps<K extends number, V>(
   // For the edge case that one of the maps is empty, we will consider them dependent, anyway
   const areDiffsDependent = mapA.getId() === mapB.getId() || mapA.size() === 0 || mapB.size() === 0;
   let idx = 0;
-  const changed = [];
-  const onlyA = [];
-  const onlyB = [];
+  const changed: Array<K> = [];
+  const onlyA: Array<K> = [];
+  const onlyB: Array<K> = [];
 
   // Compare the chunks of mapA and mapB by identity. For independent
   // maps, all chunks will be identified as "different". This will

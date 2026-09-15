@@ -8,6 +8,7 @@ import {
   tokenUserD,
   tokenUserE,
 } from "test/e2e_setup";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getTask } from "admin/api/tasks";
 import {
   createTeam,
@@ -91,7 +92,9 @@ user_A, user_B, user_C, user_D, user_E
     setUserAuthToken(tokenUserD);
 
     await expect(deleteTeam("69882b370d889b84020efd4f")).rejects.toMatchObject(
-      getExpectedErrorObject("Access denied. Only admin users can execute this operation."),
+      getExpectedErrorObject(
+        "You do not have permission to delete teams. Please ask an organization admin.",
+      ),
     );
   });
 
@@ -103,7 +106,9 @@ user_A, user_B, user_C, user_D, user_E
       name: "test-team-name",
     };
     await expect(createTeam(newTeam)).rejects.toMatchObject(
-      getExpectedErrorObject("Access denied. Only admin users can execute this operation."),
+      getExpectedErrorObject(
+        "You do not have permission to create teams. Please ask an organization admin.",
+      ),
     );
   });
 
@@ -138,7 +143,7 @@ user_A, user_B, user_C, user_D, user_E
     setUserAuthToken(tokenUserD);
 
     await expect(getTask("58135c192faeb34c0081c058")).rejects.toMatchObject(
-      getExpectedErrorObject("Task could not be found"),
+      getExpectedErrorObject("Task “58135c192faeb34c0081c058” could not be found or accessed."),
     );
   });
 
@@ -146,7 +151,7 @@ user_A, user_B, user_C, user_D, user_E
     setUserAuthToken(tokenUserE);
 
     await expect(getTask("58135c192faeb34c0081c058")).rejects.toMatchObject(
-      getExpectedErrorObject("Task could not be found"),
+      getExpectedErrorObject("Task “58135c192faeb34c0081c058” could not be found or accessed."),
     );
   });
 
@@ -162,16 +167,21 @@ user_A, user_B, user_C, user_D, user_E
     setUserAuthToken(tokenUserB);
 
     const userIdC = "770b9f4d2a7c0e4d008da6ef";
-    const user = await getUser(userIdC);
+    const user = unwrapOrThrow(await getUser(userIdC));
     expect(user.firstName).toBe("user_C");
 
     const newUser = Object.assign({}, user, {
       isActive: false,
     });
 
-    await expect(updateUser(newUser)).rejects.toMatchObject(
-      getExpectedErrorObject("You are not authorized to view or edit this resource"),
-    );
+    const result = await updateUser(newUser, { showErrorToast: false });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.cause).toMatchObject({
+        status: 403,
+        messages: [{ error: "You are not authorized to view or edit this resource." }],
+      });
+    }
   });
 
   // Project
@@ -181,7 +191,7 @@ user_A, user_B, user_C, user_D, user_E
 
     const projectId = "58135bfd2faeb3190181c057";
     await expect(deleteProject(projectId)).rejects.toMatchObject(
-      getExpectedErrorObject("Project could not be found"),
+      getExpectedErrorObject("Project “58135bfd2faeb3190181c057” could not be found or accessed."),
     );
   });
 });

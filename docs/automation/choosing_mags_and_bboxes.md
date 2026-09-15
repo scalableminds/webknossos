@@ -50,7 +50,7 @@ The recommended total annotated ground truth volume for training (both neuron an
 
 When distributing this total annotated volume of 5–10 million voxels, **many smaller, well-distributed boxes are preferable to a few large contiguous ones**. WEBKNOSSOS can auto-generate a set of non-overlapping, randomly distributed bounding boxes for you — use the grid icon button in the [Bounding Boxes tab](../ui/object_info.md#bounding-boxes-tab) or the **Generate** button in the Training Data section of the AI training dialog. The tool pre-fills the recommended box count and size for your chosen training type and ensures all generated boxes are aligned to the selected magnification. For example, ten spatially distributed boxes of size **85 × 85 × 32** voxels usually yield better results than a single larger volume of **170 × 425 × 32** voxels, as they capture more variability in the data.
 
-### Part 3: Example Use Cases
+## Part 3: Example Use Cases
 
 **Neuron training: dense neuron segmentation**
 

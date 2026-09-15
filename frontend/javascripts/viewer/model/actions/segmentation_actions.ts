@@ -1,6 +1,5 @@
 import type { AdditionalCoordinate } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
-import type { MappingType } from "viewer/store";
+import type { MappingType, Vector3 } from "viewer/constants";
 
 export type AdHocMeshInfo = {
   mappingName: string | null | undefined;
@@ -8,6 +7,7 @@ export type AdHocMeshInfo = {
   useDataStore?: boolean | null | undefined;
   preferredQuality?: number | null | undefined;
   opacity?: number | undefined;
+  isVisible?: boolean | undefined;
 };
 export type LoadAdHocMeshAction = ReturnType<typeof loadAdHocMeshAction>;
 export type LoadPrecomputedMeshAction = ReturnType<typeof loadPrecomputedMeshAction>;
@@ -15,7 +15,7 @@ export type LoadPrecomputedMeshAction = ReturnType<typeof loadPrecomputedMeshAct
 export type SegmentationAction = LoadAdHocMeshAction | LoadPrecomputedMeshAction;
 
 export const loadAdHocMeshAction = (
-  segmentId: number,
+  segmentId: bigint,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   extraInfo?: AdHocMeshInfo,
@@ -31,11 +31,12 @@ export const loadAdHocMeshAction = (
   }) as const;
 
 export const loadPrecomputedMeshAction = (
-  segmentId: number,
+  segmentId: bigint,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   opacity: number | undefined,
+  isVisible: boolean | undefined,
   layerName?: string | undefined,
 ) =>
   ({
@@ -45,5 +46,6 @@ export const loadPrecomputedMeshAction = (
     seedAdditionalCoordinates,
     meshFileName,
     opacity,
+    isVisible,
     layerName,
   }) as const;

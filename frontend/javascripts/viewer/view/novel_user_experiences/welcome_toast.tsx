@@ -1,4 +1,3 @@
-import Icon from "@ant-design/icons";
 import drawingWavingPerson from "@images/backgrounds/waving-person.svg";
 import WKLogoIcon from "@images/wk-logo.svg?react";
 import { Button, ConfigProvider, Flex, notification, Space, Typography } from "antd";
@@ -7,29 +6,42 @@ import features from "features";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import defaultsDeep from "lodash-es/defaultsDeep";
-import { ColorWKBlueZircon, getAntdTheme } from "theme";
+import { ColorWhite, ColorWKBlue, getAntdTheme } from "theme";
 
-const darkThemeWithCyanButton = defaultsDeep(
-  { token: { colorPrimary: ColorWKBlueZircon } },
+// White buttons with blue text/border to stand out against the wk-blue background.
+// The toast background is always wk-blue, so these three shades are deliberately literal and must
+// NOT be replaced by theme tokens – they have to stay white/near-white in both themes.
+const darkThemeWithWhiteButtons = defaultsDeep(
+  {
+    components: {
+      Button: {
+        colorPrimary: ColorWhite,
+        colorPrimaryHover: "#e6e6e6",
+        colorPrimaryActive: "#d9d9d9",
+        primaryColor: ColorWKBlue,
+      },
+    },
+  },
   getAntdTheme("dark"),
 );
 
 function showWelcomeToast(notification: NotificationInstance) {
   notification.open({
-    className: "webknossos-welcome-toast",
     duration: 0,
     placement: "bottomRight",
-    icon: (
-      <Icon
-        component={WKLogoIcon}
-        style={{
-          filter: "brightness(4)",
-          width: 45,
-          height: 45,
-        }}
-      />
+    title: (
+      <Flex justify="space-between" align="flex-start" gap="middle">
+        <Typography.Title level={4}>Welcome to WEBKNOSSOS</Typography.Title>
+        <WKLogoIcon
+          width={64}
+          height={64}
+          style={{
+            filter: "brightness(4)",
+            flexShrink: 0,
+          }}
+        />
+      </Flex>
     ),
-    title: <Typography.Title level={4}>Welcome to WEBKNOSSOS!</Typography.Title>,
     description: (
       <Space orientation="vertical" size="middle">
         <Typography.Paragraph>
@@ -69,7 +81,7 @@ function showWelcomeToast(notification: NotificationInstance) {
               type="primary"
               ghost
             >
-              Learn More
+              Learn more
             </Button>
           </span>
         </Flex>
@@ -78,15 +90,14 @@ function showWelcomeToast(notification: NotificationInstance) {
     styles: {
       root: {
         padding: 34,
-        backgroundColor: "var(--color-wk-blue)",
+        backgroundColor: ColorWKBlue,
       },
       description: {
         marginInlineStart: 0,
       },
       title: {
-        paddingLeft: 30, // offset for icon
         marginBottom: 20,
-        color: "white",
+        color: ColorWhite,
       },
     },
   });
@@ -115,5 +126,5 @@ export default function WelcomeToast() {
     // should also *not* appear after a registered user logs out.
     UserLocalStorage.setItem("novelUserExperienceInfos.hasSeenWelcomeToast", "true", false);
   });
-  return <ConfigProvider theme={darkThemeWithCyanButton}>{contextHolder}</ConfigProvider>;
+  return <ConfigProvider theme={darkThemeWithWhiteButtons}>{contextHolder}</ConfigProvider>;
 }

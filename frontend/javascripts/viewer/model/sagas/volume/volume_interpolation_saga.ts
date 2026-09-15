@@ -12,6 +12,7 @@ import {
   type Vector3,
 } from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndexForLayer,
@@ -59,7 +60,7 @@ function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string
       directionFactor,
     };
   }
-  const mostRecentLabelAction = getLastLabelAction(volumeTracing);
+  const mostRecentLabelAction = getLastLabelAction(state, volumeTracing);
 
   const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
   const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
@@ -254,7 +255,7 @@ function signedDist(arr: ndarray.NdArray) {
 }
 
 export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
-  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = yield* select(mayEditAnnotation);
   if (!allowUpdate) return;
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
@@ -273,13 +274,17 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
 
   // Disable copy-segmentation for the same zoom steps where the brush/trace tool is forbidden, too.
-  const isMagTooLow = yield* select((state) =>
+  const zoomState = yield* select((state) =>
     isVolumeAnnotationDisallowedForZoom(activeTool, state),
   );
 
-  if (isMagTooLow) {
+  if (zoomState.isDisabled) {
+    const hint =
+      zoomState.reason === "needs_zoom_out"
+        ? "Please zoom out further."
+        : "Please zoom in further.";
     Toast.warning(
-      'The "interpolate segmentation"-feature is not supported at this zoom level. Please zoom in further.',
+      `The "interpolate segmentation"-feature is not supported at this zoom level. ${hint}`,
     );
     return;
   }
@@ -373,8 +378,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   let firstSlice: NdArray<TypedArrayWithoutBigInt>;
   let lastSlice: NdArray<TypedArrayWithoutBigInt>;
 
-  const isBigUint64 = inputNd.data instanceof BigUint64Array;
-  if (isBigUint64) {
+  const isBigInt = inputNd.data instanceof BigUint64Array || inputNd.data instanceof BigInt64Array;
+  if (isBigInt) {
     // For BigUint64 arrays, we want to convert as early as possible to Float32, since
     // the cwise operations don't generalize across all members of TypedArray.
     // Float values are more than enough, because the interpolation process only
@@ -388,27 +393,28 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     firstSlice = ndarray(new Float32Array(firstSliceBigInt.size), firstSliceBigInt.shape);
     lastSlice = ndarray(new Float32Array(lastSliceBigInt.size), lastSliceBigInt.shape);
 
-    const activeCellIdBig = BigInt(activeCellId);
     // Calculate firstSlice = firstSliceBigInt[...] == activeCellId
     isEqualFromBigUint64(
       firstSlice,
       firstSliceBigInt as NdArray<BigUint64Array<ArrayBuffer>>,
-      activeCellIdBig,
+      activeCellId,
     );
     // Calculate lastSlice = lastSliceBigInt[...] == activeCellId
     isEqualFromBigUint64(
       lastSlice,
       lastSliceBigInt as NdArray<BigUint64Array<ArrayBuffer>>,
-      activeCellIdBig,
+      activeCellId,
     );
   } else {
     firstSlice = inputNd.pick(null, null, 0) as NdArray<TypedArrayWithoutBigInt>;
     lastSlice = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArrayWithoutBigInt>;
 
-    // Calculate firstSlice = firstSlice[...] == activeCellId
-    isEqual(firstSlice, activeCellId);
-    // Calculate lastSlice = lastSlice[...] == activeCellId
-    isEqual(lastSlice, activeCellId);
+    const activeCellIdNumber = Number(activeCellId);
+
+    // Calculate firstSlice = firstSlice[...] == activeCellIdNumber
+    isEqual(firstSlice, activeCellIdNumber);
+    // Calculate lastSlice = lastSlice[...] == activeCellIdNumber
+    isEqual(lastSlice, activeCellIdNumber);
   }
 
   if (!isNonZero(firstSlice) || !isNonZero(lastSlice)) {

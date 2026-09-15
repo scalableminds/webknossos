@@ -56,6 +56,8 @@ const volatileKeys: Array<string | number | symbol> = [
   "tracingId",
   "sortingKey",
   "path",
+  "rootPath",
+  "rootRealPath",
 ];
 
 /**
@@ -127,6 +129,15 @@ global.localStorage = {
   key: vi.fn(),
 };
 
+global.sessionStorage = {
+  getItem: vi.fn().mockReturnValue(undefined),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
+};
+
 /**
  * Writes a TypeScript file that type-checks an object against a given type using the regular TS compiler.
  * Useful for verifying that API responses match their expected TypeScript interfaces during testing.
@@ -153,9 +164,11 @@ export function resetDatabase() {
   // The parameter needs to be set globally here.
   // See https://github.com/shelljs/shelljs/issues/981#issuecomment-626840798
   shell.config.fatal = true;
-  shell.exec("tools/postgres/dbtool.js prepare-test-db", { silent: true });
+  shell.exec("tools/postgres/dbtool.js prepare-test-db-no-schema-refresh", { silent: true });
 }
 export {
+  idUserA,
+  setUserAuthToken,
   tokenUserA,
   tokenUserB,
   tokenUserC,
@@ -165,6 +178,4 @@ export {
   tokenUserF,
   tokenUserFInOrgaX,
   tokenUserFInOrgaY,
-  setUserAuthToken,
-  idUserA,
 };

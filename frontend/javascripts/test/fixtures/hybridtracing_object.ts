@@ -6,7 +6,7 @@ import { TreeTypeEnum } from "viewer/constants";
 import EdgeCollection from "viewer/model/edge_collection";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import type { SkeletonTracing } from "viewer/store";
-import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
 export const colorLayer: APIColorLayer = {
   name: "color",
@@ -70,17 +70,10 @@ export const initialSkeletonTracing: SkeletonTracing = {
     [2, initialTreeTwo],
   ]),
   treeGroups: [],
-  activeGroupId: null,
-  activeTreeId: 1,
   activeNodeId: null,
   cachedMaxNodeId: 0,
   boundingBox: null,
   userBoundingBoxes: [],
-  navigationList: {
-    list: [],
-    activeIndex: -1,
-  },
-  showSkeletons: true,
   additionalAxes: [],
 };
 
@@ -91,6 +84,11 @@ export const initialState = update(defaultVolumeState, {
     },
     readOnly: {
       $set: null,
+    },
+  },
+  localSkeletonState: {
+    activeTreeId: {
+      $set: 1,
     },
   },
   dataset: {

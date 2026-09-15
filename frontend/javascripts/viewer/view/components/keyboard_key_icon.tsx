@@ -3,13 +3,13 @@ import { ThemedIcon } from "components/themed_icon";
 import type React from "react";
 
 interface KeyboardKeyIconProps extends React.ComponentProps<typeof Icon> {
-  label: string; // e.g. "CTRL", "I",
+  label?: string | undefined; // e.g. "CTRL", "I",
 }
 
 /**
  * Renders a keyboard key icon with a centered text label. Use it to visually explain keyboard shortcuts
  */
-export function KeyboardKeyIcon({ label, style, ...props }: KeyboardKeyIconProps) {
+export function KeyboardKeyIcon({ label, style, children, ...props }: KeyboardKeyIconProps) {
   return (
     <span
       style={{
@@ -34,7 +34,7 @@ export function KeyboardKeyIcon({ label, style, ...props }: KeyboardKeyIconProps
           color: "var(--ant-color-primary)",
         }}
       >
-        {label}
+        {label ?? children}
       </span>
     </span>
   );

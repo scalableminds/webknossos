@@ -1,7 +1,7 @@
 import { hasAiPlan } from "admin/organization/pricing_plan_utils";
-import { Drawer, Tabs } from "antd";
+import { Drawer, Tabs, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -19,6 +19,7 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
   const orgaHasAiPlan = useWkSelector((state) => hasAiPlan(state.activeOrganization));
   const activeUser = useWkSelector((state) => state.activeUser);
   const isSuperUser = activeUser?.isSuperUser ?? false;
+  const { token } = theme.useToken();
 
   const ai_job_drawer_state = useWkSelector((state) => state.uiInformation.aIJobDrawerState);
   const canTrainModels = isSuperUser || orgaHasAiPlan;
@@ -68,8 +69,13 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
 
   const activeKey = ai_job_drawer_state === "invisible" ? "open_ai_inference" : ai_job_drawer_state;
 
+  const generateBBModalContextValue = useMemo(
+    () => ({ openGenerateBBModal }),
+    [openGenerateBBModal],
+  );
+
   return (
-    <GenerateBBModalContext.Provider value={{ openGenerateBBModal }}>
+    <GenerateBBModalContext.Provider value={generateBBModalContextValue}>
       <Drawer
         title="Run a WEBKNOSSOS AI Job"
         placement="right"
@@ -77,6 +83,12 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
         open={isOpen}
         onClose={handleClose}
         destroyOnHidden
+        styles={{
+          body: {
+            background: token.colorBgLayout,
+            padding: 24,
+          },
+        }}
       >
         <Tabs activeKey={activeKey} items={items} onChange={handleChange} />
       </Drawer>

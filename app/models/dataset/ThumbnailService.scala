@@ -140,8 +140,23 @@ class ThumbnailService @Inject() (
       )
       layersToRender = selectLayersToRender(viewConfiguration, usableDataSource)
       (center, zoom) = selectCenterAndZoom(viewConfiguration, usableDataSource, firstLayer)
+      // Physical (mag1) extent of the thumbnail, shared by every layer so they all show the same
+      // field of view. Must NOT be derived from any individual layer's chosen mag: layers can have
+      // mismatched mag pyramids (e.g. a segmentation layer with no mag 1), which would otherwise make
+      // that layer cover a different physical area than the others for the same output pixel size.
+      mag1Width = Math.round(width * zoom).toInt
+      mag1Height = Math.round(height * zoom).toInt
       layerParameters = layersToRender.map(layer =>
-        selectCombinedThumbnailLayerParameters(viewConfiguration, layer, center, zoom, width, height)
+        selectCombinedThumbnailLayerParameters(
+          viewConfiguration,
+          layer,
+          center,
+          zoom,
+          mag1Width,
+          mag1Height,
+          width,
+          height
+        )
       )
       client <- datasetService.clientFor(dataset)
       image <- client.getCombinedThumbnail(dataset, CombinedThumbnailRequest(width, height, layerParameters))
@@ -207,6 +222,8 @@ class ThumbnailService @Inject() (
       layer: StaticLayer,
       center: Vec3Int,
       zoom: Double,
+      mag1Width: Int,
+      mag1Height: Int,
       outputWidth: Int,
       outputHeight: Int
   ): CombinedThumbnailLayerParameters = {
@@ -215,17 +232,21 @@ class ThumbnailService @Inject() (
     val colorSettingsOpt = readColor(viewConfiguration, layer.name)
     val mappingNameOpt = readMappingName(viewConfiguration, layer.name)
     val opacity = readOpacity(viewConfiguration, layer.name, isSegmentation)
+    // Each layer may pick a different native mag (e.g. if it lacks a mag the other layers have), but
+    // mag1Width/mag1Height (the physical area covered) are fixed and shared across all layers, so the
+    // target-mag voxel counts fetched here differ instead. The datastore resizes the result to
+    // (outputWidth, outputHeight) before compositing, so this stays pixel-aligned across layers.
     val mag = magForZoom(layer, zoom)
-    val mag1Width = outputWidth * mag.x
-    val mag1Height = outputHeight * mag.y
+    val targetMagWidth = math.max(1, mag1Width / mag.x)
+    val targetMagHeight = math.max(1, mag1Height / mag.y)
     CombinedThumbnailLayerParameters(
       dataLayerName = layer.name,
       x = center.x - mag1Width / 2,
       y = center.y - mag1Height / 2,
       z = center.z,
       mag = mag.toMagLiteral(allowScalar = false),
-      width = outputWidth,
-      height = outputHeight,
+      width = targetMagWidth,
+      height = targetMagHeight,
       mappingName = mappingNameOpt,
       intensityMin = intensityRangeOpt.map(_._1),
       intensityMax = intensityRangeOpt.map(_._2),

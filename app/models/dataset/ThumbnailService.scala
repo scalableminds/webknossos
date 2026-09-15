@@ -9,8 +9,9 @@ import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.datastore.controllers.{CombinedThumbnailLayerParameters, CombinedThumbnailRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{LayerCategory, StaticLayer, UsableDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import models.configuration.DatasetConfigurationService
 import play.api.http.Status.NOT_FOUND
@@ -35,6 +36,10 @@ class ThumbnailService @Inject() (
   private val DefaultThumbnailHeight = 400
   private val MaxThumbnailWidth = 4000
   private val MaxThumbnailHeight = 4000
+
+  // Sentinel dataLayerName for the whole-dataset combined thumbnail, reusing the per-layer thumbnail
+  // cache table. Safe because real layer names are never empty.
+  private val CombinedThumbnailLayerNameSentinel = ""
 
   def getThumbnailWithCache(
       datasetIdValidated: ObjectId,
@@ -103,6 +108,86 @@ class ThumbnailService @Inject() (
       )
     } yield image
 
+  def getDatasetThumbnailWithCache(
+      datasetIdValidated: ObjectId,
+      w: Option[Int],
+      h: Option[Int]
+  )(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+    val width = MathUtils.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
+    val height = MathUtils.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
+    for {
+      dataset <- datasetDAO.findOne(datasetIdValidated)(using GlobalAccessContext)
+      image <- thumbnailCachingService.getOrLoad(
+        dataset._id,
+        CombinedThumbnailLayerNameSentinel,
+        width,
+        height,
+        None,
+        _ => getDatasetThumbnail(dataset, width, height)(using ec, GlobalAccessContext)
+      )
+    } yield image
+  }
+
+  private def getDatasetThumbnail(dataset: Dataset, width: Int, height: Int)(implicit
+      ec: ExecutionContext,
+      ctx: DBAccessContext
+  ): Fox[Array[Byte]] =
+    for {
+      usableDataSource <- datasetService.usableDataSourceFor(dataset)
+      firstLayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataset.noLayers" ~> NOT_FOUND
+      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)(
+        using ctx
+      )
+      layersToRender = selectLayersToRender(viewConfiguration, usableDataSource)
+      (center, zoom) = selectCenterAndZoom(viewConfiguration, usableDataSource, firstLayer)
+      // Physical (mag1) extent of the thumbnail, shared by every layer so they all show the same
+      // field of view. Must NOT be derived from any individual layer's chosen mag: layers can have
+      // mismatched mag pyramids (e.g. a segmentation layer with no mag 1), which would otherwise make
+      // that layer cover a different physical area than the others for the same output pixel size.
+      mag1Width = Math.round(width * zoom).toInt
+      mag1Height = Math.round(height * zoom).toInt
+      layerParameters = layersToRender.map(layer =>
+        selectCombinedThumbnailLayerParameters(
+          viewConfiguration,
+          layer,
+          center,
+          zoom,
+          mag1Width,
+          mag1Height,
+          width,
+          height
+        )
+      )
+      client <- datasetService.clientFor(dataset)
+      image <- client.getCombinedThumbnail(dataset, CombinedThumbnailRequest(width, height, layerParameters))
+      _ <- thumbnailDAO.upsertThumbnail(
+        dataset._id,
+        CombinedThumbnailLayerNameSentinel,
+        width,
+        height,
+        None,
+        image,
+        jpegMimeType,
+        // The rendered layers may each use their own mag; this is stored only for debugging purposes.
+        Vec3Int(1, 1, 1),
+        BoundingBox(center, width, height, 1)
+      )
+    } yield image
+
+  private def selectCenterAndZoom(
+      viewConfiguration: DatasetViewConfiguration,
+      usableDataSource: UsableDataSource,
+      fallbackCenterLayer: StaticLayer
+  ): (Vec3Int, Double) = {
+    val configuredCenterOpt =
+      viewConfiguration.get("position").flatMap(jsValue => JsonHelper.as[Vec3Int](jsValue).toOption)
+    val centerOpt =
+      configuredCenterOpt.orElse(BoundingBox.intersection(usableDataSource.dataLayers.map(_.boundingBox)).map(_.center))
+    val center = centerOpt.getOrElse(fallbackCenterLayer.boundingBox.center)
+    val zoom = viewConfiguration.get("zoom").flatMap(jsValue => JsonHelper.as[Double](jsValue).toOption).getOrElse(1.0)
+    (center, zoom)
+  }
+
   private def selectParameters(
       viewConfiguration: DatasetViewConfiguration,
       usableDataSource: UsableDataSource,
@@ -112,12 +197,7 @@ class ThumbnailService @Inject() (
       targetMagHeigt: Int,
       mappingName: Option[String]
   ): (BoundingBox, Vec3Int, Option[(Double, Double)], Option[ThumbnailColorSettings], Option[String]) = {
-    val configuredCenterOpt =
-      viewConfiguration.get("position").flatMap(jsValue => JsonHelper.as[Vec3Int](jsValue).toOption)
-    val centerOpt =
-      configuredCenterOpt.orElse(BoundingBox.intersection(usableDataSource.dataLayers.map(_.boundingBox)).map(_.center))
-    val center = centerOpt.getOrElse(layer.boundingBox.center)
-    val zoom = viewConfiguration.get("zoom").flatMap(jsValue => JsonHelper.as[Double](jsValue).toOption).getOrElse(1.0)
+    val (center, zoom) = selectCenterAndZoom(viewConfiguration, usableDataSource, layer)
     val intensityRangeOpt = readIntensityRange(viewConfiguration, layerName)
     val colorSettingsOpt = readColor(viewConfiguration, layerName)
     val mag = magForZoom(layer, zoom)
@@ -135,6 +215,68 @@ class ThumbnailService @Inject() (
       colorSettingsOpt,
       mappingNameResult
     )
+  }
+
+  private def selectCombinedThumbnailLayerParameters(
+      viewConfiguration: DatasetViewConfiguration,
+      layer: StaticLayer,
+      center: Vec3Int,
+      zoom: Double,
+      mag1Width: Int,
+      mag1Height: Int,
+      outputWidth: Int,
+      outputHeight: Int
+  ): CombinedThumbnailLayerParameters = {
+    val isSegmentation = layer.category == LayerCategory.segmentation
+    val intensityRangeOpt = readIntensityRange(viewConfiguration, layer.name)
+    val colorSettingsOpt = readColor(viewConfiguration, layer.name)
+    val mappingNameOpt = readMappingName(viewConfiguration, layer.name)
+    val opacity = readOpacity(viewConfiguration, layer.name, isSegmentation)
+    // Each layer may pick a different native mag (e.g. if it lacks a mag the other layers have), but
+    // mag1Width/mag1Height (the physical area covered) are fixed and shared across all layers, so the
+    // target-mag voxel counts fetched here differ instead. The datastore resizes the result to
+    // (outputWidth, outputHeight) before compositing, so this stays pixel-aligned across layers.
+    val mag = magForZoom(layer, zoom)
+    val targetMagWidth = math.max(1, mag1Width / mag.x)
+    val targetMagHeight = math.max(1, mag1Height / mag.y)
+    CombinedThumbnailLayerParameters(
+      dataLayerName = layer.name,
+      x = center.x - mag1Width / 2,
+      y = center.y - mag1Height / 2,
+      z = center.z,
+      mag = mag.toMagLiteral(allowScalar = false),
+      width = targetMagWidth,
+      height = targetMagHeight,
+      mappingName = mappingNameOpt,
+      intensityMin = intensityRangeOpt.map(_._1),
+      intensityMax = intensityRangeOpt.map(_._2),
+      color = colorSettingsOpt.map(_.color.toHtml),
+      invertColor = colorSettingsOpt.map(_.isInverted),
+      opacity = opacity
+    )
+  }
+
+  private def selectLayersToRender(
+      viewConfiguration: DatasetViewConfiguration,
+      usableDataSource: UsableDataSource
+  ): List[StaticLayer] = {
+    def isEnabled(layer: StaticLayer): Boolean = !readIsDisabled(viewConfiguration, layer.name)
+
+    val colorLayerOrder = readColorLayerOrder(viewConfiguration)
+    val orderedColorLayers =
+      usableDataSource.dataLayers.filter(layer => layer.category == LayerCategory.color && isEnabled(layer)).sortBy {
+        layer =>
+          val index = colorLayerOrder.indexOf(layer.name)
+          if (index == -1) Int.MaxValue else index
+      }
+
+    val segmentationLayerOpt = usableDataSource.dataLayers
+      .filter(layer => layer.category == LayerCategory.segmentation && isEnabled(layer))
+      .sortBy(_.name)
+      .headOption
+
+    val layersToRender = orderedColorLayers ++ segmentationLayerOpt.toList
+    if (layersToRender.nonEmpty) layersToRender else usableDataSource.dataLayers
   }
 
   private def readIntensityRange(
@@ -170,6 +312,33 @@ class ThumbnailService @Inject() (
 
   private def magForZoom(dataLayer: StaticLayer, zoom: Double): Vec3Int =
     dataLayer.resolutions.minBy(r => Math.abs(r.maxDim - zoom))
+
+  private val DefaultColorLayerOpacity = 100d
+  private val DefaultSegmentationLayerOpacity = 20d
+
+  private def readOpacity(
+      viewConfiguration: DatasetViewConfiguration,
+      layerName: String,
+      isSegmentation: Boolean
+  ): Double = {
+    val default = if (isSegmentation) DefaultSegmentationLayerOpacity else DefaultColorLayerOpacity
+    (for {
+      layersJsValue <- viewConfiguration.get("layers")
+      alpha <- (layersJsValue \ layerName \ "alpha").asOpt[Double]
+    } yield alpha).getOrElse(default)
+  }
+
+  private def readIsDisabled(viewConfiguration: DatasetViewConfiguration, layerName: String): Boolean =
+    (for {
+      layersJsValue <- viewConfiguration.get("layers")
+      isDisabled <- (layersJsValue \ layerName \ "isDisabled").asOpt[Boolean]
+    } yield isDisabled).getOrElse(false)
+
+  private def readColorLayerOrder(viewConfiguration: DatasetViewConfiguration): List[String] =
+    viewConfiguration
+      .get("colorLayerOrder")
+      .flatMap(jsValue => JsonHelper.as[List[String]](jsValue).toOption)
+      .getOrElse(List.empty)
 
 }
 

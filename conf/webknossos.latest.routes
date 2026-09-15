@@ -105,6 +105,7 @@ GET           /datasets/:datasetId/sharingToken                                 
 DELETE        /datasets/:datasetId/sharingToken                                                 controllers.DatasetController.deleteSharingToken(datasetId: ObjectId)
 PATCH         /datasets/:datasetId/teams                                                        controllers.DatasetController.updateTeams(datasetId: ObjectId)
 GET           /datasets/:datasetId/layers/:layer/thumbnail                                      controllers.DatasetController.thumbnail(datasetId: ObjectId, layer: String, w: Option[Int], h: Option[Int], mappingName: Option[String], sharingToken: Option[String])
+GET           /datasets/:datasetId/thumbnail                                                    controllers.DatasetController.datasetThumbnail(datasetId: ObjectId, w: Option[Int], h: Option[Int], sharingToken: Option[String])
 POST          /datasets/:datasetId/layers/:layer/segmentAnythingMask                            controllers.DatasetController.segmentAnythingMask(datasetId: ObjectId, layer: String, intensityMin: Option[Float], intensityMax: Option[Float])
 PUT           /datasets/:datasetId/clearThumbnailCache                                          controllers.DatasetController.removeFromThumbnailCache(datasetId: ObjectId)
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)

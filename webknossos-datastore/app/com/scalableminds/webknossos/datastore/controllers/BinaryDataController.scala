@@ -28,6 +28,7 @@ import play.api.libs.json.Json
 import play.api.mvc.*
 
 import scala.concurrent.duration.DurationInt
+import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
@@ -204,6 +205,83 @@ class BinaryDataController @Inject() (
       } yield Ok(outputStream.toByteArray).as(jpegMimeType)
     }
   }
+
+  private def combinedThumbnailLayerImage(
+      datasetId: ObjectId,
+      layerParams: CombinedThumbnailLayerParameters,
+      outputWidth: Int,
+      outputHeight: Int
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[BufferedImage] =
+    for {
+      (dataSource, dataLayer) <- datasetCache.getWithLayer(
+        datasetId,
+        layerParams.dataLayerName
+      ) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
+      magParsed <- Vec3Int.fromMagLiteral(layerParams.mag).toFox ?~> Msg.Dataset.Mag.invalid(layerParams.mag)
+      dataRequest = DataRequest(
+        VoxelPosition(layerParams.x, layerParams.y, layerParams.z, magParsed),
+        layerParams.width,
+        layerParams.height,
+        depth = 1,
+        DataServiceRequestSettings(appliedAgglomerate = layerParams.mappingName)
+      )
+      (data, _, _) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
+      intensityRange: Option[(Double, Double)] = layerParams.intensityMin.flatMap(min =>
+        layerParams.intensityMax.map(max => (min, max))
+      )
+      layerColor = layerParams.color.flatMap(Color.fromHTML)
+      params = ImageCreatorParameters(
+        dataLayer.elementClass,
+        useHalfBytes = false,
+        slideWidth = layerParams.width,
+        slideHeight = layerParams.height,
+        imagesPerRow = 1,
+        blackAndWhite = false,
+        intensityRange = intensityRange,
+        isSegmentation = dataLayer.category == LayerCategory.segmentation,
+        color = layerColor,
+        invertColor = layerParams.invertColor,
+        preserveAlpha = true,
+        opacity = layerParams.opacity
+      )
+      dataWithFallback =
+        if (data.length == 0)
+          new Array[Byte](layerParams.width * layerParams.height * dataLayer.bytesPerElement)
+        else data
+      spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params).toFox ?~> Msg.Image.createFailed
+      firstSheet <- spriteSheet.pages.headOption.toFox ?~> Msg.Image.pageFailed
+      image = firstSheet.image
+    } yield
+      if (image.getWidth == outputWidth && image.getHeight == outputHeight) image
+      else {
+        val scaled = new BufferedImage(outputWidth, outputHeight, BufferedImage.TYPE_INT_ARGB)
+        val graphics = scaled.createGraphics()
+        graphics.drawImage(image, 0, 0, outputWidth, outputHeight, null)
+        graphics.dispose()
+        scaled
+      }
+
+  def thumbnailCombinedJpeg(datasetId: ObjectId): Action[CombinedThumbnailRequest] =
+    Action.fox(validateJson[CombinedThumbnailRequest]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+        for {
+          layerImages <- Fox.serialCombined(request.body.layers)(layerParams =>
+            combinedThumbnailLayerImage(datasetId, layerParams, request.body.width, request.body.height)
+          )
+          // Opaque (no alpha channel), since the JPEG writer rejects TYPE_INT_ARGB with "Bogus input
+          // colorspace". Drawing the alpha-carrying layer images onto this opaque destination still
+          // alpha-blends them correctly, just flattening the result immediately.
+          composite = new BufferedImage(request.body.width, request.body.height, BufferedImage.TYPE_INT_RGB)
+          graphics = composite.createGraphics()
+          _ = graphics.setColor(java.awt.Color.BLACK)
+          _ = graphics.fillRect(0, 0, request.body.width, request.body.height)
+          _ = layerImages.foreach(image => graphics.drawImage(image, 0, 0, null))
+          _ = graphics.dispose()
+          outputStream = new ByteArrayOutputStream()
+          _ = new JPEGWriter().writeToOutputStream(composite)(outputStream)
+        } yield Ok(outputStream.toByteArray).as(jpegMimeType)
+      }
+    }
 
   def mappingJson(
       datasetId: ObjectId,

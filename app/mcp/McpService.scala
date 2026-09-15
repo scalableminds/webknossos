@@ -31,7 +31,8 @@ class McpService @Inject() (
 
   private val emptySchema = Json.obj("type" -> "object", "properties" -> Json.obj())
 
-  private val tools: JsArray = Json.arr(
+  // Also used to describe the tools in the MCP bundle manifest, see McpBundleService.
+  val tools: JsArray = Json.arr(
     Json.obj(
       "name" -> getTokenToolName,
       "title" -> "Get a short-lived WEBKNOSSOS API token",

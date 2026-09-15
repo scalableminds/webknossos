@@ -54,6 +54,7 @@ POST          /auth/createUserInOrganization/:organizationId                    
 # MCP (Model Context Protocol) server
 POST          /mcp                                                                              controllers.McpController.handle()
 GET           /mcp                                                                              controllers.McpController.handleGet()
+GET           /mcp/bundle                                                                       controllers.McpController.bundle()
 
 # Configurations
 GET           /user/userConfiguration                                                           controllers.ConfigurationController.read()

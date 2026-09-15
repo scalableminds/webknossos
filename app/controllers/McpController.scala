@@ -1,6 +1,6 @@
 package controllers
 
-import mcp.McpService
+import mcp.{McpBundleService, McpService}
 import play.silhouette.api.Silhouette
 import play.api.libs.json.JsValue
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -19,7 +19,8 @@ import scala.concurrent.ExecutionContext
   * that unauthenticated requests are answered by silhouette's default error handler, which does not send a
   * WWW-Authenticate challenge header, so clients need to be configured with the token explicitly.
   */
-class McpController @Inject() (mcpService: McpService, sil: Silhouette[WkEnv])(implicit
+class McpController @Inject() (mcpService: McpService, mcpBundleService: McpBundleService, sil: Silhouette[WkEnv])(
+    implicit
     ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers
 ) extends Controller {
@@ -33,5 +34,12 @@ class McpController @Inject() (mcpService: McpService, sil: Silhouette[WkEnv])(i
 
   def handleGet(): Action[AnyContent] = sil.SecuredAction { _ =>
     MethodNotAllowed
+  }
+
+  // The bundle contains no secrets (the user enters their token when installing it), so it needs no authentication.
+  def bundle(): Action[AnyContent] = Action { _ =>
+    Ok(mcpBundleService.bundleBytes)
+      .as("application/octet-stream")
+      .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="${mcpBundleService.fileName}"""")
   }
 }

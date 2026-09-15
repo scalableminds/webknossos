@@ -18,8 +18,9 @@ claude mcp add --transport http webknossos https://webknossos.org/api/mcp \
   --header "Authorization: Bearer <your_api_token>"
 ```
 
-For Claude Desktop, install the MCP Bundle (`.mcpb`) built from `tools/mcpb` in the WEBKNOSSOS repository. Double-click
-the bundle and enter the MCP URL of your instance and your auth token when asked.
+For Claude Desktop, download the MCP Bundle (`.mcpb`) from `Account Settings` > `Developer` > `Auth Token`, in the
+`MCP Server` card. Double-click the downloaded bundle to install it. The URL of your instance is already filled in,
+so only the auth token has to be entered.
 
 Other clients are usually configured with a JSON snippet like this:
 

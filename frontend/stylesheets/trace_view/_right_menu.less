@@ -38,7 +38,7 @@
 
   .ant-btn:has(.anticon-ellipsis) {
     // Hide ellipsis icon buttons (unless hovered)
-    display: none;
+    visibility: hidden;
   }
 
   &:hover {
@@ -46,6 +46,7 @@
 
     .ant-btn:has(.anticon-ellipsis) {
       display: inline-block;
+      visibility: visible;
     }
   }
 

@@ -57,16 +57,36 @@ import {
   setupRenderArea,
 } from "viewer/view/rendering_utils";
 
-// A brighter key light and a much dimmer fill light, offset to different sides/elevations,
-// so meshes actually pick up a visible light-to-dark gradient as they're rotated. The
-// previous setup used two equally-bright, near-frontal lights, which behaves like an
-// on-camera flash: shading gets flattened out because the light source barely differs
-// from the viewing angle.
-// Nominal total (~19) is close to the original two-equal-lights setup's total of 20
-// (10 + 10) - we're not trying to light the scene more dimly overall, just to stop
-// splitting that same total symmetrically, which is what was flattening the shading.
-const KEY_LIGHT_INTENSITY = 15;
-const FILL_LIGHT_INTENSITY = 4;
+// Three lights, offset to different sides/elevations (see their positions below), so
+// meshes pick up a visible light-to-dark gradient as they're rotated, on every side -
+// not just the one facing the key light. The original setup used two equally-bright
+// lights that were both close to the viewing axis, which behaves like an on-camera
+// flash: shading gets flattened out because neither light differs much from the viewing
+// angle, regardless of their intensities. Since these sit on genuinely different sides
+// of the object instead, closer intensities don't reproduce that flatness - each side
+// gets lit (and shaded) mainly by whichever light is on its side.
+//
+// Fill alone (opposite side from key, but a similar elevation) turned out not to be
+// enough: it kept the underside of round/convex shapes (e.g. a soma) from going dark,
+// but didn't give that surface its own highlight/falloff, since key/fill together still
+// leave the geometric underside - facing away from both - relying mostly on flat
+// ambient. UNDER_LIGHT is specifically angled from below to close that gap. It's weaker
+// than key since it's a secondary/supporting light, not meant to compete with it for
+// which side reads as "the" lit side.
+//
+// Keep an eye on the *combined* effect where two lights' regions overlap (e.g. where
+// fill and under both reach a lower side-ish patch of surface) - stacking can blow that
+// area out toward white/desaturated if the total intensities are pushed up too far.
+//
+// SIDE_LIGHT mirrors key horizontally (upper-left instead of upper-right) at a similar
+// elevation/depth, rather than covering a new axis like under does - key/fill/under
+// between them vary mostly in elevation (up/down) and depth (front/back), so surfaces
+// facing left specifically (the far side of vertical/diagonal branches, as seen from
+// the key light) were still comparatively flat.
+const KEY_LIGHT_INTENSITY = 10;
+const FILL_LIGHT_INTENSITY = 7;
+const UNDER_LIGHT_INTENSITY = 6;
+const SIDE_LIGHT_INTENSITY = 5;
 
 type RaycasterHit = {
   node: MeshSceneNode;
@@ -144,8 +164,16 @@ class PlaneView {
 
     // Key light: raking in from up/right so curved surfaces show a clear gradient.
     createDirLight([18, 22, 8], [0, 0, 10], KEY_LIGHT_INTENSITY, tdOrthographicCamera);
-    // Fill light: faint, from the opposite side, so shadow-facing surfaces don't go black.
+    // Fill light: from the opposite side (but a similar elevation), so shadow-facing
+    // surfaces don't go black.
     createDirLight([-10, 3, -12], [0, 0, 10], FILL_LIGHT_INTENSITY, tdOrthographicCamera);
+    // Under light: angled up from below, so the geometric underside of round/convex
+    // shapes - facing away from both key and fill above - gets its own visible
+    // highlight/falloff too, instead of just flat ambient.
+    createDirLight([2, -20, -4], [0, 0, 10], UNDER_LIGHT_INTENSITY, tdOrthographicCamera);
+    // Side light: mirrors key on the left instead of the right, at a similar
+    // elevation/depth, so left-facing surfaces get their own highlight/falloff too.
+    createDirLight([-18, 14, 9], [0, 0, 10], SIDE_LIGHT_INTENSITY, tdOrthographicCamera);
 
     // Placeholder fog for the TD viewport, giving distant mesh parts a subtle fade for
     // depth cueing. Values are meaningless here and get recomputed every frame in

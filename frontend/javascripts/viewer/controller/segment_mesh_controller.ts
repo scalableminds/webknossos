@@ -191,7 +191,7 @@ export default class SegmentMeshController {
       // Fresnel-based and close to colorless, concentrated in a sharp highlight rather
       // than broadly tinting the diffuse color, so it doesn't reintroduce the washed-out
       // look sheen caused at higher values.
-      clearcoat: 0.15,
+      clearcoat: 0.05,
       clearcoatRoughness: 0.1,
     }) as MeshMaterial;
     meshMaterial.side = FrontSide;
@@ -480,8 +480,13 @@ export default class SegmentMeshController {
     // having many lights of similar intensity coming from (almost) every direction
     // (the previous approach) cancels out the shading gradients that make a surface
     // read as three-dimensional, so we deliberately keep this to a low-intensity
-    // ambient plus two faint, distinctly-colored world-space lights instead.
-    const ambientLight = new AmbientLight("white", 0.42);
+    // ambient plus two faint, distinctly-colored world-space lights instead. Kept
+    // deliberately low: unlike the key/fill pair, ambient has no direction, so raising
+    // it lifts the darkest areas without adding any shading gradient of their own — it
+    // was raised once already to fix a too-dark far side, but that just made things
+    // look flat/featureless instead, so PlaneView's fill light intensity is what
+    // actually carries that job now.
+    const ambientLight = new AmbientLight("white", 0.2);
     this.lightsGroup.add(ambientLight);
 
     // Subtle, cool-toned rim/back light so overlapping branches keep an edge of

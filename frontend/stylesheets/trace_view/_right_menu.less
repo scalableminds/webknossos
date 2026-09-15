@@ -37,15 +37,16 @@
   min-height: var(--ant-control-height-sm); // make the list items the same height as <Button size="small">
 
   .ant-btn:has(.anticon-ellipsis) {
-    // Hide ellipsis icon buttons (unless hovered)
-    display: none;
+    // Hide ellipsis icon buttons (unless hovered), but keep their layout
+    // space reserved so the row height doesn't change on hover.
+    visibility: hidden;
   }
 
   &:hover {
     background-color: var(--ant-blue-1);
 
     .ant-btn:has(.anticon-ellipsis) {
-      display: inline-block;
+      visibility: visible;
     }
   }
 

@@ -89,8 +89,13 @@ If your token has been compromised or you suspect someone else has gained access
 
 1. Navigate to the `Developer` group and select the `Auth Token` tab in `Account Settings`.
 2. Click the `Revoke and Generate New Token` button.
-3. This will invalidate the previous token and all sessions using it.
+3. This will invalidate the previous token and all sessions using it, including any short-lived tokens that were
+   handed out through the [MCP server](mcp.md).
 
 #### Organization ID
 
 Certain API integrations need the organization ID which can be found here, in the developer settings.
+
+### MCP Server
+
+WEBKNOSSOS ships an [MCP server](mcp.md) so that AI agents can work with your datasets and annotations.

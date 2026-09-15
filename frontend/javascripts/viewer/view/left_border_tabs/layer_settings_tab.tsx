@@ -44,6 +44,7 @@ import type {
 import Store from "viewer/store";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action_bar/materialize_volume_annotation_modal";
 import ColorLayerSettings from "./components/color_layer_settings";
+import LayerBucketInspector from "./components/layer_bucket_inspector";
 import LayerSettingsHeader from "./components/layer_settings_header";
 import NumberSliderSetting from "./components/number_slider_setting";
 import SegmentationLayerSettings from "./components/segmentation_layer_settings";
@@ -395,6 +396,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <div className="tracing-settings-menu">
+        <Row justify="end" style={{ marginBottom: 4 }}>
+          <LayerBucketInspector />
+        </Row>
         <DndContext
           onDragEnd={this.onSortLayerSettingsEnd}
           onDragStart={() =>

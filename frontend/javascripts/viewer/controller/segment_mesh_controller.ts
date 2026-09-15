@@ -172,17 +172,18 @@ export default class SegmentMeshController {
       vertexColors: true,
       // A mid-range roughness gives the mesh a soft specular highlight (unlike the
       // purely-diffuse Lambert material used previously), which helps the eye read
-      // curved/cylindrical surfaces like dendrites as three-dimensional.
-      roughness: 0.55,
+      // curved/cylindrical surfaces like dendrites as three-dimensional. Lower than
+      // 0.5 starts looking noticeably glossy/plastic; higher spreads the highlight so
+      // thin it barely reads, which was contributing to the overall dark/flat look.
+      roughness: 0.45,
       metalness: 0.05,
-      // Sheen adds a soft, view-dependent brightening at grazing angles (a "rim
-      // light" effect), which helps define silhouette edges where branches overlap
-      // — otherwise same-colored crossing branches tend to visually merge. sheenColor
-      // must be non-black, since it's what the sheen lobe is tinted with. Kept fairly
-      // low: sheen also eats into the diffuse response, which was making meshes read
-      // darker overall than intended.
-      sheen: 0.8,
-      sheenRoughness: 0.6,
+      // Sheen adds a rim-light glint at grazing angles, e.g. along silhouette edges
+      // where branches overlap. A moderate/broad sheen visibly washes the segment's own
+      // color out (it layers a white lobe over it), so this is intentionally low, and
+      // sheenRoughness is kept low too so the lobe stays narrow/grazing-only rather than
+      // spreading across most of the visible, front-facing surface.
+      sheen: 0.2,
+      sheenRoughness: 0.25,
       sheenColor: WHITE,
     }) as MeshMaterial;
     meshMaterial.side = FrontSide;
@@ -204,10 +205,6 @@ export default class SegmentMeshController {
     // this detail for now via the casting.
     const mesh = new Mesh(geometry, meshMaterial) as any as MeshSceneNode;
     mesh.isMerged = isMerged;
-    // Lets meshes occlude the key light from one another (see PlaneView), which is a much
-    // stronger depth cue for crossing/overlapping branches than shading alone.
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
 
     const tweenAnimation = new TWEEN.Tween({
       opacity: 0,
@@ -457,16 +454,11 @@ export default class SegmentMeshController {
 
   getColorObjectForSegment(segmentId: bigint, layerName: string) {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
-    // The colormap segment IDs are hashed into (jsConvertCellIdToRGBA) is deliberately
-    // vivid/high-contrast so segments stay distinguishable in the 2D data view. On a lit
-    // 3D mesh, fully-saturated colors leave a little less headroom for shading
-    // (highlights/shadow) to show, so we pull saturation/lightness in only slightly here
-    // (not in the shared color function, which also drives the 2D view) - just enough to
-    // leave room for the material's own shading, without muting each segment's color
-    // identity, which is otherwise informative on its own.
-    const meshSaturation = saturation * 1.5;
-    const meshLight = 0.5 + (light - 0.5) * 1;
-    const color = new Color().setHSL(hue, meshSaturation, meshLight);
+    // Previously pulled saturation/lightness in a bit here to leave headroom for the
+    // material's shading, but the lighting/material tuning above turned out to give
+    // plenty of shading on its own - so the segment's actual color (also used for the
+    // 2D view, via getSegmentColorAsHSLA) is used as-is instead of a muted version of it.
+    const color = new Color().setHSL(hue, saturation, light);
     color.convertSRGBToLinear();
 
     return color;

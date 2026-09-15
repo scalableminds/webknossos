@@ -1,6 +1,6 @@
 import { notifyAboutDisposedRenderer } from "libs/UpdatableTexture";
 import { document, location } from "libs/window";
-import { PCFSoftShadowMap, WebGLRenderer } from "three";
+import { WebGLRenderer } from "three";
 import { Store } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 
@@ -49,17 +49,6 @@ export function getRenderer(): WebGLRenderer {
         })
       : {}
   ) as WebGLRenderer;
-
-  if (renderCanvasElement != null) {
-    // Lets the TD viewport's key light cast shadows for mesh-on-mesh occlusion (see
-    // PlaneView), which is a much stronger depth cue for overlapping/crossing branches
-    // than shading alone. autoUpdate is off because the shadow map is only relevant for
-    // one of the four viewports rendered per frame; PlaneView explicitly requests an
-    // update (via `needsUpdate`) only before that one render call.
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.autoUpdate = false;
-    renderer.shadowMap.type = PCFSoftShadowMap;
-  }
 
   return renderer;
 }

@@ -71,10 +71,13 @@ const HOVERED_COLOR_VEC3 = hslToSRGB([0.65, 0.9, 0.75]).toArray() as Vector3;
 // already pops on hover) is left close to untouched.
 const HOVER_GLOW_TARGET_LIGHTNESS = 0.65;
 const HOVER_GLOW_TARGET_SATURATION = 0.8;
-const HOVER_GLOW_MAX_LIGHTNESS_BLEND = 0.85;
-const HOVER_GLOW_MAX_SATURATION_BLEND = 0.5;
-const HOVER_EMISSIVE_INTENSITY_BASE = 0.3;
-const HOVER_EMISSIVE_INTENSITY_DARK_BONUS = 0.45;
+const HOVER_GLOW_MAX_LIGHTNESS_BLEND = 0.7;
+const HOVER_GLOW_MAX_SATURATION_BLEND = 0.4;
+// BASE applies to every hovered mesh regardless of its own color, so it's the main
+// dial for how noticeable the effect is on already-bright/saturated segments (which
+// get ~0 of the DARK_BONUS below, since darkness/dullness are ~0 for those already).
+const HOVER_EMISSIVE_INTENSITY_BASE = 0.15;
+const HOVER_EMISSIVE_INTENSITY_DARK_BONUS = 0.35;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 

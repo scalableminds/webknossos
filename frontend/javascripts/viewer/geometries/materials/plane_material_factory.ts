@@ -111,8 +111,9 @@ const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
 // activeColorLayerCount, not this constant; see getColorRenderOrder) -- the
 // real constraint on how many layers a dataset can comfortably use is GPU
 // memory (see getRequiredBucketCapacityPerLayer in data_rendering_logic.ts),
-// not this cap.
-const MAX_ACTIVE_COLOR_LAYERS = 32;
+// not this cap. Exported since dataset_saga.ts's "too many active layers"
+// warning needs to compare against the same number.
+export const MAX_ACTIVE_COLOR_LAYERS = 32;
 
 // Must match the pool_*_textures uniform names declared in
 // SHARED_UNIFORM_DECLARATIONS (main_data_shaders.glsl.ts).

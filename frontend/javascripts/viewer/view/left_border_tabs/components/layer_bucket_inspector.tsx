@@ -2,7 +2,7 @@ import { CloseOutlined, DatabaseOutlined } from "@ant-design/icons";
 import { Popover, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import FastTooltip from "components/fast_tooltip";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Model } from "viewer/singletons";
 import ButtonComponent from "viewer/view/components/button_component";
 
@@ -58,6 +58,15 @@ const columns: ColumnsType<LayerBucketStats> = [
 export default function LayerBucketInspector() {
   const [isOpen, setIsOpen] = useState(false);
   const [stats, setStats] = useState<LayerBucketStats[]>([]);
+  // antd's Popover portals its content to document.body by default and
+  // positions it with `position: fixed`, which gets computed relative to the
+  // nearest ancestor with a CSS transform (e.g. the resizable sidebar panel
+  // this sits in) instead of the viewport -- that's what made it render
+  // pinned to the far edge instead of near the trigger button. Anchoring the
+  // popup container to a local wrapper (a normal DOM descendant, positioned
+  // in the trigger's own coordinate space) sidesteps that; see
+  // sidebar_context_menu.tsx for the same fix applied to a Dropdown.
+  const containerRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -71,54 +80,57 @@ export default function LayerBucketInspector() {
   }, [isOpen]);
 
   return (
-    <Popover
-      open={isOpen}
-      // Fully controlled: only setIsOpen (the trigger button and the X
-      // button below) can open/close this, never a hover or outside click.
-      trigger={[]}
-      placement="bottomRight"
-      content={
-        <div style={{ width: 380 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 8,
-            }}
-          >
-            <Typography.Text strong>Layer Bucket Usage</Typography.Text>
-            <ButtonComponent
-              variant="text"
-              color="default"
+    <span ref={containerRef}>
+      <Popover
+        open={isOpen}
+        // Fully controlled: only setIsOpen (the trigger button and the X
+        // button below) can open/close this, never a hover or outside click.
+        trigger={[]}
+        placement="bottomRight"
+        getPopupContainer={() => containerRef.current || document.body}
+        content={
+          <div style={{ width: 380 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 8,
+              }}
+            >
+              <Typography.Text strong>Layer Bucket Usage</Typography.Text>
+              <ButtonComponent
+                variant="text"
+                color="default"
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={() => setIsOpen(false)}
+              />
+            </div>
+            <Table
               size="small"
-              icon={<CloseOutlined />}
-              onClick={() => setIsOpen(false)}
+              pagination={false}
+              rowKey="layerName"
+              dataSource={stats}
+              columns={columns}
             />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Refreshes every {POLL_INTERVAL_MS / 1000}s while open. RAM = buckets held in CPU
+              memory; GPU = buckets committed into a texture pool slot for this layer.
+            </Typography.Text>
           </div>
-          <Table
+        }
+      >
+        <FastTooltip title="Inspect per-layer bucket usage (RAM vs. GPU)">
+          <ButtonComponent
+            variant="text"
+            color="default"
             size="small"
-            pagination={false}
-            rowKey="layerName"
-            dataSource={stats}
-            columns={columns}
+            icon={<DatabaseOutlined />}
+            onClick={() => setIsOpen(!isOpen)}
           />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Refreshes every {POLL_INTERVAL_MS / 1000}s while open. RAM = buckets held in CPU memory;
-            GPU = buckets committed into a texture pool slot for this layer.
-          </Typography.Text>
-        </div>
-      }
-    >
-      <FastTooltip title="Inspect per-layer bucket usage (RAM vs. GPU)">
-        <ButtonComponent
-          variant="text"
-          color="default"
-          size="small"
-          icon={<DatabaseOutlined />}
-          onClick={() => setIsOpen(!isOpen)}
-        />
-      </FastTooltip>
-    </Popover>
+        </FastTooltip>
+      </Popover>
+    </span>
   );
 }

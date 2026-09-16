@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -160,7 +161,17 @@ class AgglomerateService @Inject() (
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
-  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long)(using
+  /**
+   * `datasetId` and `dataLayer` are only used by the PCG branch, which has no
+   * stored positions and has to find one by reading the layer itself. The file
+   * formats keep positions in the agglomerate file and ignore both.
+   */
+  def positionForSegmentId(
+      agglomerateFileKey: AgglomerateFileKey,
+      segmentId: Long,
+      datasetId: Option[ObjectId],
+      dataLayer: DataLayer
+  )(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Vec3Int] =
@@ -170,7 +181,7 @@ class AgglomerateService @Inject() (
       case LayerAttachmentDataformat.hdf5 =>
         hdf5AgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId).toFox
       case LayerAttachmentDataformat.pcg =>
-        pcgAgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId)
+        pcgAgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId, datasetId, dataLayer)
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 

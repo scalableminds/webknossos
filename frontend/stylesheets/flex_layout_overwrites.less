@@ -76,8 +76,8 @@
 }
 
 .flexlayout__tabset_tabbar_outer {
-  height: 22px;
-  line-height: 22px;
+  height: 40px;
+  line-height: 40px;
   // On Safari, this ensures that the "maximize/minimize viewport"-button is easily clickable and a tab header/name can be grabbed for repositioning. 
   // (otherwise, the resizer becomes the default target for some reason).
   z-index: 100;
@@ -119,10 +119,6 @@
   box-sizing: border-box;
   overflow: hidden; // required, otherwise the content may overflow the borders :-/
 
-
-  border-left: 1px solid transparent;
-  border-right: 1px solid transparent;
-  border-top: 1px solid transparent;
   border-bottom: 1px solid var(--ant-color-border);
   // Draw the 1px underline on all tabs so the tabbar line looks continuous.
   // The active tab will mask this line to create the "interrupt" effect.
@@ -145,23 +141,20 @@
 
   }
 
+
+
   &.flexlayout__tab_button--selected {
     background-color: var(--ant-color-bg-base);
     // Minimalist active tab: only left/right/top borders, no bottom.
-    border-left: 1px solid var(--ant-color-border);
-    border-right: 1px solid var(--ant-color-border);
-    border-top: 1px solid var(--ant-color-border);
-    border-bottom: 1px solid var(--ant-color-bg-base);
-    border-top-left-radius: var(--ant-border-radius-sm);
-    border-top-right-radius: var(--ant-border-radius-sm);
+    border-bottom: 4px solid #5460ff;
     position: relative;
     z-index: 200;
     margin-bottom: -1px;
 
     .flexlayout__tab_button_content {
       background-color: var(--ant-color-bg-base);
-      color: var(--ant-color-primary-text);
-
+      color: #f9f9f9;
+      margin-bottom: -3px;
     }
 
     // Mask the tabbar underline (an inset shadow) so the active tab "cuts" the line.
@@ -181,8 +174,56 @@
 
     .flexlayout__tab_button_content {
       background-color: var(--ant-color-primary-bg-hover);
-      color: var(--ant-color-text-secondary);
+      color: #f9f9f9;
     }
+  }
+}
+
+// The tab bar (the row .viewport-tab-button sits in) of one of the four main viewports --
+// .flexlayout__tabset_tabbar_outer_top forces a navy !important background here otherwise, so
+// this needs to match that specificity/importance to win. Only applies to the viewport grid:
+// buildBorder builds the left/right border's tab bar separately, so those are unaffected.
+.flexlayout__tabset_tabbar_outer.viewport-tabbar-outer {
+  // No underline below a floating badge.
+  box-shadow: none;
+
+  height: 20px!important;
+  line-height: 20px!important;
+}
+
+// The tab handle of one of the four main viewports (XY/YZ/XZ/3D) -- everything here only
+// overrides the shared .flexlayout__tab_button rules above for these specific tabs, so the
+// left/right border tabs (Layers/Settings, Info/Skeleton/...) are unaffected.
+.flexlayout__tab_button.viewport-tab-button {
+  // A small rounded badge instead of a full-width strip with an underline.
+  margin: 4px;
+  border-radius: 4px; // matches theme.ts's borderRadius token
+  border-bottom: none;
+  background-color: transparent;
+
+  .flexlayout__tab_button_content {
+    background-color: transparent;
+  }
+
+  &.flexlayout__tab_button--selected {
+    // There's only one tab per viewport, so it's always "selected" -- undo the
+    // underline/bottom-border treatment .flexlayout__tab_button--selected uses elsewhere.
+    border-bottom: none;
+    margin-bottom: 4px;
+
+    .flexlayout__tab_button_content {
+      background-color: transparent;
+      margin-bottom: 0;
+    }
+
+    &::after {
+      content: none;
+    }
+  }
+
+  &:hover,
+  &:hover .flexlayout__tab_button_content {
+    background-color: var(--ant-color-primary-bg-hover);
   }
 }
 

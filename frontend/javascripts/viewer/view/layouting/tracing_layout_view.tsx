@@ -10,7 +10,7 @@ import messages from "messages";
 import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { NavAndStatusBarTheme } from "theme";
+import { getNavAndStatusBarTheme } from "theme";
 import type { APICompoundType } from "types/api_types";
 import CrossOriginApi from "viewer/api/cross_origin_api";
 import Constants, { type Vector3 } from "viewer/constants";
@@ -359,7 +359,7 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
           <CrossOriginApi />
           <Layout className="tracing-layout">
             <RenderToPortal portalId="navbarTracingSlot">
-              <ConfigProvider theme={NavAndStatusBarTheme}>
+              <ConfigProvider theme={getNavAndStatusBarTheme(this.props.UITheme)}>
                 {status === "loaded" ? (
                   <div
                     style={{

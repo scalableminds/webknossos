@@ -4,6 +4,10 @@ export type TabNode = {
   component: string;
   id: string;
   enableRenderOnDemand: boolean;
+  // Forwarded verbatim by flexlayout-react onto the tab's rendered button element (in addition to
+  // its own .flexlayout__tab_button* classes), so it can be targeted in CSS without touching the
+  // tab's DOM structure or the shared .flexlayout__tab_button rules other tabs also rely on.
+  className?: string;
 };
 export type TabsetNode = {
   type: "tabset";
@@ -11,6 +15,10 @@ export type TabsetNode = {
   selected?: number;
   children: Array<TabNode>;
   maximized?: boolean;
+  // Forwarded verbatim by flexlayout-react onto the tabset's .flexlayout__tabset_tabbar_outer
+  // element (in addition to its own classes), so a tabset's tab bar can be targeted in CSS
+  // without affecting .flexlayout__tabset_tabbar_outer in other tabsets.
+  classNameTabStrip?: string;
 };
 
 export type RowOrTabsetNode = TabsetNode | RowNode;

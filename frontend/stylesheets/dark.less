@@ -5,6 +5,16 @@
     --compact-table-border: #4A4A4A;
   }
 
+  // antd's dark algorithm derives colorLink from the same palette step as colorPrimary, which
+  // mutes ColorWKBlue into a purple too dark to read comfortably as link text against the new
+  // near-black dark-mode backgrounds -- and unlike colorBgContainer/colorBorder overrides
+  // elsewhere in theme.ts, colorLink is a seed token, so antd always recomputes it and ignores a
+  // literal override there (see the comment in getAntdTheme). Reuse colorLinkHover -- already the
+  // lighter tint reserved for the hover state -- as the resting link color in dark mode instead.
+  a {
+    color: var(--ant-color-link-hover);
+  }
+
   .brain-loading-content img {
     filter: invert(1) contrast(0.7);
   }

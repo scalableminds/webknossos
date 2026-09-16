@@ -29,7 +29,7 @@ import com.scalableminds.webknossos.datastore.services.BinaryDataServiceHolder
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.box.Full
+import com.scalableminds.util.box.{Failure, Full}
 import play.api.libs.json.{JsError, JsObject, JsResult, JsSuccess, Json, Reads}
 
 import java.nio.{ByteBuffer, ByteOrder}
@@ -64,6 +64,15 @@ import scala.concurrent.duration.DurationInt
  * PCG has no largest agglomerate id -- ids are chunk-encoded and sparse, so there is
  * nothing to allocate from and `largestAgglomerateId` fails.
  */
+object PcgAgglomerateService {
+
+  /** How much bigger, counted in supervoxels, the chunk cache is than the per-id one. Per supervoxel
+    * the chunk cache spends two slots in a long array where the per-id cache spends a boxed key, a
+    * boxed value and a hash entry, so this is roughly the same memory, not more of it.
+    */
+  val chunkCacheOvercommit: Int = 8
+}
+
 class PcgAgglomerateService @Inject() (
     config: DataStoreConfig,
     rpc: RPC,
@@ -75,11 +84,43 @@ class PcgAgglomerateService @Inject() (
 
   private lazy val bucketScanner = new NativeBucketScanner()
 
-  // supervoxel -> root. A root only changes when the graph is edited, so entries are kept
-  // until evicted. Without this cache, applying a mapping costs a round trip per bucket.
+  /** supervoxel -> root, one supervoxel at a time. The fallback cache: used for graphs whose PCG
+    * cannot serve a chunk at a time, and for the odd id a chunk mapping does not account for.
+    *
+    * A root only changes when the graph is edited, so entries are kept until evicted.
+    */
   private lazy val rootCache = new LRUConcurrentCache[(AgglomerateFileKey, Long), Long] {
     val maxEntries: Int = config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries
   }
+
+  /** supervoxel -> root, a whole PCG chunk at a time. This is the cache that carries browsing.
+    *
+    * A supervoxel id names the chunk it lives in, and `chunk_root_mapping_binary` returns that whole
+    * chunk's mapping in one request. Looking at a volume is local, so the neighbours of the id that
+    * missed are the ids the next buckets ask for. A production CAVE chunk of 512x512x64 voxels is
+    * 128 WEBKNOSSOS buckets, which browsing across then costs one request instead of 128.
+    *
+    * It does not turn an unbounded working set into a bounded one: a volume larger than the cache
+    * still evicts what it is about to need. It moves that threshold rather than removing it.
+    */
+  private lazy val chunkMappingCache =
+    new ChunkMappingCache(
+      config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries.toLong * PcgAgglomerateService.chunkCacheOvercommit
+    )
+
+  /** Chunks one request may fetch before prefetching stops paying.
+    *
+    * A bucket at mag 1 sits in one or two chunks. A zoomed-out bucket covers many and samples only a
+    * few supervoxels from each, so fetching them whole would read far more than it answers. Past
+    * this many, the request asks for exactly the ids it needs.
+    */
+  private val chunkPrefetchLimit = 32
+
+  /** Graphs whose PCG has no chunk-mapping route, so that we ask once and then stop asking. Such a
+    * graph is read one supervoxel at a time, which is slower but not broken.
+    */
+  private lazy val graphsWithoutChunkMapping: java.util.Set[AgglomerateFileKey] =
+    java.util.concurrent.ConcurrentHashMap.newKeySet[AgglomerateFileKey]()
 
   // root -> supervoxels. Short TTL, because a stale member list is visibly wrong right
   // after an edit.
@@ -107,9 +148,10 @@ class PcgAgglomerateService @Inject() (
 
   def clearCache(predicate: AgglomerateFileKey => Boolean): Int = {
     val clearedRoots = rootCache.clear { case (key, _) => predicate(key) }
+    val clearedChunks = chunkMappingCache.clear { case (key, _) => predicate(key) }
     val clearedLeaves = leavesCache.clear { case (key, _) => predicate(key) }
     graphInfoCache.clear(predicate)
-    clearedRoots + clearedLeaves
+    clearedRoots + clearedChunks + clearedLeaves
   }
 
   private def baseUrl(agglomerateFileKey: AgglomerateFileKey): String =
@@ -143,25 +185,137 @@ class PcgAgglomerateService @Inject() (
     } yield roots
   }
 
-  /**
-   * Batched supervoxel -> root with a read-through cache. Zero is the background label in
-   * WEBKNOSSOS and not a PCG node, so it maps to zero without asking.
-   */
+  /** Batched supervoxel -> root. Zero is the background label in WEBKNOSSOS and not a PCG node, so
+    * it maps to zero without asking.
+    *
+    * Answered a chunk at a time where the graph's PCG can do that, and per supervoxel otherwise. The
+    * two paths give the same answers and differ only in what they leave in the cache.
+    */
   private def rootsForSupervoxels(agglomerateFileKey: AgglomerateFileKey, supervoxelIds: Seq[Long])(using
       ec: ExecutionContext
   ): Fox[Seq[Long]] = {
     val distinct = supervoxelIds.iterator.distinct.filter(_ != 0L).toSeq
+    for {
+      viaChunks <- rootsViaChunks(agglomerateFileKey, distinct)
+      lookup <- viaChunks match {
+        case Some(fromChunks) =>
+          // A supervoxel its own chunk does not account for should not happen, but asking for it by id is cheap and
+          // keeps a surprise from turning into a black voxel.
+          val unaccounted = distinct.filterNot(fromChunks.contains)
+          if (unaccounted.isEmpty) Fox.successful(fromChunks)
+          else rootsViaSupervoxels(agglomerateFileKey, unaccounted).map(fromChunks ++ _)
+        case None => rootsViaSupervoxels(agglomerateFileKey, distinct)
+      }
+    } yield supervoxelIds.map(id => if (id == 0L) 0L else lookup.getOrElse(id, 0L))
+  }
+
+  /** The per-supervoxel path: ask PCG for exactly the ids that are not cached. */
+  private def rootsViaSupervoxels(agglomerateFileKey: AgglomerateFileKey, distinct: Seq[Long])(using
+      ec: ExecutionContext
+  ): Fox[Map[Long, Long]] = {
     val cached: Map[Long, Long] =
       distinct.iterator.flatMap(id => rootCache.get((agglomerateFileKey, id)).map(id -> _)).toMap
     val missing: Array[Long] = distinct.iterator.filterNot(cached.contains).toArray
     for {
-      fetched <- if (missing.isEmpty) Fox.successful(Array.empty[Long])
-                 else postRootsBinary(agglomerateFileKey, missing)
+      fetched <-
+        if (missing.isEmpty) Fox.successful(Array.empty[Long])
+        else postRootsBinary(agglomerateFileKey, missing)
       _ = missing.indices.foreach(i => rootCache.put((agglomerateFileKey, missing(i)), fetched(i)))
-      // Resolve from a local map, not from the cache: one request larger than maxEntries
-      // would otherwise evict its own results before they are used.
-      lookup = cached ++ missing.indices.iterator.map(i => missing(i) -> fetched(i))
-    } yield supervoxelIds.map(id => if (id == 0L) 0L else lookup.getOrElse(id, 0L))
+      // Resolve from a local map, not from the cache: one request larger than maxEntries would
+      // otherwise evict its own results before they are used.
+    } yield cached ++ missing.indices.iterator.map(i => missing(i) -> fetched(i))
+  }
+
+  /** The chunk path: fetch each chunk these ids fall into, once, and answer all of them from it.
+    *
+    * `None` means "not this way, ask per supervoxel": the graph's PCG has no chunk-mapping route, the id layout is not
+    * known, or the request spans more chunks than prefetching them is worth. Callers must be able to take that answer,
+    * which is why this is never the only path.
+    */
+  private def rootsViaChunks(agglomerateFileKey: AgglomerateFileKey, distinct: Seq[Long])(using
+      ec: ExecutionContext
+  ): Fox[Option[Map[Long, Long]]] =
+    if (distinct.isEmpty || graphsWithoutChunkMapping.contains(agglomerateFileKey)) Fox.successful(None)
+    else
+      for {
+        infoBox <- graphInfo(agglomerateFileKey).shiftBox
+        chunkIdsOpt = infoBox.toOption.flatMap(info =>
+          tryo(distinct.iterator.map(chunkIdOf(info, _)).distinct.toSeq).toOption
+        )
+        result <- chunkIdsOpt match {
+          case Some(chunkIds) if chunkIds.length <= chunkPrefetchLimit =>
+            for {
+              mappingsBox <- Fox.combined(chunkIds.map(chunkMappingFor(agglomerateFileKey, _))).shiftBox
+              answer = mappingsBox match {
+                case Full(mappings) =>
+                  Some(distinct.iterator.flatMap(id => rootOfIn(mappings, id).map(id -> _)).toMap)
+                case _ => None
+              }
+            } yield answer
+          case _ => Fox.successful(None)
+        }
+      } yield result
+
+  private def rootOfIn(mappings: Seq[PcgChunkMapping], supervoxelId: Long): Option[Long] =
+    mappings.iterator.flatMap(_.rootOf(supervoxelId)).nextOption()
+
+  /** One chunk's mapping, from the cache or from PCG. A failure that looks like "this PCG has no such route" is
+    * remembered for the graph, so an upstream deployment costs one failed request rather than one per read.
+    */
+  private def chunkMappingFor(agglomerateFileKey: AgglomerateFileKey, chunkId: Long)(using
+      ec: ExecutionContext
+  ): Fox[PcgChunkMapping] =
+    chunkMappingCache.get((agglomerateFileKey, chunkId)) match {
+      case Some(mapping) => Fox.successful(mapping)
+      case None          =>
+        for {
+          mappingBox <- fetchChunkMapping(agglomerateFileKey, chunkId).shiftBox
+          mapping <- mappingBox match {
+            case Full(mapping) =>
+              chunkMappingCache.put((agglomerateFileKey, chunkId), mapping)
+              Fox.successful(mapping)
+            case failure: Failure =>
+              if (looksLikeMissingRoute(failure)) {
+                if (graphsWithoutChunkMapping.add(agglomerateFileKey))
+                  logger.info(
+                    s"${baseUrl(agglomerateFileKey)} serves no chunk mappings; reading it one supervoxel at a time"
+                  )
+              }
+              failure.toFox
+            case _ => Fox.empty
+          }
+        } yield mapping
+    }
+
+  /** 404 where the route would be, or 405 where an older PCG has the path but not the method. */
+  private def looksLikeMissingRoute(failure: Failure): Boolean =
+    failure.msg.contains("Response: 404") || failure.msg.contains("Response: 405")
+
+  private def fetchChunkMapping(agglomerateFileKey: AgglomerateFileKey, chunkId: Long)(using
+      ec: ExecutionContext
+  ): Fox[PcgChunkMapping] = {
+    val chunk = java.lang.Long.toUnsignedString(chunkId)
+    for {
+      responseBytes <- rpc(s"${baseUrl(agglomerateFileKey)}/chunk_root_mapping_binary/$chunk").silentEvenOnFailure
+        .getWithBytesResponse
+      pairs <- tryo(decodeUint64Array(responseBytes)).toFox
+      _ <- Fox.fromBool(pairs.length % 2 == 0) ?~>
+        s"PCG returned ${pairs.length} values for chunk $chunk, which is not a list of pairs"
+      mapping <- tryo(PcgChunkMapping.fromInterleaved(pairs)).toFox
+    } yield mapping
+  }
+
+  /** The chunk a supervoxel belongs to, which is its own id with the counter bits cleared -- PCG's `get_chunk_id`.
+    * The layout is `[layer | x | y | z | counter]`, so everything above the counter names the chunk.
+    */
+  private def chunkIdOf(graphInfo: PcgGraphInfo, supervoxelId: Long): Long = {
+    val layer = supervoxelId >>> (64 - graphInfo.layerIdBits)
+    val bitsPerDim = graphInfo.bitsPerDim.getOrElse(
+      layer.toInt,
+      throw new Exception(s"PCG reports no chunk bit width for layer $layer (id $supervoxelId)")
+    )
+    val counterBits = 64 - graphInfo.layerIdBits - 3 * bitsPerDim
+    (supervoxelId >>> counterBits) << counterBits
   }
 
   def applyAgglomerate(agglomerateFileKey: AgglomerateFileKey, elementClass: ElementClass.Value)(
@@ -471,6 +625,87 @@ class PcgAgglomerateService @Inject() (
       s"largestAgglomerateId is not available for PCG-backed mapping ${agglomerateFileKey.attachment.name}: " +
         "PyChunkedGraph agglomerate ids are chunk-encoded and sparse, so there is no largest id to allocate from."
     )
+}
+
+/** One PCG chunk's supervoxel -> root mapping, as two arrays ordered by supervoxel id.
+  *
+  * Arrays rather than a Map: two slots in a long array per supervoxel is what lets the same memory
+  * hold several times as much of the volume.
+  */
+private case class PcgChunkMapping(supervoxelIds: Array[Long], rootIds: Array[Long]) {
+  def size: Int = supervoxelIds.length
+
+  def rootOf(supervoxelId: Long): Option[Long] = {
+    val index = java.util.Arrays.binarySearch(supervoxelIds, supervoxelId)
+    if (index >= 0) Some(rootIds(index)) else None
+  }
+}
+
+private object PcgChunkMapping {
+
+  /** From PCG's `[supervoxel, root, supervoxel, root, ...]`.
+    *
+    * Sorted here rather than trusted to arrive sorted, because `binarySearch` needs the order and a
+    * response that is ordered differently would give wrong colours rather than an error.
+    */
+  def fromInterleaved(pairs: Array[Long]): PcgChunkMapping = {
+    val count = pairs.length / 2
+    val supervoxelIds = Array.tabulate(count)(i => pairs(2 * i))
+    val rootIds = Array.tabulate(count)(i => pairs(2 * i + 1))
+    val isSorted = (1 until count).forall(i => supervoxelIds(i - 1) <= supervoxelIds(i))
+    if (isSorted) PcgChunkMapping(supervoxelIds, rootIds)
+    else {
+      val order = Array.range(0, count).sortBy(supervoxelIds(_))
+      PcgChunkMapping(order.map(supervoxelIds(_)), order.map(rootIds(_)))
+    }
+  }
+}
+
+/** LRU over chunk mappings, bounded by the supervoxels it holds rather than by the number of chunks.
+  *
+  * Counting chunks would bound nothing: a chunk of a sparse region holds a handful of supervoxels
+  * and one of dense neuropil holds thousands.
+  */
+private class ChunkMappingCache(maxSupervoxels: Long) {
+  private val entries =
+    new java.util.LinkedHashMap[(AgglomerateFileKey, Long), PcgChunkMapping](64, 0.75f, true /* access order */ )
+  private var heldSupervoxels: Long = 0L
+
+  def get(key: (AgglomerateFileKey, Long)): Option[PcgChunkMapping] =
+    entries.synchronized(Option(entries.get(key)))
+
+  def put(key: (AgglomerateFileKey, Long), mapping: PcgChunkMapping): Unit =
+    entries.synchronized {
+      // A chunk that alone exceeds the budget would evict everything and then itself. Leave it out; its supervoxels
+      // are then looked up by id, which is what every graph did before this cache existed.
+      if (mapping.size <= maxSupervoxels) {
+        Option(entries.put(key, mapping)).foreach(previous => heldSupervoxels -= previous.size)
+        heldSupervoxels += mapping.size
+        val iterator = entries.entrySet.iterator
+        while (heldSupervoxels > maxSupervoxels && iterator.hasNext) {
+          val eldest = iterator.next()
+          if (eldest.getKey != key) {
+            heldSupervoxels -= eldest.getValue.size
+            iterator.remove()
+          }
+        }
+      }
+    }
+
+  def clear(predicate: ((AgglomerateFileKey, Long)) => Boolean): Int =
+    entries.synchronized {
+      val iterator = entries.entrySet.iterator
+      var cleared = 0
+      while (iterator.hasNext) {
+        val entry = iterator.next()
+        if (predicate(entry.getKey)) {
+          heldSupervoxels -= entry.getValue.size
+          iterator.remove()
+          cleared += 1
+        }
+      }
+      cleared
+    }
 }
 
 /**

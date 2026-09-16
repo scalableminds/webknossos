@@ -99,6 +99,8 @@ object Msg {
     val getNewestMaterializedFailed: String = "Could not find newest materialized annotation."
     val getWithTracingsFailed: String = "Could not retrieve annotation with tracings."
     val makeEditableNoBaseMapping: String = "Cannot make editable: no base mapping is set."
+    val makeEditableChunkedGraphMapping: String =
+      "Cannot make editable: this mapping is served by a chunkedgraph, whose agglomerations WEBKNOSSOS cannot change."
     val updateRemoteFailed: String = "Could not update remote annotation info."
     val downloadNoLayers: String = "Cannot download annotation that has no layers."
     val uploadEditableMappingIncompleteInformation: String =

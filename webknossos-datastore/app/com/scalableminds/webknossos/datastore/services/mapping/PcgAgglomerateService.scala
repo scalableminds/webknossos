@@ -30,7 +30,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.box.Full
-import play.api.libs.json.{JsError, JsResult, JsSuccess, Reads}
+import play.api.libs.json.{JsError, JsObject, JsResult, JsSuccess, Json, Reads}
 
 import java.nio.{ByteBuffer, ByteOrder}
 import com.scalableminds.util.objectid.ObjectId
@@ -48,12 +48,21 @@ import scala.concurrent.duration.DurationInt
  * The attachment `path` is the base URL of a PCG table, e.g.
  * `http://localhost:4000/segmentation/api/v1/table/big`; endpoints are appended to it.
  *
- * Two limitations to know about:
+ * Positions are the awkward part: PCG stores topology over an immutable volume and keeps
+ * no coordinates for its own sake. There are two ways to get one, and this service uses
+ * both:
  *
- *  - PCG has no largest agglomerate id: ids are chunk-encoded and sparse, so there is
- *    nothing to allocate from. `largestAgglomerateId` fails.
- *  - PCG's `subgraph` returns edges but no node positions, so the agglomerate graph and
- *    the skeleton built from it have all positions at zero.
+ *  - If the graph was ingested with `store_positions`, PCG has a representative voxel per
+ *    supervoxel and `POST /node_positions` returns it. One point read.
+ *  - Otherwise, decode the chunk out of the supervoxel id and read that chunk of the
+ *    volume until the id turns up. Exact, but a production chunk is hundreds of buckets.
+ *    See `positionForSegmentId`.
+ *
+ * `generateAgglomerateGraph` and `generateTree` only take the first route, so nodes of a
+ * graph ingested without positions stay at the origin.
+ *
+ * PCG has no largest agglomerate id -- ids are chunk-encoded and sparse, so there is
+ * nothing to allocate from and `largestAgglomerateId` fails.
  */
 class PcgAgglomerateService @Inject() (
     config: DataStoreConfig,
@@ -224,10 +233,13 @@ class PcgAgglomerateService @Inject() (
         s"Agglomerate has too many nodes (${segmentIds.length} > $edgeLimit)"
       response <- subgraph(agglomerateFileKey, agglomerateId, edgeLimit)
       edges <- tryo(response.edges.map(e => AgglomerateEdge(source = e(0), target = e(1)))).toFox
+      // One request for the whole agglomerate. A supervoxel PCG has no position for stays
+      // at the origin; scanning the volume for each of them would cost a read per node.
+      positions <- storedPositions(agglomerateFileKey, segmentIds)
     } yield AgglomerateGraph(
       segments = segmentIds,
       edges = edges,
-      positions = segmentIds.map(_ => Vec3IntProto(0, 0, 0)), // PCG carries no positions
+      positions = segmentIds.map(positionProtoFor(positions, _)),
       affinities = response.affinities
     )
 
@@ -240,13 +252,17 @@ class PcgAgglomerateService @Inject() (
       _ <- Fox.fromBool(segmentIds.length <= edgeLimit) ?~>
         s"Agglomerate has too many nodes (${segmentIds.length} > $edgeLimit)"
       response <- subgraph(agglomerateFileKey, agglomerateId, edgeLimit)
+      positions <- storedPositions(agglomerateFileKey, segmentIds)
       nodeIdStartAtOneOffset = 1
       // PCG's subgraph edges name supervoxels; skeleton edges name node indices.
       indexBySegmentId = segmentIds.iterator.zipWithIndex.map { case (id, idx) =>
         id -> (idx + nodeIdStartAtOneOffset)
       }.toMap
       nodes = segmentIds.indices.map { idx =>
-        NodeDefaults.createInstance.copy(id = idx + nodeIdStartAtOneOffset, position = Vec3IntProto(0, 0, 0))
+        NodeDefaults.createInstance.copy(
+          id = idx + nodeIdStartAtOneOffset,
+          position = positionProtoFor(positions, segmentIds(idx))
+        )
       }
       treeEdges <- tryo(response.edges.flatMap { e =>
         for {
@@ -268,22 +284,68 @@ class PcgAgglomerateService @Inject() (
       )
     )
 
+  /** A node's position for the graph and skeleton calls, or the origin if PCG has none. */
+  private def positionProtoFor(positions: Map[Long, Vec3Int], segmentId: Long): Vec3IntProto =
+    positions.get(segmentId) match {
+      case Some(p) => Vec3IntProto(p.x, p.y, p.z)
+      case None    => Vec3IntProto(0, 0, 0)
+    }
+
   /**
-   * A representative voxel of a supervoxel.
+   * Voxel coordinates PCG recorded at ingest, for whichever of these ids have one.
    *
-   * PCG maps a coordinate to a supervoxel but never the reverse, and it stores no node
-   * positions. A supervoxel id is `[layer | x | y | z | segment]` though, so the id names
-   * the chunk the supervoxel lives in. That bounds the search to one chunk: read it a
-   * bucket at a time and return the first voxel carrying the id.
+   * Never fails. An empty answer is the normal result for a graph ingested without
+   * `store_positions` (PCG returns `{}`) and for a PCG that predates the `node_positions`
+   * route (404). Any other failure is treated the same way, because falling back to the
+   * volume scan is always correct, only slower.
+   */
+  private def storedPositions(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long])(using
+      ec: ExecutionContext
+  ): Fox[Map[Long, Vec3Int]] =
+    if (segmentIds.isEmpty) Fox.successful(Map.empty)
+    else
+      rpc(s"${baseUrl(agglomerateFileKey)}/node_positions").silentEvenOnFailure
+        .postJsonWithJsonResponse[JsObject, Map[String, Seq[Int]]](Json.obj("node_ids" -> segmentIds))
+        .map { raw =>
+          raw.flatMap {
+            case (id, Seq(x, y, z)) => id.toLongOption.map(_ -> Vec3Int(x, y, z))
+            case _                  => None
+          }
+        }
+        .orElse(Fox.successful(Map.empty[Long, Vec3Int]))
+
+  /** A representative voxel of a supervoxel: PCG's own, if it stored one, else found by
+    * reading the volume. */
+  def positionForSegmentId(
+      agglomerateFileKey: AgglomerateFileKey,
+      segmentId: Long,
+      datasetId: Option[ObjectId],
+      dataLayer: DataLayer
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Vec3Int] =
+    for {
+      stored <- storedPositions(agglomerateFileKey, Seq(segmentId))
+      position <- stored.get(segmentId) match {
+        case Some(position) => Fox.successful(position)
+        case None           => scanPositionForSegmentId(agglomerateFileKey, segmentId, datasetId, dataLayer)
+      }
+    } yield position
+
+  /**
+   * Find a voxel of the supervoxel by reading the volume, for graphs where PCG stored no
+   * position.
+   *
+   * A supervoxel id is `[layer | x | y | z | segment]`, so it names the chunk the
+   * supervoxel lives in. That bounds the search to one chunk: read it a bucket at a time
+   * and return the first voxel carrying the id.
    *
    * The voxel returned really belongs to that supervoxel. Proofreading re-reads the
    * segment id at the position it is handed, so a merely nearby coordinate can land in a
    * neighbouring segment and act on the wrong one.
    *
-   * A chunk of 512x512x64 voxels is a few hundred buckets, which is the worst case for one
-   * lookup; `scanBatchSize` keeps those reads from being fully serial.
+   * A chunk of 512x512x64 voxels is a few hundred buckets, the worst case for one lookup;
+   * `scanBatchSize` keeps those reads from being fully serial.
    */
-  def positionForSegmentId(
+  private def scanPositionForSegmentId(
       agglomerateFileKey: AgglomerateFileKey,
       segmentId: Long,
       datasetId: Option[ObjectId],

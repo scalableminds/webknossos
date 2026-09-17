@@ -20,6 +20,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentDataformat
 import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingLayer,
@@ -362,6 +363,7 @@ class TSAnnotationService @Inject() (
         !volumeTracing.volumeBucketDataHasChanged.getOrElse(false)
       ) ?~> Msg.Annotation.volumeBucketsNotEmpty
       baseMappingName <- volumeTracing.mappingName.toFox ?~> Msg.Annotation.makeEditableNoBaseMapping
+      _ <- assertBaseMappingIsNotChunkedGraph(annotationId, volumeTracing, baseMappingName)
       editableMappingInfo = editableMappingService.create(baseMappingName)
       updater <- editableMappingUpdaterFor(
         annotationId,
@@ -372,6 +374,30 @@ class TSAnnotationService @Inject() (
         targetVersion
       )
     } yield annotationWithTracings.addEditableMapping(action.actionTracingId, editableMappingInfo, updater)
+
+  /** A chunkedgraph is the mapping, and everyone reading that graph reads the same one. WEBKNOSSOS
+    * proofreads an agglomerate file by keeping a delta of its own per annotation, which has no
+    * equivalent here, so making such a mapping editable is refused. It is refused at this point
+    * because this is where the message reaches whoever asked for it.
+    */
+  private def assertBaseMappingIsNotChunkedGraph(
+      annotationId: ObjectId,
+      volumeTracing: VolumeTracing,
+      mappingName: String
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    volumeTracing.fallbackLayer match {
+      case None            => Fox.successful(())
+      case Some(layerName) =>
+        for {
+          dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
+          isChunkedGraph = (for {
+            layer <- dataSource.getDataLayer(layerName)
+            attachments <- layer.attachments
+            agglomerate <- attachments.agglomerates.find(_.name == mappingName)
+          } yield agglomerate.dataFormat == LayerAttachmentDataformat.pcg).getOrElse(false)
+          _ <- Fox.fromBool(!isChunkedGraph) ?~> Msg.Annotation.makeEditableChunkedGraphMapping
+        } yield ()
+    }
 
   private def assertMappingIsNotLocked(volumeTracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.fromBool(!volumeTracing.mappingIsLocked.getOrElse(false)) ?~> Msg.Annotation.ApplyUpdate.mappingIsLocked

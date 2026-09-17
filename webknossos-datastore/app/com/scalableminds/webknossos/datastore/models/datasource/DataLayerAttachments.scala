@@ -139,13 +139,16 @@ object DataLayerAttachments {
 
 object LayerAttachmentDataformat extends ExtendedEnumeration {
   type LayerAttachmentDataformat = Value
-  val hdf5, json, zarr3, neuroglancerPrecomputed = Value
+  // pcg is not a file format: the attachment path is the URL of a PyChunkedGraph table,
+  // and the data is served over HTTP.
+  val hdf5, json, zarr3, neuroglancerPrecomputed, pcg = Value
 
   def suffixFor(attachmentType: LayerAttachmentDataformat): String = attachmentType match {
     case LayerAttachmentDataformat.hdf5                    => ".hdf5"
     case LayerAttachmentDataformat.json                    => ".json"
     case LayerAttachmentDataformat.zarr3                   => ""
     case LayerAttachmentDataformat.neuroglancerPrecomputed => ""
+    case LayerAttachmentDataformat.pcg                     => ""
   }
 }
 

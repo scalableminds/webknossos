@@ -584,6 +584,14 @@ export function getReadableAnnotations(
   );
 }
 
+export async function getAnnotationCountForDataset(datasetId: string): Promise<number> {
+  const { headers } = await Request.receiveJSONWithHeaders(
+    `/api/annotations/readable?limit=1&includeTotalCount=true&datasetId=${datasetId}`,
+  );
+  const totalCount = headers.get("X-Total-Count");
+  return totalCount != null ? Number.parseInt(totalCount, 10) : 0;
+}
+
 export function getTeamsForSharedAnnotation(
   typ: string,
   id: string,

@@ -8,7 +8,7 @@ import {
 } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getOrganization } from "admin/api/organization";
-import { deleteDatasetOnDisk } from "admin/rest_api";
+import { deleteDatasetOnDisk, getAnnotationCountForDataset } from "admin/rest_api";
 import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import FormattedId from "components/formatted_id";
 import features from "features";
@@ -104,6 +104,11 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
     refetchOnWindowFocus: false,
   });
   const owningOrganizationName = owningOrganization?.name;
+  const { data: annotationCount } = useQuery({
+    queryKey: ["annotationCount", selectedDataset.id],
+    queryFn: () => getAnnotationCountForDataset(selectedDataset.id),
+    refetchOnWindowFocus: false,
+  });
 
   const renderOrganization = () => {
     if (activeUser?.organization === selectedDataset.owningOrganization) return;
@@ -128,6 +133,11 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         )}{" "}
         {selectedDataset.name}
       </Typography.Title>
+      <div style={{ marginBottom: 4 }}>
+        {annotationCount != null
+          ? `${annotationCount} ${pluralize("annotation", annotationCount)}`
+          : null}
+      </div>
       {renderOrganization()}
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (

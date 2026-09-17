@@ -33,7 +33,10 @@ import {
   getUnifiedAdditionalCoordinates,
 } from "viewer/model/accessors/dataset_accessor";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
+import determineBucketsForPlaneWithScanLines from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
+import determineBucketsForPlaneWithFloodFill from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_flood_fill";
+import determineBucketsForPlaneWithFloodFillWasm from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_flood_fill_wasm";
+import determineBucketsForPlaneWithWasm from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_wasm";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit, getBaseVoxelInUnit } from "viewer/model/scaleinfo";
@@ -53,7 +56,7 @@ import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
-function calculateTotalBucketCountForZoomLevel(
+async function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
   denseMags: Array<Vector3>,
@@ -62,6 +65,8 @@ function calculateTotalBucketCountForZoomLevel(
   viewportRects: OrthoViewRects,
   unzoomedMatrix: Matrix4x4,
   abortLimit: number,
+  obliquePickerStrategy?: "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
+  prefetchAlongViewAxis?: boolean,
 ) {
   const mag = denseMags[currentMagIndex];
   const logZoomStep = Math.log2(Math.max(...mag));
@@ -89,7 +94,37 @@ function calculateTotalBucketCountForZoomLevel(
       logZoomStep,
       abortLimit,
     );
+  } else if (obliquePickerStrategy === "wasm") {
+    await determineBucketsForPlaneWithWasm(
+      loadingStrategy,
+      denseMags,
+      position,
+      enqueueFunction,
+      matrix,
+      logZoomStep,
+      viewportRects,
+      abortLimit,
+      undefined,
+      prefetchAlongViewAxis,
+    );
+  } else if (obliquePickerStrategy === "floodFillWasm") {
+    await determineBucketsForPlaneWithFloodFillWasm(
+      loadingStrategy,
+      denseMags,
+      position,
+      enqueueFunction,
+      matrix,
+      logZoomStep,
+      viewportRects,
+      abortLimit,
+      undefined,
+      prefetchAlongViewAxis,
+    );
   } else {
+    const determineBucketsForPlane =
+      obliquePickerStrategy === "floodFill"
+        ? determineBucketsForPlaneWithFloodFill
+        : determineBucketsForPlaneWithScanLines;
     determineBucketsForPlane(
       loadingStrategy,
       denseMags,
@@ -99,6 +134,8 @@ function calculateTotalBucketCountForZoomLevel(
       logZoomStep,
       viewportRects,
       abortLimit,
+      undefined,
+      prefetchAlongViewAxis,
     );
   }
 
@@ -116,7 +153,7 @@ function calculateTotalBucketCountForZoomLevel(
 // These values are used to determine the appropriate magnification for a given zoom value (e.g., a zoom value of 1.4
 // would require the second magnification).
 // This function is only exported for testing purposes
-export function _getMaximumZoomForAllMags(
+export async function _getMaximumZoomForAllMags(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
   voxelSizeFactor: Vector3,
@@ -125,7 +162,9 @@ export function _getMaximumZoomForAllMags(
   maximumCapacity: number,
   layerMatrix: Matrix4x4,
   flycamMatrix: Matrix4x4,
-): Array<number> {
+  obliquePickerStrategy?: "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
+  prefetchAlongViewAxis?: boolean,
+): Promise<Array<number>> {
   const unzoomedMatrix = M4x4.mul(layerMatrix, flycamMatrix);
 
   // This function determines which zoom value ranges are valid for the given magnifications.
@@ -164,7 +203,7 @@ export function _getMaximumZoomForAllMags(
 
   while (currentIterationCount < maximumIterationCount && currentMagIndex < mags.length) {
     const nextZoomValue = currentMaxZoomValue * ZOOM_STEP_INTERVAL;
-    const nextCapacity = calculateTotalBucketCountForZoomLevel(
+    const nextCapacity = await calculateTotalBucketCountForZoomLevel(
       viewMode,
       loadingStrategy,
       mags,
@@ -176,6 +215,8 @@ export function _getMaximumZoomForAllMags(
       // Increment the limit by one, so that rendering is still possible
       // when exactly meeting the limit.
       maximumCapacity + 1,
+      obliquePickerStrategy,
+      prefetchAlongViewAxis,
     );
 
     if (nextCapacity > maximumCapacity) {

@@ -9,6 +9,11 @@ import { globalPositionToBucketPosition } from "viewer/model/helpers/position_co
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { getPriorityWeightForZoomStepDiff, MAX_ZOOM_STEP_DIFF } from "../loading_strategy_logic";
 
+// Frozen, unmodified copy of oblique_bucket_picker.ts exactly as it was on master (commit
+// 591a669d32) before any of the work in this branch (see oblique_bucket_picker.bench.ts).
+// It exists purely as a performance baseline in the benchmark -- it is NOT wired into the
+// worker/app and should not be edited to track oblique_bucket_picker.ts's ongoing changes.
+
 // Note that the fourth component of Vector4 (if passed) is ignored, as it's not needed
 // in this use case (only one mag at a time is gathered).
 const hashPosition = ([x, y, z]: Vector3 | Vector4): number => 2 ** 32 * x + 2 ** 16 * y + z;
@@ -31,8 +36,6 @@ const ROTATIONS = {
   ] as Matrix4x4,
 };
 
-export type ScanLineCallback = (a: Vector3, b: Vector3) => void;
-
 export default function determineBucketsForPlane(
   loadingStrategy: LoadingStrategy,
   denseMags: Array<Vector3>,
@@ -42,8 +45,6 @@ export default function determineBucketsForPlane(
   logZoomStep: number,
   rects: PlaneRects,
   abortLimit?: number,
-  onScanLine?: ScanLineCallback,
-  prefetchAlongViewAxis?: boolean,
 ): void {
   let zoomStepDiff = 0;
 
@@ -58,8 +59,6 @@ export default function determineBucketsForPlane(
       zoomStepDiff,
       rects,
       abortLimit,
-      onScanLine,
-      prefetchAlongViewAxis,
     );
     zoomStepDiff++;
   }
@@ -75,8 +74,6 @@ function addNecessaryBucketsToPriorityQueuePlane(
   zoomStepDiff: number,
   rects: PlaneRects,
   abortLimit?: number,
-  onScanLine?: ScanLineCallback,
-  prefetchAlongViewAxis?: boolean,
 ): void {
   const logZoomStep = nonFallbackLogZoomStep + zoomStepDiff;
 
@@ -117,37 +114,23 @@ function addNecessaryBucketsToPriorityQueuePlane(
     // of horizontal lines which cover the entire rendered plane.
     // These "scan lines" are traversed to find out which buckets need to be
     // sent to the GPU.
-    // If prefetchAlongViewAxis is set, additional lines are also cast at z=-zDiff/+zDiff (in
-    // the same local, per-plane units as everything else here), simulating the plane having
-    // moved forward/backward along the view axis by that amount -- so that data is already
-    // loading by the time the user actually moves there. See oblique_bucket_picker_flood_fill.ts's
-    // PREFETCH_Z_DIFF for the equivalent behaviour on that strategy.
     const zDiff = 10;
     const scanLinesPoints = M4x4.transformVectorsAffine(
       queryMatrix,
-      range(steps + 1).flatMap((idx) => {
-        const y = -enlargedHalfExtent[1] + idx * stepSize[1];
-        const points: Vector3[] = [
-          // Cast lines at z=0
-          [-enlargedHalfExtent[0], y, 0],
-          [enlargedHalfExtent[0], y, 0],
-        ];
-        if (prefetchAlongViewAxis) {
-          points.push(
-            // Cast lines at z=-zDiff
-            [-enlargedHalfExtent[0], y, -zDiff],
-            [enlargedHalfExtent[0], y, -zDiff],
-            // Cast lines at z=+zDiff
-            [-enlargedHalfExtent[0], y, zDiff],
-            [enlargedHalfExtent[0], y, zDiff],
-          );
-        }
-        return points;
-      }),
+      range(steps + 1).flatMap((idx) => [
+        // Cast lines at z=-10
+        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
+        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
+        // Cast lines at z=0
+        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
+        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
+        // Cast lines at z=10
+        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
+        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
+      ]),
     );
 
     for (const [a, b] of chunk2(scanLinesPoints)) {
-      onScanLine?.(a, b);
       for (const bucketAddress of traverse(a, b, denseMags, logZoomStep)) {
         const bucketHash = hashPosition(bucketAddress);
         if (seenBucketHashes.has(bucketHash)) {

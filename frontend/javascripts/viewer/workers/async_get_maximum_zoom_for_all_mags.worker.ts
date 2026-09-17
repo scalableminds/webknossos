@@ -4,7 +4,7 @@ import { _getMaximumZoomForAllMags } from "viewer/model/accessors/flycam_accesso
 import type { LoadingStrategy } from "viewer/store";
 import { expose } from "./comlink_core";
 
-function asyncGetMaximumZoomForAllMags(
+async function asyncGetMaximumZoomForAllMags(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
   voxelSizeFactor: Vector3,
@@ -13,8 +13,28 @@ function asyncGetMaximumZoomForAllMags(
   maximumCapacity: number,
   layerMatrix: Matrix4x4,
   flycamMatrix: Matrix4x4,
+  obliquePickerStrategy?: "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
+  prefetchAlongViewAxis?: boolean,
 ) {
-  return _getMaximumZoomForAllMags(
+  // Dev-only: logs the exact parameters of this call as JSON, so they can be pasted
+  // elsewhere (e.g. into a benchmark reproducing this specific real-world scenario).
+  // console.log(
+  //   "getMaximumZoomForAllMags params:",
+  //   JSON.stringify({
+  //     viewMode,
+  //     loadingStrategy,
+  //     voxelSizeFactor,
+  //     mags,
+  //     viewportRects,
+  //     maximumCapacity,
+  //     layerMatrix,
+  //     flycamMatrix,
+  //     obliquePickerStrategy,
+  //     prefetchAlongViewAxis,
+  //   }),
+  // );
+  console.time("getMaximumZoomForAllMags");
+  const retval = await _getMaximumZoomForAllMags(
     viewMode,
     loadingStrategy,
     voxelSizeFactor,
@@ -23,7 +43,11 @@ function asyncGetMaximumZoomForAllMags(
     maximumCapacity,
     layerMatrix,
     flycamMatrix,
+    obliquePickerStrategy,
+    prefetchAlongViewAxis,
   );
+  console.timeEnd("getMaximumZoomForAllMags");
+  return retval;
 }
 
 export default expose(asyncGetMaximumZoomForAllMags);

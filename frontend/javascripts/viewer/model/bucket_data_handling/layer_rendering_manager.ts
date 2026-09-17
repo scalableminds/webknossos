@@ -6,12 +6,14 @@ import DiffableMap from "libs/diffable_map";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import type UpdatableTexture from "libs/UpdatableTexture";
+import window from "libs/window";
 import identity from "lodash-es/identity";
 import isEqual from "lodash-es/isEqual";
 import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
 import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import type { BucketAddress, Vector3, Vector4, ViewMode } from "viewer/constants";
 import {
   getElementClass,
@@ -27,6 +29,7 @@ import shaderEditor from "viewer/model/helpers/shader_editor";
 import Store, { type PlaneRects, type SegmentMap } from "viewer/store";
 import { createWorker } from "viewer/workers/comlink_wrapper";
 import type AsyncBucketPicker from "../../workers/async_bucket_picker.worker";
+import { pick as pickBucketsOnMainThread } from "../../workers/async_bucket_picker_core";
 import {
   getTransformsForLayer,
   invertAndTranspose,
@@ -51,7 +54,24 @@ const asyncBucketPick = memoizeOne(asyncBucketPickRaw, (oldArgs, newArgs) =>
   isEqual(oldArgs, newArgs),
 );
 const dummyBuffer = new ArrayBuffer(0);
+const dummyPickResult: PickResult = { buffer: dummyBuffer, scanLines: [] };
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
+type PickResult = { buffer: ArrayBuffer; scanLines: Array<[Vector3, Vector3]> };
+
+// Dev-only instrumentation: measures the full round trip of a pick from the caller's
+// perspective (latestTaskExecutor scheduling + postMessage there and back + the worker's own
+// compute, see totalPickDurationMs in async_bucket_picker.worker.ts). Comparing the two exposes
+// how much of the total cost is actually worker/messaging overhead vs. the picking computation
+// itself -- relevant for deciding whether picking is even worth running off the main thread,
+// given picks are now down in the sub-millisecond range.
+let totalRoundTripDurationMs = 0;
+let roundTripCallCount = 0;
+let totalRoundTripBucketsPicked = 0;
+// Split out of totalRoundTripDurationMs: time waiting behind LatestTaskExecutor's serial
+// queue vs. the actual worker communication + compute time (see the two timestamps taken
+// around the schedule() call below).
+let totalQueueWaitMs = 0;
+let totalWorkerRoundTripMs = 0;
 
 // Lazily-initialized singleton.
 const getSharedLookUpCuckooTable = memoizeOne(
@@ -132,7 +152,7 @@ export default class LayerRenderingManager {
   name: string;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
-  latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
+  latestTaskExecutor: LatestTaskExecutor<PickResult> = new LatestTaskExecutor();
   additionalCoordinates: AdditionalCoordinate[] | null = null;
   maximumZoomForAllMags: number[] | null = null;
 
@@ -241,11 +261,21 @@ export default class LayerRenderingManager {
       this.additionalCoordinates = additionalCoordinates;
       this.maximumZoomForAllMags = maximumZoomForAllMags;
       this.pullQueue.clear();
-      let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
+      let pickingPromise: Promise<PickResult> = Promise.resolve(dummyPickResult);
+      // scheduleTime -> workerCallStartTime: time spent waiting behind LatestTaskExecutor's
+      // serial queue (only non-zero if a previous pick's round trip hadn't finished yet).
+      // workerCallStartTime -> resolution: the actual worker communication + compute time.
+      let scheduleTime: number | null = null;
+      let workerCallStartTime: number | null = null;
 
       if (isVisible) {
-        pickingPromise = this.latestTaskExecutor.schedule(() =>
-          asyncBucketPick(
+        scheduleTime = performance.now();
+        const pickFn = WkDevFlags.bucketDebugging.useWebWorkerForBucketPicking
+          ? asyncBucketPick
+          : pickBucketsOnMainThread;
+        pickingPromise = this.latestTaskExecutor.schedule(() => {
+          workerCallStartTime = performance.now();
+          return pickFn(
             viewMode,
             mags,
             position,
@@ -254,12 +284,50 @@ export default class LayerRenderingManager {
             logZoomStep,
             datasetConfiguration.loadingStrategy,
             rects,
-          ),
-        );
+            WkDevFlags.bucketDebugging.visualizeScanLines,
+            WkDevFlags.bucketDebugging.obliquePickerStrategy,
+            WkDevFlags.bucketDebugging.prefetchAlongViewAxis,
+            WkDevFlags.bucketDebugging.shadowObliquePickerStrategy,
+          );
+        });
       }
 
       pickingPromise.then(
-        (buffer) => {
+        ({ buffer, scanLines }) => {
+          if (scheduleTime != null && workerCallStartTime != null) {
+            // Measured first, before any of the main-thread post-processing below (which is
+            // real work regardless of whether picking runs on the main thread or a worker, so
+            // it shouldn't be attributed to worker/messaging overhead).
+            const now = performance.now();
+            const bytesPerBucket = 5 * 4; // intsPerItem * bytesPerInt, see dequeueToArrayBuffer
+            const bucketCount = buffer.byteLength / bytesPerBucket;
+
+            totalQueueWaitMs += workerCallStartTime - scheduleTime;
+            totalWorkerRoundTripMs += now - workerCallStartTime;
+            totalRoundTripDurationMs += now - scheduleTime;
+            roundTripCallCount++;
+            totalRoundTripBucketsPicked += bucketCount;
+
+            if (roundTripCallCount % 100 === 0) {
+              console.log(
+                `[bucketPick:roundTrip] callCount=${roundTripCallCount} ` +
+                  `total=${(totalRoundTripDurationMs / roundTripCallCount).toFixed(3)}ms/call ` +
+                  `(queueWait=${(totalQueueWaitMs / roundTripCallCount).toFixed(3)}ms/call, ` +
+                  `workerRoundTrip=${(totalWorkerRoundTripMs / roundTripCallCount).toFixed(3)}ms/call) ` +
+                  `durationPerBucket=${(totalRoundTripDurationMs / totalRoundTripBucketsPicked).toFixed(5)}ms`,
+              );
+            }
+          }
+
+          if (WkDevFlags.bucketDebugging.visualizeScanLines) {
+            // @ts-expect-error These debugging methods are attached to window by SceneController.
+            window.removeLines();
+            for (const [a, b] of scanLines) {
+              // @ts-expect-error These debugging methods are attached to window by SceneController.
+              window.addLine(a, b);
+            }
+          }
+
           this.cube.markBucketsAsUnneeded();
           const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
             buffer,
@@ -267,6 +335,7 @@ export default class LayerRenderingManager {
             this.textureBucketManager.maximumCapacity,
             this.additionalCoordinates,
           );
+
           const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
           this.textureBucketManager.setActiveBuckets(buckets);
           // In general, pull buckets which are not available but should be sent to the GPU

@@ -224,7 +224,7 @@ export async function captureScreenshots(
 }
 
 export async function downloadScreenshot() {
-  // Save each screenshot after another with a delay as else Safari only downloads the last one.
+  // Save each screenshot after another with a delay as else Safari only downloads the last one. (See #10018)
   await captureScreenshots(undefined, ({ name, blob }) => saveAs(blob, name));
 }
 

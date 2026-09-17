@@ -75,6 +75,13 @@ type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
   activeUser: APIUser;
+  // When set, only annotations tagged with this dataset name are shown (every annotation
+  // is automatically tagged with the name of its dataset). Used to link here from a dataset's
+  // annotation count.
+  datasetNameFilter?: string | null;
+  // Called when the user manually removes the datasetNameFilter tag, so the caller can
+  // clear it from the URL, too.
+  onDatasetNameFilterCleared?: () => void;
 } & WithModalProps;
 type State = {
   shouldShowArchivedAnnotations: boolean;
@@ -123,16 +130,37 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   currentPageData: Readonly<APIAnnotationInfo[]> = [];
 
   componentDidMount() {
-    this.setState(persistence.load() as PartialState, () => {
+    const partialState: Partial<State> = {
+      ...(persistence.load() as PartialState),
+    };
+    if (this.props.datasetNameFilter) {
+      partialState.tags = [this.props.datasetNameFilter];
+    }
+    this.setState(partialState as State, () => {
       this.fetchNextPage(0);
     });
   }
 
-  componentDidUpdate(_prevProps: Props, prevState: State) {
+  componentDidUpdate(prevProps: Props, prevState: State) {
     persistence.persist(this.state);
 
     if (this.state.shouldShowArchivedAnnotations !== prevState.shouldShowArchivedAnnotations) {
       this.fetchNextPage(0);
+    }
+
+    if (this.props.datasetNameFilter !== prevProps.datasetNameFilter) {
+      // The dataset filter changed via the URL (e.g., another dataset's annotation count
+      // was clicked) -- apply it (or clear the tag again if it became null).
+      this.setState({
+        tags: this.props.datasetNameFilter ? [this.props.datasetNameFilter] : [],
+      });
+    } else if (
+      prevProps.datasetNameFilter != null &&
+      prevState.tags.includes(prevProps.datasetNameFilter) &&
+      !this.state.tags.includes(prevProps.datasetNameFilter)
+    ) {
+      // The user removed the dataset filter tag manually -- clear it from the URL, too.
+      this.props.onDatasetNameFilterCleared?.();
     }
   }
 
@@ -753,6 +781,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             })
           }
           localStorageSavingKey="lastDashboardSearchTags"
+          skipRestoreFromStorage={this.props.datasetNameFilter != null}
         />
         <Spin spinning={this.state.isLoading} size="large" style={{ marginTop: 4 }}>
           {this.renderTable()}

@@ -16,6 +16,9 @@ type FilterProps = {
   searchTags: Array<string>;
   setTags: (arg0: Array<string>) => void;
   localStorageSavingKey: string;
+  // Skips restoring the tags that were persisted from a previous session. Useful when the
+  // initial tags are already controlled by the parent (e.g., derived from the URL).
+  skipRestoreFromStorage?: boolean;
 };
 
 const LOCKED_TAG_COLOR = "var(--ant-color-warning)";
@@ -45,8 +48,12 @@ export function CategorizationSearch({
   searchTags,
   setTags,
   localStorageSavingKey,
+  skipRestoreFromStorage,
 }: FilterProps) {
   useEffectOnlyOnce(() => {
+    if (skipRestoreFromStorage) {
+      return;
+    }
     // restore the search query tags from the last session
     const searchTagString = UserLocalStorage.getItem(localStorageSavingKey);
 

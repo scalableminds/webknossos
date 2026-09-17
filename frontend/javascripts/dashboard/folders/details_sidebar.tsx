@@ -21,6 +21,7 @@ import { pluralize } from "libs/utils";
 import keyBy from "lodash-es/keyBy";
 import uniq from "lodash-es/uniq";
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import type { APIDatasetCompact, Folder } from "types/api_types";
 import Constants from "viewer/constants";
 import {
@@ -134,9 +135,11 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         {selectedDataset.name}
       </Typography.Title>
       <div style={{ marginBottom: 4 }}>
-        {annotationCount != null
-          ? `${annotationCount} ${pluralize("annotation", annotationCount)}`
-          : null}
+        {annotationCount != null && annotationCount > 0 ? (
+          <Link to={`/dashboard/annotations?dataset=${encodeURIComponent(selectedDataset.name)}`}>
+            {annotationCount} {pluralize("Annotation", annotationCount)}
+          </Link>
+        ) : null}
       </div>
       {renderOrganization()}
       <Spin spinning={fullDataset == null}>

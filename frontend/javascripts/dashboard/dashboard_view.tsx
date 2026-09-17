@@ -10,6 +10,7 @@ import { PublicationViewWithHeader } from "dashboard/publication_view";
 import features from "features";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
+import { getUrlParamsObjectFromString } from "libs/utils";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import invert from "lodash-es/invert";
 import type React from "react";
@@ -143,6 +144,12 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     this.props.navigate(`/annotations/${response.annotation.id}`);
   };
 
+  clearDatasetNameFilterFromUrl = () => {
+    const tabKeyToURLMap = invert(urlTokenToTabKeyMap);
+    const url = tabKeyToURLMap.explorativeAnnotations;
+    this.props.navigate(`/dashboard/${url}`, { replace: true });
+  };
+
   getValidTabKeys() {
     const { isAdminView } = this.props;
     return {
@@ -188,6 +195,10 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
                 isAdminView={this.props.isAdminView}
                 userId={this.props.userId}
                 activeUser={this.props.activeUser}
+                datasetNameFilter={
+                  getUrlParamsObjectFromString(this.props.location.search).dataset || null
+                }
+                onDatasetNameFilterCleared={this.clearDatasetNameFilterFromUrl}
               />
             </RenderingTabContext.Provider>
           ),

@@ -21,43 +21,109 @@
   height: 100%;
 }
 
+// --- Segment list -----------------------------------------------------------------
+//
+// One row per segment, regardless of whether a mesh is loaded for it:
+//
+//   [checkbox] [color dot] [name ......................] [mesh slot] [hover actions]
+//
+// The row itself is styled where it is rendered (segment_row.tsx / node_titles.tsx). Only
+// the treatments that CSS alone can express live here: they either target antd's own row
+// elements — the indentation, the expand caret and the checkbox are rendered around
+// titleRender's output, not by it — or they depend on the state of an ancestor. The
+// modifier classes they key off are set in segment_row.tsx.
+@segment-row-height: 30px;
+// Matches EXPANDED_ROW_PADDING and the 20px line box of the expanded row in segment_row.tsx.
+@segment-row-checkbox-expanded-offset: 9px;
+// The tree is shifted left by one indent unit (see the inline marginLeft in
+// segment_tree_view.tsx) so that the root group renders no expand caret. Anything
+// positioned against the visible left edge of the panel has to add it back.
+@segments-tree-indent-unit: 24px;
+
 .segments-tree {
   .ant-tree-treenode {
-    padding: 0 !important;
-  }
-}
+    position: relative;
+    align-items: center;
+    // The row's right padding. The left one is the indentation, which antd handles.
+    padding: 0 10px 0 0 !important;
+    // antd separates rows by a small margin; the list is meant to be a flush grid.
+    margin-bottom: 0;
+    min-height: @segment-row-height;
 
-.segment-list-item {
-  // By default, antd's list items are flex, which
-  // causes more trouble than it helps.
-  display: block;
-  padding-left: 5px;
-  padding-right: 5px;
-  border-radius: 2px;
-  min-height: var(--ant-control-height-sm); // make the list items the same height as <Button size="small">
+    &:hover,
+    // A segment that is hovered in the data viewports is highlighted in the list, too.
+    &:has(.segment-row--hovered-in-viewport) {
+      background-color: var(--ant-color-fill-quaternary);
+    }
 
-  .ant-btn:has(.anticon-ellipsis) {
-    // Hide ellipsis icon buttons (unless hovered)
-    visibility: hidden;
-  }
+    &.ant-tree-treenode-selected {
+      background-color: var(--ant-color-primary-bg);
+    }
 
-  &:hover {
-    background-color: var(--ant-blue-1);
+    // The segment that is currently centered in the data viewports. This replaces the
+    // former crosshair icon; it can co-occur with the selection tint above.
+    &:has(.segment-row--centered)::before {
+      content: "";
+      position: absolute;
+      left: @segments-tree-indent-unit;
+      top: 2px;
+      // antd uses this pseudo-element itself and gives it a height, so the bar cannot be
+      // stretched with `bottom` alone.
+      height: calc(100% - 4px);
+      width: 2px;
+      border-radius: 0 2px 2px 0;
+      background-color: var(--ant-color-primary);
+    }
 
-    .ant-btn:has(.anticon-ellipsis) {
-      display: inline-block;
+    // The single selected segment wraps its name over as many lines as it needs, so
+    // everything in its row aligns to the first line rather than to the middle.
+    &:has(.segment-row--expanded) {
+      align-items: flex-start;
+
+      .ant-tree-checkbox {
+        align-self: flex-start;
+        margin-top: @segment-row-checkbox-expanded-offset;
+      }
+    }
+
+    // The action bar is hover-only, but has to stay reachable without a mouse: antd marks
+    // the row that keyboard navigation is on with -active.
+    &:hover .segment-row__actions,
+    &:focus-within .segment-row__actions,
+    &.ant-tree-treenode-active .segment-row__actions {
       visibility: visible;
     }
   }
 
-  // If a cell is hovered in the data viewports,
-  // it should also be highlighted in the list.
-  &.is-hovered-segment {
-    background-color: var(--ant-blue-1);
+  // antd wraps titleRender's output in a plain block element that shrink-wraps its
+  // content. Both of these are needed for the row to span the available width and for
+  // the name inside it to be able to shrink below its text width.
+  .ant-tree-node-content-wrapper,
+  .ant-tree-title {
+    flex: auto;
+    min-width: 0;
+  }
+
+  .ant-tree-node-content-wrapper {
+    // The tint is drawn by the treenode above, so that it also covers the checkbox.
+    background: transparent !important;
+    padding: 0;
+    min-height: 0;
+  }
+
+  .ant-tree-checkbox {
+    margin-inline-end: 8px;
+    // antd aligns the checkbox to the top of the title (via align-self plus a 2px margin)
+    // so that it lines up with the first line of a wrapped one. Every row but the expanded
+    // one is a single line, where that leaves the checkbox above the dot and the name.
+    align-self: center;
+    margin-block-start: 0;
+  }
+
+  .segment-row__actions {
+    visibility: hidden;
   }
 }
-
-
 
 #segment-list {
   height: inherit;

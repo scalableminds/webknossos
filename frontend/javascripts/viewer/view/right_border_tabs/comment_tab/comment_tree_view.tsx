@@ -94,9 +94,7 @@ export function CommentTreeView({ treeNodes, expandedKeys, onExpand }: CommentTr
             selectedKeys={activeRowKey != null ? [activeRowKey] : []}
             onExpand={handleExpand}
             onSelect={handleSelect}
-            switcherIcon={({ expanded }: { expanded?: boolean }) => (
-              <TreeSwitcherIcon expanded={expanded} />
-            )}
+            switcherIcon={<TreeSwitcherIcon />}
             height={height}
             blockNode
             showLine

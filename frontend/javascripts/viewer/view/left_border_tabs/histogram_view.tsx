@@ -196,7 +196,7 @@ class Histogram extends PureComponent<HistogramProps, HistogramState> {
     ctx.fillStyle = `rgba(255, 0, 128, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
 
-    const toCanvasX = (x: number) => x / fullLength * CANVAS_WIDTH;
+    const toCanvasX = (x: number) => (x / fullLength) * CANVAS_WIDTH;
 
     const activeRegionLeftLimit = Math.max(histogramMin, intensityRangeMin) - minRange;
     const activeRegionRightLimit = Math.min(histogramMax, intensityRangeMax) - minRange;
@@ -221,20 +221,22 @@ class Histogram extends PureComponent<HistogramProps, HistogramState> {
 
       if (xValue >= intensityRangeMin && xValue <= intensityRangeMax) {
         if (!hasActiveRegionStartMovedToTop) {
-          const f = (activeRegionStartX - lastXInCanvasScale) / ((xInCanvasScale - lastXInCanvasScale) || 1);
+          const f =
+            (activeRegionStartX - lastXInCanvasScale) / (xInCanvasScale - lastXInCanvasScale || 1);
           activeRegion.lineTo(
             activeRegionStartX,
-            (1 - f) * downscaledData[i - 1] + (f) * downscaledData[i],
+            (1 - f) * downscaledData[i - 1] + f * downscaledData[i],
           );
           hasActiveRegionStartMovedToTop = true;
         }
 
         activeRegion.lineTo(xInCanvasScale, downscaledData[i]);
       } else if (xValue > intensityRangeMax && !hasActiveRegionEndMovedToTop) {
-        const f = (activeRegionEndX - lastXInCanvasScale) / ((xInCanvasScale - lastXInCanvasScale) || 1);
+        const f =
+          (activeRegionEndX - lastXInCanvasScale) / (xInCanvasScale - lastXInCanvasScale || 1);
         activeRegion.lineTo(
           toCanvasX(activeRegionRightLimit),
-          (1 - f) * downscaledData[i - 1] + (f) * downscaledData[i]
+          (1 - f) * downscaledData[i - 1] + f * downscaledData[i],
         );
       }
 

@@ -418,7 +418,6 @@ export class DataBucket {
     // Compare to the previous value, not the current one. This is because during rendering
     // all buckets are marked as unneeded and then all needed buckets are marked as such afterwards.
     // So to find out whether this bucket was actually unneeded before, the previous value is decisive.
-    // todop: can we call this less often?
     if (!this.previousAccessed) this.cube.triggerRenderedBucketDataChanged();
 
     this.previousAccessed = this.accessed;

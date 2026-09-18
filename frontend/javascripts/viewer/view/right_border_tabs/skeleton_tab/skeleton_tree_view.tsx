@@ -264,7 +264,7 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
                       />
                     )
                   }
-                  switcherIcon={({ expanded }) => <TreeSwitcherIcon expanded={expanded} />}
+                  switcherIcon={<TreeSwitcherIcon />}
                   onSelect={onSelect}
                   onDrop={onDrop}
                   onCheck={onCheck}

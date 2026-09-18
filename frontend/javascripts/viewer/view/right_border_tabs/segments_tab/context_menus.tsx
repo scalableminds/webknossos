@@ -4,6 +4,7 @@ import Icon, {
   CloseOutlined,
   DeleteOutlined,
   DownloadOutlined,
+  EditOutlined,
   ExpandAltOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
@@ -12,7 +13,8 @@ import Icon, {
   ShrinkOutlined,
   UndoOutlined,
 } from "@ant-design/icons";
-import LoadMeshesIcon from "@images/icons/icon-load-meshes.svg?react";
+import BrushIcon from "@images/icons/icon-brush.svg?react";
+import MeshIcon from "@images/icons/icon-mesh-vertices.svg?react";
 import PipetteIcon from "@images/icons/icon-pipette.svg?react";
 import { App, Divider, type MenuProps } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
@@ -47,9 +49,10 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { Segment } from "viewer/store";
 import Store from "viewer/store";
-import { getDescendantGroupIds } from "../shared/tree_hierarchy_view_helpers";
+import { getDescendantGroupIds, MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
 import {
   getGroupUiNodeKey,
+  getSegmentUiNodeKey,
   type SegmentGroupUiNode,
   type SegmentsHierarchy,
   type SegmentUiNode,
@@ -86,6 +89,9 @@ export type ContextMenuDependencies = {
   meshFiles: MeshFiles;
   openStatisticsModal: (target: SegmentStatisticsTarget) => void;
   hideContextMenu: () => void;
+  // Puts the row with this node key into rename mode. The rows no longer carry an edit
+  // pencil, so the context menu is the discoverable way to rename (besides double-click).
+  startRenaming: (nodeKey: string) => void;
 };
 
 function getColorOfFirstSegmentOrGrey(segments: Segment[]): Vector3 {
@@ -145,14 +151,14 @@ function useSegmentListMenuItems({
       const loadPrecomputedItem: ItemType = {
         key: "loadByFile",
         disabled: meshFiles.currentMeshFile == null,
-        icon: <Icon component={LoadMeshesIcon} />,
+        icon: <Icon component={MeshIcon} />,
         label: "Load Meshes (precomputed)",
         onClick: runAndHide(() => meshOperations.loadPrecomputedMeshes(segments)),
       };
 
       const computeAdHocItem: ItemType = {
         key: "computeAdHoc",
-        icon: <Icon component={LoadMeshesIcon} />,
+        icon: <Icon component={MeshIcon} />,
         label: "Compute Meshes (ad-hoc)",
         onClick: runAndHide(() => meshOperations.loadAdHocMeshes(segments)),
       };
@@ -264,7 +270,7 @@ function useSegmentListMenuItems({
 export function useSegmentContextMenuBuilder(
   dependencies: ContextMenuDependencies,
 ): SegmentContextMenuBuilder {
-  const { selection, meshOperations, meshFiles, hideContextMenu } = dependencies;
+  const { selection, meshOperations, meshFiles, hideContextMenu, startRenaming } = dependencies;
   const dispatch = useDispatch();
   const { modal } = App.useApp();
   const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
@@ -360,37 +366,29 @@ export function useSegmentContextMenuBuilder(
         hideContextMenu();
       };
 
+      const listItems = getSegmentListMenuItems([segment]);
+
       return {
         items: [
+          // A read-only header, so that the id of a named segment stays available now that
+          // the row itself only shows the name.
           {
-            key: "loadPrecomputedMesh",
-            disabled: currentMeshFile == null,
-            onClick: withMappingActivationConfirmation(
-              withKnownPosition(() => meshOperations.loadPrecomputedMeshes([segment])),
-              currentMeshFile?.mappingName,
-              "mesh file",
-              layerName,
-              mappingInfo,
-            ),
-            label: (
-              <LoadMeshMenuItemLabel
-                currentMeshFile={currentMeshFile}
-                volumeTracing={activeVolumeTracing}
-              />
-            ),
+            key: "segmentIdInfo",
+            type: "group",
+            label: `Segment ID: ${segment.id}`,
           },
+          { key: "segmentIdDivider", type: "divider" },
           {
-            key: "loadAdHocMesh",
-            onClick: withKnownPosition(() => meshOperations.loadAdHocMeshes([segment])),
-            label: (
-              <FastTooltip title="Compute mesh for this segment.">
-                Compute Mesh (ad-hoc)
-              </FastTooltip>
-            ),
+            key: "renameSegment",
+            disabled: !allowUpdate,
+            icon: <EditOutlined />,
+            label: "Rename Segment",
+            onClick: runAndHide(() => startRenaming(getSegmentUiNodeKey(segment.id))),
           },
           {
             key: "setActiveCell",
             disabled: isActiveSegment || !allowUpdate,
+            icon: <Icon component={BrushIcon} />,
             onClick: runAndHide(() =>
               dispatch(
                 setActiveCellAction(
@@ -415,6 +413,7 @@ export function useSegmentContextMenuBuilder(
           },
           {
             key: `changeSegmentColor-${segment.id}`,
+            icon: <Icon component={PipetteIcon} />,
             label: mesh?.isVisible ? (
               <ChangeRGBAColorMenuItemContent
                 title="Change Segment Color"
@@ -440,11 +439,13 @@ export function useSegmentContextMenuBuilder(
           {
             key: "resetSegmentColor",
             disabled: segment.color == null,
+            icon: <UndoOutlined />,
             onClick: runAndHide(() => updateThisSegment({ color: null }, true)),
             label: "Reset Segment Color",
           },
           {
             key: "removeSegmentFromList",
+            icon: <CloseOutlined />,
             onClick: runAndHide(() => {
               if (layerName != null) {
                 dispatch(removeSegmentAction(segment.id, layerName));
@@ -454,6 +455,7 @@ export function useSegmentContextMenuBuilder(
           },
           {
             key: "deleteSegmentData",
+            icon: <DeleteOutlined />,
             onClick: confirmDeleteSegmentData,
             disabled:
               activeVolumeTracing == null ||
@@ -462,12 +464,46 @@ export function useSegmentContextMenuBuilder(
               activeVolumeTracing.fallbackLayer != null,
             label: "Delete Segment's Data",
           },
-          getSegmentListMenuItems([segment]).segmentStatisticsItem,
+          listItems.segmentStatisticsItem,
+          // The mesh actions close the menu: they are the least frequent entries, and the
+          // mesh of a single segment used to be managed from its own child row in the tree,
+          // which is gone. Everything it offered lives here (and on the mesh chip).
+          { key: "meshActionDivider", type: "divider" },
+          {
+            key: "loadPrecomputedMesh",
+            disabled: currentMeshFile == null,
+            icon: <Icon component={MeshIcon} />,
+            onClick: withMappingActivationConfirmation(
+              withKnownPosition(() => meshOperations.loadPrecomputedMeshes([segment])),
+              currentMeshFile?.mappingName,
+              "mesh file",
+              layerName,
+              mappingInfo,
+            ),
+            label: (
+              <LoadMeshMenuItemLabel
+                currentMeshFile={currentMeshFile}
+                volumeTracing={activeVolumeTracing}
+              />
+            ),
+          },
+          {
+            key: "loadAdHocMesh",
+            icon: <Icon component={MeshIcon} />,
+            onClick: withKnownPosition(() => meshOperations.loadAdHocMeshes([segment])),
+            label: (
+              <FastTooltip title="Compute mesh for this segment.">
+                Compute Mesh (ad-hoc)
+              </FastTooltip>
+            ),
+          },
+          ...listItems.meshManagementItems,
         ],
       };
     },
     [
       getSegmentListMenuItems,
+      startRenaming,
       dispatch,
       modal,
       allowUpdate,
@@ -497,7 +533,7 @@ export function useSegmentContextMenuBuilder(
 export function useGroupContextMenuBuilder(
   dependencies: ContextMenuDependencies,
 ): GroupContextMenuBuilder {
-  const { hierarchy, selection, groupOperations, hideContextMenu } = dependencies;
+  const { hierarchy, selection, groupOperations, hideContextMenu, startRenaming } = dependencies;
   const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
   const segmentGroups = useWkSelector((state) => getVisibleSegments(state).segmentGroups);
   const getSegmentListMenuItems = useSegmentListMenuItems(dependencies);
@@ -527,6 +563,17 @@ export function useGroupContextMenuBuilder(
             disabled: isEditingDisabled,
             icon: <PlusOutlined />,
             label: "Create new group",
+          },
+          {
+            key: "renameGroup",
+            // The root group must not be renamed.
+            disabled: isEditingDisabled || groupId === MISSING_GROUP_ID,
+            onClick: () => {
+              startRenaming(getGroupUiNodeKey(groupId));
+              hideContextMenu();
+            },
+            icon: <EditOutlined />,
+            label: "Rename group",
           },
           {
             key: "delete",
@@ -592,6 +639,7 @@ export function useGroupContextMenuBuilder(
       groupOperations,
       getSegmentListMenuItems,
       hideContextMenu,
+      startRenaming,
     ],
   );
 }

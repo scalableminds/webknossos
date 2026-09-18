@@ -225,7 +225,7 @@ class Histogram extends PureComponent<HistogramProps, HistogramState> {
     const histogramLength = histogramMax - histogramMin;
     const fullLength = maxRange - minRange;
     const xOffset = histogramMin - minRange;
-    ctx.fillStyle = `rgba(255, 0, 128, 0.1)`;
+    ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
 
     const toCanvasX = (x: number) => (x / fullLength) * CANVAS_WIDTH;

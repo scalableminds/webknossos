@@ -111,6 +111,14 @@
     min-height: 0;
   }
 
+  // antd stretches the switcher over the full row but lays its icon out inline against a
+  // line height of its own, which leaves the caret above the middle of our taller rows.
+  .ant-tree-switcher {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .ant-tree-checkbox {
     margin-inline-end: 8px;
     // antd aligns the checkbox to the top of the title (via align-self plus a 2px margin)

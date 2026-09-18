@@ -1,0 +1,25 @@
+[package]
+name = "wk-auth-poc"
+version = "0.1.0"
+edition = "2024"
+default-run = "wk-auth-poc"
+
+[dependencies]
+axum = "0.8.9"
+bcrypt = "0.19.3"
+chrono = { version = "0.4.45", features = ["serde"] }
+dotenvy = "0.15.7"
+prost = "0.14.4"
+rand = "0.10.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sqlx = { version = "0.9", features = ["postgres", "runtime-tokio", "tls-rustls", "chrono"] }
+tokio = { version = "1.53.1", features = ["full"] }
+tonic = "0.14.6"
+tonic-prost = "0.14.6"
+tower-http = { version = "0.7.1", features = ["trace"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+
+[build-dependencies]
+tonic-prost-build = "0.14.6"

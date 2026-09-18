@@ -1,5 +1,5 @@
 import { Input, type InputRef, Typography } from "antd";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 type Props = {
   // What is rendered while not editing (e.g. "Segment 5" for an unnamed segment).
@@ -48,16 +48,29 @@ export function InlineEditableName({
 }: Props) {
   const inputRef = useRef<InputRef>(null);
 
+  // Deliberately not `autoFocus`. React applies that during the commit in which the input
+  // mounts, and antd's tree reacts to a focus event from inside its list by scrolling to
+  // its active node — against a list ref that is detached for exactly that commit, which
+  // throws. Focusing from an effect moves it past the commit. (The focus event is also
+  // stopped below, so the tree never treats renaming as navigation in the first place.)
+  useEffect(() => {
+    if (isEditing) {
+      // Selecting the current name makes typing replace it, as renaming usually should.
+      inputRef.current?.focus({ cursor: "all" });
+    }
+  }, [isEditing]);
+
   if (isEditing) {
     return (
       <Input
         ref={inputRef}
         style={style}
         size="small"
-        autoFocus
         defaultValue={editableValue}
         placeholder={placeholder}
         onClick={(event) => event.stopPropagation()}
+        // Renaming is not tree navigation; keep both events inside the input (see above).
+        onFocus={(event) => event.stopPropagation()}
         // Enter commits by blurring, so that saving has exactly one code path.
         onPressEnter={() => inputRef.current?.blur()}
         onKeyDown={(event) => {

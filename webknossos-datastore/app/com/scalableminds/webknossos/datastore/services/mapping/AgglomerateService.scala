@@ -161,11 +161,9 @@ class AgglomerateService @Inject() (
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
-  /**
-   * `datasetId` and `dataLayer` are only used by the PCG branch, which has no
-   * stored positions and has to find one by reading the layer itself. The file
-   * formats keep positions in the agglomerate file and ignore both.
-   */
+  /** `datasetId` and `dataLayer` are only used by the PCG branch, which has no stored positions and has to find one by
+    * reading the layer itself. The file formats keep positions in the agglomerate file and ignore both.
+    */
   def positionForSegmentId(
       agglomerateFileKey: AgglomerateFileKey,
       segmentId: Long,

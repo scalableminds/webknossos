@@ -41,34 +41,31 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-/**
- * Serves agglomerate mappings from a PyChunkedGraph instance over HTTP, as a third
- * `LayerAttachmentDataformat` next to hdf5 and zarr3.
- *
- * The attachment `path` is the base URL of a PCG table, e.g.
- * `http://localhost:4000/segmentation/api/v1/table/big`; endpoints are appended to it.
- *
- * Positions are the awkward part: PCG stores topology over an immutable volume and keeps
- * no coordinates for its own sake. There are two ways to get one, and this service uses
- * both:
- *
- *  - If the graph was ingested with `store_positions`, PCG has a representative voxel per
- *    supervoxel and `POST /node_positions` returns it. One point read.
- *  - Otherwise, decode the chunk out of the supervoxel id and read that chunk of the
- *    volume until the id turns up. Exact, but a production chunk is hundreds of buckets.
- *    See `positionForSegmentId`.
- *
- * `generateAgglomerateGraph` and `generateTree` only take the first route, so nodes of a
- * graph ingested without positions stay at the origin.
- *
- * PCG has no largest agglomerate id -- ids are chunk-encoded and sparse, so there is
- * nothing to allocate from and `largestAgglomerateId` fails.
- */
+/** Serves agglomerate mappings from a PyChunkedGraph instance over HTTP, as a third `LayerAttachmentDataformat` next to
+  * hdf5 and zarr3.
+  *
+  * The attachment `path` is the base URL of a PCG table, e.g. `http://localhost:4000/segmentation/api/v1/table/big`;
+  * endpoints are appended to it.
+  *
+  * Positions are the awkward part: PCG stores topology over an immutable volume and keeps no coordinates for its own
+  * sake. There are two ways to get one, and this service uses both:
+  *
+  *   - If the graph was ingested with `store_positions`, PCG has a representative voxel per supervoxel and
+  *     `POST /node_positions` returns it. One point read.
+  *   - Otherwise, decode the chunk out of the supervoxel id and read that chunk of the volume until the id turns up.
+  *     Exact, but a production chunk is hundreds of buckets. See `positionForSegmentId`.
+  *
+  * `generateAgglomerateGraph` and `generateTree` only take the first route, so nodes of a graph ingested without
+  * positions stay at the origin.
+  *
+  * PCG has no largest agglomerate id -- ids are chunk-encoded and sparse, so there is nothing to allocate from and
+  * `largestAgglomerateId` fails.
+  */
 object PcgAgglomerateService {
 
-  /** How much bigger, counted in supervoxels, the chunk cache is than the per-id one. Per supervoxel
-    * the chunk cache spends two slots in a long array where the per-id cache spends a boxed key, a
-    * boxed value and a hash entry, so this is roughly the same memory, not more of it.
+  /** How much bigger, counted in supervoxels, the chunk cache is than the per-id one. Per supervoxel the chunk cache
+    * spends two slots in a long array where the per-id cache spends a boxed key, a boxed value and a hash entry, so
+    * this is roughly the same memory, not more of it.
     */
   val chunkCacheOvercommit: Int = 8
 }
@@ -84,8 +81,8 @@ class PcgAgglomerateService @Inject() (
 
   private lazy val bucketScanner = new NativeBucketScanner()
 
-  /** supervoxel -> root, one supervoxel at a time. The fallback cache: used for graphs whose PCG
-    * cannot serve a chunk at a time, and for the odd id a chunk mapping does not account for.
+  /** supervoxel -> root, one supervoxel at a time. The fallback cache: used for graphs whose PCG cannot serve a chunk
+    * at a time, and for the odd id a chunk mapping does not account for.
     *
     * A root only changes when the graph is edited, so entries are kept until evicted.
     */
@@ -95,13 +92,13 @@ class PcgAgglomerateService @Inject() (
 
   /** supervoxel -> root, a whole PCG chunk at a time. This is the cache that carries browsing.
     *
-    * A supervoxel id names the chunk it lives in, and `chunk_root_mapping_binary` returns that whole
-    * chunk's mapping in one request. Looking at a volume is local, so the neighbours of the id that
-    * missed are the ids the next buckets ask for. A production CAVE chunk of 512x512x64 voxels is
-    * 128 WEBKNOSSOS buckets, which browsing across then costs one request instead of 128.
+    * A supervoxel id names the chunk it lives in, and `chunk_root_mapping_binary` returns that whole chunk's mapping in
+    * one request. Looking at a volume is local, so the neighbours of the id that missed are the ids the next buckets
+    * ask for. A production CAVE chunk of 512x512x64 voxels is 128 WEBKNOSSOS buckets, which browsing across then costs
+    * one request instead of 128.
     *
-    * It does not turn an unbounded working set into a bounded one: a volume larger than the cache
-    * still evicts what it is about to need. It moves that threshold rather than removing it.
+    * It does not turn an unbounded working set into a bounded one: a volume larger than the cache still evicts what it
+    * is about to need. It moves that threshold rather than removing it.
     */
   private lazy val chunkMappingCache =
     new ChunkMappingCache(
@@ -110,14 +107,14 @@ class PcgAgglomerateService @Inject() (
 
   /** Chunks one request may fetch before prefetching stops paying.
     *
-    * A bucket at mag 1 sits in one or two chunks. A zoomed-out bucket covers many and samples only a
-    * few supervoxels from each, so fetching them whole would read far more than it answers. Past
-    * this many, the request asks for exactly the ids it needs.
+    * A bucket at mag 1 sits in one or two chunks. A zoomed-out bucket covers many and samples only a few supervoxels
+    * from each, so fetching them whole would read far more than it answers. Past this many, the request asks for
+    * exactly the ids it needs.
     */
   private val chunkPrefetchLimit = 32
 
-  /** Graphs whose PCG has no chunk-mapping route, so that we ask once and then stop asking. Such a
-    * graph is read one supervoxel at a time, which is slower but not broken.
+  /** Graphs whose PCG has no chunk-mapping route, so that we ask once and then stop asking. Such a graph is read one
+    * supervoxel at a time, which is slower but not broken.
     */
   private lazy val graphsWithoutChunkMapping: java.util.Set[AgglomerateFileKey] =
     java.util.concurrent.ConcurrentHashMap.newKeySet[AgglomerateFileKey]()
@@ -129,12 +126,14 @@ class PcgAgglomerateService @Inject() (
 
   private val bucketLength = DataLayer.bucketLength
 
-  /** Buckets read in parallel per round of a position scan. Keeps a miss-heavy
-    * scan from being one serial round trip per bucket without flooding the vault. */
+  /** Buckets read in parallel per round of a position scan. Keeps a miss-heavy scan from being one serial round trip
+    * per bucket without flooding the vault.
+    */
   private val scanBatchSize = 8
 
-  /** Ceiling on buckets read for one position lookup. 512 covers a 512x512x64
-    * chunk, the largest a production CAVE graph is likely to use. */
+  /** Ceiling on buckets read for one position lookup. 512 covers a 512x512x64 chunk, the largest a production CAVE
+    * graph is likely to use.
+    */
   private val scanBucketLimit = 512
 
   // Node-id layout and voxel grid of the graph. Immutable for a graph's lifetime.
@@ -157,9 +156,9 @@ class PcgAgglomerateService @Inject() (
   private def baseUrl(agglomerateFileKey: AgglomerateFileKey): String =
     agglomerateFileKey.attachment.path.toString.stripSuffix("/")
 
-  /** PCG serves `info` outside its versioned API prefix, so the attachment URL
-    * ".../segmentation/api/v1/table/<id>" has to become
-    * ".../segmentation/table/<id>/info". Every other call keeps the api/v1 path. */
+  /** PCG serves `info` outside its versioned API prefix, so the attachment URL ".../segmentation/api/v1/table/<id>" has
+    * to become ".../segmentation/table/<id>/info". Every other call keeps the api/v1 path.
+    */
   private def infoUrl(agglomerateFileKey: AgglomerateFileKey): String =
     s"${baseUrl(agglomerateFileKey).replace("/api/v1/table/", "/table/")}/info"
 
@@ -185,11 +184,11 @@ class PcgAgglomerateService @Inject() (
     } yield roots
   }
 
-  /** Batched supervoxel -> root. Zero is the background label in WEBKNOSSOS and not a PCG node, so
-    * it maps to zero without asking.
+  /** Batched supervoxel -> root. Zero is the background label in WEBKNOSSOS and not a PCG node, so it maps to zero
+    * without asking.
     *
-    * Answered a chunk at a time where the graph's PCG can do that, and per supervoxel otherwise. The
-    * two paths give the same answers and differ only in what they leave in the cache.
+    * Answered a chunk at a time where the graph's PCG can do that, and per supervoxel otherwise. The two paths give the
+    * same answers and differ only in what they leave in the cache.
     */
   private def rootsForSupervoxels(agglomerateFileKey: AgglomerateFileKey, supervoxelIds: Seq[Long])(using
       ec: ExecutionContext
@@ -239,9 +238,8 @@ class PcgAgglomerateService @Inject() (
     else
       for {
         infoBox <- graphInfo(agglomerateFileKey).shiftBox
-        chunkIdsOpt = infoBox.toOption.flatMap(info =>
-          tryo(distinct.iterator.map(chunkIdOf(info, _)).distinct.toSeq).toOption
-        )
+        chunkIdsOpt = infoBox.toOption
+          .flatMap(info => tryo(distinct.iterator.map(chunkIdOf(info, _)).distinct.toSeq).toOption)
         result <- chunkIdsOpt match {
           case Some(chunkIds) if chunkIds.length <= chunkPrefetchLimit =>
             for {
@@ -296,8 +294,9 @@ class PcgAgglomerateService @Inject() (
   ): Fox[PcgChunkMapping] = {
     val chunk = java.lang.Long.toUnsignedString(chunkId)
     for {
-      responseBytes <- rpc(s"${baseUrl(agglomerateFileKey)}/chunk_root_mapping_binary/$chunk").silentEvenOnFailure
-        .getWithBytesResponse
+      responseBytes <- rpc(
+        s"${baseUrl(agglomerateFileKey)}/chunk_root_mapping_binary/$chunk"
+      ).silentEvenOnFailure.getWithBytesResponse
       pairs <- tryo(decodeUint64Array(responseBytes)).toFox
       _ <- Fox.fromBool(pairs.length % 2 == 0) ?~>
         s"PCG returned ${pairs.length} values for chunk $chunk, which is not a list of pairs"
@@ -305,8 +304,8 @@ class PcgAgglomerateService @Inject() (
     } yield mapping
   }
 
-  /** The chunk a supervoxel belongs to, which is its own id with the counter bits cleared -- PCG's `get_chunk_id`.
-    * The layout is `[layer | x | y | z | counter]`, so everything above the counter names the chunk.
+  /** The chunk a supervoxel belongs to, which is its own id with the counter bits cleared -- PCG's `get_chunk_id`. The
+    * layout is `[layer | x | y | z | counter]`, so everything above the counter names the chunk.
     */
   private def chunkIdOf(graphInfo: PcgGraphInfo, supervoxelId: Long): Long = {
     val layer = supervoxelId >>> (64 - graphInfo.layerIdBits)
@@ -351,13 +350,11 @@ class PcgAgglomerateService @Inject() (
           .map(_.leafIds)
     )
 
-  /**
-   * PCG stores a cross-chunk edge in both chunks it touches, so `subgraph` returns it twice,
-   * once as (a, b) and once as (b, a). WEBKNOSSOS's agglomerate graph is undirected, and the
-   * min-cut builds a JGraphT SimpleWeightedGraph, which refuses a parallel edge and fails the
-   * whole request. Fold the two directions together, keeping the affinity of the copy that
-   * survives. Every agglomerate spanning a chunk boundary has such edges.
-   */
+  /** PCG stores a cross-chunk edge in both chunks it touches, so `subgraph` returns it twice, once as (a, b) and once
+    * as (b, a). WEBKNOSSOS's agglomerate graph is undirected, and the min-cut builds a JGraphT SimpleWeightedGraph,
+    * which refuses a parallel edge and fails the whole request. Fold the two directions together, keeping the affinity
+    * of the copy that survives. Every agglomerate spanning a chunk boundary has such edges.
+    */
   private def foldEdgeDirections(response: PcgSubgraph): PcgSubgraph = {
     val seen = mutable.HashSet[(Long, Long)]()
     val kept = response.edges.zip(response.affinities).filter { case (edge, _) =>
@@ -433,7 +430,8 @@ class PcgAgglomerateService @Inject() (
           edges = treeEdges,
           name = s"agglomerate $agglomerateId (${agglomerateFileKey.attachment.name})",
           `type` = Some(TreeTypeProto.AGGLOMERATE),
-          agglomerateInfo = Some(TreeAgglomerateInfoProto(agglomerateId, None, Some(agglomerateFileKey.attachment.name)))
+          agglomerateInfo =
+            Some(TreeAgglomerateInfoProto(agglomerateId, None, Some(agglomerateFileKey.attachment.name)))
         )
       )
     )
@@ -445,14 +443,12 @@ class PcgAgglomerateService @Inject() (
       case None    => Vec3IntProto(0, 0, 0)
     }
 
-  /**
-   * Voxel coordinates PCG recorded at ingest, for whichever of these ids have one.
-   *
-   * Never fails. An empty answer is the normal result for a graph ingested without
-   * `store_positions` (PCG returns `{}`) and for a PCG that predates the `node_positions`
-   * route (404). Any other failure is treated the same way, because falling back to the
-   * volume scan is always correct, only slower.
-   */
+  /** Voxel coordinates PCG recorded at ingest, for whichever of these ids have one.
+    *
+    * Never fails. An empty answer is the normal result for a graph ingested without `store_positions` (PCG returns
+    * `{}`) and for a PCG that predates the `node_positions` route (404). Any other failure is treated the same way,
+    * because falling back to the volume scan is always correct, only slower.
+    */
   private def storedPositions(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long])(using
       ec: ExecutionContext
   ): Fox[Map[Long, Vec3Int]] =
@@ -468,8 +464,8 @@ class PcgAgglomerateService @Inject() (
         }
         .orElse(Fox.successful(Map.empty[Long, Vec3Int]))
 
-  /** A representative voxel of a supervoxel: PCG's own, if it stored one, else found by
-    * reading the volume. */
+  /** A representative voxel of a supervoxel: PCG's own, if it stored one, else found by reading the volume.
+    */
   def positionForSegmentId(
       agglomerateFileKey: AgglomerateFileKey,
       segmentId: Long,
@@ -484,21 +480,17 @@ class PcgAgglomerateService @Inject() (
       }
     } yield position
 
-  /**
-   * Find a voxel of the supervoxel by reading the volume, for graphs where PCG stored no
-   * position.
-   *
-   * A supervoxel id is `[layer | x | y | z | segment]`, so it names the chunk the
-   * supervoxel lives in. That bounds the search to one chunk: read it a bucket at a time
-   * and return the first voxel carrying the id.
-   *
-   * The voxel returned really belongs to that supervoxel. Proofreading re-reads the
-   * segment id at the position it is handed, so a merely nearby coordinate can land in a
-   * neighbouring segment and act on the wrong one.
-   *
-   * A chunk of 512x512x64 voxels is a few hundred buckets, the worst case for one lookup;
-   * `scanBatchSize` keeps those reads from being fully serial.
-   */
+  /** Find a voxel of the supervoxel by reading the volume, for graphs where PCG stored no position.
+    *
+    * A supervoxel id is `[layer | x | y | z | segment]`, so it names the chunk the supervoxel lives in. That bounds the
+    * search to one chunk: read it a bucket at a time and return the first voxel carrying the id.
+    *
+    * The voxel returned really belongs to that supervoxel. Proofreading re-reads the segment id at the position it is
+    * handed, so a merely nearby coordinate can land in a neighbouring segment and act on the wrong one.
+    *
+    * A chunk of 512x512x64 voxels is a few hundred buckets, the worst case for one lookup; `scanBatchSize` keeps those
+    * reads from being fully serial.
+    */
   private def scanPositionForSegmentId(
       agglomerateFileKey: AgglomerateFileKey,
       segmentId: Long,
@@ -518,12 +510,10 @@ class PcgAgglomerateService @Inject() (
         s"Supervoxel $segmentId was not found in its own PCG chunk $chunkBox"
     } yield position
 
-  /**
-   * The voxel box of the chunk a node id belongs to. Mirrors PCG's
-   * `get_chunk_coordinates` (pychunkedgraph/graph/chunks/utils.py): the layer sits
-   * in the top `layerIdBits` bits and selects how many bits each axis gets, with x
-   * highest and z lowest.
-   */
+  /** The voxel box of the chunk a node id belongs to. Mirrors PCG's `get_chunk_coordinates`
+    * (pychunkedgraph/graph/chunks/utils.py): the layer sits in the top `layerIdBits` bits and selects how many bits
+    * each axis gets, with x highest and z lowest.
+    */
   private def chunkBoundingBoxForSegmentId(graphInfo: PcgGraphInfo, segmentId: Long): Box[BoundingBox] =
     tryo {
       val layer = segmentId >>> (64 - graphInfo.layerIdBits)
@@ -570,7 +560,7 @@ class PcgAgglomerateService @Inject() (
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Vec3Int] =
     buckets match {
       case Nil => Fox.empty
-      case _ =>
+      case _   =>
         val (batch, rest) = buckets.splitAt(scanBatchSize)
         for {
           hits <- Fox.serialCombined(batch)(topLeft =>
@@ -629,8 +619,8 @@ class PcgAgglomerateService @Inject() (
 
 /** One PCG chunk's supervoxel -> root mapping, as two arrays ordered by supervoxel id.
   *
-  * Arrays rather than a Map: two slots in a long array per supervoxel is what lets the same memory
-  * hold several times as much of the volume.
+  * Arrays rather than a Map: two slots in a long array per supervoxel is what lets the same memory hold several times
+  * as much of the volume.
   */
 private case class PcgChunkMapping(supervoxelIds: Array[Long], rootIds: Array[Long]) {
   def size: Int = supervoxelIds.length
@@ -645,8 +635,8 @@ private object PcgChunkMapping {
 
   /** From PCG's `[supervoxel, root, supervoxel, root, ...]`.
     *
-    * Sorted here rather than trusted to arrive sorted, because `binarySearch` needs the order and a
-    * response that is ordered differently would give wrong colours rather than an error.
+    * Sorted here rather than trusted to arrive sorted, because `binarySearch` needs the order and a response that is
+    * ordered differently would give wrong colours rather than an error.
     */
   def fromInterleaved(pairs: Array[Long]): PcgChunkMapping = {
     val count = pairs.length / 2
@@ -663,8 +653,8 @@ private object PcgChunkMapping {
 
 /** LRU over chunk mappings, bounded by the supervoxels it holds rather than by the number of chunks.
   *
-  * Counting chunks would bound nothing: a chunk of a sparse region holds a handful of supervoxels
-  * and one of dense neuropil holds thousands.
+  * Counting chunks would bound nothing: a chunk of a sparse region holds a handful of supervoxels and one of dense
+  * neuropil holds thousands.
   */
 private class ChunkMappingCache(maxSupervoxels: Long) {
   private val entries =
@@ -708,11 +698,9 @@ private class ChunkMappingCache(maxSupervoxels: Long) {
     }
 }
 
-/**
- * The part of PCG's `info` that describes how a node id encodes a position:
- * how many bits name the layer, how many name each axis at that layer, and what
- * voxel box a chunk covers.
- */
+/** The part of PCG's `info` that describes how a node id encodes a position: how many bits name the layer, how many
+  * name each axis at that layer, and what voxel box a chunk covers.
+  */
 private case class PcgGraphInfo(
     layerIdBits: Int,
     bitsPerDim: Map[Int, Int],

@@ -375,11 +375,6 @@ class TSAnnotationService @Inject() (
       )
     } yield annotationWithTracings.addEditableMapping(action.actionTracingId, editableMappingInfo, updater)
 
-  /** A chunkedgraph is the mapping, and everyone reading that graph reads the same one. WEBKNOSSOS
-    * proofreads an agglomerate file by keeping a delta of its own per annotation, which has no
-    * equivalent here, so making such a mapping editable is refused. It is refused at this point
-    * because this is where the message reaches whoever asked for it.
-    */
   private def assertBaseMappingIsNotChunkedGraph(
       annotationId: ObjectId,
       volumeTracing: VolumeTracing,

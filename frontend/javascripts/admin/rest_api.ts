@@ -2565,24 +2565,41 @@ export async function getNeighborsForAgglomerateNode(
 
 // ### Smart Select
 
+export type SamExemplarBox = {
+  topLeftX: number; // int, in target mag, relative to topleft
+  topLeftY: number;
+  bottomRightX: number;
+  bottomRightY: number;
+  label: number; // 1 = positive exemplar, 0 = negative
+};
+
+export type SamPrompt =
+  | {
+      type: "BOUNDING_BOX"; // relative to topleft
+      selectionTopLeftX: number; // int, in target mag
+      selectionTopLeftY: number; // int, in target mag
+      selectionBottomRightX: number; // int, in target mag
+      selectionBottomRightY: number; // int, in target mag
+    }
+  | {
+      type: "POINT";
+      pointX: number; // int, relative to topleft
+      pointY: number; // int, relative to topleft
+    }
+  // Unlike the two above, which ask the model to track the one object the user pointed at, this
+  // asks its detector to find every instance resembling the given examples. The response is a
+  // label map with one id per instance rather than a binary mask.
+  | {
+      type: "EXEMPLAR_BOXES";
+      exemplarBoxes: SamExemplarBox[];
+    };
+
 export async function getSamMask(
   dataset: APIDataset,
   layerName: string,
   mag: Vector3,
   surroundingBoxMag1: BoundingBox, // in mag 1
-  prompt:
-    | {
-        type: "BOUNDING_BOX"; // relative to topleft
-        selectionTopLeftX: number; // int, in target mag
-        selectionTopLeftY: number; // int, in target mag
-        selectionBottomRightX: number; // int, in target mag
-        selectionBottomRightY: number; // int, in target mag
-      }
-    | {
-        type: "POINT";
-        pointX: number; // int, relative to topleft
-        pointY: number; // int, relative to topleft
-      },
+  prompt: SamPrompt,
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: readonly [number, number] | null,
 ): Promise<Uint8Array> {

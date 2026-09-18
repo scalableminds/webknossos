@@ -845,6 +845,12 @@ object Msg {
   }
   object SegmentAnything {
     val notEnabled: String = "AI-based quick select is not enabled for this WEBKNOSSOS instance."
+    val exemplarsNotEnabled: String =
+      "Exemplar-based quick select is not enabled for this WEBKNOSSOS instance."
+    val noExemplarBoxes: String = "At least one exemplar box is required for exemplar interaction."
+    val tooManyExemplarBoxes: String =
+      "Too many exemplar boxes. The model detects at most 16 instances per request."
+    val invalidExemplarLabel: String = "Exemplar box labels must be 1 (positive) or 0 (negative)."
     val noUri: String = "No URI for SAM server configured."
     val getDataFailed: String = "Could not get image data to send to SAM server."
     val getMaskFailed: String = "Could not get image mask from SAM server."

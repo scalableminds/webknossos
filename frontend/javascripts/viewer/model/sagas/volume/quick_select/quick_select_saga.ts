@@ -4,6 +4,7 @@ import Toast from "libs/toast";
 import { call, put, takeEvery } from "typed-redux-saga";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import type {
+  ComputeQuickSelectForExemplarsAction,
   ComputeQuickSelectForPointAction,
   ComputeQuickSelectForRectAction,
 } from "viewer/model/actions/volumetracing_actions";
@@ -11,10 +12,13 @@ import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import type { VolumeTracing } from "viewer/store";
 import { getActiveSegmentationTracing } from "../../../accessors/volumetracing_accessor";
-import { setQuickSelectStateAction } from "../../../actions/ui_actions";
+import {
+  clearQuickSelectExemplarBoxesAction,
+  setQuickSelectStateAction,
+} from "../../../actions/ui_actions";
 import { requestBucketModificationInVolumeTracing } from "../../saga_helpers";
 import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
-import performQuickSelectML from "./quick_select_ml_saga";
+import performQuickSelectML, { performExemplarQuickSelect } from "./quick_select_ml_saga";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);
@@ -23,8 +27,17 @@ function* shouldUseHeuristic() {
 
 export default function* listenToQuickSelect(): Saga<void> {
   yield* takeEvery(
-    ["COMPUTE_QUICK_SELECT_FOR_RECT", "COMPUTE_QUICK_SELECT_FOR_POINT"],
-    function* guard(action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction) {
+    [
+      "COMPUTE_QUICK_SELECT_FOR_RECT",
+      "COMPUTE_QUICK_SELECT_FOR_POINT",
+      "COMPUTE_QUICK_SELECT_FOR_EXEMPLARS",
+    ],
+    function* guard(
+      action:
+        | ComputeQuickSelectForRectAction
+        | ComputeQuickSelectForPointAction
+        | ComputeQuickSelectForExemplarsAction,
+    ) {
       const ctx = yield* createOperationContext({
         id: "QUICK_SELECT",
         description: "Quick-Selecting segment",
@@ -53,7 +66,9 @@ export default function* listenToQuickSelect(): Saga<void> {
             }
           }
           yield* put(setQuickSelectStateAction("active"));
-          if (yield* call(shouldUseHeuristic)) {
+          if (action.type === "COMPUTE_QUICK_SELECT_FOR_EXEMPLARS") {
+            yield* call(performExemplarQuickSelect, action);
+          } else if (yield* call(shouldUseHeuristic)) {
             yield* call(performQuickSelectHeuristic, action);
           } else {
             yield* call(performQuickSelectML, action);
@@ -64,6 +79,10 @@ export default function* listenToQuickSelect(): Saga<void> {
         ErrorHandling.notify(ex as Error);
       } finally {
         action.quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+        if (action.type === "COMPUTE_QUICK_SELECT_FOR_EXEMPLARS") {
+          action.quickSelectGeometry.setExemplarBoxes([]);
+          yield* put(clearQuickSelectExemplarBoxesAction());
+        }
         yield* put(setQuickSelectStateAction("inactive"));
       }
     },

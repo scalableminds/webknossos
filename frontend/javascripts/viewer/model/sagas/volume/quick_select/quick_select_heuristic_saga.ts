@@ -42,6 +42,7 @@ import {
 } from "viewer/model/actions/ui_actions";
 import {
   type CancelQuickSelectAction,
+  type ComputeQuickSelectForExemplarsAction,
   type ComputeQuickSelectForPointAction,
   type ComputeQuickSelectForRectAction,
   type ConfirmQuickSelectAction,
@@ -79,7 +80,16 @@ const warnAboutMultipleColorLayers = memoize((layerName: string) => {
 let wasPreviewModeToastAlreadyShown = false;
 
 export function* prepareQuickSelect(
-  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
+  action:
+    | ComputeQuickSelectForRectAction
+    | ComputeQuickSelectForPointAction
+    | ComputeQuickSelectForExemplarsAction,
+  /*
+   * Use this viewport instead of the active one. The active viewport follows the mouse
+   * (handleOverViewport), so an operation that is triggered from the toolbar rather than from
+   * within a viewport -- exemplar selection -- must pass the viewport its input was drawn in.
+   */
+  viewportOverride?: OrthoViewWithoutTD,
 ): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;
@@ -91,9 +101,10 @@ export function* prepareQuickSelect(
   labeledMag: Vector3;
   volumeTracing: VolumeTracing;
 } | null> {
-  const activeViewport = yield* select(
+  const activeViewportFromStore = yield* select(
     (state: WebknossosState) => state.viewModeData.plane.activeViewport,
   );
+  const activeViewport = viewportOverride ?? activeViewportFromStore;
   if (activeViewport === "TDView") {
     // Can happen when the user ends the drag action in the 3D viewport
     console.warn("Ignoring quick select when mouse is in 3D viewport");
@@ -511,6 +522,10 @@ export function* finalizeQuickSelectForSlice(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
   skipFinishAnnotationStroke: boolean = false,
+  // Set when one request produced several instances (exemplar-based quick select). The mask is
+  // then a label map rather than a binary mask, so only voxels carrying `labelValue` belong to
+  // this instance, and they are written as `segmentId` instead of the active cell.
+  instanceOptions?: { labelValue: number; segmentId: bigint },
 ) {
   quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
   const sectionLabeler = yield* call(
@@ -527,11 +542,13 @@ export function* finalizeQuickSelectForSlice(
     sizeUVWInMag[1],
   );
 
+  const labelValue = instanceOptions?.labelValue;
   for (let u = 0; u < sizeUVWInMag[0]; u++) {
     for (let v = 0; v < sizeUVWInMag[1]; v++) {
       // w = 0 is correct because the correct 3rd dim was already sliced
       // by the caller.
-      if (mask.get(u, v, 0) > 0) {
+      const value = mask.get(u, v, 0);
+      if (labelValue == null ? value > 0 : value === labelValue) {
         voxelBuffer2D.setValue(u, v, 1);
       }
     }
@@ -544,6 +561,8 @@ export function* finalizeQuickSelectForSlice(
     overwriteMode,
     labeledZoomStep,
     activeViewport,
+    undefined,
+    instanceOptions?.segmentId,
   );
   if (boundingBoxMag1.getCenter().some((el) => el == null)) {
     throw new Error("invalid bbox");
@@ -554,7 +573,7 @@ export function* finalizeQuickSelectForSlice(
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
   yield* put(
     updateSegmentAction(
-      volumeTracing.activeCellId,
+      instanceOptions?.segmentId ?? volumeTracing.activeCellId,
       {
         anchorPosition: boundingBoxMag1.getCenter(),
       },

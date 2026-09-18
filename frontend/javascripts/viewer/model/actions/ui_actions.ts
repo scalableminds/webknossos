@@ -1,6 +1,6 @@
 import type { OrthoView, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
+import type { BorderOpenStatus, PendingExemplarBox, Theme, WebknossosState } from "viewer/store";
 import type { StartAiJobDrawerState } from "viewer/view/ai_jobs/constants";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
@@ -23,6 +23,10 @@ export type EnterAction = ReturnType<typeof enterAction>;
 export type EscapeAction = ReturnType<typeof escapeAction>;
 export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAction>;
 type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAction>;
+export type AddQuickSelectExemplarBoxAction = ReturnType<typeof addQuickSelectExemplarBoxAction>;
+export type ClearQuickSelectExemplarBoxesAction = ReturnType<
+  typeof clearQuickSelectExemplarBoxesAction
+>;
 type HideMeasurementTooltipAction = ReturnType<typeof hideMeasurementTooltipAction>;
 type SetLastMeasuredPositionAction = ReturnType<typeof setLastMeasuredPositionAction>;
 type SetIsMeasuringAction = ReturnType<typeof setIsMeasuringAction>;
@@ -75,6 +79,8 @@ export type UiAction =
   | EscapeAction
   | SetQuickSelectStateAction
   | ShowQuickSelectSettingsAction
+  | AddQuickSelectExemplarBoxAction
+  | ClearQuickSelectExemplarBoxesAction
   | HideMeasurementTooltipAction
   | SetLastMeasuredPositionAction
   | SetIsMeasuringAction
@@ -216,6 +222,15 @@ export const showQuickSelectSettingsAction = (isOpen: boolean) =>
   ({
     type: "SET_ARE_QUICK_SELECT_SETTINGS_OPEN",
     isOpen,
+  }) as const;
+export const addQuickSelectExemplarBoxAction = (box: PendingExemplarBox) =>
+  ({
+    type: "ADD_QUICK_SELECT_EXEMPLAR_BOX",
+    box,
+  }) as const;
+export const clearQuickSelectExemplarBoxesAction = () =>
+  ({
+    type: "CLEAR_QUICK_SELECT_EXEMPLAR_BOXES",
   }) as const;
 export const hideMeasurementTooltipAction = () =>
   ({

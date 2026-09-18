@@ -184,13 +184,17 @@ export function* labelWithVoxelBuffer2D(
   labeledZoomStep: number,
   viewport: OrthoView,
   wroteVoxelsBox?: BooleanBox,
+  // Label with this segment instead of the active one. Needed when a single operation writes
+  // several segments at once (e.g. exemplar-based quick select, which yields one segment per
+  // detected instance) and so cannot go through the active cell.
+  segmentIdOverride?: bigint,
 ): Saga<void> {
   const allowUpdate = yield* select(mayEditAnnotation);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (!allowUpdate) return;
   if (voxelBuffer.isEmpty()) return;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
-  const activeCellId = volumeTracing.activeCellId;
+  const activeCellId = segmentIdOverride ?? volumeTracing.activeCellId;
   const segmentationLayer = yield* call(
     [Model, Model.getSegmentationTracingLayer],
     volumeTracing.tracingId,

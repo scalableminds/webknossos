@@ -90,6 +90,7 @@ const defaultState: WebknossosState = {
     useLegacyBindings: false,
     quickSelect: {
       useHeuristic: false,
+      useExemplars: false,
       predictionDepth: 1,
       showPreview: false,
       segmentMode: "light",
@@ -302,6 +303,7 @@ const defaultState: WebknossosState = {
     isUiReady: false,
     quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
+    quickSelectExemplarBoxes: [],
     measurementToolInfo: {
       lastMeasuredPosition: null,
       isMeasuring: false,

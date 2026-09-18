@@ -26,6 +26,8 @@ import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 
 export const CONTOUR_COLOR_NORMAL = new Color(0x0000ff);
+// Negative exemplars ("not this") are tinted red so they read as the opposite of a positive one.
+const NEGATIVE_EXEMPLAR_COLOR = new Color(0xff3333);
 export const CONTOUR_COLOR_DELETE = new Color(0xff0000);
 
 export class ContourGeometry {
@@ -191,6 +193,9 @@ export class QuickSelectGeometry {
   centerMarkerColor: Color;
   rectangle: Mesh<PlaneGeometry, MeshBasicMaterial>;
   centerMarker: Mesh<PlaneGeometry, MeshBasicMaterial>;
+  // Exemplar mode collects several boxes before submitting them, so unlike the single `rectangle`
+  // above, an arbitrary number of them has to stay on screen at once.
+  exemplarRectangles: Mesh<PlaneGeometry, MeshBasicMaterial>[] = [];
 
   constructor() {
     this.color = CONTOUR_COLOR_NORMAL;
@@ -302,12 +307,20 @@ export class QuickSelectGeometry {
   }
 
   adaptVisibilityForRendering(flycamPosition: Vector3, thirdDim: 0 | 1 | 2) {
+    // Each pending exemplar box is shown only on the section it was drawn on, independently of
+    // the single rectangle below.
+    for (const mesh of this.exemplarRectangles) {
+      mesh.visible =
+        Math.trunc(flycamPosition[thirdDim]) === Math.trunc(mesh.position.toArray()[thirdDim]);
+    }
+
     // Only show this geometry when the current viewport is exactly at the
     // right position (third dimension).
     this.meshGroup.visible =
-      this.rectangle.visible &&
-      Math.trunc(flycamPosition[thirdDim]) ===
-        Math.trunc(this.rectangle.position.toArray()[thirdDim]);
+      (this.rectangle.visible &&
+        Math.trunc(flycamPosition[thirdDim]) ===
+          Math.trunc(this.rectangle.position.toArray()[thirdDim])) ||
+      this.exemplarRectangles.some((mesh) => mesh.visible);
 
     if (this.meshGroup.visible) {
       // If the group is visible, adapt the position's third dimension to
@@ -323,6 +336,55 @@ export class QuickSelectGeometry {
 
   getMeshGroup() {
     return this.meshGroup;
+  }
+
+  /*
+   * Renders one translucent rectangle per already-drawn exemplar box. Negative exemplars
+   * (label 0) are tinted differently so the two kinds stay distinguishable.
+   */
+  setExemplarBoxes(boxes: Array<{ min: Vector3; max: Vector3; label: number }>) {
+    const { activeViewport } = Store.getState().viewModeData.plane;
+    const rotation = rotations[activeViewport];
+
+    // Grow or shrink the pool to match, disposing what is no longer needed.
+    while (this.exemplarRectangles.length > boxes.length) {
+      const mesh = this.exemplarRectangles.pop();
+      if (mesh == null) {
+        break;
+      }
+      this.meshGroup.remove(mesh);
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    }
+    while (this.exemplarRectangles.length < boxes.length) {
+      const mesh = new Mesh(
+        new PlaneGeometry(1, 1),
+        new MeshBasicMaterial({ side: DoubleSide, transparent: true, opacity: 0.35 }),
+      );
+      this.exemplarRectangles.push(mesh);
+      this.meshGroup.add(mesh);
+    }
+
+    boxes.forEach((box, index) => {
+      const mesh = this.exemplarRectangles[index];
+      const endPositionWithDepth = V3.add(box.max, Dimensions.transDim([0, 0, 1], activeViewport));
+      const centerPosition = V3.scale(V3.add(box.min, box.max), 0.5);
+      const extentUVW = Dimensions.transDim(
+        V3.abs(V3.sub(endPositionWithDepth, box.min)),
+        activeViewport,
+      );
+      if (rotation) {
+        mesh.setRotationFromEuler(rotation);
+      }
+      mesh.position.set(...centerPosition);
+      mesh.scale.set(...extentUVW);
+      mesh.geometry.computeBoundingSphere();
+      mesh.material.color = box.label === 0 ? NEGATIVE_EXEMPLAR_COLOR : this.color;
+      mesh.material.needsUpdate = true;
+      mesh.visible = true;
+    });
+
+    app.vent.emit("rerender");
   }
 
   attachTextureMask(ndData: Uint8Array<ArrayBuffer>, width: number, height: number) {
@@ -356,6 +418,11 @@ export class QuickSelectGeometry {
     this.rectangle.material.dispose();
     this.centerMarker.geometry.dispose();
     this.centerMarker.material.dispose();
+    for (const mesh of this.exemplarRectangles) {
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    }
+    this.exemplarRectangles = [];
   }
 }
 

@@ -117,8 +117,19 @@ case class ReserveAttachmentUploadToPathRequest(
 
 object SAMInteractionType extends ExtendedEnumeration {
   type SAMInteractionType = Value
-  val BOUNDING_BOX, POINT = Value
+  // BOUNDING_BOX and POINT prompt the model's tracker for the one object the user pointed at.
+  // EXEMPLAR_BOXES prompts its detector instead: "find every instance that looks like these",
+  // which answers with a label map of up to 16 instances rather than a binary mask.
+  val BOUNDING_BOX, POINT, EXEMPLAR_BOXES = Value
 }
+
+case class SAMExemplarBoxParameters(
+    topLeftX: Int, // in target-mag, relative to paddedBoundingBox topleft
+    topLeftY: Int,
+    bottomRightX: Int,
+    bottomRightY: Int,
+    label: Int // 1 = positive exemplar, 0 = negative
+) derives JsonAutoFormat
 
 case class SegmentAnythingMaskParameters(
     mag: Vec3Int,
@@ -126,13 +137,14 @@ case class SegmentAnythingMaskParameters(
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     interactionType: SAMInteractionType.SAMInteractionType,
     // selectionTopLeft and selectionBottomRight are required as input in case of bounding box interaction type.
-    // Else pointX and pointY are required.
+    // For POINT, pointX and pointY are required. For EXEMPLAR_BOXES, exemplarBoxes is required.
     selectionTopLeftX: Option[Int], // in target-mag, relative to paddedBoundingBox topleft
     selectionTopLeftY: Option[Int],
     selectionBottomRightX: Option[Int],
     selectionBottomRightY: Option[Int],
     pointX: Option[Int], // in target-mag, relative to paddedBoundingBox topleft
-    pointY: Option[Int]
+    pointY: Option[Int],
+    exemplarBoxes: Option[Seq[SAMExemplarBoxParameters]] = None
 ) derives JsonAutoFormat
 
 case class DataSourceRegistrationInfo(
@@ -652,6 +664,33 @@ class DatasetController @Inject() (
           _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.POINT)(
             Fox.fromBool(request.body.pointX.isDefined && request.body.pointY.isDefined)
           ) ?~> "Missing pointX and pointY parameters for point interaction."
+          exemplarBoxes = request.body.exemplarBoxes.getOrElse(Seq.empty)
+          _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.EXEMPLAR_BOXES) {
+            for {
+              // Gated separately from segmentAnythingEnabled: exemplars additionally need the SAM
+              // server to run the sam3 backend with its detector still resident.
+              _ <- Fox.fromBool(conf.Features.segmentAnythingExemplarsEnabled) ?~> Msg.SegmentAnything.exemplarsNotEnabled
+              _ <- Fox.fromBool(exemplarBoxes.nonEmpty) ?~> Msg.SegmentAnything.noExemplarBoxes
+              _ <- Fox.fromBool(exemplarBoxes.length <= SAMExemplarPrompt.maxBoxCount) ?~> Msg.SegmentAnything.tooManyExemplarBoxes
+              _ <- Fox.fromBool(exemplarBoxes.forall(box => box.label == 0 || box.label == 1)) ?~> Msg.SegmentAnything.invalidExemplarLabel
+            } yield ()
+          }
+          prompt <- (request.body.interactionType match {
+            case SAMInteractionType.BOUNDING_BOX =>
+              Some(
+                SAMBoxPrompt(
+                  request.body.selectionTopLeftX.getOrElse(0),
+                  request.body.selectionTopLeftY.getOrElse(0),
+                  request.body.selectionBottomRightX.getOrElse(0),
+                  request.body.selectionBottomRightY.getOrElse(0)
+                ))
+            case SAMInteractionType.POINT =>
+              Some(SAMPointPrompt(request.body.pointX.getOrElse(0), request.body.pointY.getOrElse(0)))
+            case SAMInteractionType.EXEMPLAR_BOXES =>
+              Some(SAMExemplarPrompt(exemplarBoxes.map(box =>
+                SAMExemplarBox(box.topLeftX, box.topLeftY, box.bottomRightX, box.bottomRightY, box.label))))
+            case _ => None
+          }).toFox ?~> "Unsupported SAM interaction type."
           beforeDataLoading = Instant.now
           data <- datastoreClient.getLayerData(
             dataset,
@@ -671,13 +710,7 @@ class DatasetController @Inject() (
           mask <- wKRemoteSegmentAnythingClient.getMask(
             data,
             dataLayer.elementClass,
-            request.body.interactionType,
-            request.body.selectionTopLeftX,
-            request.body.selectionTopLeftY,
-            request.body.selectionBottomRightX,
-            request.body.selectionBottomRightY,
-            request.body.pointX,
-            request.body.pointY,
+            prompt,
             targetMagSelectedBbox.size,
             intensityMin,
             intensityMax

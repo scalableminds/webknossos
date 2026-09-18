@@ -172,6 +172,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
     val editableMappingsEnabled: Boolean = get[Boolean]("features.editableMappingsEnabled")
     val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
+    val segmentAnythingExemplarsEnabled: Boolean = get[Boolean]("features.segmentAnythingExemplarsEnabled")
     val passkeysEnabled: Boolean = get[Boolean]("features.passkeysEnabled")
     val registerToDefaultOrgaEnabled: Boolean = get[Boolean]("features.registerToDefaultOrgaEnabled")
     val supportAiAgentUrl: Option[String] = getOptional[String]("features.supportAiAgentUrl")
@@ -303,6 +304,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     val uri: String = get[String]("segmentAnything.uri")
     val user: String = get[String]("segmentAnything.user")
     val password: String = get[String]("segmentAnything.password")
+    val requestTimeout: FiniteDuration = get[FiniteDuration]("segmentAnything.requestTimeout")
   }
 
   object ExternalPathDeletionService {

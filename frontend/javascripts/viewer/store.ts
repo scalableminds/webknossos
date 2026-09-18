@@ -342,8 +342,22 @@ export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "la
   readonly layers?: Record<string, Partial<DatasetLayerConfiguration>>;
 };
 
+export type PendingExemplarBox = {
+  // in mag1, layer space
+  readonly min: Vector3;
+  readonly max: Vector3;
+  readonly label: number; // 1 = positive exemplar, 0 = negative
+  // The viewport the box was drawn in. Recorded per box because the active viewport follows the
+  // mouse, so by the time the boxes are submitted from the toolbar it may be a different one --
+  // and it determines which axis is the section axis.
+  readonly viewport: OrthoViewWithoutTD;
+};
+
 export type QuickSelectConfig = {
   readonly useHeuristic: boolean;
+  // Only relevant for useHeuristic=false. Prompts the model's detector with several example boxes
+  // instead of tracking the one object the user pointed at, yielding up to 16 segments at once.
+  readonly useExemplars?: boolean;
   // Only relevant for useHeuristic=false:
   readonly predictionDepth?: number;
   // Only relevant for useHeuristic=true:
@@ -629,6 +643,9 @@ type UiInformation = {
     | "drawing" // the user is currently drawing a bounding box
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
+  // Exemplar boxes the user has drawn but not yet submitted. Unlike the other quick-select modes,
+  // which fire as soon as the rectangle is released, exemplars are collected and run together.
+  readonly quickSelectExemplarBoxes: PendingExemplarBox[];
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
   readonly voxelPipetteToolInfo: { pinnedPosition: Vector3 | null };
   readonly navbarHeight: number;

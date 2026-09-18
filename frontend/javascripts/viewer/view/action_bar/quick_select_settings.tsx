@@ -5,11 +5,16 @@ import features from "features";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import { useDispatch } from "react-redux";
+import getSceneController from "viewer/controller/scene_controller_provider";
 import defaultState from "viewer/default_state";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import { showQuickSelectSettingsAction } from "viewer/model/actions/ui_actions";
+import {
+  clearQuickSelectExemplarBoxesAction,
+  showQuickSelectSettingsAction,
+} from "viewer/model/actions/ui_actions";
 import {
   cancelQuickSelectAction,
+  computeQuickSelectForExemplarsAction,
   confirmQuickSelectAction,
   fineTuneQuickSelectAction,
 } from "viewer/model/actions/volumetracing_actions";
@@ -36,12 +41,36 @@ export function QuickSelectControls() {
 
 function AiQuickSelectControls() {
   const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
+  const exemplarBoxes = useWkSelector((state) => state.uiInformation.quickSelectExemplarBoxes);
+  const isQuickSelectActive = useWkSelector(
+    (state) => state.uiInformation.quickSelectState === "active",
+  );
+  const areExemplarsAvailable = Boolean(features().segmentAnythingExemplarsEnabled);
+  const useExemplars = Boolean(quickSelectConfig.useExemplars) && areExemplarsAvailable;
 
   const dispatch = useDispatch();
 
   const onChangePredictionDepth = (predictionDepth: number) => {
     const conf = { ...quickSelectConfig, predictionDepth };
     dispatch(updateUserSettingAction("quickSelect", conf));
+  };
+
+  const onToggleExemplars = (value: boolean) => {
+    dispatch(updateUserSettingAction("quickSelect", { ...quickSelectConfig, useExemplars: value }));
+    dispatch(clearQuickSelectExemplarBoxesAction());
+    getSceneController().quickSelectGeometry.setExemplarBoxes([]);
+  };
+
+  const onClearExemplars = () => {
+    dispatch(clearQuickSelectExemplarBoxesAction());
+    getSceneController().quickSelectGeometry.setExemplarBoxes([]);
+  };
+
+  const onRunExemplars = () => {
+    dispatch(
+      computeQuickSelectForExemplarsAction(exemplarBoxes, getSceneController().quickSelectGeometry),
+    );
+    dispatch(showQuickSelectSettingsAction(false));
   };
 
   const closeControls = () => {
@@ -61,6 +90,11 @@ function AiQuickSelectControls() {
                 be segmented at once.
               </p>
               <p>
+                With "Find Similar Instances", you instead draw boxes around a few examples and the
+                model detects every instance resembling them, creating one segment per instance (at
+                most 16). This is considerably slower than a single prompt.
+              </p>
+              <p>
                 Hint: If the predicted selection is too big, zoom in a bit further and try again.
               </p>
             </div>
@@ -69,6 +103,14 @@ function AiQuickSelectControls() {
           <QuestionCircleOutlined />
         </FastTooltip>
       </div>
+      {areExemplarsAvailable ? (
+        <SwitchSetting
+          label="Find Similar Instances"
+          value={useExemplars}
+          onChange={onToggleExemplars}
+          tooltipText="Draw a few example boxes and let the model find every instance that looks like them. Returns up to 16 segments at once."
+        />
+      ) : null}
       <NumberSliderSetting
         label="Prediction Depth"
         min={1}
@@ -78,6 +120,42 @@ function AiQuickSelectControls() {
         onChange={onChangePredictionDepth}
         defaultValue={defaultState.userConfiguration.quickSelect.predictionDepth}
       />
+      {useExemplars ? (
+        <div style={{ marginTop: "0.5rem" }}>
+          <div style={{ marginBottom: "0.5rem" }}>
+            {exemplarBoxes.length === 0
+              ? "Draw one or more boxes around example instances."
+              : `${exemplarBoxes.length} exemplar box${exemplarBoxes.length === 1 ? "" : "es"} drawn.`}
+          </div>
+          {/* Running the detector on every section is far slower than an interactive prompt, so
+              say so before the user starts a deep prediction rather than after. */}
+          {(quickSelectConfig.predictionDepth || 1) > 5 ? (
+            <div style={{ marginBottom: "0.5rem", opacity: 0.65 }}>
+              Detecting instances across {quickSelectConfig.predictionDepth} sections can take
+              several minutes.
+            </div>
+          ) : null}
+          <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem" }}>
+            <ButtonComponent
+              size="small"
+              onClick={onClearExemplars}
+              disabled={exemplarBoxes.length === 0}
+              title="Discard the drawn exemplar boxes"
+            >
+              Clear
+            </ButtonComponent>
+            <ButtonComponent
+              size="small"
+              type="primary"
+              onClick={onRunExemplars}
+              disabled={exemplarBoxes.length === 0 || isQuickSelectActive}
+              title="Find all instances resembling the drawn boxes"
+            >
+              Find Instances
+            </ButtonComponent>
+          </div>
+        </div>
+      ) : null}
       <Shortcut supportInputElements keys="escape" onTrigger={closeControls} />
       <Shortcut supportInputElements keys="enter" onTrigger={closeControls} />
     </div>

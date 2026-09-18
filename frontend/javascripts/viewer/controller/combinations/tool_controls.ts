@@ -10,6 +10,7 @@ import {
   ContourModeEnum,
   type OrthoView,
   OrthoViews,
+  type OrthoViewWithoutTD,
   type Point2,
   type Vector3,
   type Viewport,
@@ -87,12 +88,14 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import {
+  addQuickSelectExemplarBoxAction,
   hideMeasurementTooltipAction,
   setActiveUserBoundingBoxId,
   setIsMeasuringAction,
   setLastMeasuredPositionAction,
   setQuickSelectStateAction,
   setVoxelPipetteTooltipPinnedPositionAction,
+  showQuickSelectSettingsAction,
 } from "viewer/model/actions/ui_actions";
 import {
   computeQuickSelectForPointAction,
@@ -1047,19 +1050,30 @@ export class BoundingBoxToolController extends ToolController {
 }
 
 export class QuickSelectToolController extends VolumeToolController {
-  static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
+  static getPlaneMouseControls(planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
     let startPos: Vector3 | null = null;
     let currentPos: Vector3 | null = null;
     let isDragging = false;
     const SceneController = getSceneController();
     const { quickSelectGeometry } = SceneController;
+    const isExemplarMode = () => {
+      const { quickSelect } = Store.getState().userConfiguration;
+      return (
+        !quickSelect.useHeuristic &&
+        Boolean(quickSelect.useExemplars) &&
+        Boolean(features().segmentAnythingExemplarsEnabled)
+      );
+    };
     return {
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
         // Potentially confirm earlier quick select actions. That way, the user
         // can draw multiple rectangles even in preview mode. When starting a new
         // rectangle, the old one is confirmed. If no quick select rectangle exists,
-        // this is a noop effectively.
-        Store.dispatch(confirmQuickSelectAction());
+        // this is a noop effectively. In exemplar mode there is no preview to confirm --
+        // the boxes are collected until the user submits them.
+        if (!isExemplarMode()) {
+          Store.dispatch(confirmQuickSelectAction());
+        }
         quickSelectGeometry.detachTextureMask();
 
         Store.dispatch(setQuickSelectStateAction("drawing"));
@@ -1097,6 +1111,27 @@ export class QuickSelectToolController extends VolumeToolController {
           return;
         }
         if (startPos != null && currentPos != null) {
+          if (isExemplarMode()) {
+            // Collect the box rather than running a request for it: exemplars are submitted
+            // together, since one request asks for everything resembling all of them.
+            Store.dispatch(
+              addQuickSelectExemplarBoxAction({
+                min: V3.min(startPos, currentPos),
+                max: V3.max(startPos, currentPos),
+                label: 1,
+                // This handler belongs to one plane, so this is the viewport the box was drawn
+                // in -- unlike the store's activeViewport, which tracks the mouse.
+                viewport: planeId as OrthoViewWithoutTD,
+              }),
+            );
+            Store.dispatch(setQuickSelectStateAction("inactive"));
+            quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+            quickSelectGeometry.setExemplarBoxes([
+              ...Store.getState().uiInformation.quickSelectExemplarBoxes,
+            ]);
+            Store.dispatch(showQuickSelectSettingsAction(true));
+            return;
+          }
           Store.dispatch(
             computeQuickSelectForRectAction(startPos, currentPos, quickSelectGeometry),
           );
@@ -1141,7 +1176,8 @@ export class QuickSelectToolController extends VolumeToolController {
         const isAISelectAvailable = features().segmentAnythingEnabled;
         const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
 
-        if (!isQuickSelectHeuristic) {
+        if (!isQuickSelectHeuristic && !isExemplarMode()) {
+          // A click carries no extent, so it cannot serve as an exemplar box.
           Store.dispatch(computeQuickSelectForPointAction(clickedPos, quickSelectGeometry));
         }
       },
@@ -1153,14 +1189,20 @@ export class QuickSelectToolController extends VolumeToolController {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _userConfiguration: UserConfiguration,
+    userConfiguration: UserConfiguration,
     shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
+    const { quickSelect } = userConfiguration;
+    const isExemplarMode = !quickSelect.useHeuristic && Boolean(quickSelect.useExemplars);
     return {
-      leftDrag: shiftKey ? "Resize Rectangle symmetrically" : "Draw Rectangle around Segment",
+      leftDrag: shiftKey
+        ? "Resize Rectangle symmetrically"
+        : isExemplarMode
+          ? "Draw Exemplar Box"
+          : "Draw Rectangle around Segment",
       rightClick: "Context Menu",
     };
   }

@@ -174,6 +174,21 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "ADD_QUICK_SELECT_EXEMPLAR_BOX": {
+      return updateKey(state, "uiInformation", {
+        quickSelectExemplarBoxes: [...state.uiInformation.quickSelectExemplarBoxes, action.box],
+      });
+    }
+
+    case "CLEAR_QUICK_SELECT_EXEMPLAR_BOXES": {
+      if (state.uiInformation.quickSelectExemplarBoxes.length === 0) {
+        return state;
+      }
+      return updateKey(state, "uiInformation", {
+        quickSelectExemplarBoxes: [],
+      });
+    }
+
     case "HIDE_MEASUREMENT_TOOLTIP": {
       return updateKey2(state, "uiInformation", "measurementToolInfo", {
         lastMeasuredPosition: null,

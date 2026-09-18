@@ -80,6 +80,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     this
   }
 
+  def withRequestTimeout(timeout: FiniteDuration): RPCRequest = {
+    request = request.withRequestTimeout(timeout)
+    this
+  }
+
   def silent: RPCRequest = {
     verbose = false
     this

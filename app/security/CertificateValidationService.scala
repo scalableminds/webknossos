@@ -56,7 +56,12 @@ class CertificateValidationService @Inject() (implicit ec: ExecutionContext) ext
   def checkCertificateCached(): Fox[(Boolean, Long)] = cache.getOrLoad("c", _ => Fox.successful(checkCertificate))
 
   private def defaultConfigOverridesMap: Map[String, Boolean] =
-    Map("openIdConnectEnabled" -> false, "segmentAnythingEnabled" -> false, "editableMappingsEnabled" -> false)
+    Map(
+      "openIdConnectEnabled" -> false,
+      "segmentAnythingEnabled" -> false,
+      "segmentAnythingExemplarsEnabled" -> false,
+      "editableMappingsEnabled" -> false
+    )
 
   lazy val getFeatureOverrides: Map[String, Boolean] = publicKeyBox match {
     case Full(publicKey) =>

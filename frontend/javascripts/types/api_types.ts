@@ -783,6 +783,9 @@ export type APIFeatureToggles = {
   readonly optInTabs?: Array<string>;
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
+  // Exemplar-box prompts. Needs the SAM server to run the sam3 backend with its detector
+  // resident, so it is gated separately from segmentAnythingEnabled.
+  readonly segmentAnythingExemplarsEnabled?: boolean;
   readonly passkeysEnabled: boolean;
   readonly registerToDefaultOrgaEnabled?: boolean;
   readonly supportAiAgentUrl?: string;

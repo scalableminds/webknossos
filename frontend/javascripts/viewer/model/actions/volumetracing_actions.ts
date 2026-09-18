@@ -10,7 +10,7 @@ import type {
 import type { ContourMode, OrthoView, Vector2, Vector3 } from "viewer/constants";
 import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
-import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
+import type { PendingExemplarBox, Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 import type { ApplicableVolumeServerUpdateAction } from "../sagas/volume/update_actions";
 import type { Action } from "./actions";
@@ -73,6 +73,9 @@ export type ApplyVolumeUpdateActionsFromServerAction = ReturnType<
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
 export type ComputeQuickSelectForPointAction = ReturnType<typeof computeQuickSelectForPointAction>;
+export type ComputeQuickSelectForExemplarsAction = ReturnType<
+  typeof computeQuickSelectForExemplarsAction
+>;
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
 export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
@@ -128,6 +131,7 @@ export type VolumeTracingAction =
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
   | ComputeQuickSelectForPointAction
+  | ComputeQuickSelectForExemplarsAction
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
@@ -514,6 +518,21 @@ export const computeQuickSelectForPointAction = (
   ({
     type: "COMPUTE_QUICK_SELECT_FOR_POINT",
     position,
+    quickSelectGeometry,
+  }) as const;
+
+/*
+ * Unlike the two actions above, this one is not dispatched when a rectangle is released. The
+ * exemplar boxes are collected first and submitted together, since a single request asks the
+ * model to find every instance resembling all of them.
+ */
+export const computeQuickSelectForExemplarsAction = (
+  boxes: PendingExemplarBox[],
+  quickSelectGeometry: QuickSelectGeometry,
+) =>
+  ({
+    type: "COMPUTE_QUICK_SELECT_FOR_EXEMPLARS",
+    boxes,
     quickSelectGeometry,
   }) as const;
 

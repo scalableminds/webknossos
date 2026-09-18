@@ -18,6 +18,38 @@ export type BoundingBox2D = {
   max: Vector2; // exclusive
 };
 
+/*
+ * Collects the 2D bounding box of every non-zero label in a label map, in a single pass.
+ *
+ * Unlike estimateBBoxInMask, which grows one box around a binary mask, this is for responses that
+ * carry several instances at once (each with its own id). Scanning once per id instead would
+ * re-read the whole slice for every instance.
+ *
+ * The mask is indexed [u, v, 0]; the returned maxima are exclusive, matching BoundingBox2D.
+ */
+export function collectLabelBoundingBoxes(mask: NdArray): Map<number, BoundingBox2D> {
+  const [width, height] = mask.shape;
+  const boxes = new Map<number, BoundingBox2D>();
+  for (let u = 0; u < width; u++) {
+    for (let v = 0; v < height; v++) {
+      const label = mask.get(u, v, 0);
+      if (label === 0) {
+        continue;
+      }
+      const existing = boxes.get(label);
+      if (existing == null) {
+        boxes.set(label, { min: [u, v], max: [u + 1, v + 1] });
+      } else {
+        if (u < existing.min[0]) existing.min[0] = u;
+        if (v < existing.min[1]) existing.min[1] = v;
+        if (u + 1 > existing.max[0]) existing.max[0] = u + 1;
+        if (v + 1 > existing.max[1]) existing.max[1] = v + 1;
+      }
+    }
+  }
+  return boxes;
+}
+
 export function estimateBBoxInMask(mask: NdArray, initialBBox: BoundingBox2D, maxError: number) {
   let currentBBox = { min: V2.clone(initialBBox.min), max: V2.clone(initialBBox.max) };
   while (true) {

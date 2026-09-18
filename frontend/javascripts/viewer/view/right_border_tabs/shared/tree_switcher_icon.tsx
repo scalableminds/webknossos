@@ -1,16 +1,17 @@
-import { DownOutlined } from "@ant-design/icons";
+import { CaretDownFilled } from "@ant-design/icons";
+import classnames from "classnames";
 
-const EXPANDED_STYLE = {
-  transform: "rotate(0deg)",
-  transition: "transform 0.3s",
-};
-
-const COLLAPSED_STYLE = {
-  transform: "rotate(-90deg)",
-  transition: "transform 0.3s",
-};
-
-// Adapted from https://ant.design/components/tree#tree-demo-customized-icon
-export function TreeSwitcherIcon({ expanded }: { expanded?: boolean }) {
-  return <DownOutlined style={expanded ? EXPANDED_STYLE : COLLAPSED_STYLE} />;
+/*
+ * The expand/collapse icon of the trees in the border tabs.
+ *
+ * These trees pass `showLine`, for which antd's own switcher is a plus/minus square, and
+ * which makes antd tag a custom switcher with `-switcher-line-icon` instead of
+ * `-switcher-icon`. Rendering antd's caret and asking for `-switcher-icon` explicitly gives
+ * the small caret of antd's default (line-less) tree: that class carries both the 10px size
+ * and the rotation transition, and antd rotates the svg of a collapsed node itself.
+ *
+ * antd clones this element to add its own class, so `className` has to be forwarded.
+ */
+export function TreeSwitcherIcon({ className }: { className?: string }) {
+  return <CaretDownFilled className={classnames("ant-tree-switcher-icon", className)} />;
 }

@@ -13,9 +13,8 @@ import Icon, {
   ShrinkOutlined,
   UndoOutlined,
 } from "@ant-design/icons";
-// The mesh iconography of the segments tab is the same cube as the bounding box tool's.
-import MeshIcon from "@images/icons/icon-bounding-box.svg?react";
 import BrushIcon from "@images/icons/icon-brush.svg?react";
+import MeshIcon from "@images/icons/icon-mesh-vertices.svg?react";
 import PipetteIcon from "@images/icons/icon-pipette.svg?react";
 import { App, Divider, type MenuProps } from "antd";
 import type { ItemType } from "antd/es/menu/interface";

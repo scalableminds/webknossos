@@ -1,7 +1,6 @@
 import Icon, { EllipsisOutlined, LoadingOutlined } from "@ant-design/icons";
-// The mesh iconography of the segments tab is the same cube as the bounding box tool's.
-import MeshIcon from "@images/icons/icon-bounding-box.svg?react";
 import CrosshairsIcon from "@images/icons/icon-crosshairs.svg?react";
+import MeshIcon from "@images/icons/icon-mesh-vertices.svg?react";
 import { type ButtonProps, Flex } from "antd";
 import classnames from "classnames";
 import FastTooltip from "components/fast_tooltip";

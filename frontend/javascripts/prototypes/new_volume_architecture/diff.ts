@@ -92,6 +92,16 @@ export function encodeBucketDiff(diff: BucketDiff): Uint8Array {
   return new Uint8Array(buffer);
 }
 
+/**
+ * Base64 of `encodeBucketDiff`'s bytes, ready to go straight into an
+ * `updateBucketPartial` update action. A run-length diff is a few hundred
+ * bytes at most (§5.6), so the classic fromCharCode/btoa route is fine —
+ * no need for chunking the way a full bucket's bytes would require.
+ */
+export function encodeBucketDiffBase64(diff: BucketDiff): string {
+  return btoa(String.fromCharCode(...encodeBucketDiff(diff)));
+}
+
 export function decodeBucketDiff(bytes: Uint8Array): VoxelRun[] {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const value = view.getBigUint64(0, true);

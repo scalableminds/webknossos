@@ -627,8 +627,7 @@ function CreateAnimationModal(props: Props) {
                     {fieldLabel("Segmentation layer (optional)")}
                     <Select
                       allowClear
-                      showSearch
-                      optionFilterProp="label"
+                      showSearch={{ optionFilterProp: "label" }}
                       placeholder="None"
                       value={selectedSegmentationLayerName}
                       onChange={setSelectedSegmentationLayerName}

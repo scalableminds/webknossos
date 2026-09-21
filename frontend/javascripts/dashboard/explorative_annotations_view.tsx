@@ -146,9 +146,11 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
     if (this.props.datasetNameFilter !== prevProps.datasetNameFilter) {
       // Dataset filter changed via the URL.
-      this.setState({
-        tags: this.props.datasetNameFilter ? [this.props.datasetNameFilter] : [],
-      });
+      this.setState((state) => ({
+        tags: this.props.datasetNameFilter
+          ? [this.props.datasetNameFilter]
+          : state.tags.filter((tag) => tag !== prevProps.datasetNameFilter),
+      }));
     } else if (
       prevProps.datasetNameFilter != null &&
       prevState.tags.includes(prevProps.datasetNameFilter) &&

@@ -8,7 +8,7 @@ import {
 } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getOrganization } from "admin/api/organization";
-import { deleteDatasetOnDisk } from "admin/rest_api";
+import { deleteDatasetOnDisk, getAnnotationCountForDataset } from "admin/rest_api";
 import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import FormattedId from "components/formatted_id";
 import features from "features";
@@ -21,6 +21,7 @@ import { pluralize } from "libs/utils";
 import keyBy from "lodash-es/keyBy";
 import uniq from "lodash-es/uniq";
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import type { APIDatasetCompact, Folder } from "types/api_types";
 import Constants from "viewer/constants";
 import {
@@ -104,6 +105,11 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
     refetchOnWindowFocus: false,
   });
   const owningOrganizationName = owningOrganization?.name;
+  const { data: annotationCount } = useQuery({
+    queryKey: ["annotationCount", selectedDataset.id],
+    queryFn: () => getAnnotationCountForDataset(selectedDataset.id),
+    refetchOnWindowFocus: false,
+  });
 
   const renderOrganization = () => {
     if (activeUser?.organization === selectedDataset.owningOrganization) return;
@@ -128,12 +134,19 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         )}{" "}
         {selectedDataset.name}
       </Typography.Title>
+      <div style={{ marginBottom: 4 }}>
+        {annotationCount != null && annotationCount > 0 ? (
+          <Link to={`/dashboard/annotations?dataset=${encodeURIComponent(selectedDataset.name)}`}>
+            {annotationCount} {pluralize("Annotation", annotationCount)} ›
+          </Link>
+        ) : null}
+      </div>
       {renderOrganization()}
       <Spin spinning={fullDataset == null}>
         {selectedDataset.isActive && (
           <div>
             <div className="sidebar-label">Dimensions</div>
-            {fullDataset && (
+            {fullDataset?.isActive && (
               <div className="info-tab-block" style={{ marginTop: -3 }}>
                 <table
                   style={{

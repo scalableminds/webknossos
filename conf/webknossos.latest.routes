@@ -205,7 +205,7 @@ GET           /annotations/:typ/:id/download                                    
 
 GET           /annotations/source/:accessTokenOrId                                              controllers.AnnotationPrivateLinkController.annotationSource(accessTokenOrId: String, userToken: Option[String])
 
-GET           /annotations/readable                                                             controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET           /annotations/readable                                                             controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean], datasetId: Option[ObjectId])
 GET           /annotations/:typ/:id/sharedTeams                                                 controllers.AnnotationController.getSharedTeams(typ: String, id: ObjectId)
 PATCH         /annotations/:typ/:id/sharedTeams                                                 controllers.AnnotationController.updateSharedTeams(typ: String, id: ObjectId)
 PATCH         /annotations/:typ/:id/collaborationMode                                           controllers.AnnotationController.updateCollaborationMode(typ: String, id: ObjectId, collaborationMode: String)

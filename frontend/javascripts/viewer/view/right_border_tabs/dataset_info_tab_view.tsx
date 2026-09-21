@@ -11,7 +11,9 @@ import IconMousewheel from "@images/icons/icon-mousewheel.svg?react";
 import IconSegments from "@images/icons/icon-segments.svg?react";
 import IconSkeletons from "@images/icons/icon-skeletons.svg?react";
 import IconVoxelsize from "@images/icons/icon-voxelsize.svg?react";
+import { useQuery } from "@tanstack/react-query";
 import { getOrganization } from "admin/api/organization";
+import { getAnnotationCountForDataset } from "admin/rest_api";
 import { Space, Tag, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { ThemedIcon } from "components/themed_icon";
@@ -271,6 +273,24 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
         <Icon component={IconVoxelsize} className="info-tab-icon" aria-label="Voxel size" />
       </td>
       <td onClick={copyVoxelSizeToClipboard}>{formatScale(dataset.dataSource.scale)}</td>
+    </FastTooltip>
+  );
+}
+
+function DatasetAnnotationCountLink({ dataset }: { dataset: APIDataset }) {
+  const { data: annotationCount } = useQuery({
+    queryKey: ["annotationCount", dataset.id],
+    queryFn: () => getAnnotationCountForDataset(dataset.id),
+    refetchOnWindowFocus: false,
+  });
+
+  if (!annotationCount) return null;
+
+  return (
+    <FastTooltip title="Go to the annotation list for this dataset" placement="left">
+      <Link to={`/dashboard/annotations?dataset=${encodeURIComponent(dataset.name)}`}>
+        {annotationCount} {pluralize("Annotation", annotationCount)} ›
+      </Link>
     </FastTooltip>
   );
 }
@@ -535,9 +555,10 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           <div
             style={{
               wordWrap: "break-word",
+              padding: "5px 0",
             }}
           >
-            <Typography.Title level={5} style={{ display: "initial" }}>
+            <Typography.Title level={5} style={{ display: "initial", paddingRight: "5px" }}>
               {datasetName}
             </Typography.Title>
             {getEditSettingsIcon()}
@@ -551,6 +572,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
               <Markdown>{datasetDescription}</Markdown>
             </div>
           ) : null}
+          <DatasetAnnotationCountLink dataset={dataset} />
         </div>
       );
     }
@@ -567,6 +589,9 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         >
           {datasetName}
         </Link>
+        <div>
+          <DatasetAnnotationCountLink dataset={dataset} />
+        </div>
       </div>
     );
   }

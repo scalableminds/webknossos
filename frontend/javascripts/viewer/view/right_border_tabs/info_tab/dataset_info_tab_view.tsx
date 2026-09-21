@@ -23,21 +23,21 @@ import {
 import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import type { Task, WebknossosState } from "viewer/store";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
-import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
-import { MarkdownModal } from "../components/markdown_modal";
-import type { KeyboardShortcutId } from "../keyboard_shortcuts/keyboard_shortcut_constants";
+import { KeyboardKeyIcon } from "../../components/keyboard_key_icon";
+import { MarkdownModal } from "../../components/markdown_modal";
+import type { KeyboardShortcutId } from "../../keyboard_shortcuts/keyboard_shortcut_constants";
 import type {
   KeyboardShortcutsMap,
   UnmodifiedLayoutMap,
-} from "../keyboard_shortcuts/keyboard_shortcut_types";
-import { keySequenceToUiElements } from "../keyboard_shortcuts/keyboard_shortcut_utils";
-import { AnnotationStatisticsSection } from "./info_tab/annotation_stats_section";
-import { DatasetAnnotationCountLink } from "./info_tab/dataset_annotation_count";
-import { DatasetExtentRow } from "./info_tab/dataset_extent_row";
-import { DebugInfo } from "./info_tab/debug_info";
-import { MagInfoRow } from "./info_tab/mag_info_row";
-import { OwningOrganizationRow } from "./info_tab/owing_organization_row";
-import { VoxelSizeRow } from "./info_tab/voxel_size_row";
+} from "../../keyboard_shortcuts/keyboard_shortcut_types";
+import { keySequenceToUiElements } from "../../keyboard_shortcuts/keyboard_shortcut_utils";
+import { AnnotationStatisticsSection } from "./annotation_stats_section";
+import { DatasetAnnotationCountLink } from "./dataset_annotation_count";
+import { DatasetExtentRow } from "./dataset_extent_row";
+import { DebugInfo } from "./debug_info";
+import { MagInfoRow } from "./mag_info_row";
+import { OwningOrganizationRow } from "./owing_organization_row";
+import { VoxelSizeRow } from "./voxel_size_row";
 
 type StateProps = {
   annotationName: string;

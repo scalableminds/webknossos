@@ -50,6 +50,13 @@
     margin-bottom: 0;
     min-height: @segment-row-height;
 
+    // antd puts a pseudo-element just below every row to bridge that margin, so that the
+    // drop indicator doesn't flicker while dragging. With the margin gone it lies on top
+    // of the next row instead, where it would swallow the clicks aimed at its first 4px.
+    &::before {
+      pointer-events: none;
+    }
+
     &:hover,
     // A segment that is hovered in the data viewports is highlighted in the list, too.
     &:has(.segment-row--hovered-in-viewport) {

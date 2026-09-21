@@ -111,6 +111,13 @@
     min-height: 0;
   }
 
+  // antd draws the switcher's hover background as a pseudo-element of a fixed height (its
+  // own title height) anchored to the top, so on our taller rows it stops short of the
+  // bottom edge.
+  .ant-tree-switcher::before {
+    height: 100%;
+  }
+
   .ant-tree-checkbox {
     margin-inline-end: 8px;
     // antd aligns the checkbox to the top of the title (via align-self plus a 2px margin)

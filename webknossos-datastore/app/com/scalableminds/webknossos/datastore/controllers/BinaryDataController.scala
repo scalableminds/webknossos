@@ -48,6 +48,13 @@ class BinaryDataController @Inject() (
 
   override def allowRemoteOrigin: Boolean = true
 
+  private val MaxThumbnailDimension = 5000
+
+  private def validateThumbnailDimensions(width: Int, height: Int): Fox[Unit] =
+    Fox.fromBool(
+      width > 0 && width <= MaxThumbnailDimension && height > 0 && height <= MaxThumbnailDimension
+    ) ?~> s"Thumbnail width and height must be between 1 and $MaxThumbnailDimension, got ${width}x$height" ~> BAD_REQUEST
+
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
   adHocMeshServiceHolder.dataStoreAdHocMeshConfig =
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
@@ -167,6 +174,7 @@ class BinaryDataController @Inject() (
   ): Action[RawBuffer] = Action.fox(parse.raw) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
+        _ <- validateThumbnailDimensions(width, height)
         (dataSource, dataLayer) <- datasetCache.getWithLayer(
           datasetId,
           dataLayerName
@@ -361,6 +369,10 @@ class BinaryDataController @Inject() (
     Action.fox(validateJson[CombinedThumbnailRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
+          _ <- validateThumbnailDimensions(request.body.width, request.body.height)
+          _ <- Fox.serialCombined(request.body.layers)(layerParams =>
+            validateThumbnailDimensions(layerParams.width, layerParams.height)
+          )
           layerResults <- Fox.serialCombined(request.body.layers)(layerParams =>
             combinedThumbnailLayerImage(datasetId, layerParams, request.body.width, request.body.height)
           )

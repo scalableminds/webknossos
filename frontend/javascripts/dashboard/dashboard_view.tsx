@@ -147,7 +147,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
   clearDatasetNameFilterFromUrl = () => {
     const tabKeyToURLMap = invert(urlTokenToTabKeyMap);
     const url = tabKeyToURLMap.explorativeAnnotations;
-    this.props.navigate(`/dashboard/${url}`, { replace: true });
+    this.props.navigate(`/dashboard/${url}`, { replace: false });
   };
 
   getValidTabKeys() {

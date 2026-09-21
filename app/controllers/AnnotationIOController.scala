@@ -259,8 +259,9 @@ class AnnotationIOController @Inject() (
         }
         // Only editable mapping (proofreading) uploads actually write update actions whose
         // history should stay inaccessible; plain volume/skeleton uploads keep earliestAccessibleVersion at 0.
-        earliestAccessibleVersion = if (savedAnyEditableMappingVersionsMutable) layerUpdatesStartVersionMutable
-        else 0L
+        earliestAccessibleVersion =
+          if (savedAnyEditableMappingVersionsMutable) layerUpdatesStartVersionMutable
+          else 0L
       } yield (annotationLayers, earliestAccessibleVersion)
     } else { // Multiple annotations with volume layers (but at most one each) were uploaded, they have no editable mappings. Merge those volume layers into one
       val uploadedVolumeLayersFlat = volumeLayersGrouped.toList.flatten

@@ -60,7 +60,7 @@ import CategorizationLabel, {
   CategorizationSearch,
 } from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
-import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_section";
+import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_block";
 import { DashboardEmptyAnnotationsPlaceholder } from "./dashboard_empty_annotations_placeholder";
 import { DashboardTopBar } from "./dashboard_top_bar";
 

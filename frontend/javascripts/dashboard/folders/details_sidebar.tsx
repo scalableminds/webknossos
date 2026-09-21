@@ -25,7 +25,7 @@ import { Link } from "react-router";
 import type { APIDatasetCompact, Folder } from "types/api_types";
 import Constants from "viewer/constants";
 import { DatasetExtentRow } from "viewer/view/right_border_tabs/info_tab/dataset_extent_row";
-import { OwningOrganizationRow } from "viewer/view/right_border_tabs/info_tab/owning_organization_row";
+import { OwningOrganizationRow } from "viewer/view/right_border_tabs/info_tab/owning_organization_block";
 import { VoxelSizeRow } from "viewer/view/right_border_tabs/info_tab/voxel_size_row";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";

@@ -8,7 +8,7 @@ import type { ReactElement } from "react";
 import { Fragment } from "react";
 import type { APITimeTrackingPerAnnotation } from "types/api_types";
 import type { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/constants";
-import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_section";
+import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_block";
 
 type TimeTrackingDetailViewProps = {
   userId: string;

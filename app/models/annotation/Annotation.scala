@@ -16,6 +16,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState.AnnotationState
 import models.annotation.CollaborationMode.CollaborationMode
 import models.annotation.AnnotationType.AnnotationType
+import models.dataset.DatasetDAO
 import play.api.libs.json.*
 import slick.jdbc.GetResult
 import slick.jdbc.GetResult.*
@@ -200,8 +201,8 @@ class AnnotationLayerDAO @Inject() (SQLClient: SqlClient)(implicit ec: Execution
     } yield ()
 }
 
-class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: AnnotationLayerDAO)(implicit
-    ec: ExecutionContext
+class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: AnnotationLayerDAO, datasetDAO: DatasetDAO)(
+    implicit ec: ExecutionContext
 ) extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   protected val collection = Annotations
   protected def resultConverter = GetResultAnnotationsRow
@@ -239,7 +240,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
     q"""
         (
-          _user = $requestingUserId
+          ${prefix}_user = $requestingUserId
           OR (
             (${prefix}visibility = ${AnnotationVisibility.Public} or ${prefix}visibility = ${AnnotationVisibility.Internal})
             AND (
@@ -255,6 +256,12 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
                 FROM webknossos.annotation_contributors
                 WHERE _user = $requestingUserId
               )
+            )
+            AND EXISTS ( -- user must also still have access to the annotation's dataset
+              SELECT 1
+              FROM webknossos.datasets_ dd
+              WHERE dd._id = ${prefix}_dataset
+              AND (${datasetDAO.readAccessQWithPrefix(requestingUserId, q"dd.")})
             )
           )
         )

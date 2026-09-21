@@ -11,7 +11,7 @@ import { ArbitraryVectorInput } from "libs/vector_input";
 import type React from "react";
 import { Fragment, PureComponent, useState } from "react";
 import { connect, useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import type { APIDataset, APIOrganization, APISegmentationLayer, APIUser } from "types/api_types";
 import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
 import constants, {
@@ -234,6 +234,7 @@ function CreateAnnotationButton() {
       </ButtonWithAuthentication>
 
       <Modal
+        title="Select Segmentation Layer"
         open={isLayerSelectionModalVisible}
         onCancel={() => setLayerSelectionModalVisible(false)}
         onOk={handleLayerSelected}

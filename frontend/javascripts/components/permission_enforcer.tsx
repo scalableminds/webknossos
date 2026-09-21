@@ -1,5 +1,5 @@
 import { Button, Col, Result, Row } from "antd";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 export function PageNotAvailableToNormalUser() {
   return (

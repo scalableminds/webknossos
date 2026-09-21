@@ -33,7 +33,7 @@ import {
   getSegmentColorAsHSLA,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
-import Store, { type MinCutPartitions } from "viewer/store";
+import Store, { MinCutPartitionKeys, type MinCutPartitions } from "viewer/store";
 import type { BufferGeometryWithInfo } from "./mesh_helpers";
 
 // Add the raycast function. Assumes the BVH is available on
@@ -45,9 +45,9 @@ const hslToSRGB = (hsl: Vector3) => new Color().setHSL(...hsl).convertSRGBToLine
 const WHITE = new Color(1, 1, 1);
 const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
 const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
-const PARTITION_COLORS = {
-  1: [0.2, 0.2, 0.2] as Vector3,
-  2: [0.7, 0.7, 0.7] as Vector3,
+export const PARTITION_COLORS = {
+  partitionA: [0.2, 0.2, 0.2] as Vector3,
+  partitionB: [0.7, 0.7, 0.7] as Vector3,
 };
 const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
 const HOVERED_COLOR_VEC3 = HOVERED_COLOR.toArray() as Vector3;
@@ -281,6 +281,14 @@ export default class SegmentMeshController {
       this.throttledUpdateActiveUnmappedSegmentIdHighlighting(
         getActiveUnmappedSegmentId(state, segmentationTracing),
       );
+      // Re-apply the multi-split partition highlighting for the (re)created mesh.
+      // Needed in case the mesh is reloaded due to e.g. incorporating foreign update actions.
+      if (state.uiInformation.activeTool === AnnotationTool.PROOFREAD) {
+        this.throttledUpdateMinCutPartitionHighlighting(
+          state.localSegmentationStateByLayer[segmentationTracing.tracingId]?.minCutPartitions ??
+            null,
+        );
+      }
     }
   }
 
@@ -711,9 +719,9 @@ export default class SegmentMeshController {
 
       const highlightRanges: HighlightState = [];
       if (vertexSegmentMapping && minCutPartitions) {
-        for (const partitionNumber of [1, 2] as const) {
-          const partitionColor = PARTITION_COLORS[partitionNumber];
-          for (const segmentId of minCutPartitions[partitionNumber]) {
+        for (const partitionName of MinCutPartitionKeys) {
+          const partitionColor = PARTITION_COLORS[partitionName];
+          for (const segmentId of minCutPartitions[partitionName]) {
             const containsSegmentId = vertexSegmentMapping.containsSegmentId(segmentId);
             if (containsSegmentId) {
               const indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(segmentId);
@@ -741,8 +749,14 @@ export default class SegmentMeshController {
     150,
   );
 
+  throttledUpdateMinCutPartitionHighlighting = throttle(
+    this.updateMinCutPartitionHighlighting,
+    150,
+  );
+
   destroy(): void {
     this.throttledUpdateActiveUnmappedSegmentIdHighlighting.cancel();
+    this.throttledUpdateMinCutPartitionHighlighting.cancel();
     // Dispose all mesh groups (across all additional coordinates) so that
     // their geometries and materials are freed on the GPU.
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {

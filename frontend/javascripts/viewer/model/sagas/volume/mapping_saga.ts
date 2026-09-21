@@ -588,6 +588,13 @@ function* updateLocalHdf5Mapping(
     intersection: mutableRemainingEntries,
   } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMappingOrEmpty);
 
+  if (previousMapping != null && newSegmentIds.size === 0 && deletedValues.size === 0) {
+    // The set of rendered segment ids is exactly the one the current mapping was built for.
+    // We can skip updating the mapping.
+    yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
+    return;
+  }
+
   let newEntries;
   try {
     newEntries = yield* call(

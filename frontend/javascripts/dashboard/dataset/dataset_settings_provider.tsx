@@ -17,7 +17,7 @@ import isEqual from "lodash-es/isEqual";
 import size from "lodash-es/size";
 import messages from "messages";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import type { APIDataLayer, APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DataLayerWithTransformations } from "types/schemas/datasource.types";

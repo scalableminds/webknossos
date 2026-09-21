@@ -25,7 +25,7 @@ import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_fo
 import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
 import { Alert, App, Button, Input, Modal, Spin, Tag } from "antd";
-import type { ColumnType } from "antd/lib/table/interface";
+import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
@@ -50,7 +50,7 @@ import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 import type { APITask, APITaskType, TaskStatus } from "types/api_types";
 
 const { Search, TextArea } = Input;
@@ -137,7 +137,6 @@ function TaskListView({ initialFieldValues }: Props) {
     modal.confirm({
       title: "Manual Task Assignment",
       icon: <UserAddOutlined />,
-      width: 500,
       content: (
         <>
           <div>Please, select a user to manually assign this task to:</div>

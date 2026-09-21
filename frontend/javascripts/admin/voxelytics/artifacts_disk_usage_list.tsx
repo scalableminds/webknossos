@@ -1,5 +1,5 @@
 import { Table } from "antd";
-import type { ColumnsType } from "antd/lib/table";
+import type { ColumnsType } from "antd/es/table";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { localeCompareBy } from "libs/utils";
 import type React from "react";

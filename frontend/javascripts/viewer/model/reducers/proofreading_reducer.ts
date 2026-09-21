@@ -16,7 +16,7 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
         return state;
       }
       const minCutPartitions = layerData.minCutPartitions;
-      const otherPartitionIndex = action.partition === 1 ? 2 : 1;
+      const otherPartitionIndex = action.partition === "partitionA" ? "partitionB" : "partitionA";
       const actionAgglomerateId = action.agglomerateId;
       const actionUnmappedSegmentId = action.unmappedSegmentId;
       if (
@@ -74,14 +74,33 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
         localSegmentationStateByLayer: {
           [layerName]: {
             minCutPartitions: {
-              [1]: {
+              partitionA: {
                 $set: [],
               },
-              [2]: {
+              partitionB: {
                 $set: [],
               },
               agglomerateId: {
                 $set: null,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    case "SET_MULTI_CUT_AGGLOMERATE_ID": {
+      const layerData = state.localSegmentationStateByLayer[layerName];
+      // Only update the id while a selection exists.
+      if (!layerData?.minCutPartitions || layerData.minCutPartitions.agglomerateId == null) {
+        return state;
+      }
+      return update(state, {
+        localSegmentationStateByLayer: {
+          [layerName]: {
+            minCutPartitions: {
+              agglomerateId: {
+                $set: action.agglomerateId,
               },
             },
           },

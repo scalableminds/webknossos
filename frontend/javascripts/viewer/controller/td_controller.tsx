@@ -292,7 +292,7 @@ class TDController extends PureComponent<Props> {
             Store.dispatch(
               toggleSegmentInPartitionAction(
                 intersection.unmappedSegmentId,
-                2,
+                "partitionB",
                 intersection.meshId,
               ),
             );
@@ -308,7 +308,7 @@ class TDController extends PureComponent<Props> {
             Store.dispatch(
               toggleSegmentInPartitionAction(
                 intersection.unmappedSegmentId,
-                1,
+                "partitionA",
                 intersection.meshId,
               ),
             );

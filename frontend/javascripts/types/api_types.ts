@@ -841,6 +841,7 @@ export type APIJob = {
   readonly ownerEmail: string;
   readonly args: ApiJobArgs;
   readonly state: APIJobState;
+  readonly errorDetails: Record<string, unknown> | null | undefined;
   readonly resultLink: string | null | undefined;
   readonly returnValue: string | null | undefined;
   readonly voxelyticsWorkflowHash: string | null | undefined;

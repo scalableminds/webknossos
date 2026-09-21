@@ -15,6 +15,7 @@ export type CutAgglomerateFromNeighborsAction = ReturnType<
 >;
 type ResetMultiCutToolPartitionsAction = ReturnType<typeof resetMultiCutToolPartitionsAction>;
 export type MinCutPartitionsAction = ReturnType<typeof minCutPartitionsAction>;
+export type SetMultiCutAgglomerateIdAction = ReturnType<typeof setMultiCutAgglomerateIdAction>;
 
 export type ProofreadAction =
   | ProofreadAtPositionAction
@@ -25,7 +26,8 @@ export type ProofreadAction =
   | CutAgglomerateFromNeighborsAction
   | ToggleSegmentInPartitionAction
   | ResetMultiCutToolPartitionsAction
-  | MinCutPartitionsAction;
+  | MinCutPartitionsAction
+  | SetMultiCutAgglomerateIdAction;
 
 export const proofreadAtPosition = (
   position: Vector3,
@@ -94,7 +96,7 @@ export const cutAgglomerateFromNeighborsAction = (
 
 export const toggleSegmentInPartitionAction = (
   unmappedSegmentId: bigint,
-  partition: 1 | 2,
+  partition: "partitionA" | "partitionB",
   agglomerateId: bigint,
 ) =>
   ({
@@ -112,4 +114,13 @@ export const resetMultiCutToolPartitionsAction = () =>
 export const minCutPartitionsAction = () =>
   ({
     type: "MIN_CUT_PARTITIONS",
+  }) as const;
+
+// Needed in case a e.g. foreign action changed the agglomerate id of the agglomerate
+// the current user is in the progress of splitting with the multi split tool.
+// Make sure to only execute in case all multi split segments still belong to the newly given agglomerateId.
+export const setMultiCutAgglomerateIdAction = (agglomerateId: bigint) =>
+  ({
+    type: "SET_MULTI_CUT_AGGLOMERATE_ID",
+    agglomerateId,
   }) as const;

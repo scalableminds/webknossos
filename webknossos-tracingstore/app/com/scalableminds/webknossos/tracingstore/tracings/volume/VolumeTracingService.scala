@@ -931,38 +931,24 @@ class VolumeTracingService @Inject() (
       newVersion: Long,
       toTemporaryStore: Boolean,
       remapSegmentIds: Boolean
-  )(using tc: TokenContext): Fox[MergedVolumeStats] = {
-    val before = Instant.now
-    val volumeLayers = volumeTracingIds.zip(volumeTracings).map { case (tracingId, tracing) =>
-      volumeTracingLayer(ObjectId("annotationIdUnusedInThisContext"), tracingId, tracing)
-    }
-    val elementClassProto =
-      volumeLayers.headOption.map(_.tracing.elementClass).getOrElse(ElementClassProto.uint8)
-
-    val shouldCreateSegmentIndex =
-      volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(volumeLayers.map(_.tracing))
-
+  )(using tc: TokenContext): Fox[MergedVolumeStats] =
     for {
-      magSetsPerLayer <- Fox.serialCombined(volumeLayers) { volumeLayer =>
-        val magSet = new mutable.HashSet[Vec3Int]()
-        for {
-          _ <- volumeLayer.bucketStream.foreach { case (bucketPosition, _) =>
-            magSet.add(bucketPosition.mag)
-          }
-        } yield magSet.toSet
+      before = Instant.now
+      volumeLayers = volumeTracingIds.zip(volumeTracings).map { case (tracingId, tracing) =>
+        volumeTracingLayer(ObjectId("annotationIdUnusedInThisContext"), tracingId, tracing)
       }
-      magSets = magSetsPerLayer.filter(_.nonEmpty) // empty tracings should have no impact in this check
+      shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(
+        volumeLayers.map(_.tracing)
+      )
+      magSets <- determineMagSetsForLayersSkipEmpty(volumeLayers)
       result <-
-        // If none of the tracings contained any volume data. Do not save buckets, do not touch mag list
         if (magSets.isEmpty)
+          // If none of the tracings contained any volume data. Do not save buckets, do not touch mag list
           Fox.successful(MergedVolumeStats.empty(shouldCreateSegmentIndex))
         else {
           for {
-            magsIntersection: Set[Vec3Int] = magSets.headOption.map { head =>
-              magSets.foldLeft(head) { (acc, element) =>
-                acc.intersect(element)
-              }
-            }.getOrElse(Set.empty)
+            magsIntersection: Set[Vec3Int] = intersectMagSets(magSets)
+            elementClassProto = volumeLayers.headOption.map(_.tracing.elementClass).getOrElse(ElementClassProto.uint8)
             mergedVolume = new MergedVolume(elementClassProto, remapSegmentIds)
             _ <- Fox.serialCombined(volumeLayers) { volumeLayer =>
               mergedVolume.addIdSetFromBucketStream(volumeLayer.bucketStream, magsIntersection)
@@ -1024,7 +1010,26 @@ class VolumeTracingService @Inject() (
           } yield mergedVolume.stats(shouldCreateSegmentIndex)
         }
     } yield result
-  }
+
+  private def intersectMagSets(magSets: Seq[Set[Vec3Int]]): Set[Vec3Int] =
+    magSets.headOption.map { head =>
+      magSets.foldLeft(head) { (acc, element) =>
+        acc.intersect(element)
+      }
+    }.getOrElse(Set.empty)
+
+  private def determineMagSetsForLayersSkipEmpty(volumeLayers: Seq[VolumeTracingLayer]) =
+    for {
+      magSetsPerLayer <- Fox.serialCombined(volumeLayers) { volumeLayer =>
+        val magSet = new mutable.HashSet[Vec3Int]()
+        for {
+          _ <- volumeLayer.bucketStream.foreach { case (bucketPosition, _) =>
+            magSet.add(bucketPosition.mag)
+          }
+        } yield magSet.toSet
+      }
+      withoutEmpty = magSetsPerLayer.filter(_.nonEmpty) // empty tracings should have no impact in the downstream check
+    } yield withoutEmpty
 
   def importVolumeData(
       annotationId: ObjectId,

@@ -1369,7 +1369,7 @@ export async function getDataset(
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
   filterZeroMagLayers: boolean = true,
-): Promise<APIDataset> {
+): Promise<APIMaybeUnimportedDataset> {
   const params = new URLSearchParams();
   if (sharingToken != null) {
     params.set("sharingToken", String(sharingToken));
@@ -1392,6 +1392,19 @@ export async function getDataset(
   });
 }
 
+export async function getImportedDataset(
+  datasetId: string,
+  sharingToken?: string | null | undefined,
+  options: RequestOptions = {},
+  filterZeroMagLayers: boolean = true,
+): Promise<APIDataset> {
+  const ds = await getDataset(datasetId, sharingToken, options, filterZeroMagLayers);
+  if ("dataLayers" in ds.dataSource) {
+    return ds as APIDataset;
+  }
+  throw new Error(`Dataset with id ${datasetId} is not imported.`);
+}
+
 export async function getDatasetLegacy(
   datasetOrga: string,
   datasetName: string,
@@ -1404,7 +1417,7 @@ export async function getDatasetLegacy(
     sharingToken,
     options,
   );
-  return getDataset(datasetId, sharingToken, options);
+  return getImportedDataset(datasetId, sharingToken, options);
 }
 
 export type DatasetUpdater = {
@@ -1475,7 +1488,7 @@ export function updateDatasetDefaultConfiguration(
   });
 }
 
-export function getDatasetAccessList(dataset: APIDataset): Promise<Array<APIUser>> {
+export function getDatasetAccessList(dataset: APIMaybeUnimportedDataset): Promise<Array<APIUser>> {
   return Request.receiveJSON(`/api/datasets/${dataset.id}/accessList`);
 }
 

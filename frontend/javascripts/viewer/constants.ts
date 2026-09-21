@@ -1,6 +1,10 @@
 import type { Matrix4x4 } from "mjs";
 import { Euler, Matrix4 } from "three";
-export type AdditionalCoordinate = { name: string; value: number };
+// `length`: number of consecutive values starting at `value` to request along this axis,
+// instead of just one (e.g. for a 32-t-batch request against a Z-degenerate layer — see
+// DataCube.usesTRecycling and PullQueue.pullBatch). Only meaningful on requests sent
+// to the backend; a bucket's own address always carries a single-point `value`.
+export type AdditionalCoordinate = { name: string; value: number; length?: number };
 
 export const ViewModeValues = ["orthogonal", "flight"] as ViewMode[];
 
@@ -324,6 +328,7 @@ const Constants = {
   MODES_SKELETON: ["orthogonal", "flight"] as ViewMode[],
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
+  BUCKET_SIZE_2D: 32 ** 2,
   BUCKET_SHAPE: [32, 32, 32] as Vector3,
   VIEWPORT_WIDTH,
   DEFAULT_NAVBAR_HEIGHT: 48,
@@ -391,6 +396,62 @@ const Constants = {
 export const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
 export default Constants;
+
+// Layers whose z-extent is a single voxel (e.g., 2D datasets) never have real data
+// beyond the first z-slice of a bucket, since z is the bucket's highest-stride axis
+// (see DataCube.getVoxelIndexByVoxelOffset). For such layers, bucket storage (CPU
+// typed arrays and the GPU texture atlas) can be shrunk to this depth while the
+// addressing/picking machinery keeps treating buckets as BUCKET_WIDTH^3 for bookkeeping.
+//
+// Editable (volume-tracing) layers are excluded, because for them a bucket is not just
+// rendered but also sent *back*: PushQueue compresses DataBucket.data verbatim (see
+// createCompressedUpdateBucketActions), and the tracingstore's storage format is fixed at
+// bucketLength^3 voxels per bucket (VolumeTracingLayer.expectedUncompressedBucketSize).
+// A shrunk bucket therefore arrives as a too-short LZ4 block and fails to decompress.
+// Shrinking those would mean padding on upload, or teaching the tracingstore a second
+// bucket size — neither is worth it, since 2D annotations have few buckets to begin with.
+export function getEffectiveBucketDepth(
+  layerDepthInMag1: number,
+  isEditableVolumeLayer: boolean,
+): 1 | typeof Constants.BUCKET_WIDTH {
+  return layerDepthInMag1 <= 1 && !isEditableVolumeLayer ? 1 : Constants.BUCKET_WIDTH;
+}
+
+// For a z-degenerate layer that also has a time ("t") axis, the otherwise-unused
+// z-dimension of a bucket can instead be used to cache up to BUCKET_WIDTH different
+// t-slices simultaneously on the GPU (see TextureBucketManager's t-recycling support).
+// This is mutually exclusive with (and takes priority over) the plain depth-shrink
+// optimization for such layers, since it needs the full z-depth to hold those slices.
+// This check must be applied consistently wherever bucket/atlas sizing decisions are
+// made (both before a DataCube exists, from raw dataset metadata, and afterwards).
+//
+// Editable (volume-tracing) layers are excluded (for now): t-recycling relies on one whole t-batch
+// arriving from the backend as a single shared buffer, which every t within the batch then
+// renders out of. Locally created annotation data has no such buffer — each t is its own
+// bucket with its own array, all of them collide on one t-batch cuckoo key, and nothing
+// would re-upload on a same-batch t change (see LayerRenderingManager.updateDataTextures),
+// so one t's labels would show up at every t in the batch. Note that read-only segmentation
+// layers are fine; it's editability that breaks the assumption. The depth check below already
+// rules these out today, but the exclusion is repeated explicitly on purpose: that one exists
+// for an unrelated reason (the upload wire format, see getEffectiveBucketDepth) and could be
+// lifted independently, which must not silently re-enable t-recycling here.
+//
+// This is the single definition of whether a layer is t-recycled. Everything downstream
+// (DataCube.usesTRecycling, TextureBucketManager.usesTRecycling, the usesTRecyclingPerLayer
+// shader uniform) just forwards the answer, under the same name on purpose: nothing decides
+// this a second time, so a differently named copy would only invite the two to drift apart.
+// It is answered once from static layer metadata and never toggled afterwards.
+export function usesTRecycling(
+  layerDepthInMag1: number,
+  hasTAxis: boolean,
+  isEditableVolumeLayer: boolean,
+): boolean {
+  return (
+    getEffectiveBucketDepth(layerDepthInMag1, isEditableVolumeLayer) === 1 &&
+    hasTAxis &&
+    !isEditableVolumeLayer
+  );
+}
 
 export type TypedArray =
   | Uint8Array<ArrayBuffer>

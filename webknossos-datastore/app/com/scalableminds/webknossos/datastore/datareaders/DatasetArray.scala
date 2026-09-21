@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.util.box.Box.tryo
 import ucar.ma2.Array as MultiArray
 
@@ -78,7 +78,7 @@ class DatasetArray(
       (offsetArray, shapeArray) <- tryo(
         constructOffsetAndShapeArrays(offsetXYZ, shapeXYZ, additionalCoordinatesOpt, shouldReadUint24)
       ).toFox ?~> "failed to construct shape and offset array for requested coordinates"
-      bytes <- readBytes(offsetArray, shapeArray)
+      bytes <- readBytes(offsetArray, shapeArray, additionalCoordinatesOpt)
     } yield bytes
 
   private def constructOffsetAndShapeArrays(
@@ -87,6 +87,15 @@ class DatasetArray(
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
       shouldReadUint24: Boolean
   ): (Array[Int], Array[Int]) = {
+    // Multiple simultaneously-batched axes aren't supported: the repack below (see
+    // repackBatchedAxisIntoZSlot) can only swap one axis into z's byte slot. Correctness
+    // beyond that — i.e. only requesting a batch against a dataset whose z is actually
+    // degenerate — is the caller's responsibility (see DataCube.isTRecyclingEligible on the
+    // frontend): the dataset's own array metadata (axisOrder/datasetShape) turned out not to
+    // reliably expose z's true depth across formats, so it isn't re-validated here.
+    val batchedCoordinates = additionalCoordinatesOpt.getOrElse(Seq.empty).filter(_.length.exists(_ > 1))
+    require(batchedCoordinates.size <= 1, "Reading more than one batched additional axis at once is not supported")
+
     val offsetArray: Array[Int] = Array.fill(rank)(0)
     offsetArray(rank - 3) = offsetXYZ.x
     offsetArray(rank - 2) = offsetXYZ.y
@@ -113,20 +122,87 @@ class DatasetArray(
       for (additionalCoordinate <- additionalCoordinates) {
         val wkSlot = fullAxisOrder.wkSlotOfPhysicalIndex(additionalAxesMap(additionalCoordinate.name).index)
         offsetArray(wkSlot) = additionalCoordinate.value
-        // shapeArray at positions of additional coordinates is always 1
+        // shapeArray at positions of additional coordinates is 1, unless a batch of consecutive
+        // values along that axis was requested (see AdditionalCoordinate.length / repackBatchedAxisIntoZSlot).
+        // Validated rather than clamped because, unlike the fixed 32 for x/y/z, this is
+        // client-controlled sizing input, and only a full batch can be served: the repack merely
+        // reorders dimensions, so a partial length would yield a short buffer rather than the
+        // fixed-size bucket the wire format promises. A zero or negative length has no valid
+        // interpretation at all. Failing here (inside the caller's tryo) beats returning a
+        // malformed response.
+        val requestedLength = additionalCoordinate.length.getOrElse(1)
+        require(
+          requestedLength == 1 || requestedLength == DataLayer.bucketLength,
+          s"Additional-coordinate batch length for '${additionalCoordinate.name}' must be 1 or ${DataLayer.bucketLength}, got $requestedLength"
+        )
+        shapeArray(wkSlot) = requestedLength
       }
+    }
+
+    // Note that the batch is deliberately NOT clamped to the axis's real extent: a trailing
+    // batch (e.g. t=32..63 against an axis that only has 50 values) still asks for the full
+    // bucketLength, because the wire format is fixed-size and the client validates the response
+    // length against it (see DataBucket.receiveData). Asking beyond the end is safe:
+    // ChunkUtils.computeChunkIndices clamps chunk indices to the array shape, so no chunk past
+    // the end is ever requested and readAsFortranOrder's target buffer simply stays zero there.
+    // The client never addresses those slots either (see getTBatchSiblingAddresses on the
+    // frontend, which does clamp to the axis bounds).
+    if (batchedCoordinates.nonEmpty) {
+      // The wire format always carries exactly bucketLength^3 voxels' worth of data (see
+      // repackBatchedAxisIntoZSlot). z's shape (set to shapeXYZ.z, i.e. bucketLength, above)
+      // must shrink to 1 to make room for the batch — otherwise this read would ask for
+      // bucketLength^4 voxels (one full-width z axis *and* a full-width batch axis) instead
+      // of the intended "batch replaces z" swap.
+      shapeArray(rank - 1) = 1
     }
     (offsetArray, shapeArray)
   }
 
+  private def batchedAxisOf(
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
+  ): Option[AdditionalCoordinate] =
+    additionalCoordinatesOpt.flatMap(_.find(_.length.exists(_ > 1)))
+
+  // If a batched additional coordinate (length > 1) was requested, the read above widened that axis's
+  // shape to bucketLength while shrinking z's own shape to 1 (see constructOffsetAndShapeArrays), so
+  // the result still has exactly bucketLength^3 voxels total — the caller is expected to only do this
+  // when z is degenerate (see AdditionalCoordinate.length), so shrinking it away loses nothing real.
+  // The batched axis naturally ends up as the fastest-varying dimension of the read result (additional
+  // axes sit at the front of "wk" order, which ends up last/fastest after readAsFortranOrder's
+  // shape.reverse), but the wire format this bucket is
+  // returned in expects the depth axis (z) to be the slowest-varying one (see BinaryDataService.cutOutCuboid's
+  // x + y*32 + z*32*32 stride convention). This swaps the batched axis into z's dimension so the batch is
+  // packed into the byte layout a client already expects for a normal 32-deep bucket.
+  // `.copy()` is required (not just `.transpose()`, which returns a view): BytesConverter.toByteArray reads
+  // `.getStorage()` directly, which would otherwise bypass the transpose's index remapping.
+  private def repackBatchedAxisIntoZSlot(
+      multiArray: MultiArray,
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
+  ): MultiArray =
+    batchedAxisOf(additionalCoordinatesOpt) match {
+      case Some(batched) =>
+        val batchedAxisWkSlot = fullAxisOrder.wkSlotOfPhysicalIndex(additionalAxesMap(batched.name).index)
+        // readAsFortranOrder builds its target array with shape.reverse, so wk slot `s` lives at
+        // dimension `rank - 1 - s`. Z's wk slot is always rank - 1, i.e. dimension 0.
+        val batchedAxisDimension = rank - 1 - batchedAxisWkSlot
+        multiArray.transpose(batchedAxisDimension, 0).copy()
+      case None => multiArray
+    }
+
   // returns byte array in fortran-order with little-endian values
-  private def readBytes(offset: Array[Int], shape: Array[Int])(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Array[Byte]] =
+  private def readBytes(
+      offset: Array[Int],
+      shape: Array[Int],
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      typedMultiArray <- readAsFortranOrder(offset, shape)
-      asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).toFox
+      typedMultiArray <- readAsFortranOrder(
+        offset,
+        shape,
+        isBatchedRead = batchedAxisOf(additionalCoordinatesOpt).isDefined
+      )
+      repackedMultiArray = repackBatchedAxisIntoZSlot(typedMultiArray, additionalCoordinatesOpt)
+      asBytes <- BytesConverter.toByteArray(repackedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).toFox
     } yield asBytes
 
   private def printAsPhysical(values: Array[Int], flip: Boolean = false): String = {
@@ -156,7 +232,7 @@ class DatasetArray(
   // The local variables like chunkIndices are also in this order unless explicitly named.
   // Loading data adapts to the array's axis order so that …CXYZ data in fortran-order is
   // returned, regardless of the array’s internal storage.
-  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int])(using
+  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int], isBatchedRead: Boolean)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[MultiArray] = {
@@ -167,7 +243,13 @@ class DatasetArray(
       shape,
       totalOffset.map(_.toLong)
     )
-    if (partialCopyingIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
+    // The single-chunk shortcut below hands back the source chunk as-is, i.e. in the array's own
+    // dimension order rather than the `shape.reverse` layout the copying branch produces. That is
+    // equivalent for a plain read (which is why the shortcut exists), but not for a batched one:
+    // repackBatchedAxisIntoZSlot transposes by dimension index and derives those indices from the
+    // `shape.reverse` layout, so it would swap the wrong two dimensions and silently scramble the
+    // bucket. Batched reads are rare enough that always taking the copying branch costs nothing.
+    if (!isBatchedRead && partialCopyingIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(

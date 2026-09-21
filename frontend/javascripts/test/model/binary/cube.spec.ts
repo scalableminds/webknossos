@@ -239,6 +239,23 @@ describe("DataCube", () => {
     expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
   });
 
+  it<TestContext>("receiveData should reject a bucket that is not requested without mutating it", ({
+    cube,
+  }) => {
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+    bucket.markAsRequested();
+    bucket.receiveData(new Uint8Array(4 * 32 ** 3));
+
+    // The bucket is LOADED now, so a second hand-over is a programming error. It has to be
+    // rejected *before* anything is written: rawBucketData is what TextureBucketManager
+    // uploads to the GPU, so overwriting it here would leave the GPU texture describing a
+    // different fetch than the CPU-side data.
+    const rawBucketDataBefore = bucket.rawBucketData;
+    expect(() => bucket.receiveData(new Uint8Array(4 * 32 ** 3))).toThrow();
+    expect(bucket.rawBucketData).toBe(rawBucketDataBefore);
+  });
+
   it<TestContext>("Voxel Labeling should only instantiate one bucket when labeling the same bucket twice", async ({
     cube,
   }) => {

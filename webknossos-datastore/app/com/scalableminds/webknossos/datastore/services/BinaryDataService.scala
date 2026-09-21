@@ -132,8 +132,20 @@ class BinaryDataService(
   private def clipToLayerBoundingBox(request: DataServiceDataRequest)(inputArray: Array[Byte]): Box[Array[Byte]] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val requestBboxInMag = request.cuboid.toBoundingBoxInMag
-    val layerBboxInMag =
-      request.dataLayer.boundingBox / request.mag // Note that this div is implemented to round to the bigger bbox so we don’t lose voxels inside.
+    val isBatchedAdditionalCoordinateRequest =
+      request.settings.additionalCoordinates.exists(_.exists(_.length.exists(_ > 1)))
+    val layerBboxInMag = {
+      val bbox =
+        request.dataLayer.boundingBox / request.mag // Note that this div is implemented to round to the bigger bbox so we don’t lose voxels inside.
+      if (isBatchedAdditionalCoordinateRequest)
+        // A batched additional coordinate (e.g. t) is packed into this bucket's z byte-slot (see
+        // DatasetArray.repackBatchedAxisIntoZSlot). The layer's real z bound (depth 1, for the 2D datasets
+        // this applies to) must not clip that data away here, since those bytes no longer represent actual
+        // z depth for this response. Widen the z range to the full requested depth so the clip below only
+        // ever affects x/y.
+        bbox.copy(topLeft = bbox.topLeft.copy(z = requestBboxInMag.topLeft.z), depth = requestBboxInMag.depth)
+      else bbox
+    }
     val intersectionOpt = requestBboxInMag.intersection(layerBboxInMag).map(_.move(-requestBboxInMag.topLeft))
     val outputArray = new Array[Byte](inputArray.length)
     intersectionOpt.foreach { intersection =>

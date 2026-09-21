@@ -85,7 +85,7 @@ function upsampleVoxelMap(
           continue;
         }
 
-        const currentGoalVoxelMap = new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
+        const currentGoalVoxelMap = new Uint8Array(constants.BUCKET_SIZE_2D).fill(0);
         const firstDimVoxelOffset =
           boundsOfGoalBucketWithinSourceBucket[dimensionIndices[0]] * firstDimBucketOffset;
         const secondDimVoxelOffset =
@@ -213,7 +213,7 @@ function downsampleVoxelMap(
     );
     const goalVoxelMap =
       labeledVoxelMapInTargetMag.get(goalBucket.zoomedAddress) ||
-      new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
+      new Uint8Array(constants.BUCKET_SIZE_2D).fill(0);
     // Iterate over the voxelMap in the goal mag and search in each voxel for a labeled voxel (kernel-wise iteration).
     const kernelSize = map3((scaleValue) => Math.ceil(scaleValue), scaleToSource);
 

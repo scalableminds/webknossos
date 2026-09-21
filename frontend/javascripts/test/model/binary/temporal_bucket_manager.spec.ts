@@ -35,6 +35,7 @@ describe("TemporalBucketManager", () => {
       pushQueue,
       pullQueue,
       triggerRenderedBucketDataChanged: vi.fn(),
+      getEffectiveBucketVoxelCount: () => 32 ** 3,
     };
 
     const manager = new TemporalBucketManager(pullQueue as any, pushQueue as any);

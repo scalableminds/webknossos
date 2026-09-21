@@ -2439,7 +2439,7 @@ class DataApi {
 
         let labelMap = currentLabeledVoxelMap.get(bucketZoomedAddress);
         if (!labelMap) {
-          labelMap = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
+          labelMap = new Uint8Array(Constants.BUCKET_SIZE_2D);
           currentLabeledVoxelMap.set(bucketZoomedAddress, labelMap);
         }
 

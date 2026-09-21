@@ -2,6 +2,7 @@ import Icon, {
   ArrowRightOutlined,
   CopyOutlined,
   DeleteOutlined,
+  EditOutlined,
   ExpandAltOutlined,
   EyeOutlined,
   PlusOutlined,
@@ -46,7 +47,12 @@ import {
   getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
-import type { GroupUiNode, TreeUiNode } from "./hierarchy";
+import {
+  type GroupUiNode,
+  getGroupUiNodeKey,
+  getTreeUiNodeKey,
+  type TreeUiNode,
+} from "./hierarchy";
 import type { GroupOperations } from "./hooks/use_group_operations";
 import type { TreeSelection } from "./hooks/use_tree_selection";
 import { showTreeLengthNotification } from "./measurements";
@@ -63,6 +69,7 @@ function batchTreeActions(actions: Action[], batchName: string): Action {
 export function useTreeContextMenuBuilder(
   selection: TreeSelection,
   hideContextMenu: () => void,
+  startRenaming: (nodeKey: string) => void,
 ): TreeContextMenuBuilder {
   const dispatch = useDispatch();
   const allowUpdate = useWkSelector(mayEditAnnotation);
@@ -77,6 +84,16 @@ export function useTreeContextMenuBuilder(
 
       return {
         items: [
+          {
+            key: "renameTree",
+            onClick: () => {
+              startRenaming(getTreeUiNodeKey(tree.treeId));
+              hideContextMenu();
+            },
+            disabled: isEditingDisabled,
+            icon: <EditOutlined />,
+            label: "Rename Tree",
+          },
           {
             key: "changeTreeColor",
             disabled: isEditingDisabled,
@@ -174,7 +191,7 @@ export function useTreeContextMenuBuilder(
         ],
       };
     },
-    [dispatch, allowUpdate, isConcurrentCollabMode, selection, hideContextMenu],
+    [dispatch, allowUpdate, isConcurrentCollabMode, selection, hideContextMenu, startRenaming],
   );
 }
 
@@ -182,6 +199,7 @@ export function useGroupContextMenuBuilder(
   selection: TreeSelection,
   groupOperations: GroupOperations,
   hideContextMenu: () => void,
+  startRenaming: (nodeKey: string) => void,
 ): GroupContextMenuBuilder {
   const dispatch = useDispatch();
   const allowUpdate = useWkSelector(mayEditAnnotation);
@@ -279,6 +297,17 @@ export function useGroupContextMenuBuilder(
             disabled: isEditingDisabled,
             icon: <PlusOutlined />,
             label: "Create new group",
+          },
+          {
+            key: "renameGroup",
+            // The root group must not be renamed.
+            disabled: isEditingDisabled || groupId === MISSING_GROUP_ID,
+            onClick: () => {
+              startRenaming(getGroupUiNodeKey(groupId));
+              hideContextMenu();
+            },
+            icon: <EditOutlined />,
+            label: "Rename group",
           },
           labelForActiveItems != null
             ? {
@@ -385,6 +414,7 @@ export function useGroupContextMenuBuilder(
       setColorOfAllTrees,
       dispatchForGroupTrees,
       setExpansionOfSubgroups,
+      startRenaming,
     ],
   );
 }

@@ -15,7 +15,7 @@ import Icon, {
 } from "@ant-design/icons";
 import ToggleOffIcon from "@images/icons/icon-toggle-off.svg?react";
 import ToggleOnIcon from "@images/icons/icon-toggle-on.svg?react";
-import { App, Dropdown, type MenuProps, Space } from "antd";
+import { App, Divider, Dropdown, Flex, type MenuProps, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import type { ModalApi } from "libs/with_modal_hoc";
 import messages from "messages";
@@ -259,77 +259,99 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
     ],
   };
 
+  // The buttons are grouped by what they do: creating and removing items, toggling
+  // visibility, and stepping through the list. A narrow panel breaks the toolbar between
+  // the groups first; each divider is glued to the last button of its group, so that a
+  // group which has to wrap internally can never leave a divider alone on a line.
+  const groupDivider = <Divider type="vertical" style={{ height: 20, marginInline: 2 }} />;
+
   return (
-    <Space wrap>
-      <AdvancedSearchPopover
-        onSelect={onSearchSelect}
-        data={hierarchy.flatNodes}
-        searchKey={getNodeName}
-        provideShortcut
-        targetId={skeletonTabId}
-        onSelectAllMatches={onSelectAllMatchingTrees}
-      >
-        <ButtonComponent
-          title="Open search via CTRL + Shift + F"
-          icon={<SearchOutlined />}
-          variant="text"
-          color="default"
-        />
-      </AdvancedSearchPopover>
-      <ButtonComponent
-        onClick={() => dispatch(createTreeAction())}
-        title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
-        disabled={isEditingDisabled}
-        icon={<PlusOutlined />}
-        variant="text"
-        color="default"
-      />
-      <ButtonComponent
-        onClick={() => groupOperations.createGroup(MISSING_GROUP_ID)}
-        title={isEditingDisabled ? isEditingDisabledMessage : "Create new Group"}
-        disabled={isEditingDisabled}
-        icon={<FolderAddOutlined />}
-        variant="text"
-        color="default"
-      />
-      <ButtonComponent
-        onClick={onDeleteSelection}
-        title={isDeleteDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
-        disabled={isDeleteDisabled}
-        icon={<DeleteOutlined />}
-        variant="text"
-        color="default"
-      />
-      <ButtonComponent
-        onClick={() => dispatch(toggleAllTreesAction())}
-        title="Toggle Visibility of All Trees (1)"
-        disabled={isEditingDisabled}
-        icon={<Icon component={ToggleOnIcon} />}
-        variant="text"
-        color="default"
-      />
-      <ButtonComponent
-        onClick={() => dispatch(toggleInactiveTreesAction())}
-        title="Toggle Visibility of Inactive Trees (2)"
-        disabled={isEditingDisabled}
-        icon={<Icon component={ToggleOffIcon} />}
-        variant="text"
-        color="default"
-      />
-      <ButtonComponent
-        onClick={() => dispatch(selectNextTreeAction(false))}
-        title="Select previous tree"
-        icon={<ArrowLeftOutlined />}
-        variant="text"
-        color="default"
-      />
-      <ButtonComponent
-        onClick={() => dispatch(selectNextTreeAction(true))}
-        title="Select next tree"
-        icon={<ArrowRightOutlined />}
-        variant="text"
-        color="default"
-      />
+    // The "more actions" dropdown is pinned to the end of the toolbar and stays on its
+    // first line, so it keeps its place no matter how often the groups in front of it wrap.
+    <Flex align="flex-start" gap={4}>
+      <Flex wrap align="center" gap={4} style={{ flex: "auto", minWidth: 0 }}>
+        <Space wrap size={4} align="center">
+          <AdvancedSearchPopover
+            onSelect={onSearchSelect}
+            data={hierarchy.flatNodes}
+            searchKey={getNodeName}
+            provideShortcut
+            targetId={skeletonTabId}
+            onSelectAllMatches={onSelectAllMatchingTrees}
+          >
+            <ButtonComponent
+              title="Open search via CTRL + Shift + F"
+              icon={<SearchOutlined />}
+              variant="text"
+              color="default"
+            />
+          </AdvancedSearchPopover>
+          <ButtonComponent
+            onClick={() => dispatch(createTreeAction())}
+            title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
+            disabled={isEditingDisabled}
+            icon={<PlusOutlined />}
+            variant="text"
+            color="default"
+          />
+          <ButtonComponent
+            onClick={() => groupOperations.createGroup(MISSING_GROUP_ID)}
+            title={isEditingDisabled ? isEditingDisabledMessage : "Create new Group"}
+            disabled={isEditingDisabled}
+            icon={<FolderAddOutlined />}
+            variant="text"
+            color="default"
+          />
+          <Space size={4} align="center">
+            <ButtonComponent
+              onClick={onDeleteSelection}
+              title={isDeleteDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
+              disabled={isDeleteDisabled}
+              icon={<DeleteOutlined />}
+              variant="text"
+              color="default"
+            />
+            {groupDivider}
+          </Space>
+        </Space>
+        <Space wrap size={4} align="center">
+          <ButtonComponent
+            onClick={() => dispatch(toggleAllTreesAction())}
+            title="Toggle Visibility of All Trees (1)"
+            disabled={isEditingDisabled}
+            icon={<Icon component={ToggleOnIcon} />}
+            variant="text"
+            color="default"
+          />
+          <Space size={4} align="center">
+            <ButtonComponent
+              onClick={() => dispatch(toggleInactiveTreesAction())}
+              title="Toggle Visibility of Inactive Trees (2)"
+              disabled={isEditingDisabled}
+              icon={<Icon component={ToggleOffIcon} />}
+              variant="text"
+              color="default"
+            />
+            {groupDivider}
+          </Space>
+        </Space>
+        <Space wrap size={4} align="center">
+          <ButtonComponent
+            onClick={() => dispatch(selectNextTreeAction(false))}
+            title="Select previous tree"
+            icon={<ArrowLeftOutlined />}
+            variant="text"
+            color="default"
+          />
+          <ButtonComponent
+            onClick={() => dispatch(selectNextTreeAction(true))}
+            title="Select next tree"
+            icon={<ArrowRightOutlined />}
+            variant="text"
+            color="default"
+          />
+        </Space>
+      </Flex>
       <Dropdown menu={actionsMenu} trigger={["click"]}>
         <ButtonComponent
           icon={<MenuOutlined />}
@@ -338,6 +360,6 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
           title="More actions"
         />
       </Dropdown>
-    </Space>
+    </Flex>
   );
 }

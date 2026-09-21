@@ -75,12 +75,8 @@ type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
   activeUser: APIUser;
-  // When set, only annotations tagged with this dataset name are shown (every annotation
-  // is automatically tagged with the name of its dataset). Used to link here from a dataset's
-  // annotation count.
   datasetNameFilter?: string | null;
-  // Called when the user manually removes the datasetNameFilter tag, so the caller can
-  // clear it from the URL, too.
+  // Called when the user removes the datasetNameFilter tag, so the caller can clear it from the URL.
   onDatasetNameFilterCleared?: () => void;
 } & WithModalProps;
 type State = {
@@ -149,8 +145,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     }
 
     if (this.props.datasetNameFilter !== prevProps.datasetNameFilter) {
-      // The dataset filter changed via the URL (e.g., another dataset's annotation count
-      // was clicked) -- apply it (or clear the tag again if it became null).
+      // Dataset filter changed via the URL.
       this.setState({
         tags: this.props.datasetNameFilter ? [this.props.datasetNameFilter] : [],
       });
@@ -159,7 +154,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       prevState.tags.includes(prevProps.datasetNameFilter) &&
       !this.state.tags.includes(prevProps.datasetNameFilter)
     ) {
-      // The user removed the dataset filter tag manually -- clear it from the URL, too.
       this.props.onDatasetNameFilterCleared?.();
     }
   }

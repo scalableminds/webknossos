@@ -58,8 +58,6 @@ class Request {
       this.handleEmptyJsonResponse,
     );
 
-  // Same as receiveJSON, but also exposes the response headers (e.g., to read
-  // pagination metadata such as X-Total-Count).
   receiveJSONWithHeaders = (
     url: string,
     options: RequestOptions = {},

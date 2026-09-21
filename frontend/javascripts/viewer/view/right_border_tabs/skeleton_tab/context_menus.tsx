@@ -84,6 +84,14 @@ export function useTreeContextMenuBuilder(
 
       return {
         items: [
+          // A read-only header, so that the id of a tree stays available now that the
+          // row itself only shows its name.
+          {
+            key: "treeIdInfo",
+            type: "group",
+            label: `Tree ID: ${tree.treeId}`,
+          },
+          { key: "treeIdDivider", type: "divider" },
           {
             key: "renameTree",
             onClick: () => {

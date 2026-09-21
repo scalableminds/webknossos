@@ -1,6 +1,6 @@
 import Icon, { EllipsisOutlined, LoadingOutlined } from "@ant-design/icons";
 import CrosshairsIcon from "@images/icons/icon-crosshairs.svg?react";
-import MeshIcon from "@images/icons/icon-mesh-vertices.svg?react";
+import MeshIcon from "@images/icons/icon-mesh-organic-boundary.svg?react";
 import { type ButtonProps, Flex } from "antd";
 import classnames from "classnames";
 import FastTooltip from "components/fast_tooltip";

@@ -14,7 +14,7 @@ import Icon, {
   UndoOutlined,
 } from "@ant-design/icons";
 import BrushIcon from "@images/icons/icon-brush.svg?react";
-import MeshIcon from "@images/icons/icon-mesh-vertices.svg?react";
+import MeshIcon from "@images/icons/icon-mesh-organic-boundary.svg?react";
 import PipetteIcon from "@images/icons/icon-pipette.svg?react";
 import { App, Divider, type MenuProps } from "antd";
 import type { ItemType } from "antd/es/menu/interface";

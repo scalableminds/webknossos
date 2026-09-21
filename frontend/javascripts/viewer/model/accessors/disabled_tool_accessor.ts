@@ -147,9 +147,7 @@ const noSegmentationForMagRule = new DisableRule(
     if (isSegmentationTracingVisibleForMag) {
       return null;
     }
-    // The mag used above is derived from the zoom of the (potentially hidden) 2D
-    // viewports. If only the 3D viewport is visible (e.g., because it is maximized),
-    // that mag is irrelevant for proofreading, which does not rely on the 2D planes.
+    // If only the 3D viewport is visible, proofreading does not need the segmentation.
     if (tool === AnnotationTool.PROOFREAD && isOnly3DViewportVisible) {
       return null;
     }

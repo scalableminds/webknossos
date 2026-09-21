@@ -891,6 +891,7 @@ class DatasetService @Inject() (
       "description" -> dataset.description,
       "directoryName" -> dataset.directoryName,
       "created" -> dataset.created,
+      "thumbnailCacheVersion" -> dataset.thumbnailCacheVersion,
       "isEditable" -> isEditable,
       "lastUsedByUser" -> lastUsedByUser,
       "logoUrl" -> logoUrl,

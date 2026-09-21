@@ -607,7 +607,7 @@ export function getThumbnailURL(dataset: APIDataset): string {
   const colorLayer = layers.find((l) => l.category === "color");
 
   if (colorLayer) {
-    return `/api/datasets/${dataset.id}/layers/${colorLayer.name}/thumbnail`;
+    return `/api/datasets/${dataset.id}/layers/${colorLayer.name}/thumbnail?cacheVersion=${dataset.thumbnailCacheVersion}`;
   }
 
   return "";
@@ -616,7 +616,7 @@ export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   const segmentationLayer = getFirstSegmentationLayer(dataset);
 
   if (segmentationLayer) {
-    return `/api/datasets/${dataset.id}/layers/${segmentationLayer.name}/thumbnail`;
+    return `/api/datasets/${dataset.id}/layers/${segmentationLayer.name}/thumbnail?cacheVersion=${dataset.thumbnailCacheVersion}`;
   }
 
   return "";

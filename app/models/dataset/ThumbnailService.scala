@@ -363,7 +363,7 @@ class ThumbnailService @Inject() (
 
 case class ThumbnailColorSettings(color: Color, isInverted: Boolean)
 
-class ThumbnailCachingService @Inject() (thumbnailDAO: ThumbnailDAO) {
+class ThumbnailCachingService @Inject() (thumbnailDAO: ThumbnailDAO, datasetDAO: DatasetDAO) {
   private val ThumbnailCacheDuration = 10 days
 
   // First cache is in memory, then in postgres.
@@ -395,7 +395,10 @@ class ThumbnailCachingService @Inject() (thumbnailDAO: ThumbnailDAO) {
 
   def removeFromCache(datasetId: ObjectId): Fox[Unit] = {
     inMemoryThumbnailCache.clear(keyTuple => keyTuple._1 == datasetId)
-    thumbnailDAO.removeAllForDataset(datasetId)
+    for {
+      _ <- thumbnailDAO.removeAllForDataset(datasetId)
+      _ <- datasetDAO.incrementThumbnailCacheVersion(datasetId)
+    } yield ()
   }
 
   def removeExpiredThumbnails(): Fox[Unit] = thumbnailDAO.removeAllExpired(ThumbnailCacheDuration)

@@ -340,7 +340,7 @@ class DatasetRenderer {
       this.data.isActive &&
       (this.data.colorLayerNames.length > 0 || this.data.segmentationLayerNames.length > 0);
     const imgSrc = hasAnyLayer
-      ? `/api/datasets/${this.data.id}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
+      ? `/api/datasets/${this.data.id}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}&cacheVersion=${this.data.thumbnailCacheVersion}`
       : inactiveDatasetThumbnail;
     const iconClassName = hasAnyLayer ? "" : " icon-thumbnail";
 

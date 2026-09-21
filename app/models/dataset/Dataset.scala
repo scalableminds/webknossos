@@ -90,7 +90,8 @@ case class Dataset(
     rootRealPath: Option[String] = None,
     mirrorPath: Option[String] = None,
     created: Instant = Instant.now,
-    isDeleted: Boolean = false
+    isDeleted: Boolean = false,
+    thumbnailCacheVersion: Long = 0L
 )
 
 case class DatasetCompactInfo(
@@ -108,7 +109,8 @@ case class DatasetCompactInfo(
     isUnreported: Boolean,
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
-    usedStorageBytes: Long
+    usedStorageBytes: Long,
+    thumbnailCacheVersion: Long
 ) derives JsonAutoFormat {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
 }
@@ -182,7 +184,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       r.rootrealpath,
       r.mirrorpath,
       Instant.fromSql(r.created),
-      r.isdeleted
+      r.isdeleted,
+      r.thumbnailcacheversion
     )
 
   override def anonymousReadAccessQ(token: Option[String]): SqlToken = {
@@ -324,7 +327,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               d.tags,
               cl.names AS colorLayerNames,
               sl.names AS segmentationLayerNames,
-              COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes
+              COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes,
+              d.thumbnailCacheVersion
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
             JOIN webknossos.organizations o
@@ -358,6 +362,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               String,
               String,
               String,
+              Long,
               Long
           )
         ]
@@ -379,7 +384,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         colorLayerNames = parseArrayLiteral(row._12),
         segmentationLayerNames = parseArrayLiteral(row._13),
         // Only include usedStorage for datasets of your own organization.
-        usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L
+        usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L,
+        thumbnailCacheVersion = row._15
       )
     )
 
@@ -715,6 +721,13 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       _ <- assertUpdateAccess(datasetId)
       _ <- run(q"""UPDATE webknossos.datasets
                    SET mirrorPath = $mirrorPath
+                   WHERE _id = $datasetId""".asUpdate)
+    } yield ()
+
+  def incrementThumbnailCacheVersion(datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.datasets
+                   SET thumbnailCacheVersion = thumbnailCacheVersion + 1
                    WHERE _id = $datasetId""".asUpdate)
     } yield ()
 

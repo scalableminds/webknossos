@@ -214,6 +214,7 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   allowedTeams: Array<APITeam>;
   allowedTeamsCumulative: Array<APITeam>;
   created: number;
+  thumbnailCacheVersion: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
   metadata: APIMetadataEntry[] | null | undefined;
@@ -273,6 +274,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "tags"
   | "isUnreported"
   | "usedStorageBytes"
+  | "thumbnailCacheVersion"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id: string;
@@ -303,6 +305,7 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     colorLayerNames: colorLayerNames,
     segmentationLayerNames: segmentationLayerNames,
     usedStorageBytes: dataset.usedStorageBytes,
+    thumbnailCacheVersion: dataset.thumbnailCacheVersion,
   };
 }
 

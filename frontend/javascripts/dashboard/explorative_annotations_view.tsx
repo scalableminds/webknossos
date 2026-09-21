@@ -75,6 +75,9 @@ type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
   activeUser: APIUser;
+  datasetNameFilter?: string | null;
+  // Called when the user removes the datasetNameFilter tag, so the caller can clear it from the URL.
+  onDatasetNameFilterCleared?: () => void;
 } & WithModalProps;
 type State = {
   shouldShowArchivedAnnotations: boolean;
@@ -123,16 +126,37 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   currentPageData: Readonly<APIAnnotationInfo[]> = [];
 
   componentDidMount() {
-    this.setState(persistence.load() as PartialState, () => {
+    const partialState: Partial<State> = {
+      ...(persistence.load() as PartialState),
+    };
+    if (this.props.datasetNameFilter) {
+      partialState.tags = [this.props.datasetNameFilter];
+    }
+    this.setState(partialState as State, () => {
       this.fetchNextPage(0);
     });
   }
 
-  componentDidUpdate(_prevProps: Props, prevState: State) {
+  componentDidUpdate(prevProps: Props, prevState: State) {
     persistence.persist(this.state);
 
     if (this.state.shouldShowArchivedAnnotations !== prevState.shouldShowArchivedAnnotations) {
       this.fetchNextPage(0);
+    }
+
+    if (this.props.datasetNameFilter !== prevProps.datasetNameFilter) {
+      // Dataset filter changed via the URL.
+      this.setState((state) => ({
+        tags: this.props.datasetNameFilter
+          ? [this.props.datasetNameFilter]
+          : state.tags.filter((tag) => tag !== prevProps.datasetNameFilter),
+      }));
+    } else if (
+      prevProps.datasetNameFilter != null &&
+      prevState.tags.includes(prevProps.datasetNameFilter) &&
+      !this.state.tags.includes(prevProps.datasetNameFilter)
+    ) {
+      this.props.onDatasetNameFilterCleared?.();
     }
   }
 
@@ -753,6 +777,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             })
           }
           localStorageSavingKey="lastDashboardSearchTags"
+          skipRestoreFromStorage={this.props.datasetNameFilter != null}
         />
         <Spin spinning={this.state.isLoading} size="large" style={{ marginTop: 4 }}>
           {this.renderTable()}

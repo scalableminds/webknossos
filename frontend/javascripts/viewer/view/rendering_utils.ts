@@ -137,7 +137,10 @@ function getScreenshotLogoImage(): Promise<HTMLImageElement> {
 
 export type ScreenshotBlob = { name: string; blob: Blob };
 
-export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlob[]> {
+export async function captureScreenshots(
+  prefix?: string,
+  onScreenshot?: (screenshot: ScreenshotBlob) => void,
+): Promise<ScreenshotBlob[]> {
   const { dataset, flycam, temporaryConfiguration, userConfiguration } = Store.getState();
   const { renderWatermark } = userConfiguration;
   const { viewMode } = temporaryConfiguration;
@@ -207,7 +210,9 @@ export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlo
     );
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
-      results.push({ name: `${baseName}__${planeDescriptor}.png`, blob });
+      const screenshot = { name: `${baseName}__${planeDescriptor}.png`, blob };
+      results.push(screenshot);
+      onScreenshot?.(screenshot);
     }
   }
 
@@ -219,10 +224,8 @@ export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlo
 }
 
 export async function downloadScreenshot() {
-  const screenshots = await captureScreenshots();
-  for (const { name, blob } of screenshots) {
-    saveAs(blob, name);
-  }
+  // Save each screenshot after another with a delay as else Safari only downloads the last one. (See #10018)
+  await captureScreenshots(undefined, ({ name, blob }) => saveAs(blob, name));
 }
 
 export async function downloadScreenshotsAsZip(

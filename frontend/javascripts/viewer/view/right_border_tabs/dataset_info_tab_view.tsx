@@ -589,9 +589,6 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         >
           {datasetName}
         </Link>
-        <div>
-          <DatasetAnnotationCountLink dataset={dataset} />
-        </div>
       </div>
     );
   }

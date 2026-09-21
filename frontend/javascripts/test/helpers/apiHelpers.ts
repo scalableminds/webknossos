@@ -439,7 +439,7 @@ function sendJSONReceiveJSONMockImplementation(url: string, _options?: RequestOp
   return Promise.resolve({});
 }
 
-vi.mock("viewer/model/bucket_data_handling/data_rendering_logic", async (importOriginal) => {
+vi.mock("viewer/model/bucket_data_handling/gpu_capability_check", async (importOriginal) => {
   const orginalDataRenderingLogicModule = await importOriginal();
 
   return {

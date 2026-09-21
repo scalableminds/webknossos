@@ -19,6 +19,7 @@ import FastTooltip from "components/fast_tooltip";
 import { ThemedIcon } from "components/themed_icon";
 import { copyToClipboard } from "libs/clipboard";
 import {
+  formatNumber,
   formatNumberToVolume,
   formatScale,
   formatScaleForClipboard,
@@ -26,7 +27,7 @@ import {
 } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
-import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
+import { mayUserEditDataset, pluralize } from "libs/utils";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import React, { type CSSProperties } from "react";
@@ -342,10 +343,10 @@ export function AnnotationStats({
             <FastTooltip
               placement="left"
               html={`
-                  <p>Trees: ${safeNumberToStr(skeletonStats.treeCount)}</p>
-                  <p>Nodes: ${safeNumberToStr(skeletonStats.nodeCount)}</p>
-                  <p>Edges: ${safeNumberToStr(skeletonStats.edgeCount)}</p>
-                  <p>Branchpoints: ${safeNumberToStr(skeletonStats.branchPointCount)}</p>
+                  <p>Trees: ${formatNumber(skeletonStats.treeCount)}</p>
+                  <p>Nodes: ${formatNumber(skeletonStats.nodeCount)}</p>
+                  <p>Edges: ${formatNumber(skeletonStats.edgeCount)}</p>
+                  <p>Branchpoints: ${formatNumber(skeletonStats.branchPointCount)}</p>
                 `}
               wrapper="tr"
             >
@@ -353,7 +354,8 @@ export function AnnotationStats({
                 <Icon component={IconSkeletons} className="info-tab-icon" aria-label="Skeletons" />
               </td>
               <td>
-                {skeletonStats.treeCount} {formatLabel(pluralize("Tree", skeletonStats.treeCount))}
+                {formatNumber(skeletonStats.treeCount)}{" "}
+                {formatLabel(pluralize("Tree", skeletonStats.treeCount))}
               </td>
             </FastTooltip>
           ) : null}
@@ -370,7 +372,8 @@ export function AnnotationStats({
                 <Icon component={IconSegments} className="info-tab-icon" aria-label="Segments" />
               </td>
               <td>
-                {totalSegmentCount} {formatLabel(pluralize("Segment", totalSegmentCount))}
+                {formatNumber(totalSegmentCount)}{" "}
+                {formatLabel(pluralize("Segment", totalSegmentCount))}
               </td>
             </FastTooltip>
           ) : null}
@@ -388,7 +391,7 @@ export function AnnotationStats({
                 />
               </td>
               <td>
-                {boundingBoxCount}{" "}
+                {formatNumber(boundingBoxCount)}{" "}
                 {formatLabel(pluralize("Bounding Box", boundingBoxCount, "Bounding Boxes"))}
               </td>
             </FastTooltip>

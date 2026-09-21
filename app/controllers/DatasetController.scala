@@ -219,7 +219,8 @@ class DatasetController @Inject() (
           datasetId
         ) ~> NOT_FOUND // To check Access Rights
         image <- thumbnailService.getDatasetThumbnailWithCache(datasetId, w, h)
-      } yield addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
+      } yield addRemoteOriginHeaders(Ok(image))
+        .as(jpegMimeType) // .withHeaders(CACHE_CONTROL -> "public, max-age=86400")
     }
 
   def exploreRemoteDataset(): Action[List[WKExploreRemoteLayerParameters]] =

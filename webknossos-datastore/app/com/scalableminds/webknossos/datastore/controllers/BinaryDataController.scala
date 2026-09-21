@@ -211,7 +211,7 @@ class BinaryDataController @Inject() (
       layerParams: CombinedThumbnailLayerParameters,
       outputWidth: Int,
       outputHeight: Int
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[BufferedImage] =
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Boolean, BufferedImage)] =
     for {
       (dataSource, dataLayer) <- datasetCache.getWithLayer(
         datasetId,
@@ -230,6 +230,7 @@ class BinaryDataController @Inject() (
         layerParams.intensityMax.map(max => (min, max))
       )
       layerColor = layerParams.color.flatMap(Color.fromHTML)
+      isSegmentation = dataLayer.category == LayerCategory.segmentation
       params = ImageCreatorParameters(
         dataLayer.elementClass,
         useHalfBytes = false,
@@ -238,7 +239,7 @@ class BinaryDataController @Inject() (
         imagesPerRow = 1,
         blackAndWhite = false,
         intensityRange = intensityRange,
-        isSegmentation = dataLayer.category == LayerCategory.segmentation,
+        isSegmentation = isSegmentation,
         color = layerColor,
         invertColor = layerParams.invertColor,
         preserveAlpha = true,
@@ -251,31 +252,62 @@ class BinaryDataController @Inject() (
       spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params).toFox ?~> Msg.Image.createFailed
       firstSheet <- spriteSheet.pages.headOption.toFox ?~> Msg.Image.pageFailed
       image = firstSheet.image
-    } yield
-      if (image.getWidth == outputWidth && image.getHeight == outputHeight) image
-      else {
-        val scaled = new BufferedImage(outputWidth, outputHeight, BufferedImage.TYPE_INT_ARGB)
-        val graphics = scaled.createGraphics()
-        graphics.drawImage(image, 0, 0, outputWidth, outputHeight, null)
-        graphics.dispose()
-        scaled
+    } yield {
+      val resized =
+        if (image.getWidth == outputWidth && image.getHeight == outputHeight) image
+        else {
+          val scaled = new BufferedImage(outputWidth, outputHeight, BufferedImage.TYPE_INT_ARGB)
+          val graphics = scaled.createGraphics()
+          graphics.drawImage(image, 0, 0, outputWidth, outputHeight, null)
+          graphics.dispose()
+          scaled
+        }
+      (isSegmentation, resized)
+    }
+
+  // Additively blends `colorImages` into one opaque base image (matching the frontend's default
+  // "Additive" blend mode for color layers, viewer/constants.ts BLEND_MODES): channels are summed
+  // (each layer's own opacity already baked into its per-pixel alpha) and clamped, rather than the
+  // later layer opaquely overwriting the former the way normal alpha-over compositing would.
+  private def blendColorLayersAdditively(colorImages: List[BufferedImage], width: Int, height: Int): BufferedImage = {
+    val accum = new Array[Int](width * height)
+    colorImages.foreach { image =>
+      val pixels = image.getRGB(0, 0, width, height, null, 0, width)
+      var i = 0
+      while (i < pixels.length) {
+        val argb = pixels(i)
+        val alpha = (argb >>> 24) & 0xff
+        val r = (argb >>> 16) & 0xff
+        val g = (argb >>> 8) & 0xff
+        val b = argb & 0xff
+        val existing = accum(i)
+        val newR = Math.min(255, ((existing >>> 16) & 0xff) + (r * alpha) / 255)
+        val newG = Math.min(255, ((existing >>> 8) & 0xff) + (g * alpha) / 255)
+        val newB = Math.min(255, (existing & 0xff) + (b * alpha) / 255)
+        accum(i) = (0xff << 24) | (newR << 16) | (newG << 8) | newB
+        i += 1
       }
+    }
+    val blended = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+    blended.setRGB(0, 0, width, height, accum, 0, width)
+    blended
+  }
 
   def thumbnailCombinedJpeg(datasetId: ObjectId): Action[CombinedThumbnailRequest] =
     Action.fox(validateJson[CombinedThumbnailRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          layerImages <- Fox.serialCombined(request.body.layers)(layerParams =>
+          layerResults <- Fox.serialCombined(request.body.layers)(layerParams =>
             combinedThumbnailLayerImage(datasetId, layerParams, request.body.width, request.body.height)
           )
-          // Opaque (no alpha channel), since the JPEG writer rejects TYPE_INT_ARGB with "Bogus input
-          // colorspace". Drawing the alpha-carrying layer images onto this opaque destination still
-          // alpha-blends them correctly, just flattening the result immediately.
-          composite = new BufferedImage(request.body.width, request.body.height, BufferedImage.TYPE_INT_RGB)
+          colorImages = layerResults.collect { case (false, image) => image }
+          segmentationImages = layerResults.collect { case (true, image) => image }
+          // Color layers are additively blended into one opaque base; segmentation layers are then
+          // alpha-blended on top (SRC_OVER, id 0 fully transparent), mirroring how the frontend mixes
+          // the segment tint over the additively-combined data color rather than summing it.
+          composite = blendColorLayersAdditively(colorImages, request.body.width, request.body.height)
           graphics = composite.createGraphics()
-          _ = graphics.setColor(java.awt.Color.BLACK)
-          _ = graphics.fillRect(0, 0, request.body.width, request.body.height)
-          _ = layerImages.foreach(image => graphics.drawImage(image, 0, 0, null))
+          _ = segmentationImages.foreach(image => graphics.drawImage(image, 0, 0, null))
           _ = graphics.dispose()
           outputStream = new ByteArrayOutputStream()
           _ = new JPEGWriter().writeToOutputStream(composite)(outputStream)

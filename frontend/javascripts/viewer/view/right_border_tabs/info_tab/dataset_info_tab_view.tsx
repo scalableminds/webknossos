@@ -32,11 +32,11 @@ import type {
 } from "../../keyboard_shortcuts/keyboard_shortcut_types";
 import { keySequenceToUiElements } from "../../keyboard_shortcuts/keyboard_shortcut_utils";
 import { AnnotationStatisticsSection } from "./annotation_stats_section";
-import { DatasetAnnotationCountLink } from "./dataset_annotation_count";
+import { DatasetAnnotationCountLink } from "./dataset_annotation_count_link";
 import { DatasetExtentRow } from "./dataset_extent_row";
 import { DebugInfo } from "./debug_info";
 import { MagInfoRow } from "./mag_info_row";
-import { OwningOrganizationRow } from "./owing_organization_row";
+import { OwningOrganizationRow } from "./owning_organization_row";
 import { VoxelSizeRow } from "./voxel_size_row";
 
 type StateProps = {

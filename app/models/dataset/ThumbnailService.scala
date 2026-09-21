@@ -139,6 +139,8 @@ class ThumbnailService @Inject() (
         using ctx
       )
       layersToRender = selectLayersToRender(viewConfiguration, usableDataSource)
+      hasColorLayers = layersToRender.exists(_.category == LayerCategory.color)
+      blendMode = readBlendMode(viewConfiguration)
       (center, zoom) = selectCenterAndZoom(viewConfiguration, usableDataSource, firstLayer)
       // Physical (mag1) extent of the thumbnail, shared by every layer so they all show the same
       // field of view. Must NOT be derived from any individual layer's chosen mag: layers can have
@@ -155,11 +157,15 @@ class ThumbnailService @Inject() (
           mag1Width,
           mag1Height,
           width,
-          height
+          height,
+          hasColorLayers
         )
       )
       client <- datasetService.clientFor(dataset)
-      image <- client.getCombinedThumbnail(dataset, CombinedThumbnailRequest(width, height, layerParameters))
+      image <- client.getCombinedThumbnail(
+        dataset,
+        CombinedThumbnailRequest(width, height, layerParameters, blendMode)
+      )
       _ <- thumbnailDAO.upsertThumbnail(
         dataset._id,
         CombinedThumbnailLayerNameSentinel,
@@ -225,13 +231,14 @@ class ThumbnailService @Inject() (
       mag1Width: Int,
       mag1Height: Int,
       outputWidth: Int,
-      outputHeight: Int
+      outputHeight: Int,
+      hasColorLayers: Boolean
   ): CombinedThumbnailLayerParameters = {
     val isSegmentation = layer.category == LayerCategory.segmentation
     val intensityRangeOpt = readIntensityRange(viewConfiguration, layer.name)
     val colorSettingsOpt = readColor(viewConfiguration, layer.name)
     val mappingNameOpt = readMappingName(viewConfiguration, layer.name)
-    val opacity = readOpacity(viewConfiguration, layer.name, isSegmentation)
+    val opacity = readOpacity(viewConfiguration, layer.name, isSegmentation, hasColorLayers)
     // Each layer may pick a different native mag (e.g. if it lacks a mag the other layers have), but
     // mag1Width/mag1Height (the physical area covered) are fixed and shared across all layers, so the
     // target-mag voxel counts fetched here differ instead. The datastore resizes the result to
@@ -315,13 +322,20 @@ class ThumbnailService @Inject() (
 
   private val DefaultColorLayerOpacity = 100d
   private val DefaultSegmentationLayerOpacity = 20d
+  // Used instead when the thumbnail has no color layers to composite the segmentation on top of, since
+  // 20% opacity against a plain black background is too faint to make out.
+  private val DefaultSegmentationLayerOpacityWithoutColorLayers = 60d
 
   private def readOpacity(
       viewConfiguration: DatasetViewConfiguration,
       layerName: String,
-      isSegmentation: Boolean
+      isSegmentation: Boolean,
+      hasColorLayers: Boolean
   ): Double = {
-    val default = if (isSegmentation) DefaultSegmentationLayerOpacity else DefaultColorLayerOpacity
+    val default =
+      if (!isSegmentation) DefaultColorLayerOpacity
+      else if (hasColorLayers) DefaultSegmentationLayerOpacity
+      else DefaultSegmentationLayerOpacityWithoutColorLayers
     (for {
       layersJsValue <- viewConfiguration.get("layers")
       alpha <- (layersJsValue \ layerName \ "alpha").asOpt[Double]
@@ -339,6 +353,11 @@ class ThumbnailService @Inject() (
       .get("colorLayerOrder")
       .flatMap(jsValue => JsonHelper.as[List[String]](jsValue).toOption)
       .getOrElse(List.empty)
+
+  // Dataset-wide setting (sibling of "layers", not per-layer), matching the frontend's
+  // DatasetConfiguration.blendMode default of BLEND_MODES.Additive.
+  private def readBlendMode(viewConfiguration: DatasetViewConfiguration): String =
+    viewConfiguration.get("blendMode").flatMap(_.asOpt[String]).getOrElse("Additive")
 
 }
 

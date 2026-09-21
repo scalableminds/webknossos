@@ -33,7 +33,11 @@ case class CombinedThumbnailRequest(
     width: Int,
     height: Int,
     // Paint order: first entry is painted first (bottom), last entry on top
-    layers: List[CombinedThumbnailLayerParameters]
+    layers: List[CombinedThumbnailLayerParameters],
+    // How color layers are combined with each other (mirrors the frontend's dataset-wide
+    // BLEND_MODES: "Additive", "Cover", "CoverWithBlackAsTransparent"). Does not affect how a
+    // segmentation layer is layered on top of the color layers, which always alpha-blends.
+    blendMode: String
 )
 
 object CombinedThumbnailRequest {

@@ -268,7 +268,8 @@ class BinaryDataController @Inject() (
   // Additively blends `colorImages` into one opaque base image (matching the frontend's default
   // "Additive" blend mode for color layers, viewer/constants.ts BLEND_MODES): channels are summed
   // (each layer's own opacity already baked into its per-pixel alpha) and clamped, rather than the
-  // later layer opaquely overwriting the former the way normal alpha-over compositing would.
+  // later layer opaquely overwriting the former the way normal alpha-over compositing would. Mirrors
+  // blendLayersAdditive in frontend/javascripts/viewer/shaders/blending.glsl.ts (dest + src).
   private def blendColorLayersAdditively(colorImages: List[BufferedImage], width: Int, height: Int): BufferedImage = {
     val accum = new Array[Int](width * height)
     colorImages.foreach { image =>
@@ -293,6 +294,69 @@ class BinaryDataController @Inject() (
     blended
   }
 
+  // Porter-Duff "over" compositing starting from a fully transparent base, matching blendLayersCover
+  // (and, with blackAsTransparent, blendLayersCoverBlackAsTransparent) in
+  // frontend/javascripts/viewer/shaders/blending.glsl.ts. Unlike additive blending, an earlier
+  // fully-opaque layer is never overpainted by a later one.
+  private def blendColorLayersCover(
+      colorImages: List[BufferedImage],
+      width: Int,
+      height: Int,
+      blackAsTransparent: Boolean
+  ): BufferedImage = {
+    val destR = new Array[Double](width * height)
+    val destG = new Array[Double](width * height)
+    val destB = new Array[Double](width * height)
+    val destA = new Array[Double](width * height)
+    colorImages.foreach { image =>
+      val pixels = image.getRGB(0, 0, width, height, null, 0, width)
+      var i = 0
+      while (i < pixels.length) {
+        val argb = pixels(i)
+        val r = (argb >>> 16) & 0xff
+        val g = (argb >>> 8) & 0xff
+        val b = argb & 0xff
+        val srcA =
+          if (blackAsTransparent && r == 0 && g == 0 && b == 0) 0.0
+          else ((argb >>> 24) & 0xff) / 255.0
+        val dA = destA(i)
+        val mixedAlphaFactor = (1.0 - dA) * srcA
+        val mixedAlpha = mixedAlphaFactor + dA
+        if (mixedAlpha > 0.0) {
+          destR(i) = (dA * destR(i) + mixedAlphaFactor * r) / mixedAlpha
+          destG(i) = (dA * destG(i) + mixedAlphaFactor * g) / mixedAlpha
+          destB(i) = (dA * destB(i) + mixedAlphaFactor * b) / mixedAlpha
+        }
+        destA(i) = mixedAlpha
+        i += 1
+      }
+    }
+    val pixels = new Array[Int](width * height)
+    var i = 0
+    while (i < pixels.length) {
+      pixels(i) = (0xff << 24) | (Math.round(destR(i)).toInt << 16) | (Math.round(destG(i)).toInt << 8) | Math
+        .round(destB(i))
+        .toInt
+      i += 1
+    }
+    val blended = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+    blended.setRGB(0, 0, width, height, pixels, 0, width)
+    blended
+  }
+
+  private def blendColorLayers(
+      colorImages: List[BufferedImage],
+      blendMode: String,
+      width: Int,
+      height: Int
+  ): BufferedImage =
+    blendMode match {
+      case "Cover" => blendColorLayersCover(colorImages, width, height, blackAsTransparent = false)
+      case "CoverWithBlackAsTransparent" =>
+        blendColorLayersCover(colorImages, width, height, blackAsTransparent = true)
+      case _ => blendColorLayersAdditively(colorImages, width, height)
+    }
+
   def thumbnailCombinedJpeg(datasetId: ObjectId): Action[CombinedThumbnailRequest] =
     Action.fox(validateJson[CombinedThumbnailRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
@@ -302,10 +366,11 @@ class BinaryDataController @Inject() (
           )
           colorImages = layerResults.collect { case (false, image) => image }
           segmentationImages = layerResults.collect { case (true, image) => image }
-          // Color layers are additively blended into one opaque base; segmentation layers are then
-          // alpha-blended on top (SRC_OVER, id 0 fully transparent), mirroring how the frontend mixes
-          // the segment tint over the additively-combined data color rather than summing it.
-          composite = blendColorLayersAdditively(colorImages, request.body.width, request.body.height)
+          // Color layers are combined per the dataset's configured blend mode (default Additive) into
+          // one opaque base; segmentation layers are then alpha-blended on top (SRC_OVER, id 0 fully
+          // transparent) regardless of blend mode, mirroring how the frontend mixes the segment tint
+          // over the already-blended data color rather than folding it into the blend mode itself.
+          composite = blendColorLayers(colorImages, request.body.blendMode, request.body.width, request.body.height)
           graphics = composite.createGraphics()
           _ = segmentationImages.foreach(image => graphics.drawImage(image, 0, 0, null))
           _ = graphics.dispose()

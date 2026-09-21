@@ -35,6 +35,9 @@ describe("TemporalBucketManager", () => {
       pushQueue,
       pullQueue,
       triggerRenderedBucketDataChanged: vi.fn(),
+      currentBucketPickerTick: 0,
+      previousBucketPickerTick: 0,
+      onBucketMarkedAsNeeded: vi.fn(),
     };
 
     const manager = new TemporalBucketManager(pullQueue as any, pushQueue as any);

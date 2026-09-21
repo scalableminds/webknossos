@@ -260,13 +260,17 @@ export default class LayerRenderingManager {
 
       pickingPromise.then(
         (buffer) => {
-          this.cube.markBucketsAsUnneeded();
+          // consumeBucketsFromArrayBuffer marks all picked buckets as needed for this tick.
+          // The buckets of the previous tick don't have to be unmarked explicitly, since their
+          // marks expire as soon as the cube moves on to the current tick.
+          this.cube.startBucketPicking(this.currentBucketPickerTick);
           const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
             buffer,
             this.cube,
             this.textureBucketManager.maximumCapacity,
             this.additionalCoordinates,
           );
+          this.cube.finishBucketPicking();
           const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
           this.textureBucketManager.setActiveBuckets(buckets);
           // In general, pull buckets which are not available but should be sent to the GPU

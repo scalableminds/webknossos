@@ -137,7 +137,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
       <div style={{ marginBottom: 4 }}>
         {annotationCount != null && annotationCount > 0 ? (
           <Link to={`/dashboard/annotations?dataset=${encodeURIComponent(selectedDataset.name)}`}>
-            {annotationCount} {pluralize("Annotation", annotationCount)}
+            {annotationCount} {pluralize("Annotation", annotationCount)} ›
           </Link>
         ) : null}
       </div>

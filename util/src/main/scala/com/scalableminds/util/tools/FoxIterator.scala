@@ -9,7 +9,10 @@ trait FoxIterator[+A] { self =>
   // Fetches the next element. Fox.empty signals the iterator is exhausted. A failed fetch is a Fox failure.
   def next(): Fox[A]
 
-  def map[B](f: A => B): FoxIterator[B] = () => self.next().map(f)
+  // Maps each element using the given transformer function f.
+  def map[B](f: A => B): FoxIterator[B] = new FoxIterator[B] {
+    override def next(): Fox[B] = self.next().map(f)
+  }
 
   // Maps each element to Some(value) to keep it (transformed) or None to skip it.
   def flatMap[B](f: A => Option[B])(implicit ec: ExecutionContext): FoxIterator[B] = new FoxIterator[B] {
@@ -43,8 +46,7 @@ trait FoxIterator[+A] { self =>
     Fox.serialCombined(self)(a => Fox.successful(f(a))).map(_ => ())
 }
 
-// Forwards a plain synchronous Iterator as a FoxIterator, for callers that need to hand an in-memory
-// (already-fetched) sequence to a Fox-based combinator like Fox.serialCombined.
+// Forwards a plain synchronous Iterator as a FoxIterator.
 class SyncFoxIterator[A](iterator: Iterator[A])(implicit ec: ExecutionContext) extends FoxIterator[A] {
   override def next(): Fox[A] =
     if (iterator.hasNext) Fox.successful(iterator.next())

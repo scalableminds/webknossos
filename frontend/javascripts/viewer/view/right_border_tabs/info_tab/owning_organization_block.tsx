@@ -28,6 +28,7 @@ export function OrganizationBlock() {
     queryKey: ["organization", owningOrganization],
     queryFn: () => getOrganization(owningOrganization),
     refetchOnWindowFocus: false,
+    staleTime: Number.POSITIVE_INFINITY,
     enabled: !isOwnOrganization,
   });
 

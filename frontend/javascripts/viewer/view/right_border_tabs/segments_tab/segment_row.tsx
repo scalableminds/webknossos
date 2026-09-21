@@ -39,6 +39,9 @@ const COLOR_DOT_SIZE = 9;
 // Everything that keeps its size while the name wraps is centered on the first line.
 const centerOnFirstLine = (size: number) => (EXPANDED_LINE_HEIGHT - size) / 2;
 
+// Hides an element until its row is hovered or keyboard-focused (see _right_menu.less).
+const HOVER_ONLY_CLASS = "segment-row__on-hover";
+
 const MESH_CHIP_STYLE: React.CSSProperties = {
   width: MESH_CHIP_SIZE,
   height: MESH_CHIP_SIZE,
@@ -116,11 +119,14 @@ function getMeshChipTooltip(mesh: MeshInformation): string {
 }
 
 /*
- * The 20x20 mesh indicator that replaced the mesh child node of a segment. Its slot is
- * always reserved (see the wrapper below), so loading or removing a mesh never changes
- * the row count or the row height of the list.
+ * The single mesh control of a row, in a slot that is always reserved so that loading or
+ * removing a mesh never changes the row count or the row height of the list.
+ *
+ * Once a mesh exists the control is a chip that reflects its state and toggles it; until
+ * then the same spot offers computing one, on hover. Both are the same size, so there is
+ * never a separate "load mesh" button competing with a "mesh is loaded" chip.
  */
-function MeshChip({
+function MeshControl({
   segment,
   mesh,
   actions,
@@ -130,7 +136,22 @@ function MeshChip({
   actions: SegmentRowActions;
 }) {
   if (mesh == null) {
-    return null;
+    return (
+      <FastTooltip title="Compute mesh (ad-hoc)" asChild>
+        <ButtonComponent
+          className={HOVER_ONLY_CLASS}
+          color="default"
+          type="text"
+          size="small"
+          style={MESH_CHIP_STYLE}
+          icon={<Icon component={MeshIcon} />}
+          onClick={(event) => {
+            event.stopPropagation();
+            actions.computeAdHocMesh(segment);
+          }}
+        />
+      </FastTooltip>
+    );
   }
   const state = getMeshChipState(mesh);
 
@@ -159,6 +180,7 @@ function MeshChip({
  * The right-aligned icon buttons that appear while the row is hovered or keyboard-focused
  * (see the visibility rules in _right_menu.less). They replace the formerly always-visible
  * ellipsis button; the "more actions" button opens the very same menu as a right-click.
+ * Anything mesh-related lives in the mesh slot instead, see MeshControl.
  */
 function SegmentRowActionBar({
   node,
@@ -175,7 +197,7 @@ function SegmentRowActionBar({
 
   return (
     <Flex
-      className="segment-row__actions"
+      className={`segment-row__actions ${HOVER_ONLY_CLASS}`}
       align="center"
       gap={1}
       style={{
@@ -186,19 +208,6 @@ function SegmentRowActionBar({
         marginTop: isExpanded ? centerOnFirstLine(ACTION_BUTTON_SIZE) : undefined,
       }}
     >
-      <FastTooltip title="Compute mesh (ad-hoc)" asChild>
-        <ButtonComponent
-          color="default"
-          type="text"
-          size="small"
-          style={ACTION_BUTTON_STYLE}
-          icon={<Icon component={MeshIcon} />}
-          onClick={(event) => {
-            event.stopPropagation();
-            actions.computeAdHocMesh(segment);
-          }}
-        />
-      </FastTooltip>
       <FastTooltip title="Center in viewports" asChild>
         <ButtonComponent
           color="default"
@@ -377,7 +386,7 @@ export const SegmentNodeTitle = memo(
             marginTop: isExpanded ? centerOnFirstLine(MESH_CHIP_SIZE) : undefined,
           }}
         >
-          <MeshChip segment={segment} mesh={mesh} actions={actions} />
+          <MeshControl segment={segment} mesh={mesh} actions={actions} />
         </Flex>
         <SegmentRowActionBar
           node={node}

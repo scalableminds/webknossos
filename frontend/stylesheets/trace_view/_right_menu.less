@@ -86,11 +86,12 @@
       }
     }
 
-    // The action bar is hover-only, but has to stay reachable without a mouse: antd marks
-    // the row that keyboard navigation is on with -active.
-    &:hover .segment-row__actions,
-    &:focus-within .segment-row__actions,
-    &.ant-tree-treenode-active .segment-row__actions {
+    // The action bar and the "compute mesh" button are hover-only, but have to stay
+    // reachable without a mouse: antd marks the row that keyboard navigation is on
+    // with -active.
+    &:hover .segment-row__on-hover,
+    &:focus-within .segment-row__on-hover,
+    &.ant-tree-treenode-active .segment-row__on-hover {
       visibility: visible;
     }
   }
@@ -127,7 +128,7 @@
     margin-block-start: 0;
   }
 
-  .segment-row__actions {
+  .segment-row__on-hover {
     visibility: hidden;
   }
 }

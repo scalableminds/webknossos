@@ -362,7 +362,7 @@ export function AnnotationStats({
           {volumeStats.length > 0 ? (
             <FastTooltip
               placement="left"
-              html={`${totalSegmentCount} – Only segments that were manually registered (either brushed or
+              html={`${formatNumber(totalSegmentCount)} – Only segments that were manually registered (either brushed or
                       interacted with) are counted in this statistic. Segmentation layers
                       created from automated workflows (also known as fallback layers) are not
                       considered currently.`}
@@ -380,7 +380,7 @@ export function AnnotationStats({
           {boundingBoxCount ? (
             <FastTooltip
               placement="left"
-              html={`${boundingBoxCount} – Only user-defined bounding boxes are counted in this statistic. Layer bounding boxes are excluded.`}
+              html={`${formatNumber(boundingBoxCount)} – Only user-defined bounding boxes are counted in this statistic. Layer bounding boxes are excluded.`}
               wrapper="tr"
             >
               <td>

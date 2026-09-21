@@ -287,7 +287,7 @@ function DatasetAnnotationCountLink({ dataset }: { dataset: APIDataset }) {
   if (!annotationCount) return null;
 
   return (
-    <FastTooltip title="Go to the annotation list for this dataset" placement="left" wrapper="tr">
+    <FastTooltip title="Go to the annotation list for this dataset" placement="left">
       <Link to={`/dashboard/annotations?dataset=${encodeURIComponent(dataset.name)}`}>
         {annotationCount} {pluralize("Annotation", annotationCount)} ›
       </Link>
@@ -555,7 +555,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           <div
             style={{
               wordWrap: "break-word",
-              padding: "5px 0"
+              padding: "5px 0",
             }}
           >
             <Typography.Title level={5} style={{ display: "initial", paddingRight: "5px" }}>

@@ -152,8 +152,10 @@ export function* prepareSplitOrMerge(
   const agglomerateFileMag = isTreeProofreading
     ? // In case of tree proofreading, the finest mag should be used.
       magInfo.getFinestMag()
-    : // For non-tree proofreading, the active mag suffices
-      currentMag;
+    : // For non-tree proofreading, the active mag suffices. If no 2D viewport is
+      // visible (e.g., because the 3D viewport is maximized), there is no active
+      // mag, so fall back to the finest mag, just like for tree proofreading.
+      (currentMag ?? magInfo.getFinestMag());
   if (agglomerateFileMag == null) {
     return null;
   }

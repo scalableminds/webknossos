@@ -22,8 +22,7 @@ import {
   LIST_ROW_GAP,
   LIST_ROW_HEIGHT,
   MoreActionsButton,
-  RowActionBar,
-  RowItemCount,
+  RowTrailingSlot,
 } from "../shared/list_row";
 import { MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
 import type { GroupUiNode, SkeletonUiNode, TreeUiNode } from "./hierarchy";
@@ -143,10 +142,13 @@ export const TreeNodeTitle = memo(
             <TagsOutlined />
           </FastTooltip>
         ) : null}
-        <RowItemCount count={nodeCount} title={`${nodeCount} nodes`} isExpanded={isExpanded} />
-        <RowActionBar isExpanded={isExpanded}>
+        <RowTrailingSlot
+          count={nodeCount}
+          countTitle={`${nodeCount} nodes`}
+          isExpanded={isExpanded}
+        >
           <MoreActionsButton onOpenContextMenu={(event) => onContextMenu(node, event)} />
-        </RowActionBar>
+        </RowTrailingSlot>
       </Flex>
     );
   },
@@ -198,12 +200,11 @@ export const GroupNodeTitle = memo(
           onCommit={(newName) => api.tracing.renameSkeletonGroup(group.groupId, newName)}
           onFinishEditing={onFinishRenaming}
         />
-        <RowItemCount count={node.treeCount} title={`${node.treeCount} skeletons`} />
-        {/* Groups carry the same action bar as the rows above and below them, so that
+        {/* Groups carry the same trailing slot as the rows above and below them, so that
             the counts of the whole list line up in one column. */}
-        <RowActionBar>
+        <RowTrailingSlot count={node.treeCount} countTitle={`${node.treeCount} skeletons`}>
           <MoreActionsButton onOpenContextMenu={(event) => onContextMenu(node, event)} />
-        </RowActionBar>
+        </RowTrailingSlot>
       </Flex>
     );
   },

@@ -38,6 +38,8 @@ export const centerOnFirstLine = (size: number) => (EXPANDED_LINE_HEIGHT - size)
 
 // Hides an element until its row is hovered or keyboard-focused (see _right_menu.less).
 export const HOVER_ONLY_CLASS = "list-row__on-hover";
+// The counterpart: hidden exactly while the row is hovered or keyboard-focused.
+const OFF_HOVER_CLASS = "list-row__off-hover";
 
 export const ACTION_BUTTON_STYLE: React.CSSProperties = {
   width: ACTION_BUTTON_SIZE,
@@ -152,15 +154,7 @@ export function RowActionBar({
  * How many items a row stands for (nodes of a skeleton, segments or skeletons of a
  * group). Right-aligned, in front of the action bar.
  */
-export function RowItemCount({
-  count,
-  title,
-  isExpanded,
-}: {
-  count: number;
-  title: string;
-  isExpanded?: boolean;
-}) {
+export function RowItemCount({ count, title }: { count: number; title: string }) {
   return (
     <Typography.Text
       type="secondary"
@@ -170,10 +164,47 @@ export function RowItemCount({
         fontSize: 11,
         // Keeps the counts of consecutive rows in one column.
         fontVariantNumeric: "tabular-nums",
-        lineHeight: isExpanded ? `${EXPANDED_LINE_HEIGHT}px` : undefined,
       }}
     >
       {count}
     </Typography.Text>
+  );
+}
+
+/*
+ * The trailing slot of a row: it shows the item count, and the row's actions in its place
+ * while the row is hovered or keyboard-focused. Both are stacked in the same grid cell,
+ * so the slot is as wide as the wider of the two and swapping them leaves the rest of the
+ * row exactly where it was.
+ */
+export function RowTrailingSlot({
+  count,
+  countTitle,
+  isExpanded,
+  children,
+}: {
+  count: number;
+  countTitle: string;
+  isExpanded?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        flex: "none",
+        alignItems: "center",
+        justifyItems: "end",
+        // Constrained to the first line for the same reason as the action bar it contains.
+        height: isExpanded ? EXPANDED_LINE_HEIGHT : undefined,
+      }}
+    >
+      <div className={OFF_HOVER_CLASS} style={{ gridArea: "1 / 1" }}>
+        <RowItemCount count={count} title={countTitle} />
+      </div>
+      <div style={{ gridArea: "1 / 1" }}>
+        <RowActionBar>{children}</RowActionBar>
+      </div>
+    </div>
   );
 }

@@ -374,7 +374,7 @@ export function SegmentTreeView(props: Props) {
                       />
                     )
                   }
-                  switcherIcon={<TreeSwitcherIcon />}
+                  switcherIcon={({ expanded }) => <TreeSwitcherIcon expanded={expanded} />}
                   onSelect={onSelect}
                   onDrop={onDrop}
                   allowDrop={allowDrop}

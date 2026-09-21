@@ -88,7 +88,13 @@ function EnterLargestSegmentIdModal({
   const [minValue, maxValue] = getSegmentIdRangeForElementClass(segmentationLayer.elementClass);
 
   return (
-    <Modal open title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
+    <Modal
+      open
+      title="Enter Largest Segment ID"
+      onOk={handleOk}
+      onCancel={handleCancel}
+      mask={{ closable: false }}
+    >
       <p>
         No largest segment ID was configured for this segmentation layer. This means that WEBKNOSSOS
         does not know which segment ID would be safe to use for annotating new segments (because it

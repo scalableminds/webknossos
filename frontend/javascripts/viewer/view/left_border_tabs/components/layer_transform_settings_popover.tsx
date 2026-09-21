@@ -8,32 +8,68 @@ import Toast from "libs/toast";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
-import { getUntransformedDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
+import type { Vector3 } from "viewer/constants";
+import {
+  getLayerBoundingBox,
+  getUntransformedDatasetBoundingBox,
+} from "viewer/model/accessors/dataset_accessor";
 import {
   buildLiveTransforms,
   DEFAULT_SRT,
+  extractPivotFromTransforms,
   extractSRTFromTransforms,
   hasValidLiveTransformationPattern,
+  rebaseTranslationToPivot,
   type SRTValues,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { getViewportExtentInVoxelPerAxis } from "viewer/model/accessors/view_mode_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
+import {
+  getTranslationSliderConfig,
+  MIN_SCALE,
+  RelativeSlider,
+  SCALE_SLIDER_CONFIG,
+  TRANSLATION_SLIDER_STEP,
+} from "./relative_slider";
 
 // Fetches the dataset from the backend and extracts the stored SRT values for a single layer.
 // isValid is false when the layer has no transforms or transforms incompatible with this editor.
 // The dataset is fetched from the backend rather than read from the store, because the store's
-// dataSource may already contain unsaved, locally mutated transforms.
+// dataSource may already contain unsaved, locally mutated transforms. The pivot the values are
+// expressed around is returned as well, so that they can be rebased onto the editor's pivot.
 async function fetchStoredSRTForLayer(
   datasetId: string,
   layerName: string,
-): Promise<{ srt: SRTValues; isValid: boolean }> {
+): Promise<{ srt: SRTValues; isValid: boolean; pivot: Vector3 | null }> {
   const backendDataset = await getDataset(datasetId);
   const backendLayer = backendDataset.dataSource.dataLayers.find((l) => l.name === layerName);
   const stored = backendLayer?.coordinateTransformations ?? null;
   if (stored != null && hasValidLiveTransformationPattern(stored)) {
-    return { srt: extractSRTFromTransforms(stored), isValid: true };
+    return {
+      srt: extractSRTFromTransforms(stored),
+      isValid: true,
+      pivot: extractPivotFromTransforms(stored),
+    };
   }
-  return { srt: DEFAULT_SRT, isValid: false };
+  return { srt: DEFAULT_SRT, isValid: false, pivot: null };
 }
+
+// Expresses the SRT values around the given pivot. Only the translation changes; the layer stays
+// exactly where it is. fromPivot may be null for values that carry no pivot of their own.
+function withRebasedTranslation(
+  srt: SRTValues,
+  fromPivot: Vector3 | null,
+  toPivot: Vector3,
+): SRTValues {
+  if (fromPivot == null) {
+    return srt;
+  }
+  return { ...srt, translation: rebaseTranslationToPivot(srt, fromPivot, toPivot) };
+}
+
+// Step of the number input next to the scaling slider. The slider itself works in log space, see
+// SCALE_SLIDER_CONFIG.
+const SCALE_INPUT_STEP = 0.01;
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
@@ -43,46 +79,63 @@ function SectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
-function AxisSliderRow({
-  label,
-  value,
-  storedValue,
-  min,
-  max,
-  step,
-  onChange,
-  resetDisabled,
-  onReset,
-  onFlip,
-  isFlipped,
-}: {
+// Rows that do not show the value on a slider bring their own, e.g. the relative translation
+// sliders. Those have no min/max, since their range is not the range of the value.
+type AxisSliderRowSliderProps =
+  | { sliderNode: ReactNode; min?: never; max?: never }
+  | { sliderNode?: never; min: number; max: number };
+
+type AxisSliderRowProps = {
   label: string;
   value: number;
   storedValue: number;
-  min: number;
-  max: number;
+  // Lower bound of the number input. Defaults to the slider's min; pass null to leave it unbounded.
+  inputMin?: number | null;
   step: number;
   onChange: (v: number) => void;
+  // Called once a value is actually committed, i.e. the slider is released or the number input is
+  // confirmed – as opposed to onChange, which also fires continuously while dragging.
+  onCommit?: (v: number) => void;
   resetDisabled: boolean;
   // Custom reset handler. Defaults to onChange(storedValue); used when resetting the row needs to
   // restore more than the displayed value (e.g. the rotation row also restores the flip sign).
   onReset?: () => void;
   onFlip?: () => void;
   isFlipped?: boolean;
-}) {
+} & AxisSliderRowSliderProps;
+
+function AxisSliderRow({
+  label,
+  value,
+  storedValue,
+  min,
+  max,
+  inputMin = min,
+  step,
+  onChange,
+  onCommit,
+  resetDisabled,
+  onReset,
+  onFlip,
+  isFlipped,
+  sliderNode,
+}: AxisSliderRowProps) {
   return (
     <Flex align="center" gap={6} style={{ marginBottom: 4 }}>
       <Typography.Text strong style={{ width: 12, flexShrink: 0 }}>
         {label}
       </Typography.Text>
-      <Slider
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={onChange}
-        style={{ flex: 1 }}
-      />
+      {sliderNode ?? (
+        <Slider
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={onChange}
+          onChangeComplete={(v) => onCommit?.(v)}
+          style={{ flex: 1 }}
+        />
+      )}
       <div style={{ width: 28, flexShrink: 0 }}>
         {onFlip != null && (
           <Tooltip title={isFlipped ? "Axis is flipped – click to unflip" : "Flip axis"}>
@@ -100,13 +153,17 @@ function AxisSliderRow({
         )}
       </div>
       <InputNumber
-        min={min}
-        max={max}
+        // Deliberately unbounded at the top: the relative sliders apply increments and do not
+        // constrain the value, so a typed value is never clamped to a slider range. Rows without a
+        // slider range (the translation rows) leave the input unbounded in both directions.
+        min={inputMin ?? undefined}
         step={step}
         value={value}
         onChange={(v) => {
           if (v != null) onChange(v);
         }}
+        onBlur={() => onCommit?.(value)}
+        onPressEnter={() => onCommit?.(value)}
         size="small"
         style={{ width: 62 }}
       />
@@ -135,15 +192,7 @@ export function LayerTransformSettingsContent({
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const dataset = useWkSelector((state) => state.dataset);
-  const datasetBbox = getUntransformedDatasetBoundingBox(dataset);
-  const translationSettingLimits = useMemo<[number, number, number]>(
-    () => [
-      datasetBbox.max[0] - datasetBbox.min[0],
-      datasetBbox.max[1] - datasetBbox.min[1],
-      datasetBbox.max[2] - datasetBbox.min[2],
-    ],
-    [datasetBbox],
-  );
+  const datasetBbox = useMemo(() => getUntransformedDatasetBoundingBox(dataset), [dataset]);
   const transforms = useWkSelector((state) => {
     const dataLayer = state.dataset.dataSource.dataLayers.find((l) => l.name === layer.name);
     return dataLayer?.coordinateTransformations ?? null;
@@ -153,6 +202,19 @@ export function LayerTransformSettingsContent({
   );
 
   const isCompatible = useMemo(() => hasValidLiveTransformationPattern(transforms), [transforms]);
+
+  // The point that scaling and rotation happen around. This is always the center of the layer
+  // itself, so that a layer rotates in place instead of orbiting some other point. Transforms that
+  // were stored with a different pivot (e.g. the dataset center, which this editor used to write)
+  // are rebased onto this pivot, which changes the translation but not the resulting transform.
+  const pivot = useMemo(() => {
+    try {
+      return getLayerBoundingBox(dataset, layer.name).getCenter();
+    } catch {
+      // getLayerBoundingBox throws for layers that are not part of the dataset's data source.
+      return datasetBbox.getCenter();
+    }
+  }, [dataset, layer.name, datasetBbox]);
 
   // The stored SRT values are the "default" baseline saved in the backend that the reset buttons
   // restore to. They are fetched lazily once the popover becomes visible.
@@ -165,12 +227,36 @@ export function LayerTransformSettingsContent({
     queryFn: () => fetchStoredSRTForLayer(dataset.id, layer.name),
     enabled: isVisible,
   });
-  const storedSRT = storedSRTResult?.srt ?? DEFAULT_SRT;
+  // The stored values are rebased onto the current pivot too, so that the reset buttons restore the
+  // layer to exactly the stored state instead of moving it.
+  const storedSRT = useMemo(
+    () =>
+      storedSRTResult == null
+        ? DEFAULT_SRT
+        : withRebasedTranslation(storedSRTResult.srt, storedSRTResult.pivot, pivot),
+    [storedSRTResult, pivot],
+  );
 
   const srtFromStore = useMemo((): SRTValues => {
-    if (!transforms || transforms.length === 0) return DEFAULT_SRT;
-    return extractSRTFromTransforms(transforms);
-  }, [transforms]);
+    // Reading the transforms is only safe for the editable pattern: an incompatible list of the same
+    // length can hold e.g. a thin-plate-spline entry, which has no matrix to extract from. The
+    // component renders an explanation instead of the sliders in that case (see below), but hooks
+    // cannot be skipped, so the guard has to live here as well.
+    if (!isCompatible || !transforms || transforms.length === 0) return DEFAULT_SRT;
+    return withRebasedTranslation(
+      extractSRTFromTransforms(transforms),
+      extractPivotFromTransforms(transforms),
+      pivot,
+    );
+  }, [transforms, pivot, isCompatible]);
+
+  // The translation sliders reach one viewport extent in either direction, so the translation one
+  // slider action can apply follows the zoom level.
+  const viewportExtent = useWkSelector(getViewportExtentInVoxelPerAxis);
+  const translationSliderConfigs = useMemo(
+    () => viewportExtent.map(getTranslationSliderConfig),
+    [viewportExtent],
+  );
 
   const handleChange = useCallback(
     (newSRT: SRTValues) => {
@@ -178,11 +264,11 @@ export function LayerTransformSettingsContent({
         newSRT.scale,
         newSRT.rotation,
         newSRT.translation,
-        datasetBbox,
+        pivot,
       );
       dispatch(setLayerTransformsAction(layer.name, newTransforms));
     },
-    [dispatch, layer.name, datasetBbox],
+    [dispatch, layer.name, pivot],
   );
 
   const handleResetToStored = useCallback(async () => {
@@ -192,13 +278,13 @@ export function LayerTransformSettingsContent({
       Toast.error("Failed to fetch stored transforms. Please try again.");
       return;
     }
-    handleChange(data.srt);
+    handleChange(withRebasedTranslation(data.srt, data.pivot, pivot));
     if (!data.isValid) {
       Toast.info(
         "Restored to default transforms as transforms in the backend are incompatible with the Live Transforms editor.",
       );
     }
-  }, [refetchStoredSRT, handleChange]);
+  }, [refetchStoredSRT, handleChange, pivot]);
 
   const handleSaveForAllUsers = useCallback(async () => {
     setIsSaving(true);
@@ -218,6 +304,7 @@ export function LayerTransformSettingsContent({
       queryClient.setQueryData(["storedLayerSRT", dataset.id, layer.name], {
         srt: extractSRTFromTransforms(transforms),
         isValid: true,
+        pivot: extractPivotFromTransforms(transforms),
       });
       Toast.success("Layer transforms saved for all users.");
     } catch (e) {
@@ -255,6 +342,12 @@ export function LayerTransformSettingsContent({
     handleChange({ scale: newScale, rotation, translation });
   };
 
+  // The scaling row shows and edits only the magnitude; the flip orientation (the sign of the scale)
+  // is kept as it is, since the flip toggle lives in the rotation row.
+  const updateScaleMagnitude = (axis: 0 | 1 | 2, magnitude: number) => {
+    updateScale(axis, magnitude * (scale[axis] < 0 ? -1 : 1));
+  };
+
   const updateRotation = (axis: 0 | 1 | 2, v: number) => {
     const newRotation = [...rotation] as [number, number, number];
     newRotation[axis] = v;
@@ -288,10 +381,18 @@ export function LayerTransformSettingsContent({
           label={axis}
           value={translation[i]}
           storedValue={storedSRT.translation[i]}
-          min={-translationSettingLimits[i]}
-          max={translationSettingLimits[i]}
-          step={1}
+          // Any translation can be typed, the slider only applies increments to it.
+          inputMin={null}
+          step={TRANSLATION_SLIDER_STEP}
           onChange={(v) => updateTranslation(i as 0 | 1 | 2, v)}
+          sliderNode={
+            <RelativeSlider
+              value={translation[i]}
+              config={translationSliderConfigs[i]}
+              onChange={(v) => updateTranslation(i as 0 | 1 | 2, v)}
+              ariaLabel={`Translate ${axis}`}
+            />
+          }
           resetDisabled={isFetchingStored}
         />
       ))}
@@ -319,12 +420,18 @@ export function LayerTransformSettingsContent({
           label={axis}
           value={Math.abs(scale[i])}
           storedValue={Math.abs(storedSRT.scale[i])}
-          min={0.0001}
-          max={10}
-          step={0.1}
-          // The slider shows only the magnitude; keep the current flip orientation here. Resetting
-          // the flip is handled by the rotation row, where the flip toggle lives.
-          onChange={(v) => updateScale(i as 0 | 1 | 2, v * (scale[i] < 0 ? -1 : 1))}
+          inputMin={MIN_SCALE}
+          step={SCALE_INPUT_STEP}
+          onChange={(v) => updateScaleMagnitude(i as 0 | 1 | 2, v)}
+          onCommit={(v) => updateScaleMagnitude(i as 0 | 1 | 2, Math.max(MIN_SCALE, Math.abs(v)))}
+          sliderNode={
+            <RelativeSlider
+              value={Math.abs(scale[i])}
+              config={SCALE_SLIDER_CONFIG}
+              onChange={(v) => updateScaleMagnitude(i as 0 | 1 | 2, v)}
+              ariaLabel={`Scale ${axis}`}
+            />
+          }
           resetDisabled={isFetchingStored}
         />
       ))}

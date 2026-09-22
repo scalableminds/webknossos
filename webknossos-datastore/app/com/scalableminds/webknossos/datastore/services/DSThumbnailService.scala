@@ -7,7 +7,7 @@ import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.image.{Color, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.image.{CombinedImage, ImageCreator, ImageCreatorParameters}
+import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 
 import java.awt.image.BufferedImage
@@ -39,11 +39,8 @@ class DSThumbnailService @Inject() {
   )(implicit ec: ExecutionContext): Fox[BufferedImage] = for {
     imageCreatorParams = ImageCreatorParameters(
       elementClass,
-      useHalfBytes = false,
-      slideWidth = width,
-      slideHeight = height,
-      imagesPerRow = 1,
-      blackAndWhite = false,
+      width = width,
+      height = height,
       intensityRange = intensityRange,
       isSegmentation = isSegmentation,
       color = color,
@@ -55,15 +52,8 @@ class DSThumbnailService @Inject() {
       if (data.length == 0)
         new Array[Byte](width * height * ElementClass.bytesPerElement(elementClass))
       else data
-    spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, imageCreatorParams).toFox ?~> Msg.Image.createFailed
-    bufferedImage <- spriteSheetToBufferedImage(spriteSheet)
+    bufferedImage <- ImageCreator.imageFor(dataWithFallback, imageCreatorParams).toFox ?~> Msg.Image.createFailed
   } yield resizeIfNeeded(bufferedImage, outputWidth.getOrElse(width), outputHeight.getOrElse(height))
-
-  private def spriteSheetToBufferedImage(
-      spriteSheet: CombinedImage
-  )(implicit ec: ExecutionContext): Fox[BufferedImage] = for {
-    firstSheet <- spriteSheet.pages.headOption.toFox ?~> Msg.Image.pageFailed
-  } yield firstSheet.image
 
   private def resizeIfNeeded(image: BufferedImage, outputWidth: Int, outputHeight: Int): BufferedImage =
     if (image.getWidth == outputWidth && image.getHeight == outputHeight) image
@@ -75,7 +65,7 @@ class DSThumbnailService @Inject() {
       scaled
     }
 
-  def bufferedImageToJpeg(bufferedImage: BufferedImage)(implicit ec: ExecutionContext): Box[Array[Byte]] =
+  def bufferedImageToJpeg(bufferedImage: BufferedImage): Box[Array[Byte]] =
     tryo {
       val outputStream = new ByteArrayOutputStream()
       new JPEGWriter().writeToOutputStream(bufferedImage)(outputStream)
@@ -89,10 +79,8 @@ class DSThumbnailService @Inject() {
       width: Int,
       height: Int
   ): Array[Byte] = {
-    // Color layers are combined per the dataset's configured blend mode (default Additive) into
-    // one opaque base; segmentation layers are then alpha-blended on top (SRC_OVER, id 0 fully
-    // transparent) regardless of blend mode, mirroring how the frontend mixes the segment tint
-    // over the already-blended data color rather than folding it into the blend mode itself.
+    // Color layers are combined per the dataset's configured blend mode.
+    // Segmentation layers are then alpha-blended on top
     val composite = blendColorLayers(colorImages, blendMode, width, height)
     val graphics = composite.createGraphics()
     segmentationImages.foreach(image => graphics.drawImage(image, 0, 0, null))
@@ -115,11 +103,6 @@ class DSThumbnailService @Inject() {
       case _ => blendColorLayersAdditively(colorImages, width, height)
     }
 
-  // Additively blends `colorImages` into one opaque base image (matching the frontend's default
-  // "Additive" blend mode for color layers, viewer/constants.ts BLEND_MODES): channels are summed
-  // (each layer's own opacity already baked into its per-pixel alpha) and clamped, rather than the
-  // later layer opaquely overwriting the former the way normal alpha-over compositing would. Mirrors
-  // blendLayersAdditive in frontend/javascripts/viewer/shaders/blending.glsl.ts (dest + src).
   private def blendColorLayersAdditively(colorImages: Seq[BufferedImage], width: Int, height: Int): BufferedImage = {
     val accum = new Array[Int](width * height)
     colorImages.foreach { image =>
@@ -144,10 +127,6 @@ class DSThumbnailService @Inject() {
     blended
   }
 
-  // Porter-Duff "over" compositing starting from a fully transparent base, matching blendLayersCover
-  // (and, with blackAsTransparent, blendLayersCoverBlackAsTransparent) in
-  // frontend/javascripts/viewer/shaders/blending.glsl.ts. Unlike additive blending, an earlier
-  // fully-opaque layer is never overpainted by a later one.
   private def blendColorLayersCover(
       colorImages: Seq[BufferedImage],
       width: Int,

@@ -58,14 +58,14 @@ object ImageCreator extends LazyLogging {
     val intensityRange = intensityRangeOpt.getOrElse(ElementClass.defaultIntensityRange(elementClass))
     val opacityAlphaByte =
       Math.round(com.scalableminds.util.tools.MathUtils.clamp(opacity, 0d, 100d) / 100.0 * 255).toInt & 0xff
+    val colorRedCallable = applyColor(color.map(_.r).getOrElse(1d), invertColor)
+    val colorGreenCallable = applyColor(color.map(_.g).getOrElse(1d), invertColor)
+    val colorBlueCallable = applyColor(color.map(_.b).getOrElse(1d), invertColor)
     while (idx + bytesPerElement <= data.length) {
       rgbOutputArray(idx / bytesPerElement) =
         if (isSegmentation)
           idToRGB(readSegmentId(data, idx, bytesPerElement), preserveAlpha, opacityAlphaByte)
         else {
-          val colorRedCallable = applyColor(color.map(_.r).getOrElse(1d), invertColor)
-          val colorGreenCallable = applyColor(color.map(_.g).getOrElse(1d), invertColor)
-          val colorBlueCallable = applyColor(color.map(_.b).getOrElse(1d), invertColor)
           val grayNormalized = normalizeIntensityGray(data, idx, intensityRange, elementClass)
           elementClass match {
             case ElementClass.uint24 => // assume uint24 rgb color data

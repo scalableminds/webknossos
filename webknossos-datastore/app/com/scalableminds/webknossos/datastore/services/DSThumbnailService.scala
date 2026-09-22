@@ -163,9 +163,11 @@ class DSThumbnailService @Inject() {
     val pixels = new Array[Int](width * height)
     var i = 0
     while (i < pixels.length) {
-      pixels(i) = (0xff << 24) | (Math.round(destR(i)).toInt << 16) | (Math.round(destG(i)).toInt << 8) | Math
-        .round(destB(i))
-        .toInt
+      val alpha = destA(i)
+      val r = Math.round(destR(i) * alpha).toInt & 0xff
+      val g = Math.round(destG(i) * alpha).toInt & 0xff
+      val b = Math.round(destB(i) * alpha).toInt & 0xff
+      pixels(i) = (0xff << 24) | (r << 16) | (g << 8) | b
       i += 1
     }
     val blended = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)

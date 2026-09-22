@@ -56,15 +56,26 @@ export function InfoTabRow({
   onClick?: () => void;
   children: React.ReactNode;
 }) {
-  const row = (
-    <div className={`info-tab-row ${isShortValue ? "info-tab-row-short" : ""}`} onClick={onClick}>
+  const rowClassName = `info-tab-row ${isShortValue ? "info-tab-row-short" : ""}`;
+  const rowContent = (
+    <>
       <div className="info-tab-row-label">
         {label}
         {labelSuffix}
       </div>
       <div className="info-tab-row-value">{children}</div>
-    </div>
+    </>
   );
+  // A clickable row is a real button so that it can be tabbed to and triggered with
+  // Enter or Space. Only rows without interactive content take this path.
+  const row =
+    onClick != null ? (
+      <button type="button" className={rowClassName} onClick={onClick}>
+        {rowContent}
+      </button>
+    ) : (
+      <div className={rowClassName}>{rowContent}</div>
+    );
 
   if (tooltip == null && tooltipHtml == null && tooltipRenderer == null) {
     return row;
@@ -109,18 +120,26 @@ export function InlineIconButton({
   /** Group-level affordances (the dataset cog) are smaller and muted until hovered. */
   isSecondary?: boolean;
 }) {
-  const button = (
-    <Button
-      type="text"
-      size="small"
-      aria-label={ariaLabel}
-      onClick={onClick}
-      icon={icon}
-      className={`info-tab-inline-button ${isSecondary ? "info-tab-inline-button-secondary" : ""}`}
-    />
-  );
+  const className = `info-tab-inline-button ${isSecondary ? "info-tab-inline-button-secondary" : ""}`;
 
+  // Navigation is a link and an in-page action is a button — never a button inside a link,
+  // which nests two interactive controls and breaks open-in-new-tab.
   return (
-    <FastTooltip title={tooltip}>{to != null ? <Link to={to}>{button}</Link> : button}</FastTooltip>
+    <FastTooltip title={tooltip}>
+      {to != null ? (
+        <Link to={to} aria-label={ariaLabel} className={className}>
+          {icon}
+        </Link>
+      ) : (
+        <Button
+          type="text"
+          size="small"
+          aria-label={ariaLabel}
+          onClick={onClick}
+          icon={icon}
+          className={className}
+        />
+      )}
+    </FastTooltip>
   );
 }

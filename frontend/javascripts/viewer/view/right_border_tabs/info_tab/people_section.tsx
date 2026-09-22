@@ -25,7 +25,15 @@ export function PeopleSection() {
         label="Contributors"
         labelSuffix={
           <FastTooltip title={CONTRIBUTORS_EXPLANATION}>
-            <InfoCircleOutlined />
+            {/* A button rather than a bare icon so that the explanation can be reached
+                with the keyboard, not only by hovering. */}
+            <button
+              type="button"
+              className="info-tab-label-info-button"
+              aria-label="What counts as a contributor?"
+            >
+              <InfoCircleOutlined />
+            </button>
           </FastTooltip>
         }
       >

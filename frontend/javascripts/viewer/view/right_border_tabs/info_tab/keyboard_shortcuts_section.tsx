@@ -36,7 +36,13 @@ const getShortcuts = (
 ): Shortcut[] => {
   const toKeycaps = (keyboardShortcutId: KeyboardShortcutId) =>
     (keyboardShortcutsConfig[keyboardShortcutId] ?? []).flatMap((keySeq, comboIndex) => {
-      const capitalizedKeySeq = keySeq.map((keys) => keys.map((key) => key.toUpperCase()));
+      // Only single characters are capitalized for display ("i" reads better as "I" on a
+      // keycap). Anything longer is a semantic identifier — "Control", "ArrowLeft",
+      // "@BracketRight" — that sortKeyCombination, keyToUiElement and the layout map all
+      // match verbatim, so uppercasing it would strand it as raw text in the wrong position.
+      const capitalizedKeySeq = keySeq.map((keys) =>
+        keys.map((key) => (key.length === 1 ? key.toUpperCase() : key)),
+      );
       return keySequenceToUiElements(
         capitalizedKeySeq,
         true,

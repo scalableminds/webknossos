@@ -166,7 +166,12 @@ class ThumbnailService @Inject() (
         image,
         jpegMimeType,
         Vec3Int.ones, // Note: the rendered layers may each use their own mag
-        BoundingBox(center, width, height, 1)
+        BoundingBox(
+          Vec3Int(center.x - mag1Width / 2, center.y - mag1Height / 2, center.z),
+          mag1Width,
+          mag1Height,
+          1
+        )
       )
     } yield image
 
@@ -259,21 +264,18 @@ class ThumbnailService @Inject() (
   ): List[StaticLayer] = {
     def isEnabled(layer: StaticLayer): Boolean = !readIsDisabled(viewConfiguration, layer.name)
 
-    val colorLayerOrder = readColorLayerOrder(viewConfiguration)
-    val orderedColorLayers =
-      usableDataSource.dataLayers.filter(layer => layer.category == LayerCategory.color && isEnabled(layer)).sortBy {
-        layer =>
-          val index = colorLayerOrder.indexOf(layer.name)
-          if (index == -1) Int.MaxValue else index
+    def selectFrom(layers: List[StaticLayer]): List[StaticLayer] = {
+      val colorLayerOrder = readColorLayerOrder(viewConfiguration)
+      val orderedColorLayers = layers.filter(_.category == LayerCategory.color).sortBy { layer =>
+        val index = colorLayerOrder.indexOf(layer.name)
+        if (index == -1) Int.MaxValue else index
       }
+      val segmentationLayerOpt = layers.filter(_.category == LayerCategory.segmentation).sortBy(_.name).headOption
+      orderedColorLayers ++ segmentationLayerOpt.toList
+    }
 
-    val segmentationLayerOpt = usableDataSource.dataLayers
-      .filter(layer => layer.category == LayerCategory.segmentation && isEnabled(layer))
-      .sortBy(_.name)
-      .headOption
-
-    val layersToRender = orderedColorLayers ++ segmentationLayerOpt.toList
-    if (layersToRender.nonEmpty) layersToRender else usableDataSource.dataLayers
+    val enabledLayersToRender = selectFrom(usableDataSource.dataLayers.filter(isEnabled))
+    if (enabledLayersToRender.nonEmpty) enabledLayersToRender else selectFrom(usableDataSource.dataLayers)
   }
 
   private def readIntensityRange(

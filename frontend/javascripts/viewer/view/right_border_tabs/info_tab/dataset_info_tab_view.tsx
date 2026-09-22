@@ -1,10 +1,5 @@
-import { InfoCircleOutlined } from "@ant-design/icons";
-import { useQuery } from "@tanstack/react-query";
-import { getOrganization } from "admin/api/organization";
-import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { Link } from "react-router";
-import type { APIUser, APIUserBase } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
 import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_accessor";
@@ -22,13 +17,11 @@ import {
 import { InfoTabRow, InfoTabSection } from "./info_tab_layout";
 import { KeyboardShortcutsSection } from "./keyboard_shortcuts_section";
 import { MagInfoRow } from "./mag_info_row";
-import { OwningOrganizationRow } from "./owning_organization_row";
+import { DatasetOwningOrganizationRow } from "./owning_organization_row";
+import { PeopleSection } from "./people_section";
 import { VoxelSizeRow } from "./voxel_size_row";
 
 const datasetInfoTabId = "dataset-info-tab";
-
-const CONTRIBUTORS_EXPLANATION =
-  'If other users edited this annotation, they will be listed here. You can allow other users to edit the annotation by opening the "Share" dialog from the dropdown menu.';
 
 export default function DatasetInfoTabView() {
   const isDatasetViewMode = useWkSelector(
@@ -64,7 +57,7 @@ function DatasetInfoPanel() {
         <VoxelSizeRow dataset={dataset} />
         <DatasetExtentRow dataset={dataset} />
         <MagInfoRow />
-        <OrganizationRow />
+        <DatasetOwningOrganizationRow />
         <DatasetAnnotationCountLink dataset={dataset} label="Annotations" />
       </InfoTabSection>
       <KeyboardShortcutsSection />
@@ -108,85 +101,11 @@ function AnnotationInfoPanel() {
         <VoxelSizeRow dataset={dataset} />
         <DatasetExtentRow dataset={dataset} />
         <MagInfoRow />
-        <OrganizationRow />
+        <DatasetOwningOrganizationRow />
         <DatasetAnnotationCountLink dataset={dataset} label="Other annotations" />
       </InfoTabSection>
       <PeopleSection />
       <AnnotationStatisticsSection />
     </>
-  );
-}
-
-/** Only relevant when the dataset belongs to a different organization than the active user. */
-function OrganizationRow() {
-  const owningOrganization = useWkSelector((state) => state.dataset.owningOrganization);
-  const activeUserOrganization = useWkSelector((state) => state.activeUser?.organization);
-
-  const { data: organization } = useQuery({
-    queryKey: ["organization", owningOrganization],
-    queryFn: () => getOrganization(owningOrganization),
-    enabled: activeUserOrganization !== owningOrganization,
-    refetchOnWindowFocus: false,
-  });
-
-  if (activeUserOrganization === owningOrganization) {
-    return null;
-  }
-
-  return <OwningOrganizationRow organizationId={organization?.name ?? null} />;
-}
-
-function PeopleSection() {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const owner = useWkSelector((state) => state.annotation.owner);
-  const contributors = useWkSelector((state) => state.annotation.contributors);
-
-  if (!owner) {
-    return null;
-  }
-
-  return (
-    <InfoTabSection label="People">
-      <InfoTabRow label="Owner">
-        <UserName user={owner} activeUser={activeUser} />
-      </InfoTabRow>
-      <InfoTabRow
-        label="Contributors"
-        labelSuffix={
-          <FastTooltip title={CONTRIBUTORS_EXPLANATION}>
-            <InfoCircleOutlined />
-          </FastTooltip>
-        }
-      >
-        {contributors.length > 0 ? (
-          <span>
-            {contributors.map((user, index) => (
-              <span key={user.id}>
-                {index > 0 ? ", " : ""}
-                <UserName user={user} activeUser={activeUser} />
-              </span>
-            ))}
-          </span>
-        ) : (
-          // Read-only values are plain text — a chip would promise a click that does not exist.
-          <span className="info-tab-muted">None</span>
-        )}
-      </InfoTabRow>
-    </InfoTabSection>
-  );
-}
-
-function UserName({
-  user,
-  activeUser,
-}: {
-  user: APIUserBase;
-  activeUser: APIUser | null | undefined;
-}) {
-  return (
-    <span>
-      {user.firstName} {user.lastName}
-      {activeUser?.id === user.id ? <span className="info-tab-muted"> (you)</span> : null}
-    </span>
   );
 }

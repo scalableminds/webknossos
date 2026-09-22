@@ -132,17 +132,13 @@ export function AnnotationStatisticsSection() {
           {formatNumber(skeletonStats.treeCount)}
         </InfoTabRow>
       ) : null}
-      {volumeStats.length > 0 ? (
-        <InfoTabRow
-          label="Segments"
-          isShortValue
-          tooltipHtml={getSegmentStatsTooltip(totalSegmentCount)}
-        >
-          {formatNumber(totalSegmentCount)}
-        </InfoTabRow>
-      ) : null}
-      {/* Always shown, also at zero: the count is a fact about the annotation, and a row
-          that only appears once a bounding box exists makes the section jump. */}
+      <InfoTabRow
+        label="Segments"
+        isShortValue
+        tooltipHtml={getSegmentStatsTooltip(totalSegmentCount)}
+      >
+        {formatNumber(totalSegmentCount)}
+      </InfoTabRow>
       <InfoTabRow
         label="Bounding boxes"
         isShortValue

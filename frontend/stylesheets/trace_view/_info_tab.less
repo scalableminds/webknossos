@@ -1,0 +1,214 @@
+/**
+ * Info tab (right sidebar).
+ *
+ * The panel follows one spacing scale (4 / 7 / 10 / 12 / 16 / 20) and one type scale.
+ * Colors are taken from the antd tokens so that the dark theme keeps working; the design
+ * tokens they stand in for are noted where the mapping is not obvious.
+ */
+.info-tab {
+  // Long values (voxel size, extent) reach the panel's right edge. Short values (counts,
+  // magnifications) right-align to their own track instead, so that the number stays close
+  // to its label on a wide panel.
+  --info-tab-short-value-track: 96px;
+
+  // The panel may be very wide, the content column may not.
+  max-width: 520px;
+  font-size: 13px;
+}
+
+.info-tab-identity {
+  padding: 16px 16px 12px;
+}
+
+.info-tab-identity-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  // Keep the title readable when it is long enough to wrap, while the affordance
+  // stays glued to the end of the text.
+  overflow-wrap: anywhere;
+}
+
+.info-tab-title {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.info-tab-description {
+  line-height: 1.45;
+  margin-top: 4px;
+
+  // Markdown descriptions render block elements which would otherwise add their own margins.
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/** An edit affordance that belongs to a single string: rendered inline right after it. */
+.info-tab-inline-button.ant-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0;
+  border-radius: 5px;
+  color: var(--ant-color-primary);
+
+  &:hover:not(:disabled) {
+    background: var(--ant-color-fill-tertiary);
+    color: var(--ant-color-primary);
+  }
+
+  &.info-tab-inline-button-secondary {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border-radius: 4px;
+    color: var(--ant-color-text-secondary);
+
+    &:hover:not(:disabled) {
+      color: var(--ant-color-primary);
+    }
+  }
+}
+
+.info-tab-section {
+  border-top: 1px solid var(--ant-color-split);
+  padding: 6px 4px;
+
+  &:last-child {
+    padding-bottom: 12px;
+  }
+}
+
+.info-tab-section-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px 4px;
+}
+
+.info-tab-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ant-color-text-secondary);
+}
+
+.info-tab-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 12px;
+  border-radius: 6px;
+
+  &:hover {
+    background: var(--ant-color-fill-quaternary);
+  }
+}
+
+/** Short values right-align to a capped track instead of the panel's right edge. */
+.info-tab-row-short {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--info-tab-short-value-track);
+}
+
+.info-tab-row-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ant-color-text-secondary);
+}
+
+.info-tab-row-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.info-tab-row-secondary-value {
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+}
+
+/**
+ * Muted text: labels, units, secondary lines and empty states. Deliberately
+ * `colorTextSecondary` and not antd's `type="secondary"` (which resolves to the lighter
+ * `colorTextDescription`) — the latter does not reach 4.5:1 on the panel background.
+ */
+.info-tab-unit,
+.info-tab-muted {
+  color: var(--ant-color-text-secondary);
+}
+
+.info-tab-shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+
+  &:hover {
+    background: var(--ant-color-fill-quaternary);
+  }
+}
+
+.info-tab-shortcut-keys {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/** Connector words ("or", "drag") and separators ("/", "+") between keycaps. */
+.info-tab-shortcut-connector {
+  font-size: 11.5px;
+  color: var(--ant-color-text-secondary);
+  white-space: nowrap;
+}
+
+.info-tab-all-shortcuts {
+  display: block;
+  padding: 10px 12px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/**
+ * Keycap. Neutral by design — blue is reserved for links and icons. The doubled bottom
+ * border is the only 3D cue, and min-width keeps single letters square while "Alt" widens.
+ */
+.keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--ant-color-border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--ant-color-fill-quaternary);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ant-color-text);
+  white-space: nowrap;
+}
+
+.keycap-glyph {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+}

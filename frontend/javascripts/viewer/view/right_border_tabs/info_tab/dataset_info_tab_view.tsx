@@ -1,79 +1,43 @@
-import Icon, {
-  EditOutlined,
-  InfoCircleOutlined,
-  ReloadOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
-import IconBoundingBox from "@images/icons/icon-bounding-box.svg?react";
-import IconDownsampling from "@images/icons/icon-downsampling.svg?react";
-import IconExtent from "@images/icons/icon-extent.svg?react";
+import Icon, { EditOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
 import IconMousewheel from "@images/icons/icon-mousewheel.svg?react";
-import IconSegments from "@images/icons/icon-segments.svg?react";
-import IconSkeletons from "@images/icons/icon-skeletons.svg?react";
-import IconVoxelsize from "@images/icons/icon-voxelsize.svg?react";
-import { useQuery } from "@tanstack/react-query";
 import { getOrganization } from "admin/api/organization";
-import { getAnnotationCountForDataset } from "admin/rest_api";
 import { Space, Tag, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { ThemedIcon } from "components/themed_icon";
-import { copyToClipboard } from "libs/clipboard";
-import {
-  formatNumberToVolume,
-  formatScale,
-  formatScaleForClipboard,
-  formatVoxels,
-} from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
-import { useWkSelector } from "libs/react_hooks";
-import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
-import memoizeOne from "memoize-one";
-import messages from "messages";
+import { mayUserEditDataset } from "libs/utils";
 import React, { type CSSProperties } from "react";
-import { connect, useDispatch } from "react-redux";
+import { connect } from "react-redux";
 import { Link } from "react-router";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIUser, APIUserBase } from "types/api_types";
-import type { EmptyObject } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
-import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
-import {
-  getSkeletonStats,
-  getStats,
-  getVolumeStats,
-  mayEditAnnotationProperties,
-  type TracingStats,
-} from "viewer/model/accessors/annotation_accessor";
-import {
-  getDatasetExtentAsString,
-  getDatasetExtentInUnitAsProduct,
-  getDatasetExtentInVoxel,
-  getDatasetExtentInVoxelAsProduct,
-  getMagnificationUnion,
-  getReadableURLPart,
-  getViewDatasetURL,
-} from "viewer/model/accessors/dataset_accessor";
-import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
-import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
+import constants, { ControlModeEnum } from "viewer/constants";
+import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_accessor";
+import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import {
   setAnnotationDescriptionAction,
   setAnnotationNameAction,
 } from "viewer/model/actions/annotation_actions";
-import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
 import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
-import Store, { type Task, type WebknossosState } from "viewer/store";
+import type { Task, WebknossosState } from "viewer/store";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
-import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
-import { MarkdownModal } from "../components/markdown_modal";
-import type { KeyboardShortcutId } from "../keyboard_shortcuts/keyboard_shortcut_constants";
+import { KeyboardKeyIcon } from "../../components/keyboard_key_icon";
+import { MarkdownModal } from "../../components/markdown_modal";
+import type { KeyboardShortcutId } from "../../keyboard_shortcuts/keyboard_shortcut_constants";
 import type {
   KeyboardShortcutsMap,
   UnmodifiedLayoutMap,
-} from "../keyboard_shortcuts/keyboard_shortcut_types";
-import { keySequenceToUiElements } from "../keyboard_shortcuts/keyboard_shortcut_utils";
+} from "../../keyboard_shortcuts/keyboard_shortcut_types";
+import { keySequenceToUiElements } from "../../keyboard_shortcuts/keyboard_shortcut_utils";
+import { AnnotationStatisticsSection } from "./annotation_stats_section";
+import { DatasetAnnotationCountLink } from "./dataset_annotation_count_link";
+import { DatasetExtentRow } from "./dataset_extent_row";
+import { DebugInfo } from "./debug_info";
+import { MagInfoRow } from "./mag_info_row";
+import { OwningOrganizationRow } from "./owning_organization_row";
+import { VoxelSizeRow } from "./voxel_size_row";
 
 type StateProps = {
   annotationName: string;
@@ -106,12 +70,6 @@ type ShortcutInfo = {
 };
 
 const datasetInfoTabId = "dataset-info-tab";
-
-// getStats iterates over all trees which can be expensive for large tracings.
-// memoizeOne avoids recomputing while the annotation is unchanged, and
-// reuseInstanceOnEquality keeps the result instance stable when a mutation
-// did not change any of the counts (to avoid unnecessary re-renders).
-const cachedGetStats = reuseInstanceOnEquality(memoizeOne(getStats));
 
 const getShortcuts = (
   keyboardShortcutsConfig: KeyboardShortcutsMap,
@@ -202,269 +160,6 @@ const getShortcuts = (
     },
   ];
 };
-
-export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
-  const extentInVoxel = getDatasetExtentAsString(dataset, true);
-  const extentInLength = getDatasetExtentAsString(dataset, false);
-  const extentProductInVx = getDatasetExtentInVoxelAsProduct(dataset);
-  const extentProductInUnit = getDatasetExtentInUnitAsProduct(dataset);
-  const formattedExtentInUnit = formatNumberToVolume(
-    extentProductInUnit,
-    LongUnitToShortUnitMap[dataset.dataSource.scale.unit],
-  );
-
-  const renderDSExtentTooltip = () => {
-    return (
-      <div>
-        Dataset extent:
-        <br />
-        {formatVoxels(extentProductInVx)}
-        <br />
-        {formattedExtentInUnit}
-      </div>
-    );
-  };
-
-  const copyExtentToClipboard = () => {
-    const { width, height, depth } = getDatasetExtentInVoxel(dataset);
-    copyToClipboard(`${width},${height},${depth}`, "dataset extent", true);
-  };
-
-  return (
-    <FastTooltip
-      dynamicRenderer={renderDSExtentTooltip}
-      placement="left"
-      wrapper="tr"
-      key={dataset.id}
-    >
-      <td
-        style={{
-          paddingRight: 20,
-          paddingTop: 10,
-        }}
-      >
-        <Icon component={IconExtent} className="info-tab-icon" aria-label="Dataset extent" />
-      </td>
-      <td
-        style={{
-          paddingTop: 10,
-        }}
-        onClick={copyExtentToClipboard}
-      >
-        {extentInVoxel}
-        <br /> {extentInLength}
-      </td>
-    </FastTooltip>
-  );
-}
-
-export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
-  const copyVoxelSizeToClipboard = () => {
-    copyToClipboard(formatScaleForClipboard(dataset.dataSource.scale), "dataset voxel size", true);
-  };
-
-  return (
-    <FastTooltip title="Dataset voxel size" placement="left" wrapper="tr">
-      <td
-        style={{
-          paddingRight: 20,
-        }}
-      >
-        <Icon component={IconVoxelsize} className="info-tab-icon" aria-label="Voxel size" />
-      </td>
-      <td onClick={copyVoxelSizeToClipboard}>{formatScale(dataset.dataSource.scale)}</td>
-    </FastTooltip>
-  );
-}
-
-function DatasetAnnotationCountLink({ dataset }: { dataset: APIDataset }) {
-  const { data: annotationCount } = useQuery({
-    queryKey: ["annotationCount", dataset.id],
-    queryFn: () => getAnnotationCountForDataset(dataset.id),
-    refetchOnWindowFocus: false,
-  });
-
-  if (!annotationCount) return null;
-
-  return (
-    <FastTooltip title="Go to the annotation list for this dataset" placement="left">
-      <Link to={`/dashboard/annotations?dataset=${encodeURIComponent(dataset.name)}`}>
-        {annotationCount} {pluralize("Annotation", annotationCount)} ›
-      </Link>
-    </FastTooltip>
-  );
-}
-
-export function OwningOrganizationRow({ organizationId }: { organizationId: string | null }) {
-  return (
-    <FastTooltip title="Organization" placement="left">
-      <div className="info-tab-block">
-        <p className="sidebar-label">Organization</p>
-        <p>
-          <Tag color="blue" variant="outlined">
-            {organizationId === null ? <i>loading...</i> : organizationId}
-          </Tag>
-        </p>
-      </div>
-    </FastTooltip>
-  );
-}
-
-export function AnnotationStats({
-  stats,
-  asInfoBlock,
-  withMargin,
-  boundingBoxCount,
-}: {
-  stats: TracingStats | EmptyObject;
-  asInfoBlock: boolean;
-  withMargin?: boolean | null | undefined;
-  boundingBoxCount?: number;
-}) {
-  if ((!stats || Object.keys(stats).length === 0) && !boundingBoxCount) return null;
-  const formatLabel = (str: string) => (asInfoBlock ? str : "");
-  const useStyleWithMargin = withMargin != null ? withMargin : true;
-  const styleWithLargeMarginBottom = { marginBottom: 14 };
-  const styleWithSmallMargin = { margin: 2 };
-  const skeletonStats = getSkeletonStats(stats);
-  const volumeStats = getVolumeStats(stats);
-  const totalSegmentCount = volumeStats.reduce((sum, [_, volume]) => sum + volume.segmentCount, 0);
-
-  return (
-    <div
-      className="info-tab-block"
-      style={useStyleWithMargin ? styleWithLargeMarginBottom : styleWithSmallMargin}
-    >
-      {asInfoBlock && <p className="sidebar-label">Statistics</p>}
-      <table className={asInfoBlock ? "annotation-stats-table" : "annotation-stats-table-slim"}>
-        <tbody>
-          {skeletonStats ? (
-            <FastTooltip
-              placement="left"
-              html={`
-                  <p>Trees: ${safeNumberToStr(skeletonStats.treeCount)}</p>
-                  <p>Nodes: ${safeNumberToStr(skeletonStats.nodeCount)}</p>
-                  <p>Edges: ${safeNumberToStr(skeletonStats.edgeCount)}</p>
-                  <p>Branchpoints: ${safeNumberToStr(skeletonStats.branchPointCount)}</p>
-                `}
-              wrapper="tr"
-            >
-              <td>
-                <Icon component={IconSkeletons} className="info-tab-icon" aria-label="Skeletons" />
-              </td>
-              <td>
-                {skeletonStats.treeCount} {formatLabel(pluralize("Tree", skeletonStats.treeCount))}
-              </td>
-            </FastTooltip>
-          ) : null}
-          {volumeStats.length > 0 ? (
-            <FastTooltip
-              placement="left"
-              html={`${totalSegmentCount} – Only segments that were manually registered (either brushed or
-                      interacted with) are counted in this statistic. Segmentation layers
-                      created from automated workflows (also known as fallback layers) are not
-                      considered currently.`}
-              wrapper="tr"
-            >
-              <td>
-                <Icon component={IconSegments} className="info-tab-icon" aria-label="Segments" />
-              </td>
-              <td>
-                {totalSegmentCount} {formatLabel(pluralize("Segment", totalSegmentCount))}
-              </td>
-            </FastTooltip>
-          ) : null}
-          {boundingBoxCount ? (
-            <FastTooltip
-              placement="left"
-              html={`${boundingBoxCount} – Only user-defined bounding boxes are counted in this statistic. Layer bounding boxes are excluded.`}
-              wrapper="tr"
-            >
-              <td>
-                <Icon
-                  component={IconBoundingBox}
-                  className="info-tab-icon"
-                  aria-label="Bounding Boxes"
-                />
-              </td>
-              <td>
-                {boundingBoxCount}{" "}
-                {formatLabel(pluralize("Bounding Box", boundingBoxCount, "Bounding Boxes"))}
-              </td>
-            </FastTooltip>
-          ) : null}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function AnnotationStatisticsSection() {
-  const stats = useWkSelector((state) => cachedGetStats(state.annotation));
-  const boundingBoxCount = useWkSelector(
-    (state) => maybeGetSomeTracing(state.annotation)?.userBoundingBoxes.length ?? 0,
-  );
-  return <AnnotationStats stats={stats} asInfoBlock boundingBoxCount={boundingBoxCount} />;
-}
-
-function MagInfoRow() {
-  const activeMagInfo = useWkSelector(getActiveMagInfo);
-  const dataset = useWkSelector((state) => state.dataset);
-  const { representativeMag, isActiveMagGlobal, activeMagOfEnabledLayers } = activeMagInfo;
-
-  const renderMagsTooltip = () => {
-    // The annotation is read lazily when the tooltip is actually rendered
-    // (i.e., on hover) so that this row doesn't need to subscribe to (and
-    // re-render on) every annotation mutation.
-    const { annotation } = Store.getState();
-    const magUnion = getMagnificationUnion(dataset);
-    return (
-      <div style={{ width: 200 }}>
-        Rendered magnification per layer:
-        <ul>
-          {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-            const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
-
-            return (
-              <li key={layerName}>
-                {readableName}: {mag ? mag.join("-") : "none"}
-              </li>
-            );
-          })}
-        </ul>
-        Available magnifications:
-        <ul>
-          {magUnion.map((mags) => (
-            <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
-          ))}
-        </ul>
-        {messages["dataset.mag_explanation"]}
-      </div>
-    );
-  };
-
-  return representativeMag != null ? (
-    <FastTooltip dynamicRenderer={renderMagsTooltip} placement="left" wrapper="tr">
-      <td
-        style={{
-          paddingRight: 4,
-          paddingTop: 8,
-        }}
-      >
-        <Icon component={IconDownsampling} className="info-tab-icon" aria-label="Magnification" />
-      </td>
-      <td
-        style={{
-          paddingRight: 4,
-          paddingTop: 8,
-        }}
-      >
-        {representativeMag.join("-")}
-        {isActiveMagGlobal ? "" : "*"}{" "}
-      </td>
-    </FastTooltip>
-  ) : null;
-}
 
 class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
@@ -589,9 +284,6 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         >
           {datasetName}
         </Link>
-        <div>
-          <DatasetAnnotationCountLink dataset={dataset} />
-        </div>
       </div>
     );
   }
@@ -802,19 +494,6 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       </div>
     );
   }
-}
-
-function DebugInfo() {
-  const dispatch = useDispatch();
-  const versionOnClient = useWkSelector((state) => {
-    return state.annotation.version;
-  });
-  return (
-    <>
-      Version: {versionOnClient}
-      <ReloadOutlined onClick={() => dispatch(ensureHasNewestVersionAction(() => {}))} />{" "}
-    </>
-  );
 }
 
 const mapStateToProps = (state: WebknossosState): StateProps => ({

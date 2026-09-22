@@ -239,10 +239,7 @@ describe("TextureBucketManager", () => {
       tbm.packingDegree,
       tbm.bucketVoxelCount,
     );
-    expect(bucketHeightInTexture).toBe(32); // full-depth atlas geometry, not shrunk
-    // The whole raw batch buffer is uploaded verbatim (unpacked byte layout, see
-    // MockUpdatableTexture.update), so a marker's position within it carries straight
-    // through to its position within the bucket's row-aligned region of the atlas.
+    expect(bucketHeightInTexture).toBe(32);
     const bucketLocation =
       bucketHeightInTexture * bucketAddress * textureWidth + zSlot * sliceVoxelCount;
     // @ts-expect-error - texture is available in our mock but not in the real type

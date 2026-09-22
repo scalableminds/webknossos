@@ -77,8 +77,7 @@ function bucketKey(address: BucketAddress): string {
 
 // A t-batched request addresses one bucket per timepoint, so tests need a cube mock that can
 // *create* buckets on demand (the real DataCube.getOrCreateBucket does) rather than looking
-// them up in a fixed list. Deliberately does not enforce additionalAxes bounds, so that the
-// bounds filtering in getTBatchSiblingAddresses is what the bounds test actually pins.
+// them up in a fixed list.
 function createMockedCubeAndQueue(
   options: {
     usesTRecycling?: boolean;

@@ -247,10 +247,8 @@ describe("DataCube", () => {
     bucket.markAsRequested();
     bucket.receiveData(new Uint8Array(4 * 32 ** 3));
 
-    // The bucket is LOADED now, so a second hand-over is a programming error. It has to be
-    // rejected *before* anything is written: rawBucketData is what TextureBucketManager
-    // uploads to the GPU, so overwriting it here would leave the GPU texture describing a
-    // different fetch than the CPU-side data.
+    // The bucket is LOADED now, so a second receiveData call is a programming error. It has to be
+    // rejected *before* anything is written.
     const rawBucketDataBefore = bucket.rawBucketData;
     expect(() => bucket.receiveData(new Uint8Array(4 * 32 ** 3))).toThrow();
     expect(bucket.rawBucketData).toBe(rawBucketDataBefore);

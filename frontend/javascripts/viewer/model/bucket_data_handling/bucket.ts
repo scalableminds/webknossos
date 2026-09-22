@@ -118,13 +118,8 @@ export class DataBucket {
   accessed: boolean;
   previousAccessed: boolean;
   data: BucketDataArray | null | undefined;
-  // The full 32^3-voxel wire-format buffer `data` was extracted from (see receiveData).
-  // For most layers this covers exactly the same memory as `data`. For a t-recycling
-  // layer's bucket, this is the *shared* 32-t-slice batch buffer fetched together (see
-  // PullQueue.pullBatch), of which `data` is only this bucket's own single-slice window
-  // (a view, not a copy) — TextureBucketManager uploads this whole buffer to the GPU in
-  // one call instead of `data`'s narrow slice. May be backed by memory shared with
-  // sibling buckets — never mutate it.
+  // The full wire-format buffer `data` was extracted from (for most layers this is identical to
+  // `data`; for a t-recycling layer's bucket, this is the *shared* 32-t-slice buffer.
   rawBucketData: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
   cube: DataCube;
@@ -267,10 +262,7 @@ export class DataBucket {
   // Convenience accessor for the "t" (time) additional coordinate, used by
   // TextureBucketManager's t-recycling support. Returns 0 if the layer has no
   // t-axis (matching the addressing default used elsewhere for missing coordinates).
-  // Deliberately not cached, even though the value is immutable for a bucket's lifetime:
-  // the array it scans holds a handful of entries at most, and each of the three callers
-  // (getCuckooKey, processWriterQueue, PullQueue's batch fan-out) already allocates more
-  // per call than this scan costs.
+  // Note: not worth caching.
   getT(): number {
     return this.getAdditionalCoordinates()?.find((coord) => coord.name === "t")?.value ?? 0;
   }

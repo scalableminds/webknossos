@@ -214,11 +214,6 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
   });
 
   it("sizes the atlas to actually hold requiredBucketCapacity buckets, despite whole-row padding", () => {
-    // Regression guard: sizing used to divide required voxels by the texture's voxel
-    // area, which counts a shrunk bucket's row padding as usable space. The halving loop
-    // then shrank the texture past the point where the rows run out, so a 2D layer ended
-    // up holding only half the requested buckets — and getSmallestCommonBucketCapacity
-    // propagates that shortfall to every other layer in the dataset.
     const shrunkBucketVoxelCount = constants.BUCKET_SIZE_2D;
     for (const specs of [minSpecs, midSpecs, betterSpecs]) {
       for (const elementClass of ["uint8", "uint16", "uint32"] as ElementClass[]) {
@@ -310,9 +305,7 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     const capacity = getBucketCapacity(1, textureWidth, packingDegree, twoDBucketVoxelCount);
     // With clamping, each bucket occupies one full row, so capacity is bounded by
     // the number of rows (textureWidth), not by the much larger naive division
-    // (textureWidth**2 / packedBucketSize = 16_384), which would overcommit the atlas.
-    // In case we add support for multiple buckets per texture row, this would be a great increase
-    // for the capacity.
+    // (textureWidth**2 / packedBucketSize = 16_384).
     expect(capacity).toBe(textureWidth);
   });
 });

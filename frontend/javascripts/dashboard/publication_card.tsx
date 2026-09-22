@@ -10,9 +10,7 @@ import { Link } from "react-router";
 import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_types";
 import {
   getDatasetExtentAsString,
-  getSegmentationThumbnailURL,
-  getThumbnailURL,
-  hasSegmentation,
+  getDatasetThumbnailURL,
 } from "viewer/model/accessors/dataset_accessor";
 
 type DatasetDetails = {
@@ -155,23 +153,14 @@ function PublishedDatasetsOverlay({
                     })}
                     title="Click To View"
                     style={{
-                      background: `url('${getThumbnailURL(
+                      background: `url('${getDatasetThumbnailURL(
                         item.dataset,
-                      )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
+                      )}&w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
                       width: `${miniThumbnailDimension}px`,
                       height: `${miniThumbnailDimension}px`,
                     }}
                     onMouseEnter={() => setActiveItem(item)}
-                  >
-                    <div
-                      className="mini-dataset-thumbnail absolute segmentation"
-                      style={{
-                        background: `url('${getSegmentationThumbnailURL(
-                          item.dataset,
-                        )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
-                      }}
-                    />
-                  </Button>
+                  />
                 </div>
               </Link>
             );
@@ -267,10 +256,7 @@ function PublicationThumbnail({
     return <div className="dataset-thumbnail" />;
   }
 
-  const thumbnailURL = getThumbnailURL(activeItem.dataset);
-  const segmentationThumbnailURL = hasSegmentation(activeItem.dataset)
-    ? getSegmentationThumbnailURL(activeItem.dataset)
-    : null;
+  const thumbnailURL = getDatasetThumbnailURL(activeItem.dataset);
   const extendedDetails = getExtendedDetails(activeItem);
 
   return (
@@ -288,17 +274,9 @@ function PublicationThumbnail({
         <div
           className="dataset-thumbnail-image absolute"
           style={{
-            backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+            backgroundImage: `url('${thumbnailURL}&w=${thumbnailDimension}&h=${thumbnailDimension}')`,
           }}
         />
-        {segmentationThumbnailURL != null && (
-          <div
-            className="dataset-thumbnail-image absolute segmentation"
-            style={{
-              backgroundImage: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
-            }}
-          />
-        )}
         <ThumbnailOverlay details={extendedDetails} />
         {sortedItems.length > 1 && (
           <PublishedDatasetsOverlay

@@ -54,7 +54,7 @@ import { Link } from "react-router";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { Unicode } from "viewer/constants";
-import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
+import { getDatasetThumbnailURL, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import CategorizationLabel from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import { ContextMenuContext } from "viewer/view/context_menu/context_menu";
@@ -333,7 +333,7 @@ class DatasetRenderer {
       this.data.isActive &&
       (this.data.colorLayerNames.length > 0 || this.data.segmentationLayerNames.length > 0);
     const imgSrc = hasAnyLayer
-      ? `/api/datasets/${this.data.id}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}&cacheVersion=${this.data.thumbnailCacheVersion}`
+      ? `${getDatasetThumbnailURL(this.data)}&w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : inactiveDatasetThumbnail;
     const iconClassName = hasAnyLayer ? "" : " icon-thumbnail";
 

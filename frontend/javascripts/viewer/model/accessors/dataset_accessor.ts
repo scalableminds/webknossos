@@ -601,6 +601,12 @@ function _getEnabledColorLayers(dataset: APIDataset, datasetConfiguration: Datas
 }
 export const getEnabledColorLayers = memoizeOne(_getEnabledColorLayers);
 
+export function getDatasetThumbnailURL(dataset: {
+  id: string;
+  thumbnailCacheVersion: number;
+}): string {
+  return `/api/datasets/${dataset.id}/thumbnail?cacheVersion=${dataset.thumbnailCacheVersion}`;
+}
 export function getThumbnailURL(dataset: APIDataset): string {
   const layers = dataset.dataSource.dataLayers;
 

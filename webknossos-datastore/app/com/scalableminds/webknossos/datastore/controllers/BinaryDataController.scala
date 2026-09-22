@@ -4,14 +4,13 @@ import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.image.{Color, JPEGWriter}
+import com.scalableminds.util.image.Color
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
-import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
 import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceDataRequest,
@@ -29,7 +28,6 @@ import play.api.mvc.*
 
 import scala.concurrent.duration.DurationInt
 import java.awt.image.BufferedImage
-import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
@@ -41,19 +39,13 @@ class BinaryDataController @Inject() (
     mappingService: MappingService,
     slackNotificationService: DSSlackNotificationService,
     adHocMeshServiceHolder: AdHocMeshServiceHolder,
-    findDataService: FindDataService
+    findDataService: FindDataService,
+    thumbnailService: DSThumbnailService
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MissingBucketHeaders {
 
   override def allowRemoteOrigin: Boolean = true
-
-  private val MaxThumbnailDimension = 5000
-
-  private def validateThumbnailDimensions(width: Int, height: Int): Fox[Unit] =
-    Fox.fromBool(
-      width > 0 && width <= MaxThumbnailDimension && height > 0 && height <= MaxThumbnailDimension
-    ) ?~> s"Thumbnail width and height must be between 1 and $MaxThumbnailDimension, got ${width}x$height" ~> BAD_REQUEST
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
   adHocMeshServiceHolder.dataStoreAdHocMeshConfig =
@@ -157,7 +149,7 @@ class BinaryDataController @Inject() (
     }
   }
 
-  def layerThumbnail(
+  def standaloneLayerThumbnail(
       datasetId: ObjectId,
       dataLayerName: String,
       x: Int,
@@ -174,7 +166,7 @@ class BinaryDataController @Inject() (
   ): Action[RawBuffer] = Action.fox(parse.raw) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        _ <- validateThumbnailDimensions(width, height)
+        _ <- thumbnailService.validateThumbnailDimensions(width, height)
         (dataSource, dataLayer) <- datasetCache.getWithLayer(
           datasetId,
           dataLayerName
@@ -189,28 +181,18 @@ class BinaryDataController @Inject() (
         )
         (data, _, _) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
         intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
-        layerColor = color.flatMap(Color.fromHTML)
-        params = ImageCreatorParameters(
+        thumbnailBufferedImage <- thumbnailService.renderLayerThumbnail(
+          data,
           dataLayer.elementClass,
-          useHalfBytes = false,
-          slideWidth = width,
-          slideHeight = height,
-          imagesPerRow = 1,
-          blackAndWhite = false,
-          intensityRange = intensityRange,
+          width,
+          height,
+          intensityRange,
           isSegmentation = dataLayer.category == LayerCategory.segmentation,
-          color = layerColor,
+          color = color.flatMap(Color.fromHTML),
           invertColor = invertColor
         )
-        dataWithFallback =
-          if (data.length == 0)
-            new Array[Byte](width * height * dataLayer.bytesPerElement)
-          else data
-        spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params).toFox ?~> Msg.Image.createFailed
-        firstSheet <- spriteSheet.pages.headOption.toFox ?~> Msg.Image.pageFailed
-        outputStream = new ByteArrayOutputStream()
-        _ = new JPEGWriter().writeToOutputStream(firstSheet.image)(outputStream)
-      } yield Ok(outputStream.toByteArray).as(jpegMimeType)
+        thumbnailJpegBytes <- thumbnailService.bufferedImageToJpeg(thumbnailBufferedImage).toFox
+      } yield Ok(thumbnailJpegBytes).as(jpegMimeType)
     }
   }
 
@@ -237,158 +219,46 @@ class BinaryDataController @Inject() (
       intensityRange: Option[(Double, Double)] = layerParams.intensityMin.flatMap(min =>
         layerParams.intensityMax.map(max => (min, max))
       )
-      layerColor = layerParams.color.flatMap(Color.fromHTML)
       isSegmentation = dataLayer.category == LayerCategory.segmentation
-      params = ImageCreatorParameters(
+      image <- thumbnailService.renderLayerThumbnail(
+        data,
         dataLayer.elementClass,
-        useHalfBytes = false,
-        slideWidth = layerParams.width,
-        slideHeight = layerParams.height,
-        imagesPerRow = 1,
-        blackAndWhite = false,
-        intensityRange = intensityRange,
-        isSegmentation = isSegmentation,
-        color = layerColor,
-        invertColor = layerParams.invertColor,
+        layerParams.width,
+        layerParams.height,
+        intensityRange,
+        isSegmentation,
+        layerParams.color.flatMap(Color.fromHTML),
+        layerParams.invertColor,
+        outputWidth = Some(outputWidth),
+        outputHeight = Some(outputHeight),
         preserveAlpha = true,
         opacity = layerParams.opacity
       )
-      dataWithFallback =
-        if (data.length == 0)
-          new Array[Byte](layerParams.width * layerParams.height * dataLayer.bytesPerElement)
-        else data
-      spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params).toFox ?~> Msg.Image.createFailed
-      firstSheet <- spriteSheet.pages.headOption.toFox ?~> Msg.Image.pageFailed
-      image = firstSheet.image
-    } yield {
-      val resized =
-        if (image.getWidth == outputWidth && image.getHeight == outputHeight) image
-        else {
-          val scaled = new BufferedImage(outputWidth, outputHeight, BufferedImage.TYPE_INT_ARGB)
-          val graphics = scaled.createGraphics()
-          graphics.drawImage(image, 0, 0, outputWidth, outputHeight, null)
-          graphics.dispose()
-          scaled
-        }
-      (isSegmentation, resized)
-    }
-
-  // Additively blends `colorImages` into one opaque base image (matching the frontend's default
-  // "Additive" blend mode for color layers, viewer/constants.ts BLEND_MODES): channels are summed
-  // (each layer's own opacity already baked into its per-pixel alpha) and clamped, rather than the
-  // later layer opaquely overwriting the former the way normal alpha-over compositing would. Mirrors
-  // blendLayersAdditive in frontend/javascripts/viewer/shaders/blending.glsl.ts (dest + src).
-  private def blendColorLayersAdditively(colorImages: List[BufferedImage], width: Int, height: Int): BufferedImage = {
-    val accum = new Array[Int](width * height)
-    colorImages.foreach { image =>
-      val pixels = image.getRGB(0, 0, width, height, null, 0, width)
-      var i = 0
-      while (i < pixels.length) {
-        val argb = pixels(i)
-        val alpha = (argb >>> 24) & 0xff
-        val r = (argb >>> 16) & 0xff
-        val g = (argb >>> 8) & 0xff
-        val b = argb & 0xff
-        val existing = accum(i)
-        val newR = Math.min(255, ((existing >>> 16) & 0xff) + (r * alpha) / 255)
-        val newG = Math.min(255, ((existing >>> 8) & 0xff) + (g * alpha) / 255)
-        val newB = Math.min(255, (existing & 0xff) + (b * alpha) / 255)
-        accum(i) = (0xff << 24) | (newR << 16) | (newG << 8) | newB
-        i += 1
-      }
-    }
-    val blended = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-    blended.setRGB(0, 0, width, height, accum, 0, width)
-    blended
-  }
-
-  // Porter-Duff "over" compositing starting from a fully transparent base, matching blendLayersCover
-  // (and, with blackAsTransparent, blendLayersCoverBlackAsTransparent) in
-  // frontend/javascripts/viewer/shaders/blending.glsl.ts. Unlike additive blending, an earlier
-  // fully-opaque layer is never overpainted by a later one.
-  private def blendColorLayersCover(
-      colorImages: List[BufferedImage],
-      width: Int,
-      height: Int,
-      blackAsTransparent: Boolean
-  ): BufferedImage = {
-    val destR = new Array[Double](width * height)
-    val destG = new Array[Double](width * height)
-    val destB = new Array[Double](width * height)
-    val destA = new Array[Double](width * height)
-    colorImages.foreach { image =>
-      val pixels = image.getRGB(0, 0, width, height, null, 0, width)
-      var i = 0
-      while (i < pixels.length) {
-        val argb = pixels(i)
-        val r = (argb >>> 16) & 0xff
-        val g = (argb >>> 8) & 0xff
-        val b = argb & 0xff
-        val srcA =
-          if (blackAsTransparent && r == 0 && g == 0 && b == 0) 0.0
-          else ((argb >>> 24) & 0xff) / 255.0
-        val dA = destA(i)
-        val mixedAlphaFactor = (1.0 - dA) * srcA
-        val mixedAlpha = mixedAlphaFactor + dA
-        if (mixedAlpha > 0.0) {
-          destR(i) = (dA * destR(i) + mixedAlphaFactor * r) / mixedAlpha
-          destG(i) = (dA * destG(i) + mixedAlphaFactor * g) / mixedAlpha
-          destB(i) = (dA * destB(i) + mixedAlphaFactor * b) / mixedAlpha
-        }
-        destA(i) = mixedAlpha
-        i += 1
-      }
-    }
-    val pixels = new Array[Int](width * height)
-    var i = 0
-    while (i < pixels.length) {
-      pixels(i) = (0xff << 24) | (Math.round(destR(i)).toInt << 16) | (Math.round(destG(i)).toInt << 8) | Math
-        .round(destB(i))
-        .toInt
-      i += 1
-    }
-    val blended = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-    blended.setRGB(0, 0, width, height, pixels, 0, width)
-    blended
-  }
-
-  private def blendColorLayers(
-      colorImages: List[BufferedImage],
-      blendMode: String,
-      width: Int,
-      height: Int
-  ): BufferedImage =
-    blendMode match {
-      case "Cover" => blendColorLayersCover(colorImages, width, height, blackAsTransparent = false)
-      case "CoverWithBlackAsTransparent" =>
-        blendColorLayersCover(colorImages, width, height, blackAsTransparent = true)
-      case _ => blendColorLayersAdditively(colorImages, width, height)
-    }
+    } yield (isSegmentation, image)
 
   def datasetThumbnail(datasetId: ObjectId): Action[DatasetThumbnailRequest] =
     Action.fox(validateJson[DatasetThumbnailRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          _ <- validateThumbnailDimensions(request.body.width, request.body.height)
+          _ <- thumbnailService.validateThumbnailDimensions(request.body.width, request.body.height)
           _ <- Fox.serialCombined(request.body.layers)(layerParams =>
-            validateThumbnailDimensions(layerParams.width, layerParams.height)
+            thumbnailService.validateThumbnailDimensions(layerParams.width, layerParams.height)
           )
           layerResults <- Fox.serialCombined(request.body.layers)(layerParams =>
             datasetThumbnailLayerImage(datasetId, layerParams, request.body.width, request.body.height)
           )
           colorImages = layerResults.collect { case (false, image) => image }
           segmentationImages = layerResults.collect { case (true, image) => image }
-          // Color layers are combined per the dataset's configured blend mode (default Additive) into
-          // one opaque base; segmentation layers are then alpha-blended on top (SRC_OVER, id 0 fully
-          // transparent) regardless of blend mode, mirroring how the frontend mixes the segment tint
-          // over the already-blended data color rather than folding it into the blend mode itself.
-          composite = blendColorLayers(colorImages, request.body.blendMode, request.body.width, request.body.height)
-          graphics = composite.createGraphics()
-          _ = segmentationImages.foreach(image => graphics.drawImage(image, 0, 0, null))
-          _ = graphics.dispose()
-          outputStream = new ByteArrayOutputStream()
-          _ = new JPEGWriter().writeToOutputStream(composite)(outputStream)
-        } yield Ok(outputStream.toByteArray).as(jpegMimeType)
+          datasetThumbnailJpeg <- tryo(
+            thumbnailService.blendLayersToJpeg(
+              colorImages,
+              segmentationImages,
+              request.body.blendMode,
+              request.body.width,
+              request.body.height
+            )
+          ).toFox
+        } yield Ok(datasetThumbnailJpeg).as(jpegMimeType)
       }
     }
 

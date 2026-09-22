@@ -9,7 +9,7 @@ import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.controllers.{CombinedThumbnailLayerParameters, CombinedThumbnailRequest}
+import com.scalableminds.webknossos.datastore.controllers.{DatasetThumbnailLayerParameters, DatasetThumbnailRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{LayerCategory, StaticLayer, UsableDataSource}
 import com.typesafe.scalalogging.LazyLogging
@@ -37,11 +37,10 @@ class ThumbnailService @Inject() (
   private val MaxThumbnailWidth = 4000
   private val MaxThumbnailHeight = 4000
 
-  // Sentinel dataLayerName for the whole-dataset combined thumbnail, reusing the per-layer thumbnail
-  // cache table. Safe because real layer names are never empty.
-  private val CombinedThumbnailLayerNameSentinel = ""
+  // Can’t use None as layerName for dataset thumbnails, due to postgres restrictions.
+  private val DatasetThumbnailLayerNameSentinel = ""
 
-  def getThumbnailWithCache(
+  def getLayerThumbnailWithCache(
       datasetIdValidated: ObjectId,
       layerName: String,
       w: Option[Int],
@@ -59,26 +58,24 @@ class ThumbnailService @Inject() (
         width,
         height,
         mappingName,
-        _ => getThumbnail(dataset, layerName, width, height, mappingName)(using ec, GlobalAccessContext)
+        _ => getLayerThumbnail(dataset, layerName, width, height, mappingName)(using GlobalAccessContext)
       )
     } yield image
   }
 
-  private def getThumbnail(dataset: Dataset, layerName: String, width: Int, height: Int, mappingName: Option[String])(
-      implicit
-      ec: ExecutionContext,
-      ctx: DBAccessContext
-  ): Fox[Array[Byte]] =
+  private def getLayerThumbnail(
+      dataset: Dataset,
+      layerName: String,
+      width: Int,
+      height: Int,
+      mappingName: Option[String]
+  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] =
     for {
-      usableDataSource <- datasetService.usableDataSourceFor(dataset)
-      layer <- usableDataSource.dataLayers.find(_.name == layerName).toFox ?~> Msg.Dataset.Layer
-        .notFound(layerName) ~> NOT_FOUND
-      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)(
-        using ctx
-      )
+      (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, layerName)
+      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)
       (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt, mapping) = selectParameters(
         viewConfiguration,
-        usableDataSource,
+        dataSource,
         layerName,
         layer,
         width,
@@ -86,7 +83,7 @@ class ThumbnailService @Inject() (
         mappingName
       )
       client <- datasetService.clientFor(dataset)
-      image <- client.getDataLayerThumbnail(
+      image <- client.getLayerThumbnail(
         dataset,
         layerName,
         mag1BoundingBox,
@@ -119,7 +116,7 @@ class ThumbnailService @Inject() (
       dataset <- datasetDAO.findOne(datasetIdValidated)(using GlobalAccessContext)
       image <- thumbnailCachingService.getOrLoad(
         dataset._id,
-        CombinedThumbnailLayerNameSentinel,
+        DatasetThumbnailLayerNameSentinel,
         width,
         height,
         None,
@@ -134,22 +131,16 @@ class ThumbnailService @Inject() (
   ): Fox[Array[Byte]] =
     for {
       usableDataSource <- datasetService.usableDataSourceFor(dataset)
-      firstLayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataset.noLayers" ~> NOT_FOUND
-      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)(
-        using ctx
-      )
+      firstLayer <- usableDataSource.dataLayers.headOption.toFox ?~> Msg.Dataset.noLayers ~> NOT_FOUND
+      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)
       layersToRender = selectLayersToRender(viewConfiguration, usableDataSource)
       hasColorLayers = layersToRender.exists(_.category == LayerCategory.color)
       blendMode = readBlendMode(viewConfiguration)
       (center, zoom) = selectCenterAndZoom(viewConfiguration, usableDataSource, firstLayer)
-      // Physical (mag1) extent of the thumbnail, shared by every layer so they all show the same
-      // field of view. Must NOT be derived from any individual layer's chosen mag: layers can have
-      // mismatched mag pyramids (e.g. a segmentation layer with no mag 1), which would otherwise make
-      // that layer cover a different physical area than the others for the same output pixel size.
       mag1Width = Math.round(width * zoom).toInt
       mag1Height = Math.round(height * zoom).toInt
       layerParameters = layersToRender.map(layer =>
-        selectCombinedThumbnailLayerParameters(
+        selectDatasetThumbnailLayerParameters(
           viewConfiguration,
           layer,
           center,
@@ -162,20 +153,19 @@ class ThumbnailService @Inject() (
         )
       )
       client <- datasetService.clientFor(dataset)
-      image <- client.getCombinedThumbnail(
+      image <- client.getDatasetThumbnail(
         dataset,
-        CombinedThumbnailRequest(width, height, layerParameters, blendMode)
+        DatasetThumbnailRequest(width, height, layerParameters, blendMode)
       )
       _ <- thumbnailDAO.upsertThumbnail(
         dataset._id,
-        CombinedThumbnailLayerNameSentinel,
+        DatasetThumbnailLayerNameSentinel,
         width,
         height,
         None,
         image,
         jpegMimeType,
-        // The rendered layers may each use their own mag; this is stored only for debugging purposes.
-        Vec3Int(1, 1, 1),
+        Vec3Int.ones, // Note: the rendered layers may each use their own mag
         BoundingBox(center, width, height, 1)
       )
     } yield image
@@ -223,7 +213,7 @@ class ThumbnailService @Inject() (
     )
   }
 
-  private def selectCombinedThumbnailLayerParameters(
+  private def selectDatasetThumbnailLayerParameters(
       viewConfiguration: DatasetViewConfiguration,
       layer: StaticLayer,
       center: Vec3Int,
@@ -233,7 +223,7 @@ class ThumbnailService @Inject() (
       outputWidth: Int,
       outputHeight: Int,
       hasColorLayers: Boolean
-  ): CombinedThumbnailLayerParameters = {
+  ): DatasetThumbnailLayerParameters = {
     val isSegmentation = layer.category == LayerCategory.segmentation
     val intensityRangeOpt = readIntensityRange(viewConfiguration, layer.name)
     val colorSettingsOpt = readColor(viewConfiguration, layer.name)
@@ -246,7 +236,7 @@ class ThumbnailService @Inject() (
     val mag = magForZoom(layer, zoom)
     val targetMagWidth = math.max(1, mag1Width / mag.x)
     val targetMagHeight = math.max(1, mag1Height / mag.y)
-    CombinedThumbnailLayerParameters(
+    DatasetThumbnailLayerParameters(
       dataLayerName = layer.name,
       x = center.x - mag1Width / 2,
       y = center.y - mag1Height / 2,
@@ -322,8 +312,7 @@ class ThumbnailService @Inject() (
 
   private val DefaultColorLayerOpacity = 100d
   private val DefaultSegmentationLayerOpacity = 20d
-  // Used instead when the thumbnail has no color layers to composite the segmentation on top of, since
-  // 20% opacity against a plain black background is too faint to make out.
+  // For datasets with no color layers, increase segmentation opacity.
   private val DefaultSegmentationLayerOpacityWithoutColorLayers = 60d
 
   private def readOpacity(
@@ -354,8 +343,6 @@ class ThumbnailService @Inject() (
       .flatMap(jsValue => JsonHelper.as[List[String]](jsValue).toOption)
       .getOrElse(List.empty)
 
-  // Dataset-wide setting (sibling of "layers", not per-layer), matching the frontend's
-  // DatasetConfiguration.blendMode default of BLEND_MODES.Additive.
   private def readBlendMode(viewConfiguration: DatasetViewConfiguration): String =
     viewConfiguration.get("blendMode").flatMap(_.asOpt[String]).getOrElse("Additive")
 

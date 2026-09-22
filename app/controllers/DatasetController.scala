@@ -188,7 +188,7 @@ class DatasetController @Inject() (
       } yield Ok
     }
 
-  def thumbnail(
+  def layerThumbnail(
       datasetId: ObjectId,
       dataLayerName: String,
       w: Option[Int],
@@ -202,7 +202,7 @@ class DatasetController @Inject() (
         _ <- datasetDAO.findOne(datasetId)(using ctx) ?~> notFoundMessage(
           datasetId
         ) ~> NOT_FOUND // To check Access Rights
-        image <- thumbnailService.getThumbnailWithCache(datasetId, dataLayerName, w, h, mappingName)
+        image <- thumbnailService.getLayerThumbnailWithCache(datasetId, dataLayerName, w, h, mappingName)
       } yield addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
     }
 
@@ -219,8 +219,7 @@ class DatasetController @Inject() (
           datasetId
         ) ~> NOT_FOUND // To check Access Rights
         image <- thumbnailService.getDatasetThumbnailWithCache(datasetId, w, h)
-      } yield addRemoteOriginHeaders(Ok(image))
-        .as(jpegMimeType) // .withHeaders(CACHE_CONTROL -> "public, max-age=86400")
+      } yield addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
     }
 
   def exploreRemoteDataset(): Action[List[WKExploreRemoteLayerParameters]] =

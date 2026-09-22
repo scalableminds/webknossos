@@ -157,7 +157,7 @@ class BinaryDataController @Inject() (
     }
   }
 
-  def thumbnailJpeg(
+  def layerThumbnail(
       datasetId: ObjectId,
       dataLayerName: String,
       x: Int,
@@ -214,9 +214,9 @@ class BinaryDataController @Inject() (
     }
   }
 
-  private def combinedThumbnailLayerImage(
+  private def datasetThumbnailLayerImage(
       datasetId: ObjectId,
-      layerParams: CombinedThumbnailLayerParameters,
+      layerParams: DatasetThumbnailLayerParameters,
       outputWidth: Int,
       outputHeight: Int
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Boolean, BufferedImage)] =
@@ -365,8 +365,8 @@ class BinaryDataController @Inject() (
       case _ => blendColorLayersAdditively(colorImages, width, height)
     }
 
-  def thumbnailCombinedJpeg(datasetId: ObjectId): Action[CombinedThumbnailRequest] =
-    Action.fox(validateJson[CombinedThumbnailRequest]) { implicit request =>
+  def datasetThumbnail(datasetId: ObjectId): Action[DatasetThumbnailRequest] =
+    Action.fox(validateJson[DatasetThumbnailRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           _ <- validateThumbnailDimensions(request.body.width, request.body.height)
@@ -374,7 +374,7 @@ class BinaryDataController @Inject() (
             validateThumbnailDimensions(layerParams.width, layerParams.height)
           )
           layerResults <- Fox.serialCombined(request.body.layers)(layerParams =>
-            combinedThumbnailLayerImage(datasetId, layerParams, request.body.width, request.body.height)
+            datasetThumbnailLayerImage(datasetId, layerParams, request.body.width, request.body.height)
           )
           colorImages = layerResults.collect { case (false, image) => image }
           segmentationImages = layerResults.collect { case (true, image) => image }

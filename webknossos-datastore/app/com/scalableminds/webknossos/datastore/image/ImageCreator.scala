@@ -33,7 +33,7 @@ case class ImageCreatorParameters(
     invertColor: Option[Boolean] = None,
     // When true, render into an alpha-capable image: segmentation id 0 becomes fully transparent
     // and every other pixel's alpha is derived from `opacity`, instead of always being fully opaque.
-    // Used when compositing multiple layers on top of each other (see BinaryDataController.thumbnailCombinedJpeg).
+    // Used when compositing multiple layers on top of each other.
     preserveAlpha: Boolean = false,
     opacity: Double = 100
 )

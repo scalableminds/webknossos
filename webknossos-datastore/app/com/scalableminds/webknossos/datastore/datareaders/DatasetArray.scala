@@ -87,12 +87,11 @@ class DatasetArray(
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
       shouldReadUint24: Boolean
   ): (Array[Int], Array[Int]) = {
-    // Only one batched axis is supported, since repackBatchedAxisIntoZSlot can swap just one
-    // axis into z's byte slot. That the dataset's z is actually degenerate is the caller's
-    // responsibility (see DataCube.usesTRecycling on the frontend) — array metadata turned out
-    // not to expose z's true depth reliably across formats, so it isn't re-validated here.
-    val batchedCoordinates = additionalCoordinatesOpt.getOrElse(Seq.empty).filter(_.length.exists(_ > 1))
-    require(batchedCoordinates.size <= 1, "Reading more than one batched additional axis at once is not supported")
+    val batchedAdditionalCoordinate = additionalCoordinatesOpt.getOrElse(Seq.empty).filter(_.length.exists(_ > 1))
+    require(
+      batchedAdditionalCoordinate.size <= 1,
+      "Reading more than one batched additional axis at once is not supported"
+    )
 
     val offsetArray: Array[Int] = Array.fill(rank)(0)
     offsetArray(rank - 3) = offsetXYZ.x
@@ -120,26 +119,19 @@ class DatasetArray(
       for (additionalCoordinate <- additionalCoordinates) {
         val wkSlot = fullAxisOrder.wkSlotOfPhysicalIndex(additionalAxesMap(additionalCoordinate.name).index)
         offsetArray(wkSlot) = additionalCoordinate.value
-        // 1 at additional-coordinate positions, unless a batch was requested (see
-        // AdditionalCoordinate.length). Validated rather than clamped because this is
-        // client-controlled input and only a full batch can be served: the repack merely reorders
-        // dimensions, so a partial length would yield a short buffer instead of a whole bucket.
+        // shapeArray for additional coordinates must be either 1 (default) or 32 (for batched additionalAxis requests).
+        // Note that we don’t clamp the 32 to the additionalAxis range in the dataset, same as for xyz.
         val requestedLength = additionalCoordinate.length.getOrElse(1)
         require(
           requestedLength == 1 || requestedLength == DataLayer.bucketLength,
-          s"Additional-coordinate batch length for '${additionalCoordinate.name}' must be 1 or ${DataLayer.bucketLength}, got $requestedLength"
+          s"Additional-coordinate batch length for “${additionalCoordinate.name}” must be 1 or ${DataLayer.bucketLength}, got $requestedLength."
         )
         shapeArray(wkSlot) = requestedLength
       }
     }
 
-    // A trailing batch (e.g. t=32..63 against an axis of only 50 values) still asks for the full
-    // bucketLength, because the wire format is fixed-size. That is safe: computeChunkIndices
-    // clamps to the array shape, so the target buffer simply stays zero past the end, and the
-    // client never addresses those slots (getTBatchSiblingAddresses clamps to the axis bounds).
-    if (batchedCoordinates.nonEmpty) {
-      // z's shape must shrink to 1 to make room for the batch; otherwise this would read
-      // bucketLength^4 voxels instead of the intended "batch replaces z" swap.
+    if (batchedAdditionalCoordinate.nonEmpty) {
+      // If an additionalAxis is batched, z axis must have shape 1 to preserve total 32³ shape.
       shapeArray(rank - 1) = 1
     }
     (offsetArray, shapeArray)
@@ -150,11 +142,6 @@ class DatasetArray(
   ): Option[AdditionalCoordinate] =
     additionalCoordinatesOpt.flatMap(_.find(_.length.exists(_ > 1)))
 
-  // The batched axis ends up as the fastest-varying dimension of the read result, but the wire
-  // format expects z (the slowest-varying one) in that byte position, so it is swapped into z's
-  // dimension — giving the byte layout a client already expects for a normal 32-deep bucket.
-  // `.copy()` is required because BytesConverter reads `.getStorage()` directly, bypassing the
-  // index remapping a bare `.transpose()` view would rely on.
   private def repackBatchedAxisIntoZSlot(
       multiArray: MultiArray,
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
@@ -223,9 +210,6 @@ class DatasetArray(
       shape,
       totalOffset.map(_.toLong)
     )
-    // The shortcut below returns the source chunk in the array's own dimension order rather than
-    // the `shape.reverse` layout repackBatchedAxisIntoZSlot assumes, so for a batched read it
-    // would transpose the wrong dimensions and silently scramble the bucket.
     if (!isBatchedRead && partialCopyingIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox

@@ -6,7 +6,7 @@ export type AdditionalCoordinate = {
   value: number;
   // `length`: how many consecutive values to request along this axis instead of just one.
   // Only meaningful on requests sent to the backend.
-  length?: number
+  length?: number;
 };
 
 export const ViewModeValues = ["orthogonal", "flight"] as ViewMode[];

@@ -75,10 +75,11 @@ case class RawCuboidRequest(
 case class AdditionalCoordinate(
     name: String,
     value: Int,
-    // Number of consecutive values to read along this axis instead of just one; must be absent/1
-    // or exactly DataLayer.bucketLength, and only one additional axis may be batched at a time.
-    // The batch is packed into the byte position normally occupied by z, so callers must only
-    // request it for datasets whose z is degenerate — that isn't re-validated on the read path.
+    // Used by the Frontend to request batched reads along an additional axis.
+    // Number of consecutive values starting at `value` to read along this axis, instead of just one.
+    // Must be either absent/1 or exactly DataLayer.bucketLength.
+    // Only available for datasets with depth (z) <= 1.
+    // Only available for one AdditonalCoordinate per request.
     length: Option[Int] = None
 ) derives JsonAutoFormat {
   override def toString: String = s"$name=$value"

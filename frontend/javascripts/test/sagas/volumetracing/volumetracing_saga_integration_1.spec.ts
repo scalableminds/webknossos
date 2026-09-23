@@ -107,22 +107,14 @@ describe("Volume Tracing", () => {
     );
   });
 
-  // SPIKE: this asserts a behaviour the new volume architecture deliberately
-  // does not replicate (USE_NEW_VOLUME_ARCHITECTURE, currently always on — see
-  // prototypes/new_volume_architecture/integration/feature_flag.ts).
-  //
-  // The old path re-evaluates the overwrite-empty predicate once real backend
-  // data merges in (Bucket.applyVoxelMap replays its *whole* conditional
-  // write, overwriteMode included, as a pendingOperation against the arriving
-  // data), so an optimistic paint over a not-yet-loaded, actually-occupied
-  // voxel gets retroactively undone. The new path's overwrite-empty check
-  // (design/volume_annotation_architecture.md §5.4) is evaluated once, only
-  // against what is resident at paint time, and treats "not resident" as
-  // "paint it" rather than "protect it" — a deliberate, discussed choice
-  // (§5.4: "overwrite mode protects what is visible, not what exists"), not
-  // an oversight. Reconciling the two would mean re-rasterizing on data
-  // arrival, which the design doc explicitly does not do.
-  it.skip<WebknossosTestContext>("Brushing/Tracing with upsampling to unloaded data", async ({
+  // Earlier code versions, re-evaluated the overwrite-empty predicate once real backend
+  // data merged in. Thus, an optimistic paint over a not-yet-loaded, actually-occupied
+  // voxel got retroactively undone.
+  // With the redesign of volume annotation (#9972), the overwrite-empty check is only
+  // evaluated once against what is visible (i.e., already loaded data). Sticking to the
+  // older mechanism would make saving dependent on downloading the painted-over data first
+  // which would bring a lot of complexity with it.
+  it<WebknossosTestContext>("Brushing/Tracing with upsampling to unloaded data paints optimistically", async ({
     api,
     mocks,
   }) => {
@@ -155,8 +147,8 @@ describe("Volume Tracing", () => {
     for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
       expect(
         await api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], zoomStep),
-        `Center should still have old value at zoomstep=${zoomStep}`,
-      ).toBe(oldCellId);
+        `Center should carry the painted value at zoomstep=${zoomStep}`,
+      ).toBe(Number(newCellId));
     }
   });
 

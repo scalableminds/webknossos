@@ -7,7 +7,8 @@ const WORD_COUNT = BUCKET_VOXEL_COUNT / WORD_BITS; // 1024
  * One bit per voxel of a bucket: 32_768 bits = 1024 words = 4 KB.
  *
  * A "word" is one Uint32 holding the flags of 32 consecutive voxels, so voxel
- * `i` lives at bit `i & 31` of word `i >>> 5`.
+ * `i` lives at bit `i & 31` (i.e. `i % 32`) of word `i >>> 5` (i.e.
+ * `floor(i / 32)`).
  *
  * Because a flat voxel index is `x + y*32 + z*1024` and BUCKET_WIDTH is also
  * 32, a word is exactly one x-row of the bucket. A scanline therefore never
@@ -108,6 +109,7 @@ export class BucketVoxelMask {
 /** Number of x-rows per bucket; exported for tests that reason about layout. */
 export const ROWS_PER_BUCKET = BUCKET_VOXEL_COUNT / BUCKET_WIDTH;
 
+/** Counts the set bits in a 32-bit value (population count), via SWAR bit-tricks. */
 function popcount32(value: number): number {
   let v = value - ((value >>> 1) & 0x55555555);
   v = (v & 0x33333333) + ((v >>> 2) & 0x33333333);

@@ -53,7 +53,14 @@ function rasterizeBrush(
   }
 }
 
-/** Everything within the per-axis `radius` of the segment from → to. */
+/**
+ * Everything within the per-axis `radius` of the segment from → to.
+ *
+ * "Capsule" is the shape that sweeping the round brush along that segment
+ * traces out: a cylinder with a half-sphere cap at each end (for a 2D brush,
+ * a rectangle with a half-disc at each end). A single click degenerates to
+ * just the sphere/disc, since `from` and `to` coincide.
+ */
 function rasterizeCapsule(
   from: Vector3,
   to: Vector3,

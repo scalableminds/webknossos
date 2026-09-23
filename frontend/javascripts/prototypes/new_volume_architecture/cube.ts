@@ -119,10 +119,19 @@ export class WorkingDataCube implements LoadingVoxelCube {
 
     this.fetchCount++;
     const currentEntry = entry;
-    entry.fetch = this.backend.fetchBucket(address).then(({ data, version }) => {
-      this.receiveData(address, data, version);
-      currentEntry.fetch = null;
-    });
+    entry.fetch = this.backend
+      .fetchBucket(address)
+      .then(({ data, version }) => {
+        this.receiveData(address, data, version);
+      })
+      .finally(() => {
+        // Cleared on failure too, not just on success: a cached rejected
+        // promise would turn a transient backend failure into a permanent one,
+        // because every later materialize() would hand back that same
+        // rejection instead of retrying. The entry stays `pending` so its
+        // placeholder — and anything already written into it — survives.
+        currentEntry.fetch = null;
+      });
     return entry.fetch;
   }
 

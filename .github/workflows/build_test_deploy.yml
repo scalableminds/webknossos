@@ -44,10 +44,25 @@ jobs:
       - name:
           Download Coverage Artifacts
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
+        id: coverage-baseline
+        continue-on-error: true # a missing baseline degrades the coverage report, it must not fail the build
         run: |
-          gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
-          [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
-          gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
+          # The GitHub API intermittently serves stale run lists and artifact lookups ("no valid
+          # artifacts found"), so retry a few times and try several recent successful master runs.
+          for attempt in 1 2 3; do
+            candidates=$(gh run list --workflow "CI Pipeline" --branch master --limit 50 --json conclusion,createdAt,databaseId \
+              --jq '[.[] | select(.conclusion == "success")] | sort_by(.createdAt) | reverse | .[:5] | .[].databaseId')
+            for run_id in $candidates; do
+              if gh run download "$run_id" -n "$ARTIFACT_NAME" -D "$OUTPUT_DIR"; then
+                echo "Downloaded $ARTIFACT_NAME from master run $run_id"
+                echo "baseline=$OUTPUT_DIR/coverage-summary.json" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              echo "Could not download $ARTIFACT_NAME from master run $run_id (attempt $attempt)"
+            done
+            sleep 10
+          done
+          echo "::warning::Could not download $ARTIFACT_NAME from any recent master run, skipping coverage comparison"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT_NAME: vitest-coverage-master
@@ -56,7 +71,8 @@ jobs:
         uses: davelosert/vitest-coverage-report-action@v2
         with:
           comment-on: none # alternative: pr
-          json-summary-compare-path: coverage-master/coverage-summary.json
+          # Empty if no baseline could be downloaded, in which case the action skips the comparison
+          json-summary-compare-path: ${{ steps.coverage-baseline.outputs.baseline }}
       - name: "Upload Coverage"
         if: github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v7

@@ -1,8 +1,6 @@
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import messages from "messages";
-import { BrushDriver } from "prototypes/new_volume_architecture/integration/brush_driver";
-import { USE_NEW_VOLUME_ARCHITECTURE } from "prototypes/new_volume_architecture/integration/feature_flag";
 import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
@@ -72,8 +70,10 @@ import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
-import type { TransformedSectionLabeler } from "viewer/model/volumetracing/section_labeling";
+import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
+import { USE_NEW_VOLUME_ARCHITECTURE } from "viewer/model/volumetracing/integration/feature_flag";
+import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
+import type { TransformedSectionLabeler } from "viewer/model/volumetracing/legacy/section_labeling";
 import { api, Model } from "viewer/singletons";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -84,7 +84,7 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
 // SPIKE TOGGLE: route brushing through the new volume architecture
-// (frontend/javascripts/prototypes/new_volume_architecture) instead of the
+// (viewer/model/volumetracing) instead of the
 // VoxelBuffer2D path. See feature_flag.ts for the full rationale — the same
 // toggle also gates flood fill in floodfill_saga.tsx.
 //

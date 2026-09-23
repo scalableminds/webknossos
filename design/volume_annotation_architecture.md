@@ -7,7 +7,7 @@ This document intentionally does not try to stay close to the current implementa
 
 Code in this document is illustrative TypeScript — signatures and sketches meant to pin down responsibilities and data flow, not copy-pasteable implementations.
 
-A working spike of the design lives in `frontend/javascripts/prototypes/new_volume_architecture`, exercised by unit tests and wired into the brush and flood fill behind a toggle. Where this doc quotes concrete figures for the coarse-mag case (§5.4), they are measured from it rather than estimated. That spike is an MVP and implements only part of what follows — **§12 records which concepts are built, which were skipped, and in what order the rest is planned.**
+A working spike of the design lives in `frontend/javascripts/viewer/model/volumetracing`, exercised by unit tests and wired into the brush and flood fill behind a toggle. Where this doc quotes concrete figures for the coarse-mag case (§5.4), they are measured from it rather than estimated. That spike is an MVP and implements only part of what follows — **§12 records which concepts are built, which were skipped, and in what order the rest is planned.**
 
 ---
 
@@ -296,7 +296,7 @@ A sparse form (a short index list) would beat a 4 KB mask for buckets the stroke
 └──────────────┘
 ```
 
-The diagram above is the *data flow* — what a brush stroke passes through, in order. The one below is the *static structure* — every type in `prototypes/new_volume_architecture` (interfaces, plain records like `BucketDiff`, and real classes alike, all drawn as classes) and how they reference each other. `integration/` (the WK-specific adapters) is deliberately left out; it is thin glue over this structure, not part of it.
+The diagram above is the *data flow* — what a brush stroke passes through, in order. The one below is the *static structure* — every type in `viewer/model/volumetracing/core` (interfaces, plain records like `BucketDiff`, and real classes alike, all drawn as classes) and how they reference each other. `integration/` (the WK-specific adapters) and `not_yet_integrated/` are deliberately left out; it is thin glue over this structure, not part of it.
 
 Reading the arrows: a filled diamond (`*--`) is "owns/contains", a dashed arrow (`..>`) is "reads/calls", a solid arrow (`-->`) is "produces/returns", a hollow triangle (`<|--`) is "is a variant of", and a dashed hollow triangle (`..|>`) is "implements".
 
@@ -505,7 +505,7 @@ classDiagram
         +install(address, data)
     }
     class FakeBackend {
-        <<test-only>>
+        <<not yet integrated>>
         +seed(address, data)
         +fetchBucket(address) Promise
     }
@@ -954,7 +954,7 @@ The unifying rule is that `overwrite-empty-only` protects what is *visible*, not
 
 The honest cost is a timing race: the same stroke over the same region gives different results depending on whether the fetch had landed. The window is small, because source-mag buckets are by definition the ones on screen and therefore already being fetched, but it is real. Mitigation belongs in the UI — indicate that a region is still loading — rather than in the editing path, where the alternatives are stalling the brush or deferring the transaction's outcome until the network responds.
 
-**Write amplification is the thing to watch here.** At mag `16-16-16`, each source voxel expands to 4096 finest-mag voxels. The figures below are measured from the prototype in `frontend/javascripts/prototypes/new_volume_architecture`, for a radius-25 dab at mag 16 over an isotropic `1,2,4,8,16` pyramid — 1976 source voxels:
+**Write amplification is the thing to watch here.** At mag `16-16-16`, each source voxel expands to 4096 finest-mag voxels. The figures below are measured from the prototype in `frontend/javascripts/viewer/model/volumetracing`, for a radius-25 dab at mag 16 over an isotropic `1,2,4,8,16` pyramid — 1976 source voxels:
 
 | | finest mag | all mags |
 |---|---|---|
@@ -1713,7 +1713,7 @@ Two further performance items are open questions rather than designed improvemen
 
 ## 12. Implementation Status & Plan
 
-The spike in `frontend/javascripts/prototypes/new_volume_architecture` is an **MVP**, not a partial rollout of this document. Its goal was to answer the two questions a design doc cannot: does the intent → rasterize → propagate → diff pipeline actually hold together, and what does the coarse-mag case cost in practice (§5.4's figures are measured from it). Everything that would commit us to a persistence format — the journal on the live path, undo/redo, the save queue, the backend contract in §7 — was deliberately left out, because that is the half that is expensive to build twice.
+The spike in `frontend/javascripts/viewer/model/volumetracing` is an **MVP**, not a partial rollout of this document. Its goal was to answer the two questions a design doc cannot: does the intent → rasterize → propagate → diff pipeline actually hold together, and what does the coarse-mag case cost in practice (§5.4's figures are measured from it). Everything that would commit us to a persistence format — the journal on the live path, undo/redo, the save queue, the backend contract in §7 — was deliberately left out, because that is the half that is expensive to build twice.
 
 Nothing below revises the design. This section records where the code currently stands against it.
 
@@ -1721,16 +1721,16 @@ Nothing below revises the design. This section records where the code currently 
 
 | Concept | § | Module | Notes |
 |---|---|---|---|
-| `EditIntent` and its shapes | 5.1 | `intents.ts` | brush, box, mask and floodFill exist; only brush and floodFill are reachable from the UI |
-| Rasterizer | 5.3 | `rasterizer.ts` | capsule / box / mask, run-emitting, synchronous |
-| Resolver | 5.1 | `resolver.ts` | flood fill, with the bounding-box limit and the split-tool boundary gate |
-| `BucketVoxelMask`, `BucketWrite`, `BucketWriteMap` | 4 | `bucket_voxel_mask.ts`, `bucket_write_map.ts` | |
-| `VolumeTransaction`, `BucketWriter` | 5.2 | `transaction.ts` | minus the before-images, see §12.2 |
-| Mag propagation | 5.4 | `mag_propagation.ts` | upsample (step A) and downsample (step B) |
-| Diff types and run encoding | 5.6 | `diff.ts` | `encodeBucketDiff` / `decodeBucketDiff` exist but have no transport behind them |
-| `WorkingDataCube` | 5.5 | `cube.ts` | **test-only** — production goes through `WkDataCubeAdapter` over the real `DataCube` |
-| `BucketJournal` | 5.7 | `journal.ts` | **test-only** — nothing in `viewer/` appends to it |
-| `VolumeEditingSession` | 5 | `session.ts` | **test-only** — the app opens transactions from the sagas instead |
+| `EditIntent` and its shapes | 5.1 | `core/intents.ts` | brush, box, mask and floodFill exist; only brush and floodFill are reachable from the UI |
+| Rasterizer | 5.3 | `core/rasterizer.ts` | capsule / box / mask, run-emitting, synchronous |
+| Resolver | 5.1 | `core/resolver.ts` | flood fill, with the bounding-box limit and the split-tool boundary gate |
+| `BucketVoxelMask`, `BucketWrite`, `BucketWriteMap` | 4 | `core/bucket_voxel_mask.ts`, `core/bucket_write_map.ts` | |
+| `VolumeTransaction`, `BucketWriter` | 5.2 | `core/transaction.ts` | minus the before-images, see §12.2 |
+| Mag propagation | 5.4 | `core/mag_propagation.ts` | upsample (step A) and downsample (step B) |
+| Diff types and run encoding | 5.6 | `core/diff.ts` | `encodeBucketDiff` / `decodeBucketDiff` exist but have no transport behind them |
+| `WorkingDataCube` | 5.5 | `not_yet_integrated/working_data_cube.ts` | production goes through `WkDataCubeAdapter` over the real `DataCube` instead |
+| `BucketJournal` | 5.7 | `not_yet_integrated/journal.ts` | nothing in `viewer/` appends to it yet |
+| `VolumeEditingSession` | 5 | `not_yet_integrated/session.ts` | the app opens transactions from the sagas instead |
 | Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill` |
 
 The running app reaches the new code at exactly two call sites, both behind `USE_NEW_VOLUME_ARCHITECTURE`: brushing in `volumetracing_saga.tsx` and flood fill in `floodfill_saga.tsx`. Writes land in real buckets; nothing else about the existing pipeline changes.

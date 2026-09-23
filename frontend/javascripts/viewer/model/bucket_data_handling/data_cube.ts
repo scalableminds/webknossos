@@ -38,7 +38,7 @@ import { globalPositionToBucketPosition } from "viewer/model/helpers/position_co
 import {
   VoxelNeighborQueue2D,
   VoxelNeighborQueue3D,
-} from "viewer/model/volumetracing/section_labeling";
+} from "viewer/model/volumetracing/legacy/section_labeling";
 import type { Mapping, NumberLike } from "viewer/store";
 import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";

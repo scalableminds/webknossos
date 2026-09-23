@@ -1,11 +1,11 @@
-import type { WorkingDataCube } from "./cube";
-import type { TransactionDiff, TransactionId } from "./diff";
-import type { DataDependentShape, MaskShape } from "./intents";
+import type { TransactionDiff, TransactionId } from "../core/diff";
+import type { DataDependentShape, MaskShape } from "../core/intents";
+import { rasterize } from "../core/rasterizer";
+import { resolve } from "../core/resolver";
+import { VolumeTransaction } from "../core/transaction";
+import type { BucketAddress, EditContext, MagList, Vector3 } from "../core/types";
 import type { BucketJournal } from "./journal";
-import { rasterize } from "./rasterizer";
-import { resolve } from "./resolver";
-import { VolumeTransaction } from "./transaction";
-import type { BucketAddress, EditContext, MagList, Vector3 } from "./types";
+import type { WorkingDataCube } from "./working_data_cube";
 
 /**
  * Drives one editing session: opens transactions, routes intents to the

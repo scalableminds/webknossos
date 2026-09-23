@@ -4,7 +4,7 @@ import {
   type SegmentId,
   type Vector3,
   voxelIndexOf,
-} from "prototypes/new_volume_architecture";
+} from "viewer/model/volumetracing/core";
 import { describe, expect, it } from "vitest";
 import {
   bucketOf,

@@ -1,12 +1,11 @@
 /**
- * Spike implementation of the volume-annotation architecture described in
- * `design/volume_annotation_architecture.md`.
+ * The volume-annotation core described in
+ * `design/volume_annotation_architecture.md` (§12 for what is built so far).
  *
- * Standalone on purpose: almost nothing here is imported from `viewer/` (see
- * types.ts), it is wired into no part of the running app, and is exercised
- * only by unit tests. Scope is the MVP — brush and flood fill, no
- * proofreading, no interpolation, no save/backend transport beyond an
- * in-memory fake.
+ * Framework-free by construction: no store, no sagas, no React, and only two
+ * imports from `viewer/` (see types.ts). Everything that bridges to the running
+ * app lives in `../integration`; everything that exists only to exercise this
+ * code lives in `../not_yet_integrated`.
  */
 
 export { BucketVoxelMask } from "./bucket_voxel_mask";
@@ -16,7 +15,7 @@ export {
   BucketWriteMapBuilder,
   countVoxels,
 } from "./bucket_write_map";
-export { type BackendLike, type BucketState, FakeBackend, WorkingDataCube } from "./cube";
+export type { BackendLike, BucketState, LoadingVoxelCube, TransactionCube } from "./cube";
 export {
   applyRun,
   type BucketDiff,
@@ -36,11 +35,9 @@ export type {
   MaskShape,
   RasterizableShape,
 } from "./intents";
-export { BucketJournal, type BucketLog, type BucketLogEntry } from "./journal";
 export { downsampleOneLevel, propagate, upsampleOneLevel } from "./mag_propagation";
 export { rasterize } from "./rasterizer";
 export { resolve, resolveFloodFill } from "./resolver";
-export { VolumeEditingSession } from "./session";
 export { type BucketWriter, VolumeTransaction } from "./transaction";
 export {
   type AdditionalCoordinate,

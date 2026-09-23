@@ -5,7 +5,7 @@ import {
   encodeBucketDiff,
   type SegmentId,
   type Vector3,
-} from "prototypes/new_volume_architecture";
+} from "viewer/model/volumetracing/core";
 import { describe, expect, it } from "vitest";
 import {
   createHarness,

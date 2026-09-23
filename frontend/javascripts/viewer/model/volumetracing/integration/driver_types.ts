@@ -6,7 +6,7 @@
 
 import type { AdditionalCoordinate } from "viewer/constants";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
-import type { MagIndex, SegmentId, Vector3 } from "../types";
+import type { MagIndex, SegmentId, Vector3 } from "../core/types";
 
 /** What every driver needs in order to address the layer it writes into. */
 export interface DriverOptions {

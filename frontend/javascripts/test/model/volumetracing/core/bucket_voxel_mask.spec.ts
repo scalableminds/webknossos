@@ -3,7 +3,7 @@ import {
   BUCKET_WIDTH,
   BucketVoxelMask,
   voxelIndexOf,
-} from "prototypes/new_volume_architecture";
+} from "viewer/model/volumetracing/core";
 import { describe, expect, it } from "vitest";
 
 function runsOf(mask: BucketVoxelMask): Array<[number, number]> {

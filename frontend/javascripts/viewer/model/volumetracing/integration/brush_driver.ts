@@ -8,9 +8,9 @@
  * undo — buckets are mutated in place only.
  */
 
-import { rasterize } from "../rasterizer";
-import { VolumeTransaction } from "../transaction";
-import type { EditContext, OverwriteMode, Vector3 } from "../types";
+import { rasterize } from "../core/rasterizer";
+import { VolumeTransaction } from "../core/transaction";
+import type { EditContext, OverwriteMode, Vector3 } from "../core/types";
 import type { DriverOptions, DriverResult } from "./driver_types";
 import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_cube_adapter";
 

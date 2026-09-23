@@ -3,7 +3,10 @@
   margin-right: 25px;
   font-size: 14px;
   display: flex;
-  flex-wrap: wrap;
+  // Both nowrap rules keep everything on one line. Otherwise, items would wrap instead
+  // of overflowing, which the measurement in statusbar.tsx relies on.
+  flex-wrap: nowrap;
+  white-space: nowrap;
   overflow: hidden;
 
   .info-element {
@@ -19,10 +22,45 @@
 
   .shortcut-info-element {
     margin-left: 20px;
+    white-space: nowrap;
   }
 
   .ant-typography kbd {
     // increase brightness/contrast for <Typography.Text keyboard>...</Typography.Text>
     background-color: rgb(150 150 150 / 37%);
+  }
+
+  .statusbar-measurer {
+    // inline-flex (instead of the default block) makes the children lay out like the
+    // visible row, so that the measured widths match.
+    display: inline-flex;
+    position: absolute;
+    visibility: hidden;
+    white-space: nowrap;
+    pointer-events: none;
+    top: 0;
+    left: 0;
+  }
+}
+
+// Not scoped under .statusbar: antd's Popover renders its content into a portal
+// (typically appended to document.body).
+.statusbar-doc-link,
+.statusbar-doc-link:visited {
+  color: rgba(255, 255, 255, 0.67);
+  text-decoration: none;
+
+  &:hover,
+  &:focus {
+    color: rgba(255, 255, 255, 0.67);
+    text-decoration: underline;
+  }
+}
+
+.statusbar-overflow-content {
+  // The drag icons' mouse glyph sits off-center (to make room for the arrow), which
+  // only looks misaligned in this vertical list.
+  .statusbar-drag-icon {
+    transform: translateX(2px);
   }
 }

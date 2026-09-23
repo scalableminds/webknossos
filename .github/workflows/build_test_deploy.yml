@@ -44,10 +44,13 @@ jobs:
       - name:
           Download Coverage Artifacts
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
+        id: coverage-baseline
+        continue-on-error: true # the GitHub API intermittently fails to serve the artifact, which must not fail the build
         run: |
           gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
           [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
           gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
+          echo "baseline=$OUTPUT_DIR/coverage-summary.json" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT_NAME: vitest-coverage-master
@@ -56,7 +59,8 @@ jobs:
         uses: davelosert/vitest-coverage-report-action@v2
         with:
           comment-on: none # alternative: pr
-          json-summary-compare-path: coverage-master/coverage-summary.json
+          # Empty if no baseline could be downloaded, in which case the action skips the comparison
+          json-summary-compare-path: ${{ steps.coverage-baseline.outputs.baseline }}
       - name: "Upload Coverage"
         if: github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v7

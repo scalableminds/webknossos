@@ -5,7 +5,7 @@ import { getPricingPlanStatus, updateOrganization } from "admin/api/organization
 import { getUsers } from "admin/rest_api";
 import { Button, Col, Row, Space, Spin, Typography } from "antd";
 import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/format_utils";
-import { useWkSelector } from "libs/react_hooks";
+import { useApi, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { type Key, useEffect } from "react";
 import { useDispatch } from "react-redux";
@@ -42,7 +42,7 @@ export function OrganizationOverviewView() {
     data: users = [],
     isFetching: isFetchingUsers,
     error: usersError,
-  } = useQuery({
+  } = useApi({
     queryKey: ["users"],
     queryFn: () => getUsers(),
   });

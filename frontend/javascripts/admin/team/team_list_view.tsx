@@ -9,7 +9,7 @@ import LinkButton from "components/link_button";
 import { stringToTagColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
-import { useQueryWithErrorHandling } from "libs/react_hooks";
+import { useApi, useQueryWithErrorHandling } from "libs/react_hooks";
 import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
 import messages from "messages";
 import type React from "react";
@@ -80,7 +80,7 @@ function TeamListView() {
     queryFn: getEditableTeams,
     refetchOnWindowFocus: false,
   });
-  const { data: users = [], isFetching: isLoadingUsers } = useQueryWithErrorHandling({
+  const { data: users = [], isFetching: isLoadingUsers } = useApi({
     queryKey: ["editableUsers"],
     queryFn: getEditableUsers,
     refetchOnWindowFocus: false,

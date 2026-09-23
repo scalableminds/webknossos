@@ -88,7 +88,7 @@ GET           /teams/:id/projectProgressReport                                  
 # Datasets
 POST          /datasets/:datasetId/createExplorational                                          controllers.AnnotationController.createExplorational(datasetId: ObjectId)
 GET           /datasets/:datasetId/sandbox/:typ                                                 controllers.AnnotationController.getSandbox(datasetId: ObjectId, typ: String, sharingToken: Option[String])
-GET           /datasets                                                                         controllers.DatasetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
+GET           /datasets                                                                         controllers.DatasetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int])
 POST          /datasets/exploreRemote                                                           controllers.DatasetController.exploreRemoteDataset()
 POST          /datasets/exploreAndAddRemote                                                     controllers.DatasetController.exploreAndAddRemoteDataset()
 POST          /datasets/addVirtualDataset/:name                                                 controllers.DatasetController.addVirtualDataset(name: String)
@@ -204,7 +204,7 @@ GET           /annotations/:typ/:id/download                                    
 
 GET           /annotations/source/:accessTokenOrId                                              controllers.AnnotationPrivateLinkController.annotationSource(accessTokenOrId: String, userToken: Option[String])
 
-GET           /annotations/readable                                                             controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET           /annotations/readable                                                             controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean], datasetId: Option[ObjectId])
 GET           /annotations/:typ/:id/sharedTeams                                                 controllers.AnnotationController.getSharedTeams(typ: String, id: ObjectId)
 PATCH         /annotations/:typ/:id/sharedTeams                                                 controllers.AnnotationController.updateSharedTeams(typ: String, id: ObjectId)
 PATCH         /annotations/:typ/:id/collaborationMode                                           controllers.AnnotationController.updateCollaborationMode(typ: String, id: ObjectId, collaborationMode: String)

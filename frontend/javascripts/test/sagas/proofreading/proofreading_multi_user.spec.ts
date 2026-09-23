@@ -23,7 +23,7 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { VERSION_POLL_INTERVAL_COLLAB } from "viewer/model/sagas/saving/version_poll_saga";
 import { Store } from "viewer/singletons";
-import { startSaga } from "viewer/store";
+import { type NumberLike, startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   expectedMappingAfterMerge,
@@ -57,7 +57,7 @@ function* prepareEditableMapping(
   tracingId: string,
   activeSegmentId: bigint,
   anchorPosition: Vector3,
-  initialExpectedMapping?: Map<bigint, bigint>,
+  initialExpectedMapping?: Map<NumberLike, NumberLike>,
 ): Saga<void> {
   initialExpectedMapping = initialExpectedMapping ?? initialMapping;
   yield call(initializeMappingAndTool, context, tracingId);
@@ -379,13 +379,13 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1n, 1339n],
-          [2n, 1339n],
-          [3n, 1n],
-          [4n, 1339n],
-          [5n, 1339n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1339],
+          [2, 1339],
+          [3, 1],
+          [4, 1339],
+          [5, 1339],
+          [6, 6],
+          [7, 6],
         ]),
       );
 
@@ -466,13 +466,13 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1n, 1n],
-          [2n, 1339n],
-          [3n, 1340n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1],
+          [2, 1339],
+          [3, 1340],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
         ]),
       );
 
@@ -552,13 +552,13 @@ describe("Proofreading (Multi User)", () => {
         // But as answer to the edges to remove was on version before the merge, the newly added edge afterwards is not included in the edges that need to be removed to completely isolate the segment 2.
         // Thus, only 3 was cut off from segment 2.
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1339n],
-          [5n, 1n],
-          [4n, 1n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1],
+          [2, 1],
+          [3, 1339],
+          [5, 1],
+          [4, 1],
+          [6, 6],
+          [7, 6],
         ]),
       );
 
@@ -629,13 +629,13 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1n, 1n],
-          [2n, 1339n],
-          [3n, 1339n],
-          [4n, 1339n],
-          [5n, 1339n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1],
+          [2, 1339],
+          [3, 1339],
+          [4, 1339],
+          [5, 1339],
+          [6, 6],
+          [7, 6],
         ]),
       );
 
@@ -694,13 +694,13 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1n, 4n],
-          [2n, 4n],
-          [3n, 4n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 4],
+          [2, 4],
+          [3, 4],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
         ]),
       );
 
@@ -742,15 +742,15 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1n, 1337n],
-          [2n, 1337n],
-          [3n, 1337n],
-          [4n, 1337n],
-          [5n, 1337n],
-          [6n, 6n],
-          [7n, 6n],
-          // [1337n, 1337n], not loaded
-          // [1338n, 1337n], not loaded
+          [1, 1337],
+          [2, 1337],
+          [3, 1337],
+          [4, 1337],
+          [5, 1337],
+          [6, 6],
+          [7, 6],
+          // [1337, 1337], not loaded
+          // [1338, 1337], not loaded
         ]),
       );
 
@@ -825,14 +825,14 @@ describe("Proofreading (Multi User)", () => {
 
     const task = startSaga(function* task() {
       const initialExpectedMapping = new Map([
-        [1n, 1n],
-        [2n, 1n],
-        [3n, 1n],
-        [4n, 4n],
-        [5n, 4n],
-        [6n, 1337n],
-        [7n, 1337n],
-        // [1337n, 1337n], not loaded
+        [1, 1],
+        [2, 1],
+        [3, 1],
+        [4, 4],
+        [5, 4],
+        [6, 1337],
+        [7, 1337],
+        // [1337, 1337], not loaded
       ]);
       yield* prepareEditableMapping(
         context,
@@ -853,14 +853,14 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1n, 4n],
-          [2n, 4n],
-          [3n, 4n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 1337n],
-          [7n, 1337n],
-          // [1337n, 1337n], not loaded
+          [1, 4],
+          [2, 4],
+          [3, 4],
+          [4, 4],
+          [5, 4],
+          [6, 1337],
+          [7, 1337],
+          // [1337, 1337], not loaded
         ]),
       );
 
@@ -927,15 +927,15 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1n, 1339n],
-          [2n, 1339n],
-          [3n, 1339n],
-          [4n, 1339n],
-          [5n, 1339n],
-          [6n, 1337n],
-          [7n, 1337n],
-          // [1337n, 1339n], not loaded
-          // [1338n, 1339n], not loaded
+          [1, 1339],
+          [2, 1339],
+          [3, 1339],
+          [4, 1339],
+          [5, 1339],
+          [6, 1337],
+          [7, 1337],
+          // [1337, 1339], not loaded
+          // [1338, 1339], not loaded
         ]),
       );
     });
@@ -1004,15 +1004,15 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 1n],
-          [5n, 1n],
-          [6n, 6n],
-          [7n, 6n],
-          // [1337n, 1337n], not loaded
-          // [1338n, 1337n], not loaded
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 6],
+          [7, 6],
+          // [1337, 1337], not loaded
+          // [1338, 1337], not loaded
         ]),
       );
 
@@ -1082,14 +1082,14 @@ describe("Proofreading (Multi User)", () => {
 
     const task = startSaga(function* task() {
       const initialExpectedMapping = new Map([
-        [1n, 1n],
-        [2n, 1n],
-        [3n, 1n],
-        [4n, 4n],
-        [5n, 4n],
-        [6n, 1337n],
-        [7n, 1337n],
-        // [1337n, 1337n], not loaded
+        [1, 1],
+        [2, 1],
+        [3, 1],
+        [4, 4],
+        [5, 4],
+        [6, 1337],
+        [7, 1337],
+        // [1337, 1337], not loaded
       ]);
       yield* prepareEditableMapping(
         context,
@@ -1125,15 +1125,15 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(
         tracingId,
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 1337n],
-          [5n, 1339n],
-          [6n, 1339n],
-          [7n, 1339n],
-          // [1337n, 1339n], not loaded
-          // [1338n, 1339n], not loaded
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1337],
+          [5, 1339],
+          [6, 1339],
+          [7, 1339],
+          // [1337, 1339], not loaded
+          // [1338, 1339], not loaded
         ]),
       );
 
@@ -1200,14 +1200,14 @@ describe("Proofreading (Multi User)", () => {
 
     const task = startSaga(function* task() {
       const initialExpectedMapping = new Map([
-        [1n, 1n],
-        [2n, 1n],
-        [3n, 1n],
-        [4n, 4n],
-        [5n, 4n],
-        [6n, 1337n],
-        [7n, 1337n],
-        // [1337n, 1337n], not loaded
+        [1, 1],
+        [2, 1],
+        [3, 1],
+        [4, 4],
+        [5, 4],
+        [6, 1337],
+        [7, 1337],
+        // [1337, 1337], not loaded
       ]);
       yield* prepareEditableMapping(
         context,
@@ -1297,14 +1297,14 @@ describe("Proofreading (Multi User)", () => {
 
     const task = startSaga(function* task() {
       const initialExpectedMapping = new Map([
-        [1n, 1n],
-        [2n, 1n],
-        [3n, 1n],
-        [4n, 4n],
-        [5n, 4n],
-        [6n, 1337n],
-        [7n, 1337n],
-        // [1337n, 1337n], not loaded
+        [1, 1],
+        [2, 1],
+        [3, 1],
+        [4, 4],
+        [5, 4],
+        [6, 1337],
+        [7, 1337],
+        // [1337, 1337], not loaded
       ]);
       yield* prepareEditableMapping(
         context,

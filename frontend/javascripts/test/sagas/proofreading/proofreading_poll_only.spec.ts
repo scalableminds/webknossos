@@ -161,13 +161,13 @@ describe.each(AnnotationCollaborationModes)(
         );
         expect(mapping0).toEqual(
           new Map([
-            [1n, 1n],
-            [2n, 1n],
-            [3n, 1n],
-            [4n, 4n],
-            [5n, 4n],
-            [6n, 4n],
-            [7n, 4n],
+            [1, 1],
+            [2, 1],
+            [3, 1],
+            [4, 4],
+            [5, 4],
+            [6, 4],
+            [7, 4],
           ]),
         );
 
@@ -193,13 +193,13 @@ describe.each(AnnotationCollaborationModes)(
 
         expect(mapping1).toEqual(
           new Map([
-            [1n, 1n],
-            [2n, 1n],
-            [3n, 1n],
-            [4n, 4n],
-            [5n, 4n],
-            [6n, 1339n],
-            [7n, 1339n],
+            [1, 1],
+            [2, 1],
+            [3, 1],
+            [4, 4],
+            [5, 4],
+            [6, 1339],
+            [7, 1339],
           ]),
         );
 
@@ -232,13 +232,13 @@ describe.each(AnnotationCollaborationModes)(
 
         expect(mapping2).toEqual(
           new Map([
-            [1n, 1n],
-            [2n, 1n],
-            [3n, 1n],
-            [4n, 1339n],
-            [5n, 1339n],
-            [6n, 1339n],
-            [7n, 1339n],
+            [1, 1],
+            [2, 1],
+            [3, 1],
+            [4, 1339],
+            [5, 1339],
+            [6, 1339],
+            [7, 1339],
           ]),
         );
 
@@ -354,13 +354,13 @@ describe.each(AnnotationCollaborationModes)(
 
         expect(mapping1).toEqual(
           new Map([
-            [1n, 1n],
-            [2n, 1339n],
-            [3n, 1339n],
-            [4n, 4n],
-            [5n, 4n],
-            [6n, 1340n],
-            [7n, 1340n],
+            [1, 1],
+            [2, 1339],
+            [3, 1339],
+            [4, 4],
+            [5, 4],
+            [6, 1340],
+            [7, 1340],
           ]),
         );
 
@@ -428,13 +428,13 @@ describe.each(AnnotationCollaborationModes)(
 
         expect(mapping1).toEqual(
           new Map([
-            [1n, 1n],
-            [2n, 1n],
-            [3n, 1n],
-            [4n, 4n],
-            [5n, 4n],
-            [6n, 1339n],
-            [7n, 1339n],
+            [1, 1],
+            [2, 1],
+            [3, 1],
+            [4, 4],
+            [5, 4],
+            [6, 1339],
+            [7, 1339],
           ]),
         );
 

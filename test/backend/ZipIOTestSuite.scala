@@ -49,7 +49,7 @@ class ZipIOTestSuite extends AsyncWordSpec {
       includeHiddenFiles = false,
       hiddenFilesWhitelist = List.empty,
       truncateCommonPrefix = truncateCommonPrefix,
-      excludeFromPrefix = None
+      boundaryDirNames = None
     )
 
   "ZipIO.unzipToDirectory" should {

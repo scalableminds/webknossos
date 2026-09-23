@@ -1,10 +1,10 @@
 package models.annotation
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
-import play.api.libs.json.*
 
 object TracingMode extends ExtendedEnumeration {
   type TracingMode = Value
@@ -19,7 +19,7 @@ case class AnnotationSettings(
     volumeInterpolationAllowed: Boolean = true,
     mergerMode: Boolean = false,
     magRestrictions: MagRestrictions = MagRestrictions.empty
-)
+) derives JsonAutoFormat
 
 object AnnotationSettings {
   def defaultFor(tracingType: TracingType): AnnotationSettings = tracingType match {
@@ -28,6 +28,4 @@ object AnnotationSettings {
     case TracingType.skeleton | TracingType.hybrid =>
       AnnotationSettings(allowedModes = List(TracingMode.orthogonal, TracingMode.flight))
   }
-
-  implicit val jsonFormat: OFormat[AnnotationSettings] = Json.format[AnnotationSettings]
 }

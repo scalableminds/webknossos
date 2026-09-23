@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import { cachedGetPricingPlanStatus } from "admin/api/organization";
 import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
 import { getUser, updateNovelUserExperienceInfos } from "admin/rest_api";
@@ -9,6 +10,7 @@ import { PublicationViewWithHeader } from "dashboard/publication_view";
 import features from "features";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
+import { getUrlParamsObjectFromString } from "libs/utils";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import invert from "lodash-es/invert";
 import type React from "react";
@@ -114,7 +116,9 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
   async fetchData(): Promise<void> {
     const user =
-      this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;
+      this.props.userId != null
+        ? unwrapOrThrow(await getUser(this.props.userId))
+        : this.props.activeUser;
 
     // Use a cached version of this route to avoid that a tab switch in the dashboard
     // causes a whole-page spinner. Since the different tabs are controlled by the
@@ -138,6 +142,12 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       },
     });
     this.props.navigate(`/annotations/${response.annotation.id}`);
+  };
+
+  clearDatasetNameFilterFromUrl = () => {
+    const tabKeyToURLMap = invert(urlTokenToTabKeyMap);
+    const url = tabKeyToURLMap.explorativeAnnotations;
+    this.props.navigate(`/dashboard/${url}`, { replace: false });
   };
 
   getValidTabKeys() {
@@ -185,6 +195,10 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
                 isAdminView={this.props.isAdminView}
                 userId={this.props.userId}
                 activeUser={this.props.activeUser}
+                datasetNameFilter={
+                  getUrlParamsObjectFromString(this.props.location.search).dataset || null
+                }
+                onDatasetNameFilterCleared={this.clearDatasetNameFilterFromUrl}
               />
             </RenderingTabContext.Provider>
           ),

@@ -73,7 +73,7 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
         includeHiddenFiles = true,
         hiddenFilesWhitelist = List(),
         truncateCommonPrefix = true,
-        excludeFromPrefix = None
+        boundaryDirNames = None
       )
 
     // Test if the dataset was unzipped successfully

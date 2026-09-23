@@ -1,6 +1,7 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
 import { toBigInt } from "libs/bigint_helpers";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
+import { getAdaptToTypeFunction } from "libs/utils";
 import omitBy from "lodash-es/omitBy";
 import { call, put } from "typed-redux-saga";
 import type { AdditionalCoordinate, APIUpdateActionBatch } from "types/api_types";
@@ -158,9 +159,13 @@ function* addMissingSegmentsToLoadedMappings(
       annotationId,
       version,
     );
+    const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
     const mergedMapping = new Map(
       Array.from((activeMapping.mapping ?? new Map()) as NumberLikeMap).concat(
-        Array.from(mappingWithMissingIds as NumberLikeMap),
+        Array.from(mappingWithMissingIds as NumberLikeMap, ([key, value]) => [
+          adaptToType(key),
+          adaptToType(value),
+        ]),
       ),
     );
     yield* put(

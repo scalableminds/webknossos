@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -16,7 +16,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.storage.AttachmentKey
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -25,30 +24,18 @@ case class ListMeshChunksRequest(
     meshFileName: String,
     segmentId: UnsignedLong,
     annotationVersion: Option[Long]
-)
-
-object ListMeshChunksRequest {
-  implicit val jsonFormat: OFormat[ListMeshChunksRequest] = Json.format[ListMeshChunksRequest]
-}
+) derives JsonAutoFormat
 
 case class MeshChunkDataRequest(
     byteOffset: Long,
     byteSize: Int,
     segmentId: Option[UnsignedLong] // Only relevant for neuroglancer precomputed meshes, needed because of sharding
-)
+) derives JsonAutoFormat
 
 case class MeshChunkDataRequestList(
     meshFileName: String,
     requests: Seq[MeshChunkDataRequest]
-)
-
-object MeshChunkDataRequest {
-  implicit val jsonFormat: OFormat[MeshChunkDataRequest] = Json.format[MeshChunkDataRequest]
-}
-
-object MeshChunkDataRequestList {
-  implicit val jsonFormat: OFormat[MeshChunkDataRequestList] = Json.format[MeshChunkDataRequestList]
-}
+) derives JsonAutoFormat
 
 case class MeshFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment) extends AttachmentKey
 
@@ -57,11 +44,7 @@ case class MeshFileInfo(
     name: String,
     mappingName: Option[String],
     formatVersion: Long
-)
-
-object MeshFileInfo {
-  implicit val jsonFormat: OFormat[MeshFileInfo] = Json.format[MeshFileInfo]
-}
+) derives JsonAutoFormat
 
 class MeshFileService @Inject() (
     hdf5MeshFileService: Hdf5MeshFileService,

@@ -267,6 +267,12 @@ function DAGView({
       nodes={nodes}
       edges={edges}
       fitView
+      // The DAG is read-only, so none of React Flow's keyboard interactions are needed.
+      // So disable them to the view crashing when having a key pressed and loosing window focus.
+      deleteKeyCode={null}
+      multiSelectionKeyCode={null}
+      selectionKeyCode={null}
+      zoomActivationKeyCode={null}
       fitViewOptions={{ maxZoom: 1.5 }}
       minZoom={0.3}
       maxZoom={2}

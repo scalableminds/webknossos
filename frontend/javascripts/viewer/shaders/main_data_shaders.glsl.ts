@@ -247,9 +247,11 @@ void main() {
       getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
 
       <%
+        // For 64-bit ids, signed and unsigned values are handled identically: the raw bit
+        // pattern is reinterpreted as unsigned (see uint64ToUint64 for why sign doesn't matter).
         const vec4ToSomeIntFn =
           textureLayerInfos[segmentationName].elementClass.endsWith("int64")
-            ? textureLayerInfos[segmentationName].isSigned ? "int64ToUint64" : "uint64ToUint64"
+            ? "uint64ToUint64"
             : textureLayerInfos[segmentationName].isSigned ? "int32ToUint64" : "uint32ToUint64"
       %>
 

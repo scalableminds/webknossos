@@ -15,11 +15,11 @@ import toPairs from "lodash-es/toPairs";
 import uniq from "lodash-es/uniq";
 import zipObject from "lodash-es/zipObject";
 import type { APIDataset, APIUser, MapEntries } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 import type { ArbitraryObject, Comparator } from "types/type_utils";
 import type { Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
 import type { TreeGroup } from "viewer/model/types/tree_types";
-import type { BoundingBoxObject, Mapping, NumberLike, SegmentGroup } from "viewer/store";
+import type { Mapping, NumberLike, SegmentGroup } from "viewer/store";
 
 type UrlParams = Record<string, string>;
 
@@ -909,19 +909,14 @@ export function convertNumberTo64BitTuple(num: number | bigint | null): [number,
     return [0, 0];
   }
 
-  let sign: number | null;
-  if (typeof num === "bigint") {
-    sign = num < 0n ? -1 : 1;
-  } else {
-    sign = Math.sign(num);
-  }
-
   // Cast to BigInt as bit-wise operations only work with 32 bits,
-  // even though Number uses 53 bits.
-  const bigNum = BigInt(sign) * BigInt(num);
+  // even though Number uses 53 bits. BigInt's &/>> operators use two's-complement
+  // semantics for negative numbers, so this also produces the correct bit pattern
+  // for negative ids (the sign ends up encoded in bigNumHigh).
+  const bigNum = BigInt(num);
 
-  const bigNumLow = sign * Number((2n ** 32n - 1n) & bigNum);
-  const bigNumHigh = sign * Number(bigNum >> 32n);
+  const bigNumLow = Number((2n ** 32n - 1n) & bigNum);
+  const bigNumHigh = Number(bigNum >> 32n);
 
   return [bigNumHigh, bigNumLow];
 }

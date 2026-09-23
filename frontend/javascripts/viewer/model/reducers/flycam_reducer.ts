@@ -152,7 +152,12 @@ function clampPositionToDatasetBounds(state: WebknossosState, moveDelta: Vector3
 
   for (let i = 0; i < 3; i++) {
     if (Math.abs(moveDelta[i]) > MOVED_AXIS_EPSILON) {
-      matrix[12 + i] = clamp(min[i], matrix[12 + i], max[i]);
+      matrix[12 + i] = clamp(
+        min[i],
+        matrix[12 + i],
+        // Subtract 1 because max is exclusive
+        max[i] - 1,
+      );
     }
   }
 

@@ -1,13 +1,13 @@
 package controllers
 
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
 import models.organization.OrganizationDAO
 import models.user.MultiUserDAO
 import org.apache.pekko.actor.ActorSystem
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
 import security.{CertificateValidationService, WkEnv}
@@ -20,10 +20,7 @@ import scala.concurrent.ExecutionContext
 case class HelpEmailParameters(
     message: String,
     currentUrl: String
-)
-object HelpEmailParameters {
-  implicit val jsonFormat: OFormat[HelpEmailParameters] = Json.format[HelpEmailParameters]
-}
+) derives JsonAutoFormat
 
 class Application @Inject() (
     actorSystem: ActorSystem,

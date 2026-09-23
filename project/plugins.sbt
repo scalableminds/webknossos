@@ -13,6 +13,9 @@ addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.6.2")
 // scala linter
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.7")
 
+// backend test coverage
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.4.4")
+
 // protocol buffers
 libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.20"
 

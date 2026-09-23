@@ -10,6 +10,7 @@ import Icon, {
   UserOutlined,
 } from "@ant-design/icons";
 import WkLogoIcon from "@images/wk-logo.svg?react";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -55,7 +56,7 @@ import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
@@ -850,7 +851,7 @@ function Navbar() {
 
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
-    const redirectUrl = await logoutUser();
+    const redirectUrl = unwrapOrThrow(await logoutUser());
     dispatch(logoutUserAction());
     // Hard navigation
     location.href = redirectUrl;

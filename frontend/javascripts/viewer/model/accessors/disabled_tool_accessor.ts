@@ -5,9 +5,10 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import memoizeOne from "memoize-one";
 import type { APIOrganization, APIUser } from "types/api_types";
-import { IdentityTransform } from "viewer/constants";
+import { IdentityTransform, OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated, isRotated } from "viewer/model/accessors/flycam_accessor";
+import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import {
   type AgglomerateState,
   getActiveSegmentationTracing,
@@ -76,6 +77,7 @@ type Params = {
   isSegmentationTracingVisible: boolean;
   isInMergerMode: boolean;
   isSegmentationTracingVisibleForMag: boolean;
+  isOnly3DViewportVisible: boolean;
   isZoomInvalidForTracing: boolean;
   isEditableMappingActive: boolean;
   isSegmentationTracingTransformed: boolean;
@@ -141,8 +143,16 @@ const mergerModeVolumeRule = new DisableRule(VolumeToolsWithProofreading, ({ isI
 
 const noSegmentationForMagRule = new DisableRule(
   VolumeToolsWithProofreading,
-  ({ isSegmentationTracingVisibleForMag }) =>
-    isSegmentationTracingVisibleForMag ? null : DISABLED_EXPLANATION.NO_SEGMENTATION_FOR_MAG,
+  ({ isSegmentationTracingVisibleForMag, isOnly3DViewportVisible }, tool) => {
+    if (isSegmentationTracingVisibleForMag) {
+      return null;
+    }
+    // If only the 3D viewport is visible, proofreading does not need the segmentation.
+    if (tool === AnnotationTool.PROOFREAD && isOnly3DViewportVisible) {
+      return null;
+    }
+    return DISABLED_EXPLANATION.NO_SEGMENTATION_FOR_MAG;
+  },
 );
 
 const editableMappingActiveRule = new DisableRule(VolumeTools, ({ isEditableMappingActive }) =>
@@ -304,6 +314,17 @@ function getToolDisabledReason(tool: AnnotationTool, params: Params): DisabledIn
   return { isDisabled: false, explanation: "" };
 }
 
+function isOnlyTDViewportVisible(state: WebknossosState): boolean {
+  const tdViewportRect = getInputCatcherRect(state, OrthoViews.TDView);
+  if (tdViewportRect.width === 0 || tdViewportRect.height === 0) {
+    return false;
+  }
+  return OrthoViewValuesWithoutTDView.every((viewport) => {
+    const rect = getInputCatcherRect(state, viewport);
+    return rect.width === 0 || rect.height === 0;
+  });
+}
+
 const _getDisabledInfoForTools = (
   state: WebknossosState,
 ): Record<AnnotationToolId, DisabledInfo> => {
@@ -319,6 +340,7 @@ const _getDisabledInfoForTools = (
   const segmentationTracingLayer = getActiveSegmentationTracing(state);
   const labeledMag = getRenderableMagForSegmentationTracing(state, segmentationTracingLayer)?.mag;
   const isSegmentationTracingVisibleForMag = labeledMag != null;
+  const isOnly3DViewportVisible = isOnlyTDViewportVisible(state);
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const isSegmentationTracingTransformed =
     segmentationTracingLayer != null &&
@@ -342,6 +364,7 @@ const _getDisabledInfoForTools = (
     isSegmentationTracingVisible,
     isInMergerMode,
     isSegmentationTracingVisibleForMag,
+    isOnly3DViewportVisible,
     isZoomInvalidForTracing,
     isEditableMappingActive,
     isSegmentationTracingTransformed,

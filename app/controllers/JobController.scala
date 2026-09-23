@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job.*
@@ -23,7 +23,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
+import play.api.libs.json.{JsObject, JsValue, Json}
 
 object MovieResolutionSetting extends ExtendedEnumeration {
   val SD, HD = Value
@@ -49,24 +49,19 @@ case class AnimationJobOptions(
     annotationId: Option[ObjectId],
     includeSkeletons: Boolean,
     hideImageData: Boolean,
-    saveBlenderFile: Boolean
-)
-
-object AnimationJobOptions {
-  implicit val jsonFormat: OFormat[AnimationJobOptions] = Json.format[AnimationJobOptions]
-}
+    saveBlenderFile: Boolean,
+    segmentationLayerName: Option[String]
+) derives JsonAutoFormat
 
 case class AlignSectionsJobOptions(
     layerName: String,
     newDatasetName: String,
     annotationId: Option[ObjectId],
     customConfiguration: Option[JsObject],
-    fineAlignmentOnly: Option[Boolean]
-)
-
-object AlignSectionsJobOptions {
-  implicit val jsonFormat: OFormat[AlignSectionsJobOptions] = Json.format[AlignSectionsJobOptions]
-}
+    // If set, only fine alignment is performed, assuming that the dataset contains no jumps
+    // larger than this value (in voxels). If unset, a full alignment is performed.
+    fineAlignmentMaxJumpSize: Option[Int]
+) derives JsonAutoFormat
 
 class JobController @Inject() (
     jobDAO: JobDAO,
@@ -292,7 +287,7 @@ class JobController @Inject() (
             "layer_name" -> request.body.layerName,
             "annotation_id" -> request.body.annotationId,
             "custom_configuration" -> request.body.customConfiguration,
-            "fine_alignment_only" -> request.body.fineAlignmentOnly.getOrElse(false)
+            "fine_alignment_max_jump_size" -> request.body.fineAlignmentMaxJumpSize
           )
           creditTransactionComment = s"Align dataset ${dataset.name}"
           job <- jobService.submitPaidJob(
@@ -496,6 +491,7 @@ class JobController @Inject() (
           }
           layerName = animationJobOptions.layerName
           _ <- datasetService.assertValidLayerNameLax(layerName)
+          _ <- Fox.runOptional(animationJobOptions.segmentationLayerName)(datasetService.assertValidLayerNameLax)
           dataStoreClient <- datasetService.clientFor(dataset)
           userOrganizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(
             request.identity._organization,
@@ -511,6 +507,7 @@ class JobController @Inject() (
             "dataset_directory_name" -> dataset.directoryName,
             "export_file_name" -> exportFileName,
             "layer_name" -> animationJobOptions.layerName,
+            "segmentation_layer_name" -> animationJobOptions.segmentationLayerName,
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,
             "include_watermark" -> animationJobOptions.includeWatermark,
             "meshes" -> animationJobOptions.meshes,

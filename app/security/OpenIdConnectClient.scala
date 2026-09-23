@@ -1,11 +1,11 @@
 package security
 
 import com.scalableminds.util.Msg
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.JsObject
 import pdi.jwt.JwtJson
 import play.api.libs.ws.*
 import utils.WkConf
@@ -131,11 +131,7 @@ case class OpenIdConnectProviderInfo(
     token_endpoint: String,
     userinfo_endpoint: String,
     jwks_uri: String
-)
-
-object OpenIdConnectProviderInfo {
-  implicit val format: OFormat[OpenIdConnectProviderInfo] = Json.format[OpenIdConnectProviderInfo]
-}
+) derives JsonAutoFormat
 
 case class OpenIdConnectConfig(
     baseUrl: String,
@@ -157,22 +153,12 @@ case class OpenIdConnectTokenResponse(
     token_type: String,
     refresh_token: Option[String],
     scope: Option[String]
-)
-
-object OpenIdConnectTokenResponse {
-  implicit val format: OFormat[OpenIdConnectTokenResponse] = Json.format[OpenIdConnectTokenResponse]
-}
+) derives JsonAutoFormat
 
 // Claims as specified by https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
-case class OpenIdConnectUserInfo(given_name: String, family_name: String, email: String)
-object OpenIdConnectUserInfo {
-  implicit val format: OFormat[OpenIdConnectUserInfo] = Json.format[OpenIdConnectUserInfo]
-}
+case class OpenIdConnectUserInfo(given_name: String, family_name: String, email: String) derives JsonAutoFormat
 
-case class JsonWebKeySet(keys: Seq[JsonWebKey])
-object JsonWebKeySet {
-  implicit val jsonFormat: OFormat[JsonWebKeySet] = Json.format[JsonWebKeySet]
-}
+case class JsonWebKeySet(keys: Seq[JsonWebKey]) derives JsonAutoFormat
 
 // Specified by https://datatracker.ietf.org/doc/html/rfc7517#section-4
 // and RSA-specific by https://datatracker.ietf.org/doc/html/rfc7518#section-6.3.1
@@ -182,8 +168,4 @@ case class JsonWebKey(
     use: String, // usage (sig for signature or enc for encryption)
     n: Option[String], // rsa modulus
     e: Option[String] // rsa exponent
-)
-
-object JsonWebKey {
-  implicit val jsonFormat: OFormat[JsonWebKey] = Json.format[JsonWebKey]
-}
+) derives JsonAutoFormat

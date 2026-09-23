@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -10,10 +11,7 @@ import play.api.libs.json.*
 
 import java.nio.ByteOrder
 
-case class N5BlockHeader(blockSize: Array[Int], numElements: Int)
-object N5BlockHeader {
-  implicit val jsonFormat: OFormat[N5BlockHeader] = Json.format[N5BlockHeader]
-}
+case class N5BlockHeader(blockSize: Array[Int], numElements: Int) derives JsonAutoFormat
 
 case class N5Header(
     dimensions: Array[Long], // shape of the entire array

@@ -1,4 +1,4 @@
-import ErrorHandling from "libs/error_handling";
+import { assert } from "libs/assertion";
 import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
@@ -21,6 +21,7 @@ import type {
   APISegmentationLayer,
   ElementClass,
 } from "types/api_types";
+import type { BoundingBoxObject } from "types/bounding_box";
 import type { DataLayer } from "types/schemas/datasource.types";
 import constants, {
   LongUnitToShortUnitMap,
@@ -33,7 +34,6 @@ import constants, {
 } from "viewer/constants";
 import type {
   ActiveMappingInfo,
-  BoundingBoxObject,
   DataLayerType,
   DatasetConfiguration,
   Settings,
@@ -166,7 +166,7 @@ export function getLayerByName(
 ): DataLayerType {
   const dataLayers = getDataLayers(dataset);
   const hasUniqueNames = uniqBy(dataLayers, "name").length === dataLayers.length;
-  ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
+  assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
   const layer = dataLayers.find(
     (l) =>
       l.name === layerName ||

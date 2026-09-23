@@ -5,17 +5,23 @@ import com.scalableminds.util.requestlogging.AbstractRequestLogging
 import com.scalableminds.util.tools.Fox
 import play.api.mvc.{Request, Result}
 
+import scala.concurrent.ExecutionContext
+
 trait UserAwareRequestLogging extends AbstractRequestLogging {
 
   case class RequesterIdOpt(id: Option[String]) // forcing implicit conversion
 
   def log(notifier: Option[String => Unit] = None)(
       block: => Fox[Result]
-  )(implicit request: Request[?], requesterIdOpt: RequesterIdOpt): Fox[Result] =
-    for {
-      result: Result <- block
+  )(implicit
+      request: Request[?],
+      ec: ExecutionContext,
+      requesterIdOpt: RequesterIdOpt = RequesterIdOpt(None)
+  ): Fox[Result] =
+    Fox.fromFuture(for {
+      result: Result <- block.futureBox.map(boxToResult)
       _ = logRequestFormatted(request, result, notifier, requesterIdOpt.id)
-    } yield result
+    } yield result)
 
   implicit def userAwareRequestToRequesterIdOpt(implicit request: UserAwareRequest[WkEnv, ?]): RequesterIdOpt =
     RequesterIdOpt(request.identity.map(_._id.toString))

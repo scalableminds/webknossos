@@ -23,7 +23,7 @@ import {
 } from "admin/rest_api";
 import { Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/es/input";
-import type { ColumnType } from "antd/lib/table/interface";
+import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
@@ -46,7 +46,7 @@ import without from "lodash-es/without";
 import messages from "messages";
 import type React from "react";
 import { PureComponent } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import {
   type APIAnnotationInfo,
   type APIUser,
@@ -60,7 +60,7 @@ import CategorizationLabel, {
   CategorizationSearch,
 } from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
-import { AnnotationStats } from "viewer/view/right_border_tabs/dataset_info_tab_view";
+import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_section";
 import { DashboardEmptyAnnotationsPlaceholder } from "./dashboard_empty_annotations_placeholder";
 import { DashboardTopBar } from "./dashboard_top_bar";
 
@@ -75,6 +75,9 @@ type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
   activeUser: APIUser;
+  datasetNameFilter?: string | null;
+  // Called when the user removes the datasetNameFilter tag, so the caller can clear it from the URL.
+  onDatasetNameFilterCleared?: () => void;
 } & WithModalProps;
 type State = {
   shouldShowArchivedAnnotations: boolean;
@@ -123,16 +126,37 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   currentPageData: Readonly<APIAnnotationInfo[]> = [];
 
   componentDidMount() {
-    this.setState(persistence.load() as PartialState, () => {
+    const partialState: Partial<State> = {
+      ...(persistence.load() as PartialState),
+    };
+    if (this.props.datasetNameFilter) {
+      partialState.tags = [this.props.datasetNameFilter];
+    }
+    this.setState(partialState as State, () => {
       this.fetchNextPage(0);
     });
   }
 
-  componentDidUpdate(_prevProps: Props, prevState: State) {
+  componentDidUpdate(prevProps: Props, prevState: State) {
     persistence.persist(this.state);
 
     if (this.state.shouldShowArchivedAnnotations !== prevState.shouldShowArchivedAnnotations) {
       this.fetchNextPage(0);
+    }
+
+    if (this.props.datasetNameFilter !== prevProps.datasetNameFilter) {
+      // Dataset filter changed via the URL.
+      this.setState((state) => ({
+        tags: this.props.datasetNameFilter
+          ? [this.props.datasetNameFilter]
+          : state.tags.filter((tag) => tag !== prevProps.datasetNameFilter),
+      }));
+    } else if (
+      prevProps.datasetNameFilter != null &&
+      prevState.tags.includes(prevProps.datasetNameFilter) &&
+      !this.state.tags.includes(prevProps.datasetNameFilter)
+    ) {
+      this.props.onDatasetNameFilterCleared?.();
     }
   }
 
@@ -399,6 +423,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     }
 
     this.props.modal.confirm({
+      title: "Archive Annotations",
       content: `Are you sure you want to archive ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that annotations that you don't own are ignored.`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);
@@ -752,6 +777,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             })
           }
           localStorageSavingKey="lastDashboardSearchTags"
+          skipRestoreFromStorage={this.props.datasetNameFilter != null}
         />
         <Spin spinning={this.state.isLoading} size="large" style={{ marginTop: 4 }}>
           {this.renderTable()}

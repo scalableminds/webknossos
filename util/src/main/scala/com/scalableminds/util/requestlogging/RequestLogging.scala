@@ -1,15 +1,16 @@
 package com.scalableminds.util.requestlogging
 
-import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.mvc.{Formatter, FoxToResultHelpers}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 
-trait AbstractRequestLogging extends LazyLogging with Formatter {
+trait AbstractRequestLogging extends LazyLogging with Formatter with FoxToResultHelpers {
 
   def logRequestFormatted(
       request: Request[?],
@@ -20,9 +21,16 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
     if (!Status.isSuccessful(result.header.status)) {
       val userIdMsg = requesterId.map(id => s" for user $id").getOrElse("")
       val resultMsg = s": `${resultBody(result)}`"
-      val msg = s"Answering ${result.header.status} at ${request.uri}$userIdMsg$resultMsg"
+      val msg = s"Answering ${result.header.status} at ${redactUri(request.uri)}$userIdMsg$resultMsg"
       logger.warn(msg)
       notifier.foreach(_(msg))
+    }
+
+  private val redactedUriParams = Seq("key", "token")
+
+  private def redactUri(uri: String): String =
+    redactedUriParams.foldLeft(uri) { (uriAcc, param) =>
+      uriAcc.replaceAll(s"([?&]$param=)[^&]*", "$1xxx")
     }
 
   private def resultBody(result: Result): String =
@@ -33,10 +41,10 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
 
   def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 2 minutes)(
       block: => Fox[Result]
-  )(implicit request: Request[?]): Fox[Result] = {
+  )(implicit request: Request[?], ec: ExecutionContext): Fox[Result] = {
     def logTimeFormatted(executionTime: FiniteDuration, request: Request[?], result: Result): Unit = {
       val debugString =
-        s"Request `${request.method}` `${request.uri}` took ${formatDuration(executionTime)} and was${
+        s"Request `${request.method}` `${redactUri(request.uri)}` took ${formatDuration(executionTime)} and was${
             if (result.header.status != 200) " not "
             else " "
           }successful"
@@ -45,11 +53,11 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
     }
 
     val start = Instant.now
-    for {
-      result: Result <- block
+    Fox.fromFuture(for {
+      result: Result <- block.futureBox.map(boxToResult)
       executionTime = Instant.since(start)
       _ = if (executionTime > durationThreshold) logTimeFormatted(executionTime, request, result)
-    } yield result
+    } yield result)
   }
 
 }
@@ -59,10 +67,10 @@ trait RequestLogging extends AbstractRequestLogging {
 
   def log(
       notifier: Option[String => Unit] = None
-  )(block: => Fox[Result])(implicit request: Request[?]): Fox[Result] =
-    for {
-      result: Result <- block
+  )(block: => Fox[Result])(implicit request: Request[?], ec: ExecutionContext): Fox[Result] =
+    Fox.fromFuture(for {
+      result: Result <- block.futureBox.map(boxToResult)
       _ = logRequestFormatted(request, result, notifier)
-    } yield result
+    } yield result)
 
 }

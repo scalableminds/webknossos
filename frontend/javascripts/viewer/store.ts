@@ -81,8 +81,6 @@ import ProofreadingReducer from "./model/reducers/proofreading_reducer";
 import type { TreeGroup, TreeMap } from "./model/types/tree_types";
 import type { StartAiJobDrawerState } from "./view/ai_jobs/constants";
 
-export type { BoundingBoxObject } from "types/bounding_box";
-
 export type UserBoundingBoxForServer = {
   boundingBox: BoundingBoxObject;
   id: number;
@@ -663,8 +661,18 @@ type ConnectomeData = {
   readonly activeAgglomerateIds: Array<bigint>;
   readonly skeleton: SkeletonTracing | null | undefined;
 };
-export type MinCutPartitions = { 1: bigint[]; 2: bigint[]; agglomerateId: bigint | null };
-
+export const MinCutPartitionKeys = ["partitionA", "partitionB"] as const;
+export type MinCutPartitions =
+  | {
+      partitionA: bigint[];
+      partitionB: bigint[];
+      agglomerateId: bigint;
+    }
+  | {
+      partitionA: [];
+      partitionB: [];
+      agglomerateId: null;
+    };
 export type LocalMeshesInfo =
   | Record<LayerNameAsKey, Record<BigIntAsKey, MeshInformation> | undefined>
   | undefined;

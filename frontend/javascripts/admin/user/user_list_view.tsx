@@ -13,6 +13,7 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { unwrapOrThrow } from "admin/api/api_result";
 import ChangeUsernameView from "admin/auth/change_username_view";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
@@ -35,19 +36,20 @@ import {
   Tag,
   Tooltip,
   Typography,
+  theme,
 } from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import features from "features";
 import { copyToClipboard } from "libs/clipboard";
 import Persistence from "libs/persistence";
-import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { useApi, useWkSelector } from "libs/react_hooks";
 import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
 import { location } from "libs/window";
 import keyBy from "lodash-es/keyBy";
 import React, { type Key, useState } from "react";
 import { useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -71,6 +73,7 @@ const persistence = new Persistence<{
 
 function UserListView() {
   const { modal } = App.useApp();
+  const { token } = theme.useToken();
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
 
@@ -79,7 +82,7 @@ function UserListView() {
     enforceActiveOrganization(state.activeOrganization),
   );
 
-  const { data: users = [], isFetching: isLoading } = useQueryWithErrorHandling({
+  const { data: users = [], isFetching: isLoading } = useApi({
     queryKey: ["editableUsers"],
     queryFn: getEditableUsers,
     refetchOnWindowFocus: false,
@@ -99,7 +102,7 @@ function UserListView() {
   const [editNameModalOpen, setEditNameModalOpen] = useState(false);
 
   async function activateUser(selectedUser: APIUser, isActive: boolean = true) {
-    const newUser = await updateUser({ ...selectedUser, isActive });
+    const newUser = unwrapOrThrow(await updateUser({ ...selectedUser, isActive }));
     queryClient.setQueryData(["editableUsers"], (currentUsers: APIUser[]) =>
       currentUsers.map((user) => (selectedUser.id === user.id ? newUser : user)),
     );
@@ -114,7 +117,7 @@ function UserListView() {
         "If the user was activated for the first time, they will only be able to see datasets that belong to the Default team. Do you want to configure the teams and permissions of the user?",
       okText: "Configure teams and permissions",
       cancelText: "Close",
-      icon: <CheckCircleOutlined style={{ color: "green" }} />,
+      icon: <CheckCircleOutlined style={{ color: token.colorSuccess }} />,
       onOk: () => {
         setSelectedUserIds([selectedUser.id]);
         setIsTeamRoleModalOpen(isActive);

@@ -11,85 +11,22 @@ exports[`Dataset API (E2E) > Zarr streaming 2`] = `"AAAAAAAAAAAAAAAAAAAAAAAAAAAA
 exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
 [
   {
-    "allowedTeams": [],
-    "allowedTeamsCumulative": [],
+    "colorLayerNames": [],
     "created": "created",
-    "creationType": "DiskScan",
-    "dataSource": {
-      "dataLayers": [
-        {
-          "boundingBox": {
-            "depth": 100,
-            "height": 100,
-            "topLeft": [
-              50,
-              50,
-              25,
-            ],
-            "width": 100,
-          },
-          "category": "segmentation",
-          "dataFormat": "wkw",
-          "elementClass": "uint32",
-          "largestSegmentId": 176n,
-          "mags": [
-            {
-              "mag": [
-                1,
-                1,
-                1,
-              ],
-              "path": "path",
-            },
-          ],
-          "name": "segmentation",
-          "numChannels": 1,
-          "resolutions": [
-            [
-              1,
-              1,
-              1,
-            ],
-          ],
-        },
-      ],
-      "id": "id",
-      "scale": {
-        "factor": [
-          11.24,
-          11.24,
-          28,
-        ],
-        "unit": "nanometer",
-      },
-    },
-    "dataStore": {
-      "allowsUpload": true,
-      "jobsEnabled": false,
-      "jobsSupportedByAvailableWorkers": [],
-      "name": "localhost",
-      "url": "http://localhost:9000",
-    },
-    "description": null,
     "directoryName": "test-dataset",
     "folderId": "570b9f4e4bb848d0885ea917",
     "id": "id",
     "isActive": true,
     "isEditable": true,
-    "isPublic": false,
     "isUnreported": false,
-    "isVirtual": false,
     "lastUsedByUser": 0,
-    "logoUrl": "/images/mpi-logos.svg",
-    "metadata": [],
-    "mirrorPath": null,
     "name": "test-dataset",
     "owningOrganization": "Organization_X",
-    "rootPath": "rootPath",
-    "rootRealPath": "rootRealPath",
-    "sortingKey": "sortingKey",
+    "segmentationLayerNames": [
+      "segmentation",
+    ],
+    "status": "",
     "tags": [],
-    "uploaderFullName": null,
     "usedStorageBytes": 0,
   },
 ]

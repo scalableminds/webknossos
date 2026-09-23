@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(181);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(183);
 COMMIT TRANSACTION;
 
 
@@ -621,12 +621,14 @@ CREATE TABLE webknossos.jobs(
   _voxelytics_workflowHash TEXT,
   latestRunId TEXT,
   returnValue Text,
+  latestRunErrorDetails JSONB,
   retriedBySuperUser BOOLEAN NOT NULL DEFAULT FALSE,
   started TIMESTAMPTZ,
   ended TIMESTAMPTZ,
   lastRetry TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  CONSTRAINT latestRunErrorDetailsIsJsonObject CHECK(jsonb_typeof(latestRunErrorDetails) = 'object')
 );
 
 
@@ -906,6 +908,8 @@ CREATE INDEX ON webknossos.annotations(typ, state, isDeleted);
 CREATE INDEX ON webknossos.annotations(_user, _task, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, typ, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, isDeleted);
+CREATE INDEX ON webknossos.annotations(_dataset);
+CREATE INDEX ON webknossos.annotation_contributors(_user);
 CREATE INDEX ON webknossos.datasets(directoryName);
 CREATE INDEX ON webknossos.datasets(_folder);
 CREATE INDEX ON webknossos.tasks(_project);

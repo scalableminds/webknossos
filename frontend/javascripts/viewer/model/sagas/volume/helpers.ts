@@ -1,5 +1,6 @@
 import { V3 } from "libs/mjs";
 import { call } from "typed-redux-saga";
+import type { BoundingBoxObject } from "types/bounding_box";
 import Constants, {
   type ContourMode,
   ContourModeEnum,
@@ -33,7 +34,7 @@ import sampleVoxelMapToMagnification, {
   applyVoxelMap,
 } from "viewer/model/volumetracing/volume_annotation_sampling";
 import { Model } from "viewer/singletons";
-import type { BoundingBoxObject, VolumeTracing } from "viewer/store";
+import type { VolumeTracing } from "viewer/store";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   for (let i = 0; i < arr.length - 1; i++) {

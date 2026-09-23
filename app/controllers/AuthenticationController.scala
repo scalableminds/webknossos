@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
@@ -52,10 +52,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 
 case class CreateOrganizationWithExistingUserParams(userId: ObjectId, newOrganizationName: String)
-object CreateOrganizationWithExistingUserParams {
-  implicit val jsonFormat: OFormat[CreateOrganizationWithExistingUserParams] =
-    Json.format[CreateOrganizationWithExistingUserParams]
-}
+    derives JsonAutoFormat
 
 case class CreateUserInOrganizationParameters(
     firstName: String,
@@ -63,12 +60,7 @@ case class CreateUserInOrganizationParameters(
     email: String,
     password: Option[String],
     autoActivate: Option[Boolean]
-)
-
-object CreateUserInOrganizationParameters {
-  implicit val jsonFormat: OFormat[CreateUserInOrganizationParameters] =
-    Json.format[CreateUserInOrganizationParameters]
-}
+) derives JsonAutoFormat
 
 case class InviteParameters(
     recipients: Seq[String],
@@ -709,11 +701,12 @@ class AuthenticationController @Inject() (
   ): Request[AnyContent] => Fox[Result] = { implicit request: Request[AnyContent] =>
     userService.userFromMultiUserEmail(openIdConnectUserInfo.email)(using GlobalAccessContext).shiftBox.flatMap {
       case Full(user) =>
-// Assuming email verification was done by OIDC provider
+        // Assuming email verification was done by OIDC provider
         loginUser(user._id, label = "OIDC single sign-on", redirectToDashboard = true, skipEmailVerification = true)
       case Empty =>
         for {
           organization: Organization <- organizationService.findOneByInviteOrDefault(None)(using GlobalAccessContext)
+          // Assuming email verification was done by OIDC provider
           user <- createUser(
             organization,
             openIdConnectUserInfo.email,
@@ -722,7 +715,7 @@ class AuthenticationController @Inject() (
             autoActivate = true,
             None,
             isEmailVerified = true
-          ) // Assuming email verification was done by OIDC provider
+          )
           _ = logger.info(s"New user ${user._id} created via first OIDC single sign-on")
           // After registering, also login
           loginResult <- loginUser(

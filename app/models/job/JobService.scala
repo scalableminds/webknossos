@@ -173,9 +173,13 @@ class JobService @Inject() (
     for {
       multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
+      errorMessage = job.latestRunErrorDetails
+        .flatMap(details => (details \ "message").asOpt[String])
+        .map(_.trim)
+        .filter(_.nonEmpty)
       emailTemplate = job.command match {
-        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(multiUser, datasetName)
-        case _ => defaultMails.jobFailedGenericMail(multiUser, datasetName, job.command.toString)
+        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(multiUser, datasetName, errorMessage)
+        case _ => defaultMails.jobFailedGenericMail(multiUser, datasetName, job.command.toString, errorMessage)
       }
       _ = Mailer ! Send(emailTemplate)
     } yield ()
@@ -191,8 +195,8 @@ class JobService @Inject() (
         organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(using
           GlobalAccessContext
-        )
-        _ <- datasetDAO.deleteDataset(dataset._id)
+        ) ?~> Msg.Dataset.notFound(datasetDirectoryName)
+        _ <- datasetDAO.deleteDataset(dataset._id) ?~> Msg.Dataset.deleteFromDbFailed
       } yield ()
     } else Fox.successful(())
 
@@ -228,6 +232,7 @@ class JobService @Inject() (
         ownerEmail = ownerMultiUser.email,
         args = job.args - "webknossos_token" - "user_auth_token",
         state = job.effectiveState,
+        errorDetails = job.latestRunErrorDetails,
         returnValue = job.returnValue,
         resultLink = job.constructResultLink(organization._id),
         voxelyticsWorkflowHash = job._voxelyticsWorkflowHash,

@@ -1,9 +1,7 @@
 import {
   CopyOutlined,
-  DeleteOutlined,
   EllipsisOutlined,
   EyeOutlined,
-  LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
@@ -19,48 +17,35 @@ import { useDatasetCollectionContext } from "dashboard/dataset/dataset_collectio
 import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
-import type * as React from "react";
 import { useState } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
 
-const disabledStyle: React.CSSProperties = {
-  pointerEvents: "none",
-  color: "var(--ant-color-text-disabled)",
-};
-
-function getDisabledWhenReloadingStyle(isReloading: boolean) {
-  return isReloading ? disabledStyle : undefined;
-}
-
 function NewAnnotationLink({
   dataset,
-  isReloading,
   isCreateExplorativeModalVisible,
   onShowCreateExplorativeModal,
   onCloseCreateExplorativeModal,
 }: {
   dataset: APIDatasetCompact;
-  isReloading: boolean;
   isCreateExplorativeModalVisible: boolean;
   onShowCreateExplorativeModal: () => void;
   onCloseCreateExplorativeModal: () => void;
 }) {
   return (
     <div>
-      <LinkWithDisabled
+      <Link
         to={`/datasets/${dataset.id}/createExplorative/hybrid?autoFallbackLayer=true`}
         style={{
           display: "inline-block",
         }}
         title="New Annotation (Skeleton + Volume)"
-        disabled={isReloading}
       >
         <PlusOutlined className="icon-margin-right" />
         New Annotation
-      </LinkWithDisabled>
+      </Link>
       <span
         style={{
           marginLeft: 8,
@@ -73,7 +58,7 @@ function NewAnnotationLink({
       <a
         title="New Annotation With Custom Properties"
         className="ant-dropdown-link"
-        onClick={() => !isReloading && onShowCreateExplorativeModal()}
+        onClick={onShowCreateExplorativeModal}
       >
         <EllipsisOutlined />
       </a>
@@ -88,52 +73,29 @@ type Props = {
   dataset: APIDatasetCompact;
 };
 
-function LinkWithDisabled({
-  disabled,
-  onClick,
-  ...rest
-}: {
-  disabled?: boolean;
-  onClick?: () => void;
-  style?: React.CSSProperties;
-  to: string;
-  children: React.ReactNode;
-  title?: string;
-}) {
-  const maybeDisabledStyle = disabled ? disabledStyle : null;
-  const adaptedStyle =
-    rest.style != null ? { ...rest.style, ...maybeDisabledStyle } : maybeDisabledStyle;
-
-  if (!onClick) {
-    onClick = () => {};
-  }
-
-  return (
-    <Link
-      {...rest}
-      style={adaptedStyle || undefined}
-      onClick={(e) => (disabled ? e.preventDefault() : onClick?.())}
-    />
-  );
-}
-
-function DatasetActionView(props: Props) {
-  const queryClient = useQueryClient();
+export function useReloadDataset() {
   const context = useDatasetCollectionContext();
-  const { modal } = App.useApp();
-  const { dataset } = props;
-
   const [isReloading, setIsReloading] = useState(false);
-  const [isCreateExplorativeModalVisible, setIsCreateExplorativeModalVisible] = useState(false);
 
-  const onReloadDataset = async (datasetId: string) => {
+  const reloadDataset = async (datasetId: string) => {
     setIsReloading(true);
-    await onReloadImpl(datasetId, context.clearCacheAndReloadDataset);
-    setIsReloading(false);
+    try {
+      await onReloadImpl(datasetId, context.clearCacheAndReloadDataset);
+    } finally {
+      setIsReloading(false);
+    }
   };
 
-  const onDeleteDataset = async () => {
-    const dataset = await getDataset(props.dataset.id);
+  return { isReloading, reloadDataset };
+}
+
+export function useDeleteDataset() {
+  const queryClient = useQueryClient();
+  const { modal } = App.useApp();
+
+  // Resolves to true if the dataset was deleted.
+  return async (datasetId: string): Promise<boolean> => {
+    const dataset = await getDataset(datasetId);
 
     const deleteDataset = await modal.confirm({
       title: "Danger Zone",
@@ -153,7 +115,7 @@ function DatasetActionView(props: Props) {
     });
 
     if (!deleteDataset) {
-      return;
+      return false;
     }
 
     await deleteDatasetOnDisk(dataset.id);
@@ -175,39 +137,24 @@ function DatasetActionView(props: Props) {
       },
     );
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+    return true;
   };
+}
 
-  const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);
-  const reloadLink = (
-    <a
-      onClick={() => onReloadDataset(dataset.id)}
-      title="Reload Dataset"
-      style={disabledWhenReloadingStyle}
-      type="link"
-    >
-      {isReloading ? (
-        <LoadingOutlined className="icon-margin-right" />
-      ) : (
-        <ReloadOutlined className="icon-margin-right" />
-      )}
-      Reload
-    </a>
-  );
+function DatasetActionView(props: Props) {
+  const { modal } = App.useApp();
+  const { dataset } = props;
+
+  const [isCreateExplorativeModalVisible, setIsCreateExplorativeModalVisible] = useState(false);
+
   const datasetSettingsLink = (
-    <>
-      <LinkWithDisabled
-        to={`/datasets/${getReadableURLPart(dataset)}/edit`}
-        title="Open Dataset Settings"
-        disabled={isReloading}
-      >
-        <SettingOutlined className="icon-margin-right" />
-        Settings
-      </LinkWithDisabled>
-    </>
+    <Link to={`/datasets/${getReadableURLPart(dataset)}/edit`} title="Open Dataset Settings">
+      <SettingOutlined className="icon-margin-right" />
+      Settings
+    </Link>
   );
   const brokenDatasetActions = (
     <div className="dataset-table-actions">
-      {reloadLink}
       <a
         onClick={() =>
           modal.error({
@@ -229,12 +176,6 @@ function DatasetActionView(props: Props) {
         <WarningOutlined className="icon-margin-right" />
         Show Error
       </a>
-      {dataset.status !== "Deleted by user." ? (
-        <a onClick={() => onDeleteDataset()}>
-          <DeleteOutlined className="icon-margin-right" />
-          Delete Dataset
-        </a>
-      ) : null}
     </div>
   );
 
@@ -243,17 +184,15 @@ function DatasetActionView(props: Props) {
       {" "}
       <NewAnnotationLink
         dataset={dataset}
-        isReloading={isReloading}
         isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
         onShowCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(true)}
         onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
       />
-      <LinkWithDisabled to={getViewDatasetURL(dataset)} title="View Dataset" disabled={isReloading}>
+      <Link to={getViewDatasetURL(dataset)} title="View Dataset">
         <EyeOutlined className="icon-margin-right" />
         View
-      </LinkWithDisabled>
+      </Link>
       {dataset.isEditable ? datasetSettingsLink : null}
-      {/*reloadLink*/}
     </>
   );
   return (

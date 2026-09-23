@@ -6,7 +6,6 @@ import {
   PlusOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
-import metadataTeaserImage from "@images/backgrounds/metadata-teaser.svg";
 import {
   Button,
   Dropdown,
@@ -15,7 +14,6 @@ import {
   type InputNumberProps,
   type MenuProps,
   Select,
-  Tag,
 } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import {
@@ -84,22 +82,9 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
   addNewEntryMenuItems,
 }) => {
   return (
-    <Tag variant="outlined">
-      <div className="flex-center-child empty-metadata-placeholder">
-        <img
-          src={metadataTeaserImage}
-          alt="Metadata preview"
-          style={{ width: "60%", marginBottom: 16 }}
-        />
-        <span style={{ marginTop: 10 }}>
-          <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
-            <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>
-              Add First Metadata Entry
-            </Button>
-          </Dropdown>
-        </span>
-      </div>
-    </Tag>
+    <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
+      <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>Add First Metadata Entry</Button>
+    </Dropdown>
   );
 };
 

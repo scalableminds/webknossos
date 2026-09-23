@@ -46,14 +46,19 @@ export function FolderTreeSidebar() {
       expandedKeys,
       context.activeFolderId,
     );
+    const previousItemById = itemByIdRef.current;
     itemByIdRef.current = itemById;
     if (
       newTreeData.length > 0 &&
       (context.activeFolderId == null || itemById[context.activeFolderId] == null)
     ) {
-      // Select the root if there's no active folder id or if the active folder id doesn't
-      // exist in the tree data (e.g., happens when deleting the active folder).
-      context.setActiveFolderId(newTreeData[0].key);
+      // The active folder doesn't exist anymore (e.g., because it was deleted).
+      // Select its closest remaining ancestor, falling back to the root.
+      let ancestorId = previousItemById[context.activeFolderId ?? ""]?.parent;
+      while (ancestorId != null && itemById[ancestorId] == null) {
+        ancestorId = previousItemById[ancestorId]?.parent;
+      }
+      context.setActiveFolderId(ancestorId ?? newTreeData[0].key);
     }
     setTreeData(newTreeData);
     setExpandedKeys(newExpandedKeys);

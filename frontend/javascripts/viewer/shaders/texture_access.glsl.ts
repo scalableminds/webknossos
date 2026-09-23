@@ -177,14 +177,14 @@ export const getColorForCoords: ShaderModule = {
     // share one atlas region. See TextureBucketManager.getCuckooKey on the JS side.
     float maybeOverrideBucketPositionZ(uint globalLayerIndex, float realZ) {
       if (usesTRecyclingPerLayer[globalLayerIndex] > 0.5) {
-        return floor(currentAdditionalCoordinateValue / bucketWidth);
+        return floor(currentTCoordinate / bucketWidth);
       }
       return realZ;
     }
 
     float maybeOverrideOffsetInBucketZ(uint globalLayerIndex, float realOffsetZ) {
       if (usesTRecyclingPerLayer[globalLayerIndex] > 0.5) {
-        return mod(currentAdditionalCoordinateValue, bucketWidth);
+        return mod(currentTCoordinate, bucketWidth);
       }
       return realOffsetZ;
     }

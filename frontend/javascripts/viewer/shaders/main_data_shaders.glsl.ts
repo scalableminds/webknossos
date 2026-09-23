@@ -84,10 +84,9 @@ uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform float bucketVoxelCountPerLayer[<%= globalLayerCount %>];
 // See TextureBucketManager.usesTRecycling
 uniform float usesTRecyclingPerLayer[<%= globalLayerCount %>];
-// The current value of the flycam's "t" additional coordinate (global, not per-layer,
-// since additionalCoordinates is flycam-global). Only meaningful for layers where
-// usesTRecyclingPerLayer is set.
-uniform float currentAdditionalCoordinateValue;
+// Global rather than per-layer, since additionalCoordinates is flycam-global. Only
+// meaningful for layers where usesTRecyclingPerLayer is set.
+uniform float currentTCoordinate;
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
 uniform vec3 allMagnifications[<%= magnificationsCount %>];
 uniform uint magnificationCountCumSum[<%= globalLayerCount %>];

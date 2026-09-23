@@ -205,10 +205,9 @@ class PlaneMaterialFactory {
       viewportExtent: {
         value: [0, 0],
       },
-      // The flycam's current "t" (time) additional coordinate. Only meaningful for
-      // layers with usesTRecyclingPerLayer set. See startListeningForUniforms
-      // for how this is kept in sync.
-      currentAdditionalCoordinateValue: {
+      // The flycam's current "t" (time) additional coordinate, kept in sync by
+      // startListeningForUniforms. Only meaningful for layers with usesTRecyclingPerLayer set.
+      currentTCoordinate: {
         value: 0,
       },
       shouldApplyMappingOnGPU: {
@@ -542,7 +541,7 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (storeState) => storeState.flycam.additionalCoordinates,
         (additionalCoordinates) => {
-          this.uniforms.currentAdditionalCoordinateValue.value =
+          this.uniforms.currentTCoordinate.value =
             additionalCoordinates?.find((coord) => coord.name === "t")?.value ?? 0;
         },
         true,

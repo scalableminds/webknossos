@@ -134,8 +134,7 @@ const moreShortcutsLink = (
   </a>
 );
 
-// Read once in useShortcutItems so that the builders below can stay plain functions.
-type ShortcutItemContext = {
+type ShortcutItemArgs = {
   activeTool: AnnotationTool;
   userConfiguration: UserConfiguration;
   isShiftPressed: boolean;
@@ -145,15 +144,14 @@ type ShortcutItemContext = {
   isTDViewportActive: boolean;
 };
 
-// Hints for the arbitrary modes (flight/oblique).
-function getArbitraryModeItems({
+function getFlightModeItems({
   userConfiguration,
   isShiftPressed,
   isControlOrMetaPressed,
   isAltPressed,
   hasSkeleton,
   isTDViewportActive,
-}: ShortcutItemContext): ShortcutItem[] {
+}: ShortcutItemArgs): ShortcutItem[] {
   let actionDescriptor: ActionDescriptor | null = null;
   if (hasSkeleton && isShiftPressed) {
     actionDescriptor = getToolControllerForAnnotationTool(
@@ -226,7 +224,7 @@ function getPlaneModeItems({
   isControlOrMetaPressed,
   isAltPressed,
   isTDViewportActive,
-}: ShortcutItemContext): ShortcutItem[] {
+}: ShortcutItemArgs): ShortcutItem[] {
   const adaptedTool = adaptActiveToolToShortcuts(
     activeTool,
     isShiftPressed,
@@ -286,7 +284,7 @@ export function useShortcutItems(): ShortcutItem[] {
     (state) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
   );
 
-  const context: ShortcutItemContext = {
+  const shortcutArgs: ShortcutItemArgs = {
     activeTool,
     userConfiguration,
     isShiftPressed,
@@ -296,7 +294,7 @@ export function useShortcutItems(): ShortcutItem[] {
     isTDViewportActive,
   };
 
-  return isPlaneMode ? getPlaneModeItems(context) : getArbitraryModeItems(context);
+  return isPlaneMode ? getPlaneModeItems(shortcutArgs) : getFlightModeItems(shortcutArgs);
 }
 
 // ...props and ref have to be forwarded: antd's Popover injects its click handler and

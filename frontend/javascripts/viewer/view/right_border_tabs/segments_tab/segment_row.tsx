@@ -28,19 +28,17 @@ import { mayEditVisibleSegmentation } from "./segments_view_helper";
 // Every row of the list is this tall, except the expanded one. Kept in sync with
 // @segment-row-height in _right_menu.less, which needs it for antd's own row element.
 export const SEGMENT_ROW_HEIGHT = 30;
-// Chosen so that an expanded row whose name still fits on one line is exactly
-// SEGMENT_ROW_HEIGHT tall (2 * 5 + 20). Selecting such a segment then moves nothing below
-// it; only a name that actually wraps grows the row, which is the point of expanding it.
-// The line box of the expanded row's name. Deliberately the height of the mesh chip, so
-// that the chip lines up with the first line of the name without an offset, and the other
-// fixed-size parts of the row only need to be centered on a known 20px line.
+// The line box of the expanded row's name. The fixed-size parts of the row are centered
+// on it, and the ones taller than it are constrained to it so that they overflow rather
+// than grow the row (see the mesh slot and the action bar).
 const EXPANDED_LINE_HEIGHT = 20;
 // Chosen so that an expanded row whose name still fits on one line is exactly
 // SEGMENT_ROW_HEIGHT tall. Selecting such a segment then moves nothing below it; only a
 // name that actually wraps grows the row, which is the point of expanding it.
 const EXPANDED_ROW_PADDING = (SEGMENT_ROW_HEIGHT - EXPANDED_LINE_HEIGHT) / 2;
-const MESH_CHIP_SIZE = 20;
-const ACTION_BUTTON_SIZE = 24;
+// One size for every button in a row. The mesh control and the crosshair both report
+// state with the same highlight, so they have to read as the same kind of control.
+const ROW_BUTTON_SIZE = 24;
 const COLOR_DOT_SIZE = 9;
 
 // Everything that keeps its size while the name wraps is centered on the first line.
@@ -49,18 +47,10 @@ const centerOnFirstLine = (size: number) => (EXPANDED_LINE_HEIGHT - size) / 2;
 // Hides an element until its row is hovered or keyboard-focused (see _right_menu.less).
 const HOVER_ONLY_CLASS = "segment-row__on-hover";
 
-const MESH_CHIP_STYLE: React.CSSProperties = {
-  width: MESH_CHIP_SIZE,
-  height: MESH_CHIP_SIZE,
-  minWidth: MESH_CHIP_SIZE,
-  padding: 0,
-  borderRadius: 5,
-};
-
-const ACTION_BUTTON_STYLE: React.CSSProperties = {
-  width: ACTION_BUTTON_SIZE,
-  height: ACTION_BUTTON_SIZE,
-  minWidth: ACTION_BUTTON_SIZE,
+const ROW_BUTTON_STYLE: React.CSSProperties = {
+  width: ROW_BUTTON_SIZE,
+  height: ROW_BUTTON_SIZE,
+  minWidth: ROW_BUTTON_SIZE,
   padding: 0,
   borderRadius: 5,
 };
@@ -165,7 +155,7 @@ function MeshControl({
             className={HOVER_ONLY_CLASS}
             {...IDLE_APPEARANCE}
             size="small"
-            style={MESH_CHIP_STYLE}
+            style={ROW_BUTTON_STYLE}
             icon={<Icon component={MeshIcon} />}
             // Opening the menu is not a selection change.
             onClick={(event) => event.stopPropagation()}
@@ -179,7 +169,7 @@ function MeshControl({
           className={HOVER_ONLY_CLASS}
           {...IDLE_APPEARANCE}
           size="small"
-          style={MESH_CHIP_STYLE}
+          style={ROW_BUTTON_STYLE}
           icon={<Icon component={MeshIcon} />}
           onClick={(event) => {
             event.stopPropagation();
@@ -196,7 +186,7 @@ function MeshControl({
       <ButtonComponent
         {...MESH_CHIP_APPEARANCE[state]}
         size="small"
-        style={MESH_CHIP_STYLE}
+        style={ROW_BUTTON_STYLE}
         icon={state === "computing" ? <LoadingOutlined /> : <Icon component={MeshIcon} />}
         onClick={(event) => {
           // The chip is a control of its own; clicking it must not also select the row.
@@ -245,9 +235,9 @@ function SegmentRowActionBar({
         marginRight: -4,
         // The buttons are taller than the line they sit on, so in an expanded row the bar
         // is constrained to that line and lets them overflow it. Offsetting it instead
-        // would leave a margin box taller than the line and grow the row by 2px, which
-        // would shift the list on every selection change. `align="center"` keeps the
-        // buttons centered on the line either way.
+        // would leave a margin box taller than the line and grow the row, which would
+        // shift the list on every selection change. `align="center"` keeps the buttons
+        // centered on the line either way.
         height: isExpanded ? EXPANDED_LINE_HEIGHT : undefined,
       }}
     >
@@ -266,7 +256,7 @@ function SegmentRowActionBar({
           className={isCentered ? undefined : HOVER_ONLY_CLASS}
           {...(isCentered ? ACTIVE_APPEARANCE : IDLE_APPEARANCE)}
           size="small"
-          style={ACTION_BUTTON_STYLE}
+          style={ROW_BUTTON_STYLE}
           icon={<Icon component={CrosshairsIcon} />}
           onClick={(event) => {
             event.stopPropagation();
@@ -279,7 +269,7 @@ function SegmentRowActionBar({
           className={HOVER_ONLY_CLASS}
           {...IDLE_APPEARANCE}
           size="small"
-          style={ACTION_BUTTON_STYLE}
+          style={ROW_BUTTON_STYLE}
           icon={<EllipsisOutlined />}
           onClick={(event) => {
             // Opening the menu is not a selection change.
@@ -437,11 +427,12 @@ export const SegmentNodeTitle = memo(
           align="center"
           justify="center"
           style={{
-            width: MESH_CHIP_SIZE,
-            height: MESH_CHIP_SIZE,
+            width: ROW_BUTTON_SIZE,
             flex: "none",
-            // The expanded row's line box is exactly this tall, so no offset is needed.
-            marginTop: isExpanded ? centerOnFirstLine(MESH_CHIP_SIZE) : undefined,
+            // Constrained to the first line in an expanded row for the same reason as the
+            // action bar: the control is taller than the line and must overflow it rather
+            // than grow the row.
+            height: isExpanded ? EXPANDED_LINE_HEIGHT : ROW_BUTTON_SIZE,
           }}
         >
           <MeshControl segment={segment} mesh={mesh} actions={actions} />

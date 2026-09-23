@@ -1,16 +1,16 @@
-import {
+import Icon, {
   FileOutlined,
   FolderOpenOutlined,
   PlusOutlined,
-  SwapOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
 import fileDarkIcon from "@images/file-dark.png";
 import fileLightIcon from "@images/file-light.png";
 import folderThumbnailIcon from "@images/folder-thumbnail.svg";
+import IconSort from "@images/icons/icon-sort.svg?react";
 import inactiveDatasetThumbnail from "@images/inactive-dataset-thumbnail.svg";
 import type { DatasetUpdater } from "admin/rest_api";
-import { App, Dropdown, type MenuProps, Radio, Space, Table, Tag, Tooltip } from "antd";
+import { App, Button, Dropdown, type MenuProps, Radio, Space, Table, Tag, Tooltip } from "antd";
 import type { ColumnType } from "antd/es/table/interface";
 import classNames from "classnames";
 import FastTooltip from "components/fast_tooltip";
@@ -28,7 +28,6 @@ import {
   useDatasetDrop,
 } from "dashboard/folders/folder_tree";
 import { FilterChip, ListFilterHeader, RowMetaLine } from "dashboard/list_filter_header";
-import { ZeroStorageReasonList } from "dashboard/storage_info";
 import { diceCoefficient as dice } from "dice-coefficient";
 import { stringToTagColor } from "libs/colors";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
@@ -84,6 +83,7 @@ type Props = {
   setDatasetFilteringMode: (mode: DatasetFilteringMode) => void;
   updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
+  onClearSearchAndFilters: () => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
@@ -95,6 +95,9 @@ type Props = {
   // Shows a loading spinner inside the table body (e.g. while waiting for search
   // results), without hiding the header bar above it.
   isLoading?: boolean;
+  // Custom content shown as the table's empty state instead of the regular hint text
+  // (e.g. the welcome cards for a brand-new, completely empty organization).
+  emptyStateContent?: React.ReactNode;
 };
 
 type State = {
@@ -343,16 +346,20 @@ class DatasetRenderer {
         {formattedBytes}
       </FastTooltip>
     ) : (
-      <Tooltip
-        title={
-          <>
-            The storage may be zero because:
-            {ZeroStorageReasonList}
-          </>
-        }
+      <FastTooltip
+        html={`
+          The storage may be zero because:
+          <ul>
+            <li>The storage hasn't been scanned yet</li>
+            <li>The data is streamed from external sources</li>
+            <li>The data layers are already counted in other (linked) datasets</li>
+            <li>The dataset belongs to another organization</li>
+            <li>The dataset is empty</li>
+          </ul>
+        `}
       >
         {formattedBytes}
-      </Tooltip>
+      </FastTooltip>
     );
   }
   renderTypeColumn(): React.ReactNode {
@@ -404,13 +411,13 @@ class DatasetRenderer {
         updateDataset={this.datasetTable.props.updateDataset}
       />
     ) : (
-      <Tooltip title="No tags available for inactive datasets">
+      <FastTooltip title="No tags available for inactive datasets">
         <WarningOutlined
           style={{
             color: "@disabled-color",
           }}
         />
-      </Tooltip>
+      </FastTooltip>
     );
   }
   renderMetaLine(): React.ReactNode {
@@ -540,18 +547,36 @@ class DatasetTable extends PureComponent<Props, State> {
   }
 
   renderEmptyText(): React.ReactNode {
+    if (this.props.emptyStateContent != null) {
+      return this.props.emptyStateContent;
+    }
+    const { searchQuery, searchTags, datasetFilteringMode } = this.props;
+    const isSearchOrFilterActive =
+      searchQuery.length > 0 ||
+      searchTags.length > 0 ||
+      datasetFilteringMode !== "onlyShowReported";
+    const maybeClearButton = isSearchOrFilterActive ? (
+      <Button type="link" onClick={this.props.onClearSearchAndFilters}>
+        Clear search and filters
+      </Button>
+    ) : null;
+
     const maybeWarning =
-      this.props.datasetFilteringMode === "onlyShowUnreported" ? (
+      datasetFilteringMode === "onlyShowUnreported" ? (
         <p>Note that datasets are currently filtered by status.</p>
       ) : null;
-    if (this.props.searchQuery.length > 0) {
-      return this.props.searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? (
+    if (searchQuery.length > 0) {
+      return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? (
         <>
           <p>No datasets match your search.</p>
           {maybeWarning}
+          {maybeClearButton}
         </>
       ) : (
-        <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
+        <>
+          <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
+          {maybeClearButton}
+        </>
       );
     }
     if (!("queries" in this.props.context)) {
@@ -564,6 +589,7 @@ class DatasetTable extends PureComponent<Props, State> {
       <>
         <p>{emptyListHintText}</p>
         {maybeWarning}
+        {maybeClearButton}
       </>
     );
   }
@@ -740,7 +766,7 @@ class DatasetTable extends PureComponent<Props, State> {
           <FilterChip
             label={
               <>
-                <SwapOutlined /> Sort: {currentSortLabel}
+                <Icon component={IconSort} /> Sort: {currentSortLabel}
               </>
             }
           >

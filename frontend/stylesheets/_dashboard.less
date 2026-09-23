@@ -255,6 +255,13 @@ pre.dataset-import-folder-structure-hint {
   .ant-table-tbody > tr:last-child > .ant-table-cell {
     border-bottom-color: var(--ant-color-border) !important;
   }
+
+  // antd gives borderless Cards a subtle default box-shadow (e.g. the empty-state
+  // welcome cards). It reads as an odd floating panel inside an already-bordered
+  // table, so it's suppressed here.
+  .ant-card {
+    box-shadow: none;
+  }
 }
 
 /** Suppresses the vertical divider that `bordered` would otherwise draw after this

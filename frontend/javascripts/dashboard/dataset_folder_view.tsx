@@ -1,15 +1,14 @@
-import { Button, Card, Col, Flex, Row, Space } from "antd";
+import { Button, Card, Flex } from "antd";
 import features, { getDemoDatasetUrl } from "features";
-import { filterNullValues, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
-import React, { useEffect, useRef } from "react";
+import { filterNullValues, isUserAdminOrDatasetManager } from "libs/utils";
+import { useEffect, useRef } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_types";
-import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
 import { useDatasetsInFolderQuery, useFolderHierarchyQuery } from "./dataset/queries";
-import DatasetView, { DatasetAddButton, DatasetRefreshButton } from "./dataset_view";
+import DatasetView from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
 import { FolderModal } from "./folders/folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
@@ -96,8 +95,12 @@ function DatasetFolderViewInner(props: Props) {
   }, [context.datasets]);
 
   const renderNoDatasetsPlaceHolder = () => {
+    // A plain width (rather than antd's Row/Col, whose breakpoints react to the
+    // viewport width, not this column's actual - narrower, sidebar-squeezed - width)
+    // so the cards shrink and wrap based on the space they actually have.
+    const cardContainerStyle = { width: 340, maxWidth: "100%" };
     const openPublicDatasetCard = (
-      <Col span={7}>
+      <div style={cardContainerStyle}>
         <Card
           variant="borderless"
           cover={<i className="drawing drawing-empty-list-public-gallery" />}
@@ -114,11 +117,11 @@ function DatasetFolderViewInner(props: Props) {
             }
           />
         </Card>
-      </Col>
+      </div>
     );
 
     const uploadPlaceholderCard = (
-      <Col span={7}>
+      <div style={cardContainerStyle}>
         <Card
           variant="borderless"
           cover={
@@ -154,47 +157,35 @@ function DatasetFolderViewInner(props: Props) {
             }
           />
         </Card>
-      </Col>
+      </div>
     );
 
-    const adminHeader =
-      isUserAdminOrDatasetManager(props.user) || isUserTeamManager(props.user) ? (
-        <Space>
-          <DatasetRefreshButton context={context} />
-          <DatasetAddButton context={context} />
-        </Space>
-      ) : null;
-
     return (
-      <React.Fragment>
-        <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
-        <Row
-          justify="center"
-          style={{
-            padding: "20px 50px 70px",
-          }}
-          align="middle"
-          gutter={32}
-        >
-          {features().isWkorgInstance ? openPublicDatasetCard : null}
-          {isUserAdminOrDatasetManager(props.user) ? uploadPlaceholderCard : null}
-        </Row>
-      </React.Fragment>
+      <Flex
+        wrap
+        justify="center"
+        align="center"
+        gap={32}
+        style={{
+          padding: "20px 50px 70px",
+        }}
+      >
+        {features().isWkorgInstance ? openPublicDatasetCard : null}
+        {isUserAdminOrDatasetManager(props.user) ? uploadPlaceholderCard : null}
+      </Flex>
     );
   };
 
-  if (
+  // Only the root folder exists and no dataset is available yet (aka a new, empty
+  // organization) - shown as the dataset table's empty state (see DatasetTable.renderEmptyText),
+  // rather than replacing the whole view, so the folder sidebar stays visible.
+  const isBrandNewEmptyOrg =
     hierarchy != null &&
     hierarchy.flatItems.length === 1 &&
     context.datasets.length === 0 &&
     context.activeFolderId != null &&
     !context.isLoading &&
-    context.globalSearchQuery == null
-  ) {
-    // Show a placeholder if only the root folder exists and no dataset is available yet
-    // (aka a new, empty organization)
-    return renderNoDatasetsPlaceHolder();
-  }
+    context.globalSearchQuery == null;
 
   return (
     <div
@@ -217,7 +208,13 @@ function DatasetFolderViewInner(props: Props) {
       >
         <FolderTreeSidebar />
       </div>
-      <main ref={mainRef} style={{ gridColumn: "2 / 3", overflow: "auto", paddingRight: 4 }}>
+      <main
+        ref={mainRef}
+        style={{
+          gridColumn: "2 / 3",
+          paddingRight: 4,
+        }}
+      >
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}
@@ -225,6 +222,7 @@ function DatasetFolderViewInner(props: Props) {
           selectedDatasets={selectedDatasets}
           context={context}
           scrollContainerRef={mainRef}
+          emptyStateContent={isBrandNewEmptyOrg ? renderNoDatasetsPlaceHolder() : undefined}
         />
       </main>
       <div

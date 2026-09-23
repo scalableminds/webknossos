@@ -63,6 +63,10 @@ type Props = {
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
   scrollContainerRef?: React.RefObject<HTMLElement | null>;
+  // Custom content shown as the table's empty state instead of the regular hint text
+  // (e.g. the "Open a Demo Dataset" / "Upload & Import Dataset" cards for a brand-new,
+  // completely empty organization). See DatasetTable.renderEmptyText.
+  emptyStateContent?: React.ReactNode;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -105,6 +109,7 @@ function DatasetView({
   selectedDatasets,
   onSelectFolder,
   scrollContainerRef,
+  emptyStateContent,
 }: Props) {
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
@@ -163,6 +168,12 @@ function DatasetView({
     }
   }
 
+  function clearSearchAndFilters() {
+    setSearchQuery(null);
+    setSearchTags([]);
+    setDatasetFilteringMode("onlyShowReported");
+  }
+
   function handleSearch(event: React.SyntheticEvent<HTMLInputElement>) {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const value = event.target.value;
@@ -189,8 +200,10 @@ function DatasetView({
         setDatasetFilteringMode={setDatasetFilteringMode}
         updateDataset={context.updateCachedDataset}
         addTagToSearch={addTagToSearch}
+        onClearSearchAndFilters={clearSearchAndFilters}
         scrollContainerRef={scrollContainerRef}
         isLoading={isLoading}
+        emptyStateContent={emptyStateContent}
       />
     );
   }

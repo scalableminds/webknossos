@@ -6,12 +6,12 @@ import Icon, {
   PlayCircleOutlined,
   PlusOutlined,
   SearchOutlined,
-  SwapOutlined,
   TeamOutlined,
   UnlockOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import ReadOnlyIcon from "@images/icons/icon-read-only.svg?react";
+import IconSort from "@images/icons/icon-sort.svg?react";
 import { PropTypes } from "@scalableminds/prop-types";
 import {
   downloadAnnotation,
@@ -23,7 +23,7 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Radio, Space, Spin, Table, Tag, Typography } from "antd";
+import { Button, Radio, Space, Table, Tag, Typography } from "antd";
 import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
@@ -704,6 +704,12 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   };
 
   renderEmptyText(): React.ReactNode {
+    if (this.state.isLoading) {
+      // Avoid flashing the "no results" placeholder (or the call-to-action card)
+      // while the initial page of annotations is still being fetched - the
+      // table's own loading spinner (see the `loading` prop below) covers this.
+      return null;
+    }
     const { searchQuery, tags, selectedOwnerId, selectedTeamId, shouldShowArchivedAnnotations } =
       this.state;
     const isSearchOrFilterActive =
@@ -728,9 +734,22 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         {activeFilterLabels.length > 0 ? (
           <p>Note that annotations are currently filtered by {activeFilterLabels.join(", ")}.</p>
         ) : null}
+        <Button type="link" onClick={this.clearSearchAndFilters}>
+          Clear search and filters
+        </Button>
       </>
     );
   }
+
+  clearSearchAndFilters = () => {
+    this.setState({
+      searchQuery: "",
+      tags: [],
+      selectedOwnerId: null,
+      selectedTeamId: null,
+      shouldShowArchivedAnnotations: false,
+    });
+  };
 
   renderTable() {
     const searchFilteredAnnotations = this._getSearchFilteredAnnotations();
@@ -861,7 +880,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           <FilterChip
             label={
               <>
-                <SwapOutlined /> Sort: {currentSortLabel}
+                <Icon component={IconSort} /> Sort: {currentSortLabel}
               </>
             }
           >
@@ -883,6 +902,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           rowKey="id"
           showHeader={false}
           bordered
+          loading={this.state.isLoading}
           pagination={{
             defaultPageSize: 50,
             onChange: scrollToTop,
@@ -937,9 +957,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           localStorageSavingKey="lastDashboardSearchTags"
           skipRestoreFromStorage={this.props.datasetNameFilter != null}
         />
-        <Spin spinning={this.state.isLoading} size="large" style={{ marginTop: 4 }}>
-          {this.renderTable()}
-        </Spin>
+        {this.renderTable()}
         <div
           style={{
             textAlign: "right",

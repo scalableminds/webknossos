@@ -1,4 +1,5 @@
-import { Space, Tag, Tooltip } from "antd";
+import { Space, Tag } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { stringToTagColor } from "libs/colors";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
@@ -24,7 +25,7 @@ const LOCKED_TAG_COLOR = "var(--ant-color-warning)";
 export default function CategorizationLabel({ tag, kind, onClick, onClose, closable }: LabelProps) {
   const color = tag === "locked" ? LOCKED_TAG_COLOR : stringToTagColor(tag);
   return (
-    <Tooltip title={`Click to only show ${kind} with this tag.`}>
+    <FastTooltip title={`Click to only show ${kind} with this tag.`}>
       <Tag
         color={color}
         onClick={onClick}
@@ -37,7 +38,7 @@ export default function CategorizationLabel({ tag, kind, onClick, onClose, closa
       >
         {tag}
       </Tag>
-    </Tooltip>
+    </FastTooltip>
   );
 }
 

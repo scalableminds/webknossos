@@ -33,9 +33,6 @@
 // titleRender's output, not by it — or they depend on the state of an ancestor. The
 // modifier classes they key off are set in segment_row.tsx.
 @segment-row-height: 30px;
-// Centers antd's 16px checkbox on the first line of an expanded row: its EXPANDED_ROW_PADDING
-// plus half the difference to its 20px line box (see segment_row.tsx).
-@segment-row-checkbox-expanded-offset: 7px;
 // The tree is shifted left by one indent unit (see the inline marginLeft in
 // segment_tree_view.tsx) so that the root group renders no expand caret. Anything
 // positioned against the visible left edge of the panel has to add it back.
@@ -87,11 +84,6 @@
     // everything in its row aligns to the first line rather than to the middle.
     &:has(.segment-row--expanded) {
       align-items: flex-start;
-
-      .ant-tree-checkbox {
-        align-self: flex-start;
-        margin-top: @segment-row-checkbox-expanded-offset;
-      }
     }
 
     // The action bar and the "compute mesh" button are hover-only, but have to stay
@@ -129,11 +121,13 @@
 
   .ant-tree-checkbox {
     margin-inline-end: 8px;
-    // antd aligns the checkbox to the top of the title (via align-self plus a 2px margin)
-    // so that it lines up with the first line of a wrapped one. Every row but the expanded
-    // one is a single line, where that leaves the checkbox above the dot and the name.
-    align-self: center;
-    margin-block-start: 0;
+    // The checkbox has to sit in the same place whether or not the row is expanded, so it
+    // is always offset as if it were centered on one row, rather than centered on the
+    // treenode (which would drop it to the middle of a wrapped row). The offset is derived
+    // from the same tokens the browser centers by, so the two cannot drift apart. antd's
+    // own alignment (top, plus a small margin) leaves it above the dot and the name.
+    align-self: flex-start;
+    margin-block-start: calc((@segment-row-height - var(--ant-control-interactive-size)) / 2);
   }
 
   .segment-row__on-hover {

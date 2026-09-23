@@ -226,3 +226,45 @@ pre.dataset-import-folder-structure-hint {
     text-align: center;
   }
 }
+
+/** Bordered header bar above the dashboard dataset/annotation tables, holding a
+    summary count plus filter/sort dropdowns. Pairs with .dashboard-list-table
+    below it to form one continuous bordered box. */
+.dashboard-list-filter-bar {
+  border: 1px solid var(--ant-color-border);
+  border-radius: var(--ant-border-radius) var(--ant-border-radius) 0 0;
+  padding: 8px 16px;
+  background: var(--ant-color-fill-alter);
+}
+
+/** Headerless, bordered table used for the dashboard dataset/annotation lists.
+    Removes the top border/radius so it reads as a continuation of
+    .dashboard-list-filter-bar above it. */
+.dashboard-list-table {
+  .ant-table-container {
+    border-top: none !important;
+    border-radius: 0 0 var(--ant-border-radius) var(--ant-border-radius) !important;
+  }
+}
+
+/** Muted, single-line row of meta info shown beneath a dataset/annotation row's
+    title (e.g. size, creation date, owner), with entries separated by a dot. */
+.dashboard-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--ant-color-text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
+
+  &-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &-dot {
+    margin: 0 6px;
+    color: var(--ant-color-text-quaternary);
+  }
+}

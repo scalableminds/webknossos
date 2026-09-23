@@ -6,7 +6,6 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  SettingOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
@@ -14,14 +13,11 @@ import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { getJobs } from "admin/rest_api";
 import {
   Alert,
-  Badge,
   Button,
   Col,
   Dropdown,
   Flex,
   Input,
-  type MenuProps,
-  Radio,
   Row,
   Select,
   Space,
@@ -187,37 +183,13 @@ function DatasetView({
         onSelectFolder={onSelectFolder}
         isUserAdminOrDatasetManager={isUserAdminOrDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
+        setDatasetFilteringMode={setDatasetFilteringMode}
         updateDataset={context.updateCachedDataset}
         addTagToSearch={addTagToSearch}
         scrollContainerRef={scrollContainerRef}
       />
     );
   }
-
-  const createFilteringModeRadio = (key: DatasetFilteringMode, label: string) => (
-    <Radio
-      onChange={() => {
-        setDatasetFilteringMode(key);
-      }}
-      checked={datasetFilteringMode === key}
-    >
-      {label}
-    </Radio>
-  );
-
-  const filterMenu: MenuProps = {
-    items: [
-      { label: createFilteringModeRadio("showAllDatasets", "Show all datasets"), key: "all" },
-      {
-        label: createFilteringModeRadio("onlyShowReported", "Only show available datasets"),
-        key: "available",
-      },
-      {
-        label: createFilteringModeRadio("onlyShowUnreported", "Only show missing datasets"),
-        key: "missing",
-      },
-    ],
-  };
 
   const searchBox = (
     <Input
@@ -235,22 +207,6 @@ function DatasetView({
   const isUserAnAdminOrDatasetManager = isUserAdminOrDatasetManager(user);
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAnAdminOrDatasetManager || isUserTeamManager(user);
-  const search = isUserAnAdminOrDatasetManager ? (
-    <Space.Compact>
-      {searchBox}
-      <Dropdown menu={filterMenu} trigger={["click"]}>
-        <Button
-          icon={
-            <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
-              <SettingOutlined />
-            </Badge>
-          }
-        />
-      </Dropdown>
-    </Space.Compact>
-  ) : (
-    searchBox
-  );
 
   const adminHeader = isUserAdminOrDatasetManagerOrTeamManager ? (
     <Space>
@@ -272,10 +228,10 @@ function DatasetView({
           Add Folder
         </PricingEnforcedButton>
       )}
-      {search}
+      {searchBox}
     </Space>
   ) : (
-    search
+    searchBox
   );
 
   const datasets = context.datasets;

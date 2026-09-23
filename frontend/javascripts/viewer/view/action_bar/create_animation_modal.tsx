@@ -162,7 +162,7 @@ function CreateAnimationModal(props: Props) {
   const colorLayer = colorLayers[0];
   const [selectedColorLayerName, setSelectedColorLayerName] = useState<string>(colorLayer.name);
   const selectedColorLayer = getLayerByName(dataset, selectedColorLayerName);
-  // The worker reads segmentation textures from the dataset, so use fallback layers for annotations.
+  // The worker only supports segmentation textures directly from the dataset; Only the fallback layers of annotations can be used.
   const segmentationLayerNames = Array.from(
     new Set(
       getSegmentationLayers(dataset).flatMap((layer) => {

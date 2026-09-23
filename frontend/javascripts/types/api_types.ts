@@ -524,6 +524,7 @@ export type APIAnnotationInfo = {
   readonly organization: string;
   readonly description: string;
   readonly modified: number;
+  readonly created: number;
   readonly id: string;
   readonly name: string;
   // Not used by the front-end anymore, but the
@@ -545,6 +546,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     dataSetName,
     description,
     modified,
+    created,
     id,
     datasetId,
     name,
@@ -566,6 +568,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     organization,
     description,
     modified,
+    created,
     id,
     isLockedByOwner,
     name,

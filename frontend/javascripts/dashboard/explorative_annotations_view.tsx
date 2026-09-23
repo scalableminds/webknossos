@@ -694,9 +694,14 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
               withMargin={false}
               orientation="horizontal"
             />,
-            <span key="modified">
-              modified <FormattedDate timestamp={annotation.modified} />
+            <span key="created">
+              created <FormattedDate timestamp={annotation.created} />
             </span>,
+            annotation.modified - annotation.created > 60 * 1000 ? (
+              <span key="modified">
+                modified <FormattedDate timestamp={annotation.modified} />
+              </span>
+            ) : null,
           ]}
         />
       </div>
@@ -784,11 +789,12 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           return compareWithEmptyLast<APIAnnotationInfo>((annotation) =>
             annotation.owner ? formatUserName(annotation.owner) : "",
           );
+        case "newest":
+          return compareBy<APIAnnotationInfo>((annotation) => annotation.created, false);
         case "oldest":
-          return compareBy<APIAnnotationInfo>((annotation) => annotation.modified, true);
+          return compareBy<APIAnnotationInfo>((annotation) => annotation.created, true);
         default:
-          // "modifiedDesc" and "newest" both sort by last-modified, descending -
-          // there's no separate "created" timestamp for annotations to distinguish them.
+          // "modifiedDesc"
           return compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false);
       }
     };

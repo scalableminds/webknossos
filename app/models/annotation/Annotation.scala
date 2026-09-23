@@ -102,6 +102,7 @@ case class AnnotationCompactInfo(
     teamNames: Seq[String],
     teamOrganizationIds: Seq[String],
     modified: Instant,
+    created: Instant,
     tags: Set[String],
     state: AnnotationState.Value = AnnotationState.Active,
     isLockedByOwner: Boolean,
@@ -340,6 +341,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       val teamNames = parseArrayLiteral(<<[String])
       val teamOrganizationIds = parseArrayLiteral(<<[String])
       val modified = <<[Instant]
+      val created = <<[Instant]
       val tags = parseArrayLiteral(<<[String]).toSet
       val state = AnnotationState.fromString(<<[String]).getOrElse(AnnotationState.Active)
       val isLockedByOwner = <<[Boolean]
@@ -368,6 +370,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
         teamNames,
         teamOrganizationIds,
         modified,
+        created,
         tags,
         state,
         isLockedByOwner,
@@ -429,6 +432,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
               mu.lastname,
               a.collaborationMode,
               a.modified,
+              a.created,
               a.tags,
               a.state,
               a.isLockedByOwner,
@@ -450,7 +454,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             JOIN webknossos.multiusers_ mu ON u._multiUser = mu._id
             WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery AND $datasetQuery
             GROUP BY
-              a._id, a.name, a.description, a._user, a.collaborationMode, a.modified,
+              a._id, a.name, a.description, a._user, a.collaborationMode, a.modified, a.created,
               a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
               mu.firstname, mu.lastname,
               d.name, d._id, o._id
@@ -470,6 +474,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
             ARRAY_REMOVE(ARRAY_AGG(o._id), null) AS team_organization_ids,
             an.modified,
+            an.created,
             an.tags,
             an.state,
             an.isLockedByOwner,
@@ -496,6 +501,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             an.lastname,
             an.collaborationMode,
             an.modified,
+            an.created,
             an.tags,
             an.state,
             an.isLockedByOwner,

@@ -789,6 +789,7 @@ class AnnotationService @Inject() (
       contributorsJs <- Fox.serialCombined(contributors)(c => userJsonForAnnotation(c._id, Some(c)))
     } yield Json.obj(
       "modified" -> annotation.modified,
+      "created" -> annotation.created,
       "state" -> annotation.state,
       "isLockedByOwner" -> annotation.isLockedByOwner,
       "id" -> annotation.id,
@@ -890,6 +891,7 @@ class AnnotationService @Inject() (
     )
     Json.obj(
       "modified" -> annotationInfo.modified,
+      "created" -> annotationInfo.created,
       "state" -> annotationInfo.state,
       "id" -> annotationInfo.id,
       "name" -> annotationInfo.name,

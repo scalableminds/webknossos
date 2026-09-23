@@ -355,7 +355,7 @@ class DatasetRenderer {
   renderTypeColumn(): React.ReactNode {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
-  renderNameColumn(): React.ReactNode {
+  renderThumbnailColumn(): React.ReactNode {
     const selectedLayerName: string | null = this.data.isActive
       ? this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0]
       : null;
@@ -365,32 +365,34 @@ class DatasetRenderer {
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
 
     return (
-      <>
-        <Link to={getViewDatasetURL(this.data)} title="View Dataset">
-          <img
-            src={imgSrc}
-            className={`dataset-table-thumbnail ${iconClassName}`}
-            style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
-            alt=""
-          />
-        </Link>
-        <div className="dataset-table-name-container">
-          <Flex align="center" wrap gap={8}>
-            <Link
-              to={getViewDatasetURL(this.data)}
-              title="View Dataset"
-              className="incognito-link dataset-table-name"
-            >
-              {this.data.name}
-            </Link>
-            {this.renderTags()}
-          </Flex>
-          {this.renderMetaLine()}
-          {this.datasetTable.props.context.globalSearchQuery != null ? (
-            <BreadcrumbsTag parts={this.datasetTable.props.context.getBreadcrumbs(this.data)} />
-          ) : null}
-        </div>
-      </>
+      <Link to={getViewDatasetURL(this.data)} title="View Dataset">
+        <img
+          src={imgSrc}
+          className={`dataset-table-thumbnail ${iconClassName}`}
+          style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+          alt=""
+        />
+      </Link>
+    );
+  }
+  renderNameColumn(): React.ReactNode {
+    return (
+      <div className="dataset-table-name-container">
+        <Flex align="center" wrap gap={8}>
+          <Link
+            to={getViewDatasetURL(this.data)}
+            title="View Dataset"
+            className="incognito-link dataset-table-name"
+          >
+            {this.data.name}
+          </Link>
+          {this.renderTags()}
+        </Flex>
+        {this.renderMetaLine()}
+        {this.datasetTable.props.context.globalSearchQuery != null ? (
+          <BreadcrumbsTag parts={this.datasetTable.props.context.getBreadcrumbs(this.data)} />
+        ) : null}
+      </div>
     );
   }
   renderTags(): React.ReactNode {
@@ -445,22 +447,24 @@ class FolderRenderer {
   getRowKey() {
     return FolderRenderer.getRowKey(this.data);
   }
+  renderThumbnailColumn(): React.ReactNode {
+    return (
+      <img
+        src={folderThumbnailIcon}
+        className="dataset-table-thumbnail icon-thumbnail"
+        style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+        alt=""
+      />
+    );
+  }
   renderNameColumn(): React.ReactNode {
     return (
-      <>
-        <img
-          src={folderThumbnailIcon}
-          className="dataset-table-thumbnail icon-thumbnail"
-          style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
-          alt=""
+      <div className="dataset-table-name-container">
+        <span className="incognito-link dataset-table-name">{this.data.name}</span>
+        <RowMetaLine
+          items={["Folder", <span key="created">created {this.renderCreationDateColumn()}</span>]}
         />
-        <div className="dataset-table-name-container">
-          <span className="incognito-link dataset-table-name">{this.data.name}</span>
-          <RowMetaLine
-            items={["Folder", <span key="created">created {this.renderCreationDateColumn()}</span>]}
-          />
-        </div>
-      </>
+      </div>
     );
   }
   renderStorageColumn(): React.ReactNode {
@@ -636,14 +640,20 @@ class DatasetTable extends PureComponent<Props, State> {
 
     const columns: ColumnType<RowRenderer>[] = [
       {
+        width: THUMBNAIL_SIZE + 32,
+        key: "thumbnail",
+        className: "dashboard-list-table-borderless-cell",
+        render: (__, rowRenderer: RowRenderer) => rowRenderer.renderThumbnailColumn(),
+      },
+      {
         dataIndex: "name",
         key: "name",
+        className: "dashboard-list-table-borderless-cell",
         render: (_name: string, rowRenderer: RowRenderer, _index) => rowRenderer.renderNameColumn(),
       },
       {
         width: 200,
         key: "actions",
-        fixed: "right",
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
       },
     ];
@@ -741,9 +751,6 @@ class DatasetTable extends PureComponent<Props, State> {
           }}
           locale={{
             emptyText: this.renderEmptyText(),
-          }}
-          scroll={{
-            x: "max-content",
           }}
           summary={(currentPageData) => {
             // Workaround to get to the currently rendered entries (since the ordering

@@ -711,12 +711,12 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       {
         dataIndex: "name",
         key: "name",
+        className: "dashboard-list-table-borderless-cell",
         render: (_name: string, annotation: APIAnnotationInfo) =>
           this.renderAnnotationRow(annotation),
       },
       {
         width: 200,
-        fixed: "right",
         className: "nowrap",
         key: "action",
         render: (__: any, annotation: APIAnnotationInfo) => this.renderActions(annotation),
@@ -819,9 +819,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             onChange: scrollToTop,
           }}
           className="large-table dashboard-list-table"
-          scroll={{
-            x: "max-content",
-          }}
           summary={(currentPageData) => {
             // See this issue for context:
             // https://github.com/ant-design/ant-design/issues/24022#issuecomment-1050070509

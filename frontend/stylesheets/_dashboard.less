@@ -195,22 +195,20 @@ pre.dataset-import-folder-structure-hint {
   width: 80px;
   height: 80px;
   border-radius: 5px;
-  margin-right: 20px;
 }
 
 /** Styling for the dataset name within the dashboard table. */
 .dataset-table-name {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
-  display: block;
   min-height: 30px;
+  word-break: break-word;
 }
 
-/** Container for the dataset name to handle vertical alignment and max-width. */
+/** Container for the dataset name to handle vertical alignment. */
 .dataset-table-name-container {
   display: inline-block;
   vertical-align: middle;
-  max-width: 520px;
 }
 
 
@@ -245,6 +243,13 @@ pre.dataset-import-folder-structure-hint {
     border-top: none !important;
     border-radius: 0 0 var(--ant-border-radius) var(--ant-border-radius) !important;
   }
+}
+
+/** Suppresses the vertical divider that `bordered` would otherwise draw after this
+    cell (e.g. the dataset thumbnail column), so it visually merges with the next
+    column instead of being separated by a line. */
+.dashboard-list-table-borderless-cell {
+  border-inline-end: none !important;
 }
 
 /** Muted, single-line row of meta info shown beneath a dataset/annotation row's

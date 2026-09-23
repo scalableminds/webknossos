@@ -24,7 +24,7 @@ type UseOverflowMeasurementResult = {
   setItemRefFactory: (key: string) => (el: HTMLElement | null) => void;
 };
 
-export const FIXED_WIDTH_MEMORY_MS = 3000;
+export const FIXED_WIDTH_MEMORY_MS = 2_000;
 
 export type WidthSample = { timestampMs: number; width: number };
 

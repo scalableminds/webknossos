@@ -135,14 +135,10 @@ export type DataTextureSizeAndCount = {
   bucketVoxelCount: number;
 };
 
-// A data texture is a flat 2D atlas in which each bucket occupies a whole number of
-// texture rows (a row cannot be shared by two buckets). For most (non-degenerate)
-// layers, a bucket's packed data is larger than one texture row, so this height is
-// simply the natural (possibly multi-row) value. For layers with a much smaller
-// bucket footprint (e.g., 2D datasets), a bucket may pack into less than one row;
-// the height is then rounded up to one full row, at the cost of some unused padding.
-// In the future, we might want to rethink this so that multiple buckets in one texture
-// row are also supported.
+// A data texture is a flat 2D atlas in which each bucket occupies a whole number of texture
+// rows; a row is never shared by two buckets. Layers with a small bucket footprint (e.g. 2D)
+// pack into less than one row and get rounded up, wasting the remainder — supporting several
+// buckets per row would be possible future work.
 export function getBucketHeightInTexture(
   textureWidth: number,
   packingDegree: number,
@@ -173,13 +169,9 @@ export function getBucketCapacity(
   return Math.min(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, theoreticalBucketCapacity);
 }
 
-// Note that this has to go through getBucketsPerTexture rather than dividing the
-// required voxels by the texture's voxel area: a bucket occupies a whole number of
-// texture rows, so for layers whose packed bucket is smaller than one row (see
-// getBucketHeightInTexture) part of that row is padding that cannot hold another
-// bucket. Sizing by raw area would count that padding as usable and pick a texture
-// too small to actually hold requiredBucketCapacity buckets — which getBucketCapacity,
-// computing the same thing row-aware, would then report as a shortfall.
+// Must go through getBucketsPerTexture rather than dividing the required voxels by the
+// texture's voxel area: a sub-row bucket's row padding cannot hold another bucket, so
+// area-based sizing would pick a texture too small for requiredBucketCapacity buckets.
 function getDataTextureCount(
   textureSize: number,
   packingDegree: number,
@@ -243,12 +235,8 @@ function buildTextureInformationMap<
   const textureInformationPerLayer = new Map();
   layers.forEach((layer) => {
     const hasTAxis = layer.additionalAxes?.some((axis) => axis.name === "t") ?? false;
-    // A layer that will use t-recycling (see TextureBucketManager) needs its atlas
-    // sized for full-depth buckets, not the shrunk depth, even though it's
-    // z-degenerate. Both decisions must stay in sync, hence the shared helper.
-    // Volume tracing layers are already merged into the dataset's layers (with their
-    // tracingId set) by preprocessDataset before this runs, so the editability check
-    // here sees the same thing DataCube's constructor later will.
+    // A t-recycling layer needs its atlas sized for full-depth buckets despite being
+    // z-degenerate, hence the shared helper.
     const bucketVoxelCount = usesTRecycling(
       layer.boundingBox.depth,
       hasTAxis,

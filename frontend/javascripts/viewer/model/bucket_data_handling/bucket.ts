@@ -259,10 +259,8 @@ export class DataBucket {
     return this.zoomedAddress[4];
   }
 
-  // Convenience accessor for the "t" (time) additional coordinate, used by
-  // TextureBucketManager's t-recycling support. Returns 0 if the layer has no
-  // t-axis (matching the addressing default used elsewhere for missing coordinates).
-  // Note: not worth caching.
+  // The "t" (time) additional coordinate.
+  // Returns 0 if the layer has no t-axis; not worth caching.
   getT(): number {
     return this.getAdditionalCoordinates()?.find((coord) => coord.name === "t")?.value ?? 0;
   }
@@ -660,21 +658,14 @@ export class DataBucket {
     computeValueSet: boolean = false,
     voxelOffsetInWireData: number = 0,
   ): void {
-    // Validate the state before touching any field: everything below assumes REQUESTED, but
-    // the switch at the bottom only rejects a wrong state *after* rawBucketData has already
-    // been overwritten — and TextureBucketManager uploads rawBucketData to the GPU, so that
-    // would leave the CPU-side `data` and the GPU texture describing different fetches.
     if (!this.isRequested()) {
       this.unexpectedState();
     }
 
-    // The backend always sends (or, for missing buckets, uint8ToTypedBuffer synthesizes)
-    // a full 32^3-voxel cube. wireData is validated against that full size below and then
-    // sliced down to this layer's effective (possibly shrunk) bucket footprint, so that
-    // `this.data` never retains more memory than the layer actually needs. For a batched
-    // request (voxelOffsetInWireData != 0, see PullQueue.pullBatch), wireData additionally
-    // covers *several* buckets' worth of data (e.g. a whole t-batch); voxelOffsetInWireData
-    // then picks out this bucket's own window within it.
+    // The backend always sends a full 32^3-voxel cube, which is validated below and then
+    // sliced down to this layer's (possibly shrunk) bucket footprint. A batched request (see
+    // PullQueue.pullBatch) covers several buckets, and voxelOffsetInWireData picks this one's
+    // window out of it.
     const wireData = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [_TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 

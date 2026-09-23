@@ -10,10 +10,8 @@ import type { DataStoreInfo } from "viewer/store";
 import Store from "viewer/store";
 import type { DataBucket } from "./bucket";
 
-// For a layer where t should be treated like z (see DataCube.usesTRecycling), widens
-// a single-t request address into a full 32-t-aligned-batch request address, so that the
-// wire request always fetches a whole batch instead of one t-slice at a time (see
-// getTBatchSiblingAddresses for how the response is then fanned out to every t within it).
+// For a t-recycling layer (see DataCube.usesTRecycling), widens a single-t request address
+// into a full 32-t-aligned batch, which getTBatchSiblingAddresses then fans back out.
 function snapToTBatchAddress(cube: DataCube, address: BucketAddress): BucketAddress {
   if (!cube.usesTRecycling) {
     return address;
@@ -128,11 +126,8 @@ class PullQueue {
     const { dataset } = Store.getState();
     const layerInfo = getLayerByName(dataset, this.layerName);
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
-    // For a t-recycling layer, always request a whole aligned 32-t batch instead
-    // of a single t (see snapToTBatchAddress) — never just the one t-slice that happens to
-    // be needed right now. The response is then fanned out to every valid t within it (see
-    // getTBatchSiblingAddresses/handleBatchedBucketResult), so scrubbing through t within an
-    // already-fetched batch needs no further request from any consumer, not just rendering.
+    // Always request a whole aligned 32-t batch so that scrubbing within an
+    // already - fetched batch needs no further request from any consumer.
     const wireBatch = batch.map((address) => snapToTBatchAddress(this.cube, address));
 
     let hasErrored = false;
@@ -256,13 +251,10 @@ class PullQueue {
     }
   }
 
-  // Applies one wire response (data or empty) to every sibling address it covers (see
-  // getTBatchSiblingAddresses — just the one originally-requested bucket for a plain
-  // request, or every valid t within a fetched batch). Siblings beyond the one actually
-  // requested via pull() are opportunistically transitioned from UNREQUESTED to REQUESTED
-  // here so they can receive this "free" data too (this is the whole point of always
-  // fetching full t-batches); a sibling already in some other state (e.g. still loading via
-  // a different concurrent request) is left untouched.
+  // Applies one wire response to every sibling address it covers (see
+  // getTBatchSiblingAddresses). Siblings beyond the one actually requested are
+  // opportunistically moved from UNREQUESTED to REQUESTED so they can take this free data;
+  // one already in another state belongs to a concurrent request and is left untouched.
   private handleBatchedBucketResult(
     siblingAddresses: Array<BucketAddress>,
     bucketData: Uint8Array<ArrayBuffer> | null,
@@ -276,9 +268,10 @@ class PullQueue {
       if (sibling.type !== "data") {
         continue;
       }
-      const didMarkAsRequested = sibling.needsRequest();
-      if (didMarkAsRequested) {
+      let didMarkAsRequested = false;
+      if (sibling.needsRequest()) {
         sibling.markAsRequested();
+        didMarkAsRequested = true;
       }
       if (!sibling.isRequested()) {
         // The bucket might already be LOADED or MISSING.
@@ -303,14 +296,9 @@ class PullQueue {
           : 0;
         this.handleBucket(sibling, bucketData, voxelOffsetInWireData);
       } catch (error) {
-        // handleBucket can throw — most plainly on a malformed wire buffer, which, since that
-        // buffer is shared across the whole batch, fails for every sibling. Undoing the
-        // transition above is ours to do: pullBatch's failedBucketAddresses only knows about
-        // the address that was originally requested, and a bucket left in REQUESTED is stuck
-        // there for good (pull() only admits UNREQUESTED buckets, the GC skips REQUESTED ones,
-        // and ensureLoaded would await an event that is never emitted).
-        // A sibling that was already REQUESTED when we found it belongs to a concurrent batch
-        // — or is this batch's own primary — so settling it is that owner's job, not ours.
+        // Undoing our own transition is up to us: pullBatch only knows the originally requested
+        // address, and a bucket left in REQUESTED is stuck for good. One that was already REQUESTED
+        // belongs to a concurrent batch — or is this batch's own primary — so settling it is that owner's job.
         if (didMarkAsRequested && sibling.isRequested()) {
           sibling.markAsFailed();
 
@@ -319,12 +307,9 @@ class PullQueue {
           }
         }
 
-        // Rethrowing aborts the remaining siblings, which is intended: the failure is usually
-        // a property of the shared buffer, so continuing would just repeat the same error
-        // (and its ErrorHandling.notify) up to BUCKET_WIDTH times. Untouched siblings stay
-        // UNREQUESTED, i.e. exactly as before this batching existed, and get requested again
-        // when actually demanded. The throw is also what puts the originally requested bucket
-        // into failedBucketAddresses (see pullBatch).
+        // Rethrowing aborts the remaining siblings on purpose: the failure is usually a property
+        // of the shared buffer, so continuing would repeat it up to BUCKET_WIDTH times. It is also
+        // what puts the originally requested bucket into failedBucketAddresses (see pullBatch).
         throw error;
       }
     }

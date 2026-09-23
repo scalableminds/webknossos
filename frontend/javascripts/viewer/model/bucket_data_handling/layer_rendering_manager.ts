@@ -267,15 +267,8 @@ export default class LayerRenderingManager {
       this.textureBucketManager.usesTRecycling &&
       isWithinSameTBatch(this.additionalCoordinates, additionalCoordinates)
     ) {
-      // Pure t-scrubbing within an already-resident t-batch on an otherwise-unchanged
-      // viewport. There is genuinely nothing to do here: the buckets on the GPU each hold
-      // their whole 32-t batch (see PullQueue.pullBatch and TextureBucketManager's
-      // t-recycling support) and are keyed by t-batch rather than by t, so the shader
-      // simply reads a different z-sub-slot of the very same atlas data. Skipping the full
-      // re-pick is not just a shortcut: the re-pick would clear the pull queue and
-      // markBucketsAsUnneeded()/markAsNeeded() every bucket on every single t step, for no
-      // gain at all. Crossing a batch boundary falls through to the regular path below,
-      // which re-keys and re-fetches everything as usual.
+      // Pure t-scrubbing within a resident batch needs no work at all: buckets are keyed by
+      // t-batch and already hold all 32 slices, so the shader just reads a different z-sub-slot.
       this.additionalCoordinates = additionalCoordinates;
       return;
     }

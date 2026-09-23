@@ -67,9 +67,7 @@ interface TestContext {
 type AdditionalAxesMock = Record<string, { name: string; bounds: [number, number]; index: number }>;
 
 // The mocked cube stores its buckets keyed on the address including the "t" coordinate's
-// *value* but not its `length` — snapToTBatchAddress adds a `length` to the wire address
-// only, so the primary's original address still has to resolve to the same bucket, while
-// distinct timepoints must map to distinct buckets.
+// value.
 function bucketKey(address: BucketAddress): string {
   const t = address[4]?.find((coord) => coord.name === "t")?.value ?? 0;
   return `${address[0]},${address[1]},${address[2]},${address[3]},${t}`;
@@ -286,10 +284,9 @@ describe("PullQueue", () => {
 
     it("rolls back a sibling it transitioned when handing over the data fails", async () => {
       const { pullQueue, buckets, findBucket } = createTRecyclingCubeAndQueue();
-      // Too short for a bucket, so DataBucket.receiveData throws. Since the buffer is shared
-      // across the batch, it fails for the very first sibling (t=0) — deliberately not the
-      // requested bucket (t=5), so this isolates the sibling path from the pre-existing
-      // failedBucketAddresses handling of the requested bucket.
+      // Too short for a bucket, so receiveData throws. The shared buffer fails on the first
+      // sibling (t=0), deliberately not the requested bucket (t=5), which isolates the sibling
+      // path from pullBatch's own handling of the requested one.
       vi.mocked(requestWithFallback)
         .mockReset()
         .mockResolvedValue([{ type: "data", data: new Uint8Array(100) }]);

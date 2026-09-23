@@ -6,11 +6,9 @@ import org.scalatest.wordspec.AsyncWordSpec
 class ChunkUtilsTestSuite extends AsyncWordSpec {
 
   "computeChunkIndices" when {
-    // A t-batched bucket read (see DatasetArray.constructOffsetAndShapeArrays) deliberately
-    // asks for a full 32-wide batch even when the axis ends earlier, because the wire format
-    // is fixed-size. That is only safe because the chunk indices are clamped to the array
-    // shape here, leaving readAsFortranOrder's target buffer zeroed past the end instead of
-    // requesting (or failing on) chunks that don't exist.
+    // A t-batched read deliberately asks for a full 32-wide batch even when the axis ends
+    // earlier, because the wire format is fixed-size. That is only safe because chunk indices
+    // are clamped to the array shape here, leaving the target buffer zeroed past the end.
     "the selection extends past the array shape" should {
       "not return chunk indices beyond the array's last chunk" in {
         val arrayShape = Array(50L, 32L, 32L) // e.g. t=50, y, x

@@ -107,16 +107,9 @@ class DataCube {
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
   boundingBox: BoundingBox;
-  // For layers whose z-extent is a single voxel (e.g., 2D datasets), every bucket only
-  // ever holds real data in its first z-slice. In that case, storage for the bucket's
-  // typed array (and, on the GPU, the atlas footprint) can be shrunk to this depth,
-  // since the addressing/picking machinery still treats buckets as 32^3 for bookkeeping.
   readonly effectiveBucketDepth: 1 | typeof Constants.BUCKET_WIDTH;
-  // Whether this layer's buckets should always be fetched/cached in aligned 32-t batches
-  // instead of one t at a time (Z is degenerate and a t axis exists), so that a whole
-  // batch's data is fetched together and shared (see PullQueue.pullBatch and
-  // DataBucket.rawBucketData) rather than in per-t network requests. See TextureBucketManager
-  // for how the GPU atlas reuses one shared upload for a whole batch.
+  // Whether this layer's buckets are fetched and cached in aligned 32-t batches sharing one
+  // buffer (see PullQueue.pullBatch, DataBucket.rawBucketData) rather than one t at a time.
   readonly usesTRecycling: boolean;
   additionalAxes: Record<string, AdditionalAxis>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message

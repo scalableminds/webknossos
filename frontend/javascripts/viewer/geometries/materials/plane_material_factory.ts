@@ -351,18 +351,13 @@ class PlaneMaterialFactory {
   attachTextures(): void {
     let sharedLookUpTexture;
     let sharedLookUpCuckooTable;
-    // Same ordering as activeMagIndices (all iterate Model.getAllLayers()), matching
-    // globalLayerIndex. Built up here (rather than in setupUniforms) because
-    // textureBucketManager is only guaranteed to exist once getDataTextures() below
-    // has triggered its lazy setup.
+    // Same ordering as activeMagIndices (both iterate Model.getAllLayers()), matching
+    // globalLayerIndex. Built here, not in setupUniforms, because textureBucketManager only
+    // exists once getDataTextures() below has triggered its lazy setup.
     const usesTRecyclingPerLayer: number[] = [];
-    // How many voxels one bucket occupies in each layer's data texture. Read off the
-    // TextureBucketManager rather than the DataCube on purpose: those two numbers disagree
-    // for a t-recycling layer (the cube stores 32*32*1 voxels per bucket, while one atlas
-    // slot holds a whole 32-timepoint batch, i.e. the full 32^3 — see
-    // TextureBucketManager.bucketVoxelCount). The shader derives its row and texture
-    // indices from this, so it has to be exactly the number the upload side used, or it
-    // reads from the wrong place in the atlas.
+    // Voxels per bucket in each layer's data texture. Read off the TextureBucketManager, not
+    // the DataCube: the two disagree for t-recycling layers, and the shader derives its row and
+    // texture indices from this, so it must match the upload side exactly.
     const bucketVoxelCountPerLayer: number[] = [];
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {

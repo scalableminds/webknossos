@@ -76,11 +76,9 @@ function maybePadRgbData(src: TypedArray, elementClass: ElementClass, bucketVoxe
   return tmpPaddingBuffer.subarray(0, idx);
 }
 
-// A bucket's packed data may cover less than the atlas region it is uploaded into (e.g.,
-// because it packs into less than one full texture row; see getBucketHeightInTexture).
-// Since gl.texSubImage2D requires the source buffer to cover the whole region being uploaded,
-// the real data is copied into a zero-filled scratch buffer of the right size, at
-// destElementOffset.
+// A bucket's packed data may cover less than the atlas region it is uploaded into (e.g. less
+// than one full texture row, see getBucketHeightInTexture). Since gl.texSubImage2D needs the
+// source to cover the whole region, it is copied into a zero-filled scratch buffer first.
 let tmpRowPaddingBuffer: TypedArray | null = null;
 function padToUploadRegion(
   src: TypedArray,
@@ -131,20 +129,12 @@ export default class TextureBucketManager {
   maximumCapacity: number;
   packingDegree: number;
   elementClass: ElementClass;
-  // How many voxels one bucket occupies in this layer's atlas — its "footprint", the term
-  // the surrounding comments use. Note that a layer has two of these numbers and they can
-  // disagree:
-  //   * the CPU-side one, DataCube.getEffectiveBucketVoxelCount(), i.e. how much a single
-  //     DataBucket.data holds — 32^3 normally, or 32*32*1 for a z-degenerate (2D) layer;
-  //   * this one, the atlas slot size, which is what the shader addresses.
-  // They match everywhere except on a t-recycling layer, where one atlas slot holds a whole
-  // 32-timepoint batch of shrunk slices and so needs the full 32^3 even though each
-  // individual bucket only holds 32*32*1. See usesTRecycling below.
+  // How many voxels one bucket occupies in this layer's atlas — its "footprint". This differs
+  // from the CPU-side DataCube.getEffectiveBucketVoxelCount() on t-recycling layers, where one
+  // atlas slot holds a whole 32-timepoint batch (the full 32^3) while each bucket holds 32*32*1.
   bucketVoxelCount: number;
-  // When true, this layer's (always-0) z-addressing slot is repurposed to cache
-  // several t (time) slices of a z-degenerate layer simultaneously on the GPU,
-  // instead of shrinking the bucket footprint to depth 1. See getCuckooKey and
-  // DataBucket.getT().
+  // When true, this layer's (always-0) z-addressing slot caches several t-slices on the GPU
+  // instead of the bucket footprint being shrunk to depth 1. See getCuckooKey, DataBucket.getT().
   usesTRecycling: boolean;
   private cube: DataCube;
   isDestroyed: boolean = false;
@@ -208,12 +198,8 @@ export default class TextureBucketManager {
     this.setActiveBuckets([]);
   }
 
-  // For t-recycling layers, the (always-0) real z-addressing slot is
-  // repurposed to encode a "t-batch index" (floor(t/32)) instead, since up to 32
-  // t-slices of a z-degenerate layer share one atlas region/upload (see
-  // processWriterQueue and DataBucket.rawBucketData). This keeps the cuckoo table's
-  // key format/structure completely unchanged; the GLSL shader looks up by the same
-  // floor(t/32) to find the batch, then t%32 within it (see texture_access.glsl.ts).
+  // For t-recycling layers the (always-0) z slot encodes a "t-batch index" (floor(t/32))
+  // instead.
   private getCuckooKey(bucket: DataBucket): [number, number, number, number, number] {
     const z = this.usesTRecycling
       ? Math.floor(bucket.getT() / constants.BUCKET_WIDTH)
@@ -292,12 +278,11 @@ export default class TextureBucketManager {
       // enqueued (see scheduleWriterQueueProcessing).
       return;
     }
-    // uniqBy removes multiple write-bucket-requests for the same atlas index. It
-    // preserves the first occurrence of each duplicate, which is why this queue has to
-    // be filled from the front (via unshift) und read from the back (via pop). This
-    // ensures that the newest bucket "wins" if there are multiple requests for the same
-    // index — including on a t-recycling layer, where each request uploads that bucket's
-    // whole (shared) batch buffer in one go, so only the latest one needs to land.
+    // uniqBy removes multiple write-buckets-requests for the same index.
+    // It preserves the first occurrence of each duplicate, which is why
+    // this queue has to be filled from the front (via unshift) und read from the
+    // back (via pop). This ensures that the newest bucket "wins" if there are
+    // multiple buckets for the same index.
     this.writerQueue = uniqBy(this.writerQueue, (el) => el._index);
     const maxTimePerFrame = 16;
     const startingTime = performance.now();
@@ -336,12 +321,8 @@ export default class TextureBucketManager {
       const indexInDataTexture = _index % bucketsPerTexture;
       const data = bucket.getData();
       const { TypedArrayClass } = getDtypeConfigForElementClass(this.elementClass);
-      // For a t-recycling bucket, rawBucketData is the whole shared 32-slice batch
-      // buffer (of which `data` is only this bucket's own single-slice window, per the
-      // CPU-side shrink) — uploading it in full writes every t-slice in the batch to its
-      // correct z-sub-slot in one call, since the batch buffer's byte layout already
-      // matches the atlas's z-major layout (see DataBucket.rawBucketData/receiveData).
-      // This is why bucketVoxelCount is the full BUCKET_SIZE for t-recycling layers.
+      // For a t-recycling bucket, rawBucketData is the whole shared 32-slice batch buffer which
+      // can be uploaded to the GPU directly.
       const useRawBatchData = this.usesTRecycling && bucket.rawBucketData != null;
       const uploadSource = useRawBatchData ? (bucket.rawBucketData as BucketDataArray) : data;
       // How many voxels the source covers: the full atlas footprint for a batch buffer,
@@ -362,18 +343,13 @@ export default class TextureBucketManager {
       const y = bucketHeightInTexture * indexInDataTexture;
       const width = this.textureWidth;
       const height = bucketHeightInTexture;
-      // texSubImage2D requires the source buffer to cover the whole (x, y, width, height)
-      // region. The source may fall short of it, either because a bucket packs into less
-      // than one full texture row (see getBucketHeightInTexture) or because it covers less
-      // than the atlas footprint (see uploadVoxelCount). Both are fixed by zero-padding.
+      // texSubImage2D needs the source to cover the whole (x, y, width, height) region, which
+      // it may not (a sub-row bucket, or less than the atlas footprint) — fixed by zero-padding.
       const requiredElementCount = Math.round(
         (rgbPaddedSrc.length * width * height) / (uploadVoxelCount / this.packingDegree),
       );
-      // If t-recycling is enabled, but no raw bucket data is available for some reason
-      // (e.g., volume tracings should not use t-recycling currently, but if we decide to
-      // add support for that, this scenario could occur when an if-check is wrong
-      // somewhere), we ensure that the single t-slice is written into the correct t-slot.
-      // In the happy case, the value will simply be 0.
+      // Should not happen today (volume tracings don't use t-recycling), but if the shared batch
+      // buffer is ever missing, still write the single slice into its correct t-slot rather than 0.
       const destElementOffset =
         this.usesTRecycling && !useRawBatchData
           ? (bucket.getT() % constants.BUCKET_WIDTH) * rgbPaddedSrc.length

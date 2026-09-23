@@ -12,7 +12,22 @@ import {
   voxelOffsetInBucket,
 } from "./types";
 
-export type BucketState = "absent" | "pending" | "resident";
+/**
+ * What can be done with a bucket right now. Two of the three states have no
+ * counterpart in `BucketStateEnum` (bucket.ts), which tracks how far along the
+ * *fetch* is rather than what the array is good for:
+ *   - `absent`  — nothing allocated, and writes against the address are still
+ *     fine (they live in the write set / journal). The real DataCube cannot do
+ *     this: `applyVoxelMap` calls `getOrCreateData()` first thing, so writing
+ *     always materializes.
+ *   - `pending` — an array exists but does not hold backend content yet. Covers
+ *     `REQUESTED`, and `UNREQUESTED` after a failed request (which leaves
+ *     pendingOperations queued).
+ *   - `loaded`  — exactly `BucketStateEnum.LOADED`: the array holds the
+ *     backend's content with all known local diffs folded in. Orthogonal to
+ *     dirty, in both models.
+ */
+export type BucketState = "absent" | "pending" | "loaded";
 
 /**
  * The narrow surface a VolumeTransaction needs. Kept separate from
@@ -83,19 +98,20 @@ export class WorkingDataCube implements LoadingVoxelCube {
   }
 
   /**
-   * Dense content of a *resident* bucket. Returns undefined for `absent` and
+   * Dense content of a *loaded* bucket. Returns undefined for `absent` and
    * for `pending` buckets alike: a zero-filled placeholder must never be
    * mistaken for "all background". Never triggers a fetch.
    */
-  getResident(address: BucketAddress): BigUint64Array | undefined {
+  getLoadedDataOrUndefined(address: BucketAddress): BigUint64Array | undefined {
     const entry = this.buckets.get(bucketKey(address));
-    return entry?.state === "resident" ? entry.data : undefined;
+    return entry?.state === "loaded" ? entry.data : undefined;
   }
 
   /**
    * The array to write through to for live feedback, if one exists. Unlike
-   * getResident this also returns `pending` buckets, because writing into a
-   * placeholder is fine — the fold on arrival replays those writes.
+   * getLoadedDataOrUndefined this also returns `pending` buckets, because
+   * writing into a placeholder is fine — the fold on arrival replays those
+   * writes.
    */
   private materializedData(address: BucketAddress): BigUint64Array | undefined {
     return this.buckets.get(bucketKey(address))?.data;
@@ -114,7 +130,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
       };
       this.buckets.set(key, entry);
     }
-    if (entry.state === "resident") return Promise.resolve();
+    if (entry.state === "loaded") return Promise.resolve();
     if (entry.fetch != null) return entry.fetch;
 
     this.fetchCount++;
@@ -147,19 +163,19 @@ export class WorkingDataCube implements LoadingVoxelCube {
     this.journal.setBase(address, backendData, version);
     const folded = this.journal.foldOntoFetched(address, backendData, version);
     if (entry == null) {
-      this.buckets.set(key, { address, state: "resident", data: folded, fetch: null });
+      this.buckets.set(key, { address, state: "loaded", data: folded, fetch: null });
     } else {
       entry.data = folded;
-      entry.state = "resident";
+      entry.state = "loaded";
     }
     this.gpuDirty.add(key);
   }
 
   /** Load a bucket and return its content. The resolver's blocking read. */
   async ensureLoaded(address: BucketAddress): Promise<BigUint64Array> {
-    if (this.state(address) !== "resident") await this.materialize(address);
-    const data = this.getResident(address);
-    if (data == null) throw new Error(`Bucket ${bucketKey(address)} did not become resident`);
+    if (this.state(address) !== "loaded") await this.materialize(address);
+    const data = this.getLoadedDataOrUndefined(address);
+    if (data == null) throw new Error(`Bucket ${bucketKey(address)} did not become loaded`);
     return data;
   }
 
@@ -176,7 +192,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
   }
 
   backgroundProbe(address: BucketAddress): ((index: number) => boolean) | null {
-    const data = this.getResident(address);
+    const data = this.getLoadedDataOrUndefined(address);
     if (data == null) return null;
     return (index: number) => data[index] === 0n;
   }
@@ -190,7 +206,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
     this.gpuDirty.add(key);
   }
 
-  /** Read one voxel of a resident bucket. Test helper, not a hot path. */
+  /** Read one voxel of a loaded bucket. Test helper, not a hot path. */
   peek(
     voxel: Vector3,
     magIndex: number,
@@ -203,7 +219,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
       magIndex,
       additionalCoordinates,
     ];
-    const data = this.getResident(address);
+    const data = this.getLoadedDataOrUndefined(address);
     if (data == null) return undefined;
     const [x, y, z] = voxelOffsetInBucket(voxel);
     return data[voxelIndexOf(x, y, z)];

@@ -60,7 +60,7 @@ export class VolumeTransaction {
 
   /**
    * Open a write cursor for one bucket. Does not require the bucket to be
-   * resident. Materialized buckets are written through to immediately so the
+   * loaded. Materialized buckets are written through to immediately so the
    * GPU picks the change up on the next texture update.
    */
   writerFor(address: BucketAddress, value: SegmentId): BucketWriter {

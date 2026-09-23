@@ -46,7 +46,7 @@ describe("new volume architecture — flood fill", () => {
     const { cube, session, backend } = createHarness();
     seedRegion(backend);
 
-    // Coarser mags must be resident to be read back; the fill loads mag 0
+    // Coarser mags must be loaded to be read back; the fill loads mag 0
     // itself as it traverses.
     await materialize(cube, [
       [0, 0, 0, 1, null],
@@ -222,7 +222,7 @@ describe("new volume architecture — flood fill", () => {
     );
 
     // Spot-check the raw array rather than going through peek().
-    const data = cube.getResident([0, 0, 0, 0, null]);
+    const data = cube.getLoadedDataOrUndefined([0, 0, 0, 0, null]);
     expect(data).toBeDefined();
     expect(data?.[voxelIndexOf(28, 10, 3)]).toBe(FILL);
     expect(data?.[voxelIndexOf(31, 14, 3)]).toBe(FILL);

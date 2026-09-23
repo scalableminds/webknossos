@@ -7,7 +7,7 @@ This document intentionally does not try to stay close to the current implementa
 
 Code in this document is illustrative TypeScript — signatures and sketches meant to pin down responsibilities and data flow, not copy-pasteable implementations.
 
-A working spike of the design lives in `frontend/javascripts/prototypes/new_volume_architecture`, exercised by unit tests and wired into the brush behind a toggle. Where this doc quotes concrete figures for the coarse-mag case (§5.4), they are measured from it rather than estimated.
+A working spike of the design lives in `frontend/javascripts/prototypes/new_volume_architecture`, exercised by unit tests and wired into the brush and flood fill behind a toggle. Where this doc quotes concrete figures for the coarse-mag case (§5.4), they are measured from it rather than estimated. That spike is an MVP and implements only part of what follows — **§12 records which concepts are built, which were skipped, and in what order the rest is planned.**
 
 ---
 
@@ -69,11 +69,9 @@ Something is **authoritative** when it *defines* content rather than holding a c
 - **The journal is authoritative over the arrays** (principle 3). A bucket's content is *defined* as checkpoint plus ordered entries; the `32³` array in memory is a fold of that definition, kept only because the GPU needs an array. Evicting an array costs nothing but time; losing the journal loses the edit.
 - **The finest mag is authoritative over the coarser ones** (principle 2). Every edit lands there at full fidelity, while coarser mags are lossy, order-dependent approximations produced for display. This concerns *fidelity only* — it does not mean coarse mags are second-class in the log, because every mag's diffs are logged and replayed identically (§5.4).
 
-*Whether a particular bucket array holds real data.* Independently of the above, an array is authoritative when its bytes are the backend's content with all known diffs folded in — as opposed to the zero-filled placeholder a bucket carries while its fetch is in flight. This is exactly the `resident` versus `pending` distinction below, and it is what `VoxelReader.getResident` reports by returning `undefined`. Code that must not mistake "not loaded yet" for "empty" needs authority in this sense: the overwrite predicate (§5.3) and `beforeAccumulating` capture (§5.2).
+*Whether a particular bucket array holds real data.* Independently of the above, an array is authoritative when its bytes are the backend's content with all known diffs folded in — as opposed to the zero-filled placeholder a bucket carries while its fetch is in flight. In this second scope "authoritative" and `loaded` (below) are the same predicate: `loaded` is the state, authoritative is the property it guarantees, and `getLoadedDataOrUndefined` reports it by returning `undefined`. Code that must not mistake "not loaded yet" for "empty" needs authority in this sense: the overwrite predicate (§5.3) and `beforeAccumulating` capture (§5.2).
 
-#### Residency
-
-This doc also uses **resident** throughout. Here is what it means and how it maps onto the states buckets actually have.
+#### Bucket states
 
 Two independent questions decide a bucket's state: *is there a `32³` array for it in memory?* and *does that array reflect the backend's content?*
 
@@ -81,19 +79,26 @@ Two independent questions decide a bucket's state: *is there a `32³` array for 
 |---|---|---|---|---|
 | **absent** | no | — | **yes** | no |
 | **pending** | yes, zero-filled + local writes | no — backend data has not arrived | **yes** | local edits only |
-| **resident** | yes | yes | **yes** | yes |
+| **loaded** | yes | yes | **yes** | yes |
 
-> **resident** = the array exists *and* holds the backend's content with all known diffs folded in.
+> **loaded** = the array exists *and* holds the backend's content with all known diffs folded in.
 
-Orthogonal to all three: **dirty** — the bucket has diffs not yet acknowledged by the backend. In this design that is simply "its log has unsaved entries", which is what §5.5's eviction rule keys off. A fourth case, the out-of-bounds *null bucket*, never reaches the write set at all: the rasterizer's clipping step (§5.3, step 1) discards those addresses.
+**`loaded` is deliberately the same word — and the same concept — as `BucketStateEnum.LOADED` in `bucket.ts`.** Today's `receiveData` merges every queued `pendingOperation` onto the freshly fetched array *before* flipping the state, and writes made after that point go straight into the array rather than being queued, so "backend content with all local diffs folded in" is exactly what `LOADED` already guarantees. There is no new concept here and the doc does not invent a name for one.
 
-**Why the pending/resident split matters.** Four things in this design read bucket state, and they need different guarantees:
+The other two states do not line up with `BucketStateEnum`, which tracks how far along the *fetch* is rather than what the array is good for:
+
+- **`pending`** spans `REQUESTED` and also `UNREQUESTED`-after-a-failed-request, which leaves an array and its `pendingOperations` in place.
+- **`absent`** is the one with no real counterpart, and it is the load-bearing state of this design. A bucket can be `absent` *and* have writes recorded against it — the diffs live in the write set and the journal, keyed by address. The current `DataCube` cannot express that: `applyVoxelMap` calls `getOrCreateData()` as its first statement, so writing always materializes.
+
+Orthogonal to all three: **dirty** — the bucket has diffs not yet acknowledged by the backend. This is orthogonal in today's implementation too; a bucket is routinely `LOADED` and dirty. In this design dirty is simply "its log has unsaved entries", which is what §5.5's eviction rule keys off. A fourth case, the out-of-bounds *null bucket*, never reaches the write set at all: the rasterizer's clipping step (§5.3, step 1) discards those addresses.
+
+**Why the pending/loaded split matters.** Four things in this design read bucket state, and they need different guarantees:
 
 - *Recording a diff* needs nothing. Any of the three states works — this is principle 4, and it is what makes coarse-mag editing viable.
 - *Write-through for display* needs an array to exist, so `absent` must first become `pending`. Whether the backend data has arrived is irrelevant; the merge on arrival sorts it out.
-- *The overwrite predicate* (§5.3) and *`beforeAccumulating` capture* (§5.2) need **authoritative** content, so `pending` is not good enough. A pending bucket's array is zero-filled, and reading it would report "everything is background" — under `overwrite-empty-only` that means painting over data that turns out to be labeled. `VoxelReader.getResident` therefore returns `undefined` for pending buckets, deliberately, so a placeholder can never be mistaken for real content.
+- *The overwrite predicate* (§5.3) and *`beforeAccumulating` capture* (§5.2) need **authoritative** content, so `pending` is not good enough. A pending bucket's array is zero-filled, and reading it would report "everything is background" — under `overwrite-empty-only` that means painting over data that turns out to be labeled. `getLoadedDataOrUndefined` therefore returns `undefined` for pending buckets, deliberately, so a placeholder can never be mistaken for real content.
 
-**How this relates to the current implementation.** Today, brushing over unloaded data always instantiates the bucket (cheap), writes into the zero-filled array, marks it dirty, and merges when the backend data arrives. That is exactly the `absent → pending → resident` path above, and it stays valid here — with one change:
+**How this relates to the current implementation.** Today, brushing over unloaded data always instantiates the bucket (cheap), writes into the zero-filled array, marks it dirty, and merges when the backend data arrives. That is exactly the `absent → pending → loaded` path above, and it stays valid here — with one change:
 
 **Materialization on write becomes optional, driven by visibility.** Today it is unconditional. It cannot stay unconditional, because a single mag-16 stroke implies writes to ~520 finest-mag buckets the user is not looking at (§5.4); instantiating all of them costs ~134 MB to no purpose. The rule is: materialize on write only if the bucket is visible or about to be. Otherwise record the diff against its address and leave it `absent`.
 
@@ -105,7 +110,7 @@ Things this design deliberately does *not* support. Each is argued where it come
 
 - **Mag lists that are not a chain.** Every mag must be an integer multiple of the next-finer one, so that the list is totally ordered by resolution. A layer offering both `4-4-1` and `2-2-2` would violate this — neither divides the other, since one is finer in x/y and the other in z — and mag propagation (§5.4) would have no defined path between them. Standard pyramids, including anisotropic ones like `1-1-1, 2-2-1, 4-4-2`, are chains and are fine. Today's resampling does not support the non-chain case either, so this is not a regression.
 - **Coarse mags exactly matching a re-downsampling of the finest mag.** They are derived from the write sequence and are order-dependent; see principle 2 and §9.
-- **`overwrite-empty-only` as a guarantee about data the user cannot see.** The predicate is evaluated against resident source-mag content only, so it protects neither finer detail hidden inside a coarse voxel nor buckets that have not finished loading. It is a guard against overwriting what is on screen, not an invariant over the layer; see §5.4.
+- **`overwrite-empty-only` as a guarantee about data the user cannot see.** The predicate is evaluated against loaded source-mag content only, so it protects neither finer detail hidden inside a coarse voxel nor buckets that have not finished loading. It is a guard against overwriting what is on screen, not an invariant over the layer; see §5.4.
 - **Multi-valued transactions.** One user interaction writes one segment ID. This is relied on by the write-set representation (§4) and by the equivalence argument in §5.4.
 
 ---
@@ -114,7 +119,7 @@ Things this design deliberately does *not* support. Each is argued where it come
 
 The four questions this doc was written to answer:
 
-**What happens when a user draws?** A tool converts pointer input into a declarative *edit intent* (a brush stroke, a polygon, a flood-fill spec). A single `VolumeTransaction` is opened on pointer-down and stays open until pointer-up. On each pointer-move the intent grows, the incremental part is rasterized at the mag the user is looking at, and the resulting voxel writes are recorded into the transaction (and applied to resident buckets so the user sees them immediately). On pointer-up the transaction commits: mag propagation runs, the accumulated write set becomes a set of per-bucket diffs, and those go to the undo log and the save queue.
+**What happens when a user draws?** A tool converts pointer input into a declarative *edit intent* (a brush stroke, a polygon, a flood-fill spec). A single `VolumeTransaction` is opened on pointer-down and stays open until pointer-up. On each pointer-move the intent grows, the incremental part is rasterized at the mag the user is looking at, and the resulting voxel writes are recorded into the transaction (and applied to loaded buckets so the user sees them immediately). On pointer-up the transaction commits: mag propagation runs, the accumulated write set becomes a set of per-bucket diffs, and those go to the undo log and the save queue.
 
 **Who draws the circular brush into the data?** A single `Rasterizer` — the one component that knows how to turn geometry into voxel indices. Tools never touch buckets; buckets never know about brushes. The Rasterizer also owns the overwrite-mode filter, because that filter is a per-voxel decision made against current data, which is exactly its job.
 
@@ -138,7 +143,7 @@ The four questions this doc was written to answer:
 
 5. **Undo replays forward; it never inverts against live state.** Undoing transaction *T* recomputes affected buckets as if *T* had never been in the log — not by subtracting *T*'s effect from whatever the bucket looks like now. This is what keeps undo correct once other actors, or your own later actions, have touched the same voxels.
 
-6. **Keep diffs in the most compact faithful representation.** A coarse-mag stroke is a small amount of *information* even when it implies millions of finest-mag voxels. Materialize into voxel arrays only for buckets that are actually resident.
+6. **Keep diffs in the most compact faithful representation.** A coarse-mag stroke is a small amount of *information* even when it implies millions of finest-mag voxels. Materialize into voxel arrays only for buckets that are actually loaded.
 
 ---
 
@@ -272,7 +277,7 @@ A sparse form (a short index list) would beat a 4 KB mask for buckets the stroke
    │ (write set, per      │                      │
    │  bucket, LWW)        │                ┌─────┴────────────┐
    └──────┬───────────────┘                │ WorkingDataCube  │
-          │ on commit                      │ (resident        │
+          │ on commit                      │ (loaded        │
           ▼                                │  buckets → GPU)  │
    ┌──────────────────────┐                └─────┬────────────┘
    │ MagPropagation       │──── apply writes ───▶│
@@ -423,7 +428,7 @@ classDiagram
     VolumeTransaction *-- EditContext : ctx
     VolumeTransaction "1" *-- "*" BucketWriteMapEntry : bucketWrites
     VolumeTransaction ..> BucketWriter : writerFor creates
-    VolumeTransaction ..> TransactionCube : applyWrites, getResident
+    VolumeTransaction ..> TransactionCube : applyWrites, getLoadedDataOrUndefined
     VolumeTransaction ..> MagPropagation : commit calls propagate
     VolumeTransaction --> TransactionDiff : commit produces
     VolumeTransaction ..> BeforeRun : commit builds beforeCommitted, reusing mask runs
@@ -471,7 +476,7 @@ classDiagram
     %% ── WorkingDataCube (§5.5) ─────────────────────────────────────────
     class TransactionCube {
         <<interface>>
-        +getResident(address) resident data, optional
+        +getLoadedDataOrUndefined(address) loaded data, optional
         +applyWrites(address, write)
         +backgroundProbe(address) predicate, optional
     }
@@ -492,7 +497,7 @@ classDiagram
     }
     class WorkingDataCube {
         +state(address) BucketState
-        +getResident(address) resident data, optional
+        +getLoadedDataOrUndefined(address) loaded data, optional
         +materialize(address) Promise
         +receiveData(address, backendData, version)
         +ensureLoaded(address) awaited bucket data
@@ -711,7 +716,7 @@ interface BucketWriter {
   mark(index: VoxelIndex): void;
   /** The hot path. Runs are runs along x (see VoxelIndex), i.e. scanlines. */
   markRun(start: VoxelIndex, length: number): void;
-  /** Dense current content, if resident. Read once, then index directly —
+  /** Dense current content, if loaded. Read once, then index directly —
    *  this is how the overwrite predicate avoids a global lookup per voxel. */
   readonly current: BigUint64Array | undefined;
 }
@@ -722,12 +727,12 @@ class VolumeTransaction {
 
   private bucketWrites = new Map<BucketKey, { address: BucketAddress; write: BucketWrite }>();
 
-  /** Pre-transaction values, recorded on first touch — only for resident buckets. */
+  /** Pre-transaction values, recorded on first touch — only for loaded buckets. */
   private beforeAccumulating = new Map<BucketKey, Map<VoxelIndex, SegmentId>>();
 
   /**
    * Open a write cursor for one bucket. Does NOT require the bucket to be
-   * resident (principle 4). Resident buckets are also written through to the
+   * loaded (principle 4). Loaded buckets are also written through to the
    * live array so the GPU picks the change up on the next texture update.
    */
   writerFor(address: BucketAddress, value: SegmentId): BucketWriter;
@@ -738,7 +743,7 @@ class VolumeTransaction {
   /** Finalize: run mag propagation, drop no-ops, build the diff. */
   commit(propagation: MagPropagationService): TransactionDiff;
 
-  /** Restore every touched resident bucket from `beforeAccumulating`. */
+  /** Restore every touched loaded bucket from `beforeAccumulating`. */
   abort(): void;
 }
 ```
@@ -748,8 +753,8 @@ class VolumeTransaction {
 Why a write set at all, rather than "snapshot the bucket, mutate freely, diff at the end":
 
 - Repeated writes to the same voxel during a stroke coalesce for free — a brush passing over the same voxel 40 times sets the same bit 40 times.
-- It works for non-resident buckets, which snapshot-and-diff cannot: there is nothing to snapshot.
-- Its cost is bounded by *touched buckets* × 4 KB, not by touched buckets × 256 KB, and it never materializes a bucket that was not already resident.
+- It works for non-loaded buckets, which snapshot-and-diff cannot: there is nothing to snapshot.
+- Its cost is bounded by *touched buckets* × 4 KB, not by touched buckets × 256 KB, and it never materializes a bucket that was not already loaded.
 
 **`beforeAccumulating` and `beforeCommitted` are the same information at two lifecycle stages**, mirroring the write side exactly:
 
@@ -762,7 +767,7 @@ The shapes differ because the stages have different access patterns. While the s
 
 The rows differ from each other because new values are single-valued and compress to mask-plus-value, whereas old values are arbitrary (`3, 5, 0`, …) and need one per voxel. That is why `beforeCommitted` is a `BeforeRun[]` — a distinct type from `VoxelRun`, carrying a `BigUint64Array` of values per run — rather than reusing `VoxelRun` with a union field (§5.6).
 
-Both are populated only for resident buckets, and **neither is required for correctness** — forward replay never reads them (§5.7). `beforeAccumulating` exists so `abort()` is cheap; `beforeCommitted` exists so the common case of undoing your most recent action can skip a checkpoint replay.
+Both are populated only for loaded buckets, and **neither is required for correctness** — forward replay never reads them (§5.7). `beforeAccumulating` exists so `abort()` is cheap; `beforeCommitted` exists so the common case of undoing your most recent action can skip a checkpoint replay.
 
 **Cancel is not free, but it is cheap.** Because we do apply writes live (the user must see the stroke), cancelling means restoring the touched voxels from `beforeAccumulating`, not "throwing away an untouched buffer". That is O(number of written voxels), which is fine.
 
@@ -773,11 +778,11 @@ The single place that turns geometry into voxel indices.
 ```ts
 /** Read-only view over the cube; keeps the rasterizer decoupled from storage. */
 interface VoxelReader {
-  /** Dense content of a resident bucket. Fetch once per bucket, then index
+  /** Dense content of a loaded bucket. Fetch once per bucket, then index
    *  directly — never call this per voxel. Returns undefined for `absent` AND
    *  for `pending` buckets (§1.1): a zero-filled placeholder must never be
    *  mistaken for "all background". Never triggers a fetch. */
-  getResident(address: BucketAddress): BigUint64Array | undefined;
+  getLoadedDataOrUndefined(address: BucketAddress): BigUint64Array | undefined;
 }
 // One method, deliberately. Per-voxel random access lived here for flood fill's
 // neighbour walk; that moved to the ShapeResolver (§5.1), which needs an async
@@ -940,9 +945,9 @@ This needs no reads and no bucket loads, and it is exact: drawing at a coarse ma
 
 Note the loop nest is over `f[1] * f[2]`, not `f[0] * f[1] * f[2] * length` — the x extent is handled by `markRun`. Compounded across the chain, that is the difference between ~300 K run emissions and ~9.25 M individual writes for the mag-16 case below.
 
-**Overwrite mode is evaluated against what the user can see, and nothing else.** The predicate runs once, in §5.3, against resident source-mag data. Two consequences follow from the same principle, and both are deliberate:
+**Overwrite mode is evaluated against what the user can see, and nothing else.** The predicate runs once, in §5.3, against loaded source-mag data. Two consequences follow from the same principle, and both are deliberate:
 
-- *Finer detail is not protected.* The upsample writes unconditionally, so in `overwrite-empty-only` at mag 4, a coarse voxel that reads as empty may still contain labeled finest-mag voxels, and those get overwritten. Re-evaluating the predicate per finest-mag voxel would require those buckets to be resident — turning every coarse-mag stroke into hundreds of fetches.
+- *Finer detail is not protected.* The upsample writes unconditionally, so in `overwrite-empty-only` at mag 4, a coarse voxel that reads as empty may still contain labeled finest-mag voxels, and those get overwritten. Re-evaluating the predicate per finest-mag voxel would require those buckets to be loaded — turning every coarse-mag stroke into hundreds of fetches.
 - *Not-yet-loaded data is not protected.* Where the source-mag bucket is `absent` or `pending`, there is no authoritative content to test, and `emitSpan` paints optimistically rather than skipping the span.
 
 The unifying rule is that `overwrite-empty-only` protects what is *visible*, not what exists. Data hidden inside a coarse voxel and data that has not arrived yet are both invisible to the user, and in the second case the viewport is literally rendering background — so painting is what the user sees themselves doing. Failing the other way, skipping unloaded spans, would punch holes into a stroke over a region that looks empty, contradicting the display for the sake of a guarantee the mode never made.
@@ -960,11 +965,11 @@ The honest cost is a timing race: the same stroke over the same region gives dif
 
 Three things keep that affordable:
 
-- Those buckets are not materialized as `32³` typed arrays, which would be ~134 MB at the finest mag alone. Per principle 4 writes are recorded against bucket addresses whether or not the bucket is resident, and per §4 a touched bucket costs a 4 KB mask — 2.9 MB across all mags.
+- Those buckets are not materialized as `32³` typed arrays, which would be ~134 MB at the finest mag alone. Per principle 4 writes are recorded against bucket addresses whether or not the bucket is loaded, and per §4 a touched bucket costs a 4 KB mask — 2.9 MB across all mags.
 - The work is `markRun` calls rather than per-voxel writes: each fills one scanline of a block, so the count scales with runs (300 K) not voxels (9.25 M).
 - The diff run-length-encodes well, though not as well as a naive estimate suggests: a disk is mostly bucket-*edge* rather than solid interior, so the finest mag averages ~2 KB per bucket rather than the ~1 KB a fully solid block fill would cost.
 
-Non-resident buckets are never loaded just to be written; when they are later fetched, the backend has already folded the diff in, and any not-yet-saved local diffs are applied on load.
+Non-loaded buckets are never loaded just to be written; when they are later fetched, the backend has already folded the diff in, and any not-yet-saved local diffs are applied on load.
 
 #### Step B — downsample toward the coarsest mag
 
@@ -1002,7 +1007,7 @@ function downsampleOneLevel(
 
 Three things about this rule are worth stating explicitly, because they are choices, not consequences:
 
-- **Background is not a special value.** Erasing is painting with `0n`, and it downsamples like any other value: one erased finest-mag voxel clears its whole coarse voxel. The tempting alternative — "only clear the coarse voxel if *all* its finest-mag siblings are now background" — is more faithful but needs a read of every sibling, which drags bucket residency back into a step that otherwise needs no data at all. Not worth it for a display-only approximation. This is also what webKnossos does today (`downsampleVoxelMap` any-hits a 0/1 *mask*, and `applyVoxelMap` then writes the segment ID — zero included — into every masked voxel at every mag).
+- **Background is not a special value.** Erasing is painting with `0n`, and it downsamples like any other value: one erased finest-mag voxel clears its whole coarse voxel. The tempting alternative — "only clear the coarse voxel if *all* its finest-mag siblings are now background" — is more faithful but needs a read of every sibling, which drags bucket loading back into a step that otherwise needs no data at all. Not worth it for a display-only approximation. This is also what webKnossos does today (`downsampleVoxelMap` any-hits a 0/1 *mask*, and `applyVoxelMap` then writes the segment ID — zero included — into every masked voxel at every mag).
 - **The downsampling rule is written-value-wins, and it dilates in both directions.** Paint overstates presence at coarse mags; erase overstates absence. Majority vote — the textbook rule, and what "downsampling" might otherwise be assumed to mean here — would instead make thin structures disappear entirely — a 1-voxel-wide process annotated at mag 1 would be invisible the moment the user zooms out, which is unacceptable for tracing work. The upside of written-value-wins is predictability: whatever you just did is visible at every zoom level.
 - **We propagate the write set, not the bucket.** The natural-sounding alternative — "recompute each affected coarse bucket from its finest-mag children" — is infeasible: a mag-16 bucket covers `512³` finest-mag voxels, i.e. `16·16·16 = 4096` finest-mag buckets. (The child count is the product of the per-axis ratio — a `2-2-1` bucket has 4 children, a `16-16-16` bucket has 4096.) Propagating the write set touches only the voxels the user actually edited and requires no additional loads.
 
@@ -1017,7 +1022,7 @@ If the layer's finest mag is not mag 1 (some datasets start coarser), "finest ma
 The tempting alternative is to treat only finest-mag diffs as authoritative and, after an undo, re-downsample the affected coarse buckets from the rebuilt finest-mag content. Don't. It is worse in four ways:
 
 - It needs a rule that does not exist. Written-value-wins is defined over a *sequence of writes*; re-deriving from static content is a downsample, which needs some other rule (majority, any-non-zero, …) that nothing else in this design specifies.
-- It requires the finest-mag buckets to be resident, so undoing from a history panel after panning away would have to fetch them.
+- It requires the finest-mag buckets to be loaded, so undoing from a history panel after panning away would have to fetch them.
 - It breaks convergence under collaboration: a client that re-downsamples and a client that replays compute different coarse content from the same history.
 - It is the only thing that would ever need a multi-valued write set, since the rebuilt content carries arbitrary prior values (§4).
 
@@ -1041,9 +1046,9 @@ Unchanged in spirit from today: one `32³` typed array per materialized `(bucket
 
 ```ts
 interface WorkingDataCube extends VoxelReader {
-  // getResident is inherited from VoxelReader and never triggers a fetch;
+  // getLoadedDataOrUndefined is inherited from VoxelReader and never triggers a fetch;
   // ShapeResolver's loading reads go through a separate path (§5.1).
-  state(address: BucketAddress): "absent" | "pending" | "resident";   // §1.1
+  state(address: BucketAddress): "absent" | "pending" | "loaded";   // §1.1
   /** Allocates a zero-filled array (absent → pending) and starts a fetch.
    *  Called on write only when the bucket is visible or about to be. */
   materialize(address: BucketAddress): void;
@@ -1057,7 +1062,7 @@ Three constraints the new model adds:
 
 - **Eviction must respect unsaved state.** A bucket with unsaved diffs, or whose diff log is still needed by the undo horizon, cannot simply be dropped. Either keep it, or persist its log (checkpoint + entries) alongside the eviction — the log, not the array, is the thing that must survive.
 - **Load must fold local diffs, and the journal owns that fold.** See below.
-- **Materialization is a rendering decision, not a writing one.** Writes never force it (principle 4). The cube materializes a bucket because something needs to *display* it — which is why a mag-16 stroke leaves its ~520 finest-mag buckets `absent` while the mag-16 buckets on screen become `resident`.
+- **Materialization is a rendering decision, not a writing one.** Writes never force it (principle 4). The cube materializes a bucket because something needs to *display* it — which is why a mag-16 stroke leaves its ~520 finest-mag buckets `absent` while the mag-16 buckets on screen become `loaded`.
 
 #### When a fetched bucket arrives
 
@@ -1067,7 +1072,7 @@ The cube does not merge anything itself. Principle 3 says the journal holds the 
 // WorkingDataCube, on the fetch completing
 receiveData(address: BucketAddress, backendData: BigUint64Array, dataVersion: number) {
   const folded = journal.foldOntoFetched(address, backendData, dataVersion);
-  this.install(address, folded);        // pending → resident
+  this.install(address, folded);        // pending → loaded
   this.markDirtyForGpu(address);
 }
 ```
@@ -1159,7 +1164,7 @@ function toRuns(write: BucketWrite): VoxelRun[] {
 }
 ```
 
-No-op writes (`newValue === oldValue`, knowable for resident buckets) are dropped before this step, so a stroke that repaints voxels already carrying the active segment ID produces no diff at all for those voxels.
+No-op writes (`newValue === oldValue`, knowable for loaded buckets) are dropped before this step, so a stroke that repaints voxels already carrying the active segment ID produces no diff at all for those voxels.
 
 ### 5.7 `BucketJournal` — undo/redo and the per-bucket log
 
@@ -1220,7 +1225,7 @@ function rebuild(log: BucketLog): BigUint64Array {
 
 **Undo(T):** mark T's entries `skipped` in each bucket log it touched, then `rebuild` those buckets. Entries *after* T — whether this user's or, later, a collaborator's — are replayed normally, so their effects survive. There is no inverse being computed and applied; only forward folding with one entry removed. **Redo(T):** clear the flag, rebuild again.
 
-"Each bucket log it touched" includes the coarse-mag buckets, which replay exactly like the finest-mag ones (§5.4). Nothing is re-downsampled and no voxel data is read, so undo works whether or not the affected buckets are resident. `sideEffects` are reverted through the normal update-action mechanism.
+"Each bucket log it touched" includes the coarse-mag buckets, which replay exactly like the finest-mag ones (§5.4). Nothing is re-downsampled and no voxel data is read, so undo works whether or not the affected buckets are loaded. `sideEffects` are reverted through the normal update-action mechanism.
 
 **`beforeCommitted` is not what makes forward-only undo work** — forward replay never reads it. It is optional, and worth keeping for three narrower reasons:
 
@@ -1281,7 +1286,7 @@ interface UndoTransactionAction {
 }
 ```
 
-**Why undo is a marker and not a compensating diff.** The obvious alternative is to emit a normal forward transaction that restores the old values. It fails on two counts. It needs absolute prior values for every touched bucket — but undoing a mag-16 stroke means ~520 finest-mag buckets that were never resident and for which the client has no baseline, so it would have to fetch them all just to describe the undo. And those restored values are arbitrary and multi-valued, which is the one thing that would force a multi-valued write set back into §4.
+**Why undo is a marker and not a compensating diff.** The obvious alternative is to emit a normal forward transaction that restores the old values. It fails on two counts. It needs absolute prior values for every touched bucket — but undoing a mag-16 stroke means ~520 finest-mag buckets that were never loaded and for which the client has no baseline, so it would have to fetch them all just to describe the undo. And those restored values are arbitrary and multi-valued, which is the one thing that would force a multi-valued write set back into §4.
 
 A marker has neither problem: it is O(1) regardless of how many buckets T touched, and a collaborator receiving it performs the identical skip-and-refold, so client, peer and server stay in agreement by construction.
 
@@ -1295,7 +1300,7 @@ Encoding notes:
 
 The real comparison is against three specific alternatives:
 
-- **A dense `32³` array of segment IDs, gzipped.** This is the one runs clearly beat, and the reason is materialization, not size: producing it means allocating 256 KB per touched bucket, including the ~520 non-resident finest-mag buckets a mag-16 stroke writes to (§5.4). That is ~134 MB to describe one stroke, and it breaks principle 4 outright.
+- **A dense `32³` array of segment IDs, gzipped.** This is the one runs clearly beat, and the reason is materialization, not size: producing it means allocating 256 KB per touched bucket, including the ~520 non-loaded finest-mag buckets a mag-16 stroke writes to (§5.4). That is ~134 MB to describe one stroke, and it breaks principle 4 outright.
 - **A `32³` *bitmask* plus one value, gzipped.** This one is genuinely competitive and does *not* require materialization — the mask is 4 KB, we already build one (§4), and a sparse mask gzips down to very little. The trade is fixed versus proportional cost: a bucket the stroke merely grazes costs 5 runs (20 B) but a full 4 KB mask, while a densely-written bucket costs a fixed 4 KB as a mask but up to 8 KB as runs. So neither wins universally — which is precisely why the box/bitmask payload is kept on the table in §11.1 rather than dismissed.
 - **Compressing the in-memory representation.** Also viable, and not hypothetical: `frontend/javascripts/viewer/model/bucket_data_handling/bucket_snapshot.ts` does exactly this today, gzipping bucket clones for undo snapshots. The cost is not CPU but **asynchrony** — encode and decode become promises, and that file's comments document the resulting race conditions and redundant-compression caveats. Runs are small enough to keep uncompressed, so `rebuild` (§5.7) stays a tight synchronous fold and log entries stay directly inspectable.
 
@@ -1338,10 +1343,10 @@ sequenceDiagram
     Note over R: clip to bbox, split by bucket
     loop each intersecting bucket
       R->>T: writerFor(address, activeSegmentId)
-      T->>C: getResident(address)
+      T->>C: getLoadedDataOrUndefined(address)
       C-->>T: BigUint64Array, or undefined if absent/pending
       T-->>R: BucketWriter
-      opt overwrite-empty-only AND resident
+      opt overwrite-empty-only AND loaded
         R->>R: split each scanline where current[i] is not 0n
       end
       R->>T: markRun(start, length) per scanline
@@ -1357,7 +1362,7 @@ sequenceDiagram
   T->>P: propagate(sourceWrites, ctx)
   Note over P: Step A: upsample source → finest<br/>Step B: downsample source → coarsest<br/>one adjacent level at a time
   P-->>T: writes per mag (MagIndex to BucketWriteMap)
-  T->>C: applyWrites(...) for resident buckets only
+  T->>C: applyWrites(...) for loaded buckets only
   T->>T: toRuns() per bucket
   Note right of T: TransactionDiff { id, sequence,<br/>sourceMagIndex, bucketDiffs, sideEffects }
   T->>L: append(TransactionDiff)
@@ -1366,7 +1371,7 @@ sequenceDiagram
   S->>K: one versioned group of updateBucketDiff actions
 ```
 
-Two things the diagram makes visible that the prose does not. The `getResident` call returning `undefined` is the *normal* case for a coarse-mag stroke — most touched buckets are `absent` (§1.1), the overwrite predicate is skipped for them, and no fetch is triggered. And mag propagation appears exactly once, after pointer-up, not inside the move loop (§6.1).
+Two things the diagram makes visible that the prose does not. The `getLoadedDataOrUndefined` call returning `undefined` is the *normal* case for a coarse-mag stroke — most touched buckets are `absent` (§1.1), the overwrite predicate is skipped for them, and no fetch is triggered. And mag propagation appears exactly once, after pointer-up, not inside the move loop (§6.1).
 
 What crosses each boundary:
 
@@ -1388,9 +1393,9 @@ What crosses each boundary:
 
 1. **Pointer-down.** `VolumeTransaction` opens with an `EditContext` snapshotting the active segment ID, overwrite mode, source mag and additional coordinates. An empty `brush` intent is created, with the brush radius fixed for the stroke.
 2. **Pointer-move.** The tool appends a point to the path. Only the *incremental* capsule (previous point → new point) is rasterized, at the source mag. The rasterizer walks it bucket by bucket, opening one `BucketWriter` per bucket and emitting scanline runs through the overwrite predicate.
-3. **Record + display.** Those runs land in the transaction's write set and are written through to resident buckets; their GPU textures are refreshed. The user sees the stroke immediately.
+3. **Record + display.** Those runs land in the transaction's write set and are written through to loaded buckets; their GPU textures are refreshed. The user sees the stroke immediately.
 4. Steps 2–3 repeat. Overlapping samples coalesce in the write set at no cost.
-5. **Pointer-up → commit.** Mag propagation runs *once*, over the whole accumulated write set. Step A is a no-op — the source mag already *is* the finest — so the walk only goes outward: mag 1 → 2 → 4 → …, each level downsampled from the one before it. Those writes are applied to resident coarse buckets too.
+5. **Pointer-up → commit.** Mag propagation runs *once*, over the whole accumulated write set. Step A is a no-op — the source mag already *is* the finest — so the walk only goes outward: mag 1 → 2 → 4 → …, each level downsampled from the one before it. Those writes are applied to loaded coarse buckets too.
 6. The write set becomes a `TransactionDiff` (no-ops dropped, runs grouped), appended to the `BucketJournal` and enqueued for save.
 
 Running mag propagation on *every pointer-move* was considered and discarded: it does strictly more total work, since overlapping samples get re-propagated, for no correctness benefit.
@@ -1405,7 +1410,7 @@ The spike is worst for coarse-mag strokes, and there the throttle is the wrong l
 
 Identical, except at commit:
 
-- Step A walks mag 16 → 8 → 4 → 2 → 1, expanding ~2000 mag-16 voxels into ~8.1 M finest-mag voxels across ~520 finest-mag buckets (the intermediate levels are emitted on the way and are far smaller — 148, 45 and 15 buckets respectively; see §5.4 for the measured breakdown). Almost none of those buckets are resident (the user is zoomed out); no fetches are triggered. Their writes live only as 4 KB masks in the write set, then in the diff, run-encoded as block fills.
+- Step A walks mag 16 → 8 → 4 → 2 → 1, expanding ~2000 mag-16 voxels into ~8.1 M finest-mag voxels across ~520 finest-mag buckets (the intermediate levels are emitted on the way and are far smaller — 148, 45 and 15 buckets respectively; see §5.4 for the measured breakdown). Almost none of those buckets are loaded (the user is zoomed out); no fetches are triggered. Their writes live only as 4 KB masks in the write set, then in the diff, run-encoded as block fills.
 - Step B walks the other way from mag 16 — to mag 32, 64, … — each level derived from the small set one step finer, never from the 8.1 M-voxel finest set. The mag-16 buckets the user is looking at were already written by the rasterizer in step 3 and are simply carried through as the walk's starting point, so there is no visible re-flicker.
 - The save payload is ~736 `updateBucketDiff` actions totalling ~1.2 MB — not the ~190 MB the same buckets would cost as raw data.
 
@@ -1415,7 +1420,7 @@ The user paints stroke `T1` (segment 5) over a region, then stroke `T2` (segment
 
 - `T2` is the newest transaction on every bucket it touched → **fast path**: write `T2.beforeCommitted` back. Done, O(voxels in T2).
 - Had the user instead undone `T1` (via a history panel), the slow path runs: mark `T1`'s entries skipped in each affected bucket log, rebuild from the nearest checkpoint replaying `T2` but not `T1`. Voxels that `T2` painted stay segment 7; voxels only `T1` touched revert to their pre-`T1` value. Under the old snapshot-restore model, `T2`'s overlapping work would have been silently destroyed.
-- The coarse-mag bucket logs are folded the same way, skipping `T1`'s entries — no re-downsampling, and no need for the finest-mag buckets to be resident.
+- The coarse-mag bucket logs are folded the same way, skipping `T1`'s entries — no re-downsampling, and no need for the finest-mag buckets to be loaded.
 
 ---
 
@@ -1641,23 +1646,23 @@ Not implemented here, but the shape is deliberately compatible:
 | Rasterize the shape independently at each mag | N× the work, and the per-mag results disagree at boundaries, leaving the pyramid inconsistent in a way no downsampling can fix. |
 | Recompute each coarse bucket from its finest-mag children | Infeasible: a mag-16 bucket has 4096 finest-mag children. Propagate the *write set* instead. |
 | Majority-vote downsampling into coarse mags | Thin structures vanish when zooming out. Written-value-wins keeps them visible; the resulting dilation is the accepted price. |
-| Treat background as special when downsampling (clear a coarse voxel only if all finest-mag siblings are background) | More faithful, but requires reading every sibling — which re-couples mag propagation to bucket residency and forces loads during coarse-mag strokes. |
+| Treat background as special when downsampling (clear a coarse voxel only if all finest-mag siblings are background) | More faithful, but requires reading every sibling — which re-couples mag propagation to bucket loading and forces loads during coarse-mag strokes. |
 | Send only finest-mag diffs; let the backend derive coarse mags | Written-value-wins is order-dependent, so a backend seeing only final state cannot reproduce it under any derivation rule. Coarse mags would visibly change on reload. Sending all mags costs ~15–35% more payload and avoids this entirely. |
 | Keep diffs at their authoring mag, never normalize | No single source of truth; reading mag *k* requires folding diffs authored at every other mag, with ill-defined ordering between them. |
-| Snapshot-then-diff per bucket instead of a write set | Cannot represent writes to non-resident buckets, and costs O(bucket) per touched bucket even for a 5-voxel edit. |
-| Re-downsample coarse mags from the finest mag after an undo, instead of replaying their logs | Needs a downsample rule nothing specifies, requires the finest-mag buckets to be resident, breaks convergence between a re-downsampling and a replaying client, and is the only thing that would force multi-valued write sets. |
-| Transmit undo as a compensating diff that restores the old values | Needs absolute prior values for every touched bucket — including the hundreds of non-resident ones a coarse-mag stroke writes — and those values are multi-valued. A skip marker is O(1) and needs no data (§5.8). |
+| Snapshot-then-diff per bucket instead of a write set | Cannot represent writes to non-loaded buckets, and costs O(bucket) per touched bucket even for a 5-voxel edit. |
+| Re-downsample coarse mags from the finest mag after an undo, instead of replaying their logs | Needs a downsample rule nothing specifies, requires the finest-mag buckets to be loaded, breaks convergence between a re-downsampling and a replaying client, and is the only thing that would force multi-valued write sets. |
+| Transmit undo as a compensating diff that restores the old values | Needs absolute prior values for every touched bucket — including the hundreds of non-loaded ones a coarse-mag stroke writes — and those values are multi-valued. A skip marker is O(1) and needs no data (§5.8). |
 
 ---
 
 ## 10. Open Questions
 
-- **Flood fill and unloaded data.** Fill needs the connected region resident to be correct. Options: block on fetches with a progress indicator, fill progressively as buckets arrive, or bound the fill to a region and refuse beyond it. Needs a UX decision — this is the one tool where "diffs for non-resident buckets" does not save us, because the *region itself* depends on data we do not have.
+- **Flood fill and unloaded data.** Fill needs the connected region loaded to be correct. Options: block on fetches with a progress indicator, fill progressively as buckets arrive, or bound the fill to a region and refuse beyond it. Needs a UX decision — this is the one tool where "diffs for non-loaded buckets" does not save us, because the *region itself* depends on data we do not have.
 - **Interaction with mappings / agglomerates.** Proofreading edits operate on mapped IDs, and `EditContext.activeSegmentId` is then an agglomerate ID rather than a stored one. Where the mapping is resolved (before rasterization? at apply time?) is unresolved and deserves its own section.
-- **Commit-time spike on coarse-mag strokes.** Two things already blunt this. The run-oriented upsample (§5.4) works in scanlines rather than voxels, so the measured mag-16 case is ~300 K run emissions over 2.9 MB of masks rather than 9.25 M individual writes; and cascading means the *downsample* side never touches the large finest-mag set at all, deriving each coarser level from the small one beside it. What remains is the upsample chain, which is irreducible — the finest level genuinely has 8.1 M voxels in it. What is unmeasured is whether ~300 K run emissions plus a ~1.2 MB encode land as a perceptible hitch on pointer-up. If they do, the lever is *not* the mid-stroke throttle — the expansion is inherent to drawing at a coarse mag, and per-sample propagation would only repeat it. It would instead be keeping the upsample fully symbolic: carry `(box, value)` fills through to §5.8's encoder and never build masks for non-resident finest-mag buckets at all. Measure before building.
+- **Commit-time spike on coarse-mag strokes.** Two things already blunt this. The run-oriented upsample (§5.4) works in scanlines rather than voxels, so the measured mag-16 case is ~300 K run emissions over 2.9 MB of masks rather than 9.25 M individual writes; and cascading means the *downsample* side never touches the large finest-mag set at all, deriving each coarser level from the small one beside it. What remains is the upsample chain, which is irreducible — the finest level genuinely has 8.1 M voxels in it. What is unmeasured is whether ~300 K run emissions plus a ~1.2 MB encode land as a perceptible hitch on pointer-up. If they do, the lever is *not* the mid-stroke throttle — the expansion is inherent to drawing at a coarse mag, and per-sample propagation would only repeat it. It would instead be keeping the upsample fully symbolic: carry `(box, value)` fills through to §5.8's encoder and never build masks for non-loaded finest-mag buckets at all. Measure before building.
 - **Checkpoint interval *k*.** Too small → memory and storage overhead; too large → slow replay and slow eviction. Start around 20–50 entries per bucket and tune empirically. Interacts with the undo horizon.
-- **Where does the rasterizer run?** It is a pure function of `(intent, context, reader)`, which makes it a good Web Worker candidate for large strokes. Not needed for correctness; the blocker is giving a worker a cheap read view of resident buckets (`SharedArrayBuffer`, probably).
-- **Coarse mags diverge from re-downsampling the finest mag, permanently.** Not drift between client and server, and not drift between collaborators: every party folds the same ordered per-mag diffs, so everyone agrees (§5.4). But because written-value-wins is order-dependent, the stored coarse mags are a function of *how* a region was edited, and no later pass can reconstruct them from the finest mag. Principle 2 accepts this. If it stops being acceptable, the answer is a background re-derivation job on a schedule — which would first have to settle what "correct" means at coarse mags, a question this doc does not answer. Adopting a data-derivable rule instead would re-couple propagation to bucket residency and reintroduce multi-valued write sets; see §5.4.
+- **Where does the rasterizer run?** It is a pure function of `(intent, context, reader)`, which makes it a good Web Worker candidate for large strokes. Not needed for correctness; the blocker is giving a worker a cheap read view of loaded buckets (`SharedArrayBuffer`, probably).
+- **Coarse mags diverge from re-downsampling the finest mag, permanently.** Not drift between client and server, and not drift between collaborators: every party folds the same ordered per-mag diffs, so everyone agrees (§5.4). But because written-value-wins is order-dependent, the stored coarse mags are a function of *how* a region was edited, and no later pass can reconstruct them from the finest mag. Principle 2 accepts this. If it stops being acceptable, the answer is a background re-derivation job on a schedule — which would first have to settle what "correct" means at coarse mags, a question this doc does not answer. Adopting a data-derivable rule instead would re-couple propagation to bucket loading and reintroduce multi-valued write sets; see §5.4.
 - **How is redo expressed (§7.5)?** Either a re-validating action, or a tombstone that names another tombstone's version. The second is more uniform but makes the invalidated-version set a fold over the tombstone list rather than a plain union, since a tombstone may itself have been invalidated. The choice also decides whether undo/redo cycles grow the stream without bound.
 - **Is an over-approximating segment index acceptable to every consumer (§7.6)?** Skipping removal detection turns the current bottleneck into a single append, at the cost of an index that sometimes claims a segment is in a bucket it has left. Consumers must already tolerate a fetched bucket not containing the wanted segment, but that should be verified against each one — mesh generation, statistics aggregation, and the segment list — rather than assumed.
 - **Materialization policy (§7.2).** Every k-th version is simplest but wrong-shaped: version numbers are global while bucket streams are sparse, so it materializes untouched buckets repeatedly and under-materializes hot ones. Keying on per-bucket action count is the obvious fix; ad-hoc-on-read and a background service are the other candidates.
@@ -1703,3 +1708,52 @@ Worth doing when a tool starts producing large 3D patches. For the 2D patches qu
 ### 11.3 Others, tracked in §10
 
 Two further performance items are open questions rather than designed improvements, and are listed in §10: keeping the upsample fully symbolic to flatten the commit-time spike on coarse-mag strokes, and moving the rasterizer into a Web Worker.
+
+---
+
+## 12. Implementation Status & Plan
+
+The spike in `frontend/javascripts/prototypes/new_volume_architecture` is an **MVP**, not a partial rollout of this document. Its goal was to answer the two questions a design doc cannot: does the intent → rasterize → propagate → diff pipeline actually hold together, and what does the coarse-mag case cost in practice (§5.4's figures are measured from it). Everything that would commit us to a persistence format — the journal on the live path, undo/redo, the save queue, the backend contract in §7 — was deliberately left out, because that is the half that is expensive to build twice.
+
+Nothing below revises the design. This section records where the code currently stands against it.
+
+### 12.1 Implemented
+
+| Concept | § | Module | Notes |
+|---|---|---|---|
+| `EditIntent` and its shapes | 5.1 | `intents.ts` | brush, box, mask and floodFill exist; only brush and floodFill are reachable from the UI |
+| Rasterizer | 5.3 | `rasterizer.ts` | capsule / box / mask, run-emitting, synchronous |
+| Resolver | 5.1 | `resolver.ts` | flood fill, with the bounding-box limit and the split-tool boundary gate |
+| `BucketVoxelMask`, `BucketWrite`, `BucketWriteMap` | 4 | `bucket_voxel_mask.ts`, `bucket_write_map.ts` | |
+| `VolumeTransaction`, `BucketWriter` | 5.2 | `transaction.ts` | minus the before-images, see §12.2 |
+| Mag propagation | 5.4 | `mag_propagation.ts` | upsample (step A) and downsample (step B) |
+| Diff types and run encoding | 5.6 | `diff.ts` | `encodeBucketDiff` / `decodeBucketDiff` exist but have no transport behind them |
+| `WorkingDataCube` | 5.5 | `cube.ts` | **test-only** — production goes through `WkDataCubeAdapter` over the real `DataCube` |
+| `BucketJournal` | 5.7 | `journal.ts` | **test-only** — nothing in `viewer/` appends to it |
+| `VolumeEditingSession` | 5 | `session.ts` | **test-only** — the app opens transactions from the sagas instead |
+| Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill` |
+
+The running app reaches the new code at exactly two call sites, both behind `USE_NEW_VOLUME_ARCHITECTURE`: brushing in `volumetracing_saga.tsx` and flood fill in `floodfill_saga.tsx`. Writes land in real buckets; nothing else about the existing pipeline changes.
+
+### 12.2 Skipped, and why
+
+- **Before-images** (`beforeAccumulating`, `beforeCommitted` — §5.2, §5.6). Both exist to make `abort()` and single-step undo cheap, and neither pays off until undo runs on the journal. Carrying them now would only enlarge the diff against `master` for no behaviour change, so `abort()` currently just drops the write set and leaves the live-feedback writes in the buckets.
+- **Journal-backed undo/redo** (§5.7). The app still uses the existing bucket-snapshot undo stack. The journal is implemented and tested against its own unit tests, but is not on the live path, so the fold-from-base semantics are unexercised in the app.
+- **Save queue and backend sync** (§5.8), and the backend changes in §7. Volume edits still travel as today's update actions.
+- **Visibility-driven materialization** (§1.1, "materialization on write becomes optional"). `WkDataCubeAdapter` still calls `getOrCreateBucket` for every written address, so a coarse-mag stroke instantiates every finer bucket it implies. This is the largest single deviation from the design, and it is exactly the cost §5.4 argues has to be avoided.
+- **Tools other than brush and flood fill**: quick select, interpolation, proofreading and the trace/lasso tools all still run on the old path.
+- **Rasterizing off the main thread** (§10).
+
+### 12.3 Plan
+
+Ordered so that each step is independently reviewable, and so that the frontend can get as far as possible before the backend contract has to be agreed.
+
+1. **Land the MVP with the flag off.** `USE_NEW_VOLUME_ARCHITECTURE = false` before merge. The new code stays in tree and under test, off the production path.
+2. **Journal on the live path.** Append committed `TransactionDiff`s to a `BucketJournal`, and fold it onto arriving bucket data (§5.5). No user-visible change, but it is the prerequisite for steps 3 and 4 — and the point at which the journal's known gaps (folding after an acknowledged entry; `unsavedBucketDiffs()` merging runs that carry different values) have to be closed.
+3. **Undo/redo on the journal** (§5.7), replacing the snapshot stack. Reintroduce `beforeCommitted` here; this is the step where it earns its keep.
+4. **Save queue** (§5.8) — emit the two new update actions of §7.1 instead of today's. This is the hard boundary: it needs the backend side designed and built in parallel.
+5. **Visibility-driven materialization** (§1.1), which is what makes coarse-mag editing viable within the memory budget of §5.4.
+6. **Remaining tools onto the intent pipeline**, starting with quick select (it already produces something mask-shaped), then interpolation and the trace tools.
+7. **Flag on by default, then delete the old path.**
+
+Steps 1–3 are frontend-only. Everything from step 4 on is a joint change.

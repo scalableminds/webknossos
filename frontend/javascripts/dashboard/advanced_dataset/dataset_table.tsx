@@ -92,6 +92,9 @@ type Props = {
   // (see dataset_folder_view.tsx). Passed through so pagination changes can
   // scroll that container back to the top instead of the (non-scrolling) window.
   scrollContainerRef?: React.RefObject<HTMLElement | null>;
+  // Shows a loading spinner inside the table body (e.g. while waiting for search
+  // results), without hiding the header bar above it.
+  isLoading?: boolean;
 };
 
 type State = {
@@ -533,18 +536,28 @@ class DatasetTable extends PureComponent<Props, State> {
 
   renderEmptyText(): React.ReactNode {
     const maybeWarning =
-      this.props.datasetFilteringMode !== "showAllDatasets" ? (
-        <p>
-          Note that datasets are currently filtered according to whether they are available on the
-          datastore.
-          <br />
-          You can change the filtering via the menu next to the search input.
-        </p>
+      this.props.datasetFilteringMode === "onlyShowUnreported" ? (
+        <p>Note that datasets are currently filtered by status.</p>
       ) : null;
+    if (this.props.searchQuery.length > 0) {
+      return this.props.searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? (
+        <>
+          <p>No datasets match your search.</p>
+          {maybeWarning}
+        </>
+      ) : (
+        <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
+      );
+    }
+    if (!("queries" in this.props.context)) {
+      return <p>No Datasets found.</p>;
+    }
+    const emptyListHintText = this.props.isUserAdminOrDatasetManager
+      ? "There are no datasets in this folder. Import one or move a dataset from another folder."
+      : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
     return (
       <>
-        {"queries" in this.props.context ? <p>This folder is empty.</p> : <p>No Datasets found.</p>}
-
+        <p>{emptyListHintText}</p>
         {maybeWarning}
       </>
     );
@@ -638,6 +651,9 @@ class DatasetTable extends PureComponent<Props, State> {
 
     const columns: ColumnType<RowRenderer>[] = [
       {
+        // Explicit width so this column doesn't grow beyond the thumbnail's own size
+        // when the other columns don't have enough content to fill the table's width.
+        width: THUMBNAIL_SIZE + 16, // 16 = the cell's remaining (left-side only) padding
         key: "thumbnail",
         className: "dashboard-list-table-borderless-cell dashboard-list-table-thumbnail-cell",
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderThumbnailColumn(),
@@ -679,8 +695,10 @@ class DatasetTable extends PureComponent<Props, State> {
         <ListFilterHeader
           summary={
             <>
-              {filteredDataSource.length} {pluralize("Dataset", filteredDataSource.length)},{" "}
-              {activeSubfolders.length} {pluralize("Subfolder", activeSubfolders.length)}
+              {filteredDataSource.length} {pluralize("Dataset", filteredDataSource.length)}
+              {activeSubfolders.length > 0
+                ? `, ${activeSubfolders.length} ${pluralize("Subfolder", activeSubfolders.length)}`
+                : null}
             </>
           }
         >
@@ -741,6 +759,7 @@ class DatasetTable extends PureComponent<Props, State> {
           components={components}
           showHeader={false}
           bordered
+          loading={this.props.isLoading}
           className="dashboard-list-table"
           rowClassName={(renderer: RowRenderer) =>
             selectedRowKeys.includes(renderer.getRowKey()) ? "ant-table-row-selected" : ""

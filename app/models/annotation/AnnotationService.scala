@@ -888,7 +888,6 @@ class AnnotationService @Inject() (
         "stats" -> annotationInfo.annotationLayerStatistics(idx)
       )
     )
-    val tracingType: String = getAnnotationTypeForTag(annotationInfo)
     Json.obj(
       "modified" -> annotationInfo.modified,
       "state" -> annotationInfo.state,
@@ -905,7 +904,7 @@ class AnnotationService @Inject() (
       "visibility" -> annotationInfo.visibility,
       "tracingTime" -> annotationInfo.tracingTime,
       "teams" -> teamsJson,
-      "tags" -> (annotationInfo.tags ++ Set(annotationInfo.dataSetName, tracingType)),
+      "tags" -> (annotationInfo.tags ++ Set(annotationInfo.dataSetName)),
       "owner" -> Json.obj(
         "id" -> annotationInfo.ownerId.toString,
         "firstName" -> annotationInfo.ownerFirstName,
@@ -913,18 +912,6 @@ class AnnotationService @Inject() (
       ),
       "collaborationMode" -> annotationInfo.collaborationMode
     )
-  }
-
-  private def getAnnotationTypeForTag(annotationInfo: AnnotationCompactInfo): String = {
-    val skeletonPresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Skeleton.toString)
-    val volumePresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Volume.toString)
-    if (skeletonPresent && volumePresent) {
-      "hybrid"
-    } else if (skeletonPresent) {
-      "skeleton"
-    } else {
-      "volume"
-    }
   }
 
   def updateStatistics(annotationId: ObjectId, statistics: JsObject): Unit =

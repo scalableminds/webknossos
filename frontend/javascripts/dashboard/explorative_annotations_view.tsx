@@ -22,7 +22,7 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Checkbox, Radio, Space, Spin, Table, Tag } from "antd";
+import { Radio, Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
@@ -101,8 +101,8 @@ type State = {
   searchQuery: string;
   tags: Array<string>;
   isLoading: boolean;
-  selectedOwnerIds: string[];
-  selectedTeamIds: string[];
+  selectedOwnerId: string | null;
+  selectedTeamId: string | null;
   sortOption: AnnotationSortOption;
 };
 type PartialState = Pick<State, "searchQuery" | "shouldShowArchivedAnnotations">;
@@ -134,8 +134,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     searchQuery: "",
     tags: [],
     isLoading: false,
-    selectedOwnerIds: [],
-    selectedTeamIds: [],
+    selectedOwnerId: null,
+    selectedTeamId: null,
     sortOption: "modifiedDesc",
   };
 
@@ -556,8 +556,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   renderNameWithDescription(annotation: APIAnnotationInfo) {
     return (
       <span
+        className="dashboard-annotation-name-edit"
         style={{
-          color: annotation.name ? "inherit" : "var(--ant-color-text-secondary)",
           marginInlineEnd: 8,
         }}
       >
@@ -567,6 +567,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           onChange={(newName) => this.renameAnnotation(annotation, newName)}
           label="Annotation Name"
           description={annotation.description}
+          width={400}
         />
       </span>
     );
@@ -658,6 +659,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
               )}
               asInfoBlock={false}
               withMargin={false}
+              orientation="horizontal"
             />,
             <span key="modified">
               modified <FormattedDate timestamp={annotation.modified} />
@@ -670,20 +672,12 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
   renderTable() {
     const searchFilteredAnnotations = this._getSearchFilteredAnnotations();
-    const { selectedOwnerIds, selectedTeamIds, sortOption } = this.state;
+    const { selectedOwnerId, selectedTeamId, sortOption } = this.state;
 
     const ownerFilters = uniqBy(
-      // Prepend user's name to the front so that this is listed at the top
-      [
-        { formattedName: formatUserName(this.props.activeUser), id: this.props.activeUser.id },
-      ].concat(
-        compact(
-          searchFilteredAnnotations.map((annotation) =>
-            annotation.owner != null
-              ? { formattedName: formatUserName(annotation.owner), id: annotation.owner.id }
-              : null,
-          ),
-        ),
+      // Prepend the active user's own entry to the front so that it's listed first.
+      ([this.props.activeUser] as APIUserCompact[]).concat(
+        compact(searchFilteredAnnotations.map((annotation) => annotation.owner)),
       ),
       "id",
     );
@@ -692,12 +686,12 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       "id",
     );
 
-    const hasOwnerOrTeamFilter = selectedOwnerIds.length > 0 || selectedTeamIds.length > 0;
+    const hasOwnerOrTeamFilter = selectedOwnerId != null || selectedTeamId != null;
     const ownerTeamFilteredAnnotations = hasOwnerOrTeamFilter
       ? searchFilteredAnnotations.filter(
           (annotation) =>
-            (annotation.owner != null && selectedOwnerIds.includes(annotation.owner.id)) ||
-            annotation.teams.some((team) => selectedTeamIds.includes(team.id)),
+            (selectedOwnerId != null && annotation.owner?.id === selectedOwnerId) ||
+            (selectedTeamId != null && annotation.teams.some((team) => team.id === selectedTeamId)),
         )
       : searchFilteredAnnotations;
 
@@ -738,41 +732,41 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         <ListFilterHeader
           summary={`${filteredAndSortedAnnotations.length} ${pluralize("Annotation", filteredAndSortedAnnotations.length)}`}
         >
-          <FilterChip label="Owner" active={selectedOwnerIds.length > 0}>
+          <FilterChip label="Owner" active={selectedOwnerId != null}>
             <Space orientation="vertical" size={4}>
-              {ownerFilters.map(({ formattedName, id }) => (
-                <Checkbox
-                  key={id}
-                  checked={selectedOwnerIds.includes(id)}
-                  onChange={(event) =>
-                    this.setState({
-                      selectedOwnerIds: event.target.checked
-                        ? [...selectedOwnerIds, id]
-                        : selectedOwnerIds.filter((ownerId) => ownerId !== id),
-                    })
-                  }
+              <Radio
+                checked={selectedOwnerId == null}
+                onChange={() => this.setState({ selectedOwnerId: null })}
+              >
+                All
+              </Radio>
+              {ownerFilters.map((owner) => (
+                <Radio
+                  key={owner.id}
+                  checked={selectedOwnerId === owner.id}
+                  onChange={() => this.setState({ selectedOwnerId: owner.id })}
                 >
-                  {formattedName}
-                </Checkbox>
+                  {this.renderOwner(owner)}
+                </Radio>
               ))}
             </Space>
           </FilterChip>
-          <FilterChip label="Teams" active={selectedTeamIds.length > 0}>
+          <FilterChip label="Teams" active={selectedTeamId != null}>
             <Space orientation="vertical" size={4}>
+              <Radio
+                checked={selectedTeamId == null}
+                onChange={() => this.setState({ selectedTeamId: null })}
+              >
+                All
+              </Radio>
               {teamFilters.map((team: APITeam) => (
-                <Checkbox
+                <Radio
                   key={team.id}
-                  checked={selectedTeamIds.includes(team.id)}
-                  onChange={(event) =>
-                    this.setState({
-                      selectedTeamIds: event.target.checked
-                        ? [...selectedTeamIds, team.id]
-                        : selectedTeamIds.filter((teamId) => teamId !== team.id),
-                    })
-                  }
+                  checked={selectedTeamId === team.id}
+                  onChange={() => this.setState({ selectedTeamId: team.id })}
                 >
                   {team.name}
-                </Checkbox>
+                </Radio>
               ))}
             </Space>
           </FilterChip>

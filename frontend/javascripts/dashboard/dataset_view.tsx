@@ -21,7 +21,6 @@ import {
   Row,
   Select,
   Space,
-  Spin,
   Tooltip,
   Typography,
 } from "antd";
@@ -170,7 +169,11 @@ function DatasetView({
     setSearchQuery(value);
   }
 
-  function renderTable(filteredDatasets: APIDatasetCompact[], subfolders: FolderItem[]) {
+  function renderTable(
+    filteredDatasets: APIDatasetCompact[],
+    subfolders: FolderItem[],
+    isLoading: boolean,
+  ) {
     return (
       <DatasetTable
         context={context}
@@ -187,6 +190,7 @@ function DatasetView({
         updateDataset={context.updateCachedDataset}
         addTagToSearch={addTagToSearch}
         scrollContainerRef={scrollContainerRef}
+        isLoading={isLoading}
       />
     );
   }
@@ -243,9 +247,11 @@ function DatasetView({
     datasets.length === 0 &&
     datasetFilteringMode !== "onlyShowUnreported" &&
     subfolders.length === 0;
-  const content = isEmpty
-    ? renderPlaceholder(context, user, searchQuery)
-    : renderTable(filteredDatasets, subfolders);
+  const isLoading = datasets.length === 0 && context.isLoading;
+  // The table (with its header) is always shown, even with zero results (whether
+  // that's an empty folder, a filtered-out folder, or a search without matches) -
+  // the appropriate message is shown inside the table body instead (see
+  // DatasetTable.renderEmptyText), and the loading spinner inside the table itself.
 
   return (
     <div>
@@ -269,9 +275,7 @@ function DatasetView({
       />
       {!searchQuery && <FolderBreadcrumb context={context} />}
       <NewJobsAlert jobs={jobs} />
-      <Spin size="large" spinning={datasets.length === 0 && context.isLoading}>
-        {content}
-      </Spin>
+      {renderTable(filteredDatasets, subfolders, isLoading)}
     </div>
   );
 }
@@ -351,7 +355,12 @@ function GlobalSearchHeader({
     // when the back-end search is used. The frontend search doesn't have
     // this restriction which is why isEmpty is checked, too).
     return isEmpty ? (
-      <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
+      <Typography.Title level={3}>
+        <Space>
+          <SearchOutlined />
+          <span>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</span>
+        </Space>
+      </Typography.Title>
     ) : null;
   }
 
@@ -361,7 +370,7 @@ function GlobalSearchHeader({
         <Typography.Title level={3}>
           <Space>
             <SearchOutlined />
-            <span>Search Results for &quot;{searchQuery}&quot;</span>
+            <span>Search Results for “{searchQuery}”</span>
           </Space>
         </Typography.Title>
         {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
@@ -475,40 +484,6 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
       showIcon
       icon={<HourglassOutlined />}
     />
-  );
-}
-
-function renderPlaceholder(
-  context: DatasetCollectionContextValue,
-  user: APIUser,
-  searchQuery: string | null,
-) {
-  if (context.isLoading) {
-    // A spinner is rendered by the parent above this component which is
-    // why a height is necessary to avoid the spinner sticking to the top
-    // (and being cropped).
-    return <div style={{ height: 200 }} />;
-  }
-
-  if (searchQuery) {
-    return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH
-      ? "No datasets match your search."
-      : null;
-  }
-
-  const emptyListHintText = isUserAdminOrDatasetManager(user)
-    ? "There are no datasets in this folder. Import one or move a dataset from another folder."
-    : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
-
-  return (
-    <div
-      style={{
-        marginTop: 24,
-        textAlign: "center",
-      }}
-    >
-      {emptyListHintText}
-    </div>
   );
 }
 

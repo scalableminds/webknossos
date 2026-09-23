@@ -30,46 +30,37 @@ const TextWithDescription: React.FC<Props> = (props) => {
     </div>
   );
   return (
-    <span
-      className={hasDescription ? "flex-container" : ""}
-      style={{
-        alignItems: "center",
-      }}
-    >
-      <span
-        className={hasDescription ? "flex-item" : ""}
-        style={{
-          flexGrow: 0,
-        }}
-      >
-        {hasDescription ? (
-          <Tooltip title="Show description" placement="bottom">
-            <Popover title="Description" trigger="click" content={markdownDescription}>
-              <Button size="small" color="default" variant="text" icon={<AlignCenterOutlined />} />
-            </Popover>
-          </Tooltip>
-        ) : null}
-      </span>
-      <span className={hasDescription ? "flex-item" : undefined}>
-        {isEditable ? (
-          <EditableTextLabel {...(editableProps as EditableTextLabelProp)} />
-        ) : (
-          <span
-            style={{
-              margin: "0 10px",
-              display: "inline-block",
-            }}
-          >
-            {(props as NonEditableProps).markdown ? (
-              <span>
-                <Markdown>{(props as NonEditableProps).value}</Markdown>
-              </span>
-            ) : (
-              (props as NonEditableProps).value
-            )}
-          </span>
-        )}
-      </span>
+    <span style={{ wordBreak: "break-word" }}>
+      {isEditable ? (
+        <EditableTextLabel {...(editableProps as EditableTextLabelProp)} />
+      ) : (
+        <span
+          style={{
+            display: "inline-block",
+          }}
+        >
+          {(props as NonEditableProps).markdown ? (
+            <span>
+              <Markdown>{(props as NonEditableProps).value}</Markdown>
+            </span>
+          ) : (
+            (props as NonEditableProps).value
+          )}
+        </span>
+      )}
+      {hasDescription ? (
+        <Tooltip title="Show description" placement="bottom">
+          <Popover title="Description" trigger="click" content={markdownDescription}>
+            <Button
+              size="small"
+              color="default"
+              variant="text"
+              icon={<AlignCenterOutlined />}
+              style={{ marginInlineStart: 4 }}
+            />
+          </Popover>
+        </Tooltip>
+      ) : null}
     </span>
   );
 };

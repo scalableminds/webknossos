@@ -253,7 +253,7 @@ function DatasetActionView(props: Props) {
         View
       </LinkWithDisabled>
       {dataset.isEditable ? datasetSettingsLink : null}
-      {reloadLink}
+      {/*reloadLink*/}
     </>
   );
   return (

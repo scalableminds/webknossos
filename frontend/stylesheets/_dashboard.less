@@ -190,19 +190,18 @@ pre.dataset-import-folder-structure-hint {
   }
 }
 
-/** Fixed-size square thumbnail for datasets in the dashboard table. */
+/** Thumbnail for datasets in the dashboard table. */
 .dataset-table-thumbnail {
-  width: 80px;
-  height: 80px;
   border-radius: 5px;
 }
 
 /** Styling for the dataset name within the dashboard table. */
 .dataset-table-name {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 500;
   min-height: 30px;
   word-break: break-word;
+  margin-inline-end: 15px;
 }
 
 /** Container for the dataset name to handle vertical alignment. */
@@ -242,6 +241,19 @@ pre.dataset-import-folder-structure-hint {
   .ant-table-container {
     border-top: none !important;
     border-radius: 0 0 var(--ant-border-radius) var(--ant-border-radius) !important;
+    // antd's own bordered-table color doesn't exactly match --ant-color-border (the
+    // one .dashboard-list-filter-bar uses above it), so the outer box's left border
+    // would otherwise subtly change color between the header bar and the table.
+    border-color: var(--ant-color-border) !important;
+  }
+
+  // Recolor just the table's outer right/bottom edges to match, without touching
+  // the color of the divider lines between rows/columns further inside the table.
+  .ant-table-tbody > tr > .ant-table-cell:last-child {
+    border-right-color: var(--ant-color-border) !important;
+  }
+  .ant-table-tbody > tr:last-child > .ant-table-cell {
+    border-bottom-color: var(--ant-color-border) !important;
   }
 }
 

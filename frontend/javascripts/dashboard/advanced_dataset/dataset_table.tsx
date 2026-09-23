@@ -10,7 +10,7 @@ import fileLightIcon from "@images/file-light.png";
 import folderThumbnailIcon from "@images/folder-thumbnail.svg";
 import inactiveDatasetThumbnail from "@images/inactive-dataset-thumbnail.svg";
 import type { DatasetUpdater } from "admin/rest_api";
-import { App, Dropdown, Flex, type MenuProps, Radio, Space, Table, Tag, Tooltip } from "antd";
+import { App, Dropdown, type MenuProps, Radio, Space, Table, Tag, Tooltip } from "antd";
 import type { ColumnType } from "antd/es/table/interface";
 import classNames from "classnames";
 import FastTooltip from "components/fast_tooltip";
@@ -72,7 +72,7 @@ const DATASET_SORT_OPTIONS: Array<{ key: DatasetSortOption; label: string }> = [
   { key: "storage", label: "Used Storage" },
 ];
 
-const THUMBNAIL_SIZE = 100;
+const THUMBNAIL_SIZE = 80;
 
 type Props = {
   datasets: Array<APIDatasetCompact>;
@@ -378,16 +378,14 @@ class DatasetRenderer {
   renderNameColumn(): React.ReactNode {
     return (
       <div className="dataset-table-name-container">
-        <Flex align="center" wrap gap={8}>
-          <Link
-            to={getViewDatasetURL(this.data)}
-            title="View Dataset"
-            className="incognito-link dataset-table-name"
-          >
-            {this.data.name}
-          </Link>
-          {this.renderTags()}
-        </Flex>
+        <Link
+          to={getViewDatasetURL(this.data)}
+          title="View Dataset"
+          className="incognito-link dataset-table-name"
+        >
+          {this.data.name}
+        </Link>
+        {this.renderTags()}
         {this.renderMetaLine()}
         {this.datasetTable.props.context.globalSearchQuery != null ? (
           <BreadcrumbsTag parts={this.datasetTable.props.context.getBreadcrumbs(this.data)} />

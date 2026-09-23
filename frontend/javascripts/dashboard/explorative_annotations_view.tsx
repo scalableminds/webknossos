@@ -22,7 +22,7 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Checkbox, Flex, Radio, Space, Spin, Table, Tag } from "antd";
+import { Checkbox, Radio, Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
@@ -555,7 +555,12 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
   renderNameWithDescription(annotation: APIAnnotationInfo) {
     return (
-      <div style={{ color: annotation.name ? "inherit" : "var(--ant-color-text-secondary)" }}>
+      <span
+        style={{
+          color: annotation.name ? "inherit" : "var(--ant-color-text-secondary)",
+          marginInlineEnd: 8,
+        }}
+      >
         <TextWithDescription
           isEditable={this.isAnnotationEditable(annotation)}
           value={annotation.name ? annotation.name : "Unnamed Annotation"}
@@ -563,7 +568,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           label="Annotation Name"
           description={annotation.description}
         />
-      </div>
+      </span>
     );
   }
 
@@ -596,40 +601,42 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
     return (
       <div>
-        <Flex align="center" wrap gap={8}>
-          {this.renderNameWithDescription(annotation)}
-          {!this.isAnnotationEditable(annotation) ? (
-            <LinkButton disabled icon={<Icon component={ReadOnlyIcon} />}>
-              read-only
-            </LinkButton>
-          ) : null}
-          {annotation.isLockedByOwner ? (
-            <LinkButton disabled icon={<LockOutlined />}>
-              locked
-            </LinkButton>
-          ) : null}
-          <Space wrap size={4}>
-            {annotation.tags.map((tag) => (
-              <CategorizationLabel
-                key={tag}
-                kind="annotations"
-                onClick={partial(this.addTagToSearch, tag)}
-                onClose={partial(this.editTagFromAnnotation, annotation, false, tag)}
-                tag={tag}
-                closable={
-                  !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
-                  !this.state.shouldShowArchivedAnnotations
-                }
-              />
-            ))}
-            {this.state.shouldShowArchivedAnnotations ? null : (
-              <EditableTextIcon
-                icon={<PlusOutlined />}
-                onChange={partial(this.editTagFromAnnotation, annotation, true)}
-              />
-            )}
-          </Space>
-        </Flex>
+        {this.renderNameWithDescription(annotation)}
+        {!this.isAnnotationEditable(annotation) ? (
+          <LinkButton
+            disabled
+            style={{ marginInlineEnd: 8 }}
+            icon={<Icon component={ReadOnlyIcon} />}
+          >
+            read-only
+          </LinkButton>
+        ) : null}
+        {annotation.isLockedByOwner ? (
+          <LinkButton disabled style={{ marginInlineEnd: 8 }} icon={<LockOutlined />}>
+            locked
+          </LinkButton>
+        ) : null}
+        <Space wrap size={4}>
+          {annotation.tags.map((tag) => (
+            <CategorizationLabel
+              key={tag}
+              kind="annotations"
+              onClick={partial(this.addTagToSearch, tag)}
+              onClose={partial(this.editTagFromAnnotation, annotation, false, tag)}
+              tag={tag}
+              closable={
+                !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
+                !this.state.shouldShowArchivedAnnotations
+              }
+            />
+          ))}
+          {this.state.shouldShowArchivedAnnotations ? null : (
+            <EditableTextIcon
+              icon={<PlusOutlined />}
+              onChange={partial(this.editTagFromAnnotation, annotation, true)}
+            />
+          )}
+        </Space>
         <RowMetaLine
           items={[
             <FormattedId key="id" id={annotation.id} />,

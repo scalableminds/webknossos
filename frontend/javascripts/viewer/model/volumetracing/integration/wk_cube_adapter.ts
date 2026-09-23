@@ -8,7 +8,7 @@
  * Deliberately dirty:
  *   - Buckets are mutated in place. Nothing is pushed to the save queue, no
  *     update actions are emitted, and undo is not wired up.
- *   - The prototype's BucketAddress (types.ts) is structurally identical to
+ *   - The core's BucketAddress (core/types.ts) is structurally identical to
  *     the real one (xyz, magIndex, additionalCoordinates) on purpose, so
  *     addresses cross this boundary as-is — no conversion, no separate
  *     adapter-level additionalCoordinates override to keep in sync.
@@ -17,9 +17,15 @@
 import type { BucketDataArray } from "types/api_types";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
-import { applyBucketWriteToData, type BucketWrite } from "../bucket_write_map";
-import type { LoadingVoxelCube, TransactionCube } from "../cube";
-import { BUCKET_VOXEL_COUNT, type BucketAddress, type Mag, MagList, type Vector3 } from "../types";
+import { applyBucketWriteToData, type BucketWrite } from "../core/bucket_write_map";
+import type { LoadingVoxelCube, TransactionCube } from "../core/cube";
+import {
+  BUCKET_VOXEL_COUNT,
+  type BucketAddress,
+  type Mag,
+  MagList,
+  type Vector3,
+} from "../core/types";
 
 /**
  * Apply `write` to a real bucket's data array, whatever element class it
@@ -139,7 +145,7 @@ export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVo
   }
 }
 
-/** Build the prototype's MagList from a layer's MagInfo-derived dense mags. */
+/** Build the core's MagList from a layer's MagInfo-derived dense mags. */
 export function magListFromDenseMags(denseMags: Vector3[]): MagList {
   return new MagList(denseMags.map((mag) => [mag[0], mag[1], mag[2]] as Mag));
 }

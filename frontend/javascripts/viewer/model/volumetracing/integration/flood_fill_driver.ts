@@ -14,9 +14,9 @@
 import { V3 } from "libs/mjs";
 import type { Mesh } from "three";
 import { checkLineIntersection } from "viewer/model/bucket_data_handling/data_cube";
-import { resolveFloodFill } from "../resolver";
-import { VolumeTransaction } from "../transaction";
-import type { BoundingBox, EditContext, Vector3 } from "../types";
+import { resolveFloodFill } from "../core/resolver";
+import { VolumeTransaction } from "../core/transaction";
+import type { BoundingBox, EditContext, Vector3 } from "../core/types";
 import type { DriverOptions, DriverResult } from "./driver_types";
 import { magListFromDenseMags, WkLoadingCubeAdapter } from "./wk_cube_adapter";
 

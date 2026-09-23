@@ -2,7 +2,7 @@
  * Core types for the volume-annotation architecture spike.
  *
  * This module is deliberately self-contained: almost nothing here is imported from the
- * production `viewer/` code, so the prototype cannot drift with it. A few small
+ * the rest of `viewer/`, so the core cannot drift with it. A few small
  * things (Vector3, BUCKET_WIDTH) are therefore redeclared rather than shared.
  * AdditionalCoordinate is the exception: it's reused as-is (see BucketAddress
  * below), rather than redeclared, since a structural mismatch there would

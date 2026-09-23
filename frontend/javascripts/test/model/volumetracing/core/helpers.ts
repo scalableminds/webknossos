@@ -1,16 +1,18 @@
 import {
   type BucketAddress,
-  BucketJournal,
   bucketAddressOfVoxel,
   type EditContext,
-  FakeBackend,
   type Mag,
   MagList,
   type SegmentId,
   type Vector3,
+} from "viewer/model/volumetracing/core";
+import {
+  BucketJournal,
+  FakeBackend,
   VolumeEditingSession,
   WorkingDataCube,
-} from "prototypes/new_volume_architecture";
+} from "viewer/model/volumetracing/not_yet_integrated";
 
 /**
  * An intentionally anisotropic pyramid, so the tests exercise per-axis factors

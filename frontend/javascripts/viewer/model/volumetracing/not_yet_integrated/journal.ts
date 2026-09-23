@@ -4,8 +4,8 @@ import {
   type TransactionDiff,
   type TransactionId,
   type VoxelRun,
-} from "./diff";
-import { BUCKET_VOXEL_COUNT, type BucketAddress, type BucketKey, bucketKey } from "./types";
+} from "../core/diff";
+import { BUCKET_VOXEL_COUNT, type BucketAddress, type BucketKey, bucketKey } from "../core/types";
 
 export interface BucketLogEntry {
   sequence: number;

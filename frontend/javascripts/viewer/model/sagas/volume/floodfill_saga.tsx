@@ -6,8 +6,6 @@ import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
 import sortBy from "lodash-es/sortBy";
-import { USE_NEW_VOLUME_ARCHITECTURE } from "prototypes/new_volume_architecture/integration/feature_flag";
-import { runFloodFill } from "prototypes/new_volume_architecture/integration/flood_fill_driver";
 import { call, put, takeEvery } from "typed-redux-saga";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { FillMode, LabeledVoxelsMap, OrthoView, Vector2, Vector3 } from "viewer/constants";
@@ -33,6 +31,8 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import { requestBucketModificationInVolumeTracing } from "viewer/model/sagas/saga_helpers";
+import { USE_NEW_VOLUME_ARCHITECTURE } from "viewer/model/volumetracing/integration/feature_flag";
+import { runFloodFill } from "viewer/model/volumetracing/integration/flood_fill_driver";
 import { Model, Store } from "viewer/singletons";
 import {
   getSomeTracing,

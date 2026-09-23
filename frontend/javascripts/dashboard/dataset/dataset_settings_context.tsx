@@ -1,6 +1,6 @@
 import type { FormInstance } from "antd";
 import { createContext, useContext } from "react";
-import type { APIDataSource, APIDataset } from "types/api_types";
+import type { APIDataSource, APIDataset, APIMaybeUnimportedDataset } from "types/api_types";
 import type { DatasetConfiguration } from "viewer/store";
 import type { DatasetRotationAndMirroringSettings } from "./dataset_rotation_form_item";
 import type { TransformationsMode } from "./dataset_settings_data_tab";
@@ -19,7 +19,7 @@ export type DatasetSettingsFormData = {
 export type DatasetSettingsContextValue = {
   form: FormInstance<DatasetSettingsFormData>;
   isLoading: boolean;
-  dataset: APIDataset | null | undefined;
+  dataset: APIMaybeUnimportedDataset | null | undefined;
   datasetId: string;
   datasetDefaultConfiguration: DatasetConfiguration | null | undefined;
   isEditingMode: boolean;

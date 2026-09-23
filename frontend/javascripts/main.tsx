@@ -32,7 +32,7 @@ import { checkAnyOrganizationExists, getOrganization } from "admin/api/organizat
 import { CheckCertificateModal } from "components/check_certificate_modal";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
-import { RouterProvider } from "react-router-dom";
+import { RouterProvider } from "react-router/dom";
 import router from "router/router";
 import { getThemeFromUser } from "theme";
 import GlobalThemeProvider from "theme_provider";

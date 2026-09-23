@@ -14,6 +14,7 @@ import {
 import {
   getActiveDatasetsOfMyOrganization,
   getDataset,
+  getImportedDataset,
   getDatasetAccessList,
   getDatasets,
   getEditableTeams,
@@ -26,9 +27,9 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 async function getFirstDataset(): Promise<APIDataset> {
   const datasets = await getActiveDatasetsOfMyOrganization();
-  const dataset = sortBy(datasets, (d) => d.name)[0];
+  const compactDataset = sortBy(datasets, (d) => d.name)[0];
 
-  return dataset;
+  return getImportedDataset(compactDataset.id);
 }
 
 describe("Dataset API (E2E)", () => {

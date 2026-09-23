@@ -72,11 +72,11 @@ function showConfirmWarningModal(
   modal.confirm({
     title,
     content,
-    okText: "Ok",
-    cancelText: "No",
+    okText: "Delete",
+    okType: "danger",
+    // Deliberate: the only caller is a bulk tree deletion, so focus the safe choice.
     autoFocusButton: "cancel",
     icon: <WarningOutlined />,
-    onCancel: () => {},
     onOk: onConfirm,
   });
 }

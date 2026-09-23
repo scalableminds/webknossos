@@ -37,7 +37,7 @@ import AbstractTreeTab from "viewer/view/right_border_tabs/abstract_tree_tab";
 import BoundingBoxTab from "viewer/view/right_border_tabs/bounding_box_tab/bounding_box_tab";
 import CommentTabView from "viewer/view/right_border_tabs/comment_tab/comment_tab_view";
 import ConnectomeView from "viewer/view/right_border_tabs/connectome_tab/connectome_view";
-import DatasetInfoTabView from "viewer/view/right_border_tabs/dataset_info_tab_view";
+import DatasetInfoTabView from "viewer/view/right_border_tabs/info_tab/dataset_info_tab_view";
 import SegmentsView from "viewer/view/right_border_tabs/segments_tab/segments_tab_view";
 import SkeletonTabView from "viewer/view/right_border_tabs/skeleton_tab/skeleton_tab_view";
 import Statusbar from "viewer/view/statusbar/statusbar";

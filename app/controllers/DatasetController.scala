@@ -290,7 +290,7 @@ class DatasetController @Inject() (
       } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
-  // List all accessible datasets (list of json objects, one per dataset)
+  // List all accessible datasets (list of compact json objects, one per dataset)
   def list(
       // Optional filtering: If true, list only active datasets, if false, list only inactive datasets
       isActive: Option[Boolean],
@@ -309,9 +309,7 @@ class DatasetController @Inject() (
       // Optional filtering: List only datasets with names matching this search query
       searchQuery: Option[String],
       // return only the first n matching datasets.
-      limit: Option[Int],
-      // Change output format to return only a compact list with essential information on the datasets
-      compact: Option[Boolean]
+      limit: Option[Int]
   ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
       _ <- Fox.successful(())
@@ -320,71 +318,21 @@ class DatasetController @Inject() (
           request.identity.map(_._organization)
         else
           organizationId
-      js <-
-        if (compact.getOrElse(false)) {
-          for {
-            datasetInfos <- datasetDAO.findAllCompactWithSearch(
-              isActive,
-              isUnreported,
-              organizationIdOpt,
-              folderId,
-              uploaderId,
-              searchQuery,
-              request.identity.map(_._id),
-              recursive.getOrElse(false),
-              limitOpt = limit,
-              requestingUserOrga = request.identity.map(_._organization)
-            )
-          } yield Json.toJson(datasetInfos)
-        } else {
-          for {
-            datasets <- datasetDAO.findAllWithSearch(
-              isActive,
-              isUnreported,
-              organizationIdOpt,
-              folderId,
-              uploaderId,
-              searchQuery,
-              recursive.getOrElse(false),
-              limit
-            ) ?~> Msg.Dataset.List.failed
-            js <- listGrouped(datasets, request.identity) ?~> Msg.Dataset.List.groupingFailed
-          } yield Json.toJson(js)
-        }
-      _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
-    } yield addRemoteOriginHeaders(Ok(js))
-  }
-
-  private def listGrouped(datasets: List[Dataset], requestingUser: Option[User])(using
-      ctx: DBAccessContext
-  ): Fox[List[JsObject]] =
-    for {
-      requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
-        userService.teamManagerMembershipsFor(user._id)
+      datasetInfos <- datasetDAO.findAllCompactWithSearch(
+        isActive,
+        isUnreported,
+        organizationIdOpt,
+        folderId,
+        uploaderId,
+        searchQuery,
+        request.identity.map(_._id),
+        recursive.getOrElse(false),
+        limitOpt = limit,
+        requestingUserOrga = request.identity.map(_._organization)
       )
-      groupedByOrga = datasets.groupBy(_._organization).toList
-      js <- Fox.serialCombined(groupedByOrga) { (byOrgaTuple: (String, List[Dataset])) =>
-        for {
-          organization <- organizationDAO.findOne(byOrgaTuple._1)(using GlobalAccessContext) ?~> Msg.Organization
-            .notFound(byOrgaTuple._1)
-          groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
-          result <- Fox.serialCombined(groupedByDataStore) { (byDataStoreTuple: (String, List[Dataset])) =>
-            for {
-              dataStore <- dataStoreDAO.findOneByName(byDataStoreTuple._1.trim)(using GlobalAccessContext)
-              resultByDataStore: Seq[JsObject] <- Fox.serialCombined(byDataStoreTuple._2) { d =>
-                datasetService.publicWrites(
-                  d,
-                  requestingUser,
-                  Some(organization),
-                  Some(dataStore),
-                  requestingUserTeamManagerMemberships
-                ) ?~> Msg.Dataset.publicWritesFailed(d._id)
-              }
-            } yield resultByDataStore
-          }
-        } yield result.flatten
-      }
-    } yield js.flatten
+      _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
+    } yield addRemoteOriginHeaders(Ok(Json.toJson(datasetInfos)))
+  }
 
   def accessList(datasetId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {

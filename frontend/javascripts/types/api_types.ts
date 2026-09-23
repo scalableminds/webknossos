@@ -281,9 +281,9 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   segmentationLayerNames: Array<string>;
 };
 
-export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
+export function convertDatasetToCompact(dataset: APIMaybeUnimportedDataset): APIDatasetCompact {
   const [segmentationLayerNames, colorLayerNames] = partition(
-    dataset.dataSource.dataLayers,
+    "dataLayers" in dataset.dataSource ? dataset.dataSource.dataLayers : [],
     (layer) => layer.category === "segmentation",
   ).map((layers) => layers.map((layer) => layer.name).sort());
 
@@ -311,6 +311,7 @@ type APIUnimportedDataset = APIDatasetBase & {
   readonly isActive: false;
 };
 export type APIMaybeUnimportedDataset = APIUnimportedDataset | APIDataset;
+export type APIMaybeUnimportedDataSource = APIMaybeUnimportedDataset["dataSource"];
 export type APITeamMembership = {
   readonly id: string;
   readonly name: string;
@@ -841,6 +842,7 @@ export type APIJob = {
   readonly ownerEmail: string;
   readonly args: ApiJobArgs;
   readonly state: APIJobState;
+  readonly errorDetails: Record<string, unknown> | null | undefined;
   readonly resultLink: string | null | undefined;
   readonly returnValue: string | null | undefined;
   readonly voxelyticsWorkflowHash: string | null | undefined;

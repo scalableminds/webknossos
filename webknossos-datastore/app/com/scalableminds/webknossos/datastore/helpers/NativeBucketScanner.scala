@@ -50,6 +50,15 @@ class NativeBucketScanner {
       segmentId: Long
   ): Long
 
+  // The first voxel carrying segmentId as {x, y, z} relative to the bucket, empty if the bucket does not hold it.
+  @native def findSegmentIdPosition(
+      bucketBytes: Array[Byte],
+      bytesPerElement: Int,
+      isSigned: Boolean,
+      bucketLength: Int,
+      segmentId: Long
+  ): Array[Int]
+
   @native def extendSegmentBoundingBox(
       bucketBytes: Array[Byte],
       bytesPerElement: Int,

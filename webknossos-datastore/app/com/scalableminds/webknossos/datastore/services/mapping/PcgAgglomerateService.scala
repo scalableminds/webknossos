@@ -480,16 +480,23 @@ class PcgAgglomerateService @Inject() (
     )
     for {
       data <- loadBucket(request)
-      voxels <- tryo(PcgClient.decodeUint64Array(data)).toFox
-      index = voxels.indexOf(segmentId)
+      positionInBucket <- tryo(
+        bucketScanner.findSegmentIdPosition(
+          data,
+          ElementClass.bytesPerElement(dataLayer.elementClass),
+          ElementClass.isSigned(dataLayer.elementClass),
+          bucketLength,
+          segmentId
+        )
+      ).toFox
     } yield
-      if (index < 0) None
+      if (positionInBucket.isEmpty) None
       else
         Some(
           Vec3Int(
-            topLeft.x + index % bucketLength,
-            topLeft.y + (index / bucketLength) % bucketLength,
-            topLeft.z + index / (bucketLength * bucketLength)
+            topLeft.x + positionInBucket(0),
+            topLeft.y + positionInBucket(1),
+            topLeft.z + positionInBucket(2)
           )
         )
   }

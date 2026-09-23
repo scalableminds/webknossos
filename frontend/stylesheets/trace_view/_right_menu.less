@@ -33,8 +33,9 @@
 // titleRender's output, not by it — or they depend on the state of an ancestor. The
 // modifier classes they key off are set in segment_row.tsx.
 @segment-row-height: 30px;
-// Matches EXPANDED_ROW_PADDING and the 20px line box of the expanded row in segment_row.tsx.
-@segment-row-checkbox-expanded-offset: 9px;
+// Centers antd's 16px checkbox on the first line of an expanded row: its EXPANDED_ROW_PADDING
+// plus half the difference to its 20px line box (see segment_row.tsx).
+@segment-row-checkbox-expanded-offset: 7px;
 // The tree is shifted left by one indent unit (see the inline marginLeft in
 // segment_tree_view.tsx) so that the root group renders no expand caret. Anything
 // positioned against the visible left edge of the panel has to add it back.

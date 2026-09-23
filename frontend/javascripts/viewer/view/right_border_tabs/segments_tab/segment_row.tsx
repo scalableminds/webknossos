@@ -28,11 +28,17 @@ import { mayEditVisibleSegmentation } from "./segments_view_helper";
 // Every row of the list is this tall, except the expanded one. Kept in sync with
 // @segment-row-height in _right_menu.less, which needs it for antd's own row element.
 export const SEGMENT_ROW_HEIGHT = 30;
-const EXPANDED_ROW_PADDING = 7;
+// Chosen so that an expanded row whose name still fits on one line is exactly
+// SEGMENT_ROW_HEIGHT tall (2 * 5 + 20). Selecting such a segment then moves nothing below
+// it; only a name that actually wraps grows the row, which is the point of expanding it.
 // The line box of the expanded row's name. Deliberately the height of the mesh chip, so
 // that the chip lines up with the first line of the name without an offset, and the other
 // fixed-size parts of the row only need to be centered on a known 20px line.
 const EXPANDED_LINE_HEIGHT = 20;
+// Chosen so that an expanded row whose name still fits on one line is exactly
+// SEGMENT_ROW_HEIGHT tall. Selecting such a segment then moves nothing below it; only a
+// name that actually wraps grows the row, which is the point of expanding it.
+const EXPANDED_ROW_PADDING = (SEGMENT_ROW_HEIGHT - EXPANDED_LINE_HEIGHT) / 2;
 const MESH_CHIP_SIZE = 20;
 const ACTION_BUTTON_SIZE = 24;
 const COLOR_DOT_SIZE = 9;

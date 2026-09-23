@@ -2,25 +2,20 @@
  * SPIKE GLUE — drives a brush stroke through the new architecture against
  * webKnossos' real DataCube.
  *
- * The saga owns the event loop (START_EDITING / ADD_TO_CONTOUR_LIST /
- * FINISH_EDITING); this owns everything between. Nothing here touches the save
- * queue, update actions, or undo — buckets are mutated in place only.
+ * `editVolumeLayerAsync` (viewer/model/sagas/volumetracing_saga.tsx) owns the
+ * event loop (START_EDITING / ADD_TO_CONTOUR_LIST / FINISH_EDITING); this owns
+ * everything between. Nothing here touches the save queue, update actions, or
+ * undo — buckets are mutated in place only.
  */
 
-import type { AdditionalCoordinate } from "viewer/constants";
-import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { rasterize } from "../rasterizer";
 import { VolumeTransaction } from "../transaction";
-import type { EditContext, MagIndex, OverwriteMode, SegmentId, Vector3 } from "../types";
+import type { EditContext, OverwriteMode, Vector3 } from "../types";
+import type { DriverOptions, DriverResult } from "./driver_types";
 import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_cube_adapter";
 
-export interface BrushDriverOptions {
-  cube: DataCube;
-  denseMags: Vector3[];
-  magIndex: MagIndex;
-  segmentId: SegmentId;
+export interface BrushDriverOptions extends DriverOptions {
   overwriteMode: OverwriteMode;
-  additionalCoordinates: AdditionalCoordinate[] | null;
   /**
    * Per-axis brush radius in source-mag voxels. Callers fold both the voxel
    * size and the mag into this, so the rasterizer needs neither.
@@ -35,7 +30,6 @@ export class BrushDriver {
   private readonly transaction: VolumeTransaction;
   private readonly ctx: EditContext;
   private last: Vector3;
-  private segmentCount = 0;
 
   readonly startedAt = performance.now();
 
@@ -78,7 +72,6 @@ export class BrushDriver {
       this.ctx,
       this.transaction,
     );
-    this.segmentCount++;
     // Write through so the stroke is visible while the pointer is still down.
     this.transaction.flushToCube();
     this.adapter.flush();
@@ -88,7 +81,7 @@ export class BrushDriver {
    * Pointer-up: run mag propagation once over the coalesced write set, apply
    * it, and report what happened. The returned diff is *not* saved.
    */
-  finish(): { voxels: number; buckets: number; mags: number[]; durationMs: number } {
+  finish(): DriverResult {
     const diff = this.transaction.commit(0, "brush");
     this.adapter.flush();
 

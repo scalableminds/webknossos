@@ -282,6 +282,15 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
         Math.floor(position[1] / labeledMag[1]),
         Math.floor(position[2] / labeledMag[2]),
       ];
+      // The bounds' max is exclusive (isInBoundingBox tests `< max`), so it has
+      // to round *up*: a source-mag voxel q covers mag1 [q*mag, (q+1)*mag), and
+      // the last voxel overlapping an unaligned max would be cut off by
+      // flooring. E.g. max=43 at mag-factor 2 must stay 22, not become 21.
+      const toExclusiveSourceMagBound = (position: Vector3): Vector3 => [
+        Math.ceil(position[0] / labeledMag[0]),
+        Math.ceil(position[1] / labeledMag[1]),
+        Math.ceil(position[2] / labeledMag[2]),
+      ];
       const stats = yield* call(runFloodFill, {
         cube,
         denseMags: magInfo.getDenseMags(),
@@ -292,7 +301,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
         is3D: fillMode === FillModeEnum._3D,
         bounds: {
           min: toSourceMagVoxel(boundingBoxForFloodFill.min),
-          max: toSourceMagVoxel(boundingBoxForFloodFill.max),
+          max: toExclusiveSourceMagBound(boundingBoxForFloodFill.max),
         },
         splitBoundaryMesh,
       });

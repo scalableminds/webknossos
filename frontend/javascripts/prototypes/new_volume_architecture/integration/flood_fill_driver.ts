@@ -13,20 +13,14 @@
 
 import { V3 } from "libs/mjs";
 import type { Mesh } from "three";
-import type { AdditionalCoordinate } from "viewer/constants";
-import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { checkLineIntersection } from "viewer/model/bucket_data_handling/data_cube";
 import { resolveFloodFill } from "../resolver";
 import { VolumeTransaction } from "../transaction";
-import type { BoundingBox, EditContext, MagIndex, SegmentId, Vector3 } from "../types";
+import type { BoundingBox, EditContext, Vector3 } from "../types";
+import type { DriverOptions, DriverResult } from "./driver_types";
 import { magListFromDenseMags, WkLoadingCubeAdapter } from "./wk_cube_adapter";
 
-export interface FloodFillDriverOptions {
-  cube: DataCube;
-  denseMags: Vector3[];
-  magIndex: MagIndex;
-  segmentId: SegmentId;
-  additionalCoordinates: AdditionalCoordinate[] | null;
+export interface FloodFillDriverOptions extends DriverOptions {
   seed: Vector3;
   is3D: boolean;
   /**
@@ -43,11 +37,7 @@ export interface FloodFillDriverOptions {
   signal?: AbortSignal;
 }
 
-export interface FloodFillResult {
-  voxels: number;
-  buckets: number;
-  mags: number[];
-  durationMs: number;
+export interface FloodFillResult extends DriverResult {
   /**
    * True iff `bounds` cut the fill off before it ran out of matching,
    * connected voxels on its own — i.e. the true region may extend beyond
@@ -65,9 +55,10 @@ export interface FloodFillResult {
 }
 
 /**
- * Resolves the fill — the only step that awaits — then commits it as a single
- * transaction, synchronously. That ordering is what keeps "a transaction never
- * spans an await" true for this tool too (§5.1).
+ * Resolves the fill — the only step that awaits, because it loads the buckets
+ * the traversal walks into. The volume transaction is opened afterwards, and
+ * the whole labeling then runs synchronously. That ordering is what keeps "a
+ * transaction never spans an await" true for this tool too (§5.1).
  */
 export async function runFloodFill(options: FloodFillDriverOptions): Promise<FloodFillResult> {
   const startedAt = performance.now();

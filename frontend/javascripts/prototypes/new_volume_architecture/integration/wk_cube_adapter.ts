@@ -1,8 +1,11 @@
 /**
- * SPIKE GLUE — the only file in this prototype that imports from `viewer/`.
+ * SPIKE GLUE — like the drivers next to it (brush_driver.ts,
+ * flood_fill_driver.ts), this file bridges to `viewer/`; everything outside
+ * `integration/` stays independent of it.
  *
  * Lets the new rasterizer + mag propagation write into webKnossos' real
- * DataCube, so the brush can be tried in the browser. Deliberately dirty:
+ * DataCube, so the new implementation can be tried in the browser.
+ * Deliberately dirty:
  *   - Buckets are mutated in place. Nothing is pushed to the save queue, no
  *     update actions are emitted, and undo is not wired up.
  *   - The prototype's BucketAddress (types.ts) is structurally identical to
@@ -18,8 +21,12 @@ import { applyBucketWriteToData, type BucketWrite } from "../bucket_write_map";
 import type { LoadingVoxelCube, TransactionCube } from "../cube";
 import { BUCKET_VOXEL_COUNT, type BucketAddress, type Mag, MagList, type Vector3 } from "../types";
 
-/** Fill the runs of `write` into `data`, whatever element class it is. */
-function writeRuns(data: BucketDataArray, write: BucketWrite): void {
+/**
+ * Apply `write` to a real bucket's data array, whatever element class it
+ * holds. The 64-bit case is the shared `applyBucketWriteToData`; the rest is
+ * the numeric conversion only real buckets need.
+ */
+function applyWriteToAnyElementClass(data: BucketDataArray, write: BucketWrite): void {
   if (data instanceof BigUint64Array || data instanceof BigInt64Array) {
     applyBucketWriteToData(data, write);
   } else {
@@ -40,10 +47,10 @@ export class WkDataCubeAdapter implements TransactionCube {
   constructor(protected readonly cube: DataCube) {}
 
   /**
-   * Comparing against background does not require a common representation
-   * across element classes, unlike a hypothetical "give me the dense resident
-   * array" method would — which is exactly why `TransactionCube` has no such
-   * method: nothing in this iteration needs one (see cube.ts).
+   * A predicate answering "is this voxel currently background?" for one
+   * bucket, used by the rasterizer's overwrite-empty-only filter. Null when
+   * the bucket has no data to test against, in which case the filter is
+   * skipped.
    */
   backgroundProbe(address: BucketAddress): ((index: number) => boolean) | null {
     const data = this.rawData(address);
@@ -67,7 +74,7 @@ export class WkDataCubeAdapter implements TransactionCube {
       this.touched.add(bucket);
     }
 
-    writeRuns(data, write);
+    applyWriteToAnyElementClass(data, write);
 
     // getOrCreateData's own docstring warns it is unsafe to mutate directly:
     // if the backend's data for this bucket has not arrived yet, that fetch
@@ -76,7 +83,7 @@ export class WkDataCubeAdapter implements TransactionCube {
     // Bucket.applyVoxelMap uses to decide whether to additionally register a
     // pendingOperation that replays the write once real data lands.
     if (bucket.needsBackendData()) {
-      bucket.pendingOperations.push((laterData) => writeRuns(laterData, write));
+      bucket.pendingOperations.push((laterData) => applyWriteToAnyElementClass(laterData, write));
     }
   }
 

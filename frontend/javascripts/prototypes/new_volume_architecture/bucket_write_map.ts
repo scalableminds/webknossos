@@ -31,8 +31,9 @@ export interface BucketWriteMapEntry {
 
 /**
  * Apply `write`'s runs onto a dense bigint bucket array. Real buckets may
- * additionally hold a non-64-bit element class, which is why `writeRuns`
- * still has a second branch of its own on top of this.
+ * additionally hold a non-64-bit element class, which is why
+ * `applyWriteToAnyElementClass` (wk_cube_adapter.ts) still has a second
+ * branch of its own on top of this.
  */
 export function applyBucketWriteToData(
   data: BigUint64Array | BigInt64Array,

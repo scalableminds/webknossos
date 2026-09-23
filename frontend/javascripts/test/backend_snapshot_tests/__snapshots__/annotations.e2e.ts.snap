@@ -2805,7 +2805,6 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
     "stats": {},
     "tags": [
       "2012-06-28_Cortex",
-      "skeleton",
     ],
     "teams": [],
     "tracingTime": "tracingTime",
@@ -2844,7 +2843,6 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
     "stats": {},
     "tags": [
       "2012-06-28_Cortex",
-      "skeleton",
     ],
     "teams": [],
     "tracingTime": "tracingTime",
@@ -2883,7 +2881,6 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
     "stats": {},
     "tags": [
       "2012-06-28_Cortex",
-      "skeleton",
     ],
     "teams": [],
     "tracingTime": "tracingTime",

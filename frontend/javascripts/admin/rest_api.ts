@@ -586,7 +586,8 @@ export function getReadableAnnotations(
 
 export async function getAnnotationCountForDataset(datasetId: string): Promise<number> {
   const { headers } = await Request.receiveJSONWithHeaders(
-    `/api/annotations/readable?limit=1&includeTotalCount=true&datasetId=${datasetId}`,
+    // Only count non-archived annotations to match the default annotation list.
+    `/api/annotations/readable?isFinished=false&limit=1&includeTotalCount=true&datasetId=${datasetId}`,
   );
   const totalCount = headers.get("X-Total-Count");
   return totalCount != null ? Number.parseInt(totalCount, 10) : 0;

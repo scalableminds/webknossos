@@ -311,11 +311,19 @@ export function startAlignSectionsJob(
   newDatasetName: string,
   annotationId: string | undefined,
   customConfiguration: Record<string, JsonValue>,
-  fineAlignmentOnly: boolean,
+  // If set, only fine alignment is performed, assuming that the dataset contains no jumps larger
+  // than this value (in voxels). If undefined, a full alignment is performed.
+  fineAlignmentMaxJumpSize: number | undefined,
 ): Promise<APIJob> {
   return Request.sendJSONReceiveJSON(`/api/jobs/run/alignSections/${datasetId}`, {
     method: "POST",
-    data: { layerName, newDatasetName, annotationId, customConfiguration, fineAlignmentOnly },
+    data: {
+      layerName,
+      newDatasetName,
+      annotationId,
+      customConfiguration,
+      fineAlignmentMaxJumpSize,
+    },
   });
 }
 

@@ -6,7 +6,7 @@ import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import type React from "react";
 import { ColorWKBlue } from "theme";
 import { ShouldUseManualMatchesFormItem } from "../components/should_use_trees_form_item";
-import { useAlignmentJobContext } from "./ai_alignment_job_context";
+import { FINE_ALIGNMENT_MAX_JUMP_SIZE, useAlignmentJobContext } from "./ai_alignment_job_context";
 
 export const AiAlignmentSettings: React.FC = () => {
   const {
@@ -80,7 +80,9 @@ export const AiAlignmentSettings: React.FC = () => {
               <Form.Item name="fineAlignmentOnly" valuePropName="checked">
                 <Checkbox>
                   Perform fine alignment only{" "}
-                  <FastTooltip title="Enable this if the dataset is already roughly aligned and only needs fine-tuning, rather than a full alignment from scratch.">
+                  <FastTooltip
+                    title={`Enable this if the dataset is already roughly aligned and only needs fine-tuning, rather than a full alignment from scratch. Fine alignment assumes that your dataset has no jumps larger than ${FINE_ALIGNMENT_MAX_JUMP_SIZE} voxels.`}
+                  >
                     <InfoCircleOutlined />
                   </FastTooltip>
                 </Checkbox>

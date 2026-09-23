@@ -45,24 +45,12 @@ jobs:
           Download Coverage Artifacts
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
         id: coverage-baseline
-        continue-on-error: true # a missing baseline degrades the coverage report, it must not fail the build
+        continue-on-error: true # the GitHub API intermittently fails to serve the artifact, which must not fail the build
         run: |
-          # The GitHub API intermittently serves stale run lists and artifact lookups ("no valid
-          # artifacts found"), so retry a few times and try several recent successful master runs.
-          for attempt in 1 2 3; do
-            candidates=$(gh run list --workflow "CI Pipeline" --branch master --limit 50 --json conclusion,createdAt,databaseId \
-              --jq '[.[] | select(.conclusion == "success")] | sort_by(.createdAt) | reverse | .[:5] | .[].databaseId')
-            for run_id in $candidates; do
-              if gh run download "$run_id" -n "$ARTIFACT_NAME" -D "$OUTPUT_DIR"; then
-                echo "Downloaded $ARTIFACT_NAME from master run $run_id"
-                echo "baseline=$OUTPUT_DIR/coverage-summary.json" >> "$GITHUB_OUTPUT"
-                exit 0
-              fi
-              echo "Could not download $ARTIFACT_NAME from master run $run_id (attempt $attempt)"
-            done
-            sleep 10
-          done
-          echo "::warning::Could not download $ARTIFACT_NAME from any recent master run, skipping coverage comparison"
+          gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
+          [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
+          gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
+          echo "baseline=$OUTPUT_DIR/coverage-summary.json" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT_NAME: vitest-coverage-master

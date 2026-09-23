@@ -59,7 +59,13 @@ import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helper
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
-type DatasetSortOption = "lastUsed" | "createdDesc" | "createdAsc" | "name" | "storage";
+type DatasetSortOption =
+  | "lastUsed"
+  | "createdDesc"
+  | "createdAsc"
+  | "name"
+  | "storage"
+  | "annotationCount";
 
 const { ThinSpace } = Unicode;
 
@@ -69,6 +75,7 @@ const DATASET_SORT_OPTIONS: Array<{ key: DatasetSortOption; label: string }> = [
   { key: "createdAsc", label: "Oldest" },
   { key: "name", label: "Name" },
   { key: "storage", label: "Used Storage" },
+  { key: "annotationCount", label: "Most Annotations" },
 ];
 
 const THUMBNAIL_SIZE = 80;
@@ -201,6 +208,8 @@ function sortDatasetsByOption(
       return [...datasets].sort(localeCompareBy((dataset) => dataset.name));
     case "storage":
       return sortBy(datasets, (dataset) => dataset.usedStorageBytes || 0).reverse();
+    case "annotationCount":
+      return sortBy(datasets, (dataset) => dataset.annotationCount || 0).reverse();
     default:
       // "lastUsed": rank datasets by recency of use, falling back to creation date.
       return sortBy(datasets, ["lastUsedByUser", "created"]).reverse();
@@ -421,18 +430,19 @@ class DatasetRenderer {
     );
   }
   renderMetaLine(): React.ReactNode {
-    // The dataset list data model doesn't include an annotation count yet, so this is
-    // hardcoded for now until the backend/API provides the real number.
+    const { annotationCount } = this.data;
     return (
       <RowMetaLine
         items={[
           this.renderStorageColumn(),
-          <Link
-            key="annotations"
-            to={`/dashboard/annotations?dataset=${encodeURIComponent(this.data.name)}`}
-          >
-            5 Annotations
-          </Link>,
+          annotationCount ? (
+            <Link
+              key="annotations"
+              to={`/dashboard/annotations?dataset=${encodeURIComponent(this.data.name)}`}
+            >
+              {annotationCount} {pluralize("Annotation", annotationCount)}
+            </Link>
+          ) : null,
           <span key="created">created {this.renderCreationDateColumn()}</span>,
         ]}
       />

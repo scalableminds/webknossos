@@ -48,6 +48,7 @@ import com.scalableminds.webknossos.schema.Tables.{
   GetResultDatasetsRow
 }
 import controllers.DatasetUpdatePartialParameters
+import models.annotation.{AnnotationAccessQueries, AnnotationState, AnnotationType}
 import models.dataset.DatasetCreationType.DatasetCreationType
 
 import javax.inject.Inject
@@ -108,7 +109,9 @@ case class DatasetCompactInfo(
     isUnreported: Boolean,
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
-    usedStorageBytes: Long
+    usedStorageBytes: Long,
+    // Active explorationals listable by the requesting user. Only set if requested.
+    annotationCount: Option[Long] = None
 ) derives JsonAutoFormat {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
 }
@@ -273,7 +276,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       statusOpt: Option[String] = None,
       createdSinceOpt: Option[Instant] = None,
       limitOpt: Option[Int] = None,
-      requestingUserOrga: Option[String] = None
+      requestingUserOrga: Option[String] = None,
+      includeAnnotationCount: Boolean = false
   )(using ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(
@@ -288,6 +292,25 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         createdSinceOpt
       )
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
+      (annotationCountColumn, annotationCountJoin) = requestingUserIdOpt match {
+        case Some(requestingUserId) if includeAnnotationCount =>
+          // Starts from the user's listable annotations (bounded by indexes on user/team/contributor)
+          // rather than from all annotations of the listed datasets. The dataset access part of the
+          // annotation list access check is implied, since only access-checked datasets are joined.
+          (
+            q"COALESCE(annotationCounts.count, 0)",
+            q"""LEFT JOIN (
+                  SELECT a._dataset, COUNT(*) AS count
+                  FROM webknossos.annotations_ a
+                  WHERE a.typ = ${AnnotationType.Explorational}
+                  AND a.state = ${AnnotationState.Active}
+                  AND ${AnnotationAccessQueries.ownedOrSharedQ(requestingUserId, q"a.")}
+                  GROUP BY a._dataset
+                ) annotationCounts
+                  ON annotationCounts._dataset = d._id"""
+          )
+        case _ => (q"NULL::BIGINT", q"")
+      }
       query = q"""
             SELECT
               d._id,
@@ -324,7 +347,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               d.tags,
               cl.names AS colorLayerNames,
               sl.names AS segmentationLayerNames,
-              COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes
+              COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes,
+              $annotationCountColumn AS annotationCount
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
             JOIN webknossos.organizations o
@@ -341,6 +365,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               ON d._id = magStorage._dataset
             LEFT JOIN (SELECT _dataset, COALESCE(SUM(usedStorageBytes), 0) AS storage FROM webknossos.organization_usedStorage_attachments GROUP BY _dataset) attachmentStorage
               ON d._id = attachmentStorage._dataset
+            $annotationCountJoin
             """
       rows <- run(
         query.as[
@@ -358,7 +383,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               String,
               String,
               String,
-              Long
+              Long,
+              Option[Long]
           )
         ]
       )
@@ -379,7 +405,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         colorLayerNames = parseArrayLiteral(row._12),
         segmentationLayerNames = parseArrayLiteral(row._13),
         // Only include usedStorage for datasets of your own organization.
-        usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L
+        usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L,
+        annotationCount = row._15
       )
     )
 

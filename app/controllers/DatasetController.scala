@@ -309,7 +309,9 @@ class DatasetController @Inject() (
       // Optional filtering: List only datasets with names matching this search query
       searchQuery: Option[String],
       // return only the first n matching datasets.
-      limit: Option[Int]
+      limit: Option[Int],
+      // Optional: include the number of active explorational annotations the requesting user can list per dataset
+      includeAnnotationCount: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
       _ <- Fox.successful(())
@@ -328,7 +330,8 @@ class DatasetController @Inject() (
         request.identity.map(_._id),
         recursive.getOrElse(false),
         limitOpt = limit,
-        requestingUserOrga = request.identity.map(_._organization)
+        requestingUserOrga = request.identity.map(_._organization),
+        includeAnnotationCount = includeAnnotationCount.getOrElse(false)
       )
       _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
     } yield addRemoteOriginHeaders(Ok(Json.toJson(datasetInfos)))

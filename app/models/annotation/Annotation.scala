@@ -239,34 +239,18 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
     q"visibility = ${AnnotationVisibility.Public}"
 
   private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
-    q"""
-        (
-          ${prefix}_user = $requestingUserId
-          OR (
-            (${prefix}visibility = ${AnnotationVisibility.Public} or ${prefix}visibility = ${AnnotationVisibility.Internal})
-            AND (
-              ${prefix}_id IN (
-                SELECT DISTINCT a._annotation
-                FROM webknossos.annotation_sharedTeams a
-                JOIN webknossos.user_team_roles t ON a._team = t._team
-                WHERE t._user = $requestingUserId
-              )
-              OR
-              ${prefix}_id IN (
-                SELECT _annotation
-                FROM webknossos.annotation_contributors
-                WHERE _user = $requestingUserId
-              )
-            )
-            AND EXISTS ( -- user must also still have access to the annotation's dataset
-              SELECT 1
-              FROM webknossos.datasets_ dd
-              WHERE dd._id = ${prefix}_dataset
-              AND (${datasetDAO.readAccessQWithPrefix(requestingUserId, q"dd.")})
-            )
-          )
+    AnnotationAccessQueries.ownedOrSharedQ(
+      requestingUserId,
+      prefix,
+      sharedCondition = q"""
+        EXISTS ( -- user must also still have access to the annotation's dataset
+          SELECT 1
+          FROM webknossos.datasets_ dd
+          WHERE dd._id = ${prefix}_dataset
+          AND (${datasetDAO.readAccessQWithPrefix(requestingUserId, q"dd.")})
         )
-       """
+      """
+    )
 
   private def baseListAccessQ(using ctx: DBAccessContext): Fox[SqlToken] =
     accessQueryFromAccessQWithPrefix(listAccessQ, q"")(using ctx)

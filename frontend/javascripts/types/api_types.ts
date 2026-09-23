@@ -279,6 +279,8 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   status: MutableAPIDataSourceBase["status"];
   colorLayerNames: Array<string>;
   segmentationLayerNames: Array<string>;
+  // Active explorational annotations the user can list. Only present if requested.
+  annotationCount?: number;
 };
 
 export function convertDatasetToCompact(dataset: APIMaybeUnimportedDataset): APIDatasetCompact {

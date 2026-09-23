@@ -794,6 +794,10 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     };
     const sortComparator = getSortComparator();
     const filteredAndSortedAnnotations = [...ownerTeamFilteredAnnotations].sort(sortComparator);
+    // Annotations are loaded page-wise and filtered afterwards, so unloaded pages may
+    // contain more matches than are shown.
+    const { lastLoadedPage, loadedAllAnnotations } = this.getCurrentModeState();
+    const mayHaveMoreAnnotations = lastLoadedPage >= 0 && !loadedAllAnnotations;
 
     const columns: ColumnType<APIAnnotationInfo>[] = [
       {
@@ -817,7 +821,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     return (
       <>
         <ListFilterHeader
-          summary={`${filteredAndSortedAnnotations.length} ${pluralize("Annotation", filteredAndSortedAnnotations.length)}`}
+          summary={`${filteredAndSortedAnnotations.length}${mayHaveMoreAnnotations ? "+" : ""} ${pluralize("Annotation", filteredAndSortedAnnotations.length)}`}
         >
           <FilterChip label="Owner" active={selectedOwnerId != null}>
             <Space orientation="vertical" size={4}>

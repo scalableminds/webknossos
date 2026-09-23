@@ -20,7 +20,7 @@ import DatasetActionView, {
 } from "dashboard/advanced_dataset/dataset_action_view";
 import { DraggableDatasetType } from "dashboard/advanced_dataset/dnd_types";
 import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
-import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
+import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "dashboard/dataset/queries";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import {
   type DnDDropItemProps,
@@ -634,6 +634,11 @@ class DatasetTable extends PureComponent<Props, State> {
       name: folder.title,
     }));
     const filteredDataSource = this.getFilteredDatasets();
+    // Search results are capped by the backend and filtered afterwards, so reaching the cap
+    // means more matches may exist than are shown.
+    const mayHaveMoreSearchResults =
+      this.props.context.globalSearchQuery != null &&
+      this.props.context.datasets.length >= SEARCH_RESULTS_LIMIT;
     const { sortOption, hasUserSetSort } = this.state;
     let dataSourceSortedByOption: Array<DatasetOrFolder> = sortDatasetsByOption(
       filteredDataSource,
@@ -726,7 +731,9 @@ class DatasetTable extends PureComponent<Props, State> {
         <ListFilterHeader
           summary={
             <>
-              {filteredDataSource.length} {pluralize("Dataset", filteredDataSource.length)}
+              {filteredDataSource.length}
+              {mayHaveMoreSearchResults ? "+" : ""}{" "}
+              {pluralize("Dataset", filteredDataSource.length)}
               {activeSubfolders.length > 0
                 ? `, ${activeSubfolders.length} ${pluralize("Subfolder", activeSubfolders.length)}`
                 : null}

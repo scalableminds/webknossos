@@ -809,7 +809,7 @@ class AnnotationService @Inject() (
       "settings" -> settings,
       "tracingTime" -> annotation.tracingTime,
       "teams" -> teamsJson,
-      "tags" -> (annotation.tags ++ Set(dataset.name, annotation.tracingType.toString)),
+      "tags" -> (annotation.tags ++ Set(dataset.name)),
       "user" -> userJson,
       "owner" -> userJson,
       "contributors" -> contributorsJs,

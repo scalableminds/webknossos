@@ -6,7 +6,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { getSegmentIdForPosition } from "viewer/controller/combinations/volume_handlers";
-import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import {
+  getMappingInfo,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getVisibleSegments } from "viewer/model/accessors/volumetracing_accessor";
@@ -43,7 +46,10 @@ import { useJumpToSegment } from "./hooks/use_jump_to_segment";
 import { GroupNodeTitle } from "./node_titles";
 import { SegmentDetailsPanel } from "./segment_details_panel";
 import { SegmentNodeTitle, type SegmentRowActions } from "./segment_row";
-import { mayEditVisibleSegmentation } from "./segments_view_helper";
+import {
+  mayEditVisibleSegmentation,
+  withMappingActivationConfirmation,
+} from "./segments_view_helper";
 
 const CONTEXT_MENU_CLASS = "segment-list-context-menu-overlay";
 const SCROLL_DELAY_MS = 100;
@@ -120,12 +126,44 @@ export function SegmentTreeView(props: Props) {
   const startRenaming = useCallback((nodeKey: string) => setRenamingNodeKey(nodeKey), []);
   const finishRenaming = useCallback(() => setRenamingNodeKey(null), []);
 
+  const mappingInfo = useWkSelector((state) =>
+    getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      visibleSegmentationLayer?.name,
+    ),
+  );
+  const { currentMeshFile } = props.meshFiles;
+
   const jumpToSegment = useJumpToSegment();
   const segmentRowActions: SegmentRowActions = useMemo(
     () => ({
       selectAndJumpTo: selection.selectSegmentAndJumpToPosition,
       centerInViewports: jumpToSegment,
       computeAdHocMesh: (segment) => meshOperations.loadAdHocMeshes([segment]),
+      // Only worth asking when there is something to choose between. A precomputed mesh
+      // is the cheaper one, but it is stale for a segment that was edited since the file
+      // was computed, so neither is a safe default.
+      getMeshLoadMenuItems: (segment) =>
+        currentMeshFile == null
+          ? null
+          : [
+              {
+                key: "loadPrecomputedMesh",
+                label: "Load Mesh (precomputed)",
+                onClick: withMappingActivationConfirmation(
+                  () => meshOperations.loadPrecomputedMeshes([segment]),
+                  currentMeshFile.mappingName,
+                  "mesh file",
+                  visibleSegmentationLayer?.name,
+                  mappingInfo,
+                ),
+              },
+              {
+                key: "computeAdHocMesh",
+                label: "Compute Mesh (ad-hoc)",
+                onClick: () => meshOperations.loadAdHocMeshes([segment]),
+              },
+            ],
       setMeshVisibility: (segment, isVisible) =>
         meshOperations.setMeshVisibility([segment], isVisible),
       // Removing a mesh that is still loading aborts its computation (see ad_hoc_mesh_saga).
@@ -150,6 +188,8 @@ export function SegmentTreeView(props: Props) {
       dispatch,
       visibleSegmentationLayer,
       meshOperations,
+      currentMeshFile,
+      mappingInfo,
       jumpToSegment,
       selection.selectSegmentAndJumpToPosition,
       startRenaming,

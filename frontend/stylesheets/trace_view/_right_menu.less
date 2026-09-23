@@ -67,9 +67,9 @@
       background-color: var(--ant-color-primary-bg);
     }
 
-    // The segment that is currently centered in the data viewports. This replaces the
-    // former crosshair icon; it can co-occur with the selection tint above.
-    &:has(.segment-row--centered)::before {
+    // The segment that the volume tools currently write to. This replaces the former
+    // brush icon; it can co-occur with the selection tint above.
+    &:has(.segment-row--active)::before {
       content: "";
       position: absolute;
       left: @segments-tree-indent-unit;

@@ -243,7 +243,12 @@ function SegmentRowActionBar({
         // Pulls the last button's box out into the row's right padding, so that its icon
         // lines up with the right edge of the mesh chip above and below it.
         marginRight: -4,
-        marginTop: isExpanded ? centerOnFirstLine(ACTION_BUTTON_SIZE) : undefined,
+        // The buttons are taller than the line they sit on, so in an expanded row the bar
+        // is constrained to that line and lets them overflow it. Offsetting it instead
+        // would leave a margin box taller than the line and grow the row by 2px, which
+        // would shift the list on every selection change. `align="center"` keeps the
+        // buttons centered on the line either way.
+        height: isExpanded ? EXPANDED_LINE_HEIGHT : undefined,
       }}
     >
       {/*

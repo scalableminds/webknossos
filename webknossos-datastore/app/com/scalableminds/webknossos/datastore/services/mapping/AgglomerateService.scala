@@ -168,7 +168,8 @@ class AgglomerateService @Inject() (
       agglomerateFileKey: AgglomerateFileKey,
       segmentId: Long,
       datasetId: Option[ObjectId],
-      dataLayer: DataLayer
+      dataLayer: DataLayer,
+      loadBucket: DataServiceDataRequest => Fox[Array[Byte]]
   )(using
       ec: ExecutionContext,
       tc: TokenContext
@@ -179,7 +180,7 @@ class AgglomerateService @Inject() (
       case LayerAttachmentDataformat.hdf5 =>
         hdf5AgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId).toFox
       case LayerAttachmentDataformat.pcg =>
-        pcgAgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId, datasetId, dataLayer)
+        pcgAgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId, datasetId, dataLayer, loadBucket)
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 

@@ -182,7 +182,8 @@ class DataSourceController @Inject() (
           agglomerateFileKey,
           segmentId,
           Some(datasetId),
-          dataLayer
+          dataLayer,
+          bucketRequest => binaryDataServiceHolder.binaryDataService.handleDataRequest(bucketRequest)
         ) ?~> Msg.AgglomerateFile.getSegmentPositionFailed(agglomerateFileKey.attachment.name)
       } yield Ok(Json.toJson(position))
     }

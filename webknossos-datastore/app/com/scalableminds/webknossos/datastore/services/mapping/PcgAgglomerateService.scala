@@ -26,19 +26,14 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceDataRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.services.BinaryDataServiceHolder
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.box.{Failure, Full}
-import play.api.libs.json.{JsError, JsObject, JsSuccess, Json, Reads}
 
-import java.nio.{ByteBuffer, ByteOrder}
 import com.scalableminds.util.objectid.ObjectId
 
-import javax.inject.{Inject, Provider}
+import javax.inject.Inject
 import scala.collection.compat.immutable.ArraySeq
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
 /** Serves agglomerate mappings from a PyChunkedGraph (PCG) instance over HTTP, as a third `LayerAttachmentDataformat`
@@ -56,8 +51,10 @@ import scala.concurrent.ExecutionContext
   *   - Otherwise, decode the chunk out of the supervoxel id and read that chunk of the volume until the id turns up.
   *     Exact, but a production chunk is hundreds of buckets. See `positionForSegmentId`.
   *
-  * `generateAgglomerateGraph` and `generateTree` only take the first route, so nodes of a graph ingested without
-  * positions stay at the origin.
+  * `generateAgglomerateGraph` and `generateTree` only take the first route: the scan reads a chunk per supervoxel,
+  * which for a whole agglomerate would be a read per node. On a pcg that stored no positions they fail rather than
+  * return an agglomerate whose nodes all sit at the origin. The alternative to scan all the volume for positions is not
+  * viable.
   *
   * Root lookups have the same two-route shape: `POST /table/<id>/chunk_root_mapping_binary/<chunk id>` answers a whole
   * PCG chunk's supervoxel -> root mapping in one request, which is the difference between one request and one per
@@ -68,30 +65,24 @@ import scala.concurrent.ExecutionContext
   * PCG has no largest agglomerate id -- ids are chunk-encoded and sparse, so there is nothing to allocate from and
   * `largestAgglomerateId` fails.
   */
-object PcgAgglomerateService {
-
-  val chunkCacheSizeMultiplier: Int = 8
-}
-
 class PcgAgglomerateService @Inject() (
     config: DataStoreConfig,
-    rpc: RPC,
-    // A Provider breaks a dependency cycle: BinaryDataServiceHolder needs AgglomerateService
-    // to apply mappings while reading, and this service is one of its branches. Nothing is
-    // resolved until the first position lookup, when both sides exist.
-    binaryDataServiceHolderProvider: Provider[BinaryDataServiceHolder]
+    pcgClient: PcgClient
 ) extends LazyLogging {
 
   private lazy val bucketScanner = new NativeBucketScanner()
+  private lazy val chunkCacheSizeMultiplier: Int = 8
 
   // supervoxel -> root (agglomerate id) for fallback /roots_binary route results.
   private lazy val supervoxelToAgglomerateFallbackCache: AlfuCache[(AgglomerateFileKey, Long), Long] =
     AlfuCache(maxCapacity = config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries)
 
-  // supervoxel -> root (agglomerate id) for wk optimized /chunk_root_mapping_binary route results.
-  private lazy val chunkToAgglomerateMappingsCache =
-    new ChunkMappingCache(
-      config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries.toLong * PcgAgglomerateService.chunkCacheSizeMultiplier
+  // supervoxel -> root (agglomerate id) for wk optimized /chunk_root_mapping_binary route results. Weighed by the
+  // supervoxels a chunk holds, since a sparse chunk holds a handful and a dense one thousands.
+  private lazy val chunkToAgglomerateMappingsCache: AlfuCache[(AgglomerateFileKey, Long), PcgChunkMapping] =
+    AlfuCache(
+      maxCapacity = config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries * chunkCacheSizeMultiplier,
+      weighFn = Some((_, mappingBox) => mappingBox.toOption.map(_.size).getOrElse(0))
     )
 
   // Limit at which amount of chunks per request to stop the chunk based mapping optimization. Happens when the user zooms out very far.
@@ -101,15 +92,21 @@ class PcgAgglomerateService @Inject() (
   private lazy val graphsWithoutChunkMapping: java.util.Set[AgglomerateFileKey] =
     java.util.concurrent.ConcurrentHashMap.newKeySet[AgglomerateFileKey]()
 
-  // root -> supervoxels cache.
-  private lazy val leavesCache: AlfuCache[(AgglomerateFileKey, Long), Seq[Long]] = AlfuCache()
+  // root -> supervoxels cache. Weighed by the supervoxels an agglomerate holds, since a small agglomerate holds a
+  // handful and a large one millions -- counting every entry as one would bound the cache at 1000 whole agglomerates.
+  private lazy val leavesCache: AlfuCache[(AgglomerateFileKey, Long), Seq[Long]] =
+    AlfuCache(
+      maxCapacity = config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries,
+      weighFn = Some((_, leavesBox) => leavesBox.toOption.map(_.size).getOrElse(0))
+    )
 
   private val bucketLength = DataLayer.bucketLength
 
   private val scanBatchSize = 8
 
   /** Ceiling on buckets read for one position lookup. 512 covers a 512x512x64 chunk, the largest a production CAVE
-    * graph is likely to use.
+    * graph is likely to use. 512 is the relation of such a 512x512x64 bucket compared to WK Buckets. A 512x512x64
+    * volume contains 512 32x32x32 sized buckets.
     */
   private val scanBucketLimit = 512
 
@@ -117,39 +114,7 @@ class PcgAgglomerateService @Inject() (
   private lazy val graphInfoCache: AlfuCache[AgglomerateFileKey, PcgGraphInfo] = AlfuCache(maxCapacity = 100)
 
   private def graphInfo(agglomerateFileKey: AgglomerateFileKey)(using ec: ExecutionContext): Fox[PcgGraphInfo] =
-    graphInfoCache.getOrLoad(
-      agglomerateFileKey,
-      key => rpc(infoUrl(key)).silent.getWithJsonResponse[PcgGraphInfo]
-    )
-
-  private def baseUrl(agglomerateFileKey: AgglomerateFileKey): String =
-    agglomerateFileKey.attachment.path.toString.stripSuffix("/")
-
-  // PCGs info url is not version, thus removing this part from the URL here.
-  private def infoUrl(agglomerateFileKey: AgglomerateFileKey): String =
-    s"${baseUrl(agglomerateFileKey).replace("/api/v1/table/", "/table/")}/info"
-
-  private def postRootsBinary(agglomerateFileKey: AgglomerateFileKey, supervoxelIds: Array[Long])(using
-      ec: ExecutionContext
-  ): Fox[Array[Long]] = {
-    val body = ByteBuffer.allocate(supervoxelIds.length * 8).order(ByteOrder.LITTLE_ENDIAN)
-    supervoxelIds.foreach(body.putLong)
-    for {
-      responseBytes <- rpc(s"${baseUrl(agglomerateFileKey)}/roots_binary").silent
-        .addHttpHeader("Content-Type", "application/octet-stream")
-        .postBytesWithBytesResponse(body.array)
-      roots <- tryo(decodeUint64Array(responseBytes)).toFox
-      _ <- Fox.fromBool(roots.length == supervoxelIds.length) ?~>
-        Msg.AgglomerateFile.Pcg.rootCountMismatch(roots.length, supervoxelIds.length)
-    } yield roots
-  }
-
-  private def decodeUint64Array(bytes: Array[Byte]): Array[Long] = {
-    val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asLongBuffer()
-    val result = new Array[Long](buffer.remaining())
-    buffer.get(result)
-    result
-  }
+    graphInfoCache.getOrLoad(agglomerateFileKey, pcgClient.getGraphInfo)
 
   private def agglomerateIdsForSupervoxels(agglomerateFileKey: AgglomerateFileKey, supervoxelIds: Seq[Long])(using
       ec: ExecutionContext
@@ -180,7 +145,7 @@ class PcgAgglomerateService @Inject() (
     for {
       fetched <-
         if (missing.isEmpty) Fox.successful(Array.empty[Long])
-        else postRootsBinary(agglomerateFileKey, missing)
+        else pcgClient.postRootsBinary(agglomerateFileKey, missing)
       _ = missing.indices.foreach(i =>
         supervoxelToAgglomerateFallbackCache.put((agglomerateFileKey, missing(i)), fetched(i))
       )
@@ -236,16 +201,16 @@ class PcgAgglomerateService @Inject() (
       case Some(mapping) => Fox.successful(mapping)
       case None          =>
         for {
-          mappingBox <- fetchMappingForWholeChunk(agglomerateFileKey, chunkId).shiftBox
+          mappingBox <- pcgClient.getChunkRootMapping(agglomerateFileKey, chunkId).shiftBox
           mapping <- mappingBox match {
             case Full(mapping) =>
               chunkToAgglomerateMappingsCache.put((agglomerateFileKey, chunkId), mapping)
               Fox.successful(mapping)
             case failure: Failure =>
-              if (looksLikeMissingRoute(failure)) {
+              if (pcgClient.looksLikeMissingRoute(failure)) {
                 if (graphsWithoutChunkMapping.add(agglomerateFileKey))
                   logger.info(
-                    s"${baseUrl(agglomerateFileKey)} serves no chunk mappings; reading it one supervoxel at a time"
+                    s"${agglomerateFileKey.attachment.path} serves no chunk mappings; reading it one supervoxel at a time"
                   )
               }
               failure.toFox
@@ -253,27 +218,6 @@ class PcgAgglomerateService @Inject() (
           }
         } yield mapping
     }
-
-  private def looksLikeMissingRoute(failure: Failure): Boolean =
-    failure.msg.contains("Response: 404") || failure.msg.contains("Response: 405")
-
-  /*
-   * The optimized route replying with all supervoxel -> root / agglomerate id mapping of a chunk.
-   */
-  private def fetchMappingForWholeChunk(agglomerateFileKey: AgglomerateFileKey, chunkId: Long)(using
-      ec: ExecutionContext
-  ): Fox[PcgChunkMapping] = {
-    val chunk = java.lang.Long.toUnsignedString(chunkId)
-    for {
-      responseBytes <- rpc(
-        s"${baseUrl(agglomerateFileKey)}/chunk_root_mapping_binary/$chunk"
-      ).silentEvenOnFailure.getWithBytesResponse
-      pairs <- tryo(decodeUint64Array(responseBytes)).toFox
-      _ <- Fox.fromBool(pairs.length % 2 == 0) ?~>
-        Msg.AgglomerateFile.Pcg.chunkMappingNotPaired(pairs.length, chunk)
-      mapping <- tryo(PcgChunkMapping.fromInterleaved(pairs)).toFox
-    } yield mapping
-  }
 
   /** The chunk a supervoxel belongs to, which is its own id with the counter bits cleared -- PCG's `get_chunk_id`. The
     * layout is `[layer | x | y | z | counter]`, so everything above the counter names the chunk.
@@ -315,33 +259,17 @@ class PcgAgglomerateService @Inject() (
   ): Fox[Seq[Long]] =
     leavesCache.getOrLoad(
       (agglomerateFileKey, agglomerateId),
-      _ =>
-        rpc(s"${baseUrl(agglomerateFileKey)}/node/$agglomerateId/leaves").silent
-          .getWithJsonResponse[PcgLeaves]
-          .map(_.leafIds)
+      _ => pcgClient.getLeaves(agglomerateFileKey, agglomerateId)
     )
-
-  /** PCG stores a cross-chunk edge in both chunks it touches, so `subgraph` returns it twice, once as (a, b) and once
-    * as (b, a). Here we deduplicate this.
-    */
-  private def foldEdgeDirections(response: PcgSubgraph): PcgSubgraph = {
-    val seen = mutable.HashSet[(Long, Long)]()
-    val kept = response.edges.zip(response.affinities).filter { case (edge, _) =>
-      seen.add((math.min(edge(0), edge(1)), math.max(edge(0), edge(1))))
-    }
-    PcgSubgraph(kept.map(_._1), kept.map(_._2))
-  }
 
   private def subgraphForAgglomerateId(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long, edgeLimit: Int)(
       using ec: ExecutionContext
   ): Fox[PcgSubgraph] =
     for {
-      response <- rpc(s"${baseUrl(agglomerateFileKey)}/node/$agglomerateId/subgraph").silent
-        .getWithJsonResponse[PcgSubgraph]
-      folded <- tryo(foldEdgeDirections(response)).toFox
-      _ <- Fox.fromBool(folded.edges.length <= edgeLimit) ?~>
-        Msg.AgglomerateGraph.tooManyEdges(folded.edges.length, edgeLimit)
-    } yield folded
+      subgraph <- pcgClient.getSubgraph(agglomerateFileKey, agglomerateId)
+      _ <- Fox.fromBool(subgraph.edges.length <= edgeLimit) ?~>
+        Msg.AgglomerateGraph.tooManyEdges(subgraph.edges.length, edgeLimit)
+    } yield subgraph
 
   def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(using
       ec: ExecutionContext
@@ -353,9 +281,11 @@ class PcgAgglomerateService @Inject() (
         Msg.AgglomerateGraph.tooManyNodes(segmentIds.length, edgeLimit)
       response <- subgraphForAgglomerateId(agglomerateFileKey, agglomerateId, edgeLimit)
       edges <- tryo(response.edges.map(e => AgglomerateEdge(source = e(0), target = e(1)))).toFox
-      // One request for the whole agglomerate. A supervoxel PCG has no position for stays
-      // at the origin; scanning the volume for each of them would cost a read per node.
-      positions <- storedPositions(agglomerateFileKey, segmentIds)
+      // One request for the whole agglomerate. There is no volume-scan fallback here: that scan reads a chunk per
+      // supervoxel, which for a whole agglomerate would be a read per node. A graph whose nodes all sit at the
+      // origin is useless and reads as a WEBKNOSSOS bug, so say so instead of returning one.
+      positions <- pcgClient.postNodePositions(agglomerateFileKey, segmentIds)
+      _ <- Fox.fromBool(segmentIds.isEmpty || positions.nonEmpty) ?~> Msg.AgglomerateFile.Pcg.positionsNotStored
     } yield AgglomerateGraph(
       segments = segmentIds,
       edges = edges,
@@ -372,7 +302,9 @@ class PcgAgglomerateService @Inject() (
       _ <- Fox.fromBool(segmentIds.length <= edgeLimit) ?~>
         Msg.AgglomerateGraph.tooManyNodes(segmentIds.length, edgeLimit)
       response <- subgraphForAgglomerateId(agglomerateFileKey, agglomerateId, edgeLimit)
-      positions <- storedPositions(agglomerateFileKey, segmentIds)
+      // No volume-scan fallback, for the same reason as in generateAgglomerateGraph.
+      positions <- pcgClient.postNodePositions(agglomerateFileKey, segmentIds)
+      _ <- Fox.fromBool(segmentIds.isEmpty || positions.nonEmpty) ?~> Msg.AgglomerateFile.Pcg.positionsNotStored
       nodeIdStartAtOneOffset = 1
       // PCG's subgraph edges name supervoxels; skeleton edges name node indices.
       indexBySegmentId = segmentIds.iterator.zipWithIndex.map { case (id, idx) =>
@@ -411,37 +343,26 @@ class PcgAgglomerateService @Inject() (
       case None    => Vec3IntProto(0, 0, 0)
     }
 
-  /** Voxel coordinates PCG recorded at ingest, for whichever of these ids have one. None for segment ids which don't
-    * have this info.
-    */
-  private def storedPositions(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long])(using
-      ec: ExecutionContext
-  ): Fox[Map[Long, Vec3Int]] =
-    if (segmentIds.isEmpty) Fox.successful(Map.empty)
-    else
-      rpc(s"${baseUrl(agglomerateFileKey)}/node_positions").silentEvenOnFailure
-        .postJsonWithJsonResponse[JsObject, Map[String, Seq[Int]]](Json.obj("node_ids" -> segmentIds))
-        .map { raw =>
-          raw.flatMap {
-            case (id, Seq(x, y, z)) => id.toLongOption.map(_ -> Vec3Int(x, y, z))
-            case _                  => None
-          }
-        }
-        .orElse(Fox.successful(Map.empty[Long, Vec3Int]))
-
   /** A representative voxel of a supervoxel: PCG's own, if it stored one, else found by reading the volume.
+    *
+    * `loadBucket` reads one bucket of the layer. It is passed in rather than injected because BinaryDataServiceHolder
+    * needs AgglomerateService to apply mappings while reading, and this service is one of its branches -- taking the
+    * reader as a parameter keeps that from becoming a dependency cycle.
     */
   def positionForSegmentId(
       agglomerateFileKey: AgglomerateFileKey,
       segmentId: Long,
       datasetId: Option[ObjectId],
-      dataLayer: DataLayer
+      dataLayer: DataLayer,
+      loadBucket: DataServiceDataRequest => Fox[Array[Byte]]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Vec3Int] =
     for {
-      stored <- storedPositions(agglomerateFileKey, Seq(segmentId))
-      position <- stored.get(segmentId) match {
+      // Asking PCG may fail without being fatal here: the scan below finds the position by reading the volume,
+      // which is slower but needs nothing from PCG beyond the graph info already fetched.
+      storedBox <- pcgClient.postNodePositions(agglomerateFileKey, Seq(segmentId)).shiftBox
+      position <- storedBox.toOption.flatMap(_.get(segmentId)) match {
         case Some(position) => Fox.successful(position)
-        case None           => scanPositionForSegmentId(agglomerateFileKey, segmentId, datasetId, dataLayer)
+        case None           => scanPositionForSegmentId(agglomerateFileKey, segmentId, datasetId, dataLayer, loadBucket)
       }
     } yield position
 
@@ -451,17 +372,29 @@ class PcgAgglomerateService @Inject() (
       agglomerateFileKey: AgglomerateFileKey,
       segmentId: Long,
       datasetId: Option[ObjectId],
-      dataLayer: DataLayer
+      dataLayer: DataLayer,
+      loadBucket: DataServiceDataRequest => Fox[Array[Byte]]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Vec3Int] =
     for {
       graphInfo <- graphInfo(agglomerateFileKey)
       chunkBox <- chunkBoundingBoxForSegmentId(graphInfo, segmentId).toFox
-      searchBox = chunkBox.intersection(dataLayer.boundingBox).getOrElse(chunkBox)
+      searchBox <- chunkBox.intersection(dataLayer.boundingBox).toFox ?~>
+        Msg.AgglomerateFile.Pcg.chunkOutsideLayerBoundingBox(
+          segmentId,
+          chunkBox.toString,
+          dataLayer.boundingBox.toString
+        )
       buckets = bucketTopLeftsIn(searchBox)
       _ <- Fox.fromBool(buckets.length <= scanBucketLimit) ?~>
         Msg.AgglomerateFile.Pcg.chunkTooLargeToScan(segmentId, buckets.length, scanBucketLimit)
-      position <- scanForSegmentId(datasetId, agglomerateFileKey, dataLayer, segmentId, buckets.toList) ?~>
-        Msg.AgglomerateFile.Pcg.segmentNotFoundInChunk(segmentId, chunkBox.toString)
+      position <- scanForSegmentId(
+        datasetId,
+        agglomerateFileKey,
+        dataLayer,
+        segmentId,
+        buckets.toList,
+        loadBucket
+      ) ?~> Msg.AgglomerateFile.Pcg.segmentNotFoundInChunk(segmentId, chunkBox.toString)
     } yield position
 
   private def chunkBoundingBoxForSegmentId(graphInfo: PcgGraphInfo, segmentId: Long): Box[BoundingBox] =
@@ -504,7 +437,8 @@ class PcgAgglomerateService @Inject() (
       agglomerateFileKey: AgglomerateFileKey,
       dataLayer: DataLayer,
       segmentId: Long,
-      buckets: List[Vec3Int]
+      buckets: List[Vec3Int],
+      loadBucket: DataServiceDataRequest => Fox[Array[Byte]]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Vec3Int] =
     buckets match {
       case Nil => Fox.empty
@@ -512,11 +446,12 @@ class PcgAgglomerateService @Inject() (
         val (batch, rest) = buckets.splitAt(scanBatchSize)
         for {
           hits <- Fox.serialCombined(batch)(topLeft =>
-            findSegmentIdInBucket(datasetId, agglomerateFileKey, dataLayer, segmentId, topLeft)
+            findSegmentIdInBucket(datasetId, agglomerateFileKey, dataLayer, segmentId, topLeft, loadBucket)
           )
           position <- hits.flatten.headOption match {
             case Some(found) => Fox.successful(found)
-            case None        => scanForSegmentId(datasetId, agglomerateFileKey, dataLayer, segmentId, rest)
+            case None        =>
+              scanForSegmentId(datasetId, agglomerateFileKey, dataLayer, segmentId, rest, loadBucket)
           }
         } yield position
     }
@@ -526,8 +461,11 @@ class PcgAgglomerateService @Inject() (
       agglomerateFileKey: AgglomerateFileKey,
       dataLayer: DataLayer,
       segmentId: Long,
-      topLeft: Vec3Int
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Option[Vec3Int]] = {
+      topLeft: Vec3Int,
+      loadBucket: DataServiceDataRequest => Fox[Array[Byte]]
+  )(using ec: ExecutionContext): Fox[Option[Vec3Int]] = {
+    // The request is built here, not by the caller, so that the empty settings cannot be lost =>
+    // The scan explicitly requests unmapped / supervoxel-based data.
     val request = DataServiceDataRequest(
       datasetId = datasetId,
       dataSourceId = Some(agglomerateFileKey.dataSourceId),
@@ -538,12 +476,11 @@ class PcgAgglomerateService @Inject() (
         bucketLength,
         bucketLength
       ),
-      // Empty settings as the volume data stores the unmapped segment id.
       settings = DataServiceRequestSettings()
     )
     for {
-      data <- binaryDataServiceHolderProvider.get().binaryDataService.handleDataRequest(request)
-      voxels <- tryo(decodeUint64Array(data)).toFox
+      data <- loadBucket(request)
+      voxels <- tryo(PcgClient.decodeUint64Array(data)).toFox
       index = voxels.indexOf(segmentId)
     } yield
       if (index < 0) None
@@ -567,137 +504,4 @@ class PcgAgglomerateService @Inject() (
     graphInfoCache.clear(predicate)
     clearedRoots + clearedChunks + clearedLeaves
   }
-}
-
-/** One PCG chunk's supervoxel -> root mapping, as two arrays ordered by supervoxel id for binary search optimization.
-  */
-private case class PcgChunkMapping(supervoxelIds: Array[Long], rootIds: Array[Long]) {
-  def size: Int = supervoxelIds.length
-
-  def rootOf(supervoxelId: Long): Option[Long] = {
-    val index = java.util.Arrays.binarySearch(supervoxelIds, supervoxelId)
-    if (index >= 0) Some(rootIds(index)) else None
-  }
-}
-
-private object PcgChunkMapping {
-
-  /** From PCG's `[supervoxel, root, supervoxel, root, ...]` reply. Sorts by supervoxel ids if needed.
-    */
-  def fromInterleaved(pairs: Array[Long]): PcgChunkMapping = {
-    val count = pairs.length / 2
-    val supervoxelIds = Array.tabulate(count)(i => pairs(2 * i))
-    val rootIds = Array.tabulate(count)(i => pairs(2 * i + 1))
-    val isSorted = (1 until count).forall(i => supervoxelIds(i - 1) <= supervoxelIds(i))
-    if (isSorted) PcgChunkMapping(supervoxelIds, rootIds)
-    else {
-      val order = Array.range(0, count).sortBy(supervoxelIds(_))
-      PcgChunkMapping(order.map(supervoxelIds(_)), order.map(rootIds(_)))
-    }
-  }
-}
-
-/** LRU over chunk mappings, bounded by the supervoxels it holds rather than by the number of chunks as chunks can be
-  * sparse and dense.
-  */
-private class ChunkMappingCache(maxSupervoxels: Long) {
-  private val entries =
-    new java.util.LinkedHashMap[(AgglomerateFileKey, Long), PcgChunkMapping](64, 0.75f, true /* access order */ )
-  private var heldSupervoxels: Long = 0L
-
-  def get(key: (AgglomerateFileKey, Long)): Option[PcgChunkMapping] =
-    entries.synchronized(Option(entries.get(key)))
-
-  def put(key: (AgglomerateFileKey, Long), mapping: PcgChunkMapping): Unit =
-    entries.synchronized {
-      // A chunk that alone exceeds the budget would evict everything and then itself. Leave it out; its supervoxels
-      // are then looked up by id, which is what every graph did before this cache existed.
-      if (mapping.size <= maxSupervoxels) {
-        Option(entries.put(key, mapping)).foreach(previous => heldSupervoxels -= previous.size)
-        heldSupervoxels += mapping.size
-        val iterator = entries.entrySet.iterator
-        while (heldSupervoxels > maxSupervoxels && iterator.hasNext) {
-          val eldest = iterator.next()
-          if (eldest.getKey != key) {
-            heldSupervoxels -= eldest.getValue.size
-            iterator.remove()
-          }
-        }
-      }
-    }
-
-  def clear(predicate: ((AgglomerateFileKey, Long)) => Boolean): Int =
-    entries.synchronized {
-      val iterator = entries.entrySet.iterator
-      var cleared = 0
-      while (iterator.hasNext) {
-        val entry = iterator.next()
-        if (predicate(entry.getKey)) {
-          heldSupervoxels -= entry.getValue.size
-          iterator.remove()
-          cleared += 1
-        }
-      }
-      cleared
-    }
-}
-
-/** The part of PCG's `info` that describes how a node id encodes a position: how many bits name the layer, how many
-  * name each axis at that layer, and what voxel box a chunk covers.
-  */
-private case class PcgGraphInfo(
-    layerIdBits: Int,
-    bitsPerDim: Map[Int, Int],
-    chunkSize: Vec3Int,
-    chunkGridOrigin: Vec3Int
-)
-
-private object PcgGraphInfo {
-  implicit val reads: Reads[PcgGraphInfo] = Reads(json =>
-    for {
-      layerIdBits <- (json \ "graph" \ "n_bits_for_layer_id").validate[Int]
-      // Keyed by layer, as strings in JSON ("1" -> 10). Layer 1 is the supervoxel
-      // layer; coarser layers get fewer bits as the octree contracts.
-      bitMasks <- (json \ "graph" \ "spatial_bit_masks").validate[Map[String, Int]]
-      bitsPerDim <- tryo(bitMasks.map { case (layer, bits) => layer.toInt -> bits }) match {
-        case Full(parsed) => JsSuccess(parsed)
-        case _            => JsError(s"spatial_bit_masks is not keyed by layer number: ${bitMasks.keys}")
-      }
-      chunkSize <- (json \ "graph" \ "chunk_size").validate[Vec3Int]
-      // A chunk's voxel box is chunk * chunkSize, offset by the volume's own
-      // voxel_offset when PCG says the chunk grid starts there.
-      chunksStartAtVoxelOffset <- (json \ "chunks_start_at_voxel_offset").validateOpt[Boolean]
-      voxelOffsetRaw <- (json \ "scales" \ 0 \ "voxel_offset").validateOpt[Vec3Int]
-      voxelOffset = voxelOffsetRaw.getOrElse(Vec3Int.zeros)
-    } yield PcgGraphInfo(
-      layerIdBits,
-      bitsPerDim,
-      chunkSize,
-      if (chunksStartAtVoxelOffset.getOrElse(false)) voxelOffset else Vec3Int.zeros
-    )
-  )
-}
-
-private case class PcgLeaves(leafIds: Seq[Long])
-
-private object PcgLeaves {
-  implicit val reads: Reads[PcgLeaves] = Reads(json => (json \ "leaf_ids").validate[Seq[Long]].map(PcgLeaves.apply))
-}
-
-private case class PcgSubgraph(edges: Seq[Seq[Long]], affinities: Seq[Float])
-
-private object PcgSubgraph {
-  /*
-   * PCG names the edge list "nodes" -- it is a list of supervoxel id pairs.
-   *
-   * Known limitation: PCG writes the affinity of an artificially added edge as
-   * float("inf"), which Python emits as a bare `Infinity`. That is not valid JSON, and
-   * Jackson rejects the response while tokenizing, before any Reads runs.
-   */
-  implicit val reads: Reads[PcgSubgraph] = Reads(json =>
-    for {
-      edges <- (json \ "nodes").validate[Seq[Seq[Long]]]
-      affinities <- (json \ "affinities").validate[Seq[Float]]
-    } yield PcgSubgraph(edges, affinities)
-  )
 }

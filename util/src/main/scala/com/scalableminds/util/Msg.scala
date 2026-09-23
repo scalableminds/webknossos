@@ -818,6 +818,10 @@ object Msg {
         s"Supervoxel $segmentId sits in a PCG chunk of $bucketCount buckets, more than the $limit this lookup will read"
       def segmentNotFoundInChunk(segmentId: Long, chunkBox: String): String =
         s"Supervoxel $segmentId was not found in its own PCG chunk $chunkBox"
+      def chunkOutsideLayerBoundingBox(segmentId: Long, chunkBox: String, layerBox: String): String =
+        s"The PCG chunk $chunkBox of supervoxel $segmentId lies outside the bounding box $layerBox of this layer"
+      val positionsNotStored: String =
+        "This PyChunkedGraph graph has no stored node positions, so the nodes of an agglomerate cannot be placed. Positions are only available for graphs ingested with store_positions."
       def largestIdUnavailable(attachmentName: String): String =
         s"largestAgglomerateId is not available for PCG-backed mapping $attachmentName: " +
           "PyChunkedGraph agglomerate ids are chunk-encoded and sparse, so there is no largest id to allocate from."

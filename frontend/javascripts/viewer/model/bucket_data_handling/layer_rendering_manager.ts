@@ -260,9 +260,11 @@ export default class LayerRenderingManager {
 
       pickingPromise.then(
         (buffer) => {
-          // consumeBucketsFromArrayBuffer marks all picked buckets as needed for this tick.
-          // The buckets of the previous tick don't have to be unmarked explicitly, since their
-          // marks expire as soon as the cube moves on to the current tick.
+          // During bucket picking, we want to mark picked buckets as "needed". This property can
+          // be used to GC unused buckets. The marking mechanism works by notifying the DataCube
+          // about the start/stop of the picking (which does house keeping regarding "tick counters").
+          // Then, consumeBucketsFromArrayBuffer marks all picked buckets as needed for this tick.
+          // Unused buckets don't have to be marked explicitly (see DataBucket.isNeeded()).
           this.cube.startBucketPicking(this.currentBucketPickerTick);
           const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
             buffer,

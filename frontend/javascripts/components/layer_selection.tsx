@@ -36,12 +36,12 @@ export function LayerSelection<L extends { name: string }>({
   const maybeSpace = layerType != null ? " " : "";
   return (
     <Select
-      showSearch
+      showSearch={{
+        optionFilterProp: "label",
+        filterOption: (input, option) =>
+          (option?.label ?? "").toLowerCase().indexOf(input.toLowerCase()) >= 0,
+      }}
       placeholder={`Select a ${maybeLayerType}${maybeSpace}layer`}
-      optionFilterProp="label"
-      filterOption={(input, option) =>
-        (option?.label ?? "").toLowerCase().indexOf(input.toLowerCase()) >= 0
-      }
       disabled={fixedLayerName != null}
       onSelect={onSelect}
       style={style}

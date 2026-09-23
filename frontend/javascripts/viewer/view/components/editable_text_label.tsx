@@ -5,6 +5,7 @@ import Markdown from "libs/markdown_adapter";
 import Toast from "libs/toast";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
 import type { ValidationResult } from "../left_border_tabs/modals/add_volume_layer_modal";
 
@@ -36,6 +37,10 @@ export type EditableTextLabelProp = {
   trimValue?: boolean | null | undefined;
   onRenameStart?: (() => void) | undefined;
   onRenameEnd?: (() => void) | undefined;
+  // When set, the displayed text becomes a link to this target instead of a
+  // double-click-to-rename trigger; only the edit icon then starts editing.
+  linkTarget?: string;
+  linkTitle?: string;
 };
 
 function EditableTextLabel(props: EditableTextLabelProp) {
@@ -57,6 +62,8 @@ function EditableTextLabel(props: EditableTextLabelProp) {
     trimValue = false,
     onRenameStart,
     onRenameEnd,
+    linkTarget,
+    linkTitle,
   } = props;
 
   const [isEditing, setIsEditing] = useState(false);
@@ -109,7 +116,9 @@ function EditableTextLabel(props: EditableTextLabelProp) {
   const handleOnChange = () => {
     const validateAndUpdateValue = () => {
       if (validateFields()) {
-        onChange(value);
+        if (value !== propValue) {
+          onChange(value);
+        }
         setIsEditing(false);
         if (onRenameEnd) {
           onRenameEnd();
@@ -176,14 +185,27 @@ function EditableTextLabel(props: EditableTextLabelProp) {
     );
   }
 
+  const textContent = markdown ? (
+    <span style={isInvalidStyleMaybe}>
+      <Markdown>{value}</Markdown>
+    </span>
+  ) : (
+    <span style={isInvalidStyleMaybe}>{value.trim() ? value : placeholder}</span>
+  );
+
   return (
-    <Space onClick={onClick} onDoubleClick={onRename} onContextMenu={onContextMenu} size={4}>
-      {markdown ? (
-        <span style={isInvalidStyleMaybe}>
-          <Markdown>{value}</Markdown>
-        </span>
+    <Space
+      onClick={onClick}
+      onDoubleClick={linkTarget == null ? onRename : undefined}
+      onContextMenu={onContextMenu}
+      size={4}
+    >
+      {linkTarget != null ? (
+        <Link to={linkTarget} title={linkTitle} className="incognito-link">
+          {textContent}
+        </Link>
       ) : (
-        <span style={isInvalidStyleMaybe}>{value.trim() ? value : placeholder}</span>
+        textContent
       )}
       {disableEditing || hideEditIcon ? null : (
         <FastTooltip key="edit" title={`Edit ${label}`} placement="bottom">

@@ -5,6 +5,7 @@ import Icon, {
   LockOutlined,
   PlayCircleOutlined,
   PlusOutlined,
+  SearchOutlined,
   SwapOutlined,
   TeamOutlined,
   UnlockOutlined,
@@ -22,7 +23,7 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Radio, Space, Spin, Table, Tag } from "antd";
+import { Radio, Space, Spin, Table, Tag, Typography } from "antd";
 import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
@@ -62,6 +63,7 @@ import {
   type APIUserCompact,
   annotationToCompact,
 } from "types/api_types";
+import type { Comparator } from "types/type_utils";
 import { AnnotationContentTypes } from "viewer/constants";
 import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
@@ -88,12 +90,28 @@ type Props = {
   // Called when the user removes the datasetNameFilter tag, so the caller can clear it from the URL.
   onDatasetNameFilterCleared?: () => void;
 } & WithModalProps;
-type AnnotationSortOption = "modifiedDesc" | "modifiedAsc" | "name";
+type AnnotationSortOption = "modifiedDesc" | "newest" | "oldest" | "owner" | "name";
 const ANNOTATION_SORT_OPTIONS: Array<{ key: AnnotationSortOption; label: string }> = [
   { key: "modifiedDesc", label: "Last Modified" },
-  { key: "modifiedAsc", label: "Oldest First" },
+  { key: "newest", label: "Newest" },
+  { key: "oldest", label: "Oldest" },
+  { key: "owner", label: "Owner" },
   { key: "name", label: "Name" },
 ];
+
+// Sorts ascending by the selector's string value, except entries with an empty
+// (trimmed) selector value always sort last, regardless of alphabetical order.
+function compareWithEmptyLast<T>(selector: (item: T) => string): Comparator<T> {
+  const naturalCompare = localeCompareBy<T>(selector);
+  return (a: T, b: T) => {
+    const aIsEmpty = selector(a).trim() === "";
+    const bIsEmpty = selector(b).trim() === "";
+    if (aIsEmpty && bIsEmpty) return 0;
+    if (aIsEmpty) return 1;
+    if (bIsEmpty) return -1;
+    return naturalCompare(a, b);
+  };
+}
 type State = {
   shouldShowArchivedAnnotations: boolean;
   archivedModeState: AnnotationModeState;
@@ -554,6 +572,22 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   }
 
   renderNameWithDescription(annotation: APIAnnotationInfo) {
+    const isEditable = this.isAnnotationEditable(annotation);
+    const linkTarget = `/annotations/${annotation.id}`;
+    const textWithDescription = (
+      <TextWithDescription
+        isEditable={isEditable}
+        value={annotation.name ? annotation.name : "Unnamed Annotation"}
+        onChange={(newName) => this.renameAnnotation(annotation, newName)}
+        label="Annotation Name"
+        description={annotation.description}
+        width={400}
+        // Makes the name itself a link to the annotation (only the edit icon
+        // triggers renaming then); see EditableTextLabel's linkTarget prop.
+        linkTarget={linkTarget}
+        linkTitle="Open"
+      />
+    );
     return (
       <span
         className="dashboard-annotation-name-edit"
@@ -561,14 +595,13 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           marginInlineEnd: 8,
         }}
       >
-        <TextWithDescription
-          isEditable={this.isAnnotationEditable(annotation)}
-          value={annotation.name ? annotation.name : "Unnamed Annotation"}
-          onChange={(newName) => this.renameAnnotation(annotation, newName)}
-          label="Annotation Name"
-          description={annotation.description}
-          width={400}
-        />
+        {isEditable ? (
+          textWithDescription
+        ) : (
+          <Link to={linkTarget} className="incognito-link" title="Open">
+            {textWithDescription}
+          </Link>
+        )}
       </span>
     );
   }
@@ -670,6 +703,35 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     );
   };
 
+  renderEmptyText(): React.ReactNode {
+    const { searchQuery, tags, selectedOwnerId, selectedTeamId, shouldShowArchivedAnnotations } =
+      this.state;
+    const isSearchOrFilterActive =
+      searchQuery !== "" ||
+      tags.length > 0 ||
+      selectedOwnerId != null ||
+      selectedTeamId != null ||
+      shouldShowArchivedAnnotations;
+
+    if (!isSearchOrFilterActive) {
+      return <DashboardEmptyAnnotationsPlaceholder />;
+    }
+
+    const activeFilterLabels: string[] = [];
+    if (selectedOwnerId != null) activeFilterLabels.push("owner");
+    if (selectedTeamId != null) activeFilterLabels.push("teams");
+    if (shouldShowArchivedAnnotations) activeFilterLabels.push("status");
+
+    return (
+      <>
+        <p>No annotations match your search.</p>
+        {activeFilterLabels.length > 0 ? (
+          <p>Note that annotations are currently filtered by {activeFilterLabels.join(", ")}.</p>
+        ) : null}
+      </>
+    );
+  }
+
   renderTable() {
     const searchFilteredAnnotations = this._getSearchFilteredAnnotations();
     const { selectedOwnerId, selectedTeamId, sortOption } = this.state;
@@ -695,18 +757,24 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         )
       : searchFilteredAnnotations;
 
-    const sortComparator =
-      sortOption === "name"
-        ? localeCompareBy<APIAnnotationInfo>((annotation) => annotation.name)
-        : compareBy<APIAnnotationInfo>(
-            (annotation) => annotation.modified,
-            sortOption === "modifiedAsc",
+    const getSortComparator = (): Comparator<APIAnnotationInfo> => {
+      switch (sortOption) {
+        case "name":
+          return compareWithEmptyLast<APIAnnotationInfo>((annotation) => annotation.name);
+        case "owner":
+          return compareWithEmptyLast<APIAnnotationInfo>((annotation) =>
+            annotation.owner ? formatUserName(annotation.owner) : "",
           );
+        case "oldest":
+          return compareBy<APIAnnotationInfo>((annotation) => annotation.modified, true);
+        default:
+          // "modifiedDesc" and "newest" both sort by last-modified, descending -
+          // there's no separate "created" timestamp for annotations to distinguish them.
+          return compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false);
+      }
+    };
+    const sortComparator = getSortComparator();
     const filteredAndSortedAnnotations = [...ownerTeamFilteredAnnotations].sort(sortComparator);
-
-    if (filteredAndSortedAnnotations.length === 0 && !this.state.isLoading) {
-      return <DashboardEmptyAnnotationsPlaceholder />;
-    }
 
     const columns: ColumnType<APIAnnotationInfo>[] = [
       {
@@ -819,6 +887,9 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             defaultPageSize: 50,
             onChange: scrollToTop,
           }}
+          locale={{
+            emptyText: this.renderEmptyText(),
+          }}
           className="large-table dashboard-list-table"
           summary={(currentPageData) => {
             // See this issue for context:
@@ -847,6 +918,14 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           shouldShowArchivedAnnotations={this.state.shouldShowArchivedAnnotations}
           archiveAll={this.archiveAll}
         />
+        {this.state.searchQuery ? (
+          <Typography.Title level={3}>
+            <Space>
+              <SearchOutlined />
+              <span>Search Results for &quot;{this.state.searchQuery}&quot;</span>
+            </Space>
+          </Typography.Title>
+        ) : null}
         <CategorizationSearch
           itemName="annotations"
           searchTags={this.state.tags}

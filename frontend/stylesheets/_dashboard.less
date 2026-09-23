@@ -280,6 +280,17 @@ pre.dataset-import-folder-structure-hint {
   font-size: 13px;
   margin-top: 4px;
 
+  // Links within the meta line (e.g. the annotation count) should read as part of
+  // the muted text, not stand out with the default link color - but still hint at
+  // being clickable once hovered.
+  a {
+    color: inherit;
+
+    &:hover {
+      color: var(--ant-color-link);
+    }
+  }
+
   &-item {
     display: flex;
     align-items: center;

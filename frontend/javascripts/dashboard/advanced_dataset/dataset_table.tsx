@@ -420,7 +420,12 @@ class DatasetRenderer {
       <RowMetaLine
         items={[
           this.renderStorageColumn(),
-          "5 Annotations",
+          <Link
+            key="annotations"
+            to={`/dashboard/annotations?dataset=${encodeURIComponent(this.data.name)}`}
+          >
+            5 Annotations
+          </Link>,
           <span key="created">created {this.renderCreationDateColumn()}</span>,
         ]}
       />
@@ -712,12 +717,6 @@ class DatasetTable extends PureComponent<Props, State> {
             >
               <Space orientation="vertical" size={4}>
                 <Radio
-                  checked={this.props.datasetFilteringMode === "showAllDatasets"}
-                  onChange={() => this.props.setDatasetFilteringMode("showAllDatasets")}
-                >
-                  Show all datasets
-                </Radio>
-                <Radio
                   checked={this.props.datasetFilteringMode === "onlyShowReported"}
                   onChange={() => this.props.setDatasetFilteringMode("onlyShowReported")}
                 >
@@ -728,6 +727,12 @@ class DatasetTable extends PureComponent<Props, State> {
                   onChange={() => this.props.setDatasetFilteringMode("onlyShowUnreported")}
                 >
                   Only show missing datasets
+                </Radio>
+                <Radio
+                  checked={this.props.datasetFilteringMode === "showAllDatasets"}
+                  onChange={() => this.props.setDatasetFilteringMode("showAllDatasets")}
+                >
+                  Show all datasets
                 </Radio>
               </Space>
             </FilterChip>

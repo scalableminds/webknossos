@@ -7,9 +7,7 @@ import {
   SettingOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { useQueryClient } from "@tanstack/react-query";
-import { deleteDatasetOnDisk, getDataset } from "admin/rest_api";
-import { App, type MenuProps, Typography } from "antd";
+import { App, type MenuProps } from "antd";
 import type { useAppProps } from "antd/es/app/context";
 import { applyViewConfigurationToDatasetsInFolder } from "dashboard/advanced_dataset/apply_view_configuration";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
@@ -87,58 +85,6 @@ export function useReloadDataset() {
   };
 
   return { isReloading, reloadDataset };
-}
-
-export function useDeleteDataset() {
-  const queryClient = useQueryClient();
-  const { modal } = App.useApp();
-
-  // Resolves to true if the dataset was deleted.
-  return async (datasetId: string): Promise<boolean> => {
-    const dataset = await getDataset(datasetId);
-
-    const deleteDataset = await modal.confirm({
-      title: "Danger Zone",
-      content: (
-        <>
-          <Typography.Title level={4} type="danger">
-            Deleting a dataset from disk cannot be undone. Are you certain to delete dataset{" "}
-            {dataset.name}?
-          </Typography.Title>
-          <Typography.Paragraph>
-            Note, WEBKNOSSOS cannot delete datasets that have annotations associated with them.
-          </Typography.Paragraph>
-        </>
-      ),
-      okText: "Yes, delete dataset from disk",
-      okType: "danger",
-    });
-
-    if (!deleteDataset) {
-      return false;
-    }
-
-    await deleteDatasetOnDisk(dataset.id);
-
-    Toast.success(
-      messages["dataset.delete_success"]({
-        datasetName: dataset.name,
-      }),
-    );
-
-    // Invalidate the dataset list cache to exclude the deleted dataset
-    queryClient.setQueryData(
-      ["datasetsByFolder", dataset.folderId],
-      (oldItems: APIDatasetCompact[] | undefined) => {
-        if (oldItems == null) {
-          return oldItems;
-        }
-        return oldItems.filter((item) => item.id !== dataset.id);
-      },
-    );
-    queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
-    return true;
-  };
 }
 
 function DatasetActionView(props: Props) {

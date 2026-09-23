@@ -8,24 +8,21 @@ import {
   SettingOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { getOrganization } from "admin/api/organization";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { deleteDatasetOnDisk, getAnnotationCountForDataset } from "admin/rest_api";
-import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
+import { getAnnotationCountForDataset } from "admin/rest_api";
+import { Button, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import FormattedId from "components/formatted_id";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
-import features from "features";
 import { stringToTagColor } from "libs/colors";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import keyBy from "lodash-es/keyBy";
-import uniq from "lodash-es/uniq";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact, Folder } from "types/api_types";
 import Constants from "viewer/constants";
@@ -33,8 +30,12 @@ import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { DatasetExtentRow } from "viewer/view/right_border_tabs/info_tab/dataset_extent_row";
 import { OwningOrganizationRow } from "viewer/view/right_border_tabs/info_tab/owning_organization_row";
 import { VoxelSizeRow } from "viewer/view/right_border_tabs/info_tab/voxel_size_row";
-import { useDeleteDataset, useReloadDataset } from "../advanced_dataset/dataset_action_view";
+import { useReloadDataset } from "../advanced_dataset/dataset_action_view";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
+import {
+  canDeleteDataset,
+  useDeleteDatasetsModal,
+} from "../advanced_dataset/delete_datasets_modal";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import MetadataTable from "./metadata_table";
@@ -112,7 +113,7 @@ function DatasetDetails({
 }) {
   const context = useDatasetCollectionContext();
   const { isReloading, reloadDataset } = useReloadDataset();
-  const deleteDataset = useDeleteDataset();
+  const { openDeleteModal, deleteModal } = useDeleteDatasetsModal({ onDeleted });
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset.id);
   const activeUser = useWkSelector((state) => state.activeUser);
   const { data: owningOrganization } = useQuery({
@@ -258,20 +259,15 @@ function DatasetDetails({
             )}
             Reload
           </a>
-          {selectedDataset.isEditable &&
-          (features().allowDeleteDatasets || !selectedDataset.isActive) &&
-          selectedDataset.status !== "Deleted by user." ? (
-            <a
-              onClick={async () => {
-                if (await deleteDataset(selectedDataset.id)) onDeleted();
-              }}
-            >
+          {canDeleteDataset(selectedDataset) ? (
+            <a onClick={() => openDeleteModal([selectedDataset])}>
               <DeleteOutlined className="icon-margin-right" />
               Delete
             </a>
           ) : null}
         </div>
       </div>
+      {deleteModal}
     </>
   );
 }
@@ -283,112 +279,8 @@ function DatasetsDetails({
   selectedDatasets: APIDatasetCompact[];
   datasetCount: number;
 }) {
-  const queryClient = useQueryClient();
-  const [progressInPercent, setProgressInPercent] = useState(0);
-  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
-  const deletableDatasets = selectedDatasets.filter((ds) => ds.isEditable);
-  const numberOfUndeletableDatasets = selectedDatasets.length - deletableDatasets.length;
-
-  const updateAndInvalidateQueries = (deletedIds: string[]) => {
-    const uniqueFolderIds = uniq(deletableDatasets.map((ds) => ds.folderId));
-    uniqueFolderIds.forEach((folderId) => {
-      queryClient.setQueryData(
-        ["datasetsByFolder", folderId],
-        (oldItems: APIDatasetCompact[] | undefined) => {
-          if (oldItems == null) {
-            return oldItems;
-          }
-          return oldItems.filter((item) => !deletedIds.includes(item.id));
-        },
-      );
-    });
-    queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
-  };
-
-  const deleteDatasetsMutation = useMutation({
-    mutationFn: async (datasets: APIDatasetCompact[]) => {
-      const deletedIds: string[] = [];
-      for (let i = 0; i < datasets.length; i++) {
-        const dataset = datasets[i];
-        try {
-          await deleteDatasetOnDisk(dataset.id);
-          deletedIds.push(dataset.id);
-          setProgressInPercent(Math.round(((i + 1) / datasets.length) * 100));
-        } catch (_e) {
-          Toast.error(`Failed to delete dataset ${dataset.name}.`);
-        }
-      }
-      return deletedIds;
-    },
-    onSuccess: (deletedIds) => {
-      updateAndInvalidateQueries(deletedIds);
-      setShowConfirmDeleteModal(false);
-      setProgressInPercent(0);
-
-      if (deletedIds.length > 0) {
-        Toast.success(
-          `Successfully deleted ${deletedIds.length} ${pluralize("dataset", deletedIds.length)}.`,
-        );
-      }
-    },
-  });
-
-  const deleteDatasets = () => {
-    deleteDatasetsMutation.mutate(deletableDatasets);
-  };
-
-  const okayButton = (
-    <Button type="primary" danger onClick={deleteDatasets}>
-      Delete
-    </Button>
-  );
-
-  const onCancel = () => {
-    if (!deleteDatasetsMutation.isPending) {
-      setShowConfirmDeleteModal(false);
-    }
-  };
-
-  const cancelButton = <Button onClick={onCancel}>Cancel</Button>;
-
-  // TODO (#9061): Delete once soft-delete is implemented.
-  const cantBeUndoneMessage = (
-    <Typography.Text type="warning" strong>
-      This action cannot be undone.
-    </Typography.Text>
-  );
-
-  const deletableDatasetString = `${deletableDatasets.length} ${pluralize("dataset", deletableDatasets.length)}`;
-
-  const confirmModal = (
-    <Modal
-      open={showConfirmDeleteModal}
-      title="Delete Datasets"
-      footer={deleteDatasetsMutation.isPending ? null : [cancelButton, okayButton]}
-      onCancel={onCancel}
-    >
-      {deleteDatasetsMutation.isPending ? (
-        <Progress percent={progressInPercent} />
-      ) : (
-        <>
-          Are you sure you want to delete the following {deletableDatasetString}?
-          <ul>
-            {deletableDatasets.map((dataset) => (
-              <li key={dataset.id}>{dataset.name}</li>
-            ))}
-          </ul>
-          {numberOfUndeletableDatasets > 0 && (
-            <div>
-              The remaining {numberOfUndeletableDatasets} selected{" "}
-              {pluralize("dataset", numberOfUndeletableDatasets)} cannot be deleted, e.g. because
-              you do not have sufficient permissions.
-            </div>
-          )}
-          {cantBeUndoneMessage}
-        </>
-      )}
-    </Modal>
-  );
+  const { openDeleteModal, deleteModal } = useDeleteDatasetsModal();
+  const deletableCount = selectedDatasets.filter(canDeleteDataset).length;
 
   return (
     <div style={{ textAlign: "center" }}>
@@ -397,13 +289,13 @@ function DatasetsDetails({
           Selected {selectedDatasets.length} of {datasetCount} datasets. Move them to another folder
           with drag and drop.
         </div>
-        {deletableDatasets.length > 0 && features().allowDeleteDatasets && (
-          <Button onClick={() => setShowConfirmDeleteModal(true)} icon={<DeleteOutlined />}>
-            Delete {deletableDatasetString}
+        {deletableCount > 0 && (
+          <Button onClick={() => openDeleteModal(selectedDatasets)} icon={<DeleteOutlined />}>
+            Delete {deletableCount} {pluralize("dataset", deletableCount)}
           </Button>
         )}
       </Space>
-      {confirmModal}
+      {deleteModal}
     </div>
   );
 }

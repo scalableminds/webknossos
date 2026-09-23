@@ -264,6 +264,12 @@ pre.dataset-import-folder-structure-hint {
   border-inline-end: none !important;
 }
 
+/** Removes the cell's own right-hand padding (e.g. the dataset thumbnail column),
+    so the thumbnail image itself controls the gap to the next column. */
+.dashboard-list-table-thumbnail-cell {
+  padding-inline-end: 5px !important;
+}
+
 /** Muted, single-line row of meta info shown beneath a dataset/annotation row's
     title (e.g. size, creation date, owner), with entries separated by a dot. */
 .dashboard-row-meta {

@@ -638,9 +638,8 @@ class DatasetTable extends PureComponent<Props, State> {
 
     const columns: ColumnType<RowRenderer>[] = [
       {
-        width: THUMBNAIL_SIZE + 32,
         key: "thumbnail",
-        className: "dashboard-list-table-borderless-cell",
+        className: "dashboard-list-table-borderless-cell dashboard-list-table-thumbnail-cell",
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderThumbnailColumn(),
       },
       {
@@ -688,7 +687,10 @@ class DatasetTable extends PureComponent<Props, State> {
           {this.props.isUserAdminOrDatasetManager ? (
             <FilterChip
               label="Status"
-              active={this.props.datasetFilteringMode !== "showAllDatasets"}
+              // "onlyShowReported" is the default filtering mode (see dataset_view.tsx), so
+              // only highlight this chip once the user has actually deviated from it - matching
+              // how the Owner/Teams/Status chips on the Annotations tab start out unhighlighted.
+              active={this.props.datasetFilteringMode !== "onlyShowReported"}
             >
               <Space orientation="vertical" size={4}>
                 <Radio

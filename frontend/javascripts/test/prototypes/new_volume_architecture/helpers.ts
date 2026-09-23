@@ -51,7 +51,7 @@ export function editContext(overrides: Partial<EditContext> = {}): EditContext {
   };
 }
 
-/** Make the given buckets resident so tests can read them back. */
+/** Make the given buckets loaded so tests can read them back. */
 export async function materialize(
   cube: WorkingDataCube,
   addresses: BucketAddress[],

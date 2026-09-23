@@ -107,7 +107,7 @@ export class WkDataCubeAdapter implements TransactionCube {
  * (§5.1: "the only component permitted to await a bucket load"). Kept separate
  * from WkDataCubeAdapter because the brush never needs to await anything —
  * §5.4 pointedly evaluates the overwrite predicate against whatever is
- * resident rather than fetching, so blocking reads would be a regression, not
+ * loaded rather than fetching, so blocking reads would be a regression, not
  * a feature, on that path.
  */
 export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVoxelCube {

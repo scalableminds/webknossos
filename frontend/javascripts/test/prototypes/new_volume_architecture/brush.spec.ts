@@ -263,7 +263,7 @@ describe("new volume architecture — brush", () => {
     expect(cube.peek([16, 16, 5], 0)).toBe(SEGMENT);
   });
 
-  it("honours overwrite-empty-only against resident data", async () => {
+  it("honours overwrite-empty-only against loaded data", async () => {
     const { cube, session, backend } = createHarness();
     const address: BucketAddress = [0, 0, 0, 0, null];
     // Pre-existing segment 3 at one voxel the brush will cover.

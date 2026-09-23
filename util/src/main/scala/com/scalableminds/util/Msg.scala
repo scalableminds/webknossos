@@ -812,6 +812,8 @@ object Msg {
         s"PCG returned $returned roots for $requested supervoxels"
       def chunkMappingNotPaired(valueCount: Int, chunk: String): String =
         s"PCG returned $valueCount values for chunk $chunk, which is not a list of pairs"
+      def subgraphAffinityCountMismatch(edgeCount: Int, affinityCount: Int): String =
+        s"PCG returned $affinityCount affinities for $edgeCount subgraph edges"
       def noChunkBitWidth(layer: Long, id: Long): String =
         s"PCG reports no chunk bit width for layer $layer (id $id)"
       def chunkTooLargeToScan(segmentId: Long, bucketCount: Int, limit: Int): String =

@@ -163,6 +163,8 @@ class PcgClient @Inject() (rpc: RPC) extends LazyLogging {
     for {
       response <- rpc(s"${baseUrl(agglomerateFileKey)}/node/$agglomerateId/subgraph").silent
         .getWithJsonResponse[PcgSubgraph]
+      _ <- Fox.fromBool(response.edges.length == response.affinities.length) ?~>
+        Msg.AgglomerateFile.Pcg.subgraphAffinityCountMismatch(response.edges.length, response.affinities.length)
       folded <- tryo(foldEdgeDirections(response)).toFox
     } yield folded
 

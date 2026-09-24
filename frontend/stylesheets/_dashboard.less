@@ -9,6 +9,23 @@
   }
 }
 
+/** Actions of an annotation list row as a 2x2 grid: Open/Download left, Archive/Lock right. */
+.annotation-row-actions {
+  display: grid;
+  grid-template-rows: repeat(2, auto);
+  grid-auto-flow: column;
+  column-gap: 40px;
+  padding-right: 30px;
+  row-gap: 2px;
+  white-space: nowrap;
+
+  // Unavailable actions stay in place, greyed out (hovering shows the reason as tooltip).
+  a[disabled] {
+    color: var(--ant-color-text-disabled);
+    cursor: not-allowed;
+  }
+}
+
 /** Container for the description of a task type, allowing for long text wrapping and optional height capping. */
 .task-type-description {
   max-width: 700px;

@@ -27,6 +27,7 @@ import { Button, Radio, Space, Table, Tag, Typography } from "antd";
 import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
+import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
@@ -369,13 +370,20 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     const { typ, id, state } = annotation;
 
     if (state === "Active") {
+      const isEditable = this.isAnnotationEditable(annotation);
+      let archiveDisabledReason: string | undefined;
+      if (!isEditable) {
+        archiveDisabledReason = "You don't have permission to archive this annotation.";
+      } else if (annotation.isLockedByOwner) {
+        archiveDisabledReason = "Locked annotations cannot be archived.";
+      }
+      // Always render all actions so that the 2x2 grid stays aligned across rows.
       return (
-        <div>
+        <div className="annotation-row-actions">
           <Link to={`/annotations/${id}`}>
             <PlayCircleOutlined className="icon-margin-right" />
             Open
           </Link>
-          <br />
           <AsyncLink
             onClick={() => {
               const hasVolumeAnnotation = getVolumeDescriptors(annotation).length > 0;
@@ -385,38 +393,32 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           >
             Download
           </AsyncLink>
-          {this.isAnnotationEditable(annotation) ? (
-            <>
-              <br />
-              <AsyncLink
-                onClick={() => this.finishOrReopenAnnotation("finish", annotation)}
-                icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
-                disabled={annotation.isLockedByOwner}
-                title={
-                  annotation.isLockedByOwner ? "Locked annotations cannot be archived." : undefined
-                }
-              >
-                Archive
-              </AsyncLink>
-            </>
-          ) : null}
-          {isActiveUserOwner ? (
-            <>
-              <br />
-              <AsyncLink
-                onClick={() => this.setLockedState(annotation, !annotation.isLockedByOwner)}
-                icon={
-                  annotation.isLockedByOwner ? (
-                    <LockOutlined key="lock" className="icon-margin-right" />
-                  ) : (
-                    <UnlockOutlined key="unlock" className="icon-margin-right" />
-                  )
-                }
-              >
-                {annotation.isLockedByOwner ? "Unlock" : "Lock"}
-              </AsyncLink>
-            </>
-          ) : null}
+          <FastTooltip title={archiveDisabledReason}>
+            <AsyncLink
+              onClick={() => this.finishOrReopenAnnotation("finish", annotation)}
+              icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
+              disabled={archiveDisabledReason != null}
+            >
+              Archive
+            </AsyncLink>
+          </FastTooltip>
+          <FastTooltip
+            title={isActiveUserOwner ? undefined : "Only the owner can lock this annotation."}
+          >
+            <AsyncLink
+              onClick={() => this.setLockedState(annotation, !annotation.isLockedByOwner)}
+              icon={
+                annotation.isLockedByOwner ? (
+                  <LockOutlined key="lock" className="icon-margin-right" />
+                ) : (
+                  <UnlockOutlined key="unlock" className="icon-margin-right" />
+                )
+              }
+              disabled={!isActiveUserOwner}
+            >
+              {annotation.isLockedByOwner ? "Unlock" : "Lock"}
+            </AsyncLink>
+          </FastTooltip>
         </div>
       );
     } else {

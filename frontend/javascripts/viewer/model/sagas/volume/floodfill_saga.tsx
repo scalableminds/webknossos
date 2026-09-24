@@ -300,6 +300,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
       },
       splitBoundaryMesh,
     });
+    // todop
     console.info(
       `[volume] floodFill: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
     );

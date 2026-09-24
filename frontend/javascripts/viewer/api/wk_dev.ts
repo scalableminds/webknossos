@@ -8,6 +8,22 @@ import { Model, Store } from "viewer/singletons";
 import type { ApiInterface } from "./api_latest";
 import type ApiLoader from "./api_loader";
 
+/**
+ * The benchmarks' dependencies, loaded on first use.
+ *
+ * This module is reachable from `api_latest.ts`, which most of those
+ * dependencies import in turn, so importing them statically would close a
+ * cycle. They are collected in one module (`wk_dev_benchmark_deps.ts`) so this
+ * is the only dynamic import in the file.
+ *
+ * A bare `import()` rather than `importDynamic()`: wrapping it would pull the
+ * cycle back in, and for a dev-only benchmark a failed import is an acceptable
+ * outcome. Whitelisted in `tools/check-no-bare-dynamic-imports.js`.
+ */
+function loadBenchmarkDeps() {
+  return import("./wk_dev_benchmark_deps");
+}
+
 // Can be accessed via window.webknossos.DEV.flags. Only use this
 // for debugging or one off scripts.
 export const WkDevFlags = {
@@ -244,19 +260,16 @@ export default class WkDev {
       );
     }
 
-    // Dynamic import to avoid circular imports.
-    // Bare import is allowed here (whitelisted in tools/check-no-bare-dynamic-imports.js):
-    // benchmark-only; cyclic dep via importDynamic is not worth it here and a failed import is acceptable.
-    const { createCellAction } = await import("viewer/model/actions/volumetracing_actions");
-    const { updateUserSettingAction } = await import("viewer/model/actions/settings_actions");
-    const { setViewportAction } = await import("viewer/model/actions/view_mode_actions");
-    const { getActiveSegmentationTracing } = await import(
-      "viewer/model/accessors/volumetracing_accessor"
-    );
-    const { getInputCatcherRect } = await import("viewer/model/accessors/view_mode_accessor");
-    const { handleDrawStart, handleMoveForDrawOrErase, handleEndForDrawOrErase } = await import(
-      "viewer/controller/combinations/volume_handlers"
-    );
+    const {
+      createCellAction,
+      getActiveSegmentationTracing,
+      getInputCatcherRect,
+      handleDrawStart,
+      handleEndForDrawOrErase,
+      handleMoveForDrawOrErase,
+      setViewportAction,
+      updateUserSettingAction,
+    } = await loadBenchmarkDeps();
 
     const api = this.api;
 
@@ -302,10 +315,7 @@ export default class WkDev {
   }
 
   async benchmarkRotate(n: number = 10) {
-    // Dynamic import to avoid circular imports.
-    // Bare import is allowed here (whitelisted in tools/check-no-bare-dynamic-imports.js):
-    // benchmark-only; cyclic dep via importDynamic is not worth it here and a failed import is acceptable.
-    const { rotate3DViewTo } = await import("viewer/controller/camera_controller");
+    const { rotate3DViewTo } = await loadBenchmarkDeps();
 
     const animateAsPromise = (plane: OrthoView) => {
       return new Promise<void>((resolve) => {

@@ -270,13 +270,18 @@ export function generateSettingsForFolder(
           </PricingEnforcedSpan>
         ),
       },
-      {
-        key: "delete",
-        onClick: deleteFolder,
-        disabled: !isEditable,
-        icon: <DeleteOutlined className="icon-margin-right" />,
-        label: <span>Delete Folder</span>,
-      },
+      // The organization's root folder can't be deleted.
+      ...(folder.parent != null
+        ? [
+            {
+              key: "delete",
+              onClick: deleteFolder,
+              disabled: !isEditable,
+              icon: <DeleteOutlined className="icon-margin-right" />,
+              label: <span>Delete Folder</span>,
+            },
+          ]
+        : []),
     ],
   };
 }

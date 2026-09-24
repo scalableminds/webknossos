@@ -334,6 +334,9 @@ function FolderDetails({
   displayedFolderEqualsActiveFolder: boolean;
 }) {
   const context = useDatasetCollectionContext();
+  const hierarchy = context.queries.folderHierarchyQuery.data;
+  // The organization's root folder can't be deleted. Unknown folders count as root to be safe.
+  const isRootFolder = folderId == null || hierarchy?.itemById[folderId]?.parent == null;
   let message = getMaybeSelectMessage(datasetCount);
   if (!displayedFolderEqualsActiveFolder) {
     message =
@@ -390,10 +393,12 @@ function FolderDetails({
                     Edit
                   </PricingEnforcedSpan>
                 </a>
-                <a onClick={() => context.queries.deleteFolderMutation.mutateAsync(folder.id)}>
-                  <DeleteOutlined className="icon-margin-right" />
-                  Delete
-                </a>
+                {isRootFolder ? null : (
+                  <a onClick={() => context.queries.deleteFolderMutation.mutateAsync(folder.id)}>
+                    <DeleteOutlined className="icon-margin-right" />
+                    Delete
+                  </a>
+                )}
               </div>
             </div>
           ) : null}

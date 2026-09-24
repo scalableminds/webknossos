@@ -80,6 +80,7 @@ export function DetailsSidebar({
     >
       {selectedDatasets.length === 1 ? (
         <DatasetDetails
+          key={selectedDatasets[0].id}
           selectedDataset={selectedDatasets[0]}
           onDeleted={() => setSelectedDataset(null)}
         />
@@ -116,10 +117,12 @@ function DatasetDetails({
   const { openDeleteModal, deleteModal } = useDeleteDatasetsModal({ onDeleted });
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset.id);
   const activeUser = useWkSelector((state) => state.activeUser);
+  const isForeignOrgaDataset = activeUser?.organization !== selectedDataset.owningOrganization;
   const { data: owningOrganization } = useQuery({
     queryKey: ["organizations", selectedDataset.owningOrganization],
     queryFn: () => getOrganization(selectedDataset.owningOrganization),
     refetchOnWindowFocus: false,
+    enabled: isForeignOrgaDataset,
   });
   const owningOrganizationName = owningOrganization?.name;
   const { data: annotationCount } = useQuery({
@@ -129,7 +132,7 @@ function DatasetDetails({
   });
 
   const renderOrganization = () => {
-    if (activeUser?.organization === selectedDataset.owningOrganization) return;
+    if (!isForeignOrgaDataset) return;
     return (
       <table>
         <tbody>

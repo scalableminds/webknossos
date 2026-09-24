@@ -938,19 +938,36 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
             """.as[DataSourceMagRow])
     } yield storageRelevantMags
 
+  // Upserts instead of clear-and-insert, since deleting rows cascades to organization_usedStorage_mags.
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
+    val magKeys = dataLayers.flatMap(layer => layer.mags.map(mag => q"(${layer.name}, ${mag.mag}::webknossos.VECTOR3)"))
+    val keepExistingPredicate =
+      if (magKeys.isEmpty) q"" else q"AND (dataLayerName, mag) NOT IN (${SqlToken.joinByComma(magKeys)})"
     val clearQuery =
-      q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND NOT uploadToPathIsPending AND NOT uploadIsPending".asUpdate
-    val insertQueries = dataLayers.flatMap { (layer: StaticLayer) =>
+      q"""DELETE FROM webknossos.dataset_mags
+          WHERE _dataset = $datasetId
+          AND NOT uploadToPathIsPending
+          AND NOT uploadIsPending
+          $keepExistingPredicate""".asUpdate
+    val upsertQueries = dataLayers.flatMap { (layer: StaticLayer) =>
       layer.mags.map { mag =>
         q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId, uploadToPathIsPending, uploadIsPending)
             VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(
             Json.toJson(_)
           )}, ${mag.channelIndex}, ${mag.credentialId}, ${false}, ${false})
+            ON CONFLICT (_dataset, dataLayerName, mag) DO UPDATE
+            SET
+              path = EXCLUDED.path,
+              realPath = CASE WHEN dataset_mags.path IS NOT DISTINCT FROM EXCLUDED.path THEN dataset_mags.realPath END,
+              hasLocalData = dataset_mags.path IS NOT DISTINCT FROM EXCLUDED.path AND dataset_mags.hasLocalData,
+              axisOrder = EXCLUDED.axisOrder,
+              channelIndex = EXCLUDED.channelIndex,
+              credentialId = EXCLUDED.credentialId
+            WHERE NOT dataset_mags.uploadToPathIsPending AND NOT dataset_mags.uploadIsPending
            """.asUpdate
       }
     }
-    runAsSerializableTransaction(clearQuery +: insertQueries)
+    runAsSerializableTransaction(clearQuery +: upsertQueries)
   }
 
   // Note: also see attachments
@@ -1416,38 +1433,51 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
       attachments <- parseAttachments(rows.toList, useRealPaths) ?~> "Could not parse attachments"
     } yield attachments
 
+  // Upserts instead of clear-and-insert, since deleting rows cascades to organization_usedStorage_attachments.
   def updateAttachments(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
-    def insertQuery(attachment: LayerAttachment, layerName: String, attachmentType: LayerAttachmentType.Value) = {
-      val query =
-        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending)
-          VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path}, $attachmentType::webknossos.LAYER_ATTACHMENT_TYPE,
-          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${attachment.credentialId}, ${false}, ${false})"""
-      query.asUpdate
-    }
-
-    val clearQuery =
-      q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId AND NOT uploadToPathIsPending AND NOT uploadIsPending".asUpdate
-    val insertQueries = dataLayers.flatMap { (layer: StaticLayer) =>
-      layer.attachments match {
-        case Some(attachments) =>
-          attachments.agglomerates.map { agglomerate =>
-            insertQuery(agglomerate, layer.name, LayerAttachmentType.agglomerate)
-          } ++ attachments.connectomes.map { connectome =>
-            insertQuery(connectome, layer.name, LayerAttachmentType.connectome)
-          } ++ attachments.segmentIndex.map { segmentIndex =>
-            insertQuery(segmentIndex, layer.name, LayerAttachmentType.segmentIndex)
-          } ++ attachments.meshes.map { mesh =>
-            insertQuery(mesh, layer.name, LayerAttachmentType.mesh)
-          } ++ attachments.cumsum.map { cumsumFile =>
-            insertQuery(cumsumFile, layer.name, LayerAttachmentType.cumsum)
-          } ++ attachments.segmentStatistics.map { segmentStatistics =>
-            insertQuery(segmentStatistics, layer.name, LayerAttachmentType.segmentStatistics)
-          }
-        case None =>
-          List.empty
+    val attachmentEntries: List[(String, LayerAttachment, LayerAttachmentType.Value)] =
+      dataLayers.flatMap { (layer: StaticLayer) =>
+        layer.attachments match {
+          case Some(attachments) =>
+            attachments.agglomerates.map((layer.name, _, LayerAttachmentType.agglomerate)) ++
+              attachments.connectomes.map((layer.name, _, LayerAttachmentType.connectome)) ++
+              attachments.segmentIndex.map((layer.name, _, LayerAttachmentType.segmentIndex)) ++
+              attachments.meshes.map((layer.name, _, LayerAttachmentType.mesh)) ++
+              attachments.cumsum.map((layer.name, _, LayerAttachmentType.cumsum)) ++
+              attachments.segmentStatistics.map((layer.name, _, LayerAttachmentType.segmentStatistics))
+          case None =>
+            List.empty
+        }
       }
+
+    def upsertQuery(layerName: String, attachment: LayerAttachment, attachmentType: LayerAttachmentType.Value) =
+      q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending)
+          VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path}, $attachmentType::webknossos.LAYER_ATTACHMENT_TYPE,
+          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${attachment.credentialId}, ${false}, ${false})
+          ON CONFLICT (_dataset, layerName, name, type) DO UPDATE
+          SET
+            path = EXCLUDED.path,
+            realPath = CASE WHEN dataset_layer_attachments.path = EXCLUDED.path THEN dataset_layer_attachments.realPath END,
+            hasLocalData = dataset_layer_attachments.path = EXCLUDED.path AND dataset_layer_attachments.hasLocalData,
+            dataFormat = EXCLUDED.dataFormat,
+            credentialId = EXCLUDED.credentialId
+          WHERE NOT dataset_layer_attachments.uploadToPathIsPending AND NOT dataset_layer_attachments.uploadIsPending
+         """.asUpdate
+
+    val attachmentKeys = attachmentEntries.map { case (layerName, attachment, attachmentType) =>
+      q"($layerName, ${attachment.name}, $attachmentType::webknossos.LAYER_ATTACHMENT_TYPE)"
     }
-    runAsSerializableTransaction(clearQuery +: insertQueries)
+    val keepExistingPredicate =
+      if (attachmentKeys.isEmpty) q""
+      else q"AND (layerName, name, type) NOT IN (${SqlToken.joinByComma(attachmentKeys)})"
+    val clearQuery =
+      q"""DELETE FROM webknossos.dataset_layer_attachments
+          WHERE _dataset = $datasetId
+          AND NOT uploadToPathIsPending
+          AND NOT uploadIsPending
+          $keepExistingPredicate""".asUpdate
+    val upsertQueries = attachmentEntries.map(upsertQuery.tupled)
+    runAsSerializableTransaction(clearQuery +: upsertQueries)
   }
 
   // Note: also see mags.

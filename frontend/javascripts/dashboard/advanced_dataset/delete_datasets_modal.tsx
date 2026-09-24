@@ -10,10 +10,7 @@ import type { APIDatasetCompact } from "types/api_types";
 
 export function canDeleteDataset(dataset: APIDatasetCompact): boolean {
   return (
-    dataset.isEditable &&
-    // Unusable datasets may always be cleaned up.
-    (features().allowDeleteDatasets || !dataset.isActive) &&
-    dataset.status !== "Deleted by user."
+    dataset.isEditable && features().allowDeleteDatasets && dataset.status !== "Deleted by user."
   );
 }
 

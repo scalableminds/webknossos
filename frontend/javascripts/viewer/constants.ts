@@ -44,7 +44,6 @@ export type Rect = {
   width: number;
   height: number;
 };
-export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
 export const Vector2Indices = [0, 1] as const;
 export const Vector3Indices = [0, 1, 2] as const;
 export enum OrthoViews {

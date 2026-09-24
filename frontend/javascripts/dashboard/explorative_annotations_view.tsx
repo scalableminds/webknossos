@@ -71,7 +71,6 @@ import {
   annotationToCompact,
 } from "types/api_types";
 import type { Comparator } from "types/type_utils";
-import { AnnotationContentTypes } from "viewer/constants";
 import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 import CategorizationLabel, {
@@ -582,20 +581,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   renderNameWithDescription(annotation: APIAnnotationInfo) {
     const isEditable = this.isAnnotationEditable(annotation);
     const linkTarget = `/annotations/${annotation.id}`;
-    const textWithDescription = (
-      <TextWithDescription
-        isEditable={isEditable}
-        value={annotation.name ? annotation.name : "Unnamed Annotation"}
-        onChange={(newName) => this.renameAnnotation(annotation, newName)}
-        label="Annotation Name"
-        description={annotation.description}
-        width={400}
-        // Makes the name itself a link to the annotation (only the edit icon
-        // triggers renaming then); see EditableTextLabel's linkTarget prop.
-        linkTarget={linkTarget}
-        linkTitle="Open"
-      />
-    );
     return (
       <span
         className="dashboard-annotation-name-edit"
@@ -603,13 +588,18 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           marginInlineEnd: 8,
         }}
       >
-        {isEditable ? (
-          textWithDescription
-        ) : (
-          <Link to={linkTarget} className="incognito-link" title="Open">
-            {textWithDescription}
-          </Link>
-        )}
+        <TextWithDescription
+          isEditable={isEditable}
+          value={annotation.name ? annotation.name : "Unnamed Annotation"}
+          onChange={(newName) => this.renameAnnotation(annotation, newName)}
+          label="Annotation Name"
+          description={annotation.description}
+          width={400}
+          // Makes the name itself a link to the annotation (only the edit icon
+          // triggers renaming then).
+          linkTarget={linkTarget}
+          linkTitle="Open"
+        />
       </span>
     );
   }
@@ -686,10 +676,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
               onClick={partial(this.addTagToSearch, tag)}
               onClose={partial(this.editTagFromAnnotation, annotation, false, tag)}
               tag={tag}
-              closable={
-                !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
-                !this.state.shouldShowArchivedAnnotations
-              }
+              closable={tag !== annotation.dataSetName && !this.state.shouldShowArchivedAnnotations}
             />
           ))}
           {this.state.shouldShowArchivedAnnotations ? null : (
@@ -798,14 +785,11 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       "id",
     );
 
-    const hasOwnerOrTeamFilter = selectedOwnerId != null || selectedTeamId != null;
-    const ownerTeamFilteredAnnotations = hasOwnerOrTeamFilter
-      ? searchFilteredAnnotations.filter(
-          (annotation) =>
-            (selectedOwnerId != null && annotation.owner?.id === selectedOwnerId) ||
-            (selectedTeamId != null && annotation.teams.some((team) => team.id === selectedTeamId)),
-        )
-      : searchFilteredAnnotations;
+    const ownerTeamFilteredAnnotations = searchFilteredAnnotations.filter(
+      (annotation) =>
+        (selectedOwnerId == null || annotation.owner?.id === selectedOwnerId) &&
+        (selectedTeamId == null || annotation.teams.some((team) => team.id === selectedTeamId)),
+    );
 
     const getSortComparator = (): Comparator<APIAnnotationInfo> => {
       switch (sortOption) {

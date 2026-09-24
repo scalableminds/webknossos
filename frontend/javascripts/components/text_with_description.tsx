@@ -2,6 +2,7 @@ import { AlignCenterOutlined } from "@ant-design/icons";
 import { Button, Popover, Tooltip } from "antd";
 import Markdown from "libs/markdown_adapter";
 import type React from "react";
+import { Link } from "react-router";
 import type { EditableTextLabelProp } from "viewer/view/components/editable_text_label";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 
@@ -14,8 +15,35 @@ type NonEditableProps = {
   isEditable: false;
   description: string;
   value: string;
+  linkTarget?: string;
+  linkTitle?: string;
 };
 type Props = EditableProps | NonEditableProps;
+
+function NonEditableText({ markdown, value, linkTarget, linkTitle }: NonEditableProps) {
+  const text = markdown ? (
+    <span>
+      <Markdown>{value}</Markdown>
+    </span>
+  ) : (
+    value
+  );
+  return (
+    <span
+      style={{
+        display: "inline-block",
+      }}
+    >
+      {linkTarget != null ? (
+        <Link to={linkTarget} title={linkTitle} className="incognito-link">
+          {text}
+        </Link>
+      ) : (
+        text
+      )}
+    </span>
+  );
+}
 
 const TextWithDescription: React.FC<Props> = (props) => {
   const { isEditable, description, ...editableProps } = props;
@@ -34,19 +62,7 @@ const TextWithDescription: React.FC<Props> = (props) => {
       {isEditable ? (
         <EditableTextLabel {...(editableProps as EditableTextLabelProp)} />
       ) : (
-        <span
-          style={{
-            display: "inline-block",
-          }}
-        >
-          {(props as NonEditableProps).markdown ? (
-            <span>
-              <Markdown>{(props as NonEditableProps).value}</Markdown>
-            </span>
-          ) : (
-            (props as NonEditableProps).value
-          )}
-        </span>
+        <NonEditableText {...(props as NonEditableProps)} />
       )}
       {hasDescription ? (
         <Tooltip title="Show description" placement="bottom">

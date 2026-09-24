@@ -440,7 +440,7 @@ class DatasetRenderer {
     return (
       <RowMetaLine
         items={[
-          this.renderStorageColumn(),
+          this.datasetTable.shouldShowStorage() ? this.renderStorageColumn() : null,
           annotationCount ? (
             <Link
               key="annotations"
@@ -562,7 +562,18 @@ class DatasetTable extends PureComponent<Props, State> {
     return filteredByTags(filterByMode(filterByHasLayers(this.props.datasets)));
   }
 
+  shouldShowStorage(): boolean {
+    const { usedStorageInOrga } = this.props.context;
+    return (
+      this.props.isUserAdminOrDatasetManager && usedStorageInOrga != null && usedStorageInOrga > 0
+    );
+  }
+
   renderEmptyText(): React.ReactNode {
+    if (this.props.isLoading) {
+      // The table's loading spinner covers this; avoid flashing the empty-state hint.
+      return null;
+    }
     if (this.props.emptyStateContent != null) {
       return this.props.emptyStateContent;
     }
@@ -726,12 +737,8 @@ class DatasetTable extends PureComponent<Props, State> {
       },
     ];
 
-    const canSortByStorage =
-      this.props.isUserAdminOrDatasetManager &&
-      context.usedStorageInOrga != null &&
-      context.usedStorageInOrga > 0;
     const availableSortOptions = DATASET_SORT_OPTIONS.filter(
-      (option) => option.key !== "storage" || canSortByStorage,
+      (option) => option.key !== "storage" || this.shouldShowStorage(),
     );
     const currentSortLabel =
       availableSortOptions.find((option) => option.key === sortOption)?.label ?? "Last used";

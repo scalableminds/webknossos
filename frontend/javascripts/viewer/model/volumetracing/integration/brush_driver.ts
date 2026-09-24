@@ -1,11 +1,12 @@
 /**
- * SPIKE GLUE — drives a brush stroke through the new architecture against
+ * Drives a brush stroke through the volume-annotation core (../core) against
  * webKnossos' real DataCube.
  *
  * `editVolumeLayerAsync` (viewer/model/sagas/volumetracing_saga.tsx) owns the
  * event loop (START_EDITING / ADD_TO_CONTOUR_LIST / FINISH_EDITING); this owns
  * everything between. Nothing here touches the save queue, update actions, or
- * undo — buckets are mutated in place only.
+ * undo — buckets are mutated in place only, and saving still goes through the
+ * existing push queue (design doc §12.2).
  */
 
 import { rasterize } from "../core/rasterizer";
@@ -46,7 +47,7 @@ export class BrushDriver {
       additionalCoordinates: options.additionalCoordinates,
     };
     this.transaction = new VolumeTransaction(
-      `spike-${Date.now()}`,
+      `brush-${Date.now()}`,
       this.ctx,
       this.adapter,
       magListFromDenseMags(options.denseMags),

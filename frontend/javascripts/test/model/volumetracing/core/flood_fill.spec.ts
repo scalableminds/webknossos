@@ -41,7 +41,7 @@ function regionKeys(): Set<string> {
   return keys;
 }
 
-describe("new volume architecture — flood fill", () => {
+describe("volume annotation core — flood fill", () => {
   it("fills exactly the connected region, across bucket boundaries", async () => {
     const { cube, session, backend } = createHarness();
     seedRegion(backend);

@@ -82,10 +82,10 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
-// Brushing runs through the new volume architecture
-// (viewer/model/volumetracing), not the VoxelBuffer2D path. Still dirty:
-// buckets are mutated in place, nothing reaches the save queue or the undo
-// stack. The trace tool is unaffected — it keeps using the section labeler.
+// Brushing runs through viewer/model/volumetracing, not the VoxelBuffer2D
+// path. Buckets are mutated in place; nothing reaches the save queue or the
+// undo stack (design doc §12.2). The trace tool is unaffected — it keeps
+// using the section labeler.
 
 /** Global (mag-1) layer-space position -> source-mag voxel coordinates. */
 function toMagVoxel(position: Vector3, mag: Vector3): Vector3 {
@@ -256,12 +256,12 @@ export function* editVolumeLayerAsync(): Saga<never> {
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
-    // Only the brush goes through the new architecture; the trace tool below
-    // still builds up a section labeler.
+    // Only the brush is driven from viewer/model/volumetracing; the trace
+    // tool below still builds up a section labeler.
     let brushDriver: BrushDriver | null = null;
 
     if (isBrushTool(activeTool)) {
-      const spikeLayer = yield* call(
+      const segmentationLayer = yield* call(
         [Model, Model.getSegmentationTracingLayer],
         volumeTracing.tracingId,
       );
@@ -280,8 +280,8 @@ export function* editVolumeLayerAsync(): Saga<never> {
       ) as Vector3;
       brushDriver = new BrushDriver(
         {
-          cube: spikeLayer.cube,
-          denseMags: spikeLayer.cube.magInfo.getDenseMags(),
+          cube: segmentationLayer.cube,
+          denseMags: segmentationLayer.cube.magInfo.getDenseMags(),
           magIndex: labeledZoomStep,
           segmentId: contourTracingMode === ContourModeEnum.DELETE ? 0n : activeCellId,
           overwriteMode:
@@ -350,7 +350,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       // Pointer-up: mag propagation runs once over the coalesced write set.
       const stats = brushDriver.finish();
       console.info(
-        `[spike] brush: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
+        `[volume] brush: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
       );
       // currentSectionLabeler.updateArea(...) above ran regardless of which
       // path drew the stroke, so its centroid tracking is accurate here too.

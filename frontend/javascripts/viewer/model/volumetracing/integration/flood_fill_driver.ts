@@ -1,5 +1,5 @@
 /**
- * SPIKE GLUE — drives a flood fill through the new architecture against
+ * Drives a flood fill through the volume-annotation core (../core) against
  * webKnossos' real DataCube.
  *
  * Unlike the brush there is no pointer-driven interaction to drive: resolving
@@ -98,7 +98,7 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
   );
 
   const transaction = new VolumeTransaction(
-    `spike-floodfill-${Date.now()}`,
+    `floodfill-${Date.now()}`,
     ctx,
     adapter,
     magListFromDenseMags(options.denseMags),

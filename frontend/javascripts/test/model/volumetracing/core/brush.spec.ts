@@ -64,7 +64,7 @@ function referenceStroke(path: Vector3[], radius: Vector3, planeAxis: 0 | 1 | 2)
   return painted;
 }
 
-describe("new volume architecture — brush", () => {
+describe("volume annotation core — brush", () => {
   it("paints the stroke at the source mag and propagates it to every other mag", async () => {
     const { cube, session } = createHarness();
     await materialize(cube, originBuckets(MAGS.length));

@@ -1,5 +1,5 @@
 /**
- * Core types for the volume-annotation architecture spike.
+ * Core types for the volume-annotation architecture.
  *
  * This module is deliberately self-contained: almost nothing here is imported from the
  * the rest of `viewer/`, so the core cannot drift with it. A few small

@@ -1,13 +1,14 @@
 /**
- * SPIKE GLUE — like the drivers next to it (brush_driver.ts,
+ * Lets the core's rasterizer and mag propagation write into webKnossos' real
+ * DataCube. Like the drivers next to it (brush_driver.ts,
  * flood_fill_driver.ts), this file bridges to `viewer/`; everything outside
  * `integration/` stays independent of it.
  *
- * Lets the new rasterizer + mag propagation write into webKnossos' real
- * DataCube, so the new implementation can be tried in the browser.
- * Deliberately dirty:
- *   - Buckets are mutated in place. Nothing is pushed to the save queue, no
- *     update actions are emitted, and undo is not wired up.
+ * Buckets are mutated in place: nothing is pushed to the save queue, no
+ * update actions are emitted, and undo is not wired up. That is the state
+ * design doc §12.2 records, not an oversight here.
+ *
+ * One thing worth knowing about the boundary itself:
  *   - The core's BucketAddress (core/types.ts) is structurally identical to
  *     the real one (xyz, magIndex, additionalCoordinates) on purpose, so
  *     addresses cross this boundary as-is — no conversion, no separate

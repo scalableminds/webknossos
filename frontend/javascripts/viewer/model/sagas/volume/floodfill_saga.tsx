@@ -301,7 +301,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
       splitBoundaryMesh,
     });
     console.info(
-      `[spike] floodFill: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
+      `[volume] floodFill: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
     );
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
     yield* put(

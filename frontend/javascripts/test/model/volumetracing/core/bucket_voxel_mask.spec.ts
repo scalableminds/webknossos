@@ -10,7 +10,7 @@ function runsOf(mask: BucketVoxelMask): Array<[number, number]> {
   return [...mask.runs()].map(({ start, length }) => [start, length]);
 }
 
-describe("new volume architecture — BucketVoxelMask", () => {
+describe("volume annotation core — BucketVoxelMask", () => {
   it("marks and reports single voxels", () => {
     const mask = new BucketVoxelMask();
     expect(mask.count).toBe(0);

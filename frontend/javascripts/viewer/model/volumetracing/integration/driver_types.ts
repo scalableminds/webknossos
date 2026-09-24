@@ -1,7 +1,7 @@
 /**
- * SPIKE GLUE — the parts of a tool driver's input and output that do not
- * depend on which tool it is. Shared by brush_driver.ts and
- * flood_fill_driver.ts so the two stay in step.
+ * The parts of a tool driver's input and output that do not depend on which
+ * tool it is. Shared by brush_driver.ts and flood_fill_driver.ts so the two
+ * stay in step.
  */
 
 import type { AdditionalCoordinate } from "viewer/constants";

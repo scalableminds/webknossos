@@ -1733,7 +1733,7 @@ Nothing below revises the design. This section records where the code currently 
 | `VolumeEditingSession` | 5 | `not_yet_integrated/session.ts` | the app opens transactions from the sagas instead |
 | Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill` |
 
-The running app reaches the new code at exactly two call sites, both behind `USE_NEW_VOLUME_ARCHITECTURE`: brushing in `volumetracing_saga.tsx` and flood fill in `floodfill_saga.tsx`. Writes land in real buckets; nothing else about the existing pipeline changes.
+The running app reaches the new code at exactly two call sites: brushing in `volumetracing_saga.tsx` and flood fill in `floodfill_saga.tsx`. Both are now the only path for those tools — the old `VoxelBuffer2D` brush branch and `DataCube.floodFill` are gone, along with the toggle that used to select between them. The trace tool still uses the section labeler. Writes land in real buckets; nothing else about the existing pipeline changes.
 
 ### 12.2 Skipped, and why
 
@@ -1750,12 +1750,12 @@ The running app reaches the new code at exactly two call sites, both behind `USE
 
 Ordered so that each step is independently reviewable, and so that the frontend can get as far as possible before the backend contract has to be agreed.
 
-1. **Land the MVP with the flag off.** `USE_NEW_VOLUME_ARCHITECTURE = false` before merge. The new code stays in tree and under test, off the production path.
+1. **Land the MVP.** Brush and flood fill run on the new code; the old implementations of both are deleted rather than kept behind a toggle, so there is one path to reason about and no dead branch to keep compiling.
 2. **Journal on the live path.** Append committed `TransactionDiff`s to a `BucketJournal`, and fold it onto arriving bucket data (§5.5). No user-visible change, but it is the prerequisite for steps 3 and 4 — and the point at which the journal's known gaps (folding after an acknowledged entry; `unsavedBucketDiffs()` merging runs that carry different values) have to be closed.
 3. **Undo/redo on the journal** (§5.7), replacing the snapshot stack. Reintroduce `beforeCommitted` here; this is the step where it earns its keep.
 4. **Save queue** (§5.8) — emit the two new update actions of §7.1 instead of today's. This is the hard boundary: it needs the backend side designed and built in parallel.
 5. **Visibility-driven materialization** (§1.1), which is what makes coarse-mag editing viable within the memory budget of §5.4.
 6. **Remaining tools onto the intent pipeline**, starting with quick select (it already produces something mask-shaped), then interpolation and the trace tools.
-7. **Flag on by default, then delete the old path.**
+7. **Delete the remaining old paths** as the tools above move over.
 
 Steps 1–3 are frontend-only. Everything from step 4 on is a joint change.

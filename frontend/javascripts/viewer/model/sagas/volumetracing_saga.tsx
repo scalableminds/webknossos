@@ -71,7 +71,6 @@ import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_se
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
-import { USE_NEW_VOLUME_ARCHITECTURE } from "viewer/model/volumetracing/integration/feature_flag";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/legacy/section_labeling";
 import { api, Model } from "viewer/singletons";
@@ -83,14 +82,10 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
-// SPIKE TOGGLE: route brushing through the new volume architecture
-// (viewer/model/volumetracing) instead of the
-// VoxelBuffer2D path. See feature_flag.ts for the full rationale — the same
-// toggle also gates flood fill in floodfill_saga.tsx.
-//
-// Dirty on purpose: buckets are mutated in place, nothing reaches the save
-// queue or the undo stack. The trace tool is unaffected (it still uses the
-// old path).
+// Brushing runs through the new volume architecture
+// (viewer/model/volumetracing), not the VoxelBuffer2D path. Still dirty:
+// buckets are mutated in place, nothing reaches the save queue or the undo
+// stack. The trace tool is unaffected — it keeps using the section labeler.
 
 /** Global (mag-1) layer-space position -> source-mag voxel coordinates. */
 function toMagVoxel(position: Vector3, mag: Vector3): Vector3 {
@@ -261,10 +256,11 @@ export function* editVolumeLayerAsync(): Saga<never> {
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
-    // ── SPIKE: new volume architecture, brush only ───────────────────────────
-    let spikeDriver: BrushDriver | null = null;
+    // Only the brush goes through the new architecture; the trace tool below
+    // still builds up a section labeler.
+    let brushDriver: BrushDriver | null = null;
 
-    if (USE_NEW_VOLUME_ARCHITECTURE && isBrushTool(activeTool)) {
+    if (isBrushTool(activeTool)) {
       const spikeLayer = yield* call(
         [Model, Model.getSegmentationTracingLayer],
         volumeTracing.tracingId,
@@ -282,7 +278,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       const radius: Vector3 = [0, 1, 2].map(
         (axis) => (unzoomedRadius * baseVoxelFactors[axis]) / labeledMag[axis],
       ) as Vector3;
-      spikeDriver = new BrushDriver(
+      brushDriver = new BrushDriver(
         {
           cube: spikeLayer.cube,
           denseMags: spikeLayer.cube.magInfo.getDenseMags(),
@@ -299,16 +295,6 @@ export function* editVolumeLayerAsync(): Saga<never> {
         toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
       );
       wroteVoxelsBox.value = true;
-    } else if (isBrushTool(activeTool)) {
-      yield* call(
-        labelWithVoxelBuffer2D,
-        currentSectionLabeler.getCircleVoxelBuffer2D(startEditingAction.positionInLayerSpace),
-        contourTracingMode,
-        overwriteMode,
-        labeledZoomStep,
-        currentSectionLabeler.getPlane(),
-        wroteVoxelsBox,
-      );
     }
 
     let lastPosition = startEditingAction.positionInLayerSpace;
@@ -351,49 +337,18 @@ export function* editVolumeLayerAsync(): Saga<never> {
         currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
       }
 
-      if (spikeDriver != null) {
+      if (brushDriver != null) {
         // One incremental capsule per pointer-move; the transaction's write set
         // coalesces overlap, and mag propagation is deferred to pointer-up.
-        spikeDriver.extend(toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag));
-        lastPosition = addToContourListAction.positionInLayerSpace;
-        continue;
-      }
-
-      if (isBrushTool(activeTool)) {
-        const rectangleVoxelBuffer2D = currentSectionLabeler.getRectangleVoxelBuffer2D(
-          lastPosition,
-          addToContourListAction.positionInLayerSpace,
-        );
-
-        if (rectangleVoxelBuffer2D) {
-          yield* call(
-            labelWithVoxelBuffer2D,
-            rectangleVoxelBuffer2D,
-            contourTracingMode,
-            overwriteMode,
-            labeledZoomStep,
-            currentSectionLabeler.getPlane(),
-            wroteVoxelsBox,
-          );
-        }
-
-        yield* call(
-          labelWithVoxelBuffer2D,
-          currentSectionLabeler.getCircleVoxelBuffer2D(addToContourListAction.positionInLayerSpace),
-          contourTracingMode,
-          overwriteMode,
-          labeledZoomStep,
-          currentSectionLabeler.getPlane(),
-          wroteVoxelsBox,
-        );
+        brushDriver.extend(toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag));
       }
 
       lastPosition = addToContourListAction.positionInLayerSpace;
     }
 
-    if (spikeDriver != null) {
+    if (brushDriver != null) {
       // Pointer-up: mag propagation runs once over the coalesced write set.
-      const stats = spikeDriver.finish();
+      const stats = brushDriver.finish();
       console.info(
         `[spike] brush: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
       );

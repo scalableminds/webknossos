@@ -38,7 +38,7 @@ import { stringToTagColor } from "libs/colors";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
-import { localeCompareBy, pluralize, scrollContainerToTop } from "libs/utils";
+import { localeCompareBy, pluralize, scrollToTop } from "libs/utils";
 import difference from "lodash-es/difference";
 import keyBy from "lodash-es/keyBy";
 import minBy from "lodash-es/minBy";
@@ -101,10 +101,6 @@ type Props = {
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
   context: DatasetCollectionContextValue;
-  // The table is rendered inside a scrolling container that isn't the window
-  // (see dataset_folder_view.tsx). Passed through so pagination changes can
-  // scroll that container back to the top instead of the (non-scrolling) window.
-  scrollContainerRef?: React.RefObject<HTMLElement | null>;
   // Shows a loading spinner inside the table body (e.g. while waiting for search
   // results), without hiding the header bar above it.
   isLoading?: boolean;
@@ -835,7 +831,7 @@ class DatasetTable extends PureComponent<Props, State> {
           }
           pagination={{
             defaultPageSize: 50,
-            onChange: () => scrollContainerToTop(this.props.scrollContainerRef?.current),
+            onChange: scrollToTop,
           }}
           locale={{
             emptyText: this.renderEmptyText(),

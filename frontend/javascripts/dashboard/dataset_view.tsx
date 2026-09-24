@@ -62,7 +62,6 @@ type Props = {
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
-  scrollContainerRef?: React.RefObject<HTMLElement | null>;
   // Custom content shown as the table's empty state instead of the regular hint text
   // (e.g. the "Open a Demo Dataset" / "Upload & Import Dataset" cards for a brand-new,
   // completely empty organization). See DatasetTable.renderEmptyText.
@@ -108,7 +107,6 @@ function DatasetView({
   onSelectDataset,
   selectedDatasets,
   onSelectFolder,
-  scrollContainerRef,
   emptyStateContent,
 }: Props) {
   const searchQuery = context.globalSearchQuery;
@@ -202,7 +200,6 @@ function DatasetView({
         updateDataset={context.updateCachedDataset}
         addTagToSearch={addTagToSearch}
         onClearSearchAndFilters={clearSearchAndFilters}
-        scrollContainerRef={scrollContainerRef}
         isLoading={isLoading}
         emptyStateContent={emptyStateContent}
       />

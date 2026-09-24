@@ -23,6 +23,10 @@ export interface BucketLog {
    * The backend content this bucket was last loaded with, and the version it
    * reflects. Null while the bucket has never been fetched — in which case
    * nothing can be rebuilt, but nothing is being displayed either.
+   *
+   * This is the *load* base. It is not the local checkpoint design doc §5.7
+   * folds undo from; that does not exist yet (see `rebuild`), so the two roles
+   * currently share this one field.
    */
   base: { version: number; data: BigUint64Array } | null;
   entries: BucketLogEntry[]; // ascending by sequence
@@ -104,13 +108,43 @@ export class BucketJournal {
     return this.fold(this.logFor(address), backendData, dataVersion);
   }
 
-  /** Fold from the bucket's recorded base (undo/redo rebuild). */
+  /**
+   * Fold from the bucket's recorded base (undo/redo rebuild).
+   *
+   * NOT YET ENFORCED: design doc §5.8 requires that nothing still undoable has
+   * been folded into a base — "the backend's materialization/squashing point
+   * must stay at or behind the undo horizon", the same rule §5.7 states for
+   * local checkpoints. Nothing here upholds it: `setBase` advances the base to
+   * whatever version was fetched. A fold can only *add* runs onto its base, so
+   * once a transaction is inside `base.data` no skip flag can take it out
+   * again, and undoing it would silently do nothing.
+   *
+   * Hence the throw rather than a stale array. When the journal goes on the
+   * live path (§12.3 step 2), the callers of undo() decide per bucket: skip
+   * and rebuild locally while the base predates the transaction, otherwise
+   * send the `undoTransaction` marker (§5.8) and re-fetch the bucket, whose
+   * content the backend has already re-folded without it.
+   */
   rebuild(address: BucketAddress): BigUint64Array {
     const log = this.logFor(address);
     if (log.base == null) {
       return this.fold(log, new BigUint64Array(BUCKET_VOXEL_COUNT), -1);
     }
-    return this.fold(log, log.base.data, log.base.version);
+    const baseVersion = log.base.version;
+    const undoneInsideBase = log.entries.find(
+      (entry) =>
+        entry.skipped &&
+        entry.acknowledgedAtVersion != null &&
+        entry.acknowledgedAtVersion <= baseVersion,
+    );
+    if (undoneInsideBase != null) {
+      throw new Error(
+        `Cannot rebuild ${bucketKey(address)}: transaction ${undoneInsideBase.transactionId} is ` +
+          `undone but already folded into the base at version ${baseVersion}. The bucket has to be ` +
+          "re-fetched instead (see this method's docstring).",
+      );
+    }
+    return this.fold(log, log.base.data, baseVersion);
   }
 
   /** Mark a transaction skipped. Returns the buckets whose content changed. */

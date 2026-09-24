@@ -1,5 +1,5 @@
 import type { BucketWrite, BucketWriteMap } from "./bucket_write_map";
-import type { BucketAddress, MagIndex, SegmentId, VoxelIndex } from "./types";
+import type { BucketAddress, MagIndex, SegmentBucketData, SegmentId, VoxelIndex } from "./types";
 
 /**
  * A run of consecutive voxel indices sharing one value. Every run a transaction
@@ -40,9 +40,17 @@ export function toRuns(write: BucketWrite): VoxelRun[] {
   return runs;
 }
 
-/** Apply one run to a dense bucket array. Absolute writes, hence idempotent. */
-export function applyRun(data: BigUint64Array, run: VoxelRun): void {
-  data.fill(run.value, run.start, run.start + run.length);
+/**
+ * Apply one run to a bucket array of any segmentation element class. Absolute
+ * writes, hence idempotent. `run.value` is a SegmentId and therefore always a
+ * bigint, so a non-64-bit array needs it converted.
+ */
+export function applyRun(data: SegmentBucketData, run: VoxelRun): void {
+  if (data instanceof BigUint64Array || data instanceof BigInt64Array) {
+    data.fill(run.value, run.start, run.start + run.length);
+    return;
+  }
+  (data as Uint32Array).fill(Number(run.value), run.start, run.start + run.length);
 }
 
 export function bucketDiffsOf(bucketWriteMaps: Iterable<BucketWriteMap>): BucketDiff[] {

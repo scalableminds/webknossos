@@ -1,4 +1,3 @@
-import type { BucketDataArray } from "types/api_types";
 import { type BucketWriteMap, BucketWriteMapBuilder } from "./bucket_write_map";
 import type { LoadingVoxelCube } from "./cube";
 import type { DataDependentShape } from "./intents";
@@ -9,6 +8,7 @@ import {
   bucketIndexOfCoordinate,
   type EditContext,
   isInBoundingBox,
+  type SegmentBucketData,
   type StoredSegmentId,
   type Vector3,
   voxelIndexOf,
@@ -101,7 +101,7 @@ class FloodFillTraversal {
   private cachedAddress: BucketAddress | null = null;
   // `cachedData` can be null even when `cachedAddress` is not null
   // (in that case, no data exists at that address).
-  private cachedData: BucketDataArray | null = null;
+  private cachedData: SegmentBucketData | null = null;
 
   constructor(
     private readonly shape: FloodFillShape,
@@ -209,7 +209,7 @@ class FloodFillTraversal {
    */
   private readCachedVoxel(voxel: Vector3): StoredSegmentId {
     const offset = voxelOffsetInBucket(voxel);
-    return (this.cachedData as BucketDataArray)[voxelIndexOf(offset[0], offset[1], offset[2])];
+    return (this.cachedData as SegmentBucketData)[voxelIndexOf(offset[0], offset[1], offset[2])];
   }
 
   /** The voxel is part of the region: write it and walk on from it. */

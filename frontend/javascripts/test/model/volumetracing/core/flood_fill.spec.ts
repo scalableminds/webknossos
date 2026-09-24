@@ -1,9 +1,9 @@
-import type { BucketDataArray } from "types/api_types";
 import {
   BUCKET_VOXEL_COUNT,
   type BucketAddress,
   countDiffVoxels,
   countVoxels,
+  type SegmentBucketData,
   type SegmentId,
   type Vector3,
   voxelIndexOf,
@@ -245,7 +245,7 @@ describe("volume annotation core — flood fill", () => {
         return null;
       }
       /** Only bucket (0,0,0) exists; everything else is outside the dataset. */
-      async ensureLoaded(address: BucketAddress): Promise<BucketDataArray | null> {
+      async ensureLoaded(address: BucketAddress): Promise<SegmentBucketData | null> {
         this.loaded.push(address.slice(0, 3).join(","));
         const exists = address[0] === 0 && address[1] === 0 && address[2] === 0;
         return exists ? new BigUint64Array(BUCKET_VOXEL_COUNT) : null;

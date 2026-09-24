@@ -20,25 +20,21 @@ import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { applyBucketWriteToData, type BucketWrite } from "../core/bucket_write_map";
 import type { LoadingVoxelCube, TransactionCube } from "../core/cube";
-import { type BucketAddress, type Mag, MagList, type Vector3 } from "../core/types";
+import {
+  type BucketAddress,
+  type Mag,
+  MagList,
+  type SegmentBucketData,
+  type Vector3,
+} from "../core/types";
 
 /**
- * Apply `write` to a real bucket's data array, whatever element class it
- * holds. The 64-bit case is the shared `applyBucketWriteToData`; the rest is
- * the numeric conversion only real buckets need.
+ * A segmentation layer never stores float data, so its buckets are always a
+ * member of SegmentBucketData — but `getData` and friends are typed for any
+ * layer, which is why the narrowing happens here rather than at each call.
  */
-function applyWriteToAnyElementClass(data: BucketDataArray, write: BucketWrite): void {
-  if (data instanceof BigUint64Array || data instanceof BigInt64Array) {
-    applyBucketWriteToData(data, write);
-  } else {
-    // Every non-64-bit variant of BucketDataArray takes a number; TypeScript
-    // cannot narrow the union's `fill` overloads, hence the single cast.
-    const numeric = data as Uint32Array;
-    const value = Number(write.value);
-    for (const { start, length } of write.mask.runs()) {
-      numeric.fill(value, start, start + length);
-    }
-  }
+function asSegmentData(data: BucketDataArray): SegmentBucketData {
+  return data as SegmentBucketData;
 }
 
 export class WkDataCubeAdapter implements TransactionCube {
@@ -75,7 +71,7 @@ export class WkDataCubeAdapter implements TransactionCube {
       this.touched.add(bucket);
     }
 
-    applyWriteToAnyElementClass(data, write);
+    applyBucketWriteToData(asSegmentData(data), write);
 
     // getOrCreateData's own docstring warns it is unsafe to mutate directly:
     // if the backend's data for this bucket has not arrived yet, that fetch
@@ -84,7 +80,9 @@ export class WkDataCubeAdapter implements TransactionCube {
     // Bucket.applyVoxelMap uses to decide whether to additionally register a
     // pendingOperation that replays the write once real data lands.
     if (bucket.needsBackendData()) {
-      bucket.pendingOperations.push((laterData) => applyWriteToAnyElementClass(laterData, write));
+      bucket.pendingOperations.push((laterData) =>
+        applyBucketWriteToData(asSegmentData(laterData), write),
+      );
     }
   }
 
@@ -116,10 +114,10 @@ export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVo
    * Load a bucket and hand over its data as it is stored.
    * Null when the address is outside the dataset.
    */
-  async ensureLoaded(address: BucketAddress): Promise<BucketDataArray | null> {
+  async ensureLoaded(address: BucketAddress): Promise<SegmentBucketData | null> {
     const bucket = this.cube.getOrCreateBucket(address);
     if (bucket.type === "null") return null;
-    return bucket.getDataForMutation();
+    return asSegmentData(await bucket.getDataForMutation());
   }
 }
 

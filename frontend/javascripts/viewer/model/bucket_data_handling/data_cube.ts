@@ -126,7 +126,7 @@ class DataCube {
   previousBucketPickerTick: number = 0;
   private neededBucketCount: number = 0;
   private neededBucketCountInPreviousTick: number = 0;
-  private didNeededBucketsChange: boolean = false;
+  private didNeedNewBucket: boolean = false;
   private isBucketPickingInProgress: boolean = false;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
@@ -399,17 +399,21 @@ class DataCube {
     this.currentBucketPickerTick = tick;
     this.neededBucketCountInPreviousTick = this.neededBucketCount;
     this.neededBucketCount = 0;
-    this.didNeededBucketsChange = false;
+    this.didNeedNewBucket = false;
     this.isBucketPickingInProgress = true;
   }
 
   finishBucketPicking(): void {
     this.isBucketPickingInProgress = false;
-    // The set of needed buckets is unchanged if it has the same size as the previous one and
-    // if all of its members were already needed during the previous tick. Both sets only
-    // contain distinct buckets, which is why these two conditions are sufficient.
+    // The set of needed buckets is changed if:
+    // - a "new" bucket was marked as needed (that wasn't marked as such before)
+    // OR:
+    // - the number of needed buckets changed.
+    // The second condition is responsible for catching the case where
+    // fewer buckets were marked as needed (compared to before) and new new buckets
+    // were needed.
     if (
-      this.didNeededBucketsChange ||
+      this.didNeedNewBucket ||
       this.neededBucketCount !== this.neededBucketCountInPreviousTick
     ) {
       this.triggerRenderedBucketDataChanged();
@@ -426,7 +430,7 @@ class DataCube {
     if (this.isBucketPickingInProgress) {
       // Don't trigger triggerRenderedBucketDataChanged, because we can do that once
       // in `finishBucketPicking`.
-      this.didNeededBucketsChange = true;
+      this.didNeedNewBucket = true;
     } else {
       // The bucket became relevant outside of a picking round (e.g. because getData was called
       // for it while hovering). No finishBucketPicking will follow, so emit right away.

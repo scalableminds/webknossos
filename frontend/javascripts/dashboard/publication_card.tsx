@@ -17,6 +17,7 @@ import {
 type DatasetDetails = {
   species?: string;
   brainRegion?: string;
+  acquisition?: string;
 };
 
 type ExtendedDatasetDetails = DatasetDetails & {
@@ -53,7 +54,7 @@ function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {
   const details = {} as DatasetDetails;
 
   metadata?.forEach((entry) => {
-    if (entry.key === "species" || entry.key === "brainRegion") {
+    if (entry.key === "species" || entry.key === "brainRegion" || entry.key === "acquisition") {
       details[entry.key] = entry.value.toString();
     }
   });
@@ -182,20 +183,19 @@ function PublicationItemList({
 }
 
 function PublicationPreviewCaption({ item }: { item: PublicationItem }) {
-  const { name, species, brainRegion, scale } = getExtendedDetails(item);
+  const { name, species, brainRegion, acquisition, scale } = getExtendedDetails(item);
   const origin = [species && <b key="species">{species}</b>, brainRegion]
     .filter(Boolean)
     .flatMap((part, index) => (index > 0 ? [" ", part] : [part]));
+  const meta = [origin.length > 0 ? origin : null, acquisition, scale]
+    .filter(Boolean)
+    .flatMap((part, index) => (index > 0 ? [" · ", part] : [part]));
 
   return (
     <Flex align="center" gap="medium" className="publication-preview-caption">
       <Flex orientation="vertical" style={{ flex: 1, minWidth: 0 }}>
         <div className="publication-preview-caption-name">{name}</div>
-        <div className="publication-preview-caption-meta">
-          {origin}
-          {origin.length > 0 && " · "}
-          {scale}
-        </div>
+        <div className="publication-preview-caption-meta">{meta}</div>
       </Flex>
       <Link to={getUrl(item)}>
         <Button type="primary">

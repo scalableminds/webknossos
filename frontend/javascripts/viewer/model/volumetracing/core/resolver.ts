@@ -2,12 +2,14 @@ import { type BucketWriteMap, BucketWriteMapBuilder } from "./bucket_write_map";
 import type { LoadingVoxelCube } from "./cube";
 import type { DataDependentShape } from "./intents";
 import {
-  type AdditionalCoordinate,
   type BoundingBox,
+  BUCKET_WIDTH,
   type BucketAddress,
   bucketAddressOfVoxel,
   type EditContext,
+  floorDiv,
   isInBoundingBox,
+  type SegmentId,
   type Vector3,
   voxelIndexOf,
   voxelOffsetInBucket,
@@ -64,124 +66,185 @@ export interface FloodFillResolution {
 }
 
 async function resolveFloodFill(
-  shape: Extract<DataDependentShape, { kind: "floodFill" }>,
+  shape: FloodFillShape,
   ctx: EditContext,
   cube: LoadingVoxelCube,
   signal?: AbortSignal,
   options: FloodFillOptions = {},
 ): Promise<FloodFillResolution> {
-  const maxVisited = options.maxVisitedVoxels ?? DEFAULT_MAX_VISITED_VOXELS;
-  const out = new BucketWriteMapBuilder(
-    ctx.sourceMagIndex,
-    ctx.activeSegmentId,
-    ctx.additionalCoordinates,
-  );
+  return new FloodFillTraversal(shape, ctx, cube, signal, options).run();
+}
 
-  const seedValue = await readVoxel(
-    cube,
-    shape.seed,
-    ctx.sourceMagIndex,
-    ctx.additionalCoordinates,
-  );
-  if (seedValue === ctx.activeSegmentId) {
-    // Nothing to do: the region already carries the target value, and treating
-    // it as a fill would traverse it only to write what is already there.
-    return { bucketWrites: out.build(), wasBoundingBoxExceeded: false, coveredBoundingBox: null };
+type FloodFillShape = Extract<DataDependentShape, { kind: "floodFill" }>;
+
+/**
+ * One FloodFillTraversal instance describes one flood fill in progress.
+ *
+ * The per-voxel steps are deliberately split into a synchronous part and an
+ * asynchronous one (`hasCachedBucketFor` / `loadBucketFor`). This avoids
+ * calling an `async` helper once per visited voxel (which is expensive).
+ */
+class FloodFillTraversal {
+  private readonly out: BucketWriteMapBuilder;
+  private readonly maxVisited: number;
+  private readonly queue: Vector3[];
+
+  private visited = 0;
+  private wasBoundingBoxExceeded = false;
+  private coveredMin: Vector3 | null = null;
+  private coveredMax: Vector3 | null = null;
+
+  /**
+   * The bucket most recently read, so a run of neighbours inside one bucket
+   * does not re-enter the async path.
+   */
+  private cachedAddress: BucketAddress | null = null;
+  private cachedData: BigUint64Array | null = null;
+
+  constructor(
+    private readonly shape: FloodFillShape,
+    private readonly ctx: EditContext,
+    private readonly cube: LoadingVoxelCube,
+    private readonly signal: AbortSignal | undefined,
+    options: FloodFillOptions,
+  ) {
+    this.out = new BucketWriteMapBuilder(
+      ctx.sourceMagIndex,
+      ctx.activeSegmentId,
+      ctx.additionalCoordinates,
+    );
+    this.maxVisited = options.maxVisitedVoxels ?? DEFAULT_MAX_VISITED_VOXELS;
+    this.queue = [shape.seed];
   }
 
-  const queue: Vector3[] = [shape.seed];
-  let visited = 0;
-  let wasBoundingBoxExceeded = false;
-  let coveredMin: Vector3 | null = null;
-  let coveredMax: Vector3 | null = null;
-
-  // A cache of the bucket most recently read, so a run of neighbours inside one
-  // bucket does not re-enter the async path.
-  let cachedAddress: BucketAddress | null = null;
-  let cachedData: BigUint64Array | null = null;
-
-  while (queue.length > 0) {
-    signal?.throwIfAborted();
-    const voxel = queue.pop() as Vector3;
-
-    if (!isInBoundingBox(voxel, shape.bounds)) {
-      // The neighbour genuinely would have been explored otherwise — this is
-      // not "not part of the region", it is "part of the region we did not
-      // get to look at". shape.bounds is null for at most maxVisited-style
-      // callers, so this never fires when there is nothing to exceed.
-      wasBoundingBoxExceeded = true;
-      continue;
+  async run(): Promise<FloodFillResolution> {
+    const seedValue = await this.readSeedValue();
+    if (seedValue === this.ctx.activeSegmentId) {
+      // Nothing to do: the region already carries the target value..
+      return this.result();
     }
-    if (!isInBoundingBox(voxel, ctx.editableBoundingBox)) continue;
-    if (out.has(voxel)) continue; // the mask doubles as the visited set
 
-    const address = bucketAddressOfVoxel(voxel, ctx.sourceMagIndex, ctx.additionalCoordinates);
-    if (cachedAddress == null || !sameAddress(cachedAddress, address)) {
-      cachedData = await cube.ensureLoaded(address); // the only await
-      cachedAddress = address;
+    while (this.queue.length > 0) {
+      this.signal?.throwIfAborted();
+      const voxel = this.queue.pop() as Vector3;
+      if (!this.shouldExplore(voxel)) continue;
+
+      if (!this.hasCachedBucketFor(voxel)) await this.loadBucketFor(voxel); // the only await
+      if (this.readCachedVoxel(voxel) !== seedValue) continue;
+
+      this.accept(voxel);
     }
+
+    return this.result();
+  }
+
+  private async readSeedValue(): Promise<SegmentId> {
+    const { seed } = this.shape;
+    await this.loadBucketFor(seed);
+    return this.readCachedVoxel(seed);
+  }
+
+  /**
+   * Whether the voxel is still a candidate at all. Also responsible for
+   * setting `wasBoundingBoxExceeded`.
+   */
+  private shouldExplore(voxel: Vector3): boolean {
+    if (!isInBoundingBox(voxel, this.shape.bounds)) {
+      this.wasBoundingBoxExceeded = true;
+      return false;
+    }
+    if (!isInBoundingBox(voxel, this.ctx.editableBoundingBox)) {
+      // This is the annotation-level bounding box. Don't set wasBoundingBoxExceeded.
+      return false;
+    }
+    return !this.out.has(voxel); // the mask doubles as the visited set
+  }
+
+  /**
+   * Compares bucket coordinates directly rather than building a BucketAddress
+   * to compare against: this runs once per visited voxel and hits far more
+   * often than it misses, so the tuple would be allocated and discarded. The
+   * address's other two components need no comparison — mag index and
+   * additional coordinates are fixed for the whole traversal.
+   */
+  private hasCachedBucketFor(voxel: Vector3): boolean {
+    const cached = this.cachedAddress;
+    return (
+      cached != null &&
+      cached[0] === floorDiv(voxel[0], BUCKET_WIDTH) &&
+      cached[1] === floorDiv(voxel[1], BUCKET_WIDTH) &&
+      cached[2] === floorDiv(voxel[2], BUCKET_WIDTH)
+    );
+  }
+
+  private async loadBucketFor(voxel: Vector3): Promise<void> {
+    const address = bucketAddressOfVoxel(
+      voxel,
+      this.ctx.sourceMagIndex,
+      this.ctx.additionalCoordinates,
+    );
+    this.cachedData = await this.cube.ensureLoaded(address);
+    this.cachedAddress = address;
+  }
+
+  /** Only valid once `hasCachedBucketFor(voxel)` holds. */
+  private readCachedVoxel(voxel: Vector3): SegmentId {
     const offset = voxelOffsetInBucket(voxel);
-    const value = (cachedData as BigUint64Array)[voxelIndexOf(offset[0], offset[1], offset[2])];
-    if (value !== seedValue) continue;
+    return (this.cachedData as BigUint64Array)[voxelIndexOf(offset[0], offset[1], offset[2])];
+  }
 
-    out.mark(voxel);
-    visited++;
-    if (visited > maxVisited) {
-      throw new Error(`Flood fill exceeded ${maxVisited} voxels. Restrict it with a bounding box.`);
+  /** The voxel is part of the region: write it and walk on from it. */
+  private accept(voxel: Vector3): void {
+    this.out.mark(voxel);
+    this.visited++;
+    if (this.visited > this.maxVisited) {
+      throw new Error(
+        `Flood fill exceeded ${this.maxVisited} voxels. Restrict it with a bounding box.`,
+      );
     }
+    this.growCoveredBox(voxel);
+    this.enqueueNeighbours(voxel);
+  }
 
-    if (coveredMin == null || coveredMax == null) {
-      coveredMin = [...voxel];
-      coveredMax = [voxel[0] + 1, voxel[1] + 1, voxel[2] + 1];
-    } else {
-      for (let axis = 0; axis < 3; axis++) {
-        coveredMin[axis] = Math.min(coveredMin[axis], voxel[axis]);
-        coveredMax[axis] = Math.max(coveredMax[axis], voxel[axis] + 1);
-      }
+  private growCoveredBox(voxel: Vector3): void {
+    if (this.coveredMin == null || this.coveredMax == null) {
+      this.coveredMin = [...voxel];
+      this.coveredMax = [voxel[0] + 1, voxel[1] + 1, voxel[2] + 1];
+      return;
     }
-
-    for (const neighbour of neighbours(voxel, shape.is3D)) {
-      if (shape.isBlocked?.(voxel, neighbour)) continue;
-      queue.push(neighbour);
+    for (let axis = 0; axis < 3; axis++) {
+      this.coveredMin[axis] = Math.min(this.coveredMin[axis], voxel[axis]);
+      this.coveredMax[axis] = Math.max(this.coveredMax[axis], voxel[axis] + 1);
     }
   }
 
-  return {
-    bucketWrites: out.build(),
-    wasBoundingBoxExceeded,
-    coveredBoundingBox:
-      coveredMin != null && coveredMax != null ? { min: coveredMin, max: coveredMax } : null,
-  };
-}
-
-function neighbours(voxel: Vector3, is3D: boolean): Vector3[] {
-  const [x, y, z] = voxel;
-  const result: Vector3[] = [
-    [x - 1, y, z],
-    [x + 1, y, z],
-    [x, y - 1, z],
-    [x, y + 1, z],
-  ];
-  if (is3D) {
-    result.push([x, y, z - 1], [x, y, z + 1]);
+  private enqueueNeighbours(voxel: Vector3): void {
+    const [x, y, z] = voxel;
+    this.enqueueUnlessBlocked(voxel, [x - 1, y, z]);
+    this.enqueueUnlessBlocked(voxel, [x + 1, y, z]);
+    this.enqueueUnlessBlocked(voxel, [x, y - 1, z]);
+    this.enqueueUnlessBlocked(voxel, [x, y + 1, z]);
+    if (this.shape.is3D) {
+      this.enqueueUnlessBlocked(voxel, [x, y, z - 1]);
+      this.enqueueUnlessBlocked(voxel, [x, y, z + 1]);
+    }
   }
-  return result;
-}
 
-function sameAddress(a: BucketAddress, b: BucketAddress): boolean {
-  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
-}
+  /** `isBlocked` is the "Split Segments" boundary: the fill may not cross it. */
+  private enqueueUnlessBlocked(from: Vector3, to: Vector3): void {
+    if (this.shape.isBlocked?.(from, to)) return;
+    this.queue.push(to);
+  }
 
-async function readVoxel(
-  cube: LoadingVoxelCube,
-  voxel: Vector3,
-  magIndex: number,
-  additionalCoordinates: AdditionalCoordinate[] | null,
-): Promise<bigint> {
-  const address = bucketAddressOfVoxel(voxel, magIndex, additionalCoordinates);
-  const data = await cube.ensureLoaded(address);
-  const offset = voxelOffsetInBucket(voxel);
-  return data[voxelIndexOf(offset[0], offset[1], offset[2])];
+  private result(): FloodFillResolution {
+    const { coveredMin, coveredMax } = this;
+    return {
+      bucketWrites: this.out.build(),
+      wasBoundingBoxExceeded: this.wasBoundingBoxExceeded,
+      coveredBoundingBox:
+        coveredMin != null && coveredMax != null ? { min: coveredMin, max: coveredMax } : null,
+    };
+  }
 }
 
 export { resolveFloodFill };

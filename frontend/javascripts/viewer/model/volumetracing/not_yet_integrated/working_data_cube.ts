@@ -180,5 +180,4 @@ export class WorkingDataCube implements LoadingVoxelCube {
     const [x, y, z] = voxelOffsetInBucket(voxel);
     return data[voxelIndexOf(x, y, z)];
   }
-
 }

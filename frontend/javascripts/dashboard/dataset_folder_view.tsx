@@ -1,8 +1,8 @@
-import { Button, Card, Col, Flex, Row } from "antd";
+import { Button, Card, Col, Flex, Row, Space } from "antd";
 import features, { getDemoDatasetUrl } from "features";
 import { filterNullValues, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import React, { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_types";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import DatasetCollectionContextProvider, {
@@ -159,10 +159,10 @@ function DatasetFolderViewInner(props: Props) {
 
     const adminHeader =
       isUserAdminOrDatasetManager(props.user) || isUserTeamManager(props.user) ? (
-        <>
+        <Space>
           <DatasetRefreshButton context={context} />
           <DatasetAddButton context={context} />
-        </>
+        </Space>
       ) : null;
 
     return (

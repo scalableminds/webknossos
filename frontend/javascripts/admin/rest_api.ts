@@ -584,6 +584,14 @@ export function getReadableAnnotations(
   );
 }
 
+export async function getAnnotationCountForDataset(datasetId: string): Promise<number> {
+  const { headers } = await Request.receiveJSONWithHeaders(
+    `/api/annotations/readable?limit=1&includeTotalCount=true&datasetId=${datasetId}`,
+  );
+  const totalCount = headers.get("X-Total-Count");
+  return totalCount != null ? Number.parseInt(totalCount, 10) : 0;
+}
+
 export function getTeamsForSharedAnnotation(
   typ: string,
   id: string,
@@ -1343,15 +1351,13 @@ export async function getDatasets(
     params.set("includeSubfolders", includeSubfolders ? "true" : "false");
   }
 
-  params.set("compact", "true");
-
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);
   return datasets;
 }
 
-export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
-  const datasets: Array<APIDataset> = await Request.receiveJSON(
+export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDatasetCompact>> {
+  const datasets: Array<APIDatasetCompact> = await Request.receiveJSON(
     "/api/datasets?isActive=true&onlyMyOrganization=true",
   );
   assertResponseLimit(datasets);
@@ -1363,7 +1369,7 @@ export async function getDataset(
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
   filterZeroMagLayers: boolean = true,
-): Promise<APIDataset> {
+): Promise<APIMaybeUnimportedDataset> {
   const params = new URLSearchParams();
   if (sharingToken != null) {
     params.set("sharingToken", String(sharingToken));
@@ -1386,6 +1392,19 @@ export async function getDataset(
   });
 }
 
+export async function getImportedDataset(
+  datasetId: string,
+  sharingToken?: string | null | undefined,
+  options: RequestOptions = {},
+  filterZeroMagLayers: boolean = true,
+): Promise<APIDataset> {
+  const ds = await getDataset(datasetId, sharingToken, options, filterZeroMagLayers);
+  if ("dataLayers" in ds.dataSource) {
+    return ds as APIDataset;
+  }
+  throw new Error(`Dataset with id ${datasetId} is not imported.`);
+}
+
 export async function getDatasetLegacy(
   datasetOrga: string,
   datasetName: string,
@@ -1398,7 +1417,7 @@ export async function getDatasetLegacy(
     sharingToken,
     options,
   );
-  return getDataset(datasetId, sharingToken, options);
+  return getImportedDataset(datasetId, sharingToken, options);
 }
 
 export type DatasetUpdater = {
@@ -1469,7 +1488,7 @@ export function updateDatasetDefaultConfiguration(
   });
 }
 
-export function getDatasetAccessList(dataset: APIDataset): Promise<Array<APIUser>> {
+export function getDatasetAccessList(dataset: APIMaybeUnimportedDataset): Promise<Array<APIUser>> {
   return Request.receiveJSON(`/api/datasets/${dataset.id}/accessList`);
 }
 

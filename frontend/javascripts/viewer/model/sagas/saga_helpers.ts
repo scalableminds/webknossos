@@ -3,6 +3,7 @@ import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import type { CallEffect } from "redux-saga/effects";
+import { ModalWidth } from "theme";
 import {
   call,
   delay,
@@ -102,7 +103,7 @@ export function askUserForLockingActiveMapping(
         content: messages["tracing.locked_mapping_info"],
         okText: "Lock Mapping",
         cancelText: "Abort Annotation Action",
-        width: 600,
+        width: ModalWidth.Medium,
         onOk: lockMapping,
         onCancel: () => {
           reject({ isMappingLockedIfNeeded: false, reason: "User aborted." });

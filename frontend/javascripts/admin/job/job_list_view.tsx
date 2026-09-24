@@ -34,7 +34,7 @@ import {
 import capitalize from "lodash-es/capitalize";
 import type * as React from "react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { type APIJob, APIJobCommand } from "types/api_types";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
@@ -419,7 +419,7 @@ function JobListView() {
         ) : null;
       if (canRetry) {
         return (
-          <Space direction="vertical" size={4}>
+          <Space orientation="vertical" size={4}>
             <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
               <AsyncLink
                 onClick={async () => {
@@ -450,7 +450,7 @@ function JobListView() {
           "Please contact an administrator for help."
         );
         return (
-          <Space direction="vertical" size={4}>
+          <Space orientation="vertical" size={4}>
             <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
               <span>{failureMessage}</span>
             </Tooltip>

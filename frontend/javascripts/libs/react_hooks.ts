@@ -8,7 +8,7 @@ import debounce from "lodash-es/debounce";
 import noop from "lodash-es/noop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import constants from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
 import { bigIntReplacer } from "./bigint_helpers";

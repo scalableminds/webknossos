@@ -5,7 +5,7 @@ import { Button, Flex, Layout, List, Space, Spin, Tooltip } from "antd";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
 import { useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 
 const { Content } = Layout;
 

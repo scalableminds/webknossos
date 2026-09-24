@@ -6,7 +6,7 @@ import Markdown from "libs/markdown_adapter";
 import { compareBy } from "libs/utils";
 import type React from "react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_types";
 import {
   getDatasetExtentAsString,

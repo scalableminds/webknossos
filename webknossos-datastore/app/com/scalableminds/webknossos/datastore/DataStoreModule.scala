@@ -1,8 +1,6 @@
 package com.scalableminds.webknossos.datastore
 
-import org.apache.pekko.actor.ActorSystem
 import com.google.inject.AbstractModule
-import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ConnectomeFileService,
@@ -34,12 +32,10 @@ import com.scalableminds.webknossos.datastore.storage.{DataVaultService, S3Clien
 
 class DataStoreModule extends AbstractModule {
 
-  private val actorSystem: ActorSystem = ActorSystem("webknossos-datastore")
-
   override def configure(): Unit = {
     bind(classOf[DataStoreConfig]).asEagerSingleton()
     bind(classOf[DataStoreAccessTokenService]).asEagerSingleton()
-    bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-datastore")).toInstance(actorSystem)
+    bind(classOf[DSThreadPoolHealthService]).asEagerSingleton()
     bind(classOf[ManagedS3Service]).asEagerSingleton()
     bind(classOf[UploadService]).asEagerSingleton()
     bind(classOf[DataSourceService]).asEagerSingleton()

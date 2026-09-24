@@ -1,5 +1,7 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
+  Checkbox,
+  type CheckboxChangeEvent,
   Col,
   Form,
   type FormInstance,
@@ -10,8 +12,6 @@ import {
   Tooltip,
   Typography,
 } from "antd";
-import FormItem from "antd/es/form/FormItem";
-import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import { useCallback, useEffect, useMemo } from "react";
 import type { AffineTransformation, APIDataLayer } from "types/api_types";
 import {
@@ -148,16 +148,16 @@ const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
         </FormItemWithInfo>
       </Col>
       <Col span={4} style={{ marginRight: -12 }}>
-        <FormItem
+        <Form.Item
           name={["datasetRotation", axis, "rotationInDegrees"]}
           colon={false}
           label=" " /* Whitespace label is needed for correct formatting*/
         >
           <InputNumber readOnly variant="borderless" />
-        </FormItem>
+        </Form.Item>
       </Col>
       <Col span={4} style={{ marginRight: -12 }}>
-        <FormItem
+        <Form.Item
           name={["datasetRotation", axis, "isMirrored"]}
           colon={false}
           valuePropName="checked"
@@ -168,7 +168,7 @@ const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
               setMatrixRotationsForAllLayer(undefined, evt.target.checked)
             }
           />
-        </FormItem>
+        </Form.Item>
       </Col>
     </Row>
   );

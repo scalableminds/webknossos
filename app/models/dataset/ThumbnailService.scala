@@ -37,7 +37,7 @@ class ThumbnailService @Inject() (
   private val MaxThumbnailWidth = 4000
   private val MaxThumbnailHeight = 4000
 
-  // Can’t use None as layerName for dataset thumbnails, due to postgres restrictions.
+  // Can’t use None as layerName for whole-dataset thumbnails, because postgres cannot use nullable columns as primary keys.
   private val DatasetThumbnailLayerNameSentinel = ""
 
   def getLayerThumbnailWithCache(

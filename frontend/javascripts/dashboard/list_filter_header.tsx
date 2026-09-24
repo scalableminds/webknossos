@@ -63,8 +63,11 @@ export function FilterChip({
             borderRadius: token.borderRadiusLG,
             padding: 12,
             minWidth: 200,
+            maxWidth: 320,
             maxHeight: "min(400px, 60vh)",
             overflowY: "auto",
+            // Long entries (e.g., tags or team names without spaces) wrap instead of overflowing.
+            overflowWrap: "anywhere",
           }}
         >
           {children}
@@ -182,7 +185,8 @@ export function TagFilterChip({
                 <Tag
                   color={getCategorizationTagColor(tag)}
                   variant="outlined"
-                  style={{ marginInlineEnd: 0 }}
+                  // Tags don't wrap by default, which would overflow the dropdown for long tags.
+                  style={{ marginInlineEnd: 0, whiteSpace: "normal" }}
                 >
                   {tag}
                 </Tag>

@@ -631,6 +631,26 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     return formatUserName(owner);
   };
 
+  // Most listed annotations are the user's own, so the owner is only shown for annotations
+  // shared by others to make those stand out. In the admin view, all annotations belong to the
+  // viewed user, so the owner is shown plainly.
+  renderOwnerMetaItem = (owner: APIUserCompact | undefined) => {
+    if (owner == null) return null;
+    if (this.props.isAdminView) {
+      return (
+        <span key="owner" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <UserOutlined /> {formatUserName(owner)}
+        </span>
+      );
+    }
+    if (owner.id === this.props.activeUser.id) return null;
+    return (
+      <span key="owner" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <UserOutlined /> shared by {formatUserName(owner)}
+      </span>
+    );
+  };
+
   renderAnnotationRow = (annotation: APIAnnotationInfo) => {
     const owner = annotation.owner;
     const teamTags = annotation.teams.map((team) => (
@@ -681,14 +701,10 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         <RowMetaLine
           items={[
             <FormattedId key="id" id={annotation.id} />,
-            owner ? (
-              <span key="owner" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <UserOutlined /> {this.renderOwner(owner)}
-              </span>
-            ) : null,
+            this.renderOwnerMetaItem(owner),
             teamTags.length > 0 ? (
               <span key="teams" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <TeamOutlined /> {teamTags}
+                <TeamOutlined /> shared with teams {teamTags}
               </span>
             ) : null,
             <AnnotationStats

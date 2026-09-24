@@ -5,7 +5,13 @@ import {
   type TransactionId,
   type VoxelRun,
 } from "../core/diff";
-import { BUCKET_VOXEL_COUNT, type BucketAddress, type BucketKey, bucketKey } from "../core/types";
+import {
+  BUCKET_VOXEL_COUNT,
+  type BucketAddress,
+  type BucketKey,
+  bucketKey,
+  type DenseBucketData,
+} from "../core/types";
 
 export interface BucketLogEntry {
   sequence: number;
@@ -35,7 +41,7 @@ export interface BucketLog {
    * folds undo from; that does not exist yet (see `rebuild`), so the two roles
    * currently share this one field.
    */
-  base: { version: number; data: BigUint64Array } | null;
+  base: { version: number; data: DenseBucketData } | null;
   entries: BucketLogEntry[]; // ascending by sequence
 }
 
@@ -62,7 +68,7 @@ export class BucketJournal {
   }
 
   /** Record the backend content a bucket was loaded with. */
-  setBase(address: BucketAddress, data: BigUint64Array, version: number): void {
+  setBase(address: BucketAddress, data: DenseBucketData, version: number): void {
     this.logFor(address).base = { version, data };
   }
 
@@ -92,7 +98,7 @@ export class BucketJournal {
    * The single fold. Callers differ only in the base they supply and, via
    * `baseVersion`, in which entries that base already contains.
    */
-  private fold(log: BucketLog, base: BigUint64Array, baseVersion: number): BigUint64Array {
+  private fold(log: BucketLog, base: DenseBucketData, baseVersion: number): DenseBucketData {
     const data = base.slice();
     for (const entry of log.entries) {
       if (entry.skipped) continue;
@@ -109,9 +115,9 @@ export class BucketJournal {
   /** Fold local entries onto freshly fetched backend data (bucket load). */
   foldOntoFetched(
     address: BucketAddress,
-    backendData: BigUint64Array,
+    backendData: DenseBucketData,
     dataVersion: number,
-  ): BigUint64Array {
+  ): DenseBucketData {
     return this.fold(this.logFor(address), backendData, dataVersion);
   }
 
@@ -132,7 +138,7 @@ export class BucketJournal {
    * send the `undoTransaction` marker (§5.8) and re-fetch the bucket, whose
    * content the backend has already re-folded without it.
    */
-  rebuild(address: BucketAddress): BigUint64Array {
+  rebuild(address: BucketAddress): DenseBucketData {
     const log = this.logFor(address);
     if (log.base == null) {
       return this.fold(log, new BigUint64Array(BUCKET_VOXEL_COUNT), -1);

@@ -20,13 +20,7 @@ import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { applyBucketWriteToData, type BucketWrite } from "../core/bucket_write_map";
 import type { LoadingVoxelCube, TransactionCube } from "../core/cube";
-import {
-  BUCKET_VOXEL_COUNT,
-  type BucketAddress,
-  type Mag,
-  MagList,
-  type Vector3,
-} from "../core/types";
+import { type BucketAddress, type Mag, MagList, type Vector3 } from "../core/types";
 
 /**
  * Apply `write` to a real bucket's data array, whatever element class it
@@ -119,30 +113,13 @@ export class WkDataCubeAdapter implements TransactionCube {
  */
 export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVoxelCube {
   /**
-   * Load a bucket and return its dense content, converted to segment ids. Real
-   * buckets may hold any element class, but the resolver only ever compares
-   * values for equality (it never writes through this array), so a lossless
-   * per-voxel bigint cast is enough.
+   * Load a bucket and hand over its data as it is stored.
+   * Null when the address is outside the dataset.
    */
-  async ensureLoaded(address: BucketAddress): Promise<BigUint64Array> {
+  async ensureLoaded(address: BucketAddress): Promise<BucketDataArray | null> {
     const bucket = this.cube.getOrCreateBucket(address);
-    if (bucket.type === "null") {
-      // Out of the dataset's bounds. `ctx.editableBoundingBox` / `shape.bounds`
-      // (§5.1) should already keep the traversal from reaching here in the
-      // normal case; treat it as an all-background bucket rather than
-      // throwing, so a fill that grazes the edge doesn't abort outright.
-      return new BigUint64Array(BUCKET_VOXEL_COUNT);
-    }
-
-    const data = await bucket.getDataForMutation();
-    if (data instanceof BigUint64Array) return data;
-    if (data instanceof BigInt64Array) {
-      return new BigUint64Array(data.buffer, data.byteOffset, data.length);
-    }
-
-    const converted = new BigUint64Array(BUCKET_VOXEL_COUNT);
-    for (let i = 0; i < data.length; i++) converted[i] = BigInt(data[i]);
-    return converted;
+    if (bucket.type === "null") return null;
+    return bucket.getDataForMutation();
   }
 }
 

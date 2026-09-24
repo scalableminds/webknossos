@@ -1,10 +1,15 @@
+import type { BucketDataArray } from "types/api_types";
 import {
+  BUCKET_VOXEL_COUNT,
   type BucketAddress,
   countDiffVoxels,
+  countVoxels,
   type SegmentId,
   type Vector3,
   voxelIndexOf,
 } from "viewer/model/volumetracing/core";
+import type { LoadingVoxelCube } from "viewer/model/volumetracing/core/cube";
+import { resolveFloodFill } from "viewer/model/volumetracing/core/resolver";
 import { describe, expect, it } from "vitest";
 import {
   bucketOf,
@@ -227,5 +232,61 @@ describe("volume annotation core — flood fill", () => {
     expect(data?.[voxelIndexOf(28, 10, 3)]).toBe(FILL);
     expect(data?.[voxelIndexOf(31, 14, 3)]).toBe(FILL);
     expect(data?.[voxelIndexOf(27, 10, 3)]).toBe(0n); // just outside
+  });
+  /**
+   * `WorkingDataCube` materializes everything it is asked for, so the
+   * out-of-dataset case needs a cube that can actually say "no bucket here".
+   */
+  describe("with buckets missing from the dataset", () => {
+    class BoundedCube implements LoadingVoxelCube {
+      readonly loaded: string[] = [];
+      applyWrites() {}
+      backgroundProbe() {
+        return null;
+      }
+      /** Only bucket (0,0,0) exists; everything else is outside the dataset. */
+      async ensureLoaded(address: BucketAddress): Promise<BucketDataArray | null> {
+        this.loaded.push(address.slice(0, 3).join(","));
+        const exists = address[0] === 0 && address[1] === 0 && address[2] === 0;
+        return exists ? new BigUint64Array(BUCKET_VOXEL_COUNT) : null;
+      }
+    }
+
+    it("stops at the dataset edge instead of filling past it", async () => {
+      const cube = new BoundedCube();
+      // Bounds reach into bucket (1,0,0), which BoundedCube does not have.
+      const { bucketWrites } = await resolveFloodFill(
+        {
+          kind: "floodFill",
+          seed: [30, 0, 0],
+          is3D: false,
+          bounds: { min: [28, 0, 0], max: [40, 2, 1] },
+        },
+        editContext({ activeSegmentId: FILL }),
+        cube,
+      );
+
+      // x = 28..31 in bucket 0, two rows: everything past x = 31 is skipped.
+      expect(countVoxels(bucketWrites)).toBe(8);
+      expect([...bucketWrites.keys()]).toEqual(["0,0,0,0"]);
+      // The missing bucket is consulted once, then short-circuited.
+      expect(cube.loaded.filter((key) => key === "1,0,0").length).toBe(1);
+    });
+
+    it("returns an empty write set when the seed itself has no bucket", async () => {
+      const cube = new BoundedCube();
+      const { bucketWrites, coveredBoundingBox } = await resolveFloodFill(
+        {
+          kind: "floodFill",
+          seed: [40, 0, 0],
+          is3D: false,
+          bounds: { min: [32, 0, 0], max: [64, 2, 1] },
+        },
+        editContext({ activeSegmentId: FILL }),
+        cube,
+      );
+      expect(countVoxels(bucketWrites)).toBe(0);
+      expect(coveredBoundingBox).toBeNull();
+    });
   });
 });

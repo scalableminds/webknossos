@@ -9,18 +9,19 @@ import {
   type BucketAddress,
   type BucketKey,
   bucketKey,
+  type DenseBucketData,
   type SegmentId,
   type Vector3,
   voxelIndexOf,
 } from "viewer/model/volumetracing/core/types";
 
 export class FakeBackend implements BackendLike {
-  private readonly seeded = new Map<BucketKey, BigUint64Array>();
+  private readonly seeded = new Map<BucketKey, DenseBucketData>();
   version = 0;
   readonly fetched: BucketAddress[] = [];
 
   /** Pre-populate a bucket with data the frontend will later fetch. */
-  seed(address: BucketAddress, data: BigUint64Array): void {
+  seed(address: BucketAddress, data: DenseBucketData): void {
     this.seeded.set(bucketKey(address), data);
   }
 
@@ -34,7 +35,7 @@ export class FakeBackend implements BackendLike {
     data[voxelIndexOf(offset[0], offset[1], offset[2])] = value;
   }
 
-  async fetchBucket(address: BucketAddress): Promise<{ data: BigUint64Array; version: number }> {
+  async fetchBucket(address: BucketAddress): Promise<{ data: DenseBucketData; version: number }> {
     this.fetched.push(address);
     const seeded = this.seeded.get(bucketKey(address));
     const data = seeded != null ? seeded.slice() : new BigUint64Array(BUCKET_VOXEL_COUNT);

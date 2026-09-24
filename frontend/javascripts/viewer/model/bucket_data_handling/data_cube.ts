@@ -118,16 +118,11 @@ class DataCube {
   emitter: Emitter;
   lastRequestForValueSet: number | null = null;
   storePropertyUnsubscribers: Array<() => void> = [];
-  // The tick of the bucket-picking round whose results are currently in use. Buckets are
-  // marked as needed for a specific tick (see DataBucket.markAsNeeded). The ticks originate
-  // from LayerRenderingManager.currentBucketPickerTick and are adopted here as soon as the
-  // corresponding (asynchronous) picking round finished. Since rounds can be skipped when
-  // they are superseded, the ticks are not necessarily consecutive, which is why the
-  // previous tick is remembered explicitly instead of being derived.
+  // The tick of the bucket-picking round whose results are currently in use. Needed
+  // to determine which buckets are still needed.
   currentBucketPickerTick: number = 0;
-  // Tick 0 is the implicit tick before the first picking round finished. Buckets can already
-  // be marked as needed during it (e.g. by getData), which is why it is a regular tick that
-  // the first real round compares against.
+  // The previous tick is needed because ticks are not always consecutive (bucket picking
+  // may skip).
   previousBucketPickerTick: number = 0;
   private neededBucketCount: number = 0;
   private neededBucketCountInPreviousTick: number = 0;
@@ -142,12 +137,6 @@ class DataCube {
   // in a volume annotation layer are dirty), the array grows further.
   // If the array grows beyond 2 * BUCKET_COUNT_SOFT_LIMIT, the user is warned about
   // this.
-  //
-  // Each bucket remembers the bucket-picker tick during which it was last needed (either
-  // because it was picked for rendering or because its data was accessed). This is used for
-  // garbage collection: when buckets have to be collected, an iterator loops through the
-  // array and collects the first bucket that is not needed for the current tick (and that
-  // is not dirty or being requested).
   constructor(
     layerBBox: BoundingBox,
     additionalAxes: AdditionalAxis[],
@@ -404,9 +393,7 @@ class DataCube {
   startBucketPicking(tick: number): void {
     /*
      * Announces that the buckets of a finished bucket-picking round are about to be marked as
-     * needed. Note that the buckets of the previous round are not reset explicitly (which would
-     * mean iterating over all buckets of the cube). Instead, their marks simply expire because
-     * the current tick changes.
+     * needed. Marks of unneeded buckets simply "expire" because the current tick changes.
      */
     this.previousBucketPickerTick = this.currentBucketPickerTick;
     this.currentBucketPickerTick = tick;
@@ -437,8 +424,8 @@ class DataCube {
       return;
     }
     if (this.isBucketPickingInProgress) {
-      // Don't emit for each individual bucket. Instead, finishBucketPicking emits once for
-      // the entire round.
+      // Don't trigger triggerRenderedBucketDataChanged, because we can do that once
+      // in `finishBucketPicking`.
       this.didNeededBucketsChange = true;
     } else {
       // The bucket became relevant outside of a picking round (e.g. because getData was called

@@ -115,8 +115,7 @@ export class DataBucket {
   dirtyCount: number = 0;
   pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
-  // The bucket-picker tick during which this bucket was last marked as needed
-  // (see markAsNeeded and DataCube.currentBucketPickerTick).
+  // The bucket-picker tick during which this bucket was last marked as needed.
   lastNeededTick: number = -1;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
@@ -415,7 +414,7 @@ export class DataBucket {
 
   isNeeded(): boolean {
     /*
-     * Returns whether this bucket is important for the current bucket-picker tick.
+     * Returns whether this bucket is needed for the currently rendered view.
      * Needed buckets are protected from garbage collection and their values are considered
      * to be part of the rendered data (see DataCube.getValueSetForAllNeededBuckets).
      */

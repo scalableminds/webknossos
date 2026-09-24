@@ -42,7 +42,8 @@ export type AnalyticShape =
  * `x + y * size[0] + z * size[0] * size[1]`, x fastest. One byte rather than one
  * bit because this is an interchange format: byte arrays impose no alignment
  * constraint on the producer and have unambiguous byte order across worker and
- * WASM boundaries. Packing it is a later optimization.
+ * WASM boundaries. If this ever becomes a performance bottleneck, switching
+ * to a packed bit representation is a possible future optimization.
  */
 export interface MaskShape {
   kind: "mask";

@@ -85,6 +85,16 @@ export function encodeBucketDiff(diff: BucketDiff): Uint8Array {
   view.setUint32(8, diff.runs.length, true);
   let offset = 12;
   for (const run of diff.runs) {
+    if (run.value !== value) {
+      // The header holds one value for the whole bucket, so a mixed-value diff
+      // would silently serialize every run with the first one's value. A
+      // BucketDiff must come from a single transaction, which §4 guarantees is
+      // single-valued; producing one by merging transactions is the bug.
+      throw new Error(
+        `encodeBucketDiff got runs with mixed values (${value} and ${run.value}). ` +
+          "A BucketDiff must cover exactly one transaction.",
+      );
+    }
     view.setUint16(offset, run.start, true);
     view.setUint16(offset + 2, run.length, true);
     offset += 4;

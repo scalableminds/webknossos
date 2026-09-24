@@ -323,4 +323,28 @@ describe("new volume architecture — brush", () => {
       expect(decoded).toEqual(bucketDiff.runs);
     }
   });
+
+  it("keeps unsaved transactions apart, so each bucket diff stays single-valued", async () => {
+    const { cube, session, journal } = createHarness();
+    await materialize(cube, originBuckets(MAGS.length));
+
+    // Two strokes writing different segment ids into the same bucket. Merging
+    // them into one BucketDiff would be lossy: encodeBucketDiff hoists a single
+    // value into the header.
+    session.beginBrushStroke(editContext({ activeSegmentId: 5n }), [16, 16, 5], iso(4), 2);
+    const t1 = session.endBrushStroke();
+    session.beginBrushStroke(editContext({ activeSegmentId: 9n }), [18, 16, 5], iso(2), 2);
+    const t2 = session.endBrushStroke();
+
+    const unsaved = journal.unsavedTransactions();
+    expect(unsaved.map((entry) => entry.transactionId)).toEqual([t1.id, t2.id]);
+
+    for (const { bucketDiffs } of unsaved) {
+      for (const bucketDiff of bucketDiffs) {
+        const values = new Set(bucketDiff.runs.map((run) => run.value));
+        expect(values.size).toBe(1);
+        expect(decodeBucketDiff(encodeBucketDiff(bucketDiff))).toEqual(bucketDiff.runs);
+      }
+    }
+  });
 });

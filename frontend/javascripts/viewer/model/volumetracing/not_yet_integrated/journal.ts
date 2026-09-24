@@ -17,6 +17,13 @@ export interface BucketLogEntry {
   acknowledgedAtVersion: number | null;
 }
 
+/** One not-yet-saved transaction, as the save queue will send it. */
+export interface UnsavedTransaction {
+  transactionId: TransactionId;
+  sequence: number;
+  bucketDiffs: BucketDiff[];
+}
+
 export interface BucketLog {
   address: BucketAddress;
   /**
@@ -171,15 +178,30 @@ export class BucketJournal {
     return affected;
   }
 
-  /** Diffs not yet acknowledged by the backend, for the save queue. */
-  unsavedBucketDiffs(): BucketDiff[] {
-    const diffs: BucketDiff[] = [];
+  /**
+   * What the save queue still owes the backend, grouped as §5.8 requires: one
+   * entry per transaction, each carrying one `BucketDiff` per bucket that
+   * transaction touched, in `sequence` order.
+   */
+  unsavedTransactions(): UnsavedTransaction[] {
+    const byTransaction = new Map<TransactionId, UnsavedTransaction>();
     for (const log of this.logs.values()) {
-      const runs = log.entries
-        .filter((entry) => !entry.skipped && entry.acknowledgedAtVersion == null)
-        .flatMap((entry) => entry.runs);
-      if (runs.length > 0) diffs.push({ address: log.address, runs });
+      for (const entry of log.entries) {
+        if (entry.skipped || entry.acknowledgedAtVersion != null) continue;
+        let unsaved = byTransaction.get(entry.transactionId);
+        if (unsaved == null) {
+          unsaved = {
+            transactionId: entry.transactionId,
+            sequence: entry.sequence,
+            bucketDiffs: [],
+          };
+          byTransaction.set(entry.transactionId, unsaved);
+        }
+        unsaved.bucketDiffs.push({ address: log.address, runs: entry.runs });
+      }
     }
-    return diffs;
+    // Logs are iterated in insertion order, so the grouping has to be sorted:
+    // §5.8 submits transactions in sequence order.
+    return [...byTransaction.values()].sort((a, b) => a.sequence - b.sequence);
   }
 }

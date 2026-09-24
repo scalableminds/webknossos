@@ -2,9 +2,8 @@ import { toBigInt } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import { V3, V4 } from "libs/mjs";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
-import type { ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
-import { areBoundingBoxesOverlappingOrTouching, castForArrayType, mod, union } from "libs/utils";
+import { mod, union } from "libs/utils";
 import keyBy from "lodash-es/keyBy";
 import once from "lodash-es/once";
 import { createNanoEvents, type Emitter } from "nanoevents";
@@ -15,8 +14,7 @@ import type {
   BucketDataArray,
   ElementClass,
 } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { BucketAddress, LabelMasksByBucketAndW, Vector3, Vector4 } from "viewer/constants";
+import type { BucketAddress, Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -31,14 +29,8 @@ import { DataBucket, NULL_BUCKET, NullBucket } from "viewer/model/bucket_data_ha
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import type PushQueue from "viewer/model/bucket_data_handling/pushqueue";
 import TemporalBucketManager from "viewer/model/bucket_data_handling/temporal_bucket_manager";
-import type { DimensionMap } from "viewer/model/dimensions";
-import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
-import {
-  VoxelNeighborQueue2D,
-  VoxelNeighborQueue3D,
-} from "viewer/model/volumetracing/legacy/section_labeling";
 import type { Mapping, NumberLike } from "viewer/store";
 import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
@@ -63,18 +55,6 @@ class CubeEntry {
     this.boundary = boundary;
   }
 }
-
-// Instead of using blank, constant thresholds for the bounding box which
-// limits a floodfill operation, the bounding box can also be increased dynamically
-// so that long, thin processes get a larger bounding box limit.
-// If USE_FLOODFILL_VOXEL_THRESHOLD is true, the amount of labeled voxels is taken into account
-// to increase the bounding box. However, the corresponding code can still run into
-// scenarios where the labeled voxel count is significantly larger than the specified threshold,
-// since the labeled volume has to be a cuboid.
-// Also see: https://github.com/scalableminds/webknossos/issues/5769
-
-const FLOODFILL_VOXEL_THRESHOLD = 5 * 1000000;
-const USE_FLOODFILL_VOXEL_THRESHOLD = false;
 
 const NoContainment = { type: "no" } as const;
 const FullContainment = { type: "full" } as const;
@@ -563,313 +543,6 @@ class DataCube {
         }
       }
     }
-  }
-
-  async floodFill(
-    globalSeedVoxel: Vector3,
-    additionalCoordinates: AdditionalCoordinate[] | null,
-    segmentIdNumber: bigint,
-    dimensionIndices: DimensionMap,
-    _floodfillBoundingBox: BoundingBoxMinMaxType,
-    zoomStep: number,
-    progressCallback: ProgressCallback,
-    use3D: boolean,
-    splitBoundaryMesh: Mesh | null,
-  ): Promise<{
-    bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW;
-    wasBoundingBoxExceeded: boolean;
-    coveredBoundingBox: BoundingBoxMinMaxType;
-  }> {
-    // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
-    // On the inner level a bucket is flood-filled  and if the iteration of the buckets data
-    // reaches a neighbour bucket, this bucket is added to this list of buckets to flood fill.
-    // The outer level simply iterates over all  buckets in the list and triggers the bucket-wise flood fill.
-    // Additionally a map is created that saves all labeled voxels for each bucket. This map is returned at the end.
-    //
-    // Note: It is possible that a bucket is added multiple times to the list of buckets. This is intended
-    // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter it somewhere else.
-    // If it would not be possible to have the same neighbour bucket in the list multiple times,
-    // not all of the target area in the neighbour bucket might be filled.
-
-    const floodfillBoundingBox = new BoundingBox(_floodfillBoundingBox);
-
-    // Helper function to convert between xyz and uvw (both directions)
-    const transpose = (voxel: Vector3): Vector3 =>
-      Dimensions.transDimWithIndices(voxel, dimensionIndices);
-
-    const bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW = new Map();
-    const seedBucketAddress = this.positionToZoomedAddress(
-      globalSeedVoxel,
-      additionalCoordinates,
-      zoomStep,
-    );
-    const seedBucket = this.getOrCreateBucket(seedBucketAddress);
-    const coveredBBoxMin: Vector3 = [
-      Number.POSITIVE_INFINITY,
-      Number.POSITIVE_INFINITY,
-      Number.POSITIVE_INFINITY,
-    ];
-    const coveredBBoxMax: Vector3 = [0, 0, 0];
-
-    if (seedBucket.type === "null") {
-      return {
-        bucketsWithLabeledVoxelsMap,
-        wasBoundingBoxExceeded: false,
-        coveredBoundingBox: {
-          min: coveredBBoxMin,
-          max: coveredBBoxMax,
-        },
-      };
-    }
-
-    if (!this.magInfo.hasIndex(zoomStep)) {
-      throw new Error(
-        `DataCube.floodFill was called with a zoomStep of ${zoomStep} which does not exist for the current magnification.`,
-      );
-    }
-
-    const seedVoxelIndex = this.getVoxelIndex(globalSeedVoxel, zoomStep);
-    const seedBucketData = seedBucket.getOrCreateData();
-    const sourceSegmentId = seedBucketData[seedVoxelIndex];
-
-    const segmentId = castForArrayType(segmentIdNumber, seedBucketData);
-
-    if (sourceSegmentId === segmentId) {
-      return {
-        bucketsWithLabeledVoxelsMap,
-        wasBoundingBoxExceeded: false,
-        coveredBoundingBox: {
-          min: coveredBBoxMin,
-          max: coveredBBoxMax,
-        },
-      };
-    }
-
-    const bucketsWithXyzSeedsToFill: Array<[DataBucket, Vector3]> = [
-      [seedBucket, this.getVoxelOffset(globalSeedVoxel, zoomStep)],
-    ];
-    let labeledVoxelCount = 0;
-    let wasBoundingBoxExceeded = false;
-
-    // Iterate over all buckets within the area and flood fill each of them.
-    while (bucketsWithXyzSeedsToFill.length > 0) {
-      const poppedElement = bucketsWithXyzSeedsToFill.pop();
-      if (poppedElement == null) {
-        // Satisfy Typescript
-        throw new Error("Queue is empty.");
-      }
-      const [currentBucket, initialXyzVoxelInBucket] = poppedElement;
-      const currentBucketBoundingBox = currentBucket.getBoundingBox();
-      const currentGlobalBucketPosition = currentBucket.getGlobalPosition();
-      // Check if the bucket overlaps the active viewport bounds.
-      let shouldIgnoreBucket = false;
-
-      while (
-        !areBoundingBoxesOverlappingOrTouching(currentBucketBoundingBox, floodfillBoundingBox)
-      ) {
-        if (!USE_FLOODFILL_VOXEL_THRESHOLD || labeledVoxelCount > FLOODFILL_VOXEL_THRESHOLD) {
-          wasBoundingBoxExceeded = true;
-          shouldIgnoreBucket = true;
-          break;
-        } else {
-          // Increase the size of the bounding box by moving the bbox surface
-          // which is closest to the seed.
-          const seedToMinDiff = V3.sub(globalSeedVoxel, floodfillBoundingBox.min);
-          const seedToMaxDiff = V3.sub(floodfillBoundingBox.max, globalSeedVoxel);
-          const smallestDiffToMin = Math.min(...seedToMinDiff);
-          const smallestDiffToMax = Math.min(...seedToMaxDiff);
-
-          if (smallestDiffToMin < smallestDiffToMax) {
-            // Decrease min
-            floodfillBoundingBox.min[Array.from(seedToMinDiff).indexOf(smallestDiffToMin)] -=
-              constants.BUCKET_WIDTH;
-          } else {
-            // Increase max
-            floodfillBoundingBox.max[Array.from(seedToMaxDiff).indexOf(smallestDiffToMax)] +=
-              constants.BUCKET_WIDTH;
-          }
-        }
-      }
-
-      if (shouldIgnoreBucket) {
-        continue;
-      }
-
-      // Since the floodfill operation needs to read the existing bucket data, we need to
-      // load (await) the data first. This means that we don't have to define LabeledVoxelMaps
-      // for the current magnification. This simplifies the algorithm, too, since the floodfill also
-      // uses the bucket's data array to mark visited voxels (which would not be possible with
-      // LabeledVoxelMaps).
-
-      const bucketData = await currentBucket.getDataForMutation();
-      const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialXyzVoxelInBucket);
-
-      if (bucketData[initialVoxelIndex] !== sourceSegmentId) {
-        // Ignoring neighbour buckets whose segmentId at the initial voxel does not match the source cell id.
-        continue;
-      }
-
-      // Add the bucket to the current volume undo batch, if it isn't already part of it.
-      currentBucket.startDataMutation();
-      // Mark the initial voxel.
-      bucketData[initialVoxelIndex] = segmentId;
-      // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
-      const currentLabeledVoxelMap =
-        bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
-
-      const currentMag = this.magInfo.getMagByIndexOrThrow(currentBucket.zoomedAddress[3]);
-
-      const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]: Vector3) => {
-        // Convert bucket local W coordinate to global W (both mag-dependent)
-        const w = dimensionIndices[2];
-        thirdCoord += currentBucket.getTopLeftInMag()[w];
-        // Convert mag-dependent W to mag-independent W
-        thirdCoord *= currentMag[w];
-
-        if (!currentLabeledVoxelMap.has(thirdCoord)) {
-          currentLabeledVoxelMap.set(
-            thirdCoord,
-            new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0),
-          );
-        }
-
-        const dataArray = currentLabeledVoxelMap.get(thirdCoord);
-
-        if (!dataArray) {
-          // Satisfy typescript
-          throw new Error("Map entry does not exist, even though it was just set.");
-        }
-
-        dataArray[firstCoord * constants.BUCKET_WIDTH + secondCoord] = 1;
-      };
-
-      // Use a VoxelNeighborQueue2D/3D to iterate over the bucket and using bucket-local addresses and not global addresses.
-      const initialVoxelInSliceUvw = transpose(initialXyzVoxelInBucket);
-      markUvwInSliceAsLabeled(initialVoxelInSliceUvw);
-      const VoxelNeighborQueueClass = use3D ? VoxelNeighborQueue3D : VoxelNeighborQueue2D;
-      const neighbourVoxelStackUvw = new VoxelNeighborQueueClass(initialVoxelInSliceUvw);
-
-      // Iterating over all neighbours from the initialAddress.
-      while (!neighbourVoxelStackUvw.isEmpty()) {
-        const { origin, neighbors: neighbours } = neighbourVoxelStackUvw.getVoxelAndGetNeighbors();
-
-        const originGlobalPosition = V3.add(
-          currentGlobalBucketPosition,
-          V3.scale3(origin, currentMag),
-        );
-
-        for (let neighbourIndex = 0; neighbourIndex < neighbours.length; ++neighbourIndex) {
-          const neighbourVoxelUvw = neighbours[neighbourIndex];
-          const neighbourVoxelXyz = transpose(neighbourVoxelUvw);
-          // If the current neighbour is not in the current bucket, calculate its
-          // bucket's zoomed address and add the bucket to bucketsWithXyzSeedsToFill.
-          // adjustedNeighbourVoxelUvw is a copy of neighbourVoxelUvw whose value are robust
-          // against the modulo operation used in getVoxelOffset.
-          const {
-            isVoxelOutside,
-            neighbourBucketAddress,
-            adjustedVoxel: adjustedNeighbourVoxelXyz,
-          } = currentBucket.is3DVoxelInsideBucket(neighbourVoxelXyz, zoomStep);
-
-          if (isVoxelOutside) {
-            // Add the bucket to the list of buckets to flood fill.
-            const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
-
-            let shouldSkip = false;
-            if (splitBoundaryMesh) {
-              const currentGlobalPosition = V3.add(
-                currentGlobalBucketPosition,
-                V3.scale3(neighbourVoxelXyz, currentMag),
-              );
-              const intersects = checkLineIntersection(
-                splitBoundaryMesh,
-                originGlobalPosition,
-                currentGlobalPosition,
-              );
-
-              shouldSkip = intersects;
-            }
-
-            if (!shouldSkip && neighbourBucket.type !== "null") {
-              bucketsWithXyzSeedsToFill.push([neighbourBucket, adjustedNeighbourVoxelXyz]);
-            }
-          } else {
-            // Label the current neighbour and add it to the neighbourVoxelStackUvw to iterate over its neighbours.
-            const neighbourVoxelIndex = this.getVoxelIndexByVoxelOffset(neighbourVoxelXyz);
-            const currentGlobalPosition = V3.add(
-              currentGlobalBucketPosition,
-              V3.scale3(adjustedNeighbourVoxelXyz, currentMag),
-            );
-            // When flood filling in a coarser mag, a voxel in the coarse mag is more than one voxel in mag 1
-            const voxelBoundingBoxInMag1 = new BoundingBox({
-              min: currentGlobalPosition,
-              max: V3.add(currentGlobalPosition, currentMag),
-            });
-
-            let shouldSkip = false;
-            if (splitBoundaryMesh) {
-              const intersects = checkLineIntersection(
-                splitBoundaryMesh,
-                originGlobalPosition,
-                currentGlobalPosition,
-              );
-
-              shouldSkip = intersects;
-            }
-
-            if (!shouldSkip && bucketData[neighbourVoxelIndex] === sourceSegmentId) {
-              if (floodfillBoundingBox.intersectedWith(voxelBoundingBoxInMag1).getVolume() > 0) {
-                bucketData[neighbourVoxelIndex] = segmentId;
-                markUvwInSliceAsLabeled(neighbourVoxelUvw);
-                neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
-                labeledVoxelCount++;
-
-                coveredBBoxMin[0] = Math.min(coveredBBoxMin[0], voxelBoundingBoxInMag1.min[0]);
-                coveredBBoxMin[1] = Math.min(coveredBBoxMin[1], voxelBoundingBoxInMag1.min[1]);
-                coveredBBoxMin[2] = Math.min(coveredBBoxMin[2], voxelBoundingBoxInMag1.min[2]);
-
-                // The maximum is exclusive which is why we add 1 to the position
-                coveredBBoxMax[0] = Math.max(coveredBBoxMax[0], voxelBoundingBoxInMag1.max[0] + 1);
-                coveredBBoxMax[1] = Math.max(coveredBBoxMax[1], voxelBoundingBoxInMag1.max[1] + 1);
-                coveredBBoxMax[2] = Math.max(coveredBBoxMax[2], voxelBoundingBoxInMag1.max[2] + 1);
-
-                if (labeledVoxelCount % 1000000 === 0) {
-                  console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);
-
-                  await progressCallback(
-                    false,
-                    `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing...`,
-                  );
-                }
-              } else {
-                wasBoundingBoxExceeded = true;
-              }
-            }
-          }
-        }
-      }
-
-      bucketsWithLabeledVoxelsMap.set(currentBucket.zoomedAddress, currentLabeledVoxelMap);
-    }
-
-    for (const bucketZoomedAddress of bucketsWithLabeledVoxelsMap.keys()) {
-      const bucket = this.getBucket(bucketZoomedAddress);
-
-      if (bucket.type === "null") {
-        continue;
-      }
-
-      bucket.endDataMutation();
-    }
-
-    return {
-      bucketsWithLabeledVoxelsMap,
-      wasBoundingBoxExceeded,
-      coveredBoundingBox: {
-        min: coveredBBoxMin,
-        max: coveredBBoxMax,
-      },
-    };
   }
 
   triggerPushQueue() {

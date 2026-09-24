@@ -81,9 +81,14 @@ const AiTrainingDataSelector = ({
   const { availableMagnifications, layerError, magnificationError, bboxErrors, bboxWarnings } =
     issues;
   const hasErrors = hasTrainingAnnotationErrors(issues);
-  const [headerIssue, ...furtherErrors] = bboxErrors;
-  const furtherWarnings = headerIssue ? bboxWarnings : bboxWarnings.slice(1);
-  const summary = headerIssue ?? bboxWarnings[0];
+  // The most severe issue is summarized in the header. Everything that needs more words than
+  // its summary is spelled out below the layer selection.
+  const headerIssue = bboxErrors[0] ?? bboxWarnings[0];
+  const summary = headerIssue?.summary;
+  const detailedIssues = [
+    ...bboxErrors.map((issue) => ({ issue, type: "error" as const })),
+    ...bboxWarnings.map((issue) => ({ issue, type: "warning" as const })),
+  ].filter(({ issue }) => issue !== headerIssue || issue.details);
   const isComplete = Boolean(imageDataLayer && groundTruthLayer && magnification);
 
   return (
@@ -115,7 +120,12 @@ const AiTrainingDataSelector = ({
         >
           Annotation {getAnnotationDisplayName(annotation)}
         </Typography.Link>
-        <Text style={{ flex: 1, minWidth: 0, color: cssVar.colorTextSecondary }}>{summary}</Text>
+        <Text
+          ellipsis={{ tooltip: summary }}
+          style={{ flex: 1, minWidth: 0, color: cssVar.colorTextSecondary }}
+        >
+          {summary}
+        </Text>
         {summary && (
           <Button
             size="small"
@@ -205,13 +215,15 @@ const AiTrainingDataSelector = ({
           Volume <Text strong>{formatVoxels(getTrainingVolume(selectedAnnotation))}</Text>
         </Text>
       </Flex>
-      {(furtherErrors.length > 0 || furtherWarnings.length > 0) && (
+      {detailedIssues.length > 0 && (
         <Flex vertical gap={8} style={{ padding: "0 16px 16px" }}>
-          {furtherErrors.map((error) => (
-            <Alert key={error} title={error} type="error" showIcon />
-          ))}
-          {furtherWarnings.map((warning) => (
-            <Alert key={warning} title={warning} type="warning" showIcon />
+          {detailedIssues.map(({ issue, type }) => (
+            <Alert
+              key={issue.summary}
+              title={issue.details ?? issue.summary}
+              type={type}
+              showIcon
+            />
           ))}
         </Flex>
       )}

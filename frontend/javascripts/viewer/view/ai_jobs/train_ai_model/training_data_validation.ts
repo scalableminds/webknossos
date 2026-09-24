@@ -17,13 +17,22 @@ import type { AiTrainingAnnotationSelection } from "./ai_training_job_context";
 
 const MIN_BBOX_EXTENT_IN_EACH_DIM = 32;
 
+/**
+ * A problem with an annotation's bounding boxes. The summary is short enough to fit into the
+ * one-line header of the annotation block; the details list e.g. the affected boxes.
+ */
+export type BoundingBoxIssue = { summary: string; details?: string };
+
 export type TrainingAnnotationIssues = {
   availableMagnifications: Vector3[];
   layerError?: string;
   magnificationError?: string;
-  bboxErrors: string[];
-  bboxWarnings: string[];
+  bboxErrors: BoundingBoxIssue[];
+  bboxWarnings: BoundingBoxIssue[];
 };
+
+const pluralizeBoxes = (count: number) =>
+  count === 1 ? "1 bounding box" : `${count} bounding boxes`;
 
 export const getAnnotationDisplayName = (annotation: APIAnnotation) =>
   annotation.name || annotation.id.slice(-6);
@@ -39,16 +48,16 @@ function getBoundingBoxIssues(
 ): Pick<TrainingAnnotationIssues, "bboxErrors" | "bboxWarnings"> {
   const { annotation, groundTruthLayer, magnification, userBoundingBoxes, volumeTracings } =
     selection;
-  const errors: string[] = [];
-  const warnings: string[] = [];
+  const errors: BoundingBoxIssue[] = [];
+  const warnings: BoundingBoxIssue[] = [];
 
   if (userBoundingBoxes.length === 0) {
-    errors.push("No bounding boxes yet · at least one is required for training");
+    errors.push({ summary: "No bounding boxes yet · add at least one" });
     return { bboxErrors: errors, bboxWarnings: warnings };
   }
 
   if (getTrainingVolume(selection) === 0) {
-    errors.push("Total volume of bounding boxes cannot be zero.");
+    errors.push({ summary: "Bounding boxes have a total volume of zero" });
   }
 
   const groundTruthLayerBoundingBox = getGroundTruthLayerBoundingBox(
@@ -61,11 +70,12 @@ function getBoundingBoxIssues(
     groundTruthLayerBoundingBox,
   );
   if (outOfBoundsBoxes.length > 0) {
-    errors.push(
-      `The following bounding boxes are (partially) outside of the "${groundTruthLayer}" volume layer's bounding box and would cause the training to fail: ${outOfBoundsBoxes
+    errors.push({
+      summary: `${pluralizeBoxes(outOfBoundsBoxes.length)} outside the ground truth layer`,
+      details: `The following bounding boxes are (partially) outside of the "${groundTruthLayer}" volume layer's bounding box and would cause the training to fail: ${outOfBoundsBoxes
         .map((box) => box.name)
         .join(", ")}`,
-    );
+    });
   }
 
   const tooSmallBoxes: string[] = [];
@@ -93,19 +103,21 @@ function getBoundingBoxIssues(
   });
 
   if (tooSmallBoxes.length > 0) {
-    warnings.push(
-      `The following bounding boxes are too small. They should be at least ${MIN_BBOX_EXTENT_IN_EACH_DIM} Vx in each dimension: ${tooSmallBoxes.join(
+    warnings.push({
+      summary: `${pluralizeBoxes(tooSmallBoxes.length)} smaller than ${MIN_BBOX_EXTENT_IN_EACH_DIM} Vx`,
+      details: `The following bounding boxes are too small. They should be at least ${MIN_BBOX_EXTENT_IN_EACH_DIM} Vx in each dimension: ${tooSmallBoxes.join(
         ", ",
       )}`,
-    );
+    });
   }
 
   if (notMagAlignedBoundingBoxes.length > 0) {
-    warnings.push(
-      `The following bounding boxes are not aligned with the selected magnification and will be automatically shrunk: ${notMagAlignedBoundingBoxes.join(
+    warnings.push({
+      summary: `${pluralizeBoxes(notMagAlignedBoundingBoxes.length)} not aligned to the magnification`,
+      details: `The following bounding boxes are not aligned with the selected magnification and will be automatically shrunk: ${notMagAlignedBoundingBoxes.join(
         ", ",
       )}`,
-    );
+    });
   }
 
   return { bboxErrors: errors, bboxWarnings: warnings };

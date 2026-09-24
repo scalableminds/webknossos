@@ -348,11 +348,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     if (brushDriver != null) {
       // Pointer-up: mag propagation runs once over the coalesced write set.
-      const stats = brushDriver.finish();
-      // todop
-      console.info(
-        `[volume] brush: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
-      );
+      brushDriver.finish();
       // currentSectionLabeler.updateArea(...) above ran regardless of which
       // path drew the stroke, so its centroid tracking is accurate here too.
       // Without this, volume interpolation (which reads this via

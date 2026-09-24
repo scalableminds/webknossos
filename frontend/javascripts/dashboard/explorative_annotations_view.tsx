@@ -631,22 +631,22 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     return formatUserName(owner);
   };
 
-  // Most listed annotations are the user's own, so the owner is only shown for annotations
-  // shared by others to make those stand out. In the admin view, all annotations belong to the
-  // viewed user, so the owner is shown plainly.
+  // Most listed annotations are the user's own, so those only say "you", while annotations
+  // shared by others name their owner to stand out. In the admin view, all annotations belong to
+  // the viewed user, so the owner is shown plainly.
   renderOwnerMetaItem = (owner: APIUserCompact | undefined) => {
     if (owner == null) return null;
+    let ownerText: string;
     if (this.props.isAdminView) {
-      return (
-        <span key="owner" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <UserOutlined /> {formatUserName(owner)}
-        </span>
-      );
+      ownerText = formatUserName(owner);
+    } else if (owner.id === this.props.activeUser.id) {
+      ownerText = "you";
+    } else {
+      ownerText = `shared by ${formatUserName(owner)}`;
     }
-    if (owner.id === this.props.activeUser.id) return null;
     return (
       <span key="owner" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <UserOutlined /> shared by {formatUserName(owner)}
+        <UserOutlined /> {ownerText}
       </span>
     );
   };

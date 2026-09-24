@@ -26,6 +26,21 @@ export type MagIndex = number;
 
 /** uint64 in the data format, therefore bigint here. 0n === background. */
 export type SegmentId = bigint;
+/**
+ * A voxel value as its bucket stores it: bigint for the 64-bit element
+ * classes, number for the rest. Distinct from SegmentId, which is always
+ * a bigint. Same shape as `NumberLike` in viewer/store.ts, redeclared to
+ keep the core free of that import.
+ */
+export type StoredSegmentId = number | bigint;
+/**
+ * A dense 32³ bucket of segment ids, as the in-memory cube and the journal
+ * hold it. The buffer type parameter is spelled out rather than left to
+ * default to `ArrayBufferLike`, so these arrays are assignable to
+ * `BucketDataArray` (types/api_types) where they cross into `viewer/`.
+ */
+// todop: why?
+export type DenseBucketData = BigUint64Array<ArrayBuffer>;
 
 export const BUCKET_WIDTH = 32;
 /** log2(BUCKET_WIDTH) and BUCKET_WIDTH - 1, so the per-voxel address

@@ -13,6 +13,7 @@ import {
   type BucketAddress,
   type BucketKey,
   bucketKey,
+  type DenseBucketData,
   type SegmentId,
   type Vector3,
   voxelIndexOf,
@@ -24,7 +25,7 @@ interface CubeEntry {
   address: BucketAddress;
   state: BucketState;
   /** Allocated as soon as the bucket becomes `pending`. */
-  data: BigUint64Array;
+  data: DenseBucketData;
   fetch: Promise<void> | null;
 }
 
@@ -58,7 +59,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
    * for `pending` buckets alike: a zero-filled placeholder must never be
    * mistaken for "all background". Never triggers a fetch.
    */
-  getLoadedDataOrUndefined(address: BucketAddress): BigUint64Array | undefined {
+  getLoadedDataOrUndefined(address: BucketAddress): DenseBucketData | undefined {
     const entry = this.buckets.get(bucketKey(address));
     return entry?.state === "loaded" ? entry.data : undefined;
   }
@@ -69,7 +70,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
    * writing into a placeholder is fine — the fold on arrival replays those
    * writes.
    */
-  private materializedData(address: BucketAddress): BigUint64Array | undefined {
+  private materializedData(address: BucketAddress): DenseBucketData | undefined {
     return this.buckets.get(bucketKey(address))?.data;
   }
 
@@ -113,7 +114,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
    * carrying is replaced outright rather than merged — re-folding from a known
    * base is both simpler and correct.
    */
-  receiveData(address: BucketAddress, backendData: BigUint64Array, version: number): void {
+  receiveData(address: BucketAddress, backendData: DenseBucketData, version: number): void {
     const key = bucketKey(address);
     const entry = this.buckets.get(key);
     this.journal.setBase(address, backendData, version);
@@ -128,7 +129,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
   }
 
   /** Load a bucket and return its content. The resolver's blocking read. */
-  async ensureLoaded(address: BucketAddress): Promise<BigUint64Array> {
+  async ensureLoaded(address: BucketAddress): Promise<DenseBucketData> {
     if (this.state(address) !== "loaded") await this.materialize(address);
     const data = this.getLoadedDataOrUndefined(address);
     if (data == null) throw new Error(`Bucket ${bucketKey(address)} did not become loaded`);
@@ -154,7 +155,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
   }
 
   /** Overwrite a bucket's content outright (undo rebuild). */
-  install(address: BucketAddress, data: BigUint64Array): void {
+  install(address: BucketAddress, data: DenseBucketData): void {
     const key = bucketKey(address);
     const entry = this.buckets.get(key);
     if (entry == null) return; // not materialized: nothing on screen to update

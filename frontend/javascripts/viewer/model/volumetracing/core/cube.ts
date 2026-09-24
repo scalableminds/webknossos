@@ -5,8 +5,9 @@
  * `not_yet_integrated/working_data_cube.ts` is the in-memory stand-in used by tests.
  */
 
+import type { BucketDataArray } from "types/api_types";
 import type { BucketWrite } from "./bucket_write_map";
-import type { BucketAddress } from "./types";
+import type { BucketAddress, DenseBucketData } from "./types";
 
 /**
  * What can be done with a bucket right now. Two of the three states have no
@@ -51,12 +52,14 @@ export interface TransactionCube {
  * see `integration/wk_cube_adapter.ts`.
  */
 export interface LoadingVoxelCube extends TransactionCube {
-  /** Load a bucket and return its dense content. The resolver's only await. */
-  // todop: why uint64?
-  ensureLoaded(address: BucketAddress): Promise<BigUint64Array>;
+  /**
+   * Load a bucket and return its content. The resolver's only await.
+   * Null means there is no bucket at this address (outside the dataset).
+   */
+  ensureLoaded(address: BucketAddress): Promise<BucketDataArray | null>;
 }
 
 /** What the cube fetches from. Tests supply an in-memory implementation. */
 export interface BackendLike {
-  fetchBucket(address: BucketAddress): Promise<{ data: BigUint64Array; version: number }>;
+  fetchBucket(address: BucketAddress): Promise<{ data: DenseBucketData; version: number }>;
 }

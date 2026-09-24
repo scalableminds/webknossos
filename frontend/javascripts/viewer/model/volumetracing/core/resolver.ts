@@ -1,3 +1,4 @@
+import type { BucketDataArray } from "types/api_types";
 import { type BucketWriteMap, BucketWriteMapBuilder } from "./bucket_write_map";
 import type { LoadingVoxelCube } from "./cube";
 import type { DataDependentShape } from "./intents";
@@ -8,7 +9,7 @@ import {
   bucketIndexOfCoordinate,
   type EditContext,
   isInBoundingBox,
-  type SegmentId,
+  type StoredSegmentId,
   type Vector3,
   voxelIndexOf,
   voxelOffsetInBucket,
@@ -98,7 +99,9 @@ class FloodFillTraversal {
    * does not re-enter the async path.
    */
   private cachedAddress: BucketAddress | null = null;
-  private cachedData: BigUint64Array | null = null;
+  // `cachedData` can be null even when `cachedAddress` is not null
+  // (in that case, no data exists at that address).
+  private cachedData: BucketDataArray | null = null;
 
   constructor(
     private readonly shape: FloodFillShape,
@@ -118,7 +121,12 @@ class FloodFillTraversal {
 
   async run(): Promise<FloodFillResolution> {
     const seedValue = await this.readSeedValue();
-    if (seedValue === this.ctx.activeSegmentId) {
+    if (seedValue == null) {
+      // The seed sits outside the dataset. Nothing to read, nothing to fill.
+      return this.result();
+    }
+
+    if (BigInt(seedValue) === this.ctx.activeSegmentId) {
       // Nothing to do: the region already carries the target value..
       return this.result();
     }
@@ -129,6 +137,8 @@ class FloodFillTraversal {
       if (!this.shouldExplore(voxel)) continue;
 
       if (!this.hasCachedBucketFor(voxel)) await this.loadBucketFor(voxel); // the only await
+      // No bucket at this address.
+      if (this.cachedData == null) continue;
       if (this.readCachedVoxel(voxel) !== seedValue) continue;
 
       this.accept(voxel);
@@ -137,10 +147,11 @@ class FloodFillTraversal {
     return this.result();
   }
 
-  private async readSeedValue(): Promise<SegmentId> {
+  /** Null when the seed's bucket lies outside the dataset. */
+  private async readSeedValue(): Promise<StoredSegmentId | null> {
     const { seed } = this.shape;
     await this.loadBucketFor(seed);
-    return this.readCachedVoxel(seed);
+    return this.cachedData == null ? null : this.readCachedVoxel(seed);
   }
 
   /**
@@ -191,10 +202,14 @@ class FloodFillTraversal {
     this.cachedAddress = address;
   }
 
-  /** Only valid once `hasCachedBucketFor(voxel)` holds. */
-  private readCachedVoxel(voxel: Vector3): SegmentId {
+  /**
+   * Only valid once `hasCachedBucketFor(voxel)` holds and `cachedData` is
+   * non-null. The value comes back in the layer's own element class; it is
+   * only ever compared against another value from this same bucket.
+   */
+  private readCachedVoxel(voxel: Vector3): StoredSegmentId {
     const offset = voxelOffsetInBucket(voxel);
-    return (this.cachedData as BigUint64Array)[voxelIndexOf(offset[0], offset[1], offset[2])];
+    return (this.cachedData as BucketDataArray)[voxelIndexOf(offset[0], offset[1], offset[2])];
   }
 
   /** The voxel is part of the region: write it and walk on from it. */

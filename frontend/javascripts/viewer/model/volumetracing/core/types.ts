@@ -28,6 +28,10 @@ export type MagIndex = number;
 export type SegmentId = bigint;
 
 export const BUCKET_WIDTH = 32;
+/** log2(BUCKET_WIDTH) and BUCKET_WIDTH - 1, so the per-voxel address
+ * arithmetic below can shift and mask instead of dividing. */
+export const BUCKET_WIDTH_LOG2 = 5;
+export const BUCKET_WIDTH_MASK = BUCKET_WIDTH - 1;
 export const BUCKET_VOXEL_COUNT = BUCKET_WIDTH ** 3; // 32_768
 export const FINEST_MAG_INDEX = 0;
 
@@ -84,6 +88,17 @@ export function floorDiv(a: number, b: number): number {
   return Math.floor(a / b);
 }
 
+/**
+ * `floorDiv(coordinate, BUCKET_WIDTH)` without the division. An arithmetic
+ * right shift rounds towards negative infinity, which is exactly what
+ * `Math.floor` does here, and it agrees for negative coordinates too
+ * (`-33 >> 5 === -2 === Math.floor(-33 / 32)`). Worth the specialisation
+ * because the flood-fill traversal calls it per visited voxel.
+ */
+export function bucketIndexOfCoordinate(coordinate: number): number {
+  return coordinate >> BUCKET_WIDTH_LOG2;
+}
+
 /** The bucket containing a voxel, where the voxel is in `magIndex`'s own grid. */
 export function bucketAddressOfVoxel(
   voxel: Vector3,
@@ -91,9 +106,9 @@ export function bucketAddressOfVoxel(
   additionalCoordinates: AdditionalCoordinate[] | null,
 ): BucketAddress {
   return [
-    floorDiv(voxel[0], BUCKET_WIDTH),
-    floorDiv(voxel[1], BUCKET_WIDTH),
-    floorDiv(voxel[2], BUCKET_WIDTH),
+    bucketIndexOfCoordinate(voxel[0]),
+    bucketIndexOfCoordinate(voxel[1]),
+    bucketIndexOfCoordinate(voxel[2]),
     magIndex,
     additionalCoordinates,
   ];
@@ -106,11 +121,10 @@ export function originVoxelOf(address: BucketAddress): Vector3 {
 
 /** Offset of a voxel within its bucket. */
 export function voxelOffsetInBucket(voxel: Vector3): Vector3 {
-  return [
-    ((voxel[0] % BUCKET_WIDTH) + BUCKET_WIDTH) % BUCKET_WIDTH,
-    ((voxel[1] % BUCKET_WIDTH) + BUCKET_WIDTH) % BUCKET_WIDTH,
-    ((voxel[2] % BUCKET_WIDTH) + BUCKET_WIDTH) % BUCKET_WIDTH,
-  ];
+  // `v & BUCKET_WIDTH_MASK` is equivalent to `v % BUCKET_WIDTH` (or to be precise:
+  // `((v % BUCKET_WIDTH) + BUCKET_WIDTH) % BUCKET_WIDTH` which makes it compatible with
+  // negative values).
+  return [voxel[0] & BUCKET_WIDTH_MASK, voxel[1] & BUCKET_WIDTH_MASK, voxel[2] & BUCKET_WIDTH_MASK];
 }
 
 export type BoundingBox = BoundingBoxMinMaxType;

@@ -3,11 +3,10 @@ import type { LoadingVoxelCube } from "./cube";
 import type { DataDependentShape } from "./intents";
 import {
   type BoundingBox,
-  BUCKET_WIDTH,
   type BucketAddress,
   bucketAddressOfVoxel,
+  bucketIndexOfCoordinate,
   type EditContext,
-  floorDiv,
   isInBoundingBox,
   type SegmentId,
   type Vector3,
@@ -166,14 +165,19 @@ class FloodFillTraversal {
    * often than it misses, so the tuple would be allocated and discarded. The
    * address's other two components need no comparison — mag index and
    * additional coordinates are fixed for the whole traversal.
+   *
+   * Together with `bucketAddressOfVoxel` and `voxelOffsetInBucket`, whose
+   * shift/mask forms this shares, dropping the divisions measured 10-26% off a
+   * 100k-voxel 2D fill (and a wash on a 1M-voxel 3D one, where allocating the
+   * neighbour tuples dominates).
    */
   private hasCachedBucketFor(voxel: Vector3): boolean {
     const cached = this.cachedAddress;
     return (
       cached != null &&
-      cached[0] === floorDiv(voxel[0], BUCKET_WIDTH) &&
-      cached[1] === floorDiv(voxel[1], BUCKET_WIDTH) &&
-      cached[2] === floorDiv(voxel[2], BUCKET_WIDTH)
+      cached[0] === bucketIndexOfCoordinate(voxel[0]) &&
+      cached[1] === bucketIndexOfCoordinate(voxel[1]) &&
+      cached[2] === bucketIndexOfCoordinate(voxel[2])
     );
   }
 

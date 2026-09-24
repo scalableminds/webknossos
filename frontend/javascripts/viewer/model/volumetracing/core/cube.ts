@@ -52,6 +52,7 @@ export interface TransactionCube {
  */
 export interface LoadingVoxelCube extends TransactionCube {
   /** Load a bucket and return its dense content. The resolver's only await. */
+  // todop: why uint64?
   ensureLoaded(address: BucketAddress): Promise<BigUint64Array>;
 }
 

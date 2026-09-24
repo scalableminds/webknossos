@@ -1,38 +1,57 @@
 import {
   AppstoreAddOutlined,
+  CheckCircleFilled,
+  CloseCircleFilled,
   DeleteOutlined,
-  FolderOutlined,
+  ExclamationCircleFilled,
   PlusOutlined,
 } from "@ant-design/icons";
-import { Alert, Button, Card, Col, Form, Popover, Row, Select, Space, Statistic } from "antd";
+import { Alert, Button, Flex, Form, Popover, Select, Typography, theme } from "antd";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
-import { computeVolumeFromBoundingBox } from "libs/utils";
 import groupBy from "lodash-es/groupBy";
 import { useMemo, useState } from "react";
-import { ColorWKBlue } from "theme";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { useGenerateBBModalContext } from "viewer/view/ai_jobs/generate_BB_modal_context";
-import {
-  colorLayerMustNotBeUint24Rule,
-  getGroundTruthLayerBoundingBox,
-  getIntersectingMagList,
-  getOutOfBoundsBoundingBoxes,
-} from "../utils";
+import { JobSection } from "../components/job_section";
+import { colorLayerMustNotBeUint24Rule } from "../utils";
 import {
   type AiTrainingAnnotationSelection,
   useAiTrainingJobContext,
 } from "./ai_training_job_context";
 import { AnnotationsCsvInput } from "./annotations_csv_input";
+import {
+  getAnnotationDisplayName,
+  getTrainingAnnotationIssues,
+  getTrainingVolume,
+  hasTrainingAnnotationErrors,
+} from "./training_data_validation";
 
-const MIN_BBOX_EXTENT_IN_EACH_DIM = 32;
+const { Text } = Typography;
+
+function AnnotationStatusIcon({
+  hasErrors,
+  hasWarnings,
+  isComplete,
+}: {
+  hasErrors: boolean;
+  hasWarnings: boolean;
+  isComplete: boolean;
+}) {
+  const { cssVar } = theme.useToken();
+  if (hasErrors) return <CloseCircleFilled style={{ color: cssVar.colorError }} />;
+  if (hasWarnings) return <ExclamationCircleFilled style={{ color: cssVar.colorWarning }} />;
+  if (isComplete) return <CheckCircleFilled style={{ color: cssVar.colorSuccess }} />;
+  return null;
+}
 
 const AiTrainingDataSelector = ({
   selectedAnnotation,
 }: {
   selectedAnnotation: AiTrainingAnnotationSelection;
 }) => {
+  const { cssVar } = theme.useToken();
   const { openGenerateBBModal } = useGenerateBBModalContext();
   const { handleSelectionChange, setSelectedAnnotations, selectedJobType } =
     useAiTrainingJobContext();
@@ -44,8 +63,6 @@ const AiTrainingDataSelector = ({
     magnification,
     userBoundingBoxes,
     dataset,
-    volumeTracings,
-    volumeTracingMags,
   } = selectedAnnotation;
   const annotationId = annotation.id;
 
@@ -57,233 +74,153 @@ const AiTrainingDataSelector = ({
   // Remove uint24 color layers because they cannot be trained on currently
   const colorLayers = getColorLayers(dataset).filter((layer) => layer.elementClass !== "uint24");
 
-  const availableMagnifications = useMemo(() => {
-    if (imageDataLayer && groundTruthLayer) {
-      return (
-        getIntersectingMagList(
-          annotation,
-          dataset,
-          groundTruthLayer,
-          imageDataLayer,
-          volumeTracingMags,
-        ) || []
-      );
-    }
-    return [];
-  }, [imageDataLayer, groundTruthLayer, annotation, dataset, volumeTracingMags]);
-
-  const boundingBoxCount = useMemo(() => userBoundingBoxes.length, [userBoundingBoxes]);
-  const boundingBoxVolume = useMemo(
-    () =>
-      userBoundingBoxes.reduce(
-        (sum, box) => sum + computeVolumeFromBoundingBox(box.boundingBox),
-        0,
-      ),
-    [userBoundingBoxes],
+  const issues = useMemo(
+    () => getTrainingAnnotationIssues(selectedAnnotation),
+    [selectedAnnotation],
   );
-
-  const layerValidationError = useMemo(() => {
-    if (imageDataLayer && groundTruthLayer && imageDataLayer === groundTruthLayer) {
-      return "Image Data and Ground Truth layers must be different.";
-    }
-    return undefined;
-  }, [imageDataLayer, groundTruthLayer]);
-
-  const magnificationValidationError = useMemo(() => {
-    if (imageDataLayer && groundTruthLayer && availableMagnifications.length === 0) {
-      return "No common magnification found for the selected layers.";
-    }
-    return undefined;
-  }, [imageDataLayer, groundTruthLayer, availableMagnifications]);
-
-  const { bboxErrors, bboxWarnings } = useMemo(() => {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    if (userBoundingBoxes.length === 0) {
-      errors.push("At least one bounding box is required for training.");
-      return { bboxErrors: errors, bboxWarnings: warnings };
-    }
-
-    if (boundingBoxVolume === 0) {
-      errors.push("Total volume of bounding boxes cannot be zero.");
-    }
-
-    const groundTruthLayerBoundingBox = getGroundTruthLayerBoundingBox(
-      annotation,
-      groundTruthLayer,
-      volumeTracings,
-    );
-    const outOfBoundsBoxes = getOutOfBoundsBoundingBoxes(
-      userBoundingBoxes,
-      groundTruthLayerBoundingBox,
-    );
-    if (outOfBoundsBoxes.length > 0) {
-      errors.push(
-        `The following bounding boxes are (partially) outside of the "${groundTruthLayer}" volume layer's bounding box and would cause the training to fail: ${outOfBoundsBoxes
-          .map((box) => box.name)
-          .join(", ")}`,
-      );
-    }
-
-    const tooSmallBoxes: string[] = [];
-    const notMagAlignedBoundingBoxes: string[] = [];
-
-    userBoundingBoxes.forEach((box) => {
-      const boundingBox = new BoundingBox(box.boundingBox);
-      let effectiveBbox = boundingBox;
-      if (magnification) {
-        const alignedBoundingBox = boundingBox.alignFromMag1ToMag(magnification, "shrink");
-        if (!alignedBoundingBox.fromMagToMag1(magnification).equals(boundingBox)) {
-          notMagAlignedBoundingBoxes.push(box.name);
-        }
-        effectiveBbox = alignedBoundingBox;
-      }
-
-      const [width, height, depth] = effectiveBbox.getSize();
-      if (
-        width < MIN_BBOX_EXTENT_IN_EACH_DIM ||
-        height < MIN_BBOX_EXTENT_IN_EACH_DIM ||
-        depth < MIN_BBOX_EXTENT_IN_EACH_DIM
-      ) {
-        tooSmallBoxes.push(box.name);
-      }
-    });
-
-    if (tooSmallBoxes.length > 0) {
-      warnings.push(
-        `The following bounding boxes are too small. They should be at least ${MIN_BBOX_EXTENT_IN_EACH_DIM} Vx in each dimension: ${tooSmallBoxes.join(
-          ", ",
-        )}`,
-      );
-    }
-
-    if (notMagAlignedBoundingBoxes.length > 0) {
-      warnings.push(
-        `The following bounding boxes are not aligned with the selected magnification and will be automatically shrunk: ${notMagAlignedBoundingBoxes.join(
-          ", ",
-        )}`,
-      );
-    }
-
-    return { bboxErrors: errors, bboxWarnings: warnings };
-  }, [
-    userBoundingBoxes,
-    magnification,
-    boundingBoxVolume,
-    annotation,
-    groundTruthLayer,
-    volumeTracings,
-  ]);
+  const { availableMagnifications, layerError, magnificationError, bboxErrors, bboxWarnings } =
+    issues;
+  const hasErrors = hasTrainingAnnotationErrors(issues);
+  const [headerIssue, ...furtherErrors] = bboxErrors;
+  const furtherWarnings = headerIssue ? bboxWarnings : bboxWarnings.slice(1);
+  const summary = headerIssue ?? bboxWarnings[0];
+  const isComplete = Boolean(imageDataLayer && groundTruthLayer && magnification);
 
   return (
-    <Card
-      style={{ marginBottom: "24px" }}
-      type="inner"
-      title={
-        <Space style={{ width: "100%", justifyContent: "space-between" }}>
-          <a href={`/annotations/${annotation.id}`} target="_blank" rel="noreferrer">
-            Annotation: {annotation.name || annotation.id.slice(-6)}
-          </a>
+    <div
+      style={{
+        border: `1px solid ${hasErrors ? cssVar.colorErrorBorder : cssVar.colorBorderSecondary}`,
+        borderRadius: cssVar.borderRadiusLG,
+        overflow: "hidden",
+      }}
+    >
+      <Flex
+        align="center"
+        gap={12}
+        style={{
+          padding: "12px 16px",
+          background: hasErrors ? cssVar.colorErrorBg : undefined,
+        }}
+      >
+        <AnnotationStatusIcon
+          hasErrors={hasErrors}
+          hasWarnings={bboxWarnings.length > 0}
+          isComplete={isComplete}
+        />
+        <Typography.Link
+          href={`/annotations/${annotation.id}`}
+          target="_blank"
+          rel="noreferrer"
+          strong
+        >
+          Annotation {getAnnotationDisplayName(annotation)}
+        </Typography.Link>
+        <Text style={{ flex: 1, minWidth: 0, color: cssVar.colorTextSecondary }}>{summary}</Text>
+        {summary && (
           <Button
-            type="text"
-            icon={<DeleteOutlined />}
-            onClick={() =>
-              setSelectedAnnotations((prev) => prev.filter((a) => a.annotation.id !== annotationId))
+            size="small"
+            icon={<AppstoreAddOutlined />}
+            onClick={() => openGenerateBBModal(magnification ?? null, selectedJobType)}
+          >
+            Generate
+          </Button>
+        )}
+        <Button
+          type="text"
+          icon={<DeleteOutlined />}
+          aria-label="Remove annotation"
+          onClick={() =>
+            setSelectedAnnotations((prev) => prev.filter((a) => a.annotation.id !== annotationId))
+          }
+        />
+      </Flex>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, padding: 16 }}>
+        <Form.Item
+          label="Image data layer"
+          required
+          style={{ marginBottom: 0 }}
+          rules={[
+            { required: true, message: "Please select a source for the image data." },
+            colorLayerMustNotBeUint24Rule,
+          ]}
+        >
+          <Select
+            options={colorLayers.map((l) => ({ value: l.name, label: l.name }))}
+            value={imageDataLayer}
+            onChange={(value) => handleSelectionChange(annotationId, { imageDataLayer: value })}
+          />
+        </Form.Item>
+        <Form.Item
+          label="Ground truth layer"
+          required
+          style={{ marginBottom: 0 }}
+          rules={[
+            {
+              required: true,
+              message: "Please select a source for the ground truth segmentation",
+            },
+          ]}
+          validateStatus={layerError ? "error" : undefined}
+          help={layerError}
+        >
+          <Select
+            options={annotationLayerNames.map((l) => ({ value: l, label: l }))}
+            value={groundTruthLayer}
+            onChange={(value) => handleSelectionChange(annotationId, { groundTruthLayer: value })}
+          />
+        </Form.Item>
+        <Form.Item
+          label="Magnification"
+          required
+          style={{ marginBottom: 0 }}
+          rules={[{ required: true, message: "Please select a magnification" }]}
+          validateStatus={magnificationError ? "error" : undefined}
+          help={magnificationError}
+        >
+          <Select
+            disabled={!imageDataLayer || !groundTruthLayer}
+            placeholder="Select"
+            options={availableMagnifications.map((m, index) => ({
+              value: index,
+              label: `${m[0]}-${m[1]}-${m[2]}`,
+            }))}
+            value={
+              magnification
+                ? availableMagnifications.findIndex((m) => V3.equals(m, magnification))
+                : undefined
+            }
+            onChange={(index: number) =>
+              handleSelectionChange(annotationId, {
+                magnification: availableMagnifications[index],
+              })
             }
           />
-        </Space>
-      }
-    >
-      <Row gutter={24}>
-        <Col span={12}>
-          <Form.Item
-            label="Image Data Layer"
-            required
-            rules={[
-              { required: true, message: "Please select a source for the image data." },
-              colorLayerMustNotBeUint24Rule,
-            ]}
-          >
-            <Select
-              options={colorLayers.map((l) => ({ value: l.name, label: l.name }))}
-              value={imageDataLayer}
-              onChange={(value) => handleSelectionChange(annotationId, { imageDataLayer: value })}
-            />
-          </Form.Item>
-          <Form.Item
-            label="Ground Truth Layer"
-            required
-            rules={[
-              {
-                required: true,
-                message: "Please select a source for the ground truth segmentation",
-              },
-            ]}
-            validateStatus={layerValidationError ? "error" : undefined}
-            help={layerValidationError}
-          >
-            <Select
-              options={annotationLayerNames.map((l) => ({ value: l, label: l }))}
-              value={groundTruthLayer}
-              onChange={(value) => handleSelectionChange(annotationId, { groundTruthLayer: value })}
-            />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item
-            label="Magnification"
-            required
-            rules={[{ required: true, message: "Please select a magnification" }]}
-            validateStatus={magnificationValidationError ? "error" : undefined}
-            help={magnificationValidationError}
-          >
-            <Select
-              disabled={!imageDataLayer || !groundTruthLayer}
-              options={availableMagnifications.map((m, index) => ({
-                value: index,
-                label: `${m[0]}-${m[1]}-${m[2]}`,
-              }))}
-              value={
-                magnification
-                  ? availableMagnifications.findIndex((m) => V3.equals(m, magnification))
-                  : undefined
-              }
-              onChange={(index: number) =>
-                handleSelectionChange(annotationId, {
-                  magnification: availableMagnifications[index],
-                })
-              }
-            />
-          </Form.Item>
-          <Space size={"middle"}>
-            <Statistic title="Bounding Boxes" value={boundingBoxCount} />
-            <Statistic title="Volume" value={formatVoxels(boundingBoxVolume)} />
-          </Space>
-        </Col>
-      </Row>
-      {bboxErrors.map((error) => (
-        <Alert key={error} title={error} type="error" showIcon style={{ marginTop: 12 }} />
-      ))}
-      {bboxWarnings.map((warning) => (
-        <Alert key={warning} title={warning} type="warning" showIcon style={{ marginTop: 12 }} />
-      ))}
-      {(bboxErrors.length > 0 || bboxWarnings.length > 0) && (
-        <Button
-          size="small"
-          icon={<AppstoreAddOutlined />}
-          onClick={() => openGenerateBBModal(magnification ?? null, selectedJobType)}
-          style={{ marginTop: 12 }}
-        >
-          Generate
-        </Button>
+        </Form.Item>
+      </div>
+      <Flex gap={24} style={{ padding: "0 16px 16px" }}>
+        <Text type="secondary">
+          Bounding boxes <Text strong>{userBoundingBoxes.length}</Text>
+        </Text>
+        <Text type="secondary">
+          Volume <Text strong>{formatVoxels(getTrainingVolume(selectedAnnotation))}</Text>
+        </Text>
+      </Flex>
+      {(furtherErrors.length > 0 || furtherWarnings.length > 0) && (
+        <Flex vertical gap={8} style={{ padding: "0 16px 16px" }}>
+          {furtherErrors.map((error) => (
+            <Alert key={error} title={error} type="error" showIcon />
+          ))}
+          {furtherWarnings.map((warning) => (
+            <Alert key={warning} title={warning} type="warning" showIcon />
+          ))}
+        </Flex>
       )}
-    </Card>
+    </div>
   );
 };
 
 export const AiTrainingDataSection = () => {
-  const { selectedAnnotations } = useAiTrainingJobContext();
+  const { selectedAnnotations, stepStatuses } = useAiTrainingJobContext();
   const [popoverVisible, setPopoverVisible] = useState(false);
 
   const { warningDetails } = useMemo(() => {
@@ -374,14 +311,11 @@ export const AiTrainingDataSection = () => {
   }
 
   return (
-    <Card
-      type="inner"
-      title={
-        <Space align="center">
-          <FolderOutlined style={{ color: ColorWKBlue }} />
-          Training Data
-        </Space>
-      }
+    <JobSection
+      step={2}
+      title="Training data"
+      description="Each annotation needs a ground-truth layer and bounding boxes."
+      status={stepStatuses.trainingData}
       extra={
         <Popover
           content={<AnnotationsCsvInput onClose={() => setPopoverVisible(false)} />}
@@ -390,34 +324,26 @@ export const AiTrainingDataSection = () => {
           open={popoverVisible}
           onOpenChange={setPopoverVisible}
         >
-          <Button icon={<PlusOutlined />} shape="circle" />
+          <Button icon={<PlusOutlined />}>Add annotation</Button>
         </Popover>
       }
     >
       <Form layout="vertical">
-        {selectedAnnotations.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              color: "var(--ant-color-text-tertiary)",
-              padding: "24px",
-            }}
-          >
-            Please add training annotations via the + button
-          </div>
-        )}
-        {selectedAnnotations.map((selectedAnnotation) => {
-          return (
+        <Flex vertical gap={16}>
+          {selectedAnnotations.length === 0 && (
+            <Text type="secondary" style={{ textAlign: "center", padding: 24 }}>
+              Please add training annotations via the "Add annotation" button.
+            </Text>
+          )}
+          {selectedAnnotations.map((selectedAnnotation) => (
             <AiTrainingDataSelector
               key={selectedAnnotation.annotation.id}
               selectedAnnotation={selectedAnnotation}
             />
-          );
-        })}
-        {warningNode && (
-          <Alert title={warningNode} type="warning" showIcon style={{ marginTop: 12 }} />
-        )}
+          ))}
+          {warningNode && <Alert title={warningNode} type="warning" showIcon />}
+        </Flex>
       </Form>
-    </Card>
+    </JobSection>
   );
 };

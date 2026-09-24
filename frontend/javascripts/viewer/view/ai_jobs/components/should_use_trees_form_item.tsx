@@ -41,7 +41,7 @@ export function ShouldUseManualMatchesFormItem() {
       label={
         <Space>
           <div style={{}}>
-            Manual Matches{" "}
+            Manual matches{" "}
             <Tooltip title="Please select whether the alignment should take connected skeleton nodes between adjacent sections as alignment guideline whenever available.">
               <InfoCircleOutlined />
             </Tooltip>
@@ -55,7 +55,7 @@ export function ShouldUseManualMatchesFormItem() {
         },
       ]}
     >
-      <Checkbox> Use manual matches from skeleton. </Checkbox>
+      <Checkbox>Use manual matches from skeleton</Checkbox>
     </Form.Item>
   );
 }

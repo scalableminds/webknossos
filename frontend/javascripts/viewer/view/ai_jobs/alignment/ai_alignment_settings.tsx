@@ -1,9 +1,11 @@
-import { SettingOutlined } from "@ant-design/icons";
 import type { FormProps } from "antd";
-import { Card, Col, Collapse, ConfigProvider, Form, Input, Row, Space } from "antd";
+import { Col, Form, Input, Row, Typography } from "antd";
 import { KeyValuePairsFormItem } from "components/key_value_pairs";
+import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
-import { ColorWKBlue } from "theme";
+import { AdvancedSettings } from "../components/job_layout";
+import { getFormFieldErrors } from "../components/job_requirements";
+import { JobSection } from "../components/job_section";
 import { ShouldUseManualMatchesFormItem } from "../components/should_use_trees_form_item";
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
 
@@ -15,7 +17,11 @@ export const AiAlignmentSettings: React.FC = () => {
     setShouldUseManualMatches,
     customConfiguration,
     setCustomConfiguration,
+    setSettingsFormErrors,
+    stepStatuses,
   } = useAlignmentJobContext();
+
+  const dataset = useWkSelector((state) => state.dataset);
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues) => {
     if ("newDatasetName" in changedValues) {
@@ -36,45 +42,40 @@ export const AiAlignmentSettings: React.FC = () => {
   ];
 
   return (
-    <Card
-      type="inner"
-      title={
-        <Space align="center">
-          <SettingOutlined style={{ color: ColorWKBlue }} />
-          Alignment Settings
-        </Space>
-      }
+    <JobSection
+      step={2}
+      title="Alignment settings"
+      description="The aligned result is written to a new dataset."
+      status={stepStatuses.settings}
     >
-      <Form layout="vertical" onValuesChange={handleValuesChange} fields={formFields}>
+      <Form
+        layout="vertical"
+        onValuesChange={handleValuesChange}
+        onFieldsChange={(_, allFields) => setSettingsFormErrors(getFormFieldErrors(allFields))}
+        fields={formFields}
+      >
         <Row gutter={24}>
           <Col span={12}>
             <Form.Item
               name="newDatasetName"
-              label="New Dataset Name"
+              label="New dataset name"
               rules={[{ required: true, message: "Please provide a name for the new dataset" }]}
             >
-              <Input />
+              <Input placeholder={`e.g. ${dataset.name}_aligned`} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <ShouldUseManualMatchesFormItem />
           </Col>
         </Row>
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
+          Optional: connected skeleton nodes between adjacent sections are used as alignment guides.
+        </Typography.Paragraph>
 
-        <ConfigProvider
-          theme={{
-            components: {
-              Collapse: { headerPadding: "12px 0px" },
-            },
-          }}
-        >
-          <Collapse ghost bordered={false}>
-            <Collapse.Panel header="Advanced Settings" key="1">
-              <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
-            </Collapse.Panel>
-          </Collapse>
-        </ConfigProvider>
+        <AdvancedSettings hint="Custom configuration">
+          <KeyValuePairsFormItem name="customConfiguration" label="Custom configuration" />
+        </AdvancedSettings>
       </Form>
-    </Card>
+    </JobSection>
   );
 };

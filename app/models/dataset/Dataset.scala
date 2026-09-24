@@ -294,9 +294,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
       (annotationCountColumn, annotationCountJoin) = requestingUserIdOpt match {
         case Some(requestingUserId) if includeAnnotationCount =>
-          // Starts from the user's listable annotations (bounded by indexes on user/team/contributor)
-          // rather than from all annotations of the listed datasets. The dataset access part of the
-          // annotation list access check is implied, since only access-checked datasets are joined.
+          // annotationCount join is designed for best index use.
+          // The dataset access check is skipped, since only already-checked datasets are joined.
           (
             q"COALESCE(annotationCounts.count, 0)",
             q"""LEFT JOIN (

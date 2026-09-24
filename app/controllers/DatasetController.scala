@@ -310,7 +310,7 @@ class DatasetController @Inject() (
       searchQuery: Option[String],
       // return only the first n matching datasets.
       limit: Option[Int],
-      // Optional: include the number of active explorational annotations the requesting user can list per dataset
+      // include the number of active explorational annotations the requesting user can list per dataset
       includeAnnotationCount: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {

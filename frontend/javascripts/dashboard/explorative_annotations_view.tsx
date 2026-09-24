@@ -722,9 +722,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
   renderEmptyText(): React.ReactNode {
     if (this.state.isLoading) {
-      // Avoid flashing the "no results" placeholder (or the call-to-action card)
-      // while the initial page of annotations is still being fetched - the
-      // table's own loading spinner (see the `loading` prop below) covers this.
       return null;
     }
     const { searchQuery, tags, selectedOwnerId, selectedTeamId, shouldShowArchivedAnnotations } =

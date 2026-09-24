@@ -62,9 +62,8 @@ type Props = {
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
-  // Custom content shown as the table's empty state instead of the regular hint text
-  // (e.g. the "Open a Demo Dataset" / "Upload & Import Dataset" cards for a brand-new,
-  // completely empty organization). See DatasetTable.renderEmptyText.
+  // Custom content shown as the table's empty state instead of the regular hint text.
+  // Used for cards for a brand-new organizations.
   emptyStateContent?: React.ReactNode;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
@@ -260,10 +259,6 @@ function DatasetView({
     datasetFilteringMode !== "onlyShowUnreported" &&
     subfolders.length === 0;
   const isLoading = datasets.length === 0 && context.isLoading;
-  // The table (with its header) is always shown, even with zero results (whether
-  // that's an empty folder, a filtered-out folder, or a search without matches) -
-  // the appropriate message is shown inside the table body instead (see
-  // DatasetTable.renderEmptyText), and the loading spinner inside the table itself.
 
   return (
     <div>

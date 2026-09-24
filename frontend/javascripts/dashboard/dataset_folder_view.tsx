@@ -175,9 +175,6 @@ function DatasetFolderViewInner(props: Props) {
     );
   };
 
-  // Only the root folder exists and no dataset is available yet (aka a new, empty
-  // organization) - shown as the dataset table's empty state (see DatasetTable.renderEmptyText),
-  // rather than replacing the whole view, so the folder sidebar stays visible.
   const isBrandNewEmptyOrg =
     hierarchy != null &&
     hierarchy.flatItems.length === 1 &&

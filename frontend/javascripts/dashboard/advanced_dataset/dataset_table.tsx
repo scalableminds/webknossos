@@ -33,6 +33,7 @@ import {
   RowMetaLine,
   TagFilterChip,
 } from "dashboard/list_filter_header";
+import { ZeroStorageReasonList } from "dashboard/storage_info";
 import { diceCoefficient as dice } from "dice-coefficient";
 import { stringToTagColor } from "libs/colors";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
@@ -104,8 +105,8 @@ type Props = {
   // Shows a loading spinner inside the table body (e.g. while waiting for search
   // results), without hiding the header bar above it.
   isLoading?: boolean;
-  // Custom content shown as the table's empty state instead of the regular hint text
-  // (e.g. the welcome cards for a brand-new, completely empty organization).
+  // Custom content shown as the table's empty state instead of the regular hint text.
+  // Used for cards for a brand-new organizations.
   emptyStateContent?: React.ReactNode;
 };
 
@@ -358,16 +359,12 @@ class DatasetRenderer {
       </FastTooltip>
     ) : (
       <FastTooltip
-        html={`
-          The storage may be zero because:
-          <ul>
-            <li>The storage hasn't been scanned yet</li>
-            <li>The data is streamed from external sources</li>
-            <li>The data layers are already counted in other (linked) datasets</li>
-            <li>The dataset belongs to another organization</li>
-            <li>The dataset is empty</li>
-          </ul>
-        `}
+        dynamicRenderer={() => (
+          <>
+            The storage may be zero because:
+            {ZeroStorageReasonList}
+          </>
+        )}
       >
         {formattedBytes}
       </FastTooltip>
@@ -770,9 +767,6 @@ class DatasetTable extends PureComponent<Props, State> {
           {this.props.isUserAdminOrDatasetManager ? (
             <FilterChip
               label="Status"
-              // "onlyShowReported" is the default filtering mode (see dataset_view.tsx), so
-              // only highlight this chip once the user has actually deviated from it - matching
-              // how the Owner/Teams/Status chips on the Annotations tab start out unhighlighted.
               active={this.props.datasetFilteringMode !== "onlyShowReported"}
             >
               <Space orientation="vertical" size={4}>
@@ -780,19 +774,19 @@ class DatasetTable extends PureComponent<Props, State> {
                   checked={this.props.datasetFilteringMode === "onlyShowReported"}
                   onChange={() => this.props.setDatasetFilteringMode("onlyShowReported")}
                 >
-                  Only show available datasets
+                  Available
                 </Radio>
                 <Radio
                   checked={this.props.datasetFilteringMode === "onlyShowUnreported"}
                   onChange={() => this.props.setDatasetFilteringMode("onlyShowUnreported")}
                 >
-                  Only show missing datasets
+                  Missing
                 </Radio>
                 <Radio
                   checked={this.props.datasetFilteringMode === "showAllDatasets"}
                   onChange={() => this.props.setDatasetFilteringMode("showAllDatasets")}
                 >
-                  Show all datasets
+                  All
                 </Radio>
               </Space>
             </FilterChip>

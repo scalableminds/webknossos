@@ -141,17 +141,6 @@ export class VolumeTransaction {
     };
   }
 
-  /**
-   * Discard the open transaction. Used to cancel a stroke. Does not restore
-   * buckets that were already painted live — that would need capturing
-   * pre-transaction values (beforeAccumulating), which this iteration
-   * intentionally leaves out along with the rest of undo support.
-   */
-  abort(): void {
-    this.bucketWrites.clear();
-    this.committed = true;
-  }
-
   /** Which mags a commit would touch. Exposed for tests. */
   previewMagIndices(): MagIndex[] {
     return [...propagate(this.bucketWrites, this.ctx, this.mags).keys()].sort((a, b) => a - b);

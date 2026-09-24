@@ -1,9 +1,8 @@
 /**
- * The simplest thing that satisfies `BackendLike` (core/cube.ts): an in-memory
+ * The simplest thing that satisfies `BackendLike` (core/voxel_cube_interfaces.ts): an in-memory
  * store of seeded buckets. Everything not explicitly seeded reads as empty.
  */
 
-import type { BackendLike } from "viewer/model/volumetracing/core/cube";
 import {
   BUCKET_VOXEL_COUNT,
   type BucketAddress,
@@ -13,7 +12,8 @@ import {
   type SegmentId,
   type Vector3,
   voxelIndexOf,
-} from "viewer/model/volumetracing/core/types";
+} from "viewer/model/volumetracing/core/volume_annotation_types";
+import type { BackendLike } from "viewer/model/volumetracing/core/voxel_cube_interfaces";
 
 export class FakeBackend implements BackendLike {
   private readonly seeded = new Map<BucketKey, SegmentBucketData>();

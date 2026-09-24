@@ -6,6 +6,6 @@
  * that lets `../core` be exercised without the viewer. See design doc §12.
  */
 
-export { BucketJournal, type BucketLog, type BucketLogEntry } from "./journal";
-export { VolumeEditingSession } from "./session";
+export { BucketJournal, type BucketLog, type BucketLogEntry } from "./bucket_journal";
+export { VolumeEditingSession } from "./volume_editing_session";
 export { WorkingDataCube } from "./working_data_cube";

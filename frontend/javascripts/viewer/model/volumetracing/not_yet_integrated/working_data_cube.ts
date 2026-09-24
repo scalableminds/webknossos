@@ -1,12 +1,11 @@
 /**
  * NOT YET INTEGRATED — an in-memory stand-in for the real `DataCube`, so the
  * core can be exercised without the viewer. Production goes through
- * `integration/wk_cube_adapter.ts` instead. See ./index.ts for this folder's
+ * `integration/wk_data_cube_adapter.ts` instead. See ./index.ts for this folder's
  * rule: nothing here may be imported from production code.
  */
 
 import { applyBucketWriteToData, type BucketWrite } from "../core/bucket_write_map";
-import type { BackendLike, BucketState, LoadingVoxelCube } from "../core/cube";
 import {
   type AdditionalCoordinate,
   BUCKET_VOXEL_COUNT,
@@ -18,8 +17,9 @@ import {
   type Vector3,
   voxelIndexOf,
   voxelOffsetInBucket,
-} from "../core/types";
-import type { BucketJournal } from "./journal";
+} from "../core/volume_annotation_types";
+import type { BackendLike, BucketState, LoadingVoxelCube } from "../core/voxel_cube_interfaces";
+import type { BucketJournal } from "./bucket_journal";
 
 interface CubeEntry {
   address: BucketAddress;

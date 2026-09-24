@@ -12,7 +12,7 @@ import {
   type Vector3,
   voxelIndexOf,
   voxelOffsetInBucket,
-} from "./types";
+} from "./volume_annotation_types";
 
 /**
  * Writes for one bucket: which voxels were touched, and the single value being

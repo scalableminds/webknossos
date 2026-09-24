@@ -1,6 +1,4 @@
 import { type BucketWriteMap, BucketWriteMapBuilder } from "./bucket_write_map";
-import type { LoadingVoxelCube } from "./cube";
-import type { DataDependentShape } from "./intents";
 import {
   type BoundingBox,
   type BucketAddress,
@@ -13,7 +11,9 @@ import {
   type Vector3,
   voxelIndexOf,
   voxelOffsetInBucket,
-} from "./types";
+} from "./volume_annotation_types";
+import type { DataDependentShape } from "./volume_edit_intents";
+import type { LoadingVoxelCube } from "./voxel_cube_interfaces";
 
 /**
  * Resolves data-dependent intents into a write set.

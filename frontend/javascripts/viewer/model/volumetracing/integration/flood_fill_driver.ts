@@ -14,11 +14,11 @@
 import { V3 } from "libs/mjs";
 import type { Mesh } from "three";
 import { checkLineIntersection } from "viewer/model/bucket_data_handling/data_cube";
-import { resolveFloodFill } from "../core/resolver";
-import { VolumeTransaction } from "../core/transaction";
-import type { BoundingBox, EditContext, Vector3 } from "../core/types";
-import type { DriverOptions, DriverResult } from "./driver_types";
-import { magListFromDenseMags, WkLoadingCubeAdapter } from "./wk_cube_adapter";
+import { resolveFloodFill } from "../core/flood_fill_resolver";
+import type { BoundingBox, EditContext, Vector3 } from "../core/volume_annotation_types";
+import { VolumeTransaction } from "../core/volume_transaction";
+import type { DriverOptions, DriverResult } from "./tool_driver_types";
+import { magListFromDenseMags, WkLoadingCubeAdapter } from "./wk_data_cube_adapter";
 
 export interface FloodFillDriverOptions extends DriverOptions {
   seed: Vector3;

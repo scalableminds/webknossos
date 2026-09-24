@@ -1,10 +1,10 @@
-import type { TransactionDiff, TransactionId } from "../core/diff";
-import type { DataDependentShape, MaskShape } from "../core/intents";
-import { rasterize } from "../core/rasterizer";
-import { resolve } from "../core/resolver";
-import { VolumeTransaction } from "../core/transaction";
-import type { BucketAddress, EditContext, MagList, Vector3 } from "../core/types";
-import type { BucketJournal } from "./journal";
+import type { TransactionDiff, TransactionId } from "../core/bucket_diff";
+import { resolve } from "../core/flood_fill_resolver";
+import type { BucketAddress, EditContext, MagList, Vector3 } from "../core/volume_annotation_types";
+import type { DataDependentShape, MaskShape } from "../core/volume_edit_intents";
+import { VolumeTransaction } from "../core/volume_transaction";
+import { rasterize } from "../core/voxel_rasterizer";
+import type { BucketJournal } from "./bucket_journal";
 import type { WorkingDataCube } from "./working_data_cube";
 
 /**
@@ -58,7 +58,7 @@ export class VolumeEditingSession {
   beginBrushStroke(
     ctx: EditContext,
     start: Vector3,
-    /** Per-axis radius in source-mag voxels (§ intents.ts). */
+    /** Per-axis radius in source-mag voxels (§ volume_edit_intents.ts). */
     radius: Vector3,
     planeAxis: 0 | 1 | 2 | null = 2,
   ): void {

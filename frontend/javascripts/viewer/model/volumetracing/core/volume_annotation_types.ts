@@ -7,7 +7,7 @@
  * AdditionalCoordinate is the exception: it's reused as-is (see BucketAddress
  * below), rather than redeclared, since a structural mismatch there would
  * silently break the zero-conversion boundary crossing into the real
- * `viewer/` DataCube (see integration/wk_cube_adapter.ts).
+ * `viewer/` DataCube (see integration/wk_data_cube_adapter.ts).
  *
  * Simplifications versus the design doc:
  *   - Layers are implicit; there is exactly one.

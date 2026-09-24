@@ -1721,16 +1721,16 @@ Nothing below revises the design. This section records where the code currently 
 
 | Concept | § | Module | Notes |
 |---|---|---|---|
-| `EditIntent` and its shapes | 5.1 | `core/intents.ts` | brush, box, mask and floodFill exist; only brush and floodFill are reachable from the UI |
-| Rasterizer | 5.3 | `core/rasterizer.ts` | capsule / box / mask, run-emitting, synchronous |
-| Resolver | 5.1 | `core/resolver.ts` | flood fill, with the bounding-box limit and the split-tool boundary gate |
+| `EditIntent` and its shapes | 5.1 | `core/volume_edit_intents.ts` | brush, box, mask and floodFill exist; only brush and floodFill are reachable from the UI |
+| Rasterizer | 5.3 | `core/voxel_rasterizer.ts` | capsule / box / mask, run-emitting, synchronous |
+| Resolver | 5.1 | `core/flood_fill_resolver.ts` | flood fill, with the bounding-box limit and the split-tool boundary gate |
 | `BucketVoxelMask`, `BucketWrite`, `BucketWriteMap` | 4 | `core/bucket_voxel_mask.ts`, `core/bucket_write_map.ts` | |
-| `VolumeTransaction`, `BucketWriter` | 5.2 | `core/transaction.ts` | minus the before-images, see §12.2 |
+| `VolumeTransaction`, `BucketWriter` | 5.2 | `core/volume_transaction.ts` | minus the before-images, see §12.2 |
 | Mag propagation | 5.4 | `core/mag_propagation.ts` | upsample (step A) and downsample (step B) |
-| Diff types and run encoding | 5.6 | `core/diff.ts` | `encodeBucketDiff` / `decodeBucketDiff` exist but have no transport behind them |
+| Diff types and run encoding | 5.6 | `core/bucket_diff.ts` | `encodeBucketDiff` / `decodeBucketDiff` exist but have no transport behind them |
 | `WorkingDataCube` | 5.5 | `not_yet_integrated/working_data_cube.ts` | production goes through `WkDataCubeAdapter` over the real `DataCube` instead |
-| `BucketJournal` | 5.7 | `not_yet_integrated/journal.ts` | nothing in `viewer/` appends to it yet |
-| `VolumeEditingSession` | 5 | `not_yet_integrated/session.ts` | the app opens transactions from the sagas instead |
+| `BucketJournal` | 5.7 | `not_yet_integrated/bucket_journal.ts` | nothing in `viewer/` appends to it yet |
+| `VolumeEditingSession` | 5 | `not_yet_integrated/volume_editing_session.ts` | the app opens transactions from the sagas instead |
 | Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill` |
 
 The running app reaches the new code at exactly two call sites: brushing in `volumetracing_saga.tsx` and flood fill in `floodfill_saga.tsx`. Both are now the only path for those tools — the old `VoxelBuffer2D` brush branch and `DataCube.floodFill` are gone, along with the toggle that used to select between them. The trace tool still uses the section labeler. Writes land in real buckets; nothing else about the existing pipeline changes.

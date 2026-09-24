@@ -18,7 +18,7 @@ import {
   paintedVoxels,
   toMagVoxel,
   voxelsInBox,
-} from "./helpers";
+} from "./volume_test_harness";
 
 const SEGMENT: SegmentId = 7n;
 

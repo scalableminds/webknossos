@@ -1,4 +1,4 @@
-import { BUCKET_VOXEL_COUNT, BUCKET_WIDTH, type VoxelIndex } from "./types";
+import { BUCKET_VOXEL_COUNT, BUCKET_WIDTH, type VoxelIndex } from "./volume_annotation_types";
 
 const WORD_BITS = 32;
 const WORD_COUNT = BUCKET_VOXEL_COUNT / WORD_BITS; // 1024

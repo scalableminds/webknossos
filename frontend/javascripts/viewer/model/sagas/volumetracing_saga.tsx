@@ -349,6 +349,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
     if (brushDriver != null) {
       // Pointer-up: mag propagation runs once over the coalesced write set.
       const stats = brushDriver.finish();
+      // todop
       console.info(
         `[volume] brush: ${stats.voxels} voxels across ${stats.buckets} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
       );

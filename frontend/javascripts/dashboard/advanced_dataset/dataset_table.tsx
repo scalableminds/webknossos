@@ -27,7 +27,12 @@ import {
   generateSettingsForFolder,
   useDatasetDrop,
 } from "dashboard/folders/folder_tree";
-import { FilterChip, ListFilterHeader, RowMetaLine } from "dashboard/list_filter_header";
+import {
+  FilterChip,
+  ListFilterHeader,
+  RowMetaLine,
+  TagFilterChip,
+} from "dashboard/list_filter_header";
 import { diceCoefficient as dice } from "dice-coefficient";
 import { stringToTagColor } from "libs/colors";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
@@ -85,6 +90,7 @@ type Props = {
   subfolders: FolderItem[];
   searchQuery: string;
   searchTags: Array<string>;
+  setSearchTags: (tags: string[]) => void;
   isUserAdminOrDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
   setDatasetFilteringMode: (mode: DatasetFilteringMode) => void;
@@ -780,6 +786,11 @@ class DatasetTable extends PureComponent<Props, State> {
               </Space>
             </FilterChip>
           ) : null}
+          <TagFilterChip
+            selectedTags={this.props.searchTags}
+            availableTags={this.props.datasets.flatMap((dataset) => dataset.tags)}
+            onChange={this.props.setSearchTags}
+          />
           <FilterChip
             label={
               <>
@@ -970,7 +981,7 @@ export function DatasetTags({
   };
 
   return (
-    <Space>
+    <Space wrap>
       {dataset.tags.map((tag) => (
         <CategorizationLabel
           tag={tag}

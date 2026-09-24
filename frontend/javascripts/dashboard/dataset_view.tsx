@@ -194,6 +194,7 @@ function DatasetView({
         selectedDatasets={selectedDatasets}
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
+        setSearchTags={setSearchTags}
         onSelectFolder={onSelectFolder}
         isUserAdminOrDatasetManager={isUserAdminOrDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
@@ -212,6 +213,7 @@ function DatasetView({
     <Input
       prefix={<SearchOutlined />}
       allowClear
+      autoFocus
       style={{
         width: 200,
       }}

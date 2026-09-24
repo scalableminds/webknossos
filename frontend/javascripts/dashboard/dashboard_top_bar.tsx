@@ -30,6 +30,7 @@ export function DashboardTopBar({
 
   const search = (
     <Search
+      autoFocus
       style={{
         width: 200,
       }}

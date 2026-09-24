@@ -31,7 +31,13 @@ import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import TextWithDescription from "components/text_with_description";
-import { FilterChip, ListFilterHeader, RowMetaLine } from "dashboard/list_filter_header";
+import {
+  FilterChip,
+  ListFilterHeader,
+  RowMetaLine,
+  SearchableRadioFilterChip,
+  TagFilterChip,
+} from "dashboard/list_filter_header";
 import update from "immutability-helper";
 import { stringToTagColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
@@ -46,7 +52,7 @@ import {
 } from "libs/utils";
 import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import compact from "lodash-es/compact";
-import intersection from "lodash-es/intersection";
+import difference from "lodash-es/difference";
 import keyBy from "lodash-es/keyBy";
 import mapValues from "lodash-es/mapValues";
 import partial from "lodash-es/partial";
@@ -568,7 +574,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       return filteredAnnotations;
     }
 
-    return filteredAnnotations.filter((el) => intersection(this.state.tags, el.tags).length > 0);
+    return filteredAnnotations.filter((el) => difference(this.state.tags, el.tags).length === 0);
   }
 
   renderNameWithDescription(annotation: APIAnnotationInfo) {
@@ -650,7 +656,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             locked
           </LinkButton>
         ) : null}
-        <Space wrap size={4}>
+        <Space wrap>
           {annotation.tags.map((tag) => (
             <CategorizationLabel
               key={tag}
@@ -668,6 +674,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             <EditableTextIcon
               icon={<PlusOutlined />}
               onChange={partial(this.editTagFromAnnotation, annotation, true)}
+              label="Add Tag"
             />
           )}
         </Space>
@@ -829,44 +836,28 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         <ListFilterHeader
           summary={`${filteredAndSortedAnnotations.length}${mayHaveMoreAnnotations ? "+" : ""} ${pluralize("Annotation", filteredAndSortedAnnotations.length)}`}
         >
-          <FilterChip label="Owner" active={selectedOwnerId != null}>
-            <Space orientation="vertical" size={4}>
-              <Radio
-                checked={selectedOwnerId == null}
-                onChange={() => this.setState({ selectedOwnerId: null })}
-              >
-                All
-              </Radio>
-              {ownerFilters.map((owner) => (
-                <Radio
-                  key={owner.id}
-                  checked={selectedOwnerId === owner.id}
-                  onChange={() => this.setState({ selectedOwnerId: owner.id })}
-                >
-                  {this.renderOwner(owner)}
-                </Radio>
-              ))}
-            </Space>
-          </FilterChip>
-          <FilterChip label="Teams" active={selectedTeamId != null}>
-            <Space orientation="vertical" size={4}>
-              <Radio
-                checked={selectedTeamId == null}
-                onChange={() => this.setState({ selectedTeamId: null })}
-              >
-                All
-              </Radio>
-              {teamFilters.map((team: APITeam) => (
-                <Radio
-                  key={team.id}
-                  checked={selectedTeamId === team.id}
-                  onChange={() => this.setState({ selectedTeamId: team.id })}
-                >
-                  {team.name}
-                </Radio>
-              ))}
-            </Space>
-          </FilterChip>
+          <SearchableRadioFilterChip
+            label="Owner"
+            searchPlaceholder="Search owners"
+            options={ownerFilters.map((owner) => ({
+              key: owner.id,
+              label: this.renderOwner(owner),
+              searchText: formatUserName(owner),
+            }))}
+            selectedKey={selectedOwnerId}
+            onChange={(ownerId) => this.setState({ selectedOwnerId: ownerId })}
+          />
+          <SearchableRadioFilterChip
+            label="Teams"
+            searchPlaceholder="Search teams"
+            options={teamFilters.map((team: APITeam) => ({
+              key: team.id,
+              label: team.name,
+              searchText: team.name,
+            }))}
+            selectedKey={selectedTeamId}
+            onChange={(teamId) => this.setState({ selectedTeamId: teamId })}
+          />
           <FilterChip label="Status" active={this.state.shouldShowArchivedAnnotations}>
             <Space orientation="vertical" size={4}>
               <Radio
@@ -887,6 +878,11 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
               </Radio>
             </Space>
           </FilterChip>
+          <TagFilterChip
+            selectedTags={this.state.tags}
+            availableTags={this.getCurrentAnnotations().flatMap((annotation) => annotation.tags)}
+            onChange={(tags) => this.setState({ tags })}
+          />
           <FilterChip
             label={
               <>

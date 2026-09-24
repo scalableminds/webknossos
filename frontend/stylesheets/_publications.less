@@ -30,15 +30,11 @@
     }
   }
 
-  /** Styles for the actual dataset thumbnail image, handling transitions and opacity for segmentations. */
+  /** Styles for the actual dataset thumbnail image, handling transitions. */
   .dataset-thumbnail-image {
     transition: transform 0.3s ease-in-out;
     background-size: cover;
     background-position: center;
-
-    &.segmentation {
-      opacity: 0.2;
-    }
   }
 
   /** Overlay for dataset thumbnails, containing metadata like species and brain region. */
@@ -185,15 +181,11 @@
     margin-top: auto;
   }
 
-  /** Individual small dataset thumbnail, handling opacity states for different layer types and active status. */
+  /** Individual small dataset thumbnail, handling opacity states for active status. */
   .mini-dataset-thumbnail {
     opacity: 0.5;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     background-size: cover;
-
-    &.segmentation {
-      opacity: 0.2 !important;
-    }
 
     &:hover,
     &.active {

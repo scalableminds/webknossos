@@ -505,21 +505,6 @@ export function getSegmentationLayerWithMappingSupport(
   return null;
 }
 
-function getFirstSegmentationLayer(
-  dataset: APIMaybeUnimportedDataset,
-): APISegmentationLayer | null | undefined {
-  if (!dataset.isActive) {
-    return null;
-  }
-
-  const segmentationLayers = getSegmentationLayers(dataset);
-
-  if (segmentationLayers.length > 0) {
-    return segmentationLayers[0];
-  }
-
-  return null;
-}
 function _getSegmentationLayers(dataset: APIMaybeUnimportedDataset): Array<APISegmentationLayer> {
   if (!dataset.isActive) {
     return [];
@@ -601,27 +586,12 @@ function _getEnabledColorLayers(dataset: APIDataset, datasetConfiguration: Datas
 }
 export const getEnabledColorLayers = memoizeOne(_getEnabledColorLayers);
 
-export function getThumbnailURL(dataset: APIDataset): string {
-  const layers = dataset.dataSource.dataLayers;
-
-  const colorLayer = layers.find((l) => l.category === "color");
-
-  if (colorLayer) {
-    return `/api/datasets/${dataset.id}/layers/${colorLayer.name}/thumbnail`;
-  }
-
-  return "";
+export function getDatasetThumbnailURL(dataset: {
+  id: string;
+  thumbnailCacheVersion: number;
+}): string {
+  return `/api/datasets/${dataset.id}/thumbnail?cacheVersion=${dataset.thumbnailCacheVersion}`;
 }
-export function getSegmentationThumbnailURL(dataset: APIDataset): string {
-  const segmentationLayer = getFirstSegmentationLayer(dataset);
-
-  if (segmentationLayer) {
-    return `/api/datasets/${dataset.id}/layers/${segmentationLayer.name}/thumbnail`;
-  }
-
-  return "";
-}
-
 export function isLayerVisible(
   dataset: APIDataset,
   layerName: string,

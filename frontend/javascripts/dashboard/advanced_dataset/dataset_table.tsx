@@ -54,7 +54,7 @@ import { Link } from "react-router";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { Unicode } from "viewer/constants";
-import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
+import { getDatasetThumbnailURL, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import CategorizationLabel from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import { ContextMenuContext } from "viewer/view/context_menu/context_menu";
@@ -329,13 +329,13 @@ class DatasetRenderer {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
   renderNameColumn(): React.ReactNode {
-    const selectedLayerName: string | null = this.data.isActive
-      ? this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0]
-      : null;
-    const imgSrc = selectedLayerName
-      ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
+    const hasAnyLayer =
+      this.data.isActive &&
+      (this.data.colorLayerNames.length > 0 || this.data.segmentationLayerNames.length > 0);
+    const imgSrc = hasAnyLayer
+      ? `${getDatasetThumbnailURL(this.data)}&w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : inactiveDatasetThumbnail;
-    const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
+    const iconClassName = hasAnyLayer ? "" : " icon-thumbnail";
 
     return (
       <>

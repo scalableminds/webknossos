@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(183);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(184);
 COMMIT TRANSACTION;
 
 
@@ -135,6 +135,7 @@ CREATE TABLE webknossos.datasets(
   mirrorPath TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  thumbnailCacheVersion BIGINT NOT NULL DEFAULT 0,
   UNIQUE (directoryName, _organization),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
   CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object'),

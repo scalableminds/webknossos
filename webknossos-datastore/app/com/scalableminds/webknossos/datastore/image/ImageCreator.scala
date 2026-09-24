@@ -1,186 +1,138 @@
 package com.scalableminds.webknossos.datastore.image
 
+import com.scalableminds.util.box.Box
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.image.Color
 import com.typesafe.scalalogging.LazyLogging
 
 import java.awt.image.BufferedImage
-import java.io.IOException
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-
-case class ImagePartInfo(page: Int, x: Int, y: Int, height: Int, width: Int)
-
-case class PageInfo(idx: Int, start: Int, number: Int) {
-  def name: Int = idx
-}
-
-case class CombinedImage(pages: List[CombinedPage])
-
-case class CombinedPage(image: BufferedImage, info: List[ImagePartInfo], pageInfo: PageInfo)
 
 case class ImageCreatorParameters(
     elementClass: ElementClass.Value,
-    useHalfBytes: Boolean,
-    slideWidth: Int = 128,
-    slideHeight: Int = 128,
-    imagesPerRow: Int = 8,
-    imagesPerColumn: Int = Int.MaxValue,
-    imageWidth: Option[Int] = None,
-    imageHeight: Option[Int] = None,
+    width: Int = 128,
+    height: Int = 128,
     intensityRange: Option[(Double, Double)] = None,
-    blackAndWhite: Boolean,
     isSegmentation: Boolean = false,
     color: Option[Color] = None,
-    invertColor: Option[Boolean] = None
+    invertColor: Option[Boolean] = None,
+    // When true, render into an alpha-capable image: segmentation id 0 becomes fully transparent
+    // and every other pixel's alpha is derived from `opacity`, instead of always being fully opaque.
+    // Used when compositing multiple layers on top of each other.
+    preserveAlpha: Boolean = false,
+    opacity: Double = 100
 )
 
 object ImageCreator extends LazyLogging {
 
-  private val defaultTargetType = BufferedImage.TYPE_3BYTE_BGR
-
-  def spriteSheetFor(data: Array[Byte], params: ImageCreatorParameters): Option[CombinedImage] = {
-    val targetType = defaultTargetType
-    val images = calculateSprites(data, params, targetType)
-    createSpriteSheet(images, params, targetType)
+  def imageFor(data: Array[Byte], params: ImageCreatorParameters): Box[BufferedImage] = tryo {
+    val bufferedImageType = if (params.preserveAlpha) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_3BYTE_BGR
+    val bufferedImage = new BufferedImage(params.width, params.height, bufferedImageType)
+    val rgbArray = toRGBArray(
+      data,
+      params.elementClass,
+      params.isSegmentation,
+      params.intensityRange,
+      params.color,
+      params.invertColor.getOrElse(false),
+      params.preserveAlpha,
+      params.opacity
+    )
+    bufferedImage.setRGB(0, 0, params.width, params.height, rgbArray, 0, params.width)
+    bufferedImage
   }
-
-  private def calculateSprites(
-      data: Array[Byte],
-      params: ImageCreatorParameters,
-      targetType: Int
-  ): List[BufferedImage] = {
-    val imageData =
-      if (params.useHalfBytes) {
-        val r = new Array[Byte](data.length * 2)
-        data.zipWithIndex.foreach { case (b, idx) =>
-          r(2 * idx) = (b & 0xf0).toByte
-          r(2 * idx + 1) = (b & 0x0f << 4).toByte
-        }
-        r
-      } else if (params.blackAndWhite) {
-        data.map(d => if (d != 0x00) 0xff.toByte else 0x00.toByte)
-      } else
-        data
-
-    val slidingSize = params.slideHeight * params.slideWidth * ElementClass.bytesPerElement(params.elementClass)
-    imageData.sliding(slidingSize, slidingSize).toList.flatMap { slice =>
-      createBufferedImageFromBytes(slice, targetType, params)
-    }
-  }
-
-  private def createSpriteSheet(
-      bufferedImages: List[BufferedImage],
-      params: ImageCreatorParameters,
-      targetType: Int
-  ): Option[CombinedImage] =
-    if (bufferedImages.isEmpty) {
-      logger.warn("No images supplied for sprite sheet generation.")
-      None
-    } else {
-      val subpartWidth = params.slideWidth
-      val subpartHeight = params.slideHeight
-
-      val imagesPerPage = math.min(params.imagesPerColumn.toLong * params.imagesPerRow, Int.MaxValue).toInt
-      val pages = bufferedImages
-        .sliding(imagesPerPage, imagesPerPage)
-        .zipWithIndex
-        .map { case (pageImages, page) =>
-          val depth = math.ceil(pageImages.size.toFloat / params.imagesPerRow).toInt
-          val imageWidth = params.imageWidth.getOrElse(subpartWidth * params.imagesPerRow)
-          val imageHeight = params.imageHeight.getOrElse(subpartHeight * depth)
-
-          val finalImage = new BufferedImage(imageWidth, imageHeight, targetType)
-
-          val info = pageImages.zipWithIndex.map { case (image, idx) =>
-            assert(image.getWidth() == subpartWidth, "Wrong image size!")
-            assert(image.getHeight() == subpartHeight, "Wrong image size!")
-            val w = idx % params.imagesPerRow * params.slideWidth
-            val h = idx / params.imagesPerRow * params.slideHeight
-            finalImage.createGraphics().drawImage(image, w, h, null)
-            ImagePartInfo(page, w, h, subpartHeight, subpartWidth)
-          }
-          CombinedPage(finalImage, info, PageInfo(page, page * imagesPerPage, pageImages.size))
-        }
-        .toList
-      Some(CombinedImage(pages))
-    }
 
   private def toRGBArray(
-      b: Array[Byte],
+      data: Array[Byte],
       elementClass: ElementClass.Value,
       isSegmentation: Boolean,
       intensityRangeOpt: Option[(Double, Double)],
       color: Option[Color],
-      invertColor: Boolean
-  ) = {
+      invertColor: Boolean,
+      preserveAlpha: Boolean,
+      opacity: Double
+  ): Array[Int] = {
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
-    val colored = new Array[Int](b.length / bytesPerElement)
+    val rgbOutputArray = new Array[Int](data.length / bytesPerElement)
     var idx = 0
-    val l = b.length
     val intensityRange = intensityRangeOpt.getOrElse(ElementClass.defaultIntensityRange(elementClass))
-    while (idx + bytesPerElement <= l) {
-      colored(idx / bytesPerElement) =
+    val opacityAlphaByte =
+      Math.round(com.scalableminds.util.tools.MathUtils.clamp(opacity, 0d, 100d) / 100.0 * 255).toInt & 0xff
+    val colorRedCallable = applyColor(color.map(_.r).getOrElse(1d), invertColor)
+    val colorGreenCallable = applyColor(color.map(_.g).getOrElse(1d), invertColor)
+    val colorBlueCallable = applyColor(color.map(_.b).getOrElse(1d), invertColor)
+    while (idx + bytesPerElement <= data.length) {
+      rgbOutputArray(idx / bytesPerElement) =
         if (isSegmentation)
-          idToRGB(b(idx))
+          idToRGB(readSegmentId(data, idx, bytesPerElement), preserveAlpha, opacityAlphaByte)
         else {
-          val colorRed = applyColor(color.map(_.r).getOrElse(1d), invertColor)
-          val colorGreen = applyColor(color.map(_.g).getOrElse(1d), invertColor)
-          val colorBlue = applyColor(color.map(_.b).getOrElse(1d), invertColor)
-          val grayNormalized = elementClass match {
-            case ElementClass.uint8 =>
-              normalizeIntensityUint8(intensityRange, b(idx))
-            case ElementClass.int8 =>
-              normalizeIntensityInt8(intensityRange, b(idx))
-            case ElementClass.uint16 =>
-              normalizeIntensityUint16(intensityRange, b(idx), b(idx + 1))
-            case ElementClass.int16 =>
-              normalizeIntensityInt16(intensityRange, b(idx), b(idx + 1))
-            case ElementClass.uint24 => // assume uint24 rgb color data
-              b(idx).toInt // The color data is handled below
-            case ElementClass.uint32 =>
-              normalizeIntensityUint32(intensityRange, b(idx), b(idx + 1), b(idx + 2), b(idx + 3))
-            case ElementClass.int32 =>
-              normalizeIntensityInt32(intensityRange, b(idx), b(idx + 1), b(idx + 2), b(idx + 3))
-            case ElementClass.uint64 =>
-              normalizeIntensityUint64(
-                intensityRange,
-                b(idx),
-                b(idx + 1),
-                b(idx + 2),
-                b(idx + 3),
-                b(idx + 4),
-                b(idx + 5),
-                b(idx + 6),
-                b(idx + 7)
-              )
-            case ElementClass.int64 =>
-              normalizeIntensityInt64(
-                intensityRange,
-                b(idx),
-                b(idx + 1),
-                b(idx + 2),
-                b(idx + 3),
-                b(idx + 4),
-                b(idx + 5),
-                b(idx + 6),
-                b(idx + 7)
-              )
-            case ElementClass.float =>
-              normalizeIntensityFloat(intensityRange, b(idx), b(idx + 1), b(idx + 2), b(idx + 3))
-            case _ =>
-              throw new Exception(s"Unsupported ElementClass for color layer thumbnail: $elementClass")
-          }
+          val grayNormalized = normalizeIntensityGray(data, idx, intensityRange, elementClass)
           elementClass match {
             case ElementClass.uint24 => // assume uint24 rgb color data
-              (0xff << 24) | ((b(idx) & 0xff) << 16) | ((b(idx + 1) & 0xff) << 8) | ((b(idx + 2) & 0xff) << 0)
+              (opacityAlphaByte << 24) | ((data(idx) & 0xff) << 16) | ((data(idx + 1) & 0xff) << 8) | ((data(
+                idx + 2
+              ) & 0xff) << 0)
             case _ =>
-              (0xff << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
+              (opacityAlphaByte << 24) | (colorRedCallable(grayNormalized) << 16) | (colorGreenCallable(
                 grayNormalized
-              ) << 0)
+              ) << 8) | (
+                colorBlueCallable(grayNormalized) << 0
+              )
           }
         }
       idx += bytesPerElement
     }
-    colored
+    rgbOutputArray
+  }
+
+  private def normalizeIntensityGray(
+      data: Array[Byte],
+      idx: Int,
+      intensityRange: (Double, Double),
+      elementClass: ElementClass.Value
+  ): Int = elementClass match {
+    case ElementClass.uint8 =>
+      normalizeIntensityUint8(intensityRange, data(idx))
+    case ElementClass.int8 =>
+      normalizeIntensityInt8(intensityRange, data(idx))
+    case ElementClass.uint16 =>
+      normalizeIntensityUint16(intensityRange, data(idx), data(idx + 1))
+    case ElementClass.int16 =>
+      normalizeIntensityInt16(intensityRange, data(idx), data(idx + 1))
+    case ElementClass.uint32 =>
+      normalizeIntensityUint32(intensityRange, data(idx), data(idx + 1), data(idx + 2), data(idx + 3))
+    case ElementClass.int32 =>
+      normalizeIntensityInt32(intensityRange, data(idx), data(idx + 1), data(idx + 2), data(idx + 3))
+    case ElementClass.uint64 =>
+      normalizeIntensityUint64(
+        intensityRange,
+        data(idx),
+        data(idx + 1),
+        data(idx + 2),
+        data(idx + 3),
+        data(idx + 4),
+        data(idx + 5),
+        data(idx + 6),
+        data(idx + 7)
+      )
+    case ElementClass.int64 =>
+      normalizeIntensityInt64(
+        intensityRange,
+        data(idx),
+        data(idx + 1),
+        data(idx + 2),
+        data(idx + 3),
+        data(idx + 4),
+        data(idx + 5),
+        data(idx + 6),
+        data(idx + 7)
+      )
+    case ElementClass.float =>
+      normalizeIntensityFloat(intensityRange, data(idx), data(idx + 1), data(idx + 2), data(idx + 3))
+    case ElementClass.uint24 => // assume uint24 rgb color data
+      data(idx).toInt // The color data is handled separately
+    case _ =>
+      throw new Exception(s"Unsupported ElementClass for color layer thumbnail: $elementClass")
   }
 
   private def applyColor(colorFactor: Double, invertColor: Boolean): Int => Int =
@@ -296,63 +248,64 @@ object ImageCreator extends LazyLogging {
       )
       .toInt
 
-  private def idToRGB(b: Byte) = {
-    def hueToRGB(h: Double): Int = {
-
-      val i: Double = Math.floor(h * 6f)
-      val f: Double = h * 6f - i
-
-      val (r, g, b) = i % 6 match {
-        case 0 => (1.0, f, 0.0)
-        case 1 => (1.0 - f, 1.0, 0.0)
-        case 2 => (0.0, 1.0, f)
-        case 3 => (0.0, 1.0 - f, 1.0)
-        case 4 => (f, 0.0, 1.0)
-        case 5 => (1.0, 0.0, 1.0 - f)
-      }
-
-      val rByte = (r * 255).toByte
-      val gByte = (g * 255).toByte
-      val bByte = (b * 255).toByte
-      (0xff << 24) | ((rByte & 0xff) << 16) | ((gByte & 0xff) << 8) | ((bByte & 0xff) << 0)
+  // Reads the full (little-endian) segment id at `idx`, up to 8 bytes. Kept as a raw 64-bit bit
+  // pattern (not sign-extended/interpreted) since idToRGB only ever extracts sub-ranges of bits from
+  // it, mirroring how the frontend treats segment ids as unsigned 64-bit values.
+  private def readSegmentId(b: Array[Byte], idx: Int, bytesPerElement: Int): Long = {
+    var result = 0L
+    var i = 0
+    while (i < bytesPerElement) {
+      result |= (b(idx + i) & 0xffL) << (8 * i)
+      i += 1
     }
-
-    b match {
-      case 0 => (0x64 << 24) | (0x64 << 16) | (0x64 << 8) | (0x64 << 0)
-      case _ =>
-        val golden_ratio = 0.618033988749895
-        val hue = ((b & 0xff) * golden_ratio) % 1.0
-        hueToRGB(hue)
-    }
+    result
   }
 
-  private def createBufferedImageFromBytes(
-      b: Array[Byte],
-      targetType: Int,
-      params: ImageCreatorParameters
-  ): Option[BufferedImage] =
-    try {
-      val bufferedImage = new BufferedImage(params.slideWidth, params.slideHeight, targetType)
-      bufferedImage.setRGB(
-        0,
-        0,
-        params.slideWidth,
-        params.slideHeight,
-        toRGBArray(
-          b,
-          params.elementClass,
-          params.isSegmentation,
-          params.intensityRange,
-          params.color,
-          params.invertColor.getOrElse(false)
-        ),
-        0,
-        params.slideWidth
-      )
-      Some(bufferedImage)
-    } catch {
-      case e: IOException =>
-        logger.error("IOException while converting byte array to buffered image.", e)
-        None
+  private def idToRGB(id: Long, preserveAlpha: Boolean, opacityAlphaByte: Int): Int =
+    if (id == 0L) {
+      // background: transparent for full-dataset thumbnails, solid-gray for standalone layer thumbnail.
+      if (preserveAlpha) 0
+      else (0x64 << 24) | (0x64 << 16) | (0x64 << 8) | (0x64 << 0)
+    } else {
+      val significantSegmentIndex = ((id & 0xffffL) + ((id >>> 32) & 0xffffL)).toInt
+      val colorIndex =
+        getElementOfPermutation(significantSegmentIndex, colorPermutationSequenceLength, colorPermutationPrimitiveRoot)
+      val colorValueDecimal = colorIndex.toDouble / colorPermutationSequenceLength.toDouble
+      val (r, g, b) = colormapJet(colorValueDecimal)
+      val rByte = Math.round(r * 255).toInt & 0xff
+      val gByte = Math.round(g * 255).toInt & 0xff
+      val bByte = Math.round(b * 255).toInt & 0xff
+      val alphaByte = if (preserveAlpha) opacityAlphaByte else 0xff
+      (alphaByte << 24) | (rByte << 16) | (gByte << 8) | (bByte << 0)
     }
+
+  private val colorPermutationSequenceLength = 19
+  private val colorPermutationPrimitiveRoot = 2
+
+  // Rounds to float32 precision, mirroring the frontend's `imprecise` helper
+  // (frontend/javascripts/viewer/shaders/utils.glsl.ts), which keeps this JS/Scala port consistent
+  // with the GLSL shader's own (32-bit float) arithmetic.
+  private def imprecise(x: Double): Double = x.toFloat.toDouble
+
+  private def glslPow(x: Double, y: Double): Double = {
+    val log2x = imprecise(Math.log(x) / Math.log(2))
+    imprecise(Math.pow(2, y * log2x))
+  }
+
+  // Port of jsColormapJet (frontend/javascripts/viewer/shaders/utils.glsl.ts): the "jet" colormap,
+  // input and output channels in [0, 1].
+  private def colormapJet(x: Double): (Double, Double, Double) = {
+    def clamp01(v: Double): Double = Math.max(0d, Math.min(1d, v))
+    val r = clamp01(if (x < 0.89) (x - 0.35) / 0.31 else 1.0 - ((x - 0.89) / 0.11) * 0.5)
+    val g = clamp01(if (x < 0.64) (x - 0.125) * 4.0 else 1.0 - (x - 0.64) / 0.27)
+    val bl = clamp01(if (x < 0.34) 0.5 + (x * 0.5) / 0.11 else 1.0 - (x - 0.34) / 0.31)
+    (r, g, bl)
+  }
+
+  private def getElementOfPermutation(index: Int, sequenceLength: Int, primitiveRoot: Int): Int = {
+    val oneBasedIndex = (index % sequenceLength) + 1
+    if (oneBasedIndex == 1) sequenceLength
+    else (Math.floor(glslPow(primitiveRoot, oneBasedIndex)).toLong % sequenceLength).toInt
+  }
+
 }

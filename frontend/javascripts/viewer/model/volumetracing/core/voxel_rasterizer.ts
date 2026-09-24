@@ -1,5 +1,3 @@
-import type { MaskShape, RasterizableShape } from "./intents";
-import type { BucketWriter, VolumeTransaction } from "./transaction";
 import {
   type BoundingBox,
   BUCKET_WIDTH,
@@ -9,7 +7,9 @@ import {
   isInBoundingBox,
   type Vector3,
   voxelIndexOf,
-} from "./types";
+} from "./volume_annotation_types";
+import type { MaskShape, RasterizableShape } from "./volume_edit_intents";
+import type { BucketWriter, VolumeTransaction } from "./volume_transaction";
 
 /**
  * The single place that turns geometry into voxel indices.
@@ -20,7 +20,7 @@ import {
  * which no downsampling rule could repair.
  *
  * Synchronous and free of I/O by construction — data-dependent shapes are
- * resolved elsewhere (see resolver.ts) before reaching this point.
+ * resolved elsewhere (see flood_fill_resolver.ts) before reaching this point.
  */
 export function rasterize(shape: RasterizableShape, ctx: EditContext, tx: VolumeTransaction): void {
   switch (shape.kind) {

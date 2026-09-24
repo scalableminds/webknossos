@@ -4,14 +4,14 @@ import {
   type TransactionDiff,
   type TransactionId,
   type VoxelRun,
-} from "../core/diff";
+} from "../core/bucket_diff";
 import {
   BUCKET_VOXEL_COUNT,
   type BucketAddress,
   type BucketKey,
   bucketKey,
   type SegmentBucketData,
-} from "../core/types";
+} from "../core/volume_annotation_types";
 
 export interface BucketLogEntry {
   sequence: number;

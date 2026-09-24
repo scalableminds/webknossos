@@ -1,12 +1,12 @@
 /**
  * The cube contract: what the transaction, the resolver and the rasterizer
  * are allowed to assume about whatever holds bucket data. The production
- * implementation is `integration/wk_cube_adapter.ts`, over the real DataCube;
+ * implementation is `integration/wk_data_cube_adapter.ts`, over the real DataCube;
  * `not_yet_integrated/working_data_cube.ts` is the in-memory stand-in used by tests.
  */
 
 import type { BucketWrite } from "./bucket_write_map";
-import type { BucketAddress, SegmentBucketData } from "./types";
+import type { BucketAddress, SegmentBucketData } from "./volume_annotation_types";
 
 /**
  * What can be done with a bucket right now. Two of the three states have no
@@ -28,7 +28,7 @@ export type BucketState = "absent" | "pending" | "loaded";
 /**
  * The narrow surface a VolumeTransaction needs. Kept separate from
  * WorkingDataCube so a real backing store can be substituted — see
- * `integration/wk_cube_adapter.ts`.
+ * `integration/wk_data_cube_adapter.ts`.
  */
 export interface TransactionCube {
   /** Apply a bucket's writes at once, walking the mask's runs. */
@@ -48,7 +48,7 @@ export interface TransactionCube {
  * The narrow surface the resolver needs to load data during a traversal (e.g.
  * flood fill, §5.1: "the only component permitted to await a bucket load").
  * Kept separate from WorkingDataCube for the same reason as TransactionCube —
- * see `integration/wk_cube_adapter.ts`.
+ * see `integration/wk_data_cube_adapter.ts`.
  */
 export interface LoadingVoxelCube extends TransactionCube {
   /**

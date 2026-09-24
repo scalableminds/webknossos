@@ -1,5 +1,11 @@
 import type { BucketWrite, BucketWriteMap } from "./bucket_write_map";
-import type { BucketAddress, MagIndex, SegmentBucketData, SegmentId, VoxelIndex } from "./types";
+import type {
+  BucketAddress,
+  MagIndex,
+  SegmentBucketData,
+  SegmentId,
+  VoxelIndex,
+} from "./volume_annotation_types";
 
 /**
  * A run of consecutive voxel indices sharing one value. Every run a transaction

@@ -8,8 +8,8 @@ import {
   type Vector3,
   voxelIndexOf,
 } from "viewer/model/volumetracing/core";
-import type { LoadingVoxelCube } from "viewer/model/volumetracing/core/cube";
-import { resolveFloodFill } from "viewer/model/volumetracing/core/resolver";
+import { resolveFloodFill } from "viewer/model/volumetracing/core/flood_fill_resolver";
+import type { LoadingVoxelCube } from "viewer/model/volumetracing/core/voxel_cube_interfaces";
 import { describe, expect, it } from "vitest";
 import {
   bucketOf,
@@ -21,7 +21,7 @@ import {
   materialize,
   toMagVoxel,
   voxelsInBox,
-} from "./helpers";
+} from "./volume_test_harness";
 
 const EXISTING: SegmentId = 3n;
 const FILL: SegmentId = 9n;

@@ -9,11 +9,11 @@
  * existing push queue (design doc §12.2).
  */
 
-import { rasterize } from "../core/rasterizer";
-import { VolumeTransaction } from "../core/transaction";
-import type { EditContext, OverwriteMode, Vector3 } from "../core/types";
-import type { DriverOptions, DriverResult } from "./driver_types";
-import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_cube_adapter";
+import type { EditContext, OverwriteMode, Vector3 } from "../core/volume_annotation_types";
+import { VolumeTransaction } from "../core/volume_transaction";
+import { rasterize } from "../core/voxel_rasterizer";
+import type { DriverOptions, DriverResult } from "./tool_driver_types";
+import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_data_cube_adapter";
 
 export interface BrushDriverOptions extends DriverOptions {
   overwriteMode: OverwriteMode;

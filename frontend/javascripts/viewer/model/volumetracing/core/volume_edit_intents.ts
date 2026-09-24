@@ -1,4 +1,4 @@
-import type { BoundingBox, Vector3 } from "./types";
+import type { BoundingBox, Vector3 } from "./volume_annotation_types";
 
 /**
  * Two families, split by *how the intent becomes voxels* — synchronously from a

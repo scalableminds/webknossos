@@ -10,7 +10,7 @@ import {
   originVoxelOf,
   type Vector3,
   voxelOffsetOf,
-} from "./types";
+} from "./volume_annotation_types";
 
 /**
  * Source mag → every other mag, walking the pyramid outward one adjacent level

@@ -9,7 +9,7 @@
  * design doc §12.2 records, not an oversight here.
  *
  * One thing worth knowing about the boundary itself:
- *   - The core's BucketAddress (core/types.ts) is structurally identical to
+ *   - The core's BucketAddress (core/volume_annotation_types.ts) is structurally identical to
  *     the real one (xyz, magIndex, additionalCoordinates) on purpose, so
  *     addresses cross this boundary as-is — no conversion, no separate
  *     adapter-level additionalCoordinates override to keep in sync.
@@ -19,14 +19,14 @@ import type { BucketDataArray } from "types/api_types";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { applyBucketWriteToData, type BucketWrite } from "../core/bucket_write_map";
-import type { LoadingVoxelCube, TransactionCube } from "../core/cube";
 import {
   type BucketAddress,
   type Mag,
   MagList,
   type SegmentBucketData,
   type Vector3,
-} from "../core/types";
+} from "../core/volume_annotation_types";
+import type { LoadingVoxelCube, TransactionCube } from "../core/voxel_cube_interfaces";
 
 /**
  * A segmentation layer never stores float data, so its buckets are always a

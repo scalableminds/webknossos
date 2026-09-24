@@ -754,6 +754,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     }
 
     const activeFilterLabels: string[] = [];
+    if (tags.length > 0) activeFilterLabels.push("tags");
     if (selectedOwnerId != null) activeFilterLabels.push("owner");
     if (selectedTeamId != null) activeFilterLabels.push("teams");
     if (shouldShowArchivedAnnotations) activeFilterLabels.push("status");

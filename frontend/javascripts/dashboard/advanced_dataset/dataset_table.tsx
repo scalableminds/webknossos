@@ -577,9 +577,12 @@ class DatasetTable extends PureComponent<Props, State> {
       </Button>
     ) : null;
 
+    const activeFilterLabels: string[] = [];
+    if (searchTags.length > 0) activeFilterLabels.push("tags");
+    if (datasetFilteringMode === "onlyShowUnreported") activeFilterLabels.push("status");
     const maybeWarning =
-      datasetFilteringMode === "onlyShowUnreported" ? (
-        <p>Note that datasets are currently filtered by status.</p>
+      activeFilterLabels.length > 0 ? (
+        <p>Note that datasets are currently filtered by {activeFilterLabels.join(", ")}.</p>
       ) : null;
     if (searchQuery.length > 0) {
       return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? (

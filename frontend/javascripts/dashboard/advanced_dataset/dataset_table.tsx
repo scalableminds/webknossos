@@ -756,6 +756,11 @@ class DatasetTable extends PureComponent<Props, State> {
             </>
           }
         >
+          <TagFilterChip
+            selectedTags={this.props.searchTags}
+            availableTags={this.props.datasets.flatMap((dataset) => dataset.tags)}
+            onChange={this.props.setSearchTags}
+          />
           {this.props.isUserAdminOrDatasetManager ? (
             <FilterChip
               label="Status"
@@ -786,11 +791,6 @@ class DatasetTable extends PureComponent<Props, State> {
               </Space>
             </FilterChip>
           ) : null}
-          <TagFilterChip
-            selectedTags={this.props.searchTags}
-            availableTags={this.props.datasets.flatMap((dataset) => dataset.tags)}
-            onChange={this.props.setSearchTags}
-          />
           <FilterChip
             label={
               <>

@@ -186,6 +186,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
+
+  // Fit the icons into the surrounding text line (e.g. the dashboard meta line) like other
+  // inline icons. Needs .info-tab-block to override the larger icons of the vertical layout.
+  &.info-tab-block .info-tab-icon svg {
+    height: 1.1em;
+    color: inherit;
+  }
 }
 
 .info-tab-block {

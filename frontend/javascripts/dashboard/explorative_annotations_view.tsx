@@ -836,6 +836,11 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         <ListFilterHeader
           summary={`${filteredAndSortedAnnotations.length}${mayHaveMoreAnnotations ? "+" : ""} ${pluralize("Annotation", filteredAndSortedAnnotations.length)}`}
         >
+          <TagFilterChip
+            selectedTags={this.state.tags}
+            availableTags={this.getCurrentAnnotations().flatMap((annotation) => annotation.tags)}
+            onChange={(tags) => this.setState({ tags })}
+          />
           <SearchableRadioFilterChip
             label="Owner"
             searchPlaceholder="Search owners"
@@ -878,11 +883,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
               </Radio>
             </Space>
           </FilterChip>
-          <TagFilterChip
-            selectedTags={this.state.tags}
-            availableTags={this.getCurrentAnnotations().flatMap((annotation) => annotation.tags)}
-            onChange={(tags) => this.setState({ tags })}
-          />
           <FilterChip
             label={
               <>

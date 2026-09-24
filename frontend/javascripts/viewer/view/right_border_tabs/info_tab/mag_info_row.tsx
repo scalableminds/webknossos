@@ -47,7 +47,7 @@ export function MagInfoRow() {
   }
 
   return (
-    <InfoTabRow label="Magnifications" isShortValue tooltipRenderer={renderMagsTooltip}>
+    <InfoTabRow label="Current magnification" isShortValue tooltipRenderer={renderMagsTooltip}>
       <span>
         {representativeMag.join("-")}
         {isActiveMagGlobal ? "" : "*"}

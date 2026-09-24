@@ -181,7 +181,4 @@ export class WorkingDataCube implements LoadingVoxelCube {
     return data[voxelIndexOf(x, y, z)];
   }
 
-  materializedAddresses(): BucketAddress[] {
-    return [...this.buckets.values()].map((entry) => entry.address);
-  }
 }

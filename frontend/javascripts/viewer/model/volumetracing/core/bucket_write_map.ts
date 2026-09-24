@@ -7,6 +7,7 @@ import {
   bucketAddressOfVoxel,
   bucketKey,
   type MagIndex,
+  type SegmentBucketData,
   type SegmentId,
   type Vector3,
   voxelIndexOf,
@@ -30,17 +31,24 @@ export interface BucketWriteMapEntry {
 }
 
 /**
- * Apply `write`'s runs onto a dense bigint bucket array. Real buckets may
- * additionally hold a non-64-bit element class, which is why
- * `applyWriteToAnyElementClass` (wk_cube_adapter.ts) still has a second
- * branch of its own on top of this.
+ * Apply `write`'s runs onto a bucket array of any segmentation element class.
+ * The branch is taken once per bucket, not once per run: `write.value` is a
+ * SegmentId (always a bigint), so a non-64-bit array needs it converted, and
+ * doing that inside the loop would repeat the same conversion per run.
  */
-export function applyBucketWriteToData(
-  data: BigUint64Array | BigInt64Array,
-  write: BucketWrite,
-): void {
+export function applyBucketWriteToData(data: SegmentBucketData, write: BucketWrite): void {
+  if (data instanceof BigUint64Array || data instanceof BigInt64Array) {
+    for (const { start, length } of write.mask.runs()) {
+      data.fill(write.value, start, start + length);
+    }
+    return;
+  }
+  // Every non-64-bit member takes a number; TypeScript cannot narrow the
+  // union's `fill` overloads, hence the single cast.
+  const numeric = data as Uint32Array;
+  const value = Number(write.value);
   for (const { start, length } of write.mask.runs()) {
-    data.fill(write.value, start, start + length);
+    numeric.fill(value, start, start + length);
   }
 }
 

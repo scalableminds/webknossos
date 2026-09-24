@@ -10,7 +10,7 @@ import {
   type BucketAddress,
   type BucketKey,
   bucketKey,
-  type DenseBucketData,
+  type SegmentBucketData,
 } from "../core/types";
 
 export interface BucketLogEntry {
@@ -41,7 +41,7 @@ export interface BucketLog {
    * folds undo from; that does not exist yet (see `rebuild`), so the two roles
    * currently share this one field.
    */
-  base: { version: number; data: DenseBucketData } | null;
+  base: { version: number; data: SegmentBucketData } | null;
   entries: BucketLogEntry[]; // ascending by sequence
 }
 
@@ -68,7 +68,7 @@ export class BucketJournal {
   }
 
   /** Record the backend content a bucket was loaded with. */
-  setBase(address: BucketAddress, data: DenseBucketData, version: number): void {
+  setBase(address: BucketAddress, data: SegmentBucketData, version: number): void {
     this.logFor(address).base = { version, data };
   }
 
@@ -98,7 +98,7 @@ export class BucketJournal {
    * The single fold. Callers differ only in the base they supply and, via
    * `baseVersion`, in which entries that base already contains.
    */
-  private fold(log: BucketLog, base: DenseBucketData, baseVersion: number): DenseBucketData {
+  private fold(log: BucketLog, base: SegmentBucketData, baseVersion: number): SegmentBucketData {
     const data = base.slice();
     for (const entry of log.entries) {
       if (entry.skipped) continue;
@@ -115,9 +115,9 @@ export class BucketJournal {
   /** Fold local entries onto freshly fetched backend data (bucket load). */
   foldOntoFetched(
     address: BucketAddress,
-    backendData: DenseBucketData,
+    backendData: SegmentBucketData,
     dataVersion: number,
-  ): DenseBucketData {
+  ): SegmentBucketData {
     return this.fold(this.logFor(address), backendData, dataVersion);
   }
 
@@ -138,7 +138,7 @@ export class BucketJournal {
    * send the `undoTransaction` marker (§5.8) and re-fetch the bucket, whose
    * content the backend has already re-folded without it.
    */
-  rebuild(address: BucketAddress): DenseBucketData {
+  rebuild(address: BucketAddress): SegmentBucketData {
     const log = this.logFor(address);
     if (log.base == null) {
       return this.fold(log, new BigUint64Array(BUCKET_VOXEL_COUNT), -1);

@@ -13,8 +13,8 @@ import {
   type BucketAddress,
   type BucketKey,
   bucketKey,
-  type DenseBucketData,
-  type SegmentId,
+  type SegmentBucketData,
+  type StoredSegmentId,
   type Vector3,
   voxelIndexOf,
   voxelOffsetInBucket,
@@ -25,7 +25,7 @@ interface CubeEntry {
   address: BucketAddress;
   state: BucketState;
   /** Allocated as soon as the bucket becomes `pending`. */
-  data: DenseBucketData;
+  data: SegmentBucketData;
   fetch: Promise<void> | null;
 }
 
@@ -59,7 +59,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
    * for `pending` buckets alike: a zero-filled placeholder must never be
    * mistaken for "all background". Never triggers a fetch.
    */
-  getLoadedDataOrUndefined(address: BucketAddress): DenseBucketData | undefined {
+  getLoadedDataOrUndefined(address: BucketAddress): SegmentBucketData | undefined {
     const entry = this.buckets.get(bucketKey(address));
     return entry?.state === "loaded" ? entry.data : undefined;
   }
@@ -70,7 +70,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
    * writing into a placeholder is fine — the fold on arrival replays those
    * writes.
    */
-  private materializedData(address: BucketAddress): DenseBucketData | undefined {
+  private materializedData(address: BucketAddress): SegmentBucketData | undefined {
     return this.buckets.get(bucketKey(address))?.data;
   }
 
@@ -114,7 +114,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
    * carrying is replaced outright rather than merged — re-folding from a known
    * base is both simpler and correct.
    */
-  receiveData(address: BucketAddress, backendData: DenseBucketData, version: number): void {
+  receiveData(address: BucketAddress, backendData: SegmentBucketData, version: number): void {
     const key = bucketKey(address);
     const entry = this.buckets.get(key);
     this.journal.setBase(address, backendData, version);
@@ -129,7 +129,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
   }
 
   /** Load a bucket and return its content. The resolver's blocking read. */
-  async ensureLoaded(address: BucketAddress): Promise<DenseBucketData> {
+  async ensureLoaded(address: BucketAddress): Promise<SegmentBucketData> {
     if (this.state(address) !== "loaded") await this.materialize(address);
     const data = this.getLoadedDataOrUndefined(address);
     if (data == null) throw new Error(`Bucket ${bucketKey(address)} did not become loaded`);
@@ -155,7 +155,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
   }
 
   /** Overwrite a bucket's content outright (undo rebuild). */
-  install(address: BucketAddress, data: DenseBucketData): void {
+  install(address: BucketAddress, data: SegmentBucketData): void {
     const key = bucketKey(address);
     const entry = this.buckets.get(key);
     if (entry == null) return; // not materialized: nothing on screen to update
@@ -168,7 +168,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
     voxel: Vector3,
     magIndex: number,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
-  ): SegmentId | undefined {
+  ): StoredSegmentId | undefined {
     const address: BucketAddress = [
       Math.floor(voxel[0] / 32),
       Math.floor(voxel[1] / 32),

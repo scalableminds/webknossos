@@ -505,7 +505,7 @@ classDiagram
         +install(address, data)
     }
     class FakeBackend {
-        <<not yet integrated>>
+        <<test double>>
         +seed(address, data)
         +fetchBucket(address) Promise
     }

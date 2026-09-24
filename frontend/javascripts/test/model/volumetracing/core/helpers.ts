@@ -9,10 +9,10 @@ import {
 } from "viewer/model/volumetracing/core";
 import {
   BucketJournal,
-  FakeBackend,
   VolumeEditingSession,
   WorkingDataCube,
 } from "viewer/model/volumetracing/not_yet_integrated";
+import { FakeBackend } from "./fake_backend";
 
 /**
  * An intentionally anisotropic pyramid, so the tests exercise per-axis factors

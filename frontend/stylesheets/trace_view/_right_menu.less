@@ -21,24 +21,25 @@
   height: 100%;
 }
 
-// --- Segment list -----------------------------------------------------------------
+// --- Segment and skeleton lists ---------------------------------------------------
 //
-// One row per segment, regardless of whether a mesh is loaded for it:
+// Both tabs render the same row shell, one row per item:
 //
-//   [checkbox] [color dot] [name ......................] [mesh slot] [hover actions]
+//   [checkbox] [color dot] [name ...............] [extras] [count] [hover actions]
 //
-// The row itself is styled where it is rendered (segment_row.tsx / node_titles.tsx). Only
-// the treatments that CSS alone can express live here: they either target antd's own row
-// elements — the indentation, the expand caret and the checkbox are rendered around
-// titleRender's output, not by it — or they depend on the state of an ancestor. The
-// modifier classes they key off are set in segment_row.tsx.
-@segment-row-height: 30px;
-// The tree is shifted left by one indent unit (see the inline marginLeft in
-// segment_tree_view.tsx) so that the root group renders no expand caret. Anything
-// positioned against the visible left edge of the panel has to add it back.
-@segments-tree-indent-unit: 24px;
+// The row itself is styled where it is rendered (shared/list_row.tsx and the row
+// components of the two tabs). Only the treatments that CSS alone can express live here:
+// they either target antd's own row elements — the indentation, the expand caret and the
+// checkbox are rendered around titleRender's output, not by it — or they depend on the
+// state of an ancestor. The modifier classes they key off are set by the row components.
+@list-row-height: 30px;
+// Matches EXPANDED_ROW_PADDING and the 20px line box of an expanded row in list_row.tsx.
+// The tree is shifted left by one indent unit (see the inline marginLeft in the two tree
+// views) so that the root group renders no expand caret. Anything positioned against the
+// visible left edge of the panel has to add it back.
+@list-tree-indent-unit: 24px;
 
-.segments-tree {
+.list-tree {
   .ant-tree-treenode {
     position: relative;
     align-items: center;
@@ -46,7 +47,7 @@
     padding: 0 10px 0 0 !important;
     // antd separates rows by a small margin; the list is meant to be a flush grid.
     margin-bottom: 0;
-    min-height: @segment-row-height;
+    min-height: @list-row-height;
 
     // antd puts a pseudo-element just below every row to bridge that margin, so that the
     // drop indicator doesn't flicker while dragging. With the margin gone it lies on top
@@ -57,7 +58,7 @@
 
     &:hover,
     // A segment that is hovered in the data viewports is highlighted in the list, too.
-    &:has(.segment-row--hovered-in-viewport) {
+    &:has(.list-row--highlighted) {
       background-color: var(--ant-color-fill-quaternary);
     }
 
@@ -65,19 +66,27 @@
       background-color: var(--ant-color-primary-bg);
     }
 
-    // The single selected segment wraps its name over as many lines as it needs, so
+    // The single selected item wraps its name over as many lines as it needs, so
     // everything in its row aligns to the first line rather than to the middle.
-    &:has(.segment-row--expanded) {
+    &:has(.list-row--expanded) {
       align-items: flex-start;
     }
 
     // The action bar and the "compute mesh" button are hover-only, but have to stay
     // reachable without a mouse: antd marks the row that keyboard navigation is on
     // with -active.
-    &:hover .segment-row__on-hover,
-    &:focus-within .segment-row__on-hover,
-    &.ant-tree-treenode-active .segment-row__on-hover {
+    &:hover .list-row__on-hover,
+    &:focus-within .list-row__on-hover,
+    &.ant-tree-treenode-active .list-row__on-hover {
       visibility: visible;
+    }
+
+    // The item count and the row's actions share one slot, so the count makes way for
+    // them while the row is hovered.
+    &:hover .list-row__off-hover,
+    &:focus-within .list-row__off-hover,
+    &.ant-tree-treenode-active .list-row__off-hover {
+      visibility: hidden;
     }
   }
 
@@ -117,20 +126,18 @@
     // from the same tokens the browser centers by, so the two cannot drift apart. antd's
     // own alignment (top, plus a small margin) leaves it above the dot and the name.
     align-self: flex-start;
-    margin-block-start: calc((@segment-row-height - var(--ant-control-interactive-size)) / 2);
+    margin-block-start: calc((@list-row-height - var(--ant-control-interactive-size)) / 2);
   }
 
-  .segment-row__on-hover {
+  .list-row__on-hover {
     visibility: hidden;
   }
 
-  // The segment that the volume tools currently write to, replacing the former brush icon.
-  // It is rendered inside the row but positioned against antd's row element (the nearest
-  // positioned ancestor), so that it reaches the left edge of the panel whatever the
-  // indentation of the row is. It can co-occur with the selection tint.
-  .segment-row__accent {
+  // The item that new work is added to (see RowAccent in shared/list_row.tsx). It replaced
+  // the icons the two tabs used to show for this, and can co-occur with the selection tint.
+  .list-row__accent {
     position: absolute;
-    left: @segments-tree-indent-unit;
+    left: @list-tree-indent-unit;
     top: 2px;
     height: calc(100% - 4px);
     width: 2px;

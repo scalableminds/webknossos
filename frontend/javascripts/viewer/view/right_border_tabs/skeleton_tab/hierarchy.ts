@@ -29,6 +29,8 @@ export type GroupUiNode = BasicDataNode & {
   children: SkeletonUiNode[];
   // Whether any tree exists in this group or one of its descendants.
   containsTrees: boolean;
+  // How many trees this group contains, including those of its subgroups.
+  treeCount: number;
 };
 
 export type SkeletonUiNode = TreeUiNode | GroupUiNode;
@@ -115,6 +117,10 @@ export function buildSkeletonHierarchy(
       children,
       containsTrees:
         treeNodes.length > 0 || childGroupNodes.some((childNode) => childNode.containsTrees),
+      treeCount: childGroupNodes.reduce(
+        (sum, childGroup) => sum + childGroup.treeCount,
+        treeNodes.length,
+      ),
       // Groups without any content cannot be toggled.
       disableCheckbox: children.length === 0,
     };

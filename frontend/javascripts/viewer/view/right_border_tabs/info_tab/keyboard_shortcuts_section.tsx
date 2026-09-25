@@ -43,12 +43,17 @@ const getShortcuts = (
       const capitalizedKeySeq = keySeq.map((keys) =>
         keys.map((key) => (key.length === 1 ? key.toUpperCase() : key)),
       );
-      return keySequenceToUiElements(
+      const elements = keySequenceToUiElements(
         capitalizedKeySeq,
         true,
         `${keyboardShortcutId}-${comboIndex}-`,
         unmodifiedLayoutMap,
       );
+      // A shortcut can have several alternative bindings. Without a connector their caps
+      // would sit side by side and read as one chord.
+      return comboIndex === 0
+        ? elements
+        : [<Connector key={`${keyboardShortcutId}-alt-${comboIndex}`}>or</Connector>, ...elements];
     });
 
   return [
@@ -76,19 +81,31 @@ const getShortcuts = (
           : toKeycaps("MOVE_FORWARD_WITHOUT_RECORDING"),
       ],
     },
-    {
-      key: "move",
-      action: "Move",
-      // The speed lines carry the "drag" meaning, so no connector word is needed.
-      keys: [<MouseLeftDragKeycap key="move-mouse" />],
-    },
-    {
-      key: "rotate",
-      action: "Rotate 3D view",
-      // TrackballControls maps the right mouse button to ROTATE (and the left one to PAN),
-      // see libs/trackball_controls.ts.
-      keys: [<MouseRightDragKeycap key="rotate-mouse" />],
-    },
+    // Dragging means different things per view mode: in the plane viewports the left
+    // button pans and the 3D viewport's trackball rotates on the right button (see
+    // libs/trackball_controls.ts), while in flight/oblique mode a left drag yaws and
+    // pitches the flycam (see arbitrary_controller.tsx) — it does not move.
+    // The speed lines carry the "drag" meaning, so no connector word is needed.
+    ...(isInPlaneMode
+      ? [
+          {
+            key: "move",
+            action: "Move",
+            keys: [<MouseLeftDragKeycap key="move-mouse" />],
+          },
+          {
+            key: "rotate",
+            action: "Rotate 3D view",
+            keys: [<MouseRightDragKeycap key="rotate-mouse" />],
+          },
+        ]
+      : [
+          {
+            key: "rotate-flight",
+            action: "Rotate",
+            keys: [<MouseLeftDragKeycap key="rotate-flight-mouse" />],
+          },
+        ]),
     {
       key: "zoom-wheel",
       action: "Zoom with wheel",

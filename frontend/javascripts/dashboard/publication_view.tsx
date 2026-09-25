@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getPublications } from "admin/rest_api";
-import { Flex, Input, List, Spin } from "antd";
+import { Flex, Input, Spin, Typography, theme } from "antd";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
 import { compareBy, filterWithSearchQueryAND } from "libs/utils";
@@ -12,6 +12,7 @@ const { Search } = Input;
 
 export function PublicationViewWithHeader() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { token } = theme.useToken();
 
   const {
     data: publications = [],
@@ -44,8 +45,8 @@ export function PublicationViewWithHeader() {
     />
   );
   return (
-    <div>
-      <Flex justify="flex-end">{publications.length > 0 && search}</Flex>
+    <Flex orientation="vertical" gap="medium" style={{ paddingBottom: token.paddingXL }}>
+      {publications.length > 0 && <Flex justify="flex-end">{search}</Flex>}
       <Spin size="large" spinning={isLoading}>
         <div
           style={{
@@ -55,7 +56,7 @@ export function PublicationViewWithHeader() {
           <PublicationView publications={publications} searchQuery={searchQuery} />
         </div>
       </Spin>
-    </div>
+    </Flex>
   );
 }
 type Props = {
@@ -75,18 +76,23 @@ function PublicationView(props: Props) {
     props.searchQuery,
   ).sort(compareBy<APIPublication>((publication) => publication.publicationDate, false));
 
+  if (filteredPublications.length === 0) {
+    return <PublicationsEmptyText>No featured publications.</PublicationsEmptyText>;
+  }
+
   return (
-    <List
-      dataSource={filteredPublications}
-      locale={{
-        emptyText: "No featured publications.",
-      }}
-      className="antd-no-border-list publication-list"
-      renderItem={(publication) => (
-        <List.Item key={publication.id}>
-          <PublicationCard publication={publication} showDetailedLink />
-        </List.Item>
-      )}
-    />
+    <Flex orientation="vertical" gap="medium">
+      {filteredPublications.map((publication) => (
+        <PublicationCard key={publication.id} publication={publication} showDetailedLink />
+      ))}
+    </Flex>
+  );
+}
+
+export function PublicationsEmptyText({ children }: { children: React.ReactNode }) {
+  return (
+    <Typography.Paragraph type="secondary" style={{ textAlign: "center", padding: 16 }}>
+      {children}
+    </Typography.Paragraph>
   );
 }

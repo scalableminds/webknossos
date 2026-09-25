@@ -122,9 +122,9 @@ describe("Dataset Rendering", () => {
     expect(allRetrieved).toBe(true);
   });
 
-  test.sequential.for(datasetNames)(
+  test.for(datasetNames)(
     "should render dataset %s correctly",
-    { retry: 3 },
+    { retry: 3, concurrent: false },
     async (datasetName, context) => {
       // Type assertion to ensure context has browser property
       const { browser } = context as ScreenshotTestContext;
@@ -157,9 +157,9 @@ describe("Dataset Rendering", () => {
     },
   );
 
-  test.sequential.for(annotationSpecs)(
+  test.for(annotationSpecs)(
     "should render an annotation for %s with fallback_layer=%s correctly",
-    { retry: 3 },
+    { retry: 3, concurrent: false },
     async ([datasetName, fallbackLayerName], context) => {
       const fallbackLabel = fallbackLayerName ?? "without_fallback";
       // Type assertion to ensure context has browser property
@@ -198,8 +198,9 @@ describe("Dataset Rendering", () => {
     },
   );
 
-  it.sequential<ScreenshotTestContext>("should render a dataset with mappings correctly", {
+  it<ScreenshotTestContext>("should render a dataset with mappings correctly", {
     retry: 3,
+    concurrent: false,
   }, async ({ browser }) => {
     const datasetName = "ROI2017_wkw";
     const mappingName = "astrocyte";
@@ -228,8 +229,9 @@ describe("Dataset Rendering", () => {
     ).toBe(true);
   });
 
-  it.sequential<ScreenshotTestContext>("should render a dataset linked to with an active mapping and agglomerate tree correctly", {
+  it<ScreenshotTestContext>("should render a dataset linked to with an active mapping and agglomerate tree correctly", {
     retry: 3,
+    concurrent: false,
   }, async ({ browser }) => {
     const datasetName = "test-agglomerate-file";
     const viewOverride = viewOverrides[datasetName];
@@ -258,8 +260,9 @@ describe("Dataset Rendering", () => {
     ).toBe(true);
   });
 
-  it.sequential<ScreenshotTestContext>("should render a dataset sandbox linked to with an active mapping and agglomerate tree correctly", {
+  it<ScreenshotTestContext>("should render a dataset sandbox linked to with an active mapping and agglomerate tree correctly", {
     retry: 3,
+    concurrent: false,
   }, async ({ browser }) => {
     const datasetName = "test-agglomerate-file";
     const viewOverride = viewOverrides[datasetName];
@@ -286,8 +289,9 @@ describe("Dataset Rendering", () => {
     ).toBe(true);
   });
 
-  it.sequential<ScreenshotTestContext>("should render a dataset linked to with ad-hoc and precomputed meshes correctly", {
+  it<ScreenshotTestContext>("should render a dataset linked to with ad-hoc and precomputed meshes correctly", {
     retry: 3,
+    concurrent: false,
   }, async ({ browser }) => {
     const datasetName = "test-agglomerate-file";
     const viewOverride = viewOverrides["test-agglomerate-file-with-meshes"];

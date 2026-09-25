@@ -96,6 +96,7 @@ errorShots/
 .nyc_output
 coverage
 coverage-ts
+.vitest
 *.vscode
 .bsp
 temp-webknossos-schema**

@@ -1,0 +1,292 @@
+import {
+  BUCKET_VOXEL_COUNT,
+  type BucketAddress,
+  countDiffVoxels,
+  countVoxels,
+  type SegmentBucketData,
+  type SegmentId,
+  type Vector3,
+  voxelIndexOf,
+} from "viewer/model/volumetracing/core";
+import { resolveFloodFill } from "viewer/model/volumetracing/core/flood_fill_resolver";
+import type { LoadingVoxelCube } from "viewer/model/volumetracing/core/voxel_cube_interfaces";
+import { describe, expect, it } from "vitest";
+import {
+  bucketOf,
+  createHarness,
+  editContext,
+  keyOf,
+  MAGS,
+  magIndicesOf,
+  materialize,
+  toMagVoxel,
+  voxelsInBox,
+} from "./volume_test_harness";
+
+const EXISTING: SegmentId = 3n;
+const FILL: SegmentId = 9n;
+
+/**
+ * A rectangle of `EXISTING` that straddles the x=32 bucket boundary, so the
+ * traversal is forced to cross into a second bucket and fetch it.
+ */
+const REGION_MIN: Vector3 = [28, 10, 3];
+const REGION_MAX: Vector3 = [37, 15, 4]; // exclusive; single z-slice
+
+function seedRegion(backend: { seedVoxel: (a: BucketAddress, o: Vector3, v: SegmentId) => void }) {
+  for (const voxel of voxelsInBox(REGION_MIN, REGION_MAX)) {
+    const address = bucketOf(voxel, 0);
+    backend.seedVoxel(address, [voxel[0] % 32, voxel[1] % 32, voxel[2] % 32], EXISTING);
+  }
+}
+
+function regionKeys(): Set<string> {
+  const keys = new Set<string>();
+  for (const voxel of voxelsInBox(REGION_MIN, REGION_MAX)) keys.add(keyOf(voxel));
+  return keys;
+}
+
+describe("volume annotation core — flood fill", () => {
+  it("fills exactly the connected region, across bucket boundaries", async () => {
+    const { cube, session, backend } = createHarness();
+    seedRegion(backend);
+
+    // Coarser mags must be loaded to be read back; the fill loads mag 0
+    // itself as it traverses.
+    await materialize(cube, [
+      [0, 0, 0, 1, null],
+      [0, 0, 0, 2, null],
+    ]);
+
+    const ctx = editContext({ sourceMagIndex: 0, activeSegmentId: FILL });
+    const diff = await session.floodFill(
+      { kind: "floodFill", seed: [30, 12, 3], is3D: false, bounds: null },
+      ctx,
+    );
+
+    const expected = regionKeys();
+
+    // Everything in the region is filled...
+    for (const key of expected) {
+      const voxel = key.split(",").map(Number) as Vector3;
+      expect(cube.peek(voxel, 0)).toBe(FILL);
+    }
+    // ...and nothing outside it is, including the immediate ring.
+    for (const voxel of voxelsInBox([25, 7, 2], [42, 19, 6])) {
+      if (expected.has(keyOf(voxel))) continue;
+      expect(cube.peek(voxel, 0) ?? 0n).toBe(0n);
+    }
+
+    // The traversal genuinely crossed a bucket boundary.
+    const fetchedKeys = backend.fetched.map((address) => address.slice(0, 4).join(","));
+    expect(fetchedKeys).toContain("0,0,0,0");
+    expect(fetchedKeys).toContain("1,0,0,0");
+
+    // One transaction, covering every mag.
+    expect(session.emitted).toHaveLength(1);
+    expect(diff.toolName).toBe("floodFill");
+    expect(diff.sourceMagIndex).toBe(0);
+    expect(magIndicesOf(diff.bucketDiffs.map((d) => d.address))).toEqual([0, 1, 2]);
+
+    // The mag-0 diff describes exactly the region, split across two buckets.
+    const mag0 = diff.bucketDiffs.filter((d) => d.address[3] === 0);
+    expect(mag0).toHaveLength(2);
+    const mag0Voxels = mag0.flatMap((d) => d.runs).reduce((sum, run) => sum + run.length, 0);
+    expect(mag0Voxels).toBe(expected.size);
+    for (const bucketDiff of diff.bucketDiffs) {
+      for (const run of bucketDiff.runs) expect(run.value).toBe(FILL);
+    }
+  });
+
+  it("propagates the filled region to the coarser mags", async () => {
+    const { cube, session, backend } = createHarness();
+    seedRegion(backend);
+    await materialize(cube, [
+      [0, 0, 0, 1, null],
+      [0, 0, 0, 2, null],
+    ]);
+
+    await session.floodFill(
+      { kind: "floodFill", seed: [30, 12, 3], is3D: false, bounds: null },
+      editContext({ activeSegmentId: FILL }),
+    );
+
+    for (const voxel of voxelsInBox(REGION_MIN, REGION_MAX)) {
+      for (let magIndex = 1; magIndex < MAGS.length; magIndex++) {
+        const mag = MAGS.get(magIndex);
+        expect(cube.peek(toMagVoxel(voxel, mag), magIndex)).toBe(FILL);
+      }
+    }
+  });
+
+  it("respects isBlocked, refusing to cross a blocked edge", async () => {
+    // Splits REGION at x=33 (both halves stay within the same mag-0 bucket
+    // pair the other tests already exercise), like the "Split Segments"
+    // toolkit's boundary mesh does in production.
+    const { cube, session, backend } = createHarness();
+    seedRegion(backend);
+    await materialize(cube, [
+      [0, 0, 0, 1, null],
+      [0, 0, 0, 2, null],
+    ]);
+
+    const isBlocked = (from: Vector3, to: Vector3) =>
+      (from[0] < 33 && to[0] >= 33) || (from[0] >= 33 && to[0] < 33);
+
+    await session.floodFill(
+      { kind: "floodFill", seed: [30, 12, 3], is3D: false, bounds: null, isBlocked },
+      editContext({ activeSegmentId: FILL }),
+    );
+
+    // The seed's side of the boundary is filled...
+    for (const voxel of voxelsInBox(REGION_MIN, [33, 15, 4])) {
+      expect(cube.peek(voxel, 0)).toBe(FILL);
+    }
+    // ...but the traversal never crosses into the other side, which keeps
+    // its original segment id rather than becoming FILL.
+    for (const voxel of voxelsInBox([33, 10, 3], REGION_MAX)) {
+      expect(cube.peek(voxel, 0)).toBe(EXISTING);
+    }
+  });
+
+  it("respects a bounding box, stopping the traversal early", async () => {
+    const { cube, session, backend } = createHarness();
+    seedRegion(backend);
+
+    const diff = await session.floodFill(
+      {
+        kind: "floodFill",
+        seed: [30, 12, 3],
+        is3D: false,
+        // Clip to the left of the bucket boundary.
+        bounds: { min: [0, 0, 0], max: [32, 64, 64] },
+      },
+      editContext({ activeSegmentId: FILL }),
+    );
+
+    // Left of the boundary is filled, right of it is untouched.
+    expect(cube.peek([31, 12, 3], 0)).toBe(FILL);
+    await cube.materialize([1, 0, 0, 0, null]);
+    expect(cube.peek([32, 12, 3], 0)).toBe(EXISTING);
+
+    const mag0 = diff.bucketDiffs.filter((d) => d.address[3] === 0);
+    expect(mag0).toHaveLength(1);
+    expect(mag0[0].address).toEqual([0, 0, 0, 0, null]);
+    // 4 columns (28..31) × 5 rows (10..14) × 1 slice
+    expect(countDiffVoxels({ ...diff, bucketDiffs: mag0 })).toBe(4 * 5);
+  });
+
+  it("does nothing when the seed already carries the active segment id", async () => {
+    const { session, backend } = createHarness();
+    seedRegion(backend);
+
+    const diff = await session.floodFill(
+      { kind: "floodFill", seed: [30, 12, 3], is3D: false, bounds: null },
+      editContext({ activeSegmentId: EXISTING }),
+    );
+
+    expect(diff.bucketDiffs).toHaveLength(0);
+    expect(countDiffVoxels(diff)).toBe(0);
+  });
+
+  it("fills through a 3D region only when is3D is set", async () => {
+    const { cube, session, backend } = createHarness();
+    // Two stacked slices of the same value.
+    for (const voxel of voxelsInBox([10, 10, 5], [14, 14, 7])) {
+      backend.seedVoxel(bucketOf(voxel, 0), [voxel[0], voxel[1], voxel[2]], EXISTING);
+    }
+    await materialize(cube, [[0, 0, 0, 0, null]]);
+
+    await session.floodFill(
+      { kind: "floodFill", seed: [11, 11, 5], is3D: false, bounds: null },
+      editContext({ activeSegmentId: FILL }),
+    );
+    expect(cube.peek([11, 11, 5], 0)).toBe(FILL);
+    expect(cube.peek([11, 11, 6], 0)).toBe(EXISTING); // 2D fill stayed in-plane
+
+    await session.floodFill(
+      { kind: "floodFill", seed: [11, 11, 6], is3D: true, bounds: null },
+      editContext({ activeSegmentId: FILL }),
+    );
+    expect(cube.peek([11, 11, 6], 0)).toBe(FILL);
+  });
+
+  it("writes the mask through to the bucket data verbatim", async () => {
+    const { cube, session, backend } = createHarness();
+    seedRegion(backend);
+    await materialize(cube, [[0, 0, 0, 0, null]]);
+
+    await session.floodFill(
+      {
+        kind: "floodFill",
+        seed: [30, 12, 3],
+        is3D: false,
+        bounds: { min: [0, 0, 0], max: [32, 64, 64] },
+      },
+      editContext({ activeSegmentId: FILL }),
+    );
+
+    // Spot-check the raw array rather than going through peek().
+    const data = cube.getLoadedDataOrUndefined([0, 0, 0, 0, null]);
+    expect(data).toBeDefined();
+    expect(data?.[voxelIndexOf(28, 10, 3)]).toBe(FILL);
+    expect(data?.[voxelIndexOf(31, 14, 3)]).toBe(FILL);
+    expect(data?.[voxelIndexOf(27, 10, 3)]).toBe(0n); // just outside
+  });
+  /**
+   * `WorkingDataCube` materializes everything it is asked for, so the
+   * out-of-dataset case needs a cube that can actually say "no bucket here".
+   */
+  describe("with buckets missing from the dataset", () => {
+    class BoundedCube implements LoadingVoxelCube {
+      readonly loaded: string[] = [];
+      applyWrites() {}
+      backgroundProbe() {
+        return null;
+      }
+      /** Only bucket (0,0,0) exists; everything else is outside the dataset. */
+      async ensureLoaded(address: BucketAddress): Promise<SegmentBucketData | null> {
+        this.loaded.push(address.slice(0, 3).join(","));
+        const exists = address[0] === 0 && address[1] === 0 && address[2] === 0;
+        return exists ? new BigUint64Array(BUCKET_VOXEL_COUNT) : null;
+      }
+    }
+
+    it("stops at the dataset edge instead of filling past it", async () => {
+      const cube = new BoundedCube();
+      // Bounds reach into bucket (1,0,0), which BoundedCube does not have.
+      const { bucketWrites } = await resolveFloodFill(
+        {
+          kind: "floodFill",
+          seed: [30, 0, 0],
+          is3D: false,
+          bounds: { min: [28, 0, 0], max: [40, 2, 1] },
+        },
+        editContext({ activeSegmentId: FILL }),
+        cube,
+      );
+
+      // x = 28..31 in bucket 0, two rows: everything past x = 31 is skipped.
+      expect(countVoxels(bucketWrites)).toBe(8);
+      expect([...bucketWrites.keys()]).toEqual(["0,0,0,0"]);
+      // The missing bucket is consulted once, then short-circuited.
+      expect(cube.loaded.filter((key) => key === "1,0,0").length).toBe(1);
+    });
+
+    it("returns an empty write set when the seed itself has no bucket", async () => {
+      const cube = new BoundedCube();
+      const { bucketWrites, coveredBoundingBox } = await resolveFloodFill(
+        {
+          kind: "floodFill",
+          seed: [40, 0, 0],
+          is3D: false,
+          bounds: { min: [32, 0, 0], max: [64, 2, 1] },
+        },
+        editContext({ activeSegmentId: FILL }),
+        cube,
+      );
+      expect(countVoxels(bucketWrites)).toBe(0);
+      expect(coveredBoundingBox).toBeNull();
+    });
+  });
+});

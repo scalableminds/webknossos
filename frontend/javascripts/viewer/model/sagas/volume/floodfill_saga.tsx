@@ -8,7 +8,7 @@ import Toast from "libs/toast";
 import sortBy from "lodash-es/sortBy";
 import { call, put, takeEvery } from "typed-redux-saga";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { FillMode, LabeledVoxelsMap, OrthoView, Vector2, Vector3 } from "viewer/constants";
+import type { FillMode, OrthoView, Vector2, Vector3 } from "viewer/constants";
 import Constants, { FillModeEnum, Unicode } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
@@ -31,12 +31,12 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import { requestBucketModificationInVolumeTracing } from "viewer/model/sagas/saga_helpers";
+import { runFloodFill } from "viewer/model/volumetracing/integration/flood_fill_driver";
 import { Model, Store } from "viewer/singletons";
 import {
   getSomeTracing,
   getUserBoundingBoxesThatContainPosition,
 } from "../../accessors/tracing_accessor";
-import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
 
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 const NO_SUCCESS_MSG_WHEN_WITHIN_MS = 500;
@@ -184,7 +184,6 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const { cube } = segmentationLayer;
   const seedPosition = Dimensions.roundCoordinate(positionFloat);
   const activeCellId = volumeTracing.activeCellId;
-  const dimensionIndices = Dimensions.getIndices(planeId);
   const requestedZoomStep = yield* select((state) =>
     getActiveMagIndexForLayer(state, segmentationLayer.name),
   );
@@ -258,66 +257,49 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     } else {
       Toast.close(NO_FLOODFILL_BBOX_TOAST_KEY);
     }
+    const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
       successMessageDelay: 2000,
     });
     yield* call(progressCallback, false, "Performing floodfill...");
-    console.time("cube.floodFill");
     const startTimeOfFloodfill = performance.now();
-    const fillMode = yield* select((state) => state.userConfiguration.fillMode);
 
-    const {
-      bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
-      wasBoundingBoxExceeded,
-      coveredBoundingBox,
-    } = yield* call(
-      { context: cube, fn: cube.floodFill },
-      seedPosition,
-      additionalCoordinates,
-      activeCellId,
-      dimensionIndices,
-      boundingBoxForFloodFill,
-      labeledZoomStep,
-      progressCallback,
-      fillMode === FillModeEnum._3D,
+    const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
+    // Floored, unlike brush's toMagVoxel: a flood-fill seed is used for direct
+    // array indexing (resolveFloodFill), so it must land exactly on a
+    // source-mag voxel. A mag1 position is only guaranteed to divide evenly
+    // by the mag factor when it happens to be mag-aligned (e.g. z=43 at
+    // mag-factor 2 is not), so this floor is required, not just tidiness.
+    const toSourceMagVoxel = (position: Vector3): Vector3 => [
+      Math.floor(position[0] / labeledMag[0]),
+      Math.floor(position[1] / labeledMag[1]),
+      Math.floor(position[2] / labeledMag[2]),
+    ];
+    // The bounds' max is exclusive (isInBoundingBox tests `< max`), so it has
+    // to round *up*: a source-mag voxel q covers mag1 [q*mag, (q+1)*mag), and
+    // the last voxel overlapping an unaligned max would be cut off by
+    // flooring. E.g. max=43 at mag-factor 2 must stay 22, not become 21.
+    const toExclusiveSourceMagBound = (position: Vector3): Vector3 => [
+      Math.ceil(position[0] / labeledMag[0]),
+      Math.ceil(position[1] / labeledMag[1]),
+      Math.ceil(position[2] / labeledMag[2]),
+    ];
+    const stats = yield* call(runFloodFill, {
+      cube,
+      denseMags: magInfo.getDenseMags(),
+      magIndex: labeledZoomStep,
+      segmentId: activeCellId,
+      additionalCoordinates: additionalCoordinates ?? null,
+      seed: toSourceMagVoxel(seedPosition),
+      is3D: fillMode === FillModeEnum._3D,
+      bounds: {
+        min: toSourceMagVoxel(boundingBoxForFloodFill.min),
+        max: toExclusiveSourceMagBound(boundingBoxForFloodFill.max),
+      },
       splitBoundaryMesh,
-    );
-    console.timeEnd("cube.floodFill");
-    yield* call(progressCallback, false, "Finalizing floodfill...");
-    const indexSet: Set<number> = new Set();
-
-    for (const labelMaskByIndex of labelMasksByBucketAndW.values()) {
-      for (const zIndex of labelMaskByIndex.keys()) {
-        indexSet.add(zIndex);
-      }
-    }
-
-    console.time("applyLabeledVoxelMapToAllMissingMags");
-
-    for (const indexZ of indexSet) {
-      const labeledVoxelMapFromFloodFill: LabeledVoxelsMap = new Map();
-
-      for (const [bucketAddress, labelMaskByIndex] of labelMasksByBucketAndW.entries()) {
-        const map = labelMaskByIndex.get(indexZ);
-
-        if (map != null) {
-          labeledVoxelMapFromFloodFill.set(bucketAddress, map);
-        }
-      }
-
-      applyLabeledVoxelMapToAllMissingMags(
-        labeledVoxelMapFromFloodFill,
-        labeledZoomStep,
-        dimensionIndices,
-        magInfo,
-        cube,
-        activeCellId,
-        indexZ,
-        true,
-      );
-    }
-
+    });
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
     yield* put(
       updateSegmentAction(
@@ -329,22 +311,20 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
         volumeTracing.tracingId,
       ),
     );
-
-    console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
-
     yield* call(
       notifyUserAboutResult,
-      wasBoundingBoxExceeded,
+      stats.wasBoundingBoxExceeded,
       startTimeOfFloodfill,
       progressCallback,
       fillMode,
-      coveredBoundingBox,
+      // Only read by notifyUserAboutResult when wasBoundingBoxExceeded is
+      // true, in which case coveredBoundingBox is never null (see
+      // FloodFillResult's doc comment) — the fallback here is unreachable.
+      stats.coveredBoundingBox ?? { min: [0, 0, 0], max: [0, 0, 0] },
       oldSegmentIdAtSeed,
       activeCellId,
       seedPosition,
     );
-
-    cube.triggerPushQueue();
   });
 
   if (floodFillAction.callback != null) {

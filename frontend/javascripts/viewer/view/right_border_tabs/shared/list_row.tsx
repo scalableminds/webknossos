@@ -50,6 +50,22 @@ export const ACTION_BUTTON_STYLE: React.CSSProperties = {
 };
 
 /*
+ * Marks the item that new work is added to: the active segment, the active skeleton. A
+ * real element rather than a pseudo-element, so that it can carry a tooltip - it is the
+ * only thing besides the bold name that says "active", and a colored bar explains nothing
+ * on its own. It is positioned against antd's row element (the nearest positioned
+ * ancestor, see the `position: static` on the content wrapper in _right_menu.less), so
+ * that it reaches the left edge of the panel whatever the indentation of the row is.
+ */
+export function RowAccent({ title }: { title: string }) {
+  return (
+    <FastTooltip title={title} asChild>
+      <span className="list-row__accent" />
+    </FastTooltip>
+  );
+}
+
+/*
  * The color of the segment or the skeleton the row stands for.
  */
 export function ColorDot({ colorRGBA, isExpanded }: { colorRGBA: Vector4; isExpanded?: boolean }) {

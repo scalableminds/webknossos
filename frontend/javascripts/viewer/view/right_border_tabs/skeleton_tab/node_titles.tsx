@@ -22,6 +22,7 @@ import {
   LIST_ROW_GAP,
   LIST_ROW_HEIGHT,
   MoreActionsButton,
+  RowAccent,
   RowTrailingSlot,
 } from "../shared/list_row";
 import { MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
@@ -78,14 +79,6 @@ export const TreeNodeTitle = memo(
     // The type claims metadata is always set, but e.g. proto-imported trees can lack it at runtime.
     const hasMetadata = (tree.metadata ?? []).length > 0;
 
-    // The truncated rows need the full name on hover; the expanded one shows it anyway. The
-    // active tree explains its accent bar here too, because the bar is a 2px
-    // pseudo-element and can carry neither a tooltip nor a usable hover target of its own.
-    const titleLines = [
-      isExpanded ? null : tree.name,
-      isActive ? "This is the active tree. New nodes are added to it." : null,
-    ].filter((line) => line != null);
-
     const extraIconStyle: React.CSSProperties = {
       flex: "none",
       marginTop: isExpanded ? centerOnFirstLine(EXTRA_ICON_SIZE) : undefined,
@@ -94,7 +87,6 @@ export const TreeNodeTitle = memo(
     return (
       <Flex
         className={classnames("list-row", {
-          "list-row--accented": isActive,
           "list-row--expanded": isExpanded,
         })}
         align={isExpanded ? "flex-start" : "center"}
@@ -108,6 +100,9 @@ export const TreeNodeTitle = memo(
         }}
         onContextMenu={(event) => onContextMenu(node, event)}
       >
+        {isActive ? (
+          <RowAccent title="This is the active skeleton. New nodes you place are added to it." />
+        ) : null}
         <ColorDot colorRGBA={[...tree.color, 1.0]} isExpanded={isExpanded} />
         <InlineEditableName
           displayedName={tree.name}
@@ -130,7 +125,7 @@ export const TreeNodeTitle = memo(
               : null),
           }}
           // The truncated rows need the full name on hover; the expanded one shows it anyway.
-          title={titleLines.length > 0 ? titleLines.join("\n\n") : undefined}
+          title={isExpanded ? undefined : tree.name}
           onStartEditing={() => onStartRenaming(node.key)}
           onCommit={(newName) => dispatch(setTreeNameAction(newName, tree.treeId))}
           onFinishEditing={onFinishRenaming}

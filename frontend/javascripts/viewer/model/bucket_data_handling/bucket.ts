@@ -115,8 +115,9 @@ export class DataBucket {
   dirtyCount: number = 0;
   pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
-  accessed: boolean;
-  previousAccessed: boolean;
+  // The bucket-picker tick during which this bucket was last marked as needed
+  // (see markAsNeeded and DataCube.currentBucketPickerTick).
+  lastNeededTick: number = -1;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
   cube: DataCube;
@@ -145,8 +146,6 @@ export class DataBucket {
     this.temporalBucketManager = temporalBucketManager;
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
-    this.accessed = false;
-    this.previousAccessed = false;
     this.data = null;
 
     if (this.cube.isSegmentation) {
@@ -198,9 +197,9 @@ export class DataBucket {
     ];
   }
 
-  mayBeGarbageCollected(respectAccessedFlag: boolean): boolean {
+  mayBeGarbageCollected(respectNeededFlag: boolean): boolean {
     const mayBeCollected =
-      (!respectAccessedFlag || !this.accessed) &&
+      (!respectNeededFlag || !this.isNeeded()) &&
       !this.dirty &&
       this.state !== BucketStateEnum.REQUESTED &&
       this.dirtyCount === 0;
@@ -411,24 +410,35 @@ export class DataBucket {
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
-    if (this.accessed) this.cube.triggerRenderedBucketDataChanged();
+    if (this.isNeeded()) this.cube.triggerRenderedBucketDataChanged();
+  }
+
+  isNeeded(): boolean {
+    /*
+     * Returns whether this bucket is important for the current bucket-picker tick.
+     * Needed buckets are protected from garbage collection and their values are considered
+     * to be part of the rendered data (see DataCube.getValueSetForAllNeededBuckets).
+     */
+    return this.lastNeededTick === this.cube.currentBucketPickerTick;
   }
 
   markAsNeeded(): void {
-    // Compare to the previous value, not the current one. This is because during rendering
-    // all buckets are marked as unneeded and then all needed buckets are marked as such afterwards.
-    // So to find out whether this bucket was actually unneeded before, the previous value is decisive.
-    if (!this.previousAccessed) this.cube.triggerRenderedBucketDataChanged();
-
-    this.previousAccessed = this.accessed;
-    this.accessed = true;
-  }
-
-  markAsUnneeded(): void {
-    if (this.previousAccessed) this.cube.triggerRenderedBucketDataChanged();
-
-    this.previousAccessed = this.accessed;
-    this.accessed = false;
+    /*
+     * Marks this bucket as important for the current tick. There are two reasons for a bucket
+     * to be important: the bucket picker selected it for rendering or somebody accessed its
+     * data (see getData). Both share the same state, since both mean that the bucket must not
+     * be collected and that its content is currently in use.
+     * Note that the mark is not cleared explicitly. Instead, it expires as soon as the cube
+     * moves on to the next bucket-picker tick.
+     */
+    const { currentBucketPickerTick, previousBucketPickerTick } = this.cube;
+    if (this.lastNeededTick === currentBucketPickerTick) {
+      // Already marked during this tick.
+      return;
+    }
+    const wasNeededInPreviousTick = this.lastNeededTick === previousBucketPickerTick;
+    this.lastNeededTick = currentBucketPickerTick;
+    this.cube.onBucketMarkedAsNeeded(wasNeededInPreviousTick);
   }
 
   getOrCreateData(): BucketDataArray {
@@ -686,7 +696,7 @@ export class DataBucket {
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
-        if (this.accessed) this.cube.triggerRenderedBucketDataChanged();
+        if (this.isNeeded()) this.cube.triggerRenderedBucketDataChanged();
         break;
       }
 

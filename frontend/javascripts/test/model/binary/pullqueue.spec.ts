@@ -68,6 +68,9 @@ describe("PullQueue", () => {
     const mockedCube = {
       isSegmentation: true,
       triggerRenderedBucketDataChanged: () => {},
+      currentBucketPickerTick: 0,
+      previousBucketPickerTick: 0,
+      onBucketMarkedAsNeeded: () => {},
       getBucket: vi.fn(),
       getOrCreateBucket: vi.fn(),
       boundingBox: {

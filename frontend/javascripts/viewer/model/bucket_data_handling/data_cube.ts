@@ -118,6 +118,21 @@ class DataCube {
   emitter: Emitter;
   lastRequestForValueSet: number | null = null;
   storePropertyUnsubscribers: Array<() => void> = [];
+  // The tick of the bucket-picking round whose results are currently in use. Buckets are
+  // marked as needed for a specific tick (see DataBucket.markAsNeeded). The ticks originate
+  // from LayerRenderingManager.currentBucketPickerTick and are adopted here as soon as the
+  // corresponding (asynchronous) picking round finished. Since rounds can be skipped when
+  // they are superseded, the ticks are not necessarily consecutive, which is why the
+  // previous tick is remembered explicitly instead of being derived.
+  currentBucketPickerTick: number = 0;
+  // Tick 0 is the implicit tick before the first picking round finished. Buckets can already
+  // be marked as needed during it (e.g. by getData), which is why it is a regular tick that
+  // the first real round compares against.
+  previousBucketPickerTick: number = 0;
+  private neededBucketCount: number = 0;
+  private neededBucketCountInPreviousTick: number = 0;
+  private didNeededBucketsChange: boolean = false;
+  private isBucketPickingInProgress: boolean = false;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -128,13 +143,11 @@ class DataCube {
   // If the array grows beyond 2 * BUCKET_COUNT_SOFT_LIMIT, the user is warned about
   // this.
   //
-  // Each bucket consists of an access-value, the zoomStep and the actual data.
-  // The access-values are used for garbage collection. When a bucket is accessed, its
-  // access-flag is set to true.
-  // When buckets have to be collected, an iterator will loop through the queue and the buckets at
-  // the beginning of the queue will be removed from the queue and the access-value will
-  // be decreased. If the access-value of a bucket becomes 0, it is no longer in the
-  // access-queue and is least recently used. It is then removed from the cube.
+  // Each bucket remembers the bucket-picker tick during which it was last needed (either
+  // because it was picked for rendering or because its data was accessed). This is used for
+  // garbage collection: when buckets have to be collected, an iterator loops through the
+  // array and collects the first bucket that is not needed for the current tick (and that
+  // is not dirty or being requested).
   constructor(
     layerBBox: BoundingBox,
     additionalAxes: AdditionalAxis[],
@@ -388,9 +401,49 @@ class DataCube {
     return bucket;
   }
 
-  markBucketsAsUnneeded(): void {
-    for (let i = 0; i < this.buckets.length; i++) {
-      this.buckets[i].markAsUnneeded();
+  startBucketPicking(tick: number): void {
+    /*
+     * Announces that the buckets of a finished bucket-picking round are about to be marked as
+     * needed. Note that the buckets of the previous round are not reset explicitly (which would
+     * mean iterating over all buckets of the cube). Instead, their marks simply expire because
+     * the current tick changes.
+     */
+    this.previousBucketPickerTick = this.currentBucketPickerTick;
+    this.currentBucketPickerTick = tick;
+    this.neededBucketCountInPreviousTick = this.neededBucketCount;
+    this.neededBucketCount = 0;
+    this.didNeededBucketsChange = false;
+    this.isBucketPickingInProgress = true;
+  }
+
+  finishBucketPicking(): void {
+    this.isBucketPickingInProgress = false;
+    // The set of needed buckets is unchanged if it has the same size as the previous one and
+    // if all of its members were already needed during the previous tick. Both sets only
+    // contain distinct buckets, which is why these two conditions are sufficient.
+    if (
+      this.didNeededBucketsChange ||
+      this.neededBucketCount !== this.neededBucketCountInPreviousTick
+    ) {
+      this.triggerRenderedBucketDataChanged();
+    }
+  }
+
+  onBucketMarkedAsNeeded(wasNeededInPreviousTick: boolean): void {
+    // Only called by DataBucket.markAsNeeded and only for buckets that were not already
+    // marked during the current tick.
+    this.neededBucketCount++;
+    if (wasNeededInPreviousTick) {
+      return;
+    }
+    if (this.isBucketPickingInProgress) {
+      // Don't emit for each individual bucket. Instead, finishBucketPicking emits once for
+      // the entire round.
+      this.didNeededBucketsChange = true;
+    } else {
+      // The bucket became relevant outside of a picking round (e.g. because getData was called
+      // for it while hovering). No finishBucketPicking will follow, so emit right away.
+      this.triggerRenderedBucketDataChanged();
     }
   }
 
@@ -403,8 +456,8 @@ class DataCube {
 
         if (
           this.buckets[this.bucketIterator].mayBeGarbageCollected(
-            // respectAccessedFlag=true because we don't want to GC buckets
-            // that were used for rendering.
+            // respectNeededFlag=true because we don't want to GC buckets
+            // that are needed for the current tick.
             true,
           )
         ) {
@@ -479,7 +532,7 @@ class DataCube {
         // collecting unsaved buckets (that should never occur, though, because of the saved state
         // as explained above).
         bucket.mayBeGarbageCollected(
-          // respectAccessedFlag=false because we don't care whether the bucket
+          // respectNeededFlag=false because we don't care whether the bucket
           // was just used for rendering, as we reload data anyway.
           false,
         )
@@ -504,14 +557,14 @@ class DataCube {
     return Date.now() - (this.lastRequestForValueSet || 0) < 2 * 60 * 1000;
   }
 
-  getValueSetForAllAccessedBuckets(): Set<number> | Set<bigint> {
+  getValueSetForAllNeededBuckets(): Set<number> | Set<bigint> {
     this.lastRequestForValueSet = Date.now();
 
     // Theoretically, we could ignore coarser buckets for which we know that
     // finer buckets are already loaded. However, the current performance
     // is acceptable which is why this optimization isn't implemented.
     const valueSets = this.buckets
-      .filter((bucket) => bucket.state === "LOADED" && bucket.accessed)
+      .filter((bucket) => bucket.state === "LOADED" && bucket.isNeeded())
       .map((bucket) => bucket.getValueSet());
     // @ts-expect-error The buckets of a single layer all have the same element class, so they are all number or all bigint
     const valueSet = union(valueSets);

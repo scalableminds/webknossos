@@ -26,6 +26,11 @@ case class ListMeshChunksRequest(
     annotationVersion: Option[Long]
 ) derives JsonAutoFormat
 
+case class ListMeshChunksForSegmentsRequest(
+    meshFileName: String,
+    segmentIds: Seq[UnsignedLong]
+) derives JsonAutoFormat
+
 case class MeshChunkDataRequest(
     byteOffset: Long,
     byteSize: Int,
@@ -139,17 +144,26 @@ class MeshFileService @Inject() (
       case _ => Fox.successful(0)
     }
 
-  def listMeshChunksForSegmentsMerged(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(using
+  // If failOnZeroChunks is false, segments without a mesh are skipped, even if this applies to all of them.
+  def listMeshChunksForSegmentsMerged(
+      meshFileKey: MeshFileKey,
+      segmentIds: Seq[Long],
+      failOnZeroChunks: Boolean = true
+  )(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[WebknossosSegmentInfo] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
-        zarrMeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
+        zarrMeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds, failOnZeroChunks)
       case LayerAttachmentDataformat.hdf5 =>
-        hdf5MeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
+        hdf5MeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds, failOnZeroChunks)
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
-        neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
+        neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(
+          meshFileKey,
+          segmentIds,
+          failOnZeroChunks
+        )
       case _ => unsupportedDataFormat(meshFileKey)
     }
 

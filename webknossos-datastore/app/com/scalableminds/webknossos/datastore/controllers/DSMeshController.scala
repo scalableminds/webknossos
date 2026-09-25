@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.mesh.{
   DSFullMeshService,
   FullMeshRequest,
+  ListMeshChunksForSegmentsRequest,
   ListMeshChunksRequest,
   MeshChunkDataRequestList,
   MeshFileService,
@@ -70,7 +71,27 @@ class DSMeshController @Inject() (
             omitMissing = false
           )
           chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds)
-        } yield Ok(Json.toJson(chunkInfos))
+        } yield Ok(Json.toJson(chunkInfos.withSegmentIdsWithoutMesh(segmentIds)))
+      }
+    }
+
+  /* Lists the mesh chunks of several unmapped segment ids at once. Unlike listMeshChunksForSegment, segments
+     without a mesh don't make the request fail. They are listed in segmentIdsWithoutMesh instead.
+     Used by the frontend to complete an agglomerate's mesh from segments it hasn't loaded yet.
+   */
+  def listMeshChunksForSegments(datasetId: ObjectId, dataLayerName: String): Action[ListMeshChunksForSegmentsRequest] =
+    Action.fox(validateJson[ListMeshChunksForSegmentsRequest]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+        for {
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
+          meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, request.body.meshFileName)
+          segmentIds = request.body.segmentIds.map(_.toLong)
+          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(
+            meshFileKey,
+            segmentIds,
+            failOnZeroChunks = false
+          )
+        } yield Ok(Json.toJson(chunkInfos.withSegmentIdsWithoutMesh(segmentIds)))
       }
     }
 

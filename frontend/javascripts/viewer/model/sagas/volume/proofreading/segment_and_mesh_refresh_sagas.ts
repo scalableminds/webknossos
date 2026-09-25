@@ -25,7 +25,7 @@ import { Store } from "viewer/singletons";
 import type { OperationContext } from "../../operation_context_saga";
 import { spawnUntilCanceled } from "../../saga_helpers";
 import { syncWithBackend } from "./backend_sync_helper_sagas";
-import type { IdInfo, IdInfoOpt } from "./proofreading_types";
+import type { AgglomerateChangeItem, PreservedMeshDisplayProps } from "./proofreading_types";
 
 function proofreadCoarseMagIndex(): number {
   // @ts-expect-error
@@ -126,47 +126,72 @@ function* loadCoarseMesh(
   }
 }
 
+/*
+ * Shared tail of all proofreading handlers: updates the segment items of the affected agglomerate
+ * ids, syncs with the back-end and refreshes the affected meshes. The refresh is a normal mesh
+ * reload. Its chunks mostly come from the browser-side cache in mesh_chunk_provider.ts, so a reload
+ * after a merge or split needs only few requests. The refreshInfos are built by each caller, as
+ * their shape differs per operation.
+ */
 export function* refreshProofreadingSegmentsAndMeshes(
   volumeTracingId: string,
-  sourceInfo: IdInfo,
-  targetInfo: IdInfoOpt,
-  sourceAgglomerateId: bigint,
-  targetAgglomerateId: bigint,
+  refreshInfos: AgglomerateChangeItem[],
   ctx: OperationContext,
 ): Saga<void> {
-  /* Ensure segment items exist for affected segments and reload affected meshes */
-  const refreshInfos = [
-    {
-      oldAgglomerateId: sourceInfo.agglomerateId,
-      newAgglomerateId: sourceAgglomerateId,
-      nodePosition: sourceInfo.position,
-    },
-    {
-      oldAgglomerateId: targetInfo.agglomerateId,
-      newAgglomerateId: targetAgglomerateId,
-      nodePosition:
-        // targetInfo.position can only be undefined in case of
-        // a merge (see idInfos.type). In that case,
-        // this element was merged into another element.
-        // Therefore, sourceInfo.position is a valid replacement.
-        targetInfo.position ?? sourceInfo.position,
-    },
-  ];
+  // Segmentations with more than 3 dimensions are currently not compatible
+  // with proofreading. Once such datasets appear, this parameter needs to be
+  // adapted.
+  const additionalCoordinates = undefined;
+  const oldAgglomerateIds = refreshInfos
+    .map((item) => item.oldAgglomerateId)
+    .filter((id) => id != null);
+  // Both must be read before the segment items are updated, because removing an outdated segment
+  // item also removes its mesh.
+  const shouldRefreshMeshes = yield* call(
+    shouldReloadMeshesAfterProofreadAction,
+    volumeTracingId,
+    oldAgglomerateIds,
+  );
+  const displayPropsByOldAgglomerateId = yield* call(
+    getMeshDisplayPropsByOldAgglomerateId,
+    volumeTracingId,
+    oldAgglomerateIds,
+    additionalCoordinates,
+  );
+
   yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
+  // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
   yield* call(syncWithBackend, ctx);
 
-  // Refreshing the meshes might take a while and won't block the saga here.
-  yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
+  if (shouldRefreshMeshes) {
+    // Refreshing the meshes might take a while and won't block the saga here.
+    yield* spawnUntilCanceled(
+      refreshAffectedMeshes,
+      volumeTracingId,
+      withDisplayPropsOfOldMeshes(refreshInfos, displayPropsByOldAgglomerateId),
+    );
+  }
 }
 
-export function* refreshAffectedSegmentItems(
-  layerName: string,
-  items: Array<{
-    oldAgglomerateId?: bigint;
-    newAgglomerateId: bigint;
-    nodePosition: Vector3;
-  }>,
-) {
+// Explicitly passed opacity and visibility take precedence over the ones of the old mesh.
+function withDisplayPropsOfOldMeshes(
+  items: AgglomerateChangeItem[],
+  displayPropsByOldAgglomerateId: Map<bigint, PreservedMeshDisplayProps>,
+): AgglomerateChangeItem[] {
+  return items.map((item) => {
+    const oldDisplayProps =
+      item.oldAgglomerateId != null
+        ? displayPropsByOldAgglomerateId.get(item.oldAgglomerateId)
+        : undefined;
+    return {
+      ...item,
+      opacity: item.opacity ?? oldDisplayProps?.opacity,
+      isVisible: item.isVisible ?? oldDisplayProps?.isVisible,
+    };
+  });
+}
+
+function* refreshAffectedSegmentItems(layerName: string, items: AgglomerateChangeItem[]) {
   // Segmentations with more than 3 dimensions are currently not compatible
   // with proofreading. Once such datasets appear, this parameter needs to be
   // adapted.
@@ -194,7 +219,7 @@ export function* refreshAffectedSegmentItems(
   yield* all(ensureSegmentItemEffects);
 }
 
-export function* shouldReloadMeshesAfterProofreadAction(
+function* shouldReloadMeshesAfterProofreadAction(
   layerName: string,
   oldAgglomerateIds: bigint[],
 ): Saga<boolean> {
@@ -209,12 +234,6 @@ export function* shouldReloadMeshesAfterProofreadAction(
   );
   return hasAnyInvolvedMeshLoaded;
 }
-
-// Display properties of a mesh that should survive a reload.
-export type PreservedMeshDisplayProps = {
-  opacity?: number;
-  isVisible?: boolean;
-};
 
 // Capture the current opacity and visibility of the given old agglomerates' meshes, keyed by
 // agglomerate id, so that reloaded meshes can keep the user-chosen opacity and visibility.
@@ -249,37 +268,7 @@ export function* getMeshDisplayPropsByOldAgglomerateId(
   });
 }
 
-export function* maybeRefreshAffectedMeshes(
-  layerName: string,
-  items: Array<{
-    oldAgglomerateId?: bigint;
-    newAgglomerateId: bigint;
-    nodePosition: Vector3;
-    opacity?: number; // see refreshAffectedMeshes below.
-  }>,
-) {
-  const shouldDoMeshRefreshing = yield* call(shouldReloadMeshesAfterProofreadAction, layerName, [
-    ...items.map((i) => i.oldAgglomerateId).filter((id) => id != null),
-  ]);
-  if (shouldDoMeshRefreshing) {
-    // Refreshing the meshes might take a while and won't block the saga
-    // here.
-    yield* spawnUntilCanceled(refreshAffectedMeshes, layerName, items);
-  }
-}
-
-export function* refreshAffectedMeshes(
-  layerName: string,
-  items: Array<{
-    oldAgglomerateId?: bigint;
-    newAgglomerateId: bigint;
-    nodePosition: Vector3;
-    // Opacity and visibility to apply to the reloaded mesh. If unset, the values of the old
-    // mesh (oldAgglomerateId) are used before its removal (see below).
-    opacity?: number;
-    isVisible?: boolean;
-  }>,
-) {
+export function* refreshAffectedMeshes(layerName: string, items: AgglomerateChangeItem[]) {
   // ATTENTION: This saga should usually be called with `spawnUntilCanceled` to avoid that the user
   // is blocked (via takeEveryUnlessBusy) while the meshes are refreshed.
 

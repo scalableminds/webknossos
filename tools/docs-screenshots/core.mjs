@@ -37,7 +37,7 @@ export async function writeReport(output, report) {
   const cards = report.results
     .map(
       (entry) =>
-        `<article><h2>${escapeHtml(entry.id)}</h2><p>${escapeHtml(entry.output)} — ${escapeHtml(entry.status)}</p>${entry.status === "success" ? `<div class="pair"><figure><figcaption>Before</figcaption><img src="old/${escapeHtml(entry.output)}"></figure><figure><figcaption>After</figcaption><img src="new/${escapeHtml(entry.output)}"></figure></div>` : `<pre>${escapeHtml(entry.error)}</pre>${entry.failureImage ? `<a href="${escapeHtml(entry.failureImage)}">Failed page screenshot</a>` : ""}<details><summary>Diagnostics</summary><pre>${escapeHtml(JSON.stringify({ details: entry.details, browserErrors: entry.browserErrors, consoleErrors: entry.consoleErrors, requestErrors: entry.requestErrors }, null, 2))}</pre></details>`}</article>`,
+        `<article><h2>${escapeHtml(entry.id)}</h2><p>${escapeHtml(entry.output)} — ${escapeHtml(entry.status)}</p>${entry.status === "success" ? `<div class="pair"><figure><figcaption>Before</figcaption><img src="old/${escapeHtml(entry.output)}"></figure><figure><figcaption>After</figcaption><img src="new/${escapeHtml(entry.output)}"></figure></div>` : `<pre>${escapeHtml(entry.error)}</pre>${entry.failureImage ? `<a href="${escapeHtml(entry.failureImage)}">Failed page screenshot</a>` : ""}${entry.trace ? `<p><a href="${escapeHtml(entry.trace)}">Playwright trace</a></p>` : ""}<details><summary>Diagnostics</summary><pre>${escapeHtml(JSON.stringify({ details: entry.details, browserErrors: entry.browserErrors, consoleErrors: entry.consoleErrors, requestErrors: entry.requestErrors }, null, 2))}</pre></details>`}</article>`,
     )
     .join("\n");
   await fs.writeFile(

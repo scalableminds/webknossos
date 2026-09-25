@@ -2,8 +2,15 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import http from "node:http";
 import test from "node:test";
-import puppeteer from "puppeteer-core";
-import { authenticateLocalPage } from "./browser.mjs";
+import { chromium } from "playwright-core";
+import {
+  authenticateLocalPage,
+  captureContextOptions,
+  captureScreenshot,
+  clickText,
+  contextualClip,
+  waitForViewer,
+} from "./browser.mjs";
 
 test("scoped authentication leaves worker data fetches running and supports anonymous pages", {
   skip: !process.env.DOCS_SCREENSHOTS_BROWSER_TEST,
@@ -27,8 +34,12 @@ test("scoped authentication leaves worker data fetches running and supports anon
   const origin = `http://127.0.0.1:${server.address().port}`;
   let browser;
   try {
-    browser = await puppeteer.launch({ channel: "chrome", headless: true });
-    const page = await browser.newPage();
+    browser = await chromium.launch({ channel: "chrome", headless: true });
+    const page = await browser.newPage(captureContextOptions());
+    assert.deepEqual(
+      await page.evaluate(() => [screen.width, innerWidth, navigator.maxTouchPoints]),
+      [1600, 1600, 0],
+    );
     let authenticated = true;
     await authenticateLocalPage(page, origin, "test-token", () => authenticated);
     await page.goto(origin);
@@ -49,12 +60,82 @@ test("scoped authentication leaves worker data fetches running and supports anon
     assert.equal(observed.find((r) => r.url === "/").token, "test-token");
     assert.equal(observed.find((r) => r.url === "/api/user").token, "test-token");
     assert.equal(observed.find((r) => r.url === "/data/bucket").token, undefined);
+    await page.setContent(
+      `<button hidden>Download</button><button onclick="document.querySelector('[role=dialog]').hidden=false">Download</button><div role="dialog" hidden class="ant-modal-container"><h2>Download annotation</h2></div>`,
+    );
+    await clickText(page, "Download");
+    const dialog = page.getByRole("dialog");
+    await dialog.waitFor({ state: "visible" });
+    assert.ok((await dialog.screenshot()).length > 0);
+    await page.setContent(
+      '<div id="scene" style="position:absolute;left:100px;top:100px;width:600px;height:400px;background:#ccc"><button id="target" style="position:absolute;left:200px;top:150px;width:100px;height:40px">Feature</button></div>',
+    );
+    const contextual = await captureScreenshot(
+      page,
+      { target: "#target", context: "#scene", padding: 48 },
+      { output: "docs/images/context.png" },
+    );
+    assert.equal(contextual.readUInt32BE(16), 696);
+    assert.equal(contextual.readUInt32BE(20), 496);
+    await page.evaluate(() => {
+      const bar = document.createElement("div");
+      bar.className = "floating-buttons-bar";
+      bar.textContent = "Mobile controls";
+      document.body.append(bar);
+    });
+    await assert.rejects(
+      captureScreenshot(page, undefined, { output: "docs/images/context.png" }),
+      /floating-buttons-bar/,
+    );
+    assert.ok(
+      (
+        await captureScreenshot(page, undefined, {
+          output: "docs/images/mobile.png",
+          mobileControls: true,
+        })
+      ).length > 0,
+    );
+    await page.setContent(
+      '<div role="dialog" style="position:absolute;top:100px;left:100px;width:500px;height:1200px;background:#ccc">Tall dialog</div>',
+    );
+    const tallDialog = await captureScreenshot(page, page.getByRole("dialog"), {
+      output: "docs/images/dialog.png",
+      padding: 64,
+    });
+    assert.equal(tallDialog.readUInt32BE(20), 1328);
     authenticated = false;
     await page.goto(`${origin}/anonymous`);
     assert.equal(observed.find((r) => r.url === "/anonymous").token, undefined);
+    await page.evaluate(() => {
+      window.webknossos = {
+        apiReady: () => {
+          setTimeout(() => {
+            const error = document.createElement("div");
+            error.className = "initialization-error-message";
+            error.textContent = "Annotation cannot be initialized";
+            document.body.append(error);
+          }, 50);
+          return new Promise(() => {});
+        },
+      };
+    });
+    await assert.rejects(waitForViewer(page), /Annotation cannot be initialized/);
   } finally {
     await browser?.close();
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+test("contextual crops retain surroundings and clamp to the viewport", () => {
+  assert.deepEqual(
+    contextualClip([{ x: 10, y: 20, width: 40, height: 30 }], { width: 100, height: 80 }),
+    { x: 0, y: 0, width: 98, height: 80 },
+  );
+  assert.throws(() => contextualClip([null], { width: 100, height: 100 }), /not visible/);
+  assert.throws(
+    () =>
+      contextualClip([{ x: 200, y: 200, width: 10, height: 10 }], { width: 100, height: 100 }, 0),
+    /outside/,
+  );
 });

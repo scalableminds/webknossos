@@ -3,9 +3,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import puppeteer from "puppeteer-core";
+import { chromium } from "playwright-core";
 import { recipes as adminRecipes } from "./admin.mjs";
-import { authenticateLocalPage } from "./browser.mjs";
+import {
+  authenticateLocalPage,
+  captureContextOptions,
+  captureScreenshot,
+  clickText,
+  waitForViewer,
+} from "./browser.mjs";
 import { applyReport, digest, imagePath, writeReport } from "./core.mjs";
 import { checkCoverage } from "./inventory.mjs";
 import { recipes as viewerRecipes } from "./viewer.mjs";
@@ -110,10 +116,10 @@ async function run() {
     throw new Error("Review output must be outside docs/.");
   await fs.mkdir(output, { recursive: true });
   const browser = values["browser-url"]
-    ? await puppeteer.connect({ browserURL: values["browser-url"] })
-    : await puppeteer.launch({
-        ...(values.executable || process.env.PUPPETEER_EXECUTABLE_PATH
-          ? { executablePath: values.executable || process.env.PUPPETEER_EXECUTABLE_PATH }
+    ? await chromium.connectOverCDP(values["browser-url"])
+    : await chromium.launch({
+        ...(values.executable || process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+          ? { executablePath: values.executable || process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
           : { channel: "chrome" }),
         headless: !values.headed,
         args: ["--lang=en-US", "--window-size=1600,1000"],
@@ -128,7 +134,8 @@ async function run() {
   try {
     for (const recipe of selected) {
       console.log(`Capturing ${recipe.id}`);
-      const context = await browser.createBrowserContext();
+      const context = await browser.newContext(captureContextOptions(recipe));
+      await context.tracing.start({ screenshots: true, snapshots: true });
       const page = await context.newPage();
       const entry = { id: recipe.id, output: recipe.output };
       const temporaryAnnotations = [];
@@ -139,17 +146,21 @@ async function run() {
         if (message.type() === "error" && consoleErrors.length < 20)
           consoleErrors.push(message.text().replaceAll(token || "__no_token__", "[redacted]"));
       });
-      page.on("requestfailed", (request) =>
-        requestErrors.push(`${request.url().split("?")[0]}: ${request.failure()?.errorText}`),
+      page.on(
+        "requestfailed",
+        (request) =>
+          requestErrors.length < 20 &&
+          requestErrors.push(`${request.url().split("?")[0]}: ${request.failure()?.errorText}`),
       );
-      page.on("response", (response) => {
+      page.on("response", async (response) => {
+        const headers = await response.allHeaders().catch(() => ({}));
         if (
-          response.headers()["failure-bucket-indices"] &&
-          response.headers()["failure-bucket-indices"] !== "[]" &&
+          headers["failure-bucket-indices"] &&
+          headers["failure-bucket-indices"] !== "[]" &&
           requestErrors.length < 20
         )
           requestErrors.push(
-            `${response.url().split("?")[0]}: unreadable buckets ${response.headers()["failure-bucket-indices"]}`,
+            `${response.url().split("?")[0]}: unreadable buckets ${headers["failure-bucket-indices"]}`,
           );
         if (response.status() >= 400 && requestErrors.length < 20)
           requestErrors.push(`${response.url().split("?")[0]}: HTTP ${response.status()}`);
@@ -158,9 +169,6 @@ async function run() {
       try {
         page.setDefaultTimeout(30000);
         page.setDefaultNavigationTimeout(60000);
-        await page.setViewport({ width: 1600, height: 1000, deviceScaleFactor: 1 });
-        await page.emulateTimezone("UTC");
-        await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
         let authenticate = true;
         await authenticateLocalPage(page, baseUrl, token, () => authenticate);
         const ctx = {
@@ -170,54 +178,13 @@ async function run() {
           fixtures,
           async anonymous() {
             authenticate = false;
-            await context.deleteCookie(...(await context.cookies()));
+            await context.clearCookies();
           },
-          async clickText(text, { exact = true } = {}) {
-            const handle = await page.waitForFunction(
-              (text, exact) =>
-                Array.from(
-                  document.querySelectorAll("button,a,[role=tab],[role=menuitem],label,span"),
-                ).find((element) => {
-                  const content = element.textContent?.trim();
-                  return (
-                    element.getClientRects().length &&
-                    (exact ? content === text : content?.includes(text))
-                  );
-                }),
-              {},
-              text,
-              exact,
-            );
-            const element = handle.asElement();
-            if (!element) throw new Error(`Cannot click ${text}`);
-            await element.click();
-            await handle.dispose();
-          },
-          async waitForViewer() {
-            await page.waitForFunction(() => {
-              const error = document.querySelector(".initialization-error-message");
-              if (error) throw new Error(`Viewer initialization failed: ${error.textContent}`);
-              return !!window.webknossos?.apiReady;
-            });
-            await page.evaluate(async () => {
-              await Promise.race([
-                window.webknossos.apiReady(),
-                new Promise((_, reject) =>
-                  setTimeout(() => reject(new Error("Viewer API initialization timed out")), 60000),
-                ),
-              ]);
-            });
-            await page.waitForSelector(".inputcatcher", { visible: true });
-            await page.evaluate(async () => {
-              await new Promise((resolve) =>
-                requestAnimationFrame(() => requestAnimationFrame(resolve)),
-              );
-              await window.webknossos.DEV.waitForCompletedDataLoading(60000, 1000);
-            });
-          },
+          clickText: (text, options) => clickText(page, text, options),
+          waitForViewer: () => waitForViewer(page),
           async openViewer({ mode = "view", hash = {}, persist = false } = {}) {
             let route = `/datasets/${dataset.id}/${mode === "view" ? "view" : `sandbox/${mode}`}`;
-            if (persist || mode === "hybrid" || mode === "volume") {
+            if (persist || mode !== "view") {
               if (!token)
                 throw new Error("WK_AUTH_TOKEN is required for temporary annotation screenshots.");
               const layers = [];
@@ -258,23 +225,13 @@ async function run() {
             await (await window.webknossos.apiReady()).tracing.save();
           });
         }
-        await page.addStyleTag({
-          content:
-            "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}",
-        });
         await page.evaluate(async () => {
           await document.fonts.ready;
         });
-        if (await page.$(".initialization-error-message"))
+        if (await page.locator(".initialization-error-message").count())
           throw new Error("Viewer initialization failed.");
         if (browserErrors.length) throw new Error(`Browser error: ${browserErrors.join("; ")}`);
-        const target = selector ? await page.waitForSelector(selector, { visible: true }) : page;
-        const image = Buffer.from(
-          await target.screenshot({
-            type: /\.jpe?g$/i.test(recipe.output) ? "jpeg" : "png",
-            captureBeyondViewport: false,
-          }),
-        );
+        const image = Buffer.from(await captureScreenshot(page, selector, recipe));
         const old = await fs.readFile(imagePath(root, recipe.output));
         for (const [folder, bytes] of [
           ["old", old],
@@ -327,6 +284,11 @@ async function run() {
         });
         console.error(`${recipe.id}: ${error.message}`);
       } finally {
+        const trace = `trace-${encodeURIComponent(recipe.id)}.zip`;
+        await context.tracing
+          .stop(entry.status === "failed" ? { path: path.join(output, trace) } : {})
+          .catch(() => {});
+        if (entry.status === "failed") entry.trace = trace;
         await context.close();
         for (const id of temporaryAnnotations) {
           try {
@@ -341,9 +303,11 @@ async function run() {
       await writeReport(output, report);
     }
   } finally {
-    if (values["browser-url"]) browser.disconnect();
-    else await browser.close();
+    await browser.close();
   }
+  console.log(
+    `${report.results.filter((entry) => entry.status === "success").length} succeeded; ${report.results.filter((entry) => entry.status === "failed").length} failed.`,
+  );
   console.log(`Review: ${path.join(output, "index.html")}`);
   if (report.results.some((entry) => entry.status === "failed")) process.exitCode = 1;
 }

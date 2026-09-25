@@ -2,12 +2,13 @@
 // fails the recipe rather than silently replacing a documentation image with the wrong view.
 const tooltip = (prefix) => `[data-tooltip-content^=${JSON.stringify(prefix)}]`;
 const toolButton = (tool) => `.action-bar label:has(input[value="${tool}"])`;
-const modal = '.ant-modal-wrap:not([style*="display: none"]) .ant-modal-content';
+const modal = '[role="dialog"]:visible';
 const dropdown = ".ant-dropdown:not(.ant-dropdown-hidden)";
 
 async function show(ctx, selector) {
-  await ctx.page.waitForSelector(selector, { visible: true });
-  return selector;
+  const locator = typeof selector === "string" ? ctx.page.locator(selector) : selector;
+  await locator.waitFor({ state: "visible" });
+  return locator;
 }
 
 async function scene(ctx, mode = "hybrid", skeleton = false, persist = false) {
@@ -68,27 +69,38 @@ async function selectTool(ctx, tool) {
 }
 
 async function tab(ctx, title, selector) {
-  await ctx.clickText(title, { exact: true });
+  await ctx.page
+    .locator(".flexlayout__tab_button > .flexlayout__tab_button_content")
+    .filter({ hasText: new RegExp(`^${title}$`) })
+    .click();
   return show(ctx, selector);
 }
 
 async function menu(ctx, item) {
-  await ctx.clickText("Menu", { exact: true });
+  await ctx.page
+    .locator(".action-bar button")
+    .filter({ hasText: /^Menu$/ })
+    .click();
   await show(ctx, dropdown);
   if (item) {
-    await ctx.clickText(item, { exact: true });
+    await ctx.page
+      .locator(dropdown)
+      .getByRole("menuitem")
+      .filter({ hasText: new RegExp(`^${item}$`) })
+      .click();
     return show(ctx, modal);
   }
-  return dropdown;
+  return {
+    target: ctx.page.locator(dropdown),
+    context: ctx.page.locator(".action-bar"),
+    padding: 48,
+  };
 }
 
 async function contextMenu(ctx) {
-  const viewport = await ctx.page.waitForSelector("#screenshot_target_inputcatcher_PLANE_XY", {
-    visible: true,
-  });
-  const box = await viewport.boundingBox();
-  await ctx.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: "right" });
-  return show(ctx, ".node-context-menu");
+  const viewport = ctx.page.locator("#screenshot_target_inputcatcher_PLANE_XY");
+  await viewport.click({ button: "right" });
+  return { target: await show(ctx, ".node-context-menu"), context: viewport, padding: 48 };
 }
 
 async function meshes(ctx) {
@@ -135,6 +147,7 @@ async function meshes(ctx) {
         .flatMap((group) => Object.values(group || {}));
       return all.length > 0 && all.every((mesh) => !mesh.isLoading);
     },
+    undefined,
     { timeout: 120000 },
   );
   await ctx.page.evaluate(async () => {
@@ -178,8 +191,12 @@ for (const name of ["skeleton_tree_list.png", "tracing_ui_tree_visibility.jpeg"]
 add("shuffle_tree_colors.png", async (ctx) => {
   await scene(ctx, "skeleton", true);
   await tab(ctx, "Skeleton", "#tree-list");
-  await ctx.page.click(`#tree-list ${tooltip("More actions")}`);
-  return show(ctx, dropdown);
+  await ctx.page.locator(`#tree-list ${tooltip("More actions")}`).click();
+  return {
+    target: await show(ctx, dropdown),
+    context: ctx.page.locator("#tree-list"),
+    padding: 48,
+  };
 });
 for (const name of ["context_menu.png", "context_menu.jpeg", "skeleton_context_menu.png"]) {
   add(name, async (ctx) => {
@@ -198,7 +215,12 @@ add("mesh_3D_viewport.jpeg", async (ctx) => {
 for (const name of ["segments_tab.jpeg", "segments_tab2.jpeg"]) {
   add(name, async (ctx) => {
     await meshes(ctx);
-    return tab(ctx, "Segments", "#segment-list");
+    const segmentList = await tab(ctx, "Segments", "#segment-list");
+    if (name === "segments_tab.jpeg") {
+      await segmentList.locator(tooltip("Configure mesh computation")).click();
+      return { target: await show(ctx, ".ant-popover:visible"), context: segmentList, padding: 48 };
+    }
+    return segmentList;
   });
 }
 add("datalayers.jpeg", async (ctx) => {
@@ -234,40 +256,52 @@ for (const [name, label] of [
   add(name, async (ctx) => {
     await scene(ctx, "skeleton", true, true);
     await menu(ctx, "Share");
-    await ctx.page.evaluate((label) => {
-      const rows = Array.from(document.querySelectorAll(".ant-modal-body .ant-row"));
-      const row = rows.find((row) => row.textContent.includes(label));
-      if (!row) throw new Error(`Sharing control missing: ${label}`);
-      row.dataset.docsCapture = "sharing-section";
-    }, label);
-    return show(ctx, '[data-docs-capture="sharing-section"]');
+    return show(
+      ctx,
+      ctx.page
+        .locator(modal)
+        .locator(".ant-row")
+        .filter({
+          has: ctx.page.getByText(label, { exact: true }),
+        }),
+    );
   });
 }
 add("tracing_ui_import.jpeg", async (ctx) => {
   await scene(ctx, "skeleton", true);
   await tab(ctx, "Skeleton", "#tree-list");
-  await ctx.page.click(`#tree-list ${tooltip("More actions")}`);
+  await ctx.page.locator(`#tree-list ${tooltip("More actions")}`).click();
   await ctx.clickText("Import NML", { exact: true });
   return show(ctx, modal);
 });
 add("view_modes.png", async (ctx) => {
   await scene(ctx, "skeleton");
-  await ctx.page.hover('.action-bar button:has([aria-label="appstore"])');
-  return show(ctx, dropdown);
+  await ctx.page.locator(".action-bar button:has(.anticon-sync)").hover();
+  return {
+    target: await show(ctx, ".ant-popover:visible"),
+    context: ctx.page.locator(".action-bar"),
+    padding: 48,
+  };
 });
 for (const name of ["tracing_ui_flightmode.jpeg", "screenshot_flight_mode.png"]) {
   add(name, async (ctx) => {
     await scene(ctx, "skeleton", true);
-    await ctx.page.hover('.action-bar button:has([aria-label="appstore"])');
-    await ctx.clickText("Flight", { exact: true });
+    await ctx.page.locator(".action-bar button:has(.anticon-sync)").hover();
+    await ctx.page.locator(".ant-popover:visible").getByRole("switch").click();
+    await ctx.page.mouse.move(0, 0);
+    await ctx.page.locator(".ant-popover:visible").waitFor({ state: "hidden" });
     await ctx.waitForViewer();
   });
 }
 add("toolkit_dropdown.jpg", async (ctx) => {
   await scene(ctx);
-  // Toolkit is the only dropdown-trigger button wrapped in an antd badge.
-  await ctx.page.hover(".action-bar .ant-badge > button.ant-dropdown-trigger");
-  return show(ctx, dropdown);
+  // Ant Design attaches the dropdown trigger to the badge, not its button.
+  await ctx.page.locator(".action-bar .ant-badge.ant-dropdown-trigger").hover();
+  return {
+    target: await show(ctx, dropdown),
+    context: ctx.page.locator(".action-bar"),
+    padding: 48,
+  };
 });
 
 for (const [name, tool] of Object.entries({
@@ -327,7 +361,11 @@ for (const [name, tool, text] of [
     recipe(`docs/volume_annotation/images/${name}.jpg`, async (ctx) => {
       await scene(ctx);
       await selectTool(ctx, tool);
-      return show(ctx, tooltip(text));
+      // This inline tooltip wrapper has zero height; capture the actual button.
+      return show(
+        ctx,
+        name === "icon_restricted_floodfill" ? `${tooltip(text)} > button` : tooltip(text),
+      );
     }),
   );
 }
@@ -402,11 +440,11 @@ for (const output of curatedScenes) {
       }, ctx.dataset.id);
       for (const selector of fixture.hoverSelectors ?? []) {
         await show(ctx, selector);
-        await ctx.page.hover(selector);
+        await ctx.page.locator(selector).hover();
       }
       for (const selector of fixture.clickSelectors ?? []) {
         await show(ctx, selector);
-        await ctx.page.click(selector);
+        await ctx.page.locator(selector).click();
       }
       for (const text of fixture.clickTexts ?? []) await ctx.clickText(text, { exact: true });
       await ctx.waitForViewer();
@@ -417,6 +455,6 @@ for (const output of curatedScenes) {
 
 add("process_dataset.jpg", async (ctx) => {
   await scene(ctx, "view");
-  await ctx.page.hover('button[title="Start a processing job using AI"]');
+  await ctx.page.locator('button[title="Start a processing job using AI"]').hover();
   await show(ctx, dropdown);
 });

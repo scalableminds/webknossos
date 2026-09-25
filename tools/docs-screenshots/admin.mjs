@@ -1,11 +1,12 @@
 // Routes and controls are defined in router/router.tsx and the corresponding admin views.
 // These recipes only navigate, filter, and open dialogs. They never submit changes.
 const main = ".ant-layout-content";
-const modal = ".ant-modal-content";
+const content = (ctx) => ctx.page.locator(main).first();
+const dialog = (ctx) => ctx.page.getByRole("dialog").filter({ visible: true }).last();
 
 async function goto(ctx, path, ready) {
-  await ctx.page.goto(new URL(path, ctx.baseUrl).href, { waitUntil: "networkidle2" });
-  await ctx.page.waitForSelector(main, { visible: true });
+  await ctx.page.goto(new URL(path, ctx.baseUrl).href, { waitUntil: "domcontentloaded" });
+  await content(ctx).waitFor({ state: "visible" });
   if (new URL(ctx.page.url()).pathname.startsWith("/auth/login")) {
     throw new Error("This screenshot requires an authenticated local administrator.");
   }
@@ -19,18 +20,25 @@ async function goto(ctx, path, ready) {
     );
   }
   if (ready)
-    await ctx.page.waitForFunction((text) => document.body.innerText.includes(text), {}, ready);
+    await content(ctx).getByText(ready, { exact: false }).first().waitFor({ state: "visible" });
 }
 async function fill(page, selector, value) {
-  const input = await page.waitForSelector(selector, { visible: true });
-  await input.click({ clickCount: 3 });
-  await page.keyboard.press("Backspace");
-  await input.type(String(value));
+  await page.locator(selector).filter({ visible: true }).first().fill(String(value));
 }
-async function search(ctx, value = "l4_sample", selector = `${main} .ant-input`) {
-  await fill(ctx.page, selector, value);
-  await ctx.page.keyboard.press("Enter");
-  await ctx.page.waitForNetworkIdle();
+async function search(ctx, value = "l4_sample", selector = `${main} input.ant-input`) {
+  const input = ctx.page.locator(selector).filter({ visible: true }).first();
+  await input.fill(value);
+  await input.press("Enter");
+  await settled(ctx);
+}
+async function settled(ctx) {
+  // Wait for React's filtered list commit and any visible loading indicators.
+  await ctx.page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  while (await ctx.page.locator(".ant-spin-spinning:visible").count()) {
+    await ctx.page.locator(".ant-spin-spinning:visible").first().waitFor({ state: "hidden" });
+  }
 }
 async function api(ctx, path, body) {
   return ctx.page.evaluate(
@@ -62,28 +70,23 @@ function recipe(output, capture) {
 function route(output, path, ready) {
   return recipe(output, async (ctx) => {
     await goto(ctx, path, ready);
-    return main;
+    return content(ctx);
   });
 }
 function settings(output, tab, ready) {
   return recipe(output, async (ctx) => {
     await goto(ctx, `/datasets/${encodeURIComponent(ctx.dataset.id)}/edit/${tab}`, ready);
-    return main;
+    return content(ctx);
   });
 }
 async function userModal(ctx, label) {
   await goto(ctx, "/users", "Users");
-  const userId = fixture(
-    ctx,
-    "userId",
-    "ID of an active demonstration user in the local organization.",
-  );
+  const userId = ctx.fixtures?.userId || (await api(ctx, "/api/user")).id;
   const selector = `tr[data-row-key="${CSSescape(userId)}"] input[type="checkbox"]`;
-  await ctx.page.waitForSelector(selector, { visible: true });
-  await ctx.page.click(selector);
-  await ctx.clickText(label, { exact: true });
-  await ctx.page.waitForSelector(modal, { visible: true });
-  return modal;
+  await ctx.page.locator(selector).check();
+  await ctx.page.getByRole("button").filter({ hasText: label }).click();
+  await dialog(ctx).waitFor({ state: "visible" });
+  return { target: dialog(ctx), padding: 64 };
 }
 function CSSescape(value) {
   // Fixture IDs are server IDs, never arbitrary CSS fragments.
@@ -91,23 +94,38 @@ function CSSescape(value) {
   return value;
 }
 async function annotations(ctx, archived) {
-  await goto(ctx, "/dashboard/explorativeAnnotations?dataset=l4_sample", "Annotations");
-  if (archived) await ctx.clickText("Show Archived Annotations", { exact: true });
-  await ctx.page.waitForSelector(`${main} a[href^="/annotations/"]`, { visible: true });
+  await goto(ctx, "/dashboard/annotations?dataset=l4_sample", "Annotations");
+  const records = await api(ctx, `/api/annotations/readable?isFinished=${archived}&pageNumber=0`);
+  const matching = records.filter(
+    (record) => (record.datasetId ?? record.dataSetId) === ctx.dataset.id,
+  );
+  if (!matching.length) {
+    throw new Error(
+      `Missing ${archived ? "archived" : "open"} l4_sample annotation fixture. ${archived ? "Archive a dedicated demonstration annotation" : "Create a demonstration annotation"} in the local account before capturing this dashboard.`,
+    );
+  }
+  if (archived)
+    await ctx.page.getByRole("button", { name: "Show Archived Annotations", exact: true }).click();
+  await ctx.page
+    .locator(`${main} a[href^="/annotations/"]:visible`)
+    .first()
+    .waitFor({ state: "visible" });
   await assertAnnotationDatasets(ctx);
-  return main;
+  return content(ctx);
 }
 async function assertAnnotationDatasets(ctx) {
-  const ids = await ctx.page.$$eval('.ant-layout-content a[href^="/annotations/"]', (links) => [
-    ...new Set(
-      links
-        .filter((link) => link.getBoundingClientRect().width > 0)
-        .map((link) => new URL(link.href).pathname.split("/").pop()),
-    ),
-  ]);
+  const ids = await ctx.page
+    .locator('.ant-layout-content a[href^="/annotations/"]')
+    .evaluateAll((links) => [
+      ...new Set(
+        links
+          .filter((link) => link.getBoundingClientRect().width > 0)
+          .map((link) => new URL(link.href).pathname.split("/").pop()),
+      ),
+    ]);
   for (const id of ids) {
     const annotation = await api(ctx, `/api/annotations/${encodeURIComponent(id)}/info`);
-    if (annotation.datasetId !== ctx.dataset.id)
+    if ((annotation.datasetId ?? annotation.dataSetId) !== ctx.dataset.id)
       throw new Error("Visible annotations must all belong to l4_sample.");
   }
 }
@@ -120,16 +138,16 @@ async function tasks(ctx) {
       "Use a documentation account with open tasks exclusively on l4_sample for task dashboard screenshots.",
     );
   }
-  await ctx.page.waitForSelector(`${main} a[href^="/annotations/"]`, { visible: true });
-  return main;
+  await ctx.page.locator(`${main} a[href^="/annotations/"]`).first().waitFor({ state: "visible" });
+  return content(ctx);
 }
 async function checkVisibleJobs(ctx) {
-  const ids = await ctx.page.$$eval(".ant-table-row[data-row-key]", (rows) =>
-    rows.map((row) => row.getAttribute("data-row-key")),
-  );
+  const ids = await ctx.page
+    .locator(".ant-table-row[data-row-key]")
+    .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-key")));
   for (const id of ids) {
     const job = await api(ctx, `/api/jobs/${encodeURIComponent(id)}`);
-    if (job.args.datasetId !== ctx.dataset.id)
+    if ((job.args.datasetId ?? job.args.dataset_id) !== ctx.dataset.id)
       throw new Error(
         "Visible jobs must all use l4_sample. Legacy jobs without dataset IDs need replacing with current fixtures.",
       );
@@ -154,24 +172,23 @@ async function publications(ctx) {
     );
   }
   await search(ctx, "l4_sample", 'input[placeholder="Search Publications"]');
-  await ctx.page.waitForSelector(".publication-list .ant-list-item", { visible: true });
-  return main;
+  await ctx.page.locator(".publication-list .ant-list-item").first().waitFor({ state: "visible" });
+  return content(ctx);
 }
 async function onboarding(ctx, account) {
   await ctx.anonymous();
   // The runner gives each recipe an isolated context, so removing its cookies is safe.
-  const cookies = await ctx.page.browserContext().cookies();
-  if (cookies.length) await ctx.page.browserContext().deleteCookie(...cookies);
+  await ctx.page.context().clearCookies();
   await goto(ctx, "/onboarding", "Create or Join an Organization");
   await fill(ctx.page, 'input[placeholder="Your organization name"]', "Documentation Lab");
   if (account) {
     // OrganizationForm.onFinish advances local wizard state; no organization is persisted.
-    await ctx.clickText("Create", { exact: true });
+    await ctx.page.getByRole("button", { name: /Create$/ }).click();
     await ctx.page.waitForFunction(() =>
       document.body.innerText.includes("Create an Admin Account"),
     );
   }
-  return main;
+  return content(ctx);
 }
 
 export const recipes = [
@@ -179,10 +196,11 @@ export const recipes = [
     recipe(name, async (ctx) => {
       await goto(ctx, "/dashboard/datasets", "Datasets");
       await search(ctx);
-      await ctx.page.waitForSelector(`${main} a[href*="${CSSescape(ctx.dataset.id)}"]`, {
-        visible: true,
-      });
-      return main;
+      await ctx.page
+        .locator(`${main} a[href*="${CSSescape(ctx.dataset.id)}"]`)
+        .first()
+        .waitFor({ state: "visible" });
+      return content(ctx);
     }),
   ),
   recipe("dashboard_annotations.png", (ctx) => annotations(ctx, false)),
@@ -204,9 +222,12 @@ export const recipes = [
   recipe("tasks_task.jpeg", async (ctx) => {
     await goto(ctx, "/tasks/create", "Create Tasks");
     await fill(ctx.page, "#datasetId", "l4_sample");
-    await ctx.page.waitForSelector(".ant-select-item-option", { visible: true });
-    await ctx.clickText("l4_sample", { exact: true });
-    return main;
+    await ctx.page
+      .locator(".ant-select-dropdown")
+      .filter({ visible: true })
+      .getByText("l4_sample", { exact: true })
+      .click();
+    return content(ctx);
   }),
   route("tasks_project.jpeg", "/projects/create", "Project"),
   recipe("tasks_download.jpeg", async (ctx) => {
@@ -223,10 +244,11 @@ export const recipes = [
     const tasks = await api(ctx, "/api/tasks/list", { project: project.id });
     if (!tasks.length || tasks.some((task) => task.datasetId !== ctx.dataset.id))
       throw new Error("Documentation project must contain only l4_sample tasks.");
-    await ctx.page.waitForSelector('a[title="Download All Finished Annotations"]', {
-      visible: true,
-    });
-    return main;
+    await ctx.page
+      .getByTitle("Download All Finished Annotations", { exact: true })
+      .first()
+      .waitFor({ state: "visible" });
+    return content(ctx);
   }),
   recipe("task_instance_actions.jpg", async (ctx) => {
     const id = CSSescape(
@@ -236,10 +258,14 @@ export const recipes = [
     const record = await api(ctx, `/api/tasks/${id}`);
     if (record.datasetId !== ctx.dataset.id)
       throw new Error("fixtures.taskId must belong to l4_sample.");
-    await ctx.page.click(".ant-table-row-expand-icon");
-    await ctx.clickText("Actions", { exact: true });
-    await ctx.page.waitForSelector(".ant-dropdown:not(.ant-dropdown-hidden)", { visible: true });
-    return main;
+    await ctx.page.locator(`tr[data-row-key="${id}"] .ant-table-row-expand-icon`).click();
+    await ctx.page
+      .locator(".ant-table-expanded-row")
+      .getByText("Actions", { exact: true })
+      .first()
+      .click();
+    await ctx.page.getByRole("menu").waitFor({ state: "visible" });
+    return content(ctx);
   }),
   recipe("users_experience.jpeg", (ctx) => userModal(ctx, "Change Experience")),
   recipe("users_team_assignment.jpg", (ctx) => userModal(ctx, "Edit Teams & Permissions")),
@@ -247,17 +273,17 @@ export const recipes = [
   route("users_activate1.jpeg", "/users", "Users"),
   recipe("users_invite.jpeg", async (ctx) => {
     await goto(ctx, "/users", "Users");
-    await ctx.clickText("Invite Users", { exact: true });
-    await ctx.page.waitForSelector(modal, { visible: true });
-    return modal;
+    await ctx.page.getByRole("button", { name: /Invite (Users|Guests)/ }).click();
+    await dialog(ctx).waitFor({ state: "visible" });
+    return { target: dialog(ctx), padding: 64 };
   }),
   route("team_overview.jpg", "/teams", "Teams"),
   recipe("jobs.jpeg", async (ctx) => {
     await goto(ctx, "/jobs", "Jobs");
     await search(ctx);
-    await ctx.page.waitForSelector(".ant-table-row", { visible: true });
+    await ctx.page.locator(".ant-table-row").first().waitFor({ state: "visible" });
     await checkVisibleJobs(ctx);
-    return main;
+    return content(ctx);
   }),
   recipe("nuclei_segmentation_job.jpeg", async (ctx) => {
     const id = CSSescape(
@@ -265,14 +291,14 @@ export const recipes = [
     );
     await goto(ctx, "/jobs", "Jobs");
     const job = await api(ctx, `/api/jobs/${id}`);
-    if (job.args.datasetId !== ctx.dataset.id)
+    if ((job.args.datasetId ?? job.args.dataset_id) !== ctx.dataset.id)
       throw new Error("fixtures.nucleiJobId must use l4_sample.");
     await search(ctx);
-    await ctx.page.waitForSelector(`tr[data-row-key="${id}"]`, { visible: true });
+    await ctx.page.locator(`tr[data-row-key="${id}"]`).waitFor({ state: "visible" });
     if (!["infer_nuclei", "infer_instances"].includes(job.command))
       throw new Error("fixtures.nucleiJobId must be a nuclei or instance inference job.");
     await checkVisibleJobs(ctx);
-    return main;
+    return content(ctx);
   }),
   recipe("onboarding_organization.jpeg", (ctx) => onboarding(ctx, false)),
   recipe("onboarding_user.jpeg", (ctx) => onboarding(ctx, true)),

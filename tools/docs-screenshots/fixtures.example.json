@@ -3,7 +3,7 @@
     "position": [3457, 3323, 1204],
     "zoomStep": 1
   },
-  "userId": "REPLACE_WITH_LOCAL_DEMO_USER_ID",
+  "userId": null,
   "projectName": "Documentation l4_sample",
   "taskId": "REPLACE_WITH_LOCAL_L4_TASK_ID",
   "nucleiJobId": "REPLACE_WITH_LOCAL_L4_NUCLEI_JOB_ID",

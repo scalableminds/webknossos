@@ -285,6 +285,11 @@ function SegmentRowActionBar({
 /*
  * The segment name. Truncated with an end ellipsis in every row but the expanded one,
  * where it wraps over as many lines as it needs.
+ *
+ * The active segment is marked by the accent bar and the bold weight only. Coloring the
+ * name too would have to be a third copy of that signal in a color that works on both
+ * themes, and antd's primary ramp has none: `colorPrimaryActive` means "pressed", so it
+ * darkens in the dark theme as well and drops to 2.7:1 on a row, 1.7:1 on a selected one.
  */
 function SegmentName({
   node,
@@ -318,7 +323,6 @@ function SegmentName({
         // The only track of the row that may shrink.
         flex: 1,
         minWidth: 0,
-        color: isActiveSegment ? "var(--ant-color-primary-active)" : undefined,
         ...(isExpanded
           ? { whiteSpace: "normal", lineHeight: `${EXPANDED_LINE_HEIGHT}px`, textWrap: "pretty" }
           : null),

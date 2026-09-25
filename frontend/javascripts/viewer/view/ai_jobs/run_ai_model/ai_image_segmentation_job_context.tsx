@@ -8,10 +8,9 @@ import type { KeyValuePairs } from "components/key_value_pairs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
-import every from "lodash-es/every";
 import messages from "messages";
 import type React from "react";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { type AiModel, type APIDataLayer, APIJobCommand } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
@@ -25,6 +24,12 @@ import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
+import {
+  blockingRequirement,
+  type JobRequirement,
+  pendingRequirement,
+  type StepStatus,
+} from "viewer/view/ai_jobs/components/job_requirements";
 
 interface RunAiModelJobContextType {
   selectedModel: AiModel | null;
@@ -54,8 +59,11 @@ interface RunAiModelJobContextType {
   setIsEvaluationActive: (isActive: boolean) => void;
   setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
   setCustomConfiguration: (config: KeyValuePairs) => void;
+  setSettingsFormErrors: (errors: string[]) => void;
   handleStartAnalysis: () => void;
   areParametersValid: boolean;
+  requirements: JobRequirement[];
+  stepStatuses: { model: StepStatus; settings: StepStatus };
 }
 
 const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>(undefined);
@@ -91,6 +99,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       sparseTubeThresholdInNm: 1000,
       minimumMergerPathLengthInNm: 800,
     });
+  const [settingsFormErrors, setSettingsFormErrors] = useState<string[]>([]);
 
   const dispatch = useDispatch();
 
@@ -124,13 +133,31 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     refreshOrganizationCredits();
   }, []);
 
-  const areParametersValid = every([
+  const isSettingsStepComplete =
+    Boolean(newDatasetName && selectedLayer && selectedBoundingBox) &&
+    settingsFormErrors.length === 0;
+
+  const requirements = useMemo(() => {
+    const missing: JobRequirement[] = [];
+    if (!selectedModel || !selectedJobType) missing.push(pendingRequirement("Select a model"));
+    if (!newDatasetName) missing.push(pendingRequirement("Enter a new dataset name"));
+    if (!selectedLayer) missing.push(pendingRequirement("Select an image data layer"));
+    if (!selectedBoundingBox) missing.push(pendingRequirement("Select a bounding box"));
+    return missing.concat(settingsFormErrors.map(blockingRequirement));
+  }, [
     selectedModel,
     selectedJobType,
-    selectedBoundingBox,
     newDatasetName,
     selectedLayer,
+    selectedBoundingBox,
+    settingsFormErrors,
   ]);
+
+  const areParametersValid = requirements.length === 0;
+  const stepStatuses = {
+    model: selectedModel ? "done" : "pending",
+    settings: isSettingsStepComplete ? "done" : "pending",
+  } as const;
 
   const handleStartAnalysis = useCallback(async () => {
     if (
@@ -265,8 +292,11 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     setIsEvaluationActive,
     setSplitMergerEvaluationSettings,
     setCustomConfiguration,
+    setSettingsFormErrors,
     handleStartAnalysis,
     areParametersValid,
+    requirements,
+    stepStatuses,
   };
 
   return <RunAiModelJobContext.Provider value={value}>{children}</RunAiModelJobContext.Provider>;

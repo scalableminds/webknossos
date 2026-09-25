@@ -10,6 +10,12 @@ import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import { getBoundingBoxesForLayers } from "viewer/view/ai_jobs/utils";
+import {
+  blockingRequirement,
+  type JobRequirement,
+  pendingRequirement,
+  type StepStatus,
+} from "../components/job_requirements";
 import type { AlignmentTask } from "./ai_alignment_model_selector";
 
 interface AlignmentJobContextType {
@@ -24,7 +30,10 @@ interface AlignmentJobContextType {
   setShouldUseManualMatches: (shouldUseManualMatches: boolean) => void;
   customConfiguration: KeyValuePairs;
   setCustomConfiguration: (config: KeyValuePairs) => void;
+  setSettingsFormErrors: (errors: string[]) => void;
   areParametersValid: boolean;
+  requirements: JobRequirement[];
+  stepStatuses: { task: StepStatus; settings: StepStatus };
 }
 
 const AlignmentJobContext = createContext<AlignmentJobContextType | undefined>(undefined);
@@ -36,6 +45,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
   const [newDatasetName, setNewDatasetName] = useState("");
   const [shouldUseManualMatches, setShouldUseManualMatches] = useState(false);
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
+  const [settingsFormErrors, setSettingsFormErrors] = useState<string[]>([]);
   const dispatch = useDispatch();
 
   const dataset = useWkSelector((state) => state.dataset);
@@ -57,10 +67,18 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     refreshOrganizationCredits();
   }, []);
 
-  const areParametersValid = useMemo(
-    () => Boolean(selectedTask?.jobType && newDatasetName),
-    [selectedTask, newDatasetName],
-  );
+  const requirements = useMemo(() => {
+    const missing: JobRequirement[] = [];
+    if (!selectedTask?.jobType) missing.push(pendingRequirement("Select an alignment task"));
+    if (!newDatasetName) missing.push(pendingRequirement("Enter a new dataset name"));
+    return missing.concat(settingsFormErrors.map(blockingRequirement));
+  }, [selectedTask, newDatasetName, settingsFormErrors]);
+
+  const areParametersValid = requirements.length === 0;
+  const stepStatuses = {
+    task: selectedTask ? "done" : "pending",
+    settings: newDatasetName && settingsFormErrors.length === 0 ? "done" : "pending",
+  } as const;
 
   const handleStartAnalysis = useCallback(async () => {
     try {
@@ -99,7 +117,10 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     setShouldUseManualMatches,
     customConfiguration,
     setCustomConfiguration,
+    setSettingsFormErrors,
     areParametersValid,
+    requirements,
+    stepStatuses,
   };
 
   return <AlignmentJobContext.Provider value={value}>{children}</AlignmentJobContext.Provider>;

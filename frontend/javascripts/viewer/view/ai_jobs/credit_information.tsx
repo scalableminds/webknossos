@@ -4,34 +4,36 @@ import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_u
 import { getJobCreditCostAndUpdateOrgaCredits, type JobCreditCostInfo } from "admin/rest_api";
 import {
   Alert,
+  Badge,
   Button,
   Card,
-  Col,
   Divider,
   Flex,
-  Row,
   Space,
   Spin,
   Tooltip,
   Typography,
+  theme,
 } from "antd";
 import features from "features";
 import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
-import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/utils";
+import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import { Link } from "react-router";
 import { ColorWKGold } from "theme";
-import { type AiModel, APIJobCommand } from "types/api_types";
+import { APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
+import type { JobRequirement } from "./components/job_requirements";
 import { JOB_COMMANDS_WRITING_TO_STORAGE } from "./constants";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
 import { useAiTrainingJobContext } from "./train_ai_model/ai_training_job_context";
+import { getTrainingVolume } from "./train_ai_model/training_data_validation";
 import { getBestFittingMagComparedToTrainingDS } from "./utils";
 
 const { Title, Text } = Typography;
@@ -51,6 +53,7 @@ export const RunAiModelCreditInformation: React.FC = () => {
     selectedLayer,
     handleStartAnalysis,
     areParametersValid,
+    requirements,
   } = useRunAiModelJobContext();
   const dataset = useWkSelector((state) => state.dataset);
 
@@ -88,13 +91,20 @@ export const RunAiModelCreditInformation: React.FC = () => {
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start analysis"
       areParametersValid={areParametersValid}
+      requirements={requirements}
     />
   );
 };
 
 export const AlignmentCreditInformation: React.FC = () => {
-  const { selectedTask, selectedBoundingBox, colorLayer, handleStartAnalysis, areParametersValid } =
-    useAlignmentJobContext();
+  const {
+    selectedTask,
+    selectedBoundingBox,
+    colorLayer,
+    handleStartAnalysis,
+    areParametersValid,
+    requirements,
+  } = useAlignmentJobContext();
   const selectJobType = selectedTask?.jobType ?? null;
 
   const adjustedBoundingBox = useMemo(() => {
@@ -111,6 +121,8 @@ export const AlignmentCreditInformation: React.FC = () => {
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start alignment"
       areParametersValid={areParametersValid}
+      requirements={requirements}
+      selectionLabel="Selected task"
     />
   );
 };
@@ -122,17 +134,13 @@ export const TrainingCreditInformation: React.FC = () => {
     selectedAnnotations,
     handleStartAnalysis,
     areParametersValid,
+    requirements,
   } = useAiTrainingJobContext();
 
   // Create a synthetic cubic bounding box from the total training volume
   // for cost calculation purposes.
   const totalVolume = selectedAnnotations.reduce(
-    (total, { userBoundingBoxes }) =>
-      total +
-      userBoundingBoxes.reduce(
-        (sum, box) => sum + computeVolumeFromBoundingBox(box.boundingBox),
-        0,
-      ),
+    (total, selection) => total + getTrainingVolume(selection),
     0,
   );
   // bounding box sizing needs to be integer values
@@ -156,17 +164,59 @@ export const TrainingCreditInformation: React.FC = () => {
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start training"
       areParametersValid={areParametersValid}
+      requirements={requirements}
+      selectionLabel="Selected task"
+      volume={{ label: "Training volume", voxelCount: totalVolume }}
     />
   );
 };
 
 interface CreditInformationProps {
-  selectedModel: AiModel | Partial<AiModel> | null;
+  selectedModel: { name?: string } | null;
   selectedJobType: APIJobCommand | null;
   selectedBoundingBox: UserBoundingBox | null;
   handleStartAnalysis: () => void;
   startButtonTitle: string;
   areParametersValid: boolean;
+  requirements: JobRequirement[];
+  selectionLabel?: string;
+  // Replaces the default "Dataset size" row, which shows the volume of the selected bounding box.
+  volume?: { label: string; voxelCount: number };
+}
+
+function CreditRow({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
+  const { cssVar } = theme.useToken();
+  return (
+    <Flex justify="space-between" gap="small">
+      <Text style={{ color: cssVar.colorTextSecondary }}>{label}</Text>
+      <Text strong style={{ textAlign: "right" }}>
+        {value}
+      </Text>
+    </Flex>
+  );
+}
+
+function BeforeYouStart({ requirements }: { requirements: JobRequirement[] }) {
+  const { cssVar } = theme.useToken();
+  return (
+    <div
+      style={{
+        background: cssVar.colorFillAlter,
+        borderRadius: cssVar.borderRadiusLG,
+        padding: "12px 16px",
+      }}
+    >
+      <Text strong style={{ display: "block", marginBottom: 6 }}>
+        Before you start
+      </Text>
+      {requirements.map(({ label, severity }) => (
+        <Flex key={label} gap="small" align="baseline">
+          <Badge status={severity === "error" ? "error" : "warning"} />
+          <Text style={{ color: cssVar.colorTextSecondary }}>{label}</Text>
+        </Flex>
+      ))}
+    </div>
+  );
 }
 
 const CreditInformation: React.FC<CreditInformationProps> = ({
@@ -176,7 +226,11 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
   handleStartAnalysis,
   startButtonTitle,
   areParametersValid,
+  requirements,
+  selectionLabel = "Selected model",
+  volume,
 }) => {
+  const { cssVar } = theme.useToken();
   const jobTypeToCreditCostPerGVxInMillis: Partial<Record<APIJobCommand, number>> = useMemo(
     () => ({
       [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostInMilliCreditsPerGVx,
@@ -223,11 +277,14 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
   });
 
   const getBoundingBoxinVoxels = useCallback((): string => {
+    if (volume) {
+      return formatVoxels(volume.voxelCount);
+    }
     if (selectedBoundingBox) {
       return formatVoxels(boundingBoxVolume);
     }
     return "-";
-  }, [selectedBoundingBox, boundingBoxVolume]);
+  }, [volume, selectedBoundingBox, boundingBoxVolume]);
 
   const costInCredits = jobCreditCostInfo?.costInMilliCredits;
 
@@ -248,79 +305,62 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
   }
 
   return (
-    <Card
-      type="inner"
-      title={
-        <Space align="center">
-          <CreditCardOutlined style={{ color: ColorWKGold }} />
-          Credit Information
-        </Space>
-      }
-      style={{
-        position: "sticky",
-        top: 0,
-      }}
-    >
-      <Row justify="space-between" align="middle">
-        <Col>
-          <Text>Available Credits</Text>
-        </Col>
-        <Col>
-          <Text strong>{formatMilliCreditsString(organizationMilliCredits)}</Text>
-        </Col>
-      </Row>
-      <Divider />
-      <Title level={5}>Cost Breakdown:</Title>
-      <Row justify="space-between">
-        <Col>
-          <Text>Selected Model:</Text>
-        </Col>
-        <Col>
-          <Text strong>{selectedModel ? selectedModel.name : "-"}</Text>
-        </Col>
-      </Row>
-      <Row justify="space-between">
-        <Col>
-          <Text>
-            Dataset Size{" "}
-            <Tooltip title="Displayed size respects selected bounding boxes and magnifications.">
-              <InfoCircleOutlined />
-            </Tooltip>
-            :
-          </Text>
-        </Col>
-        <Col>
-          <Text strong>{getBoundingBoxinVoxels()}</Text>
-        </Col>
-      </Row>
-      <Row justify="space-between">
-        <Col>
-          <Text>Credits per Gigavoxel:</Text>
-        </Col>
-        <Col>
-          <Text strong>
-            {selectedJobType && jobTypeToCreditCostPerGVxInMillis[selectedJobType] != null
+    <Card style={{ boxShadow: cssVar.boxShadowTertiary }}>
+      <Flex align="center" gap="small" style={{ marginBottom: 16 }}>
+        <CreditCardOutlined style={{ color: ColorWKGold, fontSize: cssVar.fontSizeLG }} />
+        <Text strong style={{ fontSize: cssVar.fontSizeLG }}>
+          Credit information
+        </Text>
+      </Flex>
+      <Flex
+        justify="space-between"
+        align="center"
+        style={{
+          background: cssVar.colorFillAlter,
+          borderRadius: cssVar.borderRadiusLG,
+          padding: "12px 16px",
+          marginBottom: 20,
+        }}
+      >
+        <Text>Available credits</Text>
+        <Text strong>{formatMilliCreditsString(organizationMilliCredits)}</Text>
+      </Flex>
+      <Flex vertical gap="small">
+        <CreditRow label={selectionLabel} value={selectedModel?.name ?? "-"} />
+        <CreditRow
+          label={
+            volume?.label ?? (
+              <Space size="small">
+                Dataset size
+                <Tooltip title="Displayed size respects selected bounding boxes and magnifications.">
+                  <InfoCircleOutlined />
+                </Tooltip>
+              </Space>
+            )
+          }
+          value={getBoundingBoxinVoxels()}
+        />
+        <CreditRow
+          label="Credits per gigavoxel"
+          value={
+            selectedJobType && jobTypeToCreditCostPerGVxInMillis[selectedJobType] != null
               ? formatMilliCreditsString(jobTypeToCreditCostPerGVxInMillis[selectedJobType])
-              : "-"}
-          </Text>
-        </Col>
-      </Row>
-      <Divider />
-      <Row justify="space-between">
-        <Col>
-          <Text>Total Cost:</Text>
-        </Col>
-        <Col>
-          {isFetching && selectedBoundingBox && selectedModel ? (
-            <Spin size="small" />
-          ) : (
-            <Title level={3} style={{ margin: 0 }}>
-              {costInCredits != null ? `${formatMilliCreditsString(costInCredits)} credits` : "-"}
-            </Title>
-          )}
-        </Col>
-      </Row>
-      <Flex vertical gap="small" style={{ marginTop: "24px" }}>
+              : "-"
+          }
+        />
+      </Flex>
+      <Divider style={{ margin: "20px 0" }} />
+      <Flex justify="space-between" align="baseline" style={{ marginBottom: 20 }}>
+        <Text strong>Total cost</Text>
+        {isFetching && selectedBoundingBox && selectedModel ? (
+          <Spin size="small" />
+        ) : (
+          <Title level={3} style={{ margin: 0 }}>
+            {costInCredits != null ? `${formatMilliCreditsString(costInCredits)} credits` : "-"}
+          </Title>
+        )}
+      </Flex>
+      <Flex vertical gap="middle">
         {isBlockedByStorageQuota && (
           <Alert
             showIcon
@@ -345,6 +385,9 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           {startButtonTitle}
           {startButtonSuffix}
         </Button>
+        {isSubmitDisabled && requirements.length > 0 && (
+          <BeforeYouStart requirements={requirements} />
+        )}
         {jobCreditCostInfo?.hasEnoughCredits === false && (
           <Link to={"/organization"}>
             <Button block>Order more Credits</Button>

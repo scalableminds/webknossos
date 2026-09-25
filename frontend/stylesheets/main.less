@@ -17,6 +17,7 @@
 @import "dark.less";
 @import "command_palette.less";
 @import "_voxelytics.less";
+@import "_ai_jobs.less";
 
 // Nunito is a variable font with a wght axis spanning 200-1000. The font-weight range has to be
 // declared, otherwise the browser treats each face as a single normal-weight font and synthesizes
@@ -489,27 +490,6 @@ body {
 
   >div:last-of-type {
     margin-bottom: 15px;
-  }
-}
-
-/** Interactive list items used for selection (e.g. in the AI job selector). */
-.hoverable-list-item {
-  // used in AI Job Drawer for selecting models, tasks etc.
-  transition: background-color 0.2s ease-in-out;
-  border: 1px solid #d9d9d9 !important;
-  border-radius: 8px !important;
-  margin-bottom: 16px !important;
-  padding: 16px !important;
-
-  &:hover,
-  &.selected {
-    border-color: var(--color-wk-blue) !important;
-    background-color: var(--ant-color-info-text-hover);
-
-    .ant-typography,
-    .ant-list-item-meta-description {
-      color: var(--ant-color-primary-bg) !important;
-    }
   }
 }
 

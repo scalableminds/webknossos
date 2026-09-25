@@ -1,14 +1,11 @@
-import { ExperimentOutlined } from "@ant-design/icons";
 import mitoInferralExample from "@images/mito-inferral-example.jpg";
 import neuronInferralExample from "@images/neuron-inferral-example.jpg";
-import { Avatar, Card, List, Space, Tag, Typography } from "antd";
 import type React from "react";
 import { useCallback } from "react";
-import { ColorWKBlue } from "theme";
 import { APIJobCommand } from "types/api_types";
+import { JobSection } from "../components/job_section";
+import { SelectableTile, TileGrid } from "../components/selectable_tile";
 import { useAiTrainingJobContext } from "./ai_training_job_context";
-
-const { Text } = Typography;
 
 export type AiTrainingTask = {
   name: string;
@@ -39,7 +36,8 @@ const trainingTasks: AiTrainingTask[] = [
 ];
 
 export const AiTrainingModelSelector: React.FC = () => {
-  const { setSelectedJobType, selectedTask, setSelectedTask } = useAiTrainingJobContext();
+  const { setSelectedJobType, selectedTask, setSelectedTask, stepStatuses } =
+    useAiTrainingJobContext();
 
   const handleTaskSelection = useCallback(
     (item: AiTrainingTask) => {
@@ -52,40 +50,25 @@ export const AiTrainingModelSelector: React.FC = () => {
   );
 
   return (
-    <Card
-      type="inner"
-      title={
-        <Space align="center">
-          <ExperimentOutlined style={{ color: ColorWKBlue }} />
-          Select AI Training Task
-        </Space>
-      }
+    <JobSection
+      step={1}
+      title="Select training task"
+      description="What kind of structure should the model learn?"
+      status={stepStatuses.task}
     >
-      <List
-        itemLayout="horizontal"
-        dataSource={trainingTasks}
-        renderItem={(item) => (
-          <List.Item
-            className={"hoverable-list-item " + (selectedTask?.id === item.id ? "selected" : "")}
-            style={{
-              opacity: item.disabled ? 0.5 : 1,
-              cursor: item.disabled ? "not-allowed" : "pointer",
-            }}
-            onClick={() => handleTaskSelection(item)}
-          >
-            <List.Item.Meta
-              avatar={<Avatar shape="square" size={64} src={item.image} alt={item.name} />}
-              title={
-                <Space>
-                  <Text strong>{item.name}</Text>
-                  {item.disabled && <Tag>Coming Soon</Tag>}
-                </Space>
-              }
-              description={item.comment}
-            />
-          </List.Item>
-        )}
-      />
-    </Card>
+      <TileGrid label="Training tasks">
+        {trainingTasks.map((task) => (
+          <SelectableTile
+            key={task.id}
+            image={task.image}
+            title={task.name}
+            description={task.comment}
+            isSelected={selectedTask?.id === task.id}
+            isDisabled={task.disabled}
+            onSelect={() => handleTaskSelection(task)}
+          />
+        ))}
+      </TileGrid>
+    </JobSection>
   );
 };

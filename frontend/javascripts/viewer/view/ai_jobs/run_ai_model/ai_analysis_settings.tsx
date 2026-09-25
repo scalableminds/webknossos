@@ -1,24 +1,12 @@
-import { SettingOutlined } from "@ant-design/icons";
 import { getDatasetNameRules } from "admin/dataset/dataset_components";
 import { APIAiModelCategory } from "admin/rest_api";
 import type { FormProps } from "antd";
-import {
-  Card,
-  Col,
-  Collapse,
-  ConfigProvider,
-  Form,
-  Input,
-  InputNumber,
-  Row,
-  Select,
-  Space,
-} from "antd";
+import { Col, Form, Input, InputNumber, Row, Select } from "antd";
 import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
-import { ColorWKBlue } from "theme";
+import { useEffect } from "react";
 import { type APIDataLayer, APIJobCommand } from "types/api_types";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import type { UserBoundingBox } from "viewer/store";
@@ -31,6 +19,9 @@ import {
   isDatasetOrBoundingBoxTooSmall,
 } from "viewer/view/ai_jobs/utils";
 import { BoundingBoxSelector } from "../bounding_box_selector";
+import { AdvancedSettings } from "../components/job_layout";
+import { getFormFieldErrors } from "../components/job_requirements";
+import { JobSection } from "../components/job_section";
 import { colorLayerMustNotBeUint24Rule } from "../utils";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
@@ -52,7 +43,10 @@ export const AiAnalysisSettings: React.FC = () => {
     customConfiguration,
     setCustomConfiguration,
     selectedJobType,
+    setSettingsFormErrors,
+    stepStatuses,
   } = useRunAiModelJobContext();
+  const [form] = Form.useForm();
   const dataset = useWkSelector((state) => state.dataset);
   const colorLayers = getColorLayers(dataset);
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -81,6 +75,24 @@ export const AiAnalysisSettings: React.FC = () => {
       setCustomConfiguration(changedValues.customConfiguration);
     }
   };
+
+  // Whether the bounding box is large enough depends on the model and layer, so re-check it
+  // when those change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only re-validate when the model or layer changes
+  useEffect(() => {
+    if (form.getFieldValue("selectedBoundingBox") != null) {
+      form.validateFields(["selectedBoundingBox"]).catch(() => {});
+    }
+  }, [form, selectedModel, selectedLayer]);
+
+  // The dataset name is also filled in programmatically (e.g. when picking a model). Setting it
+  // that way keeps a previous validation error, so re-check the name if it had one.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only re-validate when the name changes
+  useEffect(() => {
+    if (form.getFieldError("newDatasetName").length > 0) {
+      form.validateFields(["newDatasetName"]).catch(() => {});
+    }
+  }, [form, newDatasetName]);
 
   const isInstanceModel = selectedJobType === APIJobCommand.INFER_INSTANCES;
   const isNeuronModel =
@@ -111,30 +123,33 @@ export const AiAnalysisSettings: React.FC = () => {
   ];
 
   return (
-    <Card
-      type="inner"
-      title={
-        <Space align="center">
-          <SettingOutlined style={{ color: ColorWKBlue }} />
-          Analysis Settings
-        </Space>
-      }
+    <JobSection
+      step={2}
+      title="Analysis settings"
+      description="Where results go and which region to process."
+      status={stepStatuses.settings}
     >
-      <Form layout="vertical" onValuesChange={handleValuesChange} fields={formFields}>
+      <Form
+        form={form}
+        layout="vertical"
+        onValuesChange={handleValuesChange}
+        onFieldsChange={(_, allFields) => setSettingsFormErrors(getFormFieldErrors(allFields))}
+        fields={formFields}
+      >
         <Row gutter={24}>
           <Col span={12}>
             <Form.Item
               name="newDatasetName"
-              label="New Dataset Name"
+              label="New dataset name"
               rules={getDatasetNameRules(activeUser)}
             >
-              <Input />
+              <Input placeholder={`e.g. ${dataset.name}_neurons`} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="selectedLayer"
-              label="Image Data Layer"
+              label="Image data layer"
               rules={[
                 { required: true, message: "Please select an image data layer" },
                 colorLayerMustNotBeUint24Rule,
@@ -150,7 +165,8 @@ export const AiAnalysisSettings: React.FC = () => {
 
         <Form.Item
           name="selectedBoundingBox"
-          label="Bounding Box"
+          label="Bounding box"
+          extra="Tip: draw one with the bounding box tool in the viewport."
           rules={[
             { required: true, message: "Please select a bounding box" },
             {
@@ -180,44 +196,30 @@ export const AiAnalysisSettings: React.FC = () => {
           <BoundingBoxSelector />
         </Form.Item>
 
-        <ConfigProvider
-          theme={{
-            components: {
-              Collapse: { headerPadding: "12px 0px" },
-            },
-          }}
-        >
-          <Collapse style={{ marginBottom: "24px" }} ghost bordered={false}>
-            <Collapse.Panel header="Advanced Settings" key="1">
-              <Row gutter={24}>
-                {isInstanceModel && (
-                  <Col span={12}>
-                    <Form.Item
-                      name="seedGeneratorDistanceThreshold"
-                      label="Seed generator distance threshold (nm)"
-                      tooltip="Controls the distance between two objects' centers used as a starting point (seed) for a growing segmentation. If empty, a default based on the selected model is used. It should be set to a positive value in nm, typically 10–30% of the model’s `max_distance` parameter (= diameter/thickness of the object). For larger objects, such as nuclei (~1000 nm), use higher values. For small ones, such as synaptic vesicles (~10 nm), use lower values. If set too low, objects may merge; if too high, they may split or be missed."
-                    >
-                      <InputNumber min={0.1} suffix="nm" style={{ width: "100%" }} />
-                    </Form.Item>
-                  </Col>
-                )}
-              </Row>
-              <Row>
-                <Col span={24}>
-                  <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
-                </Col>
-              </Row>
+        <AdvancedSettings hint="Custom configuration">
+          <Row gutter={24}>
+            {isInstanceModel && (
+              <Col span={12}>
+                <Form.Item
+                  name="seedGeneratorDistanceThreshold"
+                  label="Seed generator distance threshold (nm)"
+                  tooltip="Controls the distance between two objects' centers used as a starting point (seed) for a growing segmentation. If empty, a default based on the selected model is used. It should be set to a positive value in nm, typically 10–30% of the model’s `max_distance` parameter (= diameter/thickness of the object). For larger objects, such as nuclei (~1000 nm), use higher values. For small ones, such as synaptic vesicles (~10 nm), use lower values. If set too low, objects may merge; if too high, they may split or be missed."
+                >
+                  <InputNumber min={0.1} suffix="nm" style={{ width: "100%" }} />
+                </Form.Item>
+              </Col>
+            )}
+          </Row>
+          <KeyValuePairsFormItem name="customConfiguration" label="Custom configuration" />
 
-              {isNeuronModel && (
-                <CollapsibleSplitMergerEvaluationSettings
-                  isActive={isEvaluationActive}
-                  setActive={setIsEvaluationActive}
-                />
-              )}
-            </Collapse.Panel>
-          </Collapse>
-        </ConfigProvider>
+          {isNeuronModel && (
+            <CollapsibleSplitMergerEvaluationSettings
+              isActive={isEvaluationActive}
+              setActive={setIsEvaluationActive}
+            />
+          )}
+        </AdvancedSettings>
       </Form>
-    </Card>
+    </JobSection>
   );
 };

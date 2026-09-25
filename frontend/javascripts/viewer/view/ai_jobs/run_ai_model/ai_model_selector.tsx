@@ -1,26 +1,37 @@
-import { ExperimentOutlined } from "@ant-design/icons";
+import { SearchOutlined } from "@ant-design/icons";
 import mitoInferralExample from "@images/mito-inferral-example.jpg";
 import neuronInferralExample from "@images/neuron-inferral-example.jpg";
 import nucleiInferralExample from "@images/nuclei-inferral-example.jpg";
 import somaInferralExample from "@images/soma-inferral-example.png";
 import { APIAiModelCategory, getAiModels } from "admin/rest_api";
-import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
+import { Avatar, Flex, Input, Space, Spin, Tag, Typography } from "antd";
 import Markdown from "libs/markdown_adapter";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { ColorWKBlue } from "theme";
 import { type AiModel, APIJobCommand } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import { JobSection } from "../components/job_section";
+import {
+  SelectableRow,
+  SelectableTile,
+  TileGrid,
+  TileGroupLabel,
+} from "../components/selectable_tile";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const categoryToImage: Partial<Record<APIAiModelCategory, string>> = {
   [APIAiModelCategory.EM_NEURONS]: neuronInferralExample,
   [APIAiModelCategory.EM_NUCLEI]: nucleiInferralExample,
   [APIAiModelCategory.EM_SOMATA]: somaInferralExample,
   [APIAiModelCategory.EM_MITOCHONDRIA]: mitoInferralExample,
+};
+
+// Renders paragraphs inline so that the tile can clamp the description to two lines.
+const INLINE_MARKDOWN_COMPONENTS = {
+  p: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 };
 
 const mapCategoryToJobType = (
@@ -44,7 +55,8 @@ const mapCategoryToJobType = (
 };
 
 export const AiModelSelector: React.FC = () => {
-  const { selectedModel, setSelectedModel, setSelectedJobType } = useRunAiModelJobContext();
+  const { selectedModel, setSelectedModel, setSelectedJobType, stepStatuses } =
+    useRunAiModelJobContext();
   const [searchTerm, setSearchTerm] = useState("");
   const isSuperUser = useWkSelector((state) => enforceActiveUser(state.activeUser).isSuperUser);
 
@@ -90,109 +102,99 @@ export const AiModelSelector: React.FC = () => {
     [searchTerm, customModels],
   );
 
-  const switchToTrainingButton = (
-    <>
-      You don't have any custom models yet. Training custom models on your data is coming soon.
-      {/* <Button onClick={() => dispatch(setAIJobDrawerStateAction("open_ai_training"))} type="link">
-        Train an AI Model on your data
-      </Button> */}
-    </>
-  );
+  const noCustomModelsText =
+    searchTerm.length > 0
+      ? "No models match your search."
+      : "You don't have any custom models yet. Training custom models on your data is coming soon.";
 
   return (
-    <Card
-      type="inner"
-      title={
-        <Space align="center">
-          <ExperimentOutlined style={{ color: ColorWKBlue }} />
-          Select AI Model
-        </Space>
-      }
+    <JobSection
+      step={1}
+      title="Select AI model"
+      description="Pick a pre-trained model or one you trained yourself."
+      status={stepStatuses.model}
       extra={
-        <Input.Search
-          placeholder="Search models..."
-          style={{ width: 300 }}
+        <Input
+          placeholder="Search models…"
+          prefix={<SearchOutlined />}
+          allowClear
+          style={{ width: 240 }}
           onChange={(e) => setSearchTerm(e.target.value)}
           value={searchTerm}
         />
       }
     >
-      <Title level={5}>Pre-trained Models</Title>
       {isLoading ? (
         <Spin />
       ) : (
-        <List
-          itemLayout="horizontal"
-          dataSource={filteredPretrainedModels}
-          locale={{ emptyText: "No pre-trained models match your search." }}
-          renderItem={(item) => {
-            const previewImage = item.category ? categoryToImage[item.category] : undefined;
-            return (
-              <List.Item
-                style={{ cursor: "pointer" }}
-                className={
-                  "hoverable-list-item " + (selectedModel?.id === item.id ? "selected" : "")
-                }
-                onClick={() => onSelectModel(item)}
-              >
-                <List.Item.Meta
-                  avatar={<Avatar shape="square" size={64} src={previewImage} alt={item.name} />}
-                  title={<Text strong>{item.name}</Text>}
-                  description={<Markdown>{item.comment}</Markdown>}
+        <>
+          <TileGroupLabel title="Pre-trained models" count={filteredPretrainedModels.length} />
+          {filteredPretrainedModels.length === 0 ? (
+            <Text type="secondary">
+              {searchTerm.length > 0
+                ? "No pre-trained models match your search."
+                : "No pre-trained models are available."}
+            </Text>
+          ) : (
+            <TileGrid label="Pre-trained models">
+              {filteredPretrainedModels.map((model) => (
+                <SelectableTile
+                  key={model.id}
+                  image={model.category ? categoryToImage[model.category] : undefined}
+                  title={model.name}
+                  description={
+                    <Markdown components={INLINE_MARKDOWN_COMPONENTS}>{model.comment}</Markdown>
+                  }
+                  clampDescription
+                  isSelected={selectedModel?.id === model.id}
+                  onSelect={() => onSelectModel(model)}
                 />
-              </List.Item>
-            );
-          }}
-        />
-      )}
-
-      <Title level={5} style={{ marginTop: "24px" }}>
-        Your Custom Models
-      </Title>
-      {isLoading ? (
-        <Spin />
-      ) : (
-        <List
-          itemLayout="horizontal"
-          dataSource={filteredCustomModels}
-          locale={{
-            emptyText:
-              searchTerm.length > 0 ? "No models match your search." : switchToTrainingButton,
-          }}
-          style={{ maxHeight: 360, overflowY: "auto" }}
-          renderItem={(item) => (
-            <List.Item
-              className={"hoverable-list-item " + (selectedModel?.id === item.id ? "selected" : "")}
-              style={{
-                border:
-                  selectedModel?.id === item.id ? `1px solid ${ColorWKBlue}` : "1px solid #d9d9d9",
-                borderRadius: 8,
-                marginBottom: 16,
-                padding: 16,
-                cursor: "pointer",
-              }}
-              onClick={() => onSelectModel(item)}
-            >
-              <List.Item.Meta
-                avatar={
-                  <Avatar shape="square" size={64}>
-                    {item.name!.charAt(0)}
-                  </Avatar>
-                }
-                title={
-                  <Space>
-                    <Text strong>{item.name}</Text>
-                    <Tag>
-                      {item.category === APIAiModelCategory.EM_NEURONS ? "NEURONS" : "INSTANCES"}
-                    </Tag>
-                  </Space>
-                }
-                description={item.comment}
-              />
-            </List.Item>
+              ))}
+            </TileGrid>
           )}
-        />
+
+          <div style={{ marginTop: 20 }}>
+            <TileGroupLabel title="Your custom models" count={filteredCustomModels.length} />
+          </div>
+          {filteredCustomModels.length === 0 ? (
+            <Text type="secondary">{noCustomModelsText}</Text>
+          ) : (
+            <Flex
+              vertical
+              gap="small"
+              role="radiogroup"
+              aria-label="Your custom models"
+              style={{ maxHeight: 360, overflowY: "auto" }}
+            >
+              {filteredCustomModels.map((model) => (
+                <SelectableRow
+                  key={model.id}
+                  avatar={
+                    <Avatar shape="square" size={40}>
+                      {model.name.charAt(0)}
+                    </Avatar>
+                  }
+                  title={
+                    <Space size="small">
+                      <Text strong>{model.name}</Text>
+                      <Tag>
+                        {model.category === APIAiModelCategory.EM_NEURONS ? "NEURONS" : "INSTANCES"}
+                      </Tag>
+                    </Space>
+                  }
+                  description={
+                    model.comment ? (
+                      <Markdown components={INLINE_MARKDOWN_COMPONENTS}>{model.comment}</Markdown>
+                    ) : null
+                  }
+                  isSelected={selectedModel?.id === model.id}
+                  onSelect={() => onSelectModel(model)}
+                />
+              ))}
+            </Flex>
+          )}
+        </>
       )}
-    </Card>
+    </JobSection>
   );
 };

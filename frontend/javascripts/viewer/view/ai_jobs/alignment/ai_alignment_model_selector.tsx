@@ -1,18 +1,15 @@
-import { ExperimentOutlined } from "@ant-design/icons";
 import alignExample from "@images/align-example.png";
 import alignStitchingExample from "@images/align-stitching-example.jpg";
-import { Avatar, Card, List, Space, Tag, Typography } from "antd";
 import type React from "react";
 import { useCallback } from "react";
-import { ColorWKBlue } from "theme";
 import { APIJobCommand } from "types/api_types";
+import { JobSection } from "../components/job_section";
+import { SelectableTile, TileGrid } from "../components/selectable_tile";
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
-
-const { Text } = Typography;
 
 export type AlignmentTask = {
   name: string;
-  comment: string;
+  comment: React.ReactNode;
   id: string;
   jobType: APIJobCommand | null;
   image: string;
@@ -30,8 +27,12 @@ const alignmentTasks: AlignmentTask[] = [
   },
   {
     name: "Align & stitch multiple tiles",
-    comment:
-      "For stitching and aligning datasets with multiple tiles per section, please contact us via email for a quote.",
+    comment: (
+      <>
+        For datasets with multiple tiles per section,{" "}
+        <a href="mailto:support@webknossos.org">contact us</a> for a quote.
+      </>
+    ),
     id: "align-tiles",
     disabled: true,
     jobType: null,
@@ -40,7 +41,7 @@ const alignmentTasks: AlignmentTask[] = [
 ];
 
 export const AiAlignmentModelSelector: React.FC = () => {
-  const { selectedTask, setSelectedTask } = useAlignmentJobContext();
+  const { selectedTask, setSelectedTask, stepStatuses } = useAlignmentJobContext();
 
   const handleTaskSelection = useCallback(
     (item: AlignmentTask) => {
@@ -52,40 +53,25 @@ export const AiAlignmentModelSelector: React.FC = () => {
   );
 
   return (
-    <Card
-      type="inner"
-      title={
-        <Space align="center">
-          <ExperimentOutlined style={{ color: ColorWKBlue }} />
-          Select AI Alignment Task
-        </Space>
-      }
+    <JobSection
+      step={1}
+      title="Select alignment task"
+      description="Choose based on how your sections were acquired."
+      status={stepStatuses.task}
     >
-      <List
-        itemLayout="horizontal"
-        dataSource={alignmentTasks}
-        renderItem={(item) => (
-          <List.Item
-            className={"hoverable-list-item " + (selectedTask?.id === item.id ? "selected" : "")}
-            style={{
-              opacity: item.disabled ? 0.5 : 1,
-              cursor: item.disabled ? "not-allowed" : "pointer",
-            }}
-            onClick={() => handleTaskSelection(item)}
-          >
-            <List.Item.Meta
-              avatar={<Avatar shape="square" size={64} src={item.image} alt={item.name} />}
-              title={
-                <Space>
-                  <Text strong>{item.name}</Text>
-                  {item.disabled && <Tag>Coming Soon</Tag>}
-                </Space>
-              }
-              description={item.comment}
-            />
-          </List.Item>
-        )}
-      />
-    </Card>
+      <TileGrid label="Alignment tasks">
+        {alignmentTasks.map((task) => (
+          <SelectableTile
+            key={task.id}
+            image={task.image}
+            title={task.name}
+            description={task.comment}
+            isSelected={selectedTask?.id === task.id}
+            isDisabled={task.disabled}
+            onSelect={() => handleTaskSelection(task)}
+          />
+        ))}
+      </TileGrid>
+    </JobSection>
   );
 };

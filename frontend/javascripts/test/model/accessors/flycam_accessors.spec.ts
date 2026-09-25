@@ -87,7 +87,7 @@ describe("Flycam Accessors", () => {
     expect(getActiveMagIndexForLayer(state, "layer1")).toBe(3);
   });
 
-  it("should calculate appropriate zoom factors for datasets with many magnifications", () => {
+  it("should calculate appropriate zoom factors for datasets with many magnifications", async () => {
     const voxelSize: VoxelSize = { factor: [4, 4, 35], unit: UnitLong.nm };
     const mags: Vector3[] = [
       [1, 1, 1],
@@ -117,7 +117,7 @@ describe("Flycam Accessors", () => {
       TDView: rect,
     };
 
-    const maximumZoomPerMags = _getMaximumZoomForAllMags(
+    const maximumZoomPerMags = await _getMaximumZoomForAllMags(
       constants.MODE_PLANE_TRACING,
       "BEST_QUALITY_FIRST",
       voxelSize.factor,
@@ -126,6 +126,11 @@ describe("Flycam Accessors", () => {
       DEFAULT_REQUIRED_BUCKET_CAPACITY,
       Identity4x4,
       _getDummyFlycamMatrix(voxelSize),
+      // "scanLines" + prefetch on matches production's default (WkDevFlags.bucketDebugging.
+      // obliquePickerStrategy / .prefetchAlongViewAxis), and also matches what master always
+      // did here (unconditional z-axis prefetch) before prefetching became opt-in.
+      "scanLines",
+      true,
     );
 
     // If this test case should fail at some point, the following values may be updated appropriately

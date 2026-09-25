@@ -128,9 +128,24 @@ export function AnnotationStatisticsSection() {
   return (
     <InfoTabSection label="Statistics">
       {skeletonStats ? (
-        <InfoTabRow label="Trees" isShortValue tooltipHtml={getSkeletonStatsTooltip(skeletonStats)}>
-          {formatNumber(skeletonStats.treeCount)}
-        </InfoTabRow>
+        <>
+          <InfoTabRow label="Trees" isShortValue>
+            {formatNumber(skeletonStats.treeCount)}
+          </InfoTabRow>
+          {/* Shown inline rather than in a tooltip on the tree count — hover is hard to
+              discover, and these three belong to the same fact. */}
+          <div className="info-tab-subrows">
+            <InfoTabRow label="Nodes" isShortValue>
+              {formatNumber(skeletonStats.nodeCount)}
+            </InfoTabRow>
+            <InfoTabRow label="Edges" isShortValue>
+              {formatNumber(skeletonStats.edgeCount)}
+            </InfoTabRow>
+            <InfoTabRow label="Branchpoints" isShortValue>
+              {formatNumber(skeletonStats.branchPointCount)}
+            </InfoTabRow>
+          </div>
+        </>
       ) : null}
       <InfoTabRow
         label="Segments"

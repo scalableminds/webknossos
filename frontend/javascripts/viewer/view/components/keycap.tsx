@@ -9,12 +9,19 @@ import type React from "react";
 export function Keycap({
   children,
   isGlyph,
+  isWide,
 }: {
   children: React.ReactNode;
   /** Glyph caps (mouse buttons) are slightly larger to fit the artwork. */
   isGlyph?: boolean;
+  /** Drag glyphs carry speed lines beside the mouse and need the extra width. */
+  isWide?: boolean;
 }) {
-  return <span className={`keycap ${isGlyph ? "keycap-glyph" : ""}`}>{children}</span>;
+  return (
+    <span className={`keycap ${isGlyph ? "keycap-glyph" : ""} ${isWide ? "keycap-wide" : ""}`}>
+      {children}
+    </span>
+  );
 }
 
 const glyphProps = {
@@ -53,6 +60,48 @@ export function MouseRightButtonKeycap() {
         <path d="M10.7 6.2V5.7A4.7 4.7 0 0 0 6 1v5.2z" fill="currentColor" stroke="none" />
         <rect x="1.3" y="1" width="9.4" height="14" rx="4.7" />
         <path d="M1.3 6.2h9.4" />
+      </svg>
+    </Keycap>
+  );
+}
+
+/**
+ * Drag variants. The two trailing speed lines are the same cue the status bar uses for a
+ * drag, so the two places read as one visual language. They need a wider box than the
+ * plain buttons, hence their own glyph props.
+ */
+const dragGlyphProps = {
+  ...glyphProps,
+  width: 18,
+  height: 16,
+  viewBox: "0 0 18 16",
+} as const;
+
+export function MouseLeftDragKeycap() {
+  return (
+    <Keycap isGlyph isWide>
+      <svg {...dragGlyphProps} role="img">
+        <title>Drag with the left mouse button</title>
+        <path d="M1.3 6.2V5.7A4.7 4.7 0 0 1 6 1v5.2z" fill="currentColor" stroke="none" />
+        <rect x="1.3" y="1" width="9.4" height="14" rx="4.7" />
+        <path d="M1.3 6.2h9.4" />
+        <path d="M17 6.2h-3.6" />
+        <path d="M15.4 9.8h-2" />
+      </svg>
+    </Keycap>
+  );
+}
+
+export function MouseRightDragKeycap() {
+  return (
+    <Keycap isGlyph isWide>
+      <svg {...dragGlyphProps} role="img">
+        <title>Drag with the right mouse button</title>
+        <path d="M10.7 6.2V5.7A4.7 4.7 0 0 0 6 1v5.2z" fill="currentColor" stroke="none" />
+        <rect x="1.3" y="1" width="9.4" height="14" rx="4.7" />
+        <path d="M1.3 6.2h9.4" />
+        <path d="M17 6.2h-3.6" />
+        <path d="M15.4 9.8h-2" />
       </svg>
     </Keycap>
   );

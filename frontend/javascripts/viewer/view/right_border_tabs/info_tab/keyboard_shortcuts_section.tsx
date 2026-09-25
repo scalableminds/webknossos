@@ -3,8 +3,8 @@ import type React from "react";
 import constants from "viewer/constants";
 import {
   Keycap,
-  MouseLeftButtonKeycap,
-  MouseRightButtonKeycap,
+  MouseLeftDragKeycap,
+  MouseRightDragKeycap,
   MouseWheelKeycap,
 } from "../../components/keycap";
 import type { KeyboardShortcutId } from "../../keyboard_shortcuts/keyboard_shortcut_constants";
@@ -79,17 +79,15 @@ const getShortcuts = (
     {
       key: "move",
       action: "Move",
-      keys: [<Connector key="drag">drag</Connector>, <MouseLeftButtonKeycap key="move-mouse" />],
+      // The speed lines carry the "drag" meaning, so no connector word is needed.
+      keys: [<MouseLeftDragKeycap key="move-mouse" />],
     },
     {
       key: "rotate",
       action: "Rotate 3D view",
       // TrackballControls maps the right mouse button to ROTATE (and the left one to PAN),
       // see libs/trackball_controls.ts.
-      keys: [
-        <Connector key="drag-3d">drag in 3D</Connector>,
-        <MouseRightButtonKeycap key="rotate-mouse" />,
-      ],
+      keys: [<MouseRightDragKeycap key="rotate-mouse" />],
     },
     {
       key: "zoom-wheel",

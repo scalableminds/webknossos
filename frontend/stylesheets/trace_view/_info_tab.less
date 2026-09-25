@@ -149,6 +149,18 @@ button.info-tab-row {
   grid-template-columns: minmax(0, 1fr) var(--info-tab-short-value-track, 96px);
 }
 
+/**
+ * Sub-rows breaking a fact down (the node/edge/branchpoint counts under "Trees"). The
+ * indent and the rule tie them to the row above; the value track is untouched, so their
+ * numbers keep the same right edge as every other short value.
+ */
+.info-tab-subrows {
+  margin-left: 20px;
+  padding-left: 10px;
+  // colorSplit is too faint to read as a rule here; colorBorder is the visible hairline.
+  border-left: 1px solid var(--ant-color-border);
+}
+
 .info-tab-row-label {
   display: flex;
   align-items: center;
@@ -240,4 +252,9 @@ button.info-tab-row {
   min-width: 22px;
   height: 22px;
   padding: 0 4px;
+}
+
+/** Drag glyphs carry speed lines beside the mouse, so they need a wider cap. */
+.keycap-wide {
+  min-width: 28px;
 }

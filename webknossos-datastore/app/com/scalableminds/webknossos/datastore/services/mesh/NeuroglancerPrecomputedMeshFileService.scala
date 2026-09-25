@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
@@ -72,18 +73,29 @@ class NeuroglancerPrecomputedMeshFileService @Inject() (dataVaultService: DataVa
     )
   }
 
-  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentId: Seq[Long])(using
-      tc: TokenContext
+  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long], failOnZeroChunks: Boolean)(
+      using tc: TokenContext
   ): Fox[WebknossosSegmentInfo] =
     for {
       vaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
       mesh <- meshInfoCache.getOrLoad(meshFileKey, loadRemoteMeshInfo)
       chunkScale = Array.fill(3)(1 / math.pow(2, mesh.meshInfo.vertex_quantization_bits))
-      meshSegmentInfos <- Fox.serialCombined(segmentId)(id => listMeshChunks(vaultPath, mesh, id))
+      meshSegmentInfos <-
+        if (failOnZeroChunks) Fox.serialCombined(segmentIds)(id => listMeshChunks(vaultPath, mesh, id))
+        else listMeshChunksSkippingMissing(vaultPath, mesh, segmentIds)
+      _ <- Fox.fromBool(meshSegmentInfos.nonEmpty || !failOnZeroChunks) ?~> Msg.Mesh.File
+        .zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
       segmentInfo <- WebknossosSegmentInfo
-        .fromMeshInfosAndMetadata(meshSegmentInfos, NeuroglancerMesh.meshEncoding, chunkScale = chunkScale)
+        .fromMeshInfosAndMetadataAllowingNoChunks(meshSegmentInfos, NeuroglancerMesh.meshEncoding, chunkScale)
         .toFox
     } yield segmentInfo
+
+  private def listMeshChunksSkippingMissing(vaultPath: VaultPath, mesh: NeuroglancerMesh, segmentIds: Seq[Long])(using
+      tc: TokenContext
+  ): Fox[List[List[MeshLodInfo]]] =
+    Fox
+      .serialCombined(segmentIds)(id => listMeshChunks(vaultPath, mesh, id).map(Some(_)).orElse(Fox.successful(None)))
+      .map(_.flatten)
 
   private def listMeshChunks(vaultPath: VaultPath, mesh: NeuroglancerMesh, segmentId: Long)(using
       tc: TokenContext

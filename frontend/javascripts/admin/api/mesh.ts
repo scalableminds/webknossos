@@ -20,6 +20,10 @@ export type MeshSegmentInfo = {
   meshFormat: "draco";
   lods: Array<MeshLodInfo>;
   chunkScale: Vector3;
+  // The requested (unmapped) segment ids for which the mesh file has no mesh, e.g. because they are
+  // too small to show up in the mag the meshes were computed in. Missing in replies of older
+  // back-ends.
+  segmentIdsWithoutMesh?: Array<bigint>;
 };
 
 type ListMeshChunksRequest = {
@@ -62,6 +66,40 @@ export function getMeshFileChunksForSegment(
       };
       return Request.sendJSONReceiveJSON(
         `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks?${params}`,
+        {
+          data: payload,
+          showErrorToast: false,
+        },
+      );
+    }),
+  );
+}
+
+type ListMeshChunksForSegmentsRequest = {
+  meshFileName: string;
+  segmentIds: Array<bigint>;
+};
+
+/*
+ * Lists the chunks of several unmapped segment ids in one request. Unlike
+ * getMeshFileChunksForSegment, segments without a mesh don't make the request fail. They are
+ * reported in segmentIdsWithoutMesh instead, and lods is empty if none of the segments has a mesh.
+ */
+export function getMeshFileChunksForSegments(
+  dataStoreUrl: string,
+  datasetId: string,
+  layerName: string,
+  meshFile: APIMeshFileInfo,
+  segmentIds: Array<bigint>,
+): Promise<MeshSegmentInfo> {
+  return retryAsyncFunction(() =>
+    doWithToken((token) => {
+      const payload: ListMeshChunksForSegmentsRequest = {
+        meshFileName: meshFile.name,
+        segmentIds,
+      };
+      return Request.sendJSONReceiveJSON(
+        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/forSegments?token=${token}`,
         {
           data: payload,
           showErrorToast: false,

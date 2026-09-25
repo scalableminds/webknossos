@@ -1,5 +1,5 @@
 import type { MeshLodInfo } from "admin/api/mesh";
-import { getMeshFilesForDatasetLayer, meshApi } from "admin/rest_api";
+import { getMeshFilesForDatasetLayer, type meshApi } from "admin/rest_api";
 import Deferred from "libs/async/deferred";
 import processTaskWithPool from "libs/async/task_pool";
 import { mergeGeometries } from "libs/BufferGeometryUtils";
@@ -56,6 +56,7 @@ import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
 import { acquireMeshWorker, releaseMeshWorker } from "./common_mesh_saga";
+import { clearMeshChunkCaches, getMeshChunkData, listMeshChunks } from "./mesh_chunk_provider";
 
 const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
 
@@ -98,6 +99,10 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   // work and will be resolved by the corresponding saga execution).
   const deferred = new Deferred<Array<APIMeshFileInfo>, unknown>();
   fetchDeferredsPerLayer[layerName] = deferred;
+  if (mustRequest) {
+    // The mesh files might have been recomputed, so cached chunks can't be trusted anymore.
+    clearMeshChunkCaches();
+  }
 
   const availableMeshFiles = yield* call(
     getMeshFilesForDatasetLayer,
@@ -224,7 +229,7 @@ function* loadPrecomputedMeshForSegmentId(
     let lods: MeshLodInfo[] | null = null;
     try {
       const chunkDescriptors = yield* call(
-        getChunkLoadingDescriptors,
+        _getChunkLoadingDescriptors,
         segmentId,
         dataset,
         segmentationLayer,
@@ -285,7 +290,7 @@ function* getMappingName(segmentationLayer: APISegmentationLayer) {
   return editableMapping != null ? editableMapping.baseMappingName : meshExtraInfo.mappingName;
 }
 
-export function* getChunkLoadingDescriptors(
+function* _getChunkLoadingDescriptors(
   segmentId: bigint,
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
@@ -317,21 +322,22 @@ export function* getChunkLoadingDescriptors(
     );
   }
 
-  const segmentInfo = yield* call(
-    meshApi.getMeshFileChunksForSegment,
-    dataset.dataStore.url,
-    dataset.id,
-    getBaseSegmentationName(segmentationLayer),
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
+  const segmentInfo = yield* call(listMeshChunks, {
+    dataStoreUrl: dataset.dataStore.url,
+    datasetId: dataset.id,
+    layerName: getBaseSegmentationName(segmentationLayer),
     meshFile,
     segmentId,
     // The back-end should only receive a non-null mapping name,
     // if it should perform extra (reverse) look ups to compute a mesh
     // with a specific mapping from a mesh file that was computed
     // without a mapping.
-    meshFile.mappingName == null ? mappingName : null,
-    editableMapping != null && tracing ? tracing.tracingId : null,
+    targetMappingName: meshFile.mappingName == null ? mappingName : null,
+    editableMapping:
+      editableMapping != null && tracing ? { tracingStoreUrl, tracingId: tracing.tracingId } : null,
     annotationVersion,
-  );
+  });
   segmentInfo.lods.forEach((meshLodInfo, lodIndex) => {
     availableChunksMap[lodIndex] = meshLodInfo?.chunks;
     loadingOrder.push(lodIndex);
@@ -361,174 +367,8 @@ export function* getChunkLoadingDescriptors(
     segmentInfo,
   };
 }
-/*
- * Lists the mesh-file chunks of plain, unmapped segment ids, grouped by LOD.
- * Passing neither a mapping name nor an editable mapping tracing id makes the back-end take each id
- * as it is instead of expanding it into all segments of an agglomerate. That keeps the response
- * small, which matters because agglomerates can be huge. Segments without any chunk are skipped.
- */
-export function* getChunksForUnmappedSegments(
-  segmentIds: bigint[],
-  dataset: APIDataset,
-  segmentationLayer: APISegmentationLayer,
-  meshFile: APIMeshFileInfo,
-  annotationVersion: number,
-): Saga<{ chunksByLod: Map<number, meshApi.MeshChunk[]>; chunkScale: Vector3 } | null> {
-  const chunksByLod = new Map<number, meshApi.MeshChunk[]>();
-  let chunkScale: Vector3 | null = null;
-  // The chunks of one LOD end up in request completion order, which is fine because
-  // fetchAndMergePrecomputedChunks sorts them by unmapped segment id before merging.
-  const listingTasks = segmentIds.map(
-    (segmentId) =>
-      function* listChunksOfSegment(): Saga<void> {
-        let segmentInfo: meshApi.MeshSegmentInfo;
-        try {
-          segmentInfo = yield* call(
-            meshApi.getMeshFileChunksForSegment,
-            dataset.dataStore.url,
-            dataset.id,
-            getBaseSegmentationName(segmentationLayer),
-            meshFile,
-            segmentId,
-            null,
-            null,
-            annotationVersion,
-          );
-        } catch (exception) {
-          console.warn(`Could not list mesh chunks for segment ${segmentId}:`, exception);
-          return;
-        }
-        chunkScale = segmentInfo.chunkScale;
-        segmentInfo.lods.forEach((lodInfo, lod) => {
-          const chunksOfLod = chunksByLod.get(lod);
-          if (chunksOfLod != null) {
-            chunksOfLod.push(...lodInfo.chunks);
-          } else {
-            chunksByLod.set(lod, [...lodInfo.chunks]);
-          }
-        });
-      },
-  );
-  yield* call(processTaskWithPool, listingTasks, Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
-
-  return chunkScale == null ? null : { chunksByLod, chunkScale };
-}
-
 function extractScaleFromMatrix(transform: [Vector4, Vector4, Vector4]): Vector3 {
   return [transform[0][0], transform[1][1], transform[2][2]];
-}
-
-/*
- * Fetches and decodes one batch of mesh-file chunks for segmentIdForRequest, tagging each
- * resulting geometry with its unmappedSegmentId and applying the scale/translate/
- * computeVertexNormals steps every precomputed-mesh consumer needs. `onDecoded`, if given, is
- * invoked right after each geometry is ready (used by loadPrecomputedMeshesInChunksForLod below
- * to eagerly add chunks to the scene while still progressively loading; omitted by
- * fetchAndMergePrecomputedChunks, which only wants the final merged result). Every per-chunk
- * failure (a null chunk/data pair from the zip, or a decode error) is collected rather than
- * aborting the batch outright; if any occurred, the first is re-thrown once every chunk has been
- * attempted, so the batch task fails exactly once regardless of how many chunks in it failed.
- */
-function* fetchAndDecodeMeshChunkBatch(
-  dataset: APIDataset,
-  meshFile: APIMeshFileInfo,
-  segmentationLayer: APISegmentationLayer,
-  segmentIdForRequest: bigint,
-  chunks: meshApi.MeshChunk[],
-  chunkScale: Vector3 | null,
-  onDecoded?: (geometry: UnmergedBufferGeometryWithInfo) => Saga<void>,
-): Saga<UnmergedBufferGeometryWithInfo[]> {
-  const loader = getDracoLoader();
-  const dataForChunks = yield* call(
-    meshApi.getMeshFileChunkData,
-    dataset.dataStore.url,
-    dataset.id,
-    getBaseSegmentationName(segmentationLayer),
-    {
-      meshFileName: meshFile.name,
-      // Only extract the relevant properties
-      requests: chunks.map(({ byteOffset, byteSize }) => ({
-        byteOffset,
-        byteSize,
-        segmentId: segmentIdForRequest,
-      })),
-    },
-  );
-
-  const geometries: UnmergedBufferGeometryWithInfo[] = [];
-  const errorsWithDetails: Array<{ error: unknown; chunk: meshApi.MeshChunk | null | undefined }> =
-    [];
-  for (const [chunk, data] of zip(chunks, dataForChunks)) {
-    try {
-      if (chunk == null || data == null) {
-        throw new Error("Unexpected null value.");
-      }
-      const position = chunk.position;
-      const bufferGeometry = (yield* call(
-        loader.decodeDracoFileAsync,
-        data,
-      )) as UnmergedBufferGeometryWithInfo;
-      bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
-      if (chunkScale != null) {
-        bufferGeometry.scale(...chunkScale);
-      }
-      bufferGeometry.translate(position[0], position[1], position[2]);
-      // Compute vertex normals to achieve smooth shading. We do this here
-      // within the chunk-specific code (instead of after all chunks are merged)
-      // to distribute the workload a bit over time.
-      bufferGeometry.computeVertexNormals();
-
-      if (onDecoded != null) {
-        yield* call(onDecoded, bufferGeometry);
-      }
-      geometries.push(bufferGeometry);
-    } catch (error) {
-      errorsWithDetails.push({ error, chunk });
-    }
-
-    // Yield to the event loop after each chunk. Decoding and adding the
-    // geometries is mostly synchronous and would otherwise form a tight
-    // loop that starves rendering and can even stop the saga middleware
-    // silently (see https://github.com/redux-saga/redux-saga/issues/1592).
-    yield* call(sleep, 0);
-  }
-
-  if (errorsWithDetails.length > 0) {
-    console.warn(
-      `Errors occurred while decoding mesh chunks for segment ${segmentIdForRequest}:`,
-      errorsWithDetails,
-    );
-    // Use first error as representative
-    throw errorsWithDetails[0].error;
-  }
-
-  return geometries;
-}
-
-// Sorts `geometries` by unmappedSegmentId and merges them into a single geometry with an
-// attached VertexSegmentMapping + BVH - the final step both loadPrecomputedMeshesInChunksForLod
-// and fetchAndMergePrecomputedChunks need, whether merging a fresh load's chunks or a
-// proofreading merge's delta chunks. Returns null (disposing any partially-built geometry) if
-// there's nothing to merge or if merging fails - mergeGeometries crashes on an empty array, and
-// even a non-empty one might fail (e.g. buffers can't be allocated under memory pressure).
-function* mergeSortedGeometriesWithMapping(
-  sortedGeometries: UnmergedBufferGeometryWithInfo[],
-  segmentIdForLogging: bigint,
-): Saga<BufferGeometryWithInfo | null> {
-  if (sortedGeometries.length === 0) return null;
-  let mergedGeometry: BufferGeometryWithInfo | null = null;
-  try {
-    mergedGeometry = mergeGeometries(sortedGeometries, false) as BufferGeometryWithInfo | null;
-    if (mergedGeometry != null) {
-      mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedGeometries);
-      mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
-    }
-  } catch (exception) {
-    mergedGeometry?.dispose();
-    mergedGeometry = null;
-    console.error(`Failed to merge mesh chunks for segment ${segmentIdForLogging}:`, exception);
-  }
-  return mergedGeometry;
 }
 
 function* loadPrecomputedMeshesInChunksForLod(
@@ -546,6 +386,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   opacity: number | undefined,
 ) {
   const { segmentMeshController } = getSceneController();
+  const loader = getDracoLoader();
   if (availableChunksMap[lod] == null) {
     return;
   }
@@ -563,15 +404,41 @@ function* loadPrecomputedMeshesInChunksForLod(
   const tasks = batches.map(
     (chunks) =>
       function* loadChunks(): Saga<void> {
-        const geometries = yield* call(
-          fetchAndDecodeMeshChunkBatch,
-          dataset,
-          meshFile,
-          segmentationLayer,
+        const dataForChunks = yield* call(
+          getMeshChunkData,
+          {
+            dataStoreUrl: dataset.dataStore.url,
+            datasetId: dataset.id,
+            layerName: getBaseSegmentationName(segmentationLayer),
+            meshFileName: meshFile.name,
+          },
           segmentId,
           chunks,
-          chunkScale,
-          function* addEagerly(bufferGeometry): Saga<void> {
+        );
+
+        const errorsWithDetails = [];
+
+        for (const [chunk, data] of zip(chunks, dataForChunks)) {
+          try {
+            if (chunk == null || data == null) {
+              throw new Error("Unexpected null value.");
+            }
+            const position = chunk.position;
+            const bufferGeometry = (yield* call(
+              loader.decodeDracoFileAsync,
+              data,
+            )) as UnmergedBufferGeometryWithInfo;
+            bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
+            if (chunkScale != null) {
+              bufferGeometry.scale(...chunkScale);
+            }
+
+            bufferGeometry.translate(position[0], position[1], position[2]);
+            // Compute vertex normals to achieve smooth shading. We do this here
+            // within the chunk-specific code (instead of after all chunks are merged)
+            // to distribute the workload a bit over time.
+            bufferGeometry.computeVertexNormals();
+
             // Eagerly add the chunk geometry so that they will be rendered
             // as soon as possible. These chunks will be removed later and then
             // replaced by a merged geometry so that we have better performance
@@ -591,9 +458,24 @@ function* loadPrecomputedMeshesInChunksForLod(
               opacity,
               false,
             );
-          },
-        );
-        bufferGeometries.push(...geometries);
+
+            bufferGeometries.push(bufferGeometry);
+          } catch (error) {
+            errorsWithDetails.push({ error, chunk });
+          }
+
+          // Yield to the event loop after each chunk. Decoding and adding the
+          // geometries is mostly synchronous and would otherwise form a tight
+          // loop that starves rendering and can even stop the saga middleware
+          // silently (see https://github.com/redux-saga/redux-saga/issues/1592).
+          yield* call(sleep, 0);
+        }
+
+        if (errorsWithDetails.length > 0) {
+          console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);
+          // Use first error as representative
+          throw errorsWithDetails[0].error;
+        }
       },
   );
 
@@ -609,11 +491,24 @@ function* loadPrecomputedMeshesInChunksForLod(
     bufferGeometries,
     (geometryWithInfo) => geometryWithInfo.unmappedSegmentId,
   );
-  const mergedGeometry = yield* call(
-    mergeSortedGeometriesWithMapping,
-    sortedBufferGeometries,
-    segmentId,
-  );
+
+  // mergeGeometries will crash if the array is empty. Even if it's not empty,
+  // the function might return null or throw (e.g., when the necessary buffers
+  // cannot be allocated because of memory pressure).
+  let mergedGeometry: BufferGeometryWithInfo | null = null;
+  try {
+    mergedGeometry = (
+      sortedBufferGeometries.length > 0 ? mergeGeometries(sortedBufferGeometries, false) : null
+    ) as BufferGeometryWithInfo | null;
+    if (mergedGeometry != null) {
+      mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedBufferGeometries);
+      mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
+    }
+  } catch (exception) {
+    mergedGeometry?.dispose();
+    mergedGeometry = null;
+    console.error(`Failed to merge mesh chunks for segment ${segmentId}:`, exception);
+  }
 
   if (mergedGeometry == null) {
     // Don't fail hard. Instead, keep the eagerly added chunk meshes (see above)
@@ -653,57 +548,6 @@ function* loadPrecomputedMeshesInChunksForLod(
     opacity,
     true,
   );
-}
-
-/**
- * Fetches and decodes an explicit, already-known list of mesh-file chunks (no chunk-listing
- * round-trip - the caller already knows which chunks it wants), merging them into a single
- * geometry with an attached VertexSegmentMapping. Unlike loadPrecomputedMeshesInChunksForLod
- * above, this doesn't eagerly add individual chunks to the scene before merging them - it's used
- * by the proofreading merge orchestration (local_mesh_change_sagas.ts) to fetch only the
- * "delta" chunks belonging to the not-yet-loaded side of a merge, which is typically a small,
- * one-shot addition rather than a full progressive load.
- */
-export function* fetchAndMergePrecomputedChunks(
-  dataset: APIDataset,
-  meshFile: APIMeshFileInfo,
-  segmentationLayer: APISegmentationLayer,
-  segmentIdForRequest: bigint,
-  chunks: meshApi.MeshChunk[],
-  chunkScale: Vector3 | null,
-): Saga<BufferGeometryWithInfo | null> {
-  if (chunks.length === 0) return null;
-  const batches = chunkDynamically(chunks, MIN_BATCH_SIZE_IN_BYTES, (chunk) => chunk.byteSize);
-
-  const bufferGeometries: UnmergedBufferGeometryWithInfo[] = [];
-  const tasks = batches.map(
-    (batchChunks) =>
-      function* loadChunks(): Saga<void> {
-        const geometries = yield* call(
-          fetchAndDecodeMeshChunkBatch,
-          dataset,
-          meshFile,
-          segmentationLayer,
-          segmentIdForRequest,
-          batchChunks,
-          chunkScale,
-        );
-        bufferGeometries.push(...geometries);
-      },
-  );
-
-  try {
-    yield* call(processTaskWithPool, tasks, Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
-  } catch (exception) {
-    Toast.warning(`Some mesh chunks could not be loaded for segment ${segmentIdForRequest}.`);
-    console.error(exception);
-  }
-
-  const sortedBufferGeometries = sortBy(
-    bufferGeometries,
-    (geometryWithInfo) => geometryWithInfo.unmappedSegmentId,
-  );
-  return yield* call(mergeSortedGeometriesWithMapping, sortedBufferGeometries, segmentIdForRequest);
 }
 
 export default function* precomputedMeshSaga(): Saga<void> {

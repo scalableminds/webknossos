@@ -1,20 +1,9 @@
-import type { ActionPattern, Task } from "@redux-saga/types";
+import type { ActionPattern } from "@redux-saga/types";
 import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
-import type { CallEffect } from "redux-saga/effects";
 import { ModalWidth } from "theme";
-import {
-  call,
-  delay,
-  fork,
-  put,
-  race,
-  type SagaGenerator,
-  spawn,
-  take,
-  takeEvery,
-} from "typed-redux-saga";
+import { call, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum } from "viewer/constants";
 import { type Action, escalateErrorAction } from "viewer/model/actions/actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
@@ -186,13 +175,7 @@ export function* takeWithBatchActionSupport(actionType: Action["type"]) {
 export function* spawnUntilCanceled<Fn extends (...args: any[]) => Saga<unknown>>(
   sagaFn: Fn,
   ...params: Parameters<Fn>
-): Saga<Task> {
-  return yield* spawnEffectUntilCanceled(call(sagaFn, ...params));
-}
-
-export function* spawnEffectUntilCanceled<T>(
-  sagaEffect: SagaGenerator<T, CallEffect<T>>,
-): Saga<Task> {
+): Saga<void> {
   /*
    * Spawns the given saga with the given parameters in a non-blocking manner.
    * The saga is automatically canceled if a RESTART_SAGA or CANCEL_SAGA action
@@ -203,10 +186,10 @@ export function* spawnEffectUntilCanceled<T>(
    * that you need spawn. In general, we want to avoid spawn because it can cause
    * lingering sagas that never get teared down.
    */
-  return yield* spawn(function* (): Saga<void> {
+  yield* spawn(function* (): Saga<void> {
     try {
       yield* race({
-        completed: sagaEffect,
+        completed: call(sagaFn, ...params),
         canceled: take(["RESTART_SAGA", "CANCEL_SAGA"]),
       });
     } catch (error) {

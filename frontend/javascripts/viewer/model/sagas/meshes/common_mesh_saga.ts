@@ -144,15 +144,14 @@ function* downloadMeshCells(action: TriggerMeshesDownloadAction): Saga<void> {
 }
 
 function* handleRemoveSegment(action: RemoveSegmentAction) {
-  if (action.preserveMesh) {
-    // The caller hands this id to syncAffectedAndLoadMissingMeshes, which either adjusts the mesh
-    // locally or removes it as part of its reload fallback.
-    return;
-  }
   // The dispatched action will make sure that the mesh entry is removed from the
   // store and from the scene.
   yield* put(removeMeshAction(action.layerName, action.segmentId));
 }
+
+// Note that merging segment items (MERGE_SEGMENTS_ITEMS) must not remove the mesh of the merged-away
+// agglomerate. refreshProofreadingSegmentsAndMeshes reads it to decide whether the meshes need a
+// refresh and which opacity and visibility to keep, and removes it afterwards.
 
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {
   const { id, visibility, layerName, additionalCoordinates } = action;

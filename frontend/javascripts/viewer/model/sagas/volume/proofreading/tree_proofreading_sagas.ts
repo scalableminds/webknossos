@@ -44,7 +44,7 @@ import {
 import { performMinCut } from "./cut_operation_helper_sagas";
 import { splitAgglomerateInMapping, updateMappingWithMerge } from "./local_mapping_update_sagas";
 import { getAgglomerateInfos, lookupAgglomerateId, prepareSplitOrMerge } from "./preparation_sagas";
-import { updateProofreadingSegmentsAndScheduleSyncMeshes } from "./segment_and_mesh_refresh_sagas";
+import { refreshProofreadingSegmentsAndMeshes } from "./segment_and_mesh_refresh_sagas";
 
 // Shared setup for tree-based proofreading handlers. Returns null if the action should not proceed.
 // Note: the skeletontracing reducer already mutated the trees according to the received action.
@@ -295,14 +295,7 @@ export function* handleMergeViaTree(action: MergeTreesAction, ctx: OperationCont
         nodePosition: targetNodePosition,
       },
     ];
-    const currentAnnotationVersion = yield* select((state) => state.annotation.version);
-    yield* call(
-      updateProofreadingSegmentsAndScheduleSyncMeshes,
-      volumeTracingId,
-      refreshInfos,
-      ctx,
-      currentAnnotationVersion,
-    );
+    yield* call(refreshProofreadingSegmentsAndMeshes, volumeTracingId, refreshInfos, ctx);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -511,13 +504,7 @@ export function* handleSplitViaTree(
         nodePosition: targetNodePosition,
       },
     ];
-    yield* call(
-      updateProofreadingSegmentsAndScheduleSyncMeshes,
-      volumeTracingId,
-      refreshInfos,
-      ctx,
-      currentAnnotationVersion,
-    );
+    yield* call(refreshProofreadingSegmentsAndMeshes, volumeTracingId, refreshInfos, ctx);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);

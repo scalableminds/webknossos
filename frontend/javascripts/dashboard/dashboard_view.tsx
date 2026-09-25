@@ -164,17 +164,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     if (this.props.activeUser) {
       const validTabKeys = this.getValidTabKeys();
       const tabs = [
-        validTabKeys.publications
-          ? {
-              label: "Featured Publications",
-              key: "publications",
-              children: (
-                <RenderingTabContext.Provider value="publications">
-                  <PublicationViewWithHeader />
-                </RenderingTabContext.Provider>
-              ),
-            }
-          : null,
         validTabKeys.datasets
           ? {
               label: <span>Datasets</span>,
@@ -215,6 +204,17 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
             </RenderingTabContext.Provider>
           ),
         },
+        validTabKeys.publications
+          ? {
+              label: "Featured Publications",
+              key: "publications",
+              children: (
+                <RenderingTabContext.Provider value="publications">
+                  <PublicationViewWithHeader />
+                </RenderingTabContext.Provider>
+              ),
+            }
+          : null,
       ];
 
       return tabs.filter((el) => el != null) as Tab[];

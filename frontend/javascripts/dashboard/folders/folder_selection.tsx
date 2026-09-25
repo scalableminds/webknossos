@@ -51,12 +51,11 @@ export default function FolderSelection({
   return (
     <TreeSelect
       disabled={disabled || false}
-      showSearch
+      showSearch={{ treeNodeFilterProp: "title" }}
       style={{ width: width || "100%" }}
       value={folderId || undefined}
       styles={{ popup: { root: { maxHeight: 500, overflow: "auto" } } }}
       placeholder="Select Folder"
-      treeNodeFilterProp={"title"}
       allowClear
       popupMatchSelectWidth={false}
       treeDefaultExpandAll

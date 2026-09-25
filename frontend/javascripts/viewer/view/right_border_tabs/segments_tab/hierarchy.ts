@@ -27,6 +27,10 @@ export type SegmentGroupUiNode = BasicDataNode & {
   key: string;
   group: SegmentGroup;
   children: SegmentsUiNode[];
+  // Number of segments in this group and all of its subgroups. Rendered as the
+  // right-aligned count of a group row. It is accumulated while the hierarchy is
+  // built, because deriving it per row would walk the subtree on every render.
+  segmentCount: number;
 };
 
 export type SegmentsUiNode = SegmentUiNode | SegmentGroupUiNode;
@@ -100,6 +104,10 @@ export function buildSegmentHierarchy(
       key: getGroupUiNodeKey(group.groupId),
       group,
       children: [...childGroupNodes, ...segmentNodes],
+      segmentCount: childGroupNodes.reduce(
+        (sum, childGroup) => sum + childGroup.segmentCount,
+        segmentNodes.length,
+      ),
     };
     nodesByKey.set(node.key, node);
 

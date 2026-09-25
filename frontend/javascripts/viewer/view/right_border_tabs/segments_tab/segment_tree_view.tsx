@@ -2,11 +2,14 @@ import { type Tree as AntdTree, App, type GetRef, type TreeProps } from "antd";
 import app from "app";
 import { useWkSelector } from "libs/react_hooks";
 import { sleep } from "libs/utils";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { getSegmentIdForPosition } from "viewer/controller/combinations/volume_handlers";
-import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import {
+  getMappingInfo,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getVisibleSegments } from "viewer/model/accessors/volumetracing_accessor";
@@ -14,6 +17,7 @@ import { getUpdateSegmentActionToToggleVisibility } from "viewer/model/actions/v
 import {
   toggleAllSegmentsAction,
   toggleSegmentGroupAction,
+  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import Store from "viewer/store";
 import {
@@ -38,14 +42,24 @@ import {
   type SegmentsUiNode,
   type SegmentUiNode,
 } from "./hierarchy";
-import { GroupNodeTitle, SegmentNodeTitle } from "./node_titles";
+import { useJumpToSegment } from "./hooks/use_jump_to_segment";
+import { GroupNodeTitle } from "./node_titles";
 import { SegmentDetailsPanel } from "./segment_details_panel";
-import { mayEditVisibleSegmentation } from "./segments_view_helper";
+import { SegmentNodeTitle, type SegmentRowActions } from "./segment_row";
+import {
+  mayEditVisibleSegmentation,
+  withMappingActivationConfirmation,
+} from "./segments_view_helper";
 
 const CONTEXT_MENU_CLASS = "segment-list-context-menu-overlay";
 const SCROLL_DELAY_MS = 100;
 
-type Props = Omit<ContextMenuDependencies, "hideContextMenu">;
+type Props = Omit<ContextMenuDependencies, "hideContextMenu" | "startRenaming">;
+
+// The height of a segment/group row, matching @segment-row-height in _right_menu.less.
+// The virtualized list only uses it to estimate how many rows to render; the row that is
+// expanded for a long name measures itself.
+const ROW_HEIGHT = 30;
 
 /*
  * Reacts to the "benchmark:segmentlist:scroll" event (emitted from the dev console)
@@ -78,7 +92,7 @@ function useScrollBenchmark(treeRef: React.RefObject<GetRef<typeof AntdTree> | n
 }
 
 export function SegmentTreeView(props: Props) {
-  const { hierarchy, selection, groupOperations } = props;
+  const { hierarchy, selection, groupOperations, meshOperations } = props;
   const dispatch = useDispatch();
   const { modal } = App.useApp();
   const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
@@ -99,19 +113,95 @@ export function SegmentTreeView(props: Props) {
   );
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
-  const {
-    contextMenuPosition,
-    contextMenu,
-    openContextMenu,
-    hideContextMenu,
-    onRenameStart,
-    onRenameEnd,
-    getIsRenaming,
-  } = useTreeContextMenu(CONTEXT_MENU_CLASS);
+  const { contextMenuPosition, contextMenu, openContextMenu, hideContextMenu } =
+    useTreeContextMenu(CONTEXT_MENU_CLASS);
 
   useScrollBenchmark(treeRef);
 
-  const contextMenuDependencies: ContextMenuDependencies = { ...props, hideContextMenu };
+  // At most one row is editable at a time. Owning the key here (instead of letting each
+  // row keep its own state) lets the "Rename" context menu entry start an edit, and lets
+  // drag & drop be suspended while one is running, so that selecting text in the input
+  // doesn't start a drag.
+  const [renamingNodeKey, setRenamingNodeKey] = useState<string | null>(null);
+  const startRenaming = useCallback((nodeKey: string) => setRenamingNodeKey(nodeKey), []);
+  const finishRenaming = useCallback(() => setRenamingNodeKey(null), []);
+
+  const mappingInfo = useWkSelector((state) =>
+    getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      visibleSegmentationLayer?.name,
+    ),
+  );
+  const { currentMeshFile } = props.meshFiles;
+
+  const jumpToSegment = useJumpToSegment();
+  const segmentRowActions: SegmentRowActions = useMemo(
+    () => ({
+      selectAndJumpTo: selection.selectSegmentAndJumpToPosition,
+      centerInViewports: jumpToSegment,
+      computeAdHocMesh: (segment) => meshOperations.loadAdHocMeshes([segment]),
+      // Only worth asking when there is something to choose between. A precomputed mesh
+      // is the cheaper one, but it is stale for a segment that was edited since the file
+      // was computed, so neither is a safe default.
+      getMeshLoadMenuItems: (segment) =>
+        currentMeshFile == null
+          ? null
+          : [
+              {
+                key: "loadPrecomputedMesh",
+                label: "Load Mesh (precomputed)",
+                onClick: withMappingActivationConfirmation(
+                  () => meshOperations.loadPrecomputedMeshes([segment]),
+                  currentMeshFile.mappingName,
+                  "mesh file",
+                  visibleSegmentationLayer?.name,
+                  mappingInfo,
+                ),
+              },
+              {
+                key: "computeAdHocMesh",
+                label: "Compute Mesh (ad-hoc)",
+                onClick: () => meshOperations.loadAdHocMeshes([segment]),
+              },
+            ],
+      setMeshVisibility: (segment, isVisible) =>
+        meshOperations.setMeshVisibility([segment], isVisible),
+      // Removing a mesh that is still loading aborts its computation (see ad_hoc_mesh_saga).
+      cancelMeshComputation: (segment) => meshOperations.removeMeshes([segment]),
+      renameSegment: (segment, name) => {
+        if (visibleSegmentationLayer != null) {
+          dispatch(
+            updateSegmentAction(
+              segment.id,
+              { name: name.length > 0 ? name : null },
+              visibleSegmentationLayer.name,
+              undefined,
+              true,
+            ),
+          );
+        }
+      },
+      startRenaming,
+      finishRenaming,
+    }),
+    [
+      dispatch,
+      visibleSegmentationLayer,
+      meshOperations,
+      currentMeshFile,
+      mappingInfo,
+      jumpToSegment,
+      selection.selectSegmentAndJumpToPosition,
+      startRenaming,
+      finishRenaming,
+    ],
+  );
+
+  const contextMenuDependencies: ContextMenuDependencies = {
+    ...props,
+    hideContextMenu,
+    startRenaming,
+  };
   const buildSegmentContextMenu = useSegmentContextMenuBuilder(contextMenuDependencies);
   const buildGroupContextMenu = useGroupContextMenuBuilder(contextMenuDependencies);
 
@@ -280,7 +370,7 @@ export function SegmentTreeView(props: Props) {
   };
 
   const isNodeDraggable = (node: SegmentsUiNode): boolean =>
-    allowUpdate && !getIsRenaming() && !isRootGroupNode(node);
+    allowUpdate && renamingNodeKey == null && !isRootGroupNode(node);
 
   return (
     <>
@@ -302,6 +392,7 @@ export function SegmentTreeView(props: Props) {
                 <ScrollableVirtualizedTree<SegmentsUiNode>
                   treeData={hierarchy.roots}
                   height={height}
+                  itemHeight={ROW_HEIGHT}
                   ref={treeRef}
                   className="segments-tree"
                   titleRender={(node) =>
@@ -309,17 +400,17 @@ export function SegmentTreeView(props: Props) {
                       <SegmentNodeTitle
                         node={node}
                         isCentered={centeredSegmentId === node.segment.id}
+                        isRenaming={renamingNodeKey === node.key}
+                        actions={segmentRowActions}
                         onContextMenu={onSegmentNodeContextMenu}
-                        onRenameStart={onRenameStart}
-                        onRenameEnd={onRenameEnd}
-                        onSelectSegment={selection.selectSegmentAndJumpToPosition}
                       />
                     ) : (
                       <GroupNodeTitle
                         node={node}
+                        isRenaming={renamingNodeKey === node.key}
                         onContextMenu={onGroupNodeContextMenu}
-                        onRenameStart={onRenameStart}
-                        onRenameEnd={onRenameEnd}
+                        onStartRenaming={startRenaming}
+                        onFinishRenaming={finishRenaming}
                       />
                     )
                   }

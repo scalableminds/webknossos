@@ -157,7 +157,7 @@ export const AiModelSelector: React.FC = () => {
           ) : (
             <Flex
               vertical
-              gap={8}
+              gap="small"
               role="radiogroup"
               aria-label="Your custom models"
               style={{ maxHeight: 360, overflowY: "auto" }}
@@ -171,7 +171,7 @@ export const AiModelSelector: React.FC = () => {
                     </Avatar>
                   }
                   title={
-                    <Space size={8}>
+                    <Space size="small">
                       <Text strong>{model.name}</Text>
                       <Tag>
                         {model.category === APIAiModelCategory.EM_NEURONS ? "NEURONS" : "INSTANCES"}

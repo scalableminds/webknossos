@@ -101,7 +101,7 @@ const AiTrainingDataSelector = ({
     >
       <Flex
         align="center"
-        gap={12}
+        gap="small"
         style={{
           padding: "12px 16px",
           background: hasErrors ? cssVar.colorErrorBg : undefined,
@@ -207,7 +207,7 @@ const AiTrainingDataSelector = ({
           />
         </Form.Item>
       </div>
-      <Flex gap={24} style={{ padding: "0 16px 16px" }}>
+      <Flex gap="large" style={{ padding: "0 16px 16px" }}>
         <Text type="secondary">
           Bounding boxes <Text strong>{userBoundingBoxes.length}</Text>
         </Text>
@@ -216,7 +216,7 @@ const AiTrainingDataSelector = ({
         </Text>
       </Flex>
       {detailedIssues.length > 0 && (
-        <Flex vertical gap={8} style={{ padding: "0 16px 16px" }}>
+        <Flex vertical gap="small" style={{ padding: "0 16px 16px" }}>
           {detailedIssues.map(({ issue, type }) => (
             <Alert
               key={issue.summary}
@@ -341,7 +341,7 @@ export const AiTrainingDataSection = () => {
       }
     >
       <Form layout="vertical">
-        <Flex vertical gap={16}>
+        <Flex vertical gap="middle">
           {selectedAnnotations.length === 0 && (
             <Text type="secondary" style={{ textAlign: "center", padding: 24 }}>
               Please add training annotations via the "Add annotation" button.

@@ -191,7 +191,7 @@ interface CreditInformationProps {
 function CreditRow({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
   const { cssVar } = theme.useToken();
   return (
-    <Flex justify="space-between" gap={12}>
+    <Flex justify="space-between" gap="small">
       <Text style={{ color: cssVar.colorTextSecondary }}>{label}</Text>
       <Text strong style={{ textAlign: "right" }}>
         {value}
@@ -214,7 +214,7 @@ function BeforeYouStart({ requirements }: { requirements: JobRequirement[] }) {
         Before you start
       </Text>
       {requirements.map(({ label, severity }) => (
-        <Flex key={label} gap={8} align="baseline">
+        <Flex key={label} gap="small" align="baseline">
           <Badge status={severity === "error" ? "error" : "warning"} />
           <Text style={{ color: cssVar.colorTextSecondary }}>{label}</Text>
         </Flex>
@@ -307,7 +307,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
 
   return (
     <Card style={{ boxShadow: cssVar.boxShadowTertiary }}>
-      <Flex align="center" gap={8} style={{ marginBottom: 16 }}>
+      <Flex align="center" gap="small" style={{ marginBottom: 16 }}>
         <CreditCardOutlined style={{ color: ColorWKGold, fontSize: cssVar.fontSizeLG }} />
         <Text strong style={{ fontSize: cssVar.fontSizeLG }}>
           Credit information
@@ -326,12 +326,12 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
         <Text>Available credits</Text>
         <Text strong>{formatMilliCreditsString(organizationMilliCredits)}</Text>
       </Flex>
-      <Flex vertical gap={8}>
+      <Flex vertical gap="small">
         <CreditRow label={selectionLabel} value={selectedModel?.name ?? "-"} />
         <CreditRow
           label={
             volumeLabel ?? (
-              <Space size={4}>
+              <Space size="small">
                 Dataset size
                 <Tooltip title="Displayed size respects selected bounding boxes and magnifications.">
                   <InfoCircleOutlined />
@@ -361,7 +361,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           </Title>
         )}
       </Flex>
-      <Flex vertical gap={16}>
+      <Flex vertical gap="middle">
         {isBlockedByStorageQuota && (
           <Alert
             showIcon

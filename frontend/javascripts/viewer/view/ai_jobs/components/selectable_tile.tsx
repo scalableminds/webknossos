@@ -66,7 +66,7 @@ export function TileGrid({ children, label }: { children: React.ReactNode; label
 
 export function TileGroupLabel({ title, count }: { title: string; count: number }) {
   return (
-    <Flex gap={8} style={{ marginBottom: 8 }}>
+    <Flex gap="small" style={{ marginBottom: 8 }}>
       <Typography.Text strong>{title}</Typography.Text>
       <Typography.Text type="secondary">{count}</Typography.Text>
     </Flex>
@@ -163,7 +163,7 @@ export function SelectableRow({
       styles={{ body: { padding: "12px 16px" } }}
       {...getSelectionHandlers(selectionState, onSelect)}
     >
-      <Flex gap={12} align="center">
+      <Flex gap="small" align="center">
         {avatar}
         <Flex vertical flex={1} style={{ minWidth: 0 }}>
           {title}

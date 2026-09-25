@@ -63,7 +63,7 @@ export function JobSection({ step, title, description, status, extra, children }
   const { cssVar } = theme.useToken();
   return (
     <Card style={{ boxShadow: cssVar.boxShadowTertiary }}>
-      <Flex gap={12} align="flex-start" style={{ marginBottom: 20 }}>
+      <Flex gap="small" align="flex-start" style={{ marginBottom: 20 }}>
         <StepBadge step={step} status={status} />
         <Flex vertical flex={1}>
           <Typography.Text strong style={{ fontSize: cssVar.fontSizeLG, lineHeight: "24px" }}>

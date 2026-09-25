@@ -17,8 +17,8 @@ export function AiJobLayout({ description, sidebar, children }: AiJobLayoutProps
       >
         {description}
       </Typography.Paragraph>
-      <Flex gap={24} align="flex-start">
-        <Flex flex="2" vertical gap={16} style={{ minWidth: 0 }}>
+      <Flex gap="large" align="flex-start">
+        <Flex flex="2" vertical gap="middle" style={{ minWidth: 0 }}>
           {children}
         </Flex>
         <Flex flex="1" vertical style={{ position: "sticky", top: 0 }}>
@@ -48,7 +48,7 @@ export function AdvancedSettings({ hint, children }: AdvancedSettingsProps) {
           {
             key: "advanced",
             label: (
-              <Space size={12}>
+              <Space size="small">
                 Advanced settings
                 {hint && <Typography.Text type="secondary">{hint}</Typography.Text>}
               </Space>

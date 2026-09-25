@@ -22,7 +22,7 @@ function useTileStyle({ isSelected, isDisabled }: SelectionState): React.CSSProp
 }
 
 function getSelectionHandlers({ isSelected, isDisabled }: SelectionState, onSelect: () => void) {
-  if (isDisabled) return { "aria-disabled": true };
+  if (isDisabled) return { role: "radio", "aria-checked": false, "aria-disabled": true };
   return {
     role: "radio",
     "aria-checked": isSelected,

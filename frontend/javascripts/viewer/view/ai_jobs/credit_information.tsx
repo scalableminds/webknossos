@@ -166,7 +166,7 @@ export const TrainingCreditInformation: React.FC = () => {
       areParametersValid={areParametersValid}
       requirements={requirements}
       selectionLabel="Selected task"
-      volumeLabel="Training volume"
+      volume={{ label: "Training volume", voxelCount: totalVolume }}
     />
   );
 };
@@ -180,8 +180,8 @@ interface CreditInformationProps {
   areParametersValid: boolean;
   requirements: JobRequirement[];
   selectionLabel?: string;
-  // Without a custom label, the volume is labeled as the (bounding box restricted) dataset size.
-  volumeLabel?: string;
+  // Replaces the default "Dataset size" row, which shows the volume of the selected bounding box.
+  volume?: { label: string; voxelCount: number };
 }
 
 function CreditRow({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
@@ -228,7 +228,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
   areParametersValid,
   requirements,
   selectionLabel = "Selected model",
-  volumeLabel,
+  volume,
 }) => {
   const { cssVar } = theme.useToken();
   const jobTypeToCreditCostPerGVxInMillis: Partial<Record<APIJobCommand, number>> = useMemo(
@@ -277,11 +277,14 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
   });
 
   const getBoundingBoxinVoxels = useCallback((): string => {
+    if (volume) {
+      return formatVoxels(volume.voxelCount);
+    }
     if (selectedBoundingBox) {
       return formatVoxels(boundingBoxVolume);
     }
     return "-";
-  }, [selectedBoundingBox, boundingBoxVolume]);
+  }, [volume, selectedBoundingBox, boundingBoxVolume]);
 
   const costInCredits = jobCreditCostInfo?.costInMilliCredits;
 
@@ -326,7 +329,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
         <CreditRow label={selectionLabel} value={selectedModel?.name ?? "-"} />
         <CreditRow
           label={
-            volumeLabel ?? (
+            volume?.label ?? (
               <Space size="small">
                 Dataset size
                 <Tooltip title="Displayed size respects selected bounding boxes and magnifications.">

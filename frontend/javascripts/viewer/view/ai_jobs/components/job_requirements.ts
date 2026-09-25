@@ -1,4 +1,6 @@
-import type { FieldData } from "@rc-component/form/es/interface";
+import type { FormProps } from "antd";
+
+type FieldData = Parameters<NonNullable<FormProps["onFieldsChange"]>>[1][number];
 
 export type StepStatus = "pending" | "done" | "error";
 

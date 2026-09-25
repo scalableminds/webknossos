@@ -130,7 +130,11 @@ export const AiModelSelector: React.FC = () => {
         <>
           <TileGroupLabel title="Pre-trained models" count={filteredPretrainedModels.length} />
           {filteredPretrainedModels.length === 0 ? (
-            <Text type="secondary">No pre-trained models match your search.</Text>
+            <Text type="secondary">
+              {searchTerm.length > 0
+                ? "No pre-trained models match your search."
+                : "No pre-trained models are available."}
+            </Text>
           ) : (
             <TileGrid label="Pre-trained models">
               {filteredPretrainedModels.map((model) => (

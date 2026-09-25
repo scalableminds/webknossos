@@ -2,7 +2,7 @@
 .ai-job-tile {
   transition: all 0.2s;
 
-  &[role="radio"]:hover {
+  &[role="radio"]:not([aria-disabled="true"]):hover {
     border-color: var(--ant-color-primary) !important;
   }
 }

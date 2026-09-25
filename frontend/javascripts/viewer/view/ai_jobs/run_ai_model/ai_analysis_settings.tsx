@@ -85,6 +85,15 @@ export const AiAnalysisSettings: React.FC = () => {
     }
   }, [form, selectedModel, selectedLayer]);
 
+  // The dataset name is also filled in programmatically (e.g. when picking a model). Setting it
+  // that way keeps a previous validation error, so re-check the name if it had one.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only re-validate when the name changes
+  useEffect(() => {
+    if (form.getFieldError("newDatasetName").length > 0) {
+      form.validateFields(["newDatasetName"]).catch(() => {});
+    }
+  }, [form, newDatasetName]);
+
   const isInstanceModel = selectedJobType === APIJobCommand.INFER_INSTANCES;
   const isNeuronModel =
     selectedModel != null && selectedModel.category === APIAiModelCategory.EM_NEURONS;

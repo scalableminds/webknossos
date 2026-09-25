@@ -3,6 +3,7 @@ import { Col, Form, Input, Row, Typography } from "antd";
 import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
+import { useEffect } from "react";
 import { AdvancedSettings } from "../components/job_layout";
 import { getFormFieldErrors } from "../components/job_requirements";
 import { JobSection } from "../components/job_section";
@@ -21,7 +22,17 @@ export const AiAlignmentSettings: React.FC = () => {
     stepStatuses,
   } = useAlignmentJobContext();
 
+  const [form] = Form.useForm();
   const dataset = useWkSelector((state) => state.dataset);
+
+  // The dataset name is also filled in programmatically (e.g. when picking a model). Setting it
+  // that way keeps a previous validation error, so re-check the name if it had one.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only re-validate when the name changes
+  useEffect(() => {
+    if (form.getFieldError("newDatasetName").length > 0) {
+      form.validateFields(["newDatasetName"]).catch(() => {});
+    }
+  }, [form, newDatasetName]);
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues) => {
     if ("newDatasetName" in changedValues) {
@@ -49,6 +60,7 @@ export const AiAlignmentSettings: React.FC = () => {
       status={stepStatuses.settings}
     >
       <Form
+        form={form}
         layout="vertical"
         onValuesChange={handleValuesChange}
         onFieldsChange={(_, allFields) => setSettingsFormErrors(getFormFieldErrors(allFields))}

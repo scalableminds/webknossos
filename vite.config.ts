@@ -14,7 +14,7 @@ const alias = {
 };
 
 // https://vite.dev/config/
-export const viteConfig = {
+const viteConfig = {
   resolve: { alias, tsconfigPaths: true },
   plugins: [
     react(),

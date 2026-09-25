@@ -78,6 +78,14 @@ export const TreeNodeTitle = memo(
     // The type claims metadata is always set, but e.g. proto-imported trees can lack it at runtime.
     const hasMetadata = (tree.metadata ?? []).length > 0;
 
+    // The truncated rows need the full name on hover; the expanded one shows it anyway. The
+    // active tree explains its accent bar here too, because the bar is a 2px
+    // pseudo-element and can carry neither a tooltip nor a usable hover target of its own.
+    const titleLines = [
+      isExpanded ? null : tree.name,
+      isActive ? "This is the active tree. New nodes are added to it." : null,
+    ].filter((line) => line != null);
+
     const extraIconStyle: React.CSSProperties = {
       flex: "none",
       marginTop: isExpanded ? centerOnFirstLine(EXTRA_ICON_SIZE) : undefined,
@@ -113,7 +121,6 @@ export const TreeNodeTitle = memo(
             // The only track of the row that may shrink.
             flex: 1,
             minWidth: 0,
-            color: isActive ? "var(--ant-color-primary-active)" : undefined,
             ...(isExpanded
               ? {
                   whiteSpace: "normal",
@@ -123,7 +130,7 @@ export const TreeNodeTitle = memo(
               : null),
           }}
           // The truncated rows need the full name on hover; the expanded one shows it anyway.
-          title={isExpanded ? undefined : tree.name}
+          title={titleLines.length > 0 ? titleLines.join("\n\n") : undefined}
           onStartEditing={() => onStartRenaming(node.key)}
           onCommit={(newName) => dispatch(setTreeNameAction(newName, tree.treeId))}
           onFinishEditing={onFinishRenaming}

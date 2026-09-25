@@ -29,7 +29,7 @@ Use `--organization scalable_minds` if that is the local owning organization, or
 
 ## Coverage and one-time fixture setup
 
-The catalog includes **all 131 image assets**, even unreferenced ones: **107 still screenshots** have recipes; **24 static diagrams, editable source assets, and GIF animations** have explicit exclusion reasons. This tool does not record animated GIFs or external videos. `assets.json` and the coverage checker prevent newly added images from silently escaping classification.
+The catalog includes **all 131 image assets**, even unreferenced ones: **82 still screenshots** have recipes; **49 excluded images (including tool/modifier artwork and `datalayers.jpeg`), editable source assets, and GIF animations** have explicit exclusion reasons. This tool does not record animated GIFs or external videos. `assets.json` and the coverage checker prevent newly added images from silently escaping classification.
 
 Most viewer and toolbar recipes prepare their own state using the frontend API. Skeleton examples use a deterministic illustrative tracing. The default scene is at `[3457, 3323, 1204]`, zoom `1`; override it through `fixtures.viewer`. Mesh recipes sample non-background segments around that position and wait for mesh loading. Data loading, fonts, and visible UI controls are awaited. Viewport and emulated screen are 1600×1000 at device scale 1; touch/mobile emulation is off, timezone is UTC and animations are disabled. Captures fail if mobile controls are visible. Only recipes explicitly setting `mobileControls: true` allow them.
 

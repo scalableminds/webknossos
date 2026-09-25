@@ -67,10 +67,10 @@ function fixture(ctx, key, description) {
 function recipe(output, capture) {
   return { id: output, output: `docs/images/${output}`, capture };
 }
-function route(output, path, ready) {
+function route(output, path, ready, scrollToTop = false) {
   return recipe(output, async (ctx) => {
     await goto(ctx, path, ready);
-    return content(ctx);
+    return { target: content(ctx), scrollToTop };
   });
 }
 function settings(output, tab, ready) {
@@ -218,7 +218,7 @@ export const recipes = [
   settings("dataset_settings_metadata.jpeg", "metadata", "Metadata"),
   settings("dataset_settings_viewconfig.jpeg", "defaultConfig", "View Configuration"),
   settings("dataset_settings_delete.jpeg", "delete", "Delete Dataset"),
-  route("tasks_tasktype.jpeg", "/taskTypes/create", "Task Type"),
+  route("tasks_tasktype.jpeg", "/taskTypes/create", "Task Type", true),
   recipe("tasks_task.jpeg", async (ctx) => {
     await goto(ctx, "/tasks/create", "Create Tasks");
     await fill(ctx.page, "#datasetId", "l4_sample");
@@ -227,7 +227,7 @@ export const recipes = [
       .filter({ visible: true })
       .getByText("l4_sample", { exact: true })
       .click();
-    return content(ctx);
+    return { target: content(ctx), scrollToTop: true };
   }),
   route("tasks_project.jpeg", "/projects/create", "Project"),
   recipe("tasks_download.jpeg", async (ctx) => {

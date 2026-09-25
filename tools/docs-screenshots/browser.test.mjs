@@ -103,6 +103,31 @@ test("scoped authentication leaves worker data fetches running and supports anon
       padding: 64,
     });
     assert.equal(tallDialog.readUInt32BE(20), 1328);
+    await page.setContent(
+      '<div role="dialog" style="position:absolute;top:100px;left:200px;width:500px;height:300px;background:#ccc">Animated dialog</div>',
+    );
+    await page
+      .getByRole("dialog")
+      .evaluate((element) =>
+        element.animate([{ transform: "scale(0.1)" }, { transform: "scale(1)" }], {
+          duration: 100000,
+          fill: "forwards",
+        }),
+      );
+    const animated = await captureScreenshot(page, page.getByRole("dialog"), {
+      output: "docs/images/dialog.png",
+      padding: 64,
+    });
+    assert.equal(animated.readUInt32BE(16), 628);
+    assert.equal(animated.readUInt32BE(20), 428);
+    await page.setContent('<main style="height:3000px"><h1>Task heading</h1></main>');
+    await page.evaluate(() => window.scrollTo(0, 500));
+    await captureScreenshot(
+      page,
+      { target: "main", scrollToTop: true },
+      { output: "docs/images/task.png" },
+    );
+    assert.equal(await page.evaluate(() => window.scrollY), 0);
     authenticated = false;
     await page.goto(`${origin}/anonymous`);
     assert.equal(observed.find((r) => r.url === "/anonymous").token, undefined);

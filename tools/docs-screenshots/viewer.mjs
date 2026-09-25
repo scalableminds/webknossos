@@ -1,7 +1,6 @@
 // Recipes deliberately use the live UI and public scripting API. A missing control
 // fails the recipe rather than silently replacing a documentation image with the wrong view.
 const tooltip = (prefix) => `[data-tooltip-content^=${JSON.stringify(prefix)}]`;
-const toolButton = (tool) => `.action-bar label:has(input[value="${tool}"])`;
 const modal = '[role="dialog"]:visible';
 const dropdown = ".ant-dropdown:not(.ant-dropdown-hidden)";
 
@@ -58,14 +57,6 @@ async function scene(ctx, mode = "hybrid", skeleton = false, persist = false) {
     }
   }, skeleton);
   await ctx.waitForViewer();
-}
-
-async function selectTool(ctx, tool) {
-  await ctx.page.evaluate(async (id) => {
-    const api = await window.webknossos.apiReady();
-    api.tracing.setAnnotationTool(id);
-  }, tool);
-  await show(ctx, toolButton(tool));
 }
 
 async function tab(ctx, title, selector) {
@@ -223,10 +214,6 @@ for (const name of ["segments_tab.jpeg", "segments_tab2.jpeg"]) {
     return segmentList;
   });
 }
-add("datalayers.jpeg", async (ctx) => {
-  await scene(ctx, "view");
-  return show(ctx, ".tracing-settings-menu");
-});
 add("ui_toolbar_menu.png", async (ctx) => {
   await scene(ctx);
   return show(ctx, ".action-bar");
@@ -304,90 +291,10 @@ add("toolkit_dropdown.jpg", async (ctx) => {
   };
 });
 
-for (const [name, tool] of Object.entries({
-  "move-tool": "MOVE",
-  "skeleton-tool": "SKELETON",
-  "trace-tool": "TRACE",
-  "brush-tool": "BRUSH",
-  "eraser-tool": "ERASE_BRUSH",
-  "fill-tool": "FILL_CELL",
-  "quickselect-tool": "QUICK_SELECT",
-  "proofreading-tool": "PROOFREAD",
-  "measure-tool": "LINE_MEASUREMENT",
-  "segment-picker-tool": "VOXEL_PIPETTE",
-  "boundingbox-tool": "BOUNDING_BOX",
-})) {
-  recipes.push(
-    recipe(`docs/ui/images/${name}.jpg`, async (ctx) => {
-      await scene(ctx);
-      // Proofreading can be disabled on local installations, but its rendered icon
-      // is still present and can be captured without enabling a mapping.
-      if (tool !== "PROOFREAD") await selectTool(ctx, tool);
-      return show(ctx, toolButton(tool));
-    }),
-  );
-}
-
-for (const [name, text] of Object.entries({
-  "new-tree-modifier": "Create a new Tree",
-  "single-node-tree-mode-modifier": "Toggle the Single node Tree",
-  "pen-mode-modifier": "When activated, clicking and dragging creates nodes",
-})) {
-  recipes.push(
-    recipe(`docs/skeleton_annotation/images/${name}.jpg`, async (ctx) => {
-      await scene(ctx, "skeleton");
-      await selectTool(ctx, "SKELETON");
-      return show(ctx, tooltip(text));
-    }),
-  );
-}
-recipes.push(
-  recipe("docs/skeleton_annotation/images/merger-mode-modifier.jpg", async (ctx) => {
-    await scene(ctx, "skeleton");
-    await selectTool(ctx, "SKELETON");
-    return show(ctx, 'button:has([aria-label="Merger Mode"])');
-  }),
-);
-for (const [name, tool, text] of [
-  ["new-segment-modifier", "BRUSH", "Create a new segment id"],
-  ["brush-size-modifier", "BRUSH", "Change the brush size"],
-  ["overwrite-everything-modifier", "BRUSH", "Overwrite everything."],
-  ["overwrite-empty-modifier", "BRUSH", "Only overwrite empty areas."],
-  ["2d-modifier", "FILL_CELL", "Only perform the Fill operation"],
-  ["3d-modifier", "FILL_CELL", "Perform the Fill operation in 3D."],
-  ["icon_restricted_floodfill", "FILL_CELL", "When enabled, the floodfill"],
-]) {
-  recipes.push(
-    recipe(`docs/volume_annotation/images/${name}.jpg`, async (ctx) => {
-      await scene(ctx);
-      await selectTool(ctx, tool);
-      // This inline tooltip wrapper has zero height; capture the actual button.
-      return show(
-        ctx,
-        name === "icon_restricted_floodfill" ? `${tooltip(text)} > button` : tooltip(text),
-      );
-    }),
-  );
-}
-recipes.push(
-  recipe("docs/volume_annotation/images/interpolation-modifier.jpg", async (ctx) => {
-    await scene(ctx);
-    await selectTool(ctx, "BRUSH");
-    return show(ctx, '.action-bar [data-tooltip-content*="nterpolat"]');
-  }),
-);
-
 add("save_view_configuration_in_view_mode.png", async (ctx) => {
   await scene(ctx, "view");
   return show(ctx, tooltip("Save the current view configuration as default"));
 });
-recipes.push(
-  recipe("docs/ui/images/ai-analysis-tools.jpg", async (ctx) => {
-    await scene(ctx);
-    return show(ctx, 'button[title="Start a processing job using AI"]');
-  }),
-);
-
 // These figures show specific biological structures, ground truth, mappings,
 // or job capabilities. Replacing them with an arbitrary dataset view would
 // change their meaning. Capture checked, read-only l4_sample scene fixtures.

@@ -68,7 +68,8 @@
   },
   {
     "path": "docs/images/datalayers.jpeg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: this illustration never needs updating."
   },
   {
     "path": "docs/images/dataset_settings_datasource.jpeg",
@@ -421,19 +422,23 @@
   },
   {
     "path": "docs/skeleton_annotation/images/merger-mode-modifier.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/skeleton_annotation/images/new-tree-modifier.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/skeleton_annotation/images/pen-mode-modifier.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/skeleton_annotation/images/single-node-tree-mode-modifier.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/tutorials/images/tutorial_trainingdata_01_segment_touching_outside_of_box.jpeg",
@@ -469,82 +474,102 @@
   },
   {
     "path": "docs/ui/images/ai-analysis-tools.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/ui/images/boundingbox-tool.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/ui/images/brush-tool.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/ui/images/eraser-tool.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/ui/images/fill-tool.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/ui/images/measure-tool.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/ui/images/move-tool.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/ui/images/proofreading-tool.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/ui/images/quickselect-tool.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/ui/images/segment-picker-tool.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/ui/images/skeleton-tool.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/ui/images/trace-tool.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/volume_annotation/images/2d-modifier.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/volume_annotation/images/3d-modifier.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/volume_annotation/images/brush-size-modifier.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/volume_annotation/images/icon_restricted_floodfill.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/volume_annotation/images/interpolation-modifier.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/volume_annotation/images/new-segment-modifier.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/volume_annotation/images/overwrite-empty-modifier.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   },
   {
     "path": "docs/volume_annotation/images/overwrite-everything-modifier.jpg",
-    "kind": "screenshot"
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
   }
 ]

@@ -126,7 +126,28 @@ export async function captureScreenshot(page, result, recipe) {
   if (!result) return page.screenshot(options);
   const spec = typeof result === "object" && "target" in result ? result : { target: result };
   const target = typeof spec.target === "string" ? page.locator(spec.target) : spec.target;
-  await target.scrollIntoViewIfNeeded();
+  // Finish entrance animations before measuring: screenshot() otherwise finishes
+  // them after the clip was calculated from a scaled/transformed dialog.
+  await page.evaluate(async () => {
+    for (const animation of document.getAnimations()) {
+      if (Number.isFinite(animation.effect?.getComputedTiming().endTime)) {
+        try {
+          animation.finish();
+        } catch {
+          /* Some transitions cannot finish. */
+        }
+      }
+    }
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  if (spec.scrollToTop) {
+    await target.evaluate((element) => {
+      for (let parent = element; parent; parent = parent.parentElement) parent.scrollTo(0, 0);
+      window.scrollTo(0, 0);
+    });
+  } else {
+    await target.scrollIntoViewIfNeeded();
+  }
   const tight = /^docs\/(ui|volume_annotation|skeleton_annotation)\/images\//.test(recipe.output);
   const padding = spec.padding ?? recipe.padding ?? (tight ? 0 : 48);
   // Tall centered dialogs can exceed the viewport on accounts with many teams.

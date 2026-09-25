@@ -69,6 +69,7 @@ import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
+import { clearMeshChunkCaches } from "viewer/model/sagas/meshes/mesh_chunk_provider";
 import rootSaga from "viewer/model/sagas/root_saga";
 import { setModel, setStore } from "viewer/singletons";
 import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
@@ -243,6 +244,22 @@ vi.mock("admin/rest_api.ts", async () => {
     },
   );
 
+  // Mirrors the tracingstore's segmentsForAgglomerate route: all segments of one agglomerate at
+  // the given version.
+  const getSegmentsForAgglomerateFromTracingStoreMock = vi.fn(
+    async (
+      _tracingStoreUrl: string,
+      _tracingId: string,
+      agglomerateId: NumberLike,
+      version?: number | null | undefined,
+    ): Promise<{ segmentIds: bigint[]; agglomerateIdIsPresent: boolean }> => {
+      const segmentIds = getCurrentMappingEntriesFromServer(version)
+        .filter(([_segmentId, mappedId]) => toBigInt(mappedId) === toBigInt(agglomerateId))
+        .map(([segmentId]) => toBigInt(segmentId));
+      return { segmentIds, agglomerateIdIsPresent: segmentIds.length > 0 };
+    },
+  );
+
   const getMeshFilesForDatasetLayer = vi.fn(async () => {
     return [dummyMeshFile];
   });
@@ -257,6 +274,7 @@ vi.mock("admin/rest_api.ts", async () => {
     getMeshFilesForDatasetLayer,
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
+    getSegmentsForAgglomerateFromTracingStore: getSegmentsForAgglomerateFromTracingStoreMock,
     getEdgesForAgglomerateMinCut: vi.fn(
       (
         _tracingStoreUrl: string,
@@ -326,6 +344,27 @@ vi.mock("libs/draco.ts", async () => {
 
 vi.mock("admin/api/mesh", async () => {
   const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
+  // Every segment has a single chunk.
+  const createListingWithOneChunkPerSegment = (segmentIds: bigint[]): MeshSegmentInfo => ({
+    meshFormat: "draco",
+    lods: [
+      {
+        chunks: segmentIds.map((segmentId) => ({
+          position: [0, 0, 0],
+          byteOffset: 0,
+          byteSize: 666,
+          unmappedSegmentId: segmentId,
+        })),
+        transform: [
+          [1, 0, 0, 0],
+          [0, 1, 0, 0],
+          [0, 0, 1, 0],
+        ], // 4x3 matrix
+      },
+    ],
+    chunkScale: [1, 1, 1],
+  });
+
   const getMeshFileChunksForSegment = vi.fn(
     async (
       _dataStoreUrl: string,
@@ -338,27 +377,20 @@ vi.mock("admin/api/mesh", async () => {
     ): Promise<MeshSegmentInfo> => {
       console.log("Requesting default mesh segment info in mocked test.");
       await sleep(100);
-      return {
-        meshFormat: "draco",
-        lods: [
-          {
-            chunks: [
-              {
-                position: [0, 0, 0],
-                byteOffset: 0,
-                byteSize: 666,
-                unmappedSegmentId: segmentId,
-              },
-            ],
-            transform: [
-              [1, 0, 0, 0],
-              [0, 1, 0, 0],
-              [0, 0, 1, 0],
-            ], // 4x3 matrix
-          },
-        ],
-        chunkScale: [1, 1, 1],
-      };
+      return createListingWithOneChunkPerSegment([segmentId]);
+    },
+  );
+
+  const getMeshFileChunksForSegments = vi.fn(
+    async (
+      _dataStoreUrl: string,
+      _datasetId: string,
+      _layerName: string,
+      _meshFile: APIMeshFileInfo,
+      segmentIds: bigint[],
+    ): Promise<MeshSegmentInfo> => {
+      await sleep(100);
+      return { ...createListingWithOneChunkPerSegment(segmentIds), segmentIdsWithoutMesh: [] };
     },
   );
 
@@ -378,6 +410,7 @@ vi.mock("admin/api/mesh", async () => {
   return {
     ...actual,
     getMeshFileChunksForSegment,
+    getMeshFileChunksForSegments,
     getMeshFileChunkData,
   };
 });
@@ -582,6 +615,8 @@ export async function setupWebknossosForTesting(
   vi.mocked(acquireAnnotationMutex).mockResolvedValue(MUTEX_GRANTED);
   Store.dispatch(restartSagaAction());
   Store.dispatch(resetStoreAction());
+  // The mesh chunk caches are module state and would otherwise leak between the tests of a file.
+  clearMeshChunkCaches();
   Store.dispatch(setActiveUserAction(dummyUser));
 
   Store.dispatch(setActiveOrganizationAction(dummyOrga));

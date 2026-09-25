@@ -1,8 +1,10 @@
+import type { MinCutTargetEdge } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { isEditableEventTarget } from "libs/utils";
 import messages from "messages";
 import { all, call, put } from "typed-redux-saga";
+import type { Vector3 } from "viewer/constants";
 import {
   isAnnotationEditableByNonOwners,
   mayEditAnnotation,
@@ -27,13 +29,11 @@ import {
 import { Store } from "viewer/singletons";
 import type { Action } from "../../../actions/actions";
 import type { OperationContext } from "../../operation_context_saga";
-import { spawnUntilCanceled } from "../../saga_helpers";
 import { syncAgglomerateTreesAfterMergeAction } from "./agglomerate_tree_syncing_saga_helpers";
 import {
   pushPendingProofreadingOperationInfo,
   subscribeToAnnotationMutexInLiveCollab,
   syncAndUpdatePostProcessingInfo,
-  syncWithBackend,
 } from "./backend_sync_helper_sagas";
 import { performCutFromNeighbors, performMinCut } from "./cut_operation_helper_sagas";
 import { splitAgglomerateInMapping, updateMappingWithMerge } from "./local_mapping_update_sagas";
@@ -46,11 +46,63 @@ import {
   prepareSplitOrMerge,
   reloadMappingAndAggloIds,
 } from "./preparation_sagas";
-import {
-  maybeRefreshAffectedMeshes,
-  refreshAffectedSegmentItems,
-  refreshProofreadingSegmentsAndMeshes,
-} from "./segment_and_mesh_refresh_sagas";
+import type { AgglomerateChangeItem, IdInfo, IdInfoOpt } from "./proofreading_types";
+import { refreshProofreadingSegmentsAndMeshes } from "./segment_and_mesh_refresh_sagas";
+
+function getRefreshInfosOfSourceAndTarget(
+  sourceInfo: IdInfo,
+  targetInfo: IdInfoOpt,
+  newSourceAgglomerateId: bigint,
+  newTargetAgglomerateId: bigint,
+): AgglomerateChangeItem[] {
+  return [
+    {
+      oldAgglomerateId: sourceInfo.agglomerateId,
+      newAgglomerateId: newSourceAgglomerateId,
+      nodePosition: sourceInfo.position,
+    },
+    {
+      oldAgglomerateId: targetInfo.agglomerateId,
+      newAgglomerateId: newTargetAgglomerateId,
+      // targetInfo.position can only be undefined in case of a merge (see idInfos.type). In that
+      // case, this element was merged into another element. Therefore, sourceInfo.position is a
+      // valid replacement.
+      nodePosition: targetInfo.position ?? sourceInfo.position,
+    },
+  ];
+}
+
+/*
+ * Every agglomerate a cut produces is adjacent to at least one removed edge, so the edge endpoints
+ * yield both the id and a position of each of them. A cut can produce more than two agglomerates,
+ * as it may also separate the segments of one partition from each other. Deriving the items from
+ * the two partitions alone would miss such an agglomerate and delete its segment item and its mesh
+ * although it still exists.
+ */
+function getRefreshInfosFromRemovedEdges(
+  removedEdges: MinCutTargetEdge[],
+  agglomerateIdBeforeSplit: bigint,
+  getNewAgglomerateId: (segmentId: bigint) => bigint,
+): AgglomerateChangeItem[] {
+  const nodePositionByNewAgglomerateId = new Map<bigint, Vector3>();
+  for (const edge of removedEdges) {
+    const endpoints = [
+      [edge.segmentId1, edge.position1],
+      [edge.segmentId2, edge.position2],
+    ] as const;
+    for (const [segmentId, position] of endpoints) {
+      const newAgglomerateId = getNewAgglomerateId(segmentId);
+      if (!nodePositionByNewAgglomerateId.has(newAgglomerateId)) {
+        nodePositionByNewAgglomerateId.set(newAgglomerateId, position);
+      }
+    }
+  }
+  return Array.from(nodePositionByNewAgglomerateId, ([newAgglomerateId, nodePosition]) => ({
+    oldAgglomerateId: agglomerateIdBeforeSplit,
+    newAgglomerateId,
+    nodePosition,
+  }));
+}
 
 export function* performPartitionedMinCut(
   action: MinCutPartitionsAction | EnterAction,
@@ -141,13 +193,14 @@ export function* performPartitionedMinCut(
       ...partitions.partitionA,
       ...partitions.partitionB,
     ]);
-    // Make sure the reloaded partial mapping has mapping info about the partitions and first removed edge. The first removed edge is used for reloading the meshes.
-    // The unmapped segments of this edge might not be present in the partial mapping of the frontend as splitting can be done via mesh interactions.
+    // Make sure the reloaded partial mapping has mapping info about the partitions and all removed
+    // edges. The removed edges are used for reloading the meshes below.
+    // The unmapped segments of these edges might not be present in the partial mapping of the frontend as splitting can be done via mesh interactions.
     // There is no guarantee that for all mesh parts the mapping is locally stored.
     // So we put them all into segmentsInvolvedInSplit.
     // All these segments belonged to agglomerateId before the (min-cut) split.
     const segmentsInvolvedInSplit = unmappedSegmentsOfPartitions.union(
-      new Set([edgesToRemove[0].segmentId1, edgesToRemove[0].segmentId2]),
+      new Set(edgesToRemove.flatMap((edge) => [edge.segmentId1, edge.segmentId2])),
     );
 
     // Now that the changes are saved, we can split the mapping locally (because it requires
@@ -180,55 +233,13 @@ export function* performPartitionedMinCut(
       ),
     );
 
-    /* Reload meshes */
-    const newAgglomerateIdFromPartition1 = yield* call(
-      preparation.mapSegmentId,
-      partitions.partitionA[0],
-      mappingWithSplitApplied,
-    );
-    const newAgglomerateIdFromPartition2 = yield* call(
-      preparation.mapSegmentId,
-      partitions.partitionB[0],
-      mappingWithSplitApplied,
-    );
-
-    // Get positions of new meshes from first split edge information.
-    const firstEdgeFirstSegmentNewAgglomerate = yield* call(
-      preparation.mapSegmentId,
-      edgesToRemove[0].segmentId1,
-      mappingWithSplitApplied,
-    );
-    const meshLoadingPositionForPartition1 =
-      firstEdgeFirstSegmentNewAgglomerate === newAgglomerateIdFromPartition1
-        ? edgesToRemove[0].position1
-        : edgesToRemove[0].position2;
-    const meshLoadingPositionForPartition2 =
-      firstEdgeFirstSegmentNewAgglomerate === newAgglomerateIdFromPartition2
-        ? edgesToRemove[0].position1
-        : edgesToRemove[0].position2;
-
     /* Ensure segment items exist for affected segments and reload affected meshes */
-    const refreshInfos = [
-      {
-        oldAgglomerateId: agglomerateIdBeforeSplit,
-        newAgglomerateId: newAgglomerateIdFromPartition1,
-        nodePosition: meshLoadingPositionForPartition1,
-      },
-      {
-        oldAgglomerateId: agglomerateIdBeforeSplit,
-        newAgglomerateId: newAgglomerateIdFromPartition2,
-        nodePosition: meshLoadingPositionForPartition2,
-      },
-    ];
-    yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
-
-    // Now that the segment items are up-to-date we can sync with the back-end
-    // and release the mutex.
-    yield* call(syncWithBackend, ctx);
-
-    // Refreshing the meshes might take a while and won't block the saga
-    // here.
-    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
+    const refreshInfos = getRefreshInfosFromRemovedEdges(
+      edgesToRemove,
+      agglomerateIdBeforeSplit,
+      (segmentId) => preparation.mapSegmentId(segmentId, mappingWithSplitApplied),
+    );
+    yield* call(refreshProofreadingSegmentsAndMeshes, volumeTracingId, refreshInfos, ctx);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -342,15 +353,14 @@ export function* handleProofreadMerge(action: ProofreadMergeAction, ctx: Operati
       volumeTracingId,
     );
 
-    yield* call(
-      refreshProofreadingSegmentsAndMeshes,
-      volumeTracingId,
+    /* Ensure segment items exist for affected segments and reload affected meshes */
+    const refreshInfos = getRefreshInfosOfSourceAndTarget(
       sourceInfo,
       targetInfo,
       sourceAgglomerateId,
       targetAgglomerateId,
-      ctx,
     );
+    yield* call(refreshProofreadingSegmentsAndMeshes, volumeTracingId, refreshInfos, ctx);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -460,7 +470,8 @@ export function* handleMinCutAgglomerate(
     // Now that the changes are saved, we can split the local mapping (because it requires
     // communication with the back-end).
     const autoUpdateAgglomerateTrees = true;
-    const splitMappingInfo = yield* splitAgglomerateInMapping(
+    const splitMappingInfo = yield* call(
+      splitAgglomerateInMapping,
       activeMapping,
       latestSourceAgglomerateId,
       [sourceInfo.unmappedId],
@@ -488,7 +499,7 @@ export function* handleMinCutAgglomerate(
     // reload the agglomerate id info and the mapping.
     const newInfo = yield* call(
       reloadMappingAndAggloIds,
-      volumeTracing.tracingId,
+      volumeTracingId,
       sourceInfo.unmappedId,
       targetInfo.unmappedId,
     );
@@ -502,15 +513,14 @@ export function* handleMinCutAgglomerate(
     sourceAgglomerateId = newInfo.sourceAgglomerateId;
     targetAgglomerateId = newInfo.targetAgglomerateId;
 
-    yield* call(
-      refreshProofreadingSegmentsAndMeshes,
-      volumeTracingId,
+    /* Ensure segment items exist for affected segments and reload affected meshes */
+    const refreshInfos = getRefreshInfosOfSourceAndTarget(
       sourceInfo,
       targetInfo,
       sourceAgglomerateId,
       targetAgglomerateId,
-      ctx,
     );
+    yield* call(refreshProofreadingSegmentsAndMeshes, volumeTracingId, refreshInfos, ctx);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -656,13 +666,7 @@ export function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationC
         nodePosition: neighbor.position,
       })),
     ];
-    yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
-
-    yield* call(syncWithBackend, ctx);
-
-    // Refreshing the meshes might take a while and won't block the saga
-    // here.
-    yield* spawnUntilCanceled(maybeRefreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* call(refreshProofreadingSegmentsAndMeshes, volumeTracingId, refreshInfos, ctx);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);

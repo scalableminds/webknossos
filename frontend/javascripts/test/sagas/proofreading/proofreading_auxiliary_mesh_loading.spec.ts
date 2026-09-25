@@ -1,4 +1,4 @@
-import type { ActionPattern, Task } from "@redux-saga/types";
+import type { Task } from "@redux-saga/types";
 import type { MinCutTargetEdge } from "admin/rest_api";
 import sortBy from "lodash-es/sortBy";
 import { all, call, put, race, take } from "redux-saga/effects";
@@ -9,7 +9,6 @@ import {
 } from "test/helpers/apiHelpers";
 import { actionChannel, cancel, delay, takeEvery } from "typed-redux-saga";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import type { Action } from "viewer/model/actions/actions";
 import {
   type FinishedLoadingMeshAction,
   type RemoveMeshAction,
@@ -128,6 +127,30 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       cleanUp,
       getMeshInfos,
     };
+  }
+
+  // Mesh loads run detached and don't finish in a fixed order. A mesh answered from the mesh chunk
+  // cache finishes before one that still needs requests. Thus, this waits until the scene shows
+  // exactly the expected meshes and none of them is still loading. On timeout, the assertions that
+  // follow report the difference.
+  function* waitForMeshes(
+    context: WebknossosTestContext,
+    tracingId: string,
+    expectedIds: bigint[],
+  ): Saga<void> {
+    const expected = sortBy(expectedIds).join(",");
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const loadedIds = sortBy([...getAllCurrentlyLoadedMeshIds(context, tracingId)]).join(",");
+      const isAnyMeshLoading = yield* select((state: WebknossosState) =>
+        Object.values(state.localSegmentationStateByLayer[tracingId]?.meshes?.[""] ?? {}).some(
+          (meshInfo) => meshInfo.isLoading,
+        ),
+      );
+      if (loadedIds === expected && !isAnyMeshLoading) {
+        return;
+      }
+      yield* delay(20);
+    }
   }
 
   describe.each([false, true])("With othersMayEdit=%s", (othersMayEdit: boolean) => {
@@ -323,6 +346,72 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           anchorPosition: [1, 1, 1],
         },
       ]);
+    });
+    await task.toPromise();
+  });
+
+  it("should create segment items and meshes for every agglomerate a partitioned min-cut produces", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    // Edges 1-2-3-1337-1338-1 form a circle, i.e. one agglomerate 1.
+    mockInitialBucketAndAgglomerateData(
+      context,
+      [
+        [1n, 1338n],
+        [3n, 1337n],
+      ],
+      Store.getState(),
+    );
+
+    // The cut separates the two partitions, but additionally cuts partition A's own segments 1 and
+    // 2 apart. So it produces three agglomerates ({1}, {2, 3} and {1337, 1338}) while the
+    // partitions only name two of them. The third one must not be forgotten.
+    mockEdgesForPartitionedAgglomerateMinCut(mocks, 8, [
+      {
+        position1: getPositionForSegmentId(1),
+        position2: getPositionForSegmentId(2),
+        segmentId1: 1n,
+        segmentId2: 2n,
+      },
+    ]);
+
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* task(): Saga<void> {
+      const meshTracker = yield* trackMeshes(context, tracingId);
+      yield simulatePartitionedSplitAgglomeratesViaMeshes(context, true);
+      // Three settle events for the initially loaded meshes (1, 4 and 6), plus one per agglomerate
+      // the cut produces.
+      yield meshTracker.consumeFinishedLoadingActions(3 + 3);
+
+      const finalMapping = yield* select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1], // partition A's segment 1, which keeps the original agglomerate id
+          [2, 1340], // the agglomerate neither partition names
+          [3, 1340],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
+          [1337, 1339], // partition B
+          [1338, 1339],
+        ]),
+      );
+
+      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
+      expect(sortBy([...loadedMeshIds])).toEqual([1n, 4n, 6n, 1339n, 1340n]);
+      yield expectSegmentList(tracingId, [
+        { id: 1n, anchorPosition: getPositionForSegmentId(1) },
+        { id: 4n, anchorPosition: getPositionForSegmentId(4) },
+        { id: 6n, anchorPosition: getPositionForSegmentId(6) },
+        { id: 1339n, anchorPosition: getPositionForSegmentId(1338) },
+        { id: 1340n, anchorPosition: getPositionForSegmentId(3) },
+      ]);
+
+      yield* meshTracker.cleanUp();
     });
     await task.toPromise();
   });
@@ -695,10 +784,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           [7, 6],
         ]),
       );
-      yield take(
-        ((action: Action) =>
-          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1340n) as ActionPattern,
-      );
+      yield* waitForMeshes(context, tracingId, [1n, 4n, 6n, 1339n, 1340n]);
 
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
@@ -761,10 +847,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           [7, 6],
         ]),
       );
-      yield take(
-        ((action: Action) =>
-          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1n) as ActionPattern,
-      );
+      yield* waitForMeshes(context, tracingId, [1n, 4n, 6n, 1339n, 1340n]);
 
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
@@ -827,10 +910,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         ]),
       );
 
-      yield take(
-        ((action: Action) =>
-          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1n) as ActionPattern,
-      );
+      yield* waitForMeshes(context, tracingId, [1n]);
 
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
@@ -875,10 +955,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         ]),
       );
 
-      yield take(
-        ((action: Action) =>
-          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1n) as ActionPattern,
-      );
+      yield* waitForMeshes(context, tracingId, [1n, 4n, 6n, 1339n, 1340n]);
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 4n, 6n, 1339n, 1340n]);
@@ -949,10 +1026,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         ]),
       );
 
-      yield take(
-        ((action: Action) =>
-          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 4n) as ActionPattern,
-      );
+      yield* waitForMeshes(context, tracingId, [1n, 4n, 1339n]);
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 4n, 1339n]);
@@ -1080,10 +1154,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         ]),
       );
 
-      yield take(
-        ((action: Action) =>
-          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1n) as ActionPattern,
-      );
+      yield* waitForMeshes(context, tracingId, [1n, 6n]);
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1n, 6n]);

@@ -1,5 +1,5 @@
 import type { MeshLodInfo } from "admin/api/mesh";
-import { getMeshFilesForDatasetLayer, meshApi } from "admin/rest_api";
+import { getMeshFilesForDatasetLayer, type meshApi } from "admin/rest_api";
 import Deferred from "libs/async/deferred";
 import processTaskWithPool from "libs/async/task_pool";
 import { mergeGeometries } from "libs/BufferGeometryUtils";
@@ -56,6 +56,7 @@ import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
 import { acquireMeshWorker, releaseMeshWorker } from "./common_mesh_saga";
+import { clearMeshChunkCaches, getMeshChunkData, listMeshChunks } from "./mesh_chunk_provider";
 
 const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
 
@@ -98,6 +99,10 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   // work and will be resolved by the corresponding saga execution).
   const deferred = new Deferred<Array<APIMeshFileInfo>, unknown>();
   fetchDeferredsPerLayer[layerName] = deferred;
+  if (mustRequest) {
+    // The mesh files might have been recomputed, so cached chunks can't be trusted anymore.
+    clearMeshChunkCaches();
+  }
 
   const availableMeshFiles = yield* call(
     getMeshFilesForDatasetLayer,
@@ -317,21 +322,22 @@ function* _getChunkLoadingDescriptors(
     );
   }
 
-  const segmentInfo = yield* call(
-    meshApi.getMeshFileChunksForSegment,
-    dataset.dataStore.url,
-    dataset.id,
-    getBaseSegmentationName(segmentationLayer),
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
+  const segmentInfo = yield* call(listMeshChunks, {
+    dataStoreUrl: dataset.dataStore.url,
+    datasetId: dataset.id,
+    layerName: getBaseSegmentationName(segmentationLayer),
     meshFile,
     segmentId,
     // The back-end should only receive a non-null mapping name,
     // if it should perform extra (reverse) look ups to compute a mesh
     // with a specific mapping from a mesh file that was computed
     // without a mapping.
-    meshFile.mappingName == null ? mappingName : null,
-    editableMapping != null && tracing ? tracing.tracingId : null,
+    targetMappingName: meshFile.mappingName == null ? mappingName : null,
+    editableMapping:
+      editableMapping != null && tracing ? { tracingStoreUrl, tracingId: tracing.tracingId } : null,
     annotationVersion,
-  );
+  });
   segmentInfo.lods.forEach((meshLodInfo, lodIndex) => {
     availableChunksMap[lodIndex] = meshLodInfo?.chunks;
     loadingOrder.push(lodIndex);
@@ -399,19 +405,15 @@ function* loadPrecomputedMeshesInChunksForLod(
     (chunks) =>
       function* loadChunks(): Saga<void> {
         const dataForChunks = yield* call(
-          meshApi.getMeshFileChunkData,
-          dataset.dataStore.url,
-          dataset.id,
-          getBaseSegmentationName(segmentationLayer),
+          getMeshChunkData,
           {
+            dataStoreUrl: dataset.dataStore.url,
+            datasetId: dataset.id,
+            layerName: getBaseSegmentationName(segmentationLayer),
             meshFileName: meshFile.name,
-            // Only extract the relevant properties
-            requests: chunks.map(({ byteOffset, byteSize }) => ({
-              byteOffset,
-              byteSize,
-              segmentId,
-            })),
           },
+          segmentId,
+          chunks,
         );
 
         const errorsWithDetails = [];

@@ -243,6 +243,22 @@ vi.mock("admin/rest_api.ts", async () => {
     },
   );
 
+  // Mirrors the tracingstore's segmentsForAgglomerate route: all segments of one agglomerate at
+  // the given version.
+  const getSegmentsForAgglomerateFromTracingStoreMock = vi.fn(
+    async (
+      _tracingStoreUrl: string,
+      _tracingId: string,
+      agglomerateId: NumberLike,
+      version?: number | null | undefined,
+    ): Promise<{ segmentIds: bigint[]; agglomerateIdIsPresent: boolean }> => {
+      const segmentIds = getCurrentMappingEntriesFromServer(version)
+        .filter(([_segmentId, mappedId]) => toBigInt(mappedId) === toBigInt(agglomerateId))
+        .map(([segmentId]) => toBigInt(segmentId));
+      return { segmentIds, agglomerateIdIsPresent: segmentIds.length > 0 };
+    },
+  );
+
   const getMeshFilesForDatasetLayer = vi.fn(async () => {
     return [dummyMeshFile];
   });
@@ -257,6 +273,7 @@ vi.mock("admin/rest_api.ts", async () => {
     getMeshFilesForDatasetLayer,
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
+    getSegmentsForAgglomerateFromTracingStore: getSegmentsForAgglomerateFromTracingStoreMock,
     getEdgesForAgglomerateMinCut: vi.fn(
       (
         _tracingStoreUrl: string,

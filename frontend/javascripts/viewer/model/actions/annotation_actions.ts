@@ -80,6 +80,8 @@ export type UpdateCurrentMeshFileAction = ReturnType<typeof updateCurrentMeshFil
 export type RemoveMeshAction = ReturnType<typeof removeMeshAction>;
 export type AddAdHocMeshAction = ReturnType<typeof addAdHocMeshAction>;
 export type AddPrecomputedMeshAction = ReturnType<typeof addPrecomputedMeshAction>;
+export type RelabelMeshAction = ReturnType<typeof mergeMeshesAction>;
+export type SplitMeshAction = ReturnType<typeof splitMeshAction>;
 export type SetCollaborationModeAction = ReturnType<typeof setCollaborationModeAction>;
 
 export type AnnotationActionTypes =
@@ -110,6 +112,8 @@ export type AnnotationActionTypes =
   | RemoveMeshAction
   | AddAdHocMeshAction
   | AddPrecomputedMeshAction
+  | RelabelMeshAction
+  | SplitMeshAction
   | SetCollaborationModeAction
   | SetMipForBBoxAction
   | RemoveMipForBBoxAction
@@ -417,6 +421,36 @@ export const addPrecomputedMeshAction = (
     mappingName,
     opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
     isVisible: isVisible ?? true,
+  }) as const;
+
+// Action to update the store mesh metadata cause by a locally merged precomputed mesh.
+export const mergeMeshesAction = (
+  layerName: string,
+  oldSegmentId: bigint,
+  newSegmentId: bigint,
+  additionalCoordinates?: AdditionalCoordinate[] | null,
+) =>
+  ({
+    type: "MERGE_MESHES",
+    layerName,
+    oldSegmentId,
+    newSegmentId,
+    additionalCoordinates,
+  }) as const;
+
+// Action to update the store mesh metadata cause by a locally split precomputed mesh.
+export const splitMeshAction = (
+  layerName: string,
+  oldSegmentId: bigint,
+  newSegmentIds: bigint[],
+  additionalCoordinates?: AdditionalCoordinate[] | null,
+) =>
+  ({
+    type: "SPLIT_MESH",
+    layerName,
+    oldSegmentId,
+    newSegmentIds,
+    additionalCoordinates,
   }) as const;
 
 export const setCollaborationModeAction = (collaborationMode: AnnotationCollaborationMode) =>

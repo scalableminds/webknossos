@@ -9,7 +9,7 @@ import { removeMeshAction } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { spawnUntilCanceled, waitUntilNoActiveOperations } from "../../saga_helpers";
-import { refreshAffectedMeshes } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
+import { syncAffectedAndLoadMissingMeshes } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
 import type { ApplyingUpdateArtifacts } from "./applying_update_artifacts";
 
 export function* resolveApplyingUpdateArtifacts(
@@ -43,7 +43,10 @@ function* reloadMeshes(
 ): Saga<void> {
   // First wait in case an operation is running (e.g. proofreading) until it finishes.
   yield call(waitUntilNoActiveOperations);
-  const refreshAffectedMeshesEffects = [];
+  // Unused here: these items carry no oldAgglomerateId, so no local merge or split is attempted
+  // and every mesh is reloaded.
+  const annotationVersion = yield* select((state) => state.annotation.version);
+  const syncAffectedAndLoadMissingMeshesEffects = [];
   for (const [tracingId, displayPropsByAgglomerateId] of meshesToReloadPerLayer.entries()) {
     const refreshList: Array<{
       newAgglomerateId: bigint;
@@ -69,7 +72,9 @@ function* reloadMeshes(
         });
       }
     }
-    refreshAffectedMeshesEffects.push(call(refreshAffectedMeshes, tracingId, refreshList));
+    syncAffectedAndLoadMissingMeshesEffects.push(
+      call(syncAffectedAndLoadMissingMeshes, tracingId, refreshList, annotationVersion),
+    );
   }
-  yield* all(refreshAffectedMeshesEffects);
+  yield* all(syncAffectedAndLoadMissingMeshesEffects);
 }

@@ -249,12 +249,16 @@ export function* performMergeTreesProofreading(
   context: WebknossosTestContext,
   shouldSaveAfterLoadingTrees: boolean,
   loadMeshes: boolean,
+  afterLoadingMeshes?: () => Saga<void>,
 ): Saga<void> {
   const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
   yield* expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
     yield loadInitialMeshes(context, tracingId);
+  }
+  if (afterLoadingMeshes) {
+    yield* afterLoadingMeshes();
   }
 
   // Set up the merge-related segment partners. Normally, this would happen

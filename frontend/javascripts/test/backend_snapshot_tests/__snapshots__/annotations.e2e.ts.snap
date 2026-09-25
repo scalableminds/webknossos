@@ -1716,6 +1716,7 @@ exports[`Annotation API (E2E) > createExplorational() and finishAnnotation() 1`]
   ],
   "collaborationMode": "OwnerOnly",
   "contributors": [],
+  "created": "created",
   "dataSetName": "confocal-multi_knossos",
   "dataStore": {
     "allowsUpload": true,
@@ -1778,7 +1779,6 @@ exports[`Annotation API (E2E) > createExplorational() and finishAnnotation() 1`]
   "stats": {},
   "tags": [
     "confocal-multi_knossos",
-    "skeleton",
   ],
   "task": null,
   "teams": [],
@@ -1836,6 +1836,7 @@ exports[`Annotation API (E2E) > editAnnotation() 1`] = `
   ],
   "collaborationMode": "OwnerOnly",
   "contributors": [],
+  "created": "created",
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
     "allowsUpload": true,
@@ -1898,7 +1899,6 @@ exports[`Annotation API (E2E) > editAnnotation() 1`] = `
   "stats": {},
   "tags": [
     "2012-06-28_Cortex",
-    "skeleton",
   ],
   "task": null,
   "teams": [],
@@ -1956,6 +1956,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   ],
   "collaborationMode": "OwnerOnly",
   "contributors": [],
+  "created": "created",
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
     "allowsUpload": true,
@@ -2023,7 +2024,6 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "stats": {},
   "tags": [
     "2012-06-28_Cortex",
-    "skeleton",
   ],
   "task": null,
   "teams": [],
@@ -2081,6 +2081,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   ],
   "collaborationMode": "OwnerOnly",
   "contributors": [],
+  "created": "created",
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
     "allowsUpload": true,
@@ -2148,7 +2149,6 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "stats": {},
   "tags": [
     "2012-06-28_Cortex",
-    "skeleton",
   ],
   "task": null,
   "teams": [],
@@ -2201,6 +2201,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   ],
   "collaborationMode": "OwnerOnly",
   "contributors": [],
+  "created": "created",
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
     "allowsUpload": true,
@@ -2268,7 +2269,6 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "stats": {},
   "tags": [
     "2012-06-28_Cortex",
-    "skeleton",
   ],
   "task": {
     "boundingBox": null,
@@ -2372,6 +2372,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   ],
   "collaborationMode": "OwnerOnly",
   "contributors": [],
+  "created": "created",
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
     "allowsUpload": true,
@@ -2439,7 +2440,6 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "stats": {},
   "tags": [
     "2012-06-28_Cortex",
-    "skeleton",
   ],
   "task": {
     "boundingBox": null,
@@ -2548,6 +2548,7 @@ exports[`Annotation API (E2E) > getAnnotationInformation() 1`] = `
   ],
   "collaborationMode": "OwnerOnly",
   "contributors": [],
+  "created": 0,
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
     "allowsUpload": true,
@@ -2610,7 +2611,6 @@ exports[`Annotation API (E2E) > getAnnotationInformation() 1`] = `
   "stats": {},
   "tags": [
     "2012-06-28_Cortex",
-    "skeleton",
   ],
   "task": null,
   "teams": [],
@@ -2668,6 +2668,7 @@ exports[`Annotation API (E2E) > getAnnotationInformation() for public annotation
   ],
   "collaborationMode": "Exclusive",
   "contributors": [],
+  "created": 0,
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
     "allowsUpload": true,
@@ -2730,7 +2731,6 @@ exports[`Annotation API (E2E) > getAnnotationInformation() for public annotation
   "stats": {},
   "tags": [
     "2012-06-28_Cortex",
-    "skeleton",
   ],
   "task": null,
   "teams": [],
@@ -2788,6 +2788,7 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
       },
     ],
     "collaborationMode": "Exclusive",
+    "created": "created",
     "dataSetId": "570b9f4e4bb848d0885ee711",
     "dataSetName": "2012-06-28_Cortex",
     "description": "",
@@ -2805,7 +2806,6 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
     "stats": {},
     "tags": [
       "2012-06-28_Cortex",
-      "skeleton",
     ],
     "teams": [],
     "tracingTime": "tracingTime",
@@ -2827,6 +2827,7 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
       },
     ],
     "collaborationMode": "OwnerOnly",
+    "created": "created",
     "dataSetId": "570b9f4e4bb848d0885ee711",
     "dataSetName": "2012-06-28_Cortex",
     "description": "",
@@ -2844,7 +2845,6 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
     "stats": {},
     "tags": [
       "2012-06-28_Cortex",
-      "skeleton",
     ],
     "teams": [],
     "tracingTime": "tracingTime",
@@ -2866,6 +2866,7 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
       },
     ],
     "collaborationMode": "OwnerOnly",
+    "created": "created",
     "dataSetId": "570b9f4e4bb848d0885ee711",
     "dataSetName": "2012-06-28_Cortex",
     "description": "",
@@ -2883,7 +2884,6 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
     "stats": {},
     "tags": [
       "2012-06-28_Cortex",
-      "skeleton",
     ],
     "teams": [],
     "tracingTime": "tracingTime",

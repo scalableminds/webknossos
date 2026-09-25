@@ -154,6 +154,20 @@ export default function DatasetCollectionContextProvider({
   ]);
 
   const folderHierarchyQuery = useFolderHierarchyQuery();
+
+  // A selected subfolder only makes sense within the active folder.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only clear when the active folder changes.
+  useEffect(() => {
+    setSelectedFolder(null);
+  }, [activeFolderId]);
+
+  // Clear the selected subfolder once it's gone (e.g., after deleting it).
+  useEffect(() => {
+    const itemById = folderHierarchyQuery.data?.itemById;
+    if (selectedFolder != null && itemById != null && itemById[selectedFolder.key] == null) {
+      setSelectedFolder(null);
+    }
+  }, [folderHierarchyQuery.data, selectedFolder]);
   const datasetsInFolderQuery = useDatasetsInFolderQuery(
     globalSearchQuery == null ? activeFolderId : null,
   );

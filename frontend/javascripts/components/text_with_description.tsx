@@ -2,6 +2,7 @@ import { AlignCenterOutlined } from "@ant-design/icons";
 import { Button, Popover, Tooltip } from "antd";
 import Markdown from "libs/markdown_adapter";
 import type React from "react";
+import { Link } from "react-router";
 import type { EditableTextLabelProp } from "viewer/view/components/editable_text_label";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 
@@ -14,8 +15,35 @@ type NonEditableProps = {
   isEditable: false;
   description: string;
   value: string;
+  linkTarget?: string;
+  linkTitle?: string;
 };
 type Props = EditableProps | NonEditableProps;
+
+function NonEditableText({ markdown, value, linkTarget, linkTitle }: NonEditableProps) {
+  const text = markdown ? (
+    <span>
+      <Markdown>{value}</Markdown>
+    </span>
+  ) : (
+    value
+  );
+  return (
+    <span
+      style={{
+        display: "inline-block",
+      }}
+    >
+      {linkTarget != null ? (
+        <Link to={linkTarget} title={linkTitle} className="incognito-link">
+          {text}
+        </Link>
+      ) : (
+        text
+      )}
+    </span>
+  );
+}
 
 const TextWithDescription: React.FC<Props> = (props) => {
   const { isEditable, description, ...editableProps } = props;
@@ -30,46 +58,25 @@ const TextWithDescription: React.FC<Props> = (props) => {
     </div>
   );
   return (
-    <span
-      className={hasDescription ? "flex-container" : ""}
-      style={{
-        alignItems: "center",
-      }}
-    >
-      <span
-        className={hasDescription ? "flex-item" : ""}
-        style={{
-          flexGrow: 0,
-        }}
-      >
-        {hasDescription ? (
-          <Tooltip title="Show description" placement="bottom">
-            <Popover title="Description" trigger="click" content={markdownDescription}>
-              <Button size="small" color="default" variant="text" icon={<AlignCenterOutlined />} />
-            </Popover>
-          </Tooltip>
-        ) : null}
-      </span>
-      <span className={hasDescription ? "flex-item" : undefined}>
-        {isEditable ? (
-          <EditableTextLabel {...(editableProps as EditableTextLabelProp)} />
-        ) : (
-          <span
-            style={{
-              margin: "0 10px",
-              display: "inline-block",
-            }}
-          >
-            {(props as NonEditableProps).markdown ? (
-              <span>
-                <Markdown>{(props as NonEditableProps).value}</Markdown>
-              </span>
-            ) : (
-              (props as NonEditableProps).value
-            )}
-          </span>
-        )}
-      </span>
+    <span style={{ wordBreak: "break-word" }}>
+      {isEditable ? (
+        <EditableTextLabel {...(editableProps as EditableTextLabelProp)} />
+      ) : (
+        <NonEditableText {...(props as NonEditableProps)} />
+      )}
+      {hasDescription ? (
+        <Tooltip title="Show description" placement="bottom">
+          <Popover title="Description" trigger="click" content={markdownDescription}>
+            <Button
+              size="small"
+              color="default"
+              variant="text"
+              icon={<AlignCenterOutlined />}
+              style={{ marginInlineStart: 4 }}
+            />
+          </Popover>
+        </Tooltip>
+      ) : null}
     </span>
   );
 };

@@ -9,6 +9,23 @@
   }
 }
 
+/** Actions of an annotation list row as a 2x2 grid: Open/Download left, Archive/Lock right. */
+.annotation-row-actions {
+  display: grid;
+  grid-template-rows: repeat(2, auto);
+  grid-auto-flow: column;
+  column-gap: 40px;
+  padding-right: 30px;
+  row-gap: 2px;
+  white-space: nowrap;
+
+  // Unavailable actions stay in place, greyed out (hovering shows the reason as tooltip).
+  a[disabled] {
+    color: var(--ant-color-text-disabled);
+    cursor: not-allowed;
+  }
+}
+
 /** Container for the description of a task type, allowing for long text wrapping and optional height capping. */
 .task-type-description {
   max-width: 700px;
@@ -190,39 +207,125 @@ pre.dataset-import-folder-structure-hint {
   }
 }
 
-/** Fixed-size square thumbnail for datasets in the dashboard table. */
+/** Thumbnail for datasets in the dashboard table. */
 .dataset-table-thumbnail {
-  width: 80px;
-  height: 80px;
   border-radius: 5px;
-  margin-right: 20px;
 }
 
 /** Styling for the dataset name within the dashboard table. */
 .dataset-table-name {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 500;
-  display: block;
   min-height: 30px;
+  word-break: break-word;
+  margin-inline-end: 15px;
 }
 
-/** Container for the dataset name to handle vertical alignment and max-width. */
+/** Container for the dataset name to handle vertical alignment. */
 .dataset-table-name-container {
   display: inline-block;
   vertical-align: middle;
-  max-width: 520px;
 }
 
 
 /** Wrapper for the dataset metadata table in the dashboard, ensuring bold headers. */
 .dashboard-metadata-table-wrapper {
   th {
-    font-weight: bold !important;
+    font-style: italic !important;
+  }
+}
+
+/** Bordered header bar above the dashboard dataset/annotation tables, holding a
+    summary count plus filter/sort dropdowns. Pairs with .dashboard-list-table
+    below it to form one continuous bordered box. */
+.dashboard-list-filter-bar {
+  border: 1px solid var(--ant-color-border);
+  border-radius: var(--ant-border-radius) var(--ant-border-radius) 0 0;
+  padding: 8px 16px;
+  background: var(--ant-color-fill-alter);
+}
+
+/** Headerless, bordered table used for the dashboard dataset/annotation lists.
+    Removes the top border/radius so it reads as a continuation of
+    .dashboard-list-filter-bar above it. */
+.dashboard-list-table {
+  .ant-table-container {
+    border-top: none !important;
+    border-radius: 0 0 var(--ant-border-radius) var(--ant-border-radius) !important;
+    // antd's own bordered-table color doesn't exactly match --ant-color-border (the
+    // one .dashboard-list-filter-bar uses above it), so the outer box's left border
+    // would otherwise subtly change color between the header bar and the table.
+    border-color: var(--ant-color-border) !important;
   }
 
-  /** Placeholder text shown when a metadata table is empty. */
-  .empty-metadata-placeholder {
-    padding: 16px;
-    text-align: center;
+  // Recolor just the table's outer right/bottom edges to match, without touching
+  // the color of the divider lines between rows/columns further inside the table.
+  .ant-table-tbody > tr > .ant-table-cell:last-child {
+    border-right-color: var(--ant-color-border) !important;
+  }
+  .ant-table-tbody > tr:last-child > .ant-table-cell {
+    border-bottom-color: var(--ant-color-border) !important;
+  }
+
+  // antd gives borderless Cards a subtle default box-shadow (e.g. the empty-state
+  // welcome cards). It reads as an odd floating panel inside an already-bordered
+  // table, so it's suppressed here.
+  .ant-card {
+    box-shadow: none;
+  }
+}
+
+/** Suppresses the vertical divider that `bordered` would otherwise draw after this
+    cell (e.g. the dataset thumbnail column), so it visually merges with the next
+    column instead of being separated by a line. */
+.dashboard-list-table-borderless-cell {
+  border-inline-end: none !important;
+}
+
+/** Removes the cell's own right-hand padding (e.g. the dataset thumbnail column),
+    so the thumbnail image itself controls the gap to the next column. */
+.dashboard-list-table-thumbnail-cell {
+  padding-inline-end: 5px !important;
+}
+
+/** Single-line row of meta info shown beneath a dataset/annotation row's
+    title (e.g. size, creation date, owner), with entries separated by a dot. */
+.dashboard-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--ant-color-text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
+
+  // Links within the meta line (e.g. the annotation count) should read as part of
+  // the muted text, not stand out with the default link color - but still hint at
+  // being clickable once hovered.
+  a {
+    color: inherit;
+
+    &:hover {
+      color: var(--ant-color-link);
+    }
+  }
+
+  &-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &-dot {
+    margin: 0 6px;
+    color: var(--ant-color-text-quaternary);
+  }
+}
+
+.dashboard-annotation-name-edit {
+  font-size: 17px;
+
+  .ant-space-compact-block {
+    display: inline-flex !important;
+    width: auto !important;
   }
 }

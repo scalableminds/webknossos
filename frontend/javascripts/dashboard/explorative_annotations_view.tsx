@@ -5,11 +5,13 @@ import Icon, {
   LockOutlined,
   PlayCircleOutlined,
   PlusOutlined,
+  SearchOutlined,
   TeamOutlined,
   UnlockOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import ReadOnlyIcon from "@images/icons/icon-read-only.svg?react";
+import IconSort from "@images/icons/icon-sort.svg?react";
 import { PropTypes } from "@scalableminds/prop-types";
 import {
   downloadAnnotation,
@@ -21,23 +23,37 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Space, Spin, Table, Tag } from "antd";
+import { Button, Radio, Space, Table, Tag, Typography } from "antd";
 import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
+import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import TextWithDescription from "components/text_with_description";
+import {
+  FilterChip,
+  ListFilterHeader,
+  RowMetaLine,
+  SearchableRadioFilterChip,
+  TagFilterChip,
+} from "dashboard/list_filter_header";
 import update from "immutability-helper";
 import { stringToTagColor } from "libs/colors";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
-import { compareBy, filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
+import {
+  compareBy,
+  filterWithSearchQueryAND,
+  localeCompareBy,
+  pluralize,
+  scrollToTop,
+} from "libs/utils";
 import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import compact from "lodash-es/compact";
-import intersection from "lodash-es/intersection";
+import difference from "lodash-es/difference";
 import keyBy from "lodash-es/keyBy";
 import mapValues from "lodash-es/mapValues";
 import partial from "lodash-es/partial";
@@ -49,11 +65,12 @@ import { PureComponent } from "react";
 import { Link } from "react-router";
 import {
   type APIAnnotationInfo,
+  type APITeam,
   type APIUser,
   type APIUserCompact,
   annotationToCompact,
 } from "types/api_types";
-import { AnnotationContentTypes } from "viewer/constants";
+import type { Comparator } from "types/type_utils";
 import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 import CategorizationLabel, {
@@ -79,6 +96,28 @@ type Props = {
   // Called when the user removes the datasetNameFilter tag, so the caller can clear it from the URL.
   onDatasetNameFilterCleared?: () => void;
 } & WithModalProps;
+type AnnotationSortOption = "modifiedDesc" | "newest" | "oldest" | "owner" | "name";
+const ANNOTATION_SORT_OPTIONS: Array<{ key: AnnotationSortOption; label: string }> = [
+  { key: "modifiedDesc", label: "Last Modified" },
+  { key: "newest", label: "Newest" },
+  { key: "oldest", label: "Oldest" },
+  { key: "owner", label: "Owner" },
+  { key: "name", label: "Name" },
+];
+
+// Sorts ascending by the selector's string value, except entries with an empty
+// (trimmed) selector value always sort last, regardless of alphabetical order.
+function compareWithEmptyLast<T>(selector: (item: T) => string): Comparator<T> {
+  const naturalCompare = localeCompareBy<T>(selector);
+  return (a: T, b: T) => {
+    const aIsEmpty = selector(a).trim() === "";
+    const bIsEmpty = selector(b).trim() === "";
+    if (aIsEmpty && bIsEmpty) return 0;
+    if (aIsEmpty) return 1;
+    if (bIsEmpty) return -1;
+    return naturalCompare(a, b);
+  };
+}
 type State = {
   shouldShowArchivedAnnotations: boolean;
   archivedModeState: AnnotationModeState;
@@ -86,6 +125,9 @@ type State = {
   searchQuery: string;
   tags: Array<string>;
   isLoading: boolean;
+  selectedOwnerId: string | null;
+  selectedTeamId: string | null;
+  sortOption: AnnotationSortOption;
 };
 type PartialState = Pick<State, "searchQuery" | "shouldShowArchivedAnnotations">;
 const persistence = new Persistence<PartialState>(
@@ -116,6 +158,9 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     searchQuery: "",
     tags: [],
     isLoading: false,
+    selectedOwnerId: null,
+    selectedTeamId: null,
+    sortOption: "modifiedDesc",
   };
 
   // This attribute is not part of the state, since it is only set in the
@@ -324,13 +369,20 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     const { typ, id, state } = annotation;
 
     if (state === "Active") {
+      const isEditable = this.isAnnotationEditable(annotation);
+      let archiveDisabledReason: string | undefined;
+      if (!isEditable) {
+        archiveDisabledReason = "You don't have permission to archive this annotation.";
+      } else if (annotation.isLockedByOwner) {
+        archiveDisabledReason = "Locked annotations cannot be archived.";
+      }
+      // Always render all actions so that the 2x2 grid stays aligned across rows.
       return (
-        <div>
+        <div className="annotation-row-actions">
           <Link to={`/annotations/${id}`}>
             <PlayCircleOutlined className="icon-margin-right" />
             Open
           </Link>
-          <br />
           <AsyncLink
             onClick={() => {
               const hasVolumeAnnotation = getVolumeDescriptors(annotation).length > 0;
@@ -340,38 +392,32 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           >
             Download
           </AsyncLink>
-          {this.isAnnotationEditable(annotation) ? (
-            <>
-              <br />
-              <AsyncLink
-                onClick={() => this.finishOrReopenAnnotation("finish", annotation)}
-                icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
-                disabled={annotation.isLockedByOwner}
-                title={
-                  annotation.isLockedByOwner ? "Locked annotations cannot be archived." : undefined
-                }
-              >
-                Archive
-              </AsyncLink>
-            </>
-          ) : null}
-          {isActiveUserOwner ? (
-            <>
-              <br />
-              <AsyncLink
-                onClick={() => this.setLockedState(annotation, !annotation.isLockedByOwner)}
-                icon={
-                  annotation.isLockedByOwner ? (
-                    <LockOutlined key="lock" className="icon-margin-right" />
-                  ) : (
-                    <UnlockOutlined key="unlock" className="icon-margin-right" />
-                  )
-                }
-              >
-                {annotation.isLockedByOwner ? "Unlock" : "Lock"}
-              </AsyncLink>
-            </>
-          ) : null}
+          <FastTooltip title={archiveDisabledReason}>
+            <AsyncLink
+              onClick={() => this.finishOrReopenAnnotation("finish", annotation)}
+              icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
+              disabled={archiveDisabledReason != null}
+            >
+              Archive
+            </AsyncLink>
+          </FastTooltip>
+          <FastTooltip
+            title={isActiveUserOwner ? undefined : "Only the owner can lock this annotation."}
+          >
+            <AsyncLink
+              onClick={() => this.setLockedState(annotation, !annotation.isLockedByOwner)}
+              icon={
+                annotation.isLockedByOwner ? (
+                  <LockOutlined key="lock" className="icon-margin-right" />
+                ) : (
+                  <UnlockOutlined key="unlock" className="icon-margin-right" />
+                )
+              }
+              disabled={!isActiveUserOwner}
+            >
+              {annotation.isLockedByOwner ? "Unlock" : "Lock"}
+            </AsyncLink>
+          </FastTooltip>
         </div>
       );
     } else {
@@ -529,20 +575,32 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       return filteredAnnotations;
     }
 
-    return filteredAnnotations.filter((el) => intersection(this.state.tags, el.tags).length > 0);
+    return filteredAnnotations.filter((el) => difference(this.state.tags, el.tags).length === 0);
   }
 
   renderNameWithDescription(annotation: APIAnnotationInfo) {
+    const isEditable = this.isAnnotationEditable(annotation);
+    const linkTarget = `/annotations/${annotation.id}`;
     return (
-      <div style={{ color: annotation.name ? "inherit" : "var(--ant-color-text-secondary)" }}>
+      <span
+        className="dashboard-annotation-name-edit"
+        style={{
+          marginInlineEnd: 8,
+        }}
+      >
         <TextWithDescription
-          isEditable={this.isAnnotationEditable(annotation)}
+          isEditable={isEditable}
           value={annotation.name ? annotation.name : "Unnamed Annotation"}
           onChange={(newName) => this.renameAnnotation(annotation, newName)}
           label="Annotation Name"
           description={annotation.description}
+          width={400}
+          // Makes the name itself a link to the annotation (only the edit icon
+          // triggers renaming then).
+          linkTarget={linkTarget}
+          linkTitle="Open"
         />
-      </div>
+      </span>
     );
   }
 
@@ -553,206 +611,325 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     );
   }
 
-  renderTable() {
-    const filteredAndSortedAnnotations = this._getSearchFilteredAnnotations().sort(
-      compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false),
+  renderOwner = (owner: APIUserCompact) => {
+    if (!this.props.isAdminView && owner.id === this.props.activeUser.id) {
+      return (
+        <span>
+          {formatUserName(owner)}{" "}
+          <span style={{ color: "var(--ant-color-text-secondary)" }}>(you)</span>
+        </span>
+      );
+    }
+    return formatUserName(owner);
+  };
+
+  // Most listed annotations are the user's own, so those only say "you", while annotations
+  // shared by others name their owner to stand out. In the admin view, all annotations belong to
+  // the viewed user, so the owner is shown plainly.
+  renderOwnerMetaItem = (owner: APIUserCompact | undefined) => {
+    if (owner == null) return null;
+    let ownerText: string;
+    if (this.props.isAdminView) {
+      ownerText = formatUserName(owner);
+    } else if (owner.id === this.props.activeUser.id) {
+      ownerText = "you";
+    } else {
+      ownerText = `shared by ${formatUserName(owner)}`;
+    }
+    return (
+      <span key="owner" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <UserOutlined /> {ownerText}
+      </span>
     );
-    const renderOwner = (owner: APIUser) => {
-      if (!this.props.isAdminView && owner.id === this.props.activeUser.id) {
-        return (
-          <span>
-            {formatUserName(owner)}{" "}
-            <span style={{ color: "var(--ant-color-text-secondary)" }}>(you)</span>
-          </span>
-        );
-      }
-      return formatUserName(owner);
-    };
+  };
 
-    const ownerFilters = uniqBy(
-      // Prepend user's name to the front so that this is listed at the top
-      [
-        { formattedName: formatUserName(this.props.activeUser), id: this.props.activeUser.id },
-      ].concat(
-        compact(
-          filteredAndSortedAnnotations.map((annotation) =>
-            annotation.owner != null
-              ? { formattedName: formatUserName(annotation.owner), id: annotation.owner.id }
-              : null,
-          ),
-        ),
-      ),
-      "id",
-    ).map(({ formattedName, id }) => ({ text: formattedName, value: id }));
-    const teamFilters = uniqBy(
-      filteredAndSortedAnnotations.flatMap((annotation) => annotation.teams),
-      "id",
-    ).map((team) => ({ text: team.name, value: team.id }));
+  renderAnnotationRow = (annotation: APIAnnotationInfo) => {
+    const owner = annotation.owner;
+    const teamTags = annotation.teams.map((team) => (
+      <Tag key={team.id} color={stringToTagColor(team.name)} variant="outlined">
+        {team.name}
+      </Tag>
+    ));
 
-    const ownerAndTeamsFilters = [
-      {
-        text: "Owners",
-        value: "OwnersFilter",
-        children: ownerFilters,
-      },
-      {
-        text: "Teams",
-        value: "TeamsFilter",
-        children: teamFilters,
-      },
-    ];
+    return (
+      <div>
+        {this.renderNameWithDescription(annotation)}
+        {!this.isAnnotationEditable(annotation) ? (
+          <LinkButton
+            disabled
+            style={{ marginInlineEnd: 8 }}
+            icon={<Icon component={ReadOnlyIcon} />}
+          >
+            read-only
+          </LinkButton>
+        ) : null}
+        {annotation.isLockedByOwner ? (
+          <LinkButton disabled style={{ marginInlineEnd: 8 }} icon={<LockOutlined />}>
+            locked
+          </LinkButton>
+        ) : null}
+        <Space wrap>
+          {annotation.tags.map((tag) => (
+            <CategorizationLabel
+              key={tag}
+              kind="annotations"
+              onClick={partial(this.addTagToSearch, tag)}
+              onClose={partial(this.editTagFromAnnotation, annotation, false, tag)}
+              tag={tag}
+              closable={tag !== annotation.dataSetName && !this.state.shouldShowArchivedAnnotations}
+            />
+          ))}
+          {this.state.shouldShowArchivedAnnotations ? null : (
+            <EditableTextIcon
+              icon={<PlusOutlined />}
+              onChange={partial(this.editTagFromAnnotation, annotation, true)}
+              label="Add Tag"
+            />
+          )}
+        </Space>
+        <RowMetaLine
+          items={[
+            <FormattedId key="id" id={annotation.id} />,
+            this.renderOwnerMetaItem(owner),
+            teamTags.length > 0 ? (
+              <span key="teams" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <TeamOutlined /> shared with teams {teamTags}
+              </span>
+            ) : null,
+            <AnnotationStats
+              key="stats"
+              stats={mapValues(
+                keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
+                (layer) => layer.stats,
+              )}
+              asInfoBlock={false}
+              withMargin={false}
+              orientation="horizontal"
+            />,
+            <span key="created">
+              created <FormattedDate timestamp={annotation.created} />
+            </span>,
+            annotation.modified - annotation.created > 60 * 1000 ? (
+              <span key="modified">
+                modified <FormattedDate timestamp={annotation.modified} />
+              </span>
+            ) : null,
+          ]}
+        />
+      </div>
+    );
+  };
 
-    if (filteredAndSortedAnnotations.length === 0 && !this.state.isLoading) {
+  renderEmptyText(): React.ReactNode {
+    if (this.state.isLoading) {
+      return null;
+    }
+    const { searchQuery, tags, selectedOwnerId, selectedTeamId, shouldShowArchivedAnnotations } =
+      this.state;
+    const isSearchOrFilterActive =
+      searchQuery !== "" ||
+      tags.length > 0 ||
+      selectedOwnerId != null ||
+      selectedTeamId != null ||
+      shouldShowArchivedAnnotations;
+
+    if (!isSearchOrFilterActive) {
       return <DashboardEmptyAnnotationsPlaceholder />;
     }
 
+    const activeFilterLabels: string[] = [];
+    if (tags.length > 0) activeFilterLabels.push("tags");
+    if (selectedOwnerId != null) activeFilterLabels.push("owner");
+    if (selectedTeamId != null) activeFilterLabels.push("teams");
+    if (shouldShowArchivedAnnotations) activeFilterLabels.push("status");
+
+    return (
+      <>
+        <p>No annotations match your search.</p>
+        {activeFilterLabels.length > 0 ? (
+          <p>Note that annotations are currently filtered by {activeFilterLabels.join(", ")}.</p>
+        ) : null}
+        <Button type="link" onClick={this.clearSearchAndFilters}>
+          Clear search and filters
+        </Button>
+      </>
+    );
+  }
+
+  clearSearchAndFilters = () => {
+    this.setState({
+      searchQuery: "",
+      tags: [],
+      selectedOwnerId: null,
+      selectedTeamId: null,
+      shouldShowArchivedAnnotations: false,
+    });
+  };
+
+  renderTable() {
+    const searchFilteredAnnotations = this._getSearchFilteredAnnotations();
+    const { selectedOwnerId, selectedTeamId, sortOption } = this.state;
+
+    const ownerFilters = uniqBy(
+      // Prepend the active user's own entry to the front so that it's listed first.
+      ([this.props.activeUser] as APIUserCompact[]).concat(
+        compact(searchFilteredAnnotations.map((annotation) => annotation.owner)),
+      ),
+      "id",
+    );
+    const teamFilters = uniqBy(
+      searchFilteredAnnotations.flatMap((annotation) => annotation.teams),
+      "id",
+    );
+
+    const ownerTeamFilteredAnnotations = searchFilteredAnnotations.filter(
+      (annotation) =>
+        (selectedOwnerId == null || annotation.owner?.id === selectedOwnerId) &&
+        (selectedTeamId == null || annotation.teams.some((team) => team.id === selectedTeamId)),
+    );
+
+    const getSortComparator = (): Comparator<APIAnnotationInfo> => {
+      switch (sortOption) {
+        case "name":
+          return compareWithEmptyLast<APIAnnotationInfo>((annotation) => annotation.name);
+        case "owner":
+          return compareWithEmptyLast<APIAnnotationInfo>((annotation) =>
+            annotation.owner ? formatUserName(annotation.owner) : "",
+          );
+        case "newest":
+          return compareBy<APIAnnotationInfo>((annotation) => annotation.created, false);
+        case "oldest":
+          return compareBy<APIAnnotationInfo>((annotation) => annotation.created, true);
+        default:
+          // "modifiedDesc"
+          return compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false);
+      }
+    };
+    const sortComparator = getSortComparator();
+    const filteredAndSortedAnnotations = [...ownerTeamFilteredAnnotations].sort(sortComparator);
+    // Annotations are loaded page-wise and filtered afterwards, so unloaded pages may
+    // contain more matches than are shown.
+    const { lastLoadedPage, loadedAllAnnotations } = this.getCurrentModeState();
+    const mayHaveMoreAnnotations = lastLoadedPage >= 0 && !loadedAllAnnotations;
+
     const columns: ColumnType<APIAnnotationInfo>[] = [
       {
-        title: "ID",
-        dataIndex: "id",
-        width: 120,
-        render: (__: any, annotation: APIAnnotationInfo) => (
-          <>
-            <FormattedId id={annotation.id} />
-
-            {!this.isAnnotationEditable(annotation) ? (
-              <LinkButton disabled icon={<Icon component={ReadOnlyIcon} />}>
-                read-only
-              </LinkButton>
-            ) : null}
-            {annotation.isLockedByOwner ? (
-              <LinkButton disabled icon={<LockOutlined />}>
-                locked
-              </LinkButton>
-            ) : null}
-          </>
-        ),
-        sorter: localeCompareBy((annotation) => annotation.id),
-      },
-      {
-        title: "Name",
-        width: 280,
         dataIndex: "name",
-        sorter: localeCompareBy((annotation) => annotation.name),
+        key: "name",
+        className: "dashboard-list-table-borderless-cell",
         render: (_name: string, annotation: APIAnnotationInfo) =>
-          this.renderNameWithDescription(annotation),
-      },
-      {
-        title: "Owner & Teams",
-        dataIndex: "owner",
-        width: 300,
-        filters: ownerAndTeamsFilters,
-        filterMode: "tree",
-        onFilter: (value: React.Key | boolean, annotation: APIAnnotationInfo) =>
-          (annotation.owner != null && annotation.owner.id === value.toString()) ||
-          annotation.teams.some((team) => team.id === value),
-        sorter: localeCompareBy((annotation) => annotation.owner?.firstName || ""),
-        render: (owner: APIUser | null, annotation: APIAnnotationInfo) => {
-          const ownerName = owner != null ? renderOwner(owner) : null;
-          const teamTags = annotation.teams.map((t) => (
-            <Tag key={t.id} color={stringToTagColor(t.name)} variant="outlined">
-              {t.name}
-            </Tag>
-          ));
-
-          return (
-            <Space orientation="vertical" size="small">
-              <Space align="start">
-                <UserOutlined />
-                {ownerName}
-              </Space>
-              <Space align="start">
-                {teamTags.length > 0 ? <TeamOutlined /> : null}
-                <Space wrap size="small">
-                  {teamTags}
-                </Space>
-              </Space>
-            </Space>
-          );
-        },
-      },
-      {
-        title: "Stats",
-        width: 150,
-        render: (__: any, annotation: APIAnnotationInfo) => (
-          <AnnotationStats
-            stats={mapValues(
-              keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
-              (layer) => layer.stats,
-            )}
-            asInfoBlock={false}
-            withMargin={false}
-          />
-        ),
-      },
-      {
-        title: "Tags",
-        dataIndex: "tags",
-        render: (tags: Array<string>, annotation: APIAnnotationInfo) => (
-          <Space wrap>
-            {tags.map((tag) => (
-              <CategorizationLabel
-                key={tag}
-                kind="annotations"
-                onClick={partial(this.addTagToSearch, tag)}
-                onClose={partial(this.editTagFromAnnotation, annotation, false, tag)}
-                tag={tag}
-                closable={
-                  !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
-                  !this.state.shouldShowArchivedAnnotations
-                }
-              />
-            ))}
-            {this.state.shouldShowArchivedAnnotations ? null : (
-              <EditableTextIcon
-                icon={<PlusOutlined />}
-                onChange={partial(this.editTagFromAnnotation, annotation, true)}
-              />
-            )}
-          </Space>
-        ),
-      },
-      {
-        title: "Last Modified",
-        dataIndex: "modified",
-        width: 200,
-        sorter: compareBy<APIAnnotationInfo>((annotation) => annotation.modified),
-        render: (modified) => <FormattedDate timestamp={modified} />,
+          this.renderAnnotationRow(annotation),
       },
       {
         width: 200,
-        fixed: "right",
-        title: "Actions",
         className: "nowrap",
         key: "action",
         render: (__: any, annotation: APIAnnotationInfo) => this.renderActions(annotation),
       },
     ];
 
+    const currentSortLabel =
+      ANNOTATION_SORT_OPTIONS.find((option) => option.key === sortOption)?.label ?? "Last Modified";
+
     return (
-      <Table
-        dataSource={filteredAndSortedAnnotations}
-        rowKey="id"
-        pagination={{
-          defaultPageSize: 50,
-          onChange: scrollToTop,
-        }}
-        className="large-table"
-        scroll={{
-          x: "max-content",
-        }}
-        summary={(currentPageData) => {
-          // See this issue for context:
-          // https://github.com/ant-design/ant-design/issues/24022#issuecomment-1050070509
-          // Currently, there is no other way to easily get the items which are rendered by
-          // the table (while respecting the active filters).
-          // Using <Table onChange={...} /> is not a solution. See this explanation:
-          // https://github.com/ant-design/ant-design/issues/24022#issuecomment-691842572
-          this.currentPageData = currentPageData;
-          return null;
-        }}
-        columns={columns}
-      />
+      <>
+        <ListFilterHeader
+          summary={`${filteredAndSortedAnnotations.length}${mayHaveMoreAnnotations ? "+" : ""} ${pluralize("Annotation", filteredAndSortedAnnotations.length)}`}
+        >
+          <TagFilterChip
+            selectedTags={this.state.tags}
+            availableTags={this.getCurrentAnnotations().flatMap((annotation) => annotation.tags)}
+            onChange={(tags) => this.setState({ tags })}
+          />
+          <SearchableRadioFilterChip
+            label="Owner"
+            searchPlaceholder="Search owners"
+            options={ownerFilters.map((owner) => ({
+              key: owner.id,
+              label: this.renderOwner(owner),
+              searchText: formatUserName(owner),
+            }))}
+            selectedKey={selectedOwnerId}
+            onChange={(ownerId) => this.setState({ selectedOwnerId: ownerId })}
+          />
+          <SearchableRadioFilterChip
+            label="Teams"
+            searchPlaceholder="Search teams"
+            options={teamFilters.map((team: APITeam) => ({
+              key: team.id,
+              label: team.name,
+              searchText: team.name,
+            }))}
+            selectedKey={selectedTeamId}
+            onChange={(teamId) => this.setState({ selectedTeamId: teamId })}
+          />
+          <FilterChip label="Status" active={this.state.shouldShowArchivedAnnotations}>
+            <Space orientation="vertical" size={4}>
+              <Radio
+                checked={!this.state.shouldShowArchivedAnnotations}
+                onChange={() => {
+                  if (this.state.shouldShowArchivedAnnotations) this.toggleShowArchived();
+                }}
+              >
+                Open
+              </Radio>
+              <Radio
+                checked={this.state.shouldShowArchivedAnnotations}
+                onChange={() => {
+                  if (!this.state.shouldShowArchivedAnnotations) this.toggleShowArchived();
+                }}
+              >
+                Archived
+              </Radio>
+            </Space>
+          </FilterChip>
+          <FilterChip
+            label={
+              <>
+                <Icon component={IconSort} /> Sort: {currentSortLabel}
+              </>
+            }
+          >
+            <Space orientation="vertical" size={4}>
+              {ANNOTATION_SORT_OPTIONS.map((option) => (
+                <Radio
+                  key={option.key}
+                  checked={sortOption === option.key}
+                  onChange={() => this.setState({ sortOption: option.key })}
+                >
+                  {option.label}
+                </Radio>
+              ))}
+            </Space>
+          </FilterChip>
+        </ListFilterHeader>
+        <Table
+          dataSource={filteredAndSortedAnnotations}
+          rowKey="id"
+          showHeader={false}
+          bordered
+          loading={this.state.isLoading}
+          pagination={{
+            defaultPageSize: 50,
+            onChange: scrollToTop,
+          }}
+          locale={{
+            emptyText: this.renderEmptyText(),
+          }}
+          className="large-table dashboard-list-table"
+          summary={(currentPageData) => {
+            // See this issue for context:
+            // https://github.com/ant-design/ant-design/issues/24022#issuecomment-1050070509
+            // Currently, there is no other way to easily get the items which are rendered by
+            // the table (while respecting the active filters).
+            // Using <Table onChange={...} /> is not a solution. See this explanation:
+            // https://github.com/ant-design/ant-design/issues/24022#issuecomment-691842572
+            this.currentPageData = currentPageData;
+            return null;
+          }}
+          columns={columns}
+        />
+      </>
     );
   }
 
@@ -764,10 +941,17 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           handleOnSearch={this.handleOnSearch}
           handleSearchChanged={this.handleSearchChanged}
           searchQuery={this.state.searchQuery}
-          toggleShowArchived={this.toggleShowArchived}
           shouldShowArchivedAnnotations={this.state.shouldShowArchivedAnnotations}
           archiveAll={this.archiveAll}
         />
+        {this.state.searchQuery ? (
+          <Typography.Title level={3}>
+            <Space>
+              <SearchOutlined />
+              <span>Search Results for &quot;{this.state.searchQuery}&quot;</span>
+            </Space>
+          </Typography.Title>
+        ) : null}
         <CategorizationSearch
           itemName="annotations"
           searchTags={this.state.tags}
@@ -779,9 +963,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           localStorageSavingKey="lastDashboardSearchTags"
           skipRestoreFromStorage={this.props.datasetNameFilter != null}
         />
-        <Spin spinning={this.state.isLoading} size="large" style={{ marginTop: 4 }}>
-          {this.renderTable()}
-        </Spin>
+        {this.renderTable()}
         <div
           style={{
             textAlign: "right",

@@ -1,22 +1,17 @@
-import {
+import Icon, {
   FileOutlined,
   FolderOpenOutlined,
-  InfoCircleOutlined,
   PlusOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
 import fileDarkIcon from "@images/file-dark.png";
 import fileLightIcon from "@images/file-light.png";
 import folderThumbnailIcon from "@images/folder-thumbnail.svg";
+import IconSort from "@images/icons/icon-sort.svg?react";
 import inactiveDatasetThumbnail from "@images/inactive-dataset-thumbnail.svg";
 import type { DatasetUpdater } from "admin/rest_api";
-import { App, Dropdown, type MenuProps, Space, Table, Tag, Tooltip } from "antd";
-import type {
-  ColumnType,
-  FilterValue,
-  SorterResult,
-  TablePaginationConfig,
-} from "antd/es/table/interface";
+import { App, Button, Dropdown, type MenuProps, Radio, Space, Table, Tag, Tooltip } from "antd";
+import type { ColumnType } from "antd/es/table/interface";
 import classNames from "classnames";
 import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
@@ -25,20 +20,26 @@ import DatasetActionView, {
 } from "dashboard/advanced_dataset/dataset_action_view";
 import { DraggableDatasetType } from "dashboard/advanced_dataset/dnd_types";
 import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
-import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
+import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "dashboard/dataset/queries";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import {
   type DnDDropItemProps,
   generateSettingsForFolder,
   useDatasetDrop,
 } from "dashboard/folders/folder_tree";
+import {
+  FilterChip,
+  ListFilterHeader,
+  RowMetaLine,
+  TagFilterChip,
+} from "dashboard/list_filter_header";
 import { ZeroStorageReasonList } from "dashboard/storage_info";
 import { diceCoefficient as dice } from "dice-coefficient";
 import { stringToTagColor } from "libs/colors";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
-import { compareBy, localeCompareBy, scrollContainerToTop } from "libs/utils";
+import { localeCompareBy, pluralize, scrollToTop } from "libs/utils";
 import difference from "lodash-es/difference";
 import keyBy from "lodash-es/keyBy";
 import minBy from "lodash-es/minBy";
@@ -64,34 +65,57 @@ import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helper
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
+type DatasetSortOption =
+  | "lastUsed"
+  | "createdDesc"
+  | "createdAsc"
+  | "name"
+  | "storage"
+  | "annotationCount";
 
 const { ThinSpace } = Unicode;
-const useLruRank = true;
 
-const THUMBNAIL_SIZE = 100;
+const DATASET_SORT_OPTIONS: Array<{ key: DatasetSortOption; label: string }> = [
+  { key: "lastUsed", label: "Last used" },
+  { key: "createdDesc", label: "Newest" },
+  { key: "createdAsc", label: "Oldest" },
+  { key: "name", label: "Name" },
+  { key: "storage", label: "Used Storage" },
+  { key: "annotationCount", label: "Most Annotations" },
+];
+
+const THUMBNAIL_SIZE = 80;
 
 type Props = {
   datasets: Array<APIDatasetCompact>;
   subfolders: FolderItem[];
   searchQuery: string;
   searchTags: Array<string>;
+  setSearchTags: (tags: string[]) => void;
   isUserAdminOrDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
+  setDatasetFilteringMode: (mode: DatasetFilteringMode) => void;
   updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
+  onClearSearchAndFilters: () => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
   context: DatasetCollectionContextValue;
-  // The table is rendered inside a scrolling container that isn't the window
-  // (see dataset_folder_view.tsx). Passed through so pagination changes can
-  // scroll that container back to the top instead of the (non-scrolling) window.
-  scrollContainerRef?: React.RefObject<HTMLElement | null>;
+  // Shows a loading spinner inside the table body (e.g. while waiting for search
+  // results), without hiding the header bar above it.
+  isLoading?: boolean;
+  // Custom content shown as the table's empty state instead of the regular hint text.
+  // Used for cards for a brand-new organizations.
+  emptyStateContent?: React.ReactNode;
 };
 
 type State = {
   prevSearchQuery: string;
-  sortedInfo: SorterResult<string>;
+  sortOption: DatasetSortOption;
+  // Tracks whether the user explicitly picked a sort option (via the Sort filter chip).
+  // While false and a search query is active, results are sorted by search relevance instead.
+  hasUserSetSort: boolean;
   contextMenuPosition: [number, number] | null | undefined;
   datasetsForContextMenu: APIDatasetCompact[];
   folderForContextMenu: FolderItemWithName | null;
@@ -172,6 +196,27 @@ interface DraggableDatasetRowProps extends React.HTMLAttributes<HTMLTableRowElem
 
 function isRecordADataset(record: DatasetOrFolder): record is APIDatasetCompact {
   return (record as APIDatasetCompact).folderId !== undefined;
+}
+
+function sortDatasetsByOption(
+  datasets: APIDatasetCompact[],
+  sortOption: DatasetSortOption,
+): APIDatasetCompact[] {
+  switch (sortOption) {
+    case "createdAsc":
+      return sortBy(datasets, "created");
+    case "createdDesc":
+      return sortBy(datasets, "created").reverse();
+    case "name":
+      return [...datasets].sort(localeCompareBy((dataset) => dataset.name));
+    case "storage":
+      return sortBy(datasets, (dataset) => dataset.usedStorageBytes || 0).reverse();
+    case "annotationCount":
+      return sortBy(datasets, (dataset) => dataset.annotationCount || 0).reverse();
+    default:
+      // "lastUsed": rank datasets by recency of use, falling back to creation date.
+      return sortBy(datasets, ["lastUsedByUser", "created"]).reverse();
+  }
 }
 
 class DragPreviewProvider {
@@ -313,22 +358,22 @@ class DatasetRenderer {
         {formattedBytes}
       </FastTooltip>
     ) : (
-      <Tooltip
-        title={
+      <FastTooltip
+        dynamicRenderer={() => (
           <>
             The storage may be zero because:
             {ZeroStorageReasonList}
           </>
-        }
+        )}
       >
         {formattedBytes}
-      </Tooltip>
+      </FastTooltip>
     );
   }
   renderTypeColumn(): React.ReactNode {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
-  renderNameColumn(): React.ReactNode {
+  renderThumbnailColumn(): React.ReactNode {
     const selectedLayerName: string | null = this.data.isActive
       ? this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0]
       : null;
@@ -338,33 +383,32 @@ class DatasetRenderer {
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
 
     return (
-      <>
-        <Link to={getViewDatasetURL(this.data)} title="View Dataset">
-          <img
-            src={imgSrc}
-            className={`dataset-table-thumbnail ${iconClassName}`}
-            style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
-            alt=""
-          />
+      <Link to={getViewDatasetURL(this.data)} title="View Dataset">
+        <img
+          src={imgSrc}
+          className={`dataset-table-thumbnail ${iconClassName}`}
+          style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+          alt=""
+        />
+      </Link>
+    );
+  }
+  renderNameColumn(): React.ReactNode {
+    return (
+      <div className="dataset-table-name-container">
+        <Link
+          to={getViewDatasetURL(this.data)}
+          title="View Dataset"
+          className="incognito-link dataset-table-name"
+        >
+          {this.data.name}
         </Link>
-        <div className="dataset-table-name-container">
-          <Link
-            to={getViewDatasetURL(this.data)}
-            title="View Dataset"
-            className="incognito-link dataset-table-name"
-          >
-            {this.data.name}
-          </Link>
-
-          {this.renderTags()}
-          {this.datasetTable.props.context.globalSearchQuery != null ? (
-            <>
-              <br />
-              <BreadcrumbsTag parts={this.datasetTable.props.context.getBreadcrumbs(this.data)} />
-            </>
-          ) : null}
-        </div>
-      </>
+        {this.renderTags()}
+        {this.renderMetaLine()}
+        {this.datasetTable.props.context.globalSearchQuery != null ? (
+          <BreadcrumbsTag parts={this.datasetTable.props.context.getBreadcrumbs(this.data)} />
+        ) : null}
+      </div>
     );
   }
   renderTags(): React.ReactNode {
@@ -375,13 +419,32 @@ class DatasetRenderer {
         updateDataset={this.datasetTable.props.updateDataset}
       />
     ) : (
-      <Tooltip title="No tags available for inactive datasets">
+      <FastTooltip title="No tags available for inactive datasets">
         <WarningOutlined
           style={{
             color: "@disabled-color",
           }}
         />
-      </Tooltip>
+      </FastTooltip>
+    );
+  }
+  renderMetaLine(): React.ReactNode {
+    const { annotationCount } = this.data;
+    return (
+      <RowMetaLine
+        items={[
+          this.datasetTable.shouldShowStorage() ? this.renderStorageColumn() : null,
+          annotationCount ? (
+            <Link
+              key="annotations"
+              to={`/dashboard/annotations?dataset=${encodeURIComponent(this.data.name)}`}
+            >
+              {annotationCount} {pluralize("Annotation", annotationCount)}
+            </Link>
+          ) : null,
+          <span key="created">created {this.renderCreationDateColumn()}</span>,
+        ]}
+      />
     );
   }
   renderCreationDateColumn(): React.ReactNode {
@@ -406,19 +469,24 @@ class FolderRenderer {
   getRowKey() {
     return FolderRenderer.getRowKey(this.data);
   }
+  renderThumbnailColumn(): React.ReactNode {
+    return (
+      <img
+        src={folderThumbnailIcon}
+        className="dataset-table-thumbnail icon-thumbnail"
+        style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+        alt=""
+      />
+    );
+  }
   renderNameColumn(): React.ReactNode {
     return (
-      <>
-        <img
-          src={folderThumbnailIcon}
-          className="dataset-table-thumbnail icon-thumbnail"
-          style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
-          alt=""
+      <div className="dataset-table-name-container">
+        <span className="incognito-link dataset-table-name">{this.data.name}</span>
+        <RowMetaLine
+          items={["Folder", <span key="created">created {this.renderCreationDateColumn()}</span>]}
         />
-        <div className="dataset-table-name-container">
-          <span className="incognito-link dataset-table-name">{this.data.name}</span>
-        </div>
-      </>
+      </div>
     );
   }
   renderStorageColumn(): React.ReactNode {
@@ -434,10 +502,8 @@ class FolderRenderer {
 
 class DatasetTable extends PureComponent<Props, State> {
   state: State = {
-    sortedInfo: {
-      columnKey: useLruRank ? undefined : "created",
-      order: "descend",
-    },
+    sortOption: "lastUsed",
+    hasUserSetSort: false,
     prevSearchQuery: "",
     contextMenuPosition: null,
     datasetsForContextMenu: [],
@@ -449,32 +515,17 @@ class DatasetTable extends PureComponent<Props, State> {
   currentPageData: RowRenderer[] = [];
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
-    const maybeSortedInfo: { sortedInfo: SorterResult<string> } | EmptyObject = // Clear the sorting exactly when the search box is initially filled
-      // (searchQuery changes from empty string to non-empty string)
+    const maybeResetSort: { hasUserSetSort: boolean } | EmptyObject = // Fall back to relevance-sorting exactly when the search box is initially filled
+      // (searchQuery changes from empty string to non-empty string), unless the user
+      // explicitly picks a sort option afterwards.
       nextProps.searchQuery !== "" && prevState.prevSearchQuery === ""
-        ? {
-            sortedInfo: {
-              columnKey: "",
-              order: "ascend",
-            },
-          }
+        ? { hasUserSetSort: false }
         : {};
     return {
       prevSearchQuery: nextProps.searchQuery,
-      ...maybeSortedInfo,
+      ...maybeResetSort,
     };
   }
-
-  handleChange = <RecordType extends object = any>(
-    _pagination: TablePaginationConfig,
-    _filters: Record<string, FilterValue | null>,
-    sorter: SorterResult<RecordType> | SorterResult<RecordType>[],
-  ) => {
-    this.setState({
-      // @ts-expect-error
-      sortedInfo: sorter,
-    });
-  };
 
   getFilteredDatasets() {
     const filterByMode = (datasets: APIDatasetCompact[]) => {
@@ -504,21 +555,64 @@ class DatasetTable extends PureComponent<Props, State> {
     return filteredByTags(filterByMode(filterByHasLayers(this.props.datasets)));
   }
 
+  shouldShowStorage(): boolean {
+    const { usedStorageInOrga } = this.props.context;
+    return (
+      this.props.isUserAdminOrDatasetManager && usedStorageInOrga != null && usedStorageInOrga > 0
+    );
+  }
+
   renderEmptyText(): React.ReactNode {
+    if (this.props.isLoading) {
+      // The table's loading spinner covers this; avoid flashing the empty-state hint.
+      return null;
+    }
+    if (this.props.emptyStateContent != null) {
+      return this.props.emptyStateContent;
+    }
+    const { searchQuery, searchTags, datasetFilteringMode } = this.props;
+    const isSearchOrFilterActive =
+      searchQuery.length > 0 ||
+      searchTags.length > 0 ||
+      datasetFilteringMode !== "onlyShowReported";
+    const maybeClearButton = isSearchOrFilterActive ? (
+      <Button type="link" onClick={this.props.onClearSearchAndFilters}>
+        Clear search and filters
+      </Button>
+    ) : null;
+
+    const activeFilterLabels: string[] = [];
+    if (searchTags.length > 0) activeFilterLabels.push("tags");
+    if (datasetFilteringMode === "onlyShowUnreported") activeFilterLabels.push("status");
     const maybeWarning =
-      this.props.datasetFilteringMode !== "showAllDatasets" ? (
-        <p>
-          Note that datasets are currently filtered according to whether they are available on the
-          datastore.
-          <br />
-          You can change the filtering via the menu next to the search input.
-        </p>
+      activeFilterLabels.length > 0 ? (
+        <p>Note that datasets are currently filtered by {activeFilterLabels.join(", ")}.</p>
       ) : null;
+    if (searchQuery.length > 0) {
+      return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? (
+        <>
+          <p>No datasets match your search.</p>
+          {maybeWarning}
+          {maybeClearButton}
+        </>
+      ) : (
+        <>
+          <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
+          {maybeClearButton}
+        </>
+      );
+    }
+    if (!("queries" in this.props.context)) {
+      return <p>No Datasets found.</p>;
+    }
+    const emptyListHintText = this.props.isUserAdminOrDatasetManager
+      ? "There are no datasets in this folder. Import one or move a dataset from another folder."
+      : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
     return (
       <>
-        {"queries" in this.props.context ? <p>This folder is empty.</p> : <p>No Datasets found.</p>}
-
+        <p>{emptyListHintText}</p>
         {maybeWarning}
+        {maybeClearButton}
       </>
     );
   }
@@ -563,26 +657,32 @@ class DatasetTable extends PureComponent<Props, State> {
       name: folder.title,
     }));
     const filteredDataSource = this.getFilteredDatasets();
-    const { sortedInfo } = this.state;
-    let dataSourceSortedByRank: Array<DatasetOrFolder> = useLruRank
-      ? sortBy(filteredDataSource, ["lastUsedByUser", "created"]).reverse()
-      : filteredDataSource;
+    // Search results are capped by the backend and filtered afterwards, so reaching the cap
+    // means more matches may exist than are shown.
+    const mayHaveMoreSearchResults =
+      this.props.context.globalSearchQuery != null &&
+      this.props.context.datasets.length >= SEARCH_RESULTS_LIMIT;
+    const { sortOption, hasUserSetSort } = this.state;
+    let dataSourceSortedByOption: Array<DatasetOrFolder> = sortDatasetsByOption(
+      filteredDataSource,
+      sortOption,
+    );
     const isSearchQueryLongEnough = this.props.searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH;
     if (!isSearchQueryLongEnough) {
-      dataSourceSortedByRank = dataSourceSortedByRank.concat(activeSubfolders);
+      dataSourceSortedByOption = dataSourceSortedByOption.concat(activeSubfolders);
     }
     // Create a map from dataset to its rank
     const datasetToRankMap: Map<DatasetOrFolder, number> = new Map(
-      dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
+      dataSourceSortedByOption.map((dataset, rank) => [dataset, rank]),
     );
     const sortedDataSource =
-      // Sort using the dice coefficient if the table is not sorted by another key
+      // Sort using the dice coefficient if the user hasn't picked an explicit sort option
       // and if the query is at least 3 characters long to avoid sorting *all* datasets
-      isSearchQueryLongEnough && sortedInfo.columnKey == null
+      isSearchQueryLongEnough && !hasUserSetSort
         ? sortBy(
             [...filteredDataSource, ...activeSubfolders].map((datasetOrFolder) => {
               const diceCoefficient = dice(datasetOrFolder.name, this.props.searchQuery);
-              const rank = useLruRank ? datasetToRankMap.get(datasetOrFolder) || 0 : 0;
+              const rank = datasetToRankMap.get(datasetOrFolder) || 0;
               const rankCoefficient = 1 - rank / filteredDataSource.length;
               const coefficient = (diceCoefficient + rankCoefficient) / 2;
               return {
@@ -594,7 +694,7 @@ class DatasetTable extends PureComponent<Props, State> {
           )
             .map(({ datasetOrFolder }) => datasetOrFolder)
             .reverse()
-        : dataSourceSortedByRank;
+        : dataSourceSortedByOption;
     const sortedDataSourceRenderers: RowRenderer[] = sortedDataSource.map((record) =>
       isRecordADataset(record)
         ? new DatasetRenderer(record, this)
@@ -610,58 +710,31 @@ class DatasetTable extends PureComponent<Props, State> {
 
     const columns: ColumnType<RowRenderer>[] = [
       {
-        title: "Name",
+        // Explicit width so this column doesn't grow beyond the thumbnail's own size
+        // when the other columns don't have enough content to fill the table's width.
+        width: THUMBNAIL_SIZE + 16, // 16 = the cell's remaining (left-side only) padding
+        key: "thumbnail",
+        className: "dashboard-list-table-borderless-cell dashboard-list-table-thumbnail-cell",
+        render: (__, rowRenderer: RowRenderer) => rowRenderer.renderThumbnailColumn(),
+      },
+      {
         dataIndex: "name",
         key: "name",
-        sorter: localeCompareBy<RowRenderer>((rowRenderer) => rowRenderer.data.name),
-        sortOrder: sortedInfo.columnKey === "name" ? sortedInfo.order : undefined,
+        className: "dashboard-list-table-borderless-cell",
         render: (_name: string, rowRenderer: RowRenderer, _index) => rowRenderer.renderNameColumn(),
       },
       {
-        width: 180,
-        title: "Creation Date",
-        dataIndex: "created",
-        key: "created",
-        sorter: compareBy<RowRenderer>((rowRenderer) => rowRenderer.data.created),
-        sortOrder: sortedInfo.columnKey === "created" ? sortedInfo.order : undefined,
-        render: (_created, rowRenderer: RowRenderer) => rowRenderer.renderCreationDateColumn(),
-      },
-      {
         width: 200,
-        title: "Actions",
         key: "actions",
-        fixed: "right",
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
       },
     ];
-    if (
-      this.props.isUserAdminOrDatasetManager &&
-      context.usedStorageInOrga != null &&
-      context.usedStorageInOrga > 0
-    ) {
-      const datasetStorageSizeColumn = {
-        title: (
-          <Space>
-            Used Storage{" "}
-            <Tooltip title={"Storage used by this dataset within your organization."}>
-              <InfoCircleOutlined />
-            </Tooltip>{" "}
-          </Space>
-        ),
-        key: "storage",
-        width: 200,
-        render: (_: any, rowRenderer: RowRenderer) => {
-          return isRecordADataset(rowRenderer.data) ? rowRenderer.renderStorageColumn() : null;
-        },
-        sorter: compareBy<RowRenderer>((rowRenderer) =>
-          isRecordADataset(rowRenderer.data) && rowRenderer.data.usedStorageBytes
-            ? rowRenderer.data.usedStorageBytes
-            : 0,
-        ),
-        sortOrder: sortedInfo.columnKey === "storage" ? sortedInfo.order : undefined,
-      };
-      columns.splice(2, 0, datasetStorageSizeColumn);
-    }
+
+    const availableSortOptions = DATASET_SORT_OPTIONS.filter(
+      (option) => option.key !== "storage" || this.shouldShowStorage(),
+    );
+    const currentSortLabel =
+      availableSortOptions.find((option) => option.key === sortOption)?.label ?? "Last used";
 
     return (
       <DndProvider backend={HTML5Backend}>
@@ -674,25 +747,88 @@ class DatasetTable extends PureComponent<Props, State> {
           contextMenuPosition={contextMenuPosition}
           datasetCollectionContext={context}
         />
+        <ListFilterHeader
+          summary={
+            <>
+              {filteredDataSource.length}
+              {mayHaveMoreSearchResults ? "+" : ""}{" "}
+              {pluralize("Dataset", filteredDataSource.length)}
+              {activeSubfolders.length > 0
+                ? `, ${activeSubfolders.length} ${pluralize("Subfolder", activeSubfolders.length)}`
+                : null}
+            </>
+          }
+        >
+          <TagFilterChip
+            selectedTags={this.props.searchTags}
+            availableTags={this.props.datasets.flatMap((dataset) => dataset.tags)}
+            onChange={this.props.setSearchTags}
+          />
+          {this.props.isUserAdminOrDatasetManager ? (
+            <FilterChip
+              label="Status"
+              active={this.props.datasetFilteringMode !== "onlyShowReported"}
+            >
+              <Space orientation="vertical" size={4}>
+                <Radio
+                  checked={this.props.datasetFilteringMode === "onlyShowReported"}
+                  onChange={() => this.props.setDatasetFilteringMode("onlyShowReported")}
+                >
+                  Available
+                </Radio>
+                <Radio
+                  checked={this.props.datasetFilteringMode === "onlyShowUnreported"}
+                  onChange={() => this.props.setDatasetFilteringMode("onlyShowUnreported")}
+                >
+                  Missing
+                </Radio>
+                <Radio
+                  checked={this.props.datasetFilteringMode === "showAllDatasets"}
+                  onChange={() => this.props.setDatasetFilteringMode("showAllDatasets")}
+                >
+                  All
+                </Radio>
+              </Space>
+            </FilterChip>
+          ) : null}
+          <FilterChip
+            label={
+              <>
+                <Icon component={IconSort} /> Sort: {currentSortLabel}
+              </>
+            }
+          >
+            <Space orientation="vertical" size={4}>
+              {availableSortOptions.map((option) => (
+                <Radio
+                  key={option.key}
+                  checked={sortOption === option.key}
+                  onChange={() => this.setState({ sortOption: option.key, hasUserSetSort: true })}
+                >
+                  {option.label}
+                </Radio>
+              ))}
+            </Space>
+          </FilterChip>
+        </ListFilterHeader>
         <Table
           dataSource={sortedDataSourceRenderers}
           columns={columns}
           rowKey={(renderer: RowRenderer) => renderer.getRowKey()}
           components={components}
+          showHeader={false}
+          bordered
+          loading={this.props.isLoading}
+          className="dashboard-list-table"
+          rowClassName={(renderer: RowRenderer) =>
+            selectedRowKeys.includes(renderer.getRowKey()) ? "ant-table-row-selected" : ""
+          }
           pagination={{
             defaultPageSize: 50,
-            onChange: () => scrollContainerToTop(this.props.scrollContainerRef?.current),
+            onChange: scrollToTop,
           }}
-          styles={{
-            // hide/offset the first column containing the checkbox for row selection
-            section: { marginLeft: "-36px" },
-          }}
-          onChange={this.handleChange}
           locale={{
             emptyText: this.renderEmptyText(),
-          }}
-          scroll={{
-            x: "max-content",
           }}
           summary={(currentPageData) => {
             // Workaround to get to the currently rendered entries (since the ordering
@@ -799,14 +935,6 @@ class DatasetTable extends PureComponent<Props, State> {
               },
             };
           }}
-          rowSelection={{
-            columnWidth: 0,
-            selectedRowKeys,
-            onSelectNone: () => {
-              this.props.onSelectDataset(null);
-              context.setSelectedFolder(null);
-            },
-          }}
         />
       </DndProvider>
     );
@@ -853,7 +981,7 @@ export function DatasetTags({
   };
 
   return (
-    <Space>
+    <Space wrap>
       {dataset.tags.map((tag) => (
         <CategorizationLabel
           tag={tag}

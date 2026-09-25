@@ -310,6 +310,14 @@ function SegmentName({
   const { segment } = node;
   const displayedName = getSegmentName(segment);
 
+  // The truncated rows need the full name on hover; the expanded one shows it anyway. An
+  // active segment explains its accent bar here too, because the bar is a 2px
+  // pseudo-element and can carry neither a tooltip nor a usable hover target of its own.
+  const titleLines = [
+    isExpanded ? null : displayedName,
+    isActiveSegment ? "The currently active segment ID belongs to this segment." : null,
+  ].filter((line) => line != null);
+
   return (
     <InlineEditableName
       displayedName={displayedName}
@@ -327,8 +335,7 @@ function SegmentName({
           ? { whiteSpace: "normal", lineHeight: `${EXPANDED_LINE_HEIGHT}px`, textWrap: "pretty" }
           : null),
       }}
-      // The truncated rows need the full name on hover; the expanded one shows it anyway.
-      title={isExpanded ? undefined : displayedName}
+      title={titleLines.length > 0 ? titleLines.join("\n\n") : undefined}
       onClick={() => actions.selectAndJumpTo(segment)}
       onStartEditing={() => actions.startRenaming(node.key)}
       onCommit={(name) => actions.renameSegment(segment, name)}

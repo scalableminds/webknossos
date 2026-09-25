@@ -221,12 +221,10 @@ trait NgffExplorationUtils {
       dataset <- multiscale.datasets.headOption.toFox
       shape <- getShape(dataset, remotePath)
       axes <- Fox.combined(
-        multiscale.axes
-          .filter(axis => !defaultAxes.contains(axis.name))
-          .zipWithIndex
-          .map(axisAndIndex =>
-            createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Seq(0, shape(axisAndIndex._2).toInt)).toFox
-          )
+        // The index of an additional axis is its position in the array, so it is taken before filtering.
+        multiscale.axes.zipWithIndex.filter { case (axis, _) => !defaultAxes.contains(axis.name.toLowerCase) }.map {
+          case (axis, index) => createAdditionalAxis(axis.name, index, Seq(0, shape(index).toInt)).toFox
+        }
       )
       duplicateNames = axes.map(_.name).diff(axes.map(_.name).distinct).distinct
       _ <- Fox.fromBool(
@@ -350,13 +348,18 @@ trait NgffExplorationUtils {
       tc: TokenContext
   ): Fox[List[(StaticLayer, VoxelSize)]]
 
+  protected def readLabelsGroup(remotePath: VaultPath)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[NgffLabelsGroup] =
+    (remotePath / NgffLabelsGroup.LABEL_PATH).parseAsJson[NgffLabelsGroup]
+
   protected def exploreLabelLayers(remotePath: VaultPath, credentialId: Option[String])(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
-      labelDescriptionPath <- Fox.successful(remotePath / NgffLabelsGroup.LABEL_PATH)
-      labelGroup <- labelDescriptionPath.parseAsJson[NgffLabelsGroup]
+      labelGroup <- readLabelsGroup(remotePath)
       layerTuples <- Fox.serialCombined(labelGroup.labels) { labelPath =>
         layersForLabel(remotePath, labelPath, credentialId)
       }

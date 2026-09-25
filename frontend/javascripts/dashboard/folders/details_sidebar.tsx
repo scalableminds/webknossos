@@ -112,13 +112,9 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
   const renderOrganization = () => {
     if (activeUser?.organization === selectedDataset.owningOrganization) return;
     return (
-      <table>
-        <tbody>
-          <OwningOrganizationRow
-            organizationId={owningOrganizationName != null ? owningOrganizationName : ""}
-          />
-        </tbody>
-      </table>
+      <OwningOrganizationRow
+        organizationId={owningOrganizationName != null ? owningOrganizationName : ""}
+      />
     );
   };
 
@@ -146,16 +142,8 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             <div className="sidebar-label">Dimensions</div>
             {fullDataset?.isActive && (
               <div className="info-tab-block" style={{ marginTop: -3 }}>
-                <table
-                  style={{
-                    fontSize: 14,
-                  }}
-                >
-                  <tbody>
-                    <VoxelSizeRow dataset={fullDataset} />
-                    <DatasetExtentRow dataset={fullDataset} />
-                  </tbody>
-                </table>
+                <VoxelSizeRow dataset={fullDataset} />
+                <DatasetExtentRow dataset={fullDataset} />
               </div>
             )}
           </div>

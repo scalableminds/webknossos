@@ -18,7 +18,7 @@ import {
 import features from "features";
 import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
-import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/utils";
+import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import { Link } from "react-router";
@@ -33,6 +33,7 @@ import type { JobRequirement } from "./components/job_requirements";
 import { JOB_COMMANDS_WRITING_TO_STORAGE } from "./constants";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
 import { useAiTrainingJobContext } from "./train_ai_model/ai_training_job_context";
+import { getTrainingVolume } from "./train_ai_model/training_data_validation";
 import { getBestFittingMagComparedToTrainingDS } from "./utils";
 
 const { Title, Text } = Typography;
@@ -139,12 +140,7 @@ export const TrainingCreditInformation: React.FC = () => {
   // Create a synthetic cubic bounding box from the total training volume
   // for cost calculation purposes.
   const totalVolume = selectedAnnotations.reduce(
-    (total, { userBoundingBoxes }) =>
-      total +
-      userBoundingBoxes.reduce(
-        (sum, box) => sum + computeVolumeFromBoundingBox(box.boundingBox),
-        0,
-      ),
+    (total, selection) => total + getTrainingVolume(selection),
     0,
   );
   // bounding box sizing needs to be integer values

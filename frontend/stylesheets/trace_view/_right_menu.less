@@ -65,21 +65,6 @@
       background-color: var(--ant-color-primary-bg);
     }
 
-    // The segment that the volume tools currently write to. This replaces the former
-    // brush icon; it can co-occur with the selection tint above.
-    &:has(.segment-row--active)::before {
-      content: "";
-      position: absolute;
-      left: @segments-tree-indent-unit;
-      top: 2px;
-      // antd uses this pseudo-element itself and gives it a height, so the bar cannot be
-      // stretched with `bottom` alone.
-      height: calc(100% - 4px);
-      width: 2px;
-      border-radius: 0 2px 2px 0;
-      background-color: var(--ant-color-primary);
-    }
-
     // The single selected segment wraps its name over as many lines as it needs, so
     // everything in its row aligns to the first line rather than to the middle.
     &:has(.segment-row--expanded) {
@@ -110,6 +95,11 @@
     background: transparent !important;
     padding: 0;
     min-height: 0;
+    // antd makes this the containing block of everything in a title. The accent bar has to
+    // reach the left edge of the panel, past the indentation and the checkbox, so it needs
+    // to resolve against the row element instead. Nothing here depends on the wrapper being
+    // positioned: antd's drop indicator is a sibling of it and anchors to the row itself.
+    position: static;
   }
 
   // antd draws the switcher's hover background as a pseudo-element of a fixed height (its
@@ -132,6 +122,20 @@
 
   .segment-row__on-hover {
     visibility: hidden;
+  }
+
+  // The segment that the volume tools currently write to, replacing the former brush icon.
+  // It is rendered inside the row but positioned against antd's row element (the nearest
+  // positioned ancestor), so that it reaches the left edge of the panel whatever the
+  // indentation of the row is. It can co-occur with the selection tint.
+  .segment-row__accent {
+    position: absolute;
+    left: @segments-tree-indent-unit;
+    top: 2px;
+    height: calc(100% - 4px);
+    width: 2px;
+    border-radius: 0 2px 2px 0;
+    background-color: var(--ant-color-primary);
   }
 }
 

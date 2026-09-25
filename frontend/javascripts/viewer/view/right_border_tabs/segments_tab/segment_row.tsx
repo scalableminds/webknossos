@@ -126,6 +126,24 @@ function getMeshChipTooltip(mesh: MeshInformation): string {
 }
 
 /*
+ * Marks the segment that the volume tools write to. A real element rather than a
+ * pseudo-element, so that it can carry a tooltip: the bar is the only thing that says
+ * "active" besides the bold name, and it is not self-explanatory. It is positioned
+ * against antd's row element, which is the nearest positioned ancestor, so that it sits
+ * at the left edge of the panel instead of where this title starts.
+ */
+function ActiveSegmentAccent() {
+  return (
+    <FastTooltip
+      title="This is the active segment. Anything you paint with the volume tools is added to it."
+      asChild
+    >
+      <span className="segment-row__accent" />
+    </FastTooltip>
+  );
+}
+
+/*
  * The single mesh control of a row, in a slot that is always reserved so that loading or
  * removing a mesh never changes the row count or the row height of the list.
  *
@@ -310,14 +328,6 @@ function SegmentName({
   const { segment } = node;
   const displayedName = getSegmentName(segment);
 
-  // The truncated rows need the full name on hover; the expanded one shows it anyway. An
-  // active segment explains its accent bar here too, because the bar is a 2px
-  // pseudo-element and can carry neither a tooltip nor a usable hover target of its own.
-  const titleLines = [
-    isExpanded ? null : displayedName,
-    isActiveSegment ? "The currently active segment ID belongs to this segment." : null,
-  ].filter((line) => line != null);
-
   return (
     <InlineEditableName
       displayedName={displayedName}
@@ -335,7 +345,8 @@ function SegmentName({
           ? { whiteSpace: "normal", lineHeight: `${EXPANDED_LINE_HEIGHT}px`, textWrap: "pretty" }
           : null),
       }}
-      title={titleLines.length > 0 ? titleLines.join("\n\n") : undefined}
+      // The truncated rows need the full name on hover; the expanded one shows it anyway.
+      title={isExpanded ? undefined : displayedName}
       onClick={() => actions.selectAndJumpTo(segment)}
       onStartEditing={() => actions.startRenaming(node.key)}
       onCommit={(name) => actions.renameSegment(segment, name)}
@@ -399,7 +410,6 @@ export const SegmentNodeTitle = memo(
     return (
       <Flex
         className={classnames("segment-row", {
-          "segment-row--active": isActiveSegment,
           "segment-row--expanded": isExpanded,
           "segment-row--hovered-in-viewport": isHovered,
         })}
@@ -416,6 +426,7 @@ export const SegmentNodeTitle = memo(
         onMouseLeave={() => setHoveredSegmentId(null)}
         onContextMenu={(event) => onContextMenu(node, event)}
       >
+        {isActiveSegment ? <ActiveSegmentAccent /> : null}
         <span
           style={{
             width: COLOR_DOT_SIZE,

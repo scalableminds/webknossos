@@ -595,6 +595,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
       textureInformation.textureSize,
       textureInformation.textureCount,
       layer.name, // In case of a volume tracing layer the layer name will equal its tracingId.
+      layers.length,
     );
   }
 

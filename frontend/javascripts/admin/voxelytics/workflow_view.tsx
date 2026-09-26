@@ -339,8 +339,8 @@ export default function WorkflowView() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["voxelyticsWorkflow", workflowHash],
-    queryFn: async () => await getVoxelyticsWorkflow(workflowHash, null),
+    queryKey: ["voxelyticsWorkflow", workflowHash, runId],
+    queryFn: async () => await getVoxelyticsWorkflow(workflowHash, runId ?? null),
     // If a meta task is passed via a URL parameter, the entire report is filtered so that only the
     // tasks of the given meta task are shown (left-hand as well as right-hand side).
     select: (data) => {

@@ -6,6 +6,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import type { ComponentType } from "react";
 import React, { useState } from "react";
+import { UserThemeConfigProvider } from "theme_provider";
 import LoginForm from "./login_form";
 import RegistrationFormGeneric from "./registration_form_generic";
 
@@ -93,15 +94,18 @@ export function withAuthentication<P, C extends ComponentType<P>>(
         <>
           {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<AuthenticationProps<P>, "activeUser" | ... Remove this comment to see the full error message */}
           <WrappedComponent {...rest} onClick={() => setIsAuthenticationModalOpen(true)} />
-          <AuthenticationModal
-            alertMessage={authenticationMessage}
-            onLoggedIn={() => {
-              setIsAuthenticationModalOpen(false);
-              originalOnClick();
-            }}
-            onCancel={() => setIsAuthenticationModalOpen(false)}
-            isOpen={isAuthenticationModalOpen}
-          />
+          {/* The wrapped buttons live in the dark toolbar, so restore the regular theme for the modal. */}
+          <UserThemeConfigProvider>
+            <AuthenticationModal
+              alertMessage={authenticationMessage}
+              onLoggedIn={() => {
+                setIsAuthenticationModalOpen(false);
+                originalOnClick();
+              }}
+              onCancel={() => setIsAuthenticationModalOpen(false)}
+              isOpen={isAuthenticationModalOpen}
+            />
+          </UserThemeConfigProvider>
         </>
       );
     }

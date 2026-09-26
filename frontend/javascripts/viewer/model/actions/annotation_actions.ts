@@ -5,6 +5,7 @@ import { batchActions } from "redux-batched-actions";
 import type {
   AdditionalCoordinate,
   AnnotationCollaborationMode,
+  APIAnnotationBookmark,
   APIAnnotationVisibility,
   APIDataLayer,
   APIDataset,
@@ -51,6 +52,7 @@ export type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>
 type SetAnnotationVisibilityAction = ReturnType<typeof setAnnotationVisibilityAction>;
 export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAction>;
 export type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
+export type AddBookmarkAction = ReturnType<typeof addBookmarkAction>;
 type SetAnnotationAllowUpdateAction = ReturnType<
   typeof setIsUpdatingAnnotationCurrentlyAllowedAction
 >;
@@ -89,6 +91,7 @@ export type AnnotationActionTypes =
   | SetAnnotationVisibilityAction
   | EditAnnotationLayerAction
   | SetAnnotationDescriptionAction
+  | AddBookmarkAction
   | SetAnnotationAllowUpdateAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
@@ -178,6 +181,12 @@ export const setAnnotationDescriptionAction = (description: string) =>
   ({
     type: "SET_ANNOTATION_DESCRIPTION",
     description,
+  }) as const;
+
+export const addBookmarkAction = (bookmark: APIAnnotationBookmark) =>
+  ({
+    type: "ADD_BOOKMARK",
+    bookmark,
   }) as const;
 
 export const setIsUpdatingAnnotationCurrentlyAllowedAction = (currentlyAllowUpdate: boolean) =>

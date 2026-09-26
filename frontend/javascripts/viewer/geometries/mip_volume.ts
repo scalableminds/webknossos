@@ -125,6 +125,8 @@ uniform mat4 uProjectionMatrix;
 uniform vec3 uVolumeSize;
 uniform int uNumSteps;
 uniform vec3 uCameraForward;
+uniform vec3 uCameraPosition;
+uniform bool uIsPerspective;
 
 in vec3 vLocalPos;
 out vec4 fragColor;
@@ -156,12 +158,23 @@ function buildFragmentShader(writeDepth: boolean): string {
 void main() {
   if (uNumLayers == 0) discard;
 
-  // Orthographic: all rays share the same direction (camera forward).
-  // Transform camera forward from world space to normalized local space ([-0.5, 0.5]^3).
-  // Using w=0 for a direction vector (no translation), then divide by uVolumeSize to match
-  // the vertex shader's normalization (vLocalPos = position / uVolumeSize).
-  vec3 localDir = (uInvModelMatrix * vec4(uCameraForward, 0.0)).xyz;
-  vec3 rd = normalize(localDir / uVolumeSize);
+  // All vectors are in normalized local space ([-0.5, 0.5]^3), matching the vertex
+  // shader's normalization (vLocalPos = position / uVolumeSize).
+  vec3 rd;
+  // Parameter of the camera position along the ray (only relevant for perspective).
+  float tCamera = -1e20;
+  if (uIsPerspective) {
+    // Perspective: each ray goes from the camera position through this fragment.
+    vec3 localCam = (uInvModelMatrix * vec4(uCameraPosition, 1.0)).xyz / uVolumeSize;
+    vec3 camToFrag = vLocalPos - localCam;
+    rd = normalize(camToFrag);
+    tCamera = -length(camToFrag);
+  } else {
+    // Orthographic: all rays share the same direction (camera forward).
+    // w=0 for a direction vector (no translation).
+    vec3 localDir = (uInvModelMatrix * vec4(uCameraForward, 0.0)).xyz;
+    rd = normalize(localDir / uVolumeSize);
+  }
 
   // Use the fragment's position on the back face as the reference point on the ray.
   // The slab test returns negative tNear (ray entered front face before vLocalPos)
@@ -169,7 +182,8 @@ void main() {
   vec2 t = intersectAABB(vLocalPos, rd);
   if (t.x > t.y) discard;
 
-  float tStart = t.x;
+  // Don't sample behind the camera if it is inside the volume.
+  float tStart = max(t.x, tCamera);
   float tEnd   = t.y;
   float stepSize = (tEnd - tStart) / float(uNumSteps);
 
@@ -293,6 +307,8 @@ export class MipVolume {
         uVolumeSize: { value: volumeSize },
         uNumSteps: { value: 128 },
         uCameraForward: { value: new ThreeVector3(0, 0, -1) },
+        uCameraPosition: { value: new ThreeVector3() },
+        uIsPerspective: { value: false },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: buildFragmentShader(false),
@@ -310,6 +326,9 @@ export class MipVolume {
       this.material.uniforms.uInvModelMatrix.value.copy(this.mesh.matrixWorld).invert();
       // Store the world direction into uCameraForward
       camera.getWorldDirection(this.material.uniforms.uCameraForward.value);
+      camera.getWorldPosition(this.material.uniforms.uCameraPosition.value);
+      this.material.uniforms.uIsPerspective.value =
+        (camera as { isPerspectiveCamera?: boolean }).isPerspectiveCamera === true;
       this.material.uniforms.uModelViewMatrix.value.multiplyMatrices(
         camera.matrixWorldInverse,
         this.mesh.matrixWorld,

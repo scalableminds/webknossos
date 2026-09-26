@@ -176,7 +176,17 @@ for (const name of ["skeleton_annotations.png", "screenshot_skeletons.png"]) {
 for (const name of ["skeleton_tree_list.png", "tracing_ui_tree_visibility.jpeg"]) {
   add(name, async (ctx) => {
     await scene(ctx, "skeleton", true);
-    return tab(ctx, "Skeleton", "#tree-list");
+    const treeList = await tab(ctx, "Skeleton", "#tree-list");
+    if (name === "tracing_ui_tree_visibility.jpeg") {
+      return {
+        target: treeList,
+        highlights: [
+          treeList.locator(`${tooltip("Toggle Visibility of All Trees")} button`),
+          treeList.locator(`${tooltip("Toggle Visibility of Inactive Trees")} button`),
+        ],
+      };
+    }
+    return treeList;
   });
 }
 add("shuffle_tree_colors.png", async (ctx) => {
@@ -209,23 +219,60 @@ for (const name of ["segments_tab.jpeg", "segments_tab2.jpeg"]) {
     const segmentList = await tab(ctx, "Segments", "#segment-list");
     if (name === "segments_tab.jpeg") {
       await segmentList.locator(tooltip("Configure mesh computation")).click();
-      return { target: await show(ctx, ".ant-popover:visible"), context: segmentList, padding: 48 };
+      const settings = await show(ctx, ".ant-popover:visible");
+      return {
+        target: settings,
+        context: [segmentList, ctx.page.locator("#screenshot_target_inputcatcher_TDView")],
+        highlights: [settings],
+        padding: 48,
+      };
     }
-    return segmentList;
+    return {
+      target: segmentList,
+      context: ctx.page.locator("#screenshot_target_inputcatcher_TDView"),
+      highlights: [segmentList.locator(".ant-tree-list-holder-inner")],
+      padding: 48,
+    };
   });
 }
 add("ui_toolbar_menu.png", async (ctx) => {
   await scene(ctx);
-  return show(ctx, ".action-bar");
+  return menu(ctx);
 });
 for (const name of ["tracing_ui_download_tooolbar.jpeg", "tracing_ui_merge_1.jpeg"]) {
   add(name, async (ctx) => {
     await scene(ctx, "skeleton", true, true);
-    return menu(ctx);
+    const capture = await menu(ctx);
+    const item = name === "tracing_ui_merge_1.jpeg" ? "Merge Annotation" : "Download";
+    return {
+      ...capture,
+      highlights: [
+        ctx.page.locator(".action-bar button").filter({ hasText: /^Menu$/ }),
+        ctx.page
+          .locator(dropdown)
+          .getByRole("menuitem")
+          .filter({ hasText: new RegExp(`^${item}$`) }),
+      ],
+    };
   });
 }
+add("tracing_ui_download.jpeg", async (ctx) => {
+  await scene(ctx, "skeleton", true);
+  const treeList = await tab(ctx, "Skeleton", "#tree-list");
+  const more = treeList.locator(`${tooltip("More actions")} button`);
+  await more.click();
+  const menu = await show(ctx, dropdown);
+  return {
+    target: menu,
+    context: treeList,
+    highlights: [
+      more,
+      menu.getByRole("menuitem").filter({ hasText: /^Download Visible Trees NML$/ }),
+    ],
+    padding: 48,
+  };
+});
 for (const [name, item] of [
-  ["tracing_ui_download.jpeg", "Download"],
   ["tracing_ui_merge_2.jpeg", "Merge Annotation"],
   ["zarr_links.jpeg", "Zarr Links"],
 ]) {
@@ -243,15 +290,19 @@ for (const [name, label] of [
   add(name, async (ctx) => {
     await scene(ctx, "skeleton", true, true);
     await menu(ctx, "Share");
-    return show(
-      ctx,
-      ctx.page
-        .locator(modal)
-        .locator(".ant-row")
-        .filter({
-          has: ctx.page.getByText(label, { exact: true }),
+    const dialog = ctx.page.locator(modal);
+    const row = dialog
+      .locator(".ant-row")
+      .filter({ has: ctx.page.getByText(label, { exact: true }) });
+    const highlights = name === "sharing_modal_visibility.jpeg" ? [] : [row];
+    if (name === "sharing_modal_editing.png") {
+      highlights.push(
+        dialog.locator(".ant-row").filter({
+          has: ctx.page.getByText("Can users edit simultaneously?", { exact: true }),
         }),
-    );
+      );
+    }
+    return { target: dialog, highlights, padding: 48 };
   });
 }
 add("tracing_ui_import.jpeg", async (ctx) => {
@@ -267,6 +318,9 @@ add("view_modes.png", async (ctx) => {
   return {
     target: await show(ctx, ".ant-popover:visible"),
     context: ctx.page.locator(".action-bar"),
+    highlights: [
+      { target: ctx.page.locator(".action-bar button:has(.anticon-sync)"), color: "#cbcaff" },
+    ],
     padding: 48,
   };
 });
@@ -293,7 +347,18 @@ add("toolkit_dropdown.jpg", async (ctx) => {
 
 add("save_view_configuration_in_view_mode.png", async (ctx) => {
   await scene(ctx, "view");
-  return show(ctx, tooltip("Save the current view configuration as default"));
+  const button = ctx.page.locator(
+    `${tooltip("Save the current view configuration as default")} button`,
+  );
+  return {
+    target: button,
+    context: [
+      ctx.page.locator(".tracing-settings-menu"),
+      ctx.page.locator("#screenshot_target_inputcatcher_PLANE_XY"),
+    ],
+    highlights: [{ target: button, color: "#635bff" }],
+    padding: 48,
+  };
 });
 // These figures show specific biological structures, ground truth, mappings,
 // or job capabilities. Replacing them with an arbitrary dataset view would
@@ -355,7 +420,8 @@ for (const output of curatedScenes) {
       }
       for (const text of fixture.clickTexts ?? []) await ctx.clickText(text, { exact: true });
       await ctx.waitForViewer();
-      return fixture.selector ? show(ctx, fixture.selector) : undefined;
+      const target = fixture.selector ? await show(ctx, fixture.selector) : null;
+      return fixture.highlights?.length ? { target, highlights: fixture.highlights } : target;
     }),
   );
 }

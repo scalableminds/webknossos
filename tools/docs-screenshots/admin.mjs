@@ -298,7 +298,11 @@ export const recipes = [
     if (!["infer_nuclei", "infer_instances"].includes(job.command))
       throw new Error("fixtures.nucleiJobId must be a nuclei or instance inference job.");
     await checkVisibleJobs(ctx);
-    return content(ctx);
+    // Preserve the original screenshot's green emphasis on the nuclei job row.
+    return {
+      target: content(ctx),
+      highlights: [{ target: ctx.page.locator(`tr[data-row-key="${id}"]`), color: "#00b050" }],
+    };
   }),
   recipe("onboarding_organization.jpeg", (ctx) => onboarding(ctx, false)),
   recipe("onboarding_user.jpeg", (ctx) => onboarding(ctx, true)),

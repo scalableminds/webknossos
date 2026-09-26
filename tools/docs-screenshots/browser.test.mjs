@@ -77,6 +77,43 @@ test("scoped authentication leaves worker data fetches running and supports anon
     );
     assert.equal(contextual.readUInt32BE(16), 696);
     assert.equal(contextual.readUInt32BE(20), 496);
+    const marked = await captureScreenshot(
+      page,
+      {
+        target: "#scene",
+        highlights: ["#target"],
+        padding: 48,
+      },
+      { output: "docs/images/marked.png" },
+    );
+    const redPixels = await page.evaluate(
+      async (data) => {
+        const img = new Image();
+        img.src = data;
+        await img.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(img, 0, 0);
+        const pixels = context.getImageData(0, 0, img.width, img.height).data;
+        let count = 0;
+        for (let i = 0; i < pixels.length; i += 4)
+          if (pixels[i] > 200 && pixels[i + 1] < 20 && pixels[i + 2] < 20) count++;
+        return count;
+      },
+      `data:image/png;base64,${marked.toString("base64")}`,
+    );
+    assert.ok(redPixels > 500, "The screenshot must contain the red callout");
+    assert.equal(await page.locator("[data-docs-screenshot-highlights]").count(), 0);
+    await assert.rejects(
+      captureScreenshot(
+        page,
+        { target: "#scene", highlights: [{ target: "#target", color: "bad" }] },
+        { output: "docs/images/marked.png" },
+      ),
+      /six-digit/,
+    );
     await page.evaluate(() => {
       const bar = document.createElement("div");
       bar.className = "floating-buttons-bar";
@@ -106,14 +143,12 @@ test("scoped authentication leaves worker data fetches running and supports anon
     await page.setContent(
       '<div role="dialog" style="position:absolute;top:100px;left:200px;width:500px;height:300px;background:#ccc">Animated dialog</div>',
     );
-    await page
-      .getByRole("dialog")
-      .evaluate((element) =>
-        element.animate([{ transform: "scale(0.1)" }, { transform: "scale(1)" }], {
-          duration: 100000,
-          fill: "forwards",
-        }),
-      );
+    await page.getByRole("dialog").evaluate((element) =>
+      element.animate([{ transform: "scale(0.1)" }, { transform: "scale(1)" }], {
+        duration: 100000,
+        fill: "forwards",
+      }),
+    );
     const animated = await captureScreenshot(page, page.getByRole("dialog"), {
       output: "docs/images/dialog.png",
       padding: 64,

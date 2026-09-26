@@ -140,19 +140,19 @@ export async function captureScreenshot(page, result, recipe) {
     }
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });
-  if (spec.scrollToTop) {
+  if (target && spec.scrollToTop) {
     await target.evaluate((element) => {
       for (let parent = element; parent; parent = parent.parentElement) parent.scrollTo(0, 0);
       window.scrollTo(0, 0);
     });
-  } else {
+  } else if (target) {
     await target.scrollIntoViewIfNeeded();
   }
   const tight = /^docs\/(ui|volume_annotation|skeleton_annotation)\/images\//.test(recipe.output);
   const padding = spec.padding ?? recipe.padding ?? (tight ? 0 : 48);
   // Tall centered dialogs can exceed the viewport on accounts with many teams.
   // Resize before measuring instead of silently cutting off their footer.
-  if ((await target.getAttribute("role")) === "dialog") {
+  if (target && (await target.getAttribute("role")) === "dialog") {
     const box = await target.boundingBox();
     const viewport = page.viewportSize();
     const height = Math.ceil(box.height + padding * 2 + 200);
@@ -161,11 +161,69 @@ export async function captureScreenshot(page, result, recipe) {
       await target.scrollIntoViewIfNeeded();
     }
   }
-  if (!spec.context && padding === 0) return target.screenshot(options);
-  const boxes = [await target.boundingBox()];
+  if (!spec.context && !spec.highlights && padding === 0 && target)
+    return target.screenshot(options);
+  const boxes = target ? [await target.boundingBox()] : [];
   for (const surrounding of spec.context ? [spec.context].flat() : []) {
     const context = typeof surrounding === "string" ? page.locator(surrounding) : surrounding;
     boxes.push(await context.boundingBox());
   }
-  return page.screenshot({ ...options, clip: contextualClip(boxes, page.viewportSize(), padding) });
+  const highlights = [];
+  for (const item of spec.highlights ? [spec.highlights].flat() : []) {
+    const annotation = typeof item === "object" && "target" in item ? item : { target: item };
+    const color = annotation.color ?? "#e60000";
+    if (!/^#[0-9a-f]{6}$/i.test(color))
+      throw new Error("Highlight color must be a six-digit hex color.");
+    const locator =
+      typeof annotation.target === "string" ? page.locator(annotation.target) : annotation.target;
+    await locator.waitFor({ state: "visible" });
+    const box = await locator.boundingBox();
+    const viewport = page.viewportSize();
+    if (
+      !box ||
+      box.width <= 0 ||
+      box.height <= 0 ||
+      box.x < -0.5 ||
+      box.y < -0.5 ||
+      box.x + box.width > viewport.width + 0.5 ||
+      box.y + box.height > viewport.height + 0.5
+    ) {
+      throw new Error("Highlight target must be fully visible; adjust the recipe framing.");
+    }
+    const outline = contextualClip([box], viewport, 4);
+    highlights.push({ ...outline, color });
+    boxes.push(outline);
+  }
+  const overlay = await page.evaluateHandle((rectangles) => {
+    const layer = document.createElement("div");
+    layer.dataset.docsScreenshotHighlights = "";
+    layer.setAttribute("aria-hidden", "true");
+    for (const box of rectangles) {
+      const rectangle = document.createElement("div");
+      Object.assign(rectangle.style, {
+        position: "fixed",
+        left: `${box.x}px`,
+        top: `${box.y}px`,
+        width: `${box.width}px`,
+        height: `${box.height}px`,
+        boxSizing: "border-box",
+        border: `3px solid ${box.color}`,
+        borderRadius: "4px",
+        pointerEvents: "none",
+        zIndex: "2147483647",
+      });
+      layer.append(rectangle);
+    }
+    document.documentElement.append(layer);
+    return layer;
+  }, highlights);
+  try {
+    return await page.screenshot({
+      ...options,
+      ...(target ? { clip: contextualClip(boxes, page.viewportSize(), padding) } : {}),
+    });
+  } finally {
+    await overlay.evaluate((element) => element.remove());
+    await overlay.dispose();
+  }
 }

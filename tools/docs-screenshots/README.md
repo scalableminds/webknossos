@@ -73,7 +73,7 @@ Use demonstration users/team names because their visible values appear in the im
 }
 ```
 
-`annotationId` is optional for plain dataset views. If supplied, the runner verifies that the annotation belongs to the selected `l4_sample`. `hash` accepts the viewer's JSON URL state, including layer state, mappings, and meshes. Optional `hoverSelectors`, `clickSelectors`, and `clickTexts` are performed in that order, then `selector` chooses the capture target with surrounding padding. Omit `selector` for the full viewport. Use only non-destructive interactions for reusable curated annotations.
+`annotationId` is optional for plain dataset views. If supplied, the runner verifies that the annotation belongs to the selected `l4_sample`. `hash` accepts the viewer's JSON URL state, including layer state, mappings, and meshes. Optional `hoverSelectors`, `clickSelectors`, and `clickTexts` are performed in that order, then `selector` chooses the capture target with surrounding padding. Omit `selector` for the full viewport. Optional `highlights` accepts CSS selectors or `{ "target": "CSS selector", "color": "#e60000" }` objects for editorial callouts. Use only non-destructive interactions for reusable curated annotations.
 
 For the additive/cover examples, prepare suitable color layers on the local copy of `l4_sample`; blending a single color layer cannot demonstrate the difference. Biological defects and ground-truth examples need reviewed annotation content, not just a camera coordinate. When replacing the old scientific examples, update their accompanying Bosch/Briggman/Loomba attributions and explanatory labels in the same documentation change to match the new `l4_sample` examples. The tool does not automatically rewrite scientific claims or image credits.
 
@@ -86,6 +86,8 @@ Capture uses the real app UI. Missing selectors, disabled features, unavailable 
 ## Framing
 
 Normal element captures include 48 pixels of surrounding UI; admin dialogs include 64. Tall dialogs expand the capture viewport so their footer remains visible. Context-menu recipes include the underlying viewport. Standalone toolbar icons keep tight crops. A recipe can return `{ target, context, padding }`, where `target` and optional `context` are Playwright locators or CSS selectors (context also accepts an array). Their combined bounds plus padding are clipped to the visible viewport. Set `padding: 0` explicitly for a tight capture.
+
+Preserve editorial callouts with `highlights: [locator]` in the capture descriptor. Red outlines are anchored to the live elements after animations and layout settle; they add no layout changes and are removed after capture. A highlight may also be `{ target: locator, color: "#00b050" }` to preserve another original color. Highlight targets must be fully visible; missing or clipped targets fail rather than silently losing emphasis. Use `target: null` to highlight a full-viewport capture. Prefer highlighting a specific control within its broader panel over outlining the entire screenshot.
 
 ## Maintaining recipes
 

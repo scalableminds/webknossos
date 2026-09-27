@@ -94,7 +94,6 @@ export function withAuthentication<P, C extends ComponentType<P>>(
         <>
           {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<AuthenticationProps<P>, "activeUser" | ... Remove this comment to see the full error message */}
           <WrappedComponent {...rest} onClick={() => setIsAuthenticationModalOpen(true)} />
-          {/* The wrapped buttons live in the dark toolbar, so restore the regular theme for the modal. */}
           <UserThemeConfigProvider>
             <AuthenticationModal
               alertMessage={authenticationMessage}

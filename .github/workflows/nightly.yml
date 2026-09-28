@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 5
-          persistent-credentials: false
+          persist-credentials: false
 
       - name: Process and Log Branch Name
         run: |

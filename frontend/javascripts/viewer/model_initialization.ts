@@ -83,11 +83,11 @@ import {
   initializeEditableMappingAction,
   initializeVolumeTracingAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { computeDataTexturesSetup } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import {
-  computeDataTexturesSetup,
   getSupportedTextureSpecs,
   validateMinimumRequirements,
-} from "viewer/model/bucket_data_handling/data_rendering_logic";
+} from "viewer/model/bucket_data_handling/gpu_capability_check";
 import DataLayer from "viewer/model/data_layer";
 import type {
   DatasetConfiguration,

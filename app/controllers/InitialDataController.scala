@@ -161,6 +161,13 @@ Samplecountry
       "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua."
     )
   )
+  private val singleDatasetPublication = Publication(
+    ObjectId("6ac000000000000000000001"),
+    Some(Instant.now),
+    Some("https://static.webknossos.org/images/icon-only.svg"),
+    Some("Dummy publication with a single dataset"),
+    Some("Doe, J., Roe, R. · *Nature Methods* 2025 · [DOI](https://github.com/scalableminds/webknossos)")
+  )
   private val defaultDataStore =
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
 
@@ -341,6 +348,26 @@ Samplecountry
     )
   )
 
+  // Further virtual copies of l4_sample_remote, so that the publications view has several datasets to show.
+  private def l4SampleRemoteCopy(id: String, directoryName: String, publication: Publication, brainRegion: String) = {
+    val dataSource = defaultDataSource.copy(id = DataSourceId(directoryName, defaultOrganization._id))
+    val dataset = defaultDataset.copy(
+      _id = ObjectId(id),
+      _publication = Some(publication._id),
+      inboxSourceHash = Some(dataSource.hashCode()),
+      directoryName = directoryName,
+      name = directoryName,
+      metadata = defaultDataset.metadata :+ Json.obj("key" -> "brainRegion", "type" -> "string", "value" -> brainRegion)
+    )
+    (dataset, dataSource)
+  }
+  private val publicationDatasets = List(
+    l4SampleRemoteCopy("6ac000000000000000000002", "l4_sample_remote_2", defaultPublication, "Cortex L4"),
+    l4SampleRemoteCopy("6ac000000000000000000003", "l4_sample_remote_3", defaultPublication, "Cortex L2/3"),
+    l4SampleRemoteCopy("6ac000000000000000000004", "l4_sample_remote_4", defaultPublication, "Cortex L5"),
+    l4SampleRemoteCopy("6ac000000000000000000005", "l4_sample_remote_5", singleDatasetPublication, "Cortex L4")
+  )
+
   private val remoteNDZarrDataSource = UsableDataSource(
     id = DataSourceId("tubhiswt-4D", defaultOrganization._id),
     dataLayers = List(
@@ -425,6 +452,7 @@ Samplecountry
       _ <- insertProject()
       _ <- insertPublication()
       _ <- insertDataset()
+      _ <- insertPublicationDatasets()
       _ <- insertRemoteNDDataset()
       _ <- insertCustomAiModel()
 
@@ -530,33 +558,33 @@ Samplecountry
 
   private def insertPublication(): Fox[Unit] = publicationDAO.findAll.flatMap { publications =>
     if (publications.isEmpty) {
-      publicationDAO.insertOne(defaultPublication)
+      for {
+        _ <- publicationDAO.insertOne(defaultPublication)
+        _ <- publicationDAO.insertOne(singleDatasetPublication)
+      } yield ()
     } else Fox.successful(())
   }
 
-  private def insertDataset(): Fox[?] =
+  private def insertDatasetIfAbsent(dataset: Dataset, dataSource: UsableDataSource): Fox[?] =
     Fox.runIf(storeModules.localDataStoreEnabled) {
-      datasetDAO.findOne(defaultDataset._id).shiftBox.flatMap { maybeDataset =>
+      datasetDAO.findOne(dataset._id).shiftBox.flatMap { maybeDataset =>
         if (maybeDataset.isEmpty) {
           for {
-            _ <- datasetDAO.insertOne(defaultDataset)
-            _ <- datasetLayerDAO.updateLayers(defaultDataset._id, defaultDataSource)
+            _ <- datasetDAO.insertOne(dataset)
+            _ <- datasetLayerDAO.updateLayers(dataset._id, dataSource)
           } yield ()
         } else Fox.successful(())
       }
     }
 
-  private def insertRemoteNDDataset(): Fox[?] =
-    Fox.runIf(storeModules.localDataStoreEnabled) {
-      datasetDAO.findOne(remoteNDZarrDataset._id).shiftBox.flatMap { maybeDataset =>
-        if (maybeDataset.isEmpty) {
-          for {
-            _ <- datasetDAO.insertOne(remoteNDZarrDataset)
-            _ <- datasetLayerDAO.updateLayers(remoteNDZarrDataset._id, remoteNDZarrDataSource)
-          } yield ()
-        } else Fox.successful(())
-      }
+  private def insertDataset(): Fox[?] = insertDatasetIfAbsent(defaultDataset, defaultDataSource)
+
+  private def insertPublicationDatasets(): Fox[?] =
+    Fox.serialCombined(publicationDatasets) { case (dataset, dataSource) =>
+      insertDatasetIfAbsent(dataset, dataSource)
     }
+
+  private def insertRemoteNDDataset(): Fox[?] = insertDatasetIfAbsent(remoteNDZarrDataset, remoteNDZarrDataSource)
 
   private def insertAiModelIfAbsent(model: AiModel): Fox[?] =
     // For custom instances with no local datastore the default ai models must be inserted into the DB manually.

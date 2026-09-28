@@ -360,6 +360,7 @@ class DatasetService @Inject() (
               if (removedPaths.nonEmpty) findPathsUsedOnlyByThisDataset(datasetId)
               else Fox.successful(List.empty)
             pathsToDelete = removedPaths.intersect(pathsUsedOnlyByThisDataset)
+            _ <- thumbnailCachingService.removeFromCache(datasetId)
             _ <- datasetDAO.updateDataSource(
               datasetId,
               dataset._dataStore,
@@ -890,6 +891,7 @@ class DatasetService @Inject() (
       "description" -> dataset.description,
       "directoryName" -> dataset.directoryName,
       "created" -> dataset.created,
+      "thumbnailCacheVersion" -> dataset.thumbnailCacheVersion,
       "isEditable" -> isEditable,
       "lastUsedByUser" -> lastUsedByUser,
       "logoUrl" -> logoUrl,

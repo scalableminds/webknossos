@@ -265,7 +265,7 @@ export default class LayerRenderingManager {
           // about the start/stop of the picking (which does house keeping regarding "tick counters").
           // Then, consumeBucketsFromArrayBuffer marks all picked buckets as needed for this tick.
           // Unused buckets don't have to be marked explicitly (see DataBucket.isNeeded()).
-          this.cube.startBucketPicking(this.currentBucketPickerTick);
+          this.cube.startBucketPicking();
           const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
             buffer,
             this.cube,

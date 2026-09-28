@@ -119,10 +119,12 @@ class DataCube {
   lastRequestForValueSet: number | null = null;
   storePropertyUnsubscribers: Array<() => void> = [];
   // The tick of the bucket-picking round whose results are currently in use. Needed
-  // to determine which buckets are still needed.
+  // to determine which buckets are still needed. The cube counts the consumed rounds
+  // itself (instead of using the LayerRenderingManager's tick) because several picking
+  // results can be consumed while the view stays at the same tick.
   currentBucketPickerTick: number = 0;
-  // The previous tick is needed because ticks are not always consecutive (bucket picking
-  // may skip).
+  // Used to detect whether a bucket was already needed during the previous round
+  // (see onBucketMarkedAsNeeded).
   previousBucketPickerTick: number = 0;
   private neededBucketCount: number = 0;
   private neededBucketCountInPreviousTick: number = 0;
@@ -390,13 +392,13 @@ class DataCube {
     return bucket;
   }
 
-  startBucketPicking(tick: number): void {
+  startBucketPicking(): void {
     /*
      * Announces that the buckets of a finished bucket-picking round are about to be marked as
      * needed. Marks of unneeded buckets simply "expire" because the current tick changes.
      */
     this.previousBucketPickerTick = this.currentBucketPickerTick;
-    this.currentBucketPickerTick = tick;
+    this.currentBucketPickerTick++;
     this.neededBucketCountInPreviousTick = this.neededBucketCount;
     this.neededBucketCount = 0;
     this.didNeedNewBucket = false;

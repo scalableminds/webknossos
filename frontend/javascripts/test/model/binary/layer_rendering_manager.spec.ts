@@ -4,6 +4,7 @@ import datasetServerObject from "test/fixtures/dataset_server_object";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import type { Vector3, Vector4 } from "viewer/constants";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { assertNonNullBucket } from "viewer/model/bucket_data_handling/bucket";
 import DataCube from "viewer/model/bucket_data_handling/data_cube";
 import LayerRenderingManager from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import { MagInfo } from "viewer/model/helpers/mag_info";
@@ -164,7 +165,11 @@ describe("LayerRenderingManager", () => {
     pendingPicks[1](createPickerBuffer([inBothPicksAddress, onlyInLastPickAddress]));
     await sleep(0);
 
-    const isNeeded = (address: Vector4) => cube.getOrCreateBucket([...address, []]).isNeeded();
+    const isNeeded = (address: Vector4) => {
+      const bucket = cube.getOrCreateBucket([...address, []]);
+      assertNonNullBucket(bucket);
+      return bucket.isNeeded();
+    };
     expect(isNeeded(inBothPicksAddress)).toBe(true);
     expect(isNeeded(onlyInLastPickAddress)).toBe(true);
     // The bucket was only picked by the outdated first pick, so it should no longer be

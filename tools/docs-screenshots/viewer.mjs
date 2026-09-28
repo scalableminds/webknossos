@@ -47,7 +47,14 @@ function withoutMeshes(hash) {
   return { ...hash, stateByLayer };
 }
 
-async function scene(ctx, mode = "hybrid", skeleton = false, persist = false) {
+// `extraTrees` additionally loads the skeletons of that many neighboring agglomerates.
+async function scene(
+  ctx,
+  mode = "hybrid",
+  skeleton = false,
+  persist = false,
+  { extraTrees = 0 } = {},
+) {
   const fixtureHash = viewerHash(ctx);
   const segmentIds = fixtureMeshSegmentIds(fixtureHash);
   const hash = skeleton ? withoutMeshes(fixtureHash) : fixtureHash;
@@ -72,20 +79,36 @@ async function scene(ctx, mode = "hybrid", skeleton = false, persist = false) {
       throw new Error(
         "Skeleton screenshots show agglomerate skeletons of the fixture meshes. Configure meshes in fixtures.viewer.stateByLayer.",
       );
-    await loadAgglomerateSkeletons(ctx, segmentIds);
-    await ctx.page.evaluate(async () => {
+    await loadAgglomerateSkeletons(ctx, segmentIds, extraTrees);
+    await ctx.page.evaluate(async (position) => {
       const api = await window.webknossos.apiReady();
+      // Activating loaded or remaining trees re-centers the camera with an animation.
+      // Wait until the camera has settled, then restore the scene position.
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      const start = performance.now();
+      let last = "";
+      let stableSince = start;
+      while (performance.now() - stableSince < 500 && performance.now() - start < 10000) {
+        await frame();
+        const current = api.tracing.getCameraPosition().join();
+        if (current !== last) {
+          last = current;
+          stableSince = performance.now();
+        }
+      }
+      api.tracing.setCameraPosition(position);
       api.tracing.centerTDView();
       api.tracing.rotate3DViewToDiagonal(false);
-    });
+    }, hash.position);
   } else if (segmentIds.length) {
     await waitForMeshes(ctx, segmentIds.length);
   }
   await ctx.waitForViewer();
 }
 
-// Skeletons of the agglomerates whose meshes the fixture loads. Needs the fixture's agglomerate mapping.
-async function loadAgglomerateSkeletons(ctx, segmentIds) {
+// Skeletons of the agglomerates whose meshes the fixture loads, plus `extra` distinct neighboring
+// agglomerates sampled around the camera. Needs the fixture's agglomerate mapping.
+async function loadAgglomerateSkeletons(ctx, segmentIds, extra = 0) {
   await ctx.page.waitForFunction(
     () =>
       Object.values(
@@ -96,21 +119,71 @@ async function loadAgglomerateSkeletons(ctx, segmentIds) {
     undefined,
     { timeout: 60000 },
   );
-  const existingTrees = await ctx.page.evaluate(async (segmentIds) => {
-    const api = await window.webknossos.apiReady();
-    const trees = window.webknossos.DEV.store.getState().annotation.skeleton?.trees;
-    if (!trees) throw new Error("Agglomerate skeletons need an annotation with a skeleton layer.");
-    for (const id of segmentIds) api.tracing.loadAgglomerateSkeletonForSegmentId(BigInt(id));
-    return trees.size();
-  }, segmentIds);
+  const expectedTrees = await ctx.page.evaluate(
+    async ({ segmentIds, extra }) => {
+      const api = await window.webknossos.apiReady();
+      const trees = window.webknossos.DEV.store.getState().annotation.skeleton?.trees;
+      if (!trees)
+        throw new Error("Agglomerate skeletons need an annotation with a skeleton layer.");
+      const ids = new Set(segmentIds);
+      const layer = api.data.getVisibleSegmentationLayerName();
+      const center = api.tracing.getCameraPosition();
+      // Deterministic spiral of sample points within the visible XY plane.
+      // Oversample: neighboring agglomerates can be tiny fragments, which are removed below.
+      for (let i = 1; ids.size < segmentIds.length + 3 * extra && i <= 400; i++) {
+        const angle = i * 2.4;
+        const radius = 12 * Math.sqrt(i);
+        const position = [
+          Math.round(center[0] + radius * Math.cos(angle)),
+          Math.round(center[1] + radius * Math.sin(angle)),
+          center[2],
+        ];
+        const id = await api.data.getMappedDataValue(layer, position);
+        if (id !== 0n) ids.add(String(id));
+      }
+      for (const id of ids) api.tracing.loadAgglomerateSkeletonForSegmentId(BigInt(id));
+      return trees.size() + ids.size;
+    },
+    { segmentIds, extra },
+  );
   await ctx.page.waitForFunction(
     (count) => {
       const trees = window.webknossos.DEV.store.getState().annotation.skeleton.trees;
       return trees.size() >= count && [...trees.values()].every((tree) => tree.nodes.size() > 0);
     },
-    existingTrees + segmentIds.length,
-    { timeout: 120000 },
+    expectedTrees,
+    { timeout: 180000 },
   );
+  await ctx.page.evaluate(
+    async ({ segmentIds, extra }) => {
+      const api = await window.webknossos.apiReady();
+      const trees = Object.values(api.tracing.getAllTrees());
+      const agglomerateId = (tree) => tree.name.match(/^agglomerate (\d+)/)?.[1];
+      const neighbors = trees
+        .filter((tree) => !segmentIds.includes(agglomerateId(tree)))
+        .sort((a, b) => b.nodes.size() - a.nodes.size());
+      for (const [index, tree] of neighbors.entries()) {
+        if (index >= extra || tree.nodes.size() < 50) api.tracing.deleteTree(tree.treeId);
+      }
+      // "agglomerate 415 (agglomerate_view_65)" gets truncated in the tree list.
+      for (const tree of Object.values(api.tracing.getAllTrees())) {
+        const id = agglomerateId(tree);
+        if (id) api.tracing.setTreeName(`agglomerate ${id}`, tree.treeId);
+      }
+    },
+    { segmentIds, extra },
+  );
+}
+
+// Opens or hides a sidebar with its toggle button in the viewport headers.
+async function setSidebar(ctx, side, open) {
+  const toggle = ctx.page
+    .locator(`button${tooltip(`${open ? "Open" : "Hide"} ${side} sidebar`)}`)
+    .filter({ visible: true })
+    .first();
+  if (await toggle.count()) await toggle.click();
+  await ctx.page.mouse.move(0, 0);
+  await ctx.waitForViewer();
 }
 
 // Maximizing the 3D tab set also collapses the side panels, so the 3D view fills the screen.
@@ -276,21 +349,36 @@ add("user_interface.png", async (ctx) => {
     ],
   };
 });
-for (const name of ["main_ui.png", "screenshot_volume.png"]) {
-  add(name, async (ctx) => {
-    await scene(ctx, "hybrid");
-  });
-}
+add("main_ui.png", async (ctx) => {
+  await scene(ctx, "hybrid");
+});
+add("screenshot_volume.png", async (ctx) => {
+  await scene(ctx, "hybrid");
+  await setSidebar(ctx, "left", false);
+  await setSidebar(ctx, "right", false);
+});
 add("skeleton_annotations.png", async (ctx) => {
   await scene(ctx, "skeleton", true);
   await maximizeTDView(ctx);
+  await setSidebar(ctx, "right", true);
+  await tab(ctx, "Skeleton", "#tree-list");
 });
 add("screenshot_skeletons.png", async (ctx) => {
-  await scene(ctx, "skeleton", true);
+  await scene(ctx, "skeleton", true, false, { extraTrees: 8 });
+  await ctx.page.evaluate(() => {
+    const { dispatch } = window.webknossos.DEV.store;
+    dispatch({ type: "SET_ANNOTATION_NAME", name: "L4 Dense Skeleton Annotations" });
+    dispatch({
+      type: "SET_ANNOTATION_DESCRIPTION",
+      description:
+        "Mouse L4 S1 (SBEM)\\\nA Motta, M Berning, KM Boergens, B Staffler, M Beining, S Loomba, P Hennig, H Wissler, M Helmstaedter\\\nScience. 24 October 2019 [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)",
+    });
+  });
+  await ctx.waitForViewer();
 });
 for (const name of ["skeleton_tree_list.png", "tracing_ui_tree_visibility.jpeg"]) {
   add(name, async (ctx) => {
-    await scene(ctx, "skeleton", true);
+    await scene(ctx, "skeleton", true, false, { extraTrees: 8 });
     const treeList = await tab(ctx, "Skeleton", "#tree-list");
     if (name === "tracing_ui_tree_visibility.jpeg") {
       return {
@@ -307,14 +395,14 @@ for (const name of ["skeleton_tree_list.png", "tracing_ui_tree_visibility.jpeg"]
 add("shuffle_tree_colors.png", async (ctx) => {
   await scene(ctx, "skeleton", true);
   await tab(ctx, "Skeleton", "#tree-list");
-  await ctx.page.locator(`#tree-list ${tooltip("More actions")}`).click();
+  await ctx.page.locator(`#tree-list ${tooltip("More actions")} button`).click();
   return {
     target: await show(ctx, dropdown),
     context: ctx.page.locator("#tree-list"),
     padding: 48,
   };
 });
-for (const name of ["context_menu.png", "context_menu.jpeg", "skeleton_context_menu.png"]) {
+for (const name of ["context_menu.png", "skeleton_context_menu.png"]) {
   add(name, async (ctx) => {
     await scene(ctx, "hybrid", name === "skeleton_context_menu.png");
     return contextMenu(ctx);
@@ -354,7 +442,7 @@ add("ui_toolbar_menu.png", async (ctx) => {
   await scene(ctx);
   return menu(ctx);
 });
-for (const name of ["tracing_ui_download_tooolbar.jpeg", "tracing_ui_merge_1.jpeg"]) {
+for (const name of ["tracing_ui_download_toolbar.jpeg", "tracing_ui_merge_1.jpeg"]) {
   add(name, async (ctx) => {
     await scene(ctx, "skeleton", false, true);
     const capture = await menu(ctx);
@@ -423,7 +511,7 @@ for (const [name, label] of [
 add("tracing_ui_import.jpeg", async (ctx) => {
   await scene(ctx, "skeleton", true);
   await tab(ctx, "Skeleton", "#tree-list");
-  await ctx.page.locator(`#tree-list ${tooltip("More actions")}`).click();
+  await ctx.page.locator(`#tree-list ${tooltip("More actions")} button`).click();
   await ctx.clickText("Import NML", { exact: true });
   return show(ctx, modal);
 });
@@ -441,12 +529,24 @@ add("view_modes.png", async (ctx) => {
 });
 for (const name of ["tracing_ui_flightmode.jpeg", "screenshot_flight_mode.png"]) {
   add(name, async (ctx) => {
-    await scene(ctx, "skeleton", true);
+    // The flight-mode overview shows only the viewport: no skeleton and no sidebars.
+    const overview = name === "tracing_ui_flightmode.jpeg";
+    await scene(ctx, "skeleton", !overview);
+    if (overview) {
+      await setSidebar(ctx, "left", false);
+      await setSidebar(ctx, "right", false);
+    }
     await ctx.page.locator(".action-bar button:has(.anticon-sync)").hover();
     await ctx.page.locator(".ant-popover:visible").getByRole("switch").click();
     await ctx.page.mouse.move(0, 0);
     await ctx.page.locator(".ant-popover:visible").waitFor({ state: "hidden" });
     await ctx.waitForViewer();
+    // Crop to the square flight viewport, as in the original image.
+    if (overview)
+      return {
+        target: ctx.page.locator(".inputcatcher").filter({ visible: true }).first(),
+        padding: 0,
+      };
   });
 }
 add("toolkit_dropdown.jpg", async (ctx) => {
@@ -580,16 +680,77 @@ async function boxSampling(ctx, { count, size, step, zoomStep }) {
   await tab(ctx, "BBoxes", "#bounding-box-tab");
   await ctx.waitForViewer();
 }
-recipes.push(
-  recipe("docs/automation/images/example_box_sampling_neuron_training.jpeg", (ctx) =>
-    boxSampling(ctx, { count: 25, size: [85, 85, 32], step: [1, 1, 1], zoomStep: 1 }),
-  ),
-);
-recipes.push(
-  recipe("docs/automation/images/example_box_sampling_instance_segm.jpeg", (ctx) =>
-    boxSampling(ctx, { count: 20, size: [1024, 1024, 512], step: [16, 16, 8], zoomStep: 16 }),
-  ),
-);
+
+// Two significant digits, as in the explanatory text of the documentation page.
+const approximately = (value) => Number(value.toPrecision(2)).toLocaleString("en-US");
+const magLiteral = (mag) => mag.join("-");
+
+// Editorial callouts explaining the box dimensions and the total annotated volume.
+async function boxSamplingCallouts(ctx, { count, size, step, zoomStep }) {
+  const xy = await ctx.page.locator("#inputcatcher_PLANE_XY").boundingBox();
+  // The XY viewport renders one voxel per pixel at zoom step 1.
+  const firstBoxLeftEdge = {
+    x: xy.x + xy.width / 2 - size[0] / 2 / zoomStep - 4,
+    y: xy.y + xy.height / 2,
+  };
+  const sizeInMag = size.map((value, axis) => value / step[axis]);
+  const voxelsPerBox = sizeInMag.reduce((product, value) => product * value, 1);
+  const inMag = (dimensions, mag) => `${dimensions.join(" × ")} in Mag ${magLiteral(mag)}`;
+  const isMag1 = step.every((value) => value === 1);
+  const callouts = [
+    {
+      text: `Dimensions:\n${inMag(sizeInMag, step)}${isMag1 ? "" : `\n${inMag(size, [1, 1, 1])}`}\n\nApproximately\n${approximately(voxelsPerBox)} voxels / box${isMag1 ? "" : ` in Mag ${step[0]}`}`,
+      at: { x: 380, y: 600, width: isMag1 ? 390 : 440 },
+      arrowTo: firstBoxLeftEdge,
+    },
+    {
+      text: `${count} bounding boxes distributed across the dataset.\nApproximately ${(Number((count * voxelsPerBox).toPrecision(2)) / 1e6).toLocaleString("en-US")} million annotated voxels in total`,
+      at: isMag1 ? { x: 1212, y: 760, width: 376 } : { x: 840, y: 590, width: 350 },
+      arrowTo: ctx.page.locator("#inputcatcher_TDView"),
+    },
+  ];
+  if (!isMag1) {
+    // Point at the x coordinate of the first box's top-left corner.
+    const bounds = await ctx.page.evaluate(() => {
+      const input = [...document.querySelectorAll("#bounding-box-tab input")].find((element) =>
+        /^\d+, \d+, \d+, /.test(element.value),
+      );
+      const rect = input.getBoundingClientRect();
+      return { x: rect.x + 24, y: rect.y + rect.height };
+    });
+    callouts.push(
+      {
+        text: "Top left position divisible by Mag",
+        at: { x: 1212, y: 250, width: 300 },
+        arrowTo: bounds,
+      },
+      {
+        text: "Coarsest Mag at which instance is clearly visible",
+        at: { x: 1212, y: 800, width: 376 },
+        arrowTo: ctx.page.locator(".statusbar").getByText(magLiteral(step), { exact: true }),
+      },
+    );
+  }
+  return { target: null, callouts };
+}
+
+for (const [name, options] of [
+  [
+    "example_box_sampling_neuron_training.jpeg",
+    { count: 25, size: [85, 85, 32], step: [1, 1, 1], zoomStep: 1 },
+  ],
+  [
+    "example_box_sampling_instance_segm.jpeg",
+    { count: 20, size: [1024, 1024, 512], step: [16, 16, 8], zoomStep: 16 },
+  ],
+]) {
+  recipes.push(
+    recipe(`docs/automation/images/${name}`, async (ctx) => {
+      await boxSampling(ctx, options);
+      return boxSamplingCallouts(ctx, options);
+    }),
+  );
+}
 
 // The volume layer (with the segmentation as fallback) must stay enabled for these scenes.
 const volumeHash = (ctx) => plainHash(ctx, { stateByLayer: { predictions: { isDisabled: true } } });

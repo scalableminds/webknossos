@@ -140,6 +140,18 @@ async function unionBox(page, targets) {
   };
 }
 
+async function waitForStableBox(page, locator, timeout = 5000) {
+  const deadline = Date.now() + timeout;
+  let previous = null;
+  while (Date.now() < deadline) {
+    const box = await locator.boundingBox();
+    if (box && previous && ["x", "y", "width", "height"].every((key) => box[key] === previous[key]))
+      return;
+    previous = box;
+    await page.waitForTimeout(100);
+  }
+}
+
 export async function captureScreenshot(page, result, recipe) {
   if (recipe.mobileControls !== true) {
     await page.locator(".floating-buttons-bar").waitFor({ state: "hidden", timeout: 5000 });
@@ -174,6 +186,9 @@ export async function captureScreenshot(page, result, recipe) {
   } else if (target) {
     await target.scrollIntoViewIfNeeded();
   }
+  // Class-based enter transitions (e.g. antd's modal zoom) are no Web Animations and cannot be
+  // finished above. Measure only once the target has stopped moving and scaling.
+  if (target) await waitForStableBox(page, target);
   const tight = /^docs\/(ui|volume_annotation|skeleton_annotation)\/images\//.test(recipe.output);
   const padding = spec.padding ?? recipe.padding ?? (tight ? 0 : 48);
   // Tall centered dialogs can exceed the viewport on accounts with many teams.
@@ -233,11 +248,23 @@ export async function captureScreenshot(page, result, recipe) {
       labels,
     });
   }
+  // Editorial callouts: red text boxes with curved arrows to a UI element or a viewport point.
+  const callouts = [];
+  for (const callout of spec.callouts ?? []) {
+    let point = callout.arrowTo;
+    if (point && typeof point.x !== "number") {
+      const box = await unionBox(page, point);
+      point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    }
+    callouts.push({ text: callout.text, at: callout.at, point, fontSize: callout.fontSize ?? 24 });
+  }
   const overlay = await page.evaluateHandle(
-    ({ rectangles, regions }) => {
+    ({ rectangles, regions, callouts }) => {
       const layer = document.createElement("div");
       layer.dataset.docsScreenshotHighlights = "";
       layer.setAttribute("aria-hidden", "true");
+      // Attach first: callout arrows are computed from the laid-out callout boxes.
+      document.documentElement.append(layer);
       const fontFamily = getComputedStyle(document.body).fontFamily;
       const text = (box, content, color, fontSize) => {
         const element = document.createElement("div");
@@ -281,6 +308,68 @@ export async function captureScreenshot(page, result, recipe) {
           layer.append(text(label, label.text, region.color, region.labelFontSize));
         if (region.label) layer.append(text(region, region.label, region.color, region.fontSize));
       }
+      if (callouts.length) {
+        const svgNamespace = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNamespace, "svg");
+        Object.assign(svg.style, {
+          position: "fixed",
+          inset: "0",
+          width: "100vw",
+          height: "100vh",
+          pointerEvents: "none",
+          zIndex: "2147483647",
+        });
+        svg.innerHTML =
+          '<defs><marker id="docs-arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e60000"/></marker></defs>';
+        layer.append(svg);
+        for (const callout of callouts) {
+          const box = document.createElement("div");
+          Object.assign(box.style, {
+            position: "fixed",
+            left: `${callout.at.x}px`,
+            top: `${callout.at.y}px`,
+            width: `${callout.at.width}px`,
+            boxSizing: "border-box",
+            padding: "12px 18px",
+            border: "3px solid #e60000",
+            borderRadius: "14px",
+            background: "rgba(255, 236, 236, 0.96)",
+            color: "#e60000",
+            fontFamily,
+            fontSize: `${callout.fontSize}px`,
+            lineHeight: "1.2",
+            whiteSpace: "pre-line",
+            pointerEvents: "none",
+            zIndex: "2147483647",
+          });
+          box.textContent = callout.text;
+          layer.append(box);
+          if (!callout.point) continue;
+          // Start where the line from the box center to the target leaves the box.
+          const rect = box.getBoundingClientRect();
+          const cx = rect.x + rect.width / 2;
+          const cy = rect.y + rect.height / 2;
+          const dx = callout.point.x - cx;
+          const dy = callout.point.y - cy;
+          const scale =
+            1 / Math.max(Math.abs(dx) / (rect.width / 2), Math.abs(dy) / (rect.height / 2));
+          const start = { x: cx + dx * scale, y: cy + dy * scale };
+          const end = callout.point;
+          // Curve the arrow by bending its midpoint sideways.
+          const control = {
+            x: (start.x + end.x) / 2 - (end.y - start.y) * 0.25,
+            y: (start.y + end.y) / 2 + (end.x - start.x) * 0.25,
+          };
+          const path = document.createElementNS(svgNamespace, "path");
+          path.setAttribute(
+            "d",
+            `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`,
+          );
+          Object.assign(path.style, { fill: "none", stroke: "#e60000", strokeWidth: "4px" });
+          path.setAttribute("marker-end", "url(#docs-arrowhead)");
+          svg.append(path);
+        }
+      }
       for (const box of rectangles) {
         const rectangle = document.createElement("div");
         Object.assign(rectangle.style, {
@@ -300,7 +389,7 @@ export async function captureScreenshot(page, result, recipe) {
       document.documentElement.append(layer);
       return layer;
     },
-    { rectangles: highlights, regions },
+    { rectangles: highlights, regions, callouts },
   );
   try {
     return await page.screenshot({

@@ -27,10 +27,6 @@
     "kind": "screenshot"
   },
   {
-    "path": "docs/images/context_menu.jpeg",
-    "kind": "screenshot"
-  },
-  {
     "path": "docs/images/context_menu.png",
     "kind": "screenshot"
   },
@@ -320,7 +316,7 @@
     "kind": "screenshot"
   },
   {
-    "path": "docs/images/tracing_ui_download_tooolbar.jpeg",
+    "path": "docs/images/tracing_ui_download_toolbar.jpeg",
     "kind": "screenshot"
   },
   {

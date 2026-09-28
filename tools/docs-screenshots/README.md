@@ -29,7 +29,7 @@ Use `--organization scalable_minds` if that is the local owning organization, se
 
 ## Coverage and one-time fixture setup
 
-The catalog includes **all 129 image assets**, even unreferenced ones: **70 still screenshots** have recipes; **59 excluded images (including tool/modifier artwork, `datalayers.jpeg`, the blend-mode examples and, for now, the training-data tutorial images in `docs/tutorials/images/`), editable source assets, and GIF animations** have explicit exclusion reasons. This tool does not record animated GIFs or external videos. `assets.json` and the coverage checker prevent newly added images from silently escaping classification.
+The catalog includes **all 128 image assets**, even unreferenced ones: **69 still screenshots** have recipes; **59 excluded images (including tool/modifier artwork, `datalayers.jpeg`, the blend-mode examples and, for now, the training-data tutorial images in `docs/tutorials/images/`), editable source assets, and GIF animations** have explicit exclusion reasons. This tool does not record animated GIFs or external videos. `assets.json` and the coverage checker prevent newly added images from silently escaping classification.
 
 Most viewer and toolbar recipes prepare their own state using the frontend API. Skeleton examples load the agglomerate skeletons of the configured mesh segments. The default scene, `fixtures.viewer`, is the viewer's JSON URL state: position `[2827, 4498, 1792]`, zoom `1`, the `predictions` layer hidden, the `agglomerate_view_65` mapping active and the precomputed meshes (`meshfile_4-4-2`) of agglomerates 415 and 128501 loaded, close to the original screenshots. Recipes wait until all configured meshes have loaded. Without configured meshes, mesh recipes compute ad-hoc meshes for segments around the position instead. Data loading, fonts, and visible UI controls are awaited. Viewport and emulated screen are 1600×1000 at device scale 1; touch/mobile emulation is off, timezone is UTC and animations are disabled. Captures fail if mobile controls are visible. Only recipes explicitly setting `mobileControls: true` allow them.
 
@@ -92,6 +92,8 @@ Normal element captures include 48 pixels of surrounding UI; admin dialogs inclu
 Preserve editorial callouts with `highlights: [locator]` in the capture descriptor. Red outlines are anchored to the live elements after animations and layout settle; they add no layout changes and are removed after capture. All highlights use red, including legacy fixtures that specify another color. Highlight targets must be fully visible; missing or clipped targets fail rather than silently losing emphasis. Use `target: null` to highlight a full-viewport capture. Prefer highlighting a specific control within its broader panel over outlining the entire screenshot.
 
 Labeled `regions` explain a UI layout, as in `user_interface.png`: each region takes a `target` (one or several locators, combined into one box), a `color`, a large `label` and optional sub-`labels` (`{ target, text }`). The region gets a thick colored frame and a whitened background.
+
+Editorial `callouts` add red text boxes with curved arrows, as in the box-sampling examples: each callout takes its `text`, its position `at: { x, y, width }` in viewport pixels and an optional `arrowTo` locator or `{ x, y }` point. Capture targets are measured only once they stop moving, so class-based enter transitions (e.g. modal zoom) do not shrink the crop.
 
 ## Maintaining recipes
 

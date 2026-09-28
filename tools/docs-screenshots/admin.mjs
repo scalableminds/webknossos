@@ -201,7 +201,14 @@ async function onboarding(ctx, account) {
 }
 
 export const recipes = [
-  ...["screenshot_DS_management.png", "dashboard_regular_user.jpeg"].map((name) =>
+  recipe("screenshot_DS_management.png", async (ctx) => {
+    // Shows all datasets of the organization, unfiltered.
+    await goto(ctx, "/dashboard/datasets", "Datasets");
+    await settled(ctx);
+    await ctx.page.locator(`${main} a[href^="/datasets/"]`).first().waitFor({ state: "visible" });
+    return content(ctx);
+  }),
+  ...["dashboard_regular_user.jpeg"].map((name) =>
     recipe(name, async (ctx) => {
       await goto(ctx, "/dashboard/datasets", "Datasets");
       await search(ctx);

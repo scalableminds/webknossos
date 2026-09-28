@@ -1,9 +1,6 @@
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import messages from "messages";
-import { encodeBucketDiffBase64 } from "prototypes/new_volume_architecture/diff";
-import { BrushDriver } from "prototypes/new_volume_architecture/integration/brush_driver";
-import { USE_NEW_VOLUME_ARCHITECTURE } from "prototypes/new_volume_architecture/integration/feature_flag";
 import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
@@ -78,6 +75,7 @@ import {
   updateBucketPartial,
 } from "viewer/model/sagas/volume/update_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { encodeBucketDiffBase64 } from "viewer/model/volumetracing/core/bucket_diff";
 import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/legacy/section_labeling";
@@ -266,7 +264,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     // Only the brush is driven from viewer/model/volumetracing; the trace
     // tool below still builds up a section labeler.
-    let brushDriver: BrushDriver | null = null;
+    let brushStroke: { driver: BrushDriver; magInfo: MagInfo } | null = null;
 
     if (isBrushTool(activeTool)) {
       const segmentationLayer = yield* call(
@@ -302,7 +300,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
         },
         toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
       );
-      spike = { driver, magInfo: spikeLayer.cube.magInfo };
+      brushStroke = { driver, magInfo: segmentationLayer.cube.magInfo };
       wroteVoxelsBox.value = true;
     }
 
@@ -346,41 +344,41 @@ export function* editVolumeLayerAsync(): Saga<never> {
         currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
       }
 
-      if (brushDriver != null) {
+      if (brushStroke != null) {
         // One incremental capsule per pointer-move; the transaction's write set
         // coalesces overlap, and mag propagation is deferred to pointer-up.
-        brushDriver.extend(toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag));
+        brushStroke.driver.extend(
+          toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag),
+        );
       }
 
       lastPosition = addToContourListAction.positionInLayerSpace;
     }
 
-    if (brushDriver != null) {
+    if (brushStroke != null) {
       // Pointer-up: mag propagation runs once over the coalesced write set.
-      const stats = brushDriver.finish();
-      console.info(
-        `[spike] brush: ${stats.voxels} voxels across ${stats.bucketDiffs.length} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
-      );
+      const { bucketDiffs } = brushStroke.driver.finish();
+      const { magInfo } = brushStroke;
+      // The core's BucketAddress is structurally the viewer's, additional
+      // coordinates included, so it goes into createSendBucketInfo as-is.
       yield* put(
         pushSaveQueueTransaction(
-          stats.bucketDiffs.map((diff) =>
+          bucketDiffs.map((diff) =>
             updateBucketPartial(
-              createSendBucketInfo(
-                [
-                  diff.address[0],
-                  diff.address[1],
-                  diff.address[2],
-                  diff.address[3],
-                  additionalCoordinates,
-                ],
-                magInfo,
-              ),
+              createSendBucketInfo(diff.address, magInfo),
               encodeBucketDiffBase64(diff),
               volumeTracing.tracingId,
             ),
           ),
         ),
       );
+      // currentSectionLabeler.updateArea(...) above ran regardless of which
+      // path drew the stroke, so its centroid tracking is accurate here too.
+      // Without this, volume interpolation (which reads this via
+      // getLastLabelAction/getLabelActionFromPreviousSlice) never sees a
+      // previous slice and always reports "all recent label actions were
+      // performed on the current slice" — mirrors finishSectionLabeler below.
+      yield* put(registerLabelPointAction(currentSectionLabeler.getUnzoomedCentroid()));
     } else {
       yield* call(
         finishSectionLabeler,

@@ -4,23 +4,25 @@
  *
  * `editVolumeLayerAsync` (viewer/model/sagas/volumetracing_saga.tsx) owns the
  * event loop (START_EDITING / ADD_TO_CONTOUR_LIST / FINISH_EDITING); this owns
- * everything between. Nothing here touches the save queue, update actions, or
- * undo — buckets are mutated in place only, and saving still goes through the
- * existing push queue (design doc §12.2).
+ * everything between. The driver itself touches neither the save queue nor
+ * undo: it mutates buckets in place and returns the committed bucket diffs,
+ * which the saga turns into `updateBucketPartial` update actions.
  */
 
+import type { BucketDiff } from "../core/bucket_diff";
 import type { EditContext, OverwriteMode, Vector3 } from "../core/volume_annotation_types";
 import { VolumeTransaction } from "../core/volume_transaction";
 import { rasterize } from "../core/voxel_rasterizer";
 import type { DriverOptions, DriverResult } from "./tool_driver_types";
 import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_data_cube_adapter";
-import type { AdditionalCoordinate } from "viewer/constants";
-import type DataCube from "viewer/model/bucket_data_handling/data_cube";
-import type { BucketDiff } from "../diff";
-import { rasterize } from "../rasterizer";
-import { VolumeTransaction } from "../transaction";
-import type { EditContext, MagIndex, OverwriteMode, SegmentId, Vector3 } from "../types";
-import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_cube_adapter";
+
+export interface BrushResult extends DriverResult {
+  /**
+   * The committed per-bucket diffs, for the caller to send as
+   * `updateBucketPartial` update actions.
+   */
+  bucketDiffs: BucketDiff[];
+}
 
 export interface BrushDriverOptions extends DriverOptions {
   overwriteMode: OverwriteMode;
@@ -87,9 +89,10 @@ export class BrushDriver {
 
   /**
    * Pointer-up: run mag propagation once over the coalesced write set, apply
-   * it, and report what happened. The returned diff is *not* saved.
+   * it, and report what happened — including the bucket diffs, which the
+   * caller is responsible for handing to the save queue.
    */
-  finish(): DriverResult {
+  finish(): BrushResult {
     const diff = this.transaction.commit(0, "brush");
     this.adapter.flush();
 
@@ -99,6 +102,7 @@ export class BrushDriver {
     }
     return {
       voxels,
+      buckets: diff.bucketDiffs.length,
       bucketDiffs: diff.bucketDiffs,
       mags: [...new Set(diff.bucketDiffs.map((d) => d.address[3]))].sort((a, b) => a - b),
       durationMs: performance.now() - this.startedAt,

@@ -91,7 +91,7 @@ case class Dataset(
     mirrorPath: Option[String] = None,
     created: Instant = Instant.now,
     isDeleted: Boolean = false,
-    thumbnailCacheVersion: Long = 0L
+    thumbnailCacheVersion: Int = 0
 )
 
 case class DatasetCompactInfo(
@@ -110,7 +110,7 @@ case class DatasetCompactInfo(
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
     usedStorageBytes: Long,
-    thumbnailCacheVersion: Long
+    thumbnailCacheVersion: Int
 ) derives JsonAutoFormat {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
 }
@@ -363,7 +363,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               String,
               String,
               Long,
-              Long
+              Int
           )
         ]
       )

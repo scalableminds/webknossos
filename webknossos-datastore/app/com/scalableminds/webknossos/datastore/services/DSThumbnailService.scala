@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext
 
 class DSThumbnailService @Inject() {
 
-  private val MaxThumbnailDimension = 5000
+  private val MaxThumbnailDimension = 3000
 
   def validateThumbnailDimensions(width: Int, height: Int)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.fromBool(

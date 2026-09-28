@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.image
 import com.scalableminds.util.box.Box
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.image.Color
+import com.scalableminds.util.tools.MathUtils
 import com.typesafe.scalalogging.LazyLogging
 
 import java.awt.image.BufferedImage
@@ -57,7 +58,7 @@ object ImageCreator extends LazyLogging {
     var idx = 0
     val intensityRange = intensityRangeOpt.getOrElse(ElementClass.defaultIntensityRange(elementClass))
     val opacityAlphaByte =
-      Math.round(com.scalableminds.util.tools.MathUtils.clamp(opacity, 0d, 100d) / 100.0 * 255).toInt & 0xff
+      Math.round(MathUtils.clamp(opacity, 0d, 100d) / 100.0 * 255).toInt & 0xff
     val colorRedCallable = applyColor(color.map(_.r).getOrElse(1d), invertColor)
     val colorGreenCallable = applyColor(color.map(_.g).getOrElse(1d), invertColor)
     val colorBlueCallable = applyColor(color.map(_.b).getOrElse(1d), invertColor)
@@ -236,8 +237,8 @@ object ImageCreator extends LazyLogging {
   private def normalizeIntensityImpl(value: Double, intensityRange: (Double, Double)): Int =
     Math
       .round(
-        com.scalableminds.util.tools.MathUtils.clamp(
-          (com.scalableminds.util.tools.MathUtils.clamp(
+        MathUtils.clamp(
+          (MathUtils.clamp(
             value,
             intensityRange._1,
             intensityRange._2

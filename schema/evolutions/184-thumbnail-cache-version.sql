@@ -4,7 +4,7 @@ do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 183 
 
 DROP VIEW webknossos.datasets_;
 
-ALTER TABLE webknossos.datasets ADD COLUMN thumbnailCacheVersion BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE webknossos.datasets ADD COLUMN thumbnailCacheVersion INT NOT NULL DEFAULT 0;
 
 CREATE VIEW webknossos.datasets_ AS SELECT * FROM webknossos.datasets WHERE NOT isDeleted;
 

@@ -6,7 +6,6 @@ import type { EmptyObject } from "antd/es/_util/type";
 import FastTooltip from "components/fast_tooltip";
 import { formatNumber } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
-import { pluralize } from "libs/utils";
 import memoizeOne from "memoize-one";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import {
@@ -16,20 +15,23 @@ import {
   type TracingStats,
 } from "viewer/model/accessors/annotation_accessor";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
+import { InfoTabRow, InfoTabSection } from "./info_tab_layout";
 
+/**
+ * Compact, icon-only statistics used outside of the info tab (dashboard tables, time
+ * tracking). The info tab renders the same numbers as labelled rows instead, see
+ * AnnotationStatisticsSection.
+ */
 export function AnnotationStats({
   stats,
-  asInfoBlock,
   withMargin,
   boundingBoxCount,
 }: {
   stats: TracingStats | EmptyObject;
-  asInfoBlock: boolean;
   withMargin?: boolean | null | undefined;
   boundingBoxCount?: number;
 }) {
   if ((!stats || Object.keys(stats).length === 0) && !boundingBoxCount) return null;
-  const formatLabel = (str: string) => (asInfoBlock ? str : "");
   const useStyleWithMargin = withMargin != null ? withMargin : true;
   const styleWithLargeMarginBottom = { marginBottom: 14 };
   const styleWithSmallMargin = { margin: 2 };
@@ -42,51 +44,36 @@ export function AnnotationStats({
       className="info-tab-block"
       style={useStyleWithMargin ? styleWithLargeMarginBottom : styleWithSmallMargin}
     >
-      {asInfoBlock && <p className="sidebar-label">Statistics</p>}
-      <table className={asInfoBlock ? "annotation-stats-table" : "annotation-stats-table-slim"}>
+      <table className="annotation-stats-table-slim">
         <tbody>
           {skeletonStats ? (
             <FastTooltip
               placement="left"
-              html={`
-                  <p>Trees: ${formatNumber(skeletonStats.treeCount)}</p>
-                  <p>Nodes: ${formatNumber(skeletonStats.nodeCount)}</p>
-                  <p>Edges: ${formatNumber(skeletonStats.edgeCount)}</p>
-                  <p>Branchpoints: ${formatNumber(skeletonStats.branchPointCount)}</p>
-                `}
+              html={getSkeletonStatsTooltip(skeletonStats)}
               wrapper="tr"
             >
               <td>
                 <Icon component={IconSkeletons} className="info-tab-icon" aria-label="Skeletons" />
               </td>
-              <td>
-                {formatNumber(skeletonStats.treeCount)}{" "}
-                {formatLabel(pluralize("Tree", skeletonStats.treeCount))}
-              </td>
+              <td>{formatNumber(skeletonStats.treeCount)}</td>
             </FastTooltip>
           ) : null}
           {volumeStats.length > 0 ? (
             <FastTooltip
               placement="left"
-              html={`${formatNumber(totalSegmentCount)} – Only segments that were manually registered (either brushed or
-                      interacted with) are counted in this statistic. Segmentation layers
-                      created from automated workflows (also known as fallback layers) are not
-                      considered currently.`}
+              html={getSegmentStatsTooltip(totalSegmentCount)}
               wrapper="tr"
             >
               <td>
                 <Icon component={IconSegments} className="info-tab-icon" aria-label="Segments" />
               </td>
-              <td>
-                {formatNumber(totalSegmentCount)}{" "}
-                {formatLabel(pluralize("Segment", totalSegmentCount))}
-              </td>
+              <td>{formatNumber(totalSegmentCount)}</td>
             </FastTooltip>
           ) : null}
           {boundingBoxCount ? (
             <FastTooltip
               placement="left"
-              html={`${formatNumber(boundingBoxCount)} – Only user-defined bounding boxes are counted in this statistic. Layer bounding boxes are excluded.`}
+              html={getBoundingBoxStatsTooltip(boundingBoxCount)}
               wrapper="tr"
             >
               <td>
@@ -96,10 +83,7 @@ export function AnnotationStats({
                   aria-label="Bounding Boxes"
                 />
               </td>
-              <td>
-                {formatNumber(boundingBoxCount)}{" "}
-                {formatLabel(pluralize("Bounding Box", boundingBoxCount, "Bounding Boxes"))}
-              </td>
+              <td>{formatNumber(boundingBoxCount)}</td>
             </FastTooltip>
           ) : null}
         </tbody>
@@ -108,16 +92,75 @@ export function AnnotationStats({
   );
 }
 
+const getSkeletonStatsTooltip = (skeletonStats: NonNullable<ReturnType<typeof getSkeletonStats>>) =>
+  `
+    <p>Trees: ${formatNumber(skeletonStats.treeCount)}</p>
+    <p>Nodes: ${formatNumber(skeletonStats.nodeCount)}</p>
+    <p>Edges: ${formatNumber(skeletonStats.edgeCount)}</p>
+    <p>Branchpoints: ${formatNumber(skeletonStats.branchPointCount)}</p>
+  `;
+
+const getSegmentStatsTooltip = (totalSegmentCount: number) =>
+  `${formatNumber(totalSegmentCount)} – Only segments that were manually registered (either brushed or
+   interacted with) are counted in this statistic. Segmentation layers created from automated
+   workflows (also known as fallback layers) are not considered currently.`;
+
+const getBoundingBoxStatsTooltip = (boundingBoxCount: number) =>
+  `${formatNumber(boundingBoxCount)} – Only user-defined bounding boxes are counted in this statistic. Layer bounding boxes are excluded.`;
+
 // getStats iterates over all trees which can be expensive for large tracings.
 // memoizeOne avoids recomputing while the annotation is unchanged, and
 // reuseInstanceOnEquality keeps the result instance stable when a mutation
 // did not change any of the counts (to avoid unnecessary re-renders).
 const cachedGetStats = reuseInstanceOnEquality(memoizeOne(getStats));
 
+/** One fact per row — the counts are short values, so they share the capped value track. */
 export function AnnotationStatisticsSection() {
   const stats = useWkSelector((state) => cachedGetStats(state.annotation));
   const boundingBoxCount = useWkSelector(
     (state) => maybeGetSomeTracing(state.annotation)?.userBoundingBoxes.length ?? 0,
   );
-  return <AnnotationStats stats={stats} asInfoBlock boundingBoxCount={boundingBoxCount} />;
+
+  const skeletonStats = getSkeletonStats(stats);
+  const volumeStats = getVolumeStats(stats);
+  const totalSegmentCount = volumeStats.reduce((sum, [_, volume]) => sum + volume.segmentCount, 0);
+
+  return (
+    <InfoTabSection label="Statistics">
+      {skeletonStats ? (
+        <>
+          <InfoTabRow label="Trees" isShortValue>
+            {formatNumber(skeletonStats.treeCount)}
+          </InfoTabRow>
+          {/* Shown inline rather than in a tooltip on the tree count — hover is hard to
+              discover, and these three belong to the same fact. */}
+          <div className="info-tab-subrows">
+            <InfoTabRow label="Nodes" isShortValue>
+              {formatNumber(skeletonStats.nodeCount)}
+            </InfoTabRow>
+            <InfoTabRow label="Edges" isShortValue>
+              {formatNumber(skeletonStats.edgeCount)}
+            </InfoTabRow>
+            <InfoTabRow label="Branchpoints" isShortValue>
+              {formatNumber(skeletonStats.branchPointCount)}
+            </InfoTabRow>
+          </div>
+        </>
+      ) : null}
+      <InfoTabRow
+        label="Segments"
+        isShortValue
+        tooltipHtml={getSegmentStatsTooltip(totalSegmentCount)}
+      >
+        {formatNumber(totalSegmentCount)}
+      </InfoTabRow>
+      <InfoTabRow
+        label="Bounding boxes"
+        isShortValue
+        tooltipHtml={getBoundingBoxStatsTooltip(boundingBoxCount)}
+      >
+        {formatNumber(boundingBoxCount)}
+      </InfoTabRow>
+    </InfoTabSection>
+  );
 }

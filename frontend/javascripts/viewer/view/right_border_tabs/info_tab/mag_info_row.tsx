@@ -1,12 +1,10 @@
-import Icon from "@ant-design/icons";
-import IconDownsampling from "@images/icons/icon-downsampling.svg?react";
-import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
 import { getMagnificationUnion } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { Store } from "viewer/singletons";
+import { InfoTabRow } from "./info_tab_layout";
 
 export function MagInfoRow() {
   const activeMagInfo = useWkSelector(getActiveMagInfo);
@@ -44,25 +42,16 @@ export function MagInfoRow() {
     );
   };
 
-  return representativeMag != null ? (
-    <FastTooltip dynamicRenderer={renderMagsTooltip} placement="left" wrapper="tr">
-      <td
-        style={{
-          paddingRight: 4,
-          paddingTop: 8,
-        }}
-      >
-        <Icon component={IconDownsampling} className="info-tab-icon" aria-label="Magnification" />
-      </td>
-      <td
-        style={{
-          paddingRight: 4,
-          paddingTop: 8,
-        }}
-      >
+  if (representativeMag == null) {
+    return null;
+  }
+
+  return (
+    <InfoTabRow label="Current magnification" isShortValue tooltipRenderer={renderMagsTooltip}>
+      <span>
         {representativeMag.join("-")}
-        {isActiveMagGlobal ? "" : "*"}{" "}
-      </td>
-    </FastTooltip>
-  ) : null;
+        {isActiveMagGlobal ? "" : "*"}
+      </span>
+    </InfoTabRow>
+  );
 }

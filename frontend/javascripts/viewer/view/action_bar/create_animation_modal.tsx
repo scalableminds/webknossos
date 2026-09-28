@@ -50,6 +50,7 @@ import {
   getColorLayers,
   getLayerByName,
   getMagInfo,
+  getSegmentationLayers,
   is2dDataset,
 } from "viewer/model/accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
@@ -161,6 +162,16 @@ function CreateAnimationModal(props: Props) {
   const colorLayer = colorLayers[0];
   const [selectedColorLayerName, setSelectedColorLayerName] = useState<string>(colorLayer.name);
   const selectedColorLayer = getLayerByName(dataset, selectedColorLayerName);
+  // The worker only supports segmentation textures directly from the dataset; Only the fallback layers of annotations can be used.
+  const segmentationLayerNames = Array.from(
+    new Set(
+      getSegmentationLayers(dataset).flatMap((layer) => {
+        const datasetLayer = layer.tracingId != null ? layer.fallbackLayerInfo : layer;
+        return datasetLayer != null ? [datasetLayer.name] : [];
+      }),
+    ),
+  );
+  const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState<string>();
 
   const [isValid, setIsValid] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -316,6 +327,7 @@ function CreateAnimationModal(props: Props) {
 
     const animationOptions: RenderAnimationOptions = {
       layerName: selectedColorLayerName,
+      segmentationLayerName: selectedSegmentationLayerName,
       meshes,
       magForTextures,
       boundingBox: computeBoundingBoxObjectFromBoundingBox(boundingBox),
@@ -601,7 +613,7 @@ function CreateAnimationModal(props: Props) {
               </Divider>
               <Row gutter={24}>
                 <Col span={12}>
-                  {fieldLabel("Layer")}
+                  {fieldLabel("Color layer")}
                   <LayerSelection
                     layers={colorLayers}
                     value={selectedColorLayerName}
@@ -610,20 +622,34 @@ function CreateAnimationModal(props: Props) {
                     style={{ width: "100%" }}
                   />
                 </Col>
-                <Col span={12}>
-                  {fieldLabel("Bounding box")}
-                  <BoundingBoxSelection
-                    value={selectedBoundingBoxId}
-                    userBoundingBoxes={userBoundingBoxes}
-                    setSelectedBoundingBoxId={(boxId: number | null) => {
-                      if (boxId != null) {
-                        setSelectedBoundingBoxId(boxId);
-                      }
-                    }}
-                    style={{ width: "100%" }}
-                  />
-                </Col>
+                {segmentationLayerNames.length > 0 ? (
+                  <Col span={12}>
+                    {fieldLabel("Segmentation layer (optional)")}
+                    <Select
+                      allowClear
+                      showSearch={{ optionFilterProp: "label" }}
+                      placeholder="None"
+                      value={selectedSegmentationLayerName}
+                      onChange={setSelectedSegmentationLayerName}
+                      options={segmentationLayerNames.map((name) => ({ value: name, label: name }))}
+                      style={{ width: "100%" }}
+                    />
+                  </Col>
+                ) : null}
               </Row>
+              <div>
+                {fieldLabel("Bounding box")}
+                <BoundingBoxSelection
+                  value={selectedBoundingBoxId}
+                  userBoundingBoxes={userBoundingBoxes}
+                  setSelectedBoundingBoxId={(boxId: number | null) => {
+                    if (boxId != null) {
+                      setSelectedBoundingBoxId(boxId);
+                    }
+                  }}
+                  style={{ width: "100%" }}
+                />
+              </div>
             </Flex>
 
             {!isValid ? (

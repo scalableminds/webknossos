@@ -21,8 +21,6 @@ import {
   Flex,
   Input,
   type MenuProps,
-  message,
-  notification,
   Row,
   Select,
   Space,
@@ -267,7 +265,7 @@ export default function TaskListView({
   onReload: () => void;
   runId: string | null;
 }) {
-  const { modal } = App.useApp();
+  const { modal, message, notification } = App.useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 

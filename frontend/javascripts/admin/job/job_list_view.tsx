@@ -419,7 +419,7 @@ function JobListView() {
         ) : null;
       if (canRetry) {
         return (
-          <Space direction="vertical" size={4}>
+          <Space orientation="vertical" size={4}>
             <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
               <AsyncLink
                 onClick={async () => {
@@ -450,7 +450,7 @@ function JobListView() {
           "Please contact an administrator for help."
         );
         return (
-          <Space direction="vertical" size={4}>
+          <Space orientation="vertical" size={4}>
             <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
               <span>{failureMessage}</span>
             </Tooltip>

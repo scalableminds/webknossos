@@ -1344,6 +1344,7 @@ export enum MOVIE_DURATIONS {
 
 export type RenderAnimationOptions = {
   layerName: string;
+  segmentationLayerName?: string;
   meshes: ({
     layerName: string;
     tracingId: string | null;

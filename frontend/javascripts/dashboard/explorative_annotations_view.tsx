@@ -680,7 +680,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
               keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
               (layer) => layer.stats,
             )}
-            asInfoBlock={false}
             withMargin={false}
           />
         ),

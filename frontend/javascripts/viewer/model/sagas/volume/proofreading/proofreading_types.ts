@@ -30,6 +30,12 @@ export type GatheredInfos =
       infos: [IdInfo, IdInfo];
     };
 
+// Display properties of a mesh that should survive a reload.
+export type PreservedMeshDisplayProps = {
+  opacity?: number;
+  isVisible?: boolean;
+};
+
 // A single old-agglomerate-id -> new-agglomerate-id change that a proofreading action (or
 // incorporating a foreign one) produces. segment_and_mesh_refresh_sagas.ts uses it to update the
 // segment items and to refresh the affected meshes.
@@ -37,15 +43,4 @@ export type AgglomerateChangeItem = {
   oldAgglomerateId?: bigint;
   newAgglomerateId: bigint;
   nodePosition: Vector3;
-  // Opacity and visibility to apply to the reloaded mesh. If unset, the values of the old
-  // mesh (oldAgglomerateId) are used before its removal (see refreshAffectedMeshes in
-  // segment_and_mesh_refresh_sagas.ts).
-  opacity?: number;
-  isVisible?: boolean;
-};
-
-// Display properties of a mesh that should survive a reload.
-export type PreservedMeshDisplayProps = {
-  opacity?: number;
-  isVisible?: boolean;
-};
+} & PreservedMeshDisplayProps; // segment_and_mesh_refresh_sagas.ts). // mesh (oldAgglomerateId) are used before its removal (see refreshAffectedMeshes in // Opacity and visibility to apply to the reloaded mesh. If unset, the values of the old

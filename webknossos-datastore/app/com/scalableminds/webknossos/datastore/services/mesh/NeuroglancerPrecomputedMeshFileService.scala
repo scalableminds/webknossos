@@ -83,8 +83,8 @@ class NeuroglancerPrecomputedMeshFileService @Inject() (dataVaultService: DataVa
       meshSegmentInfos <-
         if (failOnZeroChunks) Fox.serialCombined(segmentIds)(id => listMeshChunks(vaultPath, mesh, id))
         else listMeshChunksSkippingMissing(vaultPath, mesh, segmentIds)
-      _ <- Fox.fromBool(meshSegmentInfos.nonEmpty || !failOnZeroChunks) ?~> Msg.Mesh.File
-        .zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
+      _ <- Fox.fromBool(meshSegmentInfos.nonEmpty || !failOnZeroChunks) ?~>
+        Msg.Mesh.File.zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
       segmentInfo <- WebknossosSegmentInfo
         .fromMeshInfosAndMetadataAllowingNoChunks(meshSegmentInfos, NeuroglancerMesh.meshEncoding, chunkScale)
         .toFox

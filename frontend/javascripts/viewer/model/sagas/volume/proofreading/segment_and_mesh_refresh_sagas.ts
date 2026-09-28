@@ -126,9 +126,9 @@ function* loadCoarseMesh(
   }
 }
 
-/*
+/**
  * Shared tail of all proofreading handlers: updates the segment items of the affected agglomerate
- * ids, syncs with the back-end and refreshes the affected meshes. The refresh is a normal mesh
+ * ids, syncs with the backend and refreshes the affected meshes. The refresh is a normal mesh
  * reload. Its chunks mostly come from the browser-side cache in mesh_chunk_provider.ts, so a reload
  * after a merge or split needs only few requests. The refreshInfos are built by each caller, as
  * their shape differs per operation.
@@ -160,7 +160,7 @@ export function* refreshProofreadingSegmentsAndMeshes(
   );
 
   yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
-  // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
+  // Now that the segment items are up-to-date we can sync with the backend and release the mutex.
   yield* call(syncWithBackend, ctx);
 
   if (shouldRefreshMeshes) {

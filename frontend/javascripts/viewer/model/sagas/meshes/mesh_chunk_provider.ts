@@ -67,7 +67,10 @@ export class MeshFileCache {
     return this.metadata != null && this.chunkLists.count > 0;
   }
 
-  hasChunksForSegmentId(segmentId: bigint): boolean {
+  /** Returns whether the MeshFileCache has an entry for segmentId.
+   * Note that the list might be empty due to the segment not having a chunk.
+   */
+  hasChunkListForSegmentId(segmentId: bigint): boolean {
     return this.chunkLists.has(segmentId);
   }
 

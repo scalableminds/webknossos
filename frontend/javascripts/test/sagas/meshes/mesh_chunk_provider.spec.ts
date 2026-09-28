@@ -1,10 +1,11 @@
-import type { ListMeshChunksParams, MeshChunk, MeshSegmentInfo } from "admin/api/mesh";
+import type { MeshChunk, MeshSegmentInfo } from "admin/api/mesh";
 import { getSegmentsForAgglomerateFromTracingStore, meshApi } from "admin/rest_api";
 import type { APIMeshFileInfo } from "types/api_types";
 import { GlobalMeshChunkProvider } from "viewer/model/sagas/meshes/mesh_chunk_provider";
 import {
   batchMeshChunksForLoading,
   getMeshChunkData,
+  type ListMeshChunksParamsWithTracingStoreURL,
   listMeshChunks,
 } from "viewer/model/sagas/meshes/mesh_chunk_provider_accessors";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -38,7 +39,7 @@ function listing(chunks: MeshChunk[], segmentIdsWithoutMesh: bigint[] = []): Mes
   };
 }
 
-function paramsFor(agglomerateId: bigint): ListMeshChunksParams {
+function paramsFor(agglomerateId: bigint): ListMeshChunksParamsWithTracingStoreURL {
   return {
     dataStoreUrl: "http://datastore",
     datasetId: "dataset",
@@ -287,14 +288,13 @@ describe("Mesh chunk provider", () => {
       ];
 
       // A batch is closed once it has more than 15 bytes, i.e., after two chunks.
-      const batches = batchMeshChunksForLoading(location, chunks, 15);
-      expect(batches.map((batch) => batch.map((c) => c.unmappedSegmentId))).toEqual([
-        [20n, 21n],
-        [10n, 11n],
-        [22n],
-      ]);
+      const { cachedBatches, missingBatches } = batchMeshChunksForLoading(location, chunks, 15);
+      const segmentIdsPerBatch = (batches: MeshChunk[][]) =>
+        batches.map((batch) => batch.map((c) => c.unmappedSegmentId));
+      expect(segmentIdsPerBatch(missingBatches)).toEqual([[20n, 21n], [22n]]);
+      expect(segmentIdsPerBatch(cachedBatches)).toEqual([[10n, 11n]]);
 
-      for (const batch of batches) {
+      for (const batch of [...missingBatches, ...cachedBatches]) {
         await getData(batch);
       }
       expect(chunkDataMock).toHaveBeenCalledTimes(3);

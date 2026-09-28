@@ -1,4 +1,4 @@
-import type { MeshSegmentInfo } from "admin/api/mesh";
+import type { ListMeshChunksParams, MeshSegmentInfo } from "admin/api/mesh";
 import type { MeshChunkDataRequestList } from "admin/api/mesh.ts";
 import {
   acquireAnnotationMutex,
@@ -366,15 +366,7 @@ vi.mock("admin/api/mesh", async () => {
   });
 
   const getMeshFileChunksForSegment = vi.fn(
-    async (
-      _dataStoreUrl: string,
-      _datasetId: string,
-      _layerName: string,
-      _meshFile: APIMeshFileInfo,
-      segmentId: bigint,
-      _targetMappingName: string | null | undefined,
-      _editableMappingTracingId: string | null | undefined,
-    ): Promise<MeshSegmentInfo> => {
+    async ({ segmentId }: ListMeshChunksParams): Promise<MeshSegmentInfo> => {
       console.log("Requesting default mesh segment info in mocked test.");
       await sleep(100);
       return createListingWithOneChunkPerSegment([segmentId]);

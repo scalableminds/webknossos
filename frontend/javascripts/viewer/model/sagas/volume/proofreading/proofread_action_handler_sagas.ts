@@ -73,8 +73,7 @@ function getRefreshInfosOfSourceAndTarget(
 }
 
 /*
- * Every agglomerate a cut produces is adjacent to at least one removed edge, so the edge endpoints
- * yield both the id and a position of each of them. A cut can produce more than two agglomerates,
+ * A cut can produce more than two agglomerates,
  * as it may also separate the segments of one partition from each other. Deriving the items from
  * the two partitions alone would miss such an agglomerate and delete its segment item and its mesh
  * although it still exists.

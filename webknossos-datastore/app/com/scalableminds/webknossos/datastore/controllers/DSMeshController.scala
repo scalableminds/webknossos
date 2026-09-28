@@ -75,10 +75,9 @@ class DSMeshController @Inject() (
       }
     }
 
-  /* Lists the mesh chunks of several unmapped segment ids at once. Unlike listMeshChunksForSegment, segments
-     without a mesh don't make the request fail. They are listed in segmentIdsWithoutMesh instead.
-     Used by the frontend to complete an agglomerate's mesh from segments it hasn't loaded yet.
-   */
+  /** Lists the mesh chunks of several unmapped segment ids at once. Unlike listMeshChunksForSegment, segments without a
+    * mesh don't make the request fail. They are listed in segmentIdsWithoutMesh instead.
+    */
   def listMeshChunksForSegments(datasetId: ObjectId, dataLayerName: String): Action[ListMeshChunksForSegmentsRequest] =
     Action.fox(validateJson[ListMeshChunksForSegmentsRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {

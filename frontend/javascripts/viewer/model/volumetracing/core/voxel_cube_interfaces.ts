@@ -31,17 +31,8 @@ export type BucketState = "absent" | "pending" | "loaded";
  * `integration/wk_data_cube_adapter.ts`.
  */
 export interface TransactionCube {
-  /** Apply a bucket's writes at once, walking the mask's runs. */
   applyWrites(address: BucketAddress, write: BucketWrite): void;
-  /**
-   * A predicate telling the overwrite filter whether a voxel is background, or
-   * null when the bucket has no authoritative content to test against.
-   *
-   * This is a probe rather than a raw array because real buckets may hold any
-   * element class, and only the owner of the data knows how to compare against
-   * background without materializing a converted copy.
-   */
-  backgroundProbe(address: BucketAddress): ((index: number) => boolean) | null;
+  getIsBackgroundFunction(address: BucketAddress): ((index: number) => boolean) | null;
 }
 
 /**

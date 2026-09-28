@@ -478,7 +478,7 @@ classDiagram
         <<interface>>
         +getLoadedDataOrUndefined(address) loaded data, optional
         +applyWrites(address, write)
-        +backgroundProbe(address) predicate, optional
+        +getIsBackgroundFunction(address) predicate, optional
     }
     class LoadingVoxelCube {
         <<interface, extends TransactionCube>>

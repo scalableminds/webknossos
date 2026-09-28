@@ -65,7 +65,7 @@ export class VolumeTransaction {
    */
   writerFor(address: BucketAddress, value: SegmentId): BucketWriter {
     const entry = this.entryFor(address, value);
-    const isBackground = this.cube.backgroundProbe(address);
+    const isBackground = this.cube.getIsBackgroundFunction(address);
 
     return {
       isBackground,
@@ -93,7 +93,7 @@ export class VolumeTransaction {
     for (const incoming of bucketWriteMap.values()) {
       // entryFor rather than writerFor: unlike a rasterizer write cursor,
       // recordAll never reads isBackground, so there is no reason to pay for
-      // a backgroundProbe call per bucket here.
+      // a getIsBackgroundFunction call per bucket here.
       const entry = this.entryFor(incoming.address, incoming.write.value);
       for (const { start, length } of incoming.write.mask.runs()) {
         entry.write.mask.markRun(start, length);

@@ -49,7 +49,7 @@ export class WkDataCubeAdapter implements TransactionCube {
    * the bucket has no data to test against, in which case the filter is
    * skipped.
    */
-  backgroundProbe(address: BucketAddress): ((index: number) => boolean) | null {
+  getIsBackgroundFunction(address: BucketAddress): ((index: number) => boolean) | null {
     const data = this.rawData(address);
     if (data == null) return null;
     if (data instanceof BigUint64Array || data instanceof BigInt64Array) {

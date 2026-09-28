@@ -148,7 +148,7 @@ export class WorkingDataCube implements LoadingVoxelCube {
     this.gpuDirty.add(bucketKey(address));
   }
 
-  backgroundProbe(address: BucketAddress): ((index: number) => boolean) | null {
+  getIsBackgroundFunction(address: BucketAddress): ((index: number) => boolean) | null {
     const data = this.getLoadedDataOrUndefined(address);
     if (data == null) return null;
     return (index: number) => data[index] === 0n;

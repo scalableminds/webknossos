@@ -202,9 +202,9 @@ describe("DType Dataset Rendering", () => {
     expect(datasetNames.every((name) => !!datasetNameToId[name])).toBe(true);
   });
 
-  test.sequential.for(datasetNames)(
+  test.for(datasetNames)(
     "should render %s correctly",
-    { retry: 3 },
+    { retry: 3, concurrent: false },
     async (datasetName, context) => {
       // Type assertion to ensure context has browser property
       const testContext = context as ScreenshotTestContext;

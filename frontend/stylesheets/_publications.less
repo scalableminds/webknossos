@@ -1,5 +1,43 @@
 @smartphones: ~"only screen and (max-width: 600px)";
 
+/**
+ * Grid of publication cards. Stays a single column on laptop screens (e.g. a 16" MacBook Pro)
+ * and only adds columns on very wide displays, so every card keeps room for its preview.
+ * A container query is used since the list's width, not the viewport's, is what matters.
+ */
+.publication-list {
+  container-type: inline-size;
+}
+
+.publication-list-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ant-margin);
+
+  // Cards in one row are stretched to the same height; let the body (and preview) fill it.
+  > .publication-item-card.ant-card {
+    display: flex;
+    flex-direction: column;
+
+    .ant-card-body {
+      flex: 1;
+    }
+  }
+}
+
+// Less doesn't bubble nested `@container` rules the way it does `@media`, so keep these top-level.
+@container (min-width: 2000px) {
+  .publication-list-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 3000px) {
+  .publication-list-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 /** Card for a single publication: text on the left, dataset preview on the right. */
 // `.ant-card` is needed to win over the shadow of antd's borderless card variant.
 .publication-item-card.ant-card {
@@ -116,10 +154,6 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-
-    &.segmentation {
-      opacity: 0.2;
-    }
   }
 }
 

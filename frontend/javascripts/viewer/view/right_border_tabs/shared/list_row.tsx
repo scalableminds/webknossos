@@ -18,7 +18,7 @@ import ButtonComponent from "viewer/view/components/button_component";
 
 // Every row of a list is this tall, except an expanded one. Kept in sync with
 // @list-row-height in _right_menu.less, which needs it for antd's own row element.
-export const LIST_ROW_HEIGHT = 30;
+export const LIST_ROW_HEIGHT = 25;
 export const LIST_ROW_GAP = 8;
 // The line box of an expanded row's name. The fixed-size parts of a row are centered on
 // it, and the ones taller than it are constrained to it so that they overflow rather than

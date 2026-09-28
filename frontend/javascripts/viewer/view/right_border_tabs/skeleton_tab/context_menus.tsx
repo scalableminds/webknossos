@@ -84,12 +84,18 @@ export function useTreeContextMenuBuilder(
 
       return {
         items: [
-          // A read-only header, so that the id of a tree stays available now that the
-          // row itself only shows its name.
+          // Read-only headers: the row itself only shows the name of the tree, and its
+          // node count without a label, since the count makes way for the row's actions
+          // on hover and so cannot carry a tooltip.
           {
             key: "treeIdInfo",
             type: "group",
             label: `Tree ID: ${tree.treeId}`,
+          },
+          {
+            key: "nodeCountInfo",
+            type: "group",
+            label: `Nodes: ${tree.nodes.size()}`,
           },
           { key: "treeIdDivider", type: "divider" },
           {
@@ -296,6 +302,13 @@ export function useGroupContextMenuBuilder(
 
       return {
         items: [
+          // Explains the count shown in the row, see the headers of the tree menu.
+          {
+            key: "treeCountInfo",
+            type: "group",
+            label: `Trees: ${node.treeCount} (including subgroups)`,
+          },
+          { key: "treeCountDivider", type: "divider" },
           {
             key: "create",
             onClick: () => {

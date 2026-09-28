@@ -32,7 +32,7 @@
 // they either target antd's own row elements — the indentation, the expand caret and the
 // checkbox are rendered around titleRender's output, not by it — or they depend on the
 // state of an ancestor. The modifier classes they key off are set by the row components.
-@list-row-height: 30px;
+@list-row-height: 25px;
 // Matches EXPANDED_ROW_PADDING and the 20px line box of an expanded row in list_row.tsx.
 // The tree is shifted left by one indent unit (see the inline marginLeft in the two tree
 // views) so that the root group renders no expand caret. Anything positioned against the
@@ -131,6 +131,14 @@
 
   .list-row__on-hover {
     visibility: hidden;
+
+    // antd buttons transition `all`, which includes the visibility they inherit from
+    // here. That kept them visible for a moment after the row lost its hover, on top of
+    // the item count that takes their place instantly. Only their own hover feedback
+    // is meant to be animated.
+    .ant-btn {
+      transition-property: color, background-color, border-color, box-shadow;
+    }
   }
 
   // The item that new work is added to (see RowAccent in shared/list_row.tsx). It replaced

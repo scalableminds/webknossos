@@ -3,7 +3,7 @@ import ColorGenerator from "libs/color_generator";
 import { colorObjectToRGBArray } from "libs/colors";
 import DiffableMap from "libs/diffable_map";
 import { V3 } from "libs/mjs";
-import { point3ToVector3, zeroPad } from "libs/utils";
+import { point3ToVector3 } from "libs/utils";
 import compact from "lodash-es/compact";
 import first from "lodash-es/first";
 import isEmpty from "lodash-es/isEmpty";
@@ -61,25 +61,8 @@ import {
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
-export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {
-  let user = "";
-
-  if (state.activeUser) {
-    user = `${state.activeUser.firstName}_${state.activeUser.lastName}`;
-    user = user.replace(/ /g, "_"); // Replace spaces in user names
-  }
-
-  let prefix = "Tree";
-
-  if (state.annotation.annotationType === "Explorational") {
-    // Get YYYY-MM-DD string
-    const creationDate = new Date(timestamp).toJSON().slice(0, 10);
-    prefix = `explorative_${creationDate}_${user}_`;
-  } else if (state.task) {
-    prefix = `task_${state.task.id}_${user}_`;
-  }
-
-  return `${prefix}${zeroPad(treeId, 3)}`;
+export function generateTreeName(treeId: number) {
+  return `Skeleton ${treeId}`;
 }
 function getMinimumNodeId(trees: TreeMap | MutableTreeMap): number {
   const minNodeId = min(trees.values().flatMap((tree) => tree.nodes.map((n) => n.id)));
@@ -512,7 +495,7 @@ export function createTree(
   }
   // Create a new tree id and name
   const newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
-  const newTreeName = name || generateTreeName(state, timestamp, newTreeId);
+  const newTreeName = name || generateTreeName(newTreeId);
   let groupId = null;
 
   if (addToActiveGroup) {
@@ -563,11 +546,11 @@ export function getOrCreateTree(
   return null;
 }
 
-export function ensureTreeNames(state: WebknossosState, trees: MutableTreeMap) {
+export function ensureTreeNames(trees: MutableTreeMap) {
   // Assign a new tree name for trees without a name
   for (const tree of trees.values()) {
     if (tree.name === "") {
-      tree.name = generateTreeName(state, tree.timestamp, tree.treeId);
+      tree.name = generateTreeName(tree.treeId);
     }
   }
 

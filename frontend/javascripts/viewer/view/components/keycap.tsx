@@ -1,3 +1,7 @@
+import Icon from "@ant-design/icons";
+import IconMouseLeftDrag from "@images/icons/icon-statusbar-mouse-left-drag.svg?react";
+import IconMouseRightDrag from "@images/icons/icon-statusbar-mouse-right-drag.svg?react";
+import IconMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
 import type React from "react";
 
 /**
@@ -14,7 +18,7 @@ export function Keycap({
   children: React.ReactNode;
   /** Glyph caps (mouse buttons) are slightly larger to fit the artwork. */
   isGlyph?: boolean;
-  /** Drag glyphs carry speed lines beside the mouse and need the extra width. */
+  /** The drag glyphs carry speed lines beside the mouse and need the extra width. */
   isWide?: boolean;
 }) {
   return (
@@ -24,70 +28,32 @@ export function Keycap({
   );
 }
 
-const glyphProps = {
-  width: 12,
-  height: 16,
-  viewBox: "0 0 12 16",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.3,
-  strokeLinecap: "round",
-} as const;
-
 /**
- * Mouse glyphs for keycaps. The buttons and the scroll wheel must stay distinguishable at
- * this size, so each button fills its own top quadrant while the wheel fills a centered
- * stub — without that, all three would collapse into the same empty pill.
+ * Mouse glyphs, taken from the same icon set as the status bar and the keyboard shortcut
+ * tables so that a mouse looks the same wherever it is explained. The icons hardcode a
+ * grey, but vite-plugin-replace-svg-color rewrites it to currentColor at build time, so
+ * they follow the keycap's text color in both themes.
+ *
+ * The drag variants are wider than they are tall, and `icon: true` fits every icon into a
+ * 1em square, so they need a slightly larger size than the wheel to read as the same
+ * weight.
  */
-export function MouseLeftButtonKeycap() {
+export function MouseWheelKeycap() {
   return (
     <Keycap isGlyph>
-      <svg {...glyphProps} role="img">
-        <title>Left mouse button</title>
-        <path d="M1.3 6.2V5.7A4.7 4.7 0 0 1 6 1v5.2z" fill="currentColor" stroke="none" />
-        <rect x="1.3" y="1" width="9.4" height="14" rx="4.7" />
-        <path d="M1.3 6.2h9.4" />
-      </svg>
+      <Icon component={IconMouseWheel} aria-label="Mouse wheel" style={{ fontSize: 14 }} />
     </Keycap>
   );
 }
-
-export function MouseRightButtonKeycap() {
-  return (
-    <Keycap isGlyph>
-      <svg {...glyphProps} role="img">
-        <title>Right mouse button</title>
-        <path d="M10.7 6.2V5.7A4.7 4.7 0 0 0 6 1v5.2z" fill="currentColor" stroke="none" />
-        <rect x="1.3" y="1" width="9.4" height="14" rx="4.7" />
-        <path d="M1.3 6.2h9.4" />
-      </svg>
-    </Keycap>
-  );
-}
-
-/**
- * Drag variants. The two trailing speed lines are the same cue the status bar uses for a
- * drag, so the two places read as one visual language. They need a wider box than the
- * plain buttons, hence their own glyph props.
- */
-const dragGlyphProps = {
-  ...glyphProps,
-  width: 18,
-  height: 16,
-  viewBox: "0 0 18 16",
-} as const;
 
 export function MouseLeftDragKeycap() {
   return (
     <Keycap isGlyph isWide>
-      <svg {...dragGlyphProps} role="img">
-        <title>Drag with the left mouse button</title>
-        <path d="M1.3 6.2V5.7A4.7 4.7 0 0 1 6 1v5.2z" fill="currentColor" stroke="none" />
-        <rect x="1.3" y="1" width="9.4" height="14" rx="4.7" />
-        <path d="M1.3 6.2h9.4" />
-        <path d="M17 6.2h-3.6" />
-        <path d="M15.4 9.8h-2" />
-      </svg>
+      <Icon
+        component={IconMouseLeftDrag}
+        aria-label="Drag with the left mouse button"
+        style={{ fontSize: 17 }}
+      />
     </Keycap>
   );
 }
@@ -95,26 +61,11 @@ export function MouseLeftDragKeycap() {
 export function MouseRightDragKeycap() {
   return (
     <Keycap isGlyph isWide>
-      <svg {...dragGlyphProps} role="img">
-        <title>Drag with the right mouse button</title>
-        <path d="M10.7 6.2V5.7A4.7 4.7 0 0 0 6 1v5.2z" fill="currentColor" stroke="none" />
-        <rect x="1.3" y="1" width="9.4" height="14" rx="4.7" />
-        <path d="M1.3 6.2h9.4" />
-        <path d="M17 6.2h-3.6" />
-        <path d="M15.4 9.8h-2" />
-      </svg>
-    </Keycap>
-  );
-}
-
-export function MouseWheelKeycap() {
-  return (
-    <Keycap isGlyph>
-      <svg {...glyphProps} role="img">
-        <title>Mouse wheel</title>
-        <rect x="1.3" y="1" width="9.4" height="14" rx="4.7" />
-        <rect x="4.7" y="3.2" width="2.6" height="4.4" rx="1.3" fill="currentColor" stroke="none" />
-      </svg>
+      <Icon
+        component={IconMouseRightDrag}
+        aria-label="Drag with the right mouse button"
+        style={{ fontSize: 17 }}
+      />
     </Keycap>
   );
 }

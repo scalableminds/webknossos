@@ -6,6 +6,7 @@ import { parseArgs } from "node:util";
 import { chromium } from "playwright-core";
 import { recipes as adminRecipes } from "./admin.mjs";
 import {
+  addBrowserFrame,
   authenticateLocalPage,
   captureContextOptions,
   captureScreenshot,
@@ -27,12 +28,15 @@ const { values } = parseArgs({
     organization: { type: "string", default: "sample_organization" },
     executable: { type: "string" },
     "browser-url": { type: "string" },
+    "browser-frame": { type: "string", default: "none" },
     list: { type: "boolean" },
     apply: { type: "boolean" },
     headed: { type: "boolean" },
     help: { type: "boolean" },
   },
 });
+if (!["none", "generic"].includes(values["browser-frame"]))
+  throw new Error("--browser-frame must be none or generic.");
 const recipes = [...viewerRecipes, ...adminRecipes];
 const outputs = new Set();
 const ids = new Set();
@@ -45,7 +49,7 @@ for (const recipe of recipes) {
 }
 if (values.help) {
   console.log(
-    "Usage: yarn docs:screenshots [--base-url http://localhost:9000] [--only id,id] [--fixtures file.json] [--dataset-id ID] [--organization sample_organization] [--executable CHROME_PATH] [--browser-url URL] [--headed] [--output .docs-screenshots] [--list | --apply]\nSee tools/docs-screenshots/README.md. WK_AUTH_TOKEN authenticates to the local instance.",
+    "Usage: yarn docs:screenshots [--base-url http://localhost:9000] [--only id,id] [--fixtures file.json] [--dataset-id ID] [--organization sample_organization] [--executable CHROME_PATH] [--browser-url URL] [--browser-frame none|generic] [--headed] [--output .docs-screenshots] [--list | --apply]\nSee tools/docs-screenshots/README.md. WK_AUTH_TOKEN authenticates to the local instance.",
   );
 } else if (values.list) {
   for (const recipe of recipes) console.log(`${recipe.id}\t${recipe.output}`);
@@ -55,6 +59,21 @@ if (values.help) {
   );
 } else {
   await run();
+}
+
+// Checked-in defaults (dataset, viewer scene, portable curated scenes) are merged with an
+// optional local fixtures file, which holds instance-specific IDs.
+async function loadFixtures(file) {
+  const defaults = JSON.parse(
+    await fs.readFile(new URL("./fixtures.default.json", import.meta.url), "utf8"),
+  );
+  const local = file ? JSON.parse(await fs.readFile(file, "utf8")) : {};
+  return {
+    ...defaults,
+    ...local,
+    viewer: { ...defaults.viewer, ...local.viewer },
+    scenes: { ...defaults.scenes, ...local.scenes },
+  };
 }
 
 async function run() {
@@ -69,7 +88,7 @@ async function run() {
   if (requested?.some((id) => !ids.has(id)))
     throw new Error(`Unknown recipe IDs: ${requested.filter((id) => !ids.has(id)).join(", ")}`);
   const selected = recipes.filter((recipe) => !requested || requested.includes(recipe.id));
-  const fixtures = values.fixtures ? JSON.parse(await fs.readFile(values.fixtures, "utf8")) : {};
+  const fixtures = await loadFixtures(values.fixtures);
   const token = process.env.WK_AUTH_TOKEN;
   async function api(route, method = "GET", body) {
     const response = await fetch(`${baseUrl}${route}`, {
@@ -91,21 +110,22 @@ async function run() {
     }
     return response.json();
   }
+  const datasetName = fixtures.dataset;
   const datasetId =
     values["dataset-id"] ||
     (
       await api(
-        `/api/datasets/disambiguate/${encodeURIComponent(values.organization)}/l4_sample/toId`,
+        `/api/datasets/disambiguate/${encodeURIComponent(values.organization)}/${encodeURIComponent(datasetName)}/toId`,
       )
     ).id;
   const dataset = await api(`/api/datasets/${datasetId}`);
-  if (dataset.name !== "l4_sample" && dataset.directoryName !== "l4_sample")
+  if (dataset.name !== datasetName && dataset.directoryName !== datasetName)
     throw new Error(
-      "All dataset screenshots must use published l4_sample. Selected dataset has a different name.",
+      `All dataset screenshots must use ${datasetName} (fixtures.dataset). Selected dataset has a different name.`,
     );
   if (!dataset.dataSource?.dataLayers?.length)
     throw new Error(
-      "l4_sample has no available layers. Make the published dataset available to the local instance first.",
+      `${datasetName} has no available layers. Make the dataset available to the local instance first.`,
     );
   const output = path.resolve(root, values.output);
   if (
@@ -124,11 +144,19 @@ async function run() {
         headless: !values.headed,
         args: ["--lang=en-US", "--window-size=1600,1000"],
       });
+  for (const { path: asset } of coverage.excluded) {
+    const target = path.join(output, "excluded", asset);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.copyFile(path.join(root, asset), target);
+  }
   const report = {
     createdAt: new Date().toISOString(),
     baseUrl,
     datasetId,
     browser: await browser.version(),
+    browserFrame: values["browser-frame"],
+    // Excluded images are listed in the review so they are not overlooked.
+    excluded: coverage.excluded.map(({ path, kind, reason }) => ({ path, kind, reason })),
     results: [],
   };
   try {
@@ -231,7 +259,10 @@ async function run() {
         if (await page.locator(".initialization-error-message").count())
           throw new Error("Viewer initialization failed.");
         if (browserErrors.length) throw new Error(`Browser error: ${browserErrors.join("; ")}`);
-        const image = Buffer.from(await captureScreenshot(page, selector, recipe));
+        let image = Buffer.from(await captureScreenshot(page, selector, recipe));
+        if (values["browser-frame"] === "generic") {
+          image = Buffer.from(await addBrowserFrame(page, image, recipe.output, baseUrl));
+        }
         const old = await fs.readFile(imagePath(root, recipe.output));
         for (const [folder, bytes] of [
           ["old", old],

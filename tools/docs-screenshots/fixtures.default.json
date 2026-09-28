@@ -1,0 +1,51 @@
+{
+  "dataset": "l4dense_motta_et_al_demo_v2",
+  "viewer": {
+    "position": [2827, 4498, 1792],
+    "zoomStep": 1,
+    "stateByLayer": {
+      "predictions": { "isDisabled": true },
+      "segmentation": {
+        "mappingInfo": { "mappingName": "agglomerate_view_65", "mappingType": "AGGLOMERATE" },
+        "meshInfo": {
+          "meshFileName": "meshfile_4-4-2",
+          "meshes": [
+            {
+              "segmentId": 415,
+              "seedPosition": [2827, 4498, 1792],
+              "isPrecomputed": true,
+              "meshFileName": "meshfile_4-4-2"
+            },
+            {
+              "segmentId": 128501,
+              "seedPosition": [2849, 4113, 2824],
+              "isPrecomputed": true,
+              "meshFileName": "meshfile_4-4-2"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "scenes": {
+    "docs/images/connectome_viewer.jpeg": {
+      "description": "Synapses of agglomerate 97086 from the paper_l4_full_connectome file, listed in the Connectome tab and rendered in the 3D viewport",
+      "hash": {
+        "position": [2850, 4318, 1770],
+        "zoomStep": 1.3,
+        "mode": "orthogonal",
+        "stateByLayer": {
+          "predictions": { "isDisabled": true },
+          "segmentation": {
+            "mappingInfo": { "mappingName": "agglomerate_view_80", "mappingType": "AGGLOMERATE" },
+            "connectomeInfo": {
+              "connectomeName": "paper_l4_full_connectome",
+              "agglomerateIdsToImport": [97086]
+            }
+          }
+        }
+      },
+      "clickTexts": ["Connectome"]
+    }
+  }
+}

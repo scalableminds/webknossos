@@ -69,7 +69,12 @@ export async function waitForViewer(page) {
       observer?.disconnect();
     }
   });
-  await page.locator(".inputcatcher").first().waitFor({ state: "visible" });
+  // Any viewport suffices; a maximized viewport hides the others.
+  await page
+    .locator(".inputcatcher")
+    .filter({ visible: true })
+    .first()
+    .waitFor({ state: "visible" });
   await page.evaluate(async () => {
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     await window.webknossos.DEV.waitForCompletedDataLoading(60000, 1000);
@@ -114,6 +119,27 @@ export function contextualClip(boxes, viewport, padding = 48) {
 
 // Most figures need their surrounding UI. Icons opt into tight crops through
 // their recipe path; individual recipes can supply target/context/padding.
+// Bounding box around all visible elements matched by one or several locators/selectors.
+async function unionBox(page, targets) {
+  const boxes = [];
+  for (const target of [targets].flat()) {
+    const locator = typeof target === "string" ? page.locator(target) : target;
+    for (const element of await locator.filter({ visible: true }).all()) {
+      const box = await element.boundingBox();
+      if (box?.width && box.height) boxes.push(box);
+    }
+  }
+  if (!boxes.length) throw new Error("Overlay region target is not visible.");
+  const x = Math.min(...boxes.map((box) => box.x));
+  const y = Math.min(...boxes.map((box) => box.y));
+  return {
+    x,
+    y,
+    width: Math.max(...boxes.map((box) => box.x + box.width)) - x,
+    height: Math.max(...boxes.map((box) => box.y + box.height)) - y,
+  };
+}
+
 export async function captureScreenshot(page, result, recipe) {
   if (recipe.mobileControls !== true) {
     await page.locator(".floating-buttons-bar").waitFor({ state: "hidden", timeout: 5000 });
@@ -171,9 +197,7 @@ export async function captureScreenshot(page, result, recipe) {
   const highlights = [];
   for (const item of spec.highlights ? [spec.highlights].flat() : []) {
     const annotation = typeof item === "object" && "target" in item ? item : { target: item };
-    const color = annotation.color ?? "#e60000";
-    if (!/^#[0-9a-f]{6}$/i.test(color))
-      throw new Error("Highlight color must be a six-digit hex color.");
+    const color = "#e60000";
     const locator =
       typeof annotation.target === "string" ? page.locator(annotation.target) : annotation.target;
     await locator.waitFor({ state: "visible" });
@@ -194,29 +218,90 @@ export async function captureScreenshot(page, result, recipe) {
     highlights.push({ ...outline, color });
     boxes.push(outline);
   }
-  const overlay = await page.evaluateHandle((rectangles) => {
-    const layer = document.createElement("div");
-    layer.dataset.docsScreenshotHighlights = "";
-    layer.setAttribute("aria-hidden", "true");
-    for (const box of rectangles) {
-      const rectangle = document.createElement("div");
-      Object.assign(rectangle.style, {
-        position: "fixed",
-        left: `${box.x}px`,
-        top: `${box.y}px`,
-        width: `${box.width}px`,
-        height: `${box.height}px`,
-        boxSizing: "border-box",
-        border: `3px solid ${box.color}`,
-        borderRadius: "4px",
-        pointerEvents: "none",
-        zIndex: "2147483647",
-      });
-      layer.append(rectangle);
-    }
-    document.documentElement.append(layer);
-    return layer;
-  }, highlights);
+  // Labeled regions explain the UI layout: colored frame, whitened content, large label.
+  const regions = [];
+  for (const region of spec.regions ?? []) {
+    const labels = [];
+    for (const label of region.labels ?? [])
+      labels.push({ ...(await unionBox(page, label.target)), text: label.text });
+    regions.push({
+      ...(await unionBox(page, region.target)),
+      color: region.color,
+      label: region.label,
+      fontSize: region.fontSize ?? 64,
+      labelFontSize: region.labelFontSize ?? 64,
+      labels,
+    });
+  }
+  const overlay = await page.evaluateHandle(
+    ({ rectangles, regions }) => {
+      const layer = document.createElement("div");
+      layer.dataset.docsScreenshotHighlights = "";
+      layer.setAttribute("aria-hidden", "true");
+      const fontFamily = getComputedStyle(document.body).fontFamily;
+      const text = (box, content, color, fontSize) => {
+        const element = document.createElement("div");
+        Object.assign(element.style, {
+          position: "fixed",
+          left: `${box.x}px`,
+          top: `${box.y}px`,
+          width: `${box.width}px`,
+          height: `${box.height}px`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          color,
+          fontFamily,
+          fontSize: `${fontSize}px`,
+          fontWeight: "600",
+          lineHeight: "1",
+          pointerEvents: "none",
+          zIndex: "2147483647",
+        });
+        element.textContent = content;
+        return element;
+      };
+      for (const region of regions) {
+        const frame = document.createElement("div");
+        Object.assign(frame.style, {
+          position: "fixed",
+          left: `${region.x}px`,
+          top: `${region.y}px`,
+          width: `${region.width}px`,
+          height: `${region.height}px`,
+          boxSizing: "border-box",
+          border: `10px solid ${region.color}`,
+          background: "rgba(255, 255, 255, 0.7)",
+          pointerEvents: "none",
+          zIndex: "2147483647",
+        });
+        layer.append(frame);
+        for (const label of region.labels)
+          layer.append(text(label, label.text, region.color, region.labelFontSize));
+        if (region.label) layer.append(text(region, region.label, region.color, region.fontSize));
+      }
+      for (const box of rectangles) {
+        const rectangle = document.createElement("div");
+        Object.assign(rectangle.style, {
+          position: "fixed",
+          left: `${box.x}px`,
+          top: `${box.y}px`,
+          width: `${box.width}px`,
+          height: `${box.height}px`,
+          boxSizing: "border-box",
+          border: `3px solid ${box.color}`,
+          borderRadius: "4px",
+          pointerEvents: "none",
+          zIndex: "2147483647",
+        });
+        layer.append(rectangle);
+      }
+      document.documentElement.append(layer);
+      return layer;
+    },
+    { rectangles: highlights, regions },
+  );
   try {
     return await page.screenshot({
       ...options,
@@ -225,5 +310,41 @@ export async function captureScreenshot(page, result, recipe) {
   } finally {
     await overlay.evaluate((element) => element.remove());
     await overlay.dispose();
+  }
+}
+
+// Render a generic browser frame in a separate page so it cannot affect app layout.
+export async function addBrowserFrame(page, bytes, output, baseUrl) {
+  const frame = await page.context().newPage();
+  const type = /\.jpe?g$/i.test(output) ? "jpeg" : "png";
+  try {
+    await frame.setContent(`<!doctype html><style>
+      *{box-sizing:border-box}body{margin:0;background:#fff;font:13px Arial,sans-serif}
+      header{height:72px;background:#eceef1;color:#49515b;border-bottom:1px solid #ccd0d6}
+      .tabs{height:32px;display:flex;align-items:center;gap:7px;padding:0 12px}
+      i{width:10px;height:10px;border:1px solid #a9aeb5;border-radius:50%;background:#d4d7dc}
+      .tab{margin-left:14px;background:#fff;border-radius:7px 7px 0 0;padding:7px 18px;align-self:flex-end}
+      .navigation{height:40px;display:flex;align-items:center;gap:12px;padding:5px 12px}
+      .address{background:#fff;border:1px solid #dce0e5;border-radius:14px;padding:5px 14px;flex:1;overflow:hidden;white-space:nowrap}
+      main{display:flex;justify-content:center}img{display:block;max-width:none}
+    </style><header><div class="tabs"><i></i><i></i><i></i><div class="tab">WEBKNOSSOS</div></div>
+    <div class="navigation"><span aria-hidden="true">← &nbsp; → &nbsp; ↻</span><div class="address"></div></div></header><main><img alt="Documentation screenshot"></main>`);
+    const dimensions = await frame.evaluate(
+      async ({ data, address }) => {
+        document.querySelector(".address").textContent = address;
+        const img = document.querySelector("img");
+        img.src = data;
+        await img.decode();
+        return { width: Math.max(360, img.naturalWidth), height: img.naturalHeight + 72 };
+      },
+      {
+        data: `data:image/${type};base64,${Buffer.from(bytes).toString("base64")}`,
+        address: new URL(baseUrl).origin,
+      },
+    );
+    await frame.setViewportSize(dimensions);
+    return await frame.screenshot({ type, animations: "disabled" });
+  } finally {
+    await frame.close();
   }
 }

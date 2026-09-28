@@ -15,9 +15,7 @@ async function goto(ctx, path, ready) {
       document.body.innerText.includes("Sorry, the page you visited does not exist."),
     )
   ) {
-    throw new Error(
-      `The local app does not expose ${path}. Check its feature flags; onboarding requires isWkorgInstance=false.`,
-    );
+    throw new Error(`The local app does not expose ${path}. Check its feature flags.`);
   }
   if (ready)
     await content(ctx).getByText(ready, { exact: false }).first().waitFor({ state: "visible" });
@@ -25,7 +23,7 @@ async function goto(ctx, path, ready) {
 async function fill(page, selector, value) {
   await page.locator(selector).filter({ visible: true }).first().fill(String(value));
 }
-async function search(ctx, value = "l4_sample", selector = `${main} input.ant-input`) {
+async function search(ctx, value = ctx.dataset.name, selector = `${main} input.ant-input`) {
   const input = ctx.page.locator(selector).filter({ visible: true }).first();
   await input.fill(value);
   await input.press("Enter");
@@ -94,18 +92,31 @@ function CSSescape(value) {
   return value;
 }
 async function annotations(ctx, archived) {
-  await goto(ctx, "/dashboard/annotations?dataset=l4_sample", "Annotations");
+  await goto(
+    ctx,
+    `/dashboard/annotations?dataset=${encodeURIComponent(ctx.dataset.name)}`,
+    "Annotations",
+  );
   const records = await api(ctx, `/api/annotations/readable?isFinished=${archived}&pageNumber=0`);
   const matching = records.filter(
     (record) => (record.datasetId ?? record.dataSetId) === ctx.dataset.id,
   );
   if (!matching.length) {
     throw new Error(
-      `Missing ${archived ? "archived" : "open"} l4_sample annotation fixture. ${archived ? "Archive a dedicated demonstration annotation" : "Create a demonstration annotation"} in the local account before capturing this dashboard.`,
+      `Missing ${archived ? "archived" : "open"} annotation fixture on the documentation dataset. ${archived ? "Archive a dedicated demonstration annotation" : "Create a demonstration annotation"} in the local account before capturing this dashboard.`,
     );
   }
-  if (archived)
+  if (archived) {
     await ctx.page.getByRole("button", { name: "Show Archived Annotations", exact: true }).click();
+    // Archived annotations are not linked; check their dataset tags instead.
+    const rows = ctx.page.locator(`${main} .ant-table-row`);
+    await rows.first().waitFor({ state: "visible" });
+    for (const row of await rows.all()) {
+      if (!(await row.getByText(ctx.dataset.name, { exact: true }).count()))
+        throw new Error("Visible annotations must all belong to the documentation dataset.");
+    }
+    return content(ctx);
+  }
   await ctx.page
     .locator(`${main} a[href^="/annotations/"]:visible`)
     .first()
@@ -126,16 +137,16 @@ async function assertAnnotationDatasets(ctx) {
   for (const id of ids) {
     const annotation = await api(ctx, `/api/annotations/${encodeURIComponent(id)}/info`);
     if ((annotation.datasetId ?? annotation.dataSetId) !== ctx.dataset.id)
-      throw new Error("Visible annotations must all belong to l4_sample.");
+      throw new Error("Visible annotations must all belong to the documentation dataset.");
   }
 }
 async function tasks(ctx) {
   await goto(ctx, "/dashboard/tasks", "Tasks");
-  // The task dashboard has no dataset filter. Require a dedicated documentation account.
+  // The task dashboard has no dataset filter; other open tasks of the account may appear too.
   const records = await api(ctx, "/api/user/tasks?isFinished=false&pageNumber=0");
-  if (!records.length || records.some((record) => record.datasetId !== ctx.dataset.id)) {
+  if (!records.some((record) => record.datasetId === ctx.dataset.id)) {
     throw new Error(
-      "Use a documentation account with open tasks exclusively on l4_sample for task dashboard screenshots.",
+      "The account needs an open task on the documentation dataset. Run tools/docs-screenshots/setup-fixtures.mjs.",
     );
   }
   await ctx.page.locator(`${main} a[href^="/annotations/"]`).first().waitFor({ state: "visible" });
@@ -149,38 +160,36 @@ async function checkVisibleJobs(ctx) {
     const job = await api(ctx, `/api/jobs/${encodeURIComponent(id)}`);
     if ((job.args.datasetId ?? job.args.dataset_id) !== ctx.dataset.id)
       throw new Error(
-        "Visible jobs must all use l4_sample. Legacy jobs without dataset IDs need replacing with current fixtures.",
+        "Visible jobs must all use the documentation dataset. Legacy jobs without dataset IDs need replacing with current fixtures.",
       );
   }
 }
 async function publications(ctx) {
   await goto(ctx, "/dashboard/publications", "Featured Publications");
   const records = await api(ctx, "/api/publications");
-  const selected = records.filter((record) =>
-    record.datasets.some((dataset) => dataset.id === ctx.dataset.id),
-  );
-  if (
-    !selected.length ||
-    selected.some(
-      (record) =>
-        record.datasets.some((dataset) => dataset.id !== ctx.dataset.id) ||
-        record.annotations.some((annotation) => annotation.dataset.id !== ctx.dataset.id),
-    )
-  ) {
+  // The initial data links the documentation dataset to the publication of its paper.
+  if (!records.some((record) => record.datasets.some(({ id }) => id === ctx.dataset.id))) {
     throw new Error(
-      "Configure a local featured publication containing only the published l4_sample dataset.",
+      "Configure a local featured publication containing the documentation dataset (part of the dev setup's initial data).",
     );
   }
-  await search(ctx, "l4_sample", 'input[placeholder="Search Publications"]');
+  await search(ctx, ctx.dataset.name, 'input[placeholder="Search Publications"]');
   await ctx.page.locator(".publication-list .ant-list-item").first().waitFor({ state: "visible" });
   return content(ctx);
 }
 async function onboarding(ctx, account) {
   await ctx.anonymous();
+  // The onboarding route only exists on self-hosted instances. Present the local instance as
+  // one to this browser context only, instead of requiring a server configuration change.
+  await ctx.page.route("**/api/features", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, json: { ...(await response.json()), isWkorgInstance: false } });
+  });
   // The runner gives each recipe an isolated context, so removing its cookies is safe.
   await ctx.page.context().clearCookies();
   await goto(ctx, "/onboarding", "Create or Join an Organization");
-  await fill(ctx.page, 'input[placeholder="Your organization name"]', "Documentation Lab");
+  // An AutoComplete renders its placeholder separately from the input.
+  await ctx.page.getByRole("combobox").fill("Documentation Lab");
   if (account) {
     // OrganizationForm.onFinish advances local wizard state; no organization is persisted.
     await ctx.page.getByRole("button", { name: /Create$/ }).click();
@@ -221,11 +230,11 @@ export const recipes = [
   route("tasks_tasktype.jpeg", "/taskTypes/create", "Task Type", true),
   recipe("tasks_task.jpeg", async (ctx) => {
     await goto(ctx, "/tasks/create", "Create Tasks");
-    await fill(ctx.page, "#datasetId", "l4_sample");
+    await fill(ctx.page, "#datasetId", ctx.dataset.name);
     await ctx.page
       .locator(".ant-select-dropdown")
       .filter({ visible: true })
-      .getByText("l4_sample", { exact: true })
+      .getByText(ctx.dataset.name, { exact: true })
       .click();
     return { target: content(ctx), scrollToTop: true };
   }),
@@ -234,7 +243,7 @@ export const recipes = [
     const name = fixture(
       ctx,
       "projectName",
-      "Name of a local documentation project whose tasks use l4_sample.",
+      "Name of a local documentation project whose tasks use the documentation dataset.",
     );
     await goto(ctx, "/projects", "Projects");
     await search(ctx, name);
@@ -243,7 +252,9 @@ export const recipes = [
     if (!project) throw new Error(`Documentation project not found: ${name}`);
     const tasks = await api(ctx, "/api/tasks/list", { project: project.id });
     if (!tasks.length || tasks.some((task) => task.datasetId !== ctx.dataset.id))
-      throw new Error("Documentation project must contain only l4_sample tasks.");
+      throw new Error(
+        "Documentation project must contain only tasks on the documentation dataset.",
+      );
     await ctx.page
       .getByTitle("Download All Finished Annotations", { exact: true })
       .first()
@@ -252,19 +263,23 @@ export const recipes = [
   }),
   recipe("task_instance_actions.jpg", async (ctx) => {
     const id = CSSescape(
-      fixture(ctx, "taskId", "A local l4_sample task ID with an assigned annotation."),
+      fixture(
+        ctx,
+        "taskId",
+        "A local task ID on the documentation dataset with an assigned annotation.",
+      ),
     );
     await goto(ctx, `/tasks/${id}`, "Tasks");
     const record = await api(ctx, `/api/tasks/${id}`);
     if (record.datasetId !== ctx.dataset.id)
-      throw new Error("fixtures.taskId must belong to l4_sample.");
+      throw new Error("fixtures.taskId must belong to the documentation dataset.");
     await ctx.page.locator(`tr[data-row-key="${id}"] .ant-table-row-expand-icon`).click();
     await ctx.page
       .locator(".ant-table-expanded-row")
       .getByText("Actions", { exact: true })
       .first()
       .click();
-    await ctx.page.getByRole("menu").waitFor({ state: "visible" });
+    await ctx.page.locator(".ant-dropdown:not(.ant-dropdown-hidden) [role=menu]").waitFor();
     return content(ctx);
   }),
   recipe("users_experience.jpeg", (ctx) => userModal(ctx, "Change Experience")),
@@ -287,21 +302,25 @@ export const recipes = [
   }),
   recipe("nuclei_segmentation_job.jpeg", async (ctx) => {
     const id = CSSescape(
-      fixture(ctx, "nucleiJobId", "An existing nuclei inference job for l4_sample."),
+      fixture(
+        ctx,
+        "nucleiJobId",
+        "An existing nuclei inference job for the documentation dataset.",
+      ),
     );
     await goto(ctx, "/jobs", "Jobs");
     const job = await api(ctx, `/api/jobs/${id}`);
     if ((job.args.datasetId ?? job.args.dataset_id) !== ctx.dataset.id)
-      throw new Error("fixtures.nucleiJobId must use l4_sample.");
+      throw new Error("fixtures.nucleiJobId must use the documentation dataset.");
     await search(ctx);
     await ctx.page.locator(`tr[data-row-key="${id}"]`).waitFor({ state: "visible" });
     if (!["infer_nuclei", "infer_instances"].includes(job.command))
       throw new Error("fixtures.nucleiJobId must be a nuclei or instance inference job.");
     await checkVisibleJobs(ctx);
-    // Preserve the original screenshot's green emphasis on the nuclei job row.
+    // Emphasize the nuclei job row using the standard red callout.
     return {
       target: content(ctx),
-      highlights: [{ target: ctx.page.locator(`tr[data-row-key="${id}"]`), color: "#00b050" }],
+      highlights: [ctx.page.locator(`tr[data-row-key="${id}"]`)],
     };
   }),
   recipe("onboarding_organization.jpeg", (ctx) => onboarding(ctx, false)),

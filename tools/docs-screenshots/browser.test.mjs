@@ -4,6 +4,7 @@ import http from "node:http";
 import test from "node:test";
 import { chromium } from "playwright-core";
 import {
+  addBrowserFrame,
   authenticateLocalPage,
   captureContextOptions,
   captureScreenshot,
@@ -35,7 +36,8 @@ test("scoped authentication leaves worker data fetches running and supports anon
   let browser;
   try {
     browser = await chromium.launch({ channel: "chrome", headless: true });
-    const page = await browser.newPage(captureContextOptions());
+    const context = await browser.newContext(captureContextOptions());
+    const page = await context.newPage();
     assert.deepEqual(
       await page.evaluate(() => [screen.width, innerWidth, navigator.maxTouchPoints]),
       [1600, 1600, 0],
@@ -81,7 +83,7 @@ test("scoped authentication leaves worker data fetches running and supports anon
       page,
       {
         target: "#scene",
-        highlights: ["#target"],
+        highlights: [{ target: "#target", color: "#00b050" }],
         padding: 48,
       },
       { output: "docs/images/marked.png" },
@@ -106,14 +108,10 @@ test("scoped authentication leaves worker data fetches running and supports anon
     );
     assert.ok(redPixels > 500, "The screenshot must contain the red callout");
     assert.equal(await page.locator("[data-docs-screenshot-highlights]").count(), 0);
-    await assert.rejects(
-      captureScreenshot(
-        page,
-        { target: "#scene", highlights: [{ target: "#target", color: "bad" }] },
-        { output: "docs/images/marked.png" },
-      ),
-      /six-digit/,
-    );
+    const framed = await addBrowserFrame(page, marked, "docs/images/framed.png", origin);
+    assert.equal(framed.readUInt32BE(16), marked.readUInt32BE(16));
+    assert.equal(framed.readUInt32BE(20), marked.readUInt32BE(20) + 72);
+    assert.equal(page.context().pages().length, 1);
     await page.evaluate(() => {
       const bar = document.createElement("div");
       bar.className = "floating-buttons-bar";

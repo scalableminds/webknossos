@@ -412,10 +412,7 @@ class DataCube {
     // The second condition is responsible for catching the case where
     // fewer buckets were marked as needed (compared to before) and new new buckets
     // were needed.
-    if (
-      this.didNeedNewBucket ||
-      this.neededBucketCount !== this.neededBucketCountInPreviousTick
-    ) {
+    if (this.didNeedNewBucket || this.neededBucketCount !== this.neededBucketCountInPreviousTick) {
       this.triggerRenderedBucketDataChanged();
     }
   }

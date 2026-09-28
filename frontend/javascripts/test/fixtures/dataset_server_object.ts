@@ -107,6 +107,7 @@ function createDataset(dataLayers: Array<APIColorLayer | APISegmentationLayer>):
     isPublic: false,
     description: null,
     created: 1502288550432,
+    thumbnailCacheVersion: 0,
     isEditable: true,
     directoryName: "ROI2017_wkw",
     isVirtual: false,

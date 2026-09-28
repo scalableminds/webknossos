@@ -212,7 +212,9 @@ class TSAnnotationService @Inject() (
         // mutated) and never back to false. A false value indicates a frontend bug.
         Fox.failure("Received updateVolumeBucketDataHasChanged action with value=false, which is not allowed.")
       case a: UpdateBucketPartialVolumeAction =>
-        annotationWithTracings.applyUpdateBucketPartialVolumeAction(a, annotationWithTracings)
+        annotationWithTracings.applyUpdateBucketPartialVolumeAction(a)
+      case a: DeleteSegmentDataVolumeAction =>
+        applyDeleteSegmentDataVolumeAction(annotationId, annotationWithTracings, a) ?~> "Failed to delete segment data."
       case a: ApplyableVolumeUpdateAction =>
         annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.volumeActionFailed
       case a: EditableMappingUpdateAction =>
@@ -394,6 +396,30 @@ class TSAnnotationService @Inject() (
 
   private def assertMappingIsNotLocked(volumeTracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.fromBool(!volumeTracing.mappingIsLocked.getOrElse(false)) ?~> Msg.Annotation.ApplyUpdate.mappingIsLocked
+
+  private def applyDeleteSegmentDataVolumeAction(
+      annotationId: ObjectId,
+      annotationWithTracings: AnnotationWithTracings,
+      action: DeleteSegmentDataVolumeAction
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
+    for {
+      tracing <- annotationWithTracings.getVolume(action.actionTracingId).toFox
+      _ <- Fox.fromBool(
+        tracing.getHasSegmentIndex
+      ) ?~> "Cannot delete segment data for annotations without segment index."
+      bucketBuffer <- annotationWithTracings.volumeBucketBuffersByTracingId.get(action.actionTracingId).toFox
+      fallbackLayerOpt <- volumeTracingService.getFallbackLayer(annotationId, tracing)
+      bucketPositions <- volumeSegmentIndexService.getAllBucketPositionsForSegment(
+        tracing,
+        fallbackLayerOpt,
+        action.actionTracingId,
+        action.id.toLong,
+        tracing.mappingName,
+        editableMappingTracingId = None, // bucket buffers only exist for volumesThatDoNotHaveEditableMapping
+        tracing.version
+      )
+      _ <- bucketBuffer.applyDeleteSegmentDataAction(bucketPositions, action.id.toLong)
+    } yield annotationWithTracings
 
   private def applyPendingUpdates(
       annotationWithTracingsAndMappings: AnnotationWithTracings,

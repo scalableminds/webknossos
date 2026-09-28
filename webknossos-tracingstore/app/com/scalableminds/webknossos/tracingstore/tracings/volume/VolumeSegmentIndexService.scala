@@ -8,7 +8,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -250,5 +250,47 @@ class VolumeSegmentIndexService @Inject() (
       )
       bucketPositions <- segmentIndexReader.getOne(segmentId, mag, editableMappingTracingId, additionalCoordinates)
     } yield bucketPositions
+
+  // The action deleting a segment's data carries no mag, so it always spans every mag (and, if the
+  // volume has additional axes, every point in their coordinate space) of the tracing.
+  def getAllBucketPositionsForSegment(
+      tracing: VolumeTracing,
+      fallbackLayer: Option[RemoteFallbackLayer],
+      tracingId: String,
+      segmentId: Long,
+      mappingName: Option[String],
+      editableMappingTracingId: Option[String],
+      annotationVersion: Long
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[BucketPosition]] = {
+    val possibleAdditionalCoordinates =
+      AdditionalAxis.coordinateSpace(AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)).map(Some(_))
+    val additionalCoordinateList =
+      if (possibleAdditionalCoordinates.isEmpty) List(None) else possibleAdditionalCoordinates.toList
+    for {
+      bucketPositionsPerMag <- Fox.serialCombined(tracing.mags.toList) { magProto =>
+        val mag = vec3IntFromProto(magProto)
+        for {
+          bucketPositionsPerCoordinates <- Fox.serialCombined(additionalCoordinateList) { additionalCoordinates =>
+            for {
+              bucketPositionsRaw <- getSegmentToBucketIndex(
+                tracing,
+                fallbackLayer,
+                tracingId,
+                segmentId,
+                mag,
+                mappingName,
+                editableMappingTracingId,
+                annotationVersion,
+                additionalCoordinates
+              )
+            } yield bucketPositionsRaw.toList
+              .map(vec3IntFromProto)
+              .map(_ * mag * DataLayer.bucketLength)
+              .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, additionalCoordinates))
+          }
+        } yield bucketPositionsPerCoordinates.flatten
+      }
+    } yield bucketPositionsPerMag.flatten
+  }
 
 }

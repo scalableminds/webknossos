@@ -10,7 +10,7 @@ import DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import sampleVoxelMapToMag, {
   applyVoxelMap,
-} from "viewer/model/volumetracing/volume_annotation_sampling";
+} from "viewer/model/volumetracing/legacy/volume_annotation_sampling";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock modules

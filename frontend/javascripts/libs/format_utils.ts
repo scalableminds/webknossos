@@ -139,6 +139,22 @@ export function formatScale(
   return `${scaleRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${newUnit}³/Vx`;
 }
 
+/**
+ * Splits the voxel size into the rounded edge lengths and their (plain) unit, so that a
+ * caller can style the unit differently from the numbers. `formatScale` renders the unit as
+ * "nm³/Vx"; here it stays the plain edge-length unit, because the numbers are edge lengths.
+ */
+export function formatScaleValues(
+  scale: VoxelSize | null | undefined,
+  roundToDigits: number = 2,
+): [string, string] {
+  if (scale == null) {
+    return ["", ""];
+  }
+  const [scaleRounded, newUnit] = getRoundedScaleValues(scale, roundToDigits);
+  return [scaleRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace), newUnit];
+}
+
 export function formatScaleForClipboard(
   scale: VoxelSize | null | undefined,
   roundToDigits: number = 2,

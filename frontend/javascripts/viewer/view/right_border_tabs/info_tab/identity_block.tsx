@@ -53,7 +53,12 @@ export function AnnotationIdentityBlock({
           <Typography.Text
             className={`info-tab-title ${isNameEmpty ? "info-tab-muted" : ""}`}
             editable={{
-              onChange: setName,
+              // antd saves on blur without calling onEnd, so the controlled editing state
+              // has to be reset here for clicking outside to end the edit.
+              onChange: (newName) => {
+                setName(newName);
+                setIsEditingName(false);
+              },
               editing: isEditingName,
               onStart: () => setIsEditingName(true),
               onEnd: () => setIsEditingName(false),
@@ -89,7 +94,11 @@ export function AnnotationIdentityBlock({
             {mayEdit ? "Add a description…" : "No description"}
           </Typography.Text>
         ) : (
-          <Markdown>{description}</Markdown>
+          // react-markdown renders its blocks without a wrapper; without this one every
+          // paragraph would become its own item of the flex line.
+          <div className="info-tab-description-content">
+            <Markdown>{description}</Markdown>
+          </div>
         )}
         {mayEdit ? (
           <InlineIconButton
@@ -125,7 +134,12 @@ export function DatasetIdentityBlock({
   return (
     <div className="info-tab-identity">
       <div className="info-tab-identity-line">
-        <Typography.Text className="info-tab-title">{dataset.name}</Typography.Text>
+        <Typography.Text
+          className="info-tab-title info-tab-title-ellipsis"
+          ellipsis={{ tooltip: dataset.name }}
+        >
+          {dataset.name}
+        </Typography.Text>
         <DatasetSettingsButton dataset={dataset} activeUser={activeUser} />
       </div>
       {dataset.description ? (

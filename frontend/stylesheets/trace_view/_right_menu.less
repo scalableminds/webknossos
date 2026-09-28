@@ -21,43 +21,123 @@
   height: 100%;
 }
 
+// --- Segment list -----------------------------------------------------------------
+//
+// One row per segment, regardless of whether a mesh is loaded for it:
+//
+//   [checkbox] [color dot] [name ......................] [mesh slot] [hover actions]
+//
+// The row itself is styled where it is rendered (segment_row.tsx / node_titles.tsx). Only
+// the treatments that CSS alone can express live here: they either target antd's own row
+// elements — the indentation, the expand caret and the checkbox are rendered around
+// titleRender's output, not by it — or they depend on the state of an ancestor. The
+// modifier classes they key off are set in segment_row.tsx.
+@segment-row-height: 30px;
+// The tree is shifted left by one indent unit (see the inline marginLeft in
+// segment_tree_view.tsx) so that the root group renders no expand caret. Anything
+// positioned against the visible left edge of the panel has to add it back.
+@segments-tree-indent-unit: 24px;
+
 .segments-tree {
   .ant-tree-treenode {
-    padding: 0 !important;
-  }
-}
+    position: relative;
+    align-items: center;
+    // The row's right padding. The left one is the indentation, which antd handles.
+    padding: 0 10px 0 0 !important;
+    // antd separates rows by a small margin; the list is meant to be a flush grid.
+    margin-bottom: 0;
+    min-height: @segment-row-height;
 
-.segment-list-item {
-  // By default, antd's list items are flex, which
-  // causes more trouble than it helps.
-  display: block;
-  padding-left: 5px;
-  padding-right: 5px;
-  border-radius: 2px;
-  min-height: var(--ant-control-height-sm); // make the list items the same height as <Button size="small">
+    // antd puts a pseudo-element just below every row to bridge that margin, so that the
+    // drop indicator doesn't flicker while dragging. With the margin gone it lies on top
+    // of the next row instead, where it would swallow the clicks aimed at its first 4px.
+    &::before {
+      pointer-events: none;
+    }
 
-  .ant-btn:has(.anticon-ellipsis) {
-    // Hide ellipsis icon buttons (unless hovered)
-    visibility: hidden;
-  }
+    &:hover,
+    // A segment that is hovered in the data viewports is highlighted in the list, too.
+    &:has(.segment-row--hovered-in-viewport) {
+      background-color: var(--ant-color-fill-quaternary);
+    }
 
-  &:hover {
-    background-color: var(--ant-blue-1);
+    &.ant-tree-treenode-selected {
+      background-color: var(--ant-color-primary-bg);
+    }
 
-    .ant-btn:has(.anticon-ellipsis) {
-      display: inline-block;
+    // The single selected segment wraps its name over as many lines as it needs, so
+    // everything in its row aligns to the first line rather than to the middle.
+    &:has(.segment-row--expanded) {
+      align-items: flex-start;
+    }
+
+    // The action bar and the "compute mesh" button are hover-only, but have to stay
+    // reachable without a mouse: antd marks the row that keyboard navigation is on
+    // with -active.
+    &:hover .segment-row__on-hover,
+    &:focus-within .segment-row__on-hover,
+    &.ant-tree-treenode-active .segment-row__on-hover {
       visibility: visible;
     }
   }
 
-  // If a cell is hovered in the data viewports,
-  // it should also be highlighted in the list.
-  &.is-hovered-segment {
-    background-color: var(--ant-blue-1);
+  // antd wraps titleRender's output in a plain block element that shrink-wraps its
+  // content. Both of these are needed for the row to span the available width and for
+  // the name inside it to be able to shrink below its text width.
+  .ant-tree-node-content-wrapper,
+  .ant-tree-title {
+    flex: auto;
+    min-width: 0;
+  }
+
+  .ant-tree-node-content-wrapper {
+    // The tint is drawn by the treenode above, so that it also covers the checkbox.
+    background: transparent !important;
+    padding: 0;
+    min-height: 0;
+    // antd makes this the containing block of everything in a title. The accent bar has to
+    // reach the left edge of the panel, past the indentation and the checkbox, so it needs
+    // to resolve against the row element instead. Nothing here depends on the wrapper being
+    // positioned: antd's drop indicator is a sibling of it and anchors to the row itself.
+    position: static;
+  }
+
+  // antd draws the switcher's hover background as a pseudo-element of a fixed height (its
+  // own title height) anchored to the top, so on our taller rows it stops short of the
+  // bottom edge.
+  .ant-tree-switcher::before {
+    height: 100%;
+  }
+
+  .ant-tree-checkbox {
+    margin-inline-end: 8px;
+    // The checkbox has to sit in the same place whether or not the row is expanded, so it
+    // is always offset as if it were centered on one row, rather than centered on the
+    // treenode (which would drop it to the middle of a wrapped row). The offset is derived
+    // from the same tokens the browser centers by, so the two cannot drift apart. antd's
+    // own alignment (top, plus a small margin) leaves it above the dot and the name.
+    align-self: flex-start;
+    margin-block-start: calc((@segment-row-height - var(--ant-control-interactive-size)) / 2);
+  }
+
+  .segment-row__on-hover {
+    visibility: hidden;
+  }
+
+  // The segment that the volume tools currently write to, replacing the former brush icon.
+  // It is rendered inside the row but positioned against antd's row element (the nearest
+  // positioned ancestor), so that it reaches the left edge of the panel whatever the
+  // indentation of the row is. It can co-occur with the selection tint.
+  .segment-row__accent {
+    position: absolute;
+    left: @segments-tree-indent-unit;
+    top: 2px;
+    height: calc(100% - 4px);
+    width: 2px;
+    border-radius: 0 2px 2px 0;
+    background-color: var(--ant-color-primary);
   }
 }
-
-
 
 #segment-list {
   height: inherit;

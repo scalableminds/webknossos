@@ -6,7 +6,7 @@ import { mergeGeometries } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import { getDracoLoader } from "libs/draco";
 import Toast from "libs/toast";
-import { chunkDynamically, sleep } from "libs/utils";
+import { sleep } from "libs/utils";
 import sortBy from "lodash-es/sortBy";
 import zip from "lodash-es/zip";
 import messages from "messages";
@@ -56,7 +56,12 @@ import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
 import { acquireMeshWorker, releaseMeshWorker } from "./common_mesh_saga";
-import { clearMeshChunkCaches, getMeshChunkData, listMeshChunks } from "./mesh_chunk_provider";
+import { GlobalMeshChunkProvider } from "./mesh_chunk_provider";
+import {
+  batchMeshChunksForLoading,
+  getMeshChunkData,
+  listMeshChunks,
+} from "./mesh_chunk_provider_accessors";
 
 const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
 
@@ -101,7 +106,7 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   fetchDeferredsPerLayer[layerName] = deferred;
   if (mustRequest) {
     // The mesh files might have been recomputed, so cached chunks can't be trusted anymore.
-    clearMeshChunkCaches();
+    GlobalMeshChunkProvider.clear();
   }
 
   const availableMeshFiles = yield* call(
@@ -391,30 +396,26 @@ function* loadPrecomputedMeshesInChunksForLod(
     return;
   }
   const availableChunks = availableChunksMap[lod];
+  const meshFileLocation = {
+    dataStoreUrl: dataset.dataStore.url,
+    datasetId: dataset.id,
+    layerName: getBaseSegmentationName(segmentationLayer),
+    meshFileName: meshFile.name,
+  };
   // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
   const sortedAvailableChunks = sortByDistanceTo(availableChunks, seedPosition);
 
-  const batches = chunkDynamically(
+  const batches = batchMeshChunksForLoading(
+    meshFileLocation,
     sortedAvailableChunks as meshApi.MeshChunk[],
     MIN_BATCH_SIZE_IN_BYTES,
-    (chunk) => chunk.byteSize,
   );
 
   let bufferGeometries: UnmergedBufferGeometryWithInfo[] = [];
   const tasks = batches.map(
     (chunks) =>
       function* loadChunks(): Saga<void> {
-        const dataForChunks = yield* call(
-          getMeshChunkData,
-          {
-            dataStoreUrl: dataset.dataStore.url,
-            datasetId: dataset.id,
-            layerName: getBaseSegmentationName(segmentationLayer),
-            meshFileName: meshFile.name,
-          },
-          segmentId,
-          chunks,
-        );
+        const dataForChunks = yield* call(getMeshChunkData, meshFileLocation, segmentId, chunks);
 
         const errorsWithDetails = [];
 

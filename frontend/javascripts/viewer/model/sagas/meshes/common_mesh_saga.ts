@@ -149,10 +149,6 @@ function* handleRemoveSegment(action: RemoveSegmentAction) {
   yield* put(removeMeshAction(action.layerName, action.segmentId));
 }
 
-// Note that merging segment items (MERGE_SEGMENTS_ITEMS) must not remove the mesh of the merged-away
-// agglomerate. refreshProofreadingSegmentsAndMeshes reads it to decide whether the meshes need a
-// refresh and which opacity and visibility to keep, and removes it afterwards.
-
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {
   const { id, visibility, layerName, additionalCoordinates } = action;
   const { segmentMeshController } = yield* call(getSceneController);

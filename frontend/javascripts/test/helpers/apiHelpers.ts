@@ -69,7 +69,7 @@ import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
-import { clearMeshChunkCaches } from "viewer/model/sagas/meshes/mesh_chunk_provider";
+import { GlobalMeshChunkProvider } from "viewer/model/sagas/meshes/mesh_chunk_provider";
 import rootSaga from "viewer/model/sagas/root_saga";
 import { setModel, setStore } from "viewer/singletons";
 import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
@@ -615,8 +615,7 @@ export async function setupWebknossosForTesting(
   vi.mocked(acquireAnnotationMutex).mockResolvedValue(MUTEX_GRANTED);
   Store.dispatch(restartSagaAction());
   Store.dispatch(resetStoreAction());
-  // The mesh chunk caches are module state and would otherwise leak between the tests of a file.
-  clearMeshChunkCaches();
+  GlobalMeshChunkProvider.clear();
   Store.dispatch(setActiveUserAction(dummyUser));
 
   Store.dispatch(setActiveOrganizationAction(dummyOrga));

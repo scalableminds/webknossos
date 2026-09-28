@@ -26,6 +26,7 @@ import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import { cancelSagaAction, resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
+import { GlobalMeshChunkProvider } from "viewer/model/sagas/meshes/mesh_chunk_provider";
 import rootSaga from "viewer/model/sagas/root_saga";
 import { Model, Store } from "viewer/singletons";
 import { startSaga, type Theme, type TraceOrViewCommand, type WebknossosState } from "viewer/store";
@@ -124,6 +125,7 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
     UrlManager.stopUrlUpdater();
     Model.reset();
     destroySceneController();
+    GlobalMeshChunkProvider.clear();
     Store.dispatch(resetStoreAction());
     Store.dispatch(cancelSagaAction());
 

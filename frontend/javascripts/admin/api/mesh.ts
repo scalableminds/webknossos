@@ -32,6 +32,26 @@ type ListMeshChunksRequest = {
   annotationVersion: number | undefined | null;
 };
 
+// The parameters of getMeshFileChunksForSegment, as used by the mesh chunk provider.
+export type ListMeshChunksParams = {
+  dataStoreUrl: string;
+  datasetId: string;
+  // The name of the layer in the data store, i.e. the fallback layer of a volume annotation layer.
+  layerName: string;
+  meshFile: APIMeshFileInfo;
+  segmentId: bigint;
+  // targetMappingName is the on-disk mapping name.
+  // In case of an editable mapping, this should still be the on-disk base
+  // mapping name (so that agglomerates that are untouched by the editable
+  // mapping can be looked up there without another round-trip between tracingstore
+  // and datastore)
+  targetMappingName: string | null | undefined;
+  // tracingId should be the tracing id, not the editable mapping id.
+  // If this is set, it is assumed that the request is about an editable mapping.
+  editableMapping: { tracingStoreUrl: string; tracingId: string } | null;
+  annotationVersion: number | undefined | null;
+};
+
 export function getMeshFileChunksForSegment(
   dataStoreUrl: string,
   datasetId: string,
@@ -84,6 +104,8 @@ type ListMeshChunksForSegmentsRequest = {
  * Lists the chunks of several unmapped segment ids in one request. Unlike
  * getMeshFileChunksForSegment, segments without a mesh don't make the request fail. They are
  * reported in segmentIdsWithoutMesh instead, and lods is empty if none of the segments has a mesh.
+ * This lets the mesh chunk provider remember which segments have no mesh, so that it doesn't list
+ * them again.
  */
 export function getMeshFileChunksForSegments(
   dataStoreUrl: string,

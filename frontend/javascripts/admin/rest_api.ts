@@ -2368,9 +2368,9 @@ export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bi
 export type SegmentsOfAgglomerate = {
   segmentIds: bigint[];
   // False if the editable mapping has no graph for the agglomerate at the requested version. This
-  // is the case for agglomerates that were never edited in this annotation (their segments are
-  // only listed in the agglomerate file) and for agglomerates that don't exist (any more).
-  // segmentIds is empty then.
+  // is the case for agglomerates that were not edited in this annotation up to that version (their
+  // segments are only listed in the agglomerate file) and for ids that never existed. segmentIds is
+  // empty then. An agglomerate that was merged into another one is present and has no segments.
   agglomerateIdIsPresent: boolean;
 };
 export async function getSegmentsForAgglomerateFromTracingStore<T extends number | bigint>(

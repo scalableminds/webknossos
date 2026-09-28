@@ -1,12 +1,12 @@
-import type { MeshChunk, MeshSegmentInfo } from "admin/api/mesh";
+import type { ListMeshChunksParams, MeshChunk, MeshSegmentInfo } from "admin/api/mesh";
 import { getSegmentsForAgglomerateFromTracingStore, meshApi } from "admin/rest_api";
 import type { APIMeshFileInfo } from "types/api_types";
+import { GlobalMeshChunkProvider } from "viewer/model/sagas/meshes/mesh_chunk_provider";
 import {
-  clearMeshChunkCaches,
+  batchMeshChunksForLoading,
   getMeshChunkData,
-  type ListMeshChunksParams,
   listMeshChunks,
-} from "viewer/model/sagas/meshes/mesh_chunk_provider";
+} from "viewer/model/sagas/meshes/mesh_chunk_provider_accessors";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("admin/rest_api", () => ({
@@ -79,7 +79,7 @@ async function loadAgglomerate2() {
 
 describe("Mesh chunk provider", () => {
   beforeEach(() => {
-    clearMeshChunkCaches();
+    GlobalMeshChunkProvider.clear();
     vi.resetAllMocks();
   });
 
@@ -218,7 +218,14 @@ describe("Mesh chunk provider", () => {
     });
   });
 
-  describe("getMeshChunkData", () => {
+  describe("chunk data", () => {
+    const location = {
+      dataStoreUrl: "http://datastore",
+      datasetId: "dataset",
+      layerName: "segmentation",
+      meshFileName: "meshfile",
+    };
+
     function mockChunkData() {
       chunkDataMock.mockImplementation(async (_dataStoreUrl, _datasetId, _layerName, batch) =>
         batch.requests.map(
@@ -228,12 +235,6 @@ describe("Mesh chunk provider", () => {
     }
 
     function getData(chunks: MeshChunk[]) {
-      const location = {
-        dataStoreUrl: "http://datastore",
-        datasetId: "dataset",
-        layerName: "segmentation",
-        meshFileName: "meshfile",
-      };
       return getMeshChunkData(location, 1n, chunks);
     }
 
@@ -272,6 +273,34 @@ describe("Mesh chunk provider", () => {
       expect(bufferFromCache?.byteLength).toBe(10);
       expect(firstBytes([bufferFromCache])).toEqual([10]);
       expect(chunkDataMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("batches cached and missing chunks separately, so that requests contain only missing chunks", async () => {
+      mockChunkData();
+      await getData([chunk(10n, 0), chunk(11n, 10)]);
+      const chunks = [
+        chunk(20n, 20),
+        chunk(10n, 0),
+        chunk(21n, 30),
+        chunk(11n, 10),
+        chunk(22n, 40),
+      ];
+
+      // A batch is closed once it has more than 15 bytes, i.e., after two chunks.
+      const batches = batchMeshChunksForLoading(location, chunks, 15);
+      expect(batches.map((batch) => batch.map((c) => c.unmappedSegmentId))).toEqual([
+        [20n, 21n],
+        [10n, 11n],
+        [22n],
+      ]);
+
+      for (const batch of batches) {
+        await getData(batch);
+      }
+      expect(chunkDataMock).toHaveBeenCalledTimes(3);
+      expect(chunkDataMock.mock.calls[1][3].requests.map((request) => request.byteOffset)).toEqual([
+        20, 30,
+      ]);
     });
   });
 });

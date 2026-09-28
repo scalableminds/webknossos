@@ -465,9 +465,7 @@ export function useSegmentContextMenuBuilder(
             label: "Delete Segment's Data",
           },
           listItems.segmentStatisticsItem,
-          // The mesh actions close the menu: they are the least frequent entries, and the
-          // mesh of a single segment used to be managed from its own child row in the tree,
-          // which is gone. Everything it offered lives here (and on the mesh chip).
+          // The mesh actions close the menu.
           { key: "meshActionDivider", type: "divider" },
           {
             key: "loadPrecomputedMesh",

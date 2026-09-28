@@ -89,8 +89,7 @@ export type ContextMenuDependencies = {
   meshFiles: MeshFiles;
   openStatisticsModal: (target: SegmentStatisticsTarget) => void;
   hideContextMenu: () => void;
-  // Puts the row with this node key into rename mode. The rows no longer carry an edit
-  // pencil, so the context menu is the discoverable way to rename (besides double-click).
+  // Puts the row with this node key into rename mode. The context menu is the discoverable way to rename (besides double-click).
   startRenaming: (nodeKey: string) => void;
 };
 

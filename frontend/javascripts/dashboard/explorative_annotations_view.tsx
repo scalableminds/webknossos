@@ -8,7 +8,6 @@ import Icon, {
   SearchOutlined,
   TeamOutlined,
   UnlockOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import ReadOnlyIcon from "@images/icons/icon-read-only.svg?react";
 import IconSort from "@images/icons/icon-sort.svg?react";
@@ -71,7 +70,11 @@ import {
   annotationToCompact,
 } from "types/api_types";
 import type { Comparator } from "types/type_utils";
-import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
+import {
+  getSkeletonStats,
+  getVolumeStats,
+  isAnnotationEditableByNonOwners,
+} from "viewer/model/accessors/annotation_accessor";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 import CategorizationLabel, {
   CategorizationSearch,
@@ -623,28 +626,34 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     return formatUserName(owner);
   };
 
-  // Most listed annotations are the user's own, so those only say "you", while annotations
-  // shared by others name their owner to stand out. In the admin view, all annotations belong to
-  // the viewed user, so the owner is shown plainly.
-  renderOwnerMetaItem = (owner: APIUserCompact | undefined) => {
-    if (owner == null) return null;
-    let ownerText: string;
-    if (this.props.isAdminView) {
-      ownerText = formatUserName(owner);
-    } else if (owner.id === this.props.activeUser.id) {
-      ownerText = "you";
-    } else {
-      ownerText = `shared by ${formatUserName(owner)}`;
+  // Most listed annotations are the user's own, so those only say "you". In the admin view, all
+  // annotations belong to the viewed user, so the owner is named plainly.
+  renderCreatedMetaItem = (annotation: APIAnnotationInfo) => {
+    const { owner } = annotation;
+    let ownerText: string | null = null;
+    if (owner != null) {
+      ownerText =
+        !this.props.isAdminView && owner.id === this.props.activeUser.id
+          ? "you"
+          : formatUserName(owner);
     }
     return (
-      <span key="owner" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <UserOutlined /> {ownerText}
+      <span key="created">
+        created <FormattedDate timestamp={annotation.created} />
+        {ownerText != null ? ` by ${ownerText}` : null}
       </span>
     );
   };
 
   renderAnnotationRow = (annotation: APIAnnotationInfo) => {
-    const owner = annotation.owner;
+    const stats = mapValues(
+      keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
+      (layer) => layer.stats,
+    );
+    // Checked here as well, so that no dangling separator dot is rendered for an empty stats item.
+    const hasNonZeroStats =
+      (getSkeletonStats(stats)?.treeCount ?? 0) > 0 ||
+      getVolumeStats(stats).some(([_tracingId, volumeStats]) => volumeStats.segmentCount > 0);
     const teamTags = annotation.teams.map((team) => (
       <Tag key={team.id} color={stringToTagColor(team.name)} variant="outlined">
         {team.name}
@@ -689,31 +698,28 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         </Space>
         <RowMetaLine
           items={[
-            <FormattedId key="id" id={annotation.id} />,
-            this.renderOwnerMetaItem(owner),
+            this.renderCreatedMetaItem(annotation),
+            // annotation.modified - annotation.created > 60 * 1000 ? (
+            //   <span key="modified">
+            //     modified <FormattedDate timestamp={annotation.modified} />
+            //   </span>
+            // ) : null,
             teamTags.length > 0 ? (
               <span key="teams" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <TeamOutlined /> shared with teams {teamTags}
               </span>
             ) : null,
-            <AnnotationStats
-              key="stats"
-              stats={mapValues(
-                keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
-                (layer) => layer.stats,
-              )}
-              asInfoBlock={false}
-              withMargin={false}
-              orientation="horizontal"
-            />,
-            <span key="created">
-              created <FormattedDate timestamp={annotation.created} />
-            </span>,
-            annotation.modified - annotation.created > 60 * 1000 ? (
-              <span key="modified">
-                modified <FormattedDate timestamp={annotation.modified} />
-              </span>
+            hasNonZeroStats ? (
+              <AnnotationStats
+                key="stats"
+                stats={stats}
+                asInfoBlock={false}
+                withMargin={false}
+                orientation="horizontal"
+                hideZeroCounts
+              />
             ) : null,
+            <FormattedId key="id" id={annotation.id} />,
           ]}
         />
       </div>

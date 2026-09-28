@@ -76,6 +76,7 @@ export function DetailsSidebar({
 
   return (
     <div
+      className="dashboard-details-sidebar"
       style={{ width: 300, padding: 16, position: "sticky", top: Constants.DEFAULT_NAVBAR_HEIGHT }}
     >
       {selectedDatasets.length === 1 ? (
@@ -134,13 +135,9 @@ function DatasetDetails({
   const renderOrganization = () => {
     if (!isForeignOrgaDataset) return;
     return (
-      <table>
-        <tbody>
-          <OwningOrganizationRow
-            organizationId={owningOrganizationName != null ? owningOrganizationName : ""}
-          />
-        </tbody>
-      </table>
+      <OwningOrganizationRow
+        organizationId={owningOrganizationName != null ? owningOrganizationName : ""}
+      />
     );
   };
 
@@ -169,16 +166,8 @@ function DatasetDetails({
             <div className="sidebar-label">Dimensions</div>
             {fullDataset?.isActive && (
               <div className="info-tab-block" style={{ marginTop: -3 }}>
-                <table
-                  style={{
-                    fontSize: 14,
-                  }}
-                >
-                  <tbody>
-                    <VoxelSizeRow dataset={fullDataset} />
-                    <DatasetExtentRow dataset={fullDataset} />
-                  </tbody>
-                </table>
+                <VoxelSizeRow dataset={fullDataset} />
+                <DatasetExtentRow dataset={fullDataset} />
               </div>
             )}
           </div>

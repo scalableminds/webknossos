@@ -6,7 +6,7 @@ import Icon, {
 } from "@ant-design/icons";
 import HighlighterIcon from "@images/icons/icon-highlighter.svg?react";
 import InterpolateIcon from "@images/icons/icon-interpolate.svg?react";
-import LoadMeshesIcon from "@images/icons/icon-load-meshes.svg?react";
+import MeshIcon from "@images/icons/icon-mesh-organic-boundary.svg?react";
 import OverwriteEmptyIcon from "@images/icons/icon-overwrite-empty.svg?react";
 import OverwriteEverythingIcon from "@images/icons/icon-overwrite-everything.svg?react";
 import RestrictFloodfillToBboxIcon from "@images/icons/icon-restrict-to-bounding-box.svg?react";
@@ -398,7 +398,7 @@ export function ProofreadingComponents() {
         active={autoRenderMeshes}
         style={NARROW_BUTTON_STYLE}
         onClick={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
-        icon={<Icon component={LoadMeshesIcon} />}
+        icon={<Icon component={MeshIcon} />}
       />
       <ToggleButton
         active={selectiveVisibilityInProofreading}

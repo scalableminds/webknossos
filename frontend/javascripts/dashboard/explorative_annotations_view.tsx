@@ -699,11 +699,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         <RowMetaLine
           items={[
             this.renderCreatedMetaItem(annotation),
-            // annotation.modified - annotation.created > 60 * 1000 ? (
-            //   <span key="modified">
-            //     modified <FormattedDate timestamp={annotation.modified} />
-            //   </span>
-            // ) : null,
             teamTags.length > 0 ? (
               <span key="teams" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <TeamOutlined /> shared with teams {teamTags}
@@ -713,7 +708,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
               <AnnotationStats
                 key="stats"
                 stats={stats}
-                asInfoBlock={false}
                 withMargin={false}
                 orientation="horizontal"
                 hideZeroCounts

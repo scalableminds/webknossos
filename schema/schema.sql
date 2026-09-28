@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(183);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(184);
 COMMIT TRANSACTION;
 
 
@@ -133,6 +133,7 @@ CREATE TABLE webknossos.datasets(
   rootPath TEXT,
   rootRealPath TEXT,
   mirrorPath TEXT,
+  thumbnailCacheVersion INT NOT NULL DEFAULT 0,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (directoryName, _organization),

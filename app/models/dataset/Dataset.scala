@@ -91,7 +91,8 @@ case class Dataset(
     rootRealPath: Option[String] = None,
     mirrorPath: Option[String] = None,
     created: Instant = Instant.now,
-    isDeleted: Boolean = false
+    isDeleted: Boolean = false,
+    thumbnailCacheVersion: Int = 0
 )
 
 case class DatasetCompactInfo(
@@ -110,6 +111,7 @@ case class DatasetCompactInfo(
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
     usedStorageBytes: Long,
+    thumbnailCacheVersion: Int,
     // Active explorationals listable by the requesting user. Only set if requested.
     annotationCount: Option[Long] = None
 ) derives JsonAutoFormat {
@@ -185,7 +187,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       r.rootrealpath,
       r.mirrorpath,
       Instant.fromSql(r.created),
-      r.isdeleted
+      r.isdeleted,
+      r.thumbnailcacheversion
     )
 
   override def anonymousReadAccessQ(token: Option[String]): SqlToken = {
@@ -347,6 +350,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               cl.names AS colorLayerNames,
               sl.names AS segmentationLayerNames,
               COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes,
+              d.thumbnailCacheVersion,
               $annotationCountColumn AS annotationCount
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
@@ -383,6 +387,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               String,
               String,
               Long,
+              Int,
               Option[Long]
           )
         ]
@@ -405,7 +410,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         segmentationLayerNames = parseArrayLiteral(row._13),
         // Only include usedStorage for datasets of your own organization.
         usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L,
-        annotationCount = row._15
+        thumbnailCacheVersion = row._15,
+        annotationCount = row._16
       )
     )
 
@@ -741,6 +747,13 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       _ <- assertUpdateAccess(datasetId)
       _ <- run(q"""UPDATE webknossos.datasets
                    SET mirrorPath = $mirrorPath
+                   WHERE _id = $datasetId""".asUpdate)
+    } yield ()
+
+  def incrementThumbnailCacheVersion(datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.datasets
+                   SET thumbnailCacheVersion = thumbnailCacheVersion + 1
                    WHERE _id = $datasetId""".asUpdate)
     } yield ()
 

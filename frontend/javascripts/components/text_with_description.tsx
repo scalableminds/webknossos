@@ -1,4 +1,4 @@
-import { AlignCenterOutlined } from "@ant-design/icons";
+import { AlignLeftOutlined } from "@ant-design/icons";
 import { Button, Popover, Tooltip } from "antd";
 import Markdown from "libs/markdown_adapter";
 import type React from "react";
@@ -71,7 +71,7 @@ const TextWithDescription: React.FC<Props> = (props) => {
               size="small"
               color="default"
               variant="text"
-              icon={<AlignCenterOutlined />}
+              icon={<AlignLeftOutlined />}
               style={{ marginInlineStart: 4 }}
             />
           </Popover>

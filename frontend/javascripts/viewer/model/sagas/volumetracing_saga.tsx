@@ -1,6 +1,9 @@
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import messages from "messages";
+import { encodeBucketDiffBase64 } from "prototypes/new_volume_architecture/diff";
+import { BrushDriver } from "prototypes/new_volume_architecture/integration/brush_driver";
+import { USE_NEW_VOLUME_ARCHITECTURE } from "prototypes/new_volume_architecture/integration/feature_flag";
 import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
@@ -57,7 +60,9 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { createSendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import Dimensions from "viewer/model/dimensions";
+import type { MagInfo } from "viewer/model/helpers/mag_info";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
@@ -68,7 +73,10 @@ import {
 } from "viewer/model/sagas/saga_helpers";
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
-import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
+import {
+  deleteSegmentDataVolumeAction,
+  updateBucketPartial,
+} from "viewer/model/sagas/volume/update_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
@@ -278,7 +286,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       const radius: Vector3 = [0, 1, 2].map(
         (axis) => (unzoomedRadius * baseVoxelFactors[axis]) / labeledMag[axis],
       ) as Vector3;
-      brushDriver = new BrushDriver(
+      const driver = new BrushDriver(
         {
           cube: segmentationLayer.cube,
           denseMags: segmentationLayer.cube.magInfo.getDenseMags(),
@@ -294,6 +302,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
         },
         toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
       );
+      spike = { driver, magInfo: spikeLayer.cube.magInfo };
       wroteVoxelsBox.value = true;
     }
 
@@ -348,14 +357,30 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     if (brushDriver != null) {
       // Pointer-up: mag propagation runs once over the coalesced write set.
-      brushDriver.finish();
-      // currentSectionLabeler.updateArea(...) above ran regardless of which
-      // path drew the stroke, so its centroid tracking is accurate here too.
-      // Without this, volume interpolation (which reads this via
-      // getLastLabelAction/getLabelActionFromPreviousSlice) never sees a
-      // previous slice and always reports "all recent label actions were
-      // performed on the current slice" — mirrors finishSectionLabeler below.
-      yield* put(registerLabelPointAction(currentSectionLabeler.getUnzoomedCentroid()));
+      const stats = brushDriver.finish();
+      console.info(
+        `[spike] brush: ${stats.voxels} voxels across ${stats.bucketDiffs.length} buckets, mags [${stats.mags.join(", ")}], ${stats.durationMs.toFixed(1)} ms`,
+      );
+      yield* put(
+        pushSaveQueueTransaction(
+          stats.bucketDiffs.map((diff) =>
+            updateBucketPartial(
+              createSendBucketInfo(
+                [
+                  diff.address[0],
+                  diff.address[1],
+                  diff.address[2],
+                  diff.address[3],
+                  additionalCoordinates,
+                ],
+                magInfo,
+              ),
+              encodeBucketDiffBase64(diff),
+              volumeTracing.tracingId,
+            ),
+          ),
+        ),
+      );
     } else {
       yield* call(
         finishSectionLabeler,

@@ -14,6 +14,13 @@ import { VolumeTransaction } from "../core/volume_transaction";
 import { rasterize } from "../core/voxel_rasterizer";
 import type { DriverOptions, DriverResult } from "./tool_driver_types";
 import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_data_cube_adapter";
+import type { AdditionalCoordinate } from "viewer/constants";
+import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import type { BucketDiff } from "../diff";
+import { rasterize } from "../rasterizer";
+import { VolumeTransaction } from "../transaction";
+import type { EditContext, MagIndex, OverwriteMode, SegmentId, Vector3 } from "../types";
+import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_cube_adapter";
 
 export interface BrushDriverOptions extends DriverOptions {
   overwriteMode: OverwriteMode;
@@ -92,7 +99,7 @@ export class BrushDriver {
     }
     return {
       voxels,
-      buckets: diff.bucketDiffs.length,
+      bucketDiffs: diff.bucketDiffs,
       mags: [...new Set(diff.bucketDiffs.map((d) => d.address[3]))].sort((a, b) => a - b),
       durationMs: performance.now() - this.startedAt,
     };

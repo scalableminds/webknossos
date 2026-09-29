@@ -3,17 +3,11 @@ import Toast from "libs/toast";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
-import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { getSelectedIds, getVisibleSegments } from "viewer/model/accessors/volumetracing_accessor";
-import {
-  setAdditionalCoordinatesAction,
-  setPositionAction,
-} from "viewer/model/actions/flycam_actions";
 import { setSelectedSegmentsOrGroupAction } from "viewer/model/actions/volumetracing_actions";
 import type { Segment } from "viewer/store";
-import Store from "viewer/store";
 import { getGroupUiNodeKey, getSegmentUiNodeKey } from "../hierarchy";
+import { useJumpToSegment } from "./use_jump_to_segment";
 
 export type SegmentSelection = {
   selectedSegmentIds: bigint[];
@@ -77,6 +71,7 @@ export function useSegmentSelection(): SegmentSelection {
     [setSelection],
   );
 
+  const jumpToSegment = useJumpToSegment();
   const selectSegmentAndJumpToPosition = useCallback(
     (segment: Segment) => {
       if (visibleSegmentationLayer == null) {
@@ -84,29 +79,9 @@ export function useSegmentSelection(): SegmentSelection {
         return;
       }
       focusSelection([segment.id], null);
-
-      if (!segment.anchorPosition) {
-        Toast.info("Cannot go to this segment, because its position is unknown.");
-        return;
-      }
-      const transformedPosition = layerToGlobalTransformedPosition(
-        segment.anchorPosition,
-        visibleSegmentationLayer.name,
-        "segmentation",
-        Store.getState(),
-      );
-      dispatch(setPositionAction(transformedPosition));
-
-      const { additionalCoordinates } = segment;
-      if (
-        additionalCoordinates != null &&
-        getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates) !==
-          getAdditionalCoordinatesAsString(additionalCoordinates)
-      ) {
-        dispatch(setAdditionalCoordinatesAction(additionalCoordinates));
-      }
+      jumpToSegment(segment);
     },
-    [dispatch, visibleSegmentationLayer, focusSelection],
+    [visibleSegmentationLayer, focusSelection, jumpToSegment],
   );
 
   // Memoize the derived arrays so their identities stay stable while the

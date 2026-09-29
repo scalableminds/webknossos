@@ -335,7 +335,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
       if (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing)) {
         // Close the polygon. When brushing, this causes an auto-fill which is why
-        // it's only performed when drawing (not when erasing).
+        // it's only performed when drawing (not when erasing): a common way to
+        // clean up an overfilled cell is to erase along its membrane, and an
+        // auto-fill would then erase the whole cell instead of just the stroke.
+        // See https://github.com/scalableminds/webknossos/issues/4624.
         currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
       }
 

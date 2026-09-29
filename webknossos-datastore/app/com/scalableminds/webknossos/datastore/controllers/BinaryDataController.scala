@@ -196,7 +196,6 @@ class BinaryDataController @Inject() (
     }
   }
 
-  // Without a configured range, use the sampled data range like the frontend does (load_histogram_data_saga.ts).
   private def resolveIntensityRange(
       datasetId: ObjectId,
       dataSourceId: DataSourceId,

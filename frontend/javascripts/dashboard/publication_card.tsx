@@ -8,11 +8,7 @@ import { compareBy, pluralize } from "libs/utils";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_types";
-import {
-  getSegmentationThumbnailURL,
-  getThumbnailURL,
-  hasSegmentation,
-} from "viewer/model/accessors/dataset_accessor";
+import { getDatasetThumbnailURL } from "viewer/model/accessors/dataset_accessor";
 
 type DatasetDetails = {
   species?: string;
@@ -155,7 +151,7 @@ function PublicationItemList({
             onMouseEnter={() => setActiveItem(item)}
           >
             <img
-              src={`${getThumbnailURL(item.dataset)}?w=${listThumbnailDimension}&h=${listThumbnailDimension}`}
+              src={`${getDatasetThumbnailURL(item.dataset)}&w=${listThumbnailDimension}&h=${listThumbnailDimension}`}
               alt=""
             />
             <Typography.Text ellipsis className="publication-item-row-name">
@@ -211,17 +207,10 @@ function PublicationPreview({ item }: { item: PublicationItem | null }) {
     return <div className="publication-preview" />;
   }
 
-  const imageSize = `?w=${thumbnailDimension}&h=${thumbnailDimension}`;
+  const imageSize = `&w=${thumbnailDimension}&h=${thumbnailDimension}`;
   return (
     <div className="publication-preview">
-      <img src={`${getThumbnailURL(item.dataset)}${imageSize}`} alt="" />
-      {hasSegmentation(item.dataset) && (
-        <img
-          src={`${getSegmentationThumbnailURL(item.dataset)}${imageSize}`}
-          alt=""
-          className="segmentation"
-        />
-      )}
+      <img src={`${getDatasetThumbnailURL(item.dataset)}${imageSize}`} alt="" />
       <PublicationPreviewCaption item={item} />
     </div>
   );

@@ -337,18 +337,18 @@ export function FloodFillSettings() {
     <div>
       <FillModeSwitch />
 
-      <ButtonComponent
-        style={{
-          ...NARROW_BUTTON_STYLE,
-          marginLeft: ACTIONBAR_MARGIN_LEFT,
-        }}
-        type={isRestrictedToBoundingBox ? "primary" : "default"}
-        onClick={toggleRestrictFloodfillToBoundingBox}
-        title={
-          "When enabled, the floodfill will be restricted to the bounding box enclosed by the clicked position. If multiple bounding boxes enclose that position, the smallest is used."
-        }
-        icon={<Icon component={RestrictFloodfillToBboxIcon} aria-label="Restrict floodfill" />}
-      />
+      {/* Wrap the button in Space.Compact so that the enlarged action bar icon size applies to it. */}
+      <Space.Compact style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}>
+        <ButtonComponent
+          style={NARROW_BUTTON_STYLE}
+          type={isRestrictedToBoundingBox ? "primary" : "default"}
+          onClick={toggleRestrictFloodfillToBoundingBox}
+          title={
+            "When enabled, the floodfill will be restricted to the bounding box enclosed by the clicked position. If multiple bounding boxes enclose that position, the smallest is used."
+          }
+          icon={<Icon component={RestrictFloodfillToBboxIcon} aria-label="Restrict floodfill" />}
+        />
+      </Space.Compact>
     </div>
   );
 }

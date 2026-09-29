@@ -58,7 +58,7 @@ class ThumbnailService @Inject() (
         width,
         height,
         mappingName,
-        _ => getLayerThumbnail(dataset, layerName, width, height, mappingName)(using GlobalAccessContext)
+        _ => getLayerThumbnail(dataset, layerName, width, height, mappingName)(using ec, GlobalAccessContext)
       )
     } yield image
   }
@@ -69,9 +69,10 @@ class ThumbnailService @Inject() (
       width: Int,
       height: Int,
       mappingName: Option[String]
-  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] =
+  )(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[Array[Byte]] =
     for {
       (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, layerName)
+      _ <- Fox.fromBool(layer.resolutions.nonEmpty) ?~> Msg.Dataset.noMags ~> NOT_FOUND
       viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)
       (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt, mapping) = selectParameters(
         viewConfiguration,
@@ -134,6 +135,7 @@ class ThumbnailService @Inject() (
       firstLayer <- usableDataSource.dataLayers.headOption.toFox ?~> Msg.Dataset.noLayers ~> NOT_FOUND
       viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)
       layersToRender = selectLayersToRender(viewConfiguration, usableDataSource)
+      _ <- Fox.fromBool(layersToRender.nonEmpty) ?~> Msg.Dataset.noMags ~> NOT_FOUND
       hasColorLayers = layersToRender.exists(_.category == LayerCategory.color)
       blendMode = readBlendMode(viewConfiguration)
       (center, zoom) = selectCenterAndZoom(viewConfiguration, usableDataSource, firstLayer)
@@ -274,8 +276,9 @@ class ThumbnailService @Inject() (
       orderedColorLayers ++ segmentationLayerOpt.toList
     }
 
-    val enabledLayersToRender = selectFrom(usableDataSource.dataLayers.filter(isEnabled))
-    if (enabledLayersToRender.nonEmpty) enabledLayersToRender else selectFrom(usableDataSource.dataLayers)
+    val renderableLayers = usableDataSource.dataLayers.filter(_.resolutions.nonEmpty)
+    val enabledLayersToRender = selectFrom(renderableLayers.filter(isEnabled))
+    if (enabledLayersToRender.nonEmpty) enabledLayersToRender else selectFrom(renderableLayers)
   }
 
   private def readIntensityRange(

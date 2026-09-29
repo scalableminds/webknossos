@@ -169,8 +169,8 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
   VOLUME_TOOLS: [
     AnnotationTool.MOVE,
     AnnotationTool.BRUSH,
-    AnnotationTool.ERASE_BRUSH,
     AnnotationTool.TRACE,
+    AnnotationTool.ERASE_BRUSH,
     AnnotationTool.ERASE_TRACE,
     AnnotationTool.FILL_CELL,
     AnnotationTool.VOXEL_PIPETTE,

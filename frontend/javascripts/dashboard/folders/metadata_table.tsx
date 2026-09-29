@@ -83,7 +83,9 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
 }) => {
   return (
     <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
-      <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>Add First Metadata Entry</Button>
+      <Button size="small" icon={<PlusOutlined />} className="small-add-button">
+        Add First Metadata Entry
+      </Button>
     </Dropdown>
   );
 };

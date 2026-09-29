@@ -349,6 +349,21 @@ export function* editVolumeLayerAsync(): Saga<never> {
     if (brushDriver != null) {
       // Pointer-up: mag propagation runs once over the coalesced write set.
       brushDriver.finish();
+      // A stroke released near where it started gets its enclosed area filled.
+      const fillBuffer = currentSectionLabeler.getFillingVoxelBuffer2D(activeTool);
+      if (!fillBuffer.isEmpty()) {
+        // The fill should be a separate undo step.
+        yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+        yield* call(
+          labelWithVoxelBuffer2D,
+          fillBuffer,
+          contourTracingMode,
+          overwriteMode,
+          labeledZoomStep,
+          currentSectionLabeler.getPlane(),
+          wroteVoxelsBox,
+        );
+      }
       // currentSectionLabeler.updateArea(...) above ran regardless of which
       // path drew the stroke, so its centroid tracking is accurate here too.
       // Without this, volume interpolation (which reads this via

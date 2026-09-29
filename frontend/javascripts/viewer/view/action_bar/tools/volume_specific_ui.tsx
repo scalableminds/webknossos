@@ -156,9 +156,8 @@ export function OverwriteModeSwitch({
         style={NARROW_BUTTON_STYLE}
         title={
           isOverwriteEmpty
-          ? "Overwrite-empty mode is active: brushing and erasing will only affect empty voxels (or, when erasing, voxels of the current segment ID). Click to switch to overwriting everything instead. This setting can be toggled by holding CTRL."
-          : "Overwrite-everything mode is active: brushing and erasing will overwrite any voxel, regardless of whether it is empty or already labeled. Click to switch to only overwriting empty areas. This setting can be toggled by holding CTRL."
-
+            ? "Overwrite-empty mode is active: brushing and erasing will only affect empty voxels (or, when erasing, voxels of the current segment ID). Click to switch to overwriting everything instead. This setting can be toggled by holding CTRL."
+            : "Overwrite-everything mode is active: brushing and erasing will overwrite any voxel, regardless of whether it is empty or already labeled. Click to switch to only overwriting empty areas. This setting can be toggled by holding CTRL."
         }
         icon={
           isOverwriteEmpty ? (

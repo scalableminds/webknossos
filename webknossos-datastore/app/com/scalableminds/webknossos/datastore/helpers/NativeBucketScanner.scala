@@ -92,4 +92,11 @@ class NativeBucketScanner {
       segmentId: Long
   ): Array[Byte]
 
+  @native def applyVoxelRuns(
+      bucketBytes: Array[Byte],
+      bytesPerElement: Int,
+      isSigned: Boolean,
+      voxelRunsBinary: Array[Byte]
+  ): Array[Byte]
+
 }

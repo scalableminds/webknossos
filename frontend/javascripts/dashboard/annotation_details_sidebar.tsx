@@ -101,41 +101,13 @@ function AnnotationDetails({
         onChangeName={onRename}
         hideEmptyDescription
       />
-      <div style={{ marginBottom: 4 }}>
-        <div className="sidebar-label">ID</div>
-        <Tag variant="outlined">
-          <FormattedId id={annotation.id} />
-        </Tag>
-      </div>
-      <div style={{ marginBottom: 4 }}>
-        <div className="sidebar-label">Created</div>
-        <FormattedDate timestamp={annotation.created} />
-      </div>
-      <div style={{ marginBottom: 4 }}>
-        <div className="sidebar-label">Last Modified</div>
-        <FormattedDate timestamp={annotation.modified} />
-      </div>
-      {annotation.owner != null ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Owner</div>
-          <div>{formatUserName(activeUser, annotation.owner)}</div>
-        </div>
-      ) : null}
-      {contributors.length > 0 ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Contributors</div>
-          <div>{contributors.map((user) => formatUserName(activeUser, user)).join(", ")}</div>
-        </div>
-      ) : null}
-      {annotation.collaborationMode !== "OwnerOnly" ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Who can edit</div>
-          <div>{COLLABORATION_MODE_LABELS[annotation.collaborationMode]}</div>
-        </div>
+      {Object.keys(stats).length > 0 ? (
+        <SidebarSection label="Statistics">
+          <AnnotationStats stats={stats} withMargin={false} orientation="horizontal" />
+        </SidebarSection>
       ) : null}
       {annotation.teams.length > 0 ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Access Permissions</div>
+        <SidebarSection label="Access Permissions">
           <Space wrap size="small">
             {annotation.teams.map((team) => (
               <Tag key={team.id} color={stringToTagColor(team.name)} variant="outlined">
@@ -143,23 +115,43 @@ function AnnotationDetails({
               </Tag>
             ))}
           </Space>
-        </div>
+        </SidebarSection>
       ) : null}
-      {Object.keys(stats).length > 0 ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Statistics</div>
-          <AnnotationStats stats={stats} withMargin={false} orientation="horizontal" />
-        </div>
+      {annotation.collaborationMode !== "OwnerOnly" ? (
+        <SidebarSection label="Edit Permissions">
+          {COLLABORATION_MODE_LABELS[annotation.collaborationMode]}
+        </SidebarSection>
       ) : null}
-      {tags != null ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Tags</div>
-          {tags}
-        </div>
+      {annotation.owner != null ? (
+        <SidebarSection label="Owner">
+          {formatUserName(activeUser, annotation.owner)}
+        </SidebarSection>
       ) : null}
+      {contributors.length > 0 ? (
+        <SidebarSection label="Contributors">
+          {contributors.map((user) => formatUserName(activeUser, user)).join(", ")}
+        </SidebarSection>
+      ) : null}
+      <SidebarSection label="Created">
+        <div>
+          <FormattedDate timestamp={annotation.created} />
+          {annotation.modified - annotation.created > 60 * 1000 ? (
+            <div>
+              <Typography.Text type="secondary">
+                modified <FormattedDate timestamp={annotation.modified} />
+              </Typography.Text>
+            </div>
+          ) : null}
+        </div>
+      </SidebarSection>
+      <SidebarSection label="ID">
+        <Tag variant="outlined">
+          <FormattedId id={annotation.id} />
+        </Tag>
+      </SidebarSection>
+      {tags != null ? <SidebarSection label="Tags">{tags}</SidebarSection> : null}
       {onArchive != null || onToggleLock != null ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Additional Actions</div>
+        <SidebarSection label="Additional Actions">
           <div className="dataset-table-actions">
             {onArchive != null ? (
               <AsyncLink onClick={onArchive} icon={<InboxOutlined className="icon-margin-right" />}>
@@ -181,8 +173,17 @@ function AnnotationDetails({
               </AsyncLink>
             ) : null}
           </div>
-        </div>
+        </SidebarSection>
       ) : null}
     </Spin>
+  );
+}
+
+function SidebarSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="dashboard-details-section">
+      <div className="sidebar-label">{label}</div>
+      <div className="dashboard-details-section-content">{children}</div>
+    </div>
   );
 }

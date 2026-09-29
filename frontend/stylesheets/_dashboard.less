@@ -350,6 +350,27 @@ pre.dataset-import-folder-structure-hint {
   }
 }
 
+// A labelled section of a details sidebar. The content is a flex row so that plain text,
+// tags and other inline blocks all take up the same vertical space.
+.dashboard-details-section {
+  margin-bottom: 12px;
+
+  .sidebar-label {
+    line-height: 16px;
+  }
+}
+
+.dashboard-details-section-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+
+  // Blocks that bring their own margins (e.g. the annotation stats).
+  > .info-tab-block {
+    margin: 0 !important;
+  }
+}
+
 .dashboard-details-sidebar .ant-tag,
 .dashboard-list-table .ant-tag {
   max-width: 100%;

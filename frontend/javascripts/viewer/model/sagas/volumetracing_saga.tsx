@@ -374,7 +374,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
       // getLastLabelAction/getLabelActionFromPreviousSlice) never sees a
       // previous slice and always reports "all recent label actions were
       // performed on the current slice" — mirrors finishSectionLabeler below.
-      yield* put(registerLabelPointAction(currentSectionLabeler.getUnzoomedCentroid()));
+      const centroid = currentSectionLabeler.getUnzoomedCentroid();
+      if (centroid != null) {
+        yield* put(registerLabelPointAction(centroid));
+      }
     } else {
       yield* call(
         finishSectionLabeler,
@@ -438,7 +441,10 @@ export function* finishSectionLabeler(
     );
   }
 
-  yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
+  const centroid = sectionLabeler.getUnzoomedCentroid();
+  if (centroid != null) {
+    yield* put(registerLabelPointAction(centroid));
+  }
 }
 
 function* ensureSegmentExists(

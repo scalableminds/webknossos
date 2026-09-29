@@ -39,7 +39,7 @@ function formatHumanReadable(localDate: dayjs.Dayjs, dateOnly: boolean): string 
   }
 
   if (localDate.isSame(todayStart, "day")) {
-    return localDate.format("HH:mm");
+    return localDate.format("[today] HH:mm");
   }
 
   if (localDate.isAfter(todayStart.subtract(7, "day"), "day")) {

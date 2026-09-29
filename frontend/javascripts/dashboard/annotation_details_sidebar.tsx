@@ -13,6 +13,7 @@ import { getStatsOfAnnotationInfo } from "viewer/model/accessors/annotation_acce
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_section";
 import { AnnotationIdentity } from "viewer/view/right_border_tabs/info_tab/identity_block";
+import { AnnotationStatusLabels } from "./annotation_status_labels";
 import { SidebarSection } from "./sidebar_section";
 
 // Worded like the options of the share modal.
@@ -27,6 +28,7 @@ const COLLABORATION_MODE_LABELS: Record<
 export function AnnotationDetailsSidebar({
   annotation,
   activeUser,
+  isReadOnly,
   tags,
   onRename,
   onArchive,
@@ -34,6 +36,7 @@ export function AnnotationDetailsSidebar({
 }: {
   annotation: APIAnnotationInfo | null;
   activeUser: APIUser;
+  isReadOnly: boolean;
   // The (editable) tags, rendered by the list so that they behave the same in both places.
   tags: React.ReactNode;
   // Only passed if the annotation may be renamed by the active user.
@@ -57,6 +60,7 @@ export function AnnotationDetailsSidebar({
         key={annotation.id}
         annotation={annotation}
         activeUser={activeUser}
+        isReadOnly={isReadOnly}
         tags={tags}
         onRename={onRename}
         onArchive={onArchive}
@@ -69,6 +73,7 @@ export function AnnotationDetailsSidebar({
 function AnnotationDetails({
   annotation,
   activeUser,
+  isReadOnly,
   tags,
   onRename,
   onArchive,
@@ -76,6 +81,7 @@ function AnnotationDetails({
 }: {
   annotation: APIAnnotationInfo;
   activeUser: APIUser;
+  isReadOnly: boolean;
   // The (editable) tags, rendered by the list so that they behave the same in both places.
   tags: React.ReactNode;
   onRename?: (newName: string) => void;
@@ -102,6 +108,11 @@ function AnnotationDetails({
         onChangeName={onRename}
         hideEmptyDescription
       />
+      {isReadOnly || annotation.isLockedByOwner ? (
+        <div className="dashboard-details-status-labels">
+          <AnnotationStatusLabels isReadOnly={isReadOnly} isLocked={annotation.isLockedByOwner} />
+        </div>
+      ) : null}
       {Object.keys(stats).length > 0 ? (
         <SidebarSection label="Statistics">
           <AnnotationStats stats={stats} withMargin={false} orientation="horizontal" />

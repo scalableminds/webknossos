@@ -1,12 +1,10 @@
 import Icon, {
   DownloadOutlined,
   FolderOpenOutlined,
-  LockOutlined,
   PlayCircleOutlined,
   SearchOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import ReadOnlyIcon from "@images/icons/icon-read-only.svg?react";
 import IconSort from "@images/icons/icon-sort.svg?react";
 import { PropTypes } from "@scalableminds/prop-types";
 import {
@@ -24,7 +22,6 @@ import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
-import LinkButton from "components/link_button";
 import TextWithDescription from "components/text_with_description";
 import {
   FilterChip,
@@ -72,6 +69,7 @@ import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_acces
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_section";
 import { AnnotationDetailsSidebar } from "./annotation_details_sidebar";
+import { AnnotationStatusLabels } from "./annotation_status_labels";
 import { AnnotationTags } from "./annotation_tags";
 import { DashboardEmptyAnnotationsPlaceholder } from "./dashboard_empty_annotations_placeholder";
 import { DashboardTopBar } from "./dashboard_top_bar";
@@ -640,24 +638,10 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     return (
       <div>
         {this.renderNameWithDescription(annotation)}
-        {!this.isAnnotationEditable(annotation) ? (
-          <LinkButton
-            disabled
-            className="dashboard-annotation-status-label"
-            icon={<Icon component={ReadOnlyIcon} />}
-          >
-            read-only
-          </LinkButton>
-        ) : null}
-        {annotation.isLockedByOwner ? (
-          <LinkButton
-            disabled
-            className="dashboard-annotation-status-label"
-            icon={<LockOutlined />}
-          >
-            locked
-          </LinkButton>
-        ) : null}
+        <AnnotationStatusLabels
+          isReadOnly={!this.isAnnotationEditable(annotation)}
+          isLocked={annotation.isLockedByOwner}
+        />
         {this.renderTags(annotation, "dashboard-annotation-tags")}
         <RowMetaLine
           items={[
@@ -964,6 +948,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         <AnnotationDetailsSidebar
           annotation={selectedAnnotation}
           activeUser={this.props.activeUser}
+          isReadOnly={selectedAnnotation != null && !this.isAnnotationEditable(selectedAnnotation)}
           tags={
             selectedAnnotation != null &&
             (selectedAnnotation.tags.length > 0 || !this.state.shouldShowArchivedAnnotations)

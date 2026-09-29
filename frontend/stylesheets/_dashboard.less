@@ -346,14 +346,18 @@ pre.dataset-import-folder-structure-hint {
   }
 
   .info-tab-identity {
-    padding: 0 0 12px;
+    padding: 0 0 10px 0;
+  }
+  .info-tab-title {
+    font-size: 18px;
+    font-weight: var(--ant-font-weight-strong);
   }
 }
 
-// A labelled section of a details sidebar. The content is a flex row so that plain text,
+// A labelled section of a details sidebar. The content is a flex column so that plain text,
 // tags and other inline blocks all take up the same vertical space.
 .dashboard-details-section {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 
   .sidebar-label {
     line-height: 16px;
@@ -362,11 +366,12 @@ pre.dataset-import-folder-structure-hint {
 
 .dashboard-details-section-content {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
 
-  // Blocks that bring their own margins (e.g. the annotation stats).
+  // Blocks that bring their own margins (e.g. the annotation stats or dataset dimensions).
   > .info-tab-block {
+    align-self: stretch;
     margin: 0 !important;
   }
 }

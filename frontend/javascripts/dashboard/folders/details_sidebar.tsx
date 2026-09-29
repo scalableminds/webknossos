@@ -37,6 +37,7 @@ import {
 } from "../advanced_dataset/delete_datasets_modal";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
+import { SidebarSection } from "../sidebar_section";
 import MetadataTable from "./metadata_table";
 
 export function DetailsSidebar({
@@ -157,60 +158,50 @@ function DatasetDetails({
       {fullDataset?.description ? <Markdown>{fullDataset.description}</Markdown> : null}
       {renderOrganization()}
       {selectedDataset.isActive && (
-        <div>
-          <div className="sidebar-label">Dimensions</div>
+        <SidebarSection label="Dimensions">
           {fullDataset?.isActive && (
-            <div className="info-tab-block" style={{ marginTop: -3 }}>
+            <div className="info-tab-block">
               <VoxelSizeRow dataset={fullDataset} />
               <DatasetExtentRow dataset={fullDataset} />
             </div>
           )}
-        </div>
+        </SidebarSection>
       )}
 
-      <div style={{ marginBottom: 4 }}>
-        <div className="sidebar-label">Access Permissions</div>
-
+      <SidebarSection label="Access Permissions">
         {fullDataset && (
           <TeamTags dataset={fullDataset} emptyValue="Administrators & Dataset Managers" />
         )}
-      </div>
+      </SidebarSection>
 
-      <div style={{ marginBottom: 4 }}>
-        <div className="sidebar-label">Layers</div>
+      <SidebarSection label="Layers">
         {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
-      </div>
+      </SidebarSection>
 
       {fullDataset?.uploaderFullName != null && (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Uploaded By</div>
-          <div>{fullDataset.uploaderFullName}</div>
-        </div>
+        <SidebarSection label="Uploaded By">{fullDataset.uploaderFullName}</SidebarSection>
       )}
 
-      <div style={{ marginBottom: 4 }}>
-        <div className="sidebar-label">Datastore</div>
+      <SidebarSection label="Datastore">
         {fullDataset && (
           <Tag color={stringToTagColor(fullDataset.dataStore.name)} variant="outlined">
             {fullDataset.dataStore.name}
           </Tag>
         )}
-      </div>
+      </SidebarSection>
 
-      <div style={{ marginBottom: 4 }}>
-        <div className="sidebar-label">ID</div>
+      <SidebarSection label="ID">
         {fullDataset && (
           <Tag variant="outlined">
             <FormattedId id={fullDataset.id} />
           </Tag>
         )}
-      </div>
+      </SidebarSection>
 
       {selectedDataset.isActive ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Tags</div>
+        <SidebarSection label="Tags">
           <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
-        </div>
+        </SidebarSection>
       ) : null}
 
       {fullDataset && (
@@ -218,18 +209,16 @@ function DatasetDetails({
         <MetadataTable datasetOrFolder={fullDataset} key={`${fullDataset.id}#dataset`} />
       )}
       {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Used Storage</div>
+        <SidebarSection label="Used Storage">
           <Tooltip
             title={`${Intl.NumberFormat().format(fullDataset.usedStorageBytes)} bytes`}
             placement="left"
           >
             <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
           </Tooltip>
-        </div>
+        </SidebarSection>
       ) : null}
-      <div style={{ marginBottom: 4 }}>
-        <div className="sidebar-label">Additional Actions</div>
+      <SidebarSection label="Additional Actions">
         <div className="dataset-table-actions">
           {annotationCount != null && annotationCount > 0 ? (
             <Link to={`/dashboard/annotations?dataset=${encodeURIComponent(selectedDataset.name)}`}>
@@ -252,7 +241,7 @@ function DatasetDetails({
             </a>
           ) : null}
         </div>
-      </div>
+      </SidebarSection>
       {deleteModal}
     </Spin>
   );
@@ -361,15 +350,13 @@ function FolderDetails({
             </Tooltip>
             . {message}
           </p>
-          <div className="sidebar-label">Access Permissions</div>
-          <div style={{ marginBottom: 4 }}>
+          <SidebarSection label="Access Permissions">
             <FolderTeamTags folder={folder} />
-          </div>
+          </SidebarSection>
           {/* The key is crucial to enforce rerendering when the folder changes. This is necessary for the MetadataTable to work correctly. */}
           <MetadataTable datasetOrFolder={folder} key={`${folder.id}#folder`} />
           {folder.isEditable ? (
-            <div style={{ marginBottom: 4 }}>
-              <div className="sidebar-label">Additional Actions</div>
+            <SidebarSection label="Additional Actions">
               <div className="dataset-table-actions">
                 <a
                   onClick={() => context.setFolderModalState({ mode: "edit", folderId: folder.id })}
@@ -386,7 +373,7 @@ function FolderDetails({
                   </a>
                 )}
               </div>
-            </div>
+            </SidebarSection>
           ) : null}
         </div>
       ) : error ? (

@@ -13,6 +13,7 @@ import { getStatsOfAnnotationInfo } from "viewer/model/accessors/annotation_acce
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_section";
 import { AnnotationIdentity } from "viewer/view/right_border_tabs/info_tab/identity_block";
+import { SidebarSection } from "./sidebar_section";
 
 // Worded like the options of the share modal.
 const COLLABORATION_MODE_LABELS: Record<
@@ -176,14 +177,5 @@ function AnnotationDetails({
         </SidebarSection>
       ) : null}
     </Spin>
-  );
-}
-
-function SidebarSection({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="dashboard-details-section">
-      <div className="sidebar-label">{label}</div>
-      <div className="dashboard-details-section-content">{children}</div>
-    </div>
   );
 }

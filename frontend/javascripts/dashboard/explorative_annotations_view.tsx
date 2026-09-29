@@ -666,14 +666,18 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         {!this.isAnnotationEditable(annotation) ? (
           <LinkButton
             disabled
-            style={{ marginInlineEnd: 8 }}
+            className="dashboard-annotation-status-label"
             icon={<Icon component={ReadOnlyIcon} />}
           >
             read-only
           </LinkButton>
         ) : null}
         {annotation.isLockedByOwner ? (
-          <LinkButton disabled style={{ marginInlineEnd: 8 }} icon={<LockOutlined />}>
+          <LinkButton
+            disabled
+            className="dashboard-annotation-status-label"
+            icon={<LockOutlined />}
+          >
             locked
           </LinkButton>
         ) : null}

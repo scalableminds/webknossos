@@ -95,7 +95,7 @@ export function AnnotationStats({
         style={useStyleWithMargin ? styleWithLargeMarginBottom : styleWithSmallMargin}
       >
         {entries.map((entry) => (
-          <FastTooltip key={entry.key} placement="bottom" html={entry.tooltipHtml}>
+          <FastTooltip key={entry.key} placement="top" html={entry.tooltipHtml}>
             <Icon component={entry.icon} className="info-tab-icon" aria-label={entry.ariaLabel} />{" "}
             {formatNumber(entry.count)}
           </FastTooltip>

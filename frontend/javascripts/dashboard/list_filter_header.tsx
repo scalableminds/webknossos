@@ -13,7 +13,7 @@ import {
   theme,
 } from "antd";
 import type React from "react";
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { getCategorizationTagColor } from "viewer/view/components/categorization_label";
 
 export function ListFilterHeader({
@@ -267,11 +267,12 @@ export function RowMetaLine({ items }: { items: React.ReactNode[] }) {
   return (
     <div className="dashboard-row-meta">
       {visibleItems.map((item, index) => (
+        // The dot is a sibling of the item so that the item's flex gap doesn't apply to it.
         // biome-ignore lint/suspicious/noArrayIndexKey: items are a stable, ordered list for a given row
-        <span className="dashboard-row-meta-item" key={index}>
+        <Fragment key={index}>
           {index > 0 ? <span className="dashboard-row-meta-dot">·</span> : null}
-          {item}
-        </span>
+          <span className="dashboard-row-meta-item">{item}</span>
+        </Fragment>
       ))}
     </div>
   );

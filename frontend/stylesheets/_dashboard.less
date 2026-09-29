@@ -316,9 +316,16 @@ pre.dataset-import-folder-structure-hint {
   }
 
   &-dot {
-    margin: 0 6px;
-    color: var(--ant-color-text-quaternary);
+    margin: 0 10px;
+    font-weight: bold;
+    color: var(--ant-color-text-tertiary);
   }
+}
+
+// read-only and locked labels for annotations
+.dashboard-annotation-status-label.ant-btn:disabled {
+  margin-inline-end: 8px;
+  color: var(--ant-color-text-description);
 }
 
 .dashboard-annotation-name-edit {

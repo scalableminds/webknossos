@@ -228,7 +228,7 @@ describe("Volume Tracing", () => {
       Store.dispatch(setActiveCellAction(newCellId));
     });
 
-    it<WebknossosTestContext>("fills a stroke released near its start, as a separate undo step", async ({
+    it<WebknossosTestContext>("fills a stroke released near its start, in the same undo step", async ({
       api,
     }) => {
       const layerName = api.data.getVolumeTracingLayerIds()[0];
@@ -238,19 +238,13 @@ describe("Volume Tracing", () => {
       expect(await api.data.getDataValue(layerName, inside)).toBe(Number(newCellId));
       expect(await api.data.getDataValue(layerName, onStroke)).toBe(Number(newCellId));
 
+      // One undo removes both: the fill is not an undo step of its own.
       await dispatchUndoAsync(Store.dispatch);
       expect(await api.data.getDataValue(layerName, inside), "fill undone").toBe(0);
-      expect(await api.data.getDataValue(layerName, onStroke), "stroke kept").toBe(
-        Number(newCellId),
-      );
-
-      await dispatchUndoAsync(Store.dispatch);
       expect(await api.data.getDataValue(layerName, onStroke), "stroke undone").toBe(0);
     });
 
-    it<WebknossosTestContext>("does not fill an open stroke, and adds no extra undo step", async ({
-      api,
-    }) => {
+    it<WebknossosTestContext>("does not fill an open stroke", async ({ api }) => {
       const layerName = api.data.getVolumeTracingLayerIds()[0];
       // Released at the bottom-left corner, ~40 voxels from the first contour point.
       brushStroke(squarePath);
@@ -258,7 +252,6 @@ describe("Volume Tracing", () => {
       expect(await api.data.getDataValue(layerName, inside)).toBe(0);
       expect(await api.data.getDataValue(layerName, onStroke)).toBe(Number(newCellId));
 
-      // A single undo removes the stroke: no empty undo step was pushed for the fill.
       await dispatchUndoAsync(Store.dispatch);
       expect(await api.data.getDataValue(layerName, onStroke)).toBe(0);
     });

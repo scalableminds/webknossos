@@ -353,42 +353,20 @@ export function* editVolumeLayerAsync(): Saga<never> {
       // Only a stroke that wrote something counts, so that the "no voxels
       // were changed" hint below still fires when overwrite-empty skipped all.
       if (brushDriver.finish().voxels > 0) wroteVoxelsBox.value = true;
-      // A stroke released near where it started gets its enclosed area filled.
-      const fillBuffer = currentSectionLabeler.getFillingVoxelBuffer2D(activeTool);
-      if (!fillBuffer.isEmpty()) {
-        // The fill should be a separate undo step.
-        yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
-        yield* call(
-          labelWithVoxelBuffer2D,
-          fillBuffer,
-          contourTracingMode,
-          overwriteMode,
-          labeledZoomStep,
-          currentSectionLabeler.getPlane(),
-          wroteVoxelsBox,
-        );
-      }
-      // currentSectionLabeler.updateArea(...) above ran regardless of which
-      // path drew the stroke, so its centroid tracking is accurate here too.
-      // Without this, volume interpolation (which reads this via
-      // getLastLabelAction/getLabelActionFromPreviousSlice) never sees a
-      // previous slice and always reports "all recent label actions were
-      // performed on the current slice" — mirrors finishSectionLabeler below.
-      const centroid = currentSectionLabeler.getUnzoomedCentroid();
-      if (centroid != null) {
-        yield* put(registerLabelPointAction(centroid));
-      }
-    } else {
-      yield* call(
-        finishSectionLabeler,
-        currentSectionLabeler,
-        activeTool,
-        contourTracingMode,
-        overwriteMode,
-        labeledZoomStep,
-        wroteVoxelsBox,
-      );
     }
+    // For every tool, including the brush: fills the area enclosed by the
+    // stroke if there is one (for the brush, only when it is released near its
+    // start), within the same undo step, and registers the stroke for volume
+    // interpolation.
+    yield* call(
+      finishSectionLabeler,
+      currentSectionLabeler,
+      activeTool,
+      contourTracingMode,
+      overwriteMode,
+      labeledZoomStep,
+      wroteVoxelsBox,
+    );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     yield* put(
       updateSegmentAction(

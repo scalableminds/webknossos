@@ -77,7 +77,14 @@ export function DetailsSidebar({
   return (
     <div
       className="dashboard-details-sidebar"
-      style={{ width: 300, padding: 16, position: "sticky", top: Constants.DEFAULT_NAVBAR_HEIGHT }}
+      style={{
+        width: 300,
+        padding: 16,
+        position: "sticky",
+        top: Constants.DEFAULT_NAVBAR_HEIGHT,
+        maxHeight: `calc(100vh - ${Constants.DEFAULT_NAVBAR_HEIGHT}px)`,
+        overflowY: "auto",
+      }}
     >
       {selectedDatasets.length === 1 ? (
         <DatasetDetails

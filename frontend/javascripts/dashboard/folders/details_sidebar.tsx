@@ -25,7 +25,6 @@ import keyBy from "lodash-es/keyBy";
 import { useEffect } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact, Folder } from "types/api_types";
-import Constants from "viewer/constants";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { DatasetExtentRow } from "viewer/view/right_border_tabs/info_tab/dataset_extent_row";
 import { OwningOrganizationRow } from "viewer/view/right_border_tabs/info_tab/owning_organization_row";
@@ -75,17 +74,7 @@ export function DetailsSidebar({
   }, [selectedDatasets, context.activeFolderId]);
 
   return (
-    <div
-      className="dashboard-details-sidebar"
-      style={{
-        width: 300,
-        padding: 16,
-        position: "sticky",
-        top: Constants.DEFAULT_NAVBAR_HEIGHT,
-        maxHeight: `calc(100vh - ${Constants.DEFAULT_NAVBAR_HEIGHT}px)`,
-        overflowY: "auto",
-      }}
-    >
+    <div className="dashboard-details-sidebar">
       {selectedDatasets.length === 1 ? (
         <DatasetDetails
           key={selectedDatasets[0].id}
@@ -149,7 +138,7 @@ function DatasetDetails({
   };
 
   return (
-    <>
+    <Spin spinning={isFetching}>
       <Typography.Title level={4} style={{ wordBreak: "break-all" }}>
         {selectedDataset.name}
         {selectedDataset.isEditable ? (
@@ -167,69 +156,67 @@ function DatasetDetails({
       </Typography.Title>
       {fullDataset?.description ? <Markdown>{fullDataset.description}</Markdown> : null}
       {renderOrganization()}
-      <Spin spinning={isFetching}>
-        {selectedDataset.isActive && (
-          <div>
-            <div className="sidebar-label">Dimensions</div>
-            {fullDataset?.isActive && (
-              <div className="info-tab-block" style={{ marginTop: -3 }}>
-                <VoxelSizeRow dataset={fullDataset} />
-                <DatasetExtentRow dataset={fullDataset} />
-              </div>
-            )}
-          </div>
-        )}
-
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Access Permissions</div>
-
-          {fullDataset && (
-            <TeamTags dataset={fullDataset} emptyValue="Administrators & Dataset Managers" />
+      {selectedDataset.isActive && (
+        <div>
+          <div className="sidebar-label">Dimensions</div>
+          {fullDataset?.isActive && (
+            <div className="info-tab-block" style={{ marginTop: -3 }}>
+              <VoxelSizeRow dataset={fullDataset} />
+              <DatasetExtentRow dataset={fullDataset} />
+            </div>
           )}
         </div>
+      )}
 
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Layers</div>
-          {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
-        </div>
-
-        {fullDataset?.uploaderFullName != null && (
-          <div style={{ marginBottom: 4 }}>
-            <div className="sidebar-label">Uploaded By</div>
-            <div>{fullDataset.uploaderFullName}</div>
-          </div>
-        )}
-
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Datastore</div>
-          {fullDataset && (
-            <Tag color={stringToTagColor(fullDataset.dataStore.name)} variant="outlined">
-              {fullDataset.dataStore.name}
-            </Tag>
-          )}
-        </div>
-
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">ID</div>
-          {fullDataset && (
-            <Tag variant="outlined">
-              <FormattedId id={fullDataset.id} />
-            </Tag>
-          )}
-        </div>
-
-        {selectedDataset.isActive ? (
-          <div style={{ marginBottom: 4 }}>
-            <div className="sidebar-label">Tags</div>
-            <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
-          </div>
-        ) : null}
+      <div style={{ marginBottom: 4 }}>
+        <div className="sidebar-label">Access Permissions</div>
 
         {fullDataset && (
-          /* The key is crucial to enforce rerendering when the dataset changes. This is necessary for the MetadataTable to work correctly. */
-          <MetadataTable datasetOrFolder={fullDataset} key={`${fullDataset.id}#dataset`} />
+          <TeamTags dataset={fullDataset} emptyValue="Administrators & Dataset Managers" />
         )}
-      </Spin>
+      </div>
+
+      <div style={{ marginBottom: 4 }}>
+        <div className="sidebar-label">Layers</div>
+        {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
+      </div>
+
+      {fullDataset?.uploaderFullName != null && (
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">Uploaded By</div>
+          <div>{fullDataset.uploaderFullName}</div>
+        </div>
+      )}
+
+      <div style={{ marginBottom: 4 }}>
+        <div className="sidebar-label">Datastore</div>
+        {fullDataset && (
+          <Tag color={stringToTagColor(fullDataset.dataStore.name)} variant="outlined">
+            {fullDataset.dataStore.name}
+          </Tag>
+        )}
+      </div>
+
+      <div style={{ marginBottom: 4 }}>
+        <div className="sidebar-label">ID</div>
+        {fullDataset && (
+          <Tag variant="outlined">
+            <FormattedId id={fullDataset.id} />
+          </Tag>
+        )}
+      </div>
+
+      {selectedDataset.isActive ? (
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">Tags</div>
+          <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
+        </div>
+      ) : null}
+
+      {fullDataset && (
+        /* The key is crucial to enforce rerendering when the dataset changes. This is necessary for the MetadataTable to work correctly. */
+        <MetadataTable datasetOrFolder={fullDataset} key={`${fullDataset.id}#dataset`} />
+      )}
       {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Used Storage</div>
@@ -242,7 +229,7 @@ function DatasetDetails({
         </div>
       ) : null}
       <div style={{ marginBottom: 4 }}>
-        <div className="sidebar-label">Actions</div>
+        <div className="sidebar-label">Additional Actions</div>
         <div className="dataset-table-actions">
           {annotationCount != null && annotationCount > 0 ? (
             <Link to={`/dashboard/annotations?dataset=${encodeURIComponent(selectedDataset.name)}`}>
@@ -267,7 +254,7 @@ function DatasetDetails({
         </div>
       </div>
       {deleteModal}
-    </>
+    </Spin>
   );
 }
 
@@ -382,7 +369,7 @@ function FolderDetails({
           <MetadataTable datasetOrFolder={folder} key={`${folder.id}#folder`} />
           {folder.isEditable ? (
             <div style={{ marginBottom: 4 }}>
-              <div className="sidebar-label">Actions</div>
+              <div className="sidebar-label">Additional Actions</div>
               <div className="dataset-table-actions">
                 <a
                   onClick={() => context.setFolderModalState({ mode: "edit", folderId: folder.id })}

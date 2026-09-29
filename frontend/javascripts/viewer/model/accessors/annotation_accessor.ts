@@ -218,6 +218,13 @@ export function getStats(annotation: StoreAnnotation): TracingStats {
   return stats;
 }
 
+// Stats of a compact annotation (e.g. in the dashboard), as stored per annotation layer.
+export function getStatsOfAnnotationInfo(annotation: APIAnnotationInfo): TracingStats {
+  return Object.fromEntries(
+    annotation.annotationLayers.map((layer) => [layer.tracingId, layer.stats]),
+  );
+}
+
 export function getCreationTimestamp(annotation: StoreAnnotation) {
   let timestamp = annotation.skeleton?.createdTimestamp;
   for (const volumeTracing of annotation.volumes) {

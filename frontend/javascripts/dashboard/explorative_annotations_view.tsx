@@ -1,13 +1,10 @@
 import Icon, {
   DownloadOutlined,
   FolderOpenOutlined,
-  InboxOutlined,
   LockOutlined,
   PlayCircleOutlined,
-  PlusOutlined,
   SearchOutlined,
   TeamOutlined,
-  UnlockOutlined,
 } from "@ant-design/icons";
 import ReadOnlyIcon from "@images/icons/icon-read-only.svg?react";
 import IconSort from "@images/icons/icon-sort.svg?react";
@@ -26,9 +23,7 @@ import { Button, Radio, Space, Table, Tag, Typography } from "antd";
 import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
-import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
-import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import TextWithDescription from "components/text_with_description";
 import {
@@ -53,9 +48,6 @@ import {
 import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import compact from "lodash-es/compact";
 import difference from "lodash-es/difference";
-import keyBy from "lodash-es/keyBy";
-import mapValues from "lodash-es/mapValues";
-import partial from "lodash-es/partial";
 import uniqBy from "lodash-es/uniqBy";
 import without from "lodash-es/without";
 import messages from "messages";
@@ -72,15 +64,15 @@ import {
 import type { Comparator } from "types/type_utils";
 import {
   getSkeletonStats,
+  getStatsOfAnnotationInfo,
   getVolumeStats,
   isAnnotationEditableByNonOwners,
 } from "viewer/model/accessors/annotation_accessor";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
-import CategorizationLabel, {
-  CategorizationSearch,
-} from "viewer/view/components/categorization_label";
-import EditableTextIcon from "viewer/view/components/editable_text_icon";
+import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_section";
+import { AnnotationDetailsSidebar } from "./annotation_details_sidebar";
+import { AnnotationTags } from "./annotation_tags";
 import { DashboardEmptyAnnotationsPlaceholder } from "./dashboard_empty_annotations_placeholder";
 import { DashboardTopBar } from "./dashboard_top_bar";
 
@@ -131,6 +123,7 @@ type State = {
   selectedOwnerId: string | null;
   selectedTeamId: string | null;
   sortOption: AnnotationSortOption;
+  selectedAnnotationId: string | null;
 };
 type PartialState = Pick<State, "searchQuery" | "shouldShowArchivedAnnotations">;
 const persistence = new Persistence<PartialState>(
@@ -164,6 +157,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     selectedOwnerId: null,
     selectedTeamId: null,
     sortOption: "modifiedDesc",
+    selectedAnnotationId: null,
   };
 
   // This attribute is not part of the state, since it is only set in the
@@ -367,19 +361,9 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     if (annotation.typ !== "Explorational") {
       return null;
     }
-    const isActiveUserOwner = annotation.owner?.id === this.props.activeUser.id;
-
     const { typ, id, state } = annotation;
 
     if (state === "Active") {
-      const isEditable = this.isAnnotationEditable(annotation);
-      let archiveDisabledReason: string | undefined;
-      if (!isEditable) {
-        archiveDisabledReason = "You don't have permission to archive this annotation.";
-      } else if (annotation.isLockedByOwner) {
-        archiveDisabledReason = "Locked annotations cannot be archived.";
-      }
-      // Always render all actions so that the 2x2 grid stays aligned across rows.
       return (
         <div className="annotation-row-actions">
           <Link to={`/annotations/${id}`}>
@@ -395,44 +379,17 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           >
             Download
           </AsyncLink>
-          <FastTooltip title={archiveDisabledReason}>
-            <AsyncLink
-              onClick={() => this.finishOrReopenAnnotation("finish", annotation)}
-              icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
-              disabled={archiveDisabledReason != null}
-            >
-              Archive
-            </AsyncLink>
-          </FastTooltip>
-          <FastTooltip
-            title={isActiveUserOwner ? undefined : "Only the owner can lock this annotation."}
-          >
-            <AsyncLink
-              onClick={() => this.setLockedState(annotation, !annotation.isLockedByOwner)}
-              icon={
-                annotation.isLockedByOwner ? (
-                  <LockOutlined key="lock" className="icon-margin-right" />
-                ) : (
-                  <UnlockOutlined key="unlock" className="icon-margin-right" />
-                )
-              }
-              disabled={!isActiveUserOwner}
-            >
-              {annotation.isLockedByOwner ? "Unlock" : "Lock"}
-            </AsyncLink>
-          </FastTooltip>
         </div>
       );
     } else {
       return (
-        <div>
+        <div className="annotation-row-actions">
           <AsyncLink
             onClick={() => this.finishOrReopenAnnotation("reopen", annotation)}
             icon={<FolderOpenOutlined key="folder" className="icon-margin-right" />}
           >
             Reopen
           </AsyncLink>
-          <br />
         </div>
       );
     }
@@ -581,29 +538,41 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     return filteredAnnotations.filter((el) => difference(this.state.tags, el.tags).length === 0);
   }
 
+  // The name is renamed in the details sidebar, so it's only a link to the annotation here.
   renderNameWithDescription(annotation: APIAnnotationInfo) {
-    const isEditable = this.isAnnotationEditable(annotation);
-    const linkTarget = `/annotations/${annotation.id}`;
     return (
       <span
-        className="dashboard-annotation-name-edit"
+        className="dashboard-annotation-name"
         style={{
           marginInlineEnd: 8,
         }}
       >
         <TextWithDescription
-          isEditable={isEditable}
-          value={annotation.name ? annotation.name : "Unnamed Annotation"}
-          onChange={(newName) => this.renameAnnotation(annotation, newName)}
-          label="Annotation Name"
+          isEditable={false}
+          value={annotation.name}
+          placeholder="Unnamed annotation"
           description={annotation.description}
-          width={400}
-          // Makes the name itself a link to the annotation (only the edit icon
-          // triggers renaming then).
-          linkTarget={linkTarget}
+          linkTarget={`/annotations/${annotation.id}`}
           linkTitle="Open"
         />
       </span>
+    );
+  }
+
+  mayArchiveAnnotation(annotation: APIAnnotationInfo): boolean {
+    return (
+      annotation.typ === "Explorational" &&
+      annotation.state === "Active" &&
+      this.isAnnotationEditable(annotation) &&
+      !annotation.isLockedByOwner
+    );
+  }
+
+  mayLockAnnotation(annotation: APIAnnotationInfo): boolean {
+    return (
+      annotation.typ === "Explorational" &&
+      annotation.state === "Active" &&
+      annotation.owner?.id === this.props.activeUser.id
     );
   }
 
@@ -645,11 +614,19 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     );
   };
 
+  renderTags = (annotation: APIAnnotationInfo, className?: string) => (
+    <AnnotationTags
+      annotation={annotation}
+      isEditable={!this.state.shouldShowArchivedAnnotations}
+      onClickTag={this.addTagToSearch}
+      onAddTag={(tag) => this.editTagFromAnnotation(annotation, true, tag)}
+      onRemoveTag={(tag, event) => this.editTagFromAnnotation(annotation, false, tag, event)}
+      className={className}
+    />
+  );
+
   renderAnnotationRow = (annotation: APIAnnotationInfo) => {
-    const stats = mapValues(
-      keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
-      (layer) => layer.stats,
-    );
+    const stats = getStatsOfAnnotationInfo(annotation);
     // Checked here as well, so that no dangling separator dot is rendered for an empty stats item.
     const hasNonZeroStats =
       (getSkeletonStats(stats)?.treeCount ?? 0) > 0 ||
@@ -681,25 +658,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             locked
           </LinkButton>
         ) : null}
-        <Space wrap>
-          {annotation.tags.map((tag) => (
-            <CategorizationLabel
-              key={tag}
-              kind="annotations"
-              onClick={partial(this.addTagToSearch, tag)}
-              onClose={partial(this.editTagFromAnnotation, annotation, false, tag)}
-              tag={tag}
-              closable={tag !== annotation.dataSetName && !this.state.shouldShowArchivedAnnotations}
-            />
-          ))}
-          {this.state.shouldShowArchivedAnnotations ? null : (
-            <EditableTextIcon
-              icon={<PlusOutlined />}
-              onChange={partial(this.editTagFromAnnotation, annotation, true)}
-              label="Add Tag"
-            />
-          )}
-        </Space>
+        {this.renderTags(annotation, "dashboard-annotation-tags")}
         <RowMetaLine
           items={[
             this.renderCreatedMetaItem(annotation),
@@ -717,7 +676,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
                 hideZeroCounts
               />
             ) : null,
-            <FormattedId key="id" id={annotation.id} />,
           ]}
         />
       </div>
@@ -825,7 +783,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           this.renderAnnotationRow(annotation),
       },
       {
-        width: 200,
+        // Shrinks the column to the width of its content.
+        width: 1,
         className: "nowrap",
         key: "action",
         render: (__: any, annotation: APIAnnotationInfo) => this.renderActions(annotation),
@@ -921,6 +880,20 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             emptyText: this.renderEmptyText(),
           }}
           className="large-table dashboard-list-table"
+          rowClassName={(annotation: APIAnnotationInfo) =>
+            annotation.id === this.state.selectedAnnotationId ? "ant-table-row-selected" : ""
+          }
+          onRow={(annotation: APIAnnotationInfo) => ({
+            onClick: (event) => {
+              const { tagName } = event.target as HTMLElement;
+              // Don't (de)select when another element within the row was clicked (e.g., a link).
+              if (tagName !== "TD" && tagName !== "DIV") return;
+              this.setState((prevState) => ({
+                selectedAnnotationId:
+                  prevState.selectedAnnotationId === annotation.id ? null : annotation.id,
+              }));
+            },
+          })}
           summary={(currentPageData) => {
             // See this issue for context:
             // https://github.com/ant-design/ant-design/issues/24022#issuecomment-1050070509
@@ -938,50 +911,81 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   }
 
   render() {
+    const selectedAnnotation =
+      this.getCurrentModeState().annotations.find(
+        (annotation) => annotation.id === this.state.selectedAnnotationId,
+      ) ?? null;
     return (
-      <div className="dashboard-list-width-limit">
-        <DashboardTopBar
-          isAdminView={this.props.isAdminView}
-          handleOnSearch={this.handleOnSearch}
-          handleSearchChanged={this.handleSearchChanged}
-          searchQuery={this.state.searchQuery}
-          shouldShowArchivedAnnotations={this.state.shouldShowArchivedAnnotations}
-          archiveAll={this.archiveAll}
-        />
-        {this.state.searchQuery ? (
-          <Typography.Title level={3}>
-            <Space>
-              <SearchOutlined />
-              <span>Search Results for &quot;{this.state.searchQuery}&quot;</span>
-            </Space>
-          </Typography.Title>
-        ) : null}
-        <CategorizationSearch
-          itemName="annotations"
-          searchTags={this.state.tags}
-          setTags={(tags) =>
-            this.setState({
-              tags,
-            })
-          }
-          localStorageSavingKey="lastDashboardSearchTags"
-          skipRestoreFromStorage={this.props.datasetNameFilter != null}
-        />
-        {this.renderTable()}
-        <div
-          style={{
-            textAlign: "right",
-          }}
-        >
-          {!this.getCurrentModeState().loadedAllAnnotations ? (
-            <Link
-              to="#"
-              onClick={() => this.fetchNextPage(this.getCurrentModeState().lastLoadedPage + 1)}
-            >
-              Load more Annotations
-            </Link>
+      <div className="dashboard-list-with-sidebar">
+        <div>
+          <DashboardTopBar
+            isAdminView={this.props.isAdminView}
+            handleOnSearch={this.handleOnSearch}
+            handleSearchChanged={this.handleSearchChanged}
+            searchQuery={this.state.searchQuery}
+            shouldShowArchivedAnnotations={this.state.shouldShowArchivedAnnotations}
+            archiveAll={this.archiveAll}
+          />
+          {this.state.searchQuery ? (
+            <Typography.Title level={3}>
+              <Space>
+                <SearchOutlined />
+                <span>Search Results for &quot;{this.state.searchQuery}&quot;</span>
+              </Space>
+            </Typography.Title>
           ) : null}
+          <CategorizationSearch
+            itemName="annotations"
+            searchTags={this.state.tags}
+            setTags={(tags) =>
+              this.setState({
+                tags,
+              })
+            }
+            localStorageSavingKey="lastDashboardSearchTags"
+            skipRestoreFromStorage={this.props.datasetNameFilter != null}
+          />
+          {this.renderTable()}
+          <div
+            style={{
+              textAlign: "right",
+            }}
+          >
+            {!this.getCurrentModeState().loadedAllAnnotations ? (
+              <Link
+                to="#"
+                onClick={() => this.fetchNextPage(this.getCurrentModeState().lastLoadedPage + 1)}
+              >
+                Load more Annotations
+              </Link>
+            ) : null}
+          </div>
         </div>
+        <AnnotationDetailsSidebar
+          annotation={selectedAnnotation}
+          activeUser={this.props.activeUser}
+          tags={
+            selectedAnnotation != null &&
+            (selectedAnnotation.tags.length > 0 || !this.state.shouldShowArchivedAnnotations)
+              ? this.renderTags(selectedAnnotation)
+              : null
+          }
+          onRename={
+            selectedAnnotation != null && this.isAnnotationEditable(selectedAnnotation)
+              ? (newName) => this.renameAnnotation(selectedAnnotation, newName)
+              : undefined
+          }
+          onArchive={
+            selectedAnnotation != null && this.mayArchiveAnnotation(selectedAnnotation)
+              ? () => this.finishOrReopenAnnotation("finish", selectedAnnotation)
+              : undefined
+          }
+          onToggleLock={
+            selectedAnnotation != null && this.mayLockAnnotation(selectedAnnotation)
+              ? () => this.setLockedState(selectedAnnotation, !selectedAnnotation.isLockedByOwner)
+              : undefined
+          }
+        />
       </div>
     );
   }

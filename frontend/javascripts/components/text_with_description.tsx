@@ -15,18 +15,27 @@ type NonEditableProps = {
   isEditable: false;
   description: string;
   value: string;
+  placeholder?: string;
   linkTarget?: string;
   linkTitle?: string;
 };
 type Props = EditableProps | NonEditableProps;
 
-function NonEditableText({ markdown, value, linkTarget, linkTitle }: NonEditableProps) {
+function NonEditableText({
+  markdown,
+  value,
+  placeholder,
+  linkTarget,
+  linkTitle,
+}: NonEditableProps) {
   const text = markdown ? (
     <span>
       <Markdown>{value}</Markdown>
     </span>
-  ) : (
+  ) : value.trim() ? (
     value
+  ) : (
+    placeholder
   );
   return (
     <span

@@ -9,21 +9,13 @@
   }
 }
 
-/** Actions of an annotation list row as a 2x2 grid: Open/Download left, Archive/Lock right. */
+/** Actions of an annotation list row, stacked vertically. */
 .annotation-row-actions {
-  display: grid;
-  grid-template-rows: repeat(2, auto);
-  grid-auto-flow: column;
-  column-gap: 40px;
-  padding-right: 30px;
+  display: flex;
+  flex-direction: column;
   row-gap: 2px;
+  padding-right: 30px;
   white-space: nowrap;
-
-  // Unavailable actions stay in place, greyed out (hovering shows the reason as tooltip).
-  a[disabled] {
-    color: var(--ant-color-text-disabled);
-    cursor: not-allowed;
-  }
 }
 
 /** Container for the description of a task type, allowing for long text wrapping and optional height capping. */
@@ -328,25 +320,51 @@ pre.dataset-import-folder-structure-hint {
   color: var(--ant-color-text-description);
 }
 
-.dashboard-annotation-name-edit {
+.dashboard-annotation-name {
   font-size: 17px;
+}
 
-  .ant-space-compact-block {
-    display: inline-flex !important;
-    width: auto !important;
+// Together with the 8px end margin of the preceding name or label, this matches the spacing
+// between the dataset name and its tags.
+.dashboard-annotation-tags {
+  margin-inline-start: 7px;
+}
+
+.dashboard-details-sidebar {
+  width: 300px;
+  padding: 16px;
+  position: sticky;
+  top: var(--navbar-height);
+  // When used directly as a grid item, don't stretch to the full row height.
+  align-self: start;
+  max-height: calc(100vh - var(--navbar-height));
+  overflow-y: auto;
+
+  // The info tab rows are reused here, but should align with the other sidebar entries.
+  .info-tab-row {
+    padding-inline: 0;
+  }
+
+  .info-tab-identity {
+    padding: 0 0 12px;
   }
 }
 
-// The info tab rows are reused here, but should align with the other sidebar entries.
-.dashboard-details-sidebar .info-tab-row {
-  padding-inline: 0;
+.dashboard-details-sidebar .ant-tag,
+.dashboard-list-table .ant-tag {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 :root {
   --dashboard-list-max-width: 100rem;
 }
 
-.dashboard-list-width-limit {
-  max-width: var(--dashboard-list-max-width);
-  margin-inline: auto;
+.dashboard-list-with-sidebar {
+  display: grid;
+  grid-template-columns:
+    minmax(min(60%, var(--dashboard-list-max-width)), var(--dashboard-list-max-width))
+    auto;
+  justify-content: center;
 }

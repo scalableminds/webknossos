@@ -28,6 +28,9 @@ const temporalBucketManagerMock = {
 const mockedCube = {
   isSegmentation: false,
   triggerRenderedBucketDataChanged: () => {},
+  currentBucketPickerTick: 0,
+  previousBucketPickerTick: 0,
+  onBucketMarkedAsNeeded: () => {},
 };
 
 const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {

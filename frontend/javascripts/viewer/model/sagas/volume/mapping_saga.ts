@@ -576,7 +576,7 @@ function* updateLocalHdf5Mapping(
   }
 
   const cube = Model.getCubeByLayerName(layerName);
-  const segmentIds = cube.getValueSetForAllAccessedBuckets();
+  const segmentIds = cube.getValueSetForAllNeededBuckets();
 
   const {
     aWithoutB: newSegmentIds,

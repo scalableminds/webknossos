@@ -28,6 +28,19 @@
       height: 1.3em;
     }
   }
+
+  // antd only changes the text color of hovered radio buttons. Highlight the border instead,
+  // so that radio buttons behave like the other buttons in the action bar.
+  // Note that the left border of a radio button is rendered by its ::before element.
+  .ant-radio-button-wrapper:not(.ant-radio-button-wrapper-disabled):not(
+      .ant-radio-button-wrapper-checked
+    ):hover {
+    border-color: var(--ant-color-primary-hover);
+
+    &::before {
+      background-color: var(--ant-color-primary-hover);
+    }
+  }
 }
 
 .right-floating-icon {

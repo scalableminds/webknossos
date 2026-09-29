@@ -134,16 +134,15 @@ function AnnotationDetails({
         </SidebarSection>
       ) : null}
       <SidebarSection label="Created">
-        <div>
+        <span>
           <FormattedDate timestamp={annotation.created} />
           {annotation.modified - annotation.created > 60 * 1000 ? (
-            <div>
-              <Typography.Text type="secondary">
-                modified <FormattedDate timestamp={annotation.modified} />
-              </Typography.Text>
-            </div>
+            <Typography.Text type="secondary">
+              {" "}
+              (modified <FormattedDate timestamp={annotation.modified} />)
+            </Typography.Text>
           ) : null}
-        </div>
+        </span>
       </SidebarSection>
       <SidebarSection label="ID">
         <Tag variant="outlined">

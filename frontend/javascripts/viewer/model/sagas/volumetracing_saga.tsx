@@ -288,13 +288,15 @@ export function* editVolumeLayerAsync(): Saga<never> {
             overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY
               ? "overwrite-empty-only"
               : "overwrite-all",
+          // As in labelWithVoxelBuffer2D: under overwrite-empty, painting only
+          // writes over background, and erasing only removes the active segment.
+          overwritableValue: contourTracingMode === ContourModeEnum.DELETE ? activeCellId : 0n,
           additionalCoordinates: additionalCoordinates ?? null,
           radius,
           planeAxis,
         },
         toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
       );
-      wroteVoxelsBox.value = true;
     }
 
     let lastPosition = startEditingAction.positionInLayerSpace;
@@ -348,7 +350,9 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     if (brushDriver != null) {
       // Pointer-up: mag propagation runs once over the coalesced write set.
-      brushDriver.finish();
+      // Only a stroke that wrote something counts, so that the "no voxels
+      // were changed" hint below still fires when overwrite-empty skipped all.
+      if (brushDriver.finish().voxels > 0) wroteVoxelsBox.value = true;
       // A stroke released near where it started gets its enclosed area filled.
       const fillBuffer = currentSectionLabeler.getFillingVoxelBuffer2D(activeTool);
       if (!fillBuffer.isEmpty()) {

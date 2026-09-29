@@ -107,6 +107,47 @@ describe("Volume Tracing", () => {
     );
   });
 
+  it<WebknossosTestContext>("Erasing with overwrite-empty removes only the active segment", async ({
+    api,
+    mocks,
+  }) => {
+    const existingCellId = 11;
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction(
+        { volumeTracingId: "uint16", color: "uint8" },
+        existingCellId,
+        5,
+      ),
+    );
+    await api.data.reloadAllBuckets();
+    const layerName = api.data.getVolumeTracingLayerIds()[0];
+    const position: Vector3 = [0, 0, 0];
+    // Loads the bucket, as rendering it would. The check only protects what is
+    // loaded: unloaded buckets are written optimistically.
+    expect(await api.data.getDataValue(layerName, position)).toBe(existingCellId);
+
+    Store.dispatch(updateUserSettingAction("brushSize", 10));
+    Store.dispatch(setPositionAction(position));
+    Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
+    Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_EMPTY));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
+    const eraseStroke = () => {
+      Store.dispatch(startEditingAction(position, OrthoViews.PLANE_XY));
+      Store.dispatch(addToContourListAction([2, 0, 0]));
+      Store.dispatch(finishEditingAction());
+    };
+
+    // A different active segment: the existing one is protected.
+    Store.dispatch(setActiveCellAction(99n));
+    eraseStroke();
+    expect(await api.data.getDataValue(layerName, position)).toBe(existingCellId);
+
+    // The existing segment is the active one: it gets erased.
+    Store.dispatch(setActiveCellAction(BigInt(existingCellId)));
+    eraseStroke();
+    expect(await api.data.getDataValue(layerName, position)).toBe(0);
+  });
+
   describe("brush auto-fill", () => {
     const newCellId = 2n;
     // A square stroke around `inside`, far enough from its edges that the brush

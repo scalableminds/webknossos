@@ -224,7 +224,7 @@ export interface EditContext {
   overwriteMode: OverwriteMode;
   /**
    * Under overwrite-empty-only, the only value a voxel may currently hold for
-   * it to be written: 0n when painting, but the erased segment's id when
+   * it to be written: 0n when painting, but the erased / active segment's id when
    * erasing — "only erase the active segment", as the UI promises for that
    * mode. Ignored under overwrite-all.
    */

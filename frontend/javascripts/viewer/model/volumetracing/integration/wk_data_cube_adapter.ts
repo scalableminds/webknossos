@@ -24,6 +24,7 @@ import {
   type Mag,
   MagList,
   type SegmentBucketData,
+  type SegmentId,
   type Vector3,
 } from "../core/volume_annotation_types";
 import type { LoadingVoxelCube, TransactionCube } from "../core/voxel_cube_interfaces";
@@ -44,18 +45,24 @@ export class WkDataCubeAdapter implements TransactionCube {
   constructor(protected readonly cube: DataCube) {}
 
   /**
-   * A predicate answering "is this voxel currently background?" for one
-   * bucket, used by the rasterizer's overwrite-empty-only filter. Null when
-   * the bucket has no data to test against, in which case the filter is
+   * A predicate answering "does this voxel currently hold overwritableValue?"
+   * for one bucket, used by the rasterizer's overwrite-empty-only filter. Null
+   * when the bucket has no data to test against, in which case the filter is
    * skipped.
    */
-  getIsBackgroundFunction(address: BucketAddress): ((index: number) => boolean) | null {
+  getIsOverwritableFunction(
+    address: BucketAddress,
+    overwritableValue: SegmentId,
+  ): ((index: number) => boolean) | null {
     const data = this.rawData(address);
     if (data == null) return null;
     if (data instanceof BigUint64Array || data instanceof BigInt64Array) {
-      return (index) => data[index] === 0n;
+      return (index) => data[index] === overwritableValue;
     }
-    return (index) => data[index] === 0;
+    // Converted once here rather than per voxel: a non-64-bit bucket holds
+    // numbers, and === never matches a number against a bigint.
+    const numericValue = Number(overwritableValue);
+    return (index) => data[index] === numericValue;
   }
 
   applyWrites(address: BucketAddress, write: BucketWrite): void {

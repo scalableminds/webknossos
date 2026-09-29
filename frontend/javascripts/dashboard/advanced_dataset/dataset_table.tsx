@@ -48,7 +48,7 @@ import partial from "lodash-es/partial";
 import sortBy from "lodash-es/sortBy";
 import without from "lodash-es/without";
 import type React from "react";
-import { Fragment, PureComponent, useCallback, useContext } from "react";
+import { Fragment, PureComponent, useCallback, useContext, useEffect } from "react";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Link } from "react-router";
@@ -135,6 +135,24 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const { datasets, contextMenuPosition, hideContextMenu, folder, datasetCollectionContext } =
     propsWithInputRef;
   const { clearCacheAndReloadDataset } = datasetCollectionContext;
+  const isOpen = contextMenuPosition != null;
+
+  // The click-catching overlay only covers the dataset list, so also close the menu on
+  // clicks anywhere else on the page.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onMouseDown = (event: MouseEvent) => {
+      const target = event.target as Element;
+      // Submenus may be rendered as separate popups outside of the menu container.
+      const isInsideMenu =
+        inputRef?.current?.contains(target) ||
+        target.closest?.(".ant-dropdown, .ant-dropdown-menu-submenu-popup") != null;
+      if (!isInsideMenu) hideContextMenu();
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [isOpen, inputRef, hideContextMenu]);
+
   let menu: MenuProps = { items: [] };
 
   if (contextMenuPosition != null) {

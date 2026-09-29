@@ -42,7 +42,11 @@ export async function listMeshChunks(
     ...params,
     meshFileName: params.meshFile.name,
   });
-  if (params.editableMapping != null && cache.canListFromCache()) {
+  // The tracingstore lists the unmapped segment ids of an agglomerate. Only a mesh file computed
+  // without a mapping stores its meshes under these ids. One computed for a mapping stores them
+  // under that mapping's agglomerate ids, which are different ids.
+  const isMeshFileKeyedBySegmentIds = params.meshFile.mappingName == null;
+  if (params.editableMapping != null && isMeshFileKeyedBySegmentIds && cache.canListFromCache()) {
     const listing = await tryToListMeshChunksFromCache(cache, params, params.editableMapping);
     if (listing != null) {
       return listing;

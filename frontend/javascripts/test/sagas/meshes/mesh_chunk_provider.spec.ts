@@ -217,6 +217,36 @@ describe("Mesh chunk provider", () => {
       expect(getSegmentsMock).not.toHaveBeenCalled();
       expect(listingMock).toHaveBeenCalledTimes(2);
     });
+
+    it("never uses the segments of the editable mapping for a mesh file computed for a mapping", async () => {
+      const meshFileForMapping: APIMeshFileInfo = {
+        name: "meshfile_for_mapping",
+        mappingName: "agglomerate_view_70",
+        formatVersion: 8,
+      };
+      // Cached under the key 10: the mesh of agglomerate 10 of the mapping.
+      listingMock.mockResolvedValueOnce(listing([chunk(10n, 0)]));
+      await listMeshChunks({
+        ...paramsFor(10n),
+        meshFile: meshFileForMapping,
+        targetMappingName: null,
+        editableMapping: null,
+      });
+
+      // With the editable mapping, agglomerate 3 consists of the unmapped segment 10, which is a
+      // different object than agglomerate 10.
+      mockSegmentsOfAgglomerate([10n]);
+      listingMock.mockResolvedValueOnce(listing([chunk(30n, 30)]));
+      const info = await listMeshChunks({
+        ...paramsFor(3n),
+        meshFile: meshFileForMapping,
+        targetMappingName: null,
+      });
+
+      expect(listedChunks(info)).toEqual([chunk(30n, 30)]);
+      expect(getSegmentsMock).not.toHaveBeenCalled();
+      expect(listingMock).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("chunk data", () => {

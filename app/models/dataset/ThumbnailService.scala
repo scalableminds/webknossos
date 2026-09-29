@@ -132,13 +132,13 @@ class ThumbnailService @Inject() (
   ): Fox[Array[Byte]] =
     for {
       usableDataSource <- datasetService.usableDataSourceFor(dataset)
-      firstLayer <- usableDataSource.dataLayers.headOption.toFox ?~> Msg.Dataset.noLayers ~> NOT_FOUND
+      _ <- Fox.fromBool(usableDataSource.dataLayers.nonEmpty) ?~> Msg.Dataset.noLayers ~> NOT_FOUND
       viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)
       layersToRender = selectLayersToRender(viewConfiguration, usableDataSource)
-      _ <- Fox.fromBool(layersToRender.nonEmpty) ?~> Msg.Dataset.noMags ~> NOT_FOUND
+      firstLayerToRender <- layersToRender.headOption.toFox ?~> Msg.Dataset.noMags ~> NOT_FOUND
       hasColorLayers = layersToRender.exists(_.category == LayerCategory.color)
       blendMode = readBlendMode(viewConfiguration)
-      (center, zoom) = selectCenterAndZoom(viewConfiguration, usableDataSource, firstLayer)
+      (center, zoom) = selectCenterAndZoom(viewConfiguration, usableDataSource, firstLayerToRender)
       mag1Width = Math.round(width * zoom).toInt
       mag1Height = Math.round(height * zoom).toInt
       layerParameters = layersToRender.map(layer =>

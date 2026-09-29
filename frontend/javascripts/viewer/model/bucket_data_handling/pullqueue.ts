@@ -240,15 +240,12 @@ class PullQueue {
     bucketData: Uint8Array<ArrayBuffer> | null | undefined,
     voxelOffsetInWireData: number = 0,
   ): void {
-    if (this.cube.shouldEagerlyMaintainUsedValueSet()) {
-      // If we assume that the value set of the bucket is needed often (for proofreading),
-      // we compute it here eagerly and then send the data to the bucket.
-      // That way, the computations of the value set are spread out over time instead of being
-      // clustered when DataCube.getValueSetForAllAccessedBuckets is called. This improves the FPS rate.
-      bucket.receiveData(bucketData, true, voxelOffsetInWireData);
-    } else {
-      bucket.receiveData(bucketData, false, voxelOffsetInWireData);
-    }
+    // If we assume that the value set of the bucket is needed often (for proofreading),
+    // we compute it here eagerly and then send the data to the bucket.
+    // That way, the computations of the value set are spread out over time instead of being
+    // clustered when DataCube.getValueSetForAllAccessedBuckets is called. This improves the FPS rate.
+    const eagerlyComputeValueSet = this.cube.shouldEagerlyMaintainUsedValueSet();
+    bucket.receiveData(bucketData, eagerlyComputeValueSet, voxelOffsetInWireData);
   }
 
   // Applies one wire response to every sibling address it covers (see

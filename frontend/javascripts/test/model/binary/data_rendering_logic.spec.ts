@@ -184,7 +184,7 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     expect(getEffectiveBucketDepth(1000, true)).toBe(constants.BUCKET_WIDTH);
   });
 
-  it("calculateTextureSizeAndCountForLayer never needs more total texture area for a 2D layer than for a regular layer", () => {
+  it("calculateTextureSizeAndCountForLayer needs less total texture area for a 2D layer than for a regular layer", () => {
     const shrunkBucketVoxelCount = constants.BUCKET_SIZE_2D * getEffectiveBucketDepth(1, false);
     const shrunk = calculateTextureSizeAndCountForLayer(
       midSpecs,
@@ -199,7 +199,7 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     );
     expect(shrunk.bucketVoxelCount).toBe(shrunkBucketVoxelCount);
     expect(full.bucketVoxelCount).toBe(constants.BUCKET_SIZE);
-    expect(shrunk.textureSize * shrunk.textureSize * shrunk.textureCount).toBeLessThanOrEqual(
+    expect(shrunk.textureSize * shrunk.textureSize * shrunk.textureCount).toBeLessThan(
       full.textureSize * full.textureSize * full.textureCount,
     );
   });

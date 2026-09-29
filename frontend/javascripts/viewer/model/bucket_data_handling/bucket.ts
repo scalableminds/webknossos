@@ -693,7 +693,8 @@ export class DataBucket {
     const data =
       effectiveVoxelCount === Constants.BUCKET_SIZE && voxelOffsetInWireData === 0
         ? wireData
-        : (wireData.subarray(
+        : // subarray creates a view on the data; no data is copied here.
+          (wireData.subarray(
             channelCount * voxelOffsetInWireData,
             channelCount * (voxelOffsetInWireData + effectiveVoxelCount),
           ) as BucketDataArray);

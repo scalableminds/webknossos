@@ -939,7 +939,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
   render() {
     return (
-      <div>
+      <div className="dashboard-list-width-limit">
         <DashboardTopBar
           isAdminView={this.props.isAdminView}
           handleOnSearch={this.handleOnSearch}

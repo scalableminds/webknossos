@@ -187,7 +187,9 @@ function DatasetFolderViewInner(props: Props) {
     <div
       style={{
         display: "grid",
-        gridTemplate: "auto / auto minmax(60%, 1fr) auto",
+        gridTemplate:
+          "auto / auto minmax(min(40%, var(--dashboard-list-max-width)), var(--dashboard-list-max-width)) auto",
+        justifyContent: "center",
         flexGrow: 1,
         minHeight: 0,
       }}

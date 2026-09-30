@@ -102,6 +102,7 @@
     "check-untyped-use-selector": "./tools/check-no-untyped-use-selector-imports.js",
     "check-bare-dynamic-imports": "./tools/check-no-bare-dynamic-imports.js",
     "check-unintegrated-imports": "./tools/check-no-unintegrated-imports.js",
+    "react-compiler-report": "./tools/react-compiler-report.js",
     "check-frontend-biome": "yarn run biome check --reporter=concise --diagnostic-level=error --max-diagnostics 50 frontend package.json",
     "check-frontend-custom": "tools/assert-no-test-only.sh && yarn check-untyped-saga-selects && yarn check-untyped-use-selector && yarn check-bare-dynamic-imports && yarn check-unintegrated-imports",
     "check-frontend": "yarn check-frontend-biome && yarn check-frontend-custom",

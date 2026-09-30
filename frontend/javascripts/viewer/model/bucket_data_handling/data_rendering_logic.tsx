@@ -165,80 +165,80 @@ function getDataTextureCount(
 // The buckets of all layers that share a GPU texture format are stored in one
 // shared sampler2DArray (a "pool"). Each layer owns a range of the pool's
 // slices. So there is one texture per pool, no matter how many layers exist.
-export enum ColorLayerPool {
+export enum LayerPool {
   F32 = 0,
   U8 = 1,
   S8 = 2,
   U16 = 3,
   S16 = 4,
 }
-export const COLOR_LAYER_POOLS = [
-  ColorLayerPool.F32,
-  ColorLayerPool.U8,
-  ColorLayerPool.S8,
-  ColorLayerPool.U16,
-  ColorLayerPool.S16,
+export const LAYER_POOLS = [
+  LayerPool.F32,
+  LayerPool.U8,
+  LayerPool.S8,
+  LayerPool.U16,
+  LayerPool.S16,
 ] as const;
 
 // Width and height of every pool texture. Only the depth differs between
-// pools (see computeColorLayerPoolAssignments).
-export const COLOR_LAYER_POOL_TEXTURE_WIDTH = 2048;
+// pools (see computeLayerPoolAssignments).
+export const LAYER_POOL_TEXTURE_WIDTH = 2048;
 
-export function getColorLayerPoolForElementClass(elementClass: ElementClass): ColorLayerPool {
+export function getLayerPoolForElementClass(elementClass: ElementClass): LayerPool {
   switch (elementClass) {
     case "float":
-      return ColorLayerPool.F32;
+      return LayerPool.F32;
     case "int8":
-      return ColorLayerPool.S8;
+      return LayerPool.S8;
     case "uint16":
-      return ColorLayerPool.U16;
+      return LayerPool.U16;
     case "int16":
-      return ColorLayerPool.S16;
+      return LayerPool.S16;
     // uint8, uint24, uint32, int32, uint64, int64, double: stored as raw RGBA
     // bytes and decoded in the shader (see layerDtypeTag).
     default:
-      return ColorLayerPool.U8;
+      return LayerPool.U8;
   }
 }
 
-export function getColorLayerPoolGpuConfig(pool: ColorLayerPool): {
+export function getLayerPoolGpuConfig(pool: LayerPool): {
   textureType: TextureDataType;
   pixelFormat: PixelFormat;
   internalFormat: PixelFormatGPU | undefined;
 } {
   switch (pool) {
-    case ColorLayerPool.F32:
+    case LayerPool.F32:
       return {
         textureType: FloatType,
         pixelFormat: RGBAFormat,
         internalFormat: undefined,
       };
-    case ColorLayerPool.U8:
+    case LayerPool.U8:
       return {
         textureType: UnsignedByteType,
         pixelFormat: RGBAFormat,
         internalFormat: undefined,
       };
-    case ColorLayerPool.S8:
+    case LayerPool.S8:
       return {
         textureType: ByteType,
         pixelFormat: RGBAFormat,
         internalFormat: "RGBA8_SNORM",
       };
-    case ColorLayerPool.U16:
+    case LayerPool.U16:
       return {
         textureType: UnsignedShortType,
         pixelFormat: RGIntegerFormat,
         internalFormat: "RG16UI",
       };
-    case ColorLayerPool.S16:
+    case LayerPool.S16:
       return {
         textureType: ShortType,
         pixelFormat: RGIntegerFormat,
         internalFormat: "RG16I",
       };
     default:
-      throw new Error(`Unknown color layer pool: ${pool}`);
+      throw new Error(`Unknown layer pool: ${pool}`);
   }
 }
 
@@ -265,7 +265,7 @@ export function getDataTextureCountForFixedWidth(
   packingDegree: number,
   requiredBucketCapacity: number,
 ): number {
-  return getDataTextureCount(COLOR_LAYER_POOL_TEXTURE_WIDTH, packingDegree, requiredBucketCapacity);
+  return getDataTextureCount(LAYER_POOL_TEXTURE_WIDTH, packingDegree, requiredBucketCapacity);
 }
 
 const BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY = 4;
@@ -302,8 +302,8 @@ export function getBucketCountSoftLimitPerLayer(layerCount: number): number {
   return scalePerLayerBudgetByLayerCount(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, layerCount);
 }
 
-export type ColorLayerPoolAssignment = {
-  pool: ColorLayerPool;
+export type LayerPoolAssignment = {
+  pool: LayerPool;
   baseSlice: number;
   dataTextureCount: number;
   packingDegree: number;
@@ -313,26 +313,26 @@ export type ColorLayerPoolAssignment = {
 // slices [baseSlice, baseSlice + dataTextureCount) of that pool for it. Also
 // returns each pool's total depth, which must be known up front, because
 // texStorage3D allocates storage that can't grow later.
-export function computeColorLayerPoolAssignments<
+export function computeLayerPoolAssignments<
   Layer extends { name: string; elementClass: ElementClass },
 >(
   layers: Array<Layer>,
   requiredBucketCapacity: number,
 ): {
-  assignmentByLayerName: Map<string, ColorLayerPoolAssignment>;
-  poolDepths: Record<ColorLayerPool, number>;
+  assignmentByLayerName: Map<string, LayerPoolAssignment>;
+  poolDepths: Record<LayerPool, number>;
 } {
-  const poolDepths: Record<ColorLayerPool, number> = {
-    [ColorLayerPool.F32]: 0,
-    [ColorLayerPool.U8]: 0,
-    [ColorLayerPool.S8]: 0,
-    [ColorLayerPool.U16]: 0,
-    [ColorLayerPool.S16]: 0,
+  const poolDepths: Record<LayerPool, number> = {
+    [LayerPool.F32]: 0,
+    [LayerPool.U8]: 0,
+    [LayerPool.S8]: 0,
+    [LayerPool.U16]: 0,
+    [LayerPool.S16]: 0,
   };
-  const assignmentByLayerName = new Map<string, ColorLayerPoolAssignment>();
+  const assignmentByLayerName = new Map<string, LayerPoolAssignment>();
 
   for (const layer of layers) {
-    const pool = getColorLayerPoolForElementClass(layer.elementClass);
+    const pool = getLayerPoolForElementClass(layer.elementClass);
     const { packingDegree } = getDtypeConfigForElementClass(layer.elementClass);
     const dataTextureCount = getDataTextureCountForFixedWidth(
       packingDegree,

@@ -67,15 +67,15 @@ import {
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
-  ColorLayerPool,
   DTYPE_TAG_INT32,
   DTYPE_TAG_UINT32,
   getDtypeConfigForElementClass,
   getDtypeTagForElementClass,
+  LayerPool,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import {
-  getColorLayerPoolTextureManagers,
   getGlobalLayerIndexForLayerName,
+  getLayerPoolTextureManagers,
 } from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
@@ -129,12 +129,12 @@ const getVertexBucketAlignmentLayerCap = memoizeOne((): number => {
 
 // Must match the pool_*_textures uniform names declared in
 // SHARED_UNIFORM_DECLARATIONS (main_data_shaders.glsl.ts).
-const COLOR_LAYER_POOL_UNIFORM_NAME_BY_POOL: Array<[ColorLayerPool, string]> = [
-  [ColorLayerPool.F32, "pool_f32_textures"],
-  [ColorLayerPool.U8, "pool_u8_textures"],
-  [ColorLayerPool.S8, "pool_s8_textures"],
-  [ColorLayerPool.U16, "pool_u16_textures"],
-  [ColorLayerPool.S16, "pool_s16_textures"],
+const LAYER_POOL_UNIFORM_NAME_BY_POOL: Array<[LayerPool, string]> = [
+  [LayerPool.F32, "pool_f32_textures"],
+  [LayerPool.U8, "pool_u8_textures"],
+  [LayerPool.S8, "pool_s8_textures"],
+  [LayerPool.U16, "pool_u16_textures"],
+  [LayerPool.S16, "pool_s16_textures"],
 ];
 
 const float32BitPunBuffer = new ArrayBuffer(4);
@@ -461,8 +461,8 @@ class PlaneMaterialFactory {
       value: sharedLookUpTexture,
     };
 
-    const poolTextureManagers = getColorLayerPoolTextureManagers();
-    for (const [pool, poolName] of COLOR_LAYER_POOL_UNIFORM_NAME_BY_POOL) {
+    const poolTextureManagers = getLayerPoolTextureManagers();
+    for (const [pool, poolName] of LAYER_POOL_UNIFORM_NAME_BY_POOL) {
       const poolTextureManager = poolTextureManagers.get(pool);
       if (poolTextureManager == null) {
         throw new Error(`No PoolTextureManager found for pool ${pool}.`);

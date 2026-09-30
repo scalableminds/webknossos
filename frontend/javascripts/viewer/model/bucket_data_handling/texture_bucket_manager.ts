@@ -20,7 +20,7 @@ import {
 import type PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
 
 // Where in a shared pool texture a layer's buckets live.
-export type ColorLayerPoolBinding = {
+export type LayerPoolBinding = {
   poolTextureManager: PoolTextureManager;
   baseSlice: number;
 };
@@ -106,13 +106,13 @@ export default class TextureBucketManager {
   private isWriterQueueProcessingScheduled: boolean = false;
   // Always set in the app. Only tests create managers without a pool, which
   // then use their own dataTextures.
-  private pool: ColorLayerPoolBinding | undefined;
+  private pool: LayerPoolBinding | undefined;
 
   constructor(
     textureWidth: number,
     dataTextureCount: number,
     elementClass: ElementClass,
-    pool?: ColorLayerPoolBinding,
+    pool?: LayerPoolBinding,
   ) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)

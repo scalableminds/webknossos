@@ -3,8 +3,8 @@ import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import type { Vector4 } from "viewer/constants";
 import { DataBucket, NULL_BUCKET } from "viewer/model/bucket_data_handling/bucket";
 import {
-  COLOR_LAYER_POOL_TEXTURE_WIDTH,
-  ColorLayerPool,
+  LAYER_POOL_TEXTURE_WIDTH,
+  LayerPool,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
 import TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
@@ -122,9 +122,9 @@ describe("TextureBucketManager", () => {
   });
 
   it("pooled mode writes into the shared pool texture, offset by baseSlice", () => {
-    const pool = new PoolTextureManager(ColorLayerPool.U8, /* depth */ 4);
+    const pool = new PoolTextureManager(LayerPool.U8, /* depth */ 4);
     const baseSlice = 2; // simulates another layer already having reserved slices 0-1
-    const tbm = new TextureBucketManager(COLOR_LAYER_POOL_TEXTURE_WIDTH, 2, "uint8", {
+    const tbm = new TextureBucketManager(LAYER_POOL_TEXTURE_WIDTH, 2, "uint8", {
       poolTextureManager: pool,
       baseSlice,
     });
@@ -145,14 +145,13 @@ describe("TextureBucketManager", () => {
     }
 
     const bucketsPerTexture =
-      (COLOR_LAYER_POOL_TEXTURE_WIDTH * COLOR_LAYER_POOL_TEXTURE_WIDTH) / tbm.getPackedBucketSize();
+      (LAYER_POOL_TEXTURE_WIDTH * LAYER_POOL_TEXTURE_WIDTH) / tbm.getPackedBucketSize();
     // The stored address includes the layer's baseSlice.
     expect(bucketAddress).toBeGreaterThanOrEqual(baseSlice * bucketsPerTexture);
     expect(bucketAddress).toBeLessThan((baseSlice + 1) * bucketsPerTexture);
 
     // The layer's first bucket lands in the pool texture's baseSlice-th slice.
-    const sliceByteOffset =
-      baseSlice * COLOR_LAYER_POOL_TEXTURE_WIDTH * COLOR_LAYER_POOL_TEXTURE_WIDTH;
+    const sliceByteOffset = baseSlice * LAYER_POOL_TEXTURE_WIDTH * LAYER_POOL_TEXTURE_WIDTH;
     // @ts-expect-error - texture is available in our mock but not in the real type
     expect(pool.textureArray.texture[sliceByteOffset]).toBe(100);
   });

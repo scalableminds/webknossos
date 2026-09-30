@@ -27,11 +27,11 @@ import {
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import {
-  COLOR_LAYER_POOL_TEXTURE_WIDTH,
-  COLOR_LAYER_POOLS,
-  type ColorLayerPool,
-  computeColorLayerPoolAssignments,
+  computeLayerPoolAssignments,
   getRequiredBucketCapacityPerLayer,
+  LAYER_POOL_TEXTURE_WIDTH,
+  LAYER_POOLS,
+  type LayerPool,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
@@ -73,26 +73,26 @@ const getSharedLookUpCuckooTable = memoizeOne(
 
 // Lazily-initialized singleton, created once per dataset: every layer's
 // slice range plus the 5 pool textures.
-const getColorLayerPoolPlan = memoizeOne(() => {
+const getLayerPoolPlan = memoizeOne(() => {
   const { dataset, userConfiguration } = Store.getState();
   const requiredBucketCapacity = getRequiredBucketCapacityPerLayer(
     userConfiguration.gpuMemoryFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
     dataset.dataSource.dataLayers.length,
   );
-  const { assignmentByLayerName, poolDepths } = computeColorLayerPoolAssignments(
+  const { assignmentByLayerName, poolDepths } = computeLayerPoolAssignments(
     dataset.dataSource.dataLayers,
     requiredBucketCapacity,
   );
-  const poolTextureManagers = new Map<ColorLayerPool, PoolTextureManager>(
-    COLOR_LAYER_POOLS.map((pool) => [pool, new PoolTextureManager(pool, poolDepths[pool])]),
+  const poolTextureManagers = new Map<LayerPool, PoolTextureManager>(
+    LAYER_POOLS.map((pool) => [pool, new PoolTextureManager(pool, poolDepths[pool])]),
   );
   return { assignmentByLayerName, poolTextureManagers };
 });
 
 // The pool textures are shared by all layers, so PlaneMaterialFactory
 // gets them here instead of from a single layer's LayerRenderingManager.
-export function getColorLayerPoolTextureManagers(): Map<ColorLayerPool, PoolTextureManager> {
-  return getColorLayerPoolPlan().poolTextureManagers;
+export function getLayerPoolTextureManagers(): Map<LayerPool, PoolTextureManager> {
+  return getLayerPoolPlan().poolTextureManagers;
 }
 
 function consumeBucketsFromArrayBuffer(
@@ -199,7 +199,7 @@ export default class LayerRenderingManager {
     const { dataset } = Store.getState();
     const elementClass = getElementClass(dataset, this.name);
 
-    const { assignmentByLayerName, poolTextureManagers } = getColorLayerPoolPlan();
+    const { assignmentByLayerName, poolTextureManagers } = getLayerPoolPlan();
     const assignment = assignmentByLayerName.get(this.name);
     if (assignment == null) {
       throw new Error(`No layer pool assignment found for layer ${this.name}.`);
@@ -209,7 +209,7 @@ export default class LayerRenderingManager {
       throw new Error(`No PoolTextureManager found for pool ${assignment.pool}.`);
     }
     this.textureBucketManager = new TextureBucketManager(
-      COLOR_LAYER_POOL_TEXTURE_WIDTH,
+      LAYER_POOL_TEXTURE_WIDTH,
       assignment.dataTextureCount,
       elementClass,
       { poolTextureManager, baseSlice: assignment.baseSlice },
@@ -348,7 +348,7 @@ export default class LayerRenderingManager {
       this.textureBucketManager.destroy();
     }
     getSharedLookUpCuckooTable.clear();
-    getColorLayerPoolPlan.clear();
+    getLayerPoolPlan.clear();
     asyncBucketPick.clear();
     shaderEditor.destroy();
     this.colorCuckooTable = undefined;

@@ -12,14 +12,14 @@ import constants, {
   ViewModeValuesIndices,
 } from "viewer/constants";
 import {
-  COLOR_LAYER_POOL_TEXTURE_WIDTH,
   DTYPE_TAG_INT32,
   DTYPE_TAG_UINT24,
   DTYPE_TAG_UINT32,
-  getColorLayerPoolForElementClass,
   getDtypeNormalizerForLayer,
   getDtypeTagForElementClass,
+  getLayerPoolForElementClass,
   getSegmentIdDecodeTagForLayer,
+  LAYER_POOL_TEXTURE_WIDTH,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { MAPPING_TEXTURE_WIDTH } from "viewer/model/bucket_data_handling/mappings";
@@ -133,7 +133,7 @@ uniform float layerIsInverted[<%= globalLayerCount %>];
 uniform int colorRenderOrder[<%= maxActiveColorLayers %>];
 uniform int activeColorLayerCount;
 
-// One texture array per pool (see ColorLayerPool in data_rendering_logic.ts).
+// One texture array per pool (see LayerPool in data_rendering_logic.ts).
 uniform highp sampler2DArray pool_f32_textures;
 uniform highp sampler2DArray pool_u8_textures;
 uniform highp sampler2DArray pool_s8_textures;
@@ -200,7 +200,7 @@ const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 // Width and height of every pool texture.
-const float POOL_TEXTURE_WIDTH = ${formatNumberAsGLSLFloat(COLOR_LAYER_POOL_TEXTURE_WIDTH)};
+const float POOL_TEXTURE_WIDTH = ${formatNumberAsGLSLFloat(LAYER_POOL_TEXTURE_WIDTH)};
 
 // Only layers whose global index is below this have entries in the
 // outputMagIdx/outputSeed/outputAddress varyings.
@@ -210,7 +210,7 @@ const uint VERTEX_ALIGNMENT_LAYER_CAP = <%= vertexAlignmentLayerCap %>u;
 const float layerPackingDegree[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree); }).join(", ") %>);
 const uint layerDtypeTag[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getDtypeTagForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
 const bool layerHasTpsTransform[<%= globalLayerCount %>] = bool[](<%= layerNamesWithSegmentation.map(function(name) { return tpsTransformPerLayer[name] != null ? "true" : "false"; }).join(", ") %>);
-const uint layerPoolId[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getColorLayerPoolForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
+const uint layerPoolId[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getLayerPoolForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
 const float layerDtypeNormalizer[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(getDtypeNormalizerForLayer(textureLayerInfos[name])); }).join(", ") %>);
 // Only used for segmentation layers.
 const uint layerSegmentIdDecodeTag[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getSegmentIdDecodeTagForLayer(textureLayerInfos[name].elementClass, textureLayerInfos[name].isSigned) + "u"; }).join(", ") %>);
@@ -480,7 +480,7 @@ void main() {
     isFragment: true,
     glslTypeForElementClass,
     getDtypeTagForElementClass,
-    getColorLayerPoolForElementClass,
+    getLayerPoolForElementClass,
     getDtypeNormalizerForLayer,
     getSegmentIdDecodeTagForLayer,
     each,
@@ -706,7 +706,7 @@ void main() {
     generateCalculateTpsOffsetFunction,
     glslTypeForElementClass,
     getDtypeTagForElementClass,
-    getColorLayerPoolForElementClass,
+    getLayerPoolForElementClass,
     getDtypeNormalizerForLayer,
     getSegmentIdDecodeTagForLayer,
     each,

@@ -557,7 +557,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   maximumLayerCountToRender: number;
 } {
   const { dataset } = Store.getState();
-  // Must match the capacity the pools are sized with (getColorLayerPoolPlan),
+  // Must match the capacity the pools are sized with (getLayerPoolPlan),
   // because the max-zoom computation relies on it.
   const requiredBucketCapacity = getRequiredBucketCapacityPerLayer(
     gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,

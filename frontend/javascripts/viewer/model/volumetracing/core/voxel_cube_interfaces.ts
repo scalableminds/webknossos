@@ -6,7 +6,7 @@
  */
 
 import type { BucketWrite } from "./bucket_write_map";
-import type { BucketAddress, SegmentBucketData } from "./volume_annotation_types";
+import type { BucketAddress, SegmentBucketData, SegmentId } from "./volume_annotation_types";
 
 /**
  * What can be done with a bucket right now. Two of the three states have no
@@ -32,7 +32,15 @@ export type BucketState = "absent" | "pending" | "loaded";
  */
 export interface TransactionCube {
   applyWrites(address: BucketAddress, write: BucketWrite): void;
-  getIsBackgroundFunction(address: BucketAddress): ((index: number) => boolean) | null;
+  /**
+   * A predicate telling whether a voxel of this bucket currently holds
+   * `overwritableValue`, for the overwrite-empty-only filter. Null when the
+   * bucket has no authoritative content to test against.
+   */
+  getIsOverwritableFunction(
+    address: BucketAddress,
+    overwritableValue: SegmentId,
+  ): ((index: number) => boolean) | null;
 }
 
 /**

@@ -89,8 +89,9 @@ const handleCreateCell = () => {
   }
 };
 
-const handleSetOverwriteMode = (event: RadioChangeEvent) => {
-  Store.dispatch(updateUserSettingAction("overwriteMode", event.target.value as OverwriteMode));
+const handleToggleOverwriteMode = () => {
+  const { overwriteMode } = Store.getState().userConfiguration;
+  Store.dispatch(updateUserSettingAction("overwriteMode", toggleOverwriteMode(overwriteMode)));
 };
 
 export function OverwriteModeSwitch({
@@ -145,27 +146,28 @@ export function OverwriteModeSwitch({
     return null;
   }
 
+  const isOverwriteEmpty = overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY;
+  // Wrap the button in Space.Compact so that the enlarged action bar icon size applies to it.
   return (
-    <Radio.Group
-      value={overwriteMode}
-      onChange={handleSetOverwriteMode}
-      style={{
-        marginLeft: ACTIONBAR_MARGIN_LEFT,
-      }}
-    >
-      <RadioButtonWithTooltip
-        title="Overwrite everything. This setting can be toggled by holding CTRL."
-        value={OverwriteModeEnum.OVERWRITE_ALL}
-      >
-        <Icon component={OverwriteEverythingIcon} aria-label="Overwrite All Icon" />
-      </RadioButtonWithTooltip>
-      <RadioButtonWithTooltip
-        title="Only overwrite empty areas. In case of erasing, only the current segment ID is overwritten. This setting can be toggled by holding CTRL."
-        value={OverwriteModeEnum.OVERWRITE_EMPTY}
-      >
-        <Icon component={OverwriteEmptyIcon} aria-label="Overwrite Empty Icon" />
-      </RadioButtonWithTooltip>
-    </Radio.Group>
+    <Space.Compact style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}>
+      <ToggleButton
+        active={isOverwriteEmpty}
+        onClick={handleToggleOverwriteMode}
+        style={NARROW_BUTTON_STYLE}
+        title={
+          isOverwriteEmpty
+            ? "Overwrite-empty mode is active: brushing and erasing will only affect empty voxels (or, when erasing, voxels of the current segment ID). Click to switch to overwriting everything instead. This setting can be toggled by holding CTRL."
+            : "Overwrite-everything mode is active: brushing and erasing will overwrite any voxel, regardless of whether it is empty or already labeled. Click to switch to only overwriting empty areas. This setting can be toggled by holding CTRL."
+        }
+        icon={
+          isOverwriteEmpty ? (
+            <Icon component={OverwriteEmptyIcon} aria-label="Overwrite Empty Icon" />
+          ) : (
+            <Icon component={OverwriteEverythingIcon} aria-label="Overwrite All Icon" />
+          )
+        }
+      />
+    </Space.Compact>
   );
 }
 
@@ -335,18 +337,18 @@ export function FloodFillSettings() {
     <div>
       <FillModeSwitch />
 
-      <ButtonComponent
-        style={{
-          ...NARROW_BUTTON_STYLE,
-          marginLeft: ACTIONBAR_MARGIN_LEFT,
-        }}
-        type={isRestrictedToBoundingBox ? "primary" : "default"}
-        onClick={toggleRestrictFloodfillToBoundingBox}
-        title={
-          "When enabled, the floodfill will be restricted to the bounding box enclosed by the clicked position. If multiple bounding boxes enclose that position, the smallest is used."
-        }
-        icon={<Icon component={RestrictFloodfillToBboxIcon} aria-label="Restrict floodfill" />}
-      />
+      {/* Wrap the button in Space.Compact so that the enlarged action bar icon size applies to it. */}
+      <Space.Compact style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}>
+        <ButtonComponent
+          style={NARROW_BUTTON_STYLE}
+          type={isRestrictedToBoundingBox ? "primary" : "default"}
+          onClick={toggleRestrictFloodfillToBoundingBox}
+          title={
+            "When enabled, the floodfill will be restricted to the bounding box enclosed by the clicked position. If multiple bounding boxes enclose that position, the smallest is used."
+          }
+          icon={<Icon component={RestrictFloodfillToBboxIcon} aria-label="Restrict floodfill" />}
+        />
+      </Space.Compact>
     </div>
   );
 }

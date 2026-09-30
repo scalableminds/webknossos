@@ -241,7 +241,7 @@ describe("volume annotation core — flood fill", () => {
     class BoundedCube implements LoadingVoxelCube {
       readonly loaded: string[] = [];
       applyWrites() {}
-      getIsBackgroundFunction() {
+      getIsOverwritableFunction() {
         return null;
       }
       /** Only bucket (0,0,0) exists; everything else is outside the dataset. */

@@ -189,17 +189,19 @@ function emitSpansAlongRow(
   contains: (x: number) => boolean,
 ): void {
   // overwrite-all needs no reads at all. For absent and pending buckets there
-  // is no authoritative content to test against, so paint optimistically:
+  // is no authoritative content to test against, so write optimistically:
   // overwrite mode protects what is visible, and those buckets render as
-  // background.
-  const isBackground = ctx.overwriteMode === "overwrite-empty-only" ? writer.isBackground : null;
+  // background. The same goes for every mag other than this one — mag
+  // propagation never consults the filter, since that would mean a data loading dependency.
+  const isOverwritable =
+    ctx.overwriteMode === "overwrite-empty-only" ? writer.isOverwritable : null;
   const bucketOriginX = address[0] * BUCKET_WIDTH;
 
   let runStart = -1;
   for (let x = xStart; x < xEnd; x++) {
     const localX = x - bucketOriginX;
     const index = rowBase + localX;
-    const accepted = contains(x) && (isBackground == null || isBackground(index));
+    const accepted = contains(x) && (isOverwritable == null || isOverwritable(index));
     if (accepted) {
       if (runStart < 0) runStart = index;
     } else if (runStart >= 0) {

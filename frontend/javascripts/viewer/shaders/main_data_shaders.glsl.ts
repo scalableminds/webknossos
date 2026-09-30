@@ -68,11 +68,8 @@ export type Params = {
     string,
     {
       packingDegree: number;
-      dataTextureCount: number;
       isSigned: boolean;
-      glslPrefix: "" | "i" | "u";
       elementClass: ElementClass;
-      unsanitizedName: string;
       isColor: boolean;
     }
   >;

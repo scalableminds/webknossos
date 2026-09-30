@@ -12,12 +12,7 @@ import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
 import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
-import constants, {
-  type BucketAddress,
-  type Vector3,
-  type Vector4,
-  type ViewMode,
-} from "viewer/constants";
+import type { BucketAddress, Vector3, Vector4, ViewMode } from "viewer/constants";
 import {
   getElementClass,
   getLayerByName,
@@ -160,10 +155,8 @@ export default class LayerRenderingManager {
   lastIsVisible: boolean | undefined;
   lastRects: PlaneRects | undefined;
   textureBucketManager!: TextureBucketManager;
-  textureWidth: number;
   cube: DataCube;
   pullQueue: PullQueue;
-  dataTextureCount: number;
   name: string;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
@@ -174,18 +167,10 @@ export default class LayerRenderingManager {
   private colorCuckooTable: CuckooTableVec3 | undefined;
   private storePropertyUnsubscribers: Array<() => void> = [];
 
-  constructor(
-    name: string,
-    pullQueue: PullQueue,
-    cube: DataCube,
-    textureWidth: number,
-    dataTextureCount: number,
-  ) {
+  constructor(name: string, pullQueue: PullQueue, cube: DataCube) {
     this.name = name;
     this.pullQueue = pullQueue;
     this.cube = cube;
-    this.textureWidth = textureWidth;
-    this.dataTextureCount = dataTextureCount;
   }
 
   refresh() {

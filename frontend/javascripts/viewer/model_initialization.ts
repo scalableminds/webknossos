@@ -53,7 +53,6 @@ import {
   getDataLayers,
   getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
-  hasSegmentation,
   isElementClassSupported,
   isSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
@@ -84,7 +83,6 @@ import {
   initializeVolumeTracingAction,
 } from "viewer/model/actions/volumetracing_actions";
 import {
-  computeDataTexturesSetup,
   computeLayerPoolPlan,
   getRequiredBucketCapacityPerLayer,
   getSupportedTextureSpecs,
@@ -129,7 +127,6 @@ export async function initialize(
 ): Promise<
   | {
       dataLayers: DataLayerCollection;
-      maximumTextureCountForLayer: number;
     }
   | null
   | undefined
@@ -262,14 +259,8 @@ export async function initialize(
     if (userState != null) {
       Store.dispatch(setZoomStepAction(userState.zoomLevel));
     }
-    const { smallestCommonBucketCapacity, maximumLayerCountToRender } = initializationInformation;
-    Store.dispatch(
-      initializeGpuSetupAction(
-        smallestCommonBucketCapacity,
-        gpuMemoryFactor,
-        maximumLayerCountToRender,
-      ),
-    );
+    const { smallestCommonBucketCapacity } = initializationInformation;
+    Store.dispatch(initializeGpuSetupAction(smallestCommonBucketCapacity, gpuMemoryFactor));
   }
 
   // There is no need to initialize the annotation if there is no annotation (View mode).
@@ -348,20 +339,10 @@ async function fetchEditableMappings(
 
 function validateSpecsForLayers(
   dataset: StoreDataset,
-  requiredBucketCapacity: number,
   specs: ReturnType<typeof getSupportedTextureSpecs>,
-): any {
-  const layers = dataset.dataSource.dataLayers;
+): void {
   validateMinimumRequirements(specs);
-  const setupDetails = computeDataTexturesSetup(
-    specs,
-    layers,
-    hasSegmentation(dataset),
-    requiredBucketCapacity,
-  );
-
-  maybeWarnAboutUnsupportedLayers(layers);
-  return setupDetails;
+  maybeWarnAboutUnsupportedLayers(dataset.dataSource.dataLayers);
 }
 
 function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
@@ -556,12 +537,11 @@ function initializeSettings(
 
 function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   dataLayers: DataLayerCollection;
-  maximumTextureCountForLayer: number;
   smallestCommonBucketCapacity: number;
-  maximumLayerCountToRender: number;
 } {
   const { dataset } = Store.getState();
   const specs = getSupportedTextureSpecs();
+  validateSpecsForLayers(dataset, specs);
   // Stored as gpuSetup.smallestCommonBucketCapacity. getLayerPoolPlan sizes
   // the pools with it, and the max-zoom computation relies on it.
   const { bucketCapacity: smallestCommonBucketCapacity } = computeLayerPoolPlan(
@@ -572,8 +552,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     ),
     specs.maxArrayTextureLayers,
   );
-  const { textureInformationPerLayer, maximumLayerCountToRender, maximumTextureCountForLayer } =
-    validateSpecsForLayers(dataset, smallestCommonBucketCapacity, specs);
 
   if (import.meta.env.MODE !== "test") {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");
@@ -583,16 +561,8 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   const dataLayers: DataLayerCollection = {};
 
   for (const layer of layers) {
-    const textureInformation = textureInformationPerLayer.get(layer);
-
-    if (!textureInformation) {
-      throw new Error("No texture information for layer?");
-    }
-
     dataLayers[layer.name] = new DataLayer(
       layer,
-      textureInformation.textureSize,
-      textureInformation.textureCount,
       layer.name, // In case of a volume tracing layer the layer name will equal its tracingId.
       layers.length,
     );
@@ -605,9 +575,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
 
   return {
     dataLayers,
-    maximumTextureCountForLayer,
     smallestCommonBucketCapacity,
-    maximumLayerCountToRender,
   };
 }
 

@@ -169,12 +169,9 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
     const dtypeConfig = getDtypeConfigForElementClass(elementClass);
     return {
       packingDegree: dtypeConfig.packingDegree,
-      glslPrefix: dtypeConfig.glslPrefix,
-      dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
       isSigned: dtypeConfig.isSigned,
       elementClass,
       isColor: layer.category === "color",
-      unsanitizedName: layer.name,
     };
   });
 }

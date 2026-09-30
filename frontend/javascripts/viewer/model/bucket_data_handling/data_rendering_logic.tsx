@@ -1,9 +1,7 @@
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { document } from "libs/window";
-import max from "lodash-es/max";
 import memoize from "lodash-es/memoize";
-import min from "lodash-es/min";
 import {
   ByteType,
   FloatType,
@@ -26,7 +24,6 @@ type GpuSpecs = {
   // Maximum number of slices per texture array, i.e. per pool.
   maxArrayTextureLayers: number;
 };
-const lookupTextureCount = 1;
 export function getSupportedTextureSpecs(): GpuSpecs {
   const canvas = document.createElement("canvas");
   const contextProvider =
@@ -130,12 +127,6 @@ export function validateMinimumRequirements(specs: GpuSpecs): void {
     throw new Error(msg);
   }
 }
-export type DataTextureSizeAndCount = {
-  textureSize: number;
-  textureCount: number;
-  packingDegree: number;
-};
-
 export function getBucketCapacity(
   dataTextureCount: number,
   textureWidth: number,
@@ -393,141 +384,6 @@ export function getSegmentIdDecodeTagForLayer(
     return SEGMENT_ID_DECODE_TAG_64BIT;
   }
   return isSigned ? SEGMENT_ID_DECODE_TAG_SIGNED : SEGMENT_ID_DECODE_TAG_UNSIGNED;
-}
-
-// Only exported for testing
-export function calculateTextureSizeAndCountForLayer(
-  specs: GpuSpecs,
-  elementClass: ElementClass,
-  requiredBucketCapacity: number,
-): DataTextureSizeAndCount {
-  let textureSize = specs.supportedTextureSize;
-  const { packingDegree } = getDtypeConfigForElementClass(elementClass);
-
-  // Try to half the texture size as long as it does not require more
-  // data textures. This ensures that we maximize the number of simultaneously
-  // renderable layers.
-  while (
-    getDataTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity) <=
-    getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity)
-  ) {
-    textureSize /= 2;
-  }
-
-  const textureCount = getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity);
-  return {
-    textureSize,
-    textureCount,
-    packingDegree,
-  };
-}
-
-function buildTextureInformationMap<
-  Layer extends {
-    elementClass: ElementClass;
-    category: "color" | "segmentation";
-  },
->(
-  layers: Array<Layer>,
-  specs: GpuSpecs,
-  requiredBucketCapacity: number,
-): Map<Layer, DataTextureSizeAndCount> {
-  const textureInformationPerLayer = new Map();
-  layers.forEach((layer) => {
-    const sizeAndCount = calculateTextureSizeAndCountForLayer(
-      specs,
-      layer.elementClass,
-      requiredBucketCapacity,
-    );
-    textureInformationPerLayer.set(layer, sizeAndCount);
-  });
-  return textureInformationPerLayer;
-}
-
-function getSmallestCommonBucketCapacity<
-  Layer extends {
-    elementClass: ElementClass;
-  },
->(textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>): number {
-  const capacities = Array.from(textureInformationPerLayer.values()).map((sizeAndCount) =>
-    getBucketCapacity(
-      sizeAndCount.textureCount,
-      sizeAndCount.textureSize,
-      sizeAndCount.packingDegree,
-    ),
-  );
-  return min(capacities) || 0;
-}
-
-function getRenderSupportedLayerCount<
-  Layer extends {
-    elementClass: ElementClass;
-    category: "color" | "segmentation";
-  },
->(
-  specs: GpuSpecs,
-  textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>,
-  hasSegmentation: boolean,
-) {
-  // Find out which layer needs the most textures. We assume that value is equal for all layers
-  // so that we can tell the user that X layers can be rendered simultaneously. We could be more precise
-  // here (because some layers might need fewer textures), but this would be harder to communicate to
-  // the user and also more complex to maintain code-wise.
-  const maximumTextureCountForLayer =
-    max(
-      Array.from(textureInformationPerLayer.values()).map(
-        (sizeAndCount) => sizeAndCount.textureCount,
-      ),
-    ) ?? 0;
-
-  // If a segmentation layer exists, we need to allocate a texture for custom colors,
-  // and two for mappings.
-  const textureCountForSegmentation = hasSegmentation ? 3 : 0;
-  const maximumLayerCountToRender = Math.floor(
-    (specs.maxTextureCount - textureCountForSegmentation - lookupTextureCount) /
-      maximumTextureCountForLayer,
-  );
-
-  // Without any GPU restrictions, WK would be able to render all color layers
-  // plus one segmentation layer. Use that as the upper layer count limit to avoid
-  // compiling too complex shaders.
-  const maximumLayerCount =
-    Array.from(textureInformationPerLayer.keys()).filter((l) => l.category === "color").length +
-    (hasSegmentation ? 1 : 0);
-  return {
-    maximumLayerCountToRender: Math.min(maximumLayerCountToRender, maximumLayerCount),
-    maximumTextureCountForLayer,
-  };
-}
-
-export function computeDataTexturesSetup<
-  Layer extends {
-    elementClass: ElementClass;
-    category: "color" | "segmentation";
-  },
->(specs: GpuSpecs, layers: Array<Layer>, hasSegmentation: boolean, requiredBucketCapacity: number) {
-  const textureInformationPerLayer = buildTextureInformationMap(
-    layers,
-    specs,
-    requiredBucketCapacity,
-  );
-  const smallestCommonBucketCapacity = getSmallestCommonBucketCapacity(textureInformationPerLayer);
-  const { maximumLayerCountToRender, maximumTextureCountForLayer } = getRenderSupportedLayerCount(
-    specs,
-    textureInformationPerLayer,
-    hasSegmentation,
-  );
-
-  if (import.meta.env.MODE !== "test") {
-    console.log("maximumLayerCountToRender", maximumLayerCountToRender);
-  }
-
-  return {
-    textureInformationPerLayer,
-    smallestCommonBucketCapacity,
-    maximumLayerCountToRender,
-    maximumTextureCountForLayer,
-  };
 }
 
 export function getGpuFactorsWithLabels() {

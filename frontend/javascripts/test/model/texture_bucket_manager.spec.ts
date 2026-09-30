@@ -59,7 +59,23 @@ const setActiveBucketsAndWait = (tbm: TextureBucketManager, activeBuckets: DataB
   });
 };
 
-const expectBucket = (tbm: TextureBucketManager, bucket: DataBucket, expectedFirstByte: number) => {
+const createTbm = (dataTextureCount: number) => {
+  const pool = new PoolTextureManager(LayerPool.U8, dataTextureCount);
+  const tbm = new TextureBucketManager(LAYER_POOL_TEXTURE_WIDTH, dataTextureCount, "uint8", {
+    poolTextureManager: pool,
+    baseSlice: 0,
+    bucketCapacity: Number.POSITIVE_INFINITY,
+  });
+  tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+  return { tbm, pool };
+};
+
+const expectBucket = (
+  tbm: TextureBucketManager,
+  pool: PoolTextureManager,
+  bucket: DataBucket,
+  expectedFirstByte: number,
+) => {
   const bucketAddress = tbm.lookUpCuckooTable.get([
     bucket.zoomedAddress[0],
     bucket.zoomedAddress[1],
@@ -74,7 +90,7 @@ const expectBucket = (tbm: TextureBucketManager, bucket: DataBucket, expectedFir
 
   const bucketLocation = tbm.getPackedBucketSize() * bucketAddress;
   // @ts-expect-error - texture is available in our mock but not in the real type
-  expect(tbm.dataTextures[0].texture[bucketLocation]).toBe(expectedFirstByte);
+  expect(pool.textureArray.texture[bucketLocation]).toBe(expectedFirstByte);
 };
 
 describe("TextureBucketManager", () => {
@@ -85,8 +101,7 @@ describe("TextureBucketManager", () => {
   });
 
   it("basic functionality", () => {
-    const tbm = new TextureBucketManager(2048, 1, "uint8");
-    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    const { tbm, pool } = createTbm(1);
 
     const activeBuckets = [
       buildBucket([1, 1, 1, 0], 100),
@@ -95,14 +110,13 @@ describe("TextureBucketManager", () => {
     ];
     setActiveBucketsAndWait(tbm, activeBuckets);
 
-    expectBucket(tbm, activeBuckets[0], 100);
-    expectBucket(tbm, activeBuckets[1], 101);
-    expectBucket(tbm, activeBuckets[2], 102);
+    expectBucket(tbm, pool, activeBuckets[0], 100);
+    expectBucket(tbm, pool, activeBuckets[1], 101);
+    expectBucket(tbm, pool, activeBuckets[2], 102);
   });
 
   it("changing active buckets", () => {
-    const tbm = new TextureBucketManager(2048, 2, "uint8");
-    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    const { tbm, pool } = createTbm(2);
 
     const activeBuckets = [
       buildBucket([0, 0, 0, 0], 100),
@@ -116,9 +130,9 @@ describe("TextureBucketManager", () => {
     setActiveBucketsAndWait(tbm, activeBuckets.slice(0, 3));
     setActiveBucketsAndWait(tbm, activeBuckets.slice(3, 6));
 
-    expectBucket(tbm, activeBuckets[3], 200);
-    expectBucket(tbm, activeBuckets[4], 201);
-    expectBucket(tbm, activeBuckets[5], 202);
+    expectBucket(tbm, pool, activeBuckets[3], 200);
+    expectBucket(tbm, pool, activeBuckets[4], 201);
+    expectBucket(tbm, pool, activeBuckets[5], 202);
   });
 
   it("pooled mode writes into the shared pool texture, offset by baseSlice", () => {

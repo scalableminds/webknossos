@@ -26,7 +26,6 @@ trait ReversionHelper {
 
 trait VolumeBucketCompression extends LazyLogging {
 
-  // lazy: loading the LZ4 native library is slow and would otherwise delay server startup
   private lazy val lz4factory = LZ4Factory.fastestInstance
   private lazy val compressor: LZ4Compressor = lz4factory.fastCompressor
   private lazy val decompressor: LZ4FastDecompressor = lz4factory.fastDecompressor

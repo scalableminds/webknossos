@@ -261,7 +261,7 @@ export default class LayerRenderingManager {
             WkDevFlags.bucketDebugging.visualizeScanLines,
             WkDevFlags.bucketDebugging.obliquePickerStrategy,
             WkDevFlags.bucketDebugging.prefetchAlongViewAxis,
-            WkDevFlags.bucketDebugging.shadowObliquePickerStrategy,
+            WkDevFlags.bucketDebugging.compareObliquePickerStrategies,
           ),
         );
       }

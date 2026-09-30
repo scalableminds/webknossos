@@ -34,14 +34,11 @@ export const WkDevFlags = {
     // along its view axis), so that data is already loading by the time the user actually
     // moves there. See PREFETCH_Z_DIFF / zDiff in oblique_bucket_picker(_flood_fill).ts.
     prefetchAlongViewAxis: true,
-    // Dev-only: if set, every real pick() call additionally (and redundantly) runs this
-    // strategy against the exact same parameters, purely to measure its duration for
-    // comparison against obliquePickerStrategy. Its result is discarded -- it never affects
-    // rendering. Useful for a paired, confound-free production comparison of two strategies,
-    // since both then see identical camera positions/zoom levels/bucket counts per call
-    // (unlike comparing two separately-navigated sessions). Logged every 100 calls alongside
-    // the regular instrumentation in async_bucket_picker.worker.ts. undefined disables this.
-    shadowObliquePickerStrategy: "scanLines" as "scanLines" | "floodFill" | undefined,
+    // If true, every oblique pick additionally runs the other strategy (the one not selected
+    // by obliquePickerStrategy) on the exact same input, purely for timing. Its result is
+    // discarded. Timing statistics for both strategies are logged to the console every 100
+    // picks (see async_bucket_picker.worker.ts).
+    compareObliquePickerStrategies: true,
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,

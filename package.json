@@ -60,7 +60,6 @@
     "redux-mock-store": "^1.2.2",
     "shelljs": "^0.8.5",
     "typescript": "7.0.2",
-    "typescript-coverage-report": "^1.1.0",
     "vite": "~8.2.2",
     "vite-plugin-svgr": "^4.5.0",
     "vitest": "^5.0.1"
@@ -122,7 +121,6 @@
     "typecheck": "yarn tsc && echo '✅ Frontend typing is correct'",
     "ts": "yarn tsc && echo '✅ Frontend typing is correct'",
     "ts-watch": "yarn tsc --watch",
-    "ts-coverage": "typescript-coverage-report",
     "find-cyclic-dependencies": "yarn run dpdm -T --tree false --warning false --extensions .ts,.tsx frontend/javascripts/main.tsx",
     "check-cyclic-dependencies": "node ./tools/check-cyclic-dependencies.js",
     "startf": "yarn rm-fossil-lock; yarn kill-listeners; rm -r webknossos-jni/target; yarn start",

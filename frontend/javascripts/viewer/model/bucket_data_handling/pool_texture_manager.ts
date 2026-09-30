@@ -8,16 +8,15 @@ import {
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 
 // A PoolTextureManager owns the single, shared sampler2DArray backing one
-// color-layer dtype pool (see ColorLayerPool in data_rendering_logic.ts).
-// Unlike TextureBucketManager (which owns its own dedicated texture(s) per
-// layer), many layers write their buckets into disjoint depth ranges
+// dtype pool (see ColorLayerPool in data_rendering_logic.ts).
+// Many layers write their buckets into disjoint depth ranges
 // ([baseSlice, baseSlice + dataTextureCount)) of this ONE shared texture
 // array -- see TextureBucketManager's pooled mode.
 //
 // The depth (array-layer count) is fixed at construction time and never
 // grows afterwards, since WebGL2's texStorage3D allocates immutable storage;
 // the caller (getColorLayerPoolPlan in layer_rendering_manager.ts) is
-// responsible for summing up every color layer's slice requirement for this
+// responsible for summing up every layer's slice requirement for this
 // pool *before* constructing this class.
 export default class PoolTextureManager {
   pool: ColorLayerPool;

@@ -174,7 +174,7 @@ class UpdatableTexture extends Texture {
 }
 
 /* Array-texture (sampler2DArray) analogue of UpdatableTexture above, used to
- * back a color-layer texture pool (see pool_texture_manager.ts): many
+ * back a layer texture pool (see pool_texture_manager.ts): many
  * layers' buckets are written into (sub-rectangle, single-slice) regions of
  * one shared depth-many-layers 3D texture, addressed by (x, y, zOffset).
  * Mirrors UpdatableTexture's approach of allocating once via texStorage3D

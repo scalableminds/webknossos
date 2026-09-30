@@ -242,8 +242,7 @@ const uint VERTEX_ALIGNMENT_LAYER_CAP = <%= vertexAlignmentLayerCap %>u;
 const float layerPackingDegree[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree); }).join(", ") %>);
 const uint layerDtypeTag[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getDtypeTagForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
 const bool layerHasTpsTransform[<%= globalLayerCount %>] = bool[](<%= layerNamesWithSegmentation.map(function(name) { return tpsTransformPerLayer[name] != null ? "true" : "false"; }).join(", ") %>);
-// Only meaningful for color layers (indices [0, colorLayerNames.length)); see
-// getRgbaAtXYIndex in texture_access.glsl.ts.
+// See getRgbaAtXYIndex in texture_access.glsl.ts.
 const uint layerPoolId[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getColorLayerPoolForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
 const float layerDtypeNormalizer[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(getDtypeNormalizerForLayer(textureLayerInfos[name])); }).join(", ") %>);
 // Only meaningful for segmentation layers (indices [colorLayerNames.length,

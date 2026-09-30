@@ -1219,9 +1219,7 @@ class PlaneMaterialFactory {
   // blended, based on the user's configured colorLayerOrder. This is entirely separate
   // from getLayersToRender/recomputeShaders: toggling visibility or reordering layers
   // only ever changes the result of this function, which is written directly into the
-  // colorRenderOrder/activeColorLayerCount uniforms -- never requiring a shader recompile
-  // (unless the declared set itself also happens to change, e.g. in the GPU-constrained
-  // case; see the datasetConfiguration.layers listener in startListeningForUniforms).
+  // colorRenderOrder/activeColorLayerCount uniforms -- never requiring a shader recompile.
   getColorRenderOrder(): { colorRenderOrder: number[]; activeColorLayerCount: number } {
     const state = Store.getState();
     const { colorLayerOrder, layers } = state.datasetConfiguration;

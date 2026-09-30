@@ -19,11 +19,9 @@ import {
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
 
-// Color layers write their buckets into a shared, dtype-keyed sampler2DArray
+// Layers write their buckets into a shared, dtype-keyed sampler2DArray
 // pool (see PoolTextureManager) instead of owning dedicated texture(s); this
 // describes where within that shared pool a given layer's buckets live.
-// Segmentation layers don't use this (still legacy per-layer textures, see
-// getSegmentId_<name> in segmentation.glsl.ts).
 export type ColorLayerPoolBinding = {
   poolTextureManager: PoolTextureManager;
   baseSlice: number;
@@ -108,8 +106,8 @@ export default class TextureBucketManager {
   isDestroyed: boolean = false;
   private areTexturesReady: boolean = false;
   private isWriterQueueProcessingScheduled: boolean = false;
-  // Set for color layers (pooled mode); undefined for segmentation layers,
-  // which keep their own dedicated dataTextures above.
+  // Set in pooled mode (all layers in the app); undefined only when a test
+  // constructs a TextureBucketManager with its own dedicated dataTextures.
   private pool: ColorLayerPoolBinding | undefined;
 
   constructor(

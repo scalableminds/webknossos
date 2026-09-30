@@ -187,9 +187,9 @@ export const COLOR_LAYER_POOLS = [
 
 // Fixed width/height for every pool's sampler2DArray. Since pooling amortizes
 // GPU memory across many layers, there's no need to optimize this per layer
-// the way calculateTextureSizeAndCountForLayer does for segmentation layers;
-// only the depth (array-layer count) needs to vary, and is computed by
-// getColorLayerPoolDepths below.
+// the way calculateTextureSizeAndCountForLayer does; only the depth
+// (array-layer count) needs to vary, and is computed by
+// computeColorLayerPoolAssignments below.
 export const COLOR_LAYER_POOL_TEXTURE_WIDTH = 2048;
 
 export function getColorLayerPoolForElementClass(elementClass: ElementClass): ColorLayerPool {
@@ -204,7 +204,7 @@ export function getColorLayerPoolForElementClass(elementClass: ElementClass): Co
       return ColorLayerPool.S16;
     // uint8, uint24, uint32, int32, uint64, int64, double: all stored as raw
     // bytes (UnsignedByteType/RGBA), decoded manually in the shader (see
-    // layerDtypeTag in main_data_shaders.glsl.ts), same as today.
+    // layerDtypeTag in main_data_shaders.glsl.ts).
     default:
       return ColorLayerPool.U8;
   }
@@ -257,10 +257,6 @@ export function getColorLayerPoolGpuConfig(pool: ColorLayerPool): {
   }
 }
 
-// How many fixed-width texture-array slices a layer with the given packing
-// degree needs to hold requiredBucketCapacity buckets. Mirrors
-// getDataTextureCount, just exported for use by the pool depth/base-slice
-// bookkeeping in pool_texture_manager.ts.
 // How a raw texel fetched from a layer's texture needs to be rescaled to
 // reach that layer's *native* value range (e.g. 0-255 for uint8, -128..127
 // for int8, no-op for float). Depends only on (isColor, isSigned,
@@ -283,6 +279,10 @@ export function getDtypeNormalizerForLayer(textureLayerInfo: {
   }
 }
 
+// How many fixed-width texture-array slices a layer with the given packing
+// degree needs to hold requiredBucketCapacity buckets. Mirrors
+// getDataTextureCount, for the pool depth/base-slice bookkeeping in
+// computeColorLayerPoolAssignments.
 export function getDataTextureCountForFixedWidth(
   packingDegree: number,
   requiredBucketCapacity: number,
@@ -350,10 +350,8 @@ export type ColorLayerPoolAssignment = {
   packingDegree: number;
 };
 
-// Computes, for every layer (color AND segmentation -- both are pooled the
-// same way; only *how many* function/uniform generations a layer needs
-// differs, see getSegmentId in segmentation.glsl.ts), which pool it belongs
-// to and which contiguous range of that pool's texture-array slices
+// Computes, for every layer (color and segmentation are pooled the same
+// way), which pool it belongs to and which contiguous range of that pool's texture-array slices
 // ([baseSlice, baseSlice + dataTextureCount)) is reserved for it, plus the
 // resulting total depth needed for each pool. Called once per dataset load
 // (see getColorLayerPoolPlan in layer_rendering_manager.ts) so that every

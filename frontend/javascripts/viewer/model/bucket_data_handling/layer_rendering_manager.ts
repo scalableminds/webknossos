@@ -74,8 +74,8 @@ const getSharedLookUpCuckooTable = memoizeOne(
 // Lazily-initialized singleton, computed once per dataset (see
 // computeColorLayerPoolAssignments for why the pool depths -- and therefore
 // the pools themselves -- can't be grown incrementally afterwards). Maps
-// every *color* layer to a reserved slice range within one of the 5 shared
-// dtype pools; segmentation layers keep their own dedicated textures.
+// every layer (color and segmentation) to a reserved slice range within one
+// of the 5 shared dtype pools.
 const getColorLayerPoolPlan = memoizeOne(() => {
   const { dataset, userConfiguration } = Store.getState();
   const requiredBucketCapacity = getRequiredBucketCapacityPerLayer(

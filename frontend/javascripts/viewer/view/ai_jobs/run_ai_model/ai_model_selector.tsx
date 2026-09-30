@@ -54,6 +54,16 @@ const mapCategoryToJobType = (
   }
 };
 
+const filterModels = (models: AiModel[], searchTerm: string): AiModel[] => {
+  if (!searchTerm) return models;
+  const lowerCaseSearchTerm = searchTerm.toLowerCase();
+  return models.filter(
+    (model) =>
+      model.name?.toLowerCase().includes(lowerCaseSearchTerm) ||
+      model.comment?.toLowerCase().includes(lowerCaseSearchTerm),
+  );
+};
+
 export const AiModelSelector: React.FC = () => {
   const { selectedModel, setSelectedModel, setSelectedJobType, stepStatuses } =
     useRunAiModelJobContext();
@@ -81,24 +91,12 @@ export const AiModelSelector: React.FC = () => {
     setSelectedJobType(jobType);
   };
 
-  const filterModels = (models: AiModel[]) => {
-    if (!searchTerm) return models;
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    return models.filter(
-      (model) =>
-        model.name?.toLowerCase().includes(lowerCaseSearchTerm) ||
-        model.comment?.toLowerCase().includes(lowerCaseSearchTerm),
-    );
-  };
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: filtered models need an update after searchTerm changes
   const filteredPretrainedModels = useMemo(
-    () => filterModels(pretrainedModels),
+    () => filterModels(pretrainedModels, searchTerm),
     [searchTerm, pretrainedModels],
   );
-  // biome-ignore lint/correctness/useExhaustiveDependencies: filtered models need an update after searchTerm changes
   const filteredCustomModels = useMemo(
-    () => filterModels(customModels),
+    () => filterModels(customModels, searchTerm),
     [searchTerm, customModels],
   );
 

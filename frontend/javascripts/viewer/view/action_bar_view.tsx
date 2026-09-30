@@ -12,6 +12,7 @@ import type React from "react";
 import { Fragment, PureComponent, useState } from "react";
 import { connect, useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
+import { UserThemeConfigProvider } from "theme_provider";
 import type { APIDataset, APIOrganization, APISegmentationLayer, APIUser } from "types/api_types";
 import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
 import constants, {
@@ -233,19 +234,21 @@ function CreateAnnotationButton() {
         Create Annotation
       </ButtonWithAuthentication>
 
-      <Modal
-        title="Select Segmentation Layer"
-        open={isLayerSelectionModalVisible}
-        onCancel={() => setLayerSelectionModalVisible(false)}
-        onOk={handleLayerSelected}
-      >
-        <NewVolumeLayerSelection
-          segmentationLayers={segmentationLayers}
-          dataset={dataset}
-          selectedSegmentationLayerName={selectedLayerName}
-          setSelectedSegmentationLayerName={setSelectedLayerName}
-        />
-      </Modal>
+      <UserThemeConfigProvider>
+        <Modal
+          title="Select Segmentation Layer"
+          open={isLayerSelectionModalVisible}
+          onCancel={() => setLayerSelectionModalVisible(false)}
+          onOk={handleLayerSelected}
+        >
+          <NewVolumeLayerSelection
+            segmentationLayers={segmentationLayers}
+            dataset={dataset}
+            selectedSegmentationLayerName={selectedLayerName}
+            setSelectedSegmentationLayerName={setSelectedLayerName}
+          />
+        </Modal>
+      </UserThemeConfigProvider>
     </div>
   );
 }
@@ -430,15 +433,17 @@ class ActionBarView extends PureComponent<Props, State> {
           <ModesView />
           {constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
         </div>
-        <AddNewLayoutModal
-          addLayout={this.addNewLayout}
-          isOpen={this.state.isNewLayoutModalOpen}
-          onCancel={() =>
-            this.setState({
-              isNewLayoutModalOpen: false,
-            })
-          }
-        />
+        <UserThemeConfigProvider>
+          <AddNewLayoutModal
+            addLayout={this.addNewLayout}
+            isOpen={this.state.isNewLayoutModalOpen}
+            onCancel={() =>
+              this.setState({
+                isNewLayoutModalOpen: false,
+              })
+            }
+          />
+        </UserThemeConfigProvider>
       </Fragment>
     );
   }

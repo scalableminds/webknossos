@@ -6,6 +6,7 @@ import {
   getEdgesForAgglomerateMinCut,
   getEditableAgglomerateTreeAsSkeletonTracing,
   getImportedDataset,
+  getMappingsForDatasetLayer,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
   getUpdateActionLog,
@@ -113,6 +114,7 @@ export interface WebknossosTestContext extends BaseTestContext {
     getUpdateActionLog: Mock<typeof getUpdateActionLog>;
     sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
     getPositionForSegmentInAgglomerate: Mock<typeof getPositionForSegmentInAgglomerate>;
+    getMappingsForDatasetLayer: Mock<typeof getMappingsForDatasetLayer>;
     getEditableAgglomerateTreeAsSkeletonTracing: Mock<
       typeof getEditableAgglomerateTreeAsSkeletonTracing
     >;
@@ -252,8 +254,11 @@ vi.mock("admin/rest_api.ts", async () => {
     getDataset: vi.fn(),
     getImportedDataset: vi.fn(),
     sendSaveRequestWithToken: mockedSendRequestWithToken,
-    getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
-    getMappingsForDatasetLayer: vi.fn(() => []),
+    getAgglomeratesForDatasetLayer: vi.fn(async () => ({
+      ok: true,
+      value: [sampleHdf5AgglomerateName],
+    })),
+    getMappingsForDatasetLayer: vi.fn(async () => ({ ok: true, value: [] })),
     getMeshFilesForDatasetLayer,
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
@@ -600,6 +605,7 @@ export async function setupWebknossosForTesting(
     getUpdateActionLog: vi.mocked(getUpdateActionLog),
     sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
     getPositionForSegmentInAgglomerate: vi.mocked(getPositionForSegmentInAgglomerate),
+    getMappingsForDatasetLayer: vi.mocked(getMappingsForDatasetLayer),
     getEditableAgglomerateTreeAsSkeletonTracing: vi.mocked(
       getEditableAgglomerateTreeAsSkeletonTracing,
     ),

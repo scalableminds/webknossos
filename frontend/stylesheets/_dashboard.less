@@ -318,6 +318,8 @@ pre.dataset-import-folder-structure-hint {
 .dashboard-annotation-status-label.ant-btn:disabled {
   margin-inline-end: 8px;
   color: var(--ant-color-text-description);
+  // Disabled buttons don't reliably pass hover events on to the tooltip wrapper.
+  pointer-events: none;
 }
 
 .dashboard-annotation-name {
@@ -372,7 +374,7 @@ pre.dataset-import-folder-structure-hint {
   margin-bottom: 10px;
 
   .sidebar-label {
-    line-height: 16px;
+    line-height: 18px;
   }
 }
 
@@ -386,6 +388,10 @@ pre.dataset-import-folder-structure-hint {
     align-self: stretch;
     margin: 0 !important;
   }
+}
+
+.ant-tag.dashboard-team-tag {
+  line-height: 16px;
 }
 
 .dashboard-details-sidebar .ant-tag,

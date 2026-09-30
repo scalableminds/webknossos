@@ -630,7 +630,12 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       (getSkeletonStats(stats)?.treeCount ?? 0) > 0 ||
       getVolumeStats(stats).some(([_tracingId, volumeStats]) => volumeStats.segmentCount > 0);
     const teamTags = annotation.teams.map((team) => (
-      <Tag key={team.id} color={stringToTagColor(team.name)} variant="outlined">
+      <Tag
+        key={team.id}
+        color={stringToTagColor(team.name)}
+        variant="outlined"
+        className="dashboard-team-tag"
+      >
         {team.name}
       </Tag>
     ));

@@ -4,6 +4,7 @@ import { unwrapOrThrow } from "admin/api/api_result";
 import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import { Space, Spin, Tag, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
+import FastTooltip from "components/fast_tooltip";
 import FormattedDate, { isToday } from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import { stringToTagColor } from "libs/colors";
@@ -16,8 +17,11 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_section";
 import { AnnotationIdentity } from "viewer/view/right_border_tabs/info_tab/identity_block";
 import { InlineIconButton } from "viewer/view/right_border_tabs/info_tab/info_tab_layout";
-import { AnnotationStatusLabels } from "./annotation_status_labels";
+import { AnnotationStatusLabels, LOCKED_ANNOTATION_EXPLANATION } from "./annotation_status_labels";
 import { SidebarSection } from "./sidebar_section";
+
+const ARCHIVED_ANNOTATION_EXPLANATION =
+  "Archived annotations cannot be edited and are hidden from this list by default. Change the status filter to list them.";
 
 // Worded like the options of the share modal.
 const COLLABORATION_MODE_LABELS: Record<
@@ -194,23 +198,31 @@ function AnnotationDetails({
         <SidebarSection label="Additional Actions">
           <div className="dataset-table-actions">
             {onArchive != null ? (
-              <AsyncLink onClick={onArchive} icon={<InboxOutlined className="icon-margin-right" />}>
-                Archive
-              </AsyncLink>
+              <FastTooltip title={ARCHIVED_ANNOTATION_EXPLANATION} wrapper="div">
+                <AsyncLink
+                  onClick={onArchive}
+                  icon={<InboxOutlined className="icon-margin-right" />}
+                >
+                  Archive
+                </AsyncLink>
+              </FastTooltip>
             ) : null}
             {onToggleLock != null ? (
-              <AsyncLink
-                onClick={onToggleLock}
-                icon={
-                  annotation.isLockedByOwner ? (
-                    <UnlockOutlined className="icon-margin-right" />
-                  ) : (
-                    <LockOutlined className="icon-margin-right" />
-                  )
-                }
-              >
-                {annotation.isLockedByOwner ? "Unlock" : "Lock"}
-              </AsyncLink>
+              // The div keeps the link a block within the actions list.
+              <FastTooltip title={LOCKED_ANNOTATION_EXPLANATION} wrapper="div">
+                <AsyncLink
+                  onClick={onToggleLock}
+                  icon={
+                    annotation.isLockedByOwner ? (
+                      <UnlockOutlined className="icon-margin-right" />
+                    ) : (
+                      <LockOutlined className="icon-margin-right" />
+                    )
+                  }
+                >
+                  {annotation.isLockedByOwner ? "Unlock" : "Lock"}
+                </AsyncLink>
+              </FastTooltip>
             ) : null}
           </div>
         </SidebarSection>

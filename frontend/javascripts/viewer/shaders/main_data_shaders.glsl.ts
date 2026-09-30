@@ -315,14 +315,14 @@ void main() {
   uint unmappedIdLow[<%= segmentationLayerNames.length %>];
   uint unmappedIdHigh[<%= segmentationLayerNames.length %>];
 
-  for (int segSlot = 0; segSlot < <%= segmentationLayerNames.length %>; segSlot++) {
-    segmentIdLow[segSlot] = 0u;
-    segmentIdHigh[segSlot] = 0u;
-    unmappedIdLow[segSlot] = 0u;
-    unmappedIdHigh[segSlot] = 0u;
+  for (int segIdx = 0; segIdx < <%= segmentationLayerNames.length %>; segIdx++) {
+    segmentIdLow[segIdx] = 0u;
+    segmentIdHigh[segIdx] = 0u;
+    unmappedIdLow[segIdx] = 0u;
+    unmappedIdHigh[segIdx] = 0u;
 
-    int globalIdx = <%= colorLayerNames.length %> + segSlot;
-    float effectiveAlpha = layerAlpha[globalIdx] * (1. - layerUnrenderable[globalIdx]);
+    int layerIdx = <%= colorLayerNames.length %> + segIdx;
+    float effectiveAlpha = layerAlpha[layerIdx] * (1. - layerUnrenderable[layerIdx]);
 
     // If the opacity is > 0, the segment id for the current voxel is read.
     // Since a segmentation might be mapped, the unmapped and (potentially mapped) id
@@ -330,21 +330,21 @@ void main() {
     if (effectiveAlpha > 0.) {
       vec4[2] unmapped_segment_id;
       vec4[2] segment_id;
-      getSegmentId(globalIdx, worldCoordUVW, unmapped_segment_id, segment_id);
+      getSegmentId(layerIdx, worldCoordUVW, unmapped_segment_id, segment_id);
 
-      uint decodeTag = layerSegmentIdDecodeTag[globalIdx];
+      uint decodeTag = layerSegmentIdDecodeTag[layerIdx];
 
       // Temporary vars to which decodeSegmentId will write
       highp uint hpv_low;
       highp uint hpv_high;
 
       decodeSegmentId(decodeTag, unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
-      unmappedIdLow[segSlot] = hpv_low;
-      unmappedIdHigh[segSlot] = hpv_high;
+      unmappedIdLow[segIdx] = hpv_low;
+      unmappedIdHigh[segIdx] = hpv_high;
 
       decodeSegmentId(decodeTag, segment_id[1], segment_id[0], hpv_low, hpv_high);
-      segmentIdLow[segSlot] = hpv_low;
-      segmentIdHigh[segSlot] = hpv_high;
+      segmentIdLow[segIdx] = hpv_low;
+      segmentIdHigh[segIdx] = hpv_high;
     }
   }
   <% } %>
@@ -459,30 +459,30 @@ void main() {
   gl_FragColor = data_color;
 
   <% if (hasSegmentation) { %>
-  for (int segSlot = 0; segSlot < <%= segmentationLayerNames.length %>; segSlot++) {
-    int globalIdx = <%= colorLayerNames.length %> + segSlot;
+  for (int segIdx = 0; segIdx < <%= segmentationLayerNames.length %>; segIdx++) {
+    int layerIdx = <%= colorLayerNames.length %> + segIdx;
 
     // Color map (<= to fight rounding mistakes)
-    if ( segmentIdLow[segSlot] != 0u || segmentIdHigh[segSlot] != 0u ) {
+    if ( segmentIdLow[segIdx] != 0u || segmentIdHigh[segIdx] != 0u ) {
       // Increase cell opacity when cell is hovered or if it is the active activeCell
-      bool isHoveredSegment = hoveredSegmentIdLow == segmentIdLow[segSlot]
-        && hoveredSegmentIdHigh == segmentIdHigh[segSlot];
-      bool isHoveredUnmappedSegment = hoveredUnmappedSegmentIdLow == unmappedIdLow[segSlot]
-        && hoveredUnmappedSegmentIdHigh == unmappedIdHigh[segSlot];
-      bool isActiveCell = activeCellIdLow == segmentIdLow[segSlot]
-         && activeCellIdHigh == segmentIdHigh[segSlot];
+      bool isHoveredSegment = hoveredSegmentIdLow == segmentIdLow[segIdx]
+        && hoveredSegmentIdHigh == segmentIdHigh[segIdx];
+      bool isHoveredUnmappedSegment = hoveredUnmappedSegmentIdLow == unmappedIdLow[segIdx]
+        && hoveredUnmappedSegmentIdHigh == unmappedIdHigh[segIdx];
+      bool isActiveCell = activeCellIdLow == segmentIdLow[segIdx]
+         && activeCellIdHigh == segmentIdHigh[segIdx];
       float alphaIncrement = getSegmentationAlphaIncrement(
-        layerAlpha[globalIdx],
+        layerAlpha[layerIdx],
         isHoveredSegment,
         isHoveredUnmappedSegment,
         isActiveCell
       );
 
-      vec4 segmentColor = convertCellIdToRGB(segmentIdHigh[segSlot], segmentIdLow[segSlot]);
+      vec4 segmentColor = convertCellIdToRGB(segmentIdHigh[segIdx], segmentIdLow[segIdx]);
       gl_FragColor = vec4(mix(
         data_color.rgb,
         segmentColor.rgb,
-        layerAlpha[globalIdx]  * segmentColor.a + alphaIncrement
+        layerAlpha[layerIdx]  * segmentColor.a + alphaIncrement
       ), 1.0);
     }
     vec4 brushOverlayColor = getBrushOverlay(worldCoordUVW);

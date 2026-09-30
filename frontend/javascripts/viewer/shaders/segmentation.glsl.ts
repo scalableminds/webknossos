@@ -381,11 +381,11 @@ export const getSegmentId: ShaderModule = {
     // transform/bbox/packingDegree from the same layerTransform/layerBboxMin/
     // layerBboxMax/layerPackingDegree arrays color layers use (see
     // SHARED_UNIFORM_DECLARATIONS in main_data_shaders.glsl.ts), keyed by
-    // slot (that layer's compiled index). Replaces what used to be one
+    // layerIdx (that layer's compiled index). Replaces what used to be one
     // generated getSegmentId_<name> function per segmentation layer.
-    void getSegmentId(int slot, vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
-      vec3 layerCoordUVW = transDim((layerTransform[slot] * vec4(transDim(worldPositionUVW), 1.0)).xyz);
-      if (isOutsideOfBoundingBox(layerCoordUVW, layerBboxMin[slot], layerBboxMax[slot])) {
+    void getSegmentId(int layerIdx, vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
+      vec3 layerCoordUVW = transDim((layerTransform[layerIdx] * vec4(transDim(worldPositionUVW), 1.0)).xyz);
+      if (isOutsideOfBoundingBox(layerCoordUVW, layerBboxMin[layerIdx], layerBboxMax[layerIdx])) {
         // Some GPUs don't null-initialize the variables.
         segment_id[0] = vec4(0.);
         segment_id[1] = vec4(0.);
@@ -394,15 +394,15 @@ export const getSegmentId: ShaderModule = {
         return;
       }
 
-      float packingDegree = layerPackingDegree[slot];
+      float packingDegree = layerPackingDegree[layerIdx];
       segment_id =
         getSegmentIdOrFallback(
-          float(slot),
+          float(layerIdx),
           POOL_TEXTURE_WIDTH,
           packingDegree,
           layerCoordUVW,
           vec4(0.0, 0.0, 0.0, 0.0),
-          layerHasTransformInt[slot] == 0
+          layerHasTransformInt[layerIdx] == 0
         );
 
       // Depending on the packing degree, the returned volume color contains extra values

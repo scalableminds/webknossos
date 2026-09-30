@@ -1,18 +1,21 @@
-import { InboxOutlined, LockOutlined, UnlockOutlined } from "@ant-design/icons";
+import { InboxOutlined, LockOutlined, SettingOutlined, UnlockOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { unwrapOrThrow } from "admin/api/api_result";
 import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import { Space, Spin, Tag, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
-import FormattedDate from "components/formatted_date";
+import FormattedDate, { isToday } from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import { stringToTagColor } from "libs/colors";
+import { mayUserEditDataset } from "libs/utils";
 import type React from "react";
+import { Link } from "react-router";
 import type { AnnotationCollaborationMode, APIAnnotationInfo, APIUser } from "types/api_types";
 import { getStatsOfAnnotationInfo } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_section";
 import { AnnotationIdentity } from "viewer/view/right_border_tabs/info_tab/identity_block";
+import { InlineIconButton } from "viewer/view/right_border_tabs/info_tab/info_tab_layout";
 import { AnnotationStatusLabels } from "./annotation_status_labels";
 import { SidebarSection } from "./sidebar_section";
 
@@ -113,6 +116,26 @@ function AnnotationDetails({
           <AnnotationStatusLabels isReadOnly={isReadOnly} isLocked={annotation.isLockedByOwner} />
         </div>
       ) : null}
+      <SidebarSection label="Dataset">
+        <span className="dashboard-details-dataset">
+          {/* The links only use the dataset id, since the annotation's dataset name may be outdated. */}
+          <Link
+            to={`/datasets/${annotation.datasetId}/view`}
+            title={`Click to view dataset ${annotation.dataSetName} without annotation`}
+          >
+            {annotation.dataSetName}
+          </Link>
+          {mayUserEditDataset(activeUser, { owningOrganization: annotation.organization }) ? (
+            <InlineIconButton
+              icon={<SettingOutlined />}
+              tooltip="Dataset settings"
+              ariaLabel="Dataset settings"
+              to={`/datasets/${annotation.datasetId}/edit`}
+              isSecondary
+            />
+          ) : null}
+        </span>
+      </SidebarSection>
       {Object.keys(stats).length > 0 ? (
         <SidebarSection label="Statistics">
           <AnnotationStats stats={stats} withMargin={false} orientation="horizontal" />
@@ -150,7 +173,13 @@ function AnnotationDetails({
           {annotation.modified - annotation.created > 60 * 1000 ? (
             <Typography.Text type="secondary">
               {" "}
-              (modified <FormattedDate timestamp={annotation.modified} />)
+              (modified{" "}
+              <FormattedDate
+                timestamp={annotation.modified}
+                // If both dates are today, the time alone is unambiguous.
+                includeTodayLabel={!isToday(annotation.created)}
+              />
+              )
             </Typography.Text>
           ) : null}
         </span>

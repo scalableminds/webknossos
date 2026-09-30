@@ -396,7 +396,10 @@ export function isUserAdminOrManager(user: APIUser | null | undefined): boolean 
   );
 }
 
-export function mayUserEditDataset(user: APIUser | null | undefined, dataset: APIDataset): boolean {
+export function mayUserEditDataset(
+  user: APIUser | null | undefined,
+  dataset: Pick<APIDataset, "owningOrganization">,
+): boolean {
   return (
     isUserAdminOrDatasetManager(user) &&
     user != null &&

@@ -108,7 +108,6 @@ Samplecountry
   private val multiUserId = ObjectId.generate
   private val userId2 = ObjectId.generate
   private val multiUserId2 = ObjectId.generate
-  // lazy: hashing the password is expensive and only needed in the dev setup, not on every boot
   private lazy val defaultMultiUser = MultiUser(
     multiUserId,
     defaultUserEmail,

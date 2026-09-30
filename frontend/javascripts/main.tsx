@@ -7,7 +7,7 @@ import { message } from "antd";
 import ErrorBoundary from "components/error_boundary";
 import { FailedToLoadView } from "components/failed_to_load_view";
 import { RootForFastTooltips } from "components/fast_tooltip";
-import { load as loadFeatureToggles } from "features";
+import features, { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
@@ -32,7 +32,7 @@ import { checkAnyOrganizationExists, getOrganization } from "admin/api/organizat
 import { CheckCertificateModal } from "components/check_certificate_modal";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
-import { fetchTreeHierarchy } from "dashboard/dataset/queries";
+import { folderHierarchyQueryOptions } from "dashboard/dataset/queries";
 import { RouterProvider } from "react-router/dom";
 import router from "router/router";
 import { getThemeFromUser } from "theme";
@@ -92,6 +92,19 @@ async function loadOrganization() {
   }
 }
 
+function willShowDatasetsTab(pathname: string): boolean {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  if (path === "/dashboard/datasets" || path.startsWith("/dashboard/datasets/")) {
+    return true;
+  }
+  if (path !== "/" && path !== "/dashboard") {
+    return false;
+  }
+  // Without an explicit tab, DashboardView restores the last used tab or falls back to its default.
+  const lastUsedTabKey = UserLocalStorage.getItem("lastUsedDashboardTab");
+  return lastUsedTabKey != null ? lastUsedTabKey === "datasets" : !features().isWkorgInstance;
+}
+
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initApp);
 } else {
@@ -126,10 +139,8 @@ async function initApp() {
     ]);
     // The dataset dashboard needs the folder tree first thing after mounting. Starting the request
     // now overlaps it with loading the organization and rendering the app.
-    if (Store.getState().activeUser != null && location.pathname.startsWith("/dashboard")) {
-      reactQueryClient
-        .prefetchQuery({ queryKey: ["folders"], queryFn: fetchTreeHierarchy })
-        .catch(() => {});
+    if (Store.getState().activeUser != null && willShowDatasetsTab(location.pathname)) {
+      reactQueryClient.prefetchQuery(folderHierarchyQueryOptions).catch(() => {});
     }
     await loadOrganization();
 

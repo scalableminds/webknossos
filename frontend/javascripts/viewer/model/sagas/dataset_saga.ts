@@ -5,11 +5,12 @@ import sum from "lodash-es/sum";
 import messages from "messages";
 import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { Identity4x4 } from "viewer/constants";
+import { MAX_ACTIVE_COLOR_LAYERS } from "viewer/geometries/materials/plane_material_factory";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { hasSegmentIndex } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import {
-  getEnabledLayers,
+  getEnabledColorLayers,
   getLayerByName,
   getMagInfo,
   getMaybeSegmentIndexAvailability,
@@ -29,17 +30,18 @@ import { ensureWkInitialized } from "./ready_sagas";
 
 function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    const maximumLayerCountToRender = yield* select(
-      (state) => state.temporaryConfiguration.gpuSetup.maximumLayerCountToRender,
-    );
-    const enabledLayerCount = yield* select(
-      (state) => getEnabledLayers(state.dataset, state.datasetConfiguration).length,
+    // Every layer is pool-backed now (see plane_material_factory.ts), so the
+    // only real limit on how many *color* layers can be rendered
+    // simultaneously is MAX_ACTIVE_COLOR_LAYERS -- not a GPU-texture-unit
+    // constraint anymore. (Segmentation layers aren't subject to this cap.)
+    const enabledColorLayerCount = yield* select(
+      (state) => getEnabledColorLayers(state.dataset, state.datasetConfiguration).length,
     );
 
-    if (enabledLayerCount > maximumLayerCountToRender) {
+    if (enabledColorLayerCount > MAX_ACTIVE_COLOR_LAYERS) {
       Toast.error(
         messages["webgl.too_many_active_layers"]({
-          maximumLayerCountToRender,
+          maximumLayerCountToRender: MAX_ACTIVE_COLOR_LAYERS,
         }),
         {
           sticky: true,

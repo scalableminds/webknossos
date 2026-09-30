@@ -11,6 +11,16 @@ import constants, {
   PLANE_SUBDIVISION,
   ViewModeValuesIndices,
 } from "viewer/constants";
+import {
+  COLOR_LAYER_POOL_TEXTURE_WIDTH,
+  DTYPE_TAG_INT32,
+  DTYPE_TAG_UINT24,
+  DTYPE_TAG_UINT32,
+  getColorLayerPoolForElementClass,
+  getDtypeNormalizerForLayer,
+  getDtypeTagForElementClass,
+  getSegmentIdDecodeTagForLayer,
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { MAPPING_TEXTURE_WIDTH } from "viewer/model/bucket_data_handling/mappings";
 import {
@@ -51,8 +61,12 @@ import {
 
 export type Params = {
   globalLayerCount: number;
+  // colorLayerNames/segmentationLayerNames always contain *all* of the
+  // dataset's layers (not just the ones currently toggled on). Which subset
+  // is actually blended each frame is controlled purely via the
+  // colorRenderOrder/activeColorLayerCount uniforms (see PlaneMaterialFactory),
+  // without requiring a shader recompile.
   colorLayerNames: string[];
-  orderedColorLayerNames: string[];
   segmentationLayerNames: string[];
   textureLayerInfos: Record<
     string,
@@ -73,6 +87,18 @@ export type Params = {
   useInterpolation: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
   isWindows: boolean;
+  // Fixed, compile-time upper bound for how many color layers can be
+  // simultaneously blended. Toggling/reordering which (up to this many) of
+  // the declared color layers are active is a pure uniform update.
+  maxActiveColorLayers: number;
+  // Hardware-derived (see getVertexBucketAlignmentLayerCap in
+  // plane_material_factory.ts) upper bound on how many layers' worth of
+  // outputMagIdx/outputSeed/outputAddress *varyings* can be declared without
+  // exceeding the driver's varying budget. Layers whose global layer index is
+  // >= min(globalLayerCount, this) don't get the vertex-precomputed bucket
+  // address optimization and always take the slower-but-correct full
+  // per-fragment lookup path.
+  vertexBucketAlignmentLayerCap: number;
 };
 
 const SHARED_UNIFORM_DECLARATIONS = `
@@ -93,24 +119,50 @@ uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
 uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
-<% each(layerNamesWithSegmentation, function(name) { %>
-  uniform highp <%= textureLayerInfos[name].glslPrefix %>sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
-  uniform float <%= name %>_data_texture_width;
-  uniform float <%= name %>_alpha;
-  uniform float <%= name %>_gammaCorrectionValue;
-  uniform float <%= name %>_unrenderable;
-  uniform mat4 <%= name %>_transform;
-  uniform bool <%= name %>_has_transform;
-  uniform vec3 <%= name %>_bboxMin;
-  uniform vec3 <%= name %>_bboxMax;
-<% }) %>
+// Per-layer rendering metadata. Indexed by the layer's position within
+// colorLayerNames.concat(segmentationLayerNames) (the same "compiled index"
+// used by availableLayerIndexToGlobalLayerIndex and getRgbaAtXYIndex's
+// dispatcher). Unlike the per-layer-named uniforms these arrays replace,
+// updating an entry (e.g. toggling alpha to 0, or a different color/min/max)
+// never requires a shader recompile.
+uniform float layerAlpha[<%= globalLayerCount %>];
+uniform float layerGammaCorrectionValue[<%= globalLayerCount %>];
+uniform float layerUnrenderable[<%= globalLayerCount %>];
+uniform mat4 layerTransform[<%= globalLayerCount %>];
+// 0/1 instead of bool[] to sidestep driver/three.js bool-array-uniform quirks.
+uniform int layerHasTransformInt[<%= globalLayerCount %>];
+uniform vec3 layerBboxMin[<%= globalLayerCount %>];
+uniform vec3 layerBboxMax[<%= globalLayerCount %>];
 
-<% each(colorLayerNames, function(name) { %>
-  uniform vec3 <%= name %>_color;
-  uniform <%= glslTypeForElementClass(textureLayerInfos[name].elementClass) %> <%= name %>_min;
-  uniform <%= glslTypeForElementClass(textureLayerInfos[name].elementClass) %> <%= name %>_max;
-  uniform float <%= name %>_is_inverted;
-<% }) %>
+// Only the first colorLayerNames.length entries are meaningful; the
+// remaining (segmentation) entries are unused.
+uniform vec3 layerColor[<%= globalLayerCount %>];
+// For int32/uint32 layers, the true integer min/max is bit-punned into this
+// float via intBitsToFloat/uintBitsToFloat (see PlaneMaterialFactory) to
+// avoid losing precision beyond float's 24-bit exact integer range; the
+// color-blending loop below reverses this via floatBitsToInt/floatBitsToUint
+// for those dtypes.
+uniform float layerMin[<%= globalLayerCount %>];
+uniform float layerMax[<%= globalLayerCount %>];
+uniform float layerIsInverted[<%= globalLayerCount %>];
+
+// Which (up to maxActiveColorLayers) of the declared color layers are
+// currently blended, and in what order. colorRenderOrder holds indices into
+// colorLayerNames (equivalently: compiled indices, since color layers occupy
+// compiled indices [0, colorLayerNames.length)). This is the mechanism that
+// replaces the old orderedColorLayerNames-driven template unrolling.
+uniform int colorRenderOrder[<%= maxActiveColorLayers %>];
+uniform int activeColorLayerCount;
+
+// Every layer -- color or segmentation -- reads from one of 5 shared,
+// dtype-keyed texture-array pools instead of a dedicated sampler per layer
+// -- see getRgbaAtXYIndex in texture_access.glsl.ts. There are always
+// exactly 5 of these regardless of how many layers the dataset has.
+uniform highp sampler2DArray pool_f32_textures;
+uniform highp sampler2DArray pool_u8_textures;
+uniform highp sampler2DArray pool_s8_textures;
+uniform highp usampler2DArray pool_u16_textures;
+uniform highp isampler2DArray pool_s16_textures;
 
 <% if (hasSegmentation) { %>
   // Custom color cuckoo table
@@ -171,6 +223,32 @@ const vec3 voxelSizeFactorInverted = <%= formatVector3AsVec3(voxelSizeFactorInve
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
+// Fixed width/height shared by every color/segmentation-layer texture pool
+// (see COLOR_LAYER_POOL_TEXTURE_WIDTH in data_rendering_logic.ts); replaces
+// what used to be a per-layer d_texture_width uniform now that every layer
+// is pool-backed.
+const float POOL_TEXTURE_WIDTH = ${formatNumberAsGLSLFloat(COLOR_LAYER_POOL_TEXTURE_WIDTH)};
+
+// See vertexBucketAlignmentLayerCap in Params -- only layers whose *global*
+// layer index is below this bound get an entry in the
+// outputMagIdx/outputSeed/outputAddress varyings (sized by this same
+// constant, not globalLayerCount) and thus the vertex-precomputed bucket
+// address optimization; see getColorForCoords64 in texture_access.glsl.ts.
+const uint VERTEX_ALIGNMENT_LAYER_CAP = <%= vertexAlignmentLayerCap %>u;
+
+// Static per-(always-declared)-layer metadata that only changes when the set
+// of dataset layers itself changes (i.e., exactly when a recompile already
+// happens), so it's baked as compile-time constants rather than uniforms.
+const float layerPackingDegree[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree); }).join(", ") %>);
+const uint layerDtypeTag[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getDtypeTagForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
+const bool layerHasTpsTransform[<%= globalLayerCount %>] = bool[](<%= layerNamesWithSegmentation.map(function(name) { return tpsTransformPerLayer[name] != null ? "true" : "false"; }).join(", ") %>);
+// Only meaningful for color layers (indices [0, colorLayerNames.length)); see
+// getRgbaAtXYIndex in texture_access.glsl.ts.
+const uint layerPoolId[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getColorLayerPoolForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
+const float layerDtypeNormalizer[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(getDtypeNormalizerForLayer(textureLayerInfos[name])); }).join(", ") %>);
+// Only meaningful for segmentation layers (indices [colorLayerNames.length,
+// globalLayerCount)); see decodeSegmentId in segmentation.glsl.ts.
+const uint layerSegmentIdDecodeTag[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getSegmentIdDecodeTagForLayer(textureLayerInfos[name].elementClass, textureLayerInfos[name].isSigned) + "u"; }).join(", ") %>);
 `;
 
 export default function getMainFragmentShader(params: Params) {
@@ -181,9 +259,9 @@ precision highp float;
 ${SHARED_UNIFORM_DECLARATIONS}
 
 flat in vec2 index;
-flat in uint outputMagIdx[<%= globalLayerCount %>];
-flat in uint outputSeed[<%= globalLayerCount %>];
-flat in float outputAddress[<%= globalLayerCount %>];
+flat in uint outputMagIdx[<%= vertexAlignmentLayerCap %>];
+flat in uint outputSeed[<%= vertexAlignmentLayerCap %>];
+flat in float outputAddress[<%= vertexAlignmentLayerCap %>];
 flat in float useBucketBorderVertexOptimization;
 in vec4 worldCoord;
 in vec4 modelCoord;
@@ -231,134 +309,140 @@ void main() {
   }
   vec4 data_color = vec4(0.0);
 
-  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    uint <%= segmentationName %>_id_low = 0u;
-    uint <%= segmentationName %>_id_high = 0u;
-    uint <%= segmentationName %>_unmapped_id_low = 0u;
-    uint <%= segmentationName %>_unmapped_id_high = 0u;
-    float <%= segmentationName %>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
+  <% if (segmentationLayerNames.length > 0) { %>
+  uint segmentIdLow[<%= segmentationLayerNames.length %>];
+  uint segmentIdHigh[<%= segmentationLayerNames.length %>];
+  uint unmappedIdLow[<%= segmentationLayerNames.length %>];
+  uint unmappedIdHigh[<%= segmentationLayerNames.length %>];
+
+  for (int segSlot = 0; segSlot < <%= segmentationLayerNames.length %>; segSlot++) {
+    segmentIdLow[segSlot] = 0u;
+    segmentIdHigh[segSlot] = 0u;
+    unmappedIdLow[segSlot] = 0u;
+    unmappedIdHigh[segSlot] = 0u;
+
+    int globalIdx = <%= colorLayerNames.length %> + segSlot;
+    float effectiveAlpha = layerAlpha[globalIdx] * (1. - layerUnrenderable[globalIdx]);
 
     // If the opacity is > 0, the segment id for the current voxel is read.
     // Since a segmentation might be mapped, the unmapped and (potentially mapped) id
     // is read.
-    if (<%= segmentationName %>_effective_alpha > 0.) {
+    if (effectiveAlpha > 0.) {
       vec4[2] unmapped_segment_id;
       vec4[2] segment_id;
-      getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
+      getSegmentId(globalIdx, worldCoordUVW, unmapped_segment_id, segment_id);
 
-      <%
-        // For 64-bit ids, signed and unsigned values are handled identically: the raw bit
-        // pattern is reinterpreted as unsigned (see uint64ToUint64 for why sign doesn't matter).
-        const vec4ToSomeIntFn =
-          textureLayerInfos[segmentationName].elementClass.endsWith("int64")
-            ? "uint64ToUint64"
-            : textureLayerInfos[segmentationName].isSigned ? "int32ToUint64" : "uint32ToUint64"
-      %>
+      uint decodeTag = layerSegmentIdDecodeTag[globalIdx];
 
-      // Temporary vars to which vec4ToSomeIntFn will write
+      // Temporary vars to which decodeSegmentId will write
       highp uint hpv_low;
       highp uint hpv_high;
 
-      <%= vec4ToSomeIntFn %>(unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
-      <%= segmentationName %>_unmapped_id_low = uint(hpv_low);
-      <%= segmentationName %>_unmapped_id_high = uint(hpv_high);
+      decodeSegmentId(decodeTag, unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
+      unmappedIdLow[segSlot] = hpv_low;
+      unmappedIdHigh[segSlot] = hpv_high;
 
-      <%= vec4ToSomeIntFn %>(segment_id[1], segment_id[0], hpv_low, hpv_high);
-      <%= segmentationName %>_id_low = uint(hpv_low);
-      <%= segmentationName %>_id_high = uint(hpv_high);
+      decodeSegmentId(decodeTag, segment_id[1], segment_id[0], hpv_low, hpv_high);
+      segmentIdLow[segSlot] = hpv_low;
+      segmentIdHigh[segSlot] = hpv_high;
     }
+  }
+  <% } %>
 
-  <% }) %>
+  // Get Color Value(s). Which (up to maxActiveColorLayers) layers participate
+  // and in what order is entirely uniform-driven (colorRenderOrder /
+  // activeColorLayerCount) -- toggling/reordering color layers never changes
+  // this loop's compiled code.
+  vec3 color_value = vec3(0.0);
+  vec3 precomputedTpsLayerCoordUVW[<%= globalLayerCount %>];
+  <% each(colorLayerNames, function(name, idx) {
+    if (tpsTransformPerLayer[name] != null) { %>
+      precomputedTpsLayerCoordUVW[<%= idx %>] = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
+  <% }
+  }) %>
 
-  // Get Color Value(s)
-  vec3 color_value  = vec3(0.0);
-  <% each(orderedColorLayerNames, function(name, layerIndex) { %>
-    <% const color_layer_index = colorLayerNames.indexOf(name); %>
-    float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
-    if (<%= name %>_effective_alpha > 0.) {
-      // Get grayscale value for <%= textureLayerInfos[name].unsanitizedName %>
+  for (int colorSlot = 0; colorSlot < activeColorLayerCount; colorSlot++) {
+    int layerIdx = colorRenderOrder[colorSlot];
+    float effective_alpha = layerAlpha[layerIdx] * (1. - layerUnrenderable[layerIdx]);
+    if (effective_alpha > 0.) {
+      vec3 layerCoordUVW;
+      if (layerHasTpsTransform[layerIdx]) {
+        layerCoordUVW = precomputedTpsLayerCoordUVW[layerIdx];
+      } else {
+        layerCoordUVW = transDim((layerTransform[layerIdx] * vec4(transDim(worldCoordUVW), 1.0)).xyz);
+      }
 
-      <% if (tpsTransformPerLayer[name] != null) { %>
-        vec3 layerCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
-      <% } else { %>
-        vec3 layerCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
-      <% } %>
-
-      if (!isOutsideOfBoundingBox(layerCoordUVW, <%= name %>_bboxMin, <%= name %>_bboxMax)) {
+      if (!isOutsideOfBoundingBox(layerCoordUVW, layerBboxMin[layerIdx], layerBboxMax[layerIdx])) {
         MaybeFilteredColor maybe_filtered_color =
           getMaybeFilteredColorOrFallback(
-            <%= formatNumberAsGLSLFloat(color_layer_index) %>,
-            <%= name %>_data_texture_width,
-            <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
+            float(layerIdx),
+            POOL_TEXTURE_WIDTH,
+            layerPackingDegree[layerIdx],
             layerCoordUVW,
             fallbackGray,
-            !<%= name %>_has_transform
+            layerHasTransformInt[layerIdx] == 0
           );
         bool used_fallback = maybe_filtered_color.used_fallback_color;
-        float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
+        float is_max_and_min_equal = float(layerMax[layerIdx] == layerMin[layerIdx]);
 
         // color_value is usually between 0 and 1.
         color_value = maybe_filtered_color.color.rgb;
 
-        <% const elementClass = textureLayerInfos[name].elementClass %>
-        <% if (elementClass.endsWith("int32")) { %>
-          // Handle 32-bit color layers
+        uint dtypeTag = layerDtypeTag[layerIdx];
+        if (dtypeTag == ${DTYPE_TAG_INT32}u) {
+          // Handle 32-bit signed color layers
+          ivec4 four_bytes = ivec4(255. * maybe_filtered_color.color);
+          // Combine bytes into an Int32 (assuming little-endian order)
+          highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
 
-          <% if (elementClass === "int32") { %>
-            ivec4 four_bytes = ivec4(255. * maybe_filtered_color.color);
-            // Combine bytes into an Int32 (assuming little-endian order)
-            highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
+          int minInt = floatBitsToInt(layerMin[layerIdx]);
+          int maxInt = floatBitsToInt(layerMax[layerIdx]);
+          hpv = clamp(hpv, minInt, maxInt);
 
-            int min = <%= name %>_min;
-            int max = <%= name %>_max;
-            hpv = clamp(hpv, min, max);
+          color_value = vec3(
+              scaleIntToFloat(hpv, minInt, maxInt)
+          );
+        } else if (dtypeTag == ${DTYPE_TAG_UINT32}u) {
+          // Handle 32-bit unsigned color layers.
+          // Scale from [0,1] to [0,255] so that we can convert to an uint below.
+          uvec4 four_bytes = uvec4(255. * maybe_filtered_color.color);
+          highp uint hpv =
+            uint(four_bytes.a) * uint(pow(256., 3.))
+            + uint(four_bytes.b) * uint(pow(256., 2.))
+            + uint(four_bytes.g) * 256u
+            + uint(four_bytes.r);
 
-            color_value = vec3(
-                scaleIntToFloat(hpv, min, max)
-            );
-          <% } else { %>
-            // Scale from [0,1] to [0,255] so that we can convert to an uint
-            // below.
-            uvec4 four_bytes = uvec4(255. * maybe_filtered_color.color);
-            highp uint hpv =
-              uint(four_bytes.a) * uint(pow(256., 3.))
-              + uint(four_bytes.b) * uint(pow(256., 2.))
-              + uint(four_bytes.g) * 256u
-              + uint(four_bytes.r);
-
-            uint min = <%= name %>_min;
-            uint max = <%= name %>_max;
-            hpv = clamp(hpv, min, max);
-            color_value = vec3(
-              float(hpv - min) / (float(max - min) + is_max_and_min_equal)
-            );
-          <% } %>
-
-        <% } else { %>
-          <% if (elementClass == "uint24") { %>
+          uint minUint = floatBitsToUint(layerMin[layerIdx]);
+          uint maxUint = floatBitsToUint(layerMax[layerIdx]);
+          hpv = clamp(hpv, minUint, maxUint);
+          color_value = vec3(
+            float(hpv - minUint) / (float(maxUint - minUint) + is_max_and_min_equal)
+          );
+        } else {
+          if (dtypeTag == ${DTYPE_TAG_UINT24}u) {
             color_value *= 255.;
-          <% } else { %>
+          } else {
             color_value = vec3(color_value.x);
-          <% } %>
+          }
 
           // Keep the color in bounds of min and max
-          color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+          color_value = clamp(color_value, layerMin[layerIdx], layerMax[layerIdx]);
           // Scale the color value according to the histogram settings.
           color_value = vec3(
-            scaleFloatToFloat(color_value, <%= name %>_min, <%= name %>_max)
+            scaleFloatToFloat(color_value, layerMin[layerIdx], layerMax[layerIdx])
           );
-        <% } %>
+        }
 
-        color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
+        color_value = pow(color_value, 1. / vec3(layerGammaCorrectionValue[layerIdx]));
 
         // Maybe invert the color using the inverting_factor
-        color_value = abs(color_value - <%= name %>_is_inverted);
+        color_value = abs(color_value - layerIsInverted[layerIdx]);
         // Catch the case where max == min would causes a NaN value and use black as a fallback color.
         color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
-        color_value = color_value * <%= name %>_alpha * <%= name %>_color;
+        color_value = color_value * layerAlpha[layerIdx] * layerColor[layerIdx];
         // Marking the color as invalid by setting alpha to 0.0 if the fallback color has been used
         // so the fallback color does not cover other colors.
-        vec4 layer_color = vec4(color_value, used_fallback ? 0.0 : maybe_filtered_color.color.a * <%= name %>_alpha);
+        vec4 layer_color = vec4(color_value, used_fallback ? 0.0 : maybe_filtered_color.color.a * layerAlpha[layerIdx]);
         // Calculating the color for the current layer depending on blendMode.
         // blendMode == 1.0: Additive, blendMode == 0.0: Cover, blendMode == 2.0: CoverWithBlackAsTransparent
         vec4 additive_color = blendLayersAdditive(data_color, layer_color);
@@ -368,44 +452,44 @@ void main() {
         data_color = mix(data_color, cover_black_transparent_color, float(blendMode == 2.0));
       }
     }
-  <% }) %>
+  }
   data_color = clamp(data_color, 0.0, 1.0);
   data_color.a = 1.0;
 
   gl_FragColor = data_color;
 
   <% if (hasSegmentation) { %>
-  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
+  for (int segSlot = 0; segSlot < <%= segmentationLayerNames.length %>; segSlot++) {
+    int globalIdx = <%= colorLayerNames.length %> + segSlot;
 
     // Color map (<= to fight rounding mistakes)
-    if ( <%= segmentationName %>_id_low != 0u || <%= segmentationName %>_id_high != 0u ) {
+    if ( segmentIdLow[segSlot] != 0u || segmentIdHigh[segSlot] != 0u ) {
       // Increase cell opacity when cell is hovered or if it is the active activeCell
-      bool isHoveredSegment = hoveredSegmentIdLow == <%= segmentationName %>_id_low
-        && hoveredSegmentIdHigh == <%= segmentationName %>_id_high;
-      bool isHoveredUnmappedSegment = hoveredUnmappedSegmentIdLow == <%= segmentationName %>_unmapped_id_low
-        && hoveredUnmappedSegmentIdHigh == <%= segmentationName %>_unmapped_id_high;
-      bool isActiveCell = activeCellIdLow == <%= segmentationName %>_id_low
-         && activeCellIdHigh == <%= segmentationName %>_id_high;
+      bool isHoveredSegment = hoveredSegmentIdLow == segmentIdLow[segSlot]
+        && hoveredSegmentIdHigh == segmentIdHigh[segSlot];
+      bool isHoveredUnmappedSegment = hoveredUnmappedSegmentIdLow == unmappedIdLow[segSlot]
+        && hoveredUnmappedSegmentIdHigh == unmappedIdHigh[segSlot];
+      bool isActiveCell = activeCellIdLow == segmentIdLow[segSlot]
+         && activeCellIdHigh == segmentIdHigh[segSlot];
       float alphaIncrement = getSegmentationAlphaIncrement(
-        <%= segmentationName %>_alpha,
+        layerAlpha[globalIdx],
         isHoveredSegment,
         isHoveredUnmappedSegment,
         isActiveCell
       );
 
-      vec4 segmentColor = convertCellIdToRGB(<%= segmentationName %>_id_high, <%= segmentationName %>_id_low);
+      vec4 segmentColor = convertCellIdToRGB(segmentIdHigh[segSlot], segmentIdLow[segSlot]);
       gl_FragColor = vec4(mix(
         data_color.rgb,
         segmentColor.rgb,
-        <%= segmentationName %>_alpha  * segmentColor.a + alphaIncrement
+        layerAlpha[globalIdx]  * segmentColor.a + alphaIncrement
       ), 1.0);
     }
-    vec4 <%= segmentationName %>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
-    <%= segmentationName %>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow).rgb;
-    gl_FragColor = mix(gl_FragColor, <%= segmentationName %>_brushOverlayColor, <%= segmentationName %>_brushOverlayColor.a);
+    vec4 brushOverlayColor = getBrushOverlay(worldCoordUVW);
+    brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow).rgb;
+    gl_FragColor = mix(gl_FragColor, brushOverlayColor, brushOverlayColor.a);
     gl_FragColor.a = 1.0;
-
-  <% }) %>
+  }
 
   // This will only have an effect in proofreading mode
   vec4 crossHairOverlayColor = getProofreadingCrossHairOverlay(worldCoordUVW);
@@ -418,6 +502,10 @@ void main() {
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
+    vertexAlignmentLayerCap: Math.max(
+      1,
+      Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
+    ),
     ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
@@ -429,6 +517,10 @@ void main() {
     hasSegmentation,
     isFragment: true,
     glslTypeForElementClass,
+    getDtypeTagForElementClass,
+    getColorLayerPoolForElementClass,
+    getDtypeNormalizerForLayer,
+    getSegmentIdDecodeTagForLayer,
     each,
     range,
   });
@@ -451,9 +543,9 @@ out mat4 savedModelMatrix;
 }) %>
 
 flat out vec2 index;
-flat out uint outputMagIdx[<%= globalLayerCount %>];
-flat out uint outputSeed[<%= globalLayerCount %>];
-flat out float outputAddress[<%= globalLayerCount %>];
+flat out uint outputMagIdx[<%= vertexAlignmentLayerCap %>];
+flat out uint outputSeed[<%= vertexAlignmentLayerCap %>];
+flat out float outputAddress[<%= vertexAlignmentLayerCap %>];
 // bool varyings are not supported
 flat out float useBucketBorderVertexOptimization;
 
@@ -602,35 +694,49 @@ void main() {
 
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
 
-  <% each(layerNamesWithSegmentation, function(name, layerIndex) { %>
-  if (!<%= name %>_has_transform) {
-    float bucketAddress;
-    uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[<%= layerIndex %>u];
-    uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
+  // Precompute the bucket address for every declared layer (color and
+  // segmentation) that doesn't have a transform. Which layers actually get
+  // rendered/blended this frame is decided purely via uniforms elsewhere, so
+  // this loop can be a genuine runtime loop instead of one unrolled per layer.
+  // Only layers whose *global* layer index is below VERTEX_ALIGNMENT_LAYER_CAP
+  // get an outputMagIdx/outputSeed/outputAddress entry at all -- those arrays
+  // are varyings, sized by that same cap rather than globalLayerCount (see
+  // its declaration for why); layers beyond the cap always take the slower
+  // full per-fragment lookup path in getColorForCoords64, just like
+  // transformed layers already do.
+  for (uint layerIndex = 0u; layerIndex < uint(<%= globalLayerCount %>); layerIndex++) {
+    uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[layerIndex];
+    if (layerHasTransformInt[layerIndex] == 0 && globalLayerIndex < VERTEX_ALIGNMENT_LAYER_CAP) {
+      float bucketAddress;
+      uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
 
-    uint renderedMagIdx;
-    outputMagIdx[globalLayerIndex] = 100u;
-    for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {
-      renderedMagIdx = activeMagIdx + i;
-      vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx, globalLayerIndex));
-      vec3 absoluteBucketPosition = div(coords, bucketWidth);
-      bucketAddress = lookUpBucket(
-        globalLayerIndex,
-        uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i),
-        false
-      );
+      uint renderedMagIdx;
+      outputMagIdx[globalLayerIndex] = 100u;
+      for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {
+        renderedMagIdx = activeMagIdx + i;
+        vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx, globalLayerIndex));
+        vec3 absoluteBucketPosition = div(coords, bucketWidth);
+        bucketAddress = lookUpBucket(
+          globalLayerIndex,
+          uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i),
+          false
+        );
 
-      if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
-        outputMagIdx[globalLayerIndex] = renderedMagIdx;
-        break;
+        if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
+          outputMagIdx[globalLayerIndex] = renderedMagIdx;
+          break;
+        }
       }
     }
   }
-  <% }) %>
 }
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
+    vertexAlignmentLayerCap: Math.max(
+      1,
+      Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
+    ),
     ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
@@ -644,6 +750,10 @@ void main() {
     generateTpsInitialization,
     generateCalculateTpsOffsetFunction,
     glslTypeForElementClass,
+    getDtypeTagForElementClass,
+    getColorLayerPoolForElementClass,
+    getDtypeNormalizerForLayer,
+    getSegmentIdDecodeTagForLayer,
     each,
     range,
   });

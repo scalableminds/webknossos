@@ -362,11 +362,30 @@ export const getProofreadingCrossHairOverlay: ShaderModule = {
 export const getSegmentId: ShaderModule = {
   requirements: [convertCellIdToRGB, attemptMappingLookUp, getMaybeFilteredColorOrFallback],
   code: `
+    // Which of uint64ToUint64/int32ToUint64/uint32ToUint64 (defined as part
+    // of convertCellIdToRGB above) to use for a given segmentation layer's
+    // raw fetched bytes, keyed by the per-layer layerSegmentIdDecodeTag
+    // const array (see getSegmentIdDecodeTagForLayer in
+    // data_rendering_logic.ts / main_data_shaders.glsl.ts).
+    void decodeSegmentId(uint decodeTag, vec4 lowColor, vec4 highColor, out highp uint low, out highp uint high) {
+      if (decodeTag == 0u) {
+        uint64ToUint64(lowColor, highColor, low, high);
+      } else if (decodeTag == 1u) {
+        int32ToUint64(lowColor, highColor, low, high);
+      } else {
+        uint32ToUint64(lowColor, highColor, low, high);
+      }
+    }
 
-  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    void getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
-      vec3 layerCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
-      if (isOutsideOfBoundingBox(layerCoordUVW, <%= segmentationName %>_bboxMin, <%= segmentationName %>_bboxMax)) {
+    // Generic across all segmentation layers -- reads the per-layer
+    // transform/bbox/packingDegree from the same layerTransform/layerBboxMin/
+    // layerBboxMax/layerPackingDegree arrays color layers use (see
+    // SHARED_UNIFORM_DECLARATIONS in main_data_shaders.glsl.ts), keyed by
+    // slot (that layer's compiled index). Replaces what used to be one
+    // generated getSegmentId_<name> function per segmentation layer.
+    void getSegmentId(int slot, vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
+      vec3 layerCoordUVW = transDim((layerTransform[slot] * vec4(transDim(worldPositionUVW), 1.0)).xyz);
+      if (isOutsideOfBoundingBox(layerCoordUVW, layerBboxMin[slot], layerBboxMax[slot])) {
         // Some GPUs don't null-initialize the variables.
         segment_id[0] = vec4(0.);
         segment_id[1] = vec4(0.);
@@ -375,25 +394,26 @@ export const getSegmentId: ShaderModule = {
         return;
       }
 
+      float packingDegree = layerPackingDegree[slot];
       segment_id =
         getSegmentIdOrFallback(
-          <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
-          <%= segmentationName %>_data_texture_width,
-          <%= formatNumberAsGLSLFloat(textureLayerInfos[segmentationName].packingDegree) %>,
+          float(slot),
+          POOL_TEXTURE_WIDTH,
+          packingDegree,
           layerCoordUVW,
           vec4(0.0, 0.0, 0.0, 0.0),
-          !<%= segmentationName %>_has_transform
+          layerHasTransformInt[slot] == 0
         );
 
       // Depending on the packing degree, the returned volume color contains extra values
       // which should be ignored (e.g., when comparing a cell id with the hovered cell
       // passed via uniforms).
 
-      <% if (textureLayerInfos[segmentationName].packingDegree === 4) { %>
+      if (packingDegree == 4.0) {
         segment_id[1] = vec4(segment_id[1].r, 0.0, 0.0, 0.0);
-      <% } else if (textureLayerInfos[segmentationName].packingDegree === 2) { %>
+      } else if (packingDegree == 2.0) {
         segment_id[1] = vec4(segment_id[1].r, segment_id[1].g, 0.0, 0.0);
-      <% } %>
+      }
 
       mapped_id[0] = segment_id[0]; // High
       mapped_id[1] = segment_id[1]; // Low
@@ -426,7 +446,6 @@ export const getSegmentId: ShaderModule = {
         }
       }
     }
-<% }) %>
   `,
 };
 

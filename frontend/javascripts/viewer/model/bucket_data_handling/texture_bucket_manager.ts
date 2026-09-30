@@ -17,6 +17,17 @@ import {
   getBucketCapacity,
   getDtypeConfigForElementClass,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import type PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
+
+// Color layers write their buckets into a shared, dtype-keyed sampler2DArray
+// pool (see PoolTextureManager) instead of owning dedicated texture(s); this
+// describes where within that shared pool a given layer's buckets live.
+// Segmentation layers don't use this (still legacy per-layer textures, see
+// getSegmentId_<name> in segmentation.glsl.ts).
+export type ColorLayerPoolBinding = {
+  poolTextureManager: PoolTextureManager;
+  baseSlice: number;
+};
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -97,8 +108,16 @@ export default class TextureBucketManager {
   isDestroyed: boolean = false;
   private areTexturesReady: boolean = false;
   private isWriterQueueProcessingScheduled: boolean = false;
+  // Set for color layers (pooled mode); undefined for segmentation layers,
+  // which keep their own dedicated dataTextures above.
+  private pool: ColorLayerPoolBinding | undefined;
 
-  constructor(textureWidth: number, dataTextureCount: number, elementClass: ElementClass) {
+  constructor(
+    textureWidth: number,
+    dataTextureCount: number,
+    elementClass: ElementClass,
+    pool?: ColorLayerPoolBinding,
+  ) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
     this.packingDegree = getDtypeConfigForElementClass(elementClass).packingDegree;
@@ -108,12 +127,16 @@ export default class TextureBucketManager {
     this.dataTextureCount = dataTextureCount;
     this.freeIndexSet = new Set(range(this.maximumCapacity));
     this.dataTextures = [];
+    this.pool = pool;
   }
 
   async startRAFLoop() {
     await waitForCondition(
       () =>
-        this.lookUpCuckooTable?._texture.isInitialized() && this.dataTextures[0].isInitialized(),
+        this.lookUpCuckooTable?._texture.isInitialized() &&
+        (this.pool != null
+          ? this.pool.poolTextureManager.isInitialized()
+          : this.dataTextures[0].isInitialized()),
     );
     this.areTexturesReady = true;
     this.processWriterQueue();
@@ -254,13 +277,33 @@ export default class TextureBucketManager {
 
       const src = maybePadRgbData(rawSrc, this.elementClass);
 
-      this.dataTextures[dataTextureIndex].update(
-        src,
-        0,
-        bucketHeightInTexture * indexInDataTexture,
-        this.textureWidth,
-        bucketHeightInTexture,
-      );
+      let cuckooValue = _index;
+      if (this.pool != null) {
+        // The shared pool's texture array slice for this layer's
+        // dataTextureIndex-th "page" is offset by this layer's reserved
+        // baseSlice. The cuckoo table's value becomes a pool-global address
+        // (baseSlice folded in, in "bucket" units) so that the shader's
+        // existing address decoding (textureIndex = floor(address /
+        // bucketCapacityPerTexture)) directly yields the correct slice
+        // within the pool -- no separate per-layer offset needed in GLSL.
+        this.pool.poolTextureManager.textureArray.update(
+          src,
+          0,
+          bucketHeightInTexture * indexInDataTexture,
+          this.textureWidth,
+          bucketHeightInTexture,
+          this.pool.baseSlice + dataTextureIndex,
+        );
+        cuckooValue = _index + this.pool.baseSlice * bucketsPerTexture;
+      } else {
+        this.dataTextures[dataTextureIndex].update(
+          src,
+          0,
+          bucketHeightInTexture * indexInDataTexture,
+          this.textureWidth,
+          bucketHeightInTexture,
+        );
+      }
       this.committedBucketSet.add(bucket);
 
       this.lookUpCuckooTable.set(
@@ -271,7 +314,7 @@ export default class TextureBucketManager {
           bucket.zoomedAddress[3],
           this.layerIndex,
         ],
-        _index,
+        cuckooValue,
       );
 
       // bucket.setVisualizationColor("#00ff00");
@@ -286,25 +329,29 @@ export default class TextureBucketManager {
   }
 
   getTextures(): Array<DataTexture | UpdatableTexture> {
-    return [this.lookUpCuckooTable._texture].concat(this.dataTextures);
+    // In pooled mode, the pool's shared texture is attached separately/once
+    // (see PlaneMaterialFactory), not per-layer.
+    return [this.lookUpCuckooTable._texture].concat(this.pool != null ? [] : this.dataTextures);
   }
 
   setupDataTextures(lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
-    for (let i = 0; i < this.dataTextureCount; i++) {
-      const { textureType, pixelFormat, internalFormat } = getDtypeConfigForElementClass(
-        this.elementClass,
-      );
+    if (this.pool == null) {
+      for (let i = 0; i < this.dataTextureCount; i++) {
+        const { textureType, pixelFormat, internalFormat } = getDtypeConfigForElementClass(
+          this.elementClass,
+        );
 
-      const dataTexture = createUpdatableTexture(
-        this.textureWidth,
-        this.textureWidth,
-        textureType,
-        getRenderer(),
-        pixelFormat,
-        internalFormat,
-      );
+        const dataTexture = createUpdatableTexture(
+          this.textureWidth,
+          this.textureWidth,
+          textureType,
+          getRenderer(),
+          pixelFormat,
+          internalFormat,
+        );
 
-      this.dataTextures.push(dataTexture);
+        this.dataTextures.push(dataTexture);
+      }
     }
 
     this.lookUpCuckooTable = lookUpCuckooTable;

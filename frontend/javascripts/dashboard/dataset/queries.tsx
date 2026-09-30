@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFolder,
   deleteFolder,
@@ -27,6 +27,9 @@ import {
 export const SEARCH_RESULTS_LIMIT = 100;
 export const MINIMUM_SEARCH_QUERY_LENGTH = 3;
 const FOLDER_TREE_REFETCH_INTERVAL = 30000;
+// Keeps a folder tree that was prefetched during app startup (see main.tsx) from being fetched
+// again right away when the dashboard mounts.
+const FOLDER_TREE_STALE_TIME = 10000;
 
 export function useFolderQuery(folderId: string | null) {
   const queryKey = ["folders", folderId];
@@ -80,15 +83,20 @@ export function useDatasetSearchQuery(
   });
 }
 
-export async function fetchTreeHierarchy() {
+async function fetchTreeHierarchy() {
   const flatTreeItems = await getFolderTree();
   return getFolderHierarchy(flatTreeItems);
 }
 
+export const folderHierarchyQueryOptions = queryOptions({
+  queryKey: ["folders"],
+  queryFn: fetchTreeHierarchy,
+  staleTime: FOLDER_TREE_STALE_TIME,
+});
+
 export function useFolderHierarchyQuery() {
   return useQuery({
-    queryKey: ["folders"],
-    queryFn: fetchTreeHierarchy,
+    ...folderHierarchyQueryOptions,
     refetchOnWindowFocus: false,
     refetchInterval: FOLDER_TREE_REFETCH_INTERVAL,
   });

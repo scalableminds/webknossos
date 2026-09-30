@@ -1,3 +1,4 @@
+import TWEEN from "@tweenjs/tween.js";
 import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -10,7 +11,6 @@ import {
   PerspectiveCamera,
   Vector3 as ThreeVector3,
 } from "three";
-import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector3, Viewport } from "viewer/constants";
 import Constants, { FLIGHT_CAM_DISTANCE, FlightViewport, OrthoViews } from "viewer/constants";
 import getSceneController, {

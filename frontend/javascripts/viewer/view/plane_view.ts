@@ -1,3 +1,4 @@
+import TWEEN from "@tweenjs/tween.js";
 import { sendAnalyticsEvent } from "admin/rest_api";
 import app from "app";
 import ErrorHandling from "libs/error_handling";
@@ -12,7 +13,6 @@ import {
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
 } from "three";
-import TWEEN from "tween.js";
 import type {
   OrthoViewMap,
   OrthoViewWithoutTDMap,

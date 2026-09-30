@@ -1,3 +1,4 @@
+import TWEEN from "@tweenjs/tween.js";
 import { requestTask } from "admin/api/tasks";
 import {
   doWithToken,
@@ -22,7 +23,6 @@ import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
-import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -1480,10 +1480,12 @@ class TracingApi {
         },
         200,
       )
-      .onUpdate(function (this: Tweener, t: number) {
-        // needs to be a normal (non-bound) function
+      .onUpdate((tweenState: Tweener, t: number) => {
         Store.dispatch(
-          setPositionAction([this.positionX, this.positionY, this.positionZ], dimensionToSkip),
+          setPositionAction(
+            [tweenState.positionX, tweenState.positionY, tweenState.positionZ],
+            dimensionToSkip,
+          ),
         );
         // Interpolating rotation via quaternions to get shortest rotation.
         const interpolatedQuaternion = new Quaternion().slerpQuaternions(

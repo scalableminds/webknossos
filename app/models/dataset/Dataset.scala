@@ -1353,15 +1353,12 @@ class DatasetLastUsedTimesDAO @Inject() (sqlClient: SqlClient)(implicit ec: Exec
       r <- rList.headOption.toFox
     } yield r
 
-  def updateForDatasetAndUser(datasetId: ObjectId, userId: ObjectId): Fox[Unit] = {
-    val clearQuery =
-      q"DELETE FROM webknossos.dataset_lastUsedTimes WHERE _dataset = $datasetId AND _user = $userId".asUpdate
-    val insertQuery =
-      q"INSERT INTO webknossos.dataset_lastUsedTimes(_dataset, _user, lastUsedTime) VALUES($datasetId, $userId, NOW())".asUpdate
+  def updateForDatasetAndUser(datasetId: ObjectId, userId: ObjectId): Fox[Unit] =
     for {
-      _ <- runAsSerializableTransaction(List(clearQuery, insertQuery))
+      _ <- run(q"""INSERT INTO webknossos.dataset_lastUsedTimes(_dataset, _user, lastUsedTime)
+                   VALUES($datasetId, $userId, NOW())
+                   ON CONFLICT (_dataset, _user) DO UPDATE SET lastUsedTime = NOW()""".asUpdate)
     } yield ()
-  }
 }
 
 case class StorageRelevantDataLayerAttachment(

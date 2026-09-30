@@ -61,11 +61,7 @@ import {
 
 export type Params = {
   globalLayerCount: number;
-  // colorLayerNames/segmentationLayerNames always contain *all* of the
-  // dataset's layers (not just the ones currently toggled on). Which subset
-  // is actually blended each frame is controlled purely via the
-  // colorRenderOrder/activeColorLayerCount uniforms (see PlaneMaterialFactory),
-  // without requiring a shader recompile.
+  // All layers of the dataset, including hidden ones.
   colorLayerNames: string[];
   segmentationLayerNames: string[];
   textureLayerInfos: Record<
@@ -87,17 +83,9 @@ export type Params = {
   useInterpolation: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
   isWindows: boolean;
-  // Fixed, compile-time upper bound for how many color layers can be
-  // simultaneously blended. Toggling/reordering which (up to this many) of
-  // the declared color layers are active is a pure uniform update.
+  // Size of colorRenderOrder (MAX_ACTIVE_COLOR_LAYERS).
   maxActiveColorLayers: number;
-  // Hardware-derived (see getVertexBucketAlignmentLayerCap in
-  // plane_material_factory.ts) upper bound on how many layers' worth of
-  // outputMagIdx/outputSeed/outputAddress *varyings* can be declared without
-  // exceeding the driver's varying budget. Layers whose global layer index is
-  // >= min(globalLayerCount, this) don't get the vertex-precomputed bucket
-  // address optimization and always take the slower-but-correct full
-  // per-fragment lookup path.
+  // See getVertexBucketAlignmentLayerCap in plane_material_factory.ts.
   vertexBucketAlignmentLayerCap: number;
 };
 
@@ -119,45 +107,33 @@ uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
 uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
-// Per-layer rendering metadata. Indexed by the layer's position within
-// colorLayerNames.concat(segmentationLayerNames) (the same "compiled index"
-// used by availableLayerIndexToGlobalLayerIndex and getRgbaAtXYIndex's
-// dispatcher). Unlike the per-layer-named uniforms these arrays replace,
-// updating an entry (e.g. toggling alpha to 0, or a different color/min/max)
-// never requires a shader recompile.
+// Per-layer values, indexed by the "compiled index": the layer's position in
+// colorLayerNames followed by segmentationLayerNames. This differs from the
+// global index (position in the dataset's layer list), which is used for
+// bucket lookups; availableLayerIndexToGlobalLayerIndex maps between the two.
 uniform float layerAlpha[<%= globalLayerCount %>];
 uniform float layerGammaCorrectionValue[<%= globalLayerCount %>];
 uniform float layerUnrenderable[<%= globalLayerCount %>];
 uniform mat4 layerTransform[<%= globalLayerCount %>];
-// 0/1 instead of bool[] to sidestep driver/three.js bool-array-uniform quirks.
+// 0/1 instead of bool[], which has quirks in drivers and three.js.
 uniform int layerHasTransformInt[<%= globalLayerCount %>];
 uniform vec3 layerBboxMin[<%= globalLayerCount %>];
 uniform vec3 layerBboxMax[<%= globalLayerCount %>];
 
-// Only the first colorLayerNames.length entries are meaningful; the
-// remaining (segmentation) entries are unused.
+// Unused for segmentation layers.
 uniform vec3 layerColor[<%= globalLayerCount %>];
-// For int32/uint32 layers, the true integer min/max is bit-punned into this
-// float via intBitsToFloat/uintBitsToFloat (see PlaneMaterialFactory) to
-// avoid losing precision beyond float's 24-bit exact integer range; the
-// color-blending loop below reverses this via floatBitsToInt/floatBitsToUint
-// for those dtypes.
+// For int32/uint32 layers, these hold the integer's bits (see
+// reinterpretIntAsFloatBits in plane_material_factory.ts).
 uniform float layerMin[<%= globalLayerCount %>];
 uniform float layerMax[<%= globalLayerCount %>];
 uniform float layerIsInverted[<%= globalLayerCount %>];
 
-// Which (up to maxActiveColorLayers) of the declared color layers are
-// currently blended, and in what order. colorRenderOrder holds indices into
-// colorLayerNames (equivalently: compiled indices, since color layers occupy
-// compiled indices [0, colorLayerNames.length)). This is the mechanism that
-// replaces the old orderedColorLayerNames-driven template unrolling.
+// Compiled indices of the color layers to blend, in blend order. Only the
+// first activeColorLayerCount entries are used.
 uniform int colorRenderOrder[<%= maxActiveColorLayers %>];
 uniform int activeColorLayerCount;
 
-// Every layer -- color or segmentation -- reads from one of 5 shared,
-// dtype-keyed texture-array pools instead of a dedicated sampler per layer
-// -- see getRgbaAtXYIndex in texture_access.glsl.ts. There are always
-// exactly 5 of these regardless of how many layers the dataset has.
+// One texture array per pool (see ColorLayerPool in data_rendering_logic.ts).
 uniform highp sampler2DArray pool_f32_textures;
 uniform highp sampler2DArray pool_u8_textures;
 uniform highp sampler2DArray pool_s8_textures;
@@ -223,30 +199,20 @@ const vec3 voxelSizeFactorInverted = <%= formatVector3AsVec3(voxelSizeFactorInve
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
-// Fixed width/height shared by every color/segmentation-layer texture pool
-// (see COLOR_LAYER_POOL_TEXTURE_WIDTH in data_rendering_logic.ts); replaces
-// what used to be a per-layer d_texture_width uniform now that every layer
-// is pool-backed.
+// Width and height of every pool texture.
 const float POOL_TEXTURE_WIDTH = ${formatNumberAsGLSLFloat(COLOR_LAYER_POOL_TEXTURE_WIDTH)};
 
-// See vertexBucketAlignmentLayerCap in Params -- only layers whose *global*
-// layer index is below this bound get an entry in the
-// outputMagIdx/outputSeed/outputAddress varyings (sized by this same
-// constant, not globalLayerCount) and thus the vertex-precomputed bucket
-// address optimization; see getColorForCoords64 in texture_access.glsl.ts.
+// Only layers whose global index is below this have entries in the
+// outputMagIdx/outputSeed/outputAddress varyings.
 const uint VERTEX_ALIGNMENT_LAYER_CAP = <%= vertexAlignmentLayerCap %>u;
 
-// Static per-(always-declared)-layer metadata that only changes when the set
-// of dataset layers itself changes (i.e., exactly when a recompile already
-// happens), so it's baked as compile-time constants rather than uniforms.
+// Per-layer values that are fixed for a dataset, baked in as constants.
 const float layerPackingDegree[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree); }).join(", ") %>);
 const uint layerDtypeTag[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getDtypeTagForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
 const bool layerHasTpsTransform[<%= globalLayerCount %>] = bool[](<%= layerNamesWithSegmentation.map(function(name) { return tpsTransformPerLayer[name] != null ? "true" : "false"; }).join(", ") %>);
-// See getRgbaAtXYIndex in texture_access.glsl.ts.
 const uint layerPoolId[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getColorLayerPoolForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
 const float layerDtypeNormalizer[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(getDtypeNormalizerForLayer(textureLayerInfos[name])); }).join(", ") %>);
-// Only meaningful for segmentation layers (indices [colorLayerNames.length,
-// globalLayerCount)); see decodeSegmentId in segmentation.glsl.ts.
+// Only used for segmentation layers.
 const uint layerSegmentIdDecodeTag[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getSegmentIdDecodeTagForLayer(textureLayerInfos[name].elementClass, textureLayerInfos[name].isSigned) + "u"; }).join(", ") %>);
 `;
 
@@ -348,10 +314,7 @@ void main() {
   }
   <% } %>
 
-  // Get Color Value(s). Which (up to maxActiveColorLayers) layers participate
-  // and in what order is entirely uniform-driven (colorRenderOrder /
-  // activeColorLayerCount) -- toggling/reordering color layers never changes
-  // this loop's compiled code.
+  // Get Color Value(s)
   vec3 color_value = vec3(0.0);
   vec3 precomputedTpsLayerCoordUVW[<%= globalLayerCount %>];
   <% each(colorLayerNames, function(name, idx) {
@@ -693,16 +656,9 @@ void main() {
 
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
 
-  // Precompute the bucket address for every declared layer (color and
-  // segmentation) that doesn't have a transform. Which layers actually get
-  // rendered/blended this frame is decided purely via uniforms elsewhere, so
-  // this loop can be a genuine runtime loop instead of one unrolled per layer.
-  // Only layers whose *global* layer index is below VERTEX_ALIGNMENT_LAYER_CAP
-  // get an outputMagIdx/outputSeed/outputAddress entry at all -- those arrays
-  // are varyings, sized by that same cap rather than globalLayerCount (see
-  // its declaration for why); layers beyond the cap always take the slower
-  // full per-fragment lookup path in getColorForCoords64, just like
-  // transformed layers already do.
+  // Precompute the bucket address for every untransformed layer below
+  // VERTEX_ALIGNMENT_LAYER_CAP. All other layers do the full lookup per
+  // fragment (see getColorForCoords64).
   for (uint layerIndex = 0u; layerIndex < uint(<%= globalLayerCount %>); layerIndex++) {
     uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[layerIndex];
     if (layerHasTransformInt[layerIndex] == 0 && globalLayerIndex < VERTEX_ALIGNMENT_LAYER_CAP) {

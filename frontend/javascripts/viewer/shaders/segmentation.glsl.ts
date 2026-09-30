@@ -362,11 +362,8 @@ export const getProofreadingCrossHairOverlay: ShaderModule = {
 export const getSegmentId: ShaderModule = {
   requirements: [convertCellIdToRGB, attemptMappingLookUp, getMaybeFilteredColorOrFallback],
   code: `
-    // Which of uint64ToUint64/int32ToUint64/uint32ToUint64 (defined as part
-    // of convertCellIdToRGB above) to use for a given segmentation layer's
-    // raw fetched bytes, keyed by the per-layer layerSegmentIdDecodeTag
-    // const array (see getSegmentIdDecodeTagForLayer in
-    // data_rendering_logic.ts / main_data_shaders.glsl.ts).
+    // decodeTag comes from layerSegmentIdDecodeTag (see
+    // getSegmentIdDecodeTagForLayer).
     void decodeSegmentId(uint decodeTag, vec4 lowColor, vec4 highColor, out highp uint low, out highp uint high) {
       if (decodeTag == 0u) {
         uint64ToUint64(lowColor, highColor, low, high);
@@ -377,12 +374,7 @@ export const getSegmentId: ShaderModule = {
       }
     }
 
-    // Generic across all segmentation layers -- reads the per-layer
-    // transform/bbox/packingDegree from the same layerTransform/layerBboxMin/
-    // layerBboxMax/layerPackingDegree arrays color layers use (see
-    // SHARED_UNIFORM_DECLARATIONS in main_data_shaders.glsl.ts), keyed by
-    // layerIdx (that layer's compiled index). Replaces what used to be one
-    // generated getSegmentId_<name> function per segmentation layer.
+    // layerIdx is the segmentation layer's compiled index.
     void getSegmentId(int layerIdx, vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
       vec3 layerCoordUVW = transDim((layerTransform[layerIdx] * vec4(transDim(worldPositionUVW), 1.0)).xyz);
       if (isOutsideOfBoundingBox(layerCoordUVW, layerBboxMin[layerIdx], layerBboxMax[layerIdx])) {

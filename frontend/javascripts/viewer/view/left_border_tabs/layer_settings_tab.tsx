@@ -117,9 +117,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     shouldCollapseByDefault: boolean;
   }) => {
     const { setNodeRef, transform, transition, isDragging } = useSortable({ id: layerName });
-    // null means "no explicit user choice yet" -- fall back to the
-    // dataset-size-dependent default. Once the user toggles it, their choice
-    // sticks (for this component instance/layer) regardless of that default.
+    // null until the user toggles it; until then, the default applies.
     const [isCollapsedOverride, setIsCollapsedOverride] = useState<boolean | null>(null);
     const isCollapsed = isCollapsedOverride ?? shouldCollapseByDefault;
 
@@ -357,10 +355,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       (layerName) => !getIsColorLayer(this.props.dataset, layerName),
     );
     const hasLessThanTwoColorLayers = colorLayerOrder.length < 2;
-    // With many layers, each fully expanded settings block (histogram,
-    // opacity, color, etc.) takes up a lot of sidebar space, so collapse
-    // them all by default -- individual layers can still be expanded via the
-    // header's caret toggle.
+    // Expanded settings take up a lot of space, so collapse them when there
+    // are many layers.
     const shouldCollapseByDefault = colorLayerOrder.length + segmentationLayerNames.length > 4;
     const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
       return (

@@ -557,9 +557,8 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   maximumLayerCountToRender: number;
 } {
   const { dataset } = Store.getState();
-  // Must match the per-layer capacity the texture pools are sized with (see
-  // getColorLayerPoolPlan), since smallestCommonBucketCapacity bounds how many
-  // buckets the max-zoom computation assumes fit onto the GPU per layer.
+  // Must match the capacity the pools are sized with (getColorLayerPoolPlan),
+  // because the max-zoom computation relies on it.
   const requiredBucketCapacity = getRequiredBucketCapacityPerLayer(
     gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
     dataset.dataSource.dataLayers.length,

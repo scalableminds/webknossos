@@ -295,8 +295,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
     });
 
     it<TestContext>("Ortho Mode (int32 and uint32 layers)", ({ warningEmittedCount }) => {
-      // Exercises the runtime dtypeTag branches (int32/uint32 bit-punned
-      // min/max decoding) in the color-blending loop.
+      // Covers the int32/uint32 branches of the color-blending loop.
       const code = getShader({
         globalLayerCount: 2,
         colorLayerNames: ["color_layer_1", "color_layer_2"],
@@ -338,10 +337,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
     it<TestContext>("Ortho Mode (many declared layers, fewer than maxActiveColorLayers)", ({
       warningEmittedCount,
     }) => {
-      // Exercises the case the layerAlpha/layerMin/.../colorRenderOrder
-      // arrays exist for: many more color layers declared than can be
-      // simultaneously active, which toggling/reordering should handle via
-      // uniform updates alone (see PlaneMaterialFactory.getColorRenderOrder).
       const colorLayerNames = Array.from({ length: 20 }, (_, i) => `color_layer_${i}`);
       const textureLayerInfos: Params["textureLayerInfos"] = Object.fromEntries(
         colorLayerNames.map((name) => [
@@ -379,12 +374,8 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
     it<TestContext>("Ortho Mode (vertexBucketAlignmentLayerCap smaller than 1, worst-case hardware)", ({
       warningEmittedCount,
     }) => {
-      // Regression test: outputMagIdx/outputSeed/outputAddress used to be
-      // varyings sized by globalLayerCount, which could exceed the driver's
-      // varying budget ("Could not pack varying") on datasets with many
-      // layers -- see vertexAlignmentLayerCap in main_data_shaders.glsl.ts.
-      // Exercise the smallest possible cap (matching the WebGL2-guaranteed
-      // worst case) with more declared layers than that.
+      // The smallest cap (for GPUs with the WebGL2 minimum of varyings), with
+      // more layers than the cap.
       const colorLayerNames = Array.from({ length: 5 }, (_, i) => `color_layer_${i}`);
       const textureLayerInfos: Params["textureLayerInfos"] = Object.fromEntries(
         colorLayerNames.map((name) => [

@@ -2,11 +2,8 @@ import { MenuOutlined } from "@ant-design/icons";
 import { useSortable } from "@dnd-kit/sortable";
 import FastTooltip from "components/fast_tooltip";
 
-// For color layers, showing the layer's own configured color as a dot (in
-// place of the generic grip icon) doubles as an at-a-glance legend, so you
-// don't have to expand a layer's settings just to see which color it renders
-// with. Segmentation layers have no such per-layer color, so they keep the
-// plain grip icon.
+// With a color (only color layers have one), shows a dot in that color
+// instead of the grip icon, so the color stays visible when collapsed.
 function DragHandleIcon({ isDisabled = false, color }: { isDisabled?: boolean; color?: string }) {
   return (
     <div

@@ -71,11 +71,8 @@ const getSharedLookUpCuckooTable = memoizeOne(
   () => new CuckooTableVec5(LOOKUP_CUCKOO_TEXTURE_WIDTH),
 );
 
-// Lazily-initialized singleton, computed once per dataset (see
-// computeColorLayerPoolAssignments for why the pool depths -- and therefore
-// the pools themselves -- can't be grown incrementally afterwards). Maps
-// every layer (color and segmentation) to a reserved slice range within one
-// of the 5 shared dtype pools.
+// Lazily-initialized singleton, created once per dataset: every layer's
+// slice range plus the 5 pool textures.
 const getColorLayerPoolPlan = memoizeOne(() => {
   const { dataset, userConfiguration } = Store.getState();
   const requiredBucketCapacity = getRequiredBucketCapacityPerLayer(
@@ -92,9 +89,8 @@ const getColorLayerPoolPlan = memoizeOne(() => {
   return { assignmentByLayerName, poolTextureManagers };
 });
 
-// Used by PlaneMaterialFactory to attach the (dataset-wide, shared) pool
-// textures as uniforms -- unlike per-layer textures, these aren't reached via
-// any single layer's LayerRenderingManager.
+// The pool textures are shared by all layers, so PlaneMaterialFactory
+// gets them here instead of from a single layer's LayerRenderingManager.
 export function getColorLayerPoolTextureManagers(): Map<ColorLayerPool, PoolTextureManager> {
   return getColorLayerPoolPlan().poolTextureManagers;
 }
@@ -203,9 +199,6 @@ export default class LayerRenderingManager {
     const { dataset } = Store.getState();
     const elementClass = getElementClass(dataset, this.name);
 
-    // Both color and segmentation layers write their buckets into the
-    // shared, dtype-keyed texture-array pools (see getSegmentId/
-    // getRgbaAtXYIndex in segmentation.glsl.ts/texture_access.glsl.ts).
     const { assignmentByLayerName, poolTextureManagers } = getColorLayerPoolPlan();
     const assignment = assignmentByLayerName.get(this.name);
     if (assignment == null) {

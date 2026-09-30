@@ -146,16 +146,11 @@ describe("TextureBucketManager", () => {
 
     const bucketsPerTexture =
       (COLOR_LAYER_POOL_TEXTURE_WIDTH * COLOR_LAYER_POOL_TEXTURE_WIDTH) / tbm.getPackedBucketSize();
-    // The cuckoo-stored address should be offset into this layer's reserved
-    // slice range within the shared pool (not a layer-local 0-based index),
-    // so that the shader's existing address decoding directly yields the
-    // correct pool-wide slice.
+    // The stored address includes the layer's baseSlice.
     expect(bucketAddress).toBeGreaterThanOrEqual(baseSlice * bucketsPerTexture);
     expect(bucketAddress).toBeLessThan((baseSlice + 1) * bucketsPerTexture);
 
-    // The data should have landed in the *shared* pool texture (not a
-    // private per-layer one), at the baseSlice-th slice (since this is the
-    // layer's first bucket, dataTextureIndex 0).
+    // The layer's first bucket lands in the pool texture's baseSlice-th slice.
     const sliceByteOffset =
       baseSlice * COLOR_LAYER_POOL_TEXTURE_WIDTH * COLOR_LAYER_POOL_TEXTURE_WIDTH;
     // @ts-expect-error - texture is available in our mock but not in the real type

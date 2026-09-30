@@ -106,31 +106,18 @@ export type Uniforms = Record<
 
 const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
 
-// Fixed, compile-time upper bound (see Params.maxActiveColorLayers in
-// main_data_shaders.glsl.ts) for how many color layers can be simultaneously
-// blended, independent of how many color layers the dataset actually has.
-// Cheap to raise (the blend loop's runtime cost scales with
-// activeColorLayerCount, not this constant; see getColorRenderOrder) -- the
-// real constraint on how many layers a dataset can comfortably use is GPU
-// memory (see getRequiredBucketCapacityPerLayer in data_rendering_logic.ts),
-// not this cap. Exported since dataset_saga.ts's "too many active layers"
-// warning needs to compare against the same number.
+// Maximum number of color layers blended at once. It only sizes the
+// colorRenderOrder uniform array, so raising it is cheap.
 export const MAX_ACTIVE_COLOR_LAYERS = 32;
 
-// outputMagIdx/outputSeed/outputAddress (main_data_shaders.glsl.ts) are
-// *varyings* used to let the vertex shader precompute a bucket-border-aligned
-// address per layer, sparing the fragment shader from redoing the lookup per
-// pixel. Unlike uniforms, varyings are a scarce GPU resource -- WebGL2 only
-// guarantees a minimum of gl.MAX_VARYING_VECTORS = 15 -- so sizing these
-// arrays by the dataset's full (now uncapped, see getLayersToRender) layer
-// count can exceed the driver's varying budget and fail to link ("Could not
-// pack varying"). Query the real hardware limit and derive a safe cap
-// instead; layers beyond the cap (by global layer index, see
-// VERTEX_ALIGNMENT_LAYER_CAP in main_data_shaders.glsl.ts) just always take
-// the slower-but-correct full per-fragment lookup path that already exists
-// for transformed/TPS layers.
+// Varying vectors reserved for the shader's other varyings.
 const RESERVED_BASELINE_VARYING_ROWS = 12;
 const VARYING_ROWS_PER_LAYER = 3;
+// The vertex shader precomputes a bucket address per layer and passes it on
+// via the outputMagIdx/outputSeed/outputAddress varyings. WebGL2 only
+// guarantees 15 varying vectors, and exceeding the driver's limit fails with
+// "Could not pack varying". So only layers whose global index is below this
+// cap get these varyings; the others do the full lookup per fragment.
 const getVertexBucketAlignmentLayerCap = memoizeOne((): number => {
   const gl = getRenderer().getContext() as WebGL2RenderingContext;
   const maxVaryingVectors: number = gl.getParameter(gl.MAX_VARYING_VECTORS);
@@ -155,21 +142,15 @@ const float32BitPunAsFloat = new Float32Array(float32BitPunBuffer);
 const float32BitPunAsInt = new Int32Array(float32BitPunBuffer);
 const float32BitPunAsUint = new Uint32Array(float32BitPunBuffer);
 
-// layerMin/layerMax are plain float uniform arrays (see SHARED_UNIFORM_DECLARATIONS
-// in main_data_shaders.glsl.ts), but int32/uint32 layers need their exact integer
-// min/max preserved without float's 24-bit exact-integer precision loss. We bit-pun
-// the integer value into the float uniform's bit pattern here; the shader reverses
-// this via floatBitsToInt/floatBitsToUint for those dtypes only.
-// three.js's array-uniform uploader (flatten() in WebGLUniforms) requires
-// every element of a mat4[]/vec3[] uniform array to be an object with
-// .toArray() (or the whole array to already be fully-flattened primitives) --
-// plain number tuples like Matrix4x4/Vector3 crash it. Scalar (non-array)
-// mat4/vec3 uniforms don't have this restriction, which is why this wasn't
-// an issue for the old per-layer-named uniforms.
+// three.js can only upload mat4[]/vec3[] uniforms whose elements are three.js
+// objects (with toArray()). Plain number tuples crash its uploader.
 function toThreeMatrix4(matrix: Matrix4x4): Matrix4 {
   return new Matrix4().fromArray(matrix);
 }
 
+// layerMin/layerMax are float uniforms, which can't hold every int32/uint32
+// value exactly. So the integer's bits are stored in the float, and the shader
+// reads them back with floatBitsToInt/floatBitsToUint.
 function reinterpretIntAsFloatBits(value: number, elementClass: ElementClass): number {
   const dtypeTag = getDtypeTagForElementClass(elementClass);
   if (dtypeTag === DTYPE_TAG_INT32) {
@@ -238,10 +219,8 @@ class PlaneMaterialFactory {
 
   scaledTpsInvPerLayer: Record<string, TPS3D> = {};
 
-  // The currently *declared* (compiled-into-the-shader) layer names, in the
-  // exact order the shader's layerAlpha/layerMin/.../colorRenderOrder arrays
-  // are indexed by. Kept in sync with getLayersToRender()'s result every time
-  // the shader is (re)computed; see refreshCompiledLayerNames.
+  // Layer names in the order the shader's per-layer arrays are indexed by
+  // (the "compiled index"). Updated by refreshCompiledLayerNames.
   compiledColorLayerNames: Array<string> = [];
   compiledSegmentationLayerNames: Array<string> = [];
 
@@ -265,9 +244,7 @@ class PlaneMaterialFactory {
     this.compiledSegmentationLayerNames = segmentationLayerNames;
   }
 
-  // All layers currently declared in the shader, color layers first -- the
-  // exact index space that layerAlpha/layerMin/layerTransform/... and
-  // getRgbaAtXYIndex's per-layer dispatch are indexed by.
+  // Color layers first. A layer's position here is its compiled index.
   getCompiledLayerNames(): Array<string> {
     return this.compiledColorLayerNames.concat(this.compiledSegmentationLayerNames);
   }
@@ -402,10 +379,7 @@ class PlaneMaterialFactory {
     const { nativelyRenderedLayerName } = Store.getState().datasetConfiguration;
     const dataset = Store.getState().dataset;
 
-    // Per-layer rendering metadata, indexed by compiled index (position in
-    // this.getCompiledLayerNames() == colorLayerNames.concat(segmentationLayerNames)
-    // as declared in the shader). See SHARED_UNIFORM_DECLARATIONS in
-    // main_data_shaders.glsl.ts for how these are consumed.
+    // Indexed by compiled index.
     const compiledLayerNames = this.getCompiledLayerNames();
     const layerAlpha: number[] = [];
     const layerGammaCorrectionValue: number[] = [];
@@ -470,14 +444,10 @@ class PlaneMaterialFactory {
   attachTextures(): void {
     let sharedLookUpTexture;
     let sharedLookUpCuckooTable;
-    // Every layer (color and segmentation alike) now writes into one of the
-    // shared pool_*_textures below, so there's nothing left to attach
-    // per-layer here -- just extract the shared lookup texture/cuckoo table
-    // (identical no matter which layer we ask).
+    // The lookup texture and cuckoo table are shared, so any layer returns the
+    // same ones. Calling getDataTextures() also sets up each layer's
+    // TextureBucketManager if needed.
     for (const dataLayer of Model.getAllLayers()) {
-      // getDataTextures() lazily sets up dataLayer.layerRenderingManager.textureBucketManager
-      // if needed; the returned per-layer dataTextures are always empty now
-      // (pooled mode), only the shared lookup texture is used.
       const [lookUpTexture] = dataLayer.layerRenderingManager.getDataTextures();
       sharedLookUpTexture = lookUpTexture;
       sharedLookUpCuckooTable = dataLayer.layerRenderingManager.getSharedLookUpCuckooTable();
@@ -800,11 +770,8 @@ class PlaneMaterialFactory {
               }
             }
           }
-          // Every layer (color and segmentation) is always declared in the
-          // shader now (both are pool-backed, see getLayersToRender), so
-          // toggling visibility never needs a recompile -- just which (up to
-          // MAX_ACTIVE_COLOR_LAYERS) color layers are actively blended, which
-          // is a pure uniform update.
+          // Visibility only affects which color layers are blended, so no
+          // recompile is needed.
           this.updateColorRenderOrderUniform();
           app.vent.emit("rerender");
         },
@@ -816,9 +783,6 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (state) => state.datasetConfiguration.colorLayerOrder,
         () => {
-          // Reordering color layers never changes which layers are declared
-          // in the shader, only their blend order -- a pure uniform update,
-          // no recompile needed.
           this.updateColorRenderOrderUniform();
           app.vent.emit("rerender");
         },
@@ -1042,12 +1006,8 @@ class PlaneMaterialFactory {
           this.uniforms.doAllLayersHaveTransforms = {
             value: countOfLayersWithTransforms === layers.length,
           };
-          // Presence of a TPS transform is still baked into the shader text
-          // (layerHasTpsTransform / tpsOffsetXYZ_<name>, see
-          // main_data_shaders.glsl.ts), so this still needs a recompile --
-          // recomputeShaders() no-ops via string-equality if the generated
-          // source didn't actually change (e.g. only the affine matrix
-          // values changed, not which layers have a transform at all).
+          // Which layers have a TPS transform is baked into the shader. This
+          // only recompiles if the generated code actually changed.
           this.recomputeShaders();
         },
         true,
@@ -1199,13 +1159,8 @@ class PlaneMaterialFactory {
   }, RECOMPILATION_THROTTLE_TIME);
 
   getLayersToRender(): [Array<string>, Array<string>, number] {
-    // Every layer -- color or segmentation -- is backed by one of 5 shared,
-    // fixed-cost texture-array pools (see PoolTextureManager), so declaring
-    // more of them never consumes additional GPU texture units. There's
-    // therefore no reason to ever hold any layer back from being declared;
-    // which (up to maxActiveColorLayers) color layers are actually blended
-    // each frame is a separate, purely uniform-driven concern (see
-    // getColorRenderOrder).
+    // Always all layers of the dataset. Layers share the pool textures, so
+    // declaring one more layer costs no texture units.
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
       sanitizeName(layer.name),
@@ -1214,12 +1169,9 @@ class PlaneMaterialFactory {
     return [colorLayerNames, segmentationLayerNames, globalLayerCount];
   }
 
-  // Computes, from the currently *declared* color layers (this.compiledColorLayerNames),
-  // which (up to MAX_ACTIVE_COLOR_LAYERS) are enabled and in what order they should be
-  // blended, based on the user's configured colorLayerOrder. This is entirely separate
-  // from getLayersToRender/recomputeShaders: toggling visibility or reordering layers
-  // only ever changes the result of this function, which is written directly into the
-  // colorRenderOrder/activeColorLayerCount uniforms -- never requiring a shader recompile.
+  // Compiled indices of the enabled color layers (at most
+  // MAX_ACTIVE_COLOR_LAYERS), in the user's colorLayerOrder. They are written
+  // to uniforms, so toggling or reordering layers doesn't recompile the shader.
   getColorRenderOrder(): { colorRenderOrder: number[]; activeColorLayerCount: number } {
     const state = Store.getState();
     const { colorLayerOrder, layers } = state.datasetConfiguration;

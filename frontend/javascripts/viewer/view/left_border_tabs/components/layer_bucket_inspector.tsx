@@ -15,16 +15,11 @@ type LayerBucketStats = {
   gpuBucketCapacity: number;
 };
 
-// Lightweight, poll-based (not Redux-driven) snapshot of how many buckets
-// each layer currently holds in CPU RAM (DataCube.buckets) vs. how many are
-// actually committed into a GPU texture pool slot (TextureBucketManager),
-// plus that GPU slot's total capacity. Useful for debugging the per-layer
-// bucket budget scaling (see getRequiredBucketCapacityPerLayer /
-// getBucketCountSoftLimitPerLayer in data_rendering_logic.ts).
+// Per layer: buckets in RAM (DataCube) and on the GPU (TextureBucketManager),
+// each with its limit.
 function collectLayerBucketStats(): LayerBucketStats[] {
   return Model.getAllLayers().map((dataLayer) => {
-    // Lazily created on first render; may not exist yet for a layer that
-    // has never been drawn.
+    // Created lazily, so it doesn't exist yet for layers that were never rendered.
     const textureBucketManager = dataLayer.layerRenderingManager.textureBucketManager;
     return {
       layerName: dataLayer.name,
@@ -72,8 +67,7 @@ export default function LayerBucketInspector() {
   return (
     <Popover
       open={isOpen}
-      // Fully controlled: only setIsOpen (the trigger button and the X
-      // button below) can open/close this, never a hover or outside click.
+      // Only the two buttons open or close it; not hover or outside clicks.
       trigger={[]}
       placement="bottomRight"
       content={

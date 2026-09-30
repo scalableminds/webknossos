@@ -19,9 +19,7 @@ import {
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
 
-// Layers write their buckets into a shared, dtype-keyed sampler2DArray
-// pool (see PoolTextureManager) instead of owning dedicated texture(s); this
-// describes where within that shared pool a given layer's buckets live.
+// Where in a shared pool texture a layer's buckets live.
 export type ColorLayerPoolBinding = {
   poolTextureManager: PoolTextureManager;
   baseSlice: number;
@@ -106,8 +104,8 @@ export default class TextureBucketManager {
   isDestroyed: boolean = false;
   private areTexturesReady: boolean = false;
   private isWriterQueueProcessingScheduled: boolean = false;
-  // Set in pooled mode (all layers in the app); undefined only when a test
-  // constructs a TextureBucketManager with its own dedicated dataTextures.
+  // Always set in the app. Only tests create managers without a pool, which
+  // then use their own dataTextures.
   private pool: ColorLayerPoolBinding | undefined;
 
   constructor(
@@ -277,13 +275,8 @@ export default class TextureBucketManager {
 
       let cuckooValue = _index;
       if (this.pool != null) {
-        // The shared pool's texture array slice for this layer's
-        // dataTextureIndex-th "page" is offset by this layer's reserved
-        // baseSlice. The cuckoo table's value becomes a pool-global address
-        // (baseSlice folded in, in "bucket" units) so that the shader's
-        // existing address decoding (textureIndex = floor(address /
-        // bucketCapacityPerTexture)) directly yields the correct slice
-        // within the pool -- no separate per-layer offset needed in GLSL.
+        // Store the address with baseSlice already added, so that the shader's
+        // floor(address / bucketsPerTexture) directly yields the pool slice.
         this.pool.poolTextureManager.textureArray.update(
           src,
           0,
@@ -327,8 +320,7 @@ export default class TextureBucketManager {
   }
 
   getTextures(): Array<DataTexture | UpdatableTexture> {
-    // In pooled mode, the pool's shared texture is attached separately/once
-    // (see PlaneMaterialFactory), not per-layer.
+    // Pool textures are attached once by PlaneMaterialFactory, not per layer.
     return [this.lookUpCuckooTable._texture].concat(this.pool != null ? [] : this.dataTextures);
   }
 

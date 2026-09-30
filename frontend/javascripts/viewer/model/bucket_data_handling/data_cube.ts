@@ -143,11 +143,9 @@ class DataCube {
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
-    // Total number of layers in the dataset, used to scale down
-    // BUCKET_COUNT_SOFT_LIMIT so RAM usage doesn't grow linearly with layer
-    // count (see getBucketCountSoftLimitPerLayer). Optional and defaults to
-    // the un-scaled limit so existing test call sites (which construct a
-    // DataCube in isolation) are unaffected.
+    // Number of layers in the dataset; scales BUCKET_COUNT_SOFT_LIMIT down
+    // (see getBucketCountSoftLimitPerLayer). If omitted, the unscaled limit
+    // is used.
     totalLayerCount?: number,
   ) {
     if (totalLayerCount != null) {

@@ -30,10 +30,7 @@ import { ensureWkInitialized } from "./ready_sagas";
 
 function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    // Every layer is pool-backed now (see plane_material_factory.ts), so the
-    // only real limit on how many *color* layers can be rendered
-    // simultaneously is MAX_ACTIVE_COLOR_LAYERS -- not a GPU-texture-unit
-    // constraint anymore. (Segmentation layers aren't subject to this cap.)
+    // Segmentation layers don't count towards this limit.
     const enabledColorLayerCount = yield* select(
       (state) => getEnabledColorLayers(state.dataset, state.datasetConfiguration).length,
     );

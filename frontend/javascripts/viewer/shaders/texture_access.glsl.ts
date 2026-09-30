@@ -30,13 +30,7 @@ const linearizeVec3ToIndexWithMod: ShaderModule = {
 
 const getRgbaAtXYIndex: ShaderModule = {
   code: `
-    // Every layer -- color or segmentation -- reads from one of 5 shared,
-    // dtype-keyed sampler2DArray pools (see layerPoolId/ColorLayerPool in
-    // main_data_shaders.glsl.ts / data_rendering_logic.ts) via a single,
-    // layer-count-independent dispatch -- no per-layer function/uniform
-    // needed, since a texture array's slice index is a dynamic texture
-    // coordinate, not a compile-time sampler-array index (which is what
-    // used to require one generated function per layer here).
+    // textureIdx is the slice within the layer's pool texture.
     vec4 getRgbaAtXYIndex(float localLayerIndex, float textureIdx, float x, float y) {
       uint idx = uint(localLayerIndex);
       uint poolId = layerPoolId[idx];
@@ -167,13 +161,9 @@ export const getColorForCoords: ShaderModule = {
       vec3 offsetInBucket;
       uint renderedMagIdx = activeMagIdx;
 
-      // outputMagIdx/outputSeed/outputAddress only have entries for layers
-      // below VERTEX_ALIGNMENT_LAYER_CAP (see its declaration and the
-      // vertex shader's bucket-alignment loop) -- layers beyond that always
-      // take the full per-fragment lookup path below, just like transformed
-      // layers already do. For layers within the cap, also don't use the
-      // precomputed bucket address when being at the border of buckets, to
-      // avoid rare rendering artifacts.
+      // Layers at or above VERTEX_ALIGNMENT_LAYER_CAP have no precomputed
+      // bucket address. Also don't use it at bucket borders, to avoid rare
+      // rendering artifacts.
       bool beSafe = globalLayerIndex >= VERTEX_ALIGNMENT_LAYER_CAP || useBucketBorderVertexOptimization < 0.5;
       if (!beSafe) {
         renderedMagIdx = outputMagIdx[globalLayerIndex];

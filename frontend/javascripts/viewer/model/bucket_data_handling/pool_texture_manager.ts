@@ -7,17 +7,9 @@ import {
   getColorLayerPoolGpuConfig,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 
-// A PoolTextureManager owns the single, shared sampler2DArray backing one
-// dtype pool (see ColorLayerPool in data_rendering_logic.ts).
-// Many layers write their buckets into disjoint depth ranges
-// ([baseSlice, baseSlice + dataTextureCount)) of this ONE shared texture
-// array -- see TextureBucketManager's pooled mode.
-//
-// The depth (array-layer count) is fixed at construction time and never
-// grows afterwards, since WebGL2's texStorage3D allocates immutable storage;
-// the caller (getColorLayerPoolPlan in layer_rendering_manager.ts) is
-// responsible for summing up every layer's slice requirement for this
-// pool *before* constructing this class.
+// Owns the shared texture array of one pool (see ColorLayerPool). The depth
+// can't change after construction, so the caller must pass the sum of all
+// layers' slice counts.
 export default class PoolTextureManager {
   pool: ColorLayerPool;
   depth: number;
@@ -25,16 +17,9 @@ export default class PoolTextureManager {
 
   constructor(pool: ColorLayerPool, depth: number) {
     this.pool = pool;
-    // Depth 0 would be a degenerate (and invalid) texture array; clamp to 1
-    // so pools that happen to be unused by the current dataset still get a
-    // valid texture, since the pool's sampler uniform is always declared in
-    // the shader regardless of whether any layer uses it. A dataset that
-    // only uses e.g. uint8 layers leaves the other 4 pools unused, so it's
-    // worth shrinking those to a 1x1 placeholder instead of the full
-    // COLOR_LAYER_POOL_TEXTURE_WIDTH^2 (tens of MB each) -- the shader's
-    // POOL_TEXTURE_WIDTH addressing constant only matters for pools that
-    // some layer actually maps into; an unused pool's sampler is never
-    // reached by any slot's poolId, so its real backing size is irrelevant.
+    // The shader declares every pool's sampler, so even a pool that no layer
+    // uses needs a valid texture. Since it is never read, 1x1x1 is enough
+    // and saves the memory of a full-size slice.
     const isUnused = depth === 0;
     this.depth = Math.max(1, depth);
     const width = isUnused ? 1 : COLOR_LAYER_POOL_TEXTURE_WIDTH;

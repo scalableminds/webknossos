@@ -193,12 +193,12 @@ export type SkeletonTracingStats = {
   nodeCount: number;
   edgeCount: number;
   branchPointCount: number;
-  boundingBoxCount: number;
+  boundingBoxCount?: number;
 };
 
 export type VolumeTracingStats = {
   segmentCount: number;
-  boundingBoxCount: number;
+  boundingBoxCount?: number;
 };
 
 export type TracingStats = Record<string, SkeletonTracingStats | VolumeTracingStats | EmptyObject>;
@@ -257,7 +257,7 @@ export function getVolumeStats(stats: TracingStats): [string, VolumeTracingStats
 export function getBoundingBoxCountWithPrecedence(stats: TracingStats): number | undefined {
   const skeletonStats = getSkeletonStats(stats);
   if (skeletonStats) {
-    return "boundingBoxCount" in skeletonStats ? skeletonStats.boundingBoxCount : undefined;
+    return skeletonStats.boundingBoxCount;
   }
   const volumeStats = getVolumeStats(stats);
   if (volumeStats.length === 0) {
@@ -266,9 +266,7 @@ export function getBoundingBoxCountWithPrecedence(stats: TracingStats): number |
   const [_tracingId, precedenceVolumeStats] = volumeStats.reduce((min, current) =>
     current[0] < min[0] ? current : min,
   );
-  return "boundingBoxCount" in precedenceVolumeStats
-    ? precedenceVolumeStats.boundingBoxCount
-    : undefined;
+  return precedenceVolumeStats.boundingBoxCount;
 }
 
 export function getUserStateForTracing<

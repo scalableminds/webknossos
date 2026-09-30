@@ -1,0 +1,14 @@
+@(name: String, issuerName: String, projectName: String, taskTypeName: String, annotationUrl: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+<p>
+  @{issuerName} assigned a <i>@{taskTypeName}</i> task of the project <i>@{projectName}</i> to you.
+  You can also find it in the task list of your dashboard.
+</p>
+
+@emailButton("Start Task", annotationUrl)
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

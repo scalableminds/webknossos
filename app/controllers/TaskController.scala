@@ -41,6 +41,7 @@ class TaskController @Inject() (
     projectDAO: ProjectDAO,
     taskTypeDAO: TaskTypeDAO,
     userService: UserService,
+    notificationMailService: NotificationMailService,
     taskDAO: TaskDAO,
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
@@ -233,7 +234,14 @@ class TaskController @Inject() (
         (_, initializingAnnotationId) <- taskDAO.assignOneTo(id, userId) ?~> Msg.Task.unavailable
         insertedAnnotationBox <- annotationService.createAnnotationFor(assignee, id, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
-        _ <- insertedAnnotationBox.toFox
+        insertedAnnotation <- insertedAnnotationBox.toFox
+        _ = notificationMailService.notifyTaskAssigned(
+          task,
+          project,
+          insertedAnnotation._id,
+          assignee,
+          request.identity
+        )
         taskUpdated <- taskDAO.findOne(id)
         taskJson <- taskService.publicWrites(taskUpdated)(using GlobalAccessContext)
       } yield Ok(taskJson)

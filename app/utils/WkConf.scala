@@ -86,6 +86,11 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.pricingPlanExpiryReminder.tickerInterval")
     }
 
+    object StorageWarning {
+      val enabled: Boolean = get[Boolean]("webKnossos.storageWarning.enabled")
+      val thresholdsPercent: List[Int] = getList[Int]("webKnossos.storageWarning.thresholdsPercent")
+    }
+
     object SampleOrganization {
       val enabled: Boolean = get[Boolean]("webKnossos.sampleOrganization.enabled")
 
@@ -136,6 +141,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
         Tasks,
         Cache,
         PricingPlanExpiryReminder,
+        StorageWarning,
         SampleOrganization,
         FetchUsedStorage,
         TermsOfService,
@@ -218,7 +224,12 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val password: String = get[String]("mail.mailchimp.password")
     }
 
-    val children: List[Object] = List(Smtp, Mailchimp)
+    object Notifications {
+      val accessChanges: Boolean = get[Boolean]("mail.notifications.accessChanges")
+      val manualTaskAssignments: Boolean = get[Boolean]("mail.notifications.manualTaskAssignments")
+    }
+
+    val children: List[Object] = List(Smtp, Mailchimp, Notifications)
   }
 
   object Silhouette {

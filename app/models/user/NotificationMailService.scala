@@ -135,9 +135,7 @@ class NotificationMailService @Inject() (
       newTeamMemberships: List[TeamMembership],
       issuer: User
   ): Unit =
-    if (
-      accessChangesEnabled && userBefore._id != issuer._id && !userBefore.isDeactivated && !userAfter.isDeactivated
-    )
+    if (accessChangesEnabled && userBefore._id != issuer._id && !userBefore.isDeactivated && !userAfter.isDeactivated)
       inBackground(s"access of user ${userBefore._id} changed") {
         for {
           teams <- teamDAO.findAllByIds((oldTeamMemberships ++ newTeamMemberships).map(_.teamId).distinct)
@@ -148,13 +146,15 @@ class NotificationMailService @Inject() (
             userAfter,
             teams.map(team => team._id -> team.name).toMap
           )
-          _ <- Fox.runIf(changes.nonEmpty)(for {
-            recipient <- multiUserDAO.findOne(userAfter._multiUser)
-            issuerMultiUser <- multiUserDAO.findOne(issuer._multiUser)
-            organization <- organizationDAO.findOne(userAfter._organization)
-          } yield Mailer ! Send(
-            defaultMails.accessChangedMail(recipient, issuerMultiUser.fullName, organization.name, changes)
-          ))
+          _ <- Fox.runIf(changes.nonEmpty)(
+            for {
+              recipient <- multiUserDAO.findOne(userAfter._multiUser)
+              issuerMultiUser <- multiUserDAO.findOne(issuer._multiUser)
+              organization <- organizationDAO.findOne(userAfter._organization)
+            } yield Mailer ! Send(
+              defaultMails.accessChangedMail(recipient, issuerMultiUser.fullName, organization.name, changes)
+            )
+          )
         } yield ()
       }
 
@@ -166,7 +166,8 @@ class NotificationMailService @Inject() (
           issuerMultiUser <- multiUserDAO.findOne(issuer._multiUser)
           taskType <- taskTypeDAO.findOne(task._taskType)
         } yield Mailer ! Send(
-          defaultMails.taskAssignedMail(recipient, issuerMultiUser.fullName, project.name, taskType.summary, annotationId)
+          defaultMails
+            .taskAssignedMail(recipient, issuerMultiUser.fullName, project.name, taskType.summary, annotationId)
         )
       }
 
@@ -224,7 +225,7 @@ object NotificationMailService {
       oldById.get(membership.teamId) match {
         case None if membership.isTeamManager =>
           Some(s"You were added to the team ${teamName(membership.teamId)} as team manager.")
-        case None                                               => Some(s"You were added to the team ${teamName(membership.teamId)}.")
+        case None => Some(s"You were added to the team ${teamName(membership.teamId)}.")
         case Some(old) if !old.isTeamManager && membership.isTeamManager =>
           Some(s"You are now a team manager of the team ${teamName(membership.teamId)}.")
         case Some(old) if old.isTeamManager && !membership.isTeamManager =>

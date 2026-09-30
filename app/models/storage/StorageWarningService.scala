@@ -63,7 +63,9 @@ class StorageWarningService @Inject() (
           s"Warning the owner and admins (${recipients.length}) of organization ${organization._id} that it uses $usedStorageBytes of $includedStorageBytes included storage bytes..."
         )
         _ = recipients.foreach(recipient =>
-          Mailer ! Send(defaultMails.storageWarningMail(recipient, organization, usedStorageBytes, includedStorageBytes))
+          Mailer ! Send(
+            defaultMails.storageWarningMail(recipient, organization, usedStorageBytes, includedStorageBytes)
+          )
         )
       } yield ())
     } yield ()

@@ -65,7 +65,15 @@ class NotificationMailTestSuite extends AsyncWordSpec {
     )
 
     "be empty if nothing changed" in
-      assert(accessChanges(List(TeamMembership(teamA, false)), List(TeamMembership(teamA, false)), user, user, teamNames).isEmpty)
+      assert(
+        accessChanges(
+          List(TeamMembership(teamA, false)),
+          List(TeamMembership(teamA, false)),
+          user,
+          user,
+          teamNames
+        ).isEmpty
+      )
     "describe added and removed teams" in
       assert(
         accessChanges(List(TeamMembership(teamA, false)), List(TeamMembership(teamB, true)), user, user, teamNames) ==

@@ -11,7 +11,7 @@ import { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
-import window, { document } from "libs/window";
+import window, { document, location } from "libs/window";
 import { compress, decompress } from "lz-string";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -32,6 +32,7 @@ import { checkAnyOrganizationExists, getOrganization } from "admin/api/organizat
 import { CheckCertificateModal } from "components/check_certificate_modal";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
+import { fetchTreeHierarchy } from "dashboard/dataset/queries";
 import { RouterProvider } from "react-router/dom";
 import router from "router/router";
 import { getThemeFromUser } from "theme";
@@ -123,6 +124,13 @@ async function initApp() {
       // with hasOrganizations==true.
       loadHasOrganizations(),
     ]);
+    // The dataset dashboard needs the folder tree first thing after mounting. Starting the request
+    // now overlaps it with loading the organization and rendering the app.
+    if (Store.getState().activeUser != null && location.pathname.startsWith("/dashboard")) {
+      reactQueryClient
+        .prefetchQuery({ queryKey: ["folders"], queryFn: fetchTreeHierarchy })
+        .catch(() => {});
+    }
     await loadOrganization();
 
     // In dev setup the original title indicates loading. That’s done now.

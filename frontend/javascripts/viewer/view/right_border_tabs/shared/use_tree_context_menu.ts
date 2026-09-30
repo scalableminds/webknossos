@@ -1,6 +1,6 @@
 import type { MenuProps } from "antd";
 import { useCallback, useRef, useState } from "react";
-import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
+import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/generic_context_menu_helpers";
 
 export type TreeContextMenu = {
   contextMenuPosition: [number, number] | null;

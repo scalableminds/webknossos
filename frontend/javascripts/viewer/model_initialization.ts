@@ -106,11 +106,9 @@ import {
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
-import {
-  doAllLayersHaveTheSameRotation,
-  getTransformedDatasetCenter,
-} from "./model/accessors/dataset_layer_transformation_accessor";
+import { getTransformedDatasetCenter } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";
+import { doAllLayersHaveTheSameRotation } from "./model/helpers/dataset_rotation_helpers";
 import {
   convertBoundingBoxProtoToObject,
   convertServerAdditionalAxesToFrontEnd,

@@ -24,7 +24,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
+import { getNoActionsAvailableMenu } from "viewer/view/context_menu/generic_context_menu_helpers";
 
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",

@@ -1,6 +1,5 @@
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { FillModeEnum, OverwriteModeEnum, TDViewDisplayModeEnum } from "viewer/constants";
-import { getMaximumBrushSize } from "viewer/model/accessors/volumetracing_accessor";
 
 export const userSettings = {
   clippingDistance: {
@@ -110,12 +109,11 @@ export const userSettings = {
   },
   // Note that the `maximum` limit is a theoretical one. An actual upper limit
   // is computed depending on the existing magnifications. See
-  // getMaximumBrushSize().
+  // getMaximumBrushSize() and its usage in SettingsReducer.
   brushSize: {
     type: "number",
     minimum: 1,
     maximum: 30000,
-    dynamicMaximumFn: getMaximumBrushSize,
   },
   autoSaveLayouts: {
     type: "boolean",

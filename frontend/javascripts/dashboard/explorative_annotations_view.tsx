@@ -54,8 +54,10 @@ import {
   annotationToCompact,
 } from "types/api_types";
 import { AnnotationContentTypes } from "viewer/constants";
-import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
-import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getVolumeDescriptors,
+  isAnnotationEditableByNonOwners,
+} from "viewer/model/accessors/annotation_accessor";
 import CategorizationLabel, {
   CategorizationSearch,
 } from "viewer/view/components/categorization_label";

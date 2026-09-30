@@ -1,10 +1,9 @@
 import { M4x4, type Matrix4x4 } from "libs/mjs";
 import MultiKeyMap from "libs/multi_key_map";
-import { mod } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
 import memoize from "lodash-es/memoize";
 import memoizeOne from "memoize-one";
-import { Euler, Matrix4, Quaternion, Vector3 as ThreeVector3 } from "three";
+import { Matrix4, Quaternion, Vector3 as ThreeVector3 } from "three";
 import type {
   AffineTransformation,
   APIDataLayer,
@@ -12,144 +11,29 @@ import type {
   APISkeletonLayer,
   CoordinateTransformation,
 } from "types/api_types";
-import {
-  Identity4x4,
-  IdentityTransform,
-  type NestedMatrix4,
-  type Vector3,
-  Vector3Indices,
-  type Vector4,
-} from "viewer/constants";
+import { Identity4x4, IdentityTransform, type Vector3, Vector3Indices } from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
+import {
+  cosineLocationOfRotationInMatrix,
+  doAllLayersHaveTheSameRotation,
+  fromCenterToOriginAsAffine,
+  fromOriginToCenterAsAffine,
+  getRotationMatrixAroundAxis,
+  isTranslationOnly,
+  sinusLocationOfRotationInMatrix,
+} from "../helpers/dataset_rotation_helpers";
 import {
   chainTransforms,
   createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
+  flatToNestedMatrix,
   invertTransform,
   nestedToFlatMatrix,
   type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 import { getDataLayers, getLayerBoundingBox, getLayerByName } from "./dataset_accessor";
-
-const IDENTITY_MATRIX = [
-  [1, 0, 0, 0],
-  [0, 1, 0, 0],
-  [0, 0, 1, 0],
-  [0, 0, 0, 1],
-] as NestedMatrix4;
-
-export const IDENTITY_TRANSFORM: CoordinateTransformation = {
-  type: "affine",
-  matrix: IDENTITY_MATRIX,
-};
-
-// cf. https://en.wikipedia.org/wiki/Rotation_matrix#In_three_dimensions
-const sinusLocationOfRotationInMatrix = {
-  x: [2, 1],
-  y: [0, 2],
-  z: [1, 0],
-};
-
-const cosineLocationOfRotationInMatrix = {
-  x: [1, 1],
-  y: [0, 0],
-  z: [0, 0],
-};
-
-export const AXIS_TO_TRANSFORM_INDEX = {
-  x: 1,
-  y: 2,
-  z: 3,
-};
-
-export function flatToNestedMatrix(matrix: Matrix4x4): NestedMatrix4 {
-  return [
-    matrix.slice(0, 4) as Vector4,
-    matrix.slice(4, 8) as Vector4,
-    matrix.slice(8, 12) as Vector4,
-    matrix.slice(12, 16) as Vector4,
-  ];
-}
-
-const axisPositionInMatrix = { x: 0, y: 1, z: 2 };
-
-export type RotationAndMirroringSettings = {
-  rotationInDegrees: number;
-  isMirrored: boolean;
-};
-// This function extracts the rotation in 90 degree steps and whether the axis is mirrored from the transformation matrix.
-// The transformation matrix must only include a rotation around one of the main axis.
-export function getRotationSettingsFromTransformationIn90DegreeSteps(
-  transformation: CoordinateTransformation | undefined,
-  axis: "x" | "y" | "z",
-): RotationAndMirroringSettings {
-  if (transformation && transformation.type !== "affine") {
-    return { rotationInDegrees: 0, isMirrored: false };
-  }
-  const matrix = transformation ? transformation.matrix : IDENTITY_MATRIX;
-  const isMirrored = matrix[axisPositionInMatrix[axis]][axisPositionInMatrix[axis]] < 0;
-  const cosineLocation = cosineLocationOfRotationInMatrix[axis];
-  const sinusLocation = sinusLocationOfRotationInMatrix[axis];
-  const sinOfAngle = matrix[sinusLocation[0]][sinusLocation[1]];
-  const cosOfAngle = matrix[cosineLocation[0]][cosineLocation[1]];
-  const rotation =
-    Math.abs(cosOfAngle) > 1e-6 // Avoid division by zero
-      ? Math.atan2(sinOfAngle, cosOfAngle)
-      : sinOfAngle > 0
-        ? Math.PI / 2
-        : -Math.PI / 2;
-  const rotationInDegrees = rotation * (180 / Math.PI);
-  // Round to multiple of 90 degrees and keep the result positive.
-  const roundedRotation = mod(Math.round((rotationInDegrees + 360) / 90) * 90, 360);
-  return { rotationInDegrees: roundedRotation, isMirrored };
-}
-
-export function threeMatrix4ToAffine(m: Matrix4): AffineTransformation {
-  return { type: "affine", matrix: flatToNestedMatrix(m.clone().transpose().toArray()) };
-}
-
-export function fromCenterToOrigin(bbox: BoundingBox): Matrix4 {
-  const center = bbox.getCenter();
-  return new Matrix4().makeTranslation(-center[0], -center[1], -center[2]);
-}
-
-export function fromOriginToCenter(bbox: BoundingBox): Matrix4 {
-  const center = bbox.getCenter();
-  return new Matrix4().makeTranslation(center[0], center[1], center[2]);
-}
-
-export function fromCenterToOriginAsAffine(bbox: BoundingBox): AffineTransformation {
-  return threeMatrix4ToAffine(fromCenterToOrigin(bbox));
-}
-
-export function fromOriginToCenterAsAffine(bbox: BoundingBox): AffineTransformation {
-  return threeMatrix4ToAffine(fromOriginToCenter(bbox));
-}
-
-export function getRotationMatrixAroundAxis(
-  axis: "x" | "y" | "z",
-  rotationAndMirroringSettings: RotationAndMirroringSettings,
-): AffineTransformation {
-  const euler = new Euler();
-  const rotationInRadians = rotationAndMirroringSettings.rotationInDegrees * (Math.PI / 180);
-  euler[axis] = rotationInRadians;
-  let rotationMatrix = new Matrix4().makeRotationFromEuler(euler);
-  if (rotationAndMirroringSettings.isMirrored) {
-    const scaleVector = new ThreeVector3(1, 1, 1);
-    scaleVector[axis] = -1;
-    rotationMatrix = rotationMatrix.multiply(
-      new Matrix4().makeScale(scaleVector.x, scaleVector.y, scaleVector.z),
-    );
-  }
-  rotationMatrix = rotationMatrix.transpose(); // Column-major to row-major
-  const matrixWithoutNearlyZeroValues = rotationMatrix
-    .toArray()
-    // Avoid nearly zero values due to floating point arithmetic inaccuracies.
-    .map((value) => (Math.abs(value) < Number.EPSILON ? 0 : value)) as Matrix4x4;
-  return { type: "affine", matrix: flatToNestedMatrix(matrixWithoutNearlyZeroValues) };
-}
 
 function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
   const map = new MultiKeyMap<A | B | C, T, [A, B, C]>();
@@ -384,35 +268,9 @@ export const invertAndTranspose = memoize((mat: Matrix4x4) => {
 const translation = new ThreeVector3();
 const scale = new ThreeVector3();
 const quaternion = new Quaternion();
-const IDENTITY_QUATERNION = new Quaternion();
 
 const NON_SCALED_VECTOR = new ThreeVector3(1, 1, 1);
 const EPSILON = 0.0001;
-
-function isTranslationOnly(transformation?: AffineTransformation) {
-  if (!transformation) {
-    return false;
-  }
-  const threeMatrix = new Matrix4()
-    .fromArray(nestedToFlatMatrix(transformation.matrix))
-    .transpose();
-  threeMatrix.decompose(translation, quaternion, scale);
-  return scale.equals(NON_SCALED_VECTOR) && quaternion.angleTo(IDENTITY_QUATERNION) < EPSILON;
-}
-
-function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
-  if (!transformation) {
-    return false;
-  }
-  const threeMatrix = new Matrix4()
-    .fromArray(nestedToFlatMatrix(transformation.matrix))
-    .transpose();
-  threeMatrix.decompose(translation, quaternion, scale);
-  return (
-    translation.length() === 0 &&
-    isEqual([Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z)], [1, 1, 1])
-  );
-}
 
 function isRotationOnly(transformation?: AffineTransformation) {
   if (!transformation) {
@@ -444,101 +302,6 @@ function isScaleOnly(transformation?: AffineTransformation) {
     Math.abs(m[3][2]) <= EPSILON && // checks projection component
     Math.abs(m[3][3] - 1) <= EPSILON // checks w component
   );
-}
-
-function hasValidSettingsTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
-  return dataLayers.every((layer) => layer.coordinateTransformations?.length === 5);
-}
-
-function hasOnlySettingsAffineTransformations(dataLayers: Array<APIDataLayer>): boolean {
-  return dataLayers.every((layer) =>
-    layer.coordinateTransformations?.every((transformation) => transformation.type === "affine"),
-  );
-}
-
-// The transformation array consists of 5 matrices:
-// 1. Translation to coordinate system origin
-// 2. Rotation around x-axis (potentially mirrored)
-// 3. Rotation around y-axis (potentially mirrored)
-// 4. Rotation around z-axis (potentially mirrored)
-// 5. Translation back to original position
-export const EXPECTED_SETTINGS_TRANSFORMATION_LENGTH = 5;
-
-function hasValidSettingsTransformationPattern(
-  transformations: CoordinateTransformation[],
-): boolean {
-  return (
-    transformations.length === EXPECTED_SETTINGS_TRANSFORMATION_LENGTH &&
-    isTranslationOnly(transformations[0] as AffineTransformation) &&
-    isOnlyRotatedOrMirrored(transformations[1] as AffineTransformation) &&
-    isOnlyRotatedOrMirrored(transformations[2] as AffineTransformation) &&
-    isOnlyRotatedOrMirrored(transformations[3] as AffineTransformation) &&
-    isTranslationOnly(transformations[4] as AffineTransformation)
-  );
-}
-
-function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boolean {
-  if (dataLayers.length === 0) {
-    // The dataset does not have any layers. Therefore no layers can be rotated.
-    return false;
-  }
-  const firstDataLayerTransformations = dataLayers[0].coordinateTransformations;
-  if (firstDataLayerTransformations == null || firstDataLayerTransformations.length === 0) {
-    // No transformations in all layers compatible with setting a rotation for the whole dataset.
-    return dataLayers.every(
-      (layer) =>
-        layer.coordinateTransformations == null || layer.coordinateTransformations.length === 0,
-    );
-  }
-  // There should be a translation to the origin, one transformation for each axis and one translation back. => A total of 5 affine transformations.
-  if (
-    !hasValidSettingsTransformationCount(dataLayers) ||
-    !hasOnlySettingsAffineTransformations(dataLayers)
-  ) {
-    return false;
-  }
-
-  if (!hasValidSettingsTransformationPattern(firstDataLayerTransformations)) {
-    return false;
-  }
-  for (let i = 1; i < dataLayers.length; i++) {
-    const transformations = dataLayers[i].coordinateTransformations;
-    if (
-      transformations == null ||
-      !isEqual(transformations[0], firstDataLayerTransformations[0]) ||
-      !isEqual(transformations[1], firstDataLayerTransformations[1]) ||
-      !isEqual(transformations[2], firstDataLayerTransformations[2]) ||
-      !isEqual(transformations[3], firstDataLayerTransformations[3]) ||
-      !isEqual(transformations[4], firstDataLayerTransformations[4])
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
-export const doAllLayersHaveTheSameRotation = memoize(_doAllLayersHaveTheSameRotation);
-
-export function settingsTransformationEqualsAffineIdentityTransform(
-  transformations: CoordinateTransformation[],
-): boolean {
-  const hasValidTransformationCount =
-    transformations.length === EXPECTED_SETTINGS_TRANSFORMATION_LENGTH;
-  const hasOnlyAffineTransformations = transformations.every(
-    (transformation) => transformation.type === "affine",
-  );
-  if (!hasValidTransformationCount || !hasOnlyAffineTransformations) {
-    return false;
-  }
-  const resultingTransformation = transformations.reduce(
-    (accTransformation, currentTransformation) =>
-      chainTransforms(
-        accTransformation,
-        createAffineTransformFromMatrix(currentTransformation.matrix),
-      ),
-    IdentityTransform as Transform,
-  );
-  return isEqual(resultingTransformation, IdentityTransform);
 }
 
 export function globalToLayerTransformedPosition(

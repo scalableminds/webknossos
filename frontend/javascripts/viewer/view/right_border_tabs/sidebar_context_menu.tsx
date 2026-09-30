@@ -3,7 +3,7 @@ import Shortcut from "libs/shortcut_component";
 import React from "react";
 import { ContextMenuContext } from "../context_menu/context_menu";
 import { GenericContextMenuContainer } from "../context_menu/generic_context_menu_container";
-import { getNoActionsAvailableMenu } from "../context_menu/helpers";
+import { getNoActionsAvailableMenu } from "../context_menu/generic_context_menu_helpers";
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = React.useContext(ContextMenuContext);

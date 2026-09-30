@@ -56,8 +56,8 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
-import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import Dimensions from "viewer/model/dimensions";
+import { getSegmentIdRangeForElementClass } from "viewer/model/helpers/element_class_ranges";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";

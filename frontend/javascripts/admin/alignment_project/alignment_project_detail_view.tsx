@@ -1,4 +1,5 @@
 import {
+  CloseCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
@@ -9,7 +10,20 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import { JobState } from "admin/job/job_list_view";
-import { App, Button, Card, Descriptions, Result, Space, Spin, Table, Typography } from "antd";
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  Descriptions,
+  Result,
+  Space,
+  Spin,
+  Table,
+  Tooltip,
+  Typography,
+} from "antd";
+import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
@@ -24,10 +38,14 @@ import type { Vector3 } from "viewer/constants";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import {
   type APIAlignmentProjectRun,
-  deleteAlignmentProject,
+  cancelAlignmentProjectRun,
   getAlignmentProject,
   updateAlignmentProject,
 } from "./alignment_project_mock_data";
+import {
+  type AlignmentProjectDeletionMode,
+  DeleteAlignmentProjectModal,
+} from "./delete_alignment_project_modal";
 import { StartAlignmentProjectModal } from "./start_alignment_project_modal";
 
 const { Column } = Table;
@@ -39,6 +57,7 @@ function AlignmentProjectDetailView() {
   const { modal } = App.useApp();
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   const [isEditingVoxelSize, setIsEditingVoxelSize] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   const queryKey = ["alignmentProjects", alignmentProjectId];
@@ -74,22 +93,35 @@ function AlignmentProjectDetailView() {
     handleUpdate({ voxelSize });
   };
 
-  const handleDelete = async () => {
-    const isConfirmed = await modal.confirm({
-      title: `Delete alignment project "${project.name}"?`,
-      content:
-        "All uploaded files will be deleted. Datasets that were created by alignments of this project are kept.",
-      okText: "Delete",
-      okButtonProps: { danger: true },
-    });
-    if (!isConfirmed) return;
-    await deleteAlignmentProject(project.id);
+  const handleDeleted = async (mode: AlignmentProjectDeletionMode) => {
+    if (mode === "project") {
+      navigate("/alignmentProjects");
+      queryClient.removeQueries({ queryKey });
+    }
     await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
-    Toast.success("Alignment project deleted.");
-    navigate("/alignmentProjects");
   };
 
   const renderActions = (run: APIAlignmentProjectRun) => {
+    if (run.state === "PENDING" || run.state === "STARTED") {
+      return (
+        <AsyncLink
+          onClick={async () => {
+            const isCancelConfirmed = await modal.confirm({
+              title: <p>Are you sure you want to cancel job {run.id}?</p>,
+              okText: "Yes, cancel job",
+              cancelText: "No, keep it",
+            });
+            if (isCancelConfirmed) {
+              await cancelAlignmentProjectRun(project.id, run.id);
+              await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
+            }
+          }}
+          icon={<CloseCircleOutlined className="icon-margin-right" />}
+        >
+          Cancel
+        </AsyncLink>
+      );
+    }
     if (run.state === "SUCCESS" && run.outputDataset != null) {
       return (
         <Link to={getViewDatasetURL(run.outputDataset)}>
@@ -137,20 +169,37 @@ function AlignmentProjectDetailView() {
       }
       actions={
         <Space>
-          <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
+          <Button danger icon={<DeleteOutlined />} onClick={() => setIsDeleteModalOpen(true)}>
             Delete
           </Button>
-          <Button
-            type="primary"
-            icon={<PlayCircleOutlined />}
-            onClick={() => setIsStartModalOpen(true)}
+          <Tooltip
+            title={
+              project.isInputDataDeleted
+                ? "The input data of this project was deleted. Please create a new alignment project to start another alignment."
+                : null
+            }
           >
-            Start Alignment
-          </Button>
+            <Button
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              disabled={project.isInputDataDeleted}
+              onClick={() => setIsStartModalOpen(true)}
+            >
+              Start Alignment
+            </Button>
+          </Tooltip>
         </Space>
       }
     >
       <Card title="Uploaded Files">
+        {project.isInputDataDeleted && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            title="The uploaded files were deleted to free storage. The information below describes the original upload."
+          />
+        )}
         <Descriptions column={{ xs: 1, md: 2, xl: 3 }}>
           <Descriptions.Item label="Tile CSV">
             <Space size={4}>
@@ -267,6 +316,14 @@ function AlignmentProjectDetailView() {
         </Table>
       </Card>
 
+      {isDeleteModalOpen && (
+        <DeleteAlignmentProjectModal
+          project={project}
+          isOpen
+          onClose={() => setIsDeleteModalOpen(false)}
+          onDeleted={handleDeleted}
+        />
+      )}
       <StartAlignmentProjectModal
         project={project}
         isOpen={isStartModalOpen}

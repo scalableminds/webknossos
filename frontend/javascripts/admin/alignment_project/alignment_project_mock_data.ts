@@ -36,6 +36,8 @@ export type APIAlignmentProject = {
   // Auto-detected from the uploaded files (e.g. by the backend or worker).
   readonly detectedTaskType: AlignmentProjectTaskType;
   readonly totalSizeInBytes: number;
+  // The uploaded files were deleted to free storage. Metadata and past runs are kept.
+  readonly isInputDataDeleted: boolean;
   readonly runs: APIAlignmentProjectRun[];
 };
 
@@ -63,6 +65,7 @@ let mockProjects: APIAlignmentProject[] = [
     fileCount: 10_801,
     detectedTaskType: AlignmentProjectTaskType.ALIGN_AND_STITCH_TILES,
     totalSizeInBytes: 1.62 * 1024 ** 4,
+    isInputDataDeleted: false,
     runs: [
       {
         id: "6708f1a2c3d4e5f6000000a1",
@@ -92,7 +95,7 @@ let mockProjects: APIAlignmentProject[] = [
         state: "STARTED",
         created: now - 2 * 60 * 60 * 1000,
         ...owner,
-        costInMilliCredits: null,
+        costInMilliCredits: 414_720,
         voxelyticsWorkflowHash: "c3d4e5f6a7b8",
         outputDataset: null,
         errorMessage: null,
@@ -112,6 +115,7 @@ let mockProjects: APIAlignmentProject[] = [
     fileCount: 641,
     detectedTaskType: AlignmentProjectTaskType.ALIGN_SECTIONS,
     totalSizeInBytes: 96 * 1024 ** 3,
+    isInputDataDeleted: false,
     runs: [
       {
         id: "6708f1a2c3d4e5f6000000b1",
@@ -134,7 +138,7 @@ let mockProjects: APIAlignmentProject[] = [
         ownerFirstName: "Jane",
         ownerLastName: "Doe",
         ownerEmail: "jane.doe@example.com",
-        costInMilliCredits: null,
+        costInMilliCredits: 38_400,
         voxelyticsWorkflowHash: "e5f6a7b8c9d0",
         outputDataset: null,
         errorMessage: null,
@@ -154,6 +158,7 @@ let mockProjects: APIAlignmentProject[] = [
     fileCount: 257,
     detectedTaskType: AlignmentProjectTaskType.ALIGN_AND_STITCH_TILES,
     totalSizeInBytes: 12.4 * 1024 ** 3,
+    isInputDataDeleted: false,
     runs: [],
   },
 ];
@@ -188,6 +193,7 @@ export async function createAlignmentProject(
   const newProject: APIAlignmentProject = {
     ...project,
     detectedTaskType: AlignmentProjectTaskType.ALIGN_AND_STITCH_TILES,
+    isInputDataDeleted: false,
     id: Math.random().toString(16).slice(2, 14).padEnd(24, "0"),
     created: Date.now(),
     ownerFirstName: owner.ownerFirstName,
@@ -206,6 +212,23 @@ export async function updateAlignmentProject(
   mockProjects = mockProjects.map((p) => (p.id === id ? { ...p, ...update } : p));
 }
 
+export async function deleteAlignmentProjectInputData(id: string): Promise<void> {
+  await simulateLatency();
+  mockProjects = mockProjects.map((p) =>
+    p.id === id
+      ? {
+          ...p,
+          isInputDataDeleted: true,
+          runs: p.runs.map((run) =>
+            run.state === "PENDING" || run.state === "STARTED"
+              ? { ...run, state: "CANCELLED" }
+              : run,
+          ),
+        }
+      : p,
+  );
+}
+
 export async function deleteAlignmentProject(id: string): Promise<void> {
   await simulateLatency();
   mockProjects = mockProjects.filter((p) => p.id !== id);
@@ -218,19 +241,35 @@ export async function startAlignmentProjectJob(
   _customConfiguration: Record<string, unknown>,
 ): Promise<void> {
   await simulateLatency();
+  const project = mockProjects.find((p) => p.id === projectId);
   const run: APIAlignmentProjectRun = {
     id: Math.random().toString(16).slice(2, 14).padEnd(24, "0"),
     taskType,
     state: "PENDING",
     created: Date.now(),
     ...owner,
-    costInMilliCredits: null,
+    // Credits are charged when the job is started.
+    costInMilliCredits: project ? getMockAlignmentCostInMilliCredits(project, taskType) : null,
     voxelyticsWorkflowHash: null,
     outputDataset: null,
     errorMessage: null,
   };
   mockProjects = mockProjects.map((p) =>
     p.id === projectId ? { ...p, runs: [...p.runs, run] } : p,
+  );
+}
+
+export async function cancelAlignmentProjectRun(projectId: string, runId: string): Promise<void> {
+  await simulateLatency();
+  mockProjects = mockProjects.map((p) =>
+    p.id === projectId
+      ? {
+          ...p,
+          runs: p.runs.map((run) =>
+            run.id === runId ? { ...run, state: "CANCELLED" as const } : run,
+          ),
+        }
+      : p,
   );
 }
 

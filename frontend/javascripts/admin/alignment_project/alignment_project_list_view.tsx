@@ -1,7 +1,7 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
-import { Button, Input, Spin, Table } from "antd";
+import { Button, Input, Spin, Table, Tag } from "antd";
 import FormattedDate from "components/formatted_date";
 import { formatBytes } from "libs/format_utils";
 import { compareBy, filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
@@ -61,7 +61,11 @@ function AlignmentProjectListView() {
             align="right"
             sorter={compareBy<APIAlignmentProject>((p) => p.fileCount)}
             render={(project: APIAlignmentProject) =>
-              `${project.fileCount.toLocaleString()} (${formatBytes(project.totalSizeInBytes, 1)})`
+              project.isInputDataDeleted ? (
+                <Tag>Input data deleted</Tag>
+              ) : (
+                `${project.fileCount.toLocaleString()} (${formatBytes(project.totalSizeInBytes, 1)})`
+              )
             }
           />
           <Column

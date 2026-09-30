@@ -85,6 +85,8 @@ type State = {
   windowWidth: number;
 };
 
+const ADDITIONAL_COORDINATE_VALUE_SPAN = 4;
+
 function AdditionalCoordinatesInputView() {
   const additionalAxes = useWkSelector((state) => getUnifiedAdditionalCoordinates(state.dataset));
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
@@ -110,10 +112,20 @@ function AdditionalCoordinatesInputView() {
   if (additionalCoordinates == null || additionalCoordinates.length === 0) {
     return null;
   }
+  // The popover shrink-wraps its content and NumberSliderSetting sizes its columns in
+  // percentages, so without an explicit width the value column only fits about two digits.
+  // Size the content so that column fits the longest bound (plus the input's padding).
+  const maxValueLength = Math.max(
+    ...additionalCoordinates.map((coord) => {
+      const { bounds } = additionalAxes[coord.name];
+      return Math.max(String(bounds[0]).length, String(bounds[1] - 1).length);
+    }),
+  );
+  const contentWidth = `calc(${24 / ADDITIONAL_COORDINATE_VALUE_SPAN} * (${maxValueLength}ch + 20px))`;
   return (
     <Popover
       content={
-        <div>
+        <div style={{ width: contentWidth, minWidth: 250 }}>
           {additionalCoordinates.map((coord, idx) => {
             const { bounds } = additionalAxes[coord.name];
             return (
@@ -123,7 +135,11 @@ function AdditionalCoordinatesInputView() {
                 min={bounds[0]}
                 max={bounds[1] - 1}
                 value={coord.value}
-                spans={[2, 18, 4]}
+                spans={[
+                  2,
+                  24 - 2 - ADDITIONAL_COORDINATE_VALUE_SPAN,
+                  ADDITIONAL_COORDINATE_VALUE_SPAN,
+                ]}
                 onChange={(newCoord) => {
                   const newCoords = additionalCoordinates.slice();
                   newCoords[idx] = {

@@ -1,5 +1,5 @@
-import TWEEN from "@tweenjs/tween.js";
 import { V3 } from "libs/mjs";
+import { createTween } from "libs/tween_group";
 import { waitForElementWithId } from "libs/utils";
 import { PureComponent } from "react";
 import {
@@ -433,7 +433,7 @@ export function rotate3DViewTo(
       top: tdCamera.top,
       bottom: tdCamera.bottom,
     };
-    const tween = new TWEEN.Tween(from);
+    const tween = createTween(from);
     const time = 800;
     tween
       .to(to, time)

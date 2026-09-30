@@ -1,7 +1,7 @@
-import TWEEN from "@tweenjs/tween.js";
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
+import { createTween } from "libs/tween_group";
 import forEach from "lodash-es/forEach";
 import get from "lodash-es/get";
 import isEqual from "lodash-es/isEqual";
@@ -191,7 +191,7 @@ export default class SegmentMeshController {
     const mesh = new Mesh(geometry, meshMaterial) as any as MeshSceneNode;
     mesh.isMerged = isMerged;
 
-    const tweenAnimation = new TWEEN.Tween({
+    const tweenAnimation = createTween({
       opacity: 0,
     });
     tweenAnimation

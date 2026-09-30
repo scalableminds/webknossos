@@ -1,8 +1,8 @@
-import TWEEN from "@tweenjs/tween.js";
 import { sendAnalyticsEvent } from "admin/rest_api";
 import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
+import { updateTweens } from "libs/tween_group";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
@@ -181,7 +181,7 @@ class PlaneView {
   renderFunction(forceRender: boolean = false): void {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
-    TWEEN.update();
+    updateTweens();
     const sceneController = getSceneController();
 
     // skip rendering if nothing has changed

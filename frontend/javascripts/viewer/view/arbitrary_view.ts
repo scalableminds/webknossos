@@ -1,7 +1,7 @@
-import TWEEN from "@tweenjs/tween.js";
 import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
+import { updateTweens } from "libs/tween_group";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
 import {
@@ -191,7 +191,7 @@ class FlightModeView {
 
   renderFunction() {
     this.animationRequestId = null;
-    TWEEN.update();
+    updateTweens();
 
     if (this.needsRerender) {
       const { camera, geometries } = this;

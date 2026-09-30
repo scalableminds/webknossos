@@ -1,4 +1,3 @@
-import TWEEN from "@tweenjs/tween.js";
 import { requestTask } from "admin/api/tasks";
 import {
   doWithToken,
@@ -14,6 +13,7 @@ import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
+import { createTween } from "libs/tween_group";
 import UserLocalStorage from "libs/user_local_storage";
 import { coalesce, map3, mod, sleep } from "libs/utils";
 import window, { location } from "libs/window";
@@ -1466,7 +1466,7 @@ class TracingApi {
     // The given offset is added when going to a position in the center of a voxel.
     const targetPosition = useVoxelCenter ? V3.add(V3.floor(position), [0.5, 0.5, 0.5]) : position;
 
-    const tween = new TWEEN.Tween({
+    const tween = createTween({
       positionX: curPosition[0],
       positionY: curPosition[1],
       positionZ: curPosition[2],

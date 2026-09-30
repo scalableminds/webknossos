@@ -17,11 +17,6 @@ export const WkDevFlags = {
     useLocalMask: true,
   },
   bucketDebugging: {
-    // If false, bucket picking is run synchronously on the main thread instead of being
-    // dispatched to a web worker. Useful for manually comparing the two, given picking
-    // itself has been measured to take well under 1ms, while the worker round trip
-    // (scheduling + postMessage/Comlink + thread hop) has been measured to cost much more.
-    useWebWorkerForBucketPicking: false,
     // For visualizing buckets which are passed to the GPU
     visualizeBucketsOnGPU: false,
     // For visualizing buckets which are prefetched
@@ -32,10 +27,8 @@ export const WkDevFlags = {
     // Which strategy to use for picking the buckets of an oblique (non-axis-aligned) plane.
     // "scanLines" samples the plane with a set of parallel lines; "floodFill" walks
     // neighbouring buckets outwards from the camera position, keeping only the ones whose
-    // box actually intersects the plane; "wasm" / "floodFillWasm" are the same two
-    // algorithms, ported to C/WASM(SIMD) modules. See
-    // oblique_bucket_picker(_flood_fill)?(_wasm)?.ts.
-    obliquePickerStrategy: "wasm" as "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
+    // box actually intersects the plane. See oblique_bucket_picker(_flood_fill)?.ts.
+    obliquePickerStrategy: "floodFill" as "scanLines" | "floodFill",
     // If true, the "scanLines" and "floodFill" oblique picker strategies additionally pick
     // buckets slightly in front of and behind the plane (simulating the flycam having moved
     // along its view axis), so that data is already loading by the time the user actually
@@ -48,12 +41,7 @@ export const WkDevFlags = {
     // since both then see identical camera positions/zoom levels/bucket counts per call
     // (unlike comparing two separately-navigated sessions). Logged every 100 calls alongside
     // the regular instrumentation in async_bucket_picker.worker.ts. undefined disables this.
-    shadowObliquePickerStrategy: "scanLines" as
-      | "scanLines"
-      | "floodFill"
-      | "wasm"
-      | "floodFillWasm"
-      | undefined,
+    shadowObliquePickerStrategy: "scanLines" as "scanLines" | "floodFill" | undefined,
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,

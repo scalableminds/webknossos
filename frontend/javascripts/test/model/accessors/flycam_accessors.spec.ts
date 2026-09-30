@@ -87,7 +87,7 @@ describe("Flycam Accessors", () => {
     expect(getActiveMagIndexForLayer(state, "layer1")).toBe(3);
   });
 
-  it("should calculate appropriate zoom factors for datasets with many magnifications", async () => {
+  it("should calculate appropriate zoom factors for datasets with many magnifications", () => {
     const voxelSize: VoxelSize = { factor: [4, 4, 35], unit: UnitLong.nm };
     const mags: Vector3[] = [
       [1, 1, 1],
@@ -117,7 +117,7 @@ describe("Flycam Accessors", () => {
       TDView: rect,
     };
 
-    const maximumZoomPerMags = await _getMaximumZoomForAllMags(
+    const maximumZoomPerMags = _getMaximumZoomForAllMags(
       constants.MODE_PLANE_TRACING,
       "BEST_QUALITY_FIRST",
       voxelSize.factor,

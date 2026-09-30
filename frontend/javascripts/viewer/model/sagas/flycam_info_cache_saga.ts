@@ -40,7 +40,7 @@ const getComputeFunction = memoize((_layerName: string) => {
       maximumCapacity: number,
       layerMatrix: Matrix4x4,
       flycamMatrix: Matrix4x4,
-      obliquePickerStrategy: "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
+      obliquePickerStrategy: "scanLines" | "floodFill",
       prefetchAlongViewAxis: boolean,
     ) => {
       return asyncGetMaximumZoomForAllMags(

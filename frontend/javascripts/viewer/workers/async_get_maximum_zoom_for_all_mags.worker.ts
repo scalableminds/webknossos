@@ -4,7 +4,7 @@ import { _getMaximumZoomForAllMags } from "viewer/model/accessors/flycam_accesso
 import type { LoadingStrategy } from "viewer/store";
 import { expose } from "./comlink_core";
 
-async function asyncGetMaximumZoomForAllMags(
+function asyncGetMaximumZoomForAllMags(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
   voxelSizeFactor: Vector3,
@@ -13,7 +13,7 @@ async function asyncGetMaximumZoomForAllMags(
   maximumCapacity: number,
   layerMatrix: Matrix4x4,
   flycamMatrix: Matrix4x4,
-  obliquePickerStrategy?: "scanLines" | "floodFill" | "wasm" | "floodFillWasm",
+  obliquePickerStrategy?: "scanLines" | "floodFill",
   prefetchAlongViewAxis?: boolean,
 ) {
   // Dev-only: logs the exact parameters of this call as JSON, so they can be pasted
@@ -33,8 +33,7 @@ async function asyncGetMaximumZoomForAllMags(
   //     prefetchAlongViewAxis,
   //   }),
   // );
-  console.time("getMaximumZoomForAllMags");
-  const retval = await _getMaximumZoomForAllMags(
+  return _getMaximumZoomForAllMags(
     viewMode,
     loadingStrategy,
     voxelSizeFactor,
@@ -46,8 +45,6 @@ async function asyncGetMaximumZoomForAllMags(
     obliquePickerStrategy,
     prefetchAlongViewAxis,
   );
-  console.timeEnd("getMaximumZoomForAllMags");
-  return retval;
 }
 
 export default expose(asyncGetMaximumZoomForAllMags);

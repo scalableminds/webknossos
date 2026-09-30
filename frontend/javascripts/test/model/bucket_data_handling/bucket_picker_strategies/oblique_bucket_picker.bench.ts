@@ -4,31 +4,26 @@ import type { Vector3, Vector4 } from "viewer/constants";
 import { Identity4x4 } from "viewer/constants";
 import determineBucketsForPlaneWithScanLines from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForPlaneWithFloodFill from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_flood_fill";
-import determineBucketsForPlaneWithFloodFillWasm from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_flood_fill_wasm";
 import determineBucketsForPlaneOriginal from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_original";
-import determineBucketsForPlaneWithWasm from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_wasm";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
-import { beforeAll, bench, describe } from "vitest";
+import { bench, describe } from "vitest";
 
-// Compares the oblique bucket picker strategies developed in this branch (scan lines, flood
-// fill, and C/WASM(SIMD) ports of both -- see oblique_bucket_picker.ts /
-// oblique_bucket_picker_flood_fill.ts / oblique_bucket_picker_wasm.ts /
-// oblique_bucket_picker_flood_fill_wasm.ts) against oblique_bucket_picker_original.ts, a frozen
+// Compares the oblique bucket picker strategies developed in this branch (scan lines and flood
+// fill -- see oblique_bucket_picker.ts / oblique_bucket_picker_flood_fill.ts) against
+// oblique_bucket_picker_original.ts, a frozen
 // copy of the picker exactly as it was on master before this branch, across a number of
 // rotation/zoom/viewport scenarios.
 //
 // The master version always did prefetching (extra buckets picked slightly in front of/behind
 // the plane, simulating the flycam moving along its view axis -- see PREFETCH_Z_DIFF / zDiff),
 // which this branch initially disabled to keep the scan-line/flood-fill comparison apples to
-// apples, then reintroduced behind the prefetchAlongViewAxis flag (implemented for all four
-// strategies, JS and wasm alike). So each of the four strategies is benchmarked twice: once
+// apples, then reintroduced behind the prefetchAlongViewAxis flag (implemented for both
+// strategies). So each strategy is benchmarked twice: once
 // matching the rest of this comparison (prefetch off) and once matching what "original
 // (master)" actually does (prefetch on), so the master comparison is also apples to apples.
 //
 // This is a performance comparison, not a correctness check -- there are intentionally no
-// assertions (see oblique_bucket_picker_wasm.spec.ts / oblique_bucket_picker_flood_fill_wasm.spec.ts
-// for the correctness checks that each wasm port matches its JS counterpart exactly). Run with
-// `yarn test-bench`.
+// assertions. Run with `yarn test-bench`.
 
 const LOADING_STRATEGY: LoadingStrategy = "BEST_QUALITY_FIRST";
 const POSITION: Vector3 = [1223, 3218, 518];
@@ -142,22 +137,18 @@ const SCENARIOS: Scenario[] = [
   },
 ];
 
-async function countBuckets(
+function countBuckets(
   determineBucketsForPlane:
     | typeof determineBucketsForPlaneWithScanLines
-    | typeof determineBucketsForPlaneWithWasm
-    | typeof determineBucketsForPlaneWithFloodFillWasm
     | typeof determineBucketsForPlaneOriginal,
   scenario: Scenario,
   prefetchAlongViewAxis?: boolean,
-): Promise<number> {
+): number {
   let count = 0;
   const enqueueFunction = (_bucketAddress: Vector4, _priority: number) => {
     count++;
   };
-  // wasm's determineBucketsForPlane is async (see oblique_bucket_picker_wasm.ts); awaiting the
-  // scan-line/flood-fill pickers' plain (non-promise) return value is a no-op.
-  await determineBucketsForPlane(
+  determineBucketsForPlane(
     LOADING_STRATEGY,
     scenario.denseMags,
     POSITION,
@@ -177,46 +168,15 @@ const noopEnqueue = (_bucketAddress: Vector4, _priority: number) => {};
 for (const scenario of SCENARIOS) {
   describe(`oblique bucket picker: ${scenario.name}`, () => {
     // Logged once before the timed benchmarks run, to give some context on how many buckets
-    // each strategy actually picks for this scenario. Wrapped in beforeAll() (rather than
-    // computed directly in this describe callback) since determineBucketsForPlaneWithWasm is
-    // async, and describe() callbacks themselves can't be.
-    beforeAll(async () => {
-      const scanLineCount = await countBuckets(determineBucketsForPlaneWithScanLines, scenario);
-      const floodFillCount = await countBuckets(determineBucketsForPlaneWithFloodFill, scenario);
-      const wasmCount = await countBuckets(determineBucketsForPlaneWithWasm, scenario);
-      const floodFillWasmCount = await countBuckets(
-        determineBucketsForPlaneWithFloodFillWasm,
-        scenario,
-      );
-      const scanLinePrefetchCount = await countBuckets(
-        determineBucketsForPlaneWithScanLines,
-        scenario,
-        true,
-      );
-      const floodFillPrefetchCount = await countBuckets(
-        determineBucketsForPlaneWithFloodFill,
-        scenario,
-        true,
-      );
-      const wasmPrefetchCount = await countBuckets(
-        determineBucketsForPlaneWithWasm,
-        scenario,
-        true,
-      );
-      const floodFillWasmPrefetchCount = await countBuckets(
-        determineBucketsForPlaneWithFloodFillWasm,
-        scenario,
-        true,
-      );
-      const originalCount = await countBuckets(determineBucketsForPlaneOriginal, scenario);
-      console.log(
-        `  [${scenario.name}] buckets picked - scanLines: ${scanLineCount}, floodFill: ${floodFillCount}, ` +
-          `wasm: ${wasmCount}, floodFillWasm: ${floodFillWasmCount}, ` +
-          `scanLines+prefetch: ${scanLinePrefetchCount}, floodFill+prefetch: ${floodFillPrefetchCount}, ` +
-          `wasm+prefetch: ${wasmPrefetchCount}, floodFillWasm+prefetch: ${floodFillWasmPrefetchCount}, ` +
-          `original (master): ${originalCount}`,
-      );
-    });
+    // each strategy actually picks for this scenario.
+    console.log(
+      `  [${scenario.name}] buckets picked - ` +
+        `scanLines: ${countBuckets(determineBucketsForPlaneWithScanLines, scenario)}, ` +
+        `floodFill: ${countBuckets(determineBucketsForPlaneWithFloodFill, scenario)}, ` +
+        `scanLines+prefetch: ${countBuckets(determineBucketsForPlaneWithScanLines, scenario, true)}, ` +
+        `floodFill+prefetch: ${countBuckets(determineBucketsForPlaneWithFloodFill, scenario, true)}, ` +
+        `original (master): ${countBuckets(determineBucketsForPlaneOriginal, scenario)}`,
+    );
 
     bench("scan lines", () => {
       determineBucketsForPlaneWithScanLines(
@@ -232,30 +192,6 @@ for (const scenario of SCENARIOS) {
 
     bench("flood fill", () => {
       determineBucketsForPlaneWithFloodFill(
-        LOADING_STRATEGY,
-        scenario.denseMags,
-        POSITION,
-        noopEnqueue,
-        scenario.matrix,
-        scenario.logZoomStep,
-        scenario.rects,
-      );
-    });
-
-    bench("wasm (scan lines, C/SIMD)", async () => {
-      await determineBucketsForPlaneWithWasm(
-        LOADING_STRATEGY,
-        scenario.denseMags,
-        POSITION,
-        noopEnqueue,
-        scenario.matrix,
-        scenario.logZoomStep,
-        scenario.rects,
-      );
-    });
-
-    bench("wasm (flood fill, C/SIMD)", async () => {
-      await determineBucketsForPlaneWithFloodFillWasm(
         LOADING_STRATEGY,
         scenario.denseMags,
         POSITION,
@@ -285,36 +221,6 @@ for (const scenario of SCENARIOS) {
 
     bench("flood fill + prefetch", () => {
       determineBucketsForPlaneWithFloodFill(
-        LOADING_STRATEGY,
-        scenario.denseMags,
-        POSITION,
-        noopEnqueue,
-        scenario.matrix,
-        scenario.logZoomStep,
-        scenario.rects,
-        undefined,
-        undefined,
-        true,
-      );
-    });
-
-    bench("wasm (scan lines, C/SIMD) + prefetch", async () => {
-      await determineBucketsForPlaneWithWasm(
-        LOADING_STRATEGY,
-        scenario.denseMags,
-        POSITION,
-        noopEnqueue,
-        scenario.matrix,
-        scenario.logZoomStep,
-        scenario.rects,
-        undefined,
-        undefined,
-        true,
-      );
-    });
-
-    bench("wasm (flood fill, C/SIMD) + prefetch", async () => {
-      await determineBucketsForPlaneWithFloodFillWasm(
         LOADING_STRATEGY,
         scenario.denseMags,
         POSITION,

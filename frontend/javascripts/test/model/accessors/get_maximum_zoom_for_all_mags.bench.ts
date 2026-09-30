@@ -1,6 +1,5 @@
 import type { Matrix4x4 } from "mjs";
 import type { OrthoViewRects, Vector3, ViewMode } from "viewer/constants";
-import constants from "viewer/constants";
 import { _getMaximumZoomForAllMags } from "viewer/model/accessors/flycam_accessor";
 import type { LoadingStrategy } from "viewer/store";
 import { bench, describe } from "vitest";
@@ -67,18 +66,13 @@ const SCENARIOS: Scenario[] = [
   { name: "standard 4-pane layout (572x466.5)", rects: FOUR_PANE_RECTS },
 ];
 
-const STRATEGIES: Array<"scanLines" | "floodFill" | "wasm" | "floodFillWasm"> = [
-  "scanLines",
-  "floodFill",
-  "wasm",
-  "floodFillWasm",
-];
+const STRATEGIES: Array<"scanLines" | "floodFill"> = ["scanLines", "floodFill"];
 
 for (const scenario of SCENARIOS) {
   describe(`getMaximumZoomForAllMags: ${scenario.name}`, () => {
     for (const strategy of STRATEGIES) {
-      bench(strategy, async () => {
-        await _getMaximumZoomForAllMags(
+      bench(strategy, () => {
+        _getMaximumZoomForAllMags(
           VIEW_MODE,
           LOADING_STRATEGY,
           VOXEL_SIZE_FACTOR,

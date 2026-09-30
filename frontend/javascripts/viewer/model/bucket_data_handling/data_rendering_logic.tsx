@@ -172,7 +172,6 @@ export enum ColorLayerPool {
   U16 = 3,
   S16 = 4,
 }
-export const COLOR_LAYER_POOL_COUNT = 5;
 export const COLOR_LAYER_POOLS = [
   ColorLayerPool.F32,
   ColorLayerPool.U8,
@@ -206,7 +205,6 @@ export function getColorLayerPoolGpuConfig(pool: ColorLayerPool): {
   textureType: TextureDataType;
   pixelFormat: PixelFormat;
   internalFormat: PixelFormatGPU | undefined;
-  glslPrefix: "" | "u" | "i";
 } {
   switch (pool) {
     case ColorLayerPool.F32:
@@ -214,35 +212,30 @@ export function getColorLayerPoolGpuConfig(pool: ColorLayerPool): {
         textureType: FloatType,
         pixelFormat: RGBAFormat,
         internalFormat: undefined,
-        glslPrefix: "",
       };
     case ColorLayerPool.U8:
       return {
         textureType: UnsignedByteType,
         pixelFormat: RGBAFormat,
         internalFormat: undefined,
-        glslPrefix: "",
       };
     case ColorLayerPool.S8:
       return {
         textureType: ByteType,
         pixelFormat: RGBAFormat,
         internalFormat: "RGBA8_SNORM",
-        glslPrefix: "",
       };
     case ColorLayerPool.U16:
       return {
         textureType: UnsignedShortType,
         pixelFormat: RGIntegerFormat,
         internalFormat: "RG16UI",
-        glslPrefix: "u",
       };
     case ColorLayerPool.S16:
       return {
         textureType: ShortType,
         pixelFormat: RGIntegerFormat,
         internalFormat: "RG16I",
-        glslPrefix: "i",
       };
     default:
       throw new Error(`Unknown color layer pool: ${pool}`);

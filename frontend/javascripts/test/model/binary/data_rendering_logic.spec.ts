@@ -4,6 +4,7 @@ import constants from "viewer/constants";
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
+  computeLayerPoolPlan,
   getBucketCountSoftLimitPerLayer,
   getRequiredBucketCapacityPerLayer,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
@@ -14,14 +15,17 @@ const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEM
 const minSpecs = {
   supportedTextureSize: 4096,
   maxTextureCount: 8,
+  maxArrayTextureLayers: 2048,
 };
 const midSpecs = {
   supportedTextureSize: 8192,
   maxTextureCount: 16,
+  maxArrayTextureLayers: 2048,
 };
 const betterSpecs = {
   supportedTextureSize: 16384,
   maxTextureCount: 32,
+  maxArrayTextureLayers: 2048,
 };
 const grayscaleByteCount = 1;
 const grayscaleElementClass = "uint8";
@@ -193,5 +197,27 @@ describe("getRequiredBucketCapacityPerLayer", () => {
         );
       }
     }
+  });
+});
+
+describe("computeLayerPoolPlan", () => {
+  // At the "Ultra" GPU setting, a uint64 layer needs 79 slices, so four of
+  // them (all in the U8 pool) need 316.
+  const uint64Layers = range(4).map((i) => ({
+    name: `segmentation_${i}`,
+    elementClass: "uint64" as ElementClass,
+  }));
+  const ultraCapacity = getRequiredBucketCapacityPerLayer(16, uint64Layers.length);
+
+  it("keeps the capacity if all pools fit", () => {
+    const plan = computeLayerPoolPlan(uint64Layers, ultraCapacity, 2048);
+    expect(plan.bucketCapacity).toBe(ultraCapacity);
+    expect(Math.max(...Object.values(plan.poolDepths))).toBe(316);
+  });
+
+  it("lowers the capacity until the deepest pool fits", () => {
+    const plan = computeLayerPoolPlan(uint64Layers, ultraCapacity, 256);
+    expect(plan.bucketCapacity).toBeLessThan(ultraCapacity);
+    expect(Math.max(...Object.values(plan.poolDepths))).toBeLessThanOrEqual(256);
   });
 });

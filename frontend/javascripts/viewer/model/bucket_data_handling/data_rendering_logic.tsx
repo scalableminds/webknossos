@@ -23,6 +23,8 @@ import type { TypedArrayConstructor } from "../helpers/typed_buffer";
 type GpuSpecs = {
   supportedTextureSize: number;
   maxTextureCount: number;
+  // Maximum number of slices per texture array, i.e. per pool.
+  maxArrayTextureLayers: number;
 };
 const lookupTextureCount = 1;
 export function getSupportedTextureSpecs(): GpuSpecs {
@@ -33,12 +35,14 @@ export function getSupportedTextureSpecs(): GpuSpecs {
       : (ctxName: string) => ({
           MAX_TEXTURE_SIZE: 0,
           MAX_TEXTURE_IMAGE_UNITS: 1,
+          MAX_ARRAY_TEXTURE_LAYERS: 2,
 
           getParameter(param: number) {
             if (ctxName === "webgl2") {
               const dummyValues: Record<string, any> = {
                 "0": 4096,
                 "1": 16,
+                "2": 2048,
                 "4": "debugInfo.UNMASKED_RENDERER_WEBGL",
                 "7937": "Radeon R9 200 Series",
               };
@@ -87,6 +91,7 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   return {
     supportedTextureSize,
     maxTextureCount: guardAgainstMesaLimit(maxTextureImageUnits, gl),
+    maxArrayTextureLayers: gl.getParameter(gl.MAX_ARRAY_TEXTURE_LAYERS),
   };
 }
 
@@ -346,6 +351,31 @@ export function computeLayerPoolAssignments<
   }
 
   return { assignmentByLayerName, poolDepths };
+}
+
+// Lowers the per-layer bucket capacity until every pool fits into
+// maxPoolDepth slices (the GPU's MAX_ARRAY_TEXTURE_LAYERS).
+export function computeLayerPoolPlan<Layer extends { name: string; elementClass: ElementClass }>(
+  layers: Array<Layer>,
+  requiredBucketCapacity: number,
+  maxPoolDepth: number,
+): {
+  bucketCapacity: number;
+  assignmentByLayerName: Map<string, LayerPoolAssignment>;
+  poolDepths: Record<LayerPool, number>;
+} {
+  let bucketCapacity = requiredBucketCapacity;
+  let plan = computeLayerPoolAssignments(layers, bucketCapacity);
+  let deepestPool = Math.max(...Object.values(plan.poolDepths));
+  while (deepestPool > maxPoolDepth && bucketCapacity > 1) {
+    // Slice counts are rounded up, so the proportional estimate may still be
+    // too big; the loop then shrinks further.
+    const estimate = Math.floor((bucketCapacity * maxPoolDepth) / deepestPool);
+    bucketCapacity = Math.max(1, Math.min(bucketCapacity - 1, estimate));
+    plan = computeLayerPoolAssignments(layers, bucketCapacity);
+    deepestPool = Math.max(...Object.values(plan.poolDepths));
+  }
+  return { bucketCapacity, ...plan };
 }
 
 // Which of uint64ToUint64/int32ToUint64/uint32ToUint64 (segmentation.glsl.ts)

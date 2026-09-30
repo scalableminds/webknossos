@@ -28,7 +28,6 @@ import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import {
   computeLayerPoolAssignments,
-  getRequiredBucketCapacityPerLayer,
   LAYER_POOL_TEXTURE_WIDTH,
   LAYER_POOLS,
   type LayerPool,
@@ -74,19 +73,18 @@ const getSharedLookUpCuckooTable = memoizeOne(
 // Lazily-initialized singleton, created once per dataset: every layer's
 // slice range plus the 5 pool textures.
 const getLayerPoolPlan = memoizeOne(() => {
-  const { dataset, userConfiguration } = Store.getState();
-  const requiredBucketCapacity = getRequiredBucketCapacityPerLayer(
-    userConfiguration.gpuMemoryFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
-    dataset.dataSource.dataLayers.length,
-  );
+  const { dataset, temporaryConfiguration } = Store.getState();
+  // Computed at init by computeLayerPoolPlan, so that every pool fits the
+  // GPU's limit of slices per texture array.
+  const bucketCapacity = temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity;
   const { assignmentByLayerName, poolDepths } = computeLayerPoolAssignments(
     dataset.dataSource.dataLayers,
-    requiredBucketCapacity,
+    bucketCapacity,
   );
   const poolTextureManagers = new Map<LayerPool, PoolTextureManager>(
     LAYER_POOLS.map((pool) => [pool, new PoolTextureManager(pool, poolDepths[pool])]),
   );
-  return { assignmentByLayerName, poolTextureManagers, requiredBucketCapacity };
+  return { assignmentByLayerName, poolTextureManagers, bucketCapacity };
 });
 
 // The pool textures are shared by all layers, so PlaneMaterialFactory
@@ -199,8 +197,7 @@ export default class LayerRenderingManager {
     const { dataset } = Store.getState();
     const elementClass = getElementClass(dataset, this.name);
 
-    const { assignmentByLayerName, poolTextureManagers, requiredBucketCapacity } =
-      getLayerPoolPlan();
+    const { assignmentByLayerName, poolTextureManagers, bucketCapacity } = getLayerPoolPlan();
     const assignment = assignmentByLayerName.get(this.name);
     if (assignment == null) {
       throw new Error(`No layer pool assignment found for layer ${this.name}.`);
@@ -216,7 +213,7 @@ export default class LayerRenderingManager {
       {
         poolTextureManager,
         baseSlice: assignment.baseSlice,
-        bucketCapacity: requiredBucketCapacity,
+        bucketCapacity,
       },
     );
 

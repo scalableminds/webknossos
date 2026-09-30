@@ -85,6 +85,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import {
   computeDataTexturesSetup,
+  computeLayerPoolPlan,
   getRequiredBucketCapacityPerLayer,
   getSupportedTextureSpecs,
   validateMinimumRequirements,
@@ -345,9 +346,12 @@ async function fetchEditableMappings(
   return Promise.all(promises);
 }
 
-function validateSpecsForLayers(dataset: StoreDataset, requiredBucketCapacity: number): any {
+function validateSpecsForLayers(
+  dataset: StoreDataset,
+  requiredBucketCapacity: number,
+  specs: ReturnType<typeof getSupportedTextureSpecs>,
+): any {
   const layers = dataset.dataSource.dataLayers;
-  const specs = getSupportedTextureSpecs();
   validateMinimumRequirements(specs);
   const setupDetails = computeDataTexturesSetup(
     specs,
@@ -557,18 +561,19 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   maximumLayerCountToRender: number;
 } {
   const { dataset } = Store.getState();
-  // Must match the capacity the pools are sized with (getLayerPoolPlan),
-  // because the max-zoom computation relies on it.
-  const requiredBucketCapacity = getRequiredBucketCapacityPerLayer(
-    gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
-    dataset.dataSource.dataLayers.length,
+  const specs = getSupportedTextureSpecs();
+  // Stored as gpuSetup.smallestCommonBucketCapacity. getLayerPoolPlan sizes
+  // the pools with it, and the max-zoom computation relies on it.
+  const { bucketCapacity: smallestCommonBucketCapacity } = computeLayerPoolPlan(
+    dataset.dataSource.dataLayers,
+    getRequiredBucketCapacityPerLayer(
+      gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
+      dataset.dataSource.dataLayers.length,
+    ),
+    specs.maxArrayTextureLayers,
   );
-  const {
-    textureInformationPerLayer,
-    smallestCommonBucketCapacity,
-    maximumLayerCountToRender,
-    maximumTextureCountForLayer,
-  } = validateSpecsForLayers(dataset, requiredBucketCapacity);
+  const { textureInformationPerLayer, maximumLayerCountToRender, maximumTextureCountForLayer } =
+    validateSpecsForLayers(dataset, smallestCommonBucketCapacity, specs);
 
   if (import.meta.env.MODE !== "test") {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");

@@ -1,8 +1,7 @@
-import { ConfigProvider } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
-import { getAntdTheme, getThemeFromUser } from "theme";
+import { UserThemeConfigProvider } from "theme_provider";
 import Constants from "viewer/constants";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
@@ -182,9 +181,7 @@ function TracingModals() {
     annotationOwner?.id,
   ]);
 
-  const userTheme = getThemeFromUser(activeUser);
-
-  return <ConfigProvider theme={getAntdTheme(userTheme)}>{modals}</ConfigProvider>;
+  return <UserThemeConfigProvider>{modals}</UserThemeConfigProvider>;
 }
 
 export default TracingModals;

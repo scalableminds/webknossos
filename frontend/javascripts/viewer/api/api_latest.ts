@@ -185,7 +185,7 @@ import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_s
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
 import { fetchAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
-import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
+import { applyVoxelMap } from "viewer/model/volumetracing/legacy/volume_annotation_sampling";
 import { api, Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
@@ -2439,7 +2439,7 @@ class DataApi {
 
         let labelMap = currentLabeledVoxelMap.get(bucketZoomedAddress);
         if (!labelMap) {
-          labelMap = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
+          labelMap = new Uint8Array(Constants.BUCKET_SIZE_2D);
           currentLabeledVoxelMap.set(bucketZoomedAddress, labelMap);
         }
 

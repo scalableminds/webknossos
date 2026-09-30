@@ -16,12 +16,12 @@ import {
 } from "viewer/model/helpers/position_converter";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
-import { invertAndTranspose } from "../accessors/dataset_layer_transformation_accessor";
+import { invertAndTranspose } from "../../accessors/dataset_layer_transformation_accessor";
 import {
   invertTransform,
   type Transform,
   transformPointUnscaled,
-} from "../helpers/transformation_helpers";
+} from "../../helpers/transformation_helpers";
 
 /*
   A VoxelBuffer2D instance holds a two dimensional slice
@@ -102,75 +102,6 @@ export class VoxelBuffer2D {
       lines.push(line);
     }
     console.log("VoxelBuffer content:", lines.join("\n"));
-  }
-}
-export class VoxelNeighborQueue3D {
-  /*
-   * The positions are in layer space.
-   */
-  queue: Array<Vector3>;
-
-  constructor(initialPosition: Vector3) {
-    this.queue = [initialPosition];
-  }
-
-  pushVoxel(newVoxel: Vector3) {
-    return this.queue.push(newVoxel);
-  }
-
-  isEmpty(): boolean {
-    return this.queue.length === 0;
-  }
-
-  getVoxelAndGetNeighbors(): { origin: Vector3; neighbors: Array<Vector3> } {
-    if (this.isEmpty()) {
-      return { origin: [0, 0, 0], neighbors: [] };
-    }
-
-    const currentVoxel = this.queue.shift();
-
-    if (currentVoxel == null) {
-      // Satisfy typescript
-      throw new Error("Queue returned null even though queue was not empty?");
-    }
-
-    // 6-neighborhood in 3D
-    return {
-      origin: currentVoxel,
-      neighbors: [
-        [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
-        [currentVoxel[0] - 1, currentVoxel[1], currentVoxel[2]],
-        [currentVoxel[0], currentVoxel[1] + 1, currentVoxel[2]],
-        [currentVoxel[0], currentVoxel[1] - 1, currentVoxel[2]],
-        [currentVoxel[0], currentVoxel[1], currentVoxel[2] + 1],
-        [currentVoxel[0], currentVoxel[1], currentVoxel[2] - 1],
-      ],
-    };
-  }
-}
-export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
-  getVoxelAndGetNeighbors(): { origin: Vector3; neighbors: Array<Vector3> } {
-    if (this.isEmpty()) {
-      return { origin: [0, 0, 0], neighbors: [] };
-    }
-
-    const currentVoxel = this.queue.shift();
-
-    if (currentVoxel == null) {
-      // Satisfy typescript
-      throw new Error("Queue returned null even though queue was not empty?");
-    }
-
-    // 4-neighborhood in 2D
-    return {
-      origin: currentVoxel,
-      neighbors: [
-        [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
-        [currentVoxel[0] - 1, currentVoxel[1], currentVoxel[2]],
-        [currentVoxel[0], currentVoxel[1] + 1, currentVoxel[2]],
-        [currentVoxel[0], currentVoxel[1] - 1, currentVoxel[2]],
-      ],
-    };
   }
 }
 
@@ -528,8 +459,8 @@ class SectionLabeler {
     return [transposed[0], transposed[1]];
   }
 
-  getUnzoomedCentroid(): Vector3 {
-    /* Returns the centroid (in layer space).
+  getUnzoomedCentroid(): Vector3 | null {
+    /* Returns the centroid (in layer space), or null for an empty contour.
      *
      * Formula:
      * https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
@@ -539,6 +470,9 @@ class SectionLabeler {
     let sumCx = 0;
     let sumCy = 0;
     const contourList = this.getContourList();
+    if (contourList.length === 0) {
+      return null;
+    }
 
     for (let i = 0; i < contourList.length - 1; i++) {
       const [x, y] = this.get2DCoordinate(contourList[i]);
@@ -720,9 +654,9 @@ export class TransformedSectionLabeler {
     return this.base.getCircleVoxelBuffer2D(position, scale);
   }
 
-  getUnzoomedCentroid(): Vector3 {
+  getUnzoomedCentroid(): Vector3 | null {
     const centroid = this.base.getUnzoomedCentroid();
-    return this.applyInverseTransform(centroid);
+    return centroid == null ? null : this.applyInverseTransform(centroid);
   }
 
   getPlane(): OrthoView {

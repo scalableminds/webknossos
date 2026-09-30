@@ -272,7 +272,9 @@ function addNecessaryBucketsToPriorityQueuePlane(
       Math.abs(cz - centerAddress[2]);
     enqueueFunction([cx, cy, cz, logZoomStep], priority + additionalPriorityWeight);
 
-    if (abortLimit != null && visited.size > abortLimit) {
+    // Counts enqueued buckets (head + 1), like the scan-line picker. visited.size would also
+    // count rejected neighbours and abort too early.
+    if (abortLimit != null && head + 1 >= abortLimit) {
       return;
     }
 

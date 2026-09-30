@@ -21,7 +21,7 @@ import {
 } from "viewer/view/ai_jobs/utils";
 import { BoundingBoxSelector } from "../bounding_box_selector";
 import { AdvancedSettings } from "../components/job_layout";
-import { getFormFieldErrors } from "../components/job_requirements";
+import { getFormValidationState } from "../components/job_requirements";
 import { JobSection } from "../components/job_section";
 import { colorLayerMustNotBeUint24Rule } from "../utils";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
@@ -44,7 +44,7 @@ export const AiAnalysisSettings: React.FC = () => {
     customConfiguration,
     setCustomConfiguration,
     selectedJobType,
-    setSettingsFormErrors,
+    setSettingsFormState,
     stepStatuses,
   } = useRunAiModelJobContext();
   const [form] = Form.useForm();
@@ -134,7 +134,7 @@ export const AiAnalysisSettings: React.FC = () => {
         form={form}
         layout="vertical"
         onValuesChange={handleValuesChange}
-        onFieldsChange={(_, allFields) => setSettingsFormErrors(getFormFieldErrors(allFields))}
+        onFieldsChange={(_, allFields) => setSettingsFormState(getFormValidationState(allFields))}
         fields={formFields}
       >
         <Row gutter={24}>

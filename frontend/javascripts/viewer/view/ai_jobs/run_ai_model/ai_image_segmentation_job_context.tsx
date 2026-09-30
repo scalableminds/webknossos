@@ -26,8 +26,9 @@ import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 import {
   collectRequirements,
-  type FormFieldErrors,
-  hasFormFieldErrors,
+  EMPTY_FORM_VALIDATION_STATE,
+  type FormValidationState,
+  isFormValid,
   type JobRequirement,
   type StepStatus,
 } from "viewer/view/ai_jobs/components/job_requirements";
@@ -60,7 +61,7 @@ interface RunAiModelJobContextType {
   setIsEvaluationActive: (isActive: boolean) => void;
   setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
   setCustomConfiguration: (config: KeyValuePairs) => void;
-  setSettingsFormErrors: (errors: FormFieldErrors) => void;
+  setSettingsFormState: (state: FormValidationState) => void;
   handleStartAnalysis: () => void;
   areParametersValid: boolean;
   requirements: JobRequirement[];
@@ -100,7 +101,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       sparseTubeThresholdInNm: 1000,
       minimumMergerPathLengthInNm: 800,
     });
-  const [settingsFormErrors, setSettingsFormErrors] = useState<FormFieldErrors>({});
+  const [settingsFormState, setSettingsFormState] = useState(EMPTY_FORM_VALIDATION_STATE);
 
   const dispatch = useDispatch();
 
@@ -136,7 +137,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
 
   const isSettingsStepComplete =
     Boolean(newDatasetName && selectedLayer && selectedBoundingBox) &&
-    !hasFormFieldErrors(settingsFormErrors);
+    isFormValid(settingsFormState);
 
   const requirements = useMemo(
     () =>
@@ -159,7 +160,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
             field: "selectedBoundingBox",
           },
         ],
-        settingsFormErrors,
+        settingsFormState,
       ),
     [
       selectedModel,
@@ -167,7 +168,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       newDatasetName,
       selectedLayer,
       selectedBoundingBox,
-      settingsFormErrors,
+      settingsFormState,
     ],
   );
 
@@ -310,7 +311,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     setIsEvaluationActive,
     setSplitMergerEvaluationSettings,
     setCustomConfiguration,
-    setSettingsFormErrors,
+    setSettingsFormState,
     handleStartAnalysis,
     areParametersValid,
     requirements,

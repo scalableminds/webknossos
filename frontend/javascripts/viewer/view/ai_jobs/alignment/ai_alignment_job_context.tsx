@@ -12,8 +12,9 @@ import type { UserBoundingBox } from "viewer/store";
 import { getBoundingBoxesForLayers } from "viewer/view/ai_jobs/utils";
 import {
   collectRequirements,
-  type FormFieldErrors,
-  hasFormFieldErrors,
+  EMPTY_FORM_VALIDATION_STATE,
+  type FormValidationState,
+  isFormValid,
   type JobRequirement,
   type StepStatus,
 } from "../components/job_requirements";
@@ -31,7 +32,7 @@ interface AlignmentJobContextType {
   setShouldUseManualMatches: (shouldUseManualMatches: boolean) => void;
   customConfiguration: KeyValuePairs;
   setCustomConfiguration: (config: KeyValuePairs) => void;
-  setSettingsFormErrors: (errors: FormFieldErrors) => void;
+  setSettingsFormState: (state: FormValidationState) => void;
   areParametersValid: boolean;
   requirements: JobRequirement[];
   stepStatuses: { task: StepStatus; settings: StepStatus };
@@ -46,7 +47,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
   const [newDatasetName, setNewDatasetName] = useState("");
   const [shouldUseManualMatches, setShouldUseManualMatches] = useState(false);
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
-  const [settingsFormErrors, setSettingsFormErrors] = useState<FormFieldErrors>({});
+  const [settingsFormState, setSettingsFormState] = useState(EMPTY_FORM_VALIDATION_STATE);
   const dispatch = useDispatch();
 
   const dataset = useWkSelector((state) => state.dataset);
@@ -79,15 +80,15 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
             field: "newDatasetName",
           },
         ],
-        settingsFormErrors,
+        settingsFormState,
       ),
-    [selectedTask, newDatasetName, settingsFormErrors],
+    [selectedTask, newDatasetName, settingsFormState],
   );
 
   const areParametersValid = requirements.length === 0;
   const stepStatuses = {
     task: selectedTask ? "done" : "pending",
-    settings: newDatasetName && !hasFormFieldErrors(settingsFormErrors) ? "done" : "pending",
+    settings: newDatasetName && isFormValid(settingsFormState) ? "done" : "pending",
   } as const;
 
   const handleStartAnalysis = useCallback(async () => {
@@ -129,7 +130,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     setShouldUseManualMatches,
     customConfiguration,
     setCustomConfiguration,
-    setSettingsFormErrors,
+    setSettingsFormState,
     areParametersValid,
     requirements,
     stepStatuses,

@@ -5,7 +5,7 @@ import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useEffect } from "react";
 import { AdvancedSettings } from "../components/job_layout";
-import { getFormFieldErrors } from "../components/job_requirements";
+import { getFormValidationState } from "../components/job_requirements";
 import { JobSection } from "../components/job_section";
 import { ShouldUseManualMatchesFormItem } from "../components/should_use_trees_form_item";
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
@@ -18,7 +18,7 @@ export const AiAlignmentSettings: React.FC = () => {
     setShouldUseManualMatches,
     customConfiguration,
     setCustomConfiguration,
-    setSettingsFormErrors,
+    setSettingsFormState,
     stepStatuses,
   } = useAlignmentJobContext();
 
@@ -63,7 +63,7 @@ export const AiAlignmentSettings: React.FC = () => {
         form={form}
         layout="vertical"
         onValuesChange={handleValuesChange}
-        onFieldsChange={(_, allFields) => setSettingsFormErrors(getFormFieldErrors(allFields))}
+        onFieldsChange={(_, allFields) => setSettingsFormState(getFormValidationState(allFields))}
         fields={formFields}
       >
         <Row gutter={24}>

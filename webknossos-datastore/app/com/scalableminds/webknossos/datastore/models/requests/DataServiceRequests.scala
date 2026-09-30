@@ -25,6 +25,9 @@ case class DataServiceDataRequest(
   // dataSource is None and unused for volume tracings. Insert dummy DataSourceId
   // (also unused in that case, except for logging and bucket provider cache key)
   def dataSourceIdOrVolumeDummy: DataSourceId = dataSourceId.getOrElse(DataSourceId("VolumeTracing", dataLayer.name))
+
+  lazy val isBatchedAdditionalCoordinateRequest: Boolean =
+    settings.additionalCoordinates.exists(_.exists(_.length.exists(_ > 1)))
 }
 
 case class DataReadInstruction(

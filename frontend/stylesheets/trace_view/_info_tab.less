@@ -28,6 +28,12 @@
   // Keep the title readable when it is long enough to wrap, while the affordance
   // stays glued to the end of the text.
   overflow-wrap: anywhere;
+
+  // While renaming, the title's editor should span the whole line.
+  > .ant-typography-edit-content {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 .info-tab-title {
@@ -35,6 +41,11 @@
   font-weight: 700;
   line-height: 1.25;
   margin: 0;
+}
+
+// Lets a single-line title shrink inside its flex line so that antd's ellipsis kicks in.
+.info-tab-title-ellipsis {
+  min-width: 0;
 }
 
 .info-tab-description {
@@ -45,6 +56,11 @@
   p:last-child {
     margin-bottom: 0;
   }
+}
+
+.info-tab-description-content {
+  flex: 1;
+  min-width: 0;
 }
 
 /** An edit affordance that belongs to a single string: rendered inline right after it. */

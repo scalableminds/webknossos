@@ -28,6 +28,27 @@
       height: 1.3em;
     }
   }
+
+  // antd only changes the text color of hovered radio buttons. Highlight the border instead,
+  // so that radio buttons behave like the other buttons in the action bar.
+  // The same highlighting is used for the active tool if a modifier key temporarily
+  // adapts it to another tool (see UnderlyingActiveToolContext).
+  // Note that the left border of a radio button is rendered by its ::before element.
+  .ant-radio-button-wrapper:not(.ant-radio-button-wrapper-disabled):not(
+      .ant-radio-button-wrapper-checked
+    ):is(:hover, .underlying-active-tool) {
+    border-color: var(--ant-color-primary-hover);
+
+    &::before {
+      background-color: var(--ant-color-primary-hover);
+    }
+  }
+
+  .ant-radio-button-wrapper.underlying-active-tool {
+    // Render above the neighboring buttons so that the highlighted border isn't covered.
+    // Hovered buttons use a higher z-index (see _tracing_view.less).
+    z-index: 2;
+  }
 }
 
 .right-floating-icon {

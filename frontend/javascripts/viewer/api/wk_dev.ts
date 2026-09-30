@@ -8,6 +8,22 @@ import { Model, Store } from "viewer/singletons";
 import type { ApiInterface } from "./api_latest";
 import type ApiLoader from "./api_loader";
 
+/**
+ * The benchmarks' dependencies, loaded on first use.
+ *
+ * This module is reachable from `api_latest.ts`, which most of those
+ * dependencies import in turn, so importing them statically would close a
+ * cycle. They are collected in one module (`wk_dev_benchmark_deps.ts`) so this
+ * is the only dynamic import in the file.
+ *
+ * A bare `import()` rather than `importDynamic()`: wrapping it would pull the
+ * cycle back in, and for a dev-only benchmark a failed import is an acceptable
+ * outcome. Whitelisted in `tools/check-no-bare-dynamic-imports.js`.
+ */
+function loadBenchmarkDeps() {
+  return import("./wk_dev_benchmark_deps");
+}
+
 // Can be accessed via window.webknossos.DEV.flags. Only use this
 // for debugging or one off scripts.
 export const WkDevFlags = {
@@ -231,11 +247,75 @@ export default class WkDev {
     }
   }
 
+  async benchmarkBrush(repeatAmount: number = 1) {
+    /*
+     * Benchmark brushing a stroke from the top-left to the bottom-right corner
+     * of the XY viewport, repeated ${repeatAmount} times. Preparation — creating
+     * a new segment id, setting the brush size to 300 and the overwrite mode to
+     * "OVERWRITE_ALL" — happens once beforehand and is not measured.
+     */
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "Note that this benchmark does not run in a production build. Results might not be meaningful.",
+      );
+    }
+
+    const {
+      createCellAction,
+      getActiveSegmentationTracing,
+      getInputCatcherRect,
+      handleDrawStart,
+      handleEndForDrawOrErase,
+      handleMoveForDrawOrErase,
+      setViewportAction,
+      updateUserSettingAction,
+    } = await loadBenchmarkDeps();
+
+    const api = this.api;
+
+    // --- Preparation. Not measured. ---
+    const volumeTracing = getActiveSegmentationTracing(Store.getState());
+    if (volumeTracing == null) {
+      console.error("No active volume tracing found. Aborting benchmark.");
+      return;
+    }
+    if (volumeTracing.largestSegmentId == null) {
+      console.error("largestSegmentId is not known yet. Aborting benchmark.");
+      return;
+    }
+
+    api.tracing.setAnnotationTool("BRUSH");
+    Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
+    Store.dispatch(createCellAction(volumeTracing.activeCellId, volumeTracing.largestSegmentId));
+    Store.dispatch(updateUserSettingAction("brushSize", 300));
+    Store.dispatch(updateUserSettingAction("overwriteMode", "OVERWRITE_ALL"));
+    await sleep(0);
+
+    const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.PLANE_XY);
+    const topLeft = { x: 0, y: 0 };
+    const bottomRight = { x: width, y: height };
+
+    // --- Actual painting. Measured. ---
+    const durations: number[] = [];
+    console.time("Brush Benchmark");
+    for (let i = 0; i < repeatAmount; i++) {
+      const start = performance.now();
+      handleDrawStart(topLeft, OrthoViews.PLANE_XY);
+      handleMoveForDrawOrErase(bottomRight);
+      handleEndForDrawOrErase();
+      await sleep(0);
+      durations.push(performance.now() - start);
+    }
+    console.timeEnd("Brush Benchmark");
+
+    console.log("Brush benchmark durations (ms):", durations);
+    if (durations.length > 1) {
+      console.log("Mean:", mean(durations));
+    }
+  }
+
   async benchmarkRotate(n: number = 10) {
-    // Dynamic import to avoid circular imports.
-    // Bare import is allowed here (whitelisted in tools/check-no-bare-dynamic-imports.js):
-    // benchmark-only; cyclic dep via importDynamic is not worth it here and a failed import is acceptable.
-    const { rotate3DViewTo } = await import("viewer/controller/camera_controller");
+    const { rotate3DViewTo } = await loadBenchmarkDeps();
 
     const animateAsPromise = (plane: OrthoView) => {
       return new Promise<void>((resolve) => {

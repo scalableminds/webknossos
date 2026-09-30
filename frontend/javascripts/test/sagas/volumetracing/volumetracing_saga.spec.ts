@@ -29,7 +29,7 @@ import {
   requestBucketModificationInVolumeTracing,
 } from "viewer/model/sagas/saga_helpers";
 import { editVolumeLayerAsync, finishSectionLabeler } from "viewer/model/sagas/volumetracing_saga";
-import SectionLabeler from "viewer/model/volumetracing/section_labeling";
+import SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import { Model, Store } from "viewer/singletons";
 import type { ActiveMappingInfo } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

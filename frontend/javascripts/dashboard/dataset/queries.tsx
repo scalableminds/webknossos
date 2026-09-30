@@ -80,7 +80,7 @@ export function useDatasetSearchQuery(
   });
 }
 
-async function fetchTreeHierarchy() {
+export async function fetchTreeHierarchy() {
   const flatTreeItems = await getFolderTree();
   return getFolderHierarchy(flatTreeItems);
 }

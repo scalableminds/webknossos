@@ -1,4 +1,10 @@
-import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
+import {
+  AppstoreOutlined,
+  CopyOutlined,
+  DatabaseOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
+import AlignmentProjectUploadView from "admin/alignment_project/alignment_project_upload_view";
 
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
@@ -23,6 +29,8 @@ export enum DatasetAddType {
   REMOTE = "remote",
   COMPOSE = "compose",
 }
+
+const ALIGNMENT_PROJECT_TAB_KEY = "alignmentProject";
 
 function DatasetAddView() {
   const navigate = useNavigate();
@@ -64,10 +72,10 @@ function DatasetAddView() {
   };
 
   const defaultActiveTabFromHash = location.hash.substring(1);
-  const defaultActiveKey = Object.values(DatasetAddType).includes(
-    defaultActiveTabFromHash as DatasetAddType,
+  const defaultActiveKey = [...Object.values(DatasetAddType), ALIGNMENT_PROJECT_TAB_KEY].includes(
+    defaultActiveTabFromHash,
   )
-    ? (defaultActiveTabFromHash as DatasetAddType)
+    ? defaultActiveTabFromHash
     : DatasetAddType.UPLOAD;
 
   const tabs: TabsProps["items"] = [
@@ -103,6 +111,12 @@ function DatasetAddView() {
           onAdded={handleDatasetAdded.bind(null, DatasetAddType.COMPOSE)}
         />
       ),
+    },
+    {
+      icon: <AppstoreOutlined />,
+      label: "Upload Files for Alignment Project",
+      key: ALIGNMENT_PROJECT_TAB_KEY,
+      children: <AlignmentProjectUploadView datastores={datastores} />,
     },
   ];
 

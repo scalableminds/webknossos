@@ -909,19 +909,14 @@ export function convertNumberTo64BitTuple(num: number | bigint | null): [number,
     return [0, 0];
   }
 
-  let sign: number | null;
-  if (typeof num === "bigint") {
-    sign = num < 0n ? -1 : 1;
-  } else {
-    sign = Math.sign(num);
-  }
-
   // Cast to BigInt as bit-wise operations only work with 32 bits,
-  // even though Number uses 53 bits.
-  const bigNum = BigInt(sign) * BigInt(num);
+  // even though Number uses 53 bits. BigInt's &/>> operators use two's-complement
+  // semantics for negative numbers, so this also produces the correct bit pattern
+  // for negative ids (the sign ends up encoded in bigNumHigh).
+  const bigNum = BigInt(num);
 
-  const bigNumLow = sign * Number((2n ** 32n - 1n) & bigNum);
-  const bigNumHigh = sign * Number(bigNum >> 32n);
+  const bigNumLow = Number((2n ** 32n - 1n) & bigNum);
+  const bigNumHigh = Number(bigNum >> 32n);
 
   return [bigNumHigh, bigNumLow];
 }

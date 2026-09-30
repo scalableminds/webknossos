@@ -16,6 +16,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState.AnnotationState
 import models.annotation.CollaborationMode.CollaborationMode
 import models.annotation.AnnotationType.AnnotationType
+import models.dataset.DatasetDAO
 import play.api.libs.json.*
 import slick.jdbc.GetResult
 import slick.jdbc.GetResult.*
@@ -105,6 +106,7 @@ case class AnnotationCompactInfo(
     state: AnnotationState.Value = AnnotationState.Active,
     isLockedByOwner: Boolean,
     dataSetName: String,
+    dataSetId: ObjectId,
     visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
     tracingTime: Option[Long] = None,
     organization: String,
@@ -200,8 +202,8 @@ class AnnotationLayerDAO @Inject() (SQLClient: SqlClient)(implicit ec: Execution
     } yield ()
 }
 
-class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: AnnotationLayerDAO)(implicit
-    ec: ExecutionContext
+class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: AnnotationLayerDAO, datasetDAO: DatasetDAO)(
+    implicit ec: ExecutionContext
 ) extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   protected val collection = Annotations
   protected def resultConverter = GetResultAnnotationsRow
@@ -239,7 +241,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
     q"""
         (
-          _user = $requestingUserId
+          ${prefix}_user = $requestingUserId
           OR (
             (${prefix}visibility = ${AnnotationVisibility.Public} or ${prefix}visibility = ${AnnotationVisibility.Internal})
             AND (
@@ -255,6 +257,12 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
                 FROM webknossos.annotation_contributors
                 WHERE _user = $requestingUserId
               )
+            )
+            AND EXISTS ( -- user must also still have access to the annotation's dataset
+              SELECT 1
+              FROM webknossos.datasets_ dd
+              WHERE dd._id = ${prefix}_dataset
+              AND (${datasetDAO.readAccessQWithPrefix(requestingUserId, q"dd.")})
             )
           )
         )
@@ -352,6 +360,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       val state = AnnotationState.fromString(<<[String]).getOrElse(AnnotationState.Active)
       val isLockedByOwner = <<[Boolean]
       val dataSetName = <<[String]
+      val dataSetId = <<[ObjectId]
       val typ = AnnotationType.fromString(<<[String]).getOrElse(AnnotationType.Explorational)
       val visibility = AnnotationVisibility.fromString(<<[String]).getOrElse(AnnotationVisibility.Internal)
       val tracingTime = Option(<<[Long])
@@ -379,6 +388,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
         state,
         isLockedByOwner,
         dataSetName,
+        dataSetId,
         visibility,
         tracingTime,
         organizationId,
@@ -408,6 +418,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       isFinished: Option[Boolean],
       forUser: Option[ObjectId],
       filterOwnedOrShared: Boolean,
+      datasetId: Option[ObjectId],
       limit: Int,
       pageNumber: Int = 0
   )(using ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
@@ -417,6 +428,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
         else accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, q"a.")
       stateQuery = getStateQuery(isFinished)
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
+      datasetQuery = datasetId.map(d => q"a._dataset = $d").getOrElse(q"TRUE")
       typQuery = q"a.typ = ${AnnotationType.Explorational}"
       query = q"""
           -- We need to separate the querying of the annotation with all its inner joins from the 1:n join to collect the shared teams
@@ -437,6 +449,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
               a.state,
               a.isLockedByOwner,
               d.name AS datasetName,
+              d._id AS datasetId,
               a.typ,
               a.visibility,
               a.tracingtime,
@@ -451,12 +464,12 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             JOIN webknossos.organizations_ AS o ON o._id = d._organization
             JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
             JOIN webknossos.multiusers_ mu ON u._multiUser = mu._id
-            WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
+            WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery AND $datasetQuery
             GROUP BY
               a._id, a.name, a.description, a._user, a.collaborationMode, a.modified,
               a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
               mu.firstname, mu.lastname,
-              d.name, o._id
+              d.name, d._id, o._id
             ORDER BY a._id DESC
             LIMIT $limit
             OFFSET ${pageNumber * limit}
@@ -477,6 +490,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             an.state,
             an.isLockedByOwner,
             an.datasetName,
+            an.datasetId,
             an.typ,
             an.visibility,
             an.tracingtime,
@@ -502,6 +516,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             an.state,
             an.isLockedByOwner,
             an.datasetName,
+            an.datasetId,
             an.typ,
             an.visibility,
             an.tracingtime,
@@ -515,14 +530,18 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       rows <- run(query.as[AnnotationCompactInfo])
     } yield rows.toList
 
-  def countAllListableExplorationals(isFinished: Option[Boolean])(using ctx: DBAccessContext): Fox[Long] = {
+  def countAllListableExplorationals(isFinished: Option[Boolean], datasetId: Option[ObjectId] = None)(using
+      ctx: DBAccessContext
+  ): Fox[Long] = {
     val stateQuery = getStateQuery(isFinished)
+    val datasetQuery = datasetId.map(d => q"_dataset = $d").getOrElse(q"TRUE")
     for {
       accessQuery <- baseListAccessQ
       rows <- run(q"""SELECT COUNT(*)
                       FROM $existingCollectionName
                       WHERE typ = ${AnnotationType.Explorational}
                       AND $stateQuery
+                      AND $datasetQuery
                       AND $accessQuery""".as[Long])
       count <- rows.headOption.toFox
     } yield count

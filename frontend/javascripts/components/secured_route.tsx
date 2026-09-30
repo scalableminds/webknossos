@@ -10,7 +10,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrManager } from "libs/utils";
 import type React from "react";
 import { memo, useCallback, useEffect, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
 type SecuredRouteProps = {

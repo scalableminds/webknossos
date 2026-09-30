@@ -15,7 +15,7 @@ import { coalesce, getUrlParamsObjectFromString } from "libs/utils";
 import window from "libs/window";
 import isNumber from "lodash-es/isNumber";
 import { useEffect } from "react";
-import { Navigate, useLocation, useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router";
 import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum, PerformanceMarkEnum } from "viewer/constants";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";

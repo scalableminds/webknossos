@@ -16,7 +16,7 @@ import type {
   FilterValue,
   SorterResult,
   TablePaginationConfig,
-} from "antd/lib/table/interface";
+} from "antd/es/table/interface";
 import classNames from "classnames";
 import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
@@ -50,11 +50,11 @@ import type React from "react";
 import { Fragment, PureComponent, useCallback, useContext } from "react";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { Unicode } from "viewer/constants";
-import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
+import { getDatasetThumbnailURL, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import CategorizationLabel from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import { ContextMenuContext } from "viewer/view/context_menu/context_menu";
@@ -77,7 +77,6 @@ type Props = {
   searchTags: Array<string>;
   isUserAdminOrDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
-  reloadDataset: (datasetId: string) => Promise<void>;
   updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
@@ -104,20 +103,14 @@ type ContextMenuProps = {
   hideContextMenu: () => void;
   datasets: APIDatasetCompact[];
   folder: FolderItemWithName | null;
-  reloadDataset: Props["reloadDataset"];
 };
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = useContext(ContextMenuContext);
   const { modal } = App.useApp();
-  const {
-    datasets,
-    reloadDataset,
-    contextMenuPosition,
-    hideContextMenu,
-    folder,
-    datasetCollectionContext,
-  } = propsWithInputRef;
+  const { datasets, contextMenuPosition, hideContextMenu, folder, datasetCollectionContext } =
+    propsWithInputRef;
+  const { clearCacheAndReloadDataset } = datasetCollectionContext;
   let menu: MenuProps = { items: [] };
 
   if (contextMenuPosition != null) {
@@ -127,7 +120,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
       menu = getDatasetActionContextMenu({
         hideContextMenu,
         datasets,
-        reloadDataset,
+        clearCacheAndReloadDataset,
         modal,
       });
     } else if (folder != null) {
@@ -336,13 +329,13 @@ class DatasetRenderer {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
   renderNameColumn(): React.ReactNode {
-    const selectedLayerName: string | null = this.data.isActive
-      ? this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0]
-      : null;
-    const imgSrc = selectedLayerName
-      ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
+    const hasAnyLayer =
+      this.data.isActive &&
+      (this.data.colorLayerNames.length > 0 || this.data.segmentationLayerNames.length > 0);
+    const imgSrc = hasAnyLayer
+      ? `${getDatasetThumbnailURL(this.data)}&w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : inactiveDatasetThumbnail;
-    const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
+    const iconClassName = hasAnyLayer ? "" : " icon-thumbnail";
 
     return (
       <>
@@ -395,12 +388,7 @@ class DatasetRenderer {
     return <FormattedDate timestamp={this.data.created} />;
   }
   renderActionsColumn(): React.ReactNode {
-    return (
-      <DatasetActionView
-        dataset={this.data}
-        reloadDataset={this.datasetTable.reloadSingleDataset}
-      />
-    );
+    return <DatasetActionView dataset={this.data} />;
   }
 }
 
@@ -487,8 +475,6 @@ class DatasetTable extends PureComponent<Props, State> {
       sortedInfo: sorter,
     });
   };
-
-  reloadSingleDataset = (datasetId: string): Promise<void> => this.props.reloadDataset(datasetId);
 
   getFilteredDatasets() {
     const filterByMode = (datasets: APIDatasetCompact[]) => {
@@ -685,7 +671,6 @@ class DatasetTable extends PureComponent<Props, State> {
           }}
           datasets={datasetsForContextMenu}
           folder={folderForContextMenu}
-          reloadDataset={this.props.reloadDataset}
           contextMenuPosition={contextMenuPosition}
           datasetCollectionContext={context}
         />

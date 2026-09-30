@@ -49,7 +49,8 @@ case class AnimationJobOptions(
     annotationId: Option[ObjectId],
     includeSkeletons: Boolean,
     hideImageData: Boolean,
-    saveBlenderFile: Boolean
+    saveBlenderFile: Boolean,
+    segmentationLayerName: Option[String]
 ) derives JsonAutoFormat
 
 case class AlignSectionsJobOptions(
@@ -486,6 +487,7 @@ class JobController @Inject() (
           }
           layerName = animationJobOptions.layerName
           _ <- datasetService.assertValidLayerNameLax(layerName)
+          _ <- Fox.runOptional(animationJobOptions.segmentationLayerName)(datasetService.assertValidLayerNameLax)
           dataStoreClient <- datasetService.clientFor(dataset)
           userOrganizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(
             request.identity._organization,
@@ -501,6 +503,7 @@ class JobController @Inject() (
             "dataset_directory_name" -> dataset.directoryName,
             "export_file_name" -> exportFileName,
             "layer_name" -> animationJobOptions.layerName,
+            "segmentation_layer_name" -> animationJobOptions.segmentationLayerName,
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,
             "include_watermark" -> animationJobOptions.includeWatermark,
             "meshes" -> animationJobOptions.meshes,

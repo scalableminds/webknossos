@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanUpdates } from "admin/api/organization";
 import { Table, Typography } from "antd";
-import type { ColumnsType } from "antd/lib/table";
+import type { ColumnsType } from "antd/es/table";
 import FormattedDate from "components/formatted_date";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";

@@ -319,15 +319,15 @@ instead. Only enable this option if you understand its effect. All layers will n
   "proofreading.multi_cut.no_valid_agglomerate":
     "No agglomerate for the selected segments could be found. Please retry with a new selection.",
   "proofreading.multi_cut.split_failed": "Could not determine a valid split. Operation failed.",
+  "proofreading.multi_cut.selection_invalidated_by_other_user":
+    "Another user changed this agglomerate, so your multi-split selection now spans multiple agglomerates (which cannot be split) and was cleared. Please re-select.",
   "proofreading.post_processing_info_not_found":
     "Could not retrieve updated post processing information necessary for processing this proofreading operation. Please try again.",
 
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
-  "dataset.clear_cache_success": template(
-    "The dataset <%- datasetName %> was reloaded successfully.",
-  ),
+  "dataset.clear_cache_success": "The dataset was reloaded successfully.",
   "dataset.delete_success": template(
     "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
   ),
@@ -354,9 +354,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The explored data has a different voxel size from the datasource that was already loaded. The explored voxel size was:",
   "dataset.segmentationlayer_not_existing": "This annotation has no segmentation layer.",
   "dataset.invalid_datasource_json":
-    "The datasource-properties.json on disk is invalid. Please review all properties below to use the dataset. You can always go back and change the values later.",
+    "The datasource-properties.json on disk is invalid. Please contact an administrator to fix this dataset.",
   "dataset.missing_datasource_json":
-    "A datasource-properties.json file was not found. Please review all properties below to use the dataset. You can always go back and change the values later.",
+    "A datasource-properties.json file was not found. Please contact an administrator to fix this dataset.",
   "dataset.import_complete":
     "A valid datasource-properties.json file was found. The dataset is imported and ready to use. You may still change the properties below.",
   "dataset.confirm_signup":

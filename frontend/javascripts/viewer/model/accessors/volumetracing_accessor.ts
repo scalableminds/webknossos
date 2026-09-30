@@ -891,6 +891,33 @@ export function hasAgglomerateMapping(state: WebknossosState) {
   return AGGLOMERATE_STATES.YES;
 }
 
+/** Whether the active mapping is served by a chunkedgraph (CAVE), whose agglomerations WEBKNOSSOS
+ * can read but not change. Reading paths such as agglomerate skeletons work regardless.
+ */
+export function isChunkedGraphMappingActive(state: WebknossosState): boolean {
+  const segmentation = getVisibleSegmentationLayer(state);
+  if (!segmentation) {
+    return false;
+  }
+  const { mappingName, mappingType, mappingStatus } = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    segmentation.name,
+  );
+  if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) {
+    return false;
+  }
+  if (mappingType !== "AGGLOMERATE") {
+    return false;
+  }
+  // In an annotation the visible layer is the synthetic tracing layer, which carries the dataset
+  // layer it falls back to rather than its own attachments.
+  const attachments = segmentation.attachments ?? segmentation.fallbackLayerInfo?.attachments;
+  return (
+    attachments?.agglomerates?.find((agglomerate) => agglomerate.name === mappingName)
+      ?.dataFormat === "pcg"
+  );
+}
+
 export function isZoomThresholdExceededForAgglomerateMapping(
   state: WebknossosState,
   segmentationLayerName: string,

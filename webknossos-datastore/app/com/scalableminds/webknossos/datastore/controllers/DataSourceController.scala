@@ -178,8 +178,13 @@ class DataSourceController @Inject() (
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
-        position <- agglomerateService.positionForSegmentId(agglomerateFileKey, segmentId) ?~> Msg.AgglomerateFile
-          .getSegmentPositionFailed(agglomerateFileKey.attachment.name)
+        position <- agglomerateService.positionForSegmentId(
+          agglomerateFileKey,
+          segmentId,
+          Some(datasetId),
+          dataLayer,
+          bucketRequest => binaryDataServiceHolder.binaryDataService.handleDataRequest(bucketRequest)
+        ) ?~> Msg.AgglomerateFile.getSegmentPositionFailed(agglomerateFileKey.attachment.name)
       } yield Ok(Json.toJson(position))
     }
   }

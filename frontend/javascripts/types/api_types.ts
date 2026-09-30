@@ -83,6 +83,15 @@ export type ThinPlateSplineTransformation = {
 };
 
 export type CoordinateTransformation = AffineTransformation | ThinPlateSplineTransformation;
+export type APILayerAttachment = {
+  readonly name: string;
+  readonly path: string;
+  readonly dataFormat: "hdf5" | "json" | "zarr3" | "neuroglancerPrecomputed" | "pcg";
+};
+// Only the attachment kinds the frontend actually reads are typed here.
+export type APILayerAttachments = {
+  readonly agglomerates?: Array<APILayerAttachment>;
+};
 type APIDataLayerBase = {
   readonly name: string;
   readonly boundingBox: BoundingBoxObject;
@@ -92,6 +101,7 @@ type APIDataLayerBase = {
   readonly additionalAxes: Array<AdditionalAxis> | null;
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
   readonly hasSegmentIndex?: boolean;
+  readonly attachments?: APILayerAttachments;
 };
 export type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";

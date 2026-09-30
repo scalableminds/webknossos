@@ -16,6 +16,8 @@ object Msg {
   val invalidJson: String = "Invalid json format."
   object AgglomerateGraph {
     val failed: String = "Could not look up an agglomerate graph for requested agglomerate."
+    def tooManyNodes(count: Int, limit: Int): String = s"Agglomerate has too many nodes ($count > $limit)"
+    def tooManyEdges(count: Int, limit: Int): String = s"Agglomerate has too many edges ($count > $limit)"
   }
   object AgglomerateTree {
     val failed: String = "Could not generate agglomerate tree."
@@ -99,6 +101,8 @@ object Msg {
     val getNewestMaterializedFailed: String = "Could not find newest materialized annotation."
     val getWithTracingsFailed: String = "Could not retrieve annotation with tracings."
     val makeEditableNoBaseMapping: String = "Cannot make editable: no base mapping is set."
+    val makeEditableChunkedGraphMapping: String =
+      "Cannot make editable: this mapping is served by a chunkedgraph (CAVE), whose agglomerations WEBKNOSSOS cannot change."
     val updateRemoteFailed: String = "Could not update remote annotation info."
     val downloadNoLayers: String = "Cannot download annotation that has no layers."
     val uploadEditableMappingIncompleteInformation: String =
@@ -803,6 +807,27 @@ object Msg {
     def getSegmentPositionFailed(fileName: String): String =
       s"Could not read segment position from agglomerate file “$fileName”."
     val pathNotAbsolute = "Path of agglomerate file is ambiguous, must be absolute."
+    object Pcg {
+      def rootCountMismatch(returned: Int, requested: Int): String =
+        s"PCG returned $returned roots for $requested supervoxels"
+      def chunkMappingNotPaired(valueCount: Int, chunk: String): String =
+        s"PCG returned $valueCount values for chunk $chunk, which is not a list of pairs"
+      def subgraphAffinityCountMismatch(edgeCount: Int, affinityCount: Int): String =
+        s"PCG returned $affinityCount affinities for $edgeCount subgraph edges"
+      def noChunkBitWidth(layer: Long, id: Long): String =
+        s"PCG reports no chunk bit width for layer $layer (id $id)"
+      def chunkTooLargeToScan(segmentId: Long, bucketCount: Int, limit: Int): String =
+        s"Supervoxel $segmentId sits in a PCG chunk of $bucketCount buckets, more than the $limit this lookup will read"
+      def segmentNotFoundInChunk(segmentId: Long, chunkBox: String): String =
+        s"Supervoxel $segmentId was not found in its own PCG chunk $chunkBox"
+      def chunkOutsideLayerBoundingBox(segmentId: Long, chunkBox: String, layerBox: String): String =
+        s"The PCG chunk $chunkBox of supervoxel $segmentId lies outside the bounding box $layerBox of this layer"
+      val positionsNotStored: String =
+        "This PyChunkedGraph graph has no stored node positions, so the nodes of an agglomerate cannot be placed. Positions are only available for graphs ingested with store_positions."
+      def largestIdUnavailable(attachmentName: String): String =
+        s"largestAgglomerateId is not available for PCG-backed mapping $attachmentName: " +
+          "PyChunkedGraph agglomerate ids are chunk-encoded and sparse, so there is no largest id to allocate from."
+    }
   }
   object SegmentIndexFile {
     val pathNotAbsolute = "Path of segment index file is ambiguous, must be absolute."

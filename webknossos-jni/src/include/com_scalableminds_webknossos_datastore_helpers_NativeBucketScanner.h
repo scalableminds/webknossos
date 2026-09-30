@@ -25,6 +25,14 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
 
 /*
  * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
+ * Method:     findSegmentIdPosition
+ * Signature:  ([BIZIJ)[I
+ */
+JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_findSegmentIdPosition
+  (JNIEnv *, jobject, jbyteArray, jint, jboolean, jint, jlong);
+
+/*
+ * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
  * Method:     extendSegmentBoundingBox
  * Signature:  ([BIZIJIIIIIIIII)[I
  */

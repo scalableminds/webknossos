@@ -16,7 +16,6 @@ import mapValues from "lodash-es/mapValues";
 import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
-import type { ElementClass } from "types/api_types";
 import type { ValueOf } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import {
@@ -67,10 +66,7 @@ import {
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
-  DTYPE_TAG_INT32,
-  DTYPE_TAG_UINT32,
   getDtypeConfigForElementClass,
-  getDtypeTagForElementClass,
   LayerPool,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import {
@@ -137,31 +133,10 @@ const LAYER_POOL_UNIFORM_NAME_BY_POOL: Array<[LayerPool, string]> = [
   [LayerPool.S16, "pool_s16_textures"],
 ];
 
-const float32BitPunBuffer = new ArrayBuffer(4);
-const float32BitPunAsFloat = new Float32Array(float32BitPunBuffer);
-const float32BitPunAsInt = new Int32Array(float32BitPunBuffer);
-const float32BitPunAsUint = new Uint32Array(float32BitPunBuffer);
-
 // three.js can only upload mat4[]/vec3[] uniforms whose elements are three.js
 // objects (with toArray()). Plain number tuples crash its uploader.
 function toThreeMatrix4(matrix: Matrix4x4): Matrix4 {
   return new Matrix4().fromArray(matrix);
-}
-
-// layerMin/layerMax are float uniforms, which can't hold every int32/uint32
-// value exactly. So the integer's bits are stored in the float, and the shader
-// reads them back with floatBitsToInt/floatBitsToUint.
-function reinterpretIntAsFloatBits(value: number, elementClass: ElementClass): number {
-  const dtypeTag = getDtypeTagForElementClass(elementClass);
-  if (dtypeTag === DTYPE_TAG_INT32) {
-    float32BitPunAsInt[0] = value;
-    return float32BitPunAsFloat[0];
-  }
-  if (dtypeTag === DTYPE_TAG_UINT32) {
-    float32BitPunAsUint[0] = value;
-    return float32BitPunAsFloat[0];
-  }
-  return value;
 }
 
 function sanitizeName(name: string | null | undefined): string {
@@ -391,6 +366,8 @@ class PlaneMaterialFactory {
     const layerColor: ThreeVector3[] = [];
     const layerMin: number[] = [];
     const layerMax: number[] = [];
+    const layerMinInt: number[] = [];
+    const layerMaxInt: number[] = [];
     const layerIsInverted: number[] = [];
 
     for (const layerName of compiledLayerNames) {
@@ -417,6 +394,8 @@ class PlaneMaterialFactory {
       layerColor.push(DEFAULT_COLOR);
       layerMin.push(0.0);
       layerMax.push(1.0);
+      layerMinInt.push(0);
+      layerMaxInt.push(1);
       layerIsInverted.push(0);
     }
 
@@ -430,6 +409,8 @@ class PlaneMaterialFactory {
     this.uniforms.layerColor = { value: layerColor };
     this.uniforms.layerMin = { value: layerMin };
     this.uniforms.layerMax = { value: layerMax };
+    this.uniforms.layerMinInt = { value: layerMinInt };
+    this.uniforms.layerMaxInt = { value: layerMaxInt };
     this.uniforms.layerIsInverted = { value: layerIsInverted };
 
     const { colorRenderOrder, activeColorLayerCount } = this.getColorRenderOrder();
@@ -761,12 +742,7 @@ class PlaneMaterialFactory {
             if (settings != null) {
               const compiledIdx = compiledIdxByName.get(sanitizeName(dataLayer.name));
               if (compiledIdx != null) {
-                this.updateUniformsForLayer(
-                  settings,
-                  compiledIdx,
-                  dataLayer.name,
-                  dataLayer.isSegmentation,
-                );
+                this.updateUniformsForLayer(settings, compiledIdx, dataLayer.isSegmentation);
               }
             }
           }
@@ -1092,22 +1068,18 @@ class PlaneMaterialFactory {
   updateUniformsForLayer(
     settings: DatasetLayerConfiguration,
     compiledIdx: number,
-    rawLayerName: string,
     isSegmentationLayer: boolean,
   ): void {
     const { alpha, intensityRange, isDisabled, isInverted, gammaCorrectionValue } = settings;
 
     if (!isSegmentationLayer) {
       if (intensityRange) {
-        const elementClass = getElementClass(Store.getState().dataset, rawLayerName);
-        this.uniforms.layerMin.value[compiledIdx] = reinterpretIntAsFloatBits(
-          intensityRange[0],
-          elementClass,
-        );
-        this.uniforms.layerMax.value[compiledIdx] = reinterpretIntAsFloatBits(
-          intensityRange[1],
-          elementClass,
-        );
+        this.uniforms.layerMin.value[compiledIdx] = intensityRange[0];
+        this.uniforms.layerMax.value[compiledIdx] = intensityRange[1];
+        // `| 0` keeps the bits of uint32 values above 2^31 (they become
+        // negative int32s); the shader converts them back with uint().
+        this.uniforms.layerMinInt.value[compiledIdx] = intensityRange[0] | 0;
+        this.uniforms.layerMaxInt.value[compiledIdx] = intensityRange[1] | 0;
       }
       this.uniforms.layerIsInverted.value[compiledIdx] = isInverted ? 1.0 : 0;
 

@@ -122,10 +122,13 @@ uniform vec3 layerBboxMax[<%= globalLayerCount %>];
 
 // Unused for segmentation layers.
 uniform vec3 layerColor[<%= globalLayerCount %>];
-// For int32/uint32 layers, these hold the integer's bits (see
-// reinterpretIntAsFloatBits in plane_material_factory.ts).
+// int32/uint32 layers use layerMinInt/layerMaxInt instead, because a float
+// can't represent every 32-bit integer. uint32 values are stored with the
+// same bits, so uint(layerMinInt[i]) restores them.
 uniform float layerMin[<%= globalLayerCount %>];
 uniform float layerMax[<%= globalLayerCount %>];
+uniform highp int layerMinInt[<%= globalLayerCount %>];
+uniform highp int layerMaxInt[<%= globalLayerCount %>];
 uniform float layerIsInverted[<%= globalLayerCount %>];
 
 // Compiled indices of the color layers to blend, in blend order. Only the
@@ -345,20 +348,23 @@ void main() {
             layerHasTransformInt[layerIdx] == 0
           );
         bool used_fallback = maybe_filtered_color.used_fallback_color;
-        float is_max_and_min_equal = float(layerMax[layerIdx] == layerMin[layerIdx]);
+        uint dtypeTag = layerDtypeTag[layerIdx];
+        bool is32BitIntLayer = dtypeTag == ${DTYPE_TAG_INT32}u || dtypeTag == ${DTYPE_TAG_UINT32}u;
+        float is_max_and_min_equal = is32BitIntLayer
+          ? float(layerMaxInt[layerIdx] == layerMinInt[layerIdx])
+          : float(layerMax[layerIdx] == layerMin[layerIdx]);
 
         // color_value is usually between 0 and 1.
         color_value = maybe_filtered_color.color.rgb;
 
-        uint dtypeTag = layerDtypeTag[layerIdx];
         if (dtypeTag == ${DTYPE_TAG_INT32}u) {
           // Handle 32-bit signed color layers
           ivec4 four_bytes = ivec4(255. * maybe_filtered_color.color);
           // Combine bytes into an Int32 (assuming little-endian order)
           highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
 
-          int minInt = floatBitsToInt(layerMin[layerIdx]);
-          int maxInt = floatBitsToInt(layerMax[layerIdx]);
+          int minInt = layerMinInt[layerIdx];
+          int maxInt = layerMaxInt[layerIdx];
           hpv = clamp(hpv, minInt, maxInt);
 
           color_value = vec3(
@@ -374,8 +380,8 @@ void main() {
             + uint(four_bytes.g) * 256u
             + uint(four_bytes.r);
 
-          uint minUint = floatBitsToUint(layerMin[layerIdx]);
-          uint maxUint = floatBitsToUint(layerMax[layerIdx]);
+          uint minUint = uint(layerMinInt[layerIdx]);
+          uint maxUint = uint(layerMaxInt[layerIdx]);
           hpv = clamp(hpv, minUint, maxUint);
           color_value = vec3(
             float(hpv - minUint) / (float(maxUint - minUint) + is_max_and_min_equal)

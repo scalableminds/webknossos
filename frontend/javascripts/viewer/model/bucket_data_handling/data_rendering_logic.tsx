@@ -593,8 +593,6 @@ function _getSegmentIdRangeForElementClass(elementClass: ElementClass): readonly
 export const getSegmentIdRangeForElementClass = memoize(_getSegmentIdRangeForElementClass);
 
 // Selects the byte-decoding branch in the shader's color-blending loop.
-// int32/uint32 layers also get their min/max bit-punned into the float
-// uniforms (see reinterpretIntAsFloatBits in plane_material_factory.ts).
 export const DTYPE_TAG_DEFAULT = 0;
 export const DTYPE_TAG_UINT24 = 1;
 export const DTYPE_TAG_INT32 = 2;

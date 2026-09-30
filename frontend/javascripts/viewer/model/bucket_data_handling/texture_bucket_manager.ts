@@ -23,6 +23,9 @@ import type PoolTextureManager from "viewer/model/bucket_data_handling/pool_text
 export type LayerPoolBinding = {
   poolTextureManager: PoolTextureManager;
   baseSlice: number;
+  // Upper bound for maximumCapacity. The slices are rounded up, so they may
+  // have room for more buckets than this.
+  bucketCapacity: number;
 };
 
 // A TextureBucketManager instance is responsible for making buckets available
@@ -118,7 +121,9 @@ export default class TextureBucketManager {
     // Otherwise, we don't pack bytes together (packingDegree = 1)
     this.packingDegree = getDtypeConfigForElementClass(elementClass).packingDegree;
     this.elementClass = elementClass;
-    this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
+    const textureCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
+    this.maximumCapacity =
+      pool != null ? Math.min(textureCapacity, pool.bucketCapacity) : textureCapacity;
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
     this.freeIndexSet = new Set(range(this.maximumCapacity));

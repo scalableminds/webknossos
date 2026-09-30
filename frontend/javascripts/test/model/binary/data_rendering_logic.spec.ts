@@ -4,6 +4,8 @@ import constants from "viewer/constants";
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
+  getBucketCountSoftLimitPerLayer,
+  getRequiredBucketCapacityPerLayer,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { describe, expect, it } from "vitest";
 
@@ -164,5 +166,32 @@ describe("computeDataTexturesSetup", () => {
     const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(midSpecs, true);
     testSupportFlags(computeDataTexturesSetupPartial(createLayers(20, 1)), 12);
     testSupportFlags(computeDataTexturesSetupPartial(createLayers(5, 1)), 6);
+  });
+});
+
+describe("getRequiredBucketCapacityPerLayer", () => {
+  it("is unchanged for up to 4 layers", () => {
+    expect(getRequiredBucketCapacityPerLayer(DEFAULT_GPU_MEMORY_FACTOR, 1)).toBe(
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    );
+    expect(getRequiredBucketCapacityPerLayer(DEFAULT_GPU_MEMORY_FACTOR, 4)).toBe(
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    );
+  });
+
+  it("splits the budget of 4 layers across more layers", () => {
+    expect(getRequiredBucketCapacityPerLayer(DEFAULT_GPU_MEMORY_FACTOR, 20)).toBe(
+      Math.floor((DEFAULT_REQUIRED_BUCKET_CAPACITY * 4) / 20),
+    );
+  });
+
+  it("never exceeds the RAM limit per layer", () => {
+    for (const gpuFactor of [1, 2, 4, 6, 12, 16]) {
+      for (const layerCount of [1, 4, 5, 20, 100]) {
+        expect(getRequiredBucketCapacityPerLayer(gpuFactor, layerCount)).toBeLessThanOrEqual(
+          getBucketCountSoftLimitPerLayer(layerCount),
+        );
+      }
+    }
   });
 });

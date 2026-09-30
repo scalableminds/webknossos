@@ -287,13 +287,15 @@ function scalePerLayerBudgetByLayerCount(
   return Math.max(MINIMUM_BUCKET_CAPACITY_PER_LAYER, Math.floor(totalBudget / layerCount));
 }
 
+// Capped at the RAM limit, because the DataCube can't free buckets that are
+// picked for rendering.
 export function getRequiredBucketCapacityPerLayer(
   gpuMemoryFactor: number,
   layerCount: number,
 ): number {
-  return scalePerLayerBudgetByLayerCount(
-    constants.GPU_FACTOR_MULTIPLIER * gpuMemoryFactor,
-    layerCount,
+  return Math.min(
+    scalePerLayerBudgetByLayerCount(constants.GPU_FACTOR_MULTIPLIER * gpuMemoryFactor, layerCount),
+    getBucketCountSoftLimitPerLayer(layerCount),
   );
 }
 

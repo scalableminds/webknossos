@@ -86,7 +86,7 @@ const getLayerPoolPlan = memoizeOne(() => {
   const poolTextureManagers = new Map<LayerPool, PoolTextureManager>(
     LAYER_POOLS.map((pool) => [pool, new PoolTextureManager(pool, poolDepths[pool])]),
   );
-  return { assignmentByLayerName, poolTextureManagers };
+  return { assignmentByLayerName, poolTextureManagers, requiredBucketCapacity };
 });
 
 // The pool textures are shared by all layers, so PlaneMaterialFactory
@@ -199,7 +199,8 @@ export default class LayerRenderingManager {
     const { dataset } = Store.getState();
     const elementClass = getElementClass(dataset, this.name);
 
-    const { assignmentByLayerName, poolTextureManagers } = getLayerPoolPlan();
+    const { assignmentByLayerName, poolTextureManagers, requiredBucketCapacity } =
+      getLayerPoolPlan();
     const assignment = assignmentByLayerName.get(this.name);
     if (assignment == null) {
       throw new Error(`No layer pool assignment found for layer ${this.name}.`);
@@ -212,7 +213,11 @@ export default class LayerRenderingManager {
       LAYER_POOL_TEXTURE_WIDTH,
       assignment.dataTextureCount,
       elementClass,
-      { poolTextureManager, baseSlice: assignment.baseSlice },
+      {
+        poolTextureManager,
+        baseSlice: assignment.baseSlice,
+        bucketCapacity: requiredBucketCapacity,
+      },
     );
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);

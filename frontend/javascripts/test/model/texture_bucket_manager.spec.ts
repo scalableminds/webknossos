@@ -127,6 +127,7 @@ describe("TextureBucketManager", () => {
     const tbm = new TextureBucketManager(LAYER_POOL_TEXTURE_WIDTH, 2, "uint8", {
       poolTextureManager: pool,
       baseSlice,
+      bucketCapacity: 1024,
     });
     tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
@@ -154,5 +155,16 @@ describe("TextureBucketManager", () => {
     const sliceByteOffset = baseSlice * LAYER_POOL_TEXTURE_WIDTH * LAYER_POOL_TEXTURE_WIDTH;
     // @ts-expect-error - texture is available in our mock but not in the real type
     expect(pool.textureArray.texture[sliceByteOffset]).toBe(100);
+  });
+
+  it("pooled mode caps the capacity at bucketCapacity", () => {
+    const pool = new PoolTextureManager(LayerPool.U8, /* depth */ 2);
+    // Two uint8 slices could hold 1024 buckets.
+    const tbm = new TextureBucketManager(LAYER_POOL_TEXTURE_WIDTH, 2, "uint8", {
+      poolTextureManager: pool,
+      baseSlice: 0,
+      bucketCapacity: 600,
+    });
+    expect(tbm.maximumCapacity).toBe(600);
   });
 });

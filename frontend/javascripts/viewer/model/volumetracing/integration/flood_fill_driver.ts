@@ -70,6 +70,8 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     // exactly the voxels connected to the seed's original id, which is the
     // "overwrite-all" semantics as far as the rasterizing write set goes.
     overwriteMode: "overwrite-all",
+    // Irrelevant under overwrite-all; flood fill has no overwrite toggle.
+    overwritableValue: 0n,
     editableBoundingBox: null,
     additionalCoordinates: options.additionalCoordinates,
   };

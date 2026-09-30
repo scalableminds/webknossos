@@ -288,13 +288,15 @@ export function* editVolumeLayerAsync(): Saga<never> {
             overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY
               ? "overwrite-empty-only"
               : "overwrite-all",
+          // As in labelWithVoxelBuffer2D: under overwrite-empty, painting only
+          // writes over background, and erasing only removes the active segment.
+          overwritableValue: contourTracingMode === ContourModeEnum.DELETE ? activeCellId : 0n,
           additionalCoordinates: additionalCoordinates ?? null,
           radius,
           planeAxis,
         },
         toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
       );
-      wroteVoxelsBox.value = true;
     }
 
     let lastPosition = startEditingAction.positionInLayerSpace;
@@ -333,7 +335,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
       if (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing)) {
         // Close the polygon. When brushing, this causes an auto-fill which is why
-        // it's only performed when drawing (not when erasing).
+        // it's only performed when drawing (not when erasing): a common way to
+        // clean up an overfilled cell is to erase along its membrane, and an
+        // auto-fill would then erase the whole cell instead of just the stroke.
+        // See https://github.com/scalableminds/webknossos/issues/4624.
         currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
       }
 
@@ -348,25 +353,23 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     if (brushDriver != null) {
       // Pointer-up: mag propagation runs once over the coalesced write set.
-      brushDriver.finish();
-      // currentSectionLabeler.updateArea(...) above ran regardless of which
-      // path drew the stroke, so its centroid tracking is accurate here too.
-      // Without this, volume interpolation (which reads this via
-      // getLastLabelAction/getLabelActionFromPreviousSlice) never sees a
-      // previous slice and always reports "all recent label actions were
-      // performed on the current slice" — mirrors finishSectionLabeler below.
-      yield* put(registerLabelPointAction(currentSectionLabeler.getUnzoomedCentroid()));
-    } else {
-      yield* call(
-        finishSectionLabeler,
-        currentSectionLabeler,
-        activeTool,
-        contourTracingMode,
-        overwriteMode,
-        labeledZoomStep,
-        wroteVoxelsBox,
-      );
+      // Only a stroke that wrote something counts, so that the "no voxels
+      // were changed" hint below still fires when overwrite-empty skipped all.
+      if (brushDriver.finish().voxels > 0) wroteVoxelsBox.value = true;
     }
+    // For every tool, including the brush: fills the area enclosed by the
+    // stroke if there is one (for the brush, only when it is released near its
+    // start), within the same undo step, and registers the stroke for volume
+    // interpolation.
+    yield* call(
+      finishSectionLabeler,
+      currentSectionLabeler,
+      activeTool,
+      contourTracingMode,
+      overwriteMode,
+      labeledZoomStep,
+      wroteVoxelsBox,
+    );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     yield* put(
       updateSegmentAction(
@@ -419,7 +422,10 @@ export function* finishSectionLabeler(
     );
   }
 
-  yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
+  const centroid = sectionLabeler.getUnzoomedCentroid();
+  if (centroid != null) {
+    yield* put(registerLabelPointAction(centroid));
+  }
 }
 
 function* ensureSegmentExists(

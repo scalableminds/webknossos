@@ -85,6 +85,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import {
   computeDataTexturesSetup,
+  getRequiredBucketCapacityPerLayer,
   getSupportedTextureSpecs,
   validateMinimumRequirements,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
@@ -556,9 +557,13 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   maximumLayerCountToRender: number;
 } {
   const { dataset } = Store.getState();
-  const requiredBucketCapacity =
-    constants.GPU_FACTOR_MULTIPLIER *
-    (gpuFactor != null ? gpuFactor : constants.DEFAULT_GPU_MEMORY_FACTOR);
+  // Must match the per-layer capacity the texture pools are sized with (see
+  // getColorLayerPoolPlan), since smallestCommonBucketCapacity bounds how many
+  // buckets the max-zoom computation assumes fit onto the GPU per layer.
+  const requiredBucketCapacity = getRequiredBucketCapacityPerLayer(
+    gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
+    dataset.dataSource.dataLayers.length,
+  );
   const {
     textureInformationPerLayer,
     smallestCommonBucketCapacity,

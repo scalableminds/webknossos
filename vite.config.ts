@@ -35,6 +35,13 @@ const viteConfig = {
             { name: "convertStyleToAttrs" }, // converts <SVG style="..."> to individual attrs
             {
               name: "preset-default",
+              params: {
+                overrides: {
+                  // Keep the viewBox so that icons scale with the 1em size set by svgr's icon option.
+                  // Otherwise, icons whose width/height match the viewBox would be clipped.
+                  removeViewBox: false,
+                },
+              },
             },
           ],
         },

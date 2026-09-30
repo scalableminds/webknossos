@@ -5,13 +5,34 @@ import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4 } from "viewer/const
 import traverse from "viewer/model/bucket_data_handling/bucket_traversals";
 import type { EnqueueFunction } from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import { chunk2 } from "viewer/model/helpers/chunk";
-import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
+import {
+  getBucketExtent,
+  globalPositionToBucketPosition,
+} from "viewer/model/helpers/position_converter";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { getPriorityWeightForZoomStepDiff, MAX_ZOOM_STEP_DIFF } from "../loading_strategy_logic";
 
 // Note that the fourth component of Vector4 (if passed) is ignored, as it's not needed
 // in this use case (only one mag at a time is gathered).
 const hashPosition = ([x, y, z]: Vector3 | Vector4): number => 2 ** 32 * x + 2 ** 16 * y + z;
+
+// With prefetchAlongViewAxis, buckets are also picked that the plane would intersect if it
+// moved by up to this fraction of a bucket's thickness along its normal. Being < 1, this
+// never reaches past the adjacent bucket layer, independent of zoom, mags and rotation.
+export const PREFETCH_BUCKET_FRACTION = 0.3;
+
+// Half of a bucket's thickness along the plane's normal, in local (plane) units.
+// inverseQueryMatrix maps world to local coordinates, so its z row is the plane's normal.
+export function getBucketHalfThicknessInLocalZ(
+  inverseQueryMatrix: Matrix4x4,
+  bucketHalfSize: Vector3,
+): number {
+  return (
+    bucketHalfSize[0] * Math.abs(inverseQueryMatrix[2]) +
+    bucketHalfSize[1] * Math.abs(inverseQueryMatrix[6]) +
+    bucketHalfSize[2] * Math.abs(inverseQueryMatrix[10])
+  );
+}
 
 const ALPHA = Math.PI / 2;
 
@@ -88,6 +109,14 @@ function addNecessaryBucketsToPriorityQueuePlane(
   // potential other coordinates.
   const centerAddress = globalPositionToBucketPosition(position, denseMags, logZoomStep, null);
   const additionalPriorityWeight = getPriorityWeightForZoomStepDiff(loadingStrategy, zoomStepDiff);
+  // The prefetch distance is based on the buckets of the rendered (non-fallback) mag, so that
+  // fallback levels cover the same movement instead of a proportionally larger one.
+  const prefetchBucketExtent = getBucketExtent(denseMags[nonFallbackLogZoomStep]);
+  const prefetchBucketHalfSize: Vector3 = [
+    prefetchBucketExtent[0] / 2,
+    prefetchBucketExtent[1] / 2,
+    prefetchBucketExtent[2] / 2,
+  ];
 
   for (const planeId of planeIds) {
     let extent: Vector2;
@@ -117,12 +146,16 @@ function addNecessaryBucketsToPriorityQueuePlane(
     // of horizontal lines which cover the entire rendered plane.
     // These "scan lines" are traversed to find out which buckets need to be
     // sent to the GPU.
-    // If prefetchAlongViewAxis is set, additional lines are also cast at z=-zDiff/+zDiff (in
-    // the same local, per-plane units as everything else here), simulating the plane having
-    // moved forward/backward along the view axis by that amount -- so that data is already
-    // loading by the time the user actually moves there. See oblique_bucket_picker_flood_fill.ts's
-    // PREFETCH_Z_DIFF for the equivalent behaviour on that strategy.
-    const zDiff = 10;
+    // If prefetchAlongViewAxis is set, additional lines are also cast at z=-zDiff/+zDiff (local
+    // units), so that data is already loading before the user moves there. Since zDiff is less
+    // than a bucket's thickness along the normal, every bucket intersected by some plane in
+    // between is also intersected by one of the three cast planes. So this picks the same
+    // buckets as the flood fill's thicker slab (see oblique_bucket_picker_flood_fill.ts).
+    const zDiff = prefetchAlongViewAxis
+      ? 2 *
+        PREFETCH_BUCKET_FRACTION *
+        getBucketHalfThicknessInLocalZ(M4x4.inverse(queryMatrix), prefetchBucketHalfSize)
+      : 0;
     const scanLinesPoints = M4x4.transformVectorsAffine(
       queryMatrix,
       range(steps + 1).flatMap((idx) => {

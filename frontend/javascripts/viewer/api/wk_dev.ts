@@ -32,7 +32,7 @@ export const WkDevFlags = {
     // If true, the "scanLines" and "floodFill" oblique picker strategies additionally pick
     // buckets slightly in front of and behind the plane (simulating the flycam having moved
     // along its view axis), so that data is already loading by the time the user actually
-    // moves there. See PREFETCH_Z_DIFF / zDiff in oblique_bucket_picker(_flood_fill).ts.
+    // moves there. See PREFETCH_BUCKET_FRACTION in oblique_bucket_picker.ts.
     prefetchAlongViewAxis: true,
     // If true, every oblique pick additionally runs the other strategy (the one not selected
     // by obliquePickerStrategy) on the exact same input, purely for timing. Its result is

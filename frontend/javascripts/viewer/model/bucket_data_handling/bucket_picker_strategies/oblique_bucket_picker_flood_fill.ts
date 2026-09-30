@@ -8,7 +8,11 @@ import {
 } from "viewer/model/helpers/position_converter";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { getPriorityWeightForZoomStepDiff, MAX_ZOOM_STEP_DIFF } from "../loading_strategy_logic";
-import type { ScanLineCallback } from "./oblique_bucket_picker";
+import {
+  getBucketHalfThicknessInLocalZ,
+  PREFETCH_BUCKET_FRACTION,
+  type ScanLineCallback,
+} from "./oblique_bucket_picker";
 
 // This module is an alternative to oblique_bucket_picker.ts. Instead of approximating the
 // plane's bucket coverage with a set of sampled scan lines (which can leave gaps for
@@ -24,13 +28,6 @@ import type { ScanLineCallback } from "./oblique_bucket_picker";
 // up to 3 times each), so it's written as inlined scalar arithmetic on precomputed matrix
 // coefficients rather than going through M4x4.transformVectorsAffine, which allocates a
 // handful of arrays (input wrapper, flattened copy, output, re-chunked result) per call.
-
-// When prefetchAlongViewAxis is set, buckets are additionally picked up to this many units
-// (in the same unit as bucket/voxel sizes) in front of and behind the plane, simulating the
-// user moving the flycam forward/backward along the view axis -- so that data is already
-// loading by the time they actually do. Mirrors oblique_bucket_picker.ts's zDiff constant, for
-// a comparable amount of "lookahead" between the two strategies.
-const PREFETCH_Z_DIFF = 10;
 
 const ALPHA = Math.PI / 2;
 
@@ -97,7 +94,7 @@ function buildIntersectsPlaneTest(
   matrix: Matrix4x4,
   rects: PlaneRects,
   bucketHalfSize: Vector3,
-  prefetchAlongViewAxis: boolean,
+  prefetchBucketHalfSize: Vector3 | null,
 ): IntersectsPlaneTest {
   const queryMatrix = [...matrix] as Matrix4x4;
 
@@ -136,11 +133,14 @@ function buildIntersectsPlaneTest(
     bucketHalfSize[0] * Math.abs(yx) +
     bucketHalfSize[1] * Math.abs(yy) +
     bucketHalfSize[2] * Math.abs(yz);
+  // With prefetching, the slab is widened by PREFETCH_BUCKET_FRACTION of a (non-fallback)
+  // bucket's thickness on each side, i.e. it also accepts the buckets the plane would intersect
+  // after moving by up to that distance along its normal.
   const radiusLocalZ =
-    bucketHalfSize[0] * Math.abs(zx) +
-    bucketHalfSize[1] * Math.abs(zy) +
-    bucketHalfSize[2] * Math.abs(zz) +
-    (prefetchAlongViewAxis ? PREFETCH_Z_DIFF : 0);
+    getBucketHalfThicknessInLocalZ(m, bucketHalfSize) +
+    (prefetchBucketHalfSize != null
+      ? 2 * PREFETCH_BUCKET_FRACTION * getBucketHalfThicknessInLocalZ(m, prefetchBucketHalfSize)
+      : 0);
 
   return (worldX: number, worldY: number, worldZ: number): boolean => {
     // Local z (the plane's thickness axis) is checked first, as it's usually the cheapest
@@ -182,6 +182,16 @@ function addNecessaryBucketsToPriorityQueuePlane(
   const additionalPriorityWeight = getPriorityWeightForZoomStepDiff(loadingStrategy, zoomStepDiff);
   const voxelSize = getBucketExtent(denseMags[logZoomStep]);
   const bucketHalfSize: Vector3 = [voxelSize[0] / 2, voxelSize[1] / 2, voxelSize[2] / 2];
+  // The prefetch distance is based on the buckets of the rendered (non-fallback) mag, so that
+  // fallback levels cover the same movement instead of a proportionally larger one.
+  const nonFallbackBucketExtent = getBucketExtent(denseMags[nonFallbackLogZoomStep]);
+  const prefetchBucketHalfSize: Vector3 | null = prefetchAlongViewAxis
+    ? [
+        nonFallbackBucketExtent[0] / 2,
+        nonFallbackBucketExtent[1] / 2,
+        nonFallbackBucketExtent[2] / 2,
+      ]
+    : null;
 
   // A bucket only needs to be walked/enqueued once if it touches *any* of the three
   // orthogonal viewport planes, so a single flood fill covering all three -- short-circuiting
@@ -189,13 +199,7 @@ function addNecessaryBucketsToPriorityQueuePlane(
   // through the shared seed bucket) and roughly 3x cheaper than flood-filling each plane
   // separately with its own traversal and visited set.
   const intersectsPlaneTests = planeIds.map((planeId) =>
-    buildIntersectsPlaneTest(
-      planeId,
-      matrix,
-      rects,
-      bucketHalfSize,
-      prefetchAlongViewAxis ?? false,
-    ),
+    buildIntersectsPlaneTest(planeId, matrix, rects, bucketHalfSize, prefetchBucketHalfSize),
   );
   // The bucket's world-space center is computed once per candidate (not once per plane test,
   // which would triple the redundant arithmetic for no reason -- all three tests operate on

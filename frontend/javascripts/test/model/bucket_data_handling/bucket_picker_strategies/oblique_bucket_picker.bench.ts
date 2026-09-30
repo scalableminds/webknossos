@@ -15,12 +15,11 @@ import { bench, describe } from "vitest";
 // rotation/zoom/viewport scenarios.
 //
 // The master version always did prefetching (extra buckets picked slightly in front of/behind
-// the plane, simulating the flycam moving along its view axis -- see PREFETCH_Z_DIFF / zDiff),
-// which this branch initially disabled to keep the scan-line/flood-fill comparison apples to
-// apples, then reintroduced behind the prefetchAlongViewAxis flag (implemented for both
-// strategies). So each strategy is benchmarked twice: once
-// matching the rest of this comparison (prefetch off) and once matching what "original
-// (master)" actually does (prefetch on), so the master comparison is also apples to apples.
+// the plane, simulating the flycam moving along its view axis), with a fixed distance of 10
+// local units. This branch puts it behind the prefetchAlongViewAxis flag and measures the
+// distance as a fraction of the bucket thickness instead (see PREFETCH_BUCKET_FRACTION). So
+// each strategy is benchmarked with and without prefetch; "original (master)" corresponds to
+// the prefetch variants.
 //
 // This is a performance comparison, not a correctness check -- there are intentionally no
 // assertions. Run with `yarn test-bench`.

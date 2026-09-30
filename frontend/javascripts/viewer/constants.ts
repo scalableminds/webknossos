@@ -365,6 +365,8 @@ const Constants = {
  */
 export const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
+export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / Constants.FPS;
+
 export default Constants;
 
 // For non-editable layers with depth=1, the effective depth is 1 instead of 32.

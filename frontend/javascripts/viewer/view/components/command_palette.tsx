@@ -5,80 +5,62 @@ import {
   getReadableAnnotations,
   updateSelectedThemeOfUser,
 } from "admin/rest_api";
-import type { ItemType } from "antd/es/menu/interface";
 import DOMPurify from "dompurify";
 import { copyToClipboard } from "libs/clipboard";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
 import capitalize from "lodash-es/capitalize";
-import compact from "lodash-es/compact";
-import noop from "lodash-es/noop";
 import sortBy from "lodash-es/sortBy";
 import { getAdministrationSubMenu, getAnalysisSubMenu, switchTo } from "navbar";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
 import { ColorWKBlue, getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { ViewModeValues } from "viewer/constants";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
-import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
+import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import type { UserConfiguration } from "viewer/store";
-import {
-  type TracingViewMenuProps,
-  useTracingViewMenuItems,
-} from "../action_bar/use_tracing_view_menu_items";
-import { viewDatasetMenu } from "../action_bar/view_dataset_actions_view";
-import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
 // than a theme token.
-const commandEntryColor = ColorWKBlue;
+export const commandEntryColor = ColorWKBlue;
 
 type ExtendedCommand = Command & {
   shortcut?: string;
   highlight?: string;
 };
 
-type CommandWithoutId = Omit<ExtendedCommand, "id">;
+export type CommandWithoutId = Omit<ExtendedCommand, "id">;
+
+// The commands which are only available within the viewer. The viewer provides them itself (see
+// CommandPaletteViewerCommands), because the palette is shown on every page and should not pull
+// in the viewer's code, which is only loaded on demand.
+let viewerCommands: CommandWithoutId[] = [];
+const viewerCommandsListeners = new Set<() => void>();
+
+export function setViewerCommands(commands: CommandWithoutId[]) {
+  viewerCommands = commands;
+  for (const listener of viewerCommandsListeners) {
+    listener();
+  }
+}
+
+function subscribeToViewerCommands(listener: () => void) {
+  viewerCommandsListeners.add(listener);
+  return () => {
+    viewerCommandsListeners.delete(listener);
+  };
+}
+
+const getViewerCommands = () => viewerCommands;
 
 enum DynamicCommands {
   viewDataset = "View Dataset ",
   viewAnnotation = "View Annotation ",
   switchOrganization = "Switch Organization ",
 }
-
-const getLabelForAction = (action: NonNullable<ItemType>) => {
-  if ("title" in action && action.title != null) {
-    return action.title;
-  }
-  if ("label" in action && action.label != null) {
-    return action.label.toString();
-  }
-  throw new Error("No label found for action");
-};
-
-const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutId[] => {
-  return compact(
-    menuActions.map((action) => {
-      if (action == null) {
-        return null;
-      }
-      const onClickAction = "onClick" in action && action.onClick != null ? action.onClick : noop;
-      return {
-        name: getLabelForAction(action),
-        command: onClickAction,
-        color: commandEntryColor,
-      };
-    }),
-  );
-};
 
 const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
@@ -88,66 +70,16 @@ const cleanStringOfMostHTML = (dirtyString: string | undefined) => {
   return DOMPurify.sanitize(dirtyString, { ALLOWED_TAGS: ["b"] });
 };
 
-const shortCutDictForTools: Record<string, string> = {
-  [AnnotationTool.MOVE.id]: "Ctrl + K, M",
-  [AnnotationTool.SKELETON.id]: "Ctrl + K, S",
-  [AnnotationTool.BRUSH.id]: "Ctrl + K, B",
-  [AnnotationTool.ERASE_BRUSH.id]: "Ctrl + K, E",
-  [AnnotationTool.TRACE.id]: "Ctrl + K, L",
-  [AnnotationTool.ERASE_TRACE.id]: "Ctrl + K, R",
-  [AnnotationTool.VOXEL_PIPETTE.id]: "Ctrl + K, P",
-  [AnnotationTool.QUICK_SELECT.id]: "Ctrl + K, Q",
-  [AnnotationTool.BOUNDING_BOX.id]: "Ctrl + K, X",
-  [AnnotationTool.PROOFREAD.id]: "Ctrl + K, O",
-};
-
 export const CommandPalette = () => {
   const dispatch = useDispatch();
 
-  const userConfig = useWkSelector((state) => state.userConfiguration);
-  const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
-  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
-
-  const restrictions = useWkSelector((state) => state.annotation.restrictions);
-  const allowUpdate = useWkSelector(mayEditAnnotation);
-  const task = useWkSelector((state) => state.task);
-  const annotationType = useWkSelector((state) => state.annotation.annotationType);
-  const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const activeUser = useWkSelector((state) => state.activeUser);
-  const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
-  const annotationOwner = useWkSelector((state) => state.annotation.owner);
+  const viewerCommands = useSyncExternalStore(subscribeToViewerCommands, getViewerCommands);
 
   const navigate = useNavigate();
   const [paletteKey, setPaletteKey] = useState(0);
 
-  const props: TracingViewMenuProps = {
-    restrictions,
-    task,
-    annotationType,
-    annotationId,
-    activeUser,
-    isAnnotationLockedByUser,
-    annotationOwner,
-  };
-
   const theme = getThemeFromUser(activeUser);
-
-  const getTabsAndSettingsMenuItems = () => {
-    if (!isInAnnotationView) return [];
-    const commands: CommandWithoutId[] = [];
-
-    (Object.keys(userConfig) as [keyof UserConfiguration]).forEach((key) => {
-      if (typeof userConfig[key] === "boolean" && key !== "renderWatermark") {
-        // removing the watermark is a paid feature
-        commands.push({
-          name: `Toggle ${getPhraseFromCamelCaseString(key)}`,
-          command: () => dispatch(updateUserSettingAction(key, !userConfig[key])),
-          color: commandEntryColor,
-        });
-      }
-    });
-    return commands;
-  };
 
   // type annotation due to the library
   const handleSelect = useCallback(async (command: Record<string, unknown>) => {
@@ -388,74 +320,26 @@ export const CommandPalette = () => {
     return commands;
   };
 
-  const getViewModeEntries = () => {
-    if (!isInAnnotationView) return [];
-    const commands = ViewModeValues.map((mode) => ({
-      name: `Switch to ${mode} mode`,
-      command: () => {
-        dispatch(setViewModeAction(mode));
-      },
-      color: commandEntryColor,
-    }));
-    commands.push({
-      name: "Reset layout",
-      command: () => layoutEmitter.emit(LayoutEvents.resetLayout),
-      color: commandEntryColor,
-    });
-    return commands;
-  };
-
-  const getToolEntries = useCallback(() => {
-    if (!isInAnnotationView) return [];
-    const commands: CommandWithoutId[] = [];
-    let availableTools = Object.values(AnnotationTool);
-    if (isViewMode || !allowUpdate) {
-      availableTools = Toolkits.READ_ONLY_TOOLS;
-    }
-    availableTools.forEach((tool) => {
-      commands.push({
-        name: `Switch to ${tool.readableName}`,
-        command: () => dispatch(setToolAction(tool)),
-        shortcut: shortCutDictForTools[tool.id] || "",
-        color: commandEntryColor,
-      });
-    });
-    return commands;
-  }, [isInAnnotationView, isViewMode, allowUpdate, dispatch]);
-
-  const tracingMenuItems = useTracingViewMenuItems(props, null);
-
-  const menuActions = useMemo(() => {
-    if (!isInAnnotationView) return [];
-    if (isViewMode) {
-      return viewDatasetMenu;
-    }
-    return tracingMenuItems;
-  }, [isInAnnotationView, isViewMode, tracingMenuItems]);
-
   const allStaticCommands = [
     viewDatasetsItem,
     viewAnnotationsItem,
     switchOrganizationItem,
     ...getNavigationEntries(),
     ...getThemeEntries(),
-    ...getToolEntries(),
-    ...getViewModeEntries(),
-    ...mapMenuActionsToCommands(menuActions),
-    ...getTabsAndSettingsMenuItems(),
+    ...viewerCommands,
     ...getSuperUserItems(),
     ...getAuthCommands(),
   ];
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
 
-  // Rerun when inputs that the static commands close over change. userConfig is included so
-  // the "Toggle …" commands capture the current boolean value and actually flip it instead of
-  // repeatedly applying the value that was current when the palette mounted.
+  // Rerun when the viewer's commands change. For example, the "Toggle …" commands close over the
+  // current user configuration. Without updating them, they would repeatedly apply the value that
+  // was current when the palette mounted instead of actually flipping it.
   // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
   useEffect(() => {
     setCommands(allStaticCommands);
-  }, [allowUpdate, userConfig]);
+  }, [viewerCommands]);
 
   const closePalette = () => {
     setPaletteKey((prevKey) => prevKey + 1);

@@ -22,7 +22,7 @@ import {
   resetContourAction,
   setActiveCellAction,
 } from "viewer/model/actions/volumetracing_actions";
-import UiReducer from "viewer/model/reducers/ui_reducer";
+import ToolReducer from "viewer/model/reducers/tool_reducer";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import type { StoreAnnotation, VolumeTracing, WebknossosState } from "viewer/store";
 import { describe, expect, it } from "vitest";
@@ -162,7 +162,7 @@ describe("VolumeTracing", () => {
   it("should set trace/view tool", () => {
     const setTool = setToolAction(AnnotationTool.TRACE);
     // Change tool to Trace
-    const newState = UiReducer(initialState, setTool);
+    const newState = ToolReducer(initialState, setTool);
     expect(newState).not.toBe(initialState);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.TRACE);
   });
@@ -180,7 +180,7 @@ describe("VolumeTracing", () => {
     expect(getActiveMagIndexForLayer(alteredState, VOLUME_TRACING_ID) > 1).toBe(true);
 
     // Try to change tool to Trace
-    const newState = UiReducer(alteredState, setTool);
+    const newState = ToolReducer(alteredState, setTool);
     expect(alteredState).toBe(newState);
 
     // Tool should not have changed
@@ -191,33 +191,33 @@ describe("VolumeTracing", () => {
     const cycleTool = cycleToolAction();
 
     // Cycle tool to Brush
-    let newState = UiReducer(initialState, cycleTool);
+    let newState = ToolReducer(initialState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.BRUSH);
 
     // Cycle tool to Trace
-    newState = UiReducer(newState, cycleTool);
+    newState = ToolReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.TRACE);
 
     // Cycle tool to the erase tools
-    newState = UiReducer(newState, cycleTool);
+    newState = ToolReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.ERASE_BRUSH);
-    newState = UiReducer(newState, cycleTool);
+    newState = ToolReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.ERASE_TRACE);
-    newState = UiReducer(newState, cycleTool);
+    newState = ToolReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.FILL_CELL);
-    newState = UiReducer(newState, cycleTool);
+    newState = ToolReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.VOXEL_PIPETTE);
-    newState = UiReducer(newState, cycleTool);
+    newState = ToolReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.QUICK_SELECT);
-    newState = UiReducer(newState, cycleTool);
+    newState = ToolReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.BOUNDING_BOX);
-    newState = UiReducer(newState, cycleTool);
+    newState = ToolReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.LINE_MEASUREMENT);
-    newState = UiReducer(newState, cycleTool);
+    newState = ToolReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.AREA_MEASUREMENT);
 
     // Cycle tool back to MOVE
-    newState = UiReducer(newState, cycleTool);
+    newState = ToolReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.MOVE);
   });
 

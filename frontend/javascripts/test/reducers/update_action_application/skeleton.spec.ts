@@ -44,13 +44,14 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
+import { combinedReducer } from "viewer/model/reducers/root_reducer";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import {
   type ApplicableSkeletonServerUpdateAction,
   ApplicableSkeletonUpdateActionNamesHelperNamesList,
   type UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import { combinedReducer, type WebknossosState } from "viewer/store";
+import type { WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { afterAll, describe, expect, it, test } from "vitest";
 

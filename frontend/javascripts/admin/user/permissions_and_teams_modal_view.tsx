@@ -40,7 +40,6 @@ type TeamRoleComponentProps = {
   setSelectedPermission: (permission: PERMISSIONS) => void;
   userIsAdmin: boolean;
   onlyEditingSingleUser: boolean;
-  renderSubtitlesWithDivider?: boolean;
 };
 
 type TeamRoleModalProps = {
@@ -79,7 +78,6 @@ export function PermissionsAndTeamsComponent({
   setSelectedPermission,
   userIsAdmin,
   onlyEditingSingleUser,
-  renderSubtitlesWithDivider = false,
 }: TeamRoleComponentProps) {
   const teams = useFetch(getEditableTeams, [], []);
 
@@ -109,7 +107,6 @@ export function PermissionsAndTeamsComponent({
   function getTeamComponent(team: APITeam, isDisabled: boolean) {
     return (
       <Checkbox
-        value={team.name}
         checked={has(selectedTeams, team.name)}
         disabled={isDisabled}
         onChange={(event) => {
@@ -153,14 +150,12 @@ export function PermissionsAndTeamsComponent({
   }
 
   function renderSubtitles(title: React.ReactNode) {
-    return renderSubtitlesWithDivider ? (
+    return (
       <DividerWithSubtitle>
         <Typography.Title level={5}>
           <b>{title}</b>
         </Typography.Title>
       </DividerWithSubtitle>
-    ) : (
-      <Typography.Title level={4}>{title}</Typography.Title>
     );
   }
 
@@ -381,6 +376,7 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
 
   return (
     <Modal
+      title="Teams & Permissions"
       mask={{ closable: false }}
       closable={false}
       open={isOpen}

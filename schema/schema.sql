@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(182);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(184);
 COMMIT TRANSACTION;
 
 
@@ -133,6 +133,7 @@ CREATE TABLE webknossos.datasets(
   rootPath TEXT,
   rootRealPath TEXT,
   mirrorPath TEXT,
+  thumbnailCacheVersion INT NOT NULL DEFAULT 0,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (directoryName, _organization),
@@ -621,12 +622,14 @@ CREATE TABLE webknossos.jobs(
   _voxelytics_workflowHash TEXT,
   latestRunId TEXT,
   returnValue Text,
+  latestRunErrorDetails JSONB,
   retriedBySuperUser BOOLEAN NOT NULL DEFAULT FALSE,
   started TIMESTAMPTZ,
   ended TIMESTAMPTZ,
   lastRetry TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  CONSTRAINT latestRunErrorDetailsIsJsonObject CHECK(jsonb_typeof(latestRunErrorDetails) = 'object')
 );
 
 

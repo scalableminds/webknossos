@@ -13,6 +13,7 @@ import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeHash } from "libs/utils";
 import { useState } from "react";
+import { ModalWidth } from "theme";
 import type { APIDataStore } from "types/api_types";
 import type {
   DataLayer,
@@ -222,7 +223,7 @@ function DatasetAddRemoteView(props: Props) {
           <DatastoreFormItem datastores={uploadableDatastores} hidden={hasOnlyOneDatastoreOrNone} />
           <Modal
             title="Add Layer"
-            width={800}
+            width={ModalWidth.Large}
             open={showAddLayerModal}
             footer={null}
             onCancel={() => setShowAddLayerModal(false)}

@@ -5,7 +5,7 @@ import { Button, Card, Col, Row, Typography } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import messages from "messages";
 import type * as React from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIOrganization } from "types/api_types";
 
 type Props = {

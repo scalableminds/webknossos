@@ -4,14 +4,13 @@ import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.image.{Color, JPEGWriter}
+import com.scalableminds.util.image.Color
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
-import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
 import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceDataRequest,
@@ -28,7 +27,7 @@ import play.api.libs.json.Json
 import play.api.mvc.*
 
 import scala.concurrent.duration.DurationInt
-import java.io.ByteArrayOutputStream
+import java.awt.image.BufferedImage
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
@@ -40,7 +39,8 @@ class BinaryDataController @Inject() (
     mappingService: MappingService,
     slackNotificationService: DSSlackNotificationService,
     adHocMeshServiceHolder: AdHocMeshServiceHolder,
-    findDataService: FindDataService
+    findDataService: FindDataService,
+    thumbnailService: DSThumbnailService
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MissingBucketHeaders {
@@ -149,7 +149,7 @@ class BinaryDataController @Inject() (
     }
   }
 
-  def thumbnailJpeg(
+  def standaloneLayerThumbnail(
       datasetId: ObjectId,
       dataLayerName: String,
       x: Int,
@@ -166,6 +166,7 @@ class BinaryDataController @Inject() (
   ): Action[RawBuffer] = Action.fox(parse.raw) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
+        _ <- thumbnailService.validateThumbnailDimensions(width, height)
         (dataSource, dataLayer) <- datasetCache.getWithLayer(
           datasetId,
           dataLayerName
@@ -180,30 +181,86 @@ class BinaryDataController @Inject() (
         )
         (data, _, _) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
         intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
-        layerColor = color.flatMap(Color.fromHTML)
-        params = ImageCreatorParameters(
+        thumbnailBufferedImage <- thumbnailService.renderLayerThumbnail(
+          data,
           dataLayer.elementClass,
-          useHalfBytes = false,
-          slideWidth = width,
-          slideHeight = height,
-          imagesPerRow = 1,
-          blackAndWhite = false,
-          intensityRange = intensityRange,
+          width,
+          height,
+          intensityRange,
           isSegmentation = dataLayer.category == LayerCategory.segmentation,
-          color = layerColor,
+          color = color.flatMap(Color.fromHTML),
           invertColor = invertColor
         )
-        dataWithFallback =
-          if (data.length == 0)
-            new Array[Byte](width * height * dataLayer.bytesPerElement)
-          else data
-        spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params).toFox ?~> Msg.Image.createFailed
-        firstSheet <- spriteSheet.pages.headOption.toFox ?~> Msg.Image.pageFailed
-        outputStream = new ByteArrayOutputStream()
-        _ = new JPEGWriter().writeToOutputStream(firstSheet.image)(outputStream)
-      } yield Ok(outputStream.toByteArray).as(jpegMimeType)
+        thumbnailJpegBytes <- thumbnailService.bufferedImageToJpeg(thumbnailBufferedImage).toFox
+      } yield Ok(thumbnailJpegBytes).as(jpegMimeType)
     }
   }
+
+  private def datasetThumbnailLayerImage(
+      datasetId: ObjectId,
+      layerParams: DatasetThumbnailLayerParameters,
+      outputWidth: Int,
+      outputHeight: Int
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Boolean, BufferedImage)] =
+    for {
+      (dataSource, dataLayer) <- datasetCache.getWithLayer(
+        datasetId,
+        layerParams.dataLayerName
+      ) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
+      magParsed <- Vec3Int.fromMagLiteral(layerParams.mag).toFox ?~> Msg.Dataset.Mag.invalid(layerParams.mag)
+      dataRequest = DataRequest(
+        VoxelPosition(layerParams.x, layerParams.y, layerParams.z, magParsed),
+        layerParams.width,
+        layerParams.height,
+        depth = 1,
+        DataServiceRequestSettings(appliedAgglomerate = layerParams.mappingName)
+      )
+      (data, _, _) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
+      intensityRange: Option[(Double, Double)] = layerParams.intensityMin.flatMap(min =>
+        layerParams.intensityMax.map(max => (min, max))
+      )
+      isSegmentation = dataLayer.category == LayerCategory.segmentation
+      image <- thumbnailService.renderLayerThumbnail(
+        data,
+        dataLayer.elementClass,
+        layerParams.width,
+        layerParams.height,
+        intensityRange,
+        isSegmentation,
+        layerParams.color.flatMap(Color.fromHTML),
+        layerParams.invertColor,
+        outputWidth = Some(outputWidth),
+        outputHeight = Some(outputHeight),
+        preserveAlpha = true,
+        opacity = layerParams.opacity
+      )
+    } yield (isSegmentation, image)
+
+  def datasetThumbnail(datasetId: ObjectId): Action[DatasetThumbnailRequest] =
+    Action.fox(validateJson[DatasetThumbnailRequest]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+        for {
+          _ <- thumbnailService.validateThumbnailDimensions(request.body.width, request.body.height)
+          _ <- Fox.serialCombined(request.body.layers)(layerParams =>
+            thumbnailService.validateThumbnailDimensions(layerParams.width, layerParams.height)
+          )
+          layerResults <- Fox.serialCombined(request.body.layers)(layerParams =>
+            datasetThumbnailLayerImage(datasetId, layerParams, request.body.width, request.body.height)
+          )
+          colorImages = layerResults.collect { case (false, image) => image }
+          segmentationImages = layerResults.collect { case (true, image) => image }
+          datasetThumbnailJpeg <- tryo(
+            thumbnailService.blendLayersToJpeg(
+              colorImages,
+              segmentationImages,
+              request.body.blendMode,
+              request.body.width,
+              request.body.height
+            )
+          ).toFox
+        } yield Ok(datasetThumbnailJpeg).as(jpegMimeType)
+      }
+    }
 
   def mappingJson(
       datasetId: ObjectId,

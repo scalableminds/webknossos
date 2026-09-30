@@ -21,7 +21,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { useCallback, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { ColorWKGold } from "theme";
 import { type AiModel, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";

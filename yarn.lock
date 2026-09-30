@@ -5595,15 +5595,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dompurify@npm:^3.3.0":
-  version: 3.3.0
-  resolution: "dompurify@npm:3.3.0"
+"dompurify@npm:^3.4.16":
+  version: 3.4.16
+  resolution: "dompurify@npm:3.4.16"
   dependencies:
     "@types/trusted-types": "npm:^2.0.7"
   dependenciesMeta:
     "@types/trusted-types":
       optional: true
-  checksum: 10c0/66b1787b0bc8250d8f58e13284cf7f5f6bb400a0a55515e7a2a030316a4bb0d8306fdb669c17ed86ed58ff7e53c62b5da4488c2f261d11c58870fe01b8fcc486
+  checksum: 10c0/65a901c6b6d489d3e898f67223d81dac66d613cda48f5785f0ed52a4ae320c4b2745490a58c14161e29f0273080fea0a0cb234a9ef892650e1a9b2a7befa07a5
   languageName: node
   linkType: hard
 
@@ -13276,7 +13276,7 @@ __metadata:
     dice-coefficient: "npm:^2.1.0"
     distance-transform: "https://github.com/scalableminds/distance-transform"
     documentation: "npm:^14.0.2"
-    dompurify: "npm:^3.3.0"
+    dompurify: "npm:^3.4.16"
     dpdm: "npm:^3.14.0"
     file-saver: "npm:^2.0.1"
     flexlayout-react: "npm:0.8.19"

@@ -82,7 +82,14 @@ export const AiModelSelector: React.FC = () => {
   );
 
   const pretrainedModels = useMemo(() => allModels.filter((m) => m.isPretrained), [allModels]);
-  const customModels = useMemo(() => allModels.filter((m) => !m.isPretrained), [allModels]);
+  // Models whose training is still running or failed cannot be used for inference yet.
+  const customModels = useMemo(
+    () =>
+      allModels.filter(
+        (m) => !m.isPretrained && (m.trainingJob == null || m.trainingJob.state === "SUCCESS"),
+      ),
+    [allModels],
+  );
 
   const onSelectModel = (model: AiModel) => {
     if (!model.category) return;
@@ -103,7 +110,7 @@ export const AiModelSelector: React.FC = () => {
   const noCustomModelsText =
     searchTerm.length > 0
       ? "No models match your search."
-      : "You don't have any custom models yet. Training custom models on your data is coming soon.";
+      : "You don't have any custom models yet. Use the Train Segmentation Model tab to train a model on your data.";
 
   return (
     <JobSection

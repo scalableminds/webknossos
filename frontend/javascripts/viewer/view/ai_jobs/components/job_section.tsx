@@ -1,5 +1,5 @@
 import { CheckOutlined } from "@ant-design/icons";
-import { Card, Flex, Typography, theme } from "antd";
+import { Avatar, Card, Flex, Typography, theme } from "antd";
 import type React from "react";
 import { useState } from "react";
 import type { StepStatus } from "./job_requirements";
@@ -16,8 +16,12 @@ function StepBadge({ step, status }: { step: number; status: StepStatus }) {
   }
 
   const statusStyles: Record<StepStatus, React.CSSProperties> = {
-    pending: { border: `1px solid ${cssVar.colorPrimary}`, color: cssVar.colorPrimary },
-    done: { background: cssVar.colorPrimary, color: cssVar.colorTextLightSolid },
+    pending: {
+      background: "transparent",
+      border: `1px solid ${cssVar.colorPrimary}`,
+      color: cssVar.colorPrimary,
+    },
+    done: { background: cssVar.colorPrimary },
     error: {
       background: cssVar.colorErrorBg,
       border: `1px solid ${cssVar.colorError}`,
@@ -26,26 +30,18 @@ function StepBadge({ step, status }: { step: number; status: StepStatus }) {
   };
 
   return (
-    <Flex
-      align="center"
-      justify="center"
+    <Avatar
+      size="small"
       className={shouldAnimate ? "ai-job-step-badge-done" : undefined}
-      style={{
-        width: 24,
-        height: 24,
-        flex: "none",
-        borderRadius: "50%",
-        fontSize: cssVar.fontSizeSM,
-        fontWeight: 600,
-        ...statusStyles[status],
-      }}
+      icon={
+        status === "done" ? (
+          <CheckOutlined className={shouldAnimate ? "ai-job-step-check" : undefined} />
+        ) : undefined
+      }
+      style={{ flex: "none", fontWeight: 600, ...statusStyles[status] }}
     >
-      {status === "done" ? (
-        <CheckOutlined className={shouldAnimate ? "ai-job-step-check" : undefined} />
-      ) : (
-        step
-      )}
-    </Flex>
+      {status === "done" ? undefined : step}
+    </Avatar>
   );
 }
 

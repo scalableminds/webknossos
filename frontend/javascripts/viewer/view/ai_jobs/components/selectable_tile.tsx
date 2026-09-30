@@ -96,7 +96,7 @@ export function SelectableTile({
   const tileStyle = useTileStyle(selectionState);
   return (
     <Card
-      className="ai-job-tile"
+      hoverable={!isDisabled}
       style={tileStyle}
       styles={{ body: { padding: "12px 16px 16px" } }}
       cover={
@@ -158,7 +158,7 @@ export function SelectableRow({
   const tileStyle = useTileStyle(selectionState);
   return (
     <Card
-      className="ai-job-tile"
+      hoverable
       style={tileStyle}
       styles={{ body: { padding: "12px 16px" } }}
       {...getSelectionHandlers(selectionState, onSelect)}

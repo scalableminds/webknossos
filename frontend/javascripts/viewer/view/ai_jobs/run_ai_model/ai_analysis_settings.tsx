@@ -8,6 +8,7 @@ import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { useEffect } from "react";
 import { type APIDataLayer, APIJobCommand } from "types/api_types";
+import type { Vector3 } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import type { UserBoundingBox } from "viewer/store";
 import {
@@ -174,12 +175,19 @@ export const AiAnalysisSettings: React.FC = () => {
                 if (value && selectedLayer && selectedJobType) {
                   const boundingBox = computeArrayFromBoundingBox(value.boundingBox);
                   const aiModelId = selectedModel?.id;
-                  const mag = await getBestFittingMagComparedToTrainingDS(
-                    selectedLayer,
-                    dataset.dataSource.scale,
-                    selectedJobType,
-                    aiModelId,
-                  );
+                  let mag: Vector3;
+                  try {
+                    mag = await getBestFittingMagComparedToTrainingDS(
+                      selectedLayer,
+                      dataset.dataSource.scale,
+                      selectedJobType,
+                      aiModelId,
+                    );
+                  } catch {
+                    return Promise.reject(
+                      new Error("The selected model cannot be used. Please choose another model."),
+                    );
+                  }
                   if (
                     isDatasetOrBoundingBoxTooSmall(boundingBox, mag, selectedLayer, selectedJobType)
                   ) {

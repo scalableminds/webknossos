@@ -25,9 +25,10 @@ import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 import {
-  blockingRequirement,
+  collectRequirements,
+  type FormFieldErrors,
+  hasFormFieldErrors,
   type JobRequirement,
-  pendingRequirement,
   type StepStatus,
 } from "viewer/view/ai_jobs/components/job_requirements";
 
@@ -59,7 +60,7 @@ interface RunAiModelJobContextType {
   setIsEvaluationActive: (isActive: boolean) => void;
   setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
   setCustomConfiguration: (config: KeyValuePairs) => void;
-  setSettingsFormErrors: (errors: string[]) => void;
+  setSettingsFormErrors: (errors: FormFieldErrors) => void;
   handleStartAnalysis: () => void;
   areParametersValid: boolean;
   requirements: JobRequirement[];
@@ -99,7 +100,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       sparseTubeThresholdInNm: 1000,
       minimumMergerPathLengthInNm: 800,
     });
-  const [settingsFormErrors, setSettingsFormErrors] = useState<string[]>([]);
+  const [settingsFormErrors, setSettingsFormErrors] = useState<FormFieldErrors>({});
 
   const dispatch = useDispatch();
 
@@ -135,23 +136,40 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
 
   const isSettingsStepComplete =
     Boolean(newDatasetName && selectedLayer && selectedBoundingBox) &&
-    settingsFormErrors.length === 0;
+    !hasFormFieldErrors(settingsFormErrors);
 
-  const requirements = useMemo(() => {
-    const missing: JobRequirement[] = [];
-    if (!selectedModel || !selectedJobType) missing.push(pendingRequirement("Select a model"));
-    if (!newDatasetName) missing.push(pendingRequirement("Enter a new dataset name"));
-    if (!selectedLayer) missing.push(pendingRequirement("Select an image data layer"));
-    if (!selectedBoundingBox) missing.push(pendingRequirement("Select a bounding box"));
-    return missing.concat(settingsFormErrors.map(blockingRequirement));
-  }, [
-    selectedModel,
-    selectedJobType,
-    newDatasetName,
-    selectedLayer,
-    selectedBoundingBox,
-    settingsFormErrors,
-  ]);
+  const requirements = useMemo(
+    () =>
+      collectRequirements(
+        [
+          { label: "Select a model", isMissing: !selectedModel || !selectedJobType },
+          {
+            label: "Enter a new dataset name",
+            isMissing: !newDatasetName,
+            field: "newDatasetName",
+          },
+          {
+            label: "Select an image data layer",
+            isMissing: !selectedLayer,
+            field: "selectedLayer",
+          },
+          {
+            label: "Select a bounding box",
+            isMissing: !selectedBoundingBox,
+            field: "selectedBoundingBox",
+          },
+        ],
+        settingsFormErrors,
+      ),
+    [
+      selectedModel,
+      selectedJobType,
+      newDatasetName,
+      selectedLayer,
+      selectedBoundingBox,
+      settingsFormErrors,
+    ],
+  );
 
   const areParametersValid = requirements.length === 0;
   const stepStatuses = {

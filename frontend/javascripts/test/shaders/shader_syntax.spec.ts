@@ -334,7 +334,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
       expect(warningEmittedCount).toBe(0);
     });
 
-    it<TestContext>("Ortho Mode (many declared layers, fewer than maxActiveColorLayers)", ({
+    it<TestContext>("Ortho Mode (more declared layers than maxActiveColorLayers)", ({
       warningEmittedCount,
     }) => {
       const colorLayerNames = Array.from({ length: 20 }, (_, i) => `color_layer_${i}`);
@@ -371,7 +371,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
       expect(warningEmittedCount).toBe(0);
     });
 
-    it<TestContext>("Ortho Mode (vertexBucketAlignmentLayerCap smaller than 1, worst-case hardware)", ({
+    it<TestContext>("Ortho Mode (vertexBucketAlignmentLayerCap of 1, more layers than the cap)", ({
       warningEmittedCount,
     }) => {
       // The smallest cap (for GPUs with the WebGL2 minimum of varyings), with

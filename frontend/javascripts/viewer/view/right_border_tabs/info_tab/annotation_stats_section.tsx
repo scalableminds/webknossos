@@ -1,5 +1,5 @@
 import Icon from "@ant-design/icons";
-import IconBoundingBox from "@images/icons/icon-bounding-box.svg?react";
+import IconBoundingBox from "@images/icons/icon-bounding-box-thin.svg?react";
 import IconSegments from "@images/icons/icon-segments.svg?react";
 import IconSkeletons from "@images/icons/icon-skeletons.svg?react";
 import type { EmptyObject } from "antd/es/_util/type";
@@ -9,12 +9,12 @@ import { useWkSelector } from "libs/react_hooks";
 import memoizeOne from "memoize-one";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import {
+  getBoundingBoxCountWithPrecedence,
   getSkeletonStats,
   getStats,
   getVolumeStats,
   type TracingStats,
 } from "viewer/model/accessors/annotation_accessor";
-import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { InfoTabRow, InfoTabSection } from "./info_tab_layout";
 
 /**
@@ -25,19 +25,18 @@ import { InfoTabRow, InfoTabSection } from "./info_tab_layout";
 export function AnnotationStats({
   stats,
   withMargin,
-  boundingBoxCount,
 }: {
   stats: TracingStats | EmptyObject;
   withMargin?: boolean | null | undefined;
-  boundingBoxCount?: number;
 }) {
-  if ((!stats || Object.keys(stats).length === 0) && !boundingBoxCount) return null;
+  if (!stats || Object.keys(stats).length === 0) return null;
   const useStyleWithMargin = withMargin != null ? withMargin : true;
   const styleWithLargeMarginBottom = { marginBottom: 14 };
   const styleWithSmallMargin = { margin: 2 };
   const skeletonStats = getSkeletonStats(stats);
   const volumeStats = getVolumeStats(stats);
   const totalSegmentCount = volumeStats.reduce((sum, [_, volume]) => sum + volume.segmentCount, 0);
+  const boundingBoxCount = getBoundingBoxCountWithPrecedence(stats);
 
   return (
     <div
@@ -70,7 +69,7 @@ export function AnnotationStats({
               <td>{formatNumber(totalSegmentCount)}</td>
             </FastTooltip>
           ) : null}
-          {boundingBoxCount ? (
+          {boundingBoxCount != null ? (
             <FastTooltip
               placement="left"
               html={getBoundingBoxStatsTooltip(boundingBoxCount)}
@@ -117,13 +116,11 @@ const cachedGetStats = reuseInstanceOnEquality(memoizeOne(getStats));
 /** One fact per row — the counts are short values, so they share the capped value track. */
 export function AnnotationStatisticsSection() {
   const stats = useWkSelector((state) => cachedGetStats(state.annotation));
-  const boundingBoxCount = useWkSelector(
-    (state) => maybeGetSomeTracing(state.annotation)?.userBoundingBoxes.length ?? 0,
-  );
 
   const skeletonStats = getSkeletonStats(stats);
   const volumeStats = getVolumeStats(stats);
   const totalSegmentCount = volumeStats.reduce((sum, [_, volume]) => sum + volume.segmentCount, 0);
+  const boundingBoxCount = getBoundingBoxCountWithPrecedence(stats) ?? 0;
 
   return (
     <InfoTabSection label="Statistics">

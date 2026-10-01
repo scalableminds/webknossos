@@ -1,7 +1,7 @@
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/rest_api";
 import Ansi from "ansi-to-react";
-import { Button, Flex, message, Select, Switch } from "antd";
+import { App, Button, Flex, Select, Switch } from "antd";
 import chalk from "chalk";
 import classnames from "classnames";
 import { usePolling } from "libs/react_hooks";
@@ -66,6 +66,7 @@ export default function LogTab({
   beginTime: Date | null;
   endTime: Date | null;
 }) {
+  const { message } = App.useApp();
   const [showTimestamps, setShowTimestamps] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

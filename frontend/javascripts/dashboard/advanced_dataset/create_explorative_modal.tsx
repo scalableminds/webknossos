@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { getDataset } from "admin/rest_api";
+import { getImportedDataset } from "admin/rest_api";
 import { Button, Modal, Radio, Spin, Tooltip, Typography } from "antd";
 import { Slider } from "components/slider";
 import { useFetch } from "libs/react_helpers";
@@ -166,7 +166,7 @@ export function RestrictMagnificationSlider({
 }
 
 function CreateExplorativeModal({ datasetId, onClose }: Props) {
-  const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
+  const dataset = useFetch(() => getImportedDataset(datasetId), null, [datasetId]);
   const [annotationType, setAnnotationType] = useState("hybrid");
   const [userDefinedMagIndices, setUserDefinedMagIndices] = useState([0, 10000]);
   const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState<

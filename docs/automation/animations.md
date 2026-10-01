@@ -54,5 +54,6 @@ Controls the length of the rendered video. Longer durations result in a slower, 
 
 ### Layer & Bounding Box
 
-- **Layer:** Select the data layer to be used for the animation.
+- **Color layer:** Select the color layer to be used for the animation.
+- **Segmentation layer (optional):** Select a dataset segmentation layer to include alongside the color layer. Clear the selection to omit segmentation. In annotations, the dataset's fallback segmentation is used; volume annotation edits are not included.
 - **Bounding Box:** Choose the bounding box for the animation. By default, the entire layer is selected. You can create custom bounding boxes using the [bounding box tool](../ui/toolbar.md#measurement-and-analysis).

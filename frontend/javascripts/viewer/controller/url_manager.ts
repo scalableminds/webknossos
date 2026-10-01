@@ -149,7 +149,7 @@ class UrlManager {
     // don't use location.hash = ""; since it refreshes the page
     if (!keepUrlState) {
       window.history.replaceState(
-        {},
+        window.history.state,
         "",
         location.pathname + (keepUrlSearch ? location.search : ""),
       );

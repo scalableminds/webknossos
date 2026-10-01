@@ -8,8 +8,8 @@ import {
   updateProject,
 } from "admin/rest_api";
 import { Button, Checkbox, Col, Form, Input, InputNumber, Row, Select, theme } from "antd";
-import { useWkSelector } from "libs/react_hooks";
-import { useEffect, useState } from "react";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import type { APITeam, APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -27,11 +27,6 @@ function ProjectCreateView() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
-
-  useEffect(() => {
-    fetchData();
-    applyDefaults();
-  }, []);
 
   async function fetchData() {
     setIsFetchingData(true);
@@ -54,6 +49,11 @@ function ProjectCreateView() {
     });
     form.setFieldsValue(defaultFormValues);
   }
+
+  useEffectOnlyOnce(() => {
+    fetchData();
+    applyDefaults();
+  });
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const handleSubmit = async (formValues) => {

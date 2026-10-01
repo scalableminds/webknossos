@@ -8,7 +8,6 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
-import scalapb.GeneratedMessageCompanion
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -24,10 +23,6 @@ class TemporaryTracingService @Inject() (
     segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
     temporaryTracingIdStore: TracingStoreRedisStore
 )(implicit ec: ExecutionContext) {
-
-  implicit def skeletonTracingCompanion: GeneratedMessageCompanion[SkeletonTracing] = SkeletonTracing
-  implicit def volumeTracingCompanion: GeneratedMessageCompanion[VolumeTracing] = VolumeTracing
-  implicit def annotationProtoCompanion: GeneratedMessageCompanion[AnnotationProto] = AnnotationProto
 
   // this should be longer than maxCacheTime in webknossos/AnnotationStore
   // so that the references saved there remain valid throughout their life

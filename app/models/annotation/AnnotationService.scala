@@ -43,7 +43,6 @@ import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.WkConf
@@ -100,8 +99,6 @@ class AnnotationService @Inject() (
     extends ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {
-
-  implicit val actorSystem: ActorSystem = ActorSystem()
 
   val DefaultAnnotationListLimit = 1000
 

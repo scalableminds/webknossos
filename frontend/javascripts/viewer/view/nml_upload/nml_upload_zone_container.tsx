@@ -97,6 +97,7 @@ export default function NmlUploadZoneContainer({
 
   const importTracingFiles = useCallback(async () => {
     setIsImporting(true);
+    // No try & finally block as react compiler currently can't handle this.
     await onImport(files, {
       createGroupForEachFile,
       targetGroupId,

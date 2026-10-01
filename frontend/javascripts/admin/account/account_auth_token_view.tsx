@@ -37,6 +37,7 @@ function AccountAuthTokenView() {
 
   const handleRevokeToken = async (): Promise<void> => {
     setIsLoading(true);
+    // Needed as react compiler currently can't handle try & finally blocks.
     await revokeAndRefetchToken().finally(() => setIsLoading(false));
   };
 

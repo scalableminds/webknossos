@@ -178,7 +178,7 @@ function TaskCreateBulkView() {
         warnings: uniq(warnings),
       });
     };
-
+    // No try & finally as react compiler currently can't handle this.
     await uploadTasksInBatches().finally(() => setIsUploading(false));
   }
 

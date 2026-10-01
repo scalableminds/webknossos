@@ -22,6 +22,8 @@ export type AsyncButtonProps = Omit<ButtonProps, "onClick"> & {
 /**
  * Awaits asyncFn and calls onSettled afterwards, also when asyncFn fails.
  * Errors of asyncFn are passed on to the caller.
+ * Necessary, as originalOnClick might throw synchronous (as it is not an async function).
+ * A normal promise.finally construct would not run the finally block in that case.
  */
 async function awaitAndThen(asyncFn: () => Promise<unknown>, onSettled: () => void) {
   try {

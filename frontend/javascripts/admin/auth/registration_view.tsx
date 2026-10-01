@@ -17,6 +17,7 @@ function RegistrationViewGeneric() {
 
   useEffect(() => {
     setIsLoading(true);
+    // No try & finally as react compiler currently can't handle this.
     getDefaultOrganization()
       .then(setOrganization)
       .finally(() => setIsLoading(false));

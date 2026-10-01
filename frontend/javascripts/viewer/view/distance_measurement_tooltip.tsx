@@ -8,7 +8,7 @@ import {
   formatNumberToLength,
 } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { shallowEqual, useDispatch } from "react-redux";
 import type { VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
@@ -21,7 +21,11 @@ import {
 } from "viewer/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import { getTooltipPosition, isPositionStillInPlane } from "./viewport_tooltip_helpers";
+import {
+  getTooltipPosition,
+  isPositionStillInPlane,
+  useTooltipWidth,
+} from "./viewport_tooltip_helpers";
 
 function DistanceEntry({ distance }: { distance: string }) {
   return (
@@ -76,7 +80,7 @@ export default function DistanceMeasurementTooltip() {
   const planeRatio = useWkSelector((state) =>
     getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
   );
-  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [tooltipRef, tooltipWidth] = useTooltipWidth();
   const dispatch = useDispatch();
   const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
   const activeGeometry =
@@ -130,7 +134,12 @@ export default function DistanceMeasurementTooltip() {
     return null;
   }
 
-  const { left, top } = getTooltipPosition(isMeasuring, tooltipRef, viewportRect, tooltipPosition);
+  const { left, top } = getTooltipPosition(
+    isMeasuring,
+    tooltipWidth,
+    viewportRect,
+    tooltipPosition,
+  );
 
   return (
     <div

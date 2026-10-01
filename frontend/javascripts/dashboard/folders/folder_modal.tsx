@@ -7,7 +7,7 @@ import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import { useFolderQuery } from "dashboard/dataset/queries";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Shortcut from "libs/shortcut_component";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 
 import type { APITeam } from "types/api_types";
 
@@ -27,14 +27,11 @@ function EditFolderModalContent({ folderId, onClose }: { folderId: string; onClo
   const { data: folder, isFetching } = useFolderQuery(folderId);
   const [form] = Form.useForm();
   const context = useDatasetCollectionContext();
-  const inputElement = useRef<InputRef>(null);
+  const [inputElement, setInputElement] = useState<InputRef | null>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: This is an intentional side effect to focus the input element.
   useEffect(() => {
-    if (inputElement.current) {
-      inputElement.current.focus();
-    }
-  }, [inputElement.current, isFetching]);
+    inputElement?.focus();
+  }, [inputElement]);
 
   const onSave = async () => {
     const name = form.getFieldValue("name");
@@ -66,7 +63,7 @@ function EditFolderModalContent({ folderId, onClose }: { folderId: string; onClo
           initialValues={{ name: folder.name, allowedTeams: folder.allowedTeams }}
         >
           <FormItemWithInfo name="name" label="Name" info="Name of the folder">
-            <Input value={folder.name} ref={inputElement} />
+            <Input value={folder.name} ref={setInputElement} />
           </FormItemWithInfo>
           <FormItemWithInfo
             name="allowedTeams"
@@ -97,15 +94,14 @@ function CreateFolderModalContent({
 }) {
   const [form] = Form.useForm();
   const context = useDatasetCollectionContext();
-  const inputElement = useRef<InputRef>(null);
+  const [inputElement, setInputElement] = useState<InputRef | null>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: This is an intentional side effect to focus and select the input element.
   useEffect(() => {
-    if (inputElement.current) {
-      inputElement.current.focus();
-      inputElement.current.select();
+    if (inputElement) {
+      inputElement.focus();
+      inputElement.select();
     }
-  }, [inputElement.current]);
+  }, [inputElement]);
 
   const onSave = async () => {
     const name = form.getFieldValue("name");
@@ -140,7 +136,7 @@ function CreateFolderModalContent({
           initialValues={{ name: "New folder", allowedTeams: [] }}
         >
           <FormItemWithInfo name="name" label="Name" info="Name of the folder">
-            <Input ref={inputElement} />
+            <Input ref={setInputElement} />
           </FormItemWithInfo>
           <FormItemWithInfo
             name="allowedTeams"

@@ -20,6 +20,18 @@ export type AsyncButtonProps = Omit<ButtonProps, "onClick"> & {
 };
 
 /**
+ * Awaits asyncFn and calls onSettled afterwards, also when asyncFn fails.
+ * Errors of asyncFn are passed on to the caller.
+ */
+async function awaitAndThen(asyncFn: () => Promise<unknown>, onSettled: () => void) {
+  try {
+    await asyncFn();
+  } finally {
+    onSettled();
+  }
+}
+
+/**
  * A React hook that wraps an async onClick handler to manage a loading state.
  * @param originalOnClick The async function to be called when the element is clicked.
  * @returns A tuple containing a boolean `isLoading` state and the wrapped `onClick` handler.
@@ -44,13 +56,14 @@ function useLoadingClickHandler(
 
     setIsLoading(true);
 
-    try {
-      await originalOnClick(event);
-    } finally {
-      if (!wasUnmounted.current) {
-        setIsLoading(false);
-      }
-    }
+    await awaitAndThen(
+      () => originalOnClick(event),
+      () => {
+        if (!wasUnmounted.current) {
+          setIsLoading(false);
+        }
+      },
+    );
   };
 
   return [isLoading, onClick];

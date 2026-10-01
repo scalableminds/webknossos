@@ -81,9 +81,8 @@ function DuplicateAnnotationModalInner({
           } catch (error) {
             console.error("Failed to duplicate annotation", error);
             setIsError(true);
-          } finally {
-            setIsLoading(false);
           }
+          setIsLoading(false);
         }
       }}
       footer={openAnnotationButton}

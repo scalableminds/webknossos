@@ -58,9 +58,8 @@ export default function StatisticsTab({
       });
     } catch {
       setStatisticsResult({ type: "ERROR" });
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   }
 
   usePolling(loadStatistics, null, [runId, taskName]);

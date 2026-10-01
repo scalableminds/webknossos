@@ -37,9 +37,7 @@ function SecuredRoute({
   const getIsResourcePublic = useCallback(async () => {
     if (id) {
       try {
-        const annotationInformation = unwrapOrThrow(
-          await getUnversionedAnnotationInformation(id || ""),
-        );
+        const annotationInformation = unwrapOrThrow(await getUnversionedAnnotationInformation(id));
         return annotationInformation.visibility === "Public";
       } catch (_ex) {
         // Annotation could not be found

@@ -18,9 +18,8 @@ export function HelpEmail({ onCancel }: { onCancel: () => void }) {
         onCancel();
       } catch {
         Toast.error("Sorry, we could not send the help message. Please try again later.");
-      } finally {
-        setIsSending(false);
       }
+      setIsSending(false);
     }
   };
 

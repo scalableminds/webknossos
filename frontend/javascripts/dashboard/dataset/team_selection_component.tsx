@@ -23,6 +23,10 @@ type TeamSelectionComponentProps = {
   prefix?: ReactNode;
 };
 
+function fetchPossibleTeams(allowNonEditableTeams: boolean | undefined): Promise<APITeam[]> {
+  return allowNonEditableTeams ? getTeams() : getEditableTeams();
+}
+
 function TeamSelectionComponent({
   value,
   onChange,
@@ -45,25 +49,24 @@ function TeamSelectionComponent({
     setSelectedTeams(value ? [value].flat() : []);
   }, [value]);
 
-  // Fetch teams on mount
-  useEffectOnlyOnce(() => {
-    fetchData();
-  });
-
   async function fetchData() {
     setIsFetchingData(true);
     try {
-      const possibleTeams = allowNonEditableTeams ? await getTeams() : await getEditableTeams();
+      const possibleTeams = await fetchPossibleTeams(allowNonEditableTeams);
       setPossibleTeams(possibleTeams);
       if (afterFetchedTeams) {
         afterFetchedTeams(possibleTeams);
       }
     } catch (_exception) {
       Toast.error("Could not load teams.");
-    } finally {
-      setIsFetchingData(false);
     }
+    setIsFetchingData(false);
   }
+
+  // Fetch teams on mount
+  useEffectOnlyOnce(() => {
+    fetchData();
+  });
 
   const getAllTeams = useCallback((): APITeam[] => {
     return unionBy(possibleTeams, selectedTeams, (t) => t.id);

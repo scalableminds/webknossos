@@ -195,15 +195,8 @@ function MergeModalViewInner({ isOpen, onOk }: Props) {
 
   const handleAction = async () => {
     setIsUploading(true);
-    try {
-      if (targetType === "importHere") {
-        await handleImportTrees();
-      } else {
-        await handleMerge();
-      }
-    } finally {
-      setIsUploading(false);
-    }
+    const runAction = targetType === "importHere" ? handleImportTrees : handleMerge;
+    await runAction().finally(() => setIsUploading(false));
   };
 
   const annotationInputSuffix =

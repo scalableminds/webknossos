@@ -100,6 +100,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
 
   const handleStartAnalysis = useCallback(async () => {
     const manualMatchesAnnotationId = shouldUseManualMatches ? annotationId : undefined;
+    const maxJumpSize = fineAlignmentOnly ? FINE_ALIGNMENT_MAX_JUMP_SIZE : undefined;
 
     try {
       await startAlignSectionsJob(
@@ -108,7 +109,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
         newDatasetName,
         manualMatchesAnnotationId,
         customConfiguration,
-        fineAlignmentOnly ? FINE_ALIGNMENT_MAX_JUMP_SIZE : undefined,
+        maxJumpSize,
       );
       setStartedJob({
         title: "Section alignment is running.",

@@ -25,8 +25,9 @@ export function NumberInputPopoverSetting<T extends number | bigint>(
     if (val == null || val === "") {
       return;
     }
+    const parse = isBigInt ? BigInt : Number;
     try {
-      onChange((isBigInt ? BigInt(val) : Number(val)) as T);
+      onChange(parse(val) as T);
     } catch {
       // Ignore intermediate, non-integer input (e.g. while the user is still typing).
     }

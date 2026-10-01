@@ -60,6 +60,7 @@ import {
 } from "types/api_types";
 import type { Comparator } from "types/type_utils";
 import {
+  getBoundingBoxCountWithPrecedence,
   getSkeletonStats,
   getStatsOfAnnotationInfo,
   getVolumeStats,
@@ -628,7 +629,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     // Checked here as well, so that no dangling separator dot is rendered for an empty stats item.
     const hasNonZeroStats =
       (getSkeletonStats(stats)?.treeCount ?? 0) > 0 ||
-      getVolumeStats(stats).some(([_tracingId, volumeStats]) => volumeStats.segmentCount > 0);
+      getVolumeStats(stats).some(([_tracingId, volumeStats]) => volumeStats.segmentCount > 0) ||
+      (getBoundingBoxCountWithPrecedence(stats) ?? 0) > 0;
     const teamTags = annotation.teams.map((team) => (
       <Tag
         key={team.id}

@@ -1,5 +1,5 @@
 import Icon from "@ant-design/icons";
-import IconBoundingBox from "@images/icons/icon-bounding-box.svg?react";
+import IconBoundingBox from "@images/icons/icon-bounding-box-thin.svg?react";
 import IconSegments from "@images/icons/icon-segments.svg?react";
 import IconSkeletons from "@images/icons/icon-skeletons.svg?react";
 import type { EmptyObject } from "antd/es/_util/type";
@@ -10,12 +10,12 @@ import memoizeOne from "memoize-one";
 import type React from "react";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import {
+  getBoundingBoxCountWithPrecedence,
   getSkeletonStats,
   getStats,
   getVolumeStats,
   type TracingStats,
 } from "viewer/model/accessors/annotation_accessor";
-import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { InfoTabRow, InfoTabSection } from "./info_tab_layout";
 
 type StatEntry = {
@@ -34,13 +34,11 @@ type StatEntry = {
 export function AnnotationStats({
   stats,
   withMargin,
-  boundingBoxCount,
   orientation = "vertical",
   hideZeroCounts = false,
 }: {
   stats: TracingStats | EmptyObject;
   withMargin?: boolean | null | undefined;
-  boundingBoxCount?: number;
   // "vertical" (default) stacks the stats as rows (e.g. in time tracking).
   // "horizontal" lays them out side by side (e.g. in the dashboard list views).
   orientation?: "vertical" | "horizontal";
@@ -49,6 +47,7 @@ export function AnnotationStats({
   const skeletonStats = getSkeletonStats(stats);
   const volumeStats = getVolumeStats(stats);
   const totalSegmentCount = volumeStats.reduce((sum, [_, volume]) => sum + volume.segmentCount, 0);
+  const boundingBoxCount = getBoundingBoxCountWithPrecedence(stats);
 
   let entries: StatEntry[] = [];
   if (skeletonStats) {
@@ -69,7 +68,8 @@ export function AnnotationStats({
       count: totalSegmentCount,
     });
   }
-  if (boundingBoxCount) {
+  // Old annotations don't have a bounding box count, but a count of zero is shown.
+  if (boundingBoxCount != null) {
     entries.push({
       key: "bbox",
       icon: IconBoundingBox,
@@ -154,13 +154,11 @@ const cachedGetStats = reuseInstanceOnEquality(memoizeOne(getStats));
 /** One fact per row — the counts are short values, so they share the capped value track. */
 export function AnnotationStatisticsSection() {
   const stats = useWkSelector((state) => cachedGetStats(state.annotation));
-  const boundingBoxCount = useWkSelector(
-    (state) => maybeGetSomeTracing(state.annotation)?.userBoundingBoxes.length ?? 0,
-  );
 
   const skeletonStats = getSkeletonStats(stats);
   const volumeStats = getVolumeStats(stats);
   const totalSegmentCount = volumeStats.reduce((sum, [_, volume]) => sum + volume.segmentCount, 0);
+  const boundingBoxCount = getBoundingBoxCountWithPrecedence(stats) ?? 0;
 
   return (
     <InfoTabSection label="Statistics">

@@ -751,7 +751,9 @@ class TSAnnotationService @Inject() (
       case _                                  => false
     }
     val tracingIdsWithUpdates: Set[String] = updates.flatMap {
-      case a: LayerUpdateAction        => Some(a.actionTracingId)
+      // These only mutate bucket data / the segment index (flushed separately), never the tracing proto itself.
+      case _: LazyBucketMutatingVolumeUpdateAction => None
+      case a: LayerUpdateAction                    => Some(a.actionTracingId)
       case a: AddLayerAnnotationAction => a.tracingId // tracingId is an option, but filled on save. Drop Nones
       case _                           => None
     }.toSet

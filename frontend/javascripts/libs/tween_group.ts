@@ -13,9 +13,9 @@ export function updateTweens() {
   tweenGroup.update();
   // The group keeps finished tweens, so remove them manually.
   // All tweens are started right after their creation. Hence, tweens which
-  // aren't playing anymore are finished.
+  // are neither playing nor paused are finished.
   for (const tween of tweenGroup.getAll()) {
-    if (!tween.isPlaying()) {
+    if (!tween.isPlaying() && !tween.isPaused()) {
       tweenGroup.remove(tween);
     }
   }

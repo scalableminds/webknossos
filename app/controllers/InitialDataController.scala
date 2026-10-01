@@ -111,7 +111,7 @@ Samplecountry
   private val multiUserId = ObjectId.generate
   private val userId2 = ObjectId.generate
   private val multiUserId2 = ObjectId.generate
-  private val defaultMultiUser = MultiUser(
+  private lazy val defaultMultiUser = MultiUser(
     multiUserId,
     defaultUserEmail,
     userService.createPasswordInfo(defaultUserPassword),
@@ -133,7 +133,7 @@ Samplecountry
     isDeactivated = false,
     lastTaskTypeId = None
   )
-  private val defaultMultiUser2 = MultiUser(
+  private lazy val defaultMultiUser2 = MultiUser(
     multiUserId2,
     defaultUserEmail2,
     userService.createPasswordInfo(defaultUserPassword),

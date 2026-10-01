@@ -10,6 +10,10 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
+import {
+  handleEndForDrawOrErase,
+  handleEraseStart,
+} from "viewer/controller/combinations/volume_handlers";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
@@ -21,6 +25,7 @@ import {
   clickSegmentAction,
   finishEditingAction,
   removeSegmentAction,
+  resetContourAction,
   setActiveCellAction,
   setContourTracingModeAction,
   setSegmentGroupsAction,
@@ -105,6 +110,151 @@ describe("Volume Tracing", () => {
     expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(
       Number(newCellId) + 1,
     );
+  });
+
+  it<WebknossosTestContext>("Erasing with overwrite-empty removes only the active segment", async ({
+    api,
+    mocks,
+  }) => {
+    const existingCellId = 11;
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction(
+        { volumeTracingId: "uint16", color: "uint8" },
+        existingCellId,
+        5,
+      ),
+    );
+    await api.data.reloadAllBuckets();
+    const layerName = api.data.getVolumeTracingLayerIds()[0];
+    const position: Vector3 = [0, 0, 0];
+    // Loads the bucket, as rendering it would. The check only protects what is
+    // loaded: unloaded buckets are written optimistically.
+    expect(await api.data.getDataValue(layerName, position)).toBe(existingCellId);
+
+    Store.dispatch(updateUserSettingAction("brushSize", 10));
+    Store.dispatch(setPositionAction(position));
+    Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
+    Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_EMPTY));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
+    const eraseStroke = () => {
+      Store.dispatch(startEditingAction(position, OrthoViews.PLANE_XY));
+      Store.dispatch(addToContourListAction([2, 0, 0]));
+      Store.dispatch(finishEditingAction());
+    };
+
+    // A different active segment: the existing one is protected.
+    Store.dispatch(setActiveCellAction(99n));
+    eraseStroke();
+    expect(await api.data.getDataValue(layerName, position)).toBe(existingCellId);
+
+    // The existing segment is the active one: it gets erased.
+    Store.dispatch(setActiveCellAction(BigInt(existingCellId)));
+    eraseStroke();
+    expect(await api.data.getDataValue(layerName, position)).toBe(0);
+  });
+
+  it<WebknossosTestContext>("Erasing with a single click", async ({ api, mocks }) => {
+    const existingCellId = 11;
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction(
+        { volumeTracingId: "uint16", color: "uint8" },
+        existingCellId,
+        5,
+      ),
+    );
+    await api.data.reloadAllBuckets();
+    const layerName = api.data.getVolumeTracingLayerIds()[0];
+    const position: Vector3 = [0, 0, 0];
+    expect(await api.data.getDataValue(layerName, position)).toBe(existingCellId);
+
+    Store.dispatch(updateUserSettingAction("brushSize", 10));
+    Store.dispatch(setPositionAction(position));
+    Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
+    Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
+    const labelActionCount = () =>
+      Store.getState().localSegmentationStateByLayer[layerName].lastLabelActions.length;
+    const countBefore = labelActionCount();
+
+    // Press and release through the real handlers, with no mouse move between.
+    handleEraseStart({ x: 0, y: 0 }, OrthoViews.PLANE_XY);
+    const [clickedPosition] = Store.getState().localSegmentationStateByLayer[layerName].contourList;
+    handleEndForDrawOrErase();
+
+    expect(hasRootSagaCrashed()).toBe(false);
+    expect(await api.data.getDataValue(layerName, clickedPosition)).toBe(0);
+    // Counts for interpolation and the tracing direction, like a single draw
+    // click or an erase stroke that moves.
+    expect(labelActionCount()).toBe(countBefore + 1);
+
+    // A stroke without any contour point (nothing in the UI produces one) has
+    // no centroid to register, and must not crash either.
+    Store.dispatch(startEditingAction(position, OrthoViews.PLANE_XY));
+    Store.dispatch(finishEditingAction());
+    Store.dispatch(resetContourAction());
+    expect(hasRootSagaCrashed()).toBe(false);
+    expect(labelActionCount()).toBe(countBefore + 1);
+  });
+
+  describe("brush auto-fill", () => {
+    const newCellId = 2n;
+    // A square stroke around `inside`, far enough from its edges that the brush
+    // itself never reaches it. The contour starts at the first pointer move,
+    // not at the press position, hence the tiny first step.
+    const pressPosition: Vector3 = [10, 10, 0];
+    const squarePath: Vector3[] = [
+      [11, 10, 0],
+      [50, 10, 0],
+      [50, 50, 0],
+      [10, 50, 0],
+    ];
+    const inside: Vector3 = [30, 30, 0];
+    const onStroke: Vector3 = [30, 10, 0];
+
+    function brushStroke(path: Vector3[]) {
+      Store.dispatch(startEditingAction(pressPosition, OrthoViews.PLANE_XY));
+      for (const position of path) Store.dispatch(addToContourListAction(position));
+      Store.dispatch(finishEditingAction());
+    }
+
+    beforeEach<WebknossosTestContext>(async ({ api, mocks }) => {
+      vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+        createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0, 5),
+      );
+      await api.data.reloadAllBuckets();
+      Store.dispatch(updateUserSettingAction("brushSize", 10));
+      Store.dispatch(setPositionAction([0, 0, 0]));
+      Store.dispatch(setToolAction(AnnotationTool.BRUSH));
+      Store.dispatch(setActiveCellAction(newCellId));
+    });
+
+    it<WebknossosTestContext>("fills a stroke released near its start, in the same undo step", async ({
+      api,
+    }) => {
+      const layerName = api.data.getVolumeTracingLayerIds()[0];
+      // Released 2 voxels from the first contour point, well within the brush size.
+      brushStroke([...squarePath, [10, 12, 0]]);
+
+      expect(await api.data.getDataValue(layerName, inside)).toBe(Number(newCellId));
+      expect(await api.data.getDataValue(layerName, onStroke)).toBe(Number(newCellId));
+
+      // One undo removes both: the fill is not an undo step of its own.
+      await dispatchUndoAsync(Store.dispatch);
+      expect(await api.data.getDataValue(layerName, inside), "fill undone").toBe(0);
+      expect(await api.data.getDataValue(layerName, onStroke), "stroke undone").toBe(0);
+    });
+
+    it<WebknossosTestContext>("does not fill an open stroke", async ({ api }) => {
+      const layerName = api.data.getVolumeTracingLayerIds()[0];
+      // Released at the bottom-left corner, ~40 voxels from the first contour point.
+      brushStroke(squarePath);
+
+      expect(await api.data.getDataValue(layerName, inside)).toBe(0);
+      expect(await api.data.getDataValue(layerName, onStroke)).toBe(Number(newCellId));
+
+      await dispatchUndoAsync(Store.dispatch);
+      expect(await api.data.getDataValue(layerName, onStroke)).toBe(0);
+    });
   });
 
   // Earlier code versions, re-evaluated the overwrite-empty predicate once real backend

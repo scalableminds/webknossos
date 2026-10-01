@@ -32,7 +32,6 @@ import dayjs from "dayjs";
 import {
   formatDateMedium,
   formatDurationStrict,
-  formatTimeInterval,
   formatTimeIntervalStrict,
 } from "libs/format_utils";
 import { useUpdateEvery, useWkSelector } from "libs/react_hooks";
@@ -184,7 +183,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             timed out
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.CANCELLED:
@@ -202,7 +201,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             cancelled
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.FAILED:
@@ -220,7 +219,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             failed
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.COMPLETE:
@@ -237,8 +236,8 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CheckCircleOutlined />} color="success">
             completed
           </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()},{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
+          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     default:

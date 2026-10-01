@@ -246,6 +246,9 @@ function* loadAdHocMesh(
   removeExistingMesh: boolean = false,
   layerName: string,
   maybeExtraInfo?: AdHocMeshInfo,
+  // The position from which the meshing starts. Defaults to seedPosition. In contrast to
+  // the seedPosition, it is not stored as the mesh's (and segment's) position.
+  startPosition: Vector3 = seedPosition,
 ): Saga<void> {
   const layer = Model.getLayerByName(layerName);
 
@@ -270,6 +273,7 @@ function* loadAdHocMesh(
       layer,
       segmentId,
       seedPosition,
+      startPosition,
       seedAdditionalCoordinates,
       zoomStep,
       meshExtraInfo,
@@ -321,7 +325,8 @@ function* getUsePositionsFromSegmentIndex(
 function* loadFullAdHocMesh(
   layer: DataLayer,
   segmentId: bigint,
-  position: Vector3,
+  seedPosition: Vector3,
+  startPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   zoomStep: number,
   meshExtraInfo: AdHocMeshInfo,
@@ -330,12 +335,12 @@ function* loadFullAdHocMesh(
 ): Saga<void> {
   let isInitialRequest = true;
   const { mappingName, mappingType, opacity, isVisible } = meshExtraInfo;
-  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, magInfo);
+  const clippedPosition = clipPositionToCubeBoundary(startPosition, zoomStep, magInfo);
   yield* put(
     addAdHocMeshAction(
       layer.name,
       segmentId,
-      position,
+      seedPosition,
       additionalCoordinates,
       mappingName,
       mappingType,
@@ -732,9 +737,12 @@ function* refreshMeshWithMap(
   for (const [, position] of meshPositions) {
     // Reload the mesh at the given position if it isn't already loaded there.
     // This is done to ensure that every voxel of the mesh is reloaded.
+    // The original seed position is kept, because the chunk positions don't
+    // necessarily lie within the segment. Otherwise, the segment's position would
+    // be overwritten with a wrong one (see ensureSegmentExists in volumetracing_saga).
     yield* call(
       loadAdHocMesh,
-      position,
+      meshInfo.seedPosition,
       additionalCoordinates,
       segmentId,
       shouldBeRemoved,
@@ -744,6 +752,7 @@ function* refreshMeshWithMap(
         mappingType,
         opacity,
       },
+      position,
     );
     shouldBeRemoved = false;
   }

@@ -49,6 +49,7 @@ class DataLayer {
       layerInfo.elementClass,
       this.isSegmentation,
       this.name,
+      "tracingId" in layerInfo && layerInfo.tracingId != null,
     );
     this.pullQueue = new PullQueue(this.cube, layerInfo.name, dataset.dataStore);
     this.pushQueue = new PushQueue(this.cube, tracingId);

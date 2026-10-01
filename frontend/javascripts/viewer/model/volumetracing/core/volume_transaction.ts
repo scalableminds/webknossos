@@ -21,11 +21,12 @@ export interface BucketWriter {
   mark(index: VoxelIndex): void;
   markRun(start: VoxelIndex, length: number): void;
   /**
-   * Whether a voxel currently holds background, resolved once per bucket. Null
-   * when the bucket has no authoritative content to test against — absent and
-   * pending buckets alike — in which case the overwrite filter is skipped.
+   * Whether a voxel currently holds `ctx.overwritableValue`, resolved once per
+   * bucket. Null when the bucket has no authoritative content to test against
+   * — absent and pending buckets alike — in which case the overwrite filter is
+   * skipped.
    */
-  readonly isBackground: ((index: VoxelIndex) => boolean) | null;
+  readonly isOverwritable: ((index: VoxelIndex) => boolean) | null;
 }
 
 /**
@@ -65,10 +66,10 @@ export class VolumeTransaction {
    */
   writerFor(address: BucketAddress, value: SegmentId): BucketWriter {
     const entry = this.entryFor(address, value);
-    const isBackground = this.cube.getIsBackgroundFunction(address);
+    const isOverwritable = this.cube.getIsOverwritableFunction(address, this.ctx.overwritableValue);
 
     return {
-      isBackground,
+      isOverwritable,
       mark(index: VoxelIndex) {
         entry.write.mask.mark(index);
       },
@@ -92,8 +93,8 @@ export class VolumeTransaction {
 
     for (const incoming of bucketWriteMap.values()) {
       // entryFor rather than writerFor: unlike a rasterizer write cursor,
-      // recordAll never reads isBackground, so there is no reason to pay for
-      // a getIsBackgroundFunction call per bucket here.
+      // recordAll never reads isOverwritable, so there is no reason to pay for
+      // a getIsOverwritableFunction call per bucket here.
       const entry = this.entryFor(incoming.address, incoming.write.value);
       for (const { start, length } of incoming.write.mask.runs()) {
         entry.write.mask.markRun(start, length);

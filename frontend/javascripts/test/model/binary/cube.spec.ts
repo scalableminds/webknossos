@@ -239,6 +239,21 @@ describe("DataCube", () => {
     expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
   });
 
+  it<TestContext>("receiveData should reject a bucket that is not requested without mutating it", ({
+    cube,
+  }) => {
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+    bucket.markAsRequested();
+    bucket.receiveData(new Uint8Array(4 * 32 ** 3));
+
+    // The bucket is LOADED now, so a second receiveData call is a programming error. It has to be
+    // rejected *before* anything is written.
+    const rawBucketDataBefore = bucket.rawBucketData;
+    expect(() => bucket.receiveData(new Uint8Array(4 * 32 ** 3))).toThrow();
+    expect(bucket.rawBucketData).toBe(rawBucketDataBefore);
+  });
+
   it<TestContext>("Voxel Labeling should only instantiate one bucket when labeling the same bucket twice", async ({
     cube,
   }) => {

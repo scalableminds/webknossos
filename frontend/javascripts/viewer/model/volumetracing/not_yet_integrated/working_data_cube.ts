@@ -13,6 +13,7 @@ import {
   type BucketKey,
   bucketKey,
   type SegmentBucketData,
+  type SegmentId,
   type StoredSegmentId,
   type Vector3,
   voxelIndexOf,
@@ -148,10 +149,13 @@ export class WorkingDataCube implements LoadingVoxelCube {
     this.gpuDirty.add(bucketKey(address));
   }
 
-  getIsBackgroundFunction(address: BucketAddress): ((index: number) => boolean) | null {
+  getIsOverwritableFunction(
+    address: BucketAddress,
+    overwritableValue: SegmentId,
+  ): ((index: number) => boolean) | null {
     const data = this.getLoadedDataOrUndefined(address);
     if (data == null) return null;
-    return (index: number) => data[index] === 0n;
+    return (index: number) => data[index] === overwritableValue;
   }
 
   /** Overwrite a bucket's content outright (undo rebuild). */

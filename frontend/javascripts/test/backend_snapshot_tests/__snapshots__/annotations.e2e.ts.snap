@@ -1705,6 +1705,7 @@ exports[`Annotation API (E2E) > createExplorational() and finishAnnotation() 1`]
     {
       "name": "Skeleton",
       "stats": {
+        "boundingBoxCount": 0,
         "branchPointCount": 0,
         "edgeCount": 0,
         "nodeCount": 0,

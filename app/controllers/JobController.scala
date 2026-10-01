@@ -58,8 +58,6 @@ case class AlignSectionsJobOptions(
     newDatasetName: String,
     annotationId: Option[ObjectId],
     customConfiguration: Option[JsObject],
-    // If set, only fine alignment is performed, assuming that the dataset contains no jumps
-    // larger than this value (in voxels). If unset, a full alignment is performed.
     fineAlignmentMaxJumpSize: Option[Int]
 ) derives JsonAutoFormat
 

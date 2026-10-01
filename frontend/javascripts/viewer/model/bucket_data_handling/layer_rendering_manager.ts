@@ -6,14 +6,12 @@ import DiffableMap from "libs/diffable_map";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import type UpdatableTexture from "libs/UpdatableTexture";
-import window from "libs/window";
 import identity from "lodash-es/identity";
 import isEqual from "lodash-es/isEqual";
 import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
 import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import type { BucketAddress, Vector3, Vector4, ViewMode } from "viewer/constants";
 import {
   getElementClass,
@@ -53,9 +51,7 @@ const asyncBucketPick = memoizeOne(asyncBucketPickRaw, (oldArgs, newArgs) =>
   isEqual(oldArgs, newArgs),
 );
 const dummyBuffer = new ArrayBuffer(0);
-const dummyPickResult: PickResult = { buffer: dummyBuffer, scanLines: [] };
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
-type PickResult = { buffer: ArrayBuffer; scanLines: Array<[Vector3, Vector3]> };
 
 // Lazily-initialized singleton.
 const getSharedLookUpCuckooTable = memoizeOne(
@@ -136,7 +132,7 @@ export default class LayerRenderingManager {
   name: string;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
-  latestTaskExecutor: LatestTaskExecutor<PickResult> = new LatestTaskExecutor();
+  latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
   additionalCoordinates: AdditionalCoordinate[] | null = null;
   maximumZoomForAllMags: number[] | null = null;
 
@@ -245,7 +241,7 @@ export default class LayerRenderingManager {
       this.additionalCoordinates = additionalCoordinates;
       this.maximumZoomForAllMags = maximumZoomForAllMags;
       this.pullQueue.clear();
-      let pickingPromise: Promise<PickResult> = Promise.resolve(dummyPickResult);
+      let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
       if (isVisible) {
         pickingPromise = this.latestTaskExecutor.schedule(() =>
@@ -258,25 +254,12 @@ export default class LayerRenderingManager {
             logZoomStep,
             datasetConfiguration.loadingStrategy,
             rects,
-            WkDevFlags.bucketDebugging.visualizeScanLines,
-            WkDevFlags.bucketDebugging.obliquePickerStrategy,
-            WkDevFlags.bucketDebugging.prefetchAlongViewAxis,
-            WkDevFlags.bucketDebugging.compareObliquePickerStrategies,
           ),
         );
       }
 
       pickingPromise.then(
-        ({ buffer, scanLines }) => {
-          if (WkDevFlags.bucketDebugging.visualizeScanLines) {
-            // @ts-expect-error These debugging methods are attached to window by SceneController.
-            window.removeLines();
-            for (const [a, b] of scanLines) {
-              // @ts-expect-error These debugging methods are attached to window by SceneController.
-              window.addLine(a, b);
-            }
-          }
-
+        (buffer) => {
           this.cube.markBucketsAsUnneeded();
           const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
             buffer,

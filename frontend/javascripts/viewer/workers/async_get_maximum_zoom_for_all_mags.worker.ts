@@ -13,26 +13,7 @@ function asyncGetMaximumZoomForAllMags(
   maximumCapacity: number,
   layerMatrix: Matrix4x4,
   flycamMatrix: Matrix4x4,
-  obliquePickerStrategy?: "scanLines" | "floodFill",
-  prefetchAlongViewAxis?: boolean,
 ) {
-  // Dev-only: logs the exact parameters of this call as JSON, so they can be pasted
-  // elsewhere (e.g. into a benchmark reproducing this specific real-world scenario).
-  // console.log(
-  //   "getMaximumZoomForAllMags params:",
-  //   JSON.stringify({
-  //     viewMode,
-  //     loadingStrategy,
-  //     voxelSizeFactor,
-  //     mags,
-  //     viewportRects,
-  //     maximumCapacity,
-  //     layerMatrix,
-  //     flycamMatrix,
-  //     obliquePickerStrategy,
-  //     prefetchAlongViewAxis,
-  //   }),
-  // );
   return _getMaximumZoomForAllMags(
     viewMode,
     loadingStrategy,
@@ -42,8 +23,6 @@ function asyncGetMaximumZoomForAllMags(
     maximumCapacity,
     layerMatrix,
     flycamMatrix,
-    obliquePickerStrategy,
-    prefetchAlongViewAxis,
   );
 }
 

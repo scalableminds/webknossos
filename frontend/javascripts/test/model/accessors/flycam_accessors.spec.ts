@@ -126,11 +126,6 @@ describe("Flycam Accessors", () => {
       DEFAULT_REQUIRED_BUCKET_CAPACITY,
       Identity4x4,
       _getDummyFlycamMatrix(voxelSize),
-      // "scanLines" + prefetch on matches production's default (WkDevFlags.bucketDebugging.
-      // obliquePickerStrategy / .prefetchAlongViewAxis), and also matches what master always
-      // did here (unconditional z-axis prefetch) before prefetching became opt-in.
-      "scanLines",
-      true,
     );
 
     // If this test case should fail at some point, the following values may be updated appropriately

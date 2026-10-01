@@ -3,7 +3,6 @@ import memoizeOne from "memoize-one";
 import type { Matrix4x4 } from "mjs";
 import { buffers } from "redux-saga";
 import { actionChannel, put } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import type { OrthoViewRects, Vector3, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
 import type { Saga } from "viewer/model/sagas/effect_generators";
@@ -40,8 +39,6 @@ const getComputeFunction = memoize((_layerName: string) => {
       maximumCapacity: number,
       layerMatrix: Matrix4x4,
       flycamMatrix: Matrix4x4,
-      obliquePickerStrategy: "scanLines" | "floodFill",
-      prefetchAlongViewAxis: boolean,
     ) => {
       return asyncGetMaximumZoomForAllMags(
         viewMode,
@@ -52,8 +49,6 @@ const getComputeFunction = memoize((_layerName: string) => {
         maximumCapacity,
         layerMatrix,
         flycamMatrix,
-        obliquePickerStrategy,
-        prefetchAlongViewAxis,
       );
     },
   );
@@ -128,8 +123,6 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         // However, for flight mode this is not really accurate. As a heuristic,
         // this already proved to be fine, though.
         dummyFlycamMatrix,
-        WkDevFlags.bucketDebugging.obliquePickerStrategy,
-        WkDevFlags.bucketDebugging.prefetchAlongViewAxis,
       );
       if (state.flycamInfoCache.maximumZoomForAllMags[layerName] !== zoomLevels) {
         yield* put(setMaximumZoomForAllMagsForLayerAction(layerName, zoomLevels));

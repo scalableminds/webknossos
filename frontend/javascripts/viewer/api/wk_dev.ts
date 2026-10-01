@@ -21,24 +21,6 @@ export const WkDevFlags = {
     visualizeBucketsOnGPU: false,
     // For visualizing buckets which are prefetched
     visualizePrefetchedBuckets: false,
-    // For visualizing the scan lines / flood-fill traversal that are used to determine
-    // which buckets to load for oblique (non-axis-aligned) planes
-    visualizeScanLines: false,
-    // Which strategy to use for picking the buckets of an oblique (non-axis-aligned) plane.
-    // "scanLines" samples the plane with a set of parallel lines; "floodFill" walks
-    // neighbouring buckets outwards from the camera position, keeping only the ones whose
-    // box actually intersects the plane. See oblique_bucket_picker(_flood_fill)?.ts.
-    obliquePickerStrategy: "floodFill" as "scanLines" | "floodFill",
-    // If true, the "scanLines" and "floodFill" oblique picker strategies additionally pick
-    // buckets slightly in front of and behind the plane (simulating the flycam having moved
-    // along its view axis), so that data is already loading by the time the user actually
-    // moves there. See PREFETCH_BUCKET_FRACTION in oblique_bucket_picker.ts.
-    prefetchAlongViewAxis: true,
-    // If true, every oblique pick additionally runs the other strategy (the one not selected
-    // by obliquePickerStrategy) on the exact same input, purely for timing. Its result is
-    // discarded. Timing statistics for both strategies are logged to the console every 100
-    // picks (see async_bucket_picker.worker.ts).
-    compareObliquePickerStrategies: true,
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,

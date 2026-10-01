@@ -1,10 +1,7 @@
 import { M4x4 } from "libs/mjs";
-import range from "lodash-es/range";
 import type { Matrix4x4 } from "mjs";
-import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4 } from "viewer/constants";
-import traverse from "viewer/model/bucket_data_handling/bucket_traversals";
+import type { OrthoViewWithoutTD, Vector3 } from "viewer/constants";
 import type { EnqueueFunction } from "viewer/model/bucket_data_handling/layer_rendering_manager";
-import { chunk2 } from "viewer/model/helpers/chunk";
 import {
   getBucketExtent,
   globalPositionToBucketPosition,
@@ -12,27 +9,16 @@ import {
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { getPriorityWeightForZoomStepDiff, MAX_ZOOM_STEP_DIFF } from "../loading_strategy_logic";
 
-// Note that the fourth component of Vector4 (if passed) is ignored, as it's not needed
-// in this use case (only one mag at a time is gathered).
-const hashPosition = ([x, y, z]: Vector3 | Vector4): number => 2 ** 32 * x + 2 ** 16 * y + z;
-
-// With prefetchAlongViewAxis, buckets are also picked that the plane would intersect if it
-// moved by up to this fraction of a bucket's thickness along its normal. Being < 1, this
-// never reaches past the adjacent bucket layer, independent of zoom, mags and rotation.
-export const PREFETCH_BUCKET_FRACTION = 0.3;
-
-// Half of a bucket's thickness along the plane's normal, in local (plane) units.
-// inverseQueryMatrix maps world to local coordinates, so its z row is the plane's normal.
-export function getBucketHalfThicknessInLocalZ(
-  inverseQueryMatrix: Matrix4x4,
-  bucketHalfSize: Vector3,
-): number {
-  return (
-    bucketHalfSize[0] * Math.abs(inverseQueryMatrix[2]) +
-    bucketHalfSize[1] * Math.abs(inverseQueryMatrix[6]) +
-    bucketHalfSize[2] * Math.abs(inverseQueryMatrix[10])
-  );
-}
+// Determines the buckets of the three orthogonal viewport planes with a flood fill: starting at
+// the bucket the camera position lies in, it walks to neighbouring buckets and keeps only the
+// ones whose box actually intersects one of the planes, using an exact SAT-style test. Unlike
+// sampling the planes with scan lines, this can't leave holes for rotated planes, since a
+// bucket can never "fall between" two samples.
+//
+// The per-bucket intersection test is on the hot path (it runs for every visited neighbour,
+// up to 3 times each), so it's written as inlined scalar arithmetic on precomputed matrix
+// coefficients rather than going through M4x4.transformVectorsAffine, which allocates a
+// handful of arrays (input wrapper, flattened copy, output, re-chunked result) per call.
 
 const ALPHA = Math.PI / 2;
 
@@ -52,7 +38,26 @@ const ROTATIONS = {
   ] as Matrix4x4,
 };
 
-export type ScanLineCallback = (a: Vector3, b: Vector3) => void;
+const hashPosition = ([x, y, z]: Vector3): number => 2 ** 32 * x + 2 ** 16 * y + z;
+
+// Buckets are also picked that the plane would intersect if it moved by up to this fraction of
+// a bucket's thickness along its normal, so that data is already loaded when the user moves
+// along the view axis. Being < 1, this never reaches past the adjacent bucket layer,
+// independent of zoom, mags and rotation.
+const PREFETCH_BUCKET_FRACTION = 0.3;
+
+// Half of a bucket's thickness along the plane's normal, in local (plane) units.
+// inverseQueryMatrix maps world to local coordinates, so its z row is the plane's normal.
+function getBucketHalfThicknessInLocalZ(
+  inverseQueryMatrix: Matrix4x4,
+  bucketHalfSize: Vector3,
+): number {
+  return (
+    bucketHalfSize[0] * Math.abs(inverseQueryMatrix[2]) +
+    bucketHalfSize[1] * Math.abs(inverseQueryMatrix[6]) +
+    bucketHalfSize[2] * Math.abs(inverseQueryMatrix[10])
+  );
+}
 
 export default function determineBucketsForPlane(
   loadingStrategy: LoadingStrategy,
@@ -63,8 +68,6 @@ export default function determineBucketsForPlane(
   logZoomStep: number,
   rects: PlaneRects,
   abortLimit?: number,
-  onScanLine?: ScanLineCallback,
-  prefetchAlongViewAxis?: boolean,
 ): void {
   let zoomStepDiff = 0;
 
@@ -79,11 +82,84 @@ export default function determineBucketsForPlane(
       zoomStepDiff,
       rects,
       abortLimit,
-      onScanLine,
-      prefetchAlongViewAxis,
     );
     zoomStepDiff++;
   }
+}
+
+// Takes a bucket's *world-space center* (computed once per candidate, not once per plane, see
+// below) and returns whether it's within one of the three orthogonal viewport planes.
+type IntersectsPlaneTest = (worldX: number, worldY: number, worldZ: number) => boolean;
+
+// Builds an exact box-vs-rect intersection test for one of the three orthogonal viewport
+// planes (SAT-style, see module comment above). Everything here only depends on the plane's
+// orientation/extent (not on any particular bucket), so it's computed once per planeId and
+// then reused, as plain scalar coefficients, for every bucket that gets tested against it.
+function buildIntersectsPlaneTest(
+  planeId: OrthoViewWithoutTD,
+  matrix: Matrix4x4,
+  rects: PlaneRects,
+  bucketHalfSize: Vector3,
+  prefetchBucketHalfSize: Vector3,
+): IntersectsPlaneTest {
+  const queryMatrix = [...matrix] as Matrix4x4;
+
+  if (planeId === "PLANE_YZ") {
+    M4x4.mul(matrix, ROTATIONS.YZ, queryMatrix);
+  } else if (planeId === "PLANE_XZ") {
+    M4x4.mul(matrix, ROTATIONS.XZ, queryMatrix);
+  }
+
+  const enlargedHalfExtentX = Math.ceil(rects[planeId].width / 2);
+  const enlargedHalfExtentY = Math.ceil(rects[planeId].height / 2);
+
+  // mjs matrices are column-major (m[4*col + row]), so e.g. local.z = m[2]*worldX +
+  // m[6]*worldY + m[10]*worldZ + m[14] (see M4x4.transformPointsAffine in libs/mjs.ts, which
+  // this inlines for a single point instead of an arbitrary array of points).
+  const m = M4x4.inverse(queryMatrix);
+  const xx = m[0];
+  const xy = m[4];
+  const xz = m[8];
+  const xt = m[12];
+  const yx = m[1];
+  const yy = m[5];
+  const yz = m[9];
+  const yt = m[13];
+  const zx = m[2];
+  const zy = m[6];
+  const zz = m[10];
+  const zt = m[14];
+
+  // The maximum extent (radius) of a bucket's box along a local axis, after the transform.
+  const radiusLocalX =
+    bucketHalfSize[0] * Math.abs(xx) +
+    bucketHalfSize[1] * Math.abs(xy) +
+    bucketHalfSize[2] * Math.abs(xz);
+  const radiusLocalY =
+    bucketHalfSize[0] * Math.abs(yx) +
+    bucketHalfSize[1] * Math.abs(yy) +
+    bucketHalfSize[2] * Math.abs(yz);
+  // For prefetching, the slab is widened by PREFETCH_BUCKET_FRACTION of a (non-fallback)
+  // bucket's thickness on each side, i.e. it also accepts the buckets the plane would intersect
+  // after moving by up to that distance along its normal.
+  const radiusLocalZ =
+    getBucketHalfThicknessInLocalZ(m, bucketHalfSize) +
+    2 * PREFETCH_BUCKET_FRACTION * getBucketHalfThicknessInLocalZ(m, prefetchBucketHalfSize);
+
+  return (worldX: number, worldY: number, worldZ: number): boolean => {
+    // Local z (the plane's thickness axis) is checked first, as it's usually the cheapest
+    // way to reject a bucket that isn't near this particular plane at all.
+    const localZ = zx * worldX + zy * worldY + zz * worldZ + zt;
+    if (Math.abs(localZ) > radiusLocalZ) {
+      return false;
+    }
+    const localX = xx * worldX + xy * worldY + xz * worldZ + xt;
+    if (Math.abs(localX) > enlargedHalfExtentX + radiusLocalX) {
+      return false;
+    }
+    const localY = yx * worldX + yy * worldY + yz * worldZ + yt;
+    return Math.abs(localY) <= enlargedHalfExtentY + radiusLocalY;
+  };
 }
 
 function addNecessaryBucketsToPriorityQueuePlane(
@@ -96,112 +172,107 @@ function addNecessaryBucketsToPriorityQueuePlane(
   zoomStepDiff: number,
   rects: PlaneRects,
   abortLimit?: number,
-  onScanLine?: ScanLineCallback,
-  prefetchAlongViewAxis?: boolean,
 ): void {
   const logZoomStep = nonFallbackLogZoomStep + zoomStepDiff;
-
   const planeIds: Array<OrthoViewWithoutTD> = ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"];
-  const seenBucketHashes = new Set<number>();
 
   // null is passed as additionalCoordinates, since the bucket picker doesn't care about the
   // additional coordinates. It simply sticks to 3D and the caller is responsible for augmenting
   // potential other coordinates.
   const centerAddress = globalPositionToBucketPosition(position, denseMags, logZoomStep, null);
+  const seedAddress: Vector3 = [centerAddress[0], centerAddress[1], centerAddress[2]];
   const additionalPriorityWeight = getPriorityWeightForZoomStepDiff(loadingStrategy, zoomStepDiff);
+  const voxelSize = getBucketExtent(denseMags[logZoomStep]);
+  const bucketHalfSize: Vector3 = [voxelSize[0] / 2, voxelSize[1] / 2, voxelSize[2] / 2];
   // The prefetch distance is based on the buckets of the rendered (non-fallback) mag, so that
   // fallback levels cover the same movement instead of a proportionally larger one.
-  const prefetchBucketExtent = getBucketExtent(denseMags[nonFallbackLogZoomStep]);
+  const nonFallbackBucketExtent = getBucketExtent(denseMags[nonFallbackLogZoomStep]);
   const prefetchBucketHalfSize: Vector3 = [
-    prefetchBucketExtent[0] / 2,
-    prefetchBucketExtent[1] / 2,
-    prefetchBucketExtent[2] / 2,
+    nonFallbackBucketExtent[0] / 2,
+    nonFallbackBucketExtent[1] / 2,
+    nonFallbackBucketExtent[2] / 2,
   ];
 
-  for (const planeId of planeIds) {
-    let extent: Vector2;
-    let enlargedExtent: Vector2;
-    let enlargedHalfExtent: Vector2;
-    const queryMatrix = [...matrix] as Matrix4x4;
-
-    extent = [rects[planeId].width, rects[planeId].height];
-    enlargedHalfExtent = [Math.ceil(extent[0] / 2), Math.ceil(extent[1] / 2)] as Vector2;
-    enlargedExtent = [enlargedHalfExtent[0] * 2, enlargedHalfExtent[1] * 2];
-    if (planeId === "PLANE_YZ") {
-      M4x4.mul(matrix, ROTATIONS.YZ, queryMatrix);
-    } else if (planeId === "PLANE_XZ") {
-      M4x4.mul(matrix, ROTATIONS.XZ, queryMatrix);
-    }
-
-    // Cast a vertical "scan line" and check how many buckets are intersected.
-    // That amount N is used as a measure to cast N + 1 (steps) vertical scanlines.
-    const stepRatePoints = M4x4.transformVectorsAffine(queryMatrix, [
-      [-enlargedHalfExtent[0], -enlargedHalfExtent[1], 0],
-      [-enlargedHalfExtent[0], +enlargedHalfExtent[1], 0],
-    ]);
-    const stepRateBuckets = traverse(stepRatePoints[0], stepRatePoints[1], denseMags, logZoomStep);
-    const steps = stepRateBuckets.length + 1;
-    const stepSize = [enlargedExtent[0] / steps, enlargedExtent[1] / steps];
-    // This array holds the start and end points
-    // of horizontal lines which cover the entire rendered plane.
-    // These "scan lines" are traversed to find out which buckets need to be
-    // sent to the GPU.
-    // If prefetchAlongViewAxis is set, additional lines are also cast at z=-zDiff/+zDiff (local
-    // units), so that data is already loading before the user moves there. Since zDiff is less
-    // than a bucket's thickness along the normal, every bucket intersected by some plane in
-    // between is also intersected by one of the three cast planes. So this picks the same
-    // buckets as the flood fill's thicker slab (see oblique_bucket_picker_flood_fill.ts).
-    const zDiff = prefetchAlongViewAxis
-      ? 2 *
-        PREFETCH_BUCKET_FRACTION *
-        getBucketHalfThicknessInLocalZ(M4x4.inverse(queryMatrix), prefetchBucketHalfSize)
-      : 0;
-    const scanLinesPoints = M4x4.transformVectorsAffine(
-      queryMatrix,
-      range(steps + 1).flatMap((idx) => {
-        const y = -enlargedHalfExtent[1] + idx * stepSize[1];
-        const points: Vector3[] = [
-          // Cast lines at z=0
-          [-enlargedHalfExtent[0], y, 0],
-          [enlargedHalfExtent[0], y, 0],
-        ];
-        if (prefetchAlongViewAxis) {
-          points.push(
-            // Cast lines at z=-zDiff
-            [-enlargedHalfExtent[0], y, -zDiff],
-            [enlargedHalfExtent[0], y, -zDiff],
-            // Cast lines at z=+zDiff
-            [-enlargedHalfExtent[0], y, zDiff],
-            [enlargedHalfExtent[0], y, zDiff],
-          );
-        }
-        return points;
-      }),
-    );
-
-    for (const [a, b] of chunk2(scanLinesPoints)) {
-      onScanLine?.(a, b);
-      for (const bucketAddress of traverse(a, b, denseMags, logZoomStep)) {
-        const bucketHash = hashPosition(bucketAddress);
-        if (seenBucketHashes.has(bucketHash)) {
-          // Ignore bucket as we already saw it
-          continue;
-        }
-        seenBucketHashes.add(bucketHash);
-        if (abortLimit != null && seenBucketHashes.size > abortLimit) {
-          return;
-        }
-        const priority =
-          // No V3.sub for performance reasons
-          Math.abs(bucketAddress[0] - centerAddress[0]) +
-          Math.abs(bucketAddress[1] - centerAddress[1]) +
-          Math.abs(bucketAddress[2] - centerAddress[2]);
-        enqueueFunction(
-          // Don't use ...bucketAddress for performance and better typechecking
-          [bucketAddress[0], bucketAddress[1], bucketAddress[2], logZoomStep],
-          priority + additionalPriorityWeight,
-        );
+  // A bucket only needs to be walked/enqueued once if it touches *any* of the three
+  // orthogonal viewport planes, so a single flood fill covering all three -- short-circuiting
+  // as soon as one of the three tests matches -- is both correct (their sheets are connected
+  // through the shared seed bucket) and roughly 3x cheaper than flood-filling each plane
+  // separately with its own traversal and visited set.
+  const intersectsPlaneTests = planeIds.map((planeId) =>
+    buildIntersectsPlaneTest(planeId, matrix, rects, bucketHalfSize, prefetchBucketHalfSize),
+  );
+  // The bucket's world-space center is computed once per candidate (not once per plane test,
+  // which would triple the redundant arithmetic for no reason -- all three tests operate on
+  // the same world point).
+  const intersectsAnyPlane = (worldX: number, worldY: number, worldZ: number): boolean => {
+    for (let i = 0; i < intersectsPlaneTests.length; i++) {
+      if (intersectsPlaneTests[i](worldX, worldY, worldZ)) {
+        return true;
       }
     }
+    return false;
+  };
+
+  // The seed bucket is trusted unconditionally (the camera position it's derived from lies on
+  // all three planes by construction); only its neighbours are filtered by intersectsAnyPlane.
+  const visited = new Set<number>([hashPosition(seedAddress)]);
+  const queue: Array<Vector3> = [seedAddress];
+
+  // Tries a single face-neighbour (nx,ny,nz). Written as an explicitly-called function (see the
+  // 6 call sites below) rather than a loop over NEIGHBOR_OFFSETS, to avoid destructuring an
+  // offset tuple and indexing into an array on every one of the 6 slots tried per bucket.
+  const tryNeighbor = (nx: number, ny: number, nz: number): void => {
+    // The neighbour's Vector3 is only allocated once it's confirmed new *and* accepted below
+    // -- most of the 6 slots tried per bucket are either already visited or rejected by
+    // intersectsAnyPlane, so building (and immediately discarding) an array for every one of
+    // them was pure garbage. The hash is computed straight from the scalar coordinates
+    // instead of via hashPosition(), for the same reason.
+    const neighborHash = 2 ** 32 * nx + 2 ** 16 * ny + nz;
+    if (visited.has(neighborHash)) {
+      return;
+    }
+    visited.add(neighborHash);
+
+    const worldX = nx * voxelSize[0] + bucketHalfSize[0];
+    const worldY = ny * voxelSize[1] + bucketHalfSize[1];
+    const worldZ = nz * voxelSize[2] + bucketHalfSize[2];
+
+    if (!intersectsAnyPlane(worldX, worldY, worldZ)) {
+      return;
+    }
+
+    queue.push([nx, ny, nz]);
+  };
+
+  for (let head = 0; head < queue.length; head++) {
+    const current = queue[head];
+    const cx = current[0];
+    const cy = current[1];
+    const cz = current[2];
+
+    const priority =
+      Math.abs(cx - centerAddress[0]) +
+      Math.abs(cy - centerAddress[1]) +
+      Math.abs(cz - centerAddress[2]);
+    enqueueFunction([cx, cy, cz, logZoomStep], priority + additionalPriorityWeight);
+
+    // Counts enqueued buckets (head + 1). visited.size would also count rejected neighbours
+    // and abort too early.
+    if (abortLimit != null && head + 1 >= abortLimit) {
+      return;
+    }
+
+    // The 6 face (Manhattan) neighbours of this bucket. Cheaper than the full
+    // 26-neighbourhood (3x less branching per visited bucket), at the cost of relying on the
+    // three orthogonal plane sheets (tested together via intersectsAnyPlane) to cover any
+    // single sheet's diagonal-only connections -- a lone, steeply tilted plane is only
+    // guaranteed to be 26-connected, not 6-connected, the same way a digital line is only
+    // guaranteed to be 8-connected in 2D, not 4-connected.
+    tryNeighbor(cx + 1, cy, cz);
+    tryNeighbor(cx - 1, cy, cz);
+    tryNeighbor(cx, cy + 1, cz);
+    tryNeighbor(cx, cy - 1, cz);
+    tryNeighbor(cx, cy, cz + 1);
+    tryNeighbor(cx, cy, cz - 1);
   }
 }

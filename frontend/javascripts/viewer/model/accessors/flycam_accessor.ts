@@ -33,8 +33,7 @@ import {
   getUnifiedAdditionalCoordinates,
 } from "viewer/model/accessors/dataset_accessor";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForPlaneWithScanLines from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import determineBucketsForPlaneWithFloodFill from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_flood_fill";
+import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit, getBaseVoxelInUnit } from "viewer/model/scaleinfo";
@@ -63,8 +62,6 @@ function calculateTotalBucketCountForZoomLevel(
   viewportRects: OrthoViewRects,
   unzoomedMatrix: Matrix4x4,
   abortLimit: number,
-  obliquePickerStrategy?: "scanLines" | "floodFill",
-  prefetchAlongViewAxis?: boolean,
 ) {
   const mag = denseMags[currentMagIndex];
   const logZoomStep = Math.log2(Math.max(...mag));
@@ -93,10 +90,6 @@ function calculateTotalBucketCountForZoomLevel(
       abortLimit,
     );
   } else {
-    const determineBucketsForPlane =
-      obliquePickerStrategy === "floodFill"
-        ? determineBucketsForPlaneWithFloodFill
-        : determineBucketsForPlaneWithScanLines;
     determineBucketsForPlane(
       loadingStrategy,
       denseMags,
@@ -106,8 +99,6 @@ function calculateTotalBucketCountForZoomLevel(
       logZoomStep,
       viewportRects,
       abortLimit,
-      undefined,
-      prefetchAlongViewAxis,
     );
   }
 
@@ -134,8 +125,6 @@ export function _getMaximumZoomForAllMags(
   maximumCapacity: number,
   layerMatrix: Matrix4x4,
   flycamMatrix: Matrix4x4,
-  obliquePickerStrategy?: "scanLines" | "floodFill",
-  prefetchAlongViewAxis?: boolean,
 ): Array<number> {
   const unzoomedMatrix = M4x4.mul(layerMatrix, flycamMatrix);
 
@@ -187,8 +176,6 @@ export function _getMaximumZoomForAllMags(
       // Increment the limit by one, so that rendering is still possible
       // when exactly meeting the limit.
       maximumCapacity + 1,
-      obliquePickerStrategy,
-      prefetchAlongViewAxis,
     );
 
     if (nextCapacity > maximumCapacity) {

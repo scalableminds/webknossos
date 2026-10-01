@@ -33,12 +33,10 @@ type StatEntry = {
  */
 export function AnnotationStats({
   stats,
-  withMargin,
   orientation = "vertical",
   hideZeroCounts = false,
 }: {
   stats: TracingStats | EmptyObject;
-  withMargin?: boolean | null | undefined;
   // "vertical" (default) stacks the stats as rows (e.g. in time tracking).
   // "horizontal" lays them out side by side (e.g. in the dashboard list views).
   orientation?: "vertical" | "horizontal";
@@ -84,16 +82,9 @@ export function AnnotationStats({
   }
   if (entries.length === 0) return null;
 
-  const useStyleWithMargin = withMargin != null ? withMargin : true;
-  const styleWithLargeMarginBottom = { marginBottom: 14 };
-  const styleWithSmallMargin = { margin: 2 };
-
   if (orientation === "horizontal") {
     return (
-      <div
-        className="info-tab-block annotation-stats-horizontal"
-        style={useStyleWithMargin ? styleWithLargeMarginBottom : styleWithSmallMargin}
-      >
+      <div className="info-tab-block annotation-stats-horizontal" style={{ margin: 2 }}>
         {entries.map((entry) => (
           <FastTooltip key={entry.key} placement="top" html={entry.tooltipHtml}>
             <Icon component={entry.icon} className="info-tab-icon" aria-label={entry.ariaLabel} />{" "}
@@ -105,10 +96,7 @@ export function AnnotationStats({
   }
 
   return (
-    <div
-      className="info-tab-block"
-      style={useStyleWithMargin ? styleWithLargeMarginBottom : styleWithSmallMargin}
-    >
+    <div className="info-tab-block" style={{ margin: 2 }}>
       <table className="annotation-stats-table-slim">
         <tbody>
           {entries.map((entry) => (

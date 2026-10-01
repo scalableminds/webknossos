@@ -108,7 +108,6 @@ function AnnotationDetails({
 
   return (
     <Spin spinning={isFetching}>
-      {/* The description is stored in the tracing store, so it can only be edited in the annotation view. */}
       <AnnotationIdentity
         name={annotation.name}
         description={annotation.description}
@@ -122,7 +121,6 @@ function AnnotationDetails({
       ) : null}
       <SidebarSection label="Dataset">
         <span className="dashboard-details-dataset">
-          {/* The links only use the dataset id, since the annotation's dataset name may be outdated. */}
           <Link
             to={`/datasets/${annotation.datasetId}/view`}
             title={`Click to view dataset ${annotation.dataSetName} without annotation`}
@@ -142,7 +140,7 @@ function AnnotationDetails({
       </SidebarSection>
       {Object.keys(stats).length > 0 ? (
         <SidebarSection label="Statistics">
-          <AnnotationStats stats={stats} withMargin={false} orientation="horizontal" />
+          <AnnotationStats stats={stats} orientation="horizontal" />
         </SidebarSection>
       ) : null}
       {annotation.teams.length > 0 ? (
@@ -208,7 +206,6 @@ function AnnotationDetails({
               </FastTooltip>
             ) : null}
             {onToggleLock != null ? (
-              // The div keeps the link a block within the actions list.
               <FastTooltip title={LOCKED_ANNOTATION_EXPLANATION} wrapper="div">
                 <AsyncLink
                   onClick={onToggleLock}

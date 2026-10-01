@@ -94,9 +94,6 @@ function DatasetFolderViewInner(props: Props) {
   }, [context.datasets]);
 
   const renderNoDatasetsPlaceHolder = () => {
-    // A plain width (rather than antd's Row/Col, whose breakpoints react to the
-    // viewport width, not this column's actual - narrower, sidebar-squeezed - width)
-    // so the cards shrink and wrap based on the space they actually have.
     const cardContainerStyle = { width: 340, maxWidth: "100%" };
     const openPublicDatasetCard = (
       <div style={cardContainerStyle}>

@@ -537,7 +537,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     return filteredAnnotations.filter((el) => difference(this.state.tags, el.tags).length === 0);
   }
 
-  // The name is renamed in the details sidebar, so it's only a link to the annotation here.
   renderNameWithDescription(annotation: APIAnnotationInfo) {
     return (
       <span
@@ -593,8 +592,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     return formatUserName(owner);
   };
 
-  // Most listed annotations are the user's own, so those only say "you". In the admin view, all
-  // annotations belong to the viewed user, so the owner is named plainly.
   renderCreatedMetaItem = (annotation: APIAnnotationInfo) => {
     const { owner } = annotation;
     let ownerText: string | null = null;
@@ -658,13 +655,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
               </span>
             ) : null,
             hasNonZeroStats ? (
-              <AnnotationStats
-                key="stats"
-                stats={stats}
-                withMargin={false}
-                orientation="horizontal"
-                hideZeroCounts
-              />
+              <AnnotationStats key="stats" stats={stats} orientation="horizontal" hideZeroCounts />
             ) : null,
           ]}
         />
@@ -773,7 +764,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           this.renderAnnotationRow(annotation),
       },
       {
-        // Shrinks the column to the width of its content.
         width: 1,
         className: "nowrap",
         key: "action",

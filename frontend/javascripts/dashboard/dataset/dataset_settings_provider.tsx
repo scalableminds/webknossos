@@ -83,6 +83,101 @@ export function getRotationFromCoordinateTransformations(
   return undefined;
 }
 
+/**
+ * Fetches the dataset and its default view configuration and writes both into the form.
+ * Throws if the server returns no data source.
+ */
+async function fetchDatasetIntoForm(
+  datasetId: string,
+  form: FormInstance<DatasetSettingsFormData>,
+  setSavedDataSourceOnServer: (dataSource: APIMaybeUnimportedDataSource | null | undefined) => void,
+) {
+  let fetchedDataset = await getDataset(datasetId, null, undefined, false);
+  const dataSource = fetchedDataset.dataSource;
+
+  setSavedDataSourceOnServer(dataSource);
+
+  if (dataSource == null) {
+    throw new Error("No datasource received from server.");
+  }
+
+  if (fetchedDataset.dataSource.status?.includes("Error")) {
+    const datasetClone = cloneDeep(fetchedDataset) as any as MutableAPIDataset;
+    datasetClone.dataSource.status = fetchedDataset.dataSource.status;
+    fetchedDataset = datasetClone as APIDataset;
+  }
+
+  form.setFieldsValue({
+    dataset: {
+      name: fetchedDataset.name,
+      isPublic: fetchedDataset.isPublic || false,
+      description: fetchedDataset.description || undefined,
+      allowedTeams: fetchedDataset.allowedTeams || [],
+      // @ts-expect-error: The Antd DatePicker component requires a daysjs date object instead of plain number timestamp
+      sortingKey: dayjs(fetchedDataset.sortingKey as any as Dayjs),
+    },
+  });
+
+  form.setFieldsValue({
+    dataSource,
+  });
+
+  if ("dataLayers" in dataSource) {
+    const initialRotationSettings = getRotationFromCoordinateTransformations(dataSource);
+
+    form.setFieldsValue({
+      datasetRotation: initialRotationSettings,
+    });
+
+    // This reads the coordinate transformations from the backend, thus it does not
+    // need to be updated when the user changes rotation settings in the form.
+    const isRotationOnlyInBackend = doAllLayersHaveTheSameRotation(dataSource.dataLayers);
+    form.setFieldValue("isRotationOnly", isRotationOnlyInBackend);
+
+    const dataLayersWithTransformations: DataLayerWithTransformations[] = dataSource.dataLayers.map(
+      (layer: APIDataLayer) => ({
+        name: layer.name,
+        coordinateTransformations: layer.coordinateTransformations || [],
+      }),
+    );
+    const layersWithCoordTransformationsJSON = JSON.stringify(
+      dataLayersWithTransformations,
+      null,
+      2,
+    );
+    form.setFieldsValue({
+      coordinateTransformations: layersWithCoordTransformationsJSON,
+    });
+
+    let initialTransformationsMode;
+    if (initialRotationSettings === NULLED_DS_ROTATION_SETTINGS) {
+      initialTransformationsMode = TransformationsMode.NONE;
+    } else if (isRotationOnlyInBackend) {
+      initialTransformationsMode = TransformationsMode.SIMPLE;
+    } else {
+      initialTransformationsMode = TransformationsMode.ADVANCED;
+    }
+    form.setFieldValue("transformationsMode", initialTransformationsMode);
+  }
+
+  const fetchedDatasetDefaultConfiguration = await getDatasetDefaultConfiguration(datasetId);
+  enforceValidatedDatasetViewConfiguration(
+    fetchedDatasetDefaultConfiguration,
+    fetchedDataset,
+    true,
+  );
+  form.setFieldsValue({
+    defaultConfiguration: fetchedDatasetDefaultConfiguration,
+    defaultConfigurationLayersJson: JSON.stringify(
+      fetchedDatasetDefaultConfiguration.layers,
+      null,
+      "  ",
+    ),
+  });
+
+  return { fetchedDataset, fetchedDatasetDefaultConfiguration };
+}
+
 export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = ({
   children,
   datasetId,
@@ -107,101 +202,24 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   >(null);
 
   const fetchData = useCallback(async (): Promise<string | undefined> => {
+    let datasetName: string | undefined;
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      let fetchedDataset = await getDataset(datasetId, null, undefined, false);
-      const dataSource = fetchedDataset.dataSource;
-
-      setSavedDataSourceOnServer(dataSource);
-
-      if (dataSource == null) {
-        throw new Error("No datasource received from server.");
-      }
-
-      if (fetchedDataset.dataSource.status?.includes("Error")) {
-        const datasetClone = cloneDeep(fetchedDataset) as any as MutableAPIDataset;
-        datasetClone.dataSource.status = fetchedDataset.dataSource.status;
-        fetchedDataset = datasetClone as APIDataset;
-      }
-
-      form.setFieldsValue({
-        dataset: {
-          name: fetchedDataset.name,
-          isPublic: fetchedDataset.isPublic || false,
-          description: fetchedDataset.description || undefined,
-          allowedTeams: fetchedDataset.allowedTeams || [],
-          // @ts-expect-error: The Antd DatePicker component requires a daysjs date object instead of plain number timestamp
-          sortingKey: dayjs(fetchedDataset.sortingKey as any as Dayjs),
-        },
-      });
-
-      form.setFieldsValue({
-        dataSource,
-      });
-
-      if ("dataLayers" in dataSource) {
-        const initialRotationSettings = getRotationFromCoordinateTransformations(dataSource);
-
-        form.setFieldsValue({
-          datasetRotation: initialRotationSettings,
-        });
-
-        // This reads the coordinate transformations from the backend, thus it does not
-        // need to be updated when the user changes rotation settings in the form.
-        const isRotationOnlyInBackend = doAllLayersHaveTheSameRotation(dataSource.dataLayers);
-        form.setFieldValue("isRotationOnly", isRotationOnlyInBackend);
-
-        const dataLayersWithTransformations: DataLayerWithTransformations[] =
-          dataSource.dataLayers.map((layer: APIDataLayer) => ({
-            name: layer.name,
-            coordinateTransformations: layer.coordinateTransformations || [],
-          }));
-        const layersWithCoordTransformationsJSON = JSON.stringify(
-          dataLayersWithTransformations,
-          null,
-          2,
-        );
-        form.setFieldsValue({
-          coordinateTransformations: layersWithCoordTransformationsJSON,
-        });
-
-        let initialTransformationsMode;
-        if (initialRotationSettings === NULLED_DS_ROTATION_SETTINGS) {
-          initialTransformationsMode = TransformationsMode.NONE;
-        } else if (isRotationOnlyInBackend) {
-          initialTransformationsMode = TransformationsMode.SIMPLE;
-        } else {
-          initialTransformationsMode = TransformationsMode.ADVANCED;
-        }
-        form.setFieldValue("transformationsMode", initialTransformationsMode);
-      }
-
-      const fetchedDatasetDefaultConfiguration = await getDatasetDefaultConfiguration(datasetId);
-      enforceValidatedDatasetViewConfiguration(
-        fetchedDatasetDefaultConfiguration,
-        fetchedDataset,
-        true,
+      const { fetchedDataset, fetchedDatasetDefaultConfiguration } = await fetchDatasetIntoForm(
+        datasetId,
+        form,
+        setSavedDataSourceOnServer,
       );
-      form.setFieldsValue({
-        defaultConfiguration: fetchedDatasetDefaultConfiguration,
-        defaultConfigurationLayersJson: JSON.stringify(
-          fetchedDatasetDefaultConfiguration.layers,
-          null,
-          "  ",
-        ),
-      });
-
       setDatasetDefaultConfiguration(fetchedDatasetDefaultConfiguration);
       setDataset(fetchedDataset);
-      return fetchedDataset.name;
+      datasetName = fetchedDataset.name;
     } catch (error) {
       handleGenericError(error as Error);
-      return undefined;
-    } finally {
-      setIsLoading(false);
-      form.validateFields();
     }
-  }, [datasetId, form.setFieldsValue, form.validateFields, form.setFieldValue]);
+    setIsLoading(false);
+    form.validateFields();
+    return datasetName;
+  }, [datasetId, form]);
 
   const getFormValidationSummary = useCallback((): Record<
     "data" | "general" | "defaultConfig",
@@ -332,7 +350,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     queryClient,
     onComplete,
     navigate,
-    form.getFieldsValue,
+    form,
   ]);
 
   const switchToProblematicTab = useCallback(() => {

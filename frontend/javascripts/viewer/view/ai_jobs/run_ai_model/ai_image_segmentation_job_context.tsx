@@ -14,7 +14,7 @@ import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { type AiModel, type APIDataLayer, APIJobCommand } from "types/api_types";
-import { ControlModeEnum } from "viewer/constants";
+import { ControlModeEnum, type Vector6 } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { hasEmptyTrees } from "viewer/model/accessors/skeletontracing_accessor";
 import {
@@ -56,6 +56,81 @@ interface RunAiModelJobContextType {
   setCustomConfiguration: (config: KeyValuePairs) => void;
   handleStartAnalysis: () => void;
   areParametersValid: boolean;
+}
+
+type InferenceJobType =
+  | APIJobCommand.INFER_NEURONS
+  | APIJobCommand.INFER_MITOCHONDRIA
+  | APIJobCommand.INFER_INSTANCES;
+
+async function startInferenceJob({
+  jobType,
+  maybeAnnotationId,
+  aiModelId,
+  datasetId,
+  colorLayerName,
+  boundingBox,
+  newDatasetName,
+  isEvaluationActive,
+  splitMergerEvaluationSettings,
+  seedGeneratorDistanceThreshold,
+  customConfiguration,
+}: {
+  jobType: InferenceJobType;
+  maybeAnnotationId: { annotationId?: string };
+  aiModelId: string;
+  datasetId: string;
+  colorLayerName: string;
+  boundingBox: Vector6;
+  newDatasetName: string;
+  isEvaluationActive: boolean;
+  splitMergerEvaluationSettings: SplitMergerEvaluationSettings;
+  seedGeneratorDistanceThreshold: number | null;
+  customConfiguration: KeyValuePairs;
+}) {
+  switch (jobType) {
+    case APIJobCommand.INFER_NEURONS:
+      await runNeuronModelInference({
+        ...maybeAnnotationId,
+        aiModelId,
+        datasetId,
+        colorLayerName,
+        boundingBox: boundingBox.join(","),
+        newDatasetName,
+        doSplitMergerEvaluation: isEvaluationActive,
+        ...(isEvaluationActive
+          ? {
+              evalUseSparseTracing: splitMergerEvaluationSettings.useSparseTracing,
+              evalMaxEdgeLength: splitMergerEvaluationSettings.maxEdgeLength,
+              evalSparseTubeThresholdNm: splitMergerEvaluationSettings.sparseTubeThresholdInNm,
+              evalMinMergerPathLengthNm: splitMergerEvaluationSettings.minimumMergerPathLengthInNm,
+            }
+          : {}),
+        customConfiguration,
+      });
+      break;
+    case APIJobCommand.INFER_INSTANCES:
+      await runInstanceModelInference({
+        datasetId,
+        aiModelId,
+        colorLayerName,
+        boundingBox: boundingBox.join(","),
+        newDatasetName,
+        seedGeneratorDistanceThreshold,
+        customConfiguration,
+      });
+      break;
+    case APIJobCommand.INFER_MITOCHONDRIA:
+      await runPretrainedMitochondriaInferenceJob(
+        datasetId,
+        colorLayerName,
+        boundingBox,
+        newDatasetName,
+      );
+      break;
+    default:
+      throw new Error(`Unsupported job type: ${jobType}`);
+  }
 }
 
 const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>(undefined);
@@ -176,50 +251,19 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     const aiModelId = selectedModel.id;
 
     try {
-      switch (selectedJobType) {
-        case APIJobCommand.INFER_NEURONS:
-          await runNeuronModelInference({
-            ...maybeAnnotationId,
-            aiModelId,
-            datasetId: dataset.id,
-            colorLayerName: selectedLayer.name,
-            boundingBox: boundingBox.join(","),
-            newDatasetName,
-            doSplitMergerEvaluation: isEvaluationActive,
-            ...(isEvaluationActive
-              ? {
-                  evalUseSparseTracing: splitMergerEvaluationSettings.useSparseTracing,
-                  evalMaxEdgeLength: splitMergerEvaluationSettings.maxEdgeLength,
-                  evalSparseTubeThresholdNm: splitMergerEvaluationSettings.sparseTubeThresholdInNm,
-                  evalMinMergerPathLengthNm:
-                    splitMergerEvaluationSettings.minimumMergerPathLengthInNm,
-                }
-              : {}),
-            customConfiguration,
-          });
-          break;
-        case APIJobCommand.INFER_INSTANCES:
-          await runInstanceModelInference({
-            datasetId: dataset.id,
-            aiModelId,
-            colorLayerName: selectedLayer.name,
-            boundingBox: boundingBox.join(","),
-            newDatasetName,
-            seedGeneratorDistanceThreshold,
-            customConfiguration,
-          });
-          break;
-        case APIJobCommand.INFER_MITOCHONDRIA:
-          await runPretrainedMitochondriaInferenceJob(
-            dataset.id,
-            selectedLayer.name,
-            boundingBox,
-            newDatasetName,
-          );
-          break;
-        default:
-          throw new Error(`Unsupported job type: ${selectedJobType}`);
-      }
+      await startInferenceJob({
+        jobType: selectedJobType,
+        maybeAnnotationId,
+        aiModelId,
+        datasetId: dataset.id,
+        colorLayerName: selectedLayer.name,
+        boundingBox,
+        newDatasetName,
+        isEvaluationActive,
+        splitMergerEvaluationSettings,
+        seedGeneratorDistanceThreshold,
+        customConfiguration,
+      });
       Toast.success("Analysis started successfully!");
       dispatch(setAIJobDrawerStateAction("invisible"));
     } catch (error) {

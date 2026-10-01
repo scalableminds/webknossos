@@ -11,20 +11,24 @@ type Props = {
   dataset: APIMaybeUnimportedDataset;
 };
 
+function requestDatasetAccessList(dataset: APIMaybeUnimportedDataset): Promise<APIUser[]> {
+  try {
+    return getDatasetAccessList(dataset);
+  } catch (error) {
+    handleGenericError(error as Error);
+    return Promise.resolve([]);
+  }
+}
+
 const DatasetAccessListView = ({ dataset }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const datasetUsers = useFetch(
     () => {
-      try {
-        setIsLoading(true);
-        return getDatasetAccessList(dataset);
-      } catch (error) {
-        handleGenericError(error as Error);
-        return Promise.resolve([]);
-      } finally {
-        setIsLoading(false);
-      }
+      setIsLoading(true);
+      const accessListPromise = requestDatasetAccessList(dataset);
+      setIsLoading(false);
+      return accessListPromise;
     },
     [],
     [],

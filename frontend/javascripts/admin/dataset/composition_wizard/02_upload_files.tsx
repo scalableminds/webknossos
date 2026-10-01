@@ -36,14 +36,7 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
   };
   const onNext = async () => {
     try {
-      let newContextPartial: Partial<WizardContext> | null = null;
-      if (wizardContext.composeMode === "BIG_WARP") {
-        newContextPartial = await parseBigWarpFile(fileList);
-      } else if (wizardContext.composeMode === "WK_ANNOTATIONS") {
-        newContextPartial = await parseNmlFiles(fileList);
-      } else {
-        throw new Error("Unexpected compose mode: " + wizardContext.composeMode);
-      }
+      const newContextPartial = await parseLandmarkFiles(wizardContext.composeMode, fileList);
       setWizardContext((oldContext) => ({
         ...oldContext,
         ...newContextPartial,
@@ -113,6 +106,19 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
       </AsyncButton>
     </div>
   );
+}
+
+async function parseLandmarkFiles(
+  composeMode: WizardContext["composeMode"],
+  fileList: FileList,
+): Promise<Partial<WizardContext> | null> {
+  if (composeMode === "BIG_WARP") {
+    return parseBigWarpFile(fileList);
+  } else if (composeMode === "WK_ANNOTATIONS") {
+    return parseNmlFiles(fileList);
+  } else {
+    throw new Error("Unexpected compose mode: " + composeMode);
+  }
 }
 
 async function parseBigWarpFile(fileList: FileList): Promise<Partial<WizardContext>> {

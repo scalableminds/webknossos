@@ -126,9 +126,8 @@ function ProjectListView() {
           );
         } catch (error) {
           handleGenericError(error as Error);
-        } finally {
-          setIsLoadingMutation(false);
         }
+        setIsLoadingMutation(false);
       },
     });
   }
@@ -168,9 +167,8 @@ function ProjectListView() {
           );
         } catch (error) {
           handleGenericError(error as Error);
-        } finally {
-          setIsLoadingMutation(false);
         }
+        setIsLoadingMutation(false);
       },
     });
   }

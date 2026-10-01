@@ -83,7 +83,7 @@ export const AiAlignmentSettings: React.FC = () => {
                     <Checkbox>Perform fine alignment only</Checkbox>
                   </Form.Item>
                   <FastTooltip
-                    title={`Enable this if the dataset is already roughly aligned and only needs fine-tuning, rather than a full alignment from scratch. Fine alignment assumes that your dataset has no jumps larger than ${FINE_ALIGNMENT_MAX_JUMP_SIZE} voxels.`}
+                    title={`Enable this if the dataset is already roughly aligned and only needs fine-tuning, rather than a full alignment from scratch. Fine alignment assumes that no major rotations or jumps larger than ${FINE_ALIGNMENT_MAX_JUMP_SIZE} voxels need to be solved.`}
                   >
                     <InfoCircleOutlined />
                   </FastTooltip>

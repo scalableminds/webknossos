@@ -26,6 +26,8 @@ import { CopyIconWithTooltip } from "./copy_icon_with_tooltip";
 import { getInfoMenuItem, positionToString } from "./helpers";
 import { useSegmentStatisticsLabels } from "./use_segment_statistics_labels";
 
+const NO_SEGMENT_ID = 0n;
+
 export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAtPosition: bigint) {
   const {
     globalPosition,
@@ -47,7 +49,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
   // Thus the segment id is always unambiguous / clearly defined.
   const clickedSegmentOrMeshId =
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
-  const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0n;
+  const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== NO_SEGMENT_ID;
 
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);

@@ -49,12 +49,17 @@ export function DashboardRouteRootWrapper() {
   // The `isAuthenticated` prop could be outdated for a short time frame which
   // would lead to an unnecessary browser refresh.
   const { activeUser } = Store.getState();
+
+  useEffect(() => {
+    if (!activeUser) {
+      // Hard navigate so that webknossos.org is shown for the wkorg instance.
+      window.location.href = "/";
+    }
+  }, [activeUser]);
+
   if (activeUser) {
     return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
   }
-
-  // Hard navigate so that webknossos.org is shown for the wkorg instance.
-  window.location.href = "/";
   return null;
 }
 

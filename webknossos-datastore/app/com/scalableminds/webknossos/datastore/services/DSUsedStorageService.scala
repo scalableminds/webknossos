@@ -27,7 +27,7 @@ class DSUsedStorageService @Inject() (
     managedS3Service: ManagedS3Service
 ) extends LazyLogging {
 
-  def measureStorageForPaths(paths: Seq[String], organizationId: String)(implicit
+  def measureStorageForPaths(paths: Seq[String])(implicit
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[PathStorageReport]] =

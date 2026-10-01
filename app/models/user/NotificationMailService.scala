@@ -2,6 +2,7 @@ package models.user
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.box.Failure
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
@@ -17,6 +18,7 @@ import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.*
 
 /* Informs users by email when someone else changes what they have access to or what they should work on:
    annotations and datasets shared with their teams, annotations transferred to them, changes of their team
@@ -40,6 +42,11 @@ class NotificationMailService @Inject() (
   private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
+
+  /* Users that were activated recently. The user list activates users in one request and offers to configure their
+     teams and roles in a follow-up request, so changes shortly after the activation are still part of the onboarding,
+     which the activation mail already covers. Kept in memory only, as losing it on a restart merely causes one extra mail. */
+  private val recentlyActivatedUsers: AlfuCache[ObjectId, Unit] = AlfuCache(timeToLive = 1 hour)
 
   private def accessChangesEnabled: Boolean = conf.Mail.Notifications.accessChanges
   private def taskAssignmentsEnabled: Boolean = conf.Mail.Notifications.manualTaskAssignments
@@ -126,16 +133,20 @@ class NotificationMailService @Inject() (
       }
   }
 
-  /* Only changes to users that stay active are announced. Newly activated users already get the activation mail,
-     which is typically sent together with their initial team memberships. */
+  /* Only changes to users that stay active are announced. Users that were just activated already get the activation
+     mail, so changes during their first hour after the activation are not announced separately. */
   def notifyAccessChanged(
       userBefore: User,
       oldTeamMemberships: List[TeamMembership],
       userAfter: User,
       newTeamMemberships: List[TeamMembership],
       issuer: User
-  ): Unit =
-    if (accessChangesEnabled && userBefore._id != issuer._id && !userBefore.isDeactivated && !userAfter.isDeactivated)
+  ): Unit = {
+    if (userBefore.isDeactivated && !userAfter.isDeactivated)
+      recentlyActivatedUsers.getOrLoad(userAfter._id, _ => Fox.successful(()))
+    val staysActive = !userBefore.isDeactivated && !userAfter.isDeactivated
+    val wasRecentlyActivated = recentlyActivatedUsers.keys.contains(userAfter._id)
+    if (accessChangesEnabled && userBefore._id != issuer._id && staysActive && !wasRecentlyActivated)
       inBackground(s"access of user ${userBefore._id} changed") {
         for {
           teams <- teamDAO.findAllByIds((oldTeamMemberships ++ newTeamMemberships).map(_.teamId).distinct)
@@ -157,6 +168,7 @@ class NotificationMailService @Inject() (
           )
         } yield ()
       }
+  }
 
   def notifyTaskAssigned(task: Task, project: Project, annotationId: ObjectId, assignee: User, issuer: User): Unit =
     if (taskAssignmentsEnabled && assignee._id != issuer._id)

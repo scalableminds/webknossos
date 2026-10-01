@@ -417,7 +417,8 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
           sharerName,
           datasetName,
           teamNames,
-          s"$uri/datasets/$datasetName-$datasetId/view",
+          // The dataset name is left out, as it may contain characters that are not valid in a URL path.
+          s"$uri/datasets/$datasetId/view",
           additionalFooter
         )
         .body,

@@ -53,30 +53,48 @@ export function getRenderer(): WebGLRenderer {
   return renderer;
 }
 
+type GpuInfo = { vendor: string | null; renderer: string | null };
+
+// The GPU vendor never changes during a session. Caching it avoids creating a context just for
+// analytics, which can be expensive (especially with software rendering) and blocks the main thread.
+let cachedGpuInfo: GpuInfo | null = null;
+
+export function readGpuInfo(gl: WebGLRenderingContext | WebGL2RenderingContext): GpuInfo {
+  if (cachedGpuInfo != null) return cachedGpuInfo;
+  const info: GpuInfo = { vendor: null, renderer: null };
+  const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+  if (debugInfo != null) {
+    info.vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+    info.renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+    cachedGpuInfo = info;
+  }
+  return info;
+}
+
+function getGpuInfo(): GpuInfo {
+  if (cachedGpuInfo != null) return cachedGpuInfo;
+  // Prefer the context that is already in use. Creating a new one is only a fallback.
+  const activeContext = renderer?.getContext();
+  if (activeContext != null && !activeContext.isContextLost()) {
+    return readGpuInfo(activeContext);
+  }
+  const gl = document.createElement("canvas").getContext("webgl2");
+  if (gl == null) return { vendor: null, renderer: null };
+  const info = readGpuInfo(gl);
+  gl.getExtension("WEBGL_lose_context")?.loseContext();
+  return info;
+}
+
 export function getWebGlAnalyticsInformation(state: WebknossosState) {
   const interpolationEnabled = state.datasetConfiguration.interpolation;
 
-  const info = {
+  return {
     url: location.href,
     userAgent: navigator?.userAgent,
     platform: navigator?.platform,
     interpolationEnabled,
-    vendor: null,
-    renderer: null,
+    ...getGpuInfo(),
   };
-
-  const canvas = document.createElement("canvas");
-  const gl = canvas.getContext("webgl2");
-
-  if (gl != null) {
-    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
-    if (debugInfo != null) {
-      info.vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-      info.renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-    }
-  }
-
-  return info;
 }
 
 if (typeof window !== "undefined") {

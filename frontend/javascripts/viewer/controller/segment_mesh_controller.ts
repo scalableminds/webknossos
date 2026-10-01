@@ -1,6 +1,7 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
+import { createTween } from "libs/tween_group";
 import forEach from "lodash-es/forEach";
 import get from "lodash-es/get";
 import isEqual from "lodash-es/isEqual";
@@ -19,7 +20,6 @@ import {
   Vector3 as ThreeVector3,
 } from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
-import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BigIntAsKey, LayerNameAsKey } from "types/type_utils";
 import type { Vector2, Vector3 } from "viewer/constants";
@@ -191,7 +191,7 @@ export default class SegmentMeshController {
     const mesh = new Mesh(geometry, meshMaterial) as any as MeshSceneNode;
     mesh.isMerged = isMerged;
 
-    const tweenAnimation = new TWEEN.Tween({
+    const tweenAnimation = createTween({
       opacity: 0,
     });
     tweenAnimation
@@ -201,8 +201,8 @@ export default class SegmentMeshController {
         },
         100,
       )
-      .onUpdate(function onUpdate(this: { opacity: number }) {
-        meshMaterial.opacity = this.opacity;
+      .onUpdate((tweenState: { opacity: number }) => {
+        meshMaterial.opacity = tweenState.opacity;
         app.vent.emit("rerender");
       })
       .start();

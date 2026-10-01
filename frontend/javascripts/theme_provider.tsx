@@ -43,3 +43,15 @@ export default function GlobalThemeProvider({
     </ConfigProvider>
   );
 }
+
+/**
+ * Restores the user's regular antd theme for its children. Use this for modals that are
+ * rendered within a differently themed subtree (e.g., the dark navbar/toolbar), since
+ * modals would otherwise inherit that theme.
+ */
+export function UserThemeConfigProvider({ children }: { children: React.ReactNode }) {
+  const activeUser = useWkSelector((state) => state.activeUser);
+  return (
+    <ConfigProvider theme={getAntdTheme(getThemeFromUser(activeUser))}>{children}</ConfigProvider>
+  );
+}

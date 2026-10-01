@@ -14,11 +14,13 @@ import play.api.libs.json.*
 trait UpdateAction {
   def actionTimestamp: Option[Long]
 
-  def addTimestamp(timestamp: Long): UpdateAction
+  def withTimestamp(timestamp: Long): UpdateAction
 
-  def addInfo(info: Option[String]): UpdateAction
+  def withInfo(info: Option[String]): UpdateAction
 
-  def addAuthorId(authorId: Option[ObjectId]): UpdateAction
+  def withAuthorId(authorId: Option[ObjectId]): UpdateAction
+
+  def truncated: UpdateAction = withInfo(None)
 
   def isViewOnlyChange: Boolean = false
 }

@@ -354,7 +354,7 @@ class TSAnnotationService @Inject() (
         if (truncate)
           updateActionBatches.map(batch =>
             batch.map { case (version, updateActions) =>
-              (version, updateActions.take(MaxUpdateActionEntriesPerVersion))
+              (version, updateActions.take(MaxUpdateActionEntriesPerVersion).map(_.truncated))
             }
           )
         else updateActionBatches

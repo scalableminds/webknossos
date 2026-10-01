@@ -365,11 +365,11 @@ class AnnotationTransactionService @Inject() (
 
   private def preprocessActionsForStorage(updateActionGroup: UpdateActionGroup): List[UpdateAction] = {
     val actionsWithInfo = updateActionGroup.actions.map(
-      _.addTimestamp(updateActionGroup.timestamp).addAuthorId(updateActionGroup.authorId)
+      _.withTimestamp(updateActionGroup.timestamp).withAuthorId(updateActionGroup.authorId)
     ) match {
       case Nil => List[UpdateAction]()
       // to the first action in the group, attach the group's info
-      case first :: rest => first.addInfo(updateActionGroup.info) :: rest
+      case first :: rest => first.withInfo(updateActionGroup.info) :: rest
     }
     actionsWithInfo.map {
       case a: EagerUpdateBucketVolumeAction => a.withoutBase64Data

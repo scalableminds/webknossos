@@ -37,10 +37,10 @@ case class AddLayerAnnotationAction(
     info: Option[String] = None
 ) extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): UpdateAction =
+  override def withTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -53,10 +53,10 @@ case class DeleteLayerAnnotationAction(
     info: Option[String] = None
 ) extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): UpdateAction =
+  override def withTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -68,10 +68,10 @@ case class UpdateLayerMetadataAnnotationAction(
     info: Option[String] = None
 ) extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): UpdateAction =
+  override def withTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -82,10 +82,10 @@ case class UpdateMetadataAnnotationAction(
     info: Option[String] = None
 ) extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): UpdateAction =
+  override def withTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -96,10 +96,10 @@ case class RevertToVersionAnnotationAction(
     info: Option[String] = None
 ) extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): UpdateAction =
+  override def withTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -110,10 +110,10 @@ case class ResetToBaseAnnotationAction(
     info: Option[String] = None
 ) extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): UpdateAction =
+  override def withTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -123,10 +123,10 @@ case class UpdateTdCameraAnnotationAction(
     info: Option[String] = None
 ) extends AnnotationUpdateAction derives JsonAutoFormat {
 
-  override def addTimestamp(timestamp: Long): UpdateAction =
+  override def withTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 
   override def isViewOnlyChange: Boolean = true
@@ -143,10 +143,10 @@ case class UpdateCameraAnnotationAction(
 ) extends AnnotationUpdateAction
     with UserStateUpdateAction derives JsonAutoFormat {
 
-  override def addTimestamp(timestamp: Long): UpdateAction =
+  override def withTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def isViewOnlyChange: Boolean = true
 }

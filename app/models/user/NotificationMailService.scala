@@ -85,18 +85,23 @@ class NotificationMailService @Inject() (
       inBackground(s"annotation ${annotation._id} transferred to user ${annotation._user}") {
         for {
           newOwner <- userDAO.findOne(annotation._user)
-          recipient <- multiUserDAO.findOne(newOwner._multiUser)
-          issuerMultiUser <- multiUserDAO.findOne(issuer._multiUser)
-          dataset <- datasetDAO.findOne(annotation._dataset)
-        } yield Mailer ! Send(
-          defaultMails.annotationTransferredMail(
-            recipient,
-            issuerMultiUser.fullName,
-            annotation._id,
-            annotationName(annotation),
-            dataset.name
+          // Deactivated users cannot log in, so there is nothing for them to act on.
+          _ <- Fox.runIf(!newOwner.isDeactivated)(
+            for {
+              recipient <- multiUserDAO.findOne(newOwner._multiUser)
+              issuerMultiUser <- multiUserDAO.findOne(issuer._multiUser)
+              dataset <- datasetDAO.findOne(annotation._dataset)
+            } yield Mailer ! Send(
+              defaultMails.annotationTransferredMail(
+                recipient,
+                issuerMultiUser.fullName,
+                annotation._id,
+                annotationName(annotation),
+                dataset.name
+              )
+            )
           )
-        )
+        } yield ()
       }
 
   /* Old and new team ids are those the dataset itself is shared with. Teams that have access through the dataset’s
@@ -171,7 +176,7 @@ class NotificationMailService @Inject() (
   }
 
   def notifyTaskAssigned(task: Task, project: Project, annotationId: ObjectId, assignee: User, issuer: User): Unit =
-    if (taskAssignmentsEnabled && assignee._id != issuer._id)
+    if (taskAssignmentsEnabled && assignee._id != issuer._id && !assignee.isDeactivated)
       inBackground(s"task ${task._id} assigned to user ${assignee._id}") {
         for {
           recipient <- multiUserDAO.findOne(assignee._multiUser)

@@ -54,20 +54,22 @@ class StorageWarningService @Inject() (
       crossedThresholdsPercent: Seq[Int]
   ): Fox[Unit] =
     for {
+      // Resolved before recording, so that a failed lookup does not suppress the warning until it is re-armed.
+      recipients <- multiUserDAO.findMultiUsersOfOrganizationOwnerAndAdmins(organization._id)
+      _ <- Fox.fromBool(recipients.nonEmpty) ?~> "Organization has neither an owner nor an admin to notify"
       // Recorded before sending, so that mails that cannot be delivered are not retried on every scan.
       // The count tells us how many of the thresholds were not recorded before; if none, the mails were already sent.
       newlyRecordedCount <- organizationDAO.insertStorageWarnings(organization._id, crossedThresholdsPercent)
-      _ <- Fox.runIf(newlyRecordedCount > 0)(for {
-        recipients <- multiUserDAO.findMultiUsersOfOrganizationOwnerAndAdmins(organization._id)
-        _ = logger.info(
+      _ = if (newlyRecordedCount > 0) {
+        logger.info(
           s"Warning the owner and admins (${recipients.length}) of organization ${organization._id} that it uses $usedStorageBytes of $includedStorageBytes included storage bytes..."
         )
-        _ = recipients.foreach(recipient =>
+        recipients.foreach(recipient =>
           Mailer ! Send(
             defaultMails.storageWarningMail(recipient, organization, usedStorageBytes, includedStorageBytes)
           )
         )
-      } yield ())
+      }
     } yield ()
 }
 

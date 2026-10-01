@@ -219,9 +219,11 @@ export function CreateSegmentButton() {
   );
   const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
 
-  const activeCellId = isMappingEnabled
-    ? mapId(volumeTracingId, unmappedActiveCellId)
-    : unmappedActiveCellId;
+  // The cube reads the mapping from the store. Mapping it in a selector keeps the
+  // mapped id up to date when the mapping changes (e.g., when HDF5 entries are loaded).
+  const activeCellId = useWkSelector(() =>
+    isMappingEnabled ? mapId(volumeTracingId, unmappedActiveCellId) : unmappedActiveCellId,
+  );
 
   const activeCellColor = useWkSelector((state) => {
     if (!activeCellId) {

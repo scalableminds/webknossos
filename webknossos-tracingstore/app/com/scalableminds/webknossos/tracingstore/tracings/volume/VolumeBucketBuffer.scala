@@ -161,7 +161,6 @@ class VolumeBucketBuffer(
         .toSet
     )
 
-  // TODO deduplicate from segment index buffer
   def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]]): Box[Array[Byte]] =
     bytesBox match {
       case Empty       => Full(emptyBucketArrayForElementClass)
@@ -169,9 +168,8 @@ class VolumeBucketBuffer(
       case f: Failure  => f
     }
 
-  // TODO deduplicate from segment index buffer
   lazy val emptyBucketArrayForElementClass: Array[Byte] =
-    Array.fill[Byte](ElementClass.bytesPerElement(volumeLayer.elementClass))(0)
+    Array.fill[Byte](volumeLayer.expectedUncompressedBucketSize)(0)
 
   def flush(): Fox[Unit] = {
     val fullDirtyBuckets = bucketDataBuffer.keys.flatMap { bucketPosition =>

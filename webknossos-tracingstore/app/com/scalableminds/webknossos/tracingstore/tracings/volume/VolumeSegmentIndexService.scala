@@ -69,7 +69,7 @@ class VolumeSegmentIndexService @Inject() (
     for {
       bucketBytesDecompressed <- stats.time("segmentIndex.decompress")(
         if (isRevertedElement(bucketBytes)) {
-          Fox.successful(segmentIndexBuffer.emptyBucketArrayForElementClass)
+          Fox.successful(segmentIndexBuffer.emptySingleElementBucketArrayForElementClass)
         } else {
           tryo(
             decompressIfNeeded(

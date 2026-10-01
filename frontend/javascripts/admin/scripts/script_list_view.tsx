@@ -33,7 +33,7 @@ function ScriptListView() {
   const [scripts, setScripts] = useState<APIScript[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  async function fetchData(): Promise<void> {
+  async function fetchScripts(): Promise<void> {
     const scripts = await getScripts();
     setIsLoading(false);
     setScripts(scripts);
@@ -42,7 +42,7 @@ function ScriptListView() {
   useEffectOnlyOnce(() => {
     const { searchQuery } = persistence.load();
     setSearchQuery(searchQuery || "");
-    fetchData();
+    fetchScripts();
   });
 
   useEffect(() => {

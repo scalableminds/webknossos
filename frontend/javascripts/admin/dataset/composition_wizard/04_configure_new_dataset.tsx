@@ -213,6 +213,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     };
 
     setIsLoading(true);
+    // No try & finally as react compiler currently can't handle this.
     await createComposition().finally(() => setIsLoading(false));
   };
 

@@ -393,20 +393,20 @@ export default function TaskListView({
   }
 
   async function downloadLog() {
+    if (singleRunId == null) {
+      message.error("Please select a specific run for log download.");
+      return;
+    }
+    const singleRun = report.runs.find((r) => r.id === singleRunId);
+    const beginTime = singleRun?.beginTime;
+    const endTime = singleRun?.endTime ?? new Date();
+
+    if (beginTime == null) {
+      message.error("Run hasn't started yet.");
+      return;
+    }
+
     try {
-      if (singleRunId == null) {
-        message.error("Please select a specific run for log download.");
-        return;
-      }
-      const singleRun = report.runs.find((r) => r.id === singleRunId);
-      const beginTime = singleRun?.beginTime;
-      const endTime = singleRun?.endTime ?? new Date();
-
-      if (beginTime == null) {
-        message.error("Run hasn't started yet.");
-        return;
-      }
-
       const logText = (
         await getVoxelyticsLogs(
           singleRunId,

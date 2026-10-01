@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent } from "react";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getConnectomeDataForLayer } from "viewer/model/accessors/connectome_accessor";
 import {
@@ -16,9 +16,8 @@ export default function useConnectomeSkeleton(
   layerName: string | null | undefined,
   onLayerTeardown: () => void,
 ) {
-  // Keep a ref to the latest callback so the effect only depends on the layer name.
-  const onLayerTeardownRef = useRef(onLayerTeardown);
-  onLayerTeardownRef.current = onLayerTeardown;
+  // Use an effect event for the latest callback so the effect only depends on the layer name.
+  const onLayerTeardownEvent = useEffectEvent(onLayerTeardown);
 
   useEffect(() => {
     if (layerName == null) return undefined;
@@ -44,7 +43,7 @@ export default function useConnectomeSkeleton(
       getSceneController().removeSkeleton(skeletonId);
       // Reset the connectome selection and the local state of the tab
       Store.dispatch(setActiveConnectomeAgglomerateIdsAction(layerName, []));
-      onLayerTeardownRef.current();
+      onLayerTeardownEvent();
     };
   }, [layerName]);
 }

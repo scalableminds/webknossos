@@ -328,6 +328,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
   "dataset.clear_cache_success": "The dataset was reloaded successfully.",
+  "dataset.clear_cache_failed": "The dataset could not be reloaded.",
   "dataset.delete_success": template(
     "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
   ),

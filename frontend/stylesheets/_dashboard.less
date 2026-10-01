@@ -227,9 +227,8 @@ pre.dataset-import-folder-structure-hint {
   }
 }
 
-/** Bordered header bar above the dashboard dataset/annotation tables, holding a
-    summary count plus filter/sort dropdowns. Pairs with .dashboard-list-table
-    below it to form one continuous bordered box. */
+/** Header bar above the dashboard tables, holding a summary count plus filter/sort dropdowns.
+    Pairs with .dashboard-list-table */
 .dashboard-list-filter-bar {
   border: 1px solid var(--ant-color-border);
   border-radius: var(--ant-border-radius) var(--ant-border-radius) 0 0;
@@ -237,21 +236,17 @@ pre.dataset-import-folder-structure-hint {
   background: var(--ant-color-fill-alter);
 }
 
-/** Headerless, bordered table used for the dashboard dataset/annotation lists.
+/** Headerless, bordered table used for the dashboard lists.
     Removes the top border/radius so it reads as a continuation of
     .dashboard-list-filter-bar above it. */
 .dashboard-list-table {
   .ant-table-container {
     border-top: none !important;
     border-radius: 0 0 var(--ant-border-radius) var(--ant-border-radius) !important;
-    // antd's own bordered-table color doesn't exactly match --ant-color-border (the
-    // one .dashboard-list-filter-bar uses above it), so the outer box's left border
-    // would otherwise subtly change color between the header bar and the table.
+    // match header bar border-color
     border-color: var(--ant-color-border) !important;
   }
 
-  // Recolor just the table's outer right/bottom edges to match, without touching
-  // the color of the divider lines between rows/columns further inside the table.
   .ant-table-tbody > tr > .ant-table-cell:last-child {
     border-right-color: var(--ant-color-border) !important;
   }
@@ -259,29 +254,21 @@ pre.dataset-import-folder-structure-hint {
     border-bottom-color: var(--ant-color-border) !important;
   }
 
-  // antd gives borderless Cards a subtle default box-shadow (e.g. the empty-state
-  // welcome cards). It reads as an odd floating panel inside an already-bordered
-  // table, so it's suppressed here.
   .ant-card {
     box-shadow: none;
   }
 }
 
-/** Suppresses the vertical divider that `bordered` would otherwise draw after this
-    cell (e.g. the dataset thumbnail column), so it visually merges with the next
-    column instead of being separated by a line. */
 .dashboard-list-table-borderless-cell {
   border-inline-end: none !important;
 }
 
-/** Removes the cell's own right-hand padding (e.g. the dataset thumbnail column),
-    so the thumbnail image itself controls the gap to the next column. */
 .dashboard-list-table-thumbnail-cell {
   padding-inline-end: 5px !important;
 }
 
 /** Single-line row of meta info shown beneath a dataset/annotation row's
-    title (e.g. size, creation date, owner), with entries separated by a dot. */
+    title, with entries separated by a dot. */
 .dashboard-row-meta {
   display: flex;
   align-items: center;
@@ -290,9 +277,6 @@ pre.dataset-import-folder-structure-hint {
   font-size: 13px;
   margin-top: 4px;
 
-  // Links within the meta line (e.g. the annotation count) should read as part of
-  // the muted text, not stand out with the default link color - but still hint at
-  // being clickable once hovered.
   a {
     color: inherit;
 
@@ -326,7 +310,7 @@ pre.dataset-import-folder-structure-hint {
   font-size: 17px;
 }
 
-// Together with the 8px end margin of the preceding name or label, this matches the spacing
+// Together with the end margin of the preceding name or label, this matches the spacing
 // between the dataset name and its tags.
 .dashboard-annotation-tags {
   margin-inline-start: 7px;
@@ -356,9 +340,6 @@ pre.dataset-import-folder-structure-hint {
   }
 }
 
-// A labelled section of a details sidebar. The content is a flex column so that plain text,
-// tags and other inline blocks all take up the same vertical space.
-// The dataset name, followed by its settings button (like in the annotation info tab).
 .dashboard-details-dataset {
   display: flex;
   align-items: center;

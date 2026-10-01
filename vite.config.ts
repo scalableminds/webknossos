@@ -89,7 +89,7 @@ const viteConfig = {
         changeOrigin: true,
       },
     },
-    hmr: true, // disable Hot Module Replacement for now
+    hmr: false, // disable Hot Module Replacement for now
     watch: {
       ignored: [
         "**/node_modules/**",

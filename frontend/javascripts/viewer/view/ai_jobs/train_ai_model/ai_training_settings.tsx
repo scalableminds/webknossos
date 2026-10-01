@@ -46,7 +46,7 @@ export const AiTrainingSettings: React.FC = () => {
   return (
     <JobSection
       step={3}
-      title="Training settings"
+      title="Training Settings"
       description="Name the resulting model and configure its training."
       status={stepStatuses.settings}
     >

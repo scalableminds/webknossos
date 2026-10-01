@@ -52,7 +52,7 @@ export const AiTrainingModelSelector: React.FC = () => {
   return (
     <JobSection
       step={1}
-      title="Select training task"
+      title="Select Training Task"
       description="What kind of structure should the model learn?"
       status={stepStatuses.task}
     >

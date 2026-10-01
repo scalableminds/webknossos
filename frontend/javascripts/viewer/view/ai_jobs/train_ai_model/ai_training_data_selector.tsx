@@ -325,7 +325,7 @@ export const AiTrainingDataSection = () => {
   return (
     <JobSection
       step={2}
-      title="Training data"
+      title="Training Data"
       description="Each annotation needs a ground-truth layer and bounding boxes."
       status={stepStatuses.trainingData}
       extra={

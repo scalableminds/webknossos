@@ -55,7 +55,7 @@ export const AiAlignmentSettings: React.FC = () => {
   return (
     <JobSection
       step={2}
-      title="Alignment settings"
+      title="Alignment Settings"
       description="The aligned result is written to a new dataset."
       status={stepStatuses.settings}
     >

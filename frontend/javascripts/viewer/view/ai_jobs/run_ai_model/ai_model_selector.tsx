@@ -115,7 +115,7 @@ export const AiModelSelector: React.FC = () => {
   return (
     <JobSection
       step={1}
-      title="Select AI model"
+      title="Select AI Model"
       description="Pick a pre-trained model or one you trained yourself."
       status={stepStatuses.model}
       extra={

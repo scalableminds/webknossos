@@ -309,7 +309,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
       <Flex align="center" gap="small" style={{ marginBottom: 16 }}>
         <CreditCardOutlined style={{ color: ColorWKGold, fontSize: cssVar.fontSizeLG }} />
         <Text strong style={{ fontSize: cssVar.fontSizeLG }}>
-          Credit information
+          Credit Information
         </Text>
       </Flex>
       <Flex

@@ -126,7 +126,7 @@ export const AiAnalysisSettings: React.FC = () => {
   return (
     <JobSection
       step={2}
-      title="Analysis settings"
+      title="Analysis Settings"
       description="Where results go and which region to process."
       status={stepStatuses.settings}
     >

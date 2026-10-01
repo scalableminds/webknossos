@@ -55,7 +55,7 @@ export const AiAlignmentModelSelector: React.FC = () => {
   return (
     <JobSection
       step={1}
-      title="Select alignment task"
+      title="Select Alignment Task"
       description="Choose based on how your sections were acquired."
       status={stepStatuses.task}
     >

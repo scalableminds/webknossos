@@ -2,8 +2,8 @@ import AdminPage from "admin/admin_page";
 import { unwrapOrThrow } from "admin/api/api_result";
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Col, Form, Input, Row, Select, theme } from "antd";
-import { useWkSelector } from "libs/react_hooks";
-import { useEffect, useState } from "react";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import type { APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -19,11 +19,6 @@ function ScriptCreateView() {
   const [users, setUsers] = useState<APIUser[]>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
-
-  useEffect(() => {
-    fetchData();
-    applyDefaults();
-  }, []);
 
   async function fetchData() {
     setIsFetchingData(true);
@@ -41,6 +36,11 @@ function ScriptCreateView() {
     const defaultFormValues = Object.assign({}, script, defaultValues);
     form.setFieldsValue(defaultFormValues);
   }
+
+  useEffectOnlyOnce(() => {
+    fetchData();
+    applyDefaults();
+  });
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const onFinish = async (formValues) => {

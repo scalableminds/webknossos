@@ -7,6 +7,7 @@ import type {
   AdditionalAxis,
   AnnotationCollaborationMode,
   AnnotationLayerDescriptor,
+  APIAnnotationBookmark,
   APIAnnotationType,
   APIAnnotationVisibility,
   APIConnectomeFile,
@@ -134,6 +135,7 @@ export type Annotation = {
   readonly restrictions: RestrictionsAndSettings;
   readonly visibility: AnnotationVisibility;
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
+  readonly bookmarks: Array<APIAnnotationBookmark>;
   readonly tags: Array<string>;
   readonly stats: TracingStats | null | undefined;
   readonly description: string;

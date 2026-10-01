@@ -63,6 +63,10 @@ function parseAsBigInt(value: string | number | bigint | null | undefined): {
   }
 }
 
+function isValidLargestSegmentId(id: bigint, valueRange: readonly [bigint, bigint]): boolean {
+  return id >= valueRange[0] && id <= valueRange[1] && id !== 0n;
+}
+
 function copyDatasetID(datasetId: string | null | undefined) {
   if (!datasetId) {
     return;
@@ -665,7 +669,7 @@ function SimpleLayerForm({
                         if (parsed == null || valueRange == null) {
                           return Promise.resolve();
                         }
-                        return parsed >= valueRange[0] && parsed <= valueRange[1] && parsed !== 0n
+                        return isValidLargestSegmentId(parsed, valueRange)
                           ? Promise.resolve()
                           : Promise.reject(
                               new Error(

@@ -28,6 +28,28 @@ function entriesToPairs(entries: KeyValueEntry[]): KeyValuePairs {
   return result;
 }
 
+async function loadConfigKeyOptions(setConfigKeyOptions: (options: { value: string }[]) => void) {
+  try {
+    const { WORKFLOW_CONFIG_KEYS } = await importDynamic(
+      () => import("viewer/view/ai_jobs/workflow_config_keys"),
+      {
+        showErrorToast: false,
+      },
+    );
+    setConfigKeyOptions(WORKFLOW_CONFIG_KEYS.map((k) => ({ value: k })));
+  } catch (error) {
+    // If the error has nothing to do with imports failing, propagate the error further upwards.
+    if (!(error instanceof DynamicImportError)) throw error;
+    if (error.reason === "new-version-available") {
+      Toast.info(
+        "Workflow key autocompletion is unavailable. A new WEBKNOSSOS version was released – please reload.",
+      );
+    } else {
+      Toast.warning("Workflow key autocompletion could not be loaded due to a network problem.");
+    }
+  }
+}
+
 /**
  * An editable list of key-value pairs whose result is a JSON-serializable object.
  * Values are entered as plain text and automatically coerced to numbers or booleans
@@ -48,27 +70,7 @@ export function KeyValuePairsInput({
   const [entries, setEntries] = useState<KeyValueEntry[]>([]);
   const [configKeyOptions, setConfigKeyOptions] = useState<{ value: string }[]>([]);
 
-  useDidMount(async () => {
-    try {
-      const { WORKFLOW_CONFIG_KEYS } = await importDynamic(
-        () => import("viewer/view/ai_jobs/workflow_config_keys"),
-        {
-          showErrorToast: false,
-        },
-      );
-      setConfigKeyOptions(WORKFLOW_CONFIG_KEYS.map((k) => ({ value: k })));
-    } catch (error) {
-      // If the error has nothing to do with imports failing, propagate the error further upwards.
-      if (!(error instanceof DynamicImportError)) throw error;
-      if (error.reason === "new-version-available") {
-        Toast.info(
-          "Workflow key autocompletion is unavailable. A new WEBKNOSSOS version was released – please reload.",
-        );
-      } else {
-        Toast.warning("Workflow key autocompletion could not be loaded due to a network problem.");
-      }
-    }
-  });
+  useDidMount(() => loadConfigKeyOptions(setConfigKeyOptions));
 
   function addEntry() {
     setEntries((prev) => [...prev, { id: `${idPrefix}-${Date.now()}`, key: "", rawValue: "" }]);

@@ -36,11 +36,12 @@ function ChangeUsernameView({
     const hasNameBeenChanged =
       form.isFieldTouched(FIRST_NAME_FIELD_KEY) || form.isFieldTouched(LAST_NAME_FIELD_KEY);
     if (hasNameBeenChanged) {
+      const firstName = form.getFieldValue(FIRST_NAME_FIELD_KEY) || user.firstName;
+      const lastName = form.getFieldValue(LAST_NAME_FIELD_KEY) || user.lastName;
+      const isEditingOwnUser = activeUser?.id === user?.id;
       try {
-        const firstName = form.getFieldValue(FIRST_NAME_FIELD_KEY) || user.firstName;
-        const lastName = form.getFieldValue(LAST_NAME_FIELD_KEY) || user.lastName;
         const updatedUser = await changeName(firstName, lastName);
-        if (activeUser?.id === user?.id) {
+        if (isEditingOwnUser) {
           Toast.success(`You successfully changed your name to ${firstName} ${lastName}.`);
         } else {
           Toast.success(`You successfully changed the name to ${firstName} ${lastName}.`);

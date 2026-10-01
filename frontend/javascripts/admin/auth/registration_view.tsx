@@ -16,16 +16,10 @@ function RegistrationViewGeneric() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      setIsLoading(true);
-
-      try {
-        const defaultOrg = await getDefaultOrganization();
-        setOrganization(defaultOrg);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
+    setIsLoading(true);
+    getDefaultOrganization()
+      .then(setOrganization)
+      .finally(() => setIsLoading(false));
   }, []);
 
   let content = null;

@@ -297,9 +297,8 @@ function ShareModalViewInner(props: Props) {
       // so the user still sees the settings currently saved in the backend.
       setVisibility(visibility as any as APIAnnotationVisibility);
       reportFailedChange();
-    } finally {
-      setIsChangingInProgress(false);
     }
+    setIsChangingInProgress(false);
   };
 
   const handleSharedTeamsChange = async (value: APITeam | APITeam[]) => {
@@ -322,9 +321,8 @@ function ShareModalViewInner(props: Props) {
       // so the user still sees the settings currently saved in the backend.
       setSharedTeams(sharedTeams);
       reportFailedChange();
-    } finally {
-      setIsChangingInProgress(false);
     }
+    setIsChangingInProgress(false);
   };
 
   const handleOthersCanEditCheckboxChange = async (event: RadioChangeEvent) => {
@@ -352,9 +350,8 @@ function ShareModalViewInner(props: Props) {
       console.error("Failed to update the edit option for others.", e);
       setNewOthersMayEdit(othersMayEdit);
       reportFailedChange();
-    } finally {
-      setIsChangingInProgress(false);
     }
+    setIsChangingInProgress(false);
   };
 
   const handleConcurrentEditingCheckboxChange = async (event: CheckboxChangeEvent) => {
@@ -386,9 +383,8 @@ function ShareModalViewInner(props: Props) {
         console.error("Failed to update the concurrent editing option.", e);
         setNewAllowConcurrentEditing(allowConcurrentEditing);
         reportFailedChange();
-      } finally {
-        setIsChangingInProgress(false);
       }
+      setIsChangingInProgress(false);
     }
   };
 

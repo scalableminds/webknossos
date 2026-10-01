@@ -17,6 +17,17 @@ type Props = {
   onComplete: () => void;
 };
 
+async function fetchUsersForTransfer(project: APIProject | null | undefined): Promise<{
+  sortedUsers: APIUser[];
+  usersWithActiveTasks: APIActiveUser[];
+}> {
+  const users = unwrapOrThrow(await getUsers());
+  const activeUsers = users.filter((u) => u.isActive);
+  const usersWithActiveTasks = project ? await getUsersWithActiveTasks(project.id) : [];
+  const sortedUsers = sortBy(activeUsers, "lastName");
+  return { sortedUsers, usersWithActiveTasks };
+}
+
 function TransferAllTasksModal({ project, onCancel, onComplete }: Props) {
   const [selectedUser, setSelectedUser] = useState<APIUser | undefined>(undefined);
   const [usersWithActiveTasks, setUsersWithActiveTasks] = useState<APIActiveUser[]>([]);
@@ -25,19 +36,14 @@ function TransferAllTasksModal({ project, onCancel, onComplete }: Props) {
   const users = useFetch(
     async () => {
       try {
-        const users = unwrapOrThrow(await getUsers());
-        const activeUsers = users.filter((u) => u.isActive);
-        const usersWithActiveTasks = project ? await getUsersWithActiveTasks(project.id) : [];
-
-        const sortedUsers = sortBy(activeUsers, "lastName");
-
+        const { sortedUsers, usersWithActiveTasks } = await fetchUsersForTransfer(project);
         setUsersWithActiveTasks(usersWithActiveTasks);
+        setIsLoading(false);
         return sortedUsers;
       } catch (error) {
         handleGenericError(error as Error);
-        return [];
-      } finally {
         setIsLoading(false);
+        return [];
       }
     },
     [],

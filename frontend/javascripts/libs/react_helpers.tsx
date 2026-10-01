@@ -76,9 +76,8 @@ export function useGuardedFetch<T>(
     } catch (err) {
       console.error(err);
       Toast.error(toastErrorMessage);
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   }
 
   useEffect(() => {

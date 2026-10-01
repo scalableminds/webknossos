@@ -91,6 +91,47 @@ const parseCredentials = async (file: RcFile | undefined): Promise<ArbitraryObje
   }
 };
 
+type ExploreParams = {
+  url: string;
+  datastoreName: string;
+  credentials: { username: string; pass: string } | null;
+  preferredVoxelSize: VoxelSize | undefined;
+};
+
+const exploreDataSource = async (
+  { url, datastoreName, credentials, preferredVoxelSize }: ExploreParams,
+  setExploreLog: (report: string) => void,
+): Promise<DatasourceConfiguration> => {
+  const { dataSource: newDataSourceConfig, report } = await exploreRemoteDataset(
+    [encodeURI(url)],
+    datastoreName,
+    credentials,
+    preferredVoxelSize?.factor,
+  );
+
+  setExploreLog(report);
+
+  if (!newDataSourceConfig) {
+    throw new Error(
+      "Exploring this remote dataset did not return a datasource. Please check the Log.",
+    );
+  }
+
+  ensureLargestSegmentIdsInPlace(newDataSourceConfig);
+
+  // Check for scale differences
+  if (preferredVoxelSize?.factor && !isEqual(preferredVoxelSize, newDataSourceConfig.scale)) {
+    Toast.warning(
+      `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(
+        newDataSourceConfig.scale,
+      )}`,
+      { timeout: 10000 },
+    );
+  }
+
+  return newDataSourceConfig;
+};
+
 export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
   form,
   uploadableDatastores,
@@ -227,43 +268,17 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
     setExploreLog(null);
 
     try {
-      const { url, datastoreName, credentials, preferredVoxelSize } = await buildExploreParams();
-
-      const { dataSource: newDataSourceConfig, report } = await exploreRemoteDataset(
-        [encodeURI(url)],
-        datastoreName,
-        credentials,
-        preferredVoxelSize?.factor,
-      );
-
-      setExploreLog(report);
-
-      if (!newDataSourceConfig) {
-        throw new Error(
-          "Exploring this remote dataset did not return a datasource. Please check the Log.",
-        );
+      const exploreParams = await buildExploreParams();
+      const newDataSourceConfig = await exploreDataSource(exploreParams, setExploreLog);
+      if (onSuccess != null) {
+        await onSuccess(exploreParams.url, newDataSourceConfig);
       }
-
-      ensureLargestSegmentIdsInPlace(newDataSourceConfig);
-
-      // Check for scale differences
-      if (preferredVoxelSize?.factor && !isEqual(preferredVoxelSize, newDataSourceConfig.scale)) {
-        Toast.warning(
-          `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(
-            newDataSourceConfig.scale,
-          )}`,
-          { timeout: 10000 },
-        );
-      }
-
-      await onSuccess?.(url, newDataSourceConfig);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
       Toast.error(errorMessage);
       handleFailure();
-    } finally {
-      setIsExploring(false);
     }
+    setIsExploring(false);
   }, [isExploring, buildExploreParams, onSuccess, handleFailure]);
 
   // Effects

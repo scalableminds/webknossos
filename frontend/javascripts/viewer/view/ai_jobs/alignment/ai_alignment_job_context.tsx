@@ -63,12 +63,13 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
   );
 
   const handleStartAnalysis = useCallback(async () => {
+    const manualMatchesAnnotationId = shouldUseManualMatches ? annotationId : undefined;
     try {
       await startAlignSectionsJob(
         dataset.id,
         colorLayer.name,
         newDatasetName,
-        shouldUseManualMatches ? annotationId : undefined,
+        manualMatchesAnnotationId,
         customConfiguration,
       );
       Toast.success("Alignment started successfully!");

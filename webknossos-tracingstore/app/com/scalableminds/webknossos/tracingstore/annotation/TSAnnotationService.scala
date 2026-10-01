@@ -339,6 +339,17 @@ class TSAnnotationService @Inject() (
         "value" -> Json.toJson(tuple._2)
       )
 
+    // The version restore view only needs one of these per version to describe it
+    def withoutDuplicateBucketActions(updateActions: List[UpdateAction]): List[UpdateAction] = {
+      val bucketPartialActions = updateActions.collect { case a: UpdateBucketPartialVolumeAction => a }
+      val eagerBucketActions = updateActions.collect { case a: EagerUpdateBucketVolumeAction => a }
+      val otherActions = updateActions.filter {
+        case _: UpdateBucketPartialVolumeAction | _: EagerUpdateBucketVolumeAction => false
+        case _                                                                     => true
+      }
+      bucketPartialActions.take(1) ++ eagerBucketActions.take(1) ++ otherActions
+    }
+
     val batchRanges = SequenceUtils.batchRangeInclusive(oldestVersion, newestVersion, batchSize = 1000).reverse
     for {
       updateActionBatches <- Fox.serialCombined(batchRanges.toList) { batchRange =>
@@ -354,7 +365,10 @@ class TSAnnotationService @Inject() (
         if (truncate)
           updateActionBatches.map(batch =>
             batch.map { case (version, updateActions) =>
-              (version, updateActions.take(MaxUpdateActionEntriesPerVersion).map(_.truncated))
+              (
+                version,
+                withoutDuplicateBucketActions(updateActions).take(MaxUpdateActionEntriesPerVersion).map(_.truncated)
+              )
             }
           )
         else updateActionBatches

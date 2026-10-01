@@ -49,6 +49,7 @@ import {
 import { getInterpolationInfo } from "viewer/model/sagas/volume/volume_interpolation_saga";
 import { rgbaToCSS } from "viewer/shaders/utils.glsl";
 import { Model } from "viewer/singletons";
+import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
@@ -209,21 +210,28 @@ const mapId = (volumeTracingId: string | null | undefined, id: bigint) => {
   return cube.mapId(id);
 };
 
+const getUnmappedActiveCellId = (state: WebknossosState) =>
+  getActiveSegmentationTracing(state)?.activeCellId || 0n;
+
+// The cube reads the mapping from the store. Mapping the id in a selector keeps it
+// up to date when the mapping changes (e.g., when HDF5 entries are loaded).
+const getMappedActiveCellId = (state: WebknossosState) => {
+  const volumeTracingId = getActiveSegmentationTracing(state)?.tracingId;
+  const unmappedActiveCellId = getUnmappedActiveCellId(state);
+  const { mappingStatus } = getMappingInfoForVolumeTracing(state, volumeTracingId);
+  return mappingStatus === MappingStatusEnum.ENABLED
+    ? mapId(volumeTracingId, unmappedActiveCellId)
+    : unmappedActiveCellId;
+};
+
 export function CreateSegmentButton() {
   const volumeTracingId = useWkSelector((state) => getActiveSegmentationTracing(state)?.tracingId);
-  const unmappedActiveCellId = useWkSelector(
-    (state) => getActiveSegmentationTracing(state)?.activeCellId || 0n,
-  );
   const { mappingStatus } = useWkSelector((state) =>
     getMappingInfoForVolumeTracing(state, volumeTracingId),
   );
+  const unmappedActiveCellId = useWkSelector(getUnmappedActiveCellId);
   const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
-
-  // The cube reads the mapping from the store. Mapping it in a selector keeps the
-  // mapped id up to date when the mapping changes (e.g., when HDF5 entries are loaded).
-  const activeCellId = useWkSelector(() =>
-    isMappingEnabled ? mapId(volumeTracingId, unmappedActiveCellId) : unmappedActiveCellId,
-  );
+  const activeCellId = useWkSelector(getMappedActiveCellId);
 
   const activeCellColor = useWkSelector((state) => {
     if (!activeCellId) {

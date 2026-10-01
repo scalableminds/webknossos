@@ -56,7 +56,7 @@ export function getRenderer(): WebGLRenderer {
 type GpuInfo = { vendor: string | null; renderer: string | null };
 
 // The GPU vendor never changes during a session. Caching it avoids creating a context just for
-// analytics, which is expensive (especially with software rendering) and blocks the main thread.
+// analytics, which can be expensive (especially with software rendering) and blocks the main thread.
 let cachedGpuInfo: GpuInfo | null = null;
 
 export function readGpuInfo(gl: WebGLRenderingContext | WebGL2RenderingContext): GpuInfo {

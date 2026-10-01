@@ -547,7 +547,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         }}
       >
         <TextWithDescription
-          isEditable={false}
           value={annotation.name}
           placeholder="Unnamed annotation"
           description={annotation.description}

@@ -898,7 +898,6 @@ class AnnotationService @Inject() (
       "isLockedByOwner" -> annotationInfo.isLockedByOwner,
       "annotationLayers" -> annotationLayerJson,
       "dataSetName" -> annotationInfo.dataSetName,
-      "dataSetId" -> annotationInfo.dataSetId, // included for legacy parsers
       "datasetId" -> annotationInfo.dataSetId,
       "organization" -> annotationInfo.organization,
       "visibility" -> annotationInfo.visibility,

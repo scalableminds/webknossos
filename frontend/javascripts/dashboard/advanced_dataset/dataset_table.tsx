@@ -102,8 +102,6 @@ type Props = {
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
   context: DatasetCollectionContextValue;
-  // Shows a loading spinner inside the table body (e.g. while waiting for search
-  // results), without hiding the header bar above it.
   isLoading?: boolean;
   // Custom content shown as the table's empty state instead of the regular hint text.
   // Used for cards for a brand-new organizations.
@@ -113,8 +111,7 @@ type Props = {
 type State = {
   prevSearchQuery: string;
   sortOption: DatasetSortOption;
-  // Tracks whether the user explicitly picked a sort option (via the Sort filter chip).
-  // While false and a search query is active, results are sorted by search relevance instead.
+  // Has the user set a sort order? While false and a search query is active, results are sorted by search relevance instead.
   hasUserSetSort: boolean;
   contextMenuPosition: [number, number] | null | undefined;
   datasetsForContextMenu: APIDatasetCompact[];

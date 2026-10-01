@@ -3,59 +3,24 @@ import { Button, Popover, Tooltip } from "antd";
 import Markdown from "libs/markdown_adapter";
 import type React from "react";
 import { Link } from "react-router";
-import type { EditableTextLabelProp } from "viewer/view/components/editable_text_label";
-import EditableTextLabel from "viewer/view/components/editable_text_label";
 
-type EditableProps = EditableTextLabelProp & {
-  isEditable: true;
-  description: string;
-};
-type NonEditableProps = {
-  markdown?: boolean;
-  isEditable: false;
-  description: string;
+type Props = {
   value: string;
+  // Shown when `value` is empty.
   placeholder?: string;
+  description: string;
   linkTarget?: string;
   linkTitle?: string;
 };
-type Props = EditableProps | NonEditableProps;
 
-function NonEditableText({
-  markdown,
+const TextWithDescription: React.FC<Props> = ({
   value,
   placeholder,
+  description,
   linkTarget,
   linkTitle,
-}: NonEditableProps) {
-  const text = markdown ? (
-    <span>
-      <Markdown>{value}</Markdown>
-    </span>
-  ) : value.trim() ? (
-    value
-  ) : (
-    placeholder
-  );
-  return (
-    <span
-      style={{
-        display: "inline-block",
-      }}
-    >
-      {linkTarget != null ? (
-        <Link to={linkTarget} title={linkTitle} className="incognito-link">
-          {text}
-        </Link>
-      ) : (
-        text
-      )}
-    </span>
-  );
-}
-
-const TextWithDescription: React.FC<Props> = (props) => {
-  const { isEditable, description, ...editableProps } = props;
+}) => {
+  const text = value.trim() ? value : placeholder;
   const hasDescription = description !== "";
   const markdownDescription = (
     <div
@@ -68,11 +33,19 @@ const TextWithDescription: React.FC<Props> = (props) => {
   );
   return (
     <span style={{ wordBreak: "break-word" }}>
-      {isEditable ? (
-        <EditableTextLabel {...(editableProps as EditableTextLabelProp)} />
-      ) : (
-        <NonEditableText {...(props as NonEditableProps)} />
-      )}
+      <span
+        style={{
+          display: "inline-block",
+        }}
+      >
+        {linkTarget != null ? (
+          <Link to={linkTarget} title={linkTitle} className="incognito-link">
+            {text}
+          </Link>
+        ) : (
+          text
+        )}
+      </span>
       {hasDescription ? (
         <Tooltip title="Show description" placement="bottom">
           <Popover title="Description" trigger="click" content={markdownDescription}>

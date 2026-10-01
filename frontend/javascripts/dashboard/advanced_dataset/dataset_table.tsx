@@ -106,7 +106,7 @@ type ContextMenuProps = {
 };
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
-  const inputRef = useContext(ContextMenuContext);
+  const containerElement = useContext(ContextMenuContext);
   const { modal } = App.useApp();
   const { datasets, contextMenuPosition, hideContextMenu, folder, datasetCollectionContext } =
     propsWithInputRef;
@@ -128,8 +128,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
     }
   }
 
-  if (inputRef == null || inputRef.current == null) return null;
-  const refContent = inputRef.current;
+  if (containerElement == null) return null;
 
   return (
     <Fragment>
@@ -138,7 +137,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
         menu={menu}
         classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
-        getPopupContainer={() => refContent}
+        getPopupContainer={() => containerElement}
         destroyOnHidden
       >
         <div />

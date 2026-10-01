@@ -2,7 +2,7 @@ import { WarningOutlined } from "@ant-design/icons";
 import { Divider, Empty, Modal, Spin, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
-import { useRef } from "react";
+import { useState } from "react";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import DeleteGroupModalView from "../delete_group_modal_view";
@@ -30,15 +30,15 @@ function SkeletonsHiddenWarning() {
 function ExportProgressModal({ pendingExport }: { pendingExport: "nml" | "csv" | null }) {
   // Remember the last shown title so it doesn't switch to the other export
   // type's title during the fade-out of the modal.
-  const lastExportRef = useRef<"nml" | "csv">("nml");
-  if (pendingExport != null) {
-    lastExportRef.current = pendingExport;
+  const [lastExport, setLastExport] = useState<"nml" | "csv">("nml");
+  if (pendingExport != null && pendingExport !== lastExport) {
+    setLastExport(pendingExport);
   }
 
   return (
     <Modal
       open={pendingExport != null}
-      title={lastExportRef.current === "csv" ? "Preparing CSV" : "Preparing NML"}
+      title={lastExport === "csv" ? "Preparing CSV" : "Preparing NML"}
       closable={false}
       footer={null}
       // The body is a bare Spin, so the dialog stays tight around it instead of opening a

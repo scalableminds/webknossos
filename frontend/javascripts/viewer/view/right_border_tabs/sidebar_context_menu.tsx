@@ -6,7 +6,7 @@ import { GenericContextMenuContainer } from "../context_menu/generic_context_men
 import { getNoActionsAvailableMenu } from "../context_menu/helpers";
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
-  const inputRef = React.useContext(ContextMenuContext);
+  const containerElement = React.useContext(ContextMenuContext);
   const { contextMenuPosition, hideContextMenu } = propsWithInputRef;
   let menu: MenuProps = { items: [] };
 
@@ -14,8 +14,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
     menu = propsWithInputRef.menu || getNoActionsAvailableMenu(hideContextMenu);
   }
 
-  if (inputRef == null || inputRef.current == null) return null;
-  const refContent = inputRef.current;
+  if (containerElement == null) return null;
 
   return (
     <React.Fragment>
@@ -24,7 +23,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
         menu={menu}
         classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
-        getPopupContainer={() => refContent}
+        getPopupContainer={() => containerElement}
         destroyOnHidden
       >
         <div />

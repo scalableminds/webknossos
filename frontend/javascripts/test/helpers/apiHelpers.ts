@@ -6,7 +6,6 @@ import {
   getEdgesForAgglomerateMinCut,
   getEditableAgglomerateTreeAsSkeletonTracing,
   getImportedDataset,
-  getMappingsForDatasetLayer,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
   getUpdateActionLog,
@@ -114,7 +113,6 @@ export interface WebknossosTestContext extends BaseTestContext {
     getUpdateActionLog: Mock<typeof getUpdateActionLog>;
     sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
     getPositionForSegmentInAgglomerate: Mock<typeof getPositionForSegmentInAgglomerate>;
-    getMappingsForDatasetLayer: Mock<typeof getMappingsForDatasetLayer>;
     getEditableAgglomerateTreeAsSkeletonTracing: Mock<
       typeof getEditableAgglomerateTreeAsSkeletonTracing
     >;
@@ -605,7 +603,6 @@ export async function setupWebknossosForTesting(
     getUpdateActionLog: vi.mocked(getUpdateActionLog),
     sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
     getPositionForSegmentInAgglomerate: vi.mocked(getPositionForSegmentInAgglomerate),
-    getMappingsForDatasetLayer: vi.mocked(getMappingsForDatasetLayer),
     getEditableAgglomerateTreeAsSkeletonTracing: vi.mocked(
       getEditableAgglomerateTreeAsSkeletonTracing,
     ),

@@ -216,10 +216,12 @@ export type SkeletonTracingStats = {
   nodeCount: number;
   edgeCount: number;
   branchPointCount: number;
+  boundingBoxCount?: number;
 };
 
 export type VolumeTracingStats = {
   segmentCount: number;
+  boundingBoxCount?: number;
 };
 
 export type TracingStats = Record<string, SkeletonTracingStats | VolumeTracingStats | EmptyObject>;
@@ -228,7 +230,10 @@ export function getStats(annotation: StoreAnnotation): TracingStats {
   const stats: TracingStats = {};
   const { skeleton, volumes } = annotation;
   for (const volumeTracing of volumes) {
-    stats[volumeTracing.tracingId] = { segmentCount: volumeTracing.segments.size() };
+    stats[volumeTracing.tracingId] = {
+      segmentCount: volumeTracing.segments.size(),
+      boundingBoxCount: volumeTracing.userBoundingBoxes.length,
+    };
   }
   if (skeleton) {
     stats[skeleton.tracingId] = {
@@ -236,6 +241,7 @@ export function getStats(annotation: StoreAnnotation): TracingStats {
       nodeCount: sum(skeleton.trees.values().map((tree) => tree.nodes.size())),
       edgeCount: sum(skeleton.trees.values().map((tree) => tree.edges.size())),
       branchPointCount: sum(skeleton.trees.values().map((tree) => size(tree.branchPoints))),
+      boundingBoxCount: skeleton.userBoundingBoxes.length,
     };
   }
   return stats;
@@ -267,6 +273,23 @@ export function getVolumeStats(stats: TracingStats): [string, VolumeTracingStats
     string,
     VolumeTracingStats,
   ][];
+}
+
+// Bounding boxes are carried over between annotation layers, only the layer with precedence
+// holds the up-to-date count.
+export function getBoundingBoxCountWithPrecedence(stats: TracingStats): number | undefined {
+  const skeletonStats = getSkeletonStats(stats);
+  if (skeletonStats) {
+    return skeletonStats.boundingBoxCount;
+  }
+  const volumeStats = getVolumeStats(stats);
+  if (volumeStats.length === 0) {
+    return undefined;
+  }
+  const [_tracingId, precedenceVolumeStats] = volumeStats.reduce((min, current) =>
+    current[0] < min[0] ? current : min,
+  );
+  return precedenceVolumeStats.boundingBoxCount;
 }
 
 export function getUserStateForTracing<

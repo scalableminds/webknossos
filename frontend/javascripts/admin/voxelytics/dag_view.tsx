@@ -11,7 +11,8 @@ import ReactFlow, {
   type Node as FlowNode,
   MiniMap,
   type ReactFlowInstance,
-} from "react-flow-renderer";
+} from "reactflow";
+import "reactflow/dist/style.css";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfigWithName,
@@ -244,10 +245,8 @@ function DAGView({
     }
   };
 
-  const handleSelectionChange = (
-    elements: { nodes: Array<FlowNode>; edges: Array<FlowEdge> } | null,
-  ) => {
-    if (elements === null) {
+  const handleSelectionChange = ({ nodes }: { nodes: Array<FlowNode>; edges: Array<FlowEdge> }) => {
+    if (nodes.length === 0) {
       // user clicked on background
       setSelectedNodeId(null);
     }

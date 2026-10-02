@@ -1,4 +1,6 @@
 import AccountSettingsView from "admin/account/account_settings_view";
+import AlignmentProjectDetailView from "admin/alignment_project/alignment_project_detail_view";
+import AlignmentProjectListView from "admin/alignment_project/alignment_project_list_view";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import LoginView from "admin/auth/login_view";
@@ -344,6 +346,22 @@ const routes: RouteObject[] = [
         element: (
           <SecuredRoute>
             <JobListView />
+          </SecuredRoute>
+        ),
+      },
+      {
+        path: "/alignmentProjects",
+        element: (
+          <SecuredRoute requiresAdminOrManagerRole>
+            <AlignmentProjectListView />
+          </SecuredRoute>
+        ),
+      },
+      {
+        path: "/alignmentProjects/:alignmentProjectId",
+        element: (
+          <SecuredRoute requiresAdminOrManagerRole>
+            <AlignmentProjectDetailView />
           </SecuredRoute>
         ),
       },

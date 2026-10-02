@@ -134,7 +134,7 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
   "jobList",
 );
 
-export function JobState({ job }: { job: APIJob }) {
+export function JobState({ job }: { job: Pick<APIJob, "state"> }) {
   const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
 
   const jobStateNormalized = capitalize(job.state.toLowerCase());

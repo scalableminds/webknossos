@@ -267,6 +267,10 @@ export function getAnalysisSubMenu(collapse: boolean) {
       key: "/aiModels",
       label: <Link to={"/aiModels"}>AI Models</Link>,
     });
+    analysisSubMenuItems.push({
+      key: "/alignmentProjects",
+      label: <Link to="/alignmentProjects">Alignment Projects</Link>,
+    });
   }
 
   if (features().voxelyticsEnabled) {

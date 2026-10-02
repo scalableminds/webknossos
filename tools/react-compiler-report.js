@@ -9,9 +9,9 @@
 // Usage: yarn react-compiler-report [--json] [--summary] [--check] [path-or-glob ...]
 //   --json     print machine readable JSON instead of text
 //   --summary  print only the counts and the most common reasons
-//   --check    exit with code 1 if a function is not compiled and is not listed in
-//              ALLOWED_FAILURES, or if an entry of ALLOWED_FAILURES compiles now.
-//              The CI uses this mode (yarn check-react-compiler).
+//   --check    exit with code 1 if a function is not compiled because it breaks a rule
+//              of React (see "Check mode" below), or if an entry of ALLOWED_FAILURES
+//              compiles now. The CI uses this mode (yarn check-react-compiler).
 // Without --check, the script only reports and exits with code 0 unless it cannot run.
 const fs = require("node:fs");
 const path = require("node:path");
@@ -27,7 +27,14 @@ const IGNORE = ["**/test/**", "**/*.spec.{ts,tsx}", "**/*.d.ts"];
 const CODE_FILTER =
   /forwardRef|memo|(?:const|let|var|function)\s+(?:[A-Z]|use[A-Z0-9])|(?:[A-Z]|use[A-Z0-9])[^\s:=(){}[\],;]*\s*(?:\(|[:=]\s*(?:function|\())/;
 
-// Functions that are allowed to not be compiled. Each entry needs a reason.
+// Check mode: the compiler gives each error a category. Errors of the category "Todo"
+// mean that the compiler does not support valid JavaScript yet (e.g. try/finally,
+// BigInt literals). Such functions are listed in the report, but do not fail the
+// check, because we don't rewrite valid code around compiler limitations. All other
+// categories (e.g. "Refs", "Immutability") point to code that breaks a rule of React.
+const COMPILER_LIMITATION_CATEGORY = "Todo";
+
+// Functions that are allowed to not be compiled for another reason. Each entry needs a reason.
 const ALLOWED_FAILURES = [
   {
     file: "frontend/javascripts/libs/react_hooks.ts",
@@ -92,6 +99,7 @@ function analyzeFile(file) {
         }
         failuresByFunction.get(key).errors.push({
           reason: detail.reason ?? detail.message ?? "unknown reason",
+          category: detail.category ?? detail.options?.category ?? null,
           description: detail.description ?? null,
           line: errorStart?.line ?? null,
           column: errorStart?.column != null ? errorStart.column + 1 : null,
@@ -130,8 +138,13 @@ for (const file of files) {
 }
 
 const isSameFunction = (a, b) => a.file === b.file && a.function === b.function;
+const isCompilerLimitation = (failure) =>
+  failure.errors.every((error) => error.category === COMPILER_LIMITATION_CATEGORY);
+const compilerLimitations = report.filter(isCompilerLimitation);
 const unexpectedFailures = report.filter(
-  (failure) => !ALLOWED_FAILURES.some((allowed) => isSameFunction(allowed, failure)),
+  (failure) =>
+    !isCompilerLimitation(failure) &&
+    !ALLOWED_FAILURES.some((allowed) => isSameFunction(allowed, failure)),
 );
 const analyzedFiles = new Set(files.map((file) => path.relative(ROOT, file)));
 const outdatedAllowances = ALLOWED_FAILURES.filter(
@@ -164,7 +177,7 @@ if (asJson) {
 } else {
   if (!summaryOnly) {
     let currentFile = null;
-    // In check mode, the allowed failures are not listed.
+    // In check mode, only the failures that fail the check are listed.
     for (const f of checkMode ? unexpectedFailures : report) {
       if (f.file !== currentFile) {
         console.log(`\n${f.file}`);
@@ -172,7 +185,7 @@ if (asJson) {
       }
       console.log(`  ${f.line}  ${f.function}`);
       for (const error of f.errors) {
-        console.log(`    ${error.line}:${error.column}  ${error.reason}`);
+        console.log(`    ${error.line}:${error.column}  [${error.category}] ${error.reason}`);
         if (error.description) console.log(`      ${shorten(error.description)}`);
       }
     }
@@ -198,15 +211,20 @@ if (checkMode) {
         "Remove it from ALLOWED_FAILURES in tools/react-compiler-report.js.",
     );
   }
+  console.log(
+    `\n${compilerLimitations.length} function(s) are not compiled because of compiler ` +
+      `limitations (category "${COMPILER_LIMITATION_CATEGORY}"). They don't fail the check. ` +
+      "Run `yarn react-compiler-report` to list them.",
+  );
   if (unexpectedFailures.length > 0) {
     console.log(
-      `\n❌ The React Compiler cannot compile ${unexpectedFailures.length} function(s), see above. ` +
+      `\n❌ ${unexpectedFailures.length} function(s) break a rule of React, see above. ` +
         "Fix them, or add them with a reason to ALLOWED_FAILURES in tools/react-compiler-report.js.",
     );
   }
   if (unexpectedFailures.length > 0 || outdatedAllowances.length > 0 || crashed.length > 0) {
     process.exitCode = 1;
   } else {
-    console.log("✅ The React Compiler compiles all components and hooks.");
+    console.log("✅ No component or hook breaks a rule of React.");
   }
 }

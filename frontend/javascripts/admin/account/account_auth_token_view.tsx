@@ -1,4 +1,4 @@
-import { ExportOutlined, SwapOutlined } from "@ant-design/icons";
+import { DownloadOutlined, ExportOutlined, SwapOutlined } from "@ant-design/icons";
 import { getAuthToken, revokeAuthToken } from "admin/rest_api";
 import { Button, Col, Row, Spin, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
@@ -53,7 +53,7 @@ function AccountAuthTokenView() {
     {
       title: "Token Revocation",
       tooltip:
-        "Revoke your token if it has been compromised or if you suspect someone else has gained access to it. This will invalidate all active sessions.",
+        "Revoke your token if it has been compromised or if you suspect someone else has gained access to it. This will invalidate all active sessions, as well as any short-lived tokens handed out by the MCP server.",
       content: (
         <Button icon={<SwapOutlined />} type="primary" ghost onClick={handleRevokeToken}>
           Revoke and Generate New Token
@@ -72,6 +72,23 @@ function AccountAuthTokenView() {
           },
         ]
       : []),
+    {
+      title: "MCP Server",
+      tooltip:
+        "Connect an AI agent to WEBKNOSSOS with the Model Context Protocol, using this URL and your auth token. The extension bundles the same connection for Claude Desktop.",
+      content: (
+        <>
+          <Text code copyable>
+            {`${window.location.origin}/api/mcp`}
+          </Text>
+          <div style={{ marginTop: 8 }}>
+            <a href="/api/mcp/bundle" download>
+              Download Claude Desktop extension <DownloadOutlined />
+            </a>
+          </div>
+        </>
+      ),
+    },
     {
       title: "API Documentation",
       content: (

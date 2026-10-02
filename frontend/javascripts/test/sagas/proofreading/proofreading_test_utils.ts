@@ -6,6 +6,7 @@ import isEqual from "lodash-es/isEqual";
 import sortBy from "lodash-es/sortBy";
 import { call, put, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
+import { dummyMeshFile } from "test/fixtures/dummy_mesh_file";
 import { powerOrga } from "test/fixtures/dummy_organization";
 import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
 import {
@@ -15,7 +16,7 @@ import {
 } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { delay } from "typed-redux-saga";
-import type { APIUpdateActionBatch } from "types/api_types";
+import type { APIUpdateActionBatch, ElementClass } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
@@ -24,7 +25,11 @@ import {
   getVolumeTracingById,
   hasEditableMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import {
+  setCollaborationModeAction,
+  updateCurrentMeshFileAction,
+  updateMeshFileListAction,
+} from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import {
@@ -101,7 +106,9 @@ export function* initializeMappingAndTool(
   // Read data from the 0,0,0 bucket so that it is in memory (important because the mapping
   // is only maintained for loaded buckets).
   const valueAt444 = yield call(() => api.data.getDataValue(tracingId, [4, 4, 4], 0));
-  expect(valueAt444).toBe(4);
+  // getDataValue returns whichever native type (number or bigint) matches the layer's element
+  // class, so compare via Number() to support both a uint16 and a uint64 test layer here.
+  expect(Number(valueAt444)).toBe(4);
   // Once again, we wait for FINISH_MAPPING_INITIALIZATION because the mapping is updated
   // for the keys that are found in the newly loaded bucket.
   yield take("FINISH_MAPPING_INITIALIZATION");
@@ -436,7 +443,11 @@ export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
   additionalEdges: Array<[bigint, bigint]> = [],
   initialState: WebknossosState | undefined = undefined,
-  options?: { grantMutex?: boolean },
+  // elementClass must match whatever was passed to setupWebknossosForTestingWithRestrictions,
+  // since it decides how the mocked bucket bytes are laid out (Uint16Array vs BigUint64Array,
+  // say) -- declaring a 64-bit tracing but serving uint16-shaped bytes (or vice versa) would
+  // corrupt every decoded segment id.
+  options?: { grantMutex?: boolean; elementClass?: ElementClass },
 ) {
   const { mocks } = context;
 
@@ -447,9 +458,10 @@ export function mockInitialBucketAndAgglomerateData(
     options?.grantMutex ?? true,
   );
 
+  const elementClass = options?.elementClass ?? "uint16";
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     createBucketResponseFunction(
-      { color: "uint8", segmentation: "uint16", volumeTracingId: "uint16" },
+      { color: "uint8", segmentation: elementClass, volumeTracingId: elementClass },
       backendMock.fillValue,
       backendMock.requestDelay,
       backendMock.overrides,
@@ -543,6 +555,12 @@ export function prepareGetNeighborsForAgglomerateNode(
 }
 
 export function* loadAgglomerateMeshes(agglomerateIds: number[]): Saga<void> {
+  // Activate a (mocked) precomputed mesh file so that loadCoarseMesh takes the precomputed path
+  // instead of ad-hoc meshing. This mirrors production proofreading helper meshes, which are
+  // precomputed and therefore carry a vertexSegmentMapping (used e.g. for multi-split highlighting).
+  const layerName = yield* select((state) => state.annotation.volumes[0].tracingId);
+  yield put(updateMeshFileListAction(layerName, [dummyMeshFile]));
+  yield put(updateCurrentMeshFileAction(layerName, dummyMeshFile.name));
   for (const id of agglomerateIds) {
     yield put(proofreadAtPosition([id, id, id]));
     yield take("FINISHED_LOADING_MESH");
@@ -609,13 +627,13 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
 ): Saga<void> {
   const { tracingId } = yield* select((state) => state.annotation.volumes[0]);
   const expectedInitialMapping = new Map([
-    [1n, 1n],
-    [2n, 1n],
-    [3n, 1n],
-    [4n, 4n],
-    [5n, 4n],
-    [6n, 6n],
-    [7n, 6n],
+    [1, 1],
+    [2, 1],
+    [3, 1],
+    [4, 4],
+    [5, 4],
+    [6, 6],
+    [7, 6],
   ]);
 
   yield call(initializeMappingAndTool, context, tracingId);
@@ -650,11 +668,11 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   //Activate Multi-split tool
   yield put(updateUserSettingAction("isMultiSplitActive", true));
   // Select partition 1
-  yield put(toggleSegmentInPartitionAction(1n, 1, 1n));
-  yield put(toggleSegmentInPartitionAction(2n, 1, 1n));
+  yield put(toggleSegmentInPartitionAction(1n, "partitionA", 1n));
+  yield put(toggleSegmentInPartitionAction(2n, "partitionA", 1n));
   // Select partition 2
-  yield put(toggleSegmentInPartitionAction(1337n, 2, 1n));
-  yield put(toggleSegmentInPartitionAction(1338n, 2, 1n));
+  yield put(toggleSegmentInPartitionAction(1337n, "partitionB", 1n));
+  yield put(toggleSegmentInPartitionAction(1338n, "partitionB", 1n));
   // Execute the actual merge and wait for the finished mapping.
   yield put(minCutPartitionsAction());
   yield take("FINISH_MAPPING_INITIALIZATION");
@@ -711,7 +729,7 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
 
 export function* expectMapping(
   tracingId: string,
-  expectedMapping: Map<bigint, bigint>,
+  expectedMapping: Map<NumberLike, NumberLike>,
 ): Saga<void> {
   const mapping0 = yield* select(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,

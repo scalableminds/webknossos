@@ -299,19 +299,25 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
       recipients = List(multiUser.email)
     )
 
-  def jobFailedGenericMail(multiUser: MultiUser, datasetName: String, jobTitle: String): Mail =
+  def jobFailedGenericMail(
+      multiUser: MultiUser,
+      datasetName: String,
+      jobTitle: String,
+      errorMessage: Option[String]
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = "Oops. Your WEBKNOSSOS job failed",
-      bodyHtml = html.mail.jobFailedGeneric(multiUser.fullName, datasetName, jobTitle, additionalFooter).body,
+      bodyHtml =
+        html.mail.jobFailedGeneric(multiUser.fullName, datasetName, jobTitle, errorMessage, additionalFooter).body,
       recipients = List(multiUser.email)
     )
 
-  def jobFailedUploadConvertMail(multiUser: MultiUser, datasetName: String): Mail =
+  def jobFailedUploadConvertMail(multiUser: MultiUser, datasetName: String, errorMessage: Option[String]): Mail =
     Mail(
       from = defaultSender,
       subject = "Oops. Your dataset upload & conversion failed",
-      bodyHtml = html.mail.jobFailedUploadConvert(multiUser.fullName, datasetName, additionalFooter).body,
+      bodyHtml = html.mail.jobFailedUploadConvert(multiUser.fullName, datasetName, errorMessage, additionalFooter).body,
       recipients = List(multiUser.email)
     )
 

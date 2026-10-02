@@ -1,9 +1,10 @@
 import AdminPage from "admin/admin_page";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Col, Form, Input, Row, Select, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import type { APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
@@ -26,7 +27,7 @@ function ScriptCreateView() {
 
   async function fetchData() {
     setIsFetchingData(true);
-    const fetchedUsers = await getTeamManagerOrAdminUsers();
+    const fetchedUsers = unwrapOrThrow(await getTeamManagerOrAdminUsers());
     const onlyActiveUsers = fetchedUsers.filter((user) => user.isActive);
     setUsers(onlyActiveUsers);
     setIsFetchingData(false);

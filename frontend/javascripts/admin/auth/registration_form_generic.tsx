@@ -1,4 +1,5 @@
 import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getTermsOfService } from "admin/api/terms_of_service";
 import { loginUser } from "admin/rest_api";
 import { Button, Checkbox, Col, Form, Input, Row } from "antd";
@@ -52,10 +53,12 @@ function RegistrationFormGeneric(props: Props) {
     const tryAutoLogin = props.tryAutoLogin || props.inviteToken != null || autoVerified;
 
     if (tryAutoLogin) {
-      const [user, organization] = await loginUser({
-        email: formValues.email,
-        password: formValues.password.password1,
-      });
+      const [user, organization] = unwrapOrThrow(
+        await loginUser({
+          email: formValues.email,
+          password: formValues.password.password1,
+        }),
+      );
       dispatch(setActiveUserAction(user));
       dispatch(setActiveOrganizationAction(organization));
     }

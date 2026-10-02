@@ -8,6 +8,7 @@ import {
   tokenUserF,
   writeTypeCheckingFile,
 } from "test/e2e_setup";
+import { unwrapOrThrow } from "admin/api/api_result";
 import {
   getActiveUser,
   getAdminUsers,
@@ -31,7 +32,7 @@ describe("Users API (E2E)", () => {
   });
 
   it("getUsers() Orga X", async () => {
-    const users = await getUsers();
+    const users = unwrapOrThrow(await getUsers());
     writeTypeCheckingFile(users, "user", "APIUser", {
       isArray: true,
     });
@@ -40,29 +41,29 @@ describe("Users API (E2E)", () => {
 
   it("getUsers() Orga Y", async () => {
     setUserAuthToken(tokenUserE);
-    const users = await getUsers();
+    const users = unwrapOrThrow(await getUsers());
     expect(replaceVolatileValues(users)).toMatchSnapshot();
   });
 
   it("getUsers() Orga Z", async () => {
     setUserAuthToken(tokenUserF);
-    const users = await getUsers();
+    const users = unwrapOrThrow(await getUsers());
     expect(replaceVolatileValues(users)).toMatchSnapshot();
   });
 
   it("getAdminUsers()", async () => {
-    const adminUsers = await getAdminUsers();
+    const adminUsers = unwrapOrThrow(await getAdminUsers());
     expect(replaceVolatileValues(adminUsers)).toMatchSnapshot();
   });
 
   it("getEditableUsers()", async () => {
-    const editableUsers = await getEditableUsers();
+    const editableUsers = unwrapOrThrow(await getEditableUsers());
     expect(editableUsers).toMatchSnapshot();
   });
 
   it("getUser()", async () => {
     const activeUser = await getActiveUser();
-    const user = await getUser(activeUser.id);
+    const user = unwrapOrThrow(await getUser(activeUser.id));
     expect(replaceVolatileValues(user)).toMatchSnapshot();
   });
 
@@ -71,10 +72,10 @@ describe("Users API (E2E)", () => {
     const newUser = Object.assign({}, activeUser, {
       firstName: "UpdatedFirstName",
     });
-    const updatedUser = await updateUser(newUser);
+    const updatedUser = unwrapOrThrow(await updateUser(newUser));
     expect(replaceVolatileValues(updatedUser)).toMatchSnapshot();
 
-    const oldUser = await updateUser(activeUser);
+    const oldUser = unwrapOrThrow(await updateUser(activeUser));
     expect(replaceVolatileValues(oldUser)).toMatchSnapshot();
   });
 

@@ -50,10 +50,6 @@ export const convertCellIdToRGB: ShaderModule = {
       return hpv;
     }
 
-    highp uint vec4ToIntToUint(vec4 idLow) {
-      return uint(abs(vec4ToInt(idLow)));
-    }
-
     vec4 uintToVec4(uint integerValue) {
       float r = float(integerValue & uint(0xFF));
       float g = float((integerValue >> 8) & uint(0xFF));
@@ -64,42 +60,24 @@ export const convertCellIdToRGB: ShaderModule = {
       return id;
     }
 
-    void uint64ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
-      absLow = vec4ToUint(lowColor);
-      absHigh = vec4ToUint(highColor);
+    // The segment id is only ever used for equality comparisons and for deriving a
+    // color/pattern, never for arithmetic, so signed ids are simply reinterpreted as
+    // unsigned (bit pattern-preserving), sign-extended to 64 bits when necessary. This
+    // keeps different segment ids (e.g., -5 and 5 in a signed dtype) distinguishable.
+    void uint64ToUint64(vec4 lowColor, vec4 highColor, out highp uint low, out highp uint high) {
+      low = vec4ToUint(lowColor);
+      high = vec4ToUint(highColor);
     }
 
-    void int32ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
-      absLow = vec4ToIntToUint(lowColor);
-      absHigh = 0u;
+    void int32ToUint64(vec4 lowColor, vec4 highColor, out highp uint low, out highp uint high) {
+      highp int signedValue = vec4ToInt(lowColor);
+      low = uint(signedValue);
+      high = signedValue < 0 ? 0xFFFFFFFFu : 0u;
     }
 
-    void uint32ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
-      absLow = vec4ToUint(lowColor);
-      absHigh = 0u;
-    }
-
-    void int64ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
-      // Extract low and high 32-bit parts
-      highp int low = vec4ToInt(lowColor);
-      highp int high = vec4ToInt(highColor);
-
-      // Check if the number is negative
-      if (high < 0) {
-        // Calculate the two's complement (absolute value)
-        highp uint low_uint = uint(low);
-        highp uint high_uint = uint(high);
-        highp uint combinedLow = ~low_uint + 1u; // Add 1 to the bitwise NOT of low
-        highp uint combinedHigh = ~high_uint + uint(combinedLow == 0u ? 1u : 0u); // Add carry if low overflows
-
-        // Output absolute value as two uint32
-        absLow = combinedLow;
-        absHigh = combinedHigh;
-      } else {
-        // The number is already positive
-        absLow = uint(low);
-        absHigh = uint(high);
-      }
+    void uint32ToUint64(vec4 lowColor, vec4 highColor, out highp uint low, out highp uint high) {
+      low = vec4ToUint(lowColor);
+      high = 0u;
     }
 
     vec3 attemptCustomColorLookUp(uint integerValue, uint seed) {
@@ -285,10 +263,13 @@ export const jsConvertCellIdToRGBA = (
   }
 
   let rgb;
-  const absId = id < 0n ? -id : id;
+  // The shader only ever compares/colors ids, never does arithmetic on them, so signed
+  // ids are simply reinterpreted as their 64-bit unsigned bit pattern (sign-extended),
+  // mirroring what the shader does (see int32ToUint64/uint64ToUint64 in this module).
+  const unsignedId = BigInt.asUintN(64, id);
 
   if (customColors != null) {
-    const last8Bits = Number(absId % 2n ** 8n);
+    const last8Bits = Number(unsignedId % 2n ** 8n);
     rgb = customColors[last8Bits] || [0, 0, 0];
   } else {
     // The shader always derives the segment color by using a 64-bit id from which
@@ -298,8 +279,8 @@ export const jsConvertCellIdToRGBA = (
     // In JS, we do it similarly. Note that this must be done with BigInt arithmetic
     // throughout, since converting the full id to a JS number loses precision (and
     // therefore the low bits) for ids beyond 2**53.
-    const highPart = Number((absId >> 32n) % 2n ** 16n);
-    const lowPart = Number(absId % 2n ** 16n);
+    const highPart = Number((unsignedId >> 32n) % 2n ** 16n);
+    const lowPart = Number(unsignedId % 2n ** 16n);
     const significantSegmentIndex = highPart + lowPart;
     const colorCount = 19;
     const colorIndex = jsGetElementOfPermutation(significantSegmentIndex, colorCount, 2);

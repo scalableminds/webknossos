@@ -1,4 +1,5 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { doWebAuthnLogin } from "admin/api/webauthn";
 import { loginUser, requestSingleSignOnLogin } from "admin/rest_api";
 import { Alert, Button, Flex, Form, Input } from "antd";
@@ -7,7 +8,7 @@ import features from "features";
 import { getIsInIframe } from "libs/utils";
 import messages from "messages";
 import { useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 
@@ -31,7 +32,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const onFinish = async (formValues) => {
-    const [user, organization] = await loginUser(formValues);
+    const [user, organization] = unwrapOrThrow(await loginUser(formValues));
     dispatch(setActiveUserAction(user));
     dispatch(setActiveOrganizationAction(organization));
 

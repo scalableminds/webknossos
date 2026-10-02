@@ -205,6 +205,11 @@ class PlaneMaterialFactory {
       viewportExtent: {
         value: [0, 0],
       },
+      // The flycam's current "t" (time) additional coordinate, kept in sync by
+      // startListeningForUniforms. Only meaningful for layers with usesTRecyclingPerLayer set.
+      currentTCoordinate: {
+        value: 0,
+      },
       shouldApplyMappingOnGPU: {
         value: false,
       },
@@ -345,6 +350,14 @@ class PlaneMaterialFactory {
   attachTextures(): void {
     let sharedLookUpTexture;
     let sharedLookUpCuckooTable;
+    // Same ordering as activeMagIndices (both iterate Model.getAllLayers()), matching
+    // globalLayerIndex. Built here, not in setupUniforms, because textureBucketManager only
+    // exists once getDataTextures() below has triggered its lazy setup.
+    const usesTRecyclingPerLayer: number[] = [];
+    // Voxels per bucket in each layer's data texture. Read off the TextureBucketManager, not
+    // the DataCube: the two disagree for t-recycling layers, and the shader derives its row and
+    // texture indices from this, so it must match the upload side exactly.
+    const bucketVoxelCountPerLayer: number[] = [];
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
@@ -358,7 +371,16 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_data_texture_width`] = {
         value: dataLayer.layerRenderingManager.textureWidth,
       };
+      const { textureBucketManager } = dataLayer.layerRenderingManager;
+      usesTRecyclingPerLayer.push(textureBucketManager.usesTRecycling ? 1 : 0);
+      bucketVoxelCountPerLayer.push(textureBucketManager.bucketVoxelCount);
     }
+    this.uniforms.usesTRecyclingPerLayer = {
+      value: usesTRecyclingPerLayer,
+    };
+    this.uniforms.bucketVoxelCountPerLayer = {
+      value: bucketVoxelCountPerLayer,
+    };
 
     if (!sharedLookUpCuckooTable) {
       throw new Error("Empty layer list at unexpected point.");
@@ -513,6 +535,14 @@ class PlaneMaterialFactory {
         (storeState) => getViewportExtents(storeState),
         (extents) => {
           this.uniforms.viewportExtent.value = extents[this.planeID];
+        },
+        true,
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.flycam.additionalCoordinates,
+        (additionalCoordinates) => {
+          this.uniforms.currentTCoordinate.value =
+            additionalCoordinates?.find((coord) => coord.name === "t")?.value ?? 0;
         },
         true,
       ),

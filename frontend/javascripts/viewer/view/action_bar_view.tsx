@@ -11,7 +11,8 @@ import { ArbitraryVectorInput } from "libs/vector_input";
 import type React from "react";
 import { Fragment, PureComponent, useState } from "react";
 import { connect, useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
+import { UserThemeConfigProvider } from "theme_provider";
 import type { APIDataset, APIOrganization, APISegmentationLayer, APIUser } from "types/api_types";
 import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
 import constants, {
@@ -84,6 +85,8 @@ type State = {
   windowWidth: number;
 };
 
+const ADDITIONAL_COORDINATE_VALUE_SPAN = 4;
+
 function AdditionalCoordinatesInputView() {
   const additionalAxes = useWkSelector((state) => getUnifiedAdditionalCoordinates(state.dataset));
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
@@ -109,10 +112,20 @@ function AdditionalCoordinatesInputView() {
   if (additionalCoordinates == null || additionalCoordinates.length === 0) {
     return null;
   }
+  // The popover shrink-wraps its content and NumberSliderSetting sizes its columns in
+  // percentages, so without an explicit width the value column only fits about two digits.
+  // Size the content so that column fits the longest bound (plus the input's padding).
+  const maxValueLength = Math.max(
+    ...additionalCoordinates.map((coord) => {
+      const { bounds } = additionalAxes[coord.name];
+      return Math.max(String(bounds[0]).length, String(bounds[1] - 1).length);
+    }),
+  );
+  const contentWidth = `calc(${24 / ADDITIONAL_COORDINATE_VALUE_SPAN} * (${maxValueLength}ch + 20px))`;
   return (
     <Popover
       content={
-        <div>
+        <div style={{ width: contentWidth, minWidth: 250 }}>
           {additionalCoordinates.map((coord, idx) => {
             const { bounds } = additionalAxes[coord.name];
             return (
@@ -122,7 +135,11 @@ function AdditionalCoordinatesInputView() {
                 min={bounds[0]}
                 max={bounds[1] - 1}
                 value={coord.value}
-                spans={[2, 18, 4]}
+                spans={[
+                  2,
+                  24 - 2 - ADDITIONAL_COORDINATE_VALUE_SPAN,
+                  ADDITIONAL_COORDINATE_VALUE_SPAN,
+                ]}
                 onChange={(newCoord) => {
                   const newCoords = additionalCoordinates.slice();
                   newCoords[idx] = {
@@ -233,18 +250,21 @@ function CreateAnnotationButton() {
         Create Annotation
       </ButtonWithAuthentication>
 
-      <Modal
-        open={isLayerSelectionModalVisible}
-        onCancel={() => setLayerSelectionModalVisible(false)}
-        onOk={handleLayerSelected}
-      >
-        <NewVolumeLayerSelection
-          segmentationLayers={segmentationLayers}
-          dataset={dataset}
-          selectedSegmentationLayerName={selectedLayerName}
-          setSelectedSegmentationLayerName={setSelectedLayerName}
-        />
-      </Modal>
+      <UserThemeConfigProvider>
+        <Modal
+          title="Select Segmentation Layer"
+          open={isLayerSelectionModalVisible}
+          onCancel={() => setLayerSelectionModalVisible(false)}
+          onOk={handleLayerSelected}
+        >
+          <NewVolumeLayerSelection
+            segmentationLayers={segmentationLayers}
+            dataset={dataset}
+            selectedSegmentationLayerName={selectedLayerName}
+            setSelectedSegmentationLayerName={setSelectedLayerName}
+          />
+        </Modal>
+      </UserThemeConfigProvider>
     </div>
   );
 }
@@ -429,15 +449,17 @@ class ActionBarView extends PureComponent<Props, State> {
           <ModesView />
           {constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
         </div>
-        <AddNewLayoutModal
-          addLayout={this.addNewLayout}
-          isOpen={this.state.isNewLayoutModalOpen}
-          onCancel={() =>
-            this.setState({
-              isNewLayoutModalOpen: false,
-            })
-          }
-        />
+        <UserThemeConfigProvider>
+          <AddNewLayoutModal
+            addLayout={this.addNewLayout}
+            isOpen={this.state.isNewLayoutModalOpen}
+            onCancel={() =>
+              this.setState({
+                isNewLayoutModalOpen: false,
+              })
+            }
+          />
+        </UserThemeConfigProvider>
       </Fragment>
     );
   }

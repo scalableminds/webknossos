@@ -112,18 +112,17 @@ class SkeletonTracingService @Inject() (
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
         Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes))
       )
-      nodeMappingA = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
-      (treeMappingA, treeMappingB) = TreeUtils.calculateTreeMappings(tracingA.trees, tracingB.trees)
-      groupMappingA = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
+      nodeMappingB = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
+      treeMappingB = TreeUtils.calculateTreeMapping(tracingA.trees, tracingB.trees)
+      groupMappingB = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
       mergedTrees = TreeUtils.mergeTrees(
         tracingA.trees,
         tracingB.trees,
-        treeMappingA,
         treeMappingB,
-        nodeMappingA,
-        groupMappingA
+        nodeMappingB,
+        groupMappingB
       )
-      mergedGroups = GroupUtils.mergeTreeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMappingA)
+      mergedGroups = GroupUtils.mergeTreeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMappingB)
       mergedBoundingBox = combineBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
       (userBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(
         tracingA.userBoundingBox,
@@ -134,8 +133,7 @@ class SkeletonTracingService @Inject() (
       userStates = mergeSkeletonUserStates(
         tracingA.userStates,
         tracingB.userStates,
-        groupMappingA,
-        treeMappingA,
+        groupMappingB,
         treeMappingB,
         bboxIdMapA,
         bboxIdMapB

@@ -434,7 +434,8 @@ object Msg {
     val allowedTeamsNotFound: String = "Could not find allowed teams for dataset."
     val voxelSizeFailedToFetch: String = "Could not fetch voxel size for annotation."
     val additionalCoordinatesDiffer: String = "Additional coordinates differ in merged units."
-    val findByImportURLFailed = "Failed to look up whether a dataset with the import url already exists."
+    val findByImportURLFailed = "Could not look up whether a dataset with the import url already exists."
+    val deleteFromDbFailed = "Could not delete dataset from the database."
     object Compose {
       val failed: String = "Could not compose dataset."
       val addAttachmentFailed: String = "Could not add attachment to composed dataset."
@@ -478,6 +479,7 @@ object Msg {
     object Layer {
       def notFound(layerName: String): String = s"Could not find layer “$layerName” in dataset."
       def magNotFound(layer: String, mag: String): String = s"Data layer “$layer” does not have mag “$mag”."
+      def zeroMags(layer: String) = s"Data layer “$layer” has zero mags."
       def attachmentNotFound(layer: String, attachment: String): String =
         s"Data layer “$layer” does not have attachment “$attachment”."
       val attachmentSingletonAlreadyFilled: String =

@@ -3,14 +3,14 @@ package models.folder
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{Folders, FoldersRow, GetResultFoldersRow}
 import com.typesafe.scalalogging.LazyLogging
 import models.organization.{Organization, OrganizationDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.User
-import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import slick.jdbc.PostgresProfile.api.*
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -30,10 +30,7 @@ case class FolderWithParent(
     created: Instant = Instant.now
 )
 
-case class FolderParameters(name: String, allowedTeams: List[ObjectId], metadata: JsArray)
-object FolderParameters {
-  implicit val jsonFormat: OFormat[FolderParameters] = Json.format[FolderParameters]
-}
+case class FolderParameters(name: String, allowedTeams: List[ObjectId], metadata: JsArray) derives JsonAutoFormat
 
 class FolderService @Inject() (
     teamDAO: TeamDAO,

@@ -79,6 +79,14 @@ const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
+// The number of voxels a single bucket occupies in each layer's atlas. Mirrors
+// TextureBucketManager.bucketVoxelCount exactly.
+uniform float bucketVoxelCountPerLayer[<%= globalLayerCount %>];
+// See TextureBucketManager.usesTRecycling
+uniform float usesTRecyclingPerLayer[<%= globalLayerCount %>];
+// Global rather than per-layer, since additionalCoordinates is flycam-global. Only
+// meaningful for layers where usesTRecyclingPerLayer is set.
+uniform float currentTCoordinate;
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
 uniform vec3 allMagnifications[<%= magnificationsCount %>];
 uniform uint magnificationCountCumSum[<%= globalLayerCount %>];
@@ -247,9 +255,11 @@ void main() {
       getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
 
       <%
+        // For 64-bit ids, signed and unsigned values are handled identically: the raw bit
+        // pattern is reinterpreted as unsigned (see uint64ToUint64 for why sign doesn't matter).
         const vec4ToSomeIntFn =
           textureLayerInfos[segmentationName].elementClass.endsWith("int64")
-            ? textureLayerInfos[segmentationName].isSigned ? "int64ToUint64" : "uint64ToUint64"
+            ? "uint64ToUint64"
             : textureLayerInfos[segmentationName].isSigned ? "int32ToUint64" : "uint32ToUint64"
       %>
 
@@ -612,6 +622,7 @@ void main() {
       renderedMagIdx = activeMagIdx + i;
       vec3 coords = floor(getAbsoluteCoords(worldCoordUVW, renderedMagIdx, globalLayerIndex));
       vec3 absoluteBucketPosition = div(coords, bucketWidth);
+      absoluteBucketPosition.z = maybeOverrideBucketPositionZ(globalLayerIndex, absoluteBucketPosition.z);
       bucketAddress = lookUpBucket(
         globalLayerIndex,
         uvec4(uvec3(absoluteBucketPosition), activeMagIdx + i),

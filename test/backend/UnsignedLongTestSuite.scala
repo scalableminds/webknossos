@@ -128,7 +128,7 @@ class UnsignedLongTestSuite extends AsyncWordSpec {
         "id" -> Json.obj("nested" -> "object"),
         "actionTracingId" -> "someTracingId"
       )
-      assert(badJson.validate[CreateSegmentVolumeAction](using CreateSegmentVolumeAction.jsonFormat).isError)
+      assert(badJson.validate[CreateSegmentVolumeAction].isError)
     }
   }
 

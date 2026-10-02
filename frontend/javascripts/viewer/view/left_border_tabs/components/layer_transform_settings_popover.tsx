@@ -7,7 +7,7 @@ import {
 } from "@ant-design/icons";
 import FlipIcon from "@images/icons/icon-flip.svg?react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getDataset, updateDatasetPartial } from "admin/rest_api";
+import { getImportedDataset, updateDatasetPartial } from "admin/rest_api";
 import { Button, Divider, Flex, InputNumber, Popover, Slider, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -48,7 +48,7 @@ async function fetchStoredSRTForLayer(
   datasetId: string,
   layerName: string,
 ): Promise<{ srt: SRTValues; isValid: boolean; pivot: Vector3 | null }> {
-  const backendDataset = await getDataset(datasetId);
+  const backendDataset = await getImportedDataset(datasetId);
   const backendLayer = backendDataset.dataSource.dataLayers.find((l) => l.name === layerName);
   const stored = backendLayer?.coordinateTransformations ?? null;
   if (stored != null && hasValidLiveTransformationPattern(stored)) {
@@ -326,7 +326,7 @@ export function LayerTransformSettingsContent({
       if (!areValidTransforms) {
         return;
       }
-      const backendDataset = await getDataset(dataset.id);
+      const backendDataset = await getImportedDataset(dataset.id);
       const dataSource = {
         ...backendDataset.dataSource,
         dataLayers: backendDataset.dataSource.dataLayers.map((l) =>

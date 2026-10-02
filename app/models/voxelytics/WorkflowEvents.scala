@@ -1,19 +1,21 @@
 package models.voxelytics
 
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.JsonAutoFormat
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
 import play.api.libs.json.*
 
 trait WorkflowEvent {}
 
 case class RunStateChangeEvent(state: VoxelyticsRunState, timestamp: Instant) extends WorkflowEvent
+    derives JsonAutoFormat
 
 case class TaskStateChangeEvent(
     taskName: String,
     state: VoxelyticsRunState,
     timestamp: Instant,
     artifacts: Map[String, WorkflowDescriptionArtifact]
-) extends WorkflowEvent
+) extends WorkflowEvent derives JsonAutoFormat
 
 case class ChunkStateChangeEvent(
     taskName: String,
@@ -21,9 +23,9 @@ case class ChunkStateChangeEvent(
     chunkName: String,
     timestamp: Instant,
     state: VoxelyticsRunState
-) extends WorkflowEvent
+) extends WorkflowEvent derives JsonAutoFormat
 
-case class RunHeartbeatEvent(timestamp: Instant) extends WorkflowEvent
+case class RunHeartbeatEvent(timestamp: Instant) extends WorkflowEvent derives JsonAutoFormat
 
 case class ChunkProfilingEvent(
     taskName: String,
@@ -35,7 +37,7 @@ case class ChunkProfilingEvent(
     cpuUser: Double,
     cpuSystem: Double,
     timestamp: Instant
-) extends WorkflowEvent
+) extends WorkflowEvent derives JsonAutoFormat
 
 case class ArtifactFileChecksumEvent(
     taskName: String,
@@ -47,31 +49,7 @@ case class ArtifactFileChecksumEvent(
     fileSize: Long,
     lastModified: Instant,
     timestamp: Instant
-) extends WorkflowEvent
-
-object RunStateChangeEvent {
-  implicit val jsonFormat: OFormat[RunStateChangeEvent] = Json.format[RunStateChangeEvent]
-}
-
-object TaskStateChangeEvent {
-  implicit val jsonFormat: OFormat[TaskStateChangeEvent] = Json.format[TaskStateChangeEvent]
-}
-
-object ChunkStateChangeEvent {
-  implicit val jsonFormat: OFormat[ChunkStateChangeEvent] = Json.format[ChunkStateChangeEvent]
-}
-
-object RunHeartbeatEvent {
-  implicit val jsonFormat: OFormat[RunHeartbeatEvent] = Json.format[RunHeartbeatEvent]
-}
-
-object ChunkProfilingEvent {
-  implicit val jsonFormat: OFormat[ChunkProfilingEvent] = Json.format[ChunkProfilingEvent]
-}
-
-object ArtifactFileChecksumEvent {
-  implicit val jsonFormat: OFormat[ArtifactFileChecksumEvent] = Json.format[ArtifactFileChecksumEvent]
-}
+) extends WorkflowEvent derives JsonAutoFormat
 
 object WorkflowEvent {
   implicit object workflowEventFormat extends Format[WorkflowEvent] {
@@ -87,19 +65,17 @@ object WorkflowEvent {
 
     override def writes(a: WorkflowEvent): JsObject = a match {
       case s: RunStateChangeEvent =>
-        Json.obj("type" -> "RUN_STATE_CHANGE") ++ Json.toJson(s)(using RunStateChangeEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "RUN_STATE_CHANGE") ++ Json.toJson(s).as[JsObject]
       case s: TaskStateChangeEvent =>
-        Json.obj("type" -> "TASK_STATE_CHANGE") ++ Json.toJson(s)(using TaskStateChangeEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "TASK_STATE_CHANGE") ++ Json.toJson(s).as[JsObject]
       case s: ChunkStateChangeEvent =>
-        Json.obj("type" -> "CHUNK_STATE_CHANGE") ++ Json.toJson(s)(using ChunkStateChangeEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "CHUNK_STATE_CHANGE") ++ Json.toJson(s).as[JsObject]
       case s: RunHeartbeatEvent =>
-        Json.obj("type" -> "RUN_HEARTBEAT") ++ Json.toJson(s)(using RunHeartbeatEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "RUN_HEARTBEAT") ++ Json.toJson(s).as[JsObject]
       case s: ChunkProfilingEvent =>
-        Json.obj("type" -> "CHUNK_PROFILING") ++ Json.toJson(s)(using ChunkProfilingEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "CHUNK_PROFILING") ++ Json.toJson(s).as[JsObject]
       case s: ArtifactFileChecksumEvent =>
-        Json.obj("type" -> "ARTIFACT_FILE_CHECKSUM") ++ Json
-          .toJson(s)(using ArtifactFileChecksumEvent.jsonFormat)
-          .as[JsObject]
+        Json.obj("type" -> "ARTIFACT_FILE_CHECKSUM") ++ Json.toJson(s).as[JsObject]
     }
   }
 }

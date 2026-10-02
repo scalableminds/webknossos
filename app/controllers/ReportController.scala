@@ -3,11 +3,11 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team.TeamDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
@@ -21,10 +21,7 @@ case class AvailableTaskCountsEntry(
     user: String,
     totalAvailableTasks: Int,
     availableTasksByProjects: Map[String, Int]
-)
-object AvailableTaskCountsEntry {
-  implicit val jsonFormat: OFormat[AvailableTaskCountsEntry] = Json.format[AvailableTaskCountsEntry]
-}
+) derives JsonAutoFormat
 
 case class ProjectProgressEntry(
     projectName: String,
@@ -36,10 +33,7 @@ case class ProjectProgressEntry(
     finishedInstances: Int,
     activeInstances: Int,
     billedMilliseconds: Long
-)
-object ProjectProgressEntry {
-  implicit val jsonFormat: OFormat[ProjectProgressEntry] = Json.format[ProjectProgressEntry]
-}
+) derives JsonAutoFormat
 
 class ReportDAO @Inject() (sqlClient: SqlClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {

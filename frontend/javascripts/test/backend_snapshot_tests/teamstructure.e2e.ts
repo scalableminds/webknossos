@@ -8,6 +8,7 @@ import {
   tokenUserD,
   tokenUserE,
 } from "test/e2e_setup";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getTask } from "admin/api/tasks";
 import {
   createTeam,
@@ -166,16 +167,21 @@ user_A, user_B, user_C, user_D, user_E
     setUserAuthToken(tokenUserB);
 
     const userIdC = "770b9f4d2a7c0e4d008da6ef";
-    const user = await getUser(userIdC);
+    const user = unwrapOrThrow(await getUser(userIdC));
     expect(user.firstName).toBe("user_C");
 
     const newUser = Object.assign({}, user, {
       isActive: false,
     });
 
-    await expect(updateUser(newUser)).rejects.toMatchObject(
-      getExpectedErrorObject("You are not authorized to view or edit this resource."),
-    );
+    const result = await updateUser(newUser, { showErrorToast: false });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.cause).toMatchObject({
+        status: 403,
+        messages: [{ error: "You are not authorized to view or edit this resource." }],
+      });
+    }
   });
 
   // Project

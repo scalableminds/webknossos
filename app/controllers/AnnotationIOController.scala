@@ -221,6 +221,7 @@ class AnnotationIOController @Inject() (
       Fox.failure("Cannot merge multiple annotations with editable mapping (proofreading) edges.")
     } else if (volumeLayersGrouped.length == 1) { // Just one annotation was uploaded, keep its layers separate
       var layerUpdatesStartVersionMutable = 1L
+      var savedAnyEditableMappingVersionsMutable = false
       for {
         annotationLayers <- Fox.serialCombined(volumeLayersGrouped.toList.flatten.zipWithIndex) {
           volumeLayerWithIndex =>
@@ -237,6 +238,7 @@ class AnnotationIOController @Inject() (
               )
               // The next layer’s update actions then need to start after this one
               _ = layerUpdatesStartVersionMutable = layerUpdatesStartVersionMutable + numberOfSavedVersions
+              _ = if (numberOfSavedVersions > 0) savedAnyEditableMappingVersionsMutable = true
               mappingName =
                 if (uploadedVolumeLayer.editedMappingEdgesLocation.isDefined) Some(newTracingId)
                 else uploadedVolumeLayer.tracing.mappingName
@@ -255,7 +257,12 @@ class AnnotationIOController @Inject() (
               AnnotationLayerStatistics.unknown
             )
         }
-      } yield (annotationLayers, layerUpdatesStartVersionMutable)
+        // Only editable mapping (proofreading) uploads actually write update actions whose
+        // history should stay inaccessible; plain volume/skeleton uploads keep earliestAccessibleVersion at 0.
+        earliestAccessibleVersion =
+          if (savedAnyEditableMappingVersionsMutable) layerUpdatesStartVersionMutable
+          else 0L
+      } yield (annotationLayers, earliestAccessibleVersion)
     } else { // Multiple annotations with volume layers (but at most one each) were uploaded, they have no editable mappings. Merge those volume layers into one
       val uploadedVolumeLayersFlat = volumeLayersGrouped.toList.flatten
       val newTracingId = TracingId.generate

@@ -1,12 +1,12 @@
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.geometry.AdditionalCoordinateProto
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.services.mesh.MappingType
-import play.api.libs.json.{Json, OFormat}
 
 trait AbstractDataRequest {
 
@@ -34,17 +34,13 @@ case class WebknossosDataRequest(
     applyAgglomerate: Option[String],
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     version: Option[Long]
-) extends AbstractDataRequest {
+) extends AbstractDataRequest derives JsonAutoFormat {
 
   def cuboid(dataLayer: DataLayer): Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize, cubeSize, cubeSize)
 
   def settings: DataServiceRequestSettings =
     DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), applyAgglomerate, version, additionalCoordinates)
-}
-
-object WebknossosDataRequest {
-  implicit val jsonFormat: OFormat[WebknossosDataRequest] = Json.format[WebknossosDataRequest]
 }
 
 case class WebknossosAdHocMeshRequest(
@@ -58,13 +54,9 @@ case class WebknossosAdHocMeshRequest(
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     annotationVersion: Option[Long],
     findNeighbors: Boolean = true
-) {
+) derives JsonAutoFormat {
   def cuboid: Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
-}
-
-object WebknossosAdHocMeshRequest {
-  implicit val jsonFormat: OFormat[WebknossosAdHocMeshRequest] = Json.format[WebknossosAdHocMeshRequest]
 }
 
 case class RawCuboidRequest(
@@ -72,7 +64,7 @@ case class RawCuboidRequest(
     cubeSize: Vec3Int,
     mag: Vec3Int,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]]
-) extends AbstractDataRequest {
+) extends AbstractDataRequest derives JsonAutoFormat {
   override def cuboid(dataLayer: DataLayer): Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
 
@@ -80,19 +72,20 @@ case class RawCuboidRequest(
     DataServiceRequestSettings(additionalCoordinates = additionalCoordinates)
 }
 
-object RawCuboidRequest {
-  implicit val jsonFormat: OFormat[RawCuboidRequest] = Json.format[RawCuboidRequest]
-}
-
 case class AdditionalCoordinate(
     name: String,
-    value: Int
-) {
+    value: Int,
+    // Used by the Frontend to request batched reads along an additional axis.
+    // Number of consecutive values starting at `value` to read along this axis, instead of just one.
+    // Must be either absent/1 or exactly DataLayer.bucketLength.
+    // Only available for datasets with depth (z) <= 1.
+    // Only available for one AdditonalCoordinate per request.
+    length: Option[Int] = None
+) derives JsonAutoFormat {
   override def toString: String = s"$name=$value"
 }
 
 object AdditionalCoordinate {
-  implicit val jsonFormat: OFormat[AdditionalCoordinate] = Json.format[AdditionalCoordinate]
 
   def toProto(acOpt: Option[Seq[AdditionalCoordinate]]): Seq[AdditionalCoordinateProto] =
     acOpt match {

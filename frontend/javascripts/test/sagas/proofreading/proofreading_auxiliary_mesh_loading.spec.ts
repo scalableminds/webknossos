@@ -627,6 +627,21 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       expect(sortBy([...removedMeshes])).toEqual([1n, 1339n, 1340n]);
       expect(sortBy([...addedMeshes])).toEqual([1n, 1339n, 1340n]);
       yield* meshTracker.cleanUp();
+      const finalMapping = yield* select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1339],
+          [2, 1340],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
+        ]),
+      );
       yield expectSegmentList(tracingId, [
         {
           id: 1n,
@@ -671,13 +686,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1339n],
-          [2n, 1n],
-          [3n, 1340n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1339],
+          [2, 1],
+          [3, 1340],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
         ]),
       );
       yield take(
@@ -737,13 +752,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1339n],
-          [3n, 1340n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1],
+          [2, 1339],
+          [3, 1340],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
         ]),
       );
       yield take(
@@ -802,13 +817,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 1n],
-          [5n, 1n],
-          [6n, 1n],
-          [7n, 1n],
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 1],
+          [7, 1],
         ]),
       );
 
@@ -850,13 +865,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1339n],
-          [3n, 1340n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 6n],
-          [7n, 6n],
+          [1, 1],
+          [2, 1339],
+          [3, 1340],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
         ]),
       );
 
@@ -924,13 +939,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Agglomerate 4 and 6 were merged and then agglomerate 1 was split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1339n],
-          [2n, 1339n],
-          [3n, 1n],
-          [4n, 4n],
-          [5n, 4n],
-          [6n, 4n],
-          [7n, 4n],
+          [1, 1339],
+          [2, 1339],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 4],
+          [7, 4],
         ]),
       );
 
@@ -1053,15 +1068,15 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1n, 1n],
-          [2n, 1n],
-          [3n, 1n],
-          [4n, 1n],
-          [5n, 1n],
-          [6n, 6n],
-          [7n, 6n],
-          [1337n, 1n], // Loaded as this segment is part of a split proofreading action done in this test.
-          [1338n, 1n], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 6],
+          [7, 6],
+          [1337, 1], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1338, 1], // Loaded as this segment is part of a split proofreading action done in this test.
         ]),
       );
 

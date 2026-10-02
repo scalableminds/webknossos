@@ -38,7 +38,7 @@ function DatasetReducer(state: WebknossosState, action: Action): WebknossosState
             group: null,
           },
           hideUnregisteredSegments: false,
-          minCutPartitions: { 1: [], 2: [], agglomerateId: null },
+          minCutPartitions: { partitionA: [], partitionB: [], agglomerateId: null },
           proofreadingMarkerPosition: undefined,
           activeUnmappedSegmentId: null,
           lastLabelActions: [],

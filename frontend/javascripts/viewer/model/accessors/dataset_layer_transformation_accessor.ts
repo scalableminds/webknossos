@@ -587,6 +587,7 @@ export function layerToGlobalTransformedPosition(
 // layer's coordinate transforms (relative to nativelyRenderedLayerName) into account. Since
 // different layers can have different transforms, the axis-aligned extent has to be computed
 // per layer (by transforming its 8 corners) before taking the union across layers.
+// Reminder: The returned bounding box'es max value is exclusive to the dataset.
 function _getTransformedDatasetBoundingBox(
   dataset: APIDataset,
   nativelyRenderedLayerName: string | null,

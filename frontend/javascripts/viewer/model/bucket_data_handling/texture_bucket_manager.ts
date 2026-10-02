@@ -7,14 +7,16 @@ import noop from "lodash-es/noop";
 import range from "lodash-es/range";
 import uniqBy from "lodash-es/uniqBy";
 import type { DataTexture } from "three";
-import type { ElementClass } from "types/api_types";
+import type { BucketDataArray, ElementClass } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import constants, { type TypedArray } from "viewer/constants";
 import { getRenderer } from "viewer/controller/renderer";
 import { createUpdatableTexture } from "viewer/geometries/materials/plane_material_factory_helpers";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import {
   getBucketCapacity,
+  getBucketHeightInTexture,
   getDtypeConfigForElementClass,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 
@@ -49,8 +51,10 @@ function getSomeValue<T>(set: Set<T>): T {
   return value;
 }
 
+// Sized for the largest possible (non-shrunk) bucket; layers with a smaller
+// effective bucket footprint simply use a prefix of this scratch buffer.
 const tmpPaddingBuffer = new Uint8Array(4 * constants.BUCKET_SIZE);
-function maybePadRgbData(src: TypedArray, elementClass: ElementClass) {
+function maybePadRgbData(src: TypedArray, elementClass: ElementClass, bucketVoxelCount: number) {
   if (elementClass !== "uint24") {
     return src;
   }
@@ -59,7 +63,7 @@ function maybePadRgbData(src: TypedArray, elementClass: ElementClass) {
   // since r137.
   let idx = 0;
   let srcIdx = 0;
-  while (srcIdx < 3 * constants.BUCKET_SIZE) {
+  while (srcIdx < 3 * bucketVoxelCount) {
     // @ts-expect-error BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
     // @ts-expect-error BigInt is not a problem as this code here only handles uint24 data
@@ -69,7 +73,38 @@ function maybePadRgbData(src: TypedArray, elementClass: ElementClass) {
     tmpPaddingBuffer[idx++] = 255;
   }
 
-  return tmpPaddingBuffer;
+  return tmpPaddingBuffer.subarray(0, idx);
+}
+
+// A bucket's packed data may cover less than the atlas region it is uploaded into (e.g. less
+// than one full texture row, see getBucketHeightInTexture). Since gl.texSubImage2D needs the
+// source to cover the whole region, it is copied into a zero-filled scratch buffer first.
+let tmpRowPaddingBuffer: TypedArray | null = null;
+function padToUploadRegion(
+  src: TypedArray,
+  requiredElementCount: number,
+  destElementOffset: number = 0,
+): TypedArray {
+  if (destElementOffset === 0 && src.length >= requiredElementCount) {
+    return src;
+  }
+
+  if (
+    tmpRowPaddingBuffer == null ||
+    tmpRowPaddingBuffer.constructor !== src.constructor ||
+    tmpRowPaddingBuffer.length < requiredElementCount
+  ) {
+    // @ts-expect-error TypedArray constructors all accept a length argument.
+    tmpRowPaddingBuffer = new src.constructor(requiredElementCount);
+  }
+
+  const buffer = tmpRowPaddingBuffer as TypedArray;
+  const target = buffer.subarray(0, requiredElementCount);
+  // @ts-expect-error BigInt is not a problem in practice; only used for byte-level GPU upload buffers.
+  target.fill(0);
+  // @ts-expect-error src and target always share the same underlying element type.
+  target.set(src, destElementOffset);
+  return target;
 }
 
 export default class TextureBucketManager {
@@ -94,16 +129,41 @@ export default class TextureBucketManager {
   maximumCapacity: number;
   packingDegree: number;
   elementClass: ElementClass;
+  // How many voxels one bucket occupies in this layer's atlas — its "footprint". This differs
+  // from the CPU-side DataCube.getEffectiveBucketVoxelCount() on t-recycling layers, where one
+  // atlas slot holds a whole 32-timepoint batch (the full 32^3) while each bucket holds 32*32*1.
+  bucketVoxelCount: number;
+  // When true, this layer's (always-0) z-addressing slot caches several t-slices on the GPU
+  // instead of the bucket footprint being shrunk to depth 1. See getCuckooKey, DataBucket.getT().
+  usesTRecycling: boolean;
+  private cube: DataCube;
   isDestroyed: boolean = false;
   private areTexturesReady: boolean = false;
   private isWriterQueueProcessingScheduled: boolean = false;
 
-  constructor(textureWidth: number, dataTextureCount: number, elementClass: ElementClass) {
+  constructor(
+    textureWidth: number,
+    dataTextureCount: number,
+    elementClass: ElementClass,
+    cube: DataCube,
+  ) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
     this.packingDegree = getDtypeConfigForElementClass(elementClass).packingDegree;
     this.elementClass = elementClass;
-    this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
+    this.cube = cube;
+
+    this.usesTRecycling = cube.usesTRecycling;
+
+    this.bucketVoxelCount = this.usesTRecycling
+      ? constants.BUCKET_SIZE
+      : cube.getEffectiveBucketVoxelCount();
+    this.maximumCapacity = getBucketCapacity(
+      dataTextureCount,
+      textureWidth,
+      this.packingDegree,
+      this.bucketVoxelCount,
+    );
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
     this.freeIndexSet = new Set(range(this.maximumCapacity));
@@ -138,6 +198,21 @@ export default class TextureBucketManager {
     this.setActiveBuckets([]);
   }
 
+  // For t-recycling layers the (always-0) z slot encodes a "t-batch index" (floor(t/32))
+  // instead.
+  private getCuckooKey(bucket: DataBucket): [number, number, number, number, number] {
+    const z = this.usesTRecycling
+      ? Math.floor(bucket.getT() / constants.BUCKET_WIDTH)
+      : bucket.zoomedAddress[2];
+    return [
+      bucket.zoomedAddress[0],
+      bucket.zoomedAddress[1],
+      z,
+      bucket.zoomedAddress[3],
+      this.layerIndex,
+    ];
+  }
+
   freeBucket(bucket: DataBucket): void {
     const unusedIndex = this.activeBucketToIndexMap.get(bucket);
 
@@ -152,13 +227,7 @@ export default class TextureBucketManager {
     this.activeBucketToIndexMap.delete(bucket);
     this.committedBucketSet.delete(bucket);
     this.freeIndexSet.add(unusedIndex);
-    this.lookUpCuckooTable.unset([
-      bucket.zoomedAddress[0],
-      bucket.zoomedAddress[1],
-      bucket.zoomedAddress[2],
-      bucket.zoomedAddress[3],
-      this.layerIndex,
-    ]);
+    this.lookUpCuckooTable.unset(this.getCuckooKey(bucket));
 
     // If a bucket is evicted from the GPU, it should not be rendered, anymore.
     // This is especially important when new buckets take a while to load. In that
@@ -195,7 +264,7 @@ export default class TextureBucketManager {
   }
 
   getPackedBucketSize() {
-    return constants.BUCKET_SIZE / this.packingDegree;
+    return this.bucketVoxelCount / this.packingDegree;
   }
 
   // Commit "active" buckets by writing these to the dataTexture.
@@ -217,13 +286,20 @@ export default class TextureBucketManager {
     this.writerQueue = uniqBy(this.writerQueue, (el) => el._index);
     const maxTimePerFrame = 16;
     const startingTime = performance.now();
-    const packedBucketSize = this.getPackedBucketSize();
-    const bucketHeightInTexture = packedBucketSize / this.textureWidth;
-    const bucketsPerTexture = (this.textureWidth * this.textureWidth) / packedBucketSize;
+    const bucketHeightInTexture = getBucketHeightInTexture(
+      this.textureWidth,
+      this.packingDegree,
+      this.bucketVoxelCount,
+    );
+    const bucketsPerTexture = this.textureWidth / bucketHeightInTexture;
 
     while (this.writerQueue.length > 0 && performance.now() - startingTime < maxTimePerFrame) {
-      // @ts-expect-error pop cannot return null due to the while condition
-      const { bucket, _index } = this.writerQueue.pop();
+      const poppedElement = this.writerQueue.pop();
+      if (!poppedElement) {
+        // Satisfy TS
+        throw new Error("writerQueue.length > 0 but no entry was found in it.");
+      }
+      const { bucket, _index } = poppedElement;
 
       if (!this.activeBucketToIndexMap.has(bucket)) {
         // This bucket is not needed anymore
@@ -245,34 +321,45 @@ export default class TextureBucketManager {
       const indexInDataTexture = _index % bucketsPerTexture;
       const data = bucket.getData();
       const { TypedArrayClass } = getDtypeConfigForElementClass(this.elementClass);
+      // For a t-recycling bucket, rawBucketData is the whole shared 32-slice batch buffer which
+      // can be uploaded to the GPU directly.
+      const useRawBatchData = this.usesTRecycling && bucket.rawBucketData != null;
+      const uploadSource = useRawBatchData ? (bucket.rawBucketData as BucketDataArray) : data;
+      // How many voxels the source covers: the full atlas footprint for a batch buffer,
+      // and the layer's (possibly shrunk) per-bucket footprint otherwise.
+      const uploadVoxelCount = useRawBatchData
+        ? this.bucketVoxelCount
+        : this.cube.getEffectiveBucketVoxelCount();
 
       const rawSrc = new TypedArrayClass(
-        data.buffer,
-        data.byteOffset,
-        data.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
+        uploadSource.buffer,
+        uploadSource.byteOffset,
+        uploadSource.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
       );
 
-      const src = maybePadRgbData(rawSrc, this.elementClass);
+      const rgbPaddedSrc = maybePadRgbData(rawSrc, this.elementClass, uploadVoxelCount);
 
-      this.dataTextures[dataTextureIndex].update(
-        src,
-        0,
-        bucketHeightInTexture * indexInDataTexture,
-        this.textureWidth,
-        bucketHeightInTexture,
+      const x = 0;
+      const y = bucketHeightInTexture * indexInDataTexture;
+      const width = this.textureWidth;
+      const height = bucketHeightInTexture;
+      // texSubImage2D needs the source to cover the whole (x, y, width, height) region, which
+      // it may not (a sub-row bucket, or less than the atlas footprint) — fixed by zero-padding.
+      const requiredElementCount = Math.round(
+        (rgbPaddedSrc.length * width * height) / (uploadVoxelCount / this.packingDegree),
       );
+      // Should not happen today (volume tracings don't use t-recycling), but if the shared batch
+      // buffer is ever missing, still write the single slice into its correct t-slot rather than 0.
+      const destElementOffset =
+        this.usesTRecycling && !useRawBatchData
+          ? (bucket.getT() % constants.BUCKET_WIDTH) * rgbPaddedSrc.length
+          : 0;
+      const src = padToUploadRegion(rgbPaddedSrc, requiredElementCount, destElementOffset);
+
+      this.dataTextures[dataTextureIndex].update(src, x, y, width, height);
       this.committedBucketSet.add(bucket);
 
-      this.lookUpCuckooTable.set(
-        [
-          bucket.zoomedAddress[0],
-          bucket.zoomedAddress[1],
-          bucket.zoomedAddress[2],
-          bucket.zoomedAddress[3],
-          this.layerIndex,
-        ],
-        _index,
-      );
+      this.lookUpCuckooTable.set(this.getCuckooKey(bucket), _index);
 
       // bucket.setVisualizationColor("#00ff00");
       // bucket.visualize();
@@ -319,16 +406,7 @@ export default class TextureBucketManager {
     this.freeIndexSet.delete(index);
     this.activeBucketToIndexMap.set(bucket, index);
 
-    this.lookUpCuckooTable.set(
-      [
-        bucket.zoomedAddress[0],
-        bucket.zoomedAddress[1],
-        bucket.zoomedAddress[2],
-        bucket.zoomedAddress[3],
-        this.layerIndex,
-      ],
-      NOT_YET_COMMITTED_VALUE,
-    );
+    this.lookUpCuckooTable.set(this.getCuckooKey(bucket), NOT_YET_COMMITTED_VALUE);
 
     const enqueueBucket = (_index: number) => {
       if (!bucket.hasData()) {

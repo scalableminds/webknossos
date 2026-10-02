@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getUsersWithActiveTasks, transferActiveTasksOfProject } from "admin/api/tasks";
 import { getUsers } from "admin/rest_api";
 import UserSelectionComponent from "admin/user/user_selection_component";
@@ -24,7 +25,7 @@ function TransferAllTasksModal({ project, onCancel, onComplete }: Props) {
   const users = useFetch(
     async () => {
       try {
-        const users = await getUsers();
+        const users = unwrapOrThrow(await getUsers());
         const activeUsers = users.filter((u) => u.isActive);
         const usersWithActiveTasks = project ? await getUsersWithActiveTasks(project.id) : [];
 

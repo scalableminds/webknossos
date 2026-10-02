@@ -11,22 +11,25 @@ import { ensureSegmentIndexIsLoadedAction } from "viewer/model/actions/dataset_a
 import type { Segment } from "viewer/store";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import DeleteGroupModalView from "../delete_group_modal_view";
+import { MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
+import type { SegmentStatisticsTarget } from "./context_menus";
 import { useMeshFiles } from "./hooks/use_mesh_files";
 import { useMeshOperations } from "./hooks/use_mesh_operations";
 import { useSegmentGroupOperations } from "./hooks/use_segment_group_operations";
 import { useSegmentHierarchy } from "./hooks/use_segment_hierarchy";
 import { useSegmentSelection } from "./hooks/use_segment_selection";
+import { useSegmentStatisticsFile } from "./hooks/use_segment_statistics_file";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import { SegmentTreeView } from "./segment_tree_view";
 import { SegmentsToolbar, segmentsTabId } from "./segments_toolbar";
 import { mayEditVisibleSegmentation } from "./segments_view_helper";
 
 function SegmentStatisticsModalContainer({
-  groupId,
+  target,
   onClose,
   getSegmentsOfGroupRecursively,
 }: {
-  groupId: number;
+  target: SegmentStatisticsTarget;
   onClose: () => void;
   getSegmentsOfGroupRecursively: (groupId: number) => Segment[];
 }) {
@@ -37,7 +40,8 @@ function SegmentStatisticsModalContainer({
   if (visibleSegmentationLayer == null) {
     return null;
   }
-  const segments = getSegmentsOfGroupRecursively(groupId);
+  const segments =
+    target.kind === "group" ? getSegmentsOfGroupRecursively(target.groupId) : target.segments;
   if (segments.length === 0) {
     return null;
   }
@@ -48,10 +52,19 @@ function SegmentStatisticsModalContainer({
       visibleSegmentationLayer={visibleSegmentationLayer}
       tracingId={activeVolumeTracing?.tracingId}
       relevantSegments={segments}
-      parentGroup={groupId}
+      csvFilenameSuffix={getCsvFilenameSuffix(target, segments)}
       segmentGroups={segmentGroups}
     />
   );
+}
+
+function getCsvFilenameSuffix(target: SegmentStatisticsTarget, segments: Segment[]): string | null {
+  if (target.kind === "group") {
+    return target.groupId === MISSING_GROUP_ID ? null : `group-${target.groupId}`;
+  }
+  return segments.length === 1
+    ? `segment-${segments[0].id}`
+    : `${segments.length}-selected-segments`;
 }
 
 function SegmentsTabContent() {
@@ -61,7 +74,8 @@ function SegmentsTabContent() {
   const groupOperations = useSegmentGroupOperations();
   const meshOperations = useMeshOperations();
   const meshFiles = useMeshFiles();
-  const [statisticsModalGroupId, setStatisticsModalGroupId] = useState<number | null>(null);
+  const [statisticsModalTarget, setStatisticsModalTarget] =
+    useState<SegmentStatisticsTarget | null>(null);
 
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
   const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
@@ -72,6 +86,11 @@ function SegmentsTabContent() {
   useEffect(() => {
     dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
   }, [dispatch, visibleSegmentationLayer]);
+
+  // Probed here rather than only where it is consumed, because the segment tree – and with it the
+  // group context menu that gates on this – is not rendered while the segment list is empty.
+  // The result is shared via the react-query cache, so consumers cause no extra request.
+  useSegmentStatisticsFile(visibleSegmentationLayer);
 
   return (
     <>
@@ -99,7 +118,7 @@ function SegmentsTabContent() {
             groupOperations={groupOperations}
             meshOperations={meshOperations}
             meshFiles={meshFiles}
-            openStatisticsModal={setStatisticsModalGroupId}
+            openStatisticsModal={setStatisticsModalTarget}
           />
         )}
       </div>
@@ -110,10 +129,10 @@ function SegmentsTabContent() {
           onDeleteGroupAndChildren={() => groupOperations.confirmGroupDeletion(true)}
         />
       ) : null}
-      {statisticsModalGroupId != null ? (
+      {statisticsModalTarget != null ? (
         <SegmentStatisticsModalContainer
-          groupId={statisticsModalGroupId}
-          onClose={() => setStatisticsModalGroupId(null)}
+          target={statisticsModalTarget}
+          onClose={() => setStatisticsModalTarget(null)}
           getSegmentsOfGroupRecursively={groupOperations.getSegmentsOfGroupRecursively}
         />
       ) : null}

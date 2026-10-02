@@ -1,5 +1,6 @@
 import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getEditableUsers, getProjects, getTaskTypes } from "admin/rest_api";
 import { Button, Col, Dropdown, Flex, Form, Grid, Input, Row, Select, theme } from "antd";
 import Persistence from "libs/persistence";
@@ -72,11 +73,12 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
 
   async function fetchData() {
     setIsFetchingData(true);
-    const [users, projects, taskTypes] = await Promise.all([
+    const [usersResult, projects, taskTypes] = await Promise.all([
       getEditableUsers(),
       getProjects(),
       getTaskTypes(),
     ]);
+    const users = unwrapOrThrow(usersResult);
     setUsers(users);
     setProjects(projects);
     setTaskTypes(taskTypes);

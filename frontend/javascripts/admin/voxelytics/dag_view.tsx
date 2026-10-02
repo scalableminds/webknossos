@@ -11,7 +11,8 @@ import ReactFlow, {
   type Node as FlowNode,
   MiniMap,
   type ReactFlowInstance,
-} from "react-flow-renderer";
+} from "reactflow";
+import "reactflow/dist/style.css";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfigWithName,
@@ -244,10 +245,8 @@ function DAGView({
     }
   };
 
-  const handleSelectionChange = (
-    elements: { nodes: Array<FlowNode>; edges: Array<FlowEdge> } | null,
-  ) => {
-    if (elements === null) {
+  const handleSelectionChange = ({ nodes }: { nodes: Array<FlowNode>; edges: Array<FlowEdge> }) => {
+    if (nodes.length === 0) {
       // user clicked on background
       setSelectedNodeId(null);
     }
@@ -267,6 +266,12 @@ function DAGView({
       nodes={nodes}
       edges={edges}
       fitView
+      // The DAG is read-only, so none of React Flow's keyboard interactions are needed.
+      // So disable them to the view crashing when having a key pressed and loosing window focus.
+      deleteKeyCode={null}
+      multiSelectionKeyCode={null}
+      selectionKeyCode={null}
+      zoomActivationKeyCode={null}
       fitViewOptions={{ maxZoom: 1.5 }}
       minZoom={0.3}
       maxZoom={2}

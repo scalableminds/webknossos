@@ -1,11 +1,12 @@
 import { EditOutlined, LockOutlined } from "@ant-design/icons";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { changePassword, logoutUserEverywhere } from "admin/rest_api";
 import { Alert, App, Button, Col, Form, Input, Row, Space } from "antd";
 import features from "features";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import { SettingsTitle } from "./helpers/settings_title";
 
@@ -30,7 +31,7 @@ function AccountSecurityView() {
     try {
       await changePassword(formValues);
       Toast.success(messages["auth.reset_pw_confirmation"]);
-      await logoutUserEverywhere();
+      unwrapOrThrow(await logoutUserEverywhere());
       dispatch(logoutUserAction());
       navigate("/auth/login");
     } catch (error) {
@@ -194,6 +195,7 @@ function AccountSecurityView() {
 
   async function handleLogout() {
     logoutUserEverywhere()
+      .then((result) => unwrapOrThrow(result))
       .then(() => {
         dispatch(logoutUserAction());
         navigate("/auth/login");

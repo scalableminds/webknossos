@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { type BlockerFunction, useBlocker } from "react-router-dom";
+import { type BlockerFunction, useBlocker } from "react-router";
 
 const useBeforeUnload = (hasUnsavedChanges: boolean, message: string) => {
   const beforeUnload = useCallback(

@@ -7,7 +7,7 @@ import { Layout, Tabs, type TabsProps } from "antd";
 import { useFetch } from "libs/react_helpers";
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import type { APIDataStore } from "types/api_types";
 import PostUploadModal from "./components/post_upload_modal";
 import VoxelyticsBanner from "./components/voxelytics_banner";

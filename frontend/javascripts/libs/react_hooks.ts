@@ -8,7 +8,7 @@ import debounce from "lodash-es/debounce";
 import noop from "lodash-es/noop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import constants from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
 import { bigIntReplacer } from "./bigint_helpers";
@@ -368,6 +368,7 @@ export function useApi<TData, TQueryKey extends QueryKey = QueryKey>(
 /**
  * Hook that provides type-safe access to the Webknossos Redux store.
  * @param fn - Selector function that receives the Webknossos state
+ * @param equalityFn — An optional equality function to keep the returned value stable.
  * @returns Selected state value
  */
 export function useWkSelector<T>(fn: (state: WebknossosState) => T, equalityFn?: EqualityFn<T>): T {

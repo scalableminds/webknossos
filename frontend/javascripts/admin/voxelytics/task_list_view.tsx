@@ -21,8 +21,6 @@ import {
   Flex,
   Input,
   type MenuProps,
-  message,
-  notification,
   Row,
   Select,
   Space,
@@ -34,14 +32,14 @@ import dayjs from "dayjs";
 import {
   formatDateMedium,
   formatDurationStrict,
-  formatTimeInterval,
   formatTimeIntervalStrict,
 } from "libs/format_utils";
 import { useUpdateEvery, useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
 import MiniSearch from "minisearch";
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
+import { ModalWidth } from "theme";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfig,
@@ -185,7 +183,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             timed out
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.CANCELLED:
@@ -203,7 +201,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             cancelled
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.FAILED:
@@ -221,7 +219,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             failed
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.COMPLETE:
@@ -238,8 +236,8 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CheckCircleOutlined />} color="success">
             completed
           </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()},{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
+          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     default:
@@ -266,7 +264,7 @@ export default function TaskListView({
   onReload: () => void;
   runId: string | null;
 }) {
-  const { modal } = App.useApp();
+  const { modal, message, notification } = App.useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
@@ -375,7 +373,7 @@ export default function TaskListView({
           artifacts={report.artifacts}
         />
       ),
-      width: "75%",
+      width: ModalWidth.Full,
     });
   }
 
@@ -434,7 +432,7 @@ export default function TaskListView({
       content:
         "Are you sure you want to delete this workflow report? This can not be undone. Note that if the workflow is still running, this may cause it to fail.",
       okText: "Delete",
-      okButtonProps: { danger: true },
+      okType: "danger",
       onOk: async () => {
         try {
           await deleteWorkflow(report.workflow.hash);

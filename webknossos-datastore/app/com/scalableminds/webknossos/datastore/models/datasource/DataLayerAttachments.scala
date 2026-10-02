@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import org.apache.commons.io.FilenameUtils
@@ -174,7 +174,7 @@ case class LayerAttachment(
     path: UPath,
     dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
     credentialId: Option[String] = None
-) {
+) derives JsonAutoFormat {
   // Returns Failure for attachments with remote paths.
   def localPath: Box[Path] = path.toLocalPath
 
@@ -203,7 +203,6 @@ case class LayerAttachment(
 }
 
 object LayerAttachment {
-  implicit val jsonFormat: Format[LayerAttachment] = Json.format[LayerAttachment]
 
   def scanForFiles(
       layerDirectory: Path,

@@ -4,7 +4,7 @@ import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import java.io.*
 import java.nio.file.{Files, Path}
 import java.util.zip.{GZIPOutputStream as DefaultGZIPOutputStream, *}
-import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxIterator, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
 import Box.tryo
@@ -102,6 +102,24 @@ object ZipIO extends LazyLogging {
       }
     }
 
+  def zip(sources: FoxIterator[NamedStream], out: OutputStream, level: Int)(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] = {
+    val zip = startZip(out)
+    if (level != -1) {
+      zip.stream.setLevel(level)
+    }
+    Fox.withCleanup(zipIterator(sources, zip)) {
+      zip.close()
+      out.close()
+    }
+  }
+
+  // Failures while pulling from sources (e.g. a FossilDB error) are already Fox failures, not thrown exceptions,
+  // so unlike the Iterator variant above, no try/catch is needed here.
+  private def zipIterator(sources: FoxIterator[NamedStream], zip: OpenZip)(implicit ec: ExecutionContext): Fox[Unit] =
+    Fox.serialCombined(sources)(s => zip.withFile(s.normalizedName)(s.writeTo)).map(_ => ())
+
   def startZip(out: OutputStream): OpenZip =
     OpenZip(new ZipOutputStream(out))
 
@@ -182,7 +200,7 @@ object ZipIO extends LazyLogging {
       includeHiddenFiles: Boolean = false,
       hiddenFilesWhitelist: List[String] = List(),
       truncateCommonPrefix: Boolean = false,
-      excludeFromPrefix: Option[List[String]] = None
+      boundaryDirNames: Option[List[String]] = None
   )(f: (Path, InputStream) => Fox[A])(implicit ec: ExecutionContext): Fox[List[A]] = {
 
     val zipEntries = zip.entries.asScala.filter { (e: ZipEntry) =>
@@ -191,11 +209,8 @@ object ZipIO extends LazyLogging {
       ))
     }.toList
 
-    val commonPrefix = if (truncateCommonPrefix) {
-      val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Path.of(e.getName)))
-      val strippedPrefix =
-        PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixNotFixed, excludeFromPrefix.getOrElse(List.empty))
-      PathUtils.removeSingleFileNameFromPrefix(strippedPrefix, zipEntries.map(_.getName))
+    val commonRootDir = if (truncateCommonPrefix) {
+      PathUtils.findCommonRootDirectory(zipEntries.map(e => Path.of(e.getName)), boundaryDirNames.getOrElse(List.empty))
     } else {
       Path.of("")
     }
@@ -204,7 +219,7 @@ object ZipIO extends LazyLogging {
       results.shiftBox.map {
         case Full(rs) =>
           val input: InputStream = zip.getInputStream(entry)
-          val path = commonPrefix.relativize(Path.of(entry.getName))
+          val path = commonRootDir.relativize(Path.of(entry.getName))
           val innerResultFox: Fox[List[A]] = Fox.fromFutureBox(f(path, input).futureBox.map {
             case Full(result) =>
               input.close()
@@ -237,7 +252,7 @@ object ZipIO extends LazyLogging {
       includeHiddenFiles: Boolean = false,
       hiddenFilesWhitelist: List[String] = List(),
       truncateCommonPrefix: Boolean = false,
-      excludeFromPrefix: Option[List[String]] = None
+      boundaryDirNames: Option[List[String]] = None
   )(f: (Path, InputStream) => Box[A]): Box[List[A]] = {
 
     val zipEntries = zip.entries.asScala.filter { (e: ZipEntry) =>
@@ -246,11 +261,8 @@ object ZipIO extends LazyLogging {
       ))
     }.toList
 
-    val commonPrefix = if (truncateCommonPrefix) {
-      val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Path.of(e.getName)))
-      val strippedPrefix =
-        PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixNotFixed, excludeFromPrefix.getOrElse(List.empty))
-      PathUtils.removeSingleFileNameFromPrefix(strippedPrefix, zipEntries.map(_.getName))
+    val commonRootDir = if (truncateCommonPrefix) {
+      PathUtils.findCommonRootDirectory(zipEntries.map(e => Path.of(e.getName)), boundaryDirNames.getOrElse(List.empty))
     } else {
       Path.of("")
     }
@@ -265,7 +277,7 @@ object ZipIO extends LazyLogging {
             var input: InputStream = null
             try {
               input = zip.getInputStream(entry)
-              val path = commonPrefix.relativize(rawEntryPath).normalize()
+              val path = commonRootDir.relativize(rawEntryPath).normalize()
               if (path.startsWith("..")) {
                 Failure(
                   s"Zip entry path escapes the target directory and was rejected as a potential zip slip attack: ${entry.getName}"
@@ -302,10 +314,10 @@ object ZipIO extends LazyLogging {
       includeHiddenFiles: Boolean,
       hiddenFilesWhitelist: List[String],
       truncateCommonPrefix: Boolean,
-      excludeFromPrefix: Option[List[String]]
+      boundaryDirNames: Option[List[String]]
   ): Box[List[Path]] =
     tryo(new java.util.zip.ZipFile(file)).flatMap(
-      unzipToDirectory(_, targetDir, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, excludeFromPrefix)
+      unzipToDirectory(_, targetDir, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, boundaryDirNames)
     )
 
   def unzipToDirectory(
@@ -314,9 +326,9 @@ object ZipIO extends LazyLogging {
       includeHiddenFiles: Boolean,
       hiddenFilesWhitelist: List[String],
       truncateCommonPrefix: Boolean,
-      excludeFromPrefix: Option[List[String]]
+      boundaryDirNames: Option[List[String]]
   ): Box[List[Path]] =
-    withUnziped(zip, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, excludeFromPrefix) { (name, in) =>
+    withUnziped(zip, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, boundaryDirNames) { (name, in) =>
       val path = targetDir.resolve(name).normalize()
       if (!path.startsWith(targetDir.normalize())) {
         Failure(

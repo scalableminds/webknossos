@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.annotation
 
 import com.scalableminds.util.objectid.ObjectId
-import play.api.libs.json.{Json, OFormat}
+import com.scalableminds.util.tools.JsonAutoFormat
 
 case class AnnotationSource(
     id: ObjectId,
@@ -12,10 +12,6 @@ case class AnnotationSource(
     dataStoreUrl: String,
     tracingStoreUrl: String,
     accessViaPrivateLink: Boolean
-) {
+) derives JsonAutoFormat {
   def getAnnotationLayer(layerName: String): Option[AnnotationLayer] = annotationLayers.find(_.name == layerName)
-}
-
-object AnnotationSource {
-  implicit val jsonFormat: OFormat[AnnotationSource] = Json.format[AnnotationSource]
 }

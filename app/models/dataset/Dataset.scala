@@ -6,7 +6,7 @@ import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
@@ -90,7 +90,8 @@ case class Dataset(
     rootRealPath: Option[String] = None,
     mirrorPath: Option[String] = None,
     created: Instant = Instant.now,
-    isDeleted: Boolean = false
+    isDeleted: Boolean = false,
+    thumbnailCacheVersion: Int = 0
 )
 
 case class DatasetCompactInfo(
@@ -108,13 +109,10 @@ case class DatasetCompactInfo(
     isUnreported: Boolean,
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
-    usedStorageBytes: Long
-) {
+    usedStorageBytes: Long,
+    thumbnailCacheVersion: Int
+) derives JsonAutoFormat {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
-}
-
-object DatasetCompactInfo {
-  implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
 }
 
 trait DatasetDAOLike {
@@ -186,7 +184,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       r.rootrealpath,
       r.mirrorpath,
       Instant.fromSql(r.created),
-      r.isdeleted
+      r.isdeleted,
+      r.thumbnailcacheversion
     )
 
   override def anonymousReadAccessQ(token: Option[String]): SqlToken = {
@@ -204,9 +203,12 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
   }
 
   override def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"""isPublic
+    readAccessQWithPrefix(requestingUserId, q"")
+
+  def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
+    q"""${prefix}isPublic
         OR ( -- user is matching orga admin or dataset manager
-          _organization IN (
+          ${prefix}_organization IN (
             SELECT _organization
             FROM webknossos.users_
             WHERE _id = $requestingUserId
@@ -214,7 +216,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
           )
         )
         OR ( -- user is in a team that is allowed for the dataset
-          _id IN (
+          ${prefix}_id IN (
             SELECT _dataset
             FROM webknossos.dataset_allowedTeams dt
             JOIN webknossos.user_team_roles utr ON dt._team = utr._team
@@ -222,7 +224,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
           )
         )
         OR ( -- user is in a team that is allowed for the folder or its ancestors
-          _folder IN (
+          ${prefix}_folder IN (
             SELECT fp._descendant
             FROM webknossos.folder_paths fp
             WHERE fp._ancestor IN (
@@ -325,7 +327,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               d.tags,
               cl.names AS colorLayerNames,
               sl.names AS segmentationLayerNames,
-              COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes
+              COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes,
+              d.thumbnailCacheVersion
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
             JOIN webknossos.organizations o
@@ -359,7 +362,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               String,
               String,
               String,
-              Long
+              Long,
+              Int
           )
         ]
       )
@@ -380,7 +384,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         colorLayerNames = parseArrayLiteral(row._12),
         segmentationLayerNames = parseArrayLiteral(row._13),
         // Only include usedStorage for datasets of your own organization.
-        usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L
+        usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L,
+        thumbnailCacheVersion = row._15
       )
     )
 
@@ -716,6 +721,13 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       _ <- assertUpdateAccess(datasetId)
       _ <- run(q"""UPDATE webknossos.datasets
                    SET mirrorPath = $mirrorPath
+                   WHERE _id = $datasetId""".asUpdate)
+    } yield ()
+
+  def incrementThumbnailCacheVersion(datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.datasets
+                   SET thumbnailCacheVersion = thumbnailCacheVersion + 1
                    WHERE _id = $datasetId""".asUpdate)
     } yield ()
 
@@ -1341,15 +1353,12 @@ class DatasetLastUsedTimesDAO @Inject() (sqlClient: SqlClient)(implicit ec: Exec
       r <- rList.headOption.toFox
     } yield r
 
-  def updateForDatasetAndUser(datasetId: ObjectId, userId: ObjectId): Fox[Unit] = {
-    val clearQuery =
-      q"DELETE FROM webknossos.dataset_lastUsedTimes WHERE _dataset = $datasetId AND _user = $userId".asUpdate
-    val insertQuery =
-      q"INSERT INTO webknossos.dataset_lastUsedTimes(_dataset, _user, lastUsedTime) VALUES($datasetId, $userId, NOW())".asUpdate
+  def updateForDatasetAndUser(datasetId: ObjectId, userId: ObjectId): Fox[Unit] =
     for {
-      _ <- runAsSerializableTransaction(List(clearQuery, insertQuery))
+      _ <- run(q"""INSERT INTO webknossos.dataset_lastUsedTimes(_dataset, _user, lastUsedTime)
+                   VALUES($datasetId, $userId, NOW())
+                   ON CONFLICT (_dataset, _user) DO UPDATE SET lastUsedTime = NOW()""".asUpdate)
     } yield ()
-  }
 }
 
 case class StorageRelevantDataLayerAttachment(

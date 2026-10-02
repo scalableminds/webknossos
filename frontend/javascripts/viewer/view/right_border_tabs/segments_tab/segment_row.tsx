@@ -1,0 +1,472 @@
+import Icon, { EllipsisOutlined, LoadingOutlined } from "@ant-design/icons";
+import CrosshairsIcon from "@images/icons/icon-crosshairs.svg?react";
+import MeshIcon from "@images/icons/icon-mesh-organic-boundary.svg?react";
+import { type ButtonProps, Dropdown, Flex, type MenuProps } from "antd";
+import classnames from "classnames";
+import FastTooltip from "components/fast_tooltip";
+import { V4 } from "libs/mjs";
+import { useWkSelector } from "libs/react_hooks";
+import { memo } from "react";
+import { useDispatch } from "react-redux";
+import type { Vector4 } from "viewer/constants";
+import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import {
+  getActiveSegmentationTracing,
+  getMeshesForCurrentAdditionalCoordinates,
+  getSegmentColorAsRGBA,
+  getSegmentName,
+  getSelectedIds,
+} from "viewer/model/accessors/volumetracing_accessor";
+import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
+import { rgbaToCSS } from "viewer/shaders/utils.glsl";
+import type { MeshInformation, Segment } from "viewer/store";
+import ButtonComponent from "viewer/view/components/button_component";
+import type { SegmentUiNode } from "./hierarchy";
+import { InlineEditableName } from "./inline_editable_name";
+import { mayEditVisibleSegmentation } from "./segments_view_helper";
+
+// Every row of the list is this tall, except the expanded one. Kept in sync with
+// @segment-row-height in _right_menu.less, which needs it for antd's own row element.
+export const SEGMENT_ROW_HEIGHT = 30;
+// The line box of the expanded row's name. The fixed-size parts of the row are centered
+// on it, and the ones taller than it are constrained to it so that they overflow rather
+// than grow the row (see the mesh slot and the action bar).
+const EXPANDED_LINE_HEIGHT = 20;
+// Chosen so that an expanded row whose name still fits on one line is exactly
+// SEGMENT_ROW_HEIGHT tall. Selecting such a segment then moves nothing below it; only a
+// name that actually wraps grows the row, which is the point of expanding it.
+const EXPANDED_ROW_PADDING = (SEGMENT_ROW_HEIGHT - EXPANDED_LINE_HEIGHT) / 2;
+// One size for every button in a row. The mesh control and the crosshair both report
+// state with the same highlight, so they have to read as the same kind of control.
+const ROW_BUTTON_SIZE = 24;
+const COLOR_DOT_SIZE = 9;
+
+// Everything that keeps its size while the name wraps is centered on the first line.
+const centerOnFirstLine = (size: number) => (EXPANDED_LINE_HEIGHT - size) / 2;
+
+// Hides an element until its row is hovered or keyboard-focused (see _right_menu.less).
+const HOVER_ONLY_CLASS = "segment-row__on-hover";
+
+const ROW_BUTTON_STYLE: React.CSSProperties = {
+  width: ROW_BUTTON_SIZE,
+  height: ROW_BUTTON_SIZE,
+  minWidth: ROW_BUTTON_SIZE,
+  padding: 0,
+  borderRadius: 5,
+};
+
+/*
+ * Everything a segment row can do to its segment. Bundled into one object (built once
+ * in SegmentTreeView) instead of a handful of callback props, so that the memoized rows
+ * are not invalidated whenever the tree view re-renders.
+ */
+export type SegmentRowActions = {
+  // Selects the segment and moves the camera to it (the name's click target).
+  selectAndJumpTo: (segment: Segment) => void;
+  // Moves the camera to the segment without touching the selection.
+  centerInViewports: (segment: Segment) => void;
+  computeAdHocMesh: (segment: Segment) => void;
+  // The ways a mesh can be loaded for a segment, or null when ad-hoc computation is the
+  // only one - then the mesh button triggers that directly instead of offering a choice.
+  getMeshLoadMenuItems: (segment: Segment) => MenuProps["items"] | null;
+  setMeshVisibility: (segment: Segment, isVisible: boolean) => void;
+  // Removing a mesh that is still loading aborts the computation.
+  cancelMeshComputation: (segment: Segment) => void;
+  renameSegment: (segment: Segment, name: string) => void;
+  // Renaming is owned by the tree view (keyed by node key), so that only one row at a
+  // time is editable and drag & drop can be suspended while it is.
+  startRenaming: (nodeKey: string) => void;
+  finishRenaming: () => void;
+};
+
+type Props = {
+  node: SegmentUiNode;
+  // Whether this segment is the one at the center of the data viewports. Reported by the
+  // crosshair button; looked up once for the whole list, hence a prop rather than a selector.
+  isCentered: boolean;
+  isRenaming: boolean;
+  actions: SegmentRowActions;
+  onContextMenu: (node: SegmentUiNode, event: React.MouseEvent<HTMLElement>) => void;
+};
+
+type MeshChipState = "computing" | "visible" | "hidden";
+
+function getMeshChipState(mesh: MeshInformation): MeshChipState {
+  if (mesh.isLoading) {
+    return "computing";
+  }
+  return mesh.isVisible ? "visible" : "hidden";
+}
+
+type ButtonAppearance = Pick<ButtonProps, "color" | "variant" | "type">;
+
+// A button that is only an affordance until its state turns on, at which point it also
+// reports that state. Shared by the mesh chip and the "centered in viewports" button.
+const IDLE_APPEARANCE: ButtonAppearance = { color: "default", type: "text" };
+const ACTIVE_APPEARANCE: ButtonAppearance = { color: "primary", variant: "filled" };
+
+// antd's color/variant pairs carry the whole appearance of the chip, so none of its three
+// states needs a color of its own.
+const MESH_CHIP_APPEARANCE: Record<MeshChipState, ButtonAppearance> = {
+  visible: ACTIVE_APPEARANCE,
+  hidden: { color: "default", variant: "outlined" },
+  computing: { color: "gold", variant: "filled" },
+};
+
+function getMeshChipTooltip(mesh: MeshInformation): string {
+  const kind = mesh.isPrecomputed ? "precomputed" : "ad-hoc";
+  switch (getMeshChipState(mesh)) {
+    case "computing":
+      return "Computing mesh… Click to cancel.";
+    case "visible":
+      return `Mesh visible · ${kind}. Click to hide it.`;
+    case "hidden":
+      return `Mesh loaded · hidden · ${kind}. Click to show it.`;
+  }
+}
+
+/*
+ * Marks the segment that the volume tools write to. A real element rather than a
+ * pseudo-element, so that it can carry a tooltip: the bar is the only thing that says
+ * "active" besides the bold name, and it is not self-explanatory. It is positioned
+ * against antd's row element, which is the nearest positioned ancestor, so that it sits
+ * at the left edge of the panel instead of where this title starts.
+ */
+function ActiveSegmentAccent() {
+  return (
+    <FastTooltip
+      title="This is the active segment. Anything you paint with the volume tools is added to it."
+      asChild
+    >
+      <span className="segment-row__accent" />
+    </FastTooltip>
+  );
+}
+
+/*
+ * The single mesh control of a row, in a slot that is always reserved so that loading or
+ * removing a mesh never changes the row count or the row height of the list.
+ *
+ * Once a mesh exists the control is a chip that reflects its state and toggles it; until
+ * then the same spot offers computing one, on hover. Both are the same size, so there is
+ * never a separate "load mesh" button competing with a "mesh is loaded" chip.
+ */
+function MeshControl({
+  segment,
+  mesh,
+  actions,
+}: {
+  segment: Segment;
+  mesh: MeshInformation | undefined;
+  actions: SegmentRowActions;
+}) {
+  if (mesh == null) {
+    const meshLoadMenuItems = actions.getMeshLoadMenuItems(segment);
+    if (meshLoadMenuItems != null) {
+      // Both a precomputed mesh file and ad-hoc computation are available. Which one is
+      // wanted depends on whether the segment was edited since the file was computed, so
+      // the button asks instead of guessing. The menu labels the options, so the button
+      // carries no tooltip of its own.
+      return (
+        <Dropdown menu={{ items: meshLoadMenuItems }} trigger={["click"]}>
+          <ButtonComponent
+            className={HOVER_ONLY_CLASS}
+            {...IDLE_APPEARANCE}
+            size="small"
+            style={ROW_BUTTON_STYLE}
+            icon={<Icon component={MeshIcon} />}
+            // Opening the menu is not a selection change.
+            onClick={(event) => event.stopPropagation()}
+          />
+        </Dropdown>
+      );
+    }
+    return (
+      <FastTooltip title="Compute mesh (ad-hoc)" asChild>
+        <ButtonComponent
+          className={HOVER_ONLY_CLASS}
+          {...IDLE_APPEARANCE}
+          size="small"
+          style={ROW_BUTTON_STYLE}
+          icon={<Icon component={MeshIcon} />}
+          onClick={(event) => {
+            event.stopPropagation();
+            actions.computeAdHocMesh(segment);
+          }}
+        />
+      </FastTooltip>
+    );
+  }
+  const state = getMeshChipState(mesh);
+
+  return (
+    <FastTooltip title={getMeshChipTooltip(mesh)} asChild>
+      <ButtonComponent
+        {...MESH_CHIP_APPEARANCE[state]}
+        size="small"
+        style={ROW_BUTTON_STYLE}
+        icon={state === "computing" ? <LoadingOutlined /> : <Icon component={MeshIcon} />}
+        onClick={(event) => {
+          // The chip is a control of its own; clicking it must not also select the row.
+          event.stopPropagation();
+          if (state === "computing") {
+            actions.cancelMeshComputation(segment);
+          } else {
+            actions.setMeshVisibility(segment, !mesh.isVisible);
+          }
+        }}
+      />
+    </FastTooltip>
+  );
+}
+
+/*
+ * The right-aligned icon buttons that appear while the row is hovered or keyboard-focused
+ * (see the visibility rules in _right_menu.less). They replace the formerly always-visible
+ * ellipsis button; the "more actions" button opens the very same menu as a right-click.
+ * Anything mesh-related lives in the mesh slot instead, see MeshControl.
+ */
+function SegmentRowActionBar({
+  node,
+  actions,
+  isCentered,
+  isExpanded,
+  onContextMenu,
+}: {
+  node: SegmentUiNode;
+  actions: SegmentRowActions;
+  isCentered: boolean;
+  isExpanded: boolean;
+  onContextMenu: Props["onContextMenu"];
+}) {
+  const { segment } = node;
+
+  return (
+    <Flex
+      className="segment-row__actions"
+      align="center"
+      gap={1}
+      style={{
+        flex: "none",
+        // Pulls the last button's box out into the row's right padding, so that its icon
+        // lines up with the right edge of the mesh chip above and below it.
+        marginRight: -4,
+        // The buttons are taller than the line they sit on, so in an expanded row the bar
+        // is constrained to that line and lets them overflow it. Offsetting it instead
+        // would leave a margin box taller than the line and grow the row, which would
+        // shift the list on every selection change. `align="center"` keeps the buttons
+        // centered on the line either way.
+        height: isExpanded ? EXPANDED_LINE_HEIGHT : undefined,
+      }}
+    >
+      {/*
+        Doubles as the indicator for the segment at the center of the data viewports: it
+        stays visible and takes the same highlight as a visible mesh chip, rather than
+        hiding with the rest of the bar.
+      */}
+      <FastTooltip
+        title={
+          isCentered ? "This segment is centered in the data viewports" : "Center in viewports"
+        }
+        asChild
+      >
+        <ButtonComponent
+          className={isCentered ? undefined : HOVER_ONLY_CLASS}
+          {...(isCentered ? ACTIVE_APPEARANCE : IDLE_APPEARANCE)}
+          size="small"
+          style={ROW_BUTTON_STYLE}
+          icon={<Icon component={CrosshairsIcon} />}
+          onClick={(event) => {
+            event.stopPropagation();
+            actions.centerInViewports(segment);
+          }}
+        />
+      </FastTooltip>
+      <FastTooltip title="More actions (also available via right-click)" asChild>
+        <ButtonComponent
+          className={HOVER_ONLY_CLASS}
+          {...IDLE_APPEARANCE}
+          size="small"
+          style={ROW_BUTTON_STYLE}
+          icon={<EllipsisOutlined />}
+          onClick={(event) => {
+            // Opening the menu is not a selection change.
+            event.stopPropagation();
+            onContextMenu(node, event);
+          }}
+        />
+      </FastTooltip>
+    </Flex>
+  );
+}
+
+/*
+ * The segment name. Truncated with an end ellipsis in every row but the expanded one,
+ * where it wraps over as many lines as it needs.
+ *
+ * The active segment is marked by the accent bar and the bold weight only. Coloring the
+ * name too would have to be a third copy of that signal in a color that works on both
+ * themes, and antd's primary ramp has none: `colorPrimaryActive` means "pressed", so it
+ * darkens in the dark theme as well and drops to 2.7:1 on a row, 1.7:1 on a selected one.
+ */
+function SegmentName({
+  node,
+  isRenaming,
+  isExpanded,
+  isSelected,
+  isActiveSegment,
+  actions,
+}: {
+  node: SegmentUiNode;
+  isRenaming: boolean;
+  isExpanded: boolean;
+  isSelected: boolean;
+  isActiveSegment: boolean;
+  actions: SegmentRowActions;
+}) {
+  const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
+  const { segment } = node;
+  const displayedName = getSegmentName(segment);
+
+  return (
+    <InlineEditableName
+      displayedName={displayedName}
+      editableValue={segment.name ?? ""}
+      placeholder={displayedName}
+      isEditing={isRenaming}
+      disableEditing={!allowUpdate}
+      ellipsis={!isExpanded}
+      strong={isSelected || isActiveSegment}
+      style={{
+        // The only track of the row that may shrink.
+        flex: 1,
+        minWidth: 0,
+        ...(isExpanded
+          ? { whiteSpace: "normal", lineHeight: `${EXPANDED_LINE_HEIGHT}px`, textWrap: "pretty" }
+          : null),
+      }}
+      // The truncated rows need the full name on hover; the expanded one shows it anyway.
+      title={isExpanded ? undefined : displayedName}
+      onClick={() => actions.selectAndJumpTo(segment)}
+      onStartEditing={() => actions.startRenaming(node.key)}
+      onCommit={(name) => actions.renameSegment(segment, name)}
+      onFinishEditing={actions.finishRenaming}
+    />
+  );
+}
+
+/*
+ * One segment of the list. A single 30px row, regardless of whether a mesh is loaded:
+ *
+ *   [checkbox] [color dot] [name ......................] [mesh slot] [hover actions]
+ *
+ * The checkbox and the indentation are rendered by antd around this title, which is why
+ * the row-level treatments (hover/selected tint, the active-segment accent bar, the
+ * alignment of the expanded row) are attached to .ant-tree-treenode in _right_menu.less
+ * and keyed off the modifier classes set here.
+ *
+ * The name is the only track that may shrink; everything to its right keeps a fixed
+ * width. A statistics value would slot in between the mesh chip and the action bar
+ * without changing the row height or the indentation.
+ */
+export const SegmentNodeTitle = memo(
+  ({ node, isCentered, isRenaming, actions, onContextMenu }: Props) => {
+    const dispatch = useDispatch();
+    const { segment } = node;
+
+    const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
+    const mesh = useWkSelector((state) =>
+      visibleSegmentationLayer != null
+        ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer.name)?.[
+            segment.id.toString()
+          ]
+        : undefined,
+    );
+    const segmentColorRGBA = useWkSelector(
+      (state) => getSegmentColorAsRGBA(state, segment.id),
+      (a: Vector4, b: Vector4) => V4.isEqual(a, b),
+    );
+    const isHovered = useWkSelector(
+      (state) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
+    );
+    // The segment the volume tools currently write to. Marked with the left accent bar,
+    // which replaced the brush icon this used to get.
+    const isActiveSegment = useWkSelector(
+      (state) => getActiveSegmentationTracing(state)?.activeCellId === segment.id,
+    );
+    const isSelected = useWkSelector((state) =>
+      getSelectedIds(state).segments.includes(segment.id),
+    );
+    // Only a lone selection expands: with several segments selected, growing every one
+    // of them would reflow most of the list.
+    const isExpanded = useWkSelector((state) => {
+      const selectedSegmentIds = getSelectedIds(state).segments;
+      return selectedSegmentIds.length === 1 && selectedSegmentIds[0] === segment.id;
+    });
+
+    const setHoveredSegmentId = (segmentId: bigint | null) =>
+      dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
+
+    return (
+      <Flex
+        className={classnames("segment-row", {
+          "segment-row--expanded": isExpanded,
+          "segment-row--hovered-in-viewport": isHovered,
+        })}
+        align={isExpanded ? "flex-start" : "center"}
+        gap={8}
+        style={{
+          flex: "auto",
+          minWidth: 0,
+          cursor: "pointer",
+          height: isExpanded ? undefined : SEGMENT_ROW_HEIGHT,
+          padding: isExpanded ? `${EXPANDED_ROW_PADDING}px 0` : undefined,
+        }}
+        onMouseEnter={() => setHoveredSegmentId(segment.id)}
+        onMouseLeave={() => setHoveredSegmentId(null)}
+        onContextMenu={(event) => onContextMenu(node, event)}
+      >
+        {isActiveSegment ? <ActiveSegmentAccent /> : null}
+        <span
+          style={{
+            width: COLOR_DOT_SIZE,
+            height: COLOR_DOT_SIZE,
+            borderRadius: "50%",
+            flex: "none",
+            backgroundColor: rgbaToCSS(segmentColorRGBA),
+            marginTop: isExpanded ? centerOnFirstLine(COLOR_DOT_SIZE) : undefined,
+          }}
+        />
+        <SegmentName
+          node={node}
+          isRenaming={isRenaming}
+          isExpanded={isExpanded}
+          isSelected={isSelected}
+          isActiveSegment={isActiveSegment}
+          actions={actions}
+        />
+        <Flex
+          align="center"
+          justify="center"
+          style={{
+            width: ROW_BUTTON_SIZE,
+            flex: "none",
+            // Constrained to the first line in an expanded row for the same reason as the
+            // action bar: the control is taller than the line and must overflow it rather
+            // than grow the row.
+            height: isExpanded ? EXPANDED_LINE_HEIGHT : ROW_BUTTON_SIZE,
+          }}
+        >
+          <MeshControl segment={segment} mesh={mesh} actions={actions} />
+        </Flex>
+        <SegmentRowActionBar
+          node={node}
+          actions={actions}
+          isCentered={isCentered}
+          isExpanded={isExpanded}
+          onContextMenu={onContextMenu}
+        />
+      </Flex>
+    );
+  },
+);

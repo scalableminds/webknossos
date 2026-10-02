@@ -20,6 +20,10 @@ export type SegmentUiNode = BasicDataNode & {
   segment: Segment;
   isLeaf: true;
   children?: undefined;
+  // Rows are rendered via titleRender, but antd's <Tree /> also uses the plain
+  // `title` field as the node wrapper's native title attribute, defaulting to the
+  // string "---" when it is missing. Always set to "" to suppress that fallback.
+  title: string;
 };
 
 export type SegmentGroupUiNode = BasicDataNode & {
@@ -27,6 +31,12 @@ export type SegmentGroupUiNode = BasicDataNode & {
   key: string;
   group: SegmentGroup;
   children: SegmentsUiNode[];
+  // Number of segments in this group and all of its subgroups. Rendered as the
+  // right-aligned count of a group row. It is accumulated while the hierarchy is
+  // built, because deriving it per row would walk the subtree on every render.
+  segmentCount: number;
+  // See the comment on SegmentUiNode.title.
+  title: string;
 };
 
 export type SegmentsUiNode = SegmentUiNode | SegmentGroupUiNode;
@@ -79,6 +89,7 @@ export function buildSegmentHierarchy(
       key: getSegmentUiNodeKey(segment.id),
       segment,
       isLeaf: true,
+      title: "",
     };
     nodesByKey.set(node.key, node);
     if (segment.isVisible) {
@@ -100,6 +111,11 @@ export function buildSegmentHierarchy(
       key: getGroupUiNodeKey(group.groupId),
       group,
       children: [...childGroupNodes, ...segmentNodes],
+      segmentCount: childGroupNodes.reduce(
+        (sum, childGroup) => sum + childGroup.segmentCount,
+        segmentNodes.length,
+      ),
+      title: "",
     };
     nodesByKey.set(node.key, node);
 

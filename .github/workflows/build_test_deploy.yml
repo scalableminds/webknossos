@@ -120,18 +120,14 @@ jobs:
       - name: Restore incremental compile cache
         uses: actions/cache@v6
         with:
+          # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
+          # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
           path: |
-            target
-            project/target
-            project/project/target
-            util/target
-            webknossos-datastore/target
-            webknossos-tracingstore/target
-            webknossos-jni/target
-            webknossos-slick-codegen/target
+            target/*
+            */target/*
+            project/project/target/*
             !**/target/universal
-            !target/web
-            !**/target/**/*.jar
+            !**/target/web
             !**/target/global-logging
           key: zinc-test-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
@@ -192,18 +188,14 @@ jobs:
         if: github.ref_type != 'tag'
         uses: actions/cache@v6
         with:
+          # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
+          # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
           path: |
-            target
-            project/target
-            project/project/target
-            util/target
-            webknossos-datastore/target
-            webknossos-tracingstore/target
-            webknossos-jni/target
-            webknossos-slick-codegen/target
+            target/*
+            */target/*
+            project/project/target/*
             !**/target/universal
-            !target/web
-            !**/target/**/*.jar
+            !**/target/web
             !**/target/global-logging
           key: zinc-build-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |

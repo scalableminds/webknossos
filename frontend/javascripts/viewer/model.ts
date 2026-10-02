@@ -42,13 +42,6 @@ export class WebKnossosModel {
     initialFetch: boolean,
     version?: number | undefined | null,
   ) {
-    // TODO: REMOVE - testing hack to always show the "switch organization" page
-    if (Math.random() < 2) {
-      const fakeError: any = new Error("Fake 404 for testing");
-      fakeError.status = 404;
-      fakeError.organizationToSwitchTo = { id: "fake_org", name: "Fake Test Organization" };
-      throw fakeError;
-    }
     try {
       const initializationInformation = await initialize(
         initialMaybeCompoundType,

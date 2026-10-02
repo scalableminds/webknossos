@@ -1,6 +1,7 @@
 package mail
 
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import models.organization.{Organization, PricingPlan, PricingPlanFeatures}
 import models.user.MultiUser
@@ -8,6 +9,7 @@ import utils.WkConf
 import views.*
 
 import java.net.URI
+import java.util.Locale
 import javax.inject.Inject
 import scala.util.Try
 
@@ -320,6 +322,157 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
       bodyHtml = html.mail.jobFailedUploadConvert(multiUser.fullName, datasetName, errorMessage, additionalFooter).body,
       recipients = List(multiUser.email)
     )
+
+  def storageWarningMail(
+      multiUser: MultiUser,
+      organization: Organization,
+      usedStorageBytes: Long,
+      includedStorageBytes: Long
+  ): Mail = {
+    val isExceeded = usedStorageBytes >= includedStorageBytes
+    val usagePercent = if (includedStorageBytes > 0) usedStorageBytes * 100 / includedStorageBytes else 100L
+    Mail(
+      from = defaultSender,
+      subject =
+        if (isExceeded) s"WEBKNOSSOS | Your organization ${organization.name} has used up its storage"
+        else s"WEBKNOSSOS | Your organization ${organization.name} has used $usagePercent% of its storage",
+      bodyHtml = html.mail
+        .storageWarning(
+          multiUser.fullName,
+          organization.name,
+          formatBytes(usedStorageBytes),
+          formatBytes(includedStorageBytes),
+          usagePercent,
+          isExceeded,
+          s"$uri/organization/overview",
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email),
+      replyTo = List(supportEmail)
+    )
+  }
+
+  def annotationSharedMail(
+      multiUser: MultiUser,
+      sharerName: String,
+      annotationId: ObjectId,
+      annotationName: String,
+      datasetName: String,
+      teamNames: List[String]
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | $sharerName shared an annotation with you",
+      bodyHtml = html.mail
+        .annotationShared(
+          multiUser.fullName,
+          sharerName,
+          annotationName,
+          datasetName,
+          teamNames,
+          annotationUrl(annotationId),
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email)
+    )
+
+  def annotationTransferredMail(
+      multiUser: MultiUser,
+      issuerName: String,
+      annotationId: ObjectId,
+      annotationName: String,
+      datasetName: String
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | $issuerName transferred an annotation to you",
+      bodyHtml = html.mail
+        .annotationTransferred(
+          multiUser.fullName,
+          issuerName,
+          annotationName,
+          datasetName,
+          annotationUrl(annotationId),
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email)
+    )
+
+  def datasetSharedMail(
+      multiUser: MultiUser,
+      sharerName: String,
+      datasetId: ObjectId,
+      datasetName: String,
+      teamNames: List[String]
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | $sharerName shared the dataset $datasetName with you",
+      bodyHtml = html.mail
+        .datasetShared(
+          multiUser.fullName,
+          sharerName,
+          datasetName,
+          teamNames,
+          // The dataset name is left out, as it may contain characters that are not valid in a URL path.
+          s"$uri/datasets/$datasetId/view",
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email)
+    )
+
+  def accessChangedMail(
+      multiUser: MultiUser,
+      issuerName: String,
+      organizationName: String,
+      changes: List[String]
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | Your access in $organizationName has changed",
+      bodyHtml = html.mail
+        .accessChanged(multiUser.fullName, issuerName, organizationName, changes, s"$uri/dashboard", additionalFooter)
+        .body,
+      recipients = List(multiUser.email)
+    )
+
+  def taskAssignedMail(
+      multiUser: MultiUser,
+      issuerName: String,
+      projectName: String,
+      taskTypeName: String,
+      annotationId: ObjectId
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | $issuerName assigned a task to you",
+      bodyHtml = html.mail
+        .taskAssigned(
+          multiUser.fullName,
+          issuerName,
+          projectName,
+          taskTypeName,
+          annotationUrl(annotationId),
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email)
+    )
+
+  private def annotationUrl(annotationId: ObjectId): String = s"$uri/annotations/$annotationId"
+
+  // Decimal units, matching how storage is shown in the organization overview.
+  private def formatBytes(numBytes: Long): String = {
+    val units = List("B", "KB", "MB", "GB", "TB", "PB")
+    val exponent =
+      if (numBytes < 1000) 0 else math.min((math.log10(numBytes.toDouble) / 3).toInt, units.length - 1)
+    val value = numBytes / math.pow(1000, exponent)
+    if (exponent == 0) s"$numBytes B" else "%.1f %s".formatLocal(Locale.ROOT, value, units(exponent))
+  }
 
   def emailVerificationMail(multiUser: MultiUser, key: String): Mail = {
     val linkExpiry = conf.WebKnossos.User.EmailVerification.linkExpiry

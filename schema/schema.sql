@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(185);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(186);
 COMMIT TRANSACTION;
 
 
@@ -406,6 +406,14 @@ CREATE TABLE webknossos.organization_planExpiryReminders(
   leadTimeDays INT NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (_organization, paidUntil, leadTimeDays),
+  CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
+);
+
+CREATE TABLE webknossos.organization_storageWarnings(
+  _organization TEXT NOT NULL,
+  thresholdPercent INT NOT NULL, -- the storage usage threshold the warning was sent for; removed again once usage drops clearly below it
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (_organization, thresholdPercent),
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
@@ -1046,6 +1054,8 @@ ALTER TABLE webknossos.organization_usedStorage_attachments
 ALTER TABLE webknossos.organization_plan_updates
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organization_planExpiryReminders
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organization_storageWarnings
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;

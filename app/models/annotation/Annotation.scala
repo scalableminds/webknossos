@@ -341,7 +341,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   }
 
   // Necessary since a tuple can only have 22 elements
-  implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] =
+  implicit private def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] =
     prs => {
       import prs.*
 

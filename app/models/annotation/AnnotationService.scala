@@ -43,7 +43,6 @@ import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.WkConf
@@ -100,8 +99,6 @@ class AnnotationService @Inject() (
     extends ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {
-
-  implicit val actorSystem: ActorSystem = ActorSystem()
 
   val DefaultAnnotationListLimit = 1000
 
@@ -364,9 +361,8 @@ class AnnotationService @Inject() (
     for {
       annotationBaseId <- annotationDAO.findBaseIdForTask(taskId) ?~> "Failed to retrieve annotation base id."
       annotationBase <- annotationDAO.findOne(annotationBaseId) ?~> "Failed to retrieve annotation base."
-      datasetName <- datasetDAO.getNameById(annotationBase._dataset)(using GlobalAccessContext) ?~> Msg.Dataset
+      dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Msg.Dataset
         .notFoundForAnnotation(annotationBase._dataset, annotationBase._id)
-      dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Msg.Dataset.notFound(annotationBase._dataset)
       _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(dataset._id)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       _ = logger.info(
@@ -490,7 +486,7 @@ class AnnotationService @Inject() (
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- Fox.fromBool(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> Msg.Annotation.needsEitherSkeletonOrVolume
-      project <- projectDAO.findOne(task._project)
+      _ <- projectDAO.findOne(task._project) ?~> Msg.Project.notFound(task._project)
       annotationLayers <- AnnotationLayer.layersFromIds(skeletonIdOpt, volumeIdOpt)
       annotationBase = Annotation(
         ObjectId.generate,

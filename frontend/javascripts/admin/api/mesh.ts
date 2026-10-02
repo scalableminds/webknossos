@@ -20,6 +20,10 @@ export type MeshSegmentInfo = {
   meshFormat: "draco";
   lods: Array<MeshLodInfo>;
   chunkScale: Vector3;
+  // The requested (unmapped) segment ids for which the mesh file has no mesh, e.g. because they are
+  // too small to show up in the mag the meshes were computed in. Missing in replies of older
+  // back-ends.
+  segmentIdsWithoutMesh?: Array<bigint>;
 };
 
 type ListMeshChunksRequest = {
@@ -28,23 +32,36 @@ type ListMeshChunksRequest = {
   annotationVersion: number | undefined | null;
 };
 
-export function getMeshFileChunksForSegment(
-  dataStoreUrl: string,
-  datasetId: string,
-  layerName: string,
-  meshFile: APIMeshFileInfo,
-  segmentId: bigint,
+// The parameters of getMeshFileChunksForSegment, as used by the mesh chunk provider.
+export type ListMeshChunksParams = {
+  dataStoreUrl: string;
+  datasetId: string;
+  // The name of the layer in the data store, i.e. the fallback layer of a volume annotation layer.
+  layerName: string;
+  meshFile: APIMeshFileInfo;
+  segmentId: bigint;
   // targetMappingName is the on-disk mapping name.
   // In case of an editable mapping, this should still be the on-disk base
   // mapping name (so that agglomerates that are untouched by the editable
   // mapping can be looked up there without another round-trip between tracingstore
   // and datastore)
-  targetMappingName: string | null | undefined,
+  targetMappingName: string | null | undefined;
   // editableMappingTracingId should be the tracing id, not the editable mapping id.
   // If this is set, it is assumed that the request is about an editable mapping.
-  editableMappingTracingId: string | null | undefined,
-  annotationVersion: number | undefined | null,
-): Promise<MeshSegmentInfo> {
+  editableMappingTracingId: string | null | undefined;
+  annotationVersion: number | undefined | null;
+};
+
+export function getMeshFileChunksForSegment({
+  dataStoreUrl,
+  datasetId,
+  layerName,
+  meshFile,
+  segmentId,
+  targetMappingName,
+  editableMappingTracingId,
+  annotationVersion,
+}: ListMeshChunksParams): Promise<MeshSegmentInfo> {
   return retryAsyncFunction(() =>
     doWithToken((token) => {
       const params = new URLSearchParams();
@@ -62,6 +79,42 @@ export function getMeshFileChunksForSegment(
       };
       return Request.sendJSONReceiveJSON(
         `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks?${params}`,
+        {
+          data: payload,
+          showErrorToast: false,
+        },
+      );
+    }),
+  );
+}
+
+type ListMeshChunksForSegmentsRequest = {
+  meshFileName: string;
+  segmentIds: Array<bigint>;
+};
+
+/*
+ * Lists the chunks of several unmapped segment ids in one request. Unlike
+ * getMeshFileChunksForSegment, segments without a mesh don't make the request fail. They are
+ * reported in segmentIdsWithoutMesh instead, and lods is empty if none of the segments has a mesh.
+ * This lets the mesh chunk provider remember which segments have no mesh, so that it doesn't list
+ * them again.
+ */
+export function getMeshFileChunksForSegments(
+  dataStoreUrl: string,
+  datasetId: string,
+  layerName: string,
+  meshFile: APIMeshFileInfo,
+  segmentIds: Array<bigint>,
+): Promise<MeshSegmentInfo> {
+  return retryAsyncFunction(() =>
+    doWithToken((token) => {
+      const payload: ListMeshChunksForSegmentsRequest = {
+        meshFileName: meshFile.name,
+        segmentIds,
+      };
+      return Request.sendJSONReceiveJSON(
+        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/forSegments?token=${token}`,
         {
           data: payload,
           showErrorToast: false,

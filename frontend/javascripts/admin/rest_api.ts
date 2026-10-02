@@ -2367,6 +2367,42 @@ export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bi
   );
 }
 
+export type SegmentsOfAgglomerate = {
+  segmentIds: bigint[];
+  // False if the editable mapping has no graph for the agglomerate at the requested version. This
+  // is the case for agglomerates that were not edited in this annotation up to that version (their
+  // segments are only listed in the agglomerate file) and for ids that never existed. segmentIds is
+  // empty then. An agglomerate that was merged into another one is present and has no segments.
+  agglomerateIdIsPresent: boolean;
+};
+export async function getSegmentsForAgglomerateFromTracingStore<T extends number | bigint>(
+  tracingStoreUrl: string,
+  tracingId: string,
+  agglomerateId: T,
+  // Omit to get the newest version.
+  version?: number,
+): Promise<SegmentsOfAgglomerate> {
+  const result: SegmentsOfAgglomerate = await doWithToken((token) => {
+    const params = new URLSearchParams({
+      agglomerateId: agglomerateId.toString(),
+      token: token,
+    });
+    if (version != null) {
+      params.set("version", version.toString());
+    }
+    return retryAsyncFunction(() =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/segmentsForAgglomerate?${params}`,
+        {
+          method: "GET",
+          showErrorToast: false,
+        },
+      ),
+    );
+  });
+  return result;
+}
+
 export function getEditableAgglomerateTreeAsSkeletonTracing(
   tracingStoreUrl: string,
   tracingId: string,

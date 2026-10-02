@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.google.common.io.LittleEndianDataInputStream
-import com.scalableminds.util.box.Box
+import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.tools.JsonAutoFormat
 import Box.tryo
@@ -101,8 +101,20 @@ case class WebknossosSegmentInfo(
     meshFormat: String,
     lods: List[MeshLodInfo],
     chunkScale: Array[Double] =
-      Array(1.0, 1.0, 1.0) // Used for Neuroglancer Precomputed Meshes to account for vertex quantization
-) derives JsonAutoFormat
+      Array(1.0, 1.0, 1.0), // Used for Neuroglancer Precomputed Meshes to account for vertex quantization
+    // The requested segment ids that have no chunk in any lod, e.g. because they are too small to show up in the
+    // mag the meshes were computed in. Lets clients remember that these segments have no mesh.
+    segmentIdsWithoutMesh: Option[List[UnsignedLong]] = None
+) derives JsonAutoFormat {
+
+  def withSegmentIdsWithoutMesh(requestedSegmentIds: Seq[Long]): WebknossosSegmentInfo = {
+    val segmentIdsWithMesh = lods.flatMap(_.chunks.map(_.unmappedSegmentId.toLong)).toSet
+    this.copy(
+      segmentIdsWithoutMesh =
+        Some(requestedSegmentIds.distinct.filterNot(segmentIdsWithMesh.contains).map(UnsignedLong(_)).toList)
+    )
+  }
+}
 
 object WebknossosSegmentInfo {
 
@@ -120,6 +132,15 @@ object WebknossosSegmentInfo {
         )
       }
     }
+
+  // Like fromMeshInfosAndMetadata, but returns an info without lods instead of failing if no segment has chunks.
+  def fromMeshInfosAndMetadataAllowingNoChunks(
+      chunkInfos: List[List[MeshLodInfo]],
+      meshFormat: String,
+      chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)
+  ): Box[WebknossosSegmentInfo] =
+    if (chunkInfos.isEmpty) Full(WebknossosSegmentInfo(meshFormat, lods = List.empty, chunkScale))
+    else fromMeshInfosAndMetadata(chunkInfos, meshFormat, chunkScale)
 
   private def mergeLod(thisLodFromAllChunks: List[MeshLodInfo]): MeshLodInfo = {
     val first = thisLodFromAllChunks.head

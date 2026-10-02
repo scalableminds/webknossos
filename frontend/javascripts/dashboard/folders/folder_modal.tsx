@@ -1,4 +1,4 @@
-import { Form, Input, Modal, Spin } from "antd";
+import { Form, Input, type InputRef, Modal, Spin } from "antd";
 import {
   type FolderModalState,
   useDatasetCollectionContext,
@@ -7,7 +7,7 @@ import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import { useFolderQuery } from "dashboard/dataset/queries";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Shortcut from "libs/shortcut_component";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import type { APITeam } from "types/api_types";
 
@@ -27,13 +27,14 @@ function EditFolderModalContent({ folderId, onClose }: { folderId: string; onClo
   const { data: folder, isFetching } = useFolderQuery(folderId);
   const [form] = Form.useForm();
   const context = useDatasetCollectionContext();
-  // Holds the native input element instead of antd's InputRef: antd creates a new
-  // InputRef object on every render, which would re-run the effect below each time.
-  const [inputElement, setInputElement] = useState<HTMLInputElement | null>(null);
+  const inputElement = useRef<InputRef>(null);
+  const isFormVisible = folder != null && !isFetching;
 
   useEffect(() => {
-    inputElement?.focus();
-  }, [inputElement]);
+    if (isFormVisible) {
+      inputElement.current?.focus();
+    }
+  }, [isFormVisible]);
 
   const onSave = async () => {
     const name = form.getFieldValue("name");
@@ -56,7 +57,7 @@ function EditFolderModalContent({ folderId, onClose }: { folderId: string; onClo
   const content =
     // Don't initialize form when isFetching==true, because
     // this would populate the form with outdated initial values.
-    folder != null && !isFetching ? (
+    isFormVisible ? (
       <div>
         <Shortcut keys="enter" onTrigger={onSave} supportInputElements />
         <Form
@@ -65,10 +66,7 @@ function EditFolderModalContent({ folderId, onClose }: { folderId: string; onClo
           initialValues={{ name: folder.name, allowedTeams: folder.allowedTeams }}
         >
           <FormItemWithInfo name="name" label="Name" info="Name of the folder">
-            <Input
-              value={folder.name}
-              ref={(inputRef) => setInputElement(inputRef?.input ?? null)}
-            />
+            <Input value={folder.name} ref={inputElement} />
           </FormItemWithInfo>
           <FormItemWithInfo
             name="allowedTeams"
@@ -99,16 +97,11 @@ function CreateFolderModalContent({
 }) {
   const [form] = Form.useForm();
   const context = useDatasetCollectionContext();
-  // Holds the native input element instead of antd's InputRef: antd creates a new
-  // InputRef object on every render, which would re-run the effect below each time.
-  const [inputElement, setInputElement] = useState<HTMLInputElement | null>(null);
+  const inputElement = useRef<InputRef>(null);
 
   useEffect(() => {
-    if (inputElement) {
-      inputElement.focus();
-      inputElement.select();
-    }
-  }, [inputElement]);
+    inputElement.current?.focus({ cursor: "all" });
+  }, []);
 
   const onSave = async () => {
     const name = form.getFieldValue("name");
@@ -143,7 +136,7 @@ function CreateFolderModalContent({
           initialValues={{ name: "New folder", allowedTeams: [] }}
         >
           <FormItemWithInfo name="name" label="Name" info="Name of the folder">
-            <Input ref={(inputRef) => setInputElement(inputRef?.input ?? null)} />
+            <Input ref={inputElement} />
           </FormItemWithInfo>
           <FormItemWithInfo
             name="allowedTeams"

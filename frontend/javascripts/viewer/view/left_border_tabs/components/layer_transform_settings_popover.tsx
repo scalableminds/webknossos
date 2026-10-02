@@ -201,12 +201,12 @@ export function LayerTransformSettingsContent({
   }, [refetchStoredSRT, handleChange]);
 
   const handleSaveForAllUsers = useCallback(async () => {
-    const areValidTransforms = transforms && hasValidLiveTransformationPattern(transforms);
-    if (!areValidTransforms) {
-      return;
-    }
     setIsSaving(true);
     try {
+      const areValidTransforms = transforms && hasValidLiveTransformationPattern(transforms);
+      if (!areValidTransforms) {
+        return;
+      }
       const backendDataset = await getImportedDataset(dataset.id);
       const dataSource = {
         ...backendDataset.dataSource,
@@ -223,8 +223,9 @@ export function LayerTransformSettingsContent({
     } catch (e) {
       console.error("Failed to save layer transforms:", e);
       Toast.error("Failed to save layer transforms. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   }, [dataset.id, layer.name, transforms, queryClient]);
 
   if (!isCompatible) {

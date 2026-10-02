@@ -15,26 +15,6 @@ type LogResult = Result<Array<VoxelyticsLogLine>>;
 // These constants need to be in sync with the variables in main.less
 const LOG_LINE_LIMIT = 1000;
 
-async function fetchLogLines(
-  runId: string,
-  taskName: string,
-  level: LOG_LEVELS,
-  beginTime: Date | null,
-  endTime: Date | null,
-): Promise<Array<VoxelyticsLogLine>> {
-  if (beginTime == null) {
-    return [];
-  }
-  return getVoxelyticsLogs(
-    runId,
-    taskName,
-    level,
-    addBeforePadding(beginTime),
-    addAfterPadding(endTime ?? new Date()),
-    LOG_LINE_LIMIT,
-  );
-}
-
 export function formatLog(
   logEntry: VoxelyticsLogLine,
   options: { timestamps: boolean; pid: boolean; level: boolean; logger: boolean },
@@ -97,12 +77,23 @@ export default function LogTab({
   async function loadLog() {
     setIsLoading(true);
     try {
-      const log = await fetchLogLines(runId, taskName, level, beginTime, endTime);
+      const log =
+        beginTime == null
+          ? []
+          : await getVoxelyticsLogs(
+              runId,
+              taskName,
+              level,
+              addBeforePadding(beginTime),
+              addAfterPadding(endTime ?? new Date()),
+              LOG_LINE_LIMIT,
+            );
       setLogResult({ type: "SUCCESS", value: log });
     } catch {
       setLogResult({ type: "ERROR" });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }
 
   usePolling(loadLog, isRunning ? VX_POLLING_INTERVAL : null, [runId, taskName, level]);
@@ -130,19 +121,18 @@ export default function LogTab({
   }, [logResult, showTimestamps]);
 
   async function downloadFullLog() {
-    if (beginTime == null) {
-      message.error("Run hasn't started yet.");
-      return;
-    }
-    const logEndTime = endTime ?? new Date();
     try {
+      if (beginTime == null) {
+        message.error("Run hasn't started yet.");
+        return;
+      }
       const logText = (
         await getVoxelyticsLogs(
           runId,
           taskName,
           level,
           addBeforePadding(beginTime),
-          addAfterPadding(logEndTime),
+          addAfterPadding(endTime ?? new Date()),
         )
       )
         .map((line: any) =>

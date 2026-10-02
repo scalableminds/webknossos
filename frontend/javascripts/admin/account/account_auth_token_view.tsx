@@ -1,9 +1,9 @@
 import { ExportOutlined, SwapOutlined } from "@ant-design/icons";
 import { getAuthToken, revokeAuthToken } from "admin/rest_api";
 import { Button, Col, Row, Spin, Typography } from "antd";
-import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 
@@ -14,6 +14,10 @@ function AccountAuthTokenView() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentToken, setCurrentToken] = useState<string>("");
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   async function fetchData(): Promise<void> {
     try {
       const token = await getAuthToken();
@@ -21,24 +25,20 @@ function AccountAuthTokenView() {
     } catch (error) {
       Toast.error("Failed to fetch auth token. Please refresh the page to try again.");
       console.error("Failed to fetch auth token:", error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }
 
-  useEffectOnlyOnce(() => {
-    fetchData();
-  });
-
-  const revokeAndRefetchToken = async (): Promise<void> => {
-    await revokeAuthToken();
-    const token = await getAuthToken();
-    setCurrentToken(token);
-  };
-
   const handleRevokeToken = async (): Promise<void> => {
-    setIsLoading(true);
-    // Needed as react compiler currently can't handle try & finally blocks.
-    await revokeAndRefetchToken().finally(() => setIsLoading(false));
+    try {
+      setIsLoading(true);
+      await revokeAuthToken();
+      const token = await getAuthToken();
+      setCurrentToken(token);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const APIitems: SettingsCardProps[] = [

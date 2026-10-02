@@ -20,13 +20,12 @@ export default function UserSelectionComponent({ handleSelection }: Props) {
         const users = unwrapOrThrow(await getUsers());
         const activeUsers = users.filter((u) => u.isActive);
 
-        const sortedUsers = sortBy(activeUsers, "lastName");
-        setIsLoading(false);
-        return sortedUsers;
+        return sortBy(activeUsers, "lastName");
       } catch (error) {
         handleGenericError(error as Error);
-        setIsLoading(false);
         return [];
+      } finally {
+        setIsLoading(false);
       }
     },
     [],

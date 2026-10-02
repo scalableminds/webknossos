@@ -34,7 +34,6 @@ import { AsyncButton } from "components/async_clickables";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { saveAs } from "file-saver";
-import { useEffectOnlyOnce } from "libs/react_hooks";
 import { coalesce, pluralize, tryToAwaitPromise } from "libs/utils";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import isEqual from "lodash-es/isEqual";
@@ -43,7 +42,7 @@ import omit from "lodash-es/omit";
 import omitBy from "lodash-es/omitBy";
 import uniq from "lodash-es/uniq";
 import messages from "messages";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ModalWidth } from "theme";
 import type {
@@ -322,6 +321,11 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isFetchingData, setIsFetchingData] = useState(false);
 
+  useEffect(() => {
+    fetchData();
+    applyDefaults();
+  }, []);
+
   async function fetchData() {
     setIsFetchingData(true);
     const [datasets, projects, scripts, taskTypes] = await Promise.all([
@@ -355,11 +359,6 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
     }
   }
 
-  useEffectOnlyOnce(() => {
-    fetchData();
-    applyDefaults();
-  });
-
   function transformBoundingBox(boundingBox: Vector6): BoundingBoxObject {
     return {
       topLeft: [boundingBox[0] || 0, boundingBox[1] || 0, boundingBox[2] || 0],
@@ -385,10 +384,10 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
     } else {
       setIsUploading(true);
       // or create a new one either from the form values or with an NML file
-      const createNewTasks = async () => {
-        let taskResponses: TaskCreationResponse[] = [];
-        let warnings: string[] = [];
+      let taskResponses: TaskCreationResponse[] = [];
+      let warnings: string[] = [];
 
+      try {
         if (specificationType === SpecificationEnum.Nml) {
           // Workaround: Antd replaces file objects in the formValues with a wrapper file
           // The original file object is contained in the originFileObj property
@@ -431,9 +430,9 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
           tasks: taskResponses,
           warnings: uniq(warnings),
         });
-      };
-      // No try & finally as react compiler currently can't handle this.
-      await createNewTasks().finally(() => setIsUploading(false));
+      } finally {
+        setIsUploading(false);
+      }
     }
   }
 

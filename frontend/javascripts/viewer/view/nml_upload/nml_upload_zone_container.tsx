@@ -97,17 +97,18 @@ export default function NmlUploadZoneContainer({
 
   const importTracingFiles = useCallback(async () => {
     setIsImporting(true);
-    // No try & finally block as react compiler currently can't handle this.
-    await onImport(files, {
-      createGroupForEachFile,
-      targetGroupId,
-      newGroupName: files.length === 1 ? newGroupName.trim() : undefined,
-    }).finally(() => {
+    try {
+      await onImport(files, {
+        createGroupForEachFile,
+        targetGroupId,
+        newGroupName: files.length === 1 ? newGroupName.trim() : undefined,
+      });
+    } finally {
       if (isMounted()) {
         setIsImporting(false);
         setFiles([]);
       }
-    });
+    }
   }, [onImport, files, createGroupForEachFile, targetGroupId, newGroupName, isMounted]);
 
   // This react component wraps its children and lays a dropzone over them.

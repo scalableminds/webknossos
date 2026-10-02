@@ -352,7 +352,11 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
       return;
     }
     setIsChangingVersion(true);
-    await fn().finally(() => setIsChangingVersion(false));
+    try {
+      await fn();
+    } finally {
+      setIsChangingVersion(false);
+    }
   };
 
   return (

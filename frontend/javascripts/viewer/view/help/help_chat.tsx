@@ -136,8 +136,9 @@ export function HelpChat({ isExpanded = false }: { isExpanded?: boolean }) {
       setChatMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch {
       Toast.error("Could not reach the assistant. Please try again.");
+    } finally {
+      setIsLoadingChat(false);
     }
-    setIsLoadingChat(false);
   };
 
   return (

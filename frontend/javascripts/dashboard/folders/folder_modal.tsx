@@ -1,4 +1,4 @@
-import { Form, Input, type InputRef, Modal, Spin } from "antd";
+import { Form, Input, Modal, Spin } from "antd";
 import {
   type FolderModalState,
   useDatasetCollectionContext,
@@ -27,7 +27,9 @@ function EditFolderModalContent({ folderId, onClose }: { folderId: string; onClo
   const { data: folder, isFetching } = useFolderQuery(folderId);
   const [form] = Form.useForm();
   const context = useDatasetCollectionContext();
-  const [inputElement, setInputElement] = useState<InputRef | null>(null);
+  // Holds the native input element instead of antd's InputRef: antd creates a new
+  // InputRef object on every render, which would re-run the effect below each time.
+  const [inputElement, setInputElement] = useState<HTMLInputElement | null>(null);
 
   useEffect(() => {
     inputElement?.focus();
@@ -63,7 +65,10 @@ function EditFolderModalContent({ folderId, onClose }: { folderId: string; onClo
           initialValues={{ name: folder.name, allowedTeams: folder.allowedTeams }}
         >
           <FormItemWithInfo name="name" label="Name" info="Name of the folder">
-            <Input value={folder.name} ref={setInputElement} />
+            <Input
+              value={folder.name}
+              ref={(inputRef) => setInputElement(inputRef?.input ?? null)}
+            />
           </FormItemWithInfo>
           <FormItemWithInfo
             name="allowedTeams"
@@ -94,7 +99,9 @@ function CreateFolderModalContent({
 }) {
   const [form] = Form.useForm();
   const context = useDatasetCollectionContext();
-  const [inputElement, setInputElement] = useState<InputRef | null>(null);
+  // Holds the native input element instead of antd's InputRef: antd creates a new
+  // InputRef object on every render, which would re-run the effect below each time.
+  const [inputElement, setInputElement] = useState<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (inputElement) {
@@ -136,7 +143,7 @@ function CreateFolderModalContent({
           initialValues={{ name: "New folder", allowedTeams: [] }}
         >
           <FormItemWithInfo name="name" label="Name" info="Name of the folder">
-            <Input ref={setInputElement} />
+            <Input ref={(inputRef) => setInputElement(inputRef?.input ?? null)} />
           </FormItemWithInfo>
           <FormItemWithInfo
             name="allowedTeams"

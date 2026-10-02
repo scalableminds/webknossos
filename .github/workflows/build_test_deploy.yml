@@ -82,11 +82,12 @@ jobs:
           fetch-depth: 5
           persist-credentials: false
 
+      # No `cache: sbt` here: this job only resolves the build's plugins. It would save its incomplete
+      # dependency cache first, under the same key the compiling jobs need to save the full one.
       - uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "21"
-          cache: sbt
       - uses: sbt/setup-sbt@v1
 
       - name: Check backend formatting and lint
@@ -128,6 +129,9 @@ jobs:
             webknossos-tracingstore/target
             webknossos-jni/target
             webknossos-slick-codegen/target
+            !target/web
+            !**/target/**/*.jar
+            !**/target/global-logging
           key: zinc-test-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
             zinc-test-${{ github.ref_name }}-
@@ -197,6 +201,9 @@ jobs:
             webknossos-tracingstore/target
             webknossos-jni/target
             webknossos-slick-codegen/target
+            !target/web
+            !**/target/**/*.jar
+            !**/target/global-logging
           key: zinc-build-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
             zinc-build-${{ github.ref_name }}-

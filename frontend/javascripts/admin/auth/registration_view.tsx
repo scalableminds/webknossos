@@ -16,11 +16,16 @@ function RegistrationViewGeneric() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setIsLoading(true);
-    // No try & finally as react compiler currently can't handle this.
-    getDefaultOrganization()
-      .then(setOrganization)
-      .finally(() => setIsLoading(false));
+    (async () => {
+      setIsLoading(true);
+
+      try {
+        const defaultOrg = await getDefaultOrganization();
+        setOrganization(defaultOrg);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
   let content = null;

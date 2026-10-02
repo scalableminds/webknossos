@@ -68,13 +68,6 @@ type Props = {
   defaultDatasetUrl?: string | null | undefined;
 };
 
-async function ensureDatasetNameIsValid(datasetName: string): Promise<void> {
-  const nameValidationResult = await isDatasetNameValid(datasetName);
-  if (nameValidationResult) {
-    throw new Error(nameValidationResult);
-  }
-}
-
 function DatasetAddRemoteView(props: Props) {
   const { onAdded, datastores, defaultDatasetUrl } = props;
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -140,49 +133,6 @@ function DatasetAddRemoteView(props: Props) {
   const hasFormAnyErrors = (form: FormInstance) =>
     form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
 
-  async function handleStoreDataset() {
-    try {
-      await form.validateFields();
-    } catch (_e) {
-      console.warn(_e);
-    }
-    if (hasFormAnyErrors(form)) {
-      setShowLoadingOverlay(false);
-      return;
-    }
-
-    const datastoreToUse = uploadableDatastores.find(
-      (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
-    );
-    if (!datastoreToUse) {
-      setShowLoadingOverlay(false);
-      Toast.error("Could not find datastore that allows uploading.");
-      return;
-    }
-
-    // The dataset name is not synced with the datasource.id.name in the advanced settings: See DatasetSettingsDataTab.
-    const datasetName = form.getFieldValue(["dataset", "name"]);
-    const dataSource = form.getFieldValue("dataSource");
-
-    if (dataSource && activeUser) {
-      try {
-        await ensureDatasetNameIsValid(datasetName);
-        const { newDatasetId } = await storeRemoteDataset(
-          datastoreToUse.name,
-          datasetName,
-          dataSource,
-          defaultDatasetUrl,
-          targetFolderId,
-        );
-        onAdded(newDatasetId, datasetName);
-      } catch (e) {
-        setShowLoadingOverlay(false);
-        Toast.error(`The datasource config could not be stored. ${e}`);
-        return;
-      }
-    }
-  }
-
   const onSuccessfulExplore = async (url: string, newDataSourceConfig: DatasourceConfiguration) => {
     const datasourceConfig = form.getFieldValue("dataSource");
     const mergedConfig = mergeNewLayers(datasourceConfig, newDataSourceConfig);
@@ -213,6 +163,52 @@ function DatasetAddRemoteView(props: Props) {
     }
     setShowAddLayerModal(false);
   };
+
+  async function handleStoreDataset() {
+    try {
+      await form.validateFields();
+    } catch (_e) {
+      console.warn(_e);
+    }
+    if (hasFormAnyErrors(form)) {
+      setShowLoadingOverlay(false);
+      return;
+    }
+
+    const datastoreToUse = uploadableDatastores.find(
+      (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
+    );
+    if (!datastoreToUse) {
+      setShowLoadingOverlay(false);
+      Toast.error("Could not find datastore that allows uploading.");
+      return;
+    }
+
+    // The dataset name is not synced with the datasource.id.name in the advanced settings: See DatasetSettingsDataTab.
+    const datasetName = form.getFieldValue(["dataset", "name"]);
+    const dataSource = form.getFieldValue("dataSource");
+
+    if (dataSource && activeUser) {
+      try {
+        const nameValidationResult = await isDatasetNameValid(datasetName);
+        if (nameValidationResult) {
+          throw new Error(nameValidationResult);
+        }
+        const { newDatasetId } = await storeRemoteDataset(
+          datastoreToUse.name,
+          datasetName,
+          dataSource,
+          defaultDatasetUrl,
+          targetFolderId,
+        );
+        onAdded(newDatasetId, datasetName);
+      } catch (e) {
+        setShowLoadingOverlay(false);
+        Toast.error(`The datasource config could not be stored. ${e}`);
+        return;
+      }
+    }
+  }
 
   const hideDatasetUI = maybeDataLayers == null || maybeDataLayers.length === 0;
   return (

@@ -26,25 +26,6 @@ export default function DatasetSettingsViewConfigTab() {
   return <DatasetSettingsViewConfigTabWithDataset dataset={dataset} />;
 }
 
-async function fetchAvailableMappingsForLayer(
-  dataStoreURL: string,
-  dataset: APIDataset | null | undefined,
-  layerName: string,
-): Promise<[string[], string[]]> {
-  try {
-    if (!dataset) {
-      throw new Error("Dataset is not defined.");
-    }
-    return await Promise.all([
-      getMappingsForDatasetLayer(dataStoreURL, dataset, layerName),
-      getAgglomeratesForDatasetLayer(dataStoreURL, dataset, layerName),
-    ]);
-  } catch (e: any) {
-    console.error(e);
-    throw new Error(messages["mapping.loading_failed"](layerName));
-  }
-}
-
 const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIDataset }) => {
   const [availableMappingsPerLayerCache, setAvailableMappingsPerLayer] = useState<
     Record<string, [string[], string[]]>
@@ -70,16 +51,23 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
           if (layerName in availableMappingsPerLayerCache) {
             return availableMappingsPerLayerCache[layerName];
           }
-          const jsonAndAgglomerateMappings = await fetchAvailableMappingsForLayer(
-            dataStoreURL,
-            dataset,
-            layerName,
-          );
-          setAvailableMappingsPerLayer((prev) => ({
-            ...prev,
-            [layerName]: jsonAndAgglomerateMappings,
-          }));
-          return jsonAndAgglomerateMappings;
+          try {
+            if (!dataset) {
+              throw new Error("Dataset is not defined.");
+            }
+            const jsonAndAgglomerateMappings = await Promise.all([
+              getMappingsForDatasetLayer(dataStoreURL, dataset, layerName),
+              getAgglomeratesForDatasetLayer(dataStoreURL, dataset, layerName),
+            ]);
+            setAvailableMappingsPerLayer((prev) => ({
+              ...prev,
+              [layerName]: jsonAndAgglomerateMappings,
+            }));
+            return jsonAndAgglomerateMappings;
+          } catch (e: any) {
+            console.error(e);
+            throw new Error(messages["mapping.loading_failed"](layerName));
+          }
         });
         const mappings = await Promise.all(maybeMappingRequests);
         const errors = layerNamesWithDefaultMappings

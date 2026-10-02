@@ -57,7 +57,8 @@ case class AlignSectionsJobOptions(
     layerName: String,
     newDatasetName: String,
     annotationId: Option[ObjectId],
-    customConfiguration: Option[JsObject]
+    customConfiguration: Option[JsObject],
+    fineAlignmentMaxJumpSize: Option[Int]
 ) derives JsonAutoFormat
 
 class JobController @Inject() (
@@ -283,7 +284,8 @@ class JobController @Inject() (
             "new_dataset_name" -> request.body.newDatasetName,
             "layer_name" -> request.body.layerName,
             "annotation_id" -> request.body.annotationId,
-            "custom_configuration" -> request.body.customConfiguration
+            "custom_configuration" -> request.body.customConfiguration,
+            "fine_alignment_max_jump_size" -> request.body.fineAlignmentMaxJumpSize
           )
           creditTransactionComment = s"Align dataset ${dataset.name}"
           job <- jobService.submitPaidJob(

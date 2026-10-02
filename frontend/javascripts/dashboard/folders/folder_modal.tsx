@@ -99,10 +99,6 @@ function CreateFolderModalContent({
   const context = useDatasetCollectionContext();
   const inputElement = useRef<InputRef>(null);
 
-  useEffect(() => {
-    inputElement.current?.focus({ cursor: "all" });
-  }, []);
-
   const onSave = async () => {
     const name = form.getFieldValue("name");
     const allowedTeams = (form.getFieldValue("allowedTeams") as APITeam[]) ?? [];
@@ -127,7 +123,15 @@ function CreateFolderModalContent({
   };
 
   return (
-    <Modal title="New Folder" open okText="Create" onOk={onSave} onCancel={onClose}>
+    <Modal
+      title="New Folder"
+      open
+      okText="Create"
+      onOk={onSave}
+      onCancel={onClose}
+      // Focusing the input on mount does not work reliably inside the modal, so wait until it is open.
+      afterOpenChange={(isOpen) => isOpen && inputElement.current?.focus({ cursor: "all" })}
+    >
       <div>
         <Shortcut keys="enter" onTrigger={onSave} supportInputElements />
         <Form

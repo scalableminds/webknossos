@@ -30,6 +30,7 @@ import type {
   SomeContainment,
 } from "viewer/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "viewer/model/bucket_data_handling/bucket";
+import { getBucketCountSoftLimitPerLayer } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import type PushQueue from "viewer/model/bucket_data_handling/pushqueue";
 import TemporalBucketManager from "viewer/model/bucket_data_handling/temporal_bucket_manager";
@@ -133,7 +134,14 @@ class DataCube {
     // Whether this layer is backed by a volume tracing, i.e. can be edited. Only relevant
     // for the t-recycling check below (see usesTRecycling).
     isEditableVolumeLayer: boolean = false,
+    // Number of layers in the dataset; scales BUCKET_COUNT_SOFT_LIMIT down
+    // (see getBucketCountSoftLimitPerLayer). If omitted, the unscaled limit
+    // is used.
+    totalLayerCount?: number,
   ) {
+    if (totalLayerCount != null) {
+      this.BUCKET_COUNT_SOFT_LIMIT = getBucketCountSoftLimitPerLayer(totalLayerCount);
+    }
     this.elementClass = elementClass;
     this.channelCount = getConstructorForElementClass(this.elementClass)[1];
     this.isSegmentation = isSegmentation;

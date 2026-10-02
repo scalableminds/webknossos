@@ -84,7 +84,10 @@ import {
   initializeEditableMappingAction,
   initializeVolumeTracingAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { computeDataTexturesSetup } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import {
+  computeDataTexturesSetup,
+  getRequiredBucketCapacityPerLayer,
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
 import {
   getSupportedTextureSpecs,
   validateMinimumRequirements,
@@ -566,9 +569,10 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   maximumLayerCountToRender: number;
 } {
   const { dataset } = Store.getState();
-  const requiredBucketCapacity =
-    constants.GPU_FACTOR_MULTIPLIER *
-    (gpuFactor != null ? gpuFactor : constants.DEFAULT_GPU_MEMORY_FACTOR);
+  const requiredBucketCapacity = getRequiredBucketCapacityPerLayer(
+    gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
+    dataset.dataSource.dataLayers.length,
+  );
   const {
     textureInformationPerLayer,
     smallestCommonBucketCapacity,
@@ -595,6 +599,8 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
       textureInformation.textureSize,
       textureInformation.textureCount,
       layer.name, // In case of a volume tracing layer the layer name will equal its tracingId.
+      requiredBucketCapacity,
+      layers.length,
     );
   }
 

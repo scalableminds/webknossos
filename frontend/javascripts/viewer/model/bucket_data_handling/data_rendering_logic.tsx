@@ -66,6 +66,42 @@ export function getBucketCapacity(
   return Math.min(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, theoreticalBucketCapacity);
 }
 
+const BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY = 4;
+// Keeps layers from getting so few buckets that they constantly reload.
+const MINIMUM_BUCKET_CAPACITY_PER_LAYER = 128;
+
+// A fixed per-layer budget would make memory grow with the layer count (e.g.
+// 22 layers can exhaust GPU memory). Instead, the budget of
+// BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY layers is the total, split evenly
+// when there are more layers than that.
+function scalePerLayerBudgetByLayerCount(
+  perLayerBudgetAtBaseline: number,
+  layerCount: number,
+): number {
+  if (layerCount <= BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY) {
+    return perLayerBudgetAtBaseline;
+  }
+  const totalBudget = perLayerBudgetAtBaseline * BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY;
+  return Math.max(MINIMUM_BUCKET_CAPACITY_PER_LAYER, Math.floor(totalBudget / layerCount));
+}
+
+// Capped at the RAM limit, because the DataCube can't free buckets that are
+// picked for rendering.
+export function getRequiredBucketCapacityPerLayer(
+  gpuMemoryFactor: number,
+  layerCount: number,
+): number {
+  return Math.min(
+    scalePerLayerBudgetByLayerCount(constants.GPU_FACTOR_MULTIPLIER * gpuMemoryFactor, layerCount),
+    getBucketCountSoftLimitPerLayer(layerCount),
+  );
+}
+
+// Same scaling for the number of buckets a DataCube keeps in RAM.
+export function getBucketCountSoftLimitPerLayer(layerCount: number): number {
+  return scalePerLayerBudgetByLayerCount(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, layerCount);
+}
+
 // Must go through getBucketsPerTexture rather than dividing the required voxels by the
 // texture's voxel area: a sub-row bucket's row padding cannot hold another bucket, so
 // area-based sizing would pick a texture too small for requiredBucketCapacity buckets.
@@ -229,7 +265,12 @@ export function computeDataTexturesSetup<Layer extends LayerLike>(
     specs,
     requiredBucketCapacity,
   );
-  const smallestCommonBucketCapacity = getSmallestCommonBucketCapacity(textureInformationPerLayer);
+  // The textures are rounded up and may hold more buckets than required, but
+  // TextureBucketManager uses at most requiredBucketCapacity.
+  const smallestCommonBucketCapacity = Math.min(
+    getSmallestCommonBucketCapacity(textureInformationPerLayer),
+    requiredBucketCapacity,
+  );
   const { maximumLayerCountToRender, maximumTextureCountForLayer } = getRenderSupportedLayerCount(
     specs,
     textureInformationPerLayer,

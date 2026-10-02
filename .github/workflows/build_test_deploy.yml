@@ -16,6 +16,9 @@ env:
   POSTGRES_PASSWORD: "secret_password"
   CERTIFICATE: ${{ secrets.CERTIFICATE_FOR_CI_ONLY }}
   CERTIFICATE_PUBLIC_KEY: ${{ secrets.CERTIFICATE_PUBLIC_KEY }}
+  # Compile with -Werror in all sbt jobs (see build.sbt). Identical scalacOptions are required so that
+  # the jobs can share zinc's incremental compile cache.
+  WK_FAIL_ON_WARNING: "true"
 
 jobs:
   frontend-tests:
@@ -68,6 +71,27 @@ jobs:
           name: vitest-coverage-master
           path: coverage
 
+  # Separate job, so that formatting/linting runs in parallel to compiling and testing.
+  # scalafmt and the (syntactic) scalafix rules do not need compiled code.
+  backend-lint:
+    runs-on: ubuntu-22.04
+    if: github.ref != 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 5
+          persist-credentials: false
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+
+      - name: Check backend formatting and lint
+        run: sbt "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
+
   backend-tests:
     runs-on: ubuntu-22.04
     if: github.ref != 'refs/heads/master'
@@ -86,16 +110,39 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "21"
+          cache: sbt
       - uses: sbt/setup-sbt@v1
+
+      # Incremental compile cache. Falls back to the latest master build, so that a branch's first push
+      # only recompiles what changed relative to master.
+      - name: Restore incremental compile cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            target
+            !target/universal
+            project/target
+            project/project/target
+            util/target
+            webknossos-datastore/target
+            webknossos-tracingstore/target
+            webknossos-jni/target
+            webknossos-slick-codegen/target
+          key: zinc-test-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            zinc-test-${{ github.ref_name }}-
+            zinc-build-${{ github.ref_name }}-
+            zinc-build-master-
 
       - name: Start Docker Services Postgres, Redis
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
-      - name: Install frontend dependencies
-        run: yarn install --immutable
-
-      - name: "Install System Dependencies"
-        run: sudo apt-get update && sudo apt-get install -y libdraco-dev
+      - name: Install frontend and system dependencies
+        run: |
+          (sudo apt-get update -qq && sudo apt-get install -y -qq libdraco-dev) > "$RUNNER_TEMP/apt.log" 2>&1 &
+          apt_pid=$!
+          yarn install --immutable
+          wait $apt_pid || { cat "$RUNNER_TEMP/apt.log"; exit 1; }
 
       - name: Assert unique evolution numbers
         run: tools/postgres/dbtool.js assert-unique-evolution-numbers
@@ -105,8 +152,6 @@ jobs:
         run: tools/assert-complete-migrations.sh
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
-      - name: Check backend formatting and lint
-        run: sbt --client "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
       - name: Run backend unit tests
         run: sbt --client -v "testOnly backend.*"
 
@@ -137,6 +182,26 @@ jobs:
         with:
           driver: docker
 
+      # Incremental compile cache. Release (tag) builds always compile from scratch.
+      - name: Restore incremental compile cache
+        if: github.ref_type != 'tag'
+        uses: actions/cache@v6
+        with:
+          path: |
+            target
+            !target/universal
+            project/target
+            project/project/target
+            util/target
+            webknossos-datastore/target
+            webknossos-tracingstore/target
+            webknossos-jni/target
+            webknossos-slick-codegen/target
+          key: zinc-build-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            zinc-build-${{ github.ref_name }}-
+            zinc-build-master-
+
       - name: Start Docker Services Postgres, Redis
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
@@ -149,10 +214,8 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "21"
+          cache: sbt
       - uses: sbt/setup-sbt@v1
-
-      - name: "Install System Dependencies"
-        run: sudo apt-get update && sudo apt-get install -y libdraco-dev
 
       - name: "Custom environment variables (Not Pull Request)"
         run: |
@@ -172,21 +235,34 @@ jobs:
       - name: Prepare Dependency Folders
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
 
-      - name: Install frontend dependencies
-        run: yarn install --immutable
+      - name: Install frontend and system dependencies
+        run: |
+          (sudo apt-get update -qq && sudo apt-get install -y -qq libdraco-dev) > "$RUNNER_TEMP/apt.log" 2>&1 &
+          apt_pid=$!
+          yarn install --immutable
+          wait $apt_pid || { cat "$RUNNER_TEMP/apt.log"; exit 1; }
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 
-      - name: Build webknossos (vite)
-        run: yarn build
-
-      - name: Build frontend documentation
-        run: yarn run docs --project-version "$WK_VERSION"
+      # The frontend build is only needed by `stage`, not by `compile`, so both run concurrently.
+      - name: Build frontend (vite, docs) and compile webknossos, datastore and tracingstore (sbt)
+        run: |
+          (yarn build && yarn run docs --project-version "$WK_VERSION") > "$RUNNER_TEMP/frontend-build.log" 2>&1 &
+          frontend_pid=$!
+          sbt --client compile
+          frontend_status=0
+          wait $frontend_pid || frontend_status=$?
+          echo "::group::Frontend build output"
+          cat "$RUNNER_TEMP/frontend-build.log"
+          echo "::endgroup::"
+          exit $frontend_status
         env:
           WK_VERSION: ${{ github.run_id }}
 
-      - name: Compile and stage webknossos, datastore and tracingstore (sbt)
-        run: sbt -DfailOnWarning "compile; stage; webknossosDatastore/stage; webknossosTracingstore/stage"
+      - name: Stage webknossos, datastore and tracingstore (sbt)
+        run: |
+          sbt --client "stage; webknossosDatastore/stage; webknossosTracingstore/stage"
+          sbt --client shutdown
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 

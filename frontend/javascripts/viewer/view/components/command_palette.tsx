@@ -149,57 +149,6 @@ export const CommandPalette = () => {
     return commands;
   };
 
-  // type annotation due to the library
-  const handleSelect = useCallback(async (command: Record<string, unknown>) => {
-    if (command.name == null) {
-      return;
-    }
-
-    if (command.name === DynamicCommands.viewDataset) {
-      try {
-        const items = await getDatasetItems();
-        if (items.length > 0) {
-          setCommands(items);
-        } else {
-          Toast.info("No datasets available.");
-        }
-      } catch (_e) {
-        Toast.error("Failed to load datasets.");
-      }
-      return;
-    }
-
-    if (command.name === DynamicCommands.viewAnnotation) {
-      try {
-        const items = await getAnnotationItems();
-        if (items.length > 0) {
-          setCommands(items);
-        } else {
-          Toast.info("No annotations available.");
-        }
-      } catch (_e) {
-        Toast.error("Failed to load annotations.");
-      }
-      return;
-    }
-
-    if (command.name === DynamicCommands.switchOrganization) {
-      try {
-        const organizations = await getOrganizationItems();
-        if (organizations.length > 0) {
-          setCommands(organizations);
-        } else {
-          Toast.info("No other organizations available.");
-        }
-      } catch (_e) {
-        Toast.error("Failed to load organizations.");
-      }
-      return;
-    }
-
-    closePalette();
-  }, []);
-
   const getDatasetItems = useCallback(async () => {
     const datasets = await getDatasets();
     return datasets.map((dataset) => ({
@@ -371,14 +320,14 @@ export const CommandPalette = () => {
       ["dark", "Dark"],
     ] as const;
 
-    for (let [theme, name] of themesWithNames) {
+    for (const [theme, name] of themesWithNames) {
       commands.push({
         name: `Switch to “${name}” color theme`,
         command: async () => {
-          if (theme === "auto") theme = getSystemColorTheme();
+          const resolvedTheme = theme === "auto" ? getSystemColorTheme() : theme;
 
-          const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
-          dispatch(setThemeAction(theme));
+          const newUser = await updateSelectedThemeOfUser(activeUser.id, resolvedTheme);
+          dispatch(setThemeAction(resolvedTheme));
           dispatch(setActiveUserAction(newUser));
         },
         color: commandEntryColor,
@@ -459,6 +408,57 @@ export const CommandPalette = () => {
 
   const closePalette = () => {
     setPaletteKey((prevKey) => prevKey + 1);
+  };
+
+  // type annotation due to the library
+  const handleSelect = async (command: Record<string, unknown>) => {
+    if (command.name == null) {
+      return;
+    }
+
+    if (command.name === DynamicCommands.viewDataset) {
+      try {
+        const items = await getDatasetItems();
+        if (items.length > 0) {
+          setCommands(items);
+        } else {
+          Toast.info("No datasets available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load datasets.");
+      }
+      return;
+    }
+
+    if (command.name === DynamicCommands.viewAnnotation) {
+      try {
+        const items = await getAnnotationItems();
+        if (items.length > 0) {
+          setCommands(items);
+        } else {
+          Toast.info("No annotations available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load annotations.");
+      }
+      return;
+    }
+
+    if (command.name === DynamicCommands.switchOrganization) {
+      try {
+        const organizations = await getOrganizationItems();
+        if (organizations.length > 0) {
+          setCommands(organizations);
+        } else {
+          Toast.info("No other organizations available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load organizations.");
+      }
+      return;
+    }
+
+    closePalette();
   };
 
   const commandsWithIds = useMemo(() => {

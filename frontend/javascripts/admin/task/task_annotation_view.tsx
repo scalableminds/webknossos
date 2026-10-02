@@ -28,7 +28,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import { useEffect, useState } from "react";
 import type { APIAnnotation, APITask } from "types/api_types";
-import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
+import { getVolumeDescriptors } from "viewer/model/accessors/annotation_accessor";
 
 type Props = {
   task: APITask;

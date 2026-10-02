@@ -55,29 +55,14 @@ import type { Action } from "viewer/model/actions/actions";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
 import overwriteActionMiddleware from "viewer/model/helpers/overwrite_action_middleware";
 import reduceReducers from "viewer/model/helpers/reduce_reducers";
-import AnnotationReducer from "viewer/model/reducers/annotation_reducer";
-import ConnectomeReducer from "viewer/model/reducers/connectome_reducer";
-import DatasetReducer from "viewer/model/reducers/dataset_reducer";
-import FlycamReducer from "viewer/model/reducers/flycam_reducer";
-import { withRebaseEditGuard } from "viewer/model/reducers/rebase_edit_guard";
-import SaveReducer from "viewer/model/reducers/save_reducer";
-import SettingsReducer from "viewer/model/reducers/settings_reducer";
-import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
-import TaskReducer from "viewer/model/reducers/task_reducer";
 import UiReducer from "viewer/model/reducers/ui_reducer";
 import UserReducer from "viewer/model/reducers/user_reducer";
-import ViewModeReducer from "viewer/model/reducers/view_mode_reducer";
-import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { KeyboardConfiguration } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import type { Toolkit } from "./model/accessors/tool_accessor";
 import type { OperationId } from "./model/actions/operation_context_actions";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
-import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
-import MipBBoxReducer from "./model/reducers/mip_bbox_reducer";
-import OperationContextReducer from "./model/reducers/operation_context_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
-import ProofreadingReducer from "./model/reducers/proofreading_reducer";
 import type { TreeGroup, TreeMap } from "./model/types/tree_types";
 import type { StartAiJobDrawerState } from "./view/ai_jobs/constants";
 
@@ -790,28 +775,15 @@ export type WebknossosState = {
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;
-export const combinedReducer = reduceReducers(
-  SettingsReducer,
-  DatasetReducer,
-  SkeletonTracingReducer,
-  VolumeTracingReducer,
-  ProofreadingReducer,
-  TaskReducer,
-  SaveReducer,
-  FlycamReducer,
-  FlycamInfoCacheReducer,
-  ViewModeReducer,
-  AnnotationReducer,
-  UserReducer,
-  UiReducer,
-  ConnectomeReducer,
-  OrganizationReducer,
-  MipBBoxReducer,
-  OperationContextReducer,
-) as Reducer;
+
+// Only the reducers which are needed outside of the viewer (e.g., in the dashboard). Importing
+// all reducers here would pull most of the viewer's code (and three.js) into every page, since
+// this module is part of the initially loaded code. When the viewer is loaded, it replaces this
+// with the complete reducer (see setRootReducer and viewer/viewer_setup.ts).
+const baseReducer = reduceReducers(UserReducer, UiReducer, OrganizationReducer) as Reducer;
 
 const store = createStore<WebknossosState, Action>(
-  enableBatching(withRebaseEditGuard(combinedReducer) as any),
+  enableBatching(baseReducer as any),
   defaultState,
   applyMiddleware(
     actionLoggerMiddleware,
@@ -820,6 +792,10 @@ const store = createStore<WebknossosState, Action>(
     eventEmitterMiddleware,
   ),
 );
+
+export function setRootReducer(reducer: Reducer) {
+  store.replaceReducer(enableBatching(reducer as any));
+}
 
 export function startSaga(saga: Saga<any[]>) {
   return sagaMiddleware.run(saga);

@@ -46,6 +46,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { combinedReducer } from "viewer/model/reducers/root_reducer";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/preparation_sagas";
@@ -57,7 +58,6 @@ import type {
 } from "viewer/model/sagas/volume/update_actions";
 import { Store } from "viewer/singletons";
 import type { NumberLike, SaveQueueEntry, Segment, WebknossosState } from "viewer/store";
-import { combinedReducer } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping, initialMapping } from "./proofreading_fixtures";
 

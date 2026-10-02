@@ -3,6 +3,7 @@ import { requestResult } from "admin/api/api_result";
 import dayjs from "dayjs";
 import update from "immutability-helper";
 import { toBigInt } from "libs/bigint_helpers";
+import importDynamic from "libs/import_dynamic";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import ResumableUpload from "libs/resumable_upload/resumable_upload";
@@ -95,12 +96,6 @@ import {
   getDataOrTracingStoreUrl,
   type LayerSourceInfo,
 } from "viewer/model/bucket_data_handling/wkstore_helper";
-import {
-  parseProtoAnnotation,
-  parseProtoListOfLong,
-  parseProtoTracing,
-  serializeProtoListOfLong,
-} from "viewer/model/helpers/proto_helpers";
 import type {
   DatasetConfiguration,
   Mapping,
@@ -119,6 +114,17 @@ import { doWithToken, refreshToken } from "./api/token";
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";
 export * from "./api/token";
+
+// The protobuf helpers (and with them protobufjs) are only needed by the viewer, which also
+// imports them statically. Importing them dynamically here keeps them out of the initially
+// loaded code of all other pages. Within the viewer, the module is already loaded.
+// The promise is shared by all callers, since vitest returns the unmocked module to all but
+// the first of several concurrent dynamic imports of a mocked module.
+let protoHelpersPromise: Promise<typeof import("viewer/model/helpers/proto_helpers")> | null = null;
+function loadProtoHelpers() {
+  protoHelpersPromise ??= importDynamic(() => import("viewer/model/helpers/proto_helpers"));
+  return protoHelpersPromise;
+}
 
 type NewTeam = {
   readonly name: string;
@@ -913,6 +919,7 @@ export async function getTracingForAnnotationType(
       },
     );
   });
+  const { parseProtoTracing } = await loadProtoHelpers();
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
 
   if (import.meta.env.MODE !== "test") {
@@ -997,6 +1004,7 @@ export async function getAnnotationProto(
       },
     );
   });
+  const { parseProtoAnnotation } = await loadProtoHelpers();
   const annotationProto = parseProtoAnnotation(annotationArrayBuffer);
   if (import.meta.env.MODE !== "test") {
     // Log to console as the decoded annotationProto is hard to inspect in the devtools otherwise.
@@ -2306,6 +2314,7 @@ async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(
     return new Map();
   }
   const sortedSegmentIdArray = [...filteredSegmentIds].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const { parseProtoListOfLong, serializeProtoListOfLong } = await loadProtoHelpers();
   const segmentIdBuffer = serializeProtoListOfLong(sortedSegmentIdArray.map(toBigInt));
   const listArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams(extraParams);

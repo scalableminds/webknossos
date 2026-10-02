@@ -43,7 +43,7 @@ import BoundingBox from "../bucket_data_handling/bounding_box";
 import {
   getSegmentIdRangeForElementClass,
   getSupportedValueRangeForElementClass,
-} from "../bucket_data_handling/data_rendering_logic";
+} from "../helpers/element_class_ranges";
 import { convertToDenseMags, MagInfo } from "../helpers/mag_info";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 

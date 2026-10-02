@@ -6,7 +6,6 @@ import type {
   AdditionalCoordinate,
   AnnotationLayerDescriptor,
   APIAnnotation,
-  APIAnnotationInfo,
   APIDataLayer,
   APIDataset,
   APISegmentationLayer,
@@ -21,6 +20,7 @@ import Constants, {
   type Vector4,
 } from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
+import { getVolumeDescriptors } from "viewer/model/accessors/annotation_accessor";
 import {
   getDataLayers,
   getLayerByName,
@@ -106,12 +106,6 @@ export function getVolumeTracingByNameOrActive(volumeLayerName: string | undefin
 
 export function hasVolumeTracings(annotation: StoreAnnotation): boolean {
   return annotation.volumes.length > 0;
-}
-
-export function getVolumeDescriptors(
-  annotation: APIAnnotation | StoreAnnotation | APIAnnotationInfo,
-): Array<AnnotationLayerDescriptor> {
-  return annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
 }
 
 export function getVolumeDescriptorById(

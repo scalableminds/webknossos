@@ -1,11 +1,5 @@
 import { V3 } from "libs/mjs";
-import {
-  type AnnotationLayerDescriptor,
-  AnnotationLayerEnum,
-  type APIAnnotation,
-  type ServerSkeletonTracing,
-  type ServerTracing,
-} from "types/api_types";
+import type { ServerSkeletonTracing, ServerTracing } from "types/api_types";
 import { IdentityTransform, type TreeType, type Vector3 } from "viewer/constants";
 import {
   type BranchPoint,
@@ -28,20 +22,6 @@ import { isRotated } from "./flycam_accessor";
 export function getSkeletonTracing(annotation: StoreAnnotation): SkeletonTracing | null {
   if (annotation.skeleton != null) {
     return annotation.skeleton;
-  }
-
-  return null;
-}
-
-export function getSkeletonDescriptor(
-  annotation: APIAnnotation,
-): AnnotationLayerDescriptor | null | undefined {
-  const skeletonLayers = annotation.annotationLayers.filter(
-    (descriptor) => descriptor.typ === AnnotationLayerEnum.Skeleton,
-  );
-
-  if (skeletonLayers.length > 0) {
-    return skeletonLayers[0];
   }
 
   return null;

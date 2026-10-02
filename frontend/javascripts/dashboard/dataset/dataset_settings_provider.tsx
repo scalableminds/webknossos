@@ -32,7 +32,7 @@ import {
   doAllLayersHaveTheSameRotation,
   EXPECTED_SETTINGS_TRANSFORMATION_LENGTH,
   getRotationSettingsFromTransformationIn90DegreeSteps,
-} from "viewer/model/accessors/dataset_layer_transformation_accessor";
+} from "viewer/model/helpers/dataset_rotation_helpers";
 import type { DatasetConfiguration } from "viewer/store";
 import type { DatasetRotationAndMirroringSettings } from "./dataset_rotation_form_item";
 import type { DatasetSettingsFormData } from "./dataset_settings_context";

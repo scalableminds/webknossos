@@ -59,7 +59,7 @@ import CategorizationLabel from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import { ContextMenuContext } from "viewer/view/context_menu/context_menu";
 import { GenericContextMenuContainer } from "viewer/view/context_menu/generic_context_menu_container";
-import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
+import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/generic_context_menu_helpers";
 
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;

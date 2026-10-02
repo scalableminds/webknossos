@@ -58,8 +58,9 @@ export function Slider(props: SliderProps) {
       )
         return;
       event.preventDefault();
+      const sliderRange = max - min;
       const ensuredStep = step || DEFAULT_STEP;
-      const wheelStep = getDiffPerSliderStep(max - min, wheelFactor, ensuredStep);
+      const wheelStep = getDiffPerSliderStep(sliderRange, wheelFactor, ensuredStep);
       const diff = getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
       // differentiate between single value and range slider
       if (range === false || range == null) {

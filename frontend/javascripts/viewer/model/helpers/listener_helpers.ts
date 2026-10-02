@@ -47,7 +47,7 @@ export function listenToStoreProperty<T>(
 export function useReduxActionListener(actionType: string, callback: () => void) {
   const onAction = useEffectEvent(callback);
   useEffect(() => {
-    const unsubscribe = eventBus.on(actionType, () => onAction());
+    const unsubscribe = eventBus.on(actionType, onAction);
     return () => {
       unsubscribe();
     };

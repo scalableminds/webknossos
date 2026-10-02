@@ -1,6 +1,6 @@
 import { CopyOutlined, ExportOutlined } from "@ant-design/icons";
 import { getVoxelyticsArtifactChecksums } from "admin/rest_api";
-import { Button, Card, message } from "antd";
+import { App, Button, Card } from "antd";
 import { copyToClipboard } from "libs/clipboard";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { JSONTree } from "react-json-tree";
@@ -93,6 +93,7 @@ function ArtifactsView({
   artifacts: Record<string, VoxelyticsArtifactConfig>;
 }) {
   const theme = useTheme();
+  const { message } = App.useApp();
 
   async function downloadChecksumsCSV(artifactName: string) {
     const a = document.createElement("a");

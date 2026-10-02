@@ -26,7 +26,6 @@ import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, OrthoViewMap, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
 import constants, {
-  OrthoBaseRotations,
   OrthoViews,
   OrthoViewValuesWithoutTDView,
   TDViewDisplayModeEnum,
@@ -86,6 +85,7 @@ import {
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
+import { OrthoBaseRotations } from "viewer/ortho_base_rotations";
 import { Model } from "viewer/singletons";
 import type {
   MipLayerConfig,

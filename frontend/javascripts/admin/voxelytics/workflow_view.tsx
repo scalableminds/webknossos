@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { isWorkflowAccessibleBySwitching } from "admin/api/organization";
 import { getVoxelyticsWorkflow } from "admin/rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
@@ -339,8 +339,8 @@ export default function WorkflowView() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["voxelyticsWorkflow", workflowHash],
-    queryFn: async () => await getVoxelyticsWorkflow(workflowHash, null),
+    queryKey: ["voxelyticsWorkflow", workflowHash, runId],
+    queryFn: async () => await getVoxelyticsWorkflow(workflowHash, runId ?? null),
     // If a meta task is passed via a URL parameter, the entire report is filtered so that only the
     // tasks of the given meta task are shown (left-hand as well as right-hand side).
     select: (data) => {
@@ -356,6 +356,7 @@ export default function WorkflowView() {
     staleTime: 0, // disable caching
     gcTime: 0, // disable garbage collection
     retry: false,
+    placeholderData: keepPreviousData,
   });
 
   const { data: accessibleOrganization } = useQuery({

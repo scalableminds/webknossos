@@ -20,7 +20,7 @@ const FormItem = Form.Item;
 
 export default function DatasetSettingsViewConfigTab() {
   const { dataset } = useDatasetSettingsContext();
-  if (dataset == null) {
+  if (dataset == null || !dataset.isActive) {
     return null;
   }
   return <DatasetSettingsViewConfigTabWithDataset dataset={dataset} />;

@@ -62,11 +62,13 @@ object AnnotationLayerStatistics {
         "treeCount" -> 0,
         "nodeCount" -> 0,
         "edgeCount" -> 0,
-        "branchPointCount" -> 0
+        "branchPointCount" -> 0,
+        "boundingBoxCount" -> 0
       )
     case AnnotationLayerType.Volume =>
       Json.obj(
-        "segmentCount" -> 0
+        "segmentCount" -> 0,
+        "boundingBoxCount" -> 0
       )
   }
 

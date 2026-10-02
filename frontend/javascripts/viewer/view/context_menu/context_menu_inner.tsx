@@ -21,10 +21,13 @@ export function ContextMenuInner() {
 
   const inputRef = useContext(ContextMenuContext);
 
-  const segmentIdAtPosition =
+  // The segment id depends on live state that is not passed to the function (e.g., loaded
+  // buckets, the mapping). Reading it in a selector keeps it up to date.
+  const segmentIdAtPosition = useWkSelector(() =>
     globalPosition != null && contextMenuPosition != null
       ? getSegmentIdForPosition(globalPosition)
-      : 0n;
+      : 0n,
+  );
 
   const { infoRows } = useContextMenuInfoRows(contextInfo, segmentIdAtPosition);
 

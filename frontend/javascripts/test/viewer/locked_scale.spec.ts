@@ -1,7 +1,4 @@
-import {
-  applyLockedScaleChange,
-  DEFAULT_AXIS_LOCKS,
-} from "viewer/view/left_border_tabs/components/locked_scale";
+import { applyLockedScaleChange } from "viewer/view/left_border_tabs/components/locked_scale";
 import { MIN_SCALE } from "viewer/view/left_border_tabs/components/relative_slider";
 import { describe, expect, it } from "vitest";
 

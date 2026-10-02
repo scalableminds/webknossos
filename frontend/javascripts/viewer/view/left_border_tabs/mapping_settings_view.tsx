@@ -129,14 +129,8 @@ function MappingSettingsView({ layerName }: Props) {
     [dispatch, ensureMappingsAreLoaded, layerName, mappingName],
   );
 
-  const availableMappings = useMemo(
-    () => segmentationLayer?.mappings ?? [],
-    [segmentationLayer?.mappings],
-  );
-  const availableAgglomerates = useMemo(
-    () => segmentationLayer?.agglomerates ?? [],
-    [segmentationLayer?.agglomerates],
-  );
+  const availableMappings = segmentationLayer?.mappings ?? [];
+  const availableAgglomerates = segmentationLayer?.agglomerates ?? [];
 
   // Show mapping-select even when the mapping is disabled but the UI was used before
   // (i.e., mappingName != null)

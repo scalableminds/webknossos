@@ -79,16 +79,8 @@ export const AiModelSelector: React.FC = () => {
     );
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: filtered models need an update after searchTerm changes
-  const filteredPretrainedModels = useMemo(
-    () => filterModels(pretrainedModels),
-    [searchTerm, pretrainedModels],
-  );
-  // biome-ignore lint/correctness/useExhaustiveDependencies: filtered models need an update after searchTerm changes
-  const filteredCustomModels = useMemo(
-    () => filterModels(customModels),
-    [searchTerm, customModels],
-  );
+  const filteredPretrainedModels = filterModels(pretrainedModels);
+  const filteredCustomModels = filterModels(customModels);
 
   const switchToTrainingButton = (
     <>

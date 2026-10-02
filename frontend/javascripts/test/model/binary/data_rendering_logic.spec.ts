@@ -2,177 +2,19 @@ import range from "lodash-es/range";
 import type { ElementClass } from "types/api_types";
 import constants, { getEffectiveBucketDepth, usesTRecycling } from "viewer/constants";
 import {
-  calculateTextureSizeAndCountForLayer,
-  computeDataTexturesSetup,
+  computeLayerPoolAssignments,
+  computeLayerPoolPlan,
   getBucketCapacity,
   getBucketCountSoftLimitPerLayer,
   getBucketHeightInTexture,
+  getGpuBucketVoxelCountForLayer,
   getRequiredBucketCapacityPerLayer,
-  type LayerLike,
+  LayerPool,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { describe, expect, it } from "vitest";
 
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
 const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
-const minSpecs = {
-  supportedTextureSize: 4096,
-  maxTextureCount: 8,
-};
-const midSpecs = {
-  supportedTextureSize: 8192,
-  maxTextureCount: 16,
-};
-const betterSpecs = {
-  supportedTextureSize: 16384,
-  maxTextureCount: 32,
-};
-const grayscaleByteCount = 1;
-const grayscaleElementClass = "uint8" as const;
-const volumeByteCount = 4;
-const volumeElementClass = "uint32" as const;
-
-/*
- * The current rendering logic in WK only allows
- * as many layers as necessary. This is done to avoid
- * that the shaders are compiled for N layers even though
- * N layers will never be rendered at the same time (because
- * only one segmentation layer can be rendered at a time).
- * For that reason, testing the specs has to be done with a
- * sufficiently large amount of layers. To achieve this,
- * the helper function createLayers is used.
- */
-
-// A non-degenerate depth so these layers exercise the same (non-shrunk) bucket
-// sizing as before the 2D bucket-footprint optimization was introduced.
-const NON_DEGENERATE_DEPTH = 1000;
-const createGrayscaleLayer = () => ({
-  byteCount: grayscaleByteCount,
-  elementClass: grayscaleElementClass,
-  category: "color" as const,
-  boundingBox: { depth: NON_DEGENERATE_DEPTH },
-  additionalAxes: null,
-});
-const createVolumeLayer = () => ({
-  byteCount: volumeByteCount,
-  elementClass: volumeElementClass,
-  category: "segmentation" as const,
-  boundingBox: { depth: NON_DEGENERATE_DEPTH },
-  additionalAxes: null,
-});
-
-function createLayers(grayscaleCount: number, volumeCount: number): LayerLike[] {
-  // Annotated so that the two factories' `elementClass` literal types are widened before
-  // concat has to unify them.
-  const grayscaleLayers: LayerLike[] = range(0, grayscaleCount).map(() => createGrayscaleLayer());
-  const volumeLayers: LayerLike[] = range(0, volumeCount).map(() => createVolumeLayer());
-  return grayscaleLayers.concat(volumeLayers);
-}
-
-describe("calculateTextureSizeAndCountForLayer", () => {
-  it("grayscale data + minSpecs", () => {
-    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-      minSpecs,
-      grayscaleElementClass,
-      DEFAULT_REQUIRED_BUCKET_CAPACITY,
-    );
-    expect(textureSize).toBe(minSpecs.supportedTextureSize);
-    expect(textureCount).toBe(1);
-  });
-
-  it("grayscale data + midSpecs", () => {
-    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-      midSpecs,
-      grayscaleElementClass,
-      DEFAULT_REQUIRED_BUCKET_CAPACITY,
-    );
-    expect(textureSize).toBe(minSpecs.supportedTextureSize);
-    expect(textureCount).toBe(1);
-  });
-
-  it("grayscale data + betterSpecs", () => {
-    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-      betterSpecs,
-      grayscaleElementClass,
-      DEFAULT_REQUIRED_BUCKET_CAPACITY,
-    );
-    expect(textureSize).toBe(minSpecs.supportedTextureSize);
-    expect(textureCount).toBe(1);
-  });
-
-  it("color data + minSpecs", () => {
-    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-      minSpecs,
-      volumeElementClass,
-      DEFAULT_REQUIRED_BUCKET_CAPACITY,
-    );
-    expect(textureSize).toBe(minSpecs.supportedTextureSize);
-    expect(textureCount).toBe(4);
-  });
-
-  it("color data + midSpecs", () => {
-    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-      midSpecs,
-      volumeElementClass,
-      DEFAULT_REQUIRED_BUCKET_CAPACITY,
-    );
-    expect(textureSize).toBe(midSpecs.supportedTextureSize);
-    expect(textureCount).toBe(1);
-  });
-
-  it("color data + betterSpecs", () => {
-    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-      betterSpecs,
-      volumeElementClass,
-      DEFAULT_REQUIRED_BUCKET_CAPACITY,
-    );
-    expect(textureSize).toBe(midSpecs.supportedTextureSize);
-    expect(textureCount).toBe(1);
-  });
-});
-
-function testSupportFlags(
-  supportFlags: ReturnType<typeof computeDataTexturesSetup>,
-  expectedMaximumLayerCountToRender: number,
-) {
-  expect(supportFlags.maximumLayerCountToRender).toBe(expectedMaximumLayerCountToRender);
-}
-
-function computeDataTexturesSetupCurried(spec: typeof minSpecs, hasSegmentation: boolean) {
-  return (layers: LayerLike[]) =>
-    computeDataTexturesSetup(spec, layers, hasSegmentation, DEFAULT_REQUIRED_BUCKET_CAPACITY);
-}
-
-describe("computeDataTexturesSetup", () => {
-  it("Basic support (no segmentation): all specs", () => {
-    // All specs should support up to three grayscale layers
-    const specs: [typeof minSpecs, number][] = [
-      [minSpecs, 7],
-      [midSpecs, 15],
-      [betterSpecs, 31],
-    ];
-    const hundredGrayscaleLayers = createLayers(100, 0);
-    for (const [spec, expectedLayerCount] of specs) {
-      const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(spec, false);
-      testSupportFlags(computeDataTexturesSetupPartial(hundredGrayscaleLayers), expectedLayerCount);
-      testSupportFlags(computeDataTexturesSetupPartial(hundredGrayscaleLayers), expectedLayerCount);
-      testSupportFlags(computeDataTexturesSetupPartial(hundredGrayscaleLayers), expectedLayerCount);
-    }
-  });
-
-  it("Basic support + volume: min specs", () => {
-    const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(minSpecs, true);
-    testSupportFlags(computeDataTexturesSetupPartial(createLayers(10, 0)), 4);
-    testSupportFlags(computeDataTexturesSetupPartial(createLayers(10, 1)), 1);
-    testSupportFlags(computeDataTexturesSetupPartial(createLayers(10, 1)), 1);
-    testSupportFlags(computeDataTexturesSetupPartial(createLayers(10, 1)), 1);
-  });
-
-  it("Basic support + volume: mid specs", () => {
-    const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(midSpecs, true);
-    testSupportFlags(computeDataTexturesSetupPartial(createLayers(20, 1)), 12);
-    testSupportFlags(computeDataTexturesSetupPartial(createLayers(5, 1)), 6);
-  });
-});
 
 describe("2D (degenerate-depth) layer bucket sizing", () => {
   it("getEffectiveBucketDepth shrinks only non-editable degenerate-depth layers", () => {
@@ -186,24 +28,19 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     expect(getEffectiveBucketDepth(1000, true)).toBe(constants.BUCKET_WIDTH);
   });
 
-  it("calculateTextureSizeAndCountForLayer needs less total texture area for a 2D layer than for a regular layer", () => {
-    const shrunkBucketVoxelCount = constants.BUCKET_SIZE_2D * getEffectiveBucketDepth(1, false);
-    const shrunk = calculateTextureSizeAndCountForLayer(
-      midSpecs,
-      grayscaleElementClass,
-      DEFAULT_REQUIRED_BUCKET_CAPACITY,
-      shrunkBucketVoxelCount,
-    );
-    const full = calculateTextureSizeAndCountForLayer(
-      midSpecs,
-      grayscaleElementClass,
-      DEFAULT_REQUIRED_BUCKET_CAPACITY,
-    );
-    expect(shrunk.bucketVoxelCount).toBe(shrunkBucketVoxelCount);
-    expect(full.bucketVoxelCount).toBe(constants.BUCKET_SIZE);
-    expect(shrunk.textureSize * shrunk.textureSize * shrunk.textureCount).toBeLessThan(
-      full.textureSize * full.textureSize * full.textureCount,
-    );
+  it("a 2D layer needs fewer pool slices than a regular layer", () => {
+    const layer = {
+      name: "a",
+      elementClass: "uint8" as const,
+      category: "color" as const,
+      additionalAxes: null,
+    };
+    const slicesFor = (depth: number) =>
+      computeLayerPoolAssignments(
+        [{ ...layer, boundingBox: { depth } }],
+        DEFAULT_REQUIRED_BUCKET_CAPACITY,
+      ).poolDepths[LayerPool.U8];
+    expect(slicesFor(1)).toBeLessThan(slicesFor(1000));
   });
 
   it("getBucketHeightInTexture clamps to a whole row when a bucket is smaller than the texture width", () => {
@@ -215,30 +52,27 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     expect(getBucketHeightInTexture(4096, packingDegree, constants.BUCKET_SIZE)).toBe(2);
   });
 
-  it("sizes the atlas to actually hold requiredBucketCapacity buckets, despite whole-row padding", () => {
-    const shrunkBucketVoxelCount = constants.BUCKET_SIZE_2D;
-    for (const specs of [minSpecs, midSpecs, betterSpecs]) {
-      for (const elementClass of ["uint8", "uint16", "uint32"] as ElementClass[]) {
-        for (const bucketVoxelCount of [shrunkBucketVoxelCount, constants.BUCKET_SIZE]) {
-          for (const requiredBucketCapacity of [512, 1024, DEFAULT_REQUIRED_BUCKET_CAPACITY]) {
-            const { textureSize, textureCount, packingDegree } =
-              calculateTextureSizeAndCountForLayer(
-                specs,
+  it("reserves enough pool slices for requiredBucketCapacity buckets, despite whole-row padding", () => {
+    for (const elementClass of ["uint8", "uint16", "uint32", "uint64"] as ElementClass[]) {
+      for (const depth of [1, 1000]) {
+        for (const requiredBucketCapacity of [512, 1024, DEFAULT_REQUIRED_BUCKET_CAPACITY]) {
+          const { assignmentByLayerName } = computeLayerPoolAssignments(
+            [
+              {
+                name: "a",
                 elementClass,
-                requiredBucketCapacity,
-                bucketVoxelCount,
-              );
-            const capacity = getBucketCapacity(
-              textureCount,
-              textureSize,
-              packingDegree,
-              bucketVoxelCount,
-            );
-            expect(
-              capacity,
-              `${elementClass}, bucketVoxelCount=${bucketVoxelCount}, required=${requiredBucketCapacity}, maxTex=${specs.supportedTextureSize}`,
-            ).toBeGreaterThanOrEqual(requiredBucketCapacity);
-          }
+                category: "color",
+                boundingBox: { depth },
+                additionalAxes: null,
+              },
+            ],
+            requiredBucketCapacity,
+          );
+          const { dataTextureCount, bucketsPerSlice } = assignmentByLayerName.get("a")!;
+          expect(
+            dataTextureCount * bucketsPerSlice,
+            `${elementClass}, depth=${depth}, required=${requiredBucketCapacity}`,
+          ).toBeGreaterThanOrEqual(requiredBucketCapacity);
         }
       }
     }
@@ -256,23 +90,18 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     expect(usesTRecycling(1, true, true)).toBe(false);
   });
 
-  it("buildTextureInformationMap sizes the atlas for full-depth buckets only for t-recycling layers", () => {
+  it("getGpuBucketVoxelCountForLayer uses full-depth buckets only for t-recycling layers", () => {
     const shrunkBucketVoxelCount = constants.BUCKET_SIZE_2D;
     const tAxis = [{ name: "t", bounds: [0, 100] as [number, number], index: 3 }];
-    const sizeFor = (layer: LayerLike) =>
-      computeDataTexturesSetup(midSpecs, [layer], false, DEFAULT_REQUIRED_BUCKET_CAPACITY)
-        .textureInformationPerLayer.values()
-        .next().value?.bucketVoxelCount;
-
-    const base = { elementClass: grayscaleElementClass, category: "color" as const };
-    // 2D + t, read-only: recycles, so the atlas keeps the full bucket footprint.
-    expect(sizeFor({ ...base, boundingBox: { depth: 1 }, additionalAxes: tAxis })).toBe(
-      constants.BUCKET_SIZE,
-    );
+    const base = { elementClass: "uint8" as const, category: "color" as const };
+    // 2D + t, read-only: recycles, so the GPU keeps the full bucket footprint.
+    expect(
+      getGpuBucketVoxelCountForLayer({ ...base, boundingBox: { depth: 1 }, additionalAxes: tAxis }),
+    ).toBe(constants.BUCKET_SIZE);
     // 2D + t, but editable: neither t-recycling nor the shrink applies, because its buckets
     // are sent back to the tracingstore at the full bucketLength^3.
     expect(
-      sizeFor({
+      getGpuBucketVoxelCountForLayer({
         ...base,
         category: "segmentation" as const,
         boundingBox: { depth: 1 },
@@ -282,7 +111,7 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     ).toBe(constants.BUCKET_SIZE);
     // Plain 2D, editable: same reason, no shrink.
     expect(
-      sizeFor({
+      getGpuBucketVoxelCountForLayer({
         ...base,
         category: "segmentation" as const,
         boundingBox: { depth: 1 },
@@ -291,13 +120,17 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
       }),
     ).toBe(constants.BUCKET_SIZE);
     // 2D without a t axis, read-only: plain shrink.
-    expect(sizeFor({ ...base, boundingBox: { depth: 1 }, additionalAxes: null })).toBe(
-      shrunkBucketVoxelCount,
-    );
+    expect(
+      getGpuBucketVoxelCountForLayer({ ...base, boundingBox: { depth: 1 }, additionalAxes: null }),
+    ).toBe(shrunkBucketVoxelCount);
     // Ordinary 3D layer: unchanged.
-    expect(sizeFor({ ...base, boundingBox: { depth: 1000 }, additionalAxes: tAxis })).toBe(
-      constants.BUCKET_SIZE,
-    );
+    expect(
+      getGpuBucketVoxelCountForLayer({
+        ...base,
+        boundingBox: { depth: 1000 },
+        additionalAxes: tAxis,
+      }),
+    ).toBe(constants.BUCKET_SIZE);
   });
 
   it("getBucketCapacity accounts for whole-row clamping so the reported capacity matches the real, addressable atlas space", () => {
@@ -335,6 +168,55 @@ describe("getRequiredBucketCapacityPerLayer", () => {
           getBucketCountSoftLimitPerLayer(layerCount),
         );
       }
+    }
+  });
+});
+
+describe("computeLayerPoolPlan", () => {
+  // At the "Ultra" GPU setting, a uint64 layer needs 79 slices, so four of
+  // them (all in the U8 pool) need 316.
+  const uint64Layers = range(4).map((i) => ({
+    name: `segmentation_${i}`,
+    elementClass: "uint64" as ElementClass,
+    category: "segmentation" as const,
+    boundingBox: { depth: 1000 },
+    additionalAxes: null,
+  }));
+  const ultraCapacity = getRequiredBucketCapacityPerLayer(16, uint64Layers.length);
+
+  it("keeps the capacity if all pools fit", () => {
+    const plan = computeLayerPoolPlan(uint64Layers, ultraCapacity, 2048);
+    expect(plan.bucketCapacity).toBe(ultraCapacity);
+    expect(Math.max(...Object.values(plan.poolDepths))).toBe(316);
+  });
+
+  it("lowers the capacity until the deepest pool fits", () => {
+    const plan = computeLayerPoolPlan(uint64Layers, ultraCapacity, 256);
+    expect(plan.bucketCapacity).toBeLessThan(ultraCapacity);
+    expect(Math.max(...Object.values(plan.poolDepths))).toBeLessThanOrEqual(256);
+  });
+
+  it("lowers the capacity until every bucket address fits into 21 bits", () => {
+    // A 2D uint8 layer (2048 buckets per slice) placed behind a deep uint64 layer.
+    const layers = [
+      { ...uint64Layers[0], name: "deep" },
+      {
+        name: "flat",
+        elementClass: "uint8" as ElementClass,
+        category: "color" as const,
+        boundingBox: { depth: 1 },
+        additionalAxes: null,
+      },
+    ];
+    const requiredBucketCapacity = 70000;
+    const plan = computeLayerPoolPlan(layers, requiredBucketCapacity, 4096);
+    expect(plan.bucketCapacity).toBeLessThan(requiredBucketCapacity);
+    for (const {
+      baseSlice,
+      dataTextureCount,
+      bucketsPerSlice,
+    } of plan.assignmentByLayerName.values()) {
+      expect((baseSlice + dataTextureCount) * bucketsPerSlice).toBeLessThanOrEqual(2 ** 21 - 1);
     }
   });
 });

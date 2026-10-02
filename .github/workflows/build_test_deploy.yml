@@ -114,14 +114,14 @@ jobs:
           cache: sbt
       - uses: sbt/setup-sbt@v1
 
-      # Incremental compile cache. Falls back to the latest master build, so that a branch's first push
+      # Incremental compile cache. Note: the path list is part of the cache version, changing it invalidates all entries.
+      # Falls back to the latest master build, so that a branch's first push
       # only recompiles what changed relative to master.
       - name: Restore incremental compile cache
         uses: actions/cache@v6
         with:
           path: |
             target
-            !target/universal
             project/target
             project/project/target
             util/target
@@ -129,6 +129,7 @@ jobs:
             webknossos-tracingstore/target
             webknossos-jni/target
             webknossos-slick-codegen/target
+            !**/target/universal
             !target/web
             !**/target/**/*.jar
             !**/target/global-logging
@@ -193,7 +194,6 @@ jobs:
         with:
           path: |
             target
-            !target/universal
             project/target
             project/project/target
             util/target
@@ -201,6 +201,7 @@ jobs:
             webknossos-tracingstore/target
             webknossos-jni/target
             webknossos-slick-codegen/target
+            !**/target/universal
             !target/web
             !**/target/**/*.jar
             !**/target/global-logging

@@ -21,7 +21,7 @@ export function ContextMenuInner() {
     viewport: maybeViewport,
   } = contextInfo;
 
-  const inputRef = useContext(ContextMenuContext);
+  const containerElement = useContext(ContextMenuContext);
 
   // The segment id depends on live state that is not passed to the function (e.g., loaded
   // buckets, the mapping). Reading it in a selector keeps it up to date.
@@ -49,8 +49,7 @@ export function ContextMenuInner() {
     items: menuItems,
   };
 
-  if (inputRef == null || inputRef.current == null) return null;
-  const refContent = inputRef.current;
+  if (containerElement == null) return null;
 
   return (
     <React.Fragment>
@@ -60,7 +59,7 @@ export function ContextMenuInner() {
         menu={menu}
         classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
-        getPopupContainer={() => refContent}
+        getPopupContainer={() => containerElement}
         destroyOnHidden
       >
         <div />

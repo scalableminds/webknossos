@@ -325,7 +325,7 @@ export function ShortcutRecorderModal({
       open={isOpen}
       onCancel={handleCancel}
       onOk={handleOk}
-      okButtonProps={{ disabled: keySequence.length <= 0 || currentDownSetRef.current.size > 0 }}
+      okButtonProps={{ disabled: keySequence.length <= 0 || previewKeyCombination.length > 0 }}
       title="Record Shortcut"
       destroyOnHidden={true}
     >

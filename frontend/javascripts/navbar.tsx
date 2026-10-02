@@ -569,15 +569,14 @@ function OrganizationFilterInput({
 }) {
   const ref = useRef<InputRef>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesn't understand that ref.current is accessed?
   useEffect(() => {
-    if (ref?.current && isVisible) {
+    if (ref.current && isVisible) {
       setTimeout(() => {
         // Without the timeout, the focus doesn't work unfortunately.
         ref.current?.input?.focus();
       }, 100);
     }
-  }, [ref.current, isVisible]);
+  }, [isVisible]);
   const onChangeImpl = (evt: React.ChangeEvent<HTMLInputElement>) => {
     onChange(evt.target.value);
   };

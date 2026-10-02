@@ -12,7 +12,16 @@ import OverwriteEverythingIcon from "@images/icons/icon-overwrite-everything.svg
 import RestrictFloodfillToBboxIcon from "@images/icons/icon-restrict-to-bounding-box.svg?react";
 import NewSegmentIcon from "@images/icons/icon-segment-new.svg?react";
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
-import { Badge, Button, Popconfirm, Popover, Radio, type RadioChangeEvent, Space } from "antd";
+import {
+  Badge,
+  Button,
+  Popconfirm,
+  Popover,
+  Radio,
+  type RadioChangeEvent,
+  Space,
+  theme,
+} from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { usePrevious, useWkSelector } from "libs/react_hooks";
 import type React from "react";
@@ -248,6 +257,8 @@ function IdentityComponent({ children }: { children: React.ReactNode }) {
 function NuxPopConfirm({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
+  const { token } = theme.useToken();
+
   return (
     <Popconfirm
       open
@@ -264,7 +275,7 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
       }}
       description="The AI-based Quick Select can now be triggered with a single click. Also, it can be run for multiple sections at once (open the settings here to enable this)."
       styles={{ root: { maxWidth: 400 } }}
-      icon={<InfoCircleOutlined style={{ color: "green" }} />}
+      icon={<InfoCircleOutlined style={{ color: token.colorInfo }} />}
     >
       {children}
     </Popconfirm>

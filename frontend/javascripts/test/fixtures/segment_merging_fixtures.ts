@@ -19,6 +19,7 @@ export const createAction = (id: bigint, properties: Partial<Segment>) =>
   );
 
 const [id1, id2, id3] = [1n, 2n, 3n];
+
 export { id1, id2, id3 };
 export const createSegment1 = createAction(id1, {
   name: "Name 1",

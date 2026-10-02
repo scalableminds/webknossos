@@ -54,7 +54,7 @@ const sharedRules = [
   },
   {
     validator: syncValidator(
-      (value: string | null) => !value || !value.startsWith("."),
+      (value: string | null) => !value?.startsWith("."),
       "The name must not start with a dot.",
     ),
   },

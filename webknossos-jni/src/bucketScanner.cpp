@@ -94,6 +94,32 @@ size_t getElementCount(jsize inputLengthBytes, jint bytesPerElement) {
     return inputLengthBytes / bytesPerElement;
 }
 
+template <typename T>
+inline int64_t typedValueAtIndex(const jbyte *bucketBytes, size_t index) {
+    T value;
+    // memcpy+static_cast instead of reinterpret_cast forces compiler to do this with correct alignment. No runtime cost.
+    std::memcpy(&value, bucketBytes + index * sizeof(T), sizeof(T));
+    return static_cast<int64_t>(value);
+}
+
+template <typename T>
+void collectSegmentIdsTyped(const jbyte *bucketBytes, size_t elementCount, bool skipZeroes,
+                            std::unordered_set<int64_t> &uniqueSegmentIds) {
+    bool lastValueIsKnown = false;
+    int64_t lastValue = 0;
+    for (size_t i = 0; i < elementCount; ++i) {
+        const int64_t currentValue = typedValueAtIndex<T>(bucketBytes, i);
+        if (lastValueIsKnown && currentValue == lastValue) {
+            continue;
+        }
+        lastValue = currentValue;
+        lastValueIsKnown = true;
+        if (!skipZeroes || currentValue != 0) {
+            uniqueSegmentIds.insert(currentValue);
+        }
+    }
+}
+
 JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_collectSegmentIds(
     JNIEnv *env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jboolean skipZeroes) {
 
@@ -103,12 +129,25 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
 
         std::unordered_set<int64_t> uniqueSegmentIds;
-
-        for (size_t i = 0; i < elementCount; ++i) {
-            const int64_t currentValue = segmentIdAtIndex(bucketBytes, i, bytesPerElement, isSigned);
-            if (!skipZeroes || currentValue != 0) {
-                uniqueSegmentIds.insert(currentValue);
-            }
+        switch (bytesPerElement) {
+            case 1:
+                if (isSigned) collectSegmentIdsTyped<int8_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+                else collectSegmentIdsTyped<uint8_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+                break;
+            case 2:
+                if (isSigned) collectSegmentIdsTyped<int16_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+                else collectSegmentIdsTyped<uint16_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+                break;
+            case 4:
+                if (isSigned) collectSegmentIdsTyped<int32_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+                else collectSegmentIdsTyped<uint32_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+                break;
+            case 8:
+                if (isSigned) collectSegmentIdsTyped<int64_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+                else collectSegmentIdsTyped<uint64_t>(bucketBytes, elementCount, skipZeroes, uniqueSegmentIds);
+                break;
+            default:
+                throw std::invalid_argument("Cannot collect segment ids, unsupported bytesPerElement value");
         }
 
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);

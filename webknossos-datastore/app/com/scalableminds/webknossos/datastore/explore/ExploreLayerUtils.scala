@@ -175,4 +175,15 @@ trait ExploreLayerUtils {
   def removeNeuroglancerPrefixesFromUri(uri: String): String =
     uri.stripPrefix("zarr3://").stripPrefix("zarr://").stripPrefix("precomputed://").stripPrefix("n5://")
 
+  // A URI fragment may itself contain further "#" characters.
+  // We escape those before we can pass it to java.net.URI
+  def escapeExtraFragmentHashes(uri: String): String = {
+    val firstHashIndex = uri.indexOf('#')
+    if (firstHashIndex < 0) uri
+    else {
+      val (headPart, tailPart) = uri.splitAt(firstHashIndex + 1)
+      headPart + tailPart.replace("#", "%23")
+    }
+  }
+
 }

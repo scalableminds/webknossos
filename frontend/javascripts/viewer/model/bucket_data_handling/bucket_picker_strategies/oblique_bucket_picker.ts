@@ -25,8 +25,8 @@ const ROTATIONS = {
   ] as Matrix4x4,
   XZ: [
     1, 0, 0, 0,
-    0, Math.cos(ALPHA), -Math.sin(ALPHA), 0,
-    0, Math.sin(ALPHA), Math.cos(ALPHA), 0,
+    0, Math.cos(ALPHA), Math.sin(ALPHA), 0,
+    0, -Math.sin(ALPHA), Math.cos(ALPHA), 0,
     0, 0, 0, 1,
   ] as Matrix4x4,
 };

@@ -32,7 +32,10 @@ import constants, {
   TDViewDisplayModeEnum,
 } from "viewer/constants";
 import { destroyRenderer, getRenderer } from "viewer/controller/renderer";
-import { setSceneController } from "viewer/controller/scene_controller_provider";
+import {
+  setSceneController,
+  waitForPendingSceneControllerTeardown,
+} from "viewer/controller/scene_controller_provider";
 import type FlightModePlane from "viewer/geometries/arbitrary_plane";
 import computeSplitBoundaryMeshWithSplines from "viewer/geometries/compute_split_boundary_mesh_with_splines";
 import Cube from "viewer/geometries/cube";
@@ -137,6 +140,9 @@ class SceneController {
     (entries: MipEnabledBBox[]) => this.updateMipVolumes(entries),
     300,
   );
+  // In-flight renderer.compileAsync() calls, registered by PlaneView/ArbitraryView.
+  // See waitForPendingCompiles() for why these need to be tracked.
+  private pendingCompilePromises: Set<Promise<unknown>> = new Set();
 
   // Created as instance properties to avoid creating objects in each update call.
   private rotatedPositionOffsetVector = new ThreeVector3();
@@ -378,7 +384,7 @@ class SceneController {
         !V3.equals(storeMip.bbox.boundingBox.max, bb.max);
       if (bboxChanged) {
         this.rootNode.remove(volume.mesh);
-        volume.dispose();
+        this.deferUntilCompileReady(() => volume.dispose());
         this.mipVolumes.delete(bboxId);
       }
     }
@@ -445,7 +451,9 @@ class SceneController {
     skeletonTracingSelector: (arg0: WebknossosState) => SkeletonTracing | null,
     supportsPicking: boolean,
   ): number {
-    const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);
+    const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking, (dispose) =>
+      this.deferUntilCompileReady(dispose),
+    );
     const skeletonGroup = skeleton.getRootGroup();
     this.skeletons[skeletonGroup.id] = skeleton;
     this.rootNode.add(skeletonGroup);
@@ -479,7 +487,7 @@ class SceneController {
           this.rootNode.remove(mesh);
         });
 
-        taskCube.destroy();
+        this.deferUntilCompileReady(() => taskCube.destroy());
       }
       this.taskCubeByTracingId[tracingId] = null;
     }
@@ -673,7 +681,7 @@ class SceneController {
 
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
     for (const cube of this.userBoundingBoxes) {
-      cube.destroy();
+      this.deferUntilCompileReady(() => cube.destroy());
     }
     const newUserBoundingBoxGroup = new Group();
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
@@ -769,7 +777,7 @@ class SceneController {
     // Destroy the old cubes to free their geometries/materials (see setUserBoundingBoxes).
     if (this.layerBoundingBoxes != null) {
       for (const cube of Object.values(this.layerBoundingBoxes)) {
-        cube.destroy();
+        this.deferUntilCompileReady(() => cube.destroy());
       }
     }
     const newLayerBoundingBoxGroup = new Group();
@@ -883,7 +891,48 @@ class SceneController {
     this.forEachTaskCube((cube) => cube.setVisibility(true));
   }
 
-  destroy() {
+  // Registers a pending renderer.compileAsync() promise; see PlaneView/ArbitraryView.start().
+  registerPendingCompile(promise: Promise<unknown>): void {
+    this.pendingCompilePromises.add(promise);
+    promise.finally(() => {
+      this.pendingCompilePromises.delete(promise);
+    });
+  }
+
+  // three.js's compileAsync() polls internally via an uncancellable setTimeout loop until all
+  // materials report their shader program is ready. If a tracked material (or the renderer) is
+  // disposed while that poll is still in flight, the next tick crashes ("Cannot read properties
+  // of undefined (reading 'isReady')"), since three.js's internal bookkeeping for that material
+  // is gone. So any GPU-resource disposal that could race a pending compile must wait for it
+  // first (see deferUntilCompileReady()). The timeout below is a safety net in case the GPU
+  // context is already lost and the poll would otherwise never resolve.
+  private async waitForPendingCompiles(timeoutMs = 5000): Promise<void> {
+    if (this.pendingCompilePromises.size === 0) {
+      return;
+    }
+    await Promise.race([
+      Promise.allSettled(Array.from(this.pendingCompilePromises)),
+      new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
+  }
+
+  // Guards GPU-resource disposal against the compileAsync race described in
+  // waitForPendingCompiles(). Needed at the point of disposal rather than sequenced once in
+  // destroy(), since e.g. bounding box cubes get destroyed-and-recreated during normal
+  // operation too (not just teardown).
+  deferUntilCompileReady(dispose: () => void): void {
+    if (this.pendingCompilePromises.size === 0) {
+      dispose();
+      return;
+    }
+    this.waitForPendingCompiles().then(dispose);
+  }
+
+  async destroy(): Promise<void> {
+    // See waitForPendingCompiles(); must happen before any disposal below, including
+    // skeleton removal.
+    await this.waitForPendingCompiles();
+
     // @ts-expect-error
     window.addBucketMesh = undefined;
     // @ts-expect-error
@@ -1020,7 +1069,10 @@ class SceneController {
 }
 
 export type SceneControllerType = SceneController;
-export function initializeSceneController() {
+export async function initializeSceneController(): Promise<void> {
+  // Wait for the previous SceneController's teardown to finish first, since both share the
+  // same WebGLRenderer singleton (see SceneController.destroy()).
+  await waitForPendingSceneControllerTeardown();
   const controller = new SceneController();
   setSceneController(controller);
   controller.initialize();

@@ -1,6 +1,6 @@
 ## Import Volume Annotations
 
-Any volume annotation exported from WEBKNOSSOS or the WEBKNOSSOS Python library in a ZIP archieve can be imported in one of two ways:
+Any volume annotation exported from WEBKNOSSOS or the WEBKNOSSOS Python library in a ZIP archive can be imported in one of two ways:
 
 - **From the dashboard** — drag and drop the ZIP file onto the annotation list to create a new annotation. It will open automatically and appear in your annotation list.
 - **From within an open annotation** — drop the ZIP file anywhere in the WEBKNOSSOS viewer to merge the imported data into the current annotation. The volume layer must already exist in the annotation before importing.

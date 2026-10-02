@@ -1,3 +1,5 @@
+import type { ApiResult, RetryOptions } from "admin/api/api_result";
+import { requestResult } from "admin/api/api_result";
 import dayjs from "dayjs";
 import update from "immutability-helper";
 import { toBigInt } from "libs/bigint_helpers";
@@ -29,8 +31,6 @@ import {
   type APIAnnotationType,
   type APIAnnotationVisibility,
   type APIAvailableTasksReport,
-  type APIBuildInfoDatastore,
-  type APIBuildInfoTracingstore,
   type APIBuildInfoWk,
   type APICompoundType,
   type APIConnectomeFile,
@@ -633,14 +633,21 @@ export function duplicateAnnotation(
 export async function getUnversionedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
-): Promise<APIAnnotation> {
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIAnnotation>> {
   const infoUrl = `/api/annotations/${annotationId}/info?timestamp=${Date.now()}`;
-  const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+  return requestResult(
+    async (adaptedOpts) => {
+      const annotationWithMessages = await Request.receiveJSON(infoUrl, adaptedOpts);
 
-  // Extract the potential messages property before returning the task to avoid
-  // failing e2e tests in annotations.e2e.ts
-  const { messages: _messages, ...annotation } = annotationWithMessages;
-  return annotation;
+      // Extract the potential messages property before returning the task to avoid
+      // failing e2e tests in annotations.e2e.ts
+      const { messages: _messages, ...annotation } = annotationWithMessages;
+      return annotation;
+    },
+    options,
+    retryOptions,
+  );
 }
 
 export async function getAnnotationCompoundInformation(
@@ -1898,16 +1905,6 @@ export function pingHealthEndpoint(url: string, path: "tracings" | "data"): Prom
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfoWk> {
   return Request.receiveJSON("/api/buildinfo", {
-    doNotInvestigate: true,
-    mode: "cors",
-  });
-}
-
-// ### BuildInfo datastore/tracingstore
-export function getDataOrTracingStoreBuildInfo(
-  dataOrTracingStoreUrl: string,
-): Promise<APIBuildInfoDatastore | APIBuildInfoTracingstore> {
-  return Request.receiveJSON(`${dataOrTracingStoreUrl}/api/buildinfo`, {
     doNotInvestigate: true,
     mode: "cors",
   });

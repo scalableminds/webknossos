@@ -40,6 +40,7 @@ import {
   APIJobCommand,
 } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import { isEditingAnnotationLayerSetDisabled } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -64,6 +65,7 @@ import {
   reloadHistogramAction,
   updateLayerSettingAction,
 } from "viewer/model/actions/settings_actions";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { api, Model } from "viewer/singletons";
 import type { DatasetLayerConfiguration, VolumeTracing } from "viewer/store";
@@ -128,6 +130,9 @@ export default function LayerSettingsHeader({
     state.activeUser != null ? isUserAdminOrManager(state.activeUser) : false,
   );
   const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser || false);
+  const { isDisabled: mayNotEditLayerSet, explanation: reasonForCantEditLayerSet } = useWkSelector(
+    (state) => isEditingAnnotationLayerSetDisabled(state),
+  );
   const histogramData = useWkSelector((state) => state.temporaryConfiguration.histogramData);
   const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const task = useWkSelector((state) => state.task);
@@ -393,14 +398,24 @@ export default function LayerSettingsHeader({
   const getMergeWithFallbackLayerItem = (): ItemType => ({
     key: "mergeWithFallbackLayerButton",
     icon: <MergeCellsOutlined />,
-    label: "Merge this volume annotation with its fallback layer",
+    disabled: mayNotEditLayerSet,
+    label: (
+      <FastTooltip title={reasonForCantEditLayerSet}>
+        <span>Merge this volume annotation with its fallback layer</span>
+      </FastTooltip>
+    ),
     onClick: () => onSetLayerToMergeWithFallback(layer),
   });
 
   const getDeleteAnnotationLayerItem = (): ItemType => ({
     key: "deleteAnnotationLayer",
     icon: <DeleteOutlined />,
-    label: "Delete this annotation layer",
+    disabled: mayNotEditLayerSet,
+    label: (
+      <FastTooltip title={reasonForCantEditLayerSet}>
+        <span>Delete this annotation layer</span>
+      </FastTooltip>
+    ),
     onClick: () => {
       const tracingId = "tracingId" in layer ? layer.tracingId : null;
       if (tracingId != null) {
@@ -573,7 +588,10 @@ export default function LayerSettingsHeader({
                 value={readableName}
                 isInvalid={!readableLayerNameValidationResult.isValid}
                 trimValue
-                onChange={(newName) => {
+                onChange={async (newName) => {
+                  // Defer the actual rename until any active rebase/forwarding has
+                  // finished, so a rename submitted mid-rebase isn't lost.
+                  await waitUntilRebaseFinished();
                   dispatch(
                     editAnnotationLayerAction(volumeDescriptor.tracingId, {
                       name: newName,
@@ -607,7 +625,11 @@ export default function LayerSettingsHeader({
         <LayerInfoIconWithTooltip layer={layer} dataset={dataset} />
         {canBeMadeEditable ? (
           <FastTooltip
-            title="Make this segmentation editable by adding a Volume Annotation Layer."
+            title={
+              mayNotEditLayerSet
+                ? reasonForCantEditLayerSet
+                : "Make this segmentation editable by adding a Volume Annotation Layer."
+            }
             placement="left"
           >
             <HoverIconButton
@@ -616,6 +638,7 @@ export default function LayerSettingsHeader({
               size="small"
               icon={<LockOutlined />}
               hoveredIcon={<UnlockOutlined />}
+              disabled={mayNotEditLayerSet}
               onClick={() => {
                 onShowAddVolumeLayerModal(layer.name);
               }}

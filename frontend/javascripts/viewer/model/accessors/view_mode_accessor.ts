@@ -285,7 +285,7 @@ function _calculateGlobalPos(
 ): PositionWithRounding {
   const positions = _calculateMaybeGlobalPos(state, clickPos, planeId, useRound);
 
-  if (!positions || !positions.rounded) {
+  if (!positions?.rounded) {
     console.error("Trying to calculate the global position, but no data viewport is active.");
     return { rounded: [0, 0, 0], floating: [0, 0, 0] };
   }

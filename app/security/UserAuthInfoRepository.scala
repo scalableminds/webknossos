@@ -25,7 +25,7 @@ class UserAuthInfoRepository @Inject() (userService: UserService, multiUserDAO: 
 
   override def update[T <: AuthInfo](loginInfo: LoginInfo, authInfo: T): Future[T] =
     userService
-      .changePasswordInfo(loginInfo, authInfo.asInstanceOf[PasswordInfo])
+      .changePasswordInfo(LoginInfoAdapter.userIdFromLoginInfo(loginInfo), authInfo.asInstanceOf[PasswordInfo])
       .toFutureWithEmptyToFailure
       .map(_.asInstanceOf[T])
 

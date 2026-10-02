@@ -378,8 +378,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   let firstSlice: NdArray<TypedArrayWithoutBigInt>;
   let lastSlice: NdArray<TypedArrayWithoutBigInt>;
 
-  const isBigUint64 = inputNd.data instanceof BigUint64Array;
-  if (isBigUint64) {
+  const isBigInt = inputNd.data instanceof BigUint64Array || inputNd.data instanceof BigInt64Array;
+  if (isBigInt) {
     // For BigUint64 arrays, we want to convert as early as possible to Float32, since
     // the cwise operations don't generalize across all members of TypedArray.
     // Float values are more than enough, because the interpolation process only
@@ -393,27 +393,28 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     firstSlice = ndarray(new Float32Array(firstSliceBigInt.size), firstSliceBigInt.shape);
     lastSlice = ndarray(new Float32Array(lastSliceBigInt.size), lastSliceBigInt.shape);
 
-    const activeCellIdBig = BigInt(activeCellId);
     // Calculate firstSlice = firstSliceBigInt[...] == activeCellId
     isEqualFromBigUint64(
       firstSlice,
       firstSliceBigInt as NdArray<BigUint64Array<ArrayBuffer>>,
-      activeCellIdBig,
+      activeCellId,
     );
     // Calculate lastSlice = lastSliceBigInt[...] == activeCellId
     isEqualFromBigUint64(
       lastSlice,
       lastSliceBigInt as NdArray<BigUint64Array<ArrayBuffer>>,
-      activeCellIdBig,
+      activeCellId,
     );
   } else {
     firstSlice = inputNd.pick(null, null, 0) as NdArray<TypedArrayWithoutBigInt>;
     lastSlice = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArrayWithoutBigInt>;
 
-    // Calculate firstSlice = firstSlice[...] == activeCellId
-    isEqual(firstSlice, activeCellId);
-    // Calculate lastSlice = lastSlice[...] == activeCellId
-    isEqual(lastSlice, activeCellId);
+    const activeCellIdNumber = Number(activeCellId);
+
+    // Calculate firstSlice = firstSlice[...] == activeCellIdNumber
+    isEqual(firstSlice, activeCellIdNumber);
+    // Calculate lastSlice = lastSlice[...] == activeCellIdNumber
+    isEqual(lastSlice, activeCellIdNumber);
   }
 
   if (!isNonZero(firstSlice) || !isNonZero(lastSlice)) {

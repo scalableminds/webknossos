@@ -12,7 +12,7 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
   switch (action.type) {
     case "TOGGLE_SEGMENT_IN_PARTITION": {
       const layerData = state.localSegmentationStateByLayer[layerName];
-      if (!layerData || !layerData.minCutPartitions) {
+      if (!layerData?.minCutPartitions) {
         return state;
       }
       const minCutPartitions = layerData.minCutPartitions;

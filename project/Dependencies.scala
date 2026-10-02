@@ -7,15 +7,15 @@ object Dependencies {
     Seq(
       Resolver.typesafeRepo("releases"),
       "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/", // ucar deps
-      "SciJava Public" at "https://maven.scijava.org/content/repositories/public/", // cisd deps
-      "webknossos-maven" at "https://static.webknossos.org/maven/",  // backup to fetch cisd deps in case SciJava is down
+      // "SciJava Public" at "https://maven.scijava.org/content/repositories/public/", // cisd deps
+      "webknossos-maven" at "https://static.webknossos.org/maven/" // backup to fetch cisd deps in case SciJava is down
     )
 
   private val silhouetteVersion = "10.0.4"
   private val brotliVersion = "1.23.0"
   private val slickVersion = "3.6.1"
-  private val awsVersion = "2.46.10"
-  private val postgresVersion = "42.7.11"
+  private val awsVersion = "2.53.2"
+  private val postgresVersion = "42.7.13"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
@@ -39,7 +39,7 @@ object Dependencies {
     // password hashing with bcrypt. import at.favre.lib.crypto.bcrypt
     "at.favre.lib" % "bcrypt" % "0.10.2",
     // Play http filters. Not imported.
-    filters,
+    filters
   )
 
   val slickCodegenDependencies: Seq[ModuleID] = Seq(
@@ -52,7 +52,7 @@ object Dependencies {
     // SQL Queries postgres specifics. not imported.
     "org.postgresql" % "postgresql" % postgresVersion,
     // Logging. import org.slf4j
-    "org.slf4j" % "slf4j-simple" % "2.0.18",
+    "org.slf4j" % "slf4j-simple" % "2.0.18"
   )
 
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(
@@ -79,13 +79,13 @@ object Dependencies {
     // AWS Transfer Manager for multipart uploads. import software.amazon.awssdk.transfer.s3
     "software.amazon.awssdk" % "s3-transfer-manager" % awsVersion,
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
-    "com.google.cloud" % "google-cloud-storage" % "2.69.0",
+    "com.google.cloud" % "google-cloud-storage" % "2.71.0",
     // Blosc compression. import dev.zarr.bloscjava
     "com.scalableminds" % "blosc-java" % "0.3-1.21.6",
     // Zstd compression. import org.apache.commons.compress
     "org.apache.commons" % "commons-compress" % "1.28.0",
     // Zstd compression native bindings. not imported
-    "com.github.luben" % "zstd-jni" % "1.5.7-11",
+    "com.github.luben" % "zstd-jni" % "1.5.7-15",
     // Brotli compression. import com.aayushatharva.brotli4j
     "com.aayushatharva.brotli4j" % "brotli4j" % brotliVersion,
     // Brotli compression native bindings. not imported
@@ -93,7 +93,7 @@ object Dependencies {
     "com.aayushatharva.brotli4j" % "native-osx-x86_64" % brotliVersion,
     "com.aayushatharva.brotli4j" % "native-osx-aarch64" % brotliVersion,
     // lz4 compression. import net.jpountz.lz4
-    "at.yawk.lz4" % "lz4-java" % "1.11.0"
+    "at.yawk.lz4" % "lz4-java" % "1.11.2"
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(
@@ -103,7 +103,7 @@ object Dependencies {
 
   val webknossosDependencies: Seq[ModuleID] = Seq(
     // Base64, Hashing. import org.apache.commons.codec
-    "commons-codec" % "commons-codec" % "1.22.0",
+    "commons-codec" % "commons-codec" % "1.22.1",
     // End-to-end tests, backend unit tests. import org.scalatestplus.play
     "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % "test",
     // Authenticated requests. import play.silhouette
@@ -115,7 +115,7 @@ object Dependencies {
     // Writing XML. import com.sun.xml.txw2
     "org.glassfish.jaxb" % "txw2" % "4.0.9",
     // Makes txw2 write self-closing tags in xml (which we want). Not imported.
-    "com.fasterxml.woodstox" % "woodstox-core" % "7.2.1",
+    "com.fasterxml.woodstox" % "woodstox-core" % "7.2.2",
     // Json Web Tokens (used for OIDC Auth). import pdi.jwt
     "com.github.jwt-scala" %% "jwt-play-json" % "11.0.4",
     // SQL Queries. import slick
@@ -127,7 +127,7 @@ object Dependencies {
     // SQL Queries postgres specifics. not imported.
     "org.postgresql" % "postgresql" % postgresVersion,
     /// WebAuthn for passkey authentication. import com.webauthn4j
-    "com.webauthn4j" % "webauthn4j-core" % "0.31.7.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+    "com.webauthn4j" % "webauthn4j-core" % "0.31.9.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind")
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(

@@ -5,7 +5,7 @@
 
 * [Oracle JDK 21](https://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/) (full JDK, JRE is not enough)
 * [sbt](https://www.scala-sbt.org/)
-* [PostgreSQL 10+](https://www.postgresql.org/)
+* [PostgreSQL 12+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
 * [Brotli](https://github.com/google/brotli)
 * [Draco](https://github.com/google/draco)
@@ -108,7 +108,7 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 ### PostgreSQL
 
 * Install PostgreSQL from [https://www.postgresql.org/download/](https://www.postgresql.org/download/)
-* PostgreSQL version **10+ is required**
+* PostgreSQL version **12+ is required**
 
 ### Redis
 

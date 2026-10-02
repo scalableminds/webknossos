@@ -133,57 +133,55 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
     await task.toPromise();
   });
 
-  it<WebknossosTestContext>(
-    "sends multiple save requests on saveNow when save queue was filled during saving",
-    { timeout: 10_000 },
-    async (context) => {
-      const task = startSaga(function* () {
-        const savingDoneChannel = yield actionChannel("UNREGISTER_OPERATION");
+  it<WebknossosTestContext>("sends multiple save requests on saveNow when save queue was filled during saving", {
+    timeout: 10_000,
+  }, async (context) => {
+    const task = startSaga(function* () {
+      const savingDoneChannel = yield actionChannel("UNREGISTER_OPERATION");
 
-        // sendSaveRequestWithToken is used for saving and the first request
-        // will fulfill the promise in saveRequestStartedDeferred.
-        // The first request is finished when saveRequestFinishDeferred is resolved.
-        // The second request will go through immediately (we don't need control
-        // over that).
-        const saveRequestStartedDeferred = new Deferred<void, void>();
-        const saveRequestFinishDeferred = new Deferred<void, void>();
-        context.mocks.sendSaveRequestWithToken.mockImplementation(() => {
-          saveRequestStartedDeferred.resolve();
-          return saveRequestFinishDeferred.promise();
-        });
-        const callsBefore = context.mocks.sendSaveRequestWithToken.mock.calls.length;
-
-        // Create a node and start saving
-        yield put(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
-        // Without the following line, the test becomes flaky under high CPU load
-        // because the diffing saga is executed only after the saveNow() action
-        // is dispatched below. Then, the saveNow action will be ignored because
-        // nothing is in the save queue yet.
-        yield call(
-          dispatchEnsureTracingsWereDiffedToSaveQueueAction,
-          Store.dispatch,
-          Store.getState().annotation,
-        );
-
-        // Kick off saving.
-        yield put(saveNowAction());
-
-        // Wait until saving started.
-        yield call(() => saveRequestStartedDeferred.promise());
-
-        // Create another node while saving is active.
-        Store.dispatch(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
-
-        // Let the first save request finish.
-        saveRequestFinishDeferred.resolve();
-
-        // Wait for the save operation to complete.
-        yield* take(savingDoneChannel);
-        // Since the second node was created during the first save request, a second save request
-        // should have been made.
-        expect(context.mocks.sendSaveRequestWithToken.mock.calls.length).toEqual(callsBefore + 2);
+      // sendSaveRequestWithToken is used for saving and the first request
+      // will fulfill the promise in saveRequestStartedDeferred.
+      // The first request is finished when saveRequestFinishDeferred is resolved.
+      // The second request will go through immediately (we don't need control
+      // over that).
+      const saveRequestStartedDeferred = new Deferred<void, void>();
+      const saveRequestFinishDeferred = new Deferred<void, void>();
+      context.mocks.sendSaveRequestWithToken.mockImplementation(() => {
+        saveRequestStartedDeferred.resolve();
+        return saveRequestFinishDeferred.promise();
       });
-      await task.toPromise();
-    },
-  );
+      const callsBefore = context.mocks.sendSaveRequestWithToken.mock.calls.length;
+
+      // Create a node and start saving
+      yield put(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
+      // Without the following line, the test becomes flaky under high CPU load
+      // because the diffing saga is executed only after the saveNow() action
+      // is dispatched below. Then, the saveNow action will be ignored because
+      // nothing is in the save queue yet.
+      yield call(
+        dispatchEnsureTracingsWereDiffedToSaveQueueAction,
+        Store.dispatch,
+        Store.getState().annotation,
+      );
+
+      // Kick off saving.
+      yield put(saveNowAction());
+
+      // Wait until saving started.
+      yield call(() => saveRequestStartedDeferred.promise());
+
+      // Create another node while saving is active.
+      Store.dispatch(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
+
+      // Let the first save request finish.
+      saveRequestFinishDeferred.resolve();
+
+      // Wait for the save operation to complete.
+      yield* take(savingDoneChannel);
+      // Since the second node was created during the first save request, a second save request
+      // should have been made.
+      expect(context.mocks.sendSaveRequestWithToken.mock.calls.length).toEqual(callsBefore + 2);
+    });
+    await task.toPromise();
+  });
 });

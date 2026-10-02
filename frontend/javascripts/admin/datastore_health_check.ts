@@ -1,6 +1,4 @@
 import {
-  getBuildInfo,
-  getDataOrTracingStoreBuildInfo,
   getDataStoresCached,
   getTracingStoreCached,
   isInMaintenance as isInMaintenanceAPICall,
@@ -12,7 +10,6 @@ import memoize from "lodash-es/memoize";
 import throttle from "lodash-es/throttle";
 import uniq from "lodash-es/uniq";
 import messages from "messages";
-import type { APIBuildInfoDatastore, APIBuildInfoWk } from "types/api_types";
 
 // Create a throttled function which depends on its arguments.
 // That way, each datastore is checked for health in a throttled and isolated manner
@@ -53,58 +50,16 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
 
     if (usedStore != null) {
       const { url, path } = usedStore;
-      pingHealthEndpoint(url, path).then(
-        () => {
-          if (usedStore.path === "data") {
-            // Only check a version mismatch for the data store, because
-            // the tracingstore doesn't serve a tracingstoreApiVersion field.
-            checkVersionMismatchInDataStore(url);
-          }
-        },
-        () =>
-          Toast.warning(
-            messages["datastore.health"]({
-              url,
-            }),
-          ),
+      pingHealthEndpoint(url, path).catch(() =>
+        Toast.warning(
+          messages["datastore.health"]({
+            url,
+          }),
+        ),
       );
     }
   }
 }, 5000);
-
-async function checkVersionMismatchInDataStore(datastoreUrl: string) {
-  const [buildinfoWebknossos, buildinfoDatastore] = (await Promise.all([
-    getBuildInfo(),
-    getDataOrTracingStoreBuildInfo(datastoreUrl),
-  ])) as [APIBuildInfoWk, APIBuildInfoDatastore];
-  const expectedDatastoreApiVersion = buildinfoWebknossos.webknossos.datastoreApiVersion;
-  const buildInfoWebknossosDatastore = buildinfoDatastore.webknossosDatastore;
-  const suppliedDatastoreApiVersion = buildInfoWebknossosDatastore.datastoreApiVersion;
-
-  if (
-    Number(expectedDatastoreApiVersion.split(".")[0]) <
-    Number(suppliedDatastoreApiVersion.split(".")[0])
-  ) {
-    Toast.warning(
-      messages["datastore.version.too_new"]({
-        expectedDatastoreApiVersion,
-        suppliedDatastoreApiVersion,
-        datastoreUrl,
-      }),
-    );
-  } else if (
-    Number(expectedDatastoreApiVersion.split(".")[0]) >
-    Number(suppliedDatastoreApiVersion.split(".")[0])
-  ) {
-    Toast.warning(
-      messages["datastore.version.too_old"]({
-        expectedDatastoreApiVersion,
-        suppliedDatastoreApiVersion,
-        datastoreUrl,
-      }),
-    );
-  }
-}
 
 const extractUrls = (str: string): Array<string> => {
   const urlMatcher =

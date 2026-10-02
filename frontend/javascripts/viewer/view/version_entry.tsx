@@ -15,7 +15,7 @@ import Icon, {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import HideSkeletonEdgesIcon from "@images/icons/icon-hide-skeleton-edges.svg?react";
-import { Avatar, Button, List } from "antd";
+import { App, Avatar, Button, List } from "antd";
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
 import { useWkSelector } from "libs/react_hooks";
@@ -23,6 +23,7 @@ import groupBy from "lodash-es/groupBy";
 import max from "lodash-es/max";
 import type React from "react";
 import { Fragment } from "react";
+import { isConcurrentCollaborationMode } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName, getContributorById } from "viewer/model/accessors/user_accessor";
 import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 import type {
@@ -678,18 +679,31 @@ export default function VersionEntry({
   const activeUser = useWkSelector((state) => state.activeUser);
   const owner = useWkSelector((state) => state.annotation.owner);
   const annotation = useWkSelector((state) => state.annotation);
+  const isInConcurrentCollabMode = useWkSelector((state) => isConcurrentCollaborationMode(state));
+  const { modal } = App.useApp();
 
   const liClassName = classNames("version-entry", {
     "active-version-entry": isActive,
     "version-entry-indented": isIndented,
   });
+  async function handleRestoreClick() {
+    // In a live collab scenario let the user confirm the restoring of an older version.
+    if (initialAllowUpdate && isInConcurrentCollabMode) {
+      const confirmed = await modal.confirm({
+        title: "Restore this version?",
+        content:
+          "This annotation is being edited collaboratively. Restoring this version will force a hard reload " +
+          "of WEBKNOSSOS for all users currently editing it -- including you -- and any unsaved changes will be lost. " +
+          "Do you want to continue?",
+        okText: "Yes, restore this version",
+        okType: "danger",
+      });
+      if (!confirmed) return;
+    }
+    onRestoreVersion(version);
+  }
   const restoreButton = (
-    <Button
-      size="small"
-      key="restore-button"
-      type="primary"
-      onClick={() => onRestoreVersion(version)}
-    >
+    <Button size="small" key="restore-button" type="primary" onClick={handleRestoreClick}>
       {initialAllowUpdate ? "Restore" : "Download"}
     </Button>
   );

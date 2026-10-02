@@ -192,13 +192,8 @@ class ZarrConnectomeFileService @Inject() (dataVaultService: DataVaultService, c
       _ =>
         for {
           groupVaultPath <- dataVaultService.vaultPathFor(connectomeFileKey.attachment)
-          zarrArray <- Zarr3Array.open(
+          zarrArray <- Zarr3Array.openForAttachment(
             groupVaultPath / zarrArrayName,
-            DataSourceId("dummy", "unused"),
-            "layer",
-            None,
-            None,
-            None,
             chunkCacheService.sharedChunkContentsCache
           )
         } yield zarrArray

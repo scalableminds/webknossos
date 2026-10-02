@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.datareaders.{DatasetArray, MultiArrayUtils}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.services.DSChunkCacheService
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
@@ -67,13 +67,8 @@ class ZarrAgglomerateService @Inject() (
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(agglomerateFileKey.attachment)
       segmentToAgglomeratePath = groupVaultPath / zarrArrayName
-      zarrArray <- Zarr3Array.open(
+      zarrArray <- Zarr3Array.openForAttachment(
         segmentToAgglomeratePath,
-        DataSourceId("dummy", "unused"),
-        "layer",
-        None,
-        None,
-        None,
         chunkCacheService.sharedChunkContentsCache
       )
     } yield zarrArray

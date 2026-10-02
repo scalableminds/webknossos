@@ -199,15 +199,26 @@ object PathUtils extends LazyLogging {
       Path.of("")
     } else path.getParent
 
-  def deleteDirectoryRecursively(path: Path): Box[Unit] =
-    try {
-      if (Files.exists(path)) {
-        FileUtils.deleteDirectory(path.toFile) // Using Apache Commons IO
+  def deleteDirectoryRecursively(path: Path, enforceContainedIn: Option[Path] = None): Box[Unit] =
+    try
+      enforceContainedIn match {
+        case Some(ancestor) if !isContainedIn(path, ancestor) =>
+          Failure(s"Refusing to delete $path: it is not contained within expected parent directory $ancestor")
+        case _ =>
+          if (Files.exists(path)) {
+            FileUtils.deleteDirectory(path.toFile) // Using Apache Commons IO
+          }
+          Full(())
       }
-      Full(())
-    } catch {
+    catch {
       case ex: Exception => Failure(s"Failed to delete directory $path: ${ex.getMessage}")
     }
+
+  private def isContainedIn(path: Path, parent: Path): Boolean = {
+    val normalizedParent = parent.normalize()
+    val normalizedPath = path.normalize()
+    normalizedPath.startsWith(normalizedParent) && normalizedPath != normalizedParent
+  }
 
   // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory
   def moveDirectoryViaTemp(source: Path, dst: Path): Box[Unit] = tryo {

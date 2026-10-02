@@ -11,10 +11,6 @@ import Constants from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo, is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import type { Action } from "viewer/model/actions/actions";
-import type {
-  EditAnnotationLayerAction,
-  SetAnnotationDescriptionAction,
-} from "viewer/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
@@ -32,18 +28,8 @@ import {
   mayEditAnnotationViewConfig,
 } from "../accessors/annotation_accessor";
 import { isZoomThresholdExceededForAgglomerateMapping } from "../accessors/volumetracing_accessor";
-import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { annotationMutexSaga } from "./saving/save_mutex_saga";
-import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./volume/update_actions";
-
-function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
-  const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
-  if (!mayEdit) {
-    return;
-  }
-  yield* put(pushSaveQueueTransaction([updateMetadataOfAnnotation(action.description)]));
-}
 
 function* pushAnnotationUpdateAsync(action: Action) {
   const annotation = yield* select((state) => state.annotation);
@@ -98,13 +84,6 @@ function* pushAnnotationUpdateAsync(action: Action) {
 function* pushAnnotationUpdateAsyncDelayed(action: Action) {
   yield* delay(Constants.SETTING_SAVE_DEBOUNCE_MS);
   yield* call(pushAnnotationUpdateAsync, action);
-}
-
-function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Saga<void> {
-  const { tracingId, layerProperties } = action;
-  yield* put(
-    pushSaveQueueTransaction([updateAnnotationLayerName(tracingId, layerProperties.name)]),
-  );
 }
 
 function* checkVersionRestoreParam(): Saga<void> {
@@ -213,13 +192,11 @@ function* watchAnnotationAsync(): Saga<void> {
     ["SET_ANNOTATION_NAME", "SET_ANNOTATION_VISIBILITY"],
     pushAnnotationUpdateAsync,
   );
-  yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationDescriptionUpdateAction);
   // Debounce pushing view config changes.
   yield* takeLatest(
     ["UPDATE_DATASET_SETTING", "UPDATE_LAYER_SETTING"],
     pushAnnotationUpdateAsyncDelayed,
   );
-  yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }
 
 export default [

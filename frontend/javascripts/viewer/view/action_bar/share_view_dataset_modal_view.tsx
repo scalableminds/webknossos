@@ -13,13 +13,19 @@ type Props = {
   onOk: () => any;
 };
 
-function _ShareViewDatasetModalView(props: Props) {
+function ShareViewDatasetModalViewInner(props: Props) {
   const { isOpen, onOk } = props;
   const dataset = useWkSelector((state) => state.dataset);
   const sharingToken = useDatasetSharingToken(dataset);
   const longUrl = getUrl(sharingToken, !dataset.isPublic);
 
-  const { baseUrl: zarrBaseUrl, copyLayerUrlMenu } = useZarrLinkMenu(null);
+  const {
+    baseUrl: zarrBaseUrl,
+    copyLayerUrlMenu,
+    isLoading: isZarrLinkLoading,
+    isUnavailable: isZarrLinkUnavailable,
+  } = useZarrLinkMenu(null);
+  const isZarrLinkDisabled = isZarrLinkLoading || isZarrLinkUnavailable;
 
   return (
     <Modal
@@ -72,15 +78,22 @@ function _ShareViewDatasetModalView(props: Props) {
                 style={{
                   width: "calc(78% + 32px)",
                 }}
-                value={zarrBaseUrl}
+                value={
+                  isZarrLinkLoading
+                    ? "Loading…"
+                    : isZarrLinkUnavailable
+                      ? "Unavailable"
+                      : zarrBaseUrl
+                }
                 readOnly
               />
-              <Dropdown menu={copyLayerUrlMenu}>
+              <Dropdown menu={copyLayerUrlMenu} disabled={isZarrLinkDisabled}>
                 <Button
                   style={{
                     width: "15%",
                   }}
                   icon={<CopyOutlined />}
+                  disabled={isZarrLinkDisabled}
                 >
                   Copy
                 </Button>
@@ -101,5 +114,5 @@ function _ShareViewDatasetModalView(props: Props) {
   );
 }
 
-const ShareViewDatasetModalView = makeComponentLazy(_ShareViewDatasetModalView);
+const ShareViewDatasetModalView = makeComponentLazy(ShareViewDatasetModalViewInner);
 export default ShareViewDatasetModalView;

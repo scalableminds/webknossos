@@ -20,6 +20,7 @@ import { APIAnnotationTypeEnum, type APIDataLayer } from "types/api_types";
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
 import type { ValueOf } from "types/type_utils";
 import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
+import { isEditingAnnotationLayerSetDisabled } from "viewer/model/accessors/annotation_accessor";
 import {
   getDefaultValueRangeOfLayer,
   getElementClass,
@@ -399,24 +400,33 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <>
             <Divider />
             <Row justify="center" align="middle">
-              <Button onClick={this.showAddVolumeLayerModal} icon={<PlusOutlined />}>
-                Add Volume Annotation Layer
-              </Button>
+              <FastTooltip title={this.props.changeLayerSetDisabledInfo.explanation}>
+                <Button
+                  onClick={this.showAddVolumeLayerModal}
+                  icon={<PlusOutlined />}
+                  disabled={this.props.changeLayerSetDisabledInfo.isDisabled}
+                >
+                  Add Volume Annotation Layer
+                </Button>
+              </FastTooltip>
             </Row>
           </>
         ) : null}
 
         {this.props.isUpdatingCurrentlyAllowed && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
-            <Button
-              onClick={this.addSkeletonAnnotationLayer}
-              style={{
-                marginTop: 10,
-              }}
-              icon={<PlusOutlined />}
-            >
-              Add Skeleton Annotation Layer
-            </Button>
+            <FastTooltip title={this.props.changeLayerSetDisabledInfo.explanation}>
+              <Button
+                onClick={this.addSkeletonAnnotationLayer}
+                style={{
+                  marginTop: 10,
+                }}
+                icon={<PlusOutlined />}
+                disabled={this.props.changeLayerSetDisabledInfo.isDisabled}
+              >
+                Add Skeleton Annotation Layer
+              </Button>
+            </FastTooltip>
           </Row>
         ) : null}
 
@@ -458,6 +468,7 @@ const mapStateToProps = (state: WebknossosState) => ({
   // the whole annotation would re-render the entire settings panel on every
   // skeleton/volume mutation (e.g., each placed node or brush stroke).
   isUpdatingCurrentlyAllowed: state.annotation.isUpdatingCurrentlyAllowed,
+  changeLayerSetDisabledInfo: isEditingAnnotationLayerSetDisabled(state),
   annotationType: state.annotation.annotationType,
   hasSkeletonLayer: state.annotation.skeleton != null,
   controlMode: state.temporaryConfiguration.controlMode,

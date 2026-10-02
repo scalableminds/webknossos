@@ -34,6 +34,19 @@ object HttpBasicAuthCredential {
   implicit val jsonFormat: OFormat[HttpBasicAuthCredential] = Json.format[HttpBasicAuthCredential]
 }
 
+case class XAuthTokenCredential(
+    name: String,
+    tokenValue: String,
+    user: Option[String],
+    organization: Option[String]
+) extends DataVaultCredential {
+  override def userId: Option[String] = user
+}
+
+object XAuthTokenCredential {
+  implicit val jsonFormat: OFormat[XAuthTokenCredential] = Json.format[XAuthTokenCredential]
+}
+
 case class S3AccessKeyCredential(
     name: String,
     accessKeyId: String,

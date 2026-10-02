@@ -5,6 +5,10 @@ import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { isFileExtensionEqualTo, promiseAllWithErrors, stripFileExtension } from "libs/utils";
 import last from "lodash-es/last";
+import {
+  getReasonForCantChangeAnnotationLayerSet,
+  mayEditAnnotationLayerSet,
+} from "viewer/model/accessors/annotation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
 import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
@@ -172,6 +176,13 @@ export async function importTracingFiles(files: Array<File>, options: NmlImportO
             await Model.ensureSavedState();
             const storeState = Store.getState();
             const { annotation, dataset } = storeState;
+
+            if (!mayEditAnnotationLayerSet(storeState)) {
+              throw new VolumeImportError(
+                getReasonForCantChangeAnnotationLayerSet(storeState) ??
+                  "Importing volume data is currently not allowed.",
+              );
+            }
 
             if (annotation.volumes.length === 0) {
               throw new VolumeImportError(

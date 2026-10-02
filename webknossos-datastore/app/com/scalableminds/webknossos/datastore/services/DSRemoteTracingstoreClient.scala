@@ -26,7 +26,7 @@ class DSRemoteTracingstoreClient @Inject() (
 ) extends LazyLogging {
 
   private def getZarrVersionDependantSubPath =
-    (zarrVersion: Int) => if (zarrVersion == 2) "zarr" else "zarr3_experimental"
+    (zarrVersion: Int) => if (zarrVersion == 2) "zarr" else "zarr3"
 
   def getZArray(tracingId: String, mag: String, tracingStoreUri: String)(using tc: TokenContext): Fox[ZarrHeader] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/.zarray").withTokenFromContext
@@ -35,7 +35,7 @@ class DSRemoteTracingstoreClient @Inject() (
   def getZarrJson(tracingId: String, mag: String, tracingStoreUri: String)(using
       tc: TokenContext
   ): Fox[Zarr3ArrayHeader] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr3_experimental/$tracingId/$mag/zarr.json").withTokenFromContext
+    rpc(s"$tracingStoreUri/tracings/volume/zarr3/$tracingId/$mag/zarr.json").withTokenFromContext
       .getWithJsonResponse[Zarr3ArrayHeader]
 
   def getVolumeLayerAsZarrLayer(
@@ -57,7 +57,7 @@ class DSRemoteTracingstoreClient @Inject() (
   def getZarrJsonGroupHeaderWithNgff(tracingId: String, tracingStoreUri: String)(using
       tc: TokenContext
   ): Fox[NgffZarr3GroupHeader] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr3_experimental/$tracingId/zarr.json").withTokenFromContext
+    rpc(s"$tracingStoreUri/tracings/volume/zarr3/$tracingId/zarr.json").withTokenFromContext
       .getWithJsonResponse[NgffZarr3GroupHeader]
 
   def getRawZarrCube(tracingId: String, mag: String, cxyz: String, tracingStoreUri: String)(using

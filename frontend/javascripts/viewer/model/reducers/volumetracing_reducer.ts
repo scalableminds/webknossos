@@ -465,6 +465,14 @@ function VolumeTracingReducer(
       });
     }
 
+    case "SET_HAS_SEGMENT_INDEX": {
+      if (volumeTracing.hasSegmentIndex) return state;
+
+      return updateVolumeTracing(state, volumeTracing.tracingId, {
+        hasSegmentIndex: true,
+      });
+    }
+
     case "SET_ID_RESERVATIONS": {
       // BoundingBox reservations are handled in annotation_reducer.ts, as they are not
       // scoped to a single segmentation layer.

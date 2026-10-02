@@ -188,8 +188,8 @@ object Zarr3ArrayHeader extends JsonImplicits {
         }
         attributes = (json \ "attributes").validate[JsObject].asOpt
         codecsJsValue <- (json \ "codecs").validate[JsValue]
-        codecs = readCodecs(codecsJsValue)
-        dimension_names <- (json \ "dimension_names").validate[Array[String]].orElse(JsSuccess(Array[String]()))
+        codecs <- readCodecs(codecsJsValue)
+        dimension_names = (json \ "dimension_names").validate[Array[String]].asOpt
       } yield Zarr3ArrayHeader(
         zarr_format,
         node_type,
@@ -201,52 +201,51 @@ object Zarr3ArrayHeader extends JsonImplicits {
         attributes,
         codecs,
         storage_transformers = None, // No storage transformers are currently defined
-        Some(dimension_names)
+        dimension_names
       )
 
-    private def readShardingCodecConfiguration(config: JsValue): JsResult[ShardingCodecConfiguration] =
+    private def readShardingCodecConfiguration(config: JsLookupResult): JsResult[ShardingCodecConfiguration] =
       for {
-        chunk_shape <- config("chunk_shape").validate[Array[Int]]
-        codecs = readCodecs(config("codecs"))
-        index_codecs = readCodecs(config("index_codecs"))
+        chunk_shape <- (config \ "chunk_shape").validate[Array[Int]]
+        codecs <- readCodecs((config \ "codecs").toOption.getOrElse(JsArray()))
+        index_codecs <- readCodecs((config \ "index_codecs").toOption.getOrElse(JsArray()))
         index_location = (config \ "index_location")
           .asOpt[IndexLocationSetting.IndexLocationSetting]
           .getOrElse(IndexLocationSetting.end)
       } yield ShardingCodecConfiguration(chunk_shape, codecs, index_codecs, index_location)
 
-    private def readCodecs(value: JsValue): Seq[CodecConfiguration] = {
+    // Note that a codec we cannot read must fail the whole header rather than be skipped, since decoding
+    // chunks without it would silently yield wrong data.
+    private def readCodecs(value: JsValue): JsResult[Seq[CodecConfiguration]] = {
       val rawCodecSpecs: Seq[JsValue] = value match {
         case JsArray(arr) => arr.toSeq
         case _            => Seq()
       }
-      val configurationKey = "configuration"
-      val codecSpecs = rawCodecSpecs.map(c =>
-        for {
-          spec: CodecConfiguration <- c("name") match {
-            // BytesCodec may have no "configuration" key
-            case JsString(BytesCodecConfiguration.name) =>
-              (c \ configurationKey).toOption
-                .map(_.validate[BytesCodecConfiguration])
-                .getOrElse(JsSuccess(BytesCodecConfiguration(None)))
-            case JsString(BytesCodecConfiguration.legacyName) =>
-              (c \ configurationKey).toOption
-                .map(_.validate[BytesCodecConfiguration])
-                .getOrElse(JsSuccess(BytesCodecConfiguration(None)))
-            case JsString(TransposeCodecConfiguration.name) => c(configurationKey).validate[TransposeCodecConfiguration]
-            case JsString(GzipCodecConfiguration.name)      => c(configurationKey).validate[GzipCodecConfiguration]
-            case JsString(BloscCodecConfiguration.name)     => c(configurationKey).validate[BloscCodecConfiguration]
-            case JsString(ZstdCodecConfiguration.name)      => c(configurationKey).validate[ZstdCodecConfiguration]
-            case JsString(Crc32CCodecConfiguration.name)    =>
-              JsSuccess(Crc32CCodecConfiguration) // Crc32 codec has no configuration
-            case JsString(ShardingCodecConfiguration.name) => readShardingCodecConfiguration(c(configurationKey))
-            case JsString(name) => throw new UnsupportedOperationException(s"Codec $name is not supported.")
-            case _              => throw new IllegalArgumentException()
-          }
-        } yield spec
-      )
-      codecSpecs.flatMap(possibleCodecSpec =>
-        possibleCodecSpec.map((s: CodecConfiguration) => Seq(s)).getOrElse(Seq[CodecConfiguration]())
-      )
+      rawCodecSpecs.foldLeft[JsResult[Seq[CodecConfiguration]]](JsSuccess(Seq.empty[CodecConfiguration])) {
+        (readSoFar, codecSpec) =>
+          for {
+            codecs <- readSoFar
+            codec <- readCodec(codecSpec)
+          } yield codecs :+ codec
+      }
+    }
+
+    private def readCodec(codecSpec: JsValue): JsResult[CodecConfiguration] = {
+      val configuration = codecSpec \ "configuration"
+      (codecSpec \ "name").validate[String].flatMap {
+        // BytesCodec may have no "configuration" key
+        case BytesCodecConfiguration.name | BytesCodecConfiguration.legacyName =>
+          configuration.toOption
+            .map(_.validate[BytesCodecConfiguration])
+            .getOrElse(JsSuccess(BytesCodecConfiguration(None)))
+        case TransposeCodecConfiguration.name => configuration.validate[TransposeCodecConfiguration]
+        case GzipCodecConfiguration.name      => configuration.validate[GzipCodecConfiguration]
+        case BloscCodecConfiguration.name     => configuration.validate[BloscCodecConfiguration]
+        case ZstdCodecConfiguration.name      => configuration.validate[ZstdCodecConfiguration]
+        case Crc32CCodecConfiguration.name    => JsSuccess(Crc32CCodecConfiguration) // has no configuration
+        case ShardingCodecConfiguration.name  => readShardingCodecConfiguration(configuration)
+        case name                             => JsError(s"Codec $name is not supported.")
+      }
     }
 
     override def writes(zarrArrayHeader: Zarr3ArrayHeader): JsValue = {

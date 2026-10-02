@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateTimingStats
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   KeyValueStoreConversions,
@@ -50,7 +51,8 @@ class VolumeSegmentIndexBuffer(
     temporaryTracingService: TemporaryTracingService,
     tc: TokenContext,
     isReadOnly: Boolean = false,
-    toTemporaryStore: Boolean = false
+    toTemporaryStore: Boolean = false,
+    stats: UpdateTimingStats = new UpdateTimingStats
 ) extends KeyValueStoreConversions
     with SegmentIndexKeyHelper
     with ProtoGeometryConversions
@@ -109,20 +111,33 @@ class VolumeSegmentIndexBuffer(
   )(implicit ec: ExecutionContext): Fox[List[(Long, Set[Vec3IntProto])]] =
     if (segmentIds.isEmpty) Fox.successful(List.empty)
     else {
+      stats.count("segmentIndex.lookup.requested", segmentIds.length)
       val (fromBufferHits, fromBufferMisses) = getMultipleFromBufferNoteMisses(segmentIds, mag, additionalCoordinates)
+      stats.count("segmentIndex.lookup.bufferHits", fromBufferHits.size)
       for {
         (fromFossilOrTempHits, fromFossilOrTempMisses) <-
           if (toTemporaryStore)
             Fox.successful(getMultipleFromTemporaryStoreNoteMisses(fromBufferMisses, mag, additionalCoordinates))
-          else getMultipleFromFossilNoteMisses(fromBufferMisses, mag, additionalCoordinates)
-        fromDatastoreHits <- getMultipleFromDatastore(
-          fromFossilOrTempMisses,
-          mag,
-          additionalCoordinates,
-          mappingName,
-          editableMappingTracingId,
-          annotationVersion
+          else {
+            if (fromBufferMisses.nonEmpty) stats.count("segmentIndex.fossilLookup.calls")
+            stats.time("segmentIndex.fossilLookup")(
+              getMultipleFromFossilNoteMisses(fromBufferMisses, mag, additionalCoordinates)
+            )
+          }
+        _ = stats.count("segmentIndex.lookup.fossilOrTempHits", fromFossilOrTempHits.size)
+        _ = if (fromFossilOrTempMisses.nonEmpty) stats.count("segmentIndex.datastoreLookup.calls")
+        fromDatastoreHits <- stats.time("segmentIndex.datastoreLookup")(
+          getMultipleFromDatastore(
+            fromFossilOrTempMisses,
+            mag,
+            additionalCoordinates,
+            mappingName,
+            editableMappingTracingId,
+            annotationVersion
+          )
         )
+        _ = stats.count("segmentIndex.lookup.datastoreHits", fromDatastoreHits.size)
+        _ = stats.count("segmentIndex.lookup.misses", fromFossilOrTempMisses.length - fromDatastoreHits.length)
         _ = putMultiple(fromFossilOrTempHits.toSeq, mag, additionalCoordinates, markAsChanged = false)
         _ = putMultiple(fromDatastoreHits, mag, additionalCoordinates, markAsChanged = false)
         allHits = fromBufferHits ++ fromFossilOrTempHits ++ fromDatastoreHits

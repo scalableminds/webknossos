@@ -469,16 +469,14 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                     return Promise.resolve();
                   }
 
-                  const annotationResponse = await tryToAwaitPromise(
-                    getUnversionedAnnotationInformation(value, {
-                      showErrorToast: false,
-                    }),
-                  );
+                  const annotationResponse = await getUnversionedAnnotationInformation(value, {
+                    showErrorToast: false,
+                  });
 
-                  if (annotationResponse?.dataSetName != null) {
+                  if (annotationResponse.ok) {
                     form.setFieldsValue({
-                      datasetName: annotationResponse.dataSetName,
-                      datasetId: annotationResponse.datasetId,
+                      datasetName: annotationResponse.value.dataSetName,
+                      datasetId: annotationResponse.value.datasetId,
                     });
                     return Promise.resolve();
                   }

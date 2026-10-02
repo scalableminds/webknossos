@@ -1,11 +1,11 @@
 package security
 
-import play.silhouette.api.LoginInfo
 import play.silhouette.api.repositories.AuthenticatorRepository
 import play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import TokenType.TokenType
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,9 +40,9 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator
 
-  def findOneByLoginInfo(loginInfo: LoginInfo, tokenType: TokenType): Future[Option[BearerTokenAuthenticator]] =
+  def findOneForUserAndType(userId: ObjectId, tokenType: TokenType): Future[Option[BearerTokenAuthenticator]] =
     (for {
-      tokenSQL <- tokenDAO.findOneByLoginInfo(loginInfo.providerID, loginInfo.providerKey, tokenType)
+      tokenSQL <- tokenDAO.findOneByUserIdAndType(userId, tokenType)
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator).toFutureOption
 
@@ -52,13 +52,15 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       deleteOld: Boolean = true
   ): Future[BearerTokenAuthenticator] =
     for {
-      _ <- if (deleteOld) removeByLoginInfoIfPresent(authenticator.loginInfo, tokenType) else Future.successful(())
+      _ <-
+        if (deleteOld) removeByUserIdIfPresent(LoginInfoAdapter.userIdFromLoginInfo(authenticator.loginInfo), tokenType)
+        else Future.successful(())
       _ <- insert(authenticator, tokenType).futureBox
     } yield authenticator
 
-  private def removeByLoginInfoIfPresent(loginInfo: LoginInfo, tokenType: TokenType): Future[Unit] =
+  private def removeByUserIdIfPresent(userId: ObjectId, tokenType: TokenType): Future[Unit] =
     for {
-      oldOpt <- findOneByLoginInfo(loginInfo, tokenType)
+      oldOpt <- findOneForUserAndType(userId, tokenType)
       _ <- oldOpt match {
         case Some(old) => remove(old.id)
         case None      => Future.successful(())

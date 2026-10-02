@@ -20,7 +20,7 @@ import {
   theme,
 } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
-import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { useApi, useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { animationFrame, sleep } from "libs/utils";
@@ -58,7 +58,7 @@ const sectionDivider = (title: string) => (
   </Divider>
 );
 
-function _MergeModalView({ isOpen, onOk }: Props) {
+function MergeModalViewInner({ isOpen, onOk }: Props) {
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
   const dispatch = useDispatch();
@@ -95,7 +95,7 @@ function _MergeModalView({ isOpen, onOk }: Props) {
     data: fetchedAnnotationData,
     isFetching: isFetchingAnnotation,
     status: annotationQueryStatus,
-  } = useQueryWithErrorHandling({
+  } = useApi({
     queryKey: ["unversionedAnnotation", extractedAnnotationId],
     queryFn: () =>
       getUnversionedAnnotationInformation(extractedAnnotationId!, {
@@ -153,7 +153,7 @@ function _MergeModalView({ isOpen, onOk }: Props) {
     const tracing = await getTracingForAnnotationType(annotation, skeletonDescriptorMaybe);
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type 'ServerTra... Remove this comment to see the full error message
-    if (!tracing || !tracing.trees) {
+    if (!tracing?.trees) {
       Toast.error(messages["merge.volume_unsupported"]);
       return;
     }
@@ -346,6 +346,6 @@ function _MergeModalView({ isOpen, onOk }: Props) {
   );
 }
 
-const MergeModalView = makeComponentLazy(_MergeModalView);
+const MergeModalView = makeComponentLazy(MergeModalViewInner);
 
 export default MergeModalView;

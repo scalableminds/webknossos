@@ -1,7 +1,7 @@
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "3.8.3"
+ThisBuild / scalaVersion := "3.8.4"
 ThisBuild / semanticdbEnabled := false
 
 // fix jni for scala version 3

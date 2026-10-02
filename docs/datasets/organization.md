@@ -24,3 +24,5 @@ Adding metadata to a dataset as key-value pairs to keep it organized and managea
 ///
 
 To move multiple datasets to a folder at once, you can make use of multi-selection. As in typical file explorers, ++ctrl++ + left click adds individual datasets to the current selection. ++shift++ + left click selects a range of datasets.
+
+Datasets that live in the same folder often should look the same when they are opened. Instead of configuring each of them by hand, you can set up one dataset and then copy its settings to the rest of the folder. See [Applying a View Configuration to a Whole Folder](./settings.md#applying-a-view-configuration-to-a-whole-folder).

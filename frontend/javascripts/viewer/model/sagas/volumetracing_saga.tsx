@@ -267,9 +267,12 @@ export function* editVolumeLayerAsync(): Saga<never> {
         addToContourListAction: currentAction.type === "ADD_TO_CONTOUR_LIST" ? currentAction : null,
         finishEditingAction: currentAction.type === "FINISH_EDITING" ? currentAction : null,
       };
-      if (finishEditingAction) break;
+      if (finishEditingAction) {
+        channel.close();
+        break;
+      }
 
-      if (!addToContourListAction || addToContourListAction.type !== "ADD_TO_CONTOUR_LIST") {
+      if (addToContourListAction?.type !== "ADD_TO_CONTOUR_LIST") {
         throw new Error("Unexpected action. Satisfy typescript.");
       }
 

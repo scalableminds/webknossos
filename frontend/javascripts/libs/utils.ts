@@ -1279,7 +1279,7 @@ export function getAdaptToTypeFunction(mapping: Mapping | null | undefined) {
 export function getAdaptToTypeFunctionFromList<T extends number | bigint>(
   list: Array<T>,
 ): (el: bigint) => NumberLike {
-  return list[0] == null || Boolean(typeof list[0] === "number")
+  return list[0] == null || typeof list[0] === "number"
     ? (el: bigint) => Number(el)
     : (el: bigint) => el;
 }

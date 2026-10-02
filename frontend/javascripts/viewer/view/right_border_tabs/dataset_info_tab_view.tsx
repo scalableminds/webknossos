@@ -59,6 +59,7 @@ import {
   setAnnotationNameAction,
 } from "viewer/model/actions/annotation_actions";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import Store, { type Task, type WebknossosState } from "viewer/store";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
@@ -786,7 +787,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setAnnotationNameAction(annotationName));
   },
 
-  setAnnotationDescription(comment: string) {
+  async setAnnotationDescription(comment: string) {
+    // Defer the actual update until any active rebase/forwarding has finished, so an edit
+    // submitted mid-rebase isn't lost.
+    await waitUntilRebaseFinished();
     dispatch(setAnnotationDescriptionAction(comment));
   },
 });

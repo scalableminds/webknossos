@@ -400,7 +400,7 @@ class DataSourceService @Inject() (
     val localPaths =
       paths.filter(_.isLocal).flatMap(_.toLocalPath).filter(p => localBaseDirs.exists(p.toAbsolutePath.startsWith(_)))
     for {
-      _ <- Box.combined(localPaths)(PathUtils.deleteDirectoryRecursively)
+      _ <- Box.combined(localPaths)(PathUtils.deleteDirectoryRecursively(_))
     } yield ()
   }
 

@@ -292,9 +292,7 @@ export default function* performQuickSelect(
         targetBox.fromMagToMag1(labeledMag),
         targetW,
         // a.hi(x,y) => a[:x, :y], // a.lo(x,y) => a[x:, y:]
-        mask
-          .hi(maxUV[0], maxUV[1], 1)
-          .lo(minUV[0], minUV[1], 0),
+        mask.hi(maxUV[0], maxUV[1], 1).lo(minUV[0], minUV[1], 0),
         overwriteMode,
         labeledZoomStep,
         // Only finish annotation stroke in the last iteration.

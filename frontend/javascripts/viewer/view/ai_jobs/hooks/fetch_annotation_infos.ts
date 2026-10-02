@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getAnnotationsForTask } from "admin/api/tasks";
 import {
   getDataset,
@@ -177,9 +178,11 @@ async function getBoundingBoxes(
 export async function fetchAnnotationInfo(
   annotationId: string,
 ): Promise<AnnotationInfoForAITrainingJob<APIAnnotation>> {
-  const annotation = await getUnversionedAnnotationInformation(annotationId, {
-    showErrorToast: false,
-  });
+  const annotation = unwrapOrThrow(
+    await getUnversionedAnnotationInformation(annotationId, {
+      showErrorToast: false,
+    }),
+  );
   const dataset = await getDataset(annotation.datasetId);
 
   const volumeServerTracings = await getVolumeServerTracings(annotation);

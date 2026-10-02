@@ -176,7 +176,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   openRightBorderTabById(tabType: BorderTabType) {
     const rightBorderId = "right-border-tab-container";
     const node = this.state.model.getNodeById(rightBorderId);
-    if (!node || node.getType() !== "tab") return;
+    if (node?.getType() !== "tab") return;
 
     const isRightOpen = getBorderOpenStatus(this.state.model).right;
     if (!isRightOpen) this.toggleBorder("right");

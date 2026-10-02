@@ -21,7 +21,10 @@ import max from "lodash-es/max";
 import { useEffect, useMemo, useState } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { APIUpdateActionBatch } from "types/api_types";
-import { getCreationTimestamp } from "viewer/model/accessors/annotation_accessor";
+import {
+  getCreationTimestamp,
+  isConcurrentCollaborationMode,
+} from "viewer/model/accessors/annotation_accessor";
 import { setIsUpdatingAnnotationCurrentlyAllowedAction } from "viewer/model/actions/annotation_actions";
 import {
   pushSaveQueueTransactionIsolated,
@@ -108,6 +111,12 @@ async function handleRestoreVersion(
       await Model.ensureSavedState();
     } finally {
       Store.dispatch(setIsRestoringVersionAction(false));
+    }
+    if (isConcurrentCollaborationMode(Store.getState())) {
+      // Safety measure in live collab mode: Enforce everything is in sync with the backend via hard reload.
+      // The saving above might have caused a local rebasing which might have lead to an unexpected state.
+      window.location.reload();
+      return;
     }
     Store.dispatch(setVersionRestoreVisibilityAction(false));
     const initialAllowUpdate = Store.getState().annotation.restrictions.allowUpdate;

@@ -255,8 +255,10 @@ class UploadToPathsService @Inject() (
               ),
               connectomes = attachments.connectomes
                 .map(attachment => addGeneratedPathToAttachment(attachment, LayerAttachmentType.connectome, layerPath)),
-              cumsum = attachments.cumsum.map(attachment =>
-                addGeneratedPathToAttachment(attachment, LayerAttachmentType.cumsum, layerPath)
+              cumsum = attachments.cumsum
+                .map(attachment => addGeneratedPathToAttachment(attachment, LayerAttachmentType.cumsum, layerPath)),
+              segmentStatistics = attachments.segmentStatistics.map(attachment =>
+                addGeneratedPathToAttachment(attachment, LayerAttachmentType.segmentStatistics, layerPath)
               )
             )
           )

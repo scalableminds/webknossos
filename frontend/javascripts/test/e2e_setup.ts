@@ -167,6 +167,8 @@ export function resetDatabase() {
   shell.exec("tools/postgres/dbtool.js prepare-test-db-no-schema-refresh", { silent: true });
 }
 export {
+  idUserA,
+  setUserAuthToken,
   tokenUserA,
   tokenUserB,
   tokenUserC,
@@ -176,6 +178,4 @@ export {
   tokenUserF,
   tokenUserFInOrgaX,
   tokenUserFInOrgaY,
-  setUserAuthToken,
-  idUserA,
 };

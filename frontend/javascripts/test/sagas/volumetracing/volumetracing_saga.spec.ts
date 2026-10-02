@@ -36,6 +36,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 
+const mockActionChannel = { take: () => {}, close: () => {} };
+
 const dummyActiveMapping: ActiveMappingInfo = {
   mappingName: "dummy-mapping-name",
   mapping: new Map(),
@@ -184,7 +186,7 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
-    saga.next("action_channel");
+    saga.next(mockActionChannel);
     saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
     saga.next(addToContourList([2, 3, 4]));
@@ -238,7 +240,7 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
-    saga.next("action_channel");
+    saga.next(mockActionChannel);
     saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
     // Validate that finishLayer was called
@@ -303,7 +305,7 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
-    saga.next("action_channel");
+    saga.next(mockActionChannel);
     saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
     const wroteVoxelsBox = {

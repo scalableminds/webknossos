@@ -748,7 +748,6 @@ export type APIBuildInfoWk = {
     ciTag: string;
     ciBuild: string;
     gitTag?: string;
-    datastoreApiVersion: string;
   };
   "webknossos-wrap": {
     builtAtMillis: string;
@@ -763,33 +762,6 @@ export type APIBuildInfoWk = {
   httpApiVersioning: { currentApiVersion: number; oldestSupportedApiVersion: number };
   localDataStoreEnabled: boolean;
   localTracingStoreEnabled: boolean;
-};
-
-export type APIBuildInfoDatastore = {
-  webknossosDatastore: {
-    name: string;
-    commitHash: string;
-    scalaVersion: string;
-    version: string;
-    sbtVersion: string;
-    commitDate: string;
-    ciTag: string;
-    ciBuild: string;
-    datastoreApiVersion: string;
-  };
-};
-
-export type APIBuildInfoTracingstore = {
-  webknossosTracingstore: {
-    name: string;
-    commitHash: string;
-    scalaVersion: string;
-    version: string;
-    sbtVersion: string;
-    commitDate: string;
-    ciTag: string;
-    ciBuild: string;
-  };
 };
 
 export type APIFeatureToggles = {

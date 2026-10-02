@@ -28,6 +28,7 @@ import com.scalableminds.webknossos.datastore.services.segmentindex.{
   SegmentIndexFileService,
   ZarrSegmentIndexFileService
 }
+import com.scalableminds.webknossos.datastore.services.segmentstatistics.SegmentStatisticsFileService
 import com.scalableminds.webknossos.datastore.services.uploading.UploadService
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, S3ClientPoolHolder, DataStoreRedisStore}
 
@@ -56,6 +57,7 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[ZarrAgglomerateService]).asEagerSingleton()
     bind(classOf[Hdf5AgglomerateService]).asEagerSingleton()
     bind(classOf[SegmentIndexFileService]).asEagerSingleton()
+    bind(classOf[SegmentStatisticsFileService]).asEagerSingleton()
     bind(classOf[ZarrSegmentIndexFileService]).asEagerSingleton()
     bind(classOf[Hdf5SegmentIndexFileService]).asEagerSingleton()
     bind(classOf[ConnectomeFileService]).asEagerSingleton()

@@ -1388,12 +1388,16 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
       cumsumFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.cumsum.toString))(
         parseAttachmentRow(_, useRealPaths)
       )
+      segmentStatisticsFiles <- Fox.serialCombined(
+        rows.filter(_.`type` == LayerAttachmentType.segmentStatistics.toString)
+      )(parseAttachmentRow(_, useRealPaths))
     } yield AttachmentWrapper(
       agglomerates = agglomerateFiles,
       connectomes = connectomeFiles,
       segmentIndex = segmentIndexFiles.headOption,
       meshes = meshFiles,
-      cumsum = cumsumFiles.headOption
+      cumsum = cumsumFiles.headOption,
+      segmentStatistics = segmentStatisticsFiles.headOption
     )
 
   def findAllForDatasetAndDataLayerName(
@@ -1437,6 +1441,8 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
             insertQuery(mesh, layer.name, LayerAttachmentType.mesh)
           } ++ attachments.cumsum.map { cumsumFile =>
             insertQuery(cumsumFile, layer.name, LayerAttachmentType.cumsum)
+          } ++ attachments.segmentStatistics.map { segmentStatistics =>
+            insertQuery(segmentStatistics, layer.name, LayerAttachmentType.segmentStatistics)
           }
         case None =>
           List.empty

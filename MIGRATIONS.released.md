@@ -6,6 +6,14 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [26.09.0](https://github.com/scalableminds/webknossos/releases/tag/26.09.0) - 2026-08-21
+[Commits](https://github.com/scalableminds/webknossos/compare/26.08.1...26.09.0)
+
+### Postgres Evolutions
+- [177-attachment-credential-id.sql](schema/evolutions/177-attachment-credential-id.sql)
+- [178-token-type-job.sql](schema/evolutions/178-token-type-job.sql)
+- [179-plan-expiry-reminders.sql](schema/evolutions/179-plan-expiry-reminders.sql)
+
 ## [26.08.1](https://github.com/scalableminds/webknossos/releases/tag/26.08.1) - 2026-08-03
 [Commits](https://github.com/scalableminds/webknossos/compare/26.08.0...26.08.1)
 

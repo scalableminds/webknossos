@@ -65,6 +65,12 @@ function TaskCreateBulkView() {
     return string.split(",").map((word) => word.trim());
   }
 
+  function parseText(bulkText: string): Array<NewTask> {
+    return splitToLines(bulkText)
+      .map((line) => parseLine(line))
+      .filter((task) => task !== null);
+  }
+
   function parseLine(line: string): NewTask {
     const words = splitToWords(line);
     const datasetId = words[0];
@@ -122,12 +128,6 @@ function TaskCreateBulkView() {
     };
   }
 
-  function parseText(bulkText: string): Array<NewTask> {
-    return splitToLines(bulkText)
-      .map((line) => parseLine(line))
-      .filter((task) => task !== null);
-  }
-
   async function readCSVFile(csvFile: File): Promise<NewTask[]> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -138,48 +138,6 @@ function TaskCreateBulkView() {
       reader.onerror = reject;
       reader.readAsText(csvFile);
     });
-  }
-
-  function getInvalidTaskIndices(tasks: NewTask[]): number[] {
-    // returns the index / line number of an invalidly parsed task
-    // returned indices start at 1 for easier matching by non-CS people
-    const isValidTasks = tasks.map(isValidTask);
-    const invalidTasks: number[] = [];
-    return isValidTasks.reduce((result, isValid: boolean, i: number) => {
-      if (!isValid) {
-        result.push(i + 1);
-      }
-
-      return result;
-    }, invalidTasks);
-  }
-
-  async function batchUpload(tasks: NewTask[]) {
-    // upload the tasks in batches to save the server from dying
-    setIsUploading(true);
-    setTasksCount(tasks.length);
-    setTasksProcessed(0);
-
-    const uploadTasksInBatches = async () => {
-      let taskResponses: TaskCreationResponse[] = [];
-      let warnings: string[] = [];
-
-      for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
-        const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
-
-        const response = await createTasks(subArray);
-        taskResponses = taskResponses.concat(response.tasks);
-        warnings = warnings.concat(response.warnings);
-        setTasksProcessed(i + NUM_TASKS_PER_BATCH);
-      }
-
-      handleTaskCreationResponse(modal, {
-        tasks: taskResponses,
-        warnings: uniq(warnings),
-      });
-    };
-    // No try & finally as react compiler currently can't handle this.
-    await uploadTasksInBatches().finally(() => setIsUploading(false));
   }
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
@@ -206,6 +164,48 @@ function TaskCreateBulkView() {
       );
     }
   };
+
+  function getInvalidTaskIndices(tasks: NewTask[]): number[] {
+    // returns the index / line number of an invalidly parsed task
+    // returned indices start at 1 for easier matching by non-CS people
+    const isValidTasks = tasks.map(isValidTask);
+    const invalidTasks: number[] = [];
+    return isValidTasks.reduce((result, isValid: boolean, i: number) => {
+      if (!isValid) {
+        result.push(i + 1);
+      }
+
+      return result;
+    }, invalidTasks);
+  }
+
+  async function batchUpload(tasks: NewTask[]) {
+    // upload the tasks in batches to save the server from dying
+    setIsUploading(true);
+    setTasksCount(tasks.length);
+    setTasksProcessed(0);
+
+    try {
+      let taskResponses: TaskCreationResponse[] = [];
+      let warnings: string[] = [];
+
+      for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
+        const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
+
+        const response = await createTasks(subArray);
+        taskResponses = taskResponses.concat(response.tasks);
+        warnings = warnings.concat(response.warnings);
+        setTasksProcessed(i + NUM_TASKS_PER_BATCH);
+      }
+
+      handleTaskCreationResponse(modal, {
+        tasks: taskResponses,
+        warnings: uniq(warnings),
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  }
 
   return (
     <div

@@ -168,8 +168,9 @@ export default function BoundingBoxTab() {
       await reserveIdAndAddBoundingBox(dispatch, idOfTracingWithBBoxes);
     } catch (error) {
       handleGenericError(error as Error, "Could not create a new bounding box.");
+    } finally {
+      setIsCreatingBoundingBox(false);
     }
-    setIsCreatingBoundingBox(false);
   }, [dispatch, idOfTracingWithBBoxes]);
 
   const setPosition = useCallback(

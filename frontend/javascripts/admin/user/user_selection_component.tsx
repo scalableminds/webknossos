@@ -24,15 +24,14 @@ export default function UserSelectionComponent({
     async () => {
       try {
         const users = unwrapOrThrow(await getUsers());
-        const selectableUsers = users.filter((u) => includeDeactivatedUsers || u.isActive);
+        const selectableUsers = includeDeactivatedUsers ? users : users.filter((u) => u.isActive);
 
-        const sortedUsers = sortBy(selectableUsers, "lastName");
-        setIsLoading(false);
-        return sortedUsers;
+        return sortBy(selectableUsers, "lastName");
       } catch (error) {
         handleGenericError(error as Error);
-        setIsLoading(false);
         return [];
+      } finally {
+        setIsLoading(false);
       }
     },
     [],

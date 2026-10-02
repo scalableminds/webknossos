@@ -7,7 +7,6 @@ import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
-import { useEffectOnlyOnce } from "libs/react_hooks";
 import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
 import partial from "lodash-es/partial";
 import messages from "messages";
@@ -33,21 +32,21 @@ function ScriptListView() {
   const [scripts, setScripts] = useState<APIScript[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
+  useEffect(() => {
+    const { searchQuery } = persistence.load();
+    setSearchQuery(searchQuery || "");
+    fetchScripts();
+  }, []);
+
+  useEffect(() => {
+    persistence.persist({ searchQuery });
+  }, [searchQuery]);
+
   async function fetchScripts(): Promise<void> {
     const scripts = await getScripts();
     setIsLoading(false);
     setScripts(scripts);
   }
-
-  useEffectOnlyOnce(() => {
-    const { searchQuery } = persistence.load();
-    setSearchQuery(searchQuery || "");
-    fetchScripts();
-  });
-
-  useEffect(() => {
-    persistence.persist({ searchQuery });
-  }, [searchQuery]);
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
     setSearchQuery(event.target.value);
@@ -63,8 +62,9 @@ function ScriptListView() {
           setScripts(scripts.filter((s) => s.id !== script.id));
         } catch (error) {
           handleGenericError(error as Error);
+        } finally {
+          setIsLoading(false);
         }
-        setIsLoading(false);
       },
     });
   }

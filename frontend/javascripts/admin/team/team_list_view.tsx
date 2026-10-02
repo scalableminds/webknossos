@@ -113,8 +113,9 @@ function TeamListView() {
           );
         } catch (error) {
           handleGenericError(error as Error);
+        } finally {
+          setIsLoadingMutation(false);
         }
-        setIsLoadingMutation(false);
       },
     });
   }

@@ -173,7 +173,8 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     }
 
     const newDatasetName = form.getFieldValue(["name"]);
-    const createComposition = async () => {
+    setIsLoading(true);
+    try {
       const { newDatasetId } = await createDatasetComposition({
         // keep identifying dataset at orgaId & directoryPath as this is a datastore request.
         newDatasetName,
@@ -210,11 +211,9 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         ].join("\n"),
       });
       props.onAdded(newDatasetId, newDatasetName, false);
-    };
-
-    setIsLoading(true);
-    // No try & finally as react compiler currently can't handle this.
-    await createComposition().finally(() => setIsLoading(false));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

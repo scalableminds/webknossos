@@ -12,18 +12,6 @@ import type { Script } from "viewer/store";
 
 const { TextArea } = Input;
 
-function runUserScript(code: string, onSuccess: () => void) {
-  try {
-    // biome-ignore lint/security/noGlobalEval: Loads a user provided frontend API script.
-    eval(code);
-    // close modal if the script executed successfully
-    return onSuccess();
-  } catch (error) {
-    console.error(error);
-    return alert(error);
-  }
-}
-
 type UserScriptsModalViewProps = {
   onOK: (...args: Array<any>) => any;
   isOpen: boolean;
@@ -58,8 +46,9 @@ const UserScriptsModalViewInner: React.FC<UserScriptsModalViewProps> = ({ onOK, 
       setIsCodeChanged(false);
     } catch (error) {
       handleGenericError(error as Error);
+    } finally {
+      setIsLoadingScriptContent(false);
     }
-    setIsLoadingScriptContent(false);
   }, []);
 
   const handleScriptChange = useCallback(
@@ -79,7 +68,17 @@ const UserScriptsModalViewInner: React.FC<UserScriptsModalViewProps> = ({ onOK, 
     [scripts, isCodeChanged, loadScript, modal],
   );
 
-  const handleClick = useCallback(() => runUserScript(code, onOK), [code, onOK]);
+  const handleClick = useCallback(() => {
+    try {
+      // biome-ignore lint/security/noGlobalEval: Loads a user provided frontend API script.
+      eval(code);
+      // close modal if the script executed successfully
+      return onOK();
+    } catch (error) {
+      console.error(error);
+      return alert(error);
+    }
+  }, [code, onOK]);
 
   const isLoading = isLoadingScripts || isLoadingScriptContent;
 

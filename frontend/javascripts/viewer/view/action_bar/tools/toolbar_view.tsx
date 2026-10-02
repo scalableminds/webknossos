@@ -50,8 +50,9 @@ function CreateNewBoundingBoxButton() {
       await reserveIdAndAddBoundingBox(dispatch, tracingId);
     } catch (error) {
       handleGenericError(error as Error, "Could not create a new bounding box.");
+    } finally {
+      setIsCreating(false);
     }
-    setIsCreating(false);
   }, [dispatch]);
 
   return (

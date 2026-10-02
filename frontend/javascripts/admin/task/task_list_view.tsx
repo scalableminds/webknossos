@@ -103,8 +103,9 @@ function TaskListView({ initialFieldValues }: Props) {
         setTasks(tasks);
       } catch (error) {
         handleGenericError(error as Error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     } else {
       setTasks([]);
     }
@@ -124,8 +125,9 @@ function TaskListView({ initialFieldValues }: Props) {
           setTasks(tasks.filter((t) => t.id !== task.id));
         } catch (error) {
           handleGenericError(error as Error);
+        } finally {
+          setIsLoading(false);
         }
-        setIsLoading(false);
       },
     });
   }
@@ -162,8 +164,9 @@ function TaskListView({ initialFieldValues }: Props) {
             Toast.success("A user was successfully assigned to the task.");
           } catch (error) {
             handleGenericError(error as Error);
+          } finally {
+            selectedUserIdForAssignment.current = null;
           }
-          selectedUserIdForAssignment.current = null;
         }
       },
     });

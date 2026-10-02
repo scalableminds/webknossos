@@ -286,8 +286,9 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
         });
       } catch (error) {
         handleGenericError(error as Error, "Could not generate the bounding boxes.");
+      } finally {
+        setIsGenerating(false);
       }
-      setIsGenerating(false);
     }, 0);
   };
 

@@ -1,0 +1,557 @@
+[
+  {
+    "path": "docs/automation/images/example_box_sampling_instance_segm.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/automation/images/example_box_sampling_neuron_training.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/blend-mode-example-additive-bosch-et-al.png",
+    "kind": "static",
+    "reason": "Excluded for now: illustrates blend modes with two distinct color channels (Bosch et al.); the documentation dataset has no suitable second channel."
+  },
+  {
+    "path": "docs/images/blend-mode-example-cover-bosch-et-al.png",
+    "kind": "static",
+    "reason": "Excluded for now: illustrates blend modes with two distinct color channels (Bosch et al.); the documentation dataset has no suitable second channel."
+  },
+  {
+    "path": "docs/images/comments.gif",
+    "kind": "animation",
+    "reason": "Animated interaction demonstration; requires a recording recipe, not a still screenshot."
+  },
+  {
+    "path": "docs/images/connectome_viewer.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/context_menu.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/cubes-and-buckets.jpeg",
+    "kind": "static",
+    "reason": "Conceptual diagram of dataset storage."
+  },
+  {
+    "path": "docs/images/customize_layout.gif",
+    "kind": "animation",
+    "reason": "Animated interaction demonstration; requires a recording recipe, not a still screenshot."
+  },
+  {
+    "path": "docs/images/dashboard_annotations.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/dashboard_archive.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/dashboard_featured_publications.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/dashboard_regular_user.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/dashboard_tasks.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/datalayers.jpeg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: this illustration never needs updating."
+  },
+  {
+    "path": "docs/images/dataset_settings_datasource.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/dataset_settings_delete.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/dataset_settings_metadata.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/dataset_settings_sharing.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/dataset_settings_viewconfig.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/download_dialog.gif",
+    "kind": "animation",
+    "reason": "Animated interaction demonstration; requires a recording recipe, not a still screenshot."
+  },
+  {
+    "path": "docs/images/downsampling.jpeg",
+    "kind": "static",
+    "reason": "Scientific illustration of magnification levels."
+  },
+  {
+    "path": "docs/images/getting_started-datasets.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/jobs.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/main_ui.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/materialize_volume_annotation_icon.jpg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/mesh_3D_viewport.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/mesh_options.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/metadata_dataset.gif",
+    "kind": "animation",
+    "reason": "Animated interaction demonstration; requires a recording recipe, not a still screenshot."
+  },
+  {
+    "path": "docs/images/nuclei_segmentation_job.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/onboarding_data1.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/onboarding_data2.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/onboarding_organization.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/onboarding_user.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/process_dataset.jpg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/raw/cubes-and-buckets/cubes-and-buckets-inkscape.svg",
+    "kind": "static",
+    "reason": "Editable source artwork or microscopy source asset for a documentation diagram."
+  },
+  {
+    "path": "docs/images/raw/cubes-and-buckets/cubes-and-buckets-with-guides.svg",
+    "kind": "static",
+    "reason": "Editable source artwork or microscopy source asset for a documentation diagram."
+  },
+  {
+    "path": "docs/images/raw/cubes-and-buckets/cubes-and-buckets.svg",
+    "kind": "static",
+    "reason": "Editable source artwork or microscopy source asset for a documentation diagram."
+  },
+  {
+    "path": "docs/images/raw/downsampling/cremi_raw-2-crop.png",
+    "kind": "static",
+    "reason": "Editable source artwork or microscopy source asset for a documentation diagram."
+  },
+  {
+    "path": "docs/images/raw/downsampling/cremi_raw-2.jpg",
+    "kind": "static",
+    "reason": "Editable source artwork or microscopy source asset for a documentation diagram."
+  },
+  {
+    "path": "docs/images/raw/downsampling/downsampling.svg",
+    "kind": "static",
+    "reason": "Editable source artwork or microscopy source asset for a documentation diagram."
+  },
+  {
+    "path": "docs/images/raw/flight-mode.svg",
+    "kind": "static",
+    "reason": "Editable source artwork or microscopy source asset for a documentation diagram."
+  },
+  {
+    "path": "docs/images/raw/teams/teams.svg",
+    "kind": "static",
+    "reason": "Editable source artwork or microscopy source asset for a documentation diagram."
+  },
+  {
+    "path": "docs/images/raw/tracing_ui_overview.svg",
+    "kind": "static",
+    "reason": "Editable source artwork or microscopy source asset for a documentation diagram."
+  },
+  {
+    "path": "docs/images/save_view_configuration_in_view_mode.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/screenshot_DS_management.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/screenshot_flight_mode.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/screenshot_skeletons.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/screenshot_volume.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/segments_tab.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/segments_tab2.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/sharing_modal_editing.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/sharing_modal_link.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/sharing_modal_team.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/sharing_modal_visibility.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/shuffle_tree_colors.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/skeleton_annotations.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/skeleton_context_menu.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/skeleton_tree_list.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/splitting-floodfill-visualization.png",
+    "kind": "static",
+    "reason": "Hand-drawn explanation of the splitting flood-fill algorithm."
+  },
+  {
+    "path": "docs/images/start_merger_mode_job_modal.jpg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/start_merger_mode_job_modal_button.jpg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/task_instance_actions.jpg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/tasks_download.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/tasks_project.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/tasks_task.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/tasks_tasktype.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/team_overview.jpg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/teams.jpeg",
+    "kind": "static",
+    "reason": "Conceptual organization and team diagram."
+  },
+  {
+    "path": "docs/images/toolkit_dropdown.jpg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/tracing_ui_download.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/tracing_ui_download_toolbar.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/tracing_ui_flightmode.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/tracing_ui_flightmode_radius.gif",
+    "kind": "animation",
+    "reason": "Animated interaction demonstration; requires a recording recipe, not a still screenshot."
+  },
+  {
+    "path": "docs/images/tracing_ui_flightmode_rotate.gif",
+    "kind": "animation",
+    "reason": "Animated interaction demonstration; requires a recording recipe, not a still screenshot."
+  },
+  {
+    "path": "docs/images/tracing_ui_flightmode_schema.jpeg",
+    "kind": "static",
+    "reason": "Geometric diagram explaining flight-mode navigation."
+  },
+  {
+    "path": "docs/images/tracing_ui_import.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/tracing_ui_merge_1.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/tracing_ui_merge_2.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/tracing_ui_tree_merge_split.gif",
+    "kind": "animation",
+    "reason": "Animated interaction demonstration; requires a recording recipe, not a still screenshot."
+  },
+  {
+    "path": "docs/images/tracing_ui_tree_visibility.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/ui_toolbar_menu.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/user_interface.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/users_activate1.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/users_activate2.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/users_experience.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/users_invite.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/view_modes.png",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/volume_brush.gif",
+    "kind": "animation",
+    "reason": "Animated interaction demonstration; requires a recording recipe, not a still screenshot."
+  },
+  {
+    "path": "docs/images/volume_delete.gif",
+    "kind": "animation",
+    "reason": "Animated interaction demonstration; requires a recording recipe, not a still screenshot."
+  },
+  {
+    "path": "docs/images/volume_trace.gif",
+    "kind": "animation",
+    "reason": "Animated interaction demonstration; requires a recording recipe, not a still screenshot."
+  },
+  {
+    "path": "docs/images/zarr_links.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/skeleton_annotation/images/merger-mode-modifier.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/skeleton_annotation/images/new-tree-modifier.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/skeleton_annotation/images/pen-mode-modifier.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/skeleton_annotation/images/single-node-tree-mode-modifier.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/tutorials/images/tutorial_trainingdata_01_segment_touching_outside_of_box.jpeg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates for now: training-data examples need reviewed annotation content on the documentation dataset."
+  },
+  {
+    "path": "docs/tutorials/images/tutorial_trainingdata_02_final_check.jpeg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates for now: training-data examples need reviewed annotation content on the documentation dataset."
+  },
+  {
+    "path": "docs/tutorials/images/tutorial_trainingdata_03_complete_coverage.jpeg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates for now: training-data examples need reviewed annotation content on the documentation dataset."
+  },
+  {
+    "path": "docs/tutorials/images/tutorial_trainingdata_04_gaps_membrane_within_one_segment.jpeg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates for now: training-data examples need reviewed annotation content on the documentation dataset."
+  },
+  {
+    "path": "docs/tutorials/images/tutorial_trainingdata_05_membranes_unannotated.jpeg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates for now: training-data examples need reviewed annotation content on the documentation dataset."
+  },
+  {
+    "path": "docs/tutorials/images/tutorial_trainingdata_06_cell_geometry.jpeg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates for now: training-data examples need reviewed annotation content on the documentation dataset."
+  },
+  {
+    "path": "docs/tutorials/images/tutorial_trainingdata_07_isolated_voxels.jpeg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates for now: training-data examples need reviewed annotation content on the documentation dataset."
+  },
+  {
+    "path": "docs/tutorials/images/tutorial_trainingdata_08_soma_ground_truth_example.png",
+    "kind": "static",
+    "reason": "Excluded from automatic updates for now: training-data examples need reviewed annotation content on the documentation dataset."
+  },
+  {
+    "path": "docs/ui/images/ai-analysis-tools.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/ui/images/boundingbox-tool.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/ui/images/brush-tool.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/ui/images/eraser-tool.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/ui/images/fill-tool.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/ui/images/measure-tool.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/ui/images/move-tool.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/ui/images/proofreading-tool.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/ui/images/quickselect-tool.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/ui/images/segment-picker-tool.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/ui/images/skeleton-tool.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/ui/images/trace-tool.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/volume_annotation/images/2d-modifier.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/volume_annotation/images/3d-modifier.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/volume_annotation/images/brush-size-modifier.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/volume_annotation/images/icon_restricted_floodfill.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/volume_annotation/images/interpolation-modifier.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/volume_annotation/images/new-segment-modifier.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/volume_annotation/images/overwrite-empty-modifier.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  },
+  {
+    "path": "docs/volume_annotation/images/overwrite-everything-modifier.jpg",
+    "kind": "static",
+    "reason": "Excluded from automatic updates by request: stable tool/modifier artwork."
+  }
+]

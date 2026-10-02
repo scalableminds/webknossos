@@ -1,0 +1,852 @@
+// Recipes deliberately use the live UI and public scripting API. A missing control
+// fails the recipe rather than silently replacing a documentation image with the wrong view.
+const tooltip = (prefix) => `[data-tooltip-content^=${JSON.stringify(prefix)}]`;
+const modal = '[role="dialog"]:visible';
+const dropdown = ".ant-dropdown:not(.ant-dropdown-hidden)";
+
+async function show(ctx, selector) {
+  const locator = typeof selector === "string" ? ctx.page.locator(selector) : selector;
+  await locator.waitFor({ state: "visible" });
+  return locator;
+}
+
+// fixtures.viewer is the viewer's JSON URL state (position, zoomStep, stateByLayer with
+// layer visibility, mappings and precomputed meshes). See fixtures.default.json.
+function viewerHash(ctx) {
+  const { position, zoomStep = 1, ...state } = ctx.fixtures?.viewer ?? {};
+  if (!position) throw new Error("Configure fixtures.viewer.position.");
+  return { ...state, position, zoomStep, mode: "orthogonal" };
+}
+
+function fixtureMeshSegmentIds(hash) {
+  return Object.values(hash.stateByLayer ?? {}).flatMap((layer) =>
+    (layer.meshInfo?.meshes ?? []).map((mesh) => String(mesh.segmentId)),
+  );
+}
+
+async function waitForMeshes(ctx, minimum) {
+  await ctx.page.waitForFunction(
+    (minimum) => {
+      const state = window.webknossos.DEV.store.getState();
+      const all = Object.values(state.localSegmentationStateByLayer)
+        .flatMap((layer) => Object.values(layer.meshes || {}))
+        .flatMap((group) => Object.values(group || {}));
+      return all.length >= minimum && all.every((mesh) => !mesh.isLoading);
+    },
+    minimum,
+    { timeout: 120000 },
+  );
+}
+
+// Skeleton UIs and features show the agglomerate skeletons of the fixture's mesh segments,
+// without meshes. All other screenshots show the fixture's precomputed meshes.
+function withoutMeshes(hash) {
+  const stateByLayer = Object.fromEntries(
+    Object.entries(hash.stateByLayer ?? {}).map(([name, { meshInfo, ...layer }]) => [name, layer]),
+  );
+  return { ...hash, stateByLayer };
+}
+
+// `extraTrees` additionally loads the skeletons of that many neighboring agglomerates.
+async function scene(
+  ctx,
+  mode = "hybrid",
+  skeleton = false,
+  persist = false,
+  { extraTrees = 0 } = {},
+) {
+  const fixtureHash = viewerHash(ctx);
+  const segmentIds = fixtureMeshSegmentIds(fixtureHash);
+  const hash = skeleton ? withoutMeshes(fixtureHash) : fixtureHash;
+  await ctx.openViewer({ mode, persist, hash });
+  await ctx.page.evaluate(async (position) => {
+    const api = await window.webknossos.apiReady();
+    const [min, max] = api.data.getBoundingBox(api.data.getLayerNames()[0]);
+    if (position.some((value, i) => value < min[i] || value >= max[i])) {
+      throw new Error(
+        "The screenshot position is outside the dataset. Configure fixtures.viewer.position.",
+      );
+    }
+  }, hash.position);
+  await ctx.page.evaluate(async () => {
+    const api = await window.webknossos.apiReady();
+    api.user.setConfiguration("activeToolkit", "ALL_TOOLS");
+    api.user.setConfiguration("newNodeNewTree", false);
+    api.user.setConfiguration("tdViewDisplayPlanes", true);
+  });
+  if (skeleton) {
+    if (!segmentIds.length)
+      throw new Error(
+        "Skeleton screenshots show agglomerate skeletons of the fixture meshes. Configure meshes in fixtures.viewer.stateByLayer.",
+      );
+    await loadAgglomerateSkeletons(ctx, segmentIds, extraTrees);
+    await ctx.page.evaluate(async (position) => {
+      const api = await window.webknossos.apiReady();
+      // Activating loaded or remaining trees re-centers the camera with an animation.
+      // Wait until the camera has settled, then restore the scene position.
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      const start = performance.now();
+      let last = "";
+      let stableSince = start;
+      while (performance.now() - stableSince < 500 && performance.now() - start < 10000) {
+        await frame();
+        const current = api.tracing.getCameraPosition().join();
+        if (current !== last) {
+          last = current;
+          stableSince = performance.now();
+        }
+      }
+      api.tracing.setCameraPosition(position);
+      api.tracing.centerTDView();
+      api.tracing.rotate3DViewToDiagonal(false);
+    }, hash.position);
+  } else if (segmentIds.length) {
+    await waitForMeshes(ctx, segmentIds.length);
+  }
+  await ctx.waitForViewer();
+}
+
+// Skeletons of the agglomerates whose meshes the fixture loads, plus `extra` distinct neighboring
+// agglomerates sampled around the camera. Needs the fixture's agglomerate mapping.
+async function loadAgglomerateSkeletons(ctx, segmentIds, extra = 0) {
+  await ctx.page.waitForFunction(
+    () =>
+      Object.values(
+        window.webknossos.DEV.store.getState().temporaryConfiguration.activeMappingByLayer,
+      ).some(
+        (mapping) => mapping.mappingType === "AGGLOMERATE" && mapping.mappingStatus === "ENABLED",
+      ),
+    undefined,
+    { timeout: 60000 },
+  );
+  const expectedTrees = await ctx.page.evaluate(
+    async ({ segmentIds, extra }) => {
+      const api = await window.webknossos.apiReady();
+      const trees = window.webknossos.DEV.store.getState().annotation.skeleton?.trees;
+      if (!trees)
+        throw new Error("Agglomerate skeletons need an annotation with a skeleton layer.");
+      const ids = new Set(segmentIds);
+      const layer = api.data.getVisibleSegmentationLayerName();
+      const center = api.tracing.getCameraPosition();
+      // Deterministic spiral of sample points within the visible XY plane.
+      // Oversample: neighboring agglomerates can be tiny fragments, which are removed below.
+      for (let i = 1; ids.size < segmentIds.length + 3 * extra && i <= 400; i++) {
+        const angle = i * 2.4;
+        const radius = 12 * Math.sqrt(i);
+        const position = [
+          Math.round(center[0] + radius * Math.cos(angle)),
+          Math.round(center[1] + radius * Math.sin(angle)),
+          center[2],
+        ];
+        const id = await api.data.getMappedDataValue(layer, position);
+        if (id !== 0n) ids.add(String(id));
+      }
+      for (const id of ids) api.tracing.loadAgglomerateSkeletonForSegmentId(BigInt(id));
+      return trees.size() + ids.size;
+    },
+    { segmentIds, extra },
+  );
+  await ctx.page.waitForFunction(
+    (count) => {
+      const trees = window.webknossos.DEV.store.getState().annotation.skeleton.trees;
+      return trees.size() >= count && [...trees.values()].every((tree) => tree.nodes.size() > 0);
+    },
+    expectedTrees,
+    { timeout: 180000 },
+  );
+  await ctx.page.evaluate(
+    async ({ segmentIds, extra }) => {
+      const api = await window.webknossos.apiReady();
+      const trees = Object.values(api.tracing.getAllTrees());
+      const agglomerateId = (tree) => tree.name.match(/^agglomerate (\d+)/)?.[1];
+      const neighbors = trees
+        .filter((tree) => !segmentIds.includes(agglomerateId(tree)))
+        .sort((a, b) => b.nodes.size() - a.nodes.size());
+      for (const [index, tree] of neighbors.entries()) {
+        if (index >= extra || tree.nodes.size() < 50) api.tracing.deleteTree(tree.treeId);
+      }
+      // "agglomerate 415 (agglomerate_view_65)" gets truncated in the tree list.
+      for (const tree of Object.values(api.tracing.getAllTrees())) {
+        const id = agglomerateId(tree);
+        if (id) api.tracing.setTreeName(`agglomerate ${id}`, tree.treeId);
+      }
+    },
+    { segmentIds, extra },
+  );
+}
+
+// Opens or hides a sidebar with its toggle button in the viewport headers.
+async function setSidebar(ctx, side, open) {
+  const toggle = ctx.page
+    .locator(`button${tooltip(`${open ? "Open" : "Hide"} ${side} sidebar`)}`)
+    .filter({ visible: true })
+    .first();
+  if (await toggle.count()) await toggle.click();
+  await ctx.page.mouse.move(0, 0);
+  await ctx.waitForViewer();
+}
+
+// Maximizing the 3D tab set also collapses the side panels, so the 3D view fills the screen.
+async function maximizeTDView(ctx) {
+  await ctx.page
+    .locator(".flexlayout__tabset_tabbar_outer")
+    .filter({ has: ctx.page.locator(".flexlayout__tab_button_content", { hasText: /^3D$/ }) })
+    .locator('button[title="Maximize tab set"]')
+    .click();
+  await ctx.page.mouse.move(0, 0);
+  await ctx.page.evaluate(async () => {
+    const api = await window.webknossos.apiReady();
+    api.tracing.centerTDView();
+    api.tracing.rotate3DViewToDiagonal(false);
+  });
+  await ctx.waitForViewer();
+}
+
+async function tab(ctx, title, selector) {
+  await ctx.page
+    .locator(".flexlayout__tab_button > .flexlayout__tab_button_content")
+    .filter({ hasText: new RegExp(`^${title}$`) })
+    .click();
+  return show(ctx, selector);
+}
+
+async function menu(ctx, item) {
+  await ctx.page
+    .locator(".action-bar button")
+    .filter({ hasText: /^Menu$/ })
+    .click();
+  await show(ctx, dropdown);
+  if (item) {
+    await ctx.page
+      .locator(dropdown)
+      .getByRole("menuitem")
+      .filter({ hasText: new RegExp(`^${item}$`) })
+      .click();
+    return show(ctx, modal);
+  }
+  return {
+    target: ctx.page.locator(dropdown),
+    context: ctx.page.locator(".action-bar"),
+    padding: 48,
+  };
+}
+
+async function contextMenu(ctx) {
+  const viewport = ctx.page.locator("#screenshot_target_inputcatcher_PLANE_XY");
+  await viewport.click({ button: "right" });
+  return { target: await show(ctx, ".node-context-menu"), context: viewport, padding: 48 };
+}
+
+async function meshes(ctx) {
+  await scene(ctx, "view");
+  // Precomputed meshes configured in fixtures.viewer were already loaded by scene().
+  if (!fixtureMeshSegmentIds(viewerHash(ctx)).length) await computeSampleMeshes(ctx);
+  await ctx.page.evaluate(async () => {
+    const api = await window.webknossos.apiReady();
+    api.tracing.centerTDView();
+    api.tracing.rotate3DViewToDiagonal(false);
+  });
+  await ctx.waitForViewer();
+}
+
+// Fallback without configured meshes: compute ad-hoc meshes for segments around the camera.
+async function computeSampleMeshes(ctx) {
+  await ctx.page.evaluate(async () => {
+    const api = await window.webknossos.apiReady();
+    const layer = api.data.getVisibleSegmentationLayerName();
+    if (!layer)
+      throw new Error("The dataset needs a visible segmentation layer for mesh screenshots.");
+    const center = api.tracing.getCameraPosition();
+    const found = new Set();
+    for (const offset of [
+      [0, 0, 0],
+      [20, 0, 0],
+      [0, 20, 0],
+      [-20, 0, 0],
+      [0, -20, 0],
+    ]) {
+      const seed = center.map((value, axis) => Math.round(value + offset[axis]));
+      const id = BigInt(await api.data.getDataValue(layer, seed));
+      if (id === 0n || found.has(String(id))) continue;
+      found.add(String(id));
+      api.tracing.registerSegment(id, seed, undefined, layer);
+      api.data.setSegmentColor(
+        id,
+        [
+          [0.9, 0.3, 0.2],
+          [0.2, 0.7, 0.9],
+          [0.7, 0.4, 0.9],
+        ][(found.size - 1) % 3],
+        layer,
+      );
+      api.data.computeMeshOnDemand(id, seed);
+      if (found.size === 3) break;
+    }
+    if (found.size === 0)
+      throw new Error("No non-background segments at the configured scene position.");
+  });
+  await waitForMeshes(ctx, 1);
+}
+
+function recipe(output, capture) {
+  return {
+    id: output
+      .replace(/^docs\//, "")
+      .replaceAll("/", "-")
+      .replaceAll(".", "-"),
+    output,
+    capture,
+  };
+}
+
+export const recipes = [];
+const add = (name, capture) => recipes.push(recipe(`docs/images/${name}`, capture));
+
+add("user_interface.png", async (ctx) => {
+  await scene(ctx, "hybrid");
+  const layoutOf = (selector) =>
+    ctx.page
+      .locator(selector)
+      .locator(
+        "xpath=ancestor::div[contains(concat(' ', @class, ' '), ' flexlayout__layout ')][1]",
+      );
+  const viewport = (id) => ctx.page.locator(`#inputcatcher_${id}`);
+  return {
+    target: null,
+    regions: [
+      { target: ".ant-layout-header", color: "#ff1f6a", label: "Toolbar", fontSize: 40 },
+      {
+        target: layoutOf(".tracing-settings-menu"),
+        color: "#ff8a5c",
+        label: "Layers and Settings",
+      },
+      {
+        // The viewport tabs plus their XY/YZ/XZ/3D tab bars.
+        target: [
+          ctx.page.locator(".flexlayout__tab").filter({ has: ctx.page.locator(".inputcatcher") }),
+          ctx.page.locator(".flexlayout__tabset_tabbar_outer").filter({
+            has: ctx.page.locator(".flexlayout__tab_button_content", {
+              hasText: /^(XY|YZ|XZ|3D)$/,
+            }),
+          }),
+        ],
+        color: "#4a4ff0",
+        label: "Viewports",
+        fontSize: 96,
+        labels: [
+          { target: viewport("PLANE_XY"), text: "XY" },
+          { target: viewport("PLANE_YZ"), text: "YZ" },
+          { target: viewport("PLANE_XZ"), text: "XZ" },
+          { target: viewport("TDView"), text: "3D" },
+        ],
+      },
+      {
+        target: layoutOf("#dataset-info-tab"),
+        color: "#16c7e0",
+        label: "Dataset and Object Info",
+        fontSize: 56,
+      },
+    ],
+  };
+});
+add("main_ui.png", async (ctx) => {
+  await scene(ctx, "hybrid");
+});
+add("screenshot_volume.png", async (ctx) => {
+  await scene(ctx, "hybrid");
+  await setSidebar(ctx, "left", false);
+  await setSidebar(ctx, "right", false);
+});
+add("skeleton_annotations.png", async (ctx) => {
+  await scene(ctx, "skeleton", true);
+  await maximizeTDView(ctx);
+  await setSidebar(ctx, "right", true);
+  await tab(ctx, "Skeleton", "#tree-list");
+});
+add("screenshot_skeletons.png", async (ctx) => {
+  await scene(ctx, "skeleton", true, false, { extraTrees: 8 });
+  await ctx.page.evaluate(() => {
+    const { dispatch } = window.webknossos.DEV.store;
+    dispatch({ type: "SET_ANNOTATION_NAME", name: "L4 Dense Skeleton Annotations" });
+    dispatch({
+      type: "SET_ANNOTATION_DESCRIPTION",
+      description:
+        "Mouse L4 S1 (SBEM)\\\nA Motta, M Berning, KM Boergens, B Staffler, M Beining, S Loomba, P Hennig, H Wissler, M Helmstaedter\\\nScience. 24 October 2019 [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)",
+    });
+  });
+  await ctx.waitForViewer();
+});
+for (const name of ["skeleton_tree_list.png", "tracing_ui_tree_visibility.jpeg"]) {
+  add(name, async (ctx) => {
+    await scene(ctx, "skeleton", true, false, { extraTrees: 8 });
+    const treeList = await tab(ctx, "Skeleton", "#tree-list");
+    if (name === "tracing_ui_tree_visibility.jpeg") {
+      return {
+        target: treeList,
+        highlights: [
+          treeList.locator(`${tooltip("Toggle Visibility of All Trees")} button`),
+          treeList.locator(`${tooltip("Toggle Visibility of Inactive Trees")} button`),
+        ],
+      };
+    }
+    return treeList;
+  });
+}
+add("shuffle_tree_colors.png", async (ctx) => {
+  await scene(ctx, "skeleton", true);
+  await tab(ctx, "Skeleton", "#tree-list");
+  await ctx.page.locator(`#tree-list ${tooltip("More actions")} button`).click();
+  return {
+    target: await show(ctx, dropdown),
+    context: ctx.page.locator("#tree-list"),
+    padding: 48,
+  };
+});
+add("context_menu.png", async (ctx) => {
+  await scene(ctx, "hybrid");
+  return contextMenu(ctx);
+});
+add("skeleton_context_menu.png", async (ctx) => {
+  await scene(ctx, "hybrid", true);
+  // Node actions appear only when right-clicking a node. Center the XY viewport (where the
+  // right-click lands) on the fixture skeletons' node closest to the scene position and
+  // activate one of its neighbors, so the edge actions are available as well.
+  const hash = viewerHash(ctx);
+  await ctx.page.evaluate(
+    async ({ position, segmentIds }) => {
+      const api = await window.webknossos.apiReady();
+      const distance = (node) =>
+        node.untransformedPosition.reduce((sum, value, i) => sum + (value - position[i]) ** 2, 0);
+      const candidates = Object.values(api.tracing.getAllTrees())
+        .filter((tree) => segmentIds.includes(tree.name.match(/^agglomerate (\d+)/)?.[1]))
+        .flatMap((tree) =>
+          [...tree.nodes.values()].map((node) => ({
+            node,
+            edges: tree.edges.getEdgesForNode(node.id),
+          })),
+        )
+        .filter(({ edges }) => edges.length > 0)
+        .sort((a, b) => distance(a.node) - distance(b.node));
+      if (!candidates.length) throw new Error("The fixture skeletons have no connected nodes.");
+      const [{ node, edges }] = candidates;
+      const [edge] = edges;
+      api.tracing.setActiveNode(edge.source === node.id ? edge.target : edge.source, true, true);
+      api.tracing.setCameraPosition(node.untransformedPosition);
+    },
+    { position: hash.position, segmentIds: fixtureMeshSegmentIds(hash) },
+  );
+  await ctx.waitForViewer();
+  return contextMenu(ctx);
+});
+add("mesh_options.jpeg", async (ctx) => {
+  await scene(ctx, "view");
+  return contextMenu(ctx);
+});
+add("mesh_3D_viewport.jpeg", async (ctx) => {
+  await meshes(ctx);
+  return show(ctx, "#screenshot_target_inputcatcher_TDView");
+});
+for (const name of ["segments_tab.jpeg", "segments_tab2.jpeg"]) {
+  add(name, async (ctx) => {
+    await meshes(ctx);
+    const segmentList = await tab(ctx, "Segments", "#segment-list");
+    if (name === "segments_tab.jpeg") {
+      await segmentList.locator(tooltip("Configure mesh computation")).click();
+      const settings = await show(ctx, ".ant-popover:visible");
+      return {
+        target: settings,
+        context: [segmentList, ctx.page.locator("#screenshot_target_inputcatcher_TDView")],
+        highlights: [settings],
+        padding: 48,
+      };
+    }
+    return {
+      target: segmentList,
+      context: ctx.page.locator("#screenshot_target_inputcatcher_TDView"),
+      highlights: [segmentList.locator(".ant-tree-list-holder-inner")],
+      padding: 48,
+    };
+  });
+}
+add("ui_toolbar_menu.png", async (ctx) => {
+  await scene(ctx);
+  return menu(ctx);
+});
+for (const name of ["tracing_ui_download_toolbar.jpeg", "tracing_ui_merge_1.jpeg"]) {
+  add(name, async (ctx) => {
+    await scene(ctx, "skeleton", false, true);
+    const capture = await menu(ctx);
+    const item = name === "tracing_ui_merge_1.jpeg" ? "Merge Annotation" : "Download";
+    return {
+      ...capture,
+      highlights: [
+        ctx.page.locator(".action-bar button").filter({ hasText: /^Menu$/ }),
+        ctx.page
+          .locator(dropdown)
+          .getByRole("menuitem")
+          .filter({ hasText: new RegExp(`^${item}$`) }),
+      ],
+    };
+  });
+}
+add("tracing_ui_download.jpeg", async (ctx) => {
+  await scene(ctx, "skeleton", true);
+  const treeList = await tab(ctx, "Skeleton", "#tree-list");
+  const more = treeList.locator(`${tooltip("More actions")} button`);
+  await more.click();
+  const menu = await show(ctx, dropdown);
+  return {
+    target: menu,
+    context: treeList,
+    highlights: [
+      more,
+      menu.getByRole("menuitem").filter({ hasText: /^Download Visible Trees NML$/ }),
+    ],
+    padding: 48,
+  };
+});
+for (const [name, item] of [
+  ["tracing_ui_merge_2.jpeg", "Merge Annotation"],
+  ["zarr_links.jpeg", "Zarr Links"],
+]) {
+  add(name, async (ctx) => {
+    await scene(ctx, "skeleton", false, true);
+    return menu(ctx, item);
+  });
+}
+for (const [name, label] of [
+  ["sharing_modal_visibility.jpeg", "Who can view this annotation?"],
+  ["sharing_modal_link.jpeg", "Sharing Link"],
+  ["sharing_modal_team.png", "For which teams should this annotation be listed?"],
+  ["sharing_modal_editing.png", "Who can edit this annotation?"],
+]) {
+  add(name, async (ctx) => {
+    await scene(ctx, "skeleton", false, true);
+    await menu(ctx, "Share");
+    const dialog = ctx.page.locator(modal);
+    const row = dialog
+      .locator(".ant-row")
+      .filter({ has: ctx.page.getByText(label, { exact: true }) });
+    const highlights = name === "sharing_modal_visibility.jpeg" ? [] : [row];
+    if (name === "sharing_modal_editing.png") {
+      highlights.push(
+        dialog.locator(".ant-row").filter({
+          has: ctx.page.getByText("Can users edit simultaneously?", { exact: true }),
+        }),
+      );
+    }
+    return { target: dialog, highlights, padding: 48 };
+  });
+}
+add("tracing_ui_import.jpeg", async (ctx) => {
+  await scene(ctx, "skeleton", true);
+  await tab(ctx, "Skeleton", "#tree-list");
+  await ctx.page.locator(`#tree-list ${tooltip("More actions")} button`).click();
+  await ctx.clickText("Import NML", { exact: true });
+  return show(ctx, modal);
+});
+add("view_modes.png", async (ctx) => {
+  await scene(ctx, "skeleton");
+  await ctx.page.locator(".action-bar button:has(.anticon-sync)").hover();
+  return {
+    target: await show(ctx, ".ant-popover:visible"),
+    context: ctx.page.locator(".action-bar"),
+    highlights: [
+      { target: ctx.page.locator(".action-bar button:has(.anticon-sync)"), color: "#cbcaff" },
+    ],
+    padding: 48,
+  };
+});
+for (const name of ["tracing_ui_flightmode.jpeg", "screenshot_flight_mode.png"]) {
+  add(name, async (ctx) => {
+    // The flight-mode overview shows only the viewport: no skeleton and no sidebars.
+    const overview = name === "tracing_ui_flightmode.jpeg";
+    await scene(ctx, "skeleton", !overview);
+    if (overview) {
+      await setSidebar(ctx, "left", false);
+      await setSidebar(ctx, "right", false);
+    }
+    await ctx.page.locator(".action-bar button:has(.anticon-sync)").hover();
+    await ctx.page.locator(".ant-popover:visible").getByRole("switch").click();
+    await ctx.page.mouse.move(0, 0);
+    await ctx.page.locator(".ant-popover:visible").waitFor({ state: "hidden" });
+    await ctx.waitForViewer();
+    // Crop to the square flight viewport, as in the original image.
+    if (overview)
+      return {
+        target: ctx.page.locator(".inputcatcher").filter({ visible: true }).first(),
+        padding: 0,
+      };
+  });
+}
+add("toolkit_dropdown.jpg", async (ctx) => {
+  await scene(ctx);
+  // Ant Design attaches the dropdown trigger to the badge, not its button.
+  await ctx.page.locator(".action-bar .ant-badge.ant-dropdown-trigger").hover();
+  return {
+    target: await show(ctx, dropdown),
+    context: ctx.page.locator(".action-bar"),
+    padding: 48,
+  };
+});
+
+add("save_view_configuration_in_view_mode.png", async (ctx) => {
+  await scene(ctx, "view");
+  const button = ctx.page.locator(
+    `${tooltip("Save the current view configuration as default")} button`,
+  );
+  return {
+    target: button,
+    context: [
+      ctx.page.locator(".tracing-settings-menu"),
+      ctx.page.locator("#screenshot_target_inputcatcher_PLANE_XY"),
+    ],
+    highlights: [{ target: button, color: "#635bff" }],
+    padding: 48,
+  };
+});
+// These figures show specific biological structures, ground truth, mappings,
+// or job capabilities. Replacing them with an arbitrary dataset view would
+// change their meaning. Capture checked, read-only scene fixtures.
+const curatedScenes = ["docs/images/connectome_viewer.jpeg"];
+
+for (const output of curatedScenes) {
+  recipes.push(
+    recipe(output, async (ctx) => {
+      const fixture = ctx.fixtures?.scenes?.[output];
+      if (!fixture?.hash?.position || !fixture.description) {
+        throw new Error(
+          `This figure needs a reviewed scene on the documentation dataset. Add fixtures.scenes[${JSON.stringify(output)}] with description, hash (including position), optional annotationId, selector, hoverSelectors, clickSelectors, and clickTexts. Existing image was not changed.`,
+        );
+      }
+      if (fixture.annotationId) {
+        if (!/^[a-f0-9]{24}$/.test(fixture.annotationId))
+          throw new Error("Invalid scene annotationId");
+        await ctx.page.goto(
+          `${ctx.baseUrl}/annotations/${fixture.annotationId}#${encodeURIComponent(JSON.stringify(fixture.hash))}`,
+        );
+        await ctx.waitForViewer();
+      } else {
+        await ctx.openViewer({ mode: "view", hash: fixture.hash });
+      }
+      await ctx.page.evaluate((expectedId) => {
+        const state = window.webknossos.DEV.store.getState();
+        if (state.dataset.id !== expectedId)
+          throw new Error("Curated scene must belong to the configured documentation dataset.");
+      }, ctx.dataset.id);
+      for (const selector of fixture.hoverSelectors ?? []) {
+        await show(ctx, selector);
+        await ctx.page.locator(selector).hover();
+      }
+      for (const selector of fixture.clickSelectors ?? []) {
+        await show(ctx, selector);
+        await ctx.page.locator(selector).click();
+      }
+      for (const text of fixture.clickTexts ?? []) await ctx.clickText(text, { exact: true });
+      await ctx.waitForViewer();
+      const target = fixture.selector ? await show(ctx, fixture.selector) : null;
+      return fixture.highlights?.length ? { target, highlights: fixture.highlights } : target;
+    }),
+  );
+}
+
+// Plain EM view in a temporary annotation: no segmentation, predictions, mapping or meshes.
+function plainHash(ctx, overrides = {}) {
+  const { position, zoomStep } = viewerHash(ctx);
+  return {
+    position,
+    zoomStep,
+    mode: "orthogonal",
+    stateByLayer: { predictions: { isDisabled: true }, segmentation: { isDisabled: true } },
+    ...overrides,
+  };
+}
+
+// Deterministic training boxes distributed across the dataset; the first one is centered at
+// the camera. Top-left corners are aligned to `step` (the annotation magnification).
+async function boxSampling(ctx, { count, size, step, zoomStep }) {
+  await ctx.openViewer({ mode: "skeleton", hash: plainHash(ctx, { zoomStep }) });
+  await ctx.page.evaluate(
+    async ({ count, size, step }) => {
+      const api = await window.webknossos.apiReady();
+      const [min, max] = api.data.getBoundingBox("color");
+      const center = api.tracing.getCameraPosition();
+      let seed = 42;
+      const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const colors = [
+        [0.1, 0.9, 0.8],
+        [0.6, 0.2, 0.6],
+        [0.5, 0.9, 0.1],
+        [0.1, 0.4, 0.1],
+        [0.7, 0.4, 0.9],
+        [0.9, 0.7, 0.1],
+        [0.2, 0.3, 0.8],
+        [0.9, 0.5, 0.3],
+      ];
+      for (let i = 0; i < count; i++) {
+        const topLeft = center.map((value, axis) => {
+          const start =
+            i === 0
+              ? value - size[axis] / 2
+              : min[axis] + random() * (max[axis] - min[axis] - size[axis]);
+          return Math.floor(start / step[axis]) * step[axis];
+        });
+        window.webknossos.DEV.store.dispatch({
+          type: "ADD_NEW_USER_BOUNDING_BOX",
+          id: i + 1,
+          center: undefined,
+          newBoundingBox: {
+            boundingBox: { min: topLeft, max: topLeft.map((value, axis) => value + size[axis]) },
+            name: `Bounding box ${i + 1}`,
+            color: colors[i % colors.length],
+            isVisible: true,
+          },
+        });
+      }
+      api.tracing.centerTDView();
+    },
+    { count, size, step },
+  );
+  await tab(ctx, "BBoxes", "#bounding-box-tab");
+  await ctx.waitForViewer();
+}
+
+// Two significant digits, as in the explanatory text of the documentation page.
+const approximately = (value) => Number(value.toPrecision(2)).toLocaleString("en-US");
+const magLiteral = (mag) => mag.join("-");
+
+// Editorial callouts explaining the box dimensions and the total annotated volume.
+async function boxSamplingCallouts(ctx, { count, size, step, zoomStep }) {
+  const xy = await ctx.page.locator("#inputcatcher_PLANE_XY").boundingBox();
+  // The XY viewport renders one voxel per pixel at zoom step 1.
+  const firstBoxLeftEdge = {
+    x: xy.x + xy.width / 2 - size[0] / 2 / zoomStep - 4,
+    y: xy.y + xy.height / 2,
+  };
+  const sizeInMag = size.map((value, axis) => value / step[axis]);
+  const voxelsPerBox = sizeInMag.reduce((product, value) => product * value, 1);
+  const inMag = (dimensions, mag) => `${dimensions.join(" × ")} in Mag ${magLiteral(mag)}`;
+  const isMag1 = step.every((value) => value === 1);
+  const callouts = [
+    {
+      text: `Dimensions:\n${inMag(sizeInMag, step)}${isMag1 ? "" : `\n${inMag(size, [1, 1, 1])}`}\n\nApproximately\n${approximately(voxelsPerBox)} voxels / box${isMag1 ? "" : ` in Mag ${step[0]}`}`,
+      at: { x: 380, y: 600, width: isMag1 ? 390 : 440 },
+      arrowTo: firstBoxLeftEdge,
+    },
+    {
+      text: `${count} bounding boxes distributed across the dataset.\nApproximately ${(Number((count * voxelsPerBox).toPrecision(2)) / 1e6).toLocaleString("en-US")} million annotated voxels in total`,
+      at: isMag1 ? { x: 1212, y: 760, width: 376 } : { x: 840, y: 590, width: 350 },
+      arrowTo: ctx.page.locator("#inputcatcher_TDView"),
+    },
+  ];
+  if (!isMag1) {
+    // Point at the x coordinate of the first box's top-left corner.
+    const bounds = await ctx.page.evaluate(() => {
+      const input = [...document.querySelectorAll("#bounding-box-tab input")].find((element) =>
+        /^\d+, \d+, \d+, /.test(element.value),
+      );
+      const rect = input.getBoundingClientRect();
+      return { x: rect.x + 24, y: rect.y + rect.height };
+    });
+    callouts.push(
+      {
+        text: "Top left position divisible by Mag",
+        at: { x: 1212, y: 250, width: 300 },
+        arrowTo: bounds,
+      },
+      {
+        text: "Coarsest Mag at which instance is clearly visible",
+        at: { x: 1212, y: 800, width: 376 },
+        arrowTo: ctx.page.locator(".statusbar").getByText(magLiteral(step), { exact: true }),
+      },
+    );
+  }
+  return { target: null, callouts };
+}
+
+for (const [name, options] of [
+  [
+    "example_box_sampling_neuron_training.jpeg",
+    { count: 25, size: [85, 85, 32], step: [1, 1, 1], zoomStep: 1 },
+  ],
+  [
+    "example_box_sampling_instance_segm.jpeg",
+    { count: 20, size: [1024, 1024, 512], step: [16, 16, 8], zoomStep: 16 },
+  ],
+]) {
+  recipes.push(
+    recipe(`docs/automation/images/${name}`, async (ctx) => {
+      await boxSampling(ctx, options);
+      return boxSamplingCallouts(ctx, options);
+    }),
+  );
+}
+
+// The volume layer (with the segmentation as fallback) must stay enabled for these scenes.
+const volumeHash = (ctx) => plainHash(ctx, { stateByLayer: { predictions: { isDisabled: true } } });
+add("materialize_volume_annotation_icon.jpg", async (ctx) => {
+  await ctx.openViewer({ mode: "hybrid", hash: volumeHash(ctx) });
+  const header = ctx.page
+    .locator(".tracing-settings-menu")
+    .getByText("Volume", { exact: true })
+    .locator("xpath=ancestor::*[.//span[contains(@class, 'anticon-ellipsis')]][1]");
+  await header.locator(".anticon-ellipsis").hover();
+  const menu = await show(ctx, dropdown);
+  return {
+    target: menu,
+    context: header,
+    highlights: [
+      menu
+        .getByRole("menuitem")
+        .filter({ hasText: /^Merge this volume annotation with its fallback layer$/ }),
+    ],
+    padding: 24,
+  };
+});
+
+// Merger mode cannot be enabled while a mapping is locked, so these scenes use no mapping.
+async function mergerMode(ctx) {
+  await ctx.openViewer({ mode: "hybrid", hash: volumeHash(ctx) });
+  await ctx.page.evaluate(async () => {
+    const api = await window.webknossos.apiReady();
+    api.tracing.setAnnotationTool("SKELETON");
+  });
+  await ctx.page.getByRole("img", { name: "Merger Mode" }).click();
+  // Enabling merger mode first explains it in a dialog.
+  await ctx.page.locator(modal).getByRole("button", { name: "Close" }).click();
+  await ctx.page.locator(modal).waitFor({ state: "hidden" });
+  const materialize = tooltip("Materialize this merger mode annotation into a new dataset.");
+  const button = ctx.page.locator(`button${materialize}, ${materialize} button`).first();
+  await button.waitFor({ state: "visible" });
+  return button;
+}
+add("start_merger_mode_job_modal_button.jpg", async (ctx) => {
+  const button = await mergerMode(ctx);
+  // Save first: the runner's final save re-renders the toolbar, which would hide the tooltip.
+  await ctx.page.evaluate(async () => {
+    await (await window.webknossos.apiReady()).tracing.save();
+  });
+  // react-tooltip only registers anchors added after mount when their data-tooltip-id changes,
+  // so this button (rendered once merger mode is on) needs its attribute re-set to get a tooltip.
+  await ctx.page
+    .locator(tooltip("Materialize this merger mode annotation into a new dataset."))
+    .evaluate((anchor) => {
+      const id = anchor.getAttribute("data-tooltip-id");
+      anchor.removeAttribute("data-tooltip-id");
+      anchor.setAttribute("data-tooltip-id", id);
+    });
+  await button.hover();
+  const hint = ctx.page.getByRole("tooltip").filter({ hasText: /^Materialize this merger mode/ });
+  return { target: button, context: await show(ctx, hint), padding: 16 };
+});
+add("start_merger_mode_job_modal.jpg", async (ctx) => {
+  await (await mergerMode(ctx)).click();
+  return show(ctx, modal);
+});
+
+add("process_dataset.jpg", async (ctx) => {
+  await scene(ctx, "view");
+  const button = ctx.page.locator('button[title="Start a processing job using AI"]');
+  await button.hover();
+  return { target: await show(ctx, dropdown), context: button, padding: 48 };
+});

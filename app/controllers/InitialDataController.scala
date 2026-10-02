@@ -24,8 +24,11 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   DataFormat,
+  DataLayerAttachments,
   DataSourceId,
   ElementClass,
+  LayerAttachment,
+  LayerAttachmentDataformat,
   StaticColorLayer,
   StaticSegmentationLayer,
   UsableDataSource
@@ -152,7 +155,7 @@ Samplecountry
     isDeactivated = false,
     lastTaskTypeId = None
   )
-  // Publication of the l4_sample data, as listed on webknossos.org.
+  // Publication of the l4dense and l4_sample data, as listed on webknossos.org.
   private val defaultPublication = Publication(
     ObjectId("5c766bec6c01006c018c7459"),
     Some(Instant(1571875200000L)), // 24 October 2019
@@ -437,6 +440,71 @@ Samplecountry
     )
   )
 
+  // Remote copy of the dense L4 dataset (Motta et al.) with precomputed meshes, agglomerates and a connectome.
+  // Reading its S3 buckets requires matching datastore.dataVaults.credentials.
+  private val l4DenseStorage = "s3://eu-central-2.storage.impossibleapi.net"
+  private val l4DenseBoundingBox = BoundingBox(Vec3Int(128, 128, 128), 5445, 8380, 3285)
+  private def l4DenseMags(layerPath: String) =
+    (0 to 10).toList.map { i =>
+      val mag = Vec3Int(1 << i, 1 << i, 1 << math.max(i - 1, 0))
+      MagLocator(
+        mag = mag,
+        path = Some(UPath.fromStringUnsafe(s"$l4DenseStorage/$layerPath/${mag.toMagLiteral(allowScalar = true)}")),
+        axisOrder = Some(AxisOrder(x = 1, y = 2, z = Some(3), c = Some(0)))
+      )
+    }
+  private val l4DenseSegmentationPath = "webknossos-wkorg-0002/scalable_minds/l4dense_motta_et_al_dev_v2/segmentation"
+  private def l4DenseAttachment(name: String, attachmentPath: String) =
+    LayerAttachment(
+      name,
+      UPath.fromStringUnsafe(s"$l4DenseStorage/$l4DenseSegmentationPath/$attachmentPath/$name"),
+      LayerAttachmentDataformat.zarr3
+    )
+  private val l4DenseDataSource = UsableDataSource(
+    id = DataSourceId("l4dense_motta_et_al_demo_v2", defaultOrganization._id),
+    dataLayers = List(
+      StaticColorLayer(
+        name = "color",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = l4DenseBoundingBox,
+        elementClass = ElementClass.uint8,
+        mags = l4DenseMags("webknossos-wkorg-0002/scalable_minds/l4dense_motta_et_al_demo.bak/color")
+      ),
+      StaticColorLayer(
+        name = "predictions",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = BoundingBox(Vec3Int(0, 0, 0), 5632, 8704, 3584),
+        elementClass = ElementClass.uint24,
+        mags = l4DenseMags("webknossos-wkorg-0001/scalable_minds/l4dense_motta_et_al_dev_v2/prediction")
+      ),
+      StaticSegmentationLayer(
+        name = "segmentation",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = l4DenseBoundingBox,
+        elementClass = ElementClass.uint32,
+        mags = l4DenseMags(l4DenseSegmentationPath),
+        attachments = Some(
+          DataLayerAttachments(
+            meshes = Seq(l4DenseAttachment("meshfile_4-4-2", "meshes")),
+            agglomerates = (5 to 100 by 5).map(i => l4DenseAttachment(s"agglomerate_view_$i", "agglomerates")),
+            segmentIndex = Some(l4DenseAttachment("segmentIndex", "segmentIndex")),
+            connectomes = Seq(l4DenseAttachment("paper_l4_full_connectome", "connectomes"))
+          )
+        ),
+        largestSegmentId = Some(2504697)
+      )
+    ),
+    scale = VoxelSize(Vec3Double(11.239999771118164, 11.239999771118164, 28), LengthUnit.nanometer)
+  )
+  private val l4DenseDataset = defaultDataset.copy(
+    _id = ObjectId("6ac000000000000000000010"),
+    inboxSourceHash = Some(l4DenseDataSource.hashCode()),
+    directoryName = l4DenseDataSource.id.directoryName,
+    name = l4DenseDataSource.id.directoryName,
+    voxelSize = Some(l4DenseDataSource.scale),
+    metadata = defaultDataset.metadata :+ Json.obj("key" -> "brainRegion", "type" -> "string", "value" -> "Cortex L4")
+  )
+
   def insert: Fox[Unit] =
     for {
       _ <- updateLocalDataStorePublicUri()
@@ -460,6 +528,7 @@ Samplecountry
       _ <- insertDataset()
       _ <- insertPublicationDatasets()
       _ <- insertRemoteNDDataset()
+      _ <- insertL4DenseDataset()
       _ <- insertCustomAiModel()
 
     } yield ()
@@ -591,6 +660,8 @@ Samplecountry
     }
 
   private def insertRemoteNDDataset(): Fox[?] = insertDatasetIfAbsent(remoteNDZarrDataset, remoteNDZarrDataSource)
+
+  private def insertL4DenseDataset(): Fox[?] = insertDatasetIfAbsent(l4DenseDataset, l4DenseDataSource)
 
   private def insertAiModelIfAbsent(model: AiModel): Fox[?] =
     // For custom instances with no local datastore the default ai models must be inserted into the DB manually.

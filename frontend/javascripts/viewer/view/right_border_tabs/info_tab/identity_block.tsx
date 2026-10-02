@@ -2,7 +2,7 @@ import { EditOutlined, SettingOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
 import Markdown from "libs/markdown_adapter";
 import { mayUserEditDataset } from "libs/utils";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataset, APIUser } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
@@ -22,6 +22,8 @@ import { InlineIconButton } from "./info_tab_layout";
  * pencil next to it.
  */
 
+const NAME_PLACEHOLDER = "Unnamed annotation";
+
 export function AnnotationIdentityBlock({
   name,
   description,
@@ -32,9 +34,6 @@ export function AnnotationIdentityBlock({
   mayEdit: boolean;
 }) {
   const dispatch = useDispatch();
-  const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
-
   const setName = (newName: string) => dispatch(setAnnotationNameAction(newName));
   const setDescription = async (newDescription: string) => {
     // Defer the actual update until any active rebase/forwarding has finished, so an edit
@@ -43,22 +42,66 @@ export function AnnotationIdentityBlock({
     dispatch(setAnnotationDescriptionAction(newDescription));
   };
 
+  return (
+    <AnnotationIdentity
+      name={name}
+      description={description}
+      onChangeName={mayEdit ? setName : undefined}
+      onChangeDescription={mayEdit ? setDescription : undefined}
+    />
+  );
+}
+
+/**
+ * Store-independent variant of AnnotationIdentityBlock (e.g. for the dashboard). The name and
+ * description are only editable if the respective change handler is passed.
+ */
+export function AnnotationIdentity({
+  name,
+  description,
+  onChangeName,
+  onChangeDescription,
+  hideEmptyDescription = false,
+}: {
+  name: string;
+  description: string;
+  onChangeName?: (newName: string) => void;
+  onChangeDescription?: (newDescription: string) => void;
+  // Skips the "No description" placeholder if the description is empty and not editable.
+  hideEmptyDescription?: boolean;
+}) {
+  const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const nameLineRef = useRef<HTMLDivElement>(null);
+
+  // antd's editable Typography doesn't support a placeholder, so set it on its textarea directly.
+  useEffect(() => {
+    if (isEditingName) {
+      nameLineRef.current?.querySelector("textarea")?.setAttribute("placeholder", NAME_PLACEHOLDER);
+    }
+  }, [isEditingName]);
+  const mayEditName = onChangeName != null;
+  const mayEditDescription = onChangeDescription != null;
+
   const isNameEmpty = name === "";
   const isDescriptionEmpty = description === "";
 
   return (
     <div className="info-tab-identity">
-      <div className="info-tab-identity-line">
-        {mayEdit ? (
+      <div className="info-tab-identity-line" ref={nameLineRef}>
+        {mayEditName ? (
           <Typography.Text
             className={`info-tab-title ${isNameEmpty ? "info-tab-muted" : ""}`}
             editable={{
               // antd saves on blur without calling onEnd, so the controlled editing state
               // has to be reset here for clicking outside to end the edit.
               onChange: (newName) => {
-                setName(newName);
+                // antd calls onChange whenever editing ends, even if nothing was changed.
+                if (newName !== name) onChangeName(newName);
                 setIsEditingName(false);
               },
+              // Start editing with the actual name, not the placeholder.
+              text: name,
               editing: isEditingName,
               onStart: () => setIsEditingName(true),
               onEnd: () => setIsEditingName(false),
@@ -68,14 +111,14 @@ export function AnnotationIdentityBlock({
               triggerType: ["text"],
             }}
           >
-            {isNameEmpty ? "Unnamed annotation" : name}
+            {isNameEmpty ? NAME_PLACEHOLDER : name}
           </Typography.Text>
         ) : (
           <Typography.Text className={`info-tab-title ${isNameEmpty ? "info-tab-muted" : ""}`}>
-            {isNameEmpty ? "Unnamed annotation" : name}
+            {isNameEmpty ? NAME_PLACEHOLDER : name}
           </Typography.Text>
         )}
-        {mayEdit && !isEditingName ? (
+        {mayEditName && !isEditingName ? (
           <InlineIconButton
             icon={<EditOutlined />}
             tooltip="Rename annotation"
@@ -85,39 +128,41 @@ export function AnnotationIdentityBlock({
         ) : null}
       </div>
 
-      <div className="info-tab-identity-line info-tab-description">
-        {isDescriptionEmpty ? (
-          <Typography.Text
-            className="info-tab-muted"
-            onClick={mayEdit ? () => setIsMarkdownModalOpen(true) : undefined}
-          >
-            {mayEdit ? "Add a description…" : "No description"}
-          </Typography.Text>
-        ) : (
-          // react-markdown renders its blocks without a wrapper; without this one every
-          // paragraph would become its own item of the flex line.
-          <div className="info-tab-description-content">
-            <Markdown>{description}</Markdown>
-          </div>
-        )}
-        {mayEdit ? (
-          <InlineIconButton
-            icon={<EditOutlined />}
-            tooltip="Edit description"
-            ariaLabel="Edit description"
-            onClick={() => setIsMarkdownModalOpen(true)}
-          />
-        ) : null}
-      </div>
+      {isDescriptionEmpty && !mayEditDescription && hideEmptyDescription ? null : (
+        <div className="info-tab-identity-line info-tab-description">
+          {isDescriptionEmpty ? (
+            <Typography.Text
+              className="info-tab-muted"
+              onClick={mayEditDescription ? () => setIsMarkdownModalOpen(true) : undefined}
+            >
+              {mayEditDescription ? "Add a description…" : "No description"}
+            </Typography.Text>
+          ) : (
+            // react-markdown renders its blocks without a wrapper; without this one every
+            // paragraph would become its own item of the flex line.
+            <div className="info-tab-description-content">
+              <Markdown>{description}</Markdown>
+            </div>
+          )}
+          {mayEditDescription ? (
+            <InlineIconButton
+              icon={<EditOutlined />}
+              tooltip="Edit description"
+              ariaLabel="Edit description"
+              onClick={() => setIsMarkdownModalOpen(true)}
+            />
+          ) : null}
+        </div>
+      )}
 
-      {mayEdit ? (
+      {mayEditDescription ? (
         <MarkdownModal
           label="Annotation Description"
           placeholder="[No description]"
           source={description}
           isOpen={isMarkdownModalOpen}
           onOk={() => setIsMarkdownModalOpen(false)}
-          onChange={setDescription}
+          onChange={onChangeDescription}
         />
       ) : null}
     </div>

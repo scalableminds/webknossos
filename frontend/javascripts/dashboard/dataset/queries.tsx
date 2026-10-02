@@ -73,7 +73,14 @@ export function useDatasetSearchQuery(
       if (query == null || query.length < MINIMUM_SEARCH_QUERY_LENGTH) {
         return [];
       }
-      return await getDatasets(null, folderId, query, searchRecursively, SEARCH_RESULTS_LIMIT);
+      return await getDatasets(
+        null,
+        folderId,
+        query,
+        searchRecursively,
+        SEARCH_RESULTS_LIMIT,
+        true,
+      );
     },
     refetchOnWindowFocus: false,
     enabled: query != null,
@@ -142,7 +149,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
         return datasets;
       }
 
-      return getDatasets(null, folderId);
+      return getDatasets(null, folderId, null, null, null, true);
     },
     refetchOnWindowFocus: false,
     enabled: false,
@@ -159,7 +166,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
 
     let effectWasCancelled = false;
     const startTime = performance.now();
-    getDatasets(null, folderId)
+    getDatasets(null, folderId, null, null, null, true)
       .then((newDatasets) => {
         if (effectWasCancelled) {
           return;
@@ -228,7 +235,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
             if (timeoutId == null) {
               return;
             }
-            const newDatasets = await getDatasets(null, folderId);
+            const newDatasets = await getDatasets(null, folderId, null, null, null, true);
             const oldDatasets = (queryClient.getQueryData(queryKey) || []) as APIDatasetCompact[];
             queryClient.setQueryData(
               queryKey,
@@ -397,12 +404,20 @@ export function useUpdateDatasetMutation(folderId: string | null) {
     },
     mutationKey,
     onSuccess: (updatedDataset: APIMaybeUnimportedDataset) => {
+      // The full dataset doesn't contain the annotation count, so carry it over from the list.
+      const previousAnnotationCount = (
+        queryClient.getQueryData(mutationKey) as APIDatasetCompact[] | undefined
+      )?.find((ds) => ds.id === updatedDataset.id)?.annotationCount;
+      const toCompact = (dataset: APIMaybeUnimportedDataset): APIDatasetCompact => ({
+        ...convertDatasetToCompact(dataset),
+        annotationCount: previousAnnotationCount,
+      });
       queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
         (oldItems || [])
           .map((oldDataset: APIDatasetCompact) => {
             return oldDataset.id === updatedDataset.id
               ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
-                convertDatasetToCompact({
+                toCompact({
                   ...updatedDataset,
                   lastUsedByUser: oldDataset.lastUsedByUser,
                 })
@@ -432,7 +447,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
                 // for some reason (e.g., a bug), we filter it away to avoid
                 // duplicates.
                 .filter((el) => el.id !== updatedDataset.id)
-                .concat([convertDatasetToCompact(updatedDataset)])
+                .concat([toCompact(updatedDataset)])
             );
           },
         );

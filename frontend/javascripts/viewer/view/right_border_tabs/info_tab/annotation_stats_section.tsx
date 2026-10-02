@@ -7,6 +7,7 @@ import FastTooltip from "components/fast_tooltip";
 import { formatNumber } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import memoizeOne from "memoize-one";
+import type React from "react";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import {
   getBoundingBoxCountWithPrecedence,
@@ -17,6 +18,14 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { InfoTabRow, InfoTabSection } from "./info_tab_layout";
 
+type StatEntry = {
+  key: string;
+  icon: React.ComponentType;
+  ariaLabel: string;
+  tooltipHtml: string;
+  count: number;
+};
+
 /**
  * Compact, icon-only statistics used outside of the info tab (dashboard tables, time
  * tracking). The info tab renders the same numbers as labelled rows instead, see
@@ -24,67 +33,84 @@ import { InfoTabRow, InfoTabSection } from "./info_tab_layout";
  */
 export function AnnotationStats({
   stats,
-  withMargin,
+  orientation = "vertical",
+  hideZeroCounts = false,
 }: {
   stats: TracingStats | EmptyObject;
-  withMargin?: boolean | null | undefined;
+  // "vertical" (default) stacks the stats as rows (e.g. in time tracking).
+  // "horizontal" lays them out side by side (e.g. in the dashboard list views).
+  orientation?: "vertical" | "horizontal";
+  hideZeroCounts?: boolean;
 }) {
-  if (!stats || Object.keys(stats).length === 0) return null;
-  const useStyleWithMargin = withMargin != null ? withMargin : true;
-  const styleWithLargeMarginBottom = { marginBottom: 14 };
-  const styleWithSmallMargin = { margin: 2 };
   const skeletonStats = getSkeletonStats(stats);
   const volumeStats = getVolumeStats(stats);
   const totalSegmentCount = volumeStats.reduce((sum, [_, volume]) => sum + volume.segmentCount, 0);
   const boundingBoxCount = getBoundingBoxCountWithPrecedence(stats);
 
+  let entries: StatEntry[] = [];
+  if (skeletonStats) {
+    entries.push({
+      key: "skeleton",
+      icon: IconSkeletons,
+      ariaLabel: "Skeletons",
+      tooltipHtml: getSkeletonStatsTooltip(skeletonStats),
+      count: skeletonStats.treeCount,
+    });
+  }
+  if (volumeStats.length > 0) {
+    entries.push({
+      key: "volume",
+      icon: IconSegments,
+      ariaLabel: "Segments",
+      tooltipHtml: getSegmentStatsTooltip(totalSegmentCount),
+      count: totalSegmentCount,
+    });
+  }
+  // Old annotations don't have a bounding box count, but a count of zero is shown.
+  if (boundingBoxCount != null) {
+    entries.push({
+      key: "bbox",
+      icon: IconBoundingBox,
+      ariaLabel: "Bounding Boxes",
+      tooltipHtml: getBoundingBoxStatsTooltip(boundingBoxCount),
+      count: boundingBoxCount,
+    });
+  }
+
+  if (hideZeroCounts) {
+    entries = entries.filter((entry) => entry.count > 0);
+  }
+  if (entries.length === 0) return null;
+
+  if (orientation === "horizontal") {
+    return (
+      <div className="info-tab-block annotation-stats-horizontal" style={{ margin: 2 }}>
+        {entries.map((entry) => (
+          <FastTooltip key={entry.key} placement="top" html={entry.tooltipHtml}>
+            <Icon component={entry.icon} className="info-tab-icon" aria-label={entry.ariaLabel} />{" "}
+            {formatNumber(entry.count)}
+          </FastTooltip>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="info-tab-block"
-      style={useStyleWithMargin ? styleWithLargeMarginBottom : styleWithSmallMargin}
-    >
+    <div className="info-tab-block" style={{ margin: 2 }}>
       <table className="annotation-stats-table-slim">
         <tbody>
-          {skeletonStats ? (
-            <FastTooltip
-              placement="left"
-              html={getSkeletonStatsTooltip(skeletonStats)}
-              wrapper="tr"
-            >
-              <td>
-                <Icon component={IconSkeletons} className="info-tab-icon" aria-label="Skeletons" />
-              </td>
-              <td>{formatNumber(skeletonStats.treeCount)}</td>
-            </FastTooltip>
-          ) : null}
-          {volumeStats.length > 0 ? (
-            <FastTooltip
-              placement="left"
-              html={getSegmentStatsTooltip(totalSegmentCount)}
-              wrapper="tr"
-            >
-              <td>
-                <Icon component={IconSegments} className="info-tab-icon" aria-label="Segments" />
-              </td>
-              <td>{formatNumber(totalSegmentCount)}</td>
-            </FastTooltip>
-          ) : null}
-          {boundingBoxCount != null ? (
-            <FastTooltip
-              placement="left"
-              html={getBoundingBoxStatsTooltip(boundingBoxCount)}
-              wrapper="tr"
-            >
+          {entries.map((entry) => (
+            <FastTooltip key={entry.key} placement="left" html={entry.tooltipHtml} wrapper="tr">
               <td>
                 <Icon
-                  component={IconBoundingBox}
+                  component={entry.icon}
                   className="info-tab-icon"
-                  aria-label="Bounding Boxes"
+                  aria-label={entry.ariaLabel}
                 />
               </td>
-              <td>{formatNumber(boundingBoxCount)}</td>
+              <td>{formatNumber(entry.count)}</td>
             </FastTooltip>
-          ) : null}
+          ))}
         </tbody>
       </table>
     </div>

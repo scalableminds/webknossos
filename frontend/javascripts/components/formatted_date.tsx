@@ -26,7 +26,19 @@ function formatTimezoneOffset(offsetMinutes: number): string {
   return `UTC${sign}${hours}:${String(minutes).padStart(2, "0")}`;
 }
 
-function formatHumanReadable(localDate: dayjs.Dayjs, dateOnly: boolean): string {
+function toLocalDate(timestamp: string | number | Date): dayjs.Dayjs {
+  return dayjs.utc(timestamp).local();
+}
+
+export function isToday(timestamp: string | number | Date): boolean {
+  return toLocalDate(timestamp).isSame(dayjs(), "day");
+}
+
+function formatHumanReadable(
+  localDate: dayjs.Dayjs,
+  dateOnly: boolean,
+  includeTodayLabel: boolean,
+): string {
   if (dateOnly) {
     return localDate.format("D MMMM YYYY");
   }
@@ -39,7 +51,7 @@ function formatHumanReadable(localDate: dayjs.Dayjs, dateOnly: boolean): string 
   }
 
   if (localDate.isSame(todayStart, "day")) {
-    return localDate.format("HH:mm");
+    return localDate.format(includeTodayLabel ? "[today] HH:mm" : "HH:mm");
   }
 
   if (localDate.isAfter(todayStart.subtract(7, "day"), "day")) {
@@ -57,17 +69,20 @@ export default function FormattedDate({
   timestamp,
   format,
   dateOnly,
+  includeTodayLabel = false,
 }: {
   timestamp: string | number | Date;
   format?: string;
   dateOnly?: boolean;
+  // Prefixes times of today with "today" (e.g. "today 13:01" instead of "13:01").
+  includeTodayLabel?: boolean;
 }) {
-  const localDate = dayjs.utc(timestamp).local();
+  const localDate = toLocalDate(timestamp);
   const tzString = formatTimezoneOffset(localDate.utcOffset());
   const tooltipText = localDate.format(`YYYY-MM-DD HH:mm:ss (${tzString})`);
   const displayText = format
     ? localDate.format(format)
-    : formatHumanReadable(localDate, dateOnly ?? false);
+    : formatHumanReadable(localDate, dateOnly ?? false, includeTodayLabel);
 
   return (
     <span onClick={() => copyToClipboard(tooltipText, "date", true)}>

@@ -59,7 +59,9 @@ export function BrainSpinnerWithError({
     <AsyncButton
       type="primary"
       onClick={async () => {
-        if (organizationToSwitchTo != null) {
+        // TODO: REMOVE - testing hack to keep the button in its loading state
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+        if (Math.random() > 2 && organizationToSwitchTo != null) {
           await switchToOrganization(organizationToSwitchTo.id);
         }
       }}

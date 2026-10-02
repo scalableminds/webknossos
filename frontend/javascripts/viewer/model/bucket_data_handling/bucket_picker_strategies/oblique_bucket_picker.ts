@@ -38,7 +38,7 @@ const ROTATIONS = {
   ] as Matrix4x4,
 };
 
-const hashPosition = ([x, y, z]: Vector3): number => 2 ** 32 * x + 2 ** 16 * y + z;
+const hashPosition = (x: number, y: number, z: number): number => 2 ** 32 * x + 2 ** 16 * y + z;
 
 // Buckets are also picked that the plane would intersect if it moved by up to this fraction of
 // a bucket's thickness along its normal, so that data is already loaded when the user moves
@@ -194,16 +194,12 @@ function addNecessaryBucketsToPriorityQueuePlane(
   ];
 
   // A bucket only needs to be walked/enqueued once if it touches *any* of the three
-  // orthogonal viewport planes, so a single flood fill covering all three -- short-circuiting
-  // as soon as one of the three tests matches -- is both correct (their sheets are connected
-  // through the shared seed bucket) and roughly 3x cheaper than flood-filling each plane
-  // separately with its own traversal and visited set.
+  // orthogonal viewport planes, so a single flood fill covering all three is
+  // roughly 3x cheaper than flood-filling each plane separately with its own
+  // traversal and visited set.
   const intersectsPlaneTests = planeIds.map((planeId) =>
     buildIntersectsPlaneTest(planeId, matrix, rects, bucketHalfSize, prefetchBucketHalfSize),
   );
-  // The bucket's world-space center is computed once per candidate (not once per plane test,
-  // which would triple the redundant arithmetic for no reason -- all three tests operate on
-  // the same world point).
   const intersectsAnyPlane = (worldX: number, worldY: number, worldZ: number): boolean => {
     for (let i = 0; i < intersectsPlaneTests.length; i++) {
       if (intersectsPlaneTests[i](worldX, worldY, worldZ)) {
@@ -213,21 +209,14 @@ function addNecessaryBucketsToPriorityQueuePlane(
     return false;
   };
 
-  // The seed bucket is trusted unconditionally (the camera position it's derived from lies on
-  // all three planes by construction); only its neighbours are filtered by intersectsAnyPlane.
-  const visited = new Set<number>([hashPosition(seedAddress)]);
+  const visited = new Set<number>([hashPosition(seedAddress[0], seedAddress[1], seedAddress[2])]);
   const queue: Array<Vector3> = [seedAddress];
 
   // Tries a single face-neighbour (nx,ny,nz). Written as an explicitly-called function (see the
   // 6 call sites below) rather than a loop over NEIGHBOR_OFFSETS, to avoid destructuring an
   // offset tuple and indexing into an array on every one of the 6 slots tried per bucket.
   const tryNeighbor = (nx: number, ny: number, nz: number): void => {
-    // The neighbour's Vector3 is only allocated once it's confirmed new *and* accepted below
-    // -- most of the 6 slots tried per bucket are either already visited or rejected by
-    // intersectsAnyPlane, so building (and immediately discarding) an array for every one of
-    // them was pure garbage. The hash is computed straight from the scalar coordinates
-    // instead of via hashPosition(), for the same reason.
-    const neighborHash = 2 ** 32 * nx + 2 ** 16 * ny + nz;
+    const neighborHash = hashPosition(nx, ny, nz);
     if (visited.has(neighborHash)) {
       return;
     }
@@ -256,18 +245,14 @@ function addNecessaryBucketsToPriorityQueuePlane(
       Math.abs(cz - centerAddress[2]);
     enqueueFunction([cx, cy, cz, logZoomStep], priority + additionalPriorityWeight);
 
-    // Counts enqueued buckets (head + 1). visited.size would also count rejected neighbours
-    // and abort too early.
-    if (abortLimit != null && head + 1 >= abortLimit) {
+    const enqueuedBucketCount = head + 1;
+    if (abortLimit != null && enqueuedBucketCount >= abortLimit) {
       return;
     }
 
-    // The 6 face (Manhattan) neighbours of this bucket. Cheaper than the full
-    // 26-neighbourhood (3x less branching per visited bucket), at the cost of relying on the
-    // three orthogonal plane sheets (tested together via intersectsAnyPlane) to cover any
-    // single sheet's diagonal-only connections -- a lone, steeply tilted plane is only
-    // guaranteed to be 26-connected, not 6-connected, the same way a digital line is only
-    // guaranteed to be 8-connected in 2D, not 4-connected.
+    // The 6 face (Manhattan) neighbours of this bucket. A full 26-neighbourhood
+    // would be way more expensive while not adding much value (due to the "prefetching"
+    // feature, missing diagonal connections should become almost impossible).
     tryNeighbor(cx + 1, cy, cz);
     tryNeighbor(cx - 1, cy, cz);
     tryNeighbor(cx, cy + 1, cz);

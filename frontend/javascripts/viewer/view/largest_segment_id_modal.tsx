@@ -20,11 +20,6 @@ import type { VolumeTracing } from "viewer/store";
 import Store from "viewer/throttled_store";
 
 const TOAST_KEY = "enter-largest-segment-id";
-const NO_SEGMENT_ID = 0n;
-
-function isValidLargestSegmentId(segmentId: bigint | null): segmentId is bigint {
-  return segmentId != null && segmentId >= 1n;
-}
 
 export function showToastWarningForLargestSegmentIdMissing(volumeTracing: VolumeTracing) {
   const segmentationLayer = getSegmentationLayerForTracing(Store.getState(), volumeTracing);
@@ -57,18 +52,18 @@ function EnterLargestSegmentIdModal({
   segmentationLayer: APISegmentationLayer;
   destroy: (...args: Array<any>) => any;
 }) {
-  const [largestSegmentId, setLargestSegmentId] = useState<bigint | null>(NO_SEGMENT_ID);
+  const [largestSegmentId, setLargestSegmentId] = useState<bigint | null>(0n);
   const activeUser = useWkSelector((state) => state.activeUser);
   const dataset = useWkSelector((state) => state.dataset);
   const activeCellId =
     useWkSelector(
       (state) =>
         getVolumeTracingByLayerName(state.annotation, segmentationLayer.name)?.activeCellId,
-    ) || NO_SEGMENT_ID;
+    ) || 0n;
 
   const dispatch = useDispatch();
   const handleOk = () => {
-    if (!isValidLargestSegmentId(largestSegmentId)) {
+    if (largestSegmentId == null || largestSegmentId < 1n) {
       Toast.warning("Please enter a segment id greater than 0.");
       return;
     }

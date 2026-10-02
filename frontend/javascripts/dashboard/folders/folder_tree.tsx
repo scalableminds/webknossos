@@ -7,7 +7,6 @@ import {
 } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { App, Dropdown, type MenuProps, Tree } from "antd";
-import type { useAppProps } from "antd/es/app/context";
 import type { DataNode, DirectoryTreeProps } from "antd/es/tree";
 import classNames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -320,52 +319,6 @@ export type DnDDropItemProps = {
   datasetId: string;
 } & ArbitraryObject;
 
-/**
- * Moves all selected datasets into the given folder and shows the progress in a modal.
- */
-function moveSelectedDatasetsToFolder(
-  context: DatasetCollectionContextValue,
-  folderId: string,
-  modal: useAppProps["modal"],
-) {
-  const { selectedDatasets } = context;
-  // Show a modal so that the user cannot do anything else while the datasets are being moved.
-  const progressModal = modal.info({
-    title: "Moving Datasets",
-    content: `Preparing to move ${selectedDatasets.length} datasets...`,
-    onCancel: (_close) => {},
-    onOk: (_close) => {},
-    okText: null,
-  });
-
-  let successCounter = 0;
-  Promise.all(
-    selectedDatasets.map((ds) =>
-      context.queries.updateDatasetMutation.mutateAsync([ds.id, { folderId }]).then(() => {
-        successCounter++;
-        progressModal.update({
-          content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
-        });
-      }),
-    ),
-  )
-    .then(
-      () => Toast.success(`Successfully moved ${selectedDatasets.length} datasets.`),
-      (err) => {
-        Toast.error(
-          `Couldn't move all ${selectedDatasets.length} datasets. See console for details`,
-        );
-        console.error(err);
-      },
-    )
-    .finally(() => {
-      // The datasets are not in the active folder anymore. Clear the selection to avoid
-      // that stale instances are mutated during the next bulk action.
-      context.setSelectedDatasets([]);
-      progressModal.destroy();
-    });
-}
-
 export function useDatasetDrop(
   folderId: string,
   canDrop: boolean,
@@ -377,7 +330,7 @@ export function useDatasetDrop(
   ConnectDropTarget,
 ] {
   const context = useDatasetCollectionContext();
-  const { selectedDatasets } = context;
+  const { selectedDatasets, setSelectedDatasets } = context;
   const { modal } = App.useApp();
   const [collectedProps, drop] = useDrop<
     DnDDropItemProps,
@@ -397,7 +350,41 @@ export function useDatasetDrop(
           return;
         }
 
-        moveSelectedDatasetsToFolder(context, folderId, modal);
+        // Show a modal so that the user cannot do anything else while the datasets are being moved.
+        const progressModal = modal.info({
+          title: "Moving Datasets",
+          content: `Preparing to move ${selectedDatasets.length} datasets...`,
+          onCancel: (_close) => {},
+          onOk: (_close) => {},
+          okText: null,
+        });
+
+        let successCounter = 0;
+        Promise.all(
+          selectedDatasets.map((ds) =>
+            context.queries.updateDatasetMutation.mutateAsync([ds.id, { folderId }]).then(() => {
+              successCounter++;
+              progressModal.update({
+                content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
+              });
+            }),
+          ),
+        )
+          .then(
+            () => Toast.success(`Successfully moved ${selectedDatasets.length} datasets.`),
+            (err) => {
+              Toast.error(
+                `Couldn't move all ${selectedDatasets.length} datasets. See console for details`,
+              );
+              console.error(err);
+            },
+          )
+          .finally(() => {
+            // The datasets are not in the active folder anymore. Clear the selection to avoid
+            // that stale instances are mutated during the next bulk action.
+            setSelectedDatasets([]);
+            progressModal.destroy();
+          });
       } else {
         const dataset = context.datasets.find((ds) => ds.id === item.datasetId);
 

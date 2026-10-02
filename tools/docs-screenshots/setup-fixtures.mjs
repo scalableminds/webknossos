@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Creates the local records that admin screenshots need, using only the public REST API:
-// a documentation project with one task on the documentation dataset (assigned to the
-// authenticated account) and an archived annotation. Re-running reuses existing records.
+// demonstration teams, a documentation task type, a documentation project with one task of
+// that type on the documentation dataset (assigned to the authenticated account) and an
+// archived annotation. Re-running reuses existing records.
 // Writes the instance-specific IDs to a fixtures file for `yarn docs:screenshots --fixtures`.
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -52,6 +53,37 @@ const user = await api("/user");
 const team = user.teams[0];
 if (!team) throw new Error("The documentation account needs a team.");
 
+const teams = await api("/teams");
+for (const name of defaults.teams ?? []) {
+  if (!teams.some((candidate) => candidate.name === name)) {
+    await api("/teams", "POST", { name });
+    console.log(`Created team ${name}`);
+  }
+}
+
+let taskType = (await api("/taskTypes")).find(
+  (candidate) => candidate.summary === defaults.taskType.summary,
+);
+if (!taskType) {
+  taskType = await api("/taskTypes", "POST", {
+    summary: defaults.taskType.summary,
+    description: defaults.taskType.description,
+    teamId: team.id,
+    settings: {
+      allowedModes: defaults.taskType.allowedModes,
+      preferredMode: defaults.taskType.allowedModes[0],
+      branchPointsAllowed: true,
+      somaClickingAllowed: false,
+      volumeInterpolationAllowed: false,
+      mergerMode: false,
+      magRestrictions: {},
+    },
+    recommendedConfiguration: null,
+    tracingType: "skeleton",
+  });
+  console.log(`Created task type ${taskType.summary}`);
+}
+
 let project = (await api("/projects")).find((candidate) => candidate.name === projectName);
 if (!project) {
   project = await api("/projects", "POST", {
@@ -66,10 +98,17 @@ if (!project) {
   console.log(`Created project ${projectName}`);
 }
 
-let [task] = await api("/tasks/list", "POST", { project: project.id });
+// Tasks of the documentation project that use another task type predate the documentation
+// task type; replace them so the task dashboard shows its description.
+let task;
+for (const candidate of await api("/tasks/list", "POST", { project: project.id })) {
+  if (candidate.type.id === taskType.id) task ??= candidate;
+  else {
+    await api(`/tasks/${candidate.id}`, "DELETE");
+    console.log(`Deleted task ${candidate.id} of another task type`);
+  }
+}
 if (!task) {
-  const [taskType] = await api("/taskTypes");
-  if (!taskType) throw new Error("Create a task type first.");
   const [experience] = Object.entries(user.experiences ?? {});
   const created = await api("/tasks", "POST", [
     {

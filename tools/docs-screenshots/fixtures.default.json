@@ -47,5 +47,11 @@
       },
       "clickTexts": ["Connectome"]
     }
-  }
+  },
+  "taskType": {
+    "summary": "Axon Tracing",
+    "description": "In this task we would like you to trace the axon starting at the task position through the dataset.\n\nHints:\n\n- Place a node at least every 10 slices and at every branch point.\n- Mark branch points with **B** and follow every branch to its end.\n- Ignore dendrites and glia; stay within the axon.\n- Leave a comment on nodes where the axon leaves the dataset.\n\nThe full keyboard shortcuts can be found in the [documentation](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html).",
+    "allowedModes": ["orthogonal", "flight"]
+  },
+  "teams": ["Axon Tracing", "Dendrite Proofreading", "Synapse Annotation", "Student Annotators"]
 }

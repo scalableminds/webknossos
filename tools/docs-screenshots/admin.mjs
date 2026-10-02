@@ -23,6 +23,27 @@ async function goto(ctx, path, ready) {
 async function fill(page, selector, value) {
   await page.locator(selector).filter({ visible: true }).first().fill(String(value));
 }
+// Illustrative form input; recipes never submit forms. Selects are found by their form label
+// because not every select component forwards its form item ID.
+async function choose(ctx, id, ...labels) {
+  const select = ctx.page.locator(`.ant-form-item:has(label[for="${id}"]) .ant-select`);
+  await select.click();
+  // Scope to this select's dropdown; a previous one may still be fading out.
+  const listId = await select.getByRole("combobox").getAttribute("aria-controls");
+  const options = ctx.page
+    .locator(".ant-select-dropdown")
+    .filter({ has: ctx.page.locator(`[id="${listId}"]`) })
+    .locator(".ant-select-item-option");
+  for (const label of labels) {
+    const option =
+      typeof label === "number" ? options.nth(label) : options.filter({ hasText: label }).first();
+    // Multiple-choice selects may preselect an option; clicking it again would deselect it.
+    if (!(await option.getAttribute("class")).includes("ant-select-item-option-selected"))
+      await option.click();
+  }
+  // Multiple-choice dropdowns stay open after selecting.
+  if (await options.first().isVisible()) await ctx.page.keyboard.press("Escape");
+}
 async function search(ctx, value = ctx.dataset.name, selector = `${main} input.ant-input`) {
   const input = ctx.page.locator(selector).filter({ visible: true }).first();
   await input.fill(value);
@@ -150,6 +171,12 @@ async function tasks(ctx) {
     );
   }
   await ctx.page.locator(`${main} a[href^="/annotations/"]`).first().waitFor({ state: "visible" });
+  // Task type descriptions render with lazily loaded Markdown, showing "Loading..." meanwhile.
+  await ctx.page.locator(".task-type-description").first().waitFor({ state: "visible" });
+  await ctx.page
+    .locator(".task-type-description")
+    .getByText("Loading...", { exact: true })
+    .waitFor({ state: "detached" });
   return content(ctx);
 }
 async function checkVisibleJobs(ctx) {
@@ -221,31 +248,63 @@ export const recipes = [
   ),
   recipe("dashboard_annotations.png", (ctx) => annotations(ctx, false)),
   recipe("dashboard_archive.png", (ctx) => annotations(ctx, true)),
-  ...["dashboard_tasks.png", "dashboard_tasks.jpeg", "screenshot_tasks.png"].map((name) =>
-    recipe(name, tasks),
+  recipe("dashboard_tasks.jpeg", tasks),
+  ...["dashboard_featured_publications.png", "getting_started-datasets.jpeg"].map((name) =>
+    recipe(name, publications),
   ),
-  ...[
-    "screenshot_featured_publications.png",
-    "dashboard_featured_publications.png",
-    "getting_started-datasets.jpeg",
-  ].map((name) => recipe(name, publications)),
   settings("dataset_settings_datasource.jpeg", "data", "Data Source"),
   settings("dataset_settings_sharing.jpeg", "sharing", "Sharing & Permissions"),
   settings("dataset_settings_metadata.jpeg", "metadata", "Metadata"),
   settings("dataset_settings_viewconfig.jpeg", "defaultConfig", "View Configuration"),
   settings("dataset_settings_delete.jpeg", "delete", "Delete Dataset"),
-  route("tasks_tasktype.jpeg", "/taskTypes/create", "Task Type", true),
+  recipe("tasks_tasktype.jpeg", async (ctx) => {
+    const taskType = fixture(
+      ctx,
+      "taskType",
+      "Summary and description of a demonstration task type.",
+    );
+    await goto(ctx, "/taskTypes/create", "Task Type");
+    await fill(ctx.page, "#summary", taskType.summary);
+    await choose(ctx, "teamId", 0);
+    await fill(ctx.page, "#description", taskType.description);
+    await choose(ctx, "settings_allowedModes", "Orthogonal", "Flight");
+    await choose(ctx, "settings_preferredMode", "Orthogonal");
+    await ctx.page.locator("#settings_somaClickingAllowed").uncheck();
+    await ctx.page.locator("#settings_somaClickingAllowed").blur();
+    await ctx.page.mouse.move(0, 0);
+    return { target: content(ctx), scrollToTop: true };
+  }),
   recipe("tasks_task.jpeg", async (ctx) => {
+    const taskType = fixture(ctx, "taskType", "Summary of a demonstration task type.");
+    const projectName = fixture(ctx, "projectName", "Name of the local documentation project.");
     await goto(ctx, "/tasks/create", "Create Tasks");
+    await choose(ctx, "taskTypeId", taskType.summary);
+    await choose(ctx, "neededExperience_domain", 0);
+    await fill(ctx.page, "#neededExperience_value", 1);
+    await fill(ctx.page, "#pendingInstances", 10);
+    await choose(ctx, "projectName", projectName);
+    await fill(ctx.page, "#boundingBox", "2700, 4370, 1730, 256, 256, 128");
     await fill(ctx.page, "#datasetId", ctx.dataset.name);
     await ctx.page
       .locator(".ant-select-dropdown")
       .filter({ visible: true })
       .getByText(ctx.dataset.name, { exact: true })
       .click();
+    await fill(ctx.page, "#editPosition", ctx.fixtures.viewer.position.join(", "));
+    await ctx.page.locator("#editPosition").blur();
     return { target: content(ctx), scrollToTop: true };
   }),
-  route("tasks_project.jpeg", "/projects/create", "Project"),
+  recipe("tasks_project.jpeg", async (ctx) => {
+    await goto(ctx, "/projects/create", "Project");
+    await fill(ctx.page, "#name", "L4AxonReconstruction");
+    await choose(ctx, "team", 0);
+    const user = await api(ctx, "/api/user");
+    await choose(ctx, "owner", `${user.lastName}, ${user.firstName}`);
+    await fill(ctx.page, "#priority", 100);
+    await fill(ctx.page, "#expectedTime", 90);
+    await ctx.page.locator("#expectedTime").blur();
+    return content(ctx);
+  }),
   recipe("tasks_download.jpeg", async (ctx) => {
     const name = fixture(
       ctx,
@@ -262,11 +321,11 @@ export const recipes = [
       throw new Error(
         "Documentation project must contain only tasks on the documentation dataset.",
       );
-    await ctx.page
+    const download = ctx.page
       .getByTitle("Download All Finished Annotations", { exact: true })
-      .first()
-      .waitFor({ state: "visible" });
-    return content(ctx);
+      .first();
+    await download.waitFor({ state: "visible" });
+    return { target: content(ctx), highlights: [download] };
   }),
   recipe("task_instance_actions.jpg", async (ctx) => {
     const id = CSSescape(
@@ -290,7 +349,6 @@ export const recipes = [
     return content(ctx);
   }),
   recipe("users_experience.jpeg", (ctx) => userModal(ctx, "Change Experience")),
-  recipe("users_team_assignment.jpg", (ctx) => userModal(ctx, "Edit Teams & Permissions")),
   recipe("users_activate2.jpeg", (ctx) => userModal(ctx, "Edit Teams & Permissions")),
   route("users_activate1.jpeg", "/users", "Users"),
   recipe("users_invite.jpeg", async (ctx) => {

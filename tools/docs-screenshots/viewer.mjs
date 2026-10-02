@@ -402,12 +402,42 @@ add("shuffle_tree_colors.png", async (ctx) => {
     padding: 48,
   };
 });
-for (const name of ["context_menu.png", "skeleton_context_menu.png"]) {
-  add(name, async (ctx) => {
-    await scene(ctx, "hybrid", name === "skeleton_context_menu.png");
-    return contextMenu(ctx);
-  });
-}
+add("context_menu.png", async (ctx) => {
+  await scene(ctx, "hybrid");
+  return contextMenu(ctx);
+});
+add("skeleton_context_menu.png", async (ctx) => {
+  await scene(ctx, "hybrid", true);
+  // Node actions appear only when right-clicking a node. Center the XY viewport (where the
+  // right-click lands) on the fixture skeletons' node closest to the scene position and
+  // activate one of its neighbors, so the edge actions are available as well.
+  const hash = viewerHash(ctx);
+  await ctx.page.evaluate(
+    async ({ position, segmentIds }) => {
+      const api = await window.webknossos.apiReady();
+      const distance = (node) =>
+        node.untransformedPosition.reduce((sum, value, i) => sum + (value - position[i]) ** 2, 0);
+      const candidates = Object.values(api.tracing.getAllTrees())
+        .filter((tree) => segmentIds.includes(tree.name.match(/^agglomerate (\d+)/)?.[1]))
+        .flatMap((tree) =>
+          [...tree.nodes.values()].map((node) => ({
+            node,
+            edges: tree.edges.getEdgesForNode(node.id),
+          })),
+        )
+        .filter(({ edges }) => edges.length > 0)
+        .sort((a, b) => distance(a.node) - distance(b.node));
+      if (!candidates.length) throw new Error("The fixture skeletons have no connected nodes.");
+      const [{ node, edges }] = candidates;
+      const [edge] = edges;
+      api.tracing.setActiveNode(edge.source === node.id ? edge.target : edge.source, true, true);
+      api.tracing.setCameraPosition(node.untransformedPosition);
+    },
+    { position: hash.position, segmentIds: fixtureMeshSegmentIds(hash) },
+  );
+  await ctx.waitForViewer();
+  return contextMenu(ctx);
+});
 add("mesh_options.jpeg", async (ctx) => {
   await scene(ctx, "view");
   return contextMenu(ctx);
@@ -816,6 +846,7 @@ add("start_merger_mode_job_modal.jpg", async (ctx) => {
 
 add("process_dataset.jpg", async (ctx) => {
   await scene(ctx, "view");
-  await ctx.page.locator('button[title="Start a processing job using AI"]').hover();
-  await show(ctx, dropdown);
+  const button = ctx.page.locator('button[title="Start a processing job using AI"]');
+  await button.hover();
+  return { target: await show(ctx, dropdown), context: button, padding: 48 };
 });

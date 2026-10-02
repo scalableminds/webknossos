@@ -61,10 +61,6 @@
     "kind": "screenshot"
   },
   {
-    "path": "docs/images/dashboard_tasks.png",
-    "kind": "screenshot"
-  },
-  {
     "path": "docs/images/datalayers.jpeg",
     "kind": "static",
     "reason": "Excluded from automatic updates by request: this illustration never needs updating."
@@ -206,19 +202,11 @@
     "kind": "screenshot"
   },
   {
-    "path": "docs/images/screenshot_featured_publications.png",
-    "kind": "screenshot"
-  },
-  {
     "path": "docs/images/screenshot_flight_mode.png",
     "kind": "screenshot"
   },
   {
     "path": "docs/images/screenshot_skeletons.png",
-    "kind": "screenshot"
-  },
-  {
-    "path": "docs/images/screenshot_tasks.png",
     "kind": "screenshot"
   },
   {
@@ -381,10 +369,6 @@
   },
   {
     "path": "docs/images/users_invite.jpeg",
-    "kind": "screenshot"
-  },
-  {
-    "path": "docs/images/users_team_assignment.jpg",
     "kind": "screenshot"
   },
   {

@@ -234,14 +234,8 @@ function getRenderSupportedLayerCount<
       maximumTextureCountForLayer,
   );
 
-  // Without any GPU restrictions, WK would be able to render all color layers
-  // plus one segmentation layer. Use that as the upper layer count limit to avoid
-  // compiling too complex shaders.
-  const maximumLayerCount =
-    Array.from(textureInformationPerLayer.keys()).filter((l) => l.category === "color").length +
-    (hasSegmentation ? 1 : 0);
   return {
-    maximumLayerCountToRender: Math.min(maximumLayerCountToRender, maximumLayerCount),
+    maximumLayerCountToRender: Math.min(maximumLayerCountToRender, textureInformationPerLayer.size),
     maximumTextureCountForLayer,
   };
 }

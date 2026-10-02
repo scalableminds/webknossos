@@ -167,6 +167,11 @@ describe("computeDataTexturesSetup", () => {
     testSupportFlags(computeDataTexturesSetupPartial(createLayers(10, 1)), 1);
   });
 
+  it("Several segmentation layers are not limited to one", () => {
+    const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(betterSpecs, true);
+    testSupportFlags(computeDataTexturesSetupPartial(createLayers(2, 3)), 5);
+  });
+
   it("Basic support + volume: mid specs", () => {
     const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(midSpecs, true);
     testSupportFlags(computeDataTexturesSetupPartial(createLayers(20, 1)), 12);

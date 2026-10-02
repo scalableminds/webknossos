@@ -741,16 +741,21 @@ export function extractPivotFromTransforms(transforms: CoordinateTransformation[
   return [-x, -y, -z];
 }
 
-// Returns the translation that expresses the same overall transform around a different pivot.
+// A layer transform is described by its scale, rotation and translation (srt) plus the pivot that
+// scaling and rotation happen around. Moving the pivot changes where the layer ends up, unless the
+// translation is adjusted to compensate. This function computes that adjusted translation: building
+// the transform chain from srt.scale, srt.rotation and the returned translation around newPivot
+// maps every point exactly like the chain built from srt around oldPivot does. Scale and rotation
+// are not affected by the pivot, so only the translation has to change.
 //
-// With T being translation, R being rotation and S being scaling,
-// the chain is T(pivot) * T(t) * R * S * T(-pivot), so as a point map it is
-//   M x = A (x - pivot) + pivot + t   with the linear part A = R * S.
-// A carries no pivot information, which is why the rotation and the scale stay untouched and the
-// whole difference is absorbed by the translation. Matching the total translation for an old pivot p
-// and a new pivot q
+// Derivation: with T being a translation, R the rotation and S the scaling, the chain is
+// T(pivot) * T(t) * R * S * T(-pivot). As a point map this is
+//   M x = A (x - pivot) + pivot + t = A x + (I - A) pivot + t
+// where A = R * S is the linear part (the 3x3 matrix without translation) and I is the identity
+// matrix. Only the constant term (I - A) pivot + t depends on the pivot. Requiring it to be equal
+// for the old pivot p with translation t and the new pivot q with translation t'
 //   (I - A) q + t' = (I - A) p + t
-// gives the result below. See docs in the spec: t' = t + (I - A)(p - q).
+// gives t' = t + (I - A)(p - q), which is what is computed below.
 export function rebaseTranslationToPivot(
   srt: SRTValues,
   oldPivot: Vector3,

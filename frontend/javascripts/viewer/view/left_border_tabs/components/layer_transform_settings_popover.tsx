@@ -1,11 +1,17 @@
-import { CloseOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  CloseOutlined,
+  InfoCircleOutlined,
+  LockOutlined,
+  ReloadOutlined,
+  UnlockOutlined,
+} from "@ant-design/icons";
 import FlipIcon from "@images/icons/icon-flip.svg?react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import { Button, Divider, Flex, InputNumber, Popover, Slider, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -24,6 +30,7 @@ import {
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getViewportExtentInVoxelPerAxis } from "viewer/model/accessors/view_mode_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
+import { type AxisLocks, applyLockedScaleChange, DEFAULT_AXIS_LOCKS } from "./locked_scale";
 import {
   getTranslationSliderConfig,
   MIN_SCALE,
@@ -71,11 +78,49 @@ function withRebasedTranslation(
 // SCALE_SLIDER_CONFIG.
 const SCALE_INPUT_STEP = 0.01;
 
-function SectionLabel({ children }: { children: ReactNode }) {
+// Explains the relative sliders, whose snapping back to the center is surprising at first.
+const RELATIVE_SLIDER_HINT =
+  "The sliders snap back to the center when released. Each drag changes the current value, " +
+  "which allows for fine as well as large changes.";
+
+function SectionLabel({ children, hint }: { children: ReactNode; hint?: string }) {
   return (
     <Typography.Title level={5} style={{ marginBottom: 4 }}>
       {children}
+      {hint != null && (
+        <Tooltip title={hint}>
+          <InfoCircleOutlined style={{ color: "gray", marginLeft: 6, fontSize: 12 }} />
+        </Tooltip>
+      )}
     </Typography.Title>
+  );
+}
+
+// A small icon button that toggles a per-axis option, highlighted while the option is active.
+function AxisToggleButton({
+  icon,
+  tooltip,
+  isActive,
+  onClick,
+}: {
+  icon: ReactNode;
+  tooltip: string;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip title={tooltip}>
+      <Button
+        type="text"
+        size="small"
+        icon={icon}
+        onClick={onClick}
+        style={{
+          padding: "0 4px",
+          color: isActive ? "var(--ant-color-primary)" : undefined,
+        }}
+      />
+    </Tooltip>
   );
 }
 
@@ -93,15 +138,12 @@ type AxisSliderRowProps = {
   inputMin?: number | null;
   step: number;
   onChange: (v: number) => void;
-  // Called once a value is actually committed, i.e. the slider is released or the number input is
-  // confirmed – as opposed to onChange, which also fires continuously while dragging.
-  onCommit?: (v: number) => void;
   resetDisabled: boolean;
   // Custom reset handler. Defaults to onChange(storedValue); used when resetting the row needs to
   // restore more than the displayed value (e.g. the rotation row also restores the flip sign).
   onReset?: () => void;
-  onFlip?: () => void;
-  isFlipped?: boolean;
+  // Shown between the slider and the number input, e.g. the flip or the lock toggle.
+  axisToggle?: ReactNode;
 } & AxisSliderRowSliderProps;
 
 function AxisSliderRow({
@@ -113,11 +155,9 @@ function AxisSliderRow({
   inputMin = min,
   step,
   onChange,
-  onCommit,
   resetDisabled,
   onReset,
-  onFlip,
-  isFlipped,
+  axisToggle,
   sliderNode,
 }: AxisSliderRowProps) {
   return (
@@ -132,38 +172,20 @@ function AxisSliderRow({
           step={step}
           value={value}
           onChange={onChange}
-          onChangeComplete={(v) => onCommit?.(v)}
           style={{ flex: 1 }}
         />
       )}
-      <div style={{ width: 28, flexShrink: 0 }}>
-        {onFlip != null && (
-          <Tooltip title={isFlipped ? "Axis is flipped – click to unflip" : "Flip axis"}>
-            <Button
-              type="text"
-              size="small"
-              icon={<FlipIcon />}
-              onClick={onFlip}
-              style={{
-                padding: "0 4px",
-                color: isFlipped ? "var(--ant-color-primary)" : undefined,
-              }}
-            />
-          </Tooltip>
-        )}
-      </div>
+      <div style={{ width: 28, flexShrink: 0 }}>{axisToggle}</div>
       <InputNumber
-        // Deliberately unbounded at the top: typing a value beyond the slider's current maximum
-        // extends the slider range (see onCommit) instead of being clamped to it. Rows without a
-        // slider range (the translation rows) leave the input unbounded in both directions.
+        // Deliberately unbounded at the top, since the relative sliders do not limit the value. Rows
+        // with inputMin null (the translation rows) are unbounded in both directions. A value typed
+        // below inputMin is not emitted while typing and is clamped to it on blur or Enter.
         min={inputMin ?? undefined}
         step={step}
         value={value}
         onChange={(v) => {
           if (v != null) onChange(v);
         }}
-        onBlur={() => onCommit?.(value)}
-        onPressEnter={() => onCommit?.(value)}
         size="small"
         style={{ width: 62 }}
       />
@@ -191,8 +213,19 @@ export function LayerTransformSettingsContent({
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
+  const [scaleLocks, setScaleLocks] = useState<AxisLocks>(DEFAULT_AXIS_LOCKS);
+  // The scale magnitudes from when the current scale slider action started. Locked axes are scaled
+  // relative to these, see applyLockedScaleChange.
+  const scaleAtSliderStartRef = useRef<Vector3 | null>(null);
+  // The scale slider that is currently dragged and its handle offset, so that the sliders of the
+  // other locked axes can show the same offset. Locked axes are scaled by the same factor, so the
+  // same offset is exactly what is applied to them.
+  const [scaleSliderDrag, setScaleSliderDrag] = useState<{ axis: number; offset: number } | null>(
+    null,
+  );
+  const endScaleSliderDrag = useCallback(() => setScaleSliderDrag(null), []);
   const dataset = useWkSelector((state) => state.dataset);
-  const datasetBbox = useMemo(() => getUntransformedDatasetBoundingBox(dataset), [dataset]);
+  const datasetBbox = getUntransformedDatasetBoundingBox(dataset);
   const transforms = useWkSelector((state) => {
     const dataLayer = state.dataset.dataSource.dataLayers.find((l) => l.name === layer.name);
     return dataLayer?.coordinateTransformations ?? null;
@@ -342,10 +375,44 @@ export function LayerTransformSettingsContent({
     handleChange({ scale: newScale, rotation, translation });
   };
 
-  // The scaling row shows and edits only the magnitude; the flip orientation (the sign of the scale)
-  // is kept as it is, since the flip toggle lives in the rotation row.
-  const updateScaleMagnitude = (axis: 0 | 1 | 2, magnitude: number) => {
-    updateScale(axis, magnitude * (scale[axis] < 0 ? -1 : 1));
+  const scaleMagnitudes: Vector3 = [Math.abs(scale[0]), Math.abs(scale[1]), Math.abs(scale[2])];
+
+  // The scaling rows show and edit only the magnitudes; the flip orientations (the signs of the
+  // scale) are kept as they are, since the flip toggle lives in the rotation row. Math.sign is not
+  // used here, since it is 0 for a scale of 0, which could then never be enlarged again.
+  const updateScaleMagnitudes = (magnitudes: Vector3) => {
+    const newScale = magnitudes.map(
+      (magnitude, i) => magnitude * (scale[i] < 0 ? -1 : 1),
+    ) as Vector3;
+    handleChange({ scale: newScale, rotation, translation });
+  };
+
+  // Changes the scale magnitude of an axis, together with all other locked axes if it is locked.
+  // While a slider is dragged, the change is relative to the magnitudes from the start of the drag,
+  // otherwise relative to the current ones.
+  const updateLockedScaleMagnitude = (
+    axis: 0 | 1 | 2,
+    magnitude: number,
+    reference: Vector3 = scaleMagnitudes,
+  ) => {
+    updateScaleMagnitudes(applyLockedScaleChange(reference, scaleLocks, axis, magnitude));
+  };
+
+  // Resetting a locked axis resets all locked axes, so that they stay in sync.
+  const resetScaleMagnitude = (axis: 0 | 1 | 2) => {
+    const newMagnitudes: Vector3 = [...scaleMagnitudes];
+    for (let other = 0; other < 3; other++) {
+      if (other === axis || (scaleLocks[axis] && scaleLocks[other])) {
+        newMagnitudes[other] = Math.abs(storedSRT.scale[other]);
+      }
+    }
+    updateScaleMagnitudes(newMagnitudes);
+  };
+
+  const toggleScaleLock = (axis: 0 | 1 | 2) => {
+    setScaleLocks(
+      (locks) => locks.map((isLocked, i) => (i === axis ? !isLocked : isLocked)) as AxisLocks,
+    );
   };
 
   const updateRotation = (axis: 0 | 1 | 2, v: number) => {
@@ -374,7 +441,7 @@ export function LayerTransformSettingsContent({
 
   return (
     <Flex vertical style={{ width: 250 }}>
-      <SectionLabel>Translation</SectionLabel>
+      <SectionLabel hint={RELATIVE_SLIDER_HINT}>Translation</SectionLabel>
       {(["X", "Y", "Z"] as const).map((axis, i) => (
         <AxisSliderRow
           key={axis}
@@ -409,30 +476,67 @@ export function LayerTransformSettingsContent({
           onChange={(v) => updateRotation(i as 0 | 1 | 2, v)}
           resetDisabled={isFetchingStored}
           onReset={() => resetRotationAndFlip(i as 0 | 1 | 2)}
-          onFlip={() => updateScale(i as 0 | 1 | 2, -scale[i])}
-          isFlipped={scale[i] < 0}
+          axisToggle={
+            <AxisToggleButton
+              icon={<FlipIcon />}
+              tooltip={scale[i] < 0 ? "Axis is flipped – click to unflip" : "Flip axis"}
+              isActive={scale[i] < 0}
+              onClick={() => updateScale(i as 0 | 1 | 2, -scale[i])}
+            />
+          }
         />
       ))}
-      <SectionLabel>Scaling</SectionLabel>
+      <SectionLabel hint={RELATIVE_SLIDER_HINT}>Scaling</SectionLabel>
       {(["X", "Y", "Z"] as const).map((axis, i) => (
         <AxisSliderRow
           key={axis}
           label={axis}
-          value={Math.abs(scale[i])}
+          value={scaleMagnitudes[i]}
           storedValue={Math.abs(storedSRT.scale[i])}
           inputMin={MIN_SCALE}
           step={SCALE_INPUT_STEP}
-          onChange={(v) => updateScaleMagnitude(i as 0 | 1 | 2, v)}
-          onCommit={(v) => updateScaleMagnitude(i as 0 | 1 | 2, Math.max(MIN_SCALE, Math.abs(v)))}
+          onChange={(v) => updateLockedScaleMagnitude(i as 0 | 1 | 2, v)}
           sliderNode={
             <RelativeSlider
-              value={Math.abs(scale[i])}
+              value={scaleMagnitudes[i]}
               config={SCALE_SLIDER_CONFIG}
-              onChange={(v) => updateScaleMagnitude(i as 0 | 1 | 2, v)}
+              onActionStart={() => {
+                scaleAtSliderStartRef.current = scaleMagnitudes;
+              }}
+              onChange={(v, offset) => {
+                setScaleSliderDrag({ axis: i, offset });
+                updateLockedScaleMagnitude(
+                  i as 0 | 1 | 2,
+                  v,
+                  scaleAtSliderStartRef.current ?? scaleMagnitudes,
+                );
+              }}
+              onActionEnd={endScaleSliderDrag}
+              mirroredOffset={
+                scaleSliderDrag != null &&
+                scaleSliderDrag.axis !== i &&
+                scaleLocks[i] &&
+                scaleLocks[scaleSliderDrag.axis]
+                  ? scaleSliderDrag.offset
+                  : undefined
+              }
               ariaLabel={`Scale ${axis}`}
             />
           }
+          axisToggle={
+            <AxisToggleButton
+              icon={scaleLocks[i] ? <LockOutlined /> : <UnlockOutlined />}
+              tooltip={
+                scaleLocks[i]
+                  ? "Locked axes are scaled together, keeping their proportions – click to unlock"
+                  : "Click to lock, so that this axis is scaled together with the other locked axes"
+              }
+              isActive={scaleLocks[i]}
+              onClick={() => toggleScaleLock(i as 0 | 1 | 2)}
+            />
+          }
           resetDisabled={isFetchingStored}
+          onReset={() => resetScaleMagnitude(i as 0 | 1 | 2)}
         />
       ))}
       <Divider />

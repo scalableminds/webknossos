@@ -15,6 +15,10 @@ import { transformPointUnscaled } from "viewer/model/helpers/transformation_help
 import { describe, expect, it } from "vitest";
 
 const EPSILON = 0.001;
+// For results that are computed exactly up to float rounding, e.g. a single rebase of small
+// numbers. EPSILON is much looser, since it is also used where values pass through several matrix
+// multiplications and Euler angle extractions, which accumulate more rounding error.
+const FLOAT_PRECISION = 1e-9;
 // The pivot is deliberately far away from the origin so that a wrong pivot is clearly visible.
 const PIVOT: Vector3 = [1000, 2000, 3000];
 
@@ -179,15 +183,28 @@ describe("Live layer transforms", () => {
     // With an identity linear part the pivot is irrelevant.
     const srt: SRTValues = { scale: [1, 1, 1], rotation: [0, 0, 0], translation: [5, 6, 7] };
 
-    almostEqual(expect, rebaseTranslationToPivot(srt, [1, 2, 3], [400, -5, 60]), [5, 6, 7], 1e-9);
+    almostEqual(
+      expect,
+      rebaseTranslationToPivot(srt, [1, 2, 3], [400, -5, 60]),
+      [5, 6, 7],
+      FLOAT_PRECISION,
+    );
   });
 
   it("should yield (I - A) * p for the classic offset case", () => {
-    // t = 0 and the new pivot at the origin, with a pure scaling: t' = p - A p = p * (1 - scale).
+    // A is the linear part of the transform (rotation * scaling) and I the identity matrix, see
+    // rebaseTranslationToPivot. In general, the rebased translation is t' = t + (I - A)(p - q).
+    // Here t = 0, the new pivot q is the origin and A is a pure scaling, so this simplifies to
+    // t' = p - A p = p * (1 - scale).
     const srt: SRTValues = { scale: [3, 3, 3], rotation: [0, 0, 0], translation: [0, 0, 0] };
     const p: Vector3 = [100, 200, 300];
 
-    almostEqual(expect, rebaseTranslationToPivot(srt, p, [0, 0, 0]), [-200, -400, -600], 1e-9);
+    almostEqual(
+      expect,
+      rebaseTranslationToPivot(srt, p, [0, 0, 0]),
+      [-200, -400, -600],
+      FLOAT_PRECISION,
+    );
   });
 
   it("should round-trip when rebasing back to the original pivot", () => {
@@ -197,7 +214,7 @@ describe("Live layer transforms", () => {
     const there = { ...srt, translation: rebaseTranslationToPivot(srt, PIVOT, other) };
     const back = rebaseTranslationToPivot(there, other, PIVOT);
 
-    almostEqual(expect, back, srt.translation, 1e-9);
+    almostEqual(expect, back, srt.translation, FLOAT_PRECISION);
   });
 
   it("should handle a degenerate scale, where the linear part is singular", () => {
@@ -207,7 +224,7 @@ describe("Live layer transforms", () => {
     const rebased = rebaseTranslationToPivot(srt, p, [0, 0, 0]);
 
     // x is scaled by 0, so (I - A) p keeps the full 100 on that axis.
-    almostEqual(expect, rebased, [100, -200, -300], 1e-9);
+    almostEqual(expect, rebased, [100, -200, -300], FLOAT_PRECISION);
     expect(rebased.every((value) => Number.isFinite(value))).toBe(true);
   });
 

@@ -1,60 +1,60 @@
 import {
   applyRelativeFactor,
   applyRelativeTranslationDelta,
-  FALLBACK_TRANSLATION_SLIDER_RANGE,
-  formatSliderRange,
+  FALLBACK_TRANSLATION_SLIDER_MAX_OFFSET,
+  formatSliderMaxOffset,
   getTranslationSliderConfig,
   MIN_SCALE,
   SCALE_SLIDER_CONFIG,
-  translationSliderRangeFromViewportExtent,
+  translationSliderMaxOffsetFromViewportExtent,
 } from "viewer/view/left_border_tabs/components/relative_slider";
 import { describe, expect, it } from "vitest";
 
-describe("translationSliderRangeFromViewportExtent", () => {
+describe("translationSliderMaxOffsetFromViewportExtent", () => {
   it("should round a viewport extent to a single significant digit", () => {
-    expect(translationSliderRangeFromViewportExtent(1253)).toBe(1000);
-    expect(translationSliderRangeFromViewportExtent(2600)).toBe(3000);
-    expect(translationSliderRangeFromViewportExtent(123.4)).toBe(100);
-    expect(translationSliderRangeFromViewportExtent(9)).toBe(9);
+    expect(translationSliderMaxOffsetFromViewportExtent(1253)).toBe(1000);
+    expect(translationSliderMaxOffsetFromViewportExtent(2600)).toBe(3000);
+    expect(translationSliderMaxOffsetFromViewportExtent(123.4)).toBe(100);
+    expect(translationSliderMaxOffsetFromViewportExtent(9)).toBe(9);
   });
 
   it("should stay in the single-digit range when the mantissa rounds up", () => {
-    expect(translationSliderRangeFromViewportExtent(9700)).toBe(10000);
+    expect(translationSliderMaxOffsetFromViewportExtent(9700)).toBe(10000);
   });
 
   it("should fall back for extents that no laid-out viewport can produce", () => {
     // getViewportExtentInVoxelPerAxis floors its result at 1, so 1 means "no viewport yet".
     for (const extent of [1, 0, -5, Number.NaN, Number.POSITIVE_INFINITY]) {
-      expect(translationSliderRangeFromViewportExtent(extent)).toBe(
-        FALLBACK_TRANSLATION_SLIDER_RANGE,
+      expect(translationSliderMaxOffsetFromViewportExtent(extent)).toBe(
+        FALLBACK_TRANSLATION_SLIDER_MAX_OFFSET,
       );
     }
   });
 
-  it("should always return a usable range with a single significant digit", () => {
+  it("should always return a usable maximum offset with a single significant digit", () => {
     for (const extent of [2, 3.7, 47, 1000, 12345, 1e7, Number.NaN, Number.NEGATIVE_INFINITY]) {
-      const range = translationSliderRangeFromViewportExtent(extent);
-      expect(Number.isInteger(range)).toBe(true);
-      expect(range).toBeGreaterThan(1);
+      const maxOffset = translationSliderMaxOffsetFromViewportExtent(extent);
+      expect(Number.isInteger(maxOffset)).toBe(true);
+      expect(maxOffset).toBeGreaterThan(1);
       // A single significant digit means the value is one digit followed by only zeroes.
-      expect(range.toString().replace(/0+$/, "")).toHaveLength(1);
+      expect(maxOffset.toString().replace(/0+$/, "")).toHaveLength(1);
     }
   });
 });
 
-describe("formatSliderRange", () => {
+describe("formatSliderMaxOffset", () => {
   it("should spell out small ranges", () => {
-    expect(formatSliderRange(9)).toBe("9");
-    expect(formatSliderRange(100)).toBe("100");
-    expect(formatSliderRange(900)).toBe("900");
+    expect(formatSliderMaxOffset(9)).toBe("9");
+    expect(formatSliderMaxOffset(100)).toBe("100");
+    expect(formatSliderMaxOffset(900)).toBe("900");
   });
 
   it("should use an exponent instead of a thousands separator", () => {
-    expect(formatSliderRange(1000)).toBe("1e3");
-    expect(formatSliderRange(3000)).toBe("3e3");
-    expect(formatSliderRange(9000)).toBe("9e3");
-    expect(formatSliderRange(20000)).toBe("2e4");
-    expect(formatSliderRange(1e7)).toBe("1e7");
+    expect(formatSliderMaxOffset(1000)).toBe("1e3");
+    expect(formatSliderMaxOffset(3000)).toBe("3e3");
+    expect(formatSliderMaxOffset(9000)).toBe("9e3");
+    expect(formatSliderMaxOffset(20000)).toBe("2e4");
+    expect(formatSliderMaxOffset(1e7)).toBe("1e7");
   });
 });
 
@@ -62,7 +62,7 @@ describe("getTranslationSliderConfig", () => {
   it("should reach one viewport extent in either direction, in whole voxels", () => {
     const config = getTranslationSliderConfig(1253);
 
-    expect(config.range).toBe(1000);
+    expect(config.maxOffset).toBe(1000);
     expect(config.step).toBe(1);
     expect(config.apply(500, -200)).toBe(300);
   });
@@ -96,16 +96,16 @@ describe("getTranslationSliderConfig", () => {
 
 describe("SCALE_SLIDER_CONFIG", () => {
   it("should span one decade in either direction", () => {
-    expect(SCALE_SLIDER_CONFIG.range).toBe(1);
+    expect(SCALE_SLIDER_CONFIG.maxOffset).toBe(1);
     expect(SCALE_SLIDER_CONFIG.marks[-1].label).toBe("×1/10");
     expect(SCALE_SLIDER_CONFIG.marks[1].label).toBe("×10");
   });
 
   it("should reach a tenth and ten times the value the action started from", () => {
-    const { apply, range } = SCALE_SLIDER_CONFIG;
+    const { apply, maxOffset } = SCALE_SLIDER_CONFIG;
 
-    expect(apply(2, -range)).toBe(0.2);
-    expect(apply(2, range)).toBe(20);
+    expect(apply(2, -maxOffset)).toBe(0.2);
+    expect(apply(2, maxOffset)).toBe(20);
     expect(apply(2, 0)).toBe(2);
   });
 
@@ -136,6 +136,7 @@ describe("applyRelativeFactor", () => {
   });
 
   it("should keep four significant digits, so that tiny scalings stay usable", () => {
+    // 0.001 * 10 ** 0.1 ≈ 0.001259
     expect(applyRelativeFactor(0.001, 0.1)).toBeCloseTo(0.001259, 6);
   });
 

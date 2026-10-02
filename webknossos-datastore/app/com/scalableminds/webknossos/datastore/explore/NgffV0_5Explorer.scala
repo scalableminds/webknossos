@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffDataset, NgffMultiscalesItem}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffDataset, NgffLabelsGroup, NgffMultiscalesItem}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupHeader, Zarr3ArrayHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -51,6 +51,12 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
       )
       layers: List[(StaticLayer, VoxelSize)] = layerLists.flatten
     } yield layers ++ labelLayers
+
+  override protected def readLabelsGroup(remotePath: VaultPath)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[NgffLabelsGroup] =
+    (remotePath / NgffLabelsGroup.LABEL_PATH_ZARR3).parseAsJson(using NgffLabelsGroup.zarr3Reads)
 
   protected def createLayer(
       remotePath: VaultPath,

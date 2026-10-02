@@ -1904,43 +1904,69 @@ export async function getMappingsForDatasetLayer(
   datastoreUrl: string,
   dataset: APIDataset,
   layerName: string,
-): Promise<Array<string>> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/mappings?token=${token}`,
-    ),
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<string>>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) =>
+        Request.receiveJSON(
+          `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/mappings?token=${token}`,
+          adaptedOptions,
+        ),
+      ),
+    options,
+    retryOptions,
   );
 }
 
-export function fetchMapping(
+export async function fetchMapping(
   datastoreUrl: string,
   dataset: APIDataset,
   layerName: string,
   mappingName: string,
-): Promise<APIMapping> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
-    ),
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIMapping>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) =>
+        Request.receiveJSON(
+          `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
+          adaptedOptions,
+        ),
+      ),
+    options,
+    retryOptions,
   );
 }
 
-export function getEditableMappingInfo(
+export async function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,
   annotationId: string,
   version: number | undefined | null,
-): Promise<ServerEditableMapping> {
-  return doWithToken((token) => {
-    const params = new URLSearchParams({
-      token,
-      annotationId: `${annotationId}`,
-    });
-    if (version != null) {
-      params.set("version", version.toString());
-    }
-    return Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?${params}`);
-  });
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<ServerEditableMapping>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) => {
+        const params = new URLSearchParams({
+          token,
+          annotationId: `${annotationId}`,
+        });
+        if (version != null) {
+          params.set("version", version.toString());
+        }
+        return Request.receiveJSON(
+          `${tracingStoreUrl}/tracings/mapping/${tracingId}/info?${params}`,
+          adaptedOptions,
+        );
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getPositionForSegmentInAgglomerate(
@@ -1966,11 +1992,19 @@ export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   dataset: APIDataset,
   layerName: string,
-): Promise<Array<string>> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates?token=${token}`,
-    ),
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<string>>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) =>
+        Request.receiveJSON(
+          `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates?token=${token}`,
+          adaptedOptions,
+        ),
+      ),
+    options,
+    retryOptions,
   );
 }
 

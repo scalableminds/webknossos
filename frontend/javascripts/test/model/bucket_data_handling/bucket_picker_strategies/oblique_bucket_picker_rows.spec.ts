@@ -2,11 +2,10 @@ import { M4x4, type Matrix4x4 } from "libs/mjs";
 import type { Vector3, Vector4 } from "viewer/constants";
 import constants, { UnitLong } from "viewer/constants";
 import { _getDummyFlycamMatrix } from "viewer/model/accessors/flycam_accessor";
-import {
+import determineBucketsForPlaneByRows, {
   PREFETCH_BUCKET_FRACTION,
   ROTATIONS,
-} from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import determineBucketsForPlaneByRows from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_rows";
+} from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_rows";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { buildOverlapTest } from "viewer/model/bucket_data_handling/polyhedron_flood_fill";
 import {

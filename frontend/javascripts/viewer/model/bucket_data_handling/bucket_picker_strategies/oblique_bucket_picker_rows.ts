@@ -9,7 +9,6 @@ import {
 } from "viewer/model/helpers/position_converter";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { getPriorityWeightForZoomStepDiff, MAX_ZOOM_STEP_DIFF } from "../loading_strategy_logic";
-import { PREFETCH_BUCKET_FRACTION, ROTATIONS } from "./oblique_bucket_picker";
 
 // Determines the buckets of the three orthogonal viewport planes row by row.
 //
@@ -27,6 +26,30 @@ import { PREFETCH_BUCKET_FRACTION, ROTATIONS } from "./oblique_bucket_picker";
 // exact test (to be robust against rounding and to decide ties like the test). The interior of
 // an interval is emitted without testing. The three planes' intervals are merged per row, so
 // that no bucket is emitted twice.
+
+const ALPHA = Math.PI / 2;
+
+// biome-ignore format: don't format array
+export const ROTATIONS = {
+  YZ: [
+    Math.cos(ALPHA), 0, Math.sin(ALPHA), 0,
+    0, 1, 0, 0,
+    -Math.sin(ALPHA), 0, Math.cos(ALPHA), 0,
+    0, 0, 0, 1,
+  ] as Matrix4x4,
+  XZ: [
+    1, 0, 0, 0,
+    0, Math.cos(ALPHA), Math.sin(ALPHA), 0,
+    0, -Math.sin(ALPHA), Math.cos(ALPHA), 0,
+    0, 0, 0, 1,
+  ] as Matrix4x4,
+};
+
+// Buckets are also picked that the plane would intersect if it moved by up to this fraction of
+// a bucket's thickness along its normal, so that data is already loaded when the user moves
+// along the view axis. Being < 1, this never reaches past the adjacent bucket layer,
+// independent of zoom, mags and rotation.
+export const PREFETCH_BUCKET_FRACTION = 0.3;
 
 const PLANE_IDS: Array<OrthoViewWithoutTD> = ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"];
 
@@ -179,15 +202,16 @@ function addBucketsOfLevel(
 ): void {
   const logZoomStep = nonFallbackLogZoomStep + zoomStepDiff;
   // null is passed as additionalCoordinates, since the bucket picker doesn't care about the
-  // additional coordinates (see oblique_bucket_picker.ts).
+  // additional coordinates. It simply sticks to 3D and the caller is responsible for augmenting
+  // potential other coordinates.
   const centerAddress = globalPositionToBucketPosition(position, denseMags, logZoomStep, null);
   const centerX = centerAddress[0];
   const centerY = centerAddress[1];
   const centerZ = centerAddress[2];
   const additionalPriorityWeight = getPriorityWeightForZoomStepDiff(loadingStrategy, zoomStepDiff);
   const bucketExtent = getBucketExtent(denseMags[logZoomStep]);
-  // Same prefetch distance as in oblique_bucket_picker.ts: based on the buckets of the rendered
-  // (non-fallback) mag, so that fallback levels cover the same movement.
+  // The prefetch distance is based on the buckets of the rendered (non-fallback) mag, so that
+  // fallback levels cover the same movement instead of a proportionally larger one.
   const prefetchBucketExtent = getBucketExtent(denseMags[nonFallbackLogZoomStep]);
 
   // Everything below is in bucket coordinates (world / bucketExtent), in which a bucket with

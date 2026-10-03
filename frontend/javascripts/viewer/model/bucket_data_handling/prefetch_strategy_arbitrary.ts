@@ -3,7 +3,10 @@ import { M4x4, V3 } from "libs/mjs";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { Vector3 } from "viewer/constants";
-import PolyhedronRasterizer from "viewer/model/bucket_data_handling/polyhedron_rasterizer";
+import {
+  collectBucketsInConvexPolyhedronByRows,
+  getSquareFrustum,
+} from "viewer/model/bucket_data_handling/polyhedron_flood_fill";
 import { AbstractPrefetchStrategy } from "viewer/model/bucket_data_handling/prefetch_strategy_plane";
 import type { PullQueueItem } from "viewer/model/bucket_data_handling/pullqueue";
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
@@ -15,15 +18,7 @@ export class PrefetchStrategyFlight extends AbstractPrefetchStrategy {
   roundTripTimeRangeStart = 0;
   roundTripTimeRangeEnd = Number.POSITIVE_INFINITY;
   name = "FLIGHT";
-  // @ts-expect-error ts-migrate(2702) FIXME: 'PolyhedronRasterizer' only refers to a type, but ... Remove this comment to see the full error message
-  prefetchPolyhedron: PolyhedronRasterizer.Master = PolyhedronRasterizer.Master.squareFrustum(
-    7,
-    7,
-    -0.5,
-    10,
-    10,
-    20,
-  );
+  prefetchFrustum = getSquareFrustum(7, 7, -0.5, 10, 10, 20);
 
   getExtentObject(
     poly0: BoundingBoxMinMaxType,
@@ -73,25 +68,27 @@ export class PrefetchStrategyFlight extends AbstractPrefetchStrategy {
 
     const matrix0 = M4x4.clone(matrix);
     this.modifyMatrixForPoly(matrix0, zoomStep);
-    const polyhedron0 = this.prefetchPolyhedron.transformAffine(matrix0);
-    const testAddresses = polyhedron0.collectPointsOnion(matrix0[12], matrix0[13], matrix0[14]);
+    const testAddresses = collectBucketsInConvexPolyhedronByRows(
+      M4x4.transformPointsAffine(matrix0, this.prefetchFrustum.vertices),
+      this.prefetchFrustum.edgeIndices,
+    );
+    const positionBucketWithZoomStep = globalPositionToBucketPosition(
+      position,
+      mags,
+      zoomStep,
+      null,
+    );
+    const positionBucket: Vector3 = [
+      positionBucketWithZoomStep[0],
+      positionBucketWithZoomStep[1],
+      positionBucketWithZoomStep[2],
+    ];
     let i = 0;
 
     while (i < testAddresses.length) {
       const bucketX = testAddresses[i++];
       const bucketY = testAddresses[i++];
       const bucketZ = testAddresses[i++];
-      const positionBucketWithZoomStep = globalPositionToBucketPosition(
-        position,
-        mags,
-        zoomStep,
-        null,
-      );
-      const positionBucket: Vector3 = [
-        positionBucketWithZoomStep[0],
-        positionBucketWithZoomStep[1],
-        positionBucketWithZoomStep[2],
-      ];
       const distanceToPosition = V3.length(V3.sub([bucketX, bucketY, bucketZ], positionBucket));
       pullQueue.push({
         bucket: [bucketX, bucketY, bucketZ, zoomStep, additionalCoordinates ?? []],

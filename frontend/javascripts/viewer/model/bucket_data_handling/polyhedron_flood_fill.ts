@@ -414,3 +414,33 @@ function addDirection(
   }
   directions.push(normalized);
 }
+
+// A frustum around the z axis whose faces at nearZ and farZ are rectangles of the given widths,
+// in the format the functions above expect.
+export function getSquareFrustum(
+  nearWidthX: number,
+  nearWidthY: number,
+  nearZ: number,
+  farWidthX: number,
+  farWidthY: number,
+  farZ: number,
+): { vertices: Array<number>; edgeIndices: Array<number> } {
+  const vertices: Array<number> = [];
+  for (const signX of [-1, 1]) {
+    for (const signY of [-1, 1]) {
+      vertices.push((signX * nearWidthX) / 2, (signY * nearWidthY) / 2, nearZ);
+      vertices.push((signX * farWidthX) / 2, (signY * farWidthY) / 2, farZ);
+    }
+  }
+  // Vertex i has the offset 3 * i. Bit 0 of i selects the far face, bit 1 the y sign and bit 2
+  // the x sign, so two vertices are connected iff their indices differ in exactly one bit.
+  const edgeIndices: Array<number> = [];
+  for (let i = 0; i < 8; i++) {
+    for (const bit of [1, 2, 4]) {
+      if ((i & bit) === 0) {
+        edgeIndices.push(3 * i, 3 * (i | bit));
+      }
+    }
+  }
+  return { vertices, edgeIndices };
+}

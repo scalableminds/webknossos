@@ -1,9 +1,9 @@
 import { M4x4, type Matrix4x4 } from "libs/mjs";
 import {
   buildOverlapTest,
-  collectBucketsInConvexPolyhedronByRows,
+  collectBucketsInConvexPolyhedron,
   getSquareFrustum,
-} from "viewer/model/bucket_data_handling/polyhedron_flood_fill";
+} from "viewer/model/bucket_data_handling/convex_polyhedron_buckets";
 import { describe, expect, it } from "vitest";
 
 const frustum = getSquareFrustum(7, 7, -0.5, 10, 10, 20);
@@ -93,7 +93,7 @@ function bruteForce(vertices: Array<number>, edgeIndices: Array<number>): string
   return keys.sort();
 }
 
-describe("collectBucketsInConvexPolyhedronByRows", () => {
+describe("collectBucketsInConvexPolyhedron", () => {
   it("picks exactly the buckets of an axis-aligned cuboid", () => {
     // Spans buckets 1 to 3 (inclusive) in each dimension; buckets 0 and 4 only touch it.
     const cuboid = getSquareFrustum(3, 3, 0, 3, 3, 3);
@@ -101,7 +101,7 @@ describe("collectBucketsInConvexPolyhedronByRows", () => {
       getMatrix([0, 0, 0], [2.5, 2.5, 1]),
       cuboid.vertices,
     );
-    const buckets = collectBucketsInConvexPolyhedronByRows(vertices, cuboid.edgeIndices);
+    const buckets = collectBucketsInConvexPolyhedron(vertices, cuboid.edgeIndices);
     expect(buckets.length / 3).toBe(27);
     for (let i = 0; i < buckets.length; i++) {
       expect(buckets[i]).toBeGreaterThanOrEqual(1);
@@ -112,9 +112,7 @@ describe("collectBucketsInConvexPolyhedronByRows", () => {
   MATRICES.forEach((matrix, index) => {
     it(`finds exactly the overlapping buckets (matrix ${index})`, () => {
       const vertices = getVertices(matrix);
-      const found = toSortedKeys(
-        collectBucketsInConvexPolyhedronByRows(vertices, frustum.edgeIndices),
-      );
+      const found = toSortedKeys(collectBucketsInConvexPolyhedron(vertices, frustum.edgeIndices));
       expect(found).toEqual(bruteForce(vertices, frustum.edgeIndices));
 
       // Independent check of the overlap test: if a sample point inside a bucket lies inside
@@ -163,9 +161,7 @@ describe("collectBucketsInConvexPolyhedronByRows", () => {
         matrix = M4x4.scale([1, 1, 11 / 24], matrix, []) as Matrix4x4;
       }
       const vertices = getVertices(matrix);
-      const found = toSortedKeys(
-        collectBucketsInConvexPolyhedronByRows(vertices, frustum.edgeIndices),
-      );
+      const found = toSortedKeys(collectBucketsInConvexPolyhedron(vertices, frustum.edgeIndices));
       expect(found, `case ${i}`).toEqual(bruteForce(vertices, frustum.edgeIndices));
     }
   });

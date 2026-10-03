@@ -57,7 +57,7 @@ let rowOutput = new Int32Array(0);
 // condition of the overlap test is linear in x, so the overlapping buckets of a row form one
 // contiguous interval whose ends can be computed per row. To be robust against rounding and to treat ties exactly like the overlap
 // test, the computed ends are only used as a starting point and corrected with the exact test.
-export function collectBucketsInConvexPolyhedronByRows(
+export function collectBucketsInConvexPolyhedron(
   vertices: ArrayLike<number>,
   edgeIndices: ArrayLike<number>,
 ): Int32Array {

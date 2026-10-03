@@ -6,8 +6,8 @@ import determineBucketsForPlane, {
   PREFETCH_BUCKET_FRACTION,
   ROTATIONS,
 } from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
+import { buildOverlapTest } from "viewer/model/bucket_data_handling/convex_polyhedron_buckets";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
-import { buildOverlapTest } from "viewer/model/bucket_data_handling/polyhedron_flood_fill";
 import {
   getBucketExtent,
   globalPositionToBucketPosition,

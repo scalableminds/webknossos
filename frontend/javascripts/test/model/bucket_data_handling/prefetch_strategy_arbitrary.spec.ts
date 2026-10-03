@@ -5,7 +5,7 @@ import { _getDummyFlycamMatrix } from "viewer/model/accessors/flycam_accessor";
 import {
   buildOverlapTest,
   getSquareFrustum,
-} from "viewer/model/bucket_data_handling/polyhedron_flood_fill";
+} from "viewer/model/bucket_data_handling/convex_polyhedron_buckets";
 import { PrefetchStrategyFlight } from "viewer/model/bucket_data_handling/prefetch_strategy_arbitrary";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import { describe, expect, it } from "vitest";

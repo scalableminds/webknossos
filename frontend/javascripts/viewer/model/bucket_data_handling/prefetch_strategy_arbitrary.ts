@@ -4,9 +4,9 @@ import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { Vector3 } from "viewer/constants";
 import {
-  collectBucketsInConvexPolyhedronByRows,
+  collectBucketsInConvexPolyhedron,
   getSquareFrustum,
-} from "viewer/model/bucket_data_handling/polyhedron_flood_fill";
+} from "viewer/model/bucket_data_handling/convex_polyhedron_buckets";
 import { AbstractPrefetchStrategy } from "viewer/model/bucket_data_handling/prefetch_strategy_plane";
 import type { PullQueueItem } from "viewer/model/bucket_data_handling/pullqueue";
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
@@ -68,7 +68,7 @@ export class PrefetchStrategyFlight extends AbstractPrefetchStrategy {
 
     const matrix0 = M4x4.clone(matrix);
     this.modifyMatrixForPoly(matrix0, zoomStep);
-    const testAddresses = collectBucketsInConvexPolyhedronByRows(
+    const testAddresses = collectBucketsInConvexPolyhedron(
       M4x4.transformPointsAffine(matrix0, this.prefetchFrustum.vertices),
       this.prefetchFrustum.edgeIndices,
     );

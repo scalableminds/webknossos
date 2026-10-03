@@ -1,8 +1,8 @@
 // Collects all buckets whose box [x, x+1] × [y, y+1] × [z, z+1] (in bucket coordinates)
 // overlaps a convex polyhedron with positive volume (buckets that only touch it are skipped),
 // using a flood fill from the bucket containing the polyhedron's centroid. The polyhedron is
-// given like PolyhedronRasterizer.Master: flat vertex coordinates and pairs of edge indices
-// (offsets into the vertex array).
+// given as flat vertex coordinates and pairs of edge indices (offsets into the vertex array),
+// see getSquareFrustum.
 //
 // The overlap test is an exact separating-axis test. For two convex polyhedra, it suffices
 // to test the face normals of both and the cross products of their edge directions. The face

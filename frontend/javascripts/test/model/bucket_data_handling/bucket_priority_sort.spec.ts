@@ -3,13 +3,13 @@ import { M4x4, type Matrix4x4 } from "libs/mjs";
 import type { Vector3, Vector4 } from "viewer/constants";
 import { UnitLong } from "viewer/constants";
 import { _getDummyFlycamMatrix } from "viewer/model/accessors/flycam_accessor";
-import determineBucketsForPlaneByRows from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_rows";
+import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import { countingSortToArrayBuffer } from "viewer/model/bucket_data_handling/bucket_priority_sort";
 import { describe, expect, it } from "vitest";
 
 type Item = { bucketAddress: Vector4; priority: number };
 
-// Same as the bucket picker worker's priority queue path.
+// Like the bucket picker worker's priority queue path (still used in flight mode).
 function sortWithPriorityQueue(items: Item[]): Uint32Array {
   const queue = new PriorityQueue<Item>({ comparator: (b, a) => b.priority - a.priority });
   for (const item of items) queue.queue(item);
@@ -84,7 +84,7 @@ describe("countingSortToArrayBuffer", () => {
     matrix[14] = position[2];
     const rect = { width: 572, height: 466.5, top: 0, left: 0 };
     const items: Item[] = [];
-    determineBucketsForPlaneByRows(
+    determineBucketsForPlane(
       "BEST_QUALITY_FIRST",
       [
         [1, 1, 1],

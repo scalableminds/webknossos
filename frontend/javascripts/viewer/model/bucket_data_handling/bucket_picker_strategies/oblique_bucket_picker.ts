@@ -70,7 +70,7 @@ type PlaneBox = {
   normal: Vector3;
 };
 
-export default function determineBucketsForPlaneByRows(
+export default function determineBucketsForPlane(
   loadingStrategy: LoadingStrategy,
   denseMags: Array<Vector3>,
   position: Vector3,

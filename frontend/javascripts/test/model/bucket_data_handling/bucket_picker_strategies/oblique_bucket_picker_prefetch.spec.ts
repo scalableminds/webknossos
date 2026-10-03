@@ -2,7 +2,7 @@ import { M4x4, type Matrix4x4 } from "libs/mjs";
 import type { Vector3, Vector4 } from "viewer/constants";
 import { UnitLong } from "viewer/constants";
 import { _getDummyFlycamMatrix } from "viewer/model/accessors/flycam_accessor";
-import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_rows";
+import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import type { PlaneRects } from "viewer/store";
 import { describe, expect, it } from "vitest";
 

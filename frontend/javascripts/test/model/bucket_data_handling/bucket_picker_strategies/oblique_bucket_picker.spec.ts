@@ -2,10 +2,10 @@ import { M4x4, type Matrix4x4 } from "libs/mjs";
 import type { Vector3, Vector4 } from "viewer/constants";
 import constants, { UnitLong } from "viewer/constants";
 import { _getDummyFlycamMatrix } from "viewer/model/accessors/flycam_accessor";
-import determineBucketsForPlaneByRows, {
+import determineBucketsForPlane, {
   PREFETCH_BUCKET_FRACTION,
   ROTATIONS,
-} from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_rows";
+} from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { buildOverlapTest } from "viewer/model/bucket_data_handling/polyhedron_flood_fill";
 import {
@@ -77,7 +77,7 @@ function pick(
 ): { priorities: Map<string, number>; duplicateCount: number } {
   const priorities = new Map<string, number>();
   let duplicateCount = 0;
-  determineBucketsForPlaneByRows(
+  determineBucketsForPlane(
     "BEST_QUALITY_FIRST",
     scenario.mags,
     scenario.position,
@@ -255,7 +255,7 @@ function getRandomScenarios(count: number): Scenario[] {
   return scenarios;
 }
 
-describe("Oblique bucket picker by rows", () => {
+describe("Oblique bucket picker", () => {
   for (const scenario of [...SCENARIOS, ...getRandomScenarios(40)]) {
     it(`picks exactly the buckets overlapping the plane regions (${scenario.name})`, () => {
       const { priorities, duplicateCount } = pick(scenario);

@@ -3,7 +3,7 @@ import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_rows";
+import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import { countingSortToArrayBuffer } from "viewer/model/bucket_data_handling/bucket_priority_sort";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { expose } from "./comlink_core";

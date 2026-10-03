@@ -6,12 +6,12 @@ import { _getDummyFlycamMatrix } from "viewer/model/accessors/flycam_accessor";
 import determineBucketsForPlaneWithFloodFill from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForPlaneByRows from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_rows";
 import type { PlaneRects } from "viewer/store";
-import { bench, describe } from "vitest";
+import { test } from "vitest";
 
 // Compares the flood fill bucket picker with the row-based one. Each picker is measured with a
 // no-op enqueue function (picking only) and with the priority queue the bucket picker worker
 // uses (closer to the real cost per pick). Performance comparison only, run with
-// `vitest bench --config vitest_spec.config.ts run <this file>`.
+// `vitest bench --config vitest_spec.config.ts --reporter=verbose run <this file>`.
 
 const VOXEL_SIZE: Vector3 = [11, 11, 24];
 const MAGS: Vector3[] = [
@@ -119,7 +119,7 @@ function pickIntoQueue(
 }
 
 for (const scenario of SCENARIOS) {
-  describe(`bucket picker: ${scenario.name}`, () => {
+  test(`bucket picker: ${scenario.name}`, { timeout: 60000 }, async ({ bench }) => {
     // Logged once before the timed benchmarks run.
     const floodFillCount = pickIntoQueue(determineBucketsForPlaneWithFloodFill, scenario).length;
     const rowsCount = pickIntoQueue(determineBucketsForPlaneByRows, scenario).length;
@@ -136,17 +136,20 @@ for (const scenario of SCENARIOS) {
         scenario.rects,
       );
 
-    bench("flood fill", () => {
-      pick(determineBucketsForPlaneWithFloodFill);
-    });
-    bench("rows", () => {
-      pick(determineBucketsForPlaneByRows);
-    });
-    bench("flood fill + priority queue", () => {
-      pickIntoQueue(determineBucketsForPlaneWithFloodFill, scenario);
-    });
-    bench("rows + priority queue", () => {
-      pickIntoQueue(determineBucketsForPlaneByRows, scenario);
-    });
+    await bench.compare(
+      bench("flood fill", () => {
+        pick(determineBucketsForPlaneWithFloodFill);
+      }),
+      bench("rows", () => {
+        pick(determineBucketsForPlaneByRows);
+      }),
+      bench("flood fill + priority queue", () => {
+        pickIntoQueue(determineBucketsForPlaneWithFloodFill, scenario);
+      }),
+      bench("rows + priority queue", () => {
+        pickIntoQueue(determineBucketsForPlaneByRows, scenario);
+      }),
+      { time: 500 },
+    );
   });
 }

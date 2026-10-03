@@ -5,11 +5,11 @@ import collectBucketsInConvexPolyhedron, {
   collectBucketsInConvexPolyhedronByRows,
 } from "viewer/model/bucket_data_handling/polyhedron_flood_fill";
 import PolyhedronRasterizer from "viewer/model/bucket_data_handling/polyhedron_rasterizer";
-import { bench, describe } from "vitest";
+import { test } from "vitest";
 
 // Compares PolyhedronRasterizer (as used by PrefetchStrategyFlight) with a flood fill over the
 // buckets that overlap the same polyhedron. Performance comparison only, run with
-// `vitest bench --config vitest_spec.config.ts run <this file>`.
+// `vitest bench --config vitest_spec.config.ts --reporter=verbose run <this file>`.
 
 type Scenario = {
   name: string;
@@ -106,7 +106,7 @@ for (const scenario of SCENARIOS) {
       master.indices,
     );
 
-  describe(`polyhedron buckets: ${scenario.name}`, () => {
+  test(`polyhedron buckets: ${scenario.name}`, { timeout: 60000 }, async ({ bench }) => {
     // Logged once before the timed benchmarks run.
     const rasterized = toKeys(rasterize());
     const floodFilled = toKeys(floodFill());
@@ -128,16 +128,17 @@ for (const scenario of SCENARIOS) {
         `rows: ${byRows.size} (${rowsMatchFloodFill ? "same as" : "DIFFERENT FROM"} flood fill)`,
     );
 
-    bench("rasterizer", () => {
-      rasterize();
-    });
-
-    bench("flood fill", () => {
-      floodFill();
-    });
-
-    bench("rows", () => {
-      rows();
-    });
+    await bench.compare(
+      bench("rasterizer", () => {
+        rasterize();
+      }),
+      bench("flood fill", () => {
+        floodFill();
+      }),
+      bench("rows", () => {
+        rows();
+      }),
+      { time: 500 },
+    );
   });
 }

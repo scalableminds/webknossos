@@ -1,5 +1,5 @@
 import { M4x4, type Matrix4x4 } from "libs/mjs";
-import collectBucketsInConvexPolyhedron, {
+import {
   buildOverlapTest,
   collectBucketsInConvexPolyhedronByRows,
   getSquareFrustum,
@@ -61,11 +61,6 @@ const MATRICES: Matrix4x4[] = [
   getMatrix([1.1, 2.3, 0.7], [57.25, 80.5, 31.75]),
 ];
 
-const IMPLEMENTATIONS = {
-  "flood fill": collectBucketsInConvexPolyhedron,
-  rows: collectBucketsInConvexPolyhedronByRows,
-};
-
 function toSortedKeys(buckets: Int32Array): string[] {
   const keys: string[] = [];
   for (let i = 0; i < buckets.length; i += 3) {
@@ -98,81 +93,80 @@ function bruteForce(vertices: Array<number>, edgeIndices: Array<number>): string
   return keys.sort();
 }
 
-for (const [name, collectBuckets] of Object.entries(IMPLEMENTATIONS)) {
-  describe(`collectBucketsInConvexPolyhedron (${name})`, () => {
-    it("picks exactly the buckets of an axis-aligned cuboid", () => {
-      // Spans buckets 1 to 3 (inclusive) in each dimension; buckets 0 and 4 only touch it.
-      const cuboid = getSquareFrustum(3, 3, 0, 3, 3, 3);
-      const vertices = M4x4.transformPointsAffine(
-        getMatrix([0, 0, 0], [2.5, 2.5, 1]),
-        cuboid.vertices,
+describe("collectBucketsInConvexPolyhedronByRows", () => {
+  it("picks exactly the buckets of an axis-aligned cuboid", () => {
+    // Spans buckets 1 to 3 (inclusive) in each dimension; buckets 0 and 4 only touch it.
+    const cuboid = getSquareFrustum(3, 3, 0, 3, 3, 3);
+    const vertices = M4x4.transformPointsAffine(
+      getMatrix([0, 0, 0], [2.5, 2.5, 1]),
+      cuboid.vertices,
+    );
+    const buckets = collectBucketsInConvexPolyhedronByRows(vertices, cuboid.edgeIndices);
+    expect(buckets.length / 3).toBe(27);
+    for (let i = 0; i < buckets.length; i++) {
+      expect(buckets[i]).toBeGreaterThanOrEqual(1);
+      expect(buckets[i]).toBeLessThanOrEqual(3);
+    }
+  });
+
+  MATRICES.forEach((matrix, index) => {
+    it(`finds exactly the overlapping buckets (matrix ${index})`, () => {
+      const vertices = getVertices(matrix);
+      const found = toSortedKeys(
+        collectBucketsInConvexPolyhedronByRows(vertices, frustum.edgeIndices),
       );
-      const buckets = collectBuckets(vertices, cuboid.edgeIndices);
-      expect(buckets.length / 3).toBe(27);
-      for (let i = 0; i < buckets.length; i++) {
-        expect(buckets[i]).toBeGreaterThanOrEqual(1);
-        expect(buckets[i]).toBeLessThanOrEqual(3);
-      }
-    });
+      expect(found).toEqual(bruteForce(vertices, frustum.edgeIndices));
 
-    MATRICES.forEach((matrix, index) => {
-      it(`finds exactly the overlapping buckets (matrix ${index})`, () => {
-        const vertices = getVertices(matrix);
-        const found = toSortedKeys(collectBuckets(vertices, frustum.edgeIndices));
-        expect(found).toEqual(bruteForce(vertices, frustum.edgeIndices));
-
-        // Independent check of the overlap test: if a sample point inside a bucket lies inside
-        // the frustum, the bucket overlaps it.
-        const foundSet = new Set(found);
-        const { min, max } = getBoundingBox(vertices);
-        const steps = [0.1, 0.3, 0.5, 0.7, 0.9];
-        const missedBySamples: string[] = [];
-        for (let x = min[0]; x <= max[0]; x++) {
-          for (let y = min[1]; y <= max[1]; y++) {
-            for (let z = min[2]; z <= max[2]; z++) {
-              const hit = steps.some((sx) =>
-                steps.some((sy) =>
-                  steps.some((sz) => isInside(vertices, [x + sx, y + sy, z + sz])),
-                ),
-              );
-              if (hit && !foundSet.has(`${x},${y},${z}`)) {
-                missedBySamples.push(`${x},${y},${z}`);
-              }
+      // Independent check of the overlap test: if a sample point inside a bucket lies inside
+      // the frustum, the bucket overlaps it.
+      const foundSet = new Set(found);
+      const { min, max } = getBoundingBox(vertices);
+      const steps = [0.1, 0.3, 0.5, 0.7, 0.9];
+      const missedBySamples: string[] = [];
+      for (let x = min[0]; x <= max[0]; x++) {
+        for (let y = min[1]; y <= max[1]; y++) {
+          for (let z = min[2]; z <= max[2]; z++) {
+            const hit = steps.some((sx) =>
+              steps.some((sy) => steps.some((sz) => isInside(vertices, [x + sx, y + sy, z + sz]))),
+            );
+            if (hit && !foundSet.has(`${x},${y},${z}`)) {
+              missedBySamples.push(`${x},${y},${z}`);
             }
           }
         }
-        expect(missedBySamples).toEqual([]);
-      });
-    });
-
-    it("finds exactly the overlapping buckets for random and degenerate frustum poses", () => {
-      // Deterministic PRNG, so failures are reproducible.
-      let seed = 42;
-      const random = () => {
-        seed = (seed * 1103515245 + 12345) % 2 ** 31;
-        return seed / 2 ** 31;
-      };
-      const specialAngles = [0, Math.PI / 4, Math.PI / 2, Math.PI];
-      for (let i = 0; i < 300; i++) {
-        // Half of the cases use special angles and (half-)integer positions, which create ties.
-        const isSpecial = i % 2 === 0;
-        const angle = () =>
-          isSpecial
-            ? specialAngles[Math.floor(random() * specialAngles.length)]
-            : random() * 2 * Math.PI;
-        const coordinate = () =>
-          isSpecial ? 50 + Math.floor(random() * 8) / 2 : 50 + random() * 4;
-        let matrix = getMatrix(
-          [angle(), angle(), angle()],
-          [coordinate(), coordinate(), coordinate()],
-        );
-        if (random() < 0.5) {
-          matrix = M4x4.scale([1, 1, 11 / 24], matrix, []) as Matrix4x4;
-        }
-        const vertices = getVertices(matrix);
-        const found = toSortedKeys(collectBuckets(vertices, frustum.edgeIndices));
-        expect(found, `case ${i}`).toEqual(bruteForce(vertices, frustum.edgeIndices));
       }
+      expect(missedBySamples).toEqual([]);
     });
   });
-}
+
+  it("finds exactly the overlapping buckets for random and degenerate frustum poses", () => {
+    // Deterministic PRNG, so failures are reproducible.
+    let seed = 42;
+    const random = () => {
+      seed = (seed * 1103515245 + 12345) % 2 ** 31;
+      return seed / 2 ** 31;
+    };
+    const specialAngles = [0, Math.PI / 4, Math.PI / 2, Math.PI];
+    for (let i = 0; i < 300; i++) {
+      // Half of the cases use special angles and (half-)integer positions, which create ties.
+      const isSpecial = i % 2 === 0;
+      const angle = () =>
+        isSpecial
+          ? specialAngles[Math.floor(random() * specialAngles.length)]
+          : random() * 2 * Math.PI;
+      const coordinate = () => (isSpecial ? 50 + Math.floor(random() * 8) / 2 : 50 + random() * 4);
+      let matrix = getMatrix(
+        [angle(), angle(), angle()],
+        [coordinate(), coordinate(), coordinate()],
+      );
+      if (random() < 0.5) {
+        matrix = M4x4.scale([1, 1, 11 / 24], matrix, []) as Matrix4x4;
+      }
+      const vertices = getVertices(matrix);
+      const found = toSortedKeys(
+        collectBucketsInConvexPolyhedronByRows(vertices, frustum.edgeIndices),
+      );
+      expect(found, `case ${i}`).toEqual(bruteForce(vertices, frustum.edgeIndices));
+    }
+  });
+});

@@ -1,122 +1,12 @@
 // Collects all buckets whose box [x, x+1] × [y, y+1] × [z, z+1] (in bucket coordinates)
-// overlaps a convex polyhedron with positive volume (buckets that only touch it are skipped),
-// using a flood fill from the bucket containing the polyhedron's centroid. The polyhedron is
-// given as flat vertex coordinates and pairs of edge indices (offsets into the vertex array),
-// see getSquareFrustum.
+// overlaps a convex polyhedron with positive volume (buckets that only touch it are skipped).
+// The polyhedron is given as flat vertex coordinates and pairs of edge indices (offsets into the
+// vertex array), see getSquareFrustum.
 //
 // The overlap test is an exact separating-axis test. For two convex polyhedra, it suffices
 // to test the face normals of both and the cross products of their edge directions. The face
 // normals of the polyhedron are cross products of its own edges, so all candidate axes can be
 // derived from the edges plus the three bucket axes.
-
-// Reused across calls. visitedStamps stores the call in which a cell was last visited, so the
-// grid doesn't need to be cleared between calls.
-let visitedStamps = new Uint32Array(0);
-let currentStamp = 0;
-let queue = new Int32Array(0);
-
-export default function collectBucketsInConvexPolyhedron(
-  vertices: ArrayLike<number>,
-  edgeIndices: ArrayLike<number>,
-): Int32Array {
-  const overlaps = buildOverlapTest(vertices, edgeIndices);
-  const vertexCount = vertices.length / 3;
-
-  // All overlapping buckets lie within the polyhedron's bounding box, so a dense grid can serve
-  // as the visited set.
-  const min = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
-  const max = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
-  const centroid = [0, 0, 0];
-  for (let v = 0; v < vertexCount; v++) {
-    for (let d = 0; d < 3; d++) {
-      const value = vertices[3 * v + d];
-      min[d] = Math.min(min[d], value);
-      max[d] = Math.max(max[d], value);
-      centroid[d] += value / vertexCount;
-    }
-  }
-  // One cell of margin on each side. Margin cells lie outside the bounding box, so they're never
-  // accepted, and the flood fill never steps beyond them. That's why no bounds checks are needed.
-  const minX = Math.floor(min[0]) - 1;
-  const minY = Math.floor(min[1]) - 1;
-  const minZ = Math.floor(min[2]) - 1;
-  const sizeX = Math.floor(max[0]) - minX + 2;
-  const sizeY = Math.floor(max[1]) - minY + 2;
-  const sizeZ = Math.floor(max[2]) - minZ + 2;
-  const strideY = sizeX;
-  const strideZ = sizeX * sizeY;
-  const cellCount = strideZ * sizeZ;
-
-  if (visitedStamps.length < cellCount) {
-    visitedStamps = new Uint32Array(cellCount);
-    queue = new Int32Array(cellCount);
-    currentStamp = 0;
-  }
-  currentStamp++;
-  if (currentStamp === 0xffffffff) {
-    visitedStamps.fill(0);
-    currentStamp = 1;
-  }
-  const stamp = currentStamp;
-  const visited = visitedStamps;
-
-  const seedIndex =
-    Math.floor(centroid[0]) -
-    minX +
-    strideY * (Math.floor(centroid[1]) - minY) +
-    strideZ * (Math.floor(centroid[2]) - minZ);
-  visited[seedIndex] = stamp;
-  queue[0] = seedIndex;
-  let queueLength = 1;
-
-  // The queue holds grid indices of accepted cells, in BFS order.
-  for (let head = 0; head < queueLength; head++) {
-    const index = queue[head];
-    const x = (index % sizeX) + minX;
-    const y = (Math.floor(index / strideY) % sizeY) + minY;
-    const z = Math.floor(index / strideZ) + minZ;
-
-    let neighbor = index + 1;
-    if (visited[neighbor] !== stamp) {
-      visited[neighbor] = stamp;
-      if (overlaps(x + 1, y, z)) queue[queueLength++] = neighbor;
-    }
-    neighbor = index - 1;
-    if (visited[neighbor] !== stamp) {
-      visited[neighbor] = stamp;
-      if (overlaps(x - 1, y, z)) queue[queueLength++] = neighbor;
-    }
-    neighbor = index + strideY;
-    if (visited[neighbor] !== stamp) {
-      visited[neighbor] = stamp;
-      if (overlaps(x, y + 1, z)) queue[queueLength++] = neighbor;
-    }
-    neighbor = index - strideY;
-    if (visited[neighbor] !== stamp) {
-      visited[neighbor] = stamp;
-      if (overlaps(x, y - 1, z)) queue[queueLength++] = neighbor;
-    }
-    neighbor = index + strideZ;
-    if (visited[neighbor] !== stamp) {
-      visited[neighbor] = stamp;
-      if (overlaps(x, y, z + 1)) queue[queueLength++] = neighbor;
-    }
-    neighbor = index - strideZ;
-    if (visited[neighbor] !== stamp) {
-      visited[neighbor] = stamp;
-      if (overlaps(x, y, z - 1)) queue[queueLength++] = neighbor;
-    }
-  }
-
-  const output = new Int32Array(3 * queueLength);
-  for (let i = 0; i < queueLength; i++) {
-    const index = queue[i];
-    output[3 * i] = (index % sizeX) + minX;
-    output[3 * i + 1] = (Math.floor(index / strideY) % sizeY) + minY;
-    output[3 * i + 2] = Math.floor(index / strideZ) + minZ;
-  }
-  return output;
-}
 
 type AxisBounds = {
   axisCount: number;
@@ -163,10 +53,9 @@ function buildAxisBounds(vertices: ArrayLike<number>, edgeIndices: ArrayLike<num
 
 let rowOutput = new Int32Array(0);
 
-// Returns the same buckets as collectBucketsInConvexPolyhedron, but enumerates them row by row
-// instead of with a flood fill. For a fixed row (y, z), every condition of the overlap test is
-// linear in x, so the overlapping buckets of a row form one contiguous interval whose ends can be
-// computed per row. To be robust against rounding and to treat ties exactly like the overlap
+// Returns the buckets overlapping the polyhedron, row by row. For a fixed row (y, z), every
+// condition of the overlap test is linear in x, so the overlapping buckets of a row form one
+// contiguous interval whose ends can be computed per row. To be robust against rounding and to treat ties exactly like the overlap
 // test, the computed ends are only used as a starting point and corrected with the exact test.
 export function collectBucketsInConvexPolyhedronByRows(
   vertices: ArrayLike<number>,

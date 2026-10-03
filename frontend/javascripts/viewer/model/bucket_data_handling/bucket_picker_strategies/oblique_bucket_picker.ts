@@ -23,7 +23,7 @@ import { getPriorityWeightForZoomStepDiff, MAX_ZOOM_STEP_DIFF } from "../loading
 const ALPHA = Math.PI / 2;
 
 // biome-ignore format: don't format array
-const ROTATIONS = {
+export const ROTATIONS = {
   YZ: [
     Math.cos(ALPHA), 0, Math.sin(ALPHA), 0,
     0, 1, 0, 0,
@@ -44,7 +44,7 @@ const hashPosition = (x: number, y: number, z: number): number => 2 ** 32 * x + 
 // a bucket's thickness along its normal, so that data is already loaded when the user moves
 // along the view axis. Being < 1, this never reaches past the adjacent bucket layer,
 // independent of zoom, mags and rotation.
-const PREFETCH_BUCKET_FRACTION = 0.3;
+export const PREFETCH_BUCKET_FRACTION = 0.3;
 
 // Half of a bucket's thickness along the plane's normal, in local (plane) units.
 // inverseQueryMatrix maps world to local coordinates, so its z row is the plane's normal.

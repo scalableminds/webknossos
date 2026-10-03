@@ -1,6 +1,7 @@
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "mjs";
 import type { OrthoViewWithoutTD, Vector3 } from "viewer/constants";
+import constants from "viewer/constants";
 import type { EnqueueFunction } from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import {
   getBucketExtent,
@@ -10,12 +11,12 @@ import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { getPriorityWeightForZoomStepDiff, MAX_ZOOM_STEP_DIFF } from "../loading_strategy_logic";
 import { PREFETCH_BUCKET_FRACTION, ROTATIONS } from "./oblique_bucket_picker";
 
-// Determines the buckets of the three orthogonal viewport planes row by row, as an alternative
-// to the flood fill in oblique_bucket_picker.ts.
+// Determines the buckets of the three orthogonal viewport planes row by row.
 //
 // Each plane's region is a box: the viewport rectangle, thickened along the plane's normal for
 // prefetching (see PREFETCH_BUCKET_FRACTION). A bucket is picked if it overlaps one of the
-// boxes with positive volume, using an exact separating-axis test. In bucket coordinates, a box
+// boxes with positive volume, using an exact separating-axis test. Each bucket is grown by
+// INTERPOLATION_MARGIN for this test (see there). In bucket coordinates, a box
 // is a parallelepiped with three edge directions, so 15 axes suffice: its 3 face normals, the 3
 // bucket axes and the 9 cross products of a bucket axis with an edge direction. The three
 // planes are the same box orientation with permuted axes, so they share these axes and only
@@ -28,6 +29,12 @@ import { PREFETCH_BUCKET_FRACTION, ROTATIONS } from "./oblique_bucket_picker";
 // that no bucket is emitted twice.
 
 const PLANE_IDS: Array<OrthoViewWithoutTD> = ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"];
+
+// With interpolation, the shader also reads the neighbouring voxel of a sampled position (see
+// filtering.glsl.ts). So buckets that are up to one voxel away from a plane's region are picked,
+// too. Otherwise, pixels at the border of the viewport could fall back to a coarser mag. The
+// margin is in bucket units, i.e., one voxel of the respective mag.
+const INTERPOLATION_MARGIN = 1 / constants.BUCKET_WIDTH;
 const PLANE_COUNT = PLANE_IDS.length;
 
 type PlaneBox = {
@@ -211,7 +218,7 @@ function addBucketsOfLevel(
   const axes = getAxes(planeEdges[0]);
   const axisCount = axes.length / 3;
   // A bucket with min corner p overlaps plane box b iff lower[b][k] < axis_k·p < upper[b][k]
-  // for every axis k. The bounds fold in the bucket's center offset and radius per axis.
+  // for every axis k. The bounds fold in the (grown) bucket's center offset and radius per axis.
   const lower = new Float64Array(PLANE_COUNT * axisCount);
   const upper = new Float64Array(PLANE_COUNT * axisCount);
   for (let k = 0; k < axisCount; k++) {
@@ -220,7 +227,8 @@ function addBucketsOfLevel(
     const az = axes[3 * k + 2];
     const projectedCenter = ax * center[0] + ay * center[1] + az * center[2];
     const bucketCenterOffset = 0.5 * (ax + ay + az);
-    const bucketRadius = 0.5 * (Math.abs(ax) + Math.abs(ay) + Math.abs(az));
+    const bucketRadius =
+      (0.5 + INTERPOLATION_MARGIN) * (Math.abs(ax) + Math.abs(ay) + Math.abs(az));
     for (let b = 0; b < PLANE_COUNT; b++) {
       const edges = planeEdges[b];
       const box = planeBoxes[b];
@@ -268,8 +276,8 @@ function addBucketsOfLevel(
         box.halfExtentU * Math.abs(edges[d]) +
         box.halfExtentV * Math.abs(edges[3 + d]) +
         halfThicknesses[b] * Math.abs(edges[6 + d]);
-      boxMin[3 * b + d] = Math.floor(center[d] - radius);
-      boxMax[3 * b + d] = Math.floor(center[d] + radius);
+      boxMin[3 * b + d] = Math.floor(center[d] - radius - INTERPOLATION_MARGIN);
+      boxMax[3 * b + d] = Math.floor(center[d] + radius + INTERPOLATION_MARGIN);
     }
   }
   const minY = Math.min(boxMin[1], boxMin[4], boxMin[7]);

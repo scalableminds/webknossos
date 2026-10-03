@@ -33,7 +33,7 @@ import {
   getUnifiedAdditionalCoordinates,
 } from "viewer/model/accessors/dataset_accessor";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
+import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_rows";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit, getBaseVoxelInUnit } from "viewer/model/scaleinfo";

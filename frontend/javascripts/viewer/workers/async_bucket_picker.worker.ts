@@ -3,7 +3,8 @@ import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
+import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_rows";
+import { countingSortToArrayBuffer } from "viewer/model/bucket_data_handling/bucket_priority_sort";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
 import { expose } from "./comlink_core";
 
@@ -48,6 +49,26 @@ function pick(
   loadingStrategy: LoadingStrategy,
   rects: PlaneRects,
 ): ArrayBuffer {
+  if (viewMode !== constants.MODE_FLIGHT) {
+    // The oblique picker's priorities are small integers, so a counting sort is cheaper than
+    // the priority queue.
+    const addresses: number[] = [];
+    const priorities: number[] = [];
+    determineBucketsForPlane(
+      loadingStrategy,
+      denseMags,
+      position,
+      (bucketAddress: Vector4, priority: number) => {
+        addresses.push(bucketAddress[0], bucketAddress[1], bucketAddress[2], bucketAddress[3]);
+        priorities.push(priority);
+      },
+      matrix,
+      logZoomStep,
+      rects,
+    );
+    return countingSortToArrayBuffer(addresses, priorities);
+  }
+
   const bucketQueue = new PriorityQueue({
     // small priorities take precedence
     comparator,
@@ -60,26 +81,14 @@ function pick(
     });
   };
 
-  if (viewMode === constants.MODE_FLIGHT) {
-    determineBucketsForFlight(
-      denseMags,
-      position,
-      sphericalCapRadius,
-      enqueueFunction,
-      matrix,
-      logZoomStep,
-    );
-  } else {
-    determineBucketsForPlane(
-      loadingStrategy,
-      denseMags,
-      position,
-      enqueueFunction,
-      matrix,
-      logZoomStep,
-      rects,
-    );
-  }
+  determineBucketsForFlight(
+    denseMags,
+    position,
+    sphericalCapRadius,
+    enqueueFunction,
+    matrix,
+    logZoomStep,
+  );
 
   return dequeueToArrayBuffer(bucketQueue);
 }

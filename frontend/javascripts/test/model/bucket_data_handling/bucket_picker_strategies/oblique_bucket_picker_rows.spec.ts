@@ -1,16 +1,18 @@
 import { M4x4, type Matrix4x4 } from "libs/mjs";
 import type { Vector3, Vector4 } from "viewer/constants";
-import { UnitLong } from "viewer/constants";
+import constants, { UnitLong } from "viewer/constants";
 import { _getDummyFlycamMatrix } from "viewer/model/accessors/flycam_accessor";
-import determineBucketsForPlaneWithFloodFill, {
+import {
   PREFETCH_BUCKET_FRACTION,
   ROTATIONS,
 } from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForPlaneByRows from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_rows";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { buildOverlapTest } from "viewer/model/bucket_data_handling/polyhedron_flood_fill";
-import PolyhedronRasterizer from "viewer/model/bucket_data_handling/polyhedron_rasterizer";
-import { getBucketExtent } from "viewer/model/helpers/position_converter";
+import {
+  getBucketExtent,
+  globalPositionToBucketPosition,
+} from "viewer/model/helpers/position_converter";
 import type { PlaneRects } from "viewer/store";
 import { describe, expect, it } from "vitest";
 
@@ -29,6 +31,8 @@ const ISOTROPIC_MAGS: Vector3[] = [
   [16, 16, 16],
 ];
 const PLANE_IDS = ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"] as const;
+// The picker also picks buckets up to one voxel away from a plane region (for interpolation).
+const MARGIN = 1 / constants.BUCKET_WIDTH;
 function makeRects(width: number, height: number): PlaneRects {
   const rect = { width, height, top: 0, left: 0 };
   return { PLANE_XY: rect, PLANE_XZ: rect, PLANE_YZ: rect, TDView: rect };
@@ -66,17 +70,15 @@ type Scenario = {
   matrix: Matrix4x4;
   logZoomStep: number;
   rects: PlaneRects;
-  isAxisAligned?: boolean;
 };
 
 function pick(
-  determineBuckets: typeof determineBucketsForPlaneWithFloodFill,
   scenario: Scenario,
   abortLimit?: number,
 ): { priorities: Map<string, number>; duplicateCount: number } {
   const priorities = new Map<string, number>();
   let duplicateCount = 0;
-  determineBuckets(
+  determineBucketsForPlaneByRows(
     "BEST_QUALITY_FIRST",
     scenario.mags,
     scenario.position,
@@ -93,9 +95,62 @@ function pick(
   return { priorities, duplicateCount };
 }
 
-// The buckets that overlap one of the plane regions, scaled by boxScale around their centers.
-// Uses the generic polyhedron test as an independent implementation of the exact test.
-function getOverlappingBuckets(scenario: Scenario, boxScale: number): Set<string> {
+// The vertices (in bucket coordinates) and edges of a plane region grown by a cube with half
+// size margin: a bucket grown by the margin overlaps the region iff the bucket overlaps the grown
+// region. The grown region is the convex hull of the region's corners, each shifted to all 8
+// corners of the cube. Its edge directions are the region's and the cube's.
+function getGrownRegion(
+  queryMatrix: Matrix4x4,
+  halfExtents: Vector3,
+  bucketExtent: Vector3,
+  margin: number,
+): { vertices: number[]; edgeIndices: number[] } {
+  const signs = [-1, 1];
+  const vertices: number[] = [];
+  for (const sx of signs) {
+    for (const sy of signs) {
+      for (const sz of signs) {
+        const corner = M4x4.transformPointsAffine(queryMatrix, [
+          sx * halfExtents[0],
+          sy * halfExtents[1],
+          sz * halfExtents[2],
+        ]);
+        for (const mx of signs) {
+          for (const my of signs) {
+            for (const mz of signs) {
+              vertices.push(
+                corner[0] / bucketExtent[0] + mx * margin,
+                corner[1] / bucketExtent[1] + my * margin,
+                corner[2] / bucketExtent[2] + mz * margin,
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+  // Vertex index = 8 * regionCorner + cubeCorner, both with the bits (x, y, z) = (4, 2, 1).
+  const offset = (regionCorner: number, cubeCorner: number) => 3 * (8 * regionCorner + cubeCorner);
+  const edgeIndices = [
+    offset(0, 0),
+    offset(4, 0), // region edges
+    offset(0, 0),
+    offset(2, 0),
+    offset(0, 0),
+    offset(1, 0),
+    offset(0, 0),
+    offset(0, 4), // cube edges
+    offset(0, 0),
+    offset(0, 2),
+    offset(0, 0),
+    offset(0, 1),
+  ];
+  return { vertices, edgeIndices };
+}
+
+// The buckets that overlap one of the plane regions, with all sizes scaled by sizeScale. Uses the
+// generic polyhedron test as an independent implementation of the exact test.
+function getOverlappingBuckets(scenario: Scenario, sizeScale: number): Set<string> {
   const { mags, matrix, logZoomStep, rects } = scenario;
   const keys = new Set<string>();
   const prefetchBucketExtent = getBucketExtent(mags[logZoomStep]);
@@ -112,21 +167,18 @@ function getOverlappingBuckets(scenario: Scenario, boxScale: number): Set<string
         (prefetchBucketExtent[0] * Math.abs(inverse[2]) +
           prefetchBucketExtent[1] * Math.abs(inverse[6]) +
           prefetchBucketExtent[2] * Math.abs(inverse[10]));
-      const width = 2 * Math.ceil(rects[planeId].width / 2) * boxScale;
-      const height = 2 * Math.ceil(rects[planeId].height / 2) * boxScale;
-      const thickness = halfThickness * boxScale;
-      const box = PolyhedronRasterizer.Master.squareFrustum(
-        width,
-        height,
-        -thickness,
-        width,
-        height,
-        thickness,
+      const halfExtents: Vector3 = [
+        Math.ceil(rects[planeId].width / 2) * sizeScale,
+        Math.ceil(rects[planeId].height / 2) * sizeScale,
+        halfThickness * sizeScale,
+      ];
+      const { vertices, edgeIndices } = getGrownRegion(
+        queryMatrix,
+        halfExtents,
+        bucketExtent,
+        MARGIN * sizeScale,
       );
-      const vertices = M4x4.transformPointsAffine(queryMatrix, box.vertices).map(
-        (value, i) => value / bucketExtent[i % 3],
-      );
-      const overlaps = buildOverlapTest(vertices, box.indices);
+      const overlaps = buildOverlapTest(vertices, edgeIndices);
       const min = [0, 1, 2].map(
         (d) => Math.floor(Math.min(...vertices.filter((_, i) => i % 3 === d))) - 1,
       );
@@ -166,7 +218,6 @@ const SCENARIOS: Scenario[] = [
     matrix: makeMatrix(voxelSize, angles as Vector3, POSITION, zoom as number),
     logZoomStep: logZoomStep as number,
     rects: FOUR_PANE_RECTS,
-    isAxisAligned: (angles as Vector3).every((angle) => angle % 90 === 0),
   };
 });
 
@@ -207,46 +258,44 @@ function getRandomScenarios(count: number): Scenario[] {
 
 describe("Oblique bucket picker by rows", () => {
   for (const scenario of [...SCENARIOS, ...getRandomScenarios(40)]) {
-    it(`matches the exact test and the flood fill picker (${scenario.name})`, () => {
-      const rows = pick(determineBucketsForPlaneByRows, scenario);
-      const floodFill = pick(determineBucketsForPlaneWithFloodFill, scenario);
-      expect(rows.duplicateCount).toBe(0);
+    it(`picks exactly the buckets overlapping the plane regions (${scenario.name})`, () => {
+      const { priorities, duplicateCount } = pick(scenario);
+      expect(duplicateCount).toBe(0);
 
       // Every bucket that clearly overlaps a plane region is picked, and every picked bucket
       // overlaps one (the tolerance only matters for exact ties).
       const clearlyOverlapping = getOverlappingBuckets(scenario, 1 - 1e-9);
       const possiblyOverlapping = getOverlappingBuckets(scenario, 1 + 1e-9);
-      const picked = [...rows.priorities.keys()];
-      expect([...clearlyOverlapping].filter((key) => !rows.priorities.has(key))).toEqual([]);
+      const picked = [...priorities.keys()];
+      expect([...clearlyOverlapping].filter((key) => !priorities.has(key))).toEqual([]);
       expect(picked.filter((key) => !possiblyOverlapping.has(key))).toEqual([]);
 
-      // The flood fill picks a superset. Its per-plane test is conservative, so it additionally
-      // accepts some buckets near the rims of the plane regions which don't overlap them.
-      expect(picked.filter((key) => !floodFill.priorities.has(key))).toEqual([]);
-      const floodFillOnly = [...floodFill.priorities.keys()].filter(
-        (key) => !rows.priorities.has(key),
-      );
-      expect(floodFillOnly.filter((key) => clearlyOverlapping.has(key))).toEqual([]);
-      if (scenario.isAxisAligned) {
-        expect(floodFillOnly).toEqual([]);
-      }
-
-      for (const [key, priority] of rows.priorities) {
-        expect(priority).toBe(floodFill.priorities.get(key));
+      // Priority: Manhattan distance to the camera's bucket, plus a weight per fallback level.
+      for (const [key, priority] of priorities) {
+        const [x, y, z, level] = key.split(",").map(Number);
+        const center = globalPositionToBucketPosition(
+          scenario.position,
+          scenario.mags,
+          level,
+          null,
+        );
+        const distance =
+          Math.abs(x - center[0]) + Math.abs(y - center[1]) + Math.abs(z - center[2]);
+        expect(priority).toBe(distance + 1000 * (level - scenario.logZoomStep));
       }
     });
   }
 
   it("stops each level after abortLimit buckets", () => {
     const scenario = SCENARIOS[4];
-    const unlimited = pick(determineBucketsForPlaneByRows, scenario);
+    const unlimited = pick(scenario);
     const countPerLevel = new Map<string, number>();
     for (const key of unlimited.priorities.keys()) {
       const level = key.split(",")[3];
       countPerLevel.set(level, (countPerLevel.get(level) ?? 0) + 1);
     }
     const abortLimit = 500;
-    const limited = pick(determineBucketsForPlaneByRows, scenario, abortLimit);
+    const limited = pick(scenario, abortLimit);
     const expectedCount = [...countPerLevel.values()].reduce(
       (sum, count) => sum + Math.min(count, abortLimit),
       0,

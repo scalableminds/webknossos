@@ -5,12 +5,13 @@ import { UnitLong } from "viewer/constants";
 import { _getDummyFlycamMatrix } from "viewer/model/accessors/flycam_accessor";
 import determineBucketsForPlaneWithFloodFill from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForPlaneByRows from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker_rows";
+import { countingSortToArrayBuffer } from "viewer/model/bucket_data_handling/bucket_priority_sort";
 import type { PlaneRects } from "viewer/store";
 import { test } from "vitest";
 
 // Compares the flood fill bucket picker with the row-based one. Each picker is measured with a
-// no-op enqueue function (picking only) and with the priority queue the bucket picker worker
-// uses (closer to the real cost per pick). Performance comparison only, run with
+// no-op enqueue function (picking only), with the priority queue the bucket picker worker used
+// to sort the buckets, and with the counting sort it uses now. Performance comparison only, run with
 // `vitest bench --config vitest_spec.config.ts --reporter=verbose run <this file>`.
 
 const VOXEL_SIZE: Vector3 = [11, 11, 24];
@@ -101,10 +102,11 @@ type PriorityItem = { bucketAddress: Vector4; priority: number };
 const comparator = (b: PriorityItem, a: PriorityItem) => b.priority - a.priority;
 const noopEnqueue = (_bucketAddress: Vector4, _priority: number) => {};
 
+// Like the bucket picker worker did: queue all buckets, then dequeue them into a buffer.
 function pickIntoQueue(
   determineBuckets: typeof determineBucketsForPlaneWithFloodFill,
   scenario: Scenario,
-) {
+): ArrayBuffer {
   const bucketQueue = new PriorityQueue<PriorityItem>({ comparator });
   determineBuckets(
     "BEST_QUALITY_FIRST",
@@ -115,14 +117,46 @@ function pickIntoQueue(
     scenario.logZoomStep,
     scenario.rects,
   );
-  return bucketQueue;
+  const buffer = new ArrayBuffer(bucketQueue.length * 5 * 4);
+  const output = new Uint32Array(buffer);
+  for (let offset = 0; bucketQueue.length > 0; offset += 5) {
+    const { bucketAddress, priority } = bucketQueue.dequeue();
+    output[offset] = bucketAddress[0];
+    output[offset + 1] = bucketAddress[1];
+    output[offset + 2] = bucketAddress[2];
+    output[offset + 3] = bucketAddress[3];
+    output[offset + 4] = priority;
+  }
+  return buffer;
+}
+
+function pickWithCountingSort(
+  determineBuckets: typeof determineBucketsForPlaneWithFloodFill,
+  scenario: Scenario,
+) {
+  const addresses: number[] = [];
+  const priorities: number[] = [];
+  determineBuckets(
+    "BEST_QUALITY_FIRST",
+    MAGS,
+    POSITION,
+    (bucketAddress, priority) => {
+      addresses.push(bucketAddress[0], bucketAddress[1], bucketAddress[2], bucketAddress[3]);
+      priorities.push(priority);
+    },
+    scenario.matrix,
+    scenario.logZoomStep,
+    scenario.rects,
+  );
+  return countingSortToArrayBuffer(addresses, priorities);
 }
 
 for (const scenario of SCENARIOS) {
   test(`bucket picker: ${scenario.name}`, { timeout: 60000 }, async ({ bench }) => {
     // Logged once before the timed benchmarks run.
-    const floodFillCount = pickIntoQueue(determineBucketsForPlaneWithFloodFill, scenario).length;
-    const rowsCount = pickIntoQueue(determineBucketsForPlaneByRows, scenario).length;
+    const floodFillCount =
+      pickIntoQueue(determineBucketsForPlaneWithFloodFill, scenario).byteLength / 20;
+    const rowsCount = pickIntoQueue(determineBucketsForPlaneByRows, scenario).byteLength / 20;
     console.log(`  [${scenario.name}] buckets - flood fill: ${floodFillCount}, rows: ${rowsCount}`);
 
     const pick = (determineBuckets: typeof determineBucketsForPlaneWithFloodFill) =>
@@ -148,6 +182,12 @@ for (const scenario of SCENARIOS) {
       }),
       bench("rows + priority queue", () => {
         pickIntoQueue(determineBucketsForPlaneByRows, scenario);
+      }),
+      bench("flood fill + counting sort", () => {
+        pickWithCountingSort(determineBucketsForPlaneWithFloodFill, scenario);
+      }),
+      bench("rows + counting sort", () => {
+        pickWithCountingSort(determineBucketsForPlaneByRows, scenario);
       }),
       { time: 500 },
     );

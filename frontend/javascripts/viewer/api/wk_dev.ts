@@ -37,11 +37,6 @@ export const WkDevFlags = {
     visualizeBucketsOnGPU: false,
     // For visualizing buckets which are prefetched
     visualizePrefetchedBuckets: false,
-    // If true, every oblique pick additionally runs the row-based bucket picker and a counting
-    // sort instead of the priority queue, on the same input and purely for timing. Only the
-    // current flood fill + priority queue result is rendered. Statistics are logged to the
-    // bucket picker worker's console every 100 picks (see async_bucket_picker.worker.ts).
-    compareObliquePickers: true,
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,

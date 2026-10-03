@@ -12,7 +12,6 @@ import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
 import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import type { BucketAddress, Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
 import {
@@ -298,7 +297,6 @@ export default class LayerRenderingManager {
             logZoomStep,
             datasetConfiguration.loadingStrategy,
             rects,
-            WkDevFlags.bucketDebugging.compareObliquePickers,
           ),
         );
       }

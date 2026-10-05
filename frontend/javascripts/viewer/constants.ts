@@ -289,7 +289,6 @@ export type LabelMasksByBucketAndW = Map<BucketAddress, Map<number, Uint8Array>>
 
 const Constants = {
   FLIGHT_VIEW: 4,
-  DEFAULT_BORDER_WIDTH: 400,
   DEFAULT_BORDER_WIDTH_IN_IFRAME: 200,
   MODE_PLANE_TRACING: "orthogonal" as ViewMode,
   MODE_FLIGHT: "flight" as ViewMode,

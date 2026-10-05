@@ -9,6 +9,8 @@ import { useNodeContextMenuOptions } from "./node_context_menu_options";
 import { hideContextMenu } from "./use_context_menu_actions";
 import { useContextMenuInfoRows } from "./use_context_menu_info_rows";
 
+const NO_SEGMENT_ID = 0n;
+
 export function ContextMenuInner() {
   const contextInfo = useWkSelector((state) => state.uiInformation.contextInfo);
 
@@ -26,7 +28,7 @@ export function ContextMenuInner() {
   const segmentIdAtPosition = useWkSelector(() =>
     globalPosition != null && contextMenuPosition != null
       ? getSegmentIdForPosition(globalPosition)
-      : 0n,
+      : NO_SEGMENT_ID,
   );
 
   const { infoRows } = useContextMenuInfoRows(contextInfo, segmentIdAtPosition);

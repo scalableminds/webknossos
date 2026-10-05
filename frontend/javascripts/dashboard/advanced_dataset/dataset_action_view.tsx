@@ -105,10 +105,6 @@ function LinkWithDisabled({
   const adaptedStyle =
     rest.style != null ? { ...rest.style, ...maybeDisabledStyle } : maybeDisabledStyle;
 
-  if (!onClick) {
-    onClick = () => {};
-  }
-
   return (
     <Link
       {...rest}

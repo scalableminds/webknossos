@@ -16,6 +16,7 @@ import type { useAppProps } from "antd/es/app/context";
 import { applyViewConfigurationToDatasetsInFolder } from "dashboard/advanced_dataset/apply_view_configuration";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
 import { useDatasetCollectionContext } from "dashboard/dataset/dataset_collection_context";
+import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
@@ -269,8 +270,12 @@ const onReloadImpl = async (
   datasetId: string,
   clearCacheAndReloadDataset: (arg0: string) => Promise<void>,
 ) => {
-  await clearCacheAndReloadDataset(datasetId);
-  Toast.success(messages["dataset.clear_cache_success"]);
+  try {
+    await clearCacheAndReloadDataset(datasetId);
+    Toast.success(messages["dataset.clear_cache_success"]);
+  } catch (error) {
+    handleGenericError(error as Error, messages["dataset.clear_cache_failed"]);
+  }
 };
 
 export function getDatasetActionContextMenu({

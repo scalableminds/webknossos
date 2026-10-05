@@ -117,8 +117,9 @@ jobs:
           java-version: "21"
       - uses: sbt/setup-sbt@v1
 
-      # This job only runs on feature branches, so it always uses the caches (see caching policy above).
+      # This job does not run on master. On tags it skips the caches (see caching policy above).
       - name: Cache sbt dependencies
+        if: github.ref_type == 'branch'
         uses: actions/cache@v6
         with:
           path: |
@@ -129,6 +130,7 @@ jobs:
       # Falls back to the latest master build, so that a branch's first push
       # only recompiles what changed relative to master.
       - name: Cache incremental compilation
+        if: github.ref_type == 'branch'
         uses: actions/cache@v6
         with:
           # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
@@ -153,8 +155,10 @@ jobs:
         run: |
           (sudo apt-get update -qq && sudo apt-get install -y -qq libdraco-dev) > "$RUNNER_TEMP/apt.log" 2>&1 &
           apt_pid=$!
-          yarn install --immutable
+          yarn_status=0
+          yarn install --immutable || yarn_status=$?
           wait $apt_pid || { cat "$RUNNER_TEMP/apt.log"; exit 1; }
+          exit $yarn_status
 
       - name: Assert unique evolution numbers
         run: tools/postgres/dbtool.js assert-unique-evolution-numbers
@@ -262,8 +266,10 @@ jobs:
         run: |
           (sudo apt-get update -qq && sudo apt-get install -y -qq libdraco-dev) > "$RUNNER_TEMP/apt.log" 2>&1 &
           apt_pid=$!
-          yarn install --immutable
+          yarn_status=0
+          yarn install --immutable || yarn_status=$?
           wait $apt_pid || { cat "$RUNNER_TEMP/apt.log"; exit 1; }
+          exit $yarn_status
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 

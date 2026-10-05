@@ -14,6 +14,7 @@ import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
+import { createTween } from "libs/tween_group";
 import UserLocalStorage from "libs/user_local_storage";
 import { coalesce, map3, mod, sleep } from "libs/utils";
 import window, { location } from "libs/window";
@@ -23,7 +24,6 @@ import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
-import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -1467,7 +1467,7 @@ class TracingApi {
     // The given offset is added when going to a position in the center of a voxel.
     const targetPosition = useVoxelCenter ? V3.add(V3.floor(position), [0.5, 0.5, 0.5]) : position;
 
-    const tween = new TWEEN.Tween({
+    const tween = createTween({
       positionX: curPosition[0],
       positionY: curPosition[1],
       positionZ: curPosition[2],
@@ -1481,10 +1481,12 @@ class TracingApi {
         },
         200,
       )
-      .onUpdate(function (this: Tweener, t: number) {
-        // needs to be a normal (non-bound) function
+      .onUpdate((tweenState: Tweener, t: number) => {
         Store.dispatch(
-          setPositionAction([this.positionX, this.positionY, this.positionZ], dimensionToSkip),
+          setPositionAction(
+            [tweenState.positionX, tweenState.positionY, tweenState.positionZ],
+            dimensionToSkip,
+          ),
         );
         // Interpolating rotation via quaternions to get shortest rotation.
         const interpolatedQuaternion = new Quaternion().slerpQuaternions(

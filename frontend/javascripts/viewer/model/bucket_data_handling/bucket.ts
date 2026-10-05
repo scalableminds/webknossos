@@ -424,11 +424,6 @@ export class DataBucket {
   }
 
   isNeeded(): boolean {
-    /*
-     * Returns whether this bucket is needed for the currently rendered view.
-     * Needed buckets are protected from garbage collection and their values are considered
-     * to be part of the rendered data (see DataCube.getValueSetForAllNeededBuckets).
-     */
     return this.lastNeededTick === this.cube.currentBucketPickerTick;
   }
 

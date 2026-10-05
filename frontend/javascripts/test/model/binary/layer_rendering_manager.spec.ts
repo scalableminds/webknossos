@@ -1,20 +1,11 @@
-import { M4x4 } from "libs/mjs";
 import { sleep } from "libs/utils";
-import datasetServerObject from "test/fixtures/dataset_server_object";
-import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import type { Vector3, Vector4 } from "viewer/constants";
-import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { assertNonNullBucket } from "viewer/model/bucket_data_handling/bucket";
-import DataCube from "viewer/model/bucket_data_handling/data_cube";
-import LayerRenderingManager from "viewer/model/bucket_data_handling/layer_rendering_manager";
-import { MagInfo } from "viewer/model/helpers/mag_info";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const mags: Vector3[] = [
-  [1, 1, 1],
-  [2, 2, 2],
-  [4, 4, 4],
-];
+import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import type LayerRenderingManager from "viewer/model/bucket_data_handling/layer_rendering_manager";
+import { Model } from "viewer/singletons";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Every call to the (mocked) bucket picker worker is recorded here, so that the test
 // can decide when each pick finishes and which buckets it returns.
@@ -22,70 +13,21 @@ const { pendingPicks } = vi.hoisted(() => ({
   pendingPicks: [] as Array<(buffer: ArrayBuffer) => void>,
 }));
 
-vi.mock("viewer/workers/comlink_wrapper", () => ({
-  createWorker: () => () =>
-    new Promise<ArrayBuffer>((resolve) => {
-      pendingPicks.push(resolve);
-    }),
-}));
-
-vi.mock("viewer/store", () => ({
-  default: {
-    getState: () => ({
-      dataset: datasetServerObject,
-      annotation: {
-        skeleton: skeletontracingServerObject,
-      },
-      task: null,
-      datasetConfiguration: {
-        fourBit: false,
-        loadingStrategy: "BEST_QUALITY_FIRST",
-        nativelyRenderedLayerName: null,
-      },
-      temporaryConfiguration: {
-        viewMode: "orthogonal",
-        activeMappingByLayer: {},
-      },
-      userConfiguration: {
-        sphericalCapRadius: 100,
-      },
-      flycam: {
-        zoomStep: 1,
-        currentMatrix: M4x4.identity(),
-        additionalCoordinates: null,
-      },
-      flycamInfoCache: {
-        maximumZoomForAllMags: { layerName: [1, 2, 4] },
-      },
-    }),
-    dispatch: vi.fn(),
-    subscribe: vi.fn(),
-  },
-}));
-
-vi.mock("viewer/model/accessors/dataset_accessor", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("viewer/model/accessors/dataset_accessor")>()),
-  getLayerByName: () => ({ name: "layerName", mags: mags.map((mag) => ({ mag })) }),
-  getMagInfo: () => new MagInfo(mags),
-  isLayerVisible: () => true,
-}));
-
-vi.mock("viewer/model/accessors/dataset_layer_transformation_accessor", () => ({
-  getTransformsForLayer: () => ({ affineMatrix: M4x4.identity() }),
-  invertAndTranspose: (matrix: unknown) => matrix,
-}));
-
-vi.mock("viewer/model/accessors/view_mode_accessor", () => ({
-  getViewportRects: () => ({}),
-}));
-
-vi.mock("viewer/model/sagas/root_saga", () => ({
-  default: function* () {
-    yield;
-  },
-}));
-
-vi.mock("app", () => ({ default: { vent: { emit: vi.fn() } } }));
+vi.mock("viewer/workers/comlink_wrapper", async (importOriginal) => {
+  const original = await importOriginal<typeof import("viewer/workers/comlink_wrapper")>();
+  return {
+    ...original,
+    createWorker: (pathToWorker: string) => {
+      if (pathToWorker !== "async_bucket_picker.worker.ts") {
+        return original.createWorker(pathToWorker);
+      }
+      return () =>
+        new Promise<ArrayBuffer>((resolve) => {
+          pendingPicks.push(resolve);
+        });
+    },
+  };
+});
 
 function createPickerBuffer(addresses: Vector4[]): ArrayBuffer {
   // Mirrors the format of the bucket picker worker: [x, y, z, zoomStep, priority] per bucket.
@@ -97,39 +39,29 @@ function createPickerBuffer(addresses: Vector4[]): ArrayBuffer {
 }
 
 describe("LayerRenderingManager", () => {
-  interface TestContext {
+  interface TestContext extends WebknossosTestContext {
     cube: DataCube;
     layerRenderingManager: LayerRenderingManager;
   }
 
-  beforeEach<TestContext>((context) => {
+  beforeEach<TestContext>(async (context) => {
     pendingPicks.length = 0;
-    const cube = new DataCube(
-      new BoundingBox({ min: [0, 0, 0], max: [100, 100, 100] }),
-      [],
-      new MagInfo(mags),
-      "uint32",
-      false,
-      "layerName",
-    );
-    const pullQueue = { clear: vi.fn(), addAll: vi.fn(), pull: vi.fn() };
-    cube.initializeWithQueues(pullQueue as any, { insert: vi.fn(), push: vi.fn() } as any);
+    await setupWebknossosForTesting(context, "skeleton");
 
-    const layerRenderingManager = new LayerRenderingManager(
-      "layerName",
-      pullQueue as any,
-      cube,
-      512,
-      1,
-    );
+    const layer = Model.getLayerByName("color");
+    const { layerRenderingManager } = layer;
     // Avoid setting up real textures (which would need a WebGL context).
     layerRenderingManager.textureBucketManager = {
       maximumCapacity: 100,
       setActiveBuckets: vi.fn(),
     } as any;
 
-    context.cube = cube;
+    context.cube = layer.cube;
     context.layerRenderingManager = layerRenderingManager;
+  });
+
+  afterEach<TestContext>((context) => {
+    context.tearDownPullQueues();
   });
 
   it<TestContext>("should not keep buckets needed which were only picked by an outdated pick", async ({
@@ -157,12 +89,14 @@ describe("LayerRenderingManager", () => {
 
     // The first pick finishes. Its result is still consumed even though the view has
     // changed since. Afterwards, the executor starts the third (latest) pick.
-    pendingPicks[0](createPickerBuffer([onlyInFirstPickAddress, inBothPicksAddress]));
+    const resolveFirstPick = pendingPicks[0];
+    resolveFirstPick(createPickerBuffer([onlyInFirstPickAddress, inBothPicksAddress]));
     await sleep(0);
     expect(pendingPicks.length).toBe(2);
 
     // The latest pick finishes and no longer contains the first bucket.
-    pendingPicks[1](createPickerBuffer([inBothPicksAddress, onlyInLastPickAddress]));
+    const resolveLatestPick = pendingPicks[1];
+    resolveLatestPick(createPickerBuffer([inBothPicksAddress, onlyInLastPickAddress]));
     await sleep(0);
 
     const isNeeded = (address: Vector4) => {

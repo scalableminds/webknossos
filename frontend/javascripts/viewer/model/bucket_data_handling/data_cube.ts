@@ -427,16 +427,17 @@ class DataCube {
     // Only called by DataBucket.markAsNeeded and only for buckets that were not already
     // marked during the current tick.
     this.neededBucketCount++;
-    if (wasNeededInPreviousTick) {
-      return;
-    }
     if (this.isBucketPickingInProgress) {
       // Don't trigger triggerRenderedBucketDataChanged, because we can do that once
       // in `finishBucketPicking`.
-      this.didNeedNewBucket = true;
+      if (!wasNeededInPreviousTick) {
+        this.didNeedNewBucket = true;
+      }
     } else {
       // The bucket became relevant outside of a picking round (e.g. because getData was called
       // for it while hovering). No finishBucketPicking will follow, so emit right away.
+      // This is also necessary if the bucket was needed in the previous tick, because the
+      // current tick's set of needed buckets didn't contain it so far.
       this.triggerRenderedBucketDataChanged();
     }
   }

@@ -45,15 +45,10 @@ function EditableTextIcon(props: Props) {
     <Button
       size="small"
       icon={props.icon}
-      style={{
-        height: 22,
-        width: props.label ? "initial" : 22,
-        fontSize: "12px",
-        color: "var(--ant-color-text-secondary)",
-      }}
+      className="small-add-button"
       onClick={() => setIsEditing(true)}
     >
-      {props.label ? <span style={{ marginLeft: 0 }}>{props.label}</span> : null}
+      {props.label}
     </Button>
   );
 }

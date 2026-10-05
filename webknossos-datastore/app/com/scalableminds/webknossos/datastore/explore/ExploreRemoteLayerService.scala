@@ -8,13 +8,18 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.datavault.{S3DataVault, VaultPath}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
-import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, DataVaultCredential, DataVaultService}
+import com.scalableminds.webknossos.datastore.storage.{
+  CredentializedUPath,
+  DataVaultCredential,
+  DataVaultService,
+  S3ClientPoolHolder
+}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.webknossos.datastore.helpers.{UPath, ZipEntryUPath}
+import com.scalableminds.webknossos.datastore.helpers.{S3UriUtils, UPath, ZipEntryUPath}
 
 import java.nio.file.Path
 import javax.inject.Inject
@@ -36,7 +41,8 @@ case class ExploreRemoteLayerParameters(
 class ExploreRemoteLayerService @Inject() (
     dataVaultService: DataVaultService,
     remoteWebknossosClient: DSRemoteWebknossosClient,
-    dataStoreConfig: DataStoreConfig
+    dataStoreConfig: DataStoreConfig,
+    s3ClientPoolHolder: S3ClientPoolHolder
 ) extends ExploreLayerUtils
     with Formatter
     with LazyLogging {
@@ -70,9 +76,11 @@ class ExploreRemoteLayerService @Inject() (
       reportMutable: ListBuffer[String]
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
-      upath <- UPath
+      parsedUPath <- UPath
         .fromString(removeNeuroglancerPrefixesFromUri(removeHeaderFileNamesFromUriSuffix(layerUri)))
         .toFox ?~> s"Received invalid URI: $layerUri"
+      credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)
+      upath <- insertS3EndpointIfMissing(parsedUPath, credentialOpt)
       upathForExplore = upath match {
         case _: ZipEntryUPath                                                                      => upath
         case _ if ZipEntryUPath.relevantFileExtensions.exists(upath.toString.toLowerCase.endsWith) =>
@@ -80,7 +88,6 @@ class ExploreRemoteLayerService @Inject() (
         case _ => upath
       }
       _ <- assertLocalPathInWhitelist(upathForExplore)
-      credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)
       remotePath <- dataVaultService.vaultPathFor(
         CredentializedUPath(upathForExplore, credentialOpt)
       ) ?~> Msg.DataVault.setupFailed
@@ -103,6 +110,34 @@ class ExploreRemoteLayerService @Inject() (
         reportMutable
       )
     } yield layersWithVoxelSizes
+
+  // Rewrites s3://bucket/key to s3://s3.<region>.amazonaws.com/bucket/key, since not all clients (e.g. the python
+  // library) support the short style. Falls back to the global endpoint if the region cannot be looked up.
+  private def insertS3EndpointIfMissing(upath: UPath, credentialOpt: Option[DataVaultCredential])(implicit
+      ec: ExecutionContext
+  ): Fox[UPath] =
+    upath match {
+      case ZipEntryUPath(outerPath, innerPath) =>
+        insertS3EndpointIfMissing(outerPath, credentialOpt).map(ZipEntryUPath(_, innerPath))
+      case _ =>
+        upath.toRemoteUri match {
+          case Full(uri) if S3UriUtils.isShortStyle(uri) =>
+            for {
+              bucket <- S3UriUtils.hostBucketFromUri(uri).toFox
+              regionBox <- s3ClientPoolHolder.s3ClientPool
+                .getBucketRegion(S3DataVault.s3CredentialFrom(credentialOpt), uri, bucket)
+                .shiftBox
+              _ = regionBox match {
+                case f: Failure =>
+                  logger.info(s"Could not look up region of s3 bucket $bucket, using global endpoint: ${f.msg}")
+                case _ => ()
+              }
+              endpointHost = S3UriUtils.awsEndpointHost(regionBox.toOption)
+              withEndpoint <- UPath.fromString(S3UriUtils.withEndpointHost(uri, endpointHost)).toFox
+            } yield withEndpoint
+          case _ => Fox.successful(upath)
+        }
+    }
 
   private def assertLocalPathInWhitelist(upath: UPath)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.fromBool(

@@ -18,11 +18,13 @@ import software.amazon.awssdk.http.Protocol
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
+import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest
 
 import java.net.URI
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.DurationConverters.ScalaDurationOps
+import scala.jdk.FutureConverters.*
 import scala.jdk.OptionConverters.RichOptional
 import scala.util.{Failure as TryFailure, Success as TrySuccess}
 
@@ -67,6 +69,21 @@ class S3ClientPool(ws: WSClient) {
       )
     } yield client
   }
+
+  // Requires the s3:GetBucketLocation permission, which anonymous requests never have.
+  def getBucketRegion(credentialOpt: Option[S3AccessKeyCredential], uri: URI, bucket: String)(implicit
+      ec: ExecutionContext
+  ): Fox[String] =
+    for {
+      client <- getS3Client(credentialOpt, uri, isForUpload = false)
+      response <- Fox.fromFuture(
+        client.getBucketLocation(GetBucketLocationRequest.builder().bucket(bucket).build()).asScala
+      )
+    } yield Option(response.locationConstraintAsString()).filter(_.nonEmpty) match {
+      case None         => Region.US_EAST_1.id() // Buckets in us-east-1 have no location constraint
+      case Some("EU")   => Region.EU_WEST_1.id() // Legacy location constraint
+      case Some(region) => region
+    }
 
   private def isHetznerEndpoint(customEndpointOpt: Option[URI]): Boolean =
     customEndpointOpt.exists(_.getHost.endsWith(".your-objectstorage.com"))

@@ -18,7 +18,6 @@ import type {
   OrthoViewRects,
   Vector2,
   Vector3,
-  Vector4,
   ViewMode,
 } from "viewer/constants";
 import constants, { OrthoViews } from "viewer/constants";
@@ -67,11 +66,8 @@ function calculateTotalBucketCountForZoomLevel(
   const logZoomStep = Math.log2(Math.max(...mag));
 
   let counter = 0;
-
-  const addresses = [];
-  const enqueueFunction = (bucketAddress: Vector4) => {
+  const enqueueFunction = () => {
     counter++;
-    addresses.push(bucketAddress);
   };
 
   // Define dummy values

@@ -559,9 +559,9 @@ add("view_modes.png", async (ctx) => {
 });
 for (const name of ["tracing_ui_flightmode.jpeg", "screenshot_flight_mode.png"]) {
   add(name, async (ctx) => {
-    // The flight-mode overview shows only the viewport: no skeleton and no sidebars.
+    // Neither flight-mode screenshot shows agglomerate skeletons. The overview also hides the sidebars.
     const overview = name === "tracing_ui_flightmode.jpeg";
-    await scene(ctx, "skeleton", !overview);
+    await scene(ctx, "skeleton");
     if (overview) {
       await setSidebar(ctx, "left", false);
       await setSidebar(ctx, "right", false);

@@ -53,5 +53,93 @@
     "description": "In this task we would like you to trace the axon starting at the task position through the dataset.\n\nHints:\n\n- Place a node at least every 10 slices and at every branch point.\n- Mark branch points with **B** and follow every branch to its end.\n- Ignore dendrites and glia; stay within the axon.\n- Leave a comment on nodes where the axon leaves the dataset.\n\nThe full keyboard shortcuts can be found in the [documentation](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html).",
     "allowedModes": ["orthogonal", "flight"]
   },
-  "teams": ["Axon Tracing", "Dendrite Proofreading", "Synapse Annotation", "Student Annotators"]
+  "teams": ["Axon Tracing", "Dendrite Proofreading", "Synapse Annotation", "Student Annotators"],
+  "exampleDatasets": {
+    "tag": "Example data",
+    "datasets": {
+      "l4dense_motta_et_al_demo_v2": {
+        "description": "Dense connectomic reconstruction of layer 4 of mouse primary somatosensory cortex (Motta et al., Science 2019). Serial block-face EM with automated segmentation, agglomerates and synapse predictions.",
+        "tags": ["SBEM", "Mouse", "Cortex L4", "Connectomics", "Published"],
+        "metadata": [
+          { "key": "species", "type": "string", "value": "Mus musculus" },
+          { "key": "brainRegion", "type": "string", "value": "Somatosensory cortex L4" },
+          { "key": "acquisition", "type": "string", "value": "SBEM" },
+          { "key": "animalAge (days)", "type": "number", "value": 28 },
+          { "key": "doi", "type": "string", "value": "10.1126/science.aay3134" }
+        ]
+      },
+      "l4_sample_remote": {
+        "description": "Cropped sample of the layer 4 cortex volume, streamed from remote storage. Ideal for trying out annotation tools.",
+        "tags": ["SBEM", "Mouse", "Cortex L4", "Sample"],
+        "metadata": [{ "key": "brainRegion", "type": "string", "value": "Cortex L4" }]
+      },
+      "l4_sample_remote_2": {
+        "description": "Axon tracing training volume from layer 4 of mouse somatosensory cortex.",
+        "tags": ["SBEM", "Mouse", "Cortex L4", "Training"]
+      },
+      "l4_sample_remote_3": {
+        "description": "Dendrite proofreading volume from layers 2/3 of mouse somatosensory cortex.",
+        "tags": ["SBEM", "Mouse", "Cortex L2/3", "Proofreading"]
+      },
+      "l4_sample_remote_4": {
+        "description": "Synapse annotation volume from layer 5 of mouse somatosensory cortex.",
+        "tags": ["SBEM", "Mouse", "Cortex L5", "Synapses"]
+      },
+      "tubhiswt-4D": {
+        "description": "Fluorescence time-lapse from the OME sample data, stored as a remote 4D OME-Zarr.",
+        "tags": ["Light microscopy", "Fluorescence", "Time-lapse", "OME-Zarr"],
+        "metadata": [
+          { "key": "acquisition", "type": "string", "value": "Fluorescence microscopy" },
+          { "key": "format", "type": "string", "value": "OME-Zarr" },
+          { "key": "labels", "type": "string[]", "value": ["Tubulin", "Histone"] }
+        ]
+      }
+    }
+  },
+  "annotations": {
+    "open": [
+      {
+        "name": "Axon reconstruction 415",
+        "description": "Skeleton tracing of the axon of agglomerate 415, including every branch point up to the dataset border.",
+        "tags": ["Axon", "Skeleton tracing"]
+      },
+      {
+        "name": "Dendrite proofreading",
+        "description": "Merge and split errors fixed in the dendrite agglomerates around the soma.",
+        "tags": ["Dendrite", "Proofreading"]
+      },
+      {
+        "name": "Synapse annotations axon 128501",
+        "description": "Presynaptic boutons of axon 128501, each marked with a commented node.",
+        "tags": ["Synapses", "Axon"]
+      },
+      {
+        "name": "Soma survey",
+        "description": "One node per cell body in the volume, used to seed neuron reconstructions.",
+        "tags": ["Somata", "Survey"]
+      },
+      {
+        "name": "Spine head inventory",
+        "description": "Spine heads along a single dendrite, grouped into trees by spine type.",
+        "tags": ["Dendrite", "Spines"]
+      },
+      {
+        "name": "Training annotation",
+        "description": "Practice tracing for new team members of the Student Annotators team.",
+        "tags": ["Training"]
+      }
+    ],
+    "archived": [
+      {
+        "name": "Axon reconstruction (first pass)",
+        "description": "Initial axon tracing, superseded by Axon reconstruction 415.",
+        "tags": ["Axon", "Skeleton tracing"]
+      },
+      {
+        "name": "Glia exclusion review",
+        "description": "Reviewed glia fragments that were excluded from the neuron agglomerates.",
+        "tags": ["Glia", "Review"]
+      }
+    ]
+  }
 }

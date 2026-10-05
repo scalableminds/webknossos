@@ -13,6 +13,28 @@ export function imagePath(root, relative) {
     throw new Error(`Unsafe screenshot path: ${relative}`);
   return path.join(root, relative);
 }
+// The review directory keeps all images of one kind (old, new, excluded) in a single flat
+// folder, regardless of their docs subdirectory. Filenames are unique across the docs.
+export function reviewPath(base, relative) {
+  return path.join(base, path.basename(relative));
+}
+// Reviews captured before the flat layout keep images under their docs path.
+async function readCapture(output, relative) {
+  const candidates = [
+    reviewPath(path.join(output, "new"), relative),
+    imagePath(path.join(output, "new"), relative),
+  ];
+  for (const candidate of candidates) {
+    try {
+      return await fs.readFile(candidate);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+  }
+  throw new Error(
+    `Missing capture of ${relative} in ${path.join(output, "new")}; capture it again before applying.`,
+  );
+}
 export async function applyReport(root, output, recipes) {
   const report = JSON.parse(await fs.readFile(path.join(output, "report.json"), "utf8"));
   const allowed = new Set(recipes.map((recipe) => recipe.output));
@@ -21,8 +43,11 @@ export async function applyReport(root, output, recipes) {
     if (entry.status !== "success") continue;
     if (!allowed.has(entry.output)) throw new Error(`Unknown recipe output: ${entry.output}`);
     const target = imagePath(root, entry.output);
-    const bytes = await fs.readFile(imagePath(path.join(output, "new"), entry.output));
-    if (digest(bytes) !== entry.sha256) throw new Error(`Generated image changed: ${entry.output}`);
+    const bytes = await readCapture(output, entry.output);
+    if (digest(bytes) !== entry.sha256)
+      throw new Error(
+        `Generated image changed: ${entry.output} doesn't match report.json; capture it again before applying.`,
+      );
     if (digest(await fs.readFile(target)) !== entry.previousSha256)
       throw new Error(
         `Docs image changed since capture: ${entry.output}; regenerate before applying.`,
@@ -37,14 +62,14 @@ export async function writeReport(output, report) {
   const cards = report.results
     .map(
       (entry) =>
-        `<article data-status="${escapeHtml(entry.status)}"><h2>${escapeHtml(entry.id)}</h2><p>${escapeHtml(entry.output)} — ${escapeHtml(entry.status)}</p>${entry.status === "success" ? `<div class="pair"><figure><figcaption>Before</figcaption><img src="old/${escapeHtml(entry.output)}"></figure><figure><figcaption>After</figcaption><img src="new/${escapeHtml(entry.output)}"></figure></div>` : `<pre>${escapeHtml(entry.error)}</pre>${entry.failureImage ? `<a href="${escapeHtml(entry.failureImage)}">Failed page screenshot</a>` : ""}${entry.trace ? `<p><a href="${escapeHtml(entry.trace)}">Playwright trace</a></p>` : ""}<details><summary>Diagnostics</summary><pre>${escapeHtml(JSON.stringify({ details: entry.details, browserErrors: entry.browserErrors, consoleErrors: entry.consoleErrors, requestErrors: entry.requestErrors }, null, 2))}</pre></details>`}</article>`,
+        `<article data-status="${escapeHtml(entry.status)}"><h2>${escapeHtml(entry.id)}</h2><p>${escapeHtml(entry.output)} — ${escapeHtml(entry.status)}</p>${entry.status === "success" ? `<div class="pair"><figure><figcaption>Before</figcaption><img src="old/${escapeHtml(path.basename(entry.output))}"></figure><figure><figcaption>After</figcaption><img src="new/${escapeHtml(path.basename(entry.output))}"></figure></div>` : `<pre>${escapeHtml(entry.error)}</pre>${entry.failureImage ? `<a href="${escapeHtml(entry.failureImage)}">Failed page screenshot</a>` : ""}${entry.trace ? `<p><a href="${escapeHtml(entry.trace)}">Playwright trace</a></p>` : ""}<details><summary>Diagnostics</summary><pre>${escapeHtml(JSON.stringify({ details: entry.details, browserErrors: entry.browserErrors, consoleErrors: entry.consoleErrors, requestErrors: entry.requestErrors }, null, 2))}</pre></details>`}</article>`,
     )
     .join("\n");
   const excluded = report.excluded ?? [];
   const excludedCards = excluded
     .map(
       (asset) =>
-        `<article data-status="excluded"><h2>${escapeHtml(asset.path)}</h2><p>excluded ${escapeHtml(asset.kind)} — ${escapeHtml(asset.reason)}</p><img class="thumbnail" src="excluded/${escapeHtml(asset.path)}"></article>`,
+        `<article data-status="excluded"><h2>${escapeHtml(asset.path)}</h2><p>excluded ${escapeHtml(asset.kind)} — ${escapeHtml(asset.reason)}</p><img class="thumbnail" src="excluded/${escapeHtml(path.basename(asset.path))}"></article>`,
     )
     .join("\n");
   const succeeded = report.results.filter((entry) => entry.status === "success").length;

@@ -1,6 +1,6 @@
 # Documentation screenshots
 
-Generate documentation screenshots with Playwright against a **local** WEBKNOSSOS instance. Existing filenames and JPEG/PNG formats are preserved. Captures go into a review directory; a separate command applies them to the docs.
+Generate documentation screenshots with Playwright against a **local** WEBKNOSSOS instance. Existing filenames and JPEG/PNG formats are preserved. Captures go into a review directory (`new/` and `old/` hold every image by filename, regardless of its docs subdirectory); a separate command applies them to the docs.
 
 ## Quick start
 
@@ -49,12 +49,14 @@ yarn docs:screenshots --fixtures .docs-screenshots/fixtures.local.json
 | `taskType` | Task type of the documentation task, shown on the task dashboard | yes (`Axon Tracing`) |
 | `projectName` | Project with tasks exclusively on the documentation dataset | yes (`DocumentationL4dense`) |
 | `taskId` | Task on the documentation dataset, assigned to the account | yes |
-| Archived annotation on the documentation dataset | Archive dashboard | yes |
+| `exampleDatasets` | Descriptions, tags and metadata of the example datasets (keyed by directory name; missing ones are skipped); the dataset dashboard lists those with the shared tag | yes |
+| `annotations` | Named open and archived annotations with tags and descriptions on the documentation dataset | yes |
 | At least one open task on the documentation dataset | Task dashboards (other open tasks may appear too) | yes |
 | `nucleiJobId` | Existing nuclei/instance inference job on the documentation dataset | no API without running a job |
 | Existing jobs on the documentation dataset | Jobs table | no API without running a job |
 | A featured publication containing the documentation dataset | Publications dashboards | no; the dev setup's initial data links it to the Motta et al. 2019 publication |
-| Appropriate local feature flags and plan permissions | AI, team sharing, jobs, publications | – |
+| Jobs enabled (`yarn enable-jobs`; restart WEBKNOSSOS afterwards if it changed `application.conf`) | Jobs, AI | yes |
+| Appropriate local feature flags and plan permissions | AI, team sharing, publications | – |
 
 The onboarding recipes present the local instance as self-hosted (`isWkorgInstance=false`) to their own browser context by rewriting the `/api/features` response, so they work regardless of the server configuration.
 

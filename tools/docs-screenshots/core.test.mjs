@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { applyReport, digest, imagePath, writeReport } from "./core.mjs";
+import { applyReport, digest, imagePath, reviewPath, writeReport } from "./core.mjs";
 
 test("rejects paths outside documentation raster images", () => {
   for (const value of ["../image.png", "docs/../../image.png", "docs/x.svg", "/docs/x.png"])
@@ -13,13 +13,17 @@ test("rejects paths outside documentation raster images", () => {
 test("apply validates all captures before updating any originals", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "wk-docs-screenshots-"));
   const output = path.join(root, "review");
-  const recipes = ["a", "b"].map((id) => ({ id, output: `docs/images/${id}.png` }));
+  // Images from different docs directories share one flat review folder.
+  const recipes = ["images/a", "automation/images/b"].map((id) => ({
+    id,
+    output: `docs/${id}.png`,
+  }));
   const report = { createdAt: "test", baseUrl: "http://localhost", results: [] };
   for (const recipe of recipes) {
-    for (const base of [root, path.join(output, "new")])
-      await fs.mkdir(path.dirname(imagePath(base, recipe.output)), { recursive: true });
+    await fs.mkdir(path.dirname(imagePath(root, recipe.output)), { recursive: true });
+    await fs.mkdir(path.join(output, "new"), { recursive: true });
     await fs.writeFile(imagePath(root, recipe.output), "old");
-    await fs.writeFile(imagePath(path.join(output, "new"), recipe.output), "new");
+    await fs.writeFile(reviewPath(path.join(output, "new"), recipe.output), "new");
     report.results.push({
       ...recipe,
       status: "success",
@@ -55,9 +59,9 @@ test("failed captures cannot replace originals and tampered captures are refused
   const output = path.join(root, "review");
   const recipe = { id: "a", output: "docs/a.png" };
   await fs.mkdir(path.join(root, "docs"), { recursive: true });
-  await fs.mkdir(path.join(output, "new", "docs"), { recursive: true });
+  await fs.mkdir(path.join(output, "new"), { recursive: true });
   await fs.writeFile(imagePath(root, recipe.output), "original");
-  await fs.writeFile(imagePath(path.join(output, "new"), recipe.output), "stale");
+  await fs.writeFile(reviewPath(path.join(output, "new"), recipe.output), "stale");
   const entry = {
     ...recipe,
     status: "failed",
@@ -67,8 +71,16 @@ test("failed captures cannot replace originals and tampered captures are refused
   };
   await writeReport(output, { results: [entry] });
   assert.equal(await applyReport(root, output, [recipe]), 0);
+  // Reviews from before the flat layout keep captures under their docs path.
+  await fs.mkdir(path.join(output, "new", "docs"), { recursive: true });
+  await fs.rename(
+    reviewPath(path.join(output, "new"), recipe.output),
+    imagePath(path.join(output, "new"), recipe.output),
+  );
   entry.status = "success";
   await writeReport(output, { results: [entry] });
   await assert.rejects(applyReport(root, output, [recipe]), /Generated image changed/);
+  await fs.rm(path.join(output, "new"), { recursive: true });
+  await assert.rejects(applyReport(root, output, [recipe]), /Missing capture of docs\/a\.png/);
   assert.equal(await fs.readFile(imagePath(root, recipe.output), "utf8"), "original");
 });

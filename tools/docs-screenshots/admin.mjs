@@ -112,6 +112,36 @@ function CSSescape(value) {
   if (!/^[a-zA-Z0-9_-]+$/.test(value)) throw new Error(`Invalid fixture ID: ${value}`);
   return value;
 }
+const setupHint = "Run tools/docs-screenshots/setup-fixtures.mjs.";
+// Filter chips of the dashboard lists (see list_filter_header.tsx) open a dropdown.
+async function openFilterChip(ctx, label) {
+  await ctx.page
+    .locator(".dashboard-list-filter-bar button")
+    .filter({ hasText: label })
+    .first()
+    .click();
+  const popup = ctx.page.locator(".ant-dropdown:not(.ant-dropdown-hidden)").last();
+  await popup.waitFor({ state: "visible" });
+  return popup;
+}
+async function closeFilterChip(ctx, popup) {
+  await ctx.page.keyboard.press("Escape");
+  await popup.waitFor({ state: "hidden" });
+  await settled(ctx);
+}
+async function chooseFilterOption(ctx, chip, option) {
+  const popup = await openFilterChip(ctx, chip);
+  await popup.getByText(option, { exact: true }).click();
+  await closeFilterChip(ctx, popup);
+}
+// List rows only (de)select when their cell itself is clicked, not the links or tags within it.
+async function selectRow(ctx, row) {
+  const cell = row.locator("td").first();
+  const box = await cell.boundingBox();
+  await cell.click({ position: { x: box.width - 8, y: 8 } });
+  await ctx.page.mouse.move(0, 0);
+  await settled(ctx);
+}
 async function annotations(ctx, archived) {
   await goto(
     ctx,
@@ -119,30 +149,45 @@ async function annotations(ctx, archived) {
     "Annotations",
   );
   const records = await api(ctx, `/api/annotations/readable?isFinished=${archived}&pageNumber=0`);
-  const matching = records.filter(
-    (record) => (record.datasetId ?? record.dataSetId) === ctx.dataset.id,
+  const fixtures = fixture(
+    ctx,
+    "annotations",
+    "Names, descriptions and tags of the demonstration annotations.",
+  )[archived ? "archived" : "open"];
+  const missing = fixtures.filter(
+    ({ name, description }) =>
+      !records.some(
+        (record) =>
+          (record.datasetId ?? record.dataSetId) === ctx.dataset.id &&
+          record.name === name &&
+          record.description === description,
+      ),
   );
-  if (!matching.length) {
+  if (missing.length) {
     throw new Error(
-      `Missing ${archived ? "archived" : "open"} annotation fixture on the documentation dataset. ${archived ? "Archive a dedicated demonstration annotation" : "Create a demonstration annotation"} in the local account before capturing this dashboard.`,
+      `Missing ${archived ? "archived" : "open"} demonstration annotations on the documentation dataset: ${missing.map(({ name }) => name).join(", ")}. ${setupHint}`,
     );
   }
-  if (archived) {
-    await ctx.page.getByRole("button", { name: "Show Archived Annotations", exact: true }).click();
-    // Archived annotations are not linked; check their dataset tags instead.
-    const rows = ctx.page.locator(`${main} .ant-table-row`);
-    await rows.first().waitFor({ state: "visible" });
-    for (const row of await rows.all()) {
-      if (!(await row.getByText(ctx.dataset.name, { exact: true }).count()))
-        throw new Error("Visible annotations must all belong to the documentation dataset.");
-    }
-    return content(ctx);
+  if (archived) await chooseFilterOption(ctx, "Status", "Archived");
+  // Unnamed annotations sort last, so the named demonstration annotations come first.
+  await chooseFilterOption(ctx, "Sort:", "Name");
+  const rows = ctx.page.locator(`${main} .ant-table-row`);
+  await rows.first().waitFor({ state: "visible" });
+  // The dataset filter of the URL shows only annotations of the documentation dataset; their
+  // rows list its name as a tag.
+  for (const row of await rows.all()) {
+    if (!(await row.getByText(ctx.dataset.name, { exact: true }).count()))
+      throw new Error("Visible annotations must all belong to the documentation dataset.");
   }
-  await ctx.page
-    .locator(`${main} a[href^="/annotations/"]:visible`)
-    .first()
-    .waitFor({ state: "visible" });
-  await assertAnnotationDatasets(ctx);
+  if (!archived) await assertAnnotationDatasets(ctx);
+  // Show the details sidebar of the first demonstration annotation.
+  const [selected] = [...fixtures].sort((a, b) => a.name.localeCompare(b.name));
+  await selectRow(
+    ctx,
+    rows.filter({ has: ctx.page.getByText(selected.name, { exact: true }) }).first(),
+  );
+  await content(ctx).locator(".ant-table-row-selected").first().waitFor({ state: "visible" });
+  await content(ctx).getByText(selected.description).last().waitFor({ state: "visible" });
   return content(ctx);
 }
 async function assertAnnotationDatasets(ctx) {
@@ -229,10 +274,26 @@ async function onboarding(ctx, account) {
 
 export const recipes = [
   recipe("screenshot_DS_management.png", async (ctx) => {
-    // Shows all datasets of the organization, unfiltered.
+    // Shows the example datasets, which share a tag, with the documentation dataset selected.
+    const { tag, datasets } = fixture(
+      ctx,
+      "exampleDatasets",
+      "Descriptions, tags and metadata of the example datasets.",
+    );
     await goto(ctx, "/dashboard/datasets", "Datasets");
+    const dataset = await api(ctx, `/api/datasets/${encodeURIComponent(ctx.dataset.id)}`);
+    if (!dataset.tags.includes(tag) || !dataset.description)
+      throw new Error(`The example datasets need their descriptions and tags. ${setupHint}`);
     await settled(ctx);
     await ctx.page.locator(`${main} a[href^="/datasets/"]`).first().waitFor({ state: "visible" });
+    const popup = await openFilterChip(ctx, "Tags");
+    await popup.getByRole("checkbox", { name: tag, exact: true }).check();
+    await closeFilterChip(ctx, popup);
+    await selectRow(ctx, ctx.page.locator(`tr[data-row-key="${CSSescape(ctx.dataset.id)}"]`));
+    await content(ctx)
+      .getByText(datasets[ctx.dataset.name].description)
+      .last()
+      .waitFor({ state: "visible" });
     return content(ctx);
   }),
   ...["dashboard_regular_user.jpeg"].map((name) =>
@@ -254,7 +315,18 @@ export const recipes = [
   ),
   settings("dataset_settings_datasource.jpeg", "data", "Data Source"),
   settings("dataset_settings_sharing.jpeg", "sharing", "Sharing & Permissions"),
-  settings("dataset_settings_metadata.jpeg", "metadata", "Metadata"),
+  recipe("dataset_settings_metadata.jpeg", async (ctx) => {
+    await goto(ctx, `/datasets/${encodeURIComponent(ctx.dataset.id)}/edit/metadata`, "Metadata");
+    const { description } = await api(ctx, `/api/datasets/${encodeURIComponent(ctx.dataset.id)}`);
+    if (!description)
+      throw new Error(`The documentation dataset needs a description. ${setupHint}`);
+    // The form is filled in once the dataset has loaded.
+    await ctx.page.waitForFunction(
+      (value) => [...document.querySelectorAll("textarea")].some((area) => area.value === value),
+      description,
+    );
+    return content(ctx);
+  }),
   settings("dataset_settings_viewconfig.jpeg", "defaultConfig", "View Configuration"),
   settings("dataset_settings_delete.jpeg", "delete", "Delete Dataset"),
   recipe("tasks_tasktype.jpeg", async (ctx) => {
@@ -357,7 +429,21 @@ export const recipes = [
     await dialog(ctx).waitFor({ state: "visible" });
     return { target: dialog(ctx), padding: 64 };
   }),
-  route("team_overview.jpg", "/teams", "Teams"),
+  recipe("team_overview.jpg", async (ctx) => {
+    await goto(ctx, "/teams", "Teams");
+    // Expand the team with the most members to show its member list.
+    const [teams, users] = await Promise.all([api(ctx, "/api/teams"), api(ctx, "/api/users")]);
+    const memberCount = (team) =>
+      users.filter((user) => user.isActive && user.teams.some(({ id }) => id === team.id)).length;
+    const team = teams.reduce((best, team) =>
+      memberCount(team) > memberCount(best) ? team : best,
+    );
+    const row = ctx.page.locator(`tr[data-row-key="${CSSescape(team.id)}"]`);
+    await row.locator(".ant-table-row-expand-icon").click();
+    await ctx.page.locator(".ant-table-expanded-row").first().waitFor({ state: "visible" });
+    await ctx.page.mouse.move(0, 0);
+    return content(ctx);
+  }),
   recipe("jobs.jpeg", async (ctx) => {
     await goto(ctx, "/jobs", "Jobs");
     await search(ctx);

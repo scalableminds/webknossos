@@ -13,7 +13,7 @@ import {
   clickText,
   waitForViewer,
 } from "./browser.mjs";
-import { applyReport, digest, imagePath, writeReport } from "./core.mjs";
+import { applyReport, digest, imagePath, reviewPath, writeReport } from "./core.mjs";
 import { checkCoverage } from "./inventory.mjs";
 import { recipes as viewerRecipes } from "./viewer.mjs";
 
@@ -42,9 +42,11 @@ const outputs = new Set();
 const ids = new Set();
 for (const recipe of recipes) {
   imagePath(root, recipe.output);
-  if (outputs.has(recipe.output) || ids.has(recipe.id))
+  // Review images are stored by filename only, see reviewPath.
+  const filename = path.basename(recipe.output);
+  if (outputs.has(filename) || ids.has(recipe.id))
     throw new Error(`Duplicate recipe: ${recipe.id} / ${recipe.output}`);
-  outputs.add(recipe.output);
+  outputs.add(filename);
   ids.add(recipe.id);
 }
 if (values.help) {
@@ -54,9 +56,15 @@ if (values.help) {
 } else if (values.list) {
   for (const recipe of recipes) console.log(`${recipe.id}\t${recipe.output}`);
 } else if (values.apply) {
-  console.log(
-    `Updated ${await applyReport(root, path.resolve(root, values.output), recipes)} documentation images.`,
-  );
+  try {
+    console.log(
+      `Updated ${await applyReport(root, path.resolve(root, values.output), recipes)} documentation images.`,
+    );
+  } catch (error) {
+    // Apply errors are actionable messages; no images were written.
+    console.error(`Nothing applied: ${error.message}`);
+    process.exitCode = 1;
+  }
 } else {
   await run();
 }
@@ -144,8 +152,12 @@ async function run() {
         headless: !values.headed,
         args: ["--lang=en-US", "--window-size=1600,1000"],
       });
+  const excludedFilenames = new Set();
   for (const { path: asset } of coverage.excluded) {
-    const target = path.join(output, "excluded", asset);
+    if (excludedFilenames.has(path.basename(asset)))
+      throw new Error(`Duplicate excluded image filename: ${asset}`);
+    excludedFilenames.add(path.basename(asset));
+    const target = reviewPath(path.join(output, "excluded"), asset);
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.copyFile(path.join(root, asset), target);
   }
@@ -268,7 +280,7 @@ async function run() {
           ["old", old],
           ["new", image],
         ]) {
-          const targetPath = imagePath(path.join(output, folder), recipe.output);
+          const targetPath = reviewPath(path.join(output, folder), recipe.output);
           await fs.mkdir(path.dirname(targetPath), { recursive: true });
           await fs.writeFile(targetPath, bytes);
         }

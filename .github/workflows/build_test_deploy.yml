@@ -3,9 +3,9 @@ name: CI Pipeline
 on:
   push:
     branches:
-      - "*"
+      - "**"
     tags:
-      - "*"
+      - "**"
   workflow_dispatch: {}
 
 env:

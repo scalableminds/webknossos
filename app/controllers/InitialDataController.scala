@@ -108,7 +108,7 @@ Samplecountry
   private val multiUserId = ObjectId.generate
   private val userId2 = ObjectId.generate
   private val multiUserId2 = ObjectId.generate
-  private val defaultMultiUser = MultiUser(
+  private lazy val defaultMultiUser = MultiUser(
     multiUserId,
     defaultUserEmail,
     userService.createPasswordInfo(defaultUserPassword),
@@ -130,7 +130,7 @@ Samplecountry
     isDeactivated = false,
     lastTaskTypeId = None
   )
-  private val defaultMultiUser2 = MultiUser(
+  private lazy val defaultMultiUser2 = MultiUser(
     multiUserId2,
     defaultUserEmail2,
     userService.createPasswordInfo(defaultUserPassword),
@@ -152,13 +152,19 @@ Samplecountry
     isDeactivated = false,
     lastTaskTypeId = None
   )
+  // Publication of the l4_sample data, as listed on webknossos.org.
   private val defaultPublication = Publication(
     ObjectId("5c766bec6c01006c018c7459"),
-    Some(Instant.now),
-    Some("https://static.webknossos.org/images/icon-only.svg"),
-    Some("Dummy Title that is usually very long and contains highly scientific terms"),
+    Some(Instant(1571875200000L)), // 24 October 2019
+    None,
+    Some("Dense connectomic reconstruction in layer 4 of the somatosensory cortex"),
     Some(
-      "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua."
+      """Serial block-face scanning electron microscopy volume from layer 4 of mouse primary somatosensory cortex (P28).
+        |
+        |A Motta, M Berning, KM Boergens, B Staffler, M Beining, S Loomba, P Hennig, H Wissler, M Helmstaedter\
+        |Science. 24 October 2019. [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)\
+        |© Max Planck Institute for Brain Research, Frankfurt, Germany\
+        |Data available at [https://l4dense2019.brain.mpg.de/](https://l4dense2019.brain.mpg.de/)""".stripMargin
     )
   )
   private val singleDatasetPublication = Publication(

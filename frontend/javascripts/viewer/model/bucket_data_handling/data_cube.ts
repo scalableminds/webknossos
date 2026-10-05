@@ -16,7 +16,11 @@ import type {
 } from "types/api_types";
 import type { BucketAddress, Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
-import constants, { MappingStatusEnum } from "viewer/constants";
+import constants, {
+  getEffectiveBucketDepth,
+  MappingStatusEnum,
+  usesTRecycling,
+} from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -83,6 +87,10 @@ class DataCube {
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
   boundingBox: BoundingBox;
+  readonly effectiveBucketDepth: 1 | typeof Constants.BUCKET_WIDTH;
+  // Whether this layer's buckets are fetched and cached in aligned 32-t batches sharing one
+  // buffer (see PullQueue.pullBatch, DataBucket.rawBucketData) rather than one t at a time.
+  readonly usesTRecycling: boolean;
   additionalAxes: Record<string, AdditionalAxis>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;
@@ -122,6 +130,9 @@ class DataCube {
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
+    // Whether this layer is backed by a volume tracing, i.e. can be edited. Only relevant
+    // for the t-recycling check below (see usesTRecycling).
+    isEditableVolumeLayer: boolean = false,
   ) {
     this.elementClass = elementClass;
     this.channelCount = getConstructorForElementClass(this.elementClass)[1];
@@ -130,6 +141,15 @@ class DataCube {
     this.layerName = layerName;
     this.additionalAxes = keyBy(additionalAxes, "name");
     this.emitter = createNanoEvents();
+    this.effectiveBucketDepth = getEffectiveBucketDepth(
+      layerBBox.getSize()[2],
+      isEditableVolumeLayer,
+    );
+    this.usesTRecycling = usesTRecycling(
+      layerBBox.getSize()[2],
+      this.additionalAxes.t != null,
+      isEditableVolumeLayer,
+    );
 
     this.cubes = {};
     this.buckets = [];
@@ -167,6 +187,10 @@ class DataCube {
 
   getNullBucket(): Bucket {
     return NULL_BUCKET;
+  }
+
+  getEffectiveBucketVoxelCount(): number {
+    return constants.BUCKET_WIDTH * constants.BUCKET_WIDTH * this.effectiveBucketDepth;
   }
 
   isMappingEnabled(): boolean {

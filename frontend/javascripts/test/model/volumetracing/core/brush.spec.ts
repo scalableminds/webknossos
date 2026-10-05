@@ -281,6 +281,26 @@ describe("volume annotation core — brush", () => {
     expect(cube.peek([17, 16, 5], 0)).toBe(SEGMENT);
   });
 
+  it("erases only the overwritable segment under overwrite-empty-only", async () => {
+    const { cube, session, backend } = createHarness();
+    const address: BucketAddress = [0, 0, 0, 0, null];
+    // Two segments side by side under the brush; only segment 3 is erased.
+    backend.seedVoxel(address, [16, 16, 5], 3n);
+    backend.seedVoxel(address, [17, 16, 5], 4n);
+    await materialize(cube, originBuckets(MAGS.length));
+
+    const ctx = editContext({
+      overwriteMode: "overwrite-empty-only",
+      activeSegmentId: 0n,
+      overwritableValue: 3n,
+    });
+    session.beginBrushStroke(ctx, [16, 16, 5], iso(3), 2);
+    session.endBrushStroke();
+
+    expect(cube.peek([16, 16, 5], 0)).toBe(0n);
+    expect(cube.peek([17, 16, 5], 0)).toBe(4n);
+  });
+
   it("undoes an earlier stroke while keeping a later, overlapping one", async () => {
     const { cube, session } = createHarness();
     await materialize(cube, originBuckets(MAGS.length));

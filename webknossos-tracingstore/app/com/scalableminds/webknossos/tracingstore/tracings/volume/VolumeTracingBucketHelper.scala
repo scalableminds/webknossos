@@ -26,9 +26,9 @@ trait ReversionHelper {
 
 trait VolumeBucketCompression extends LazyLogging {
 
-  private val lz4factory = LZ4Factory.fastestInstance
-  private val compressor: LZ4Compressor = lz4factory.fastCompressor
-  private val decompressor: LZ4FastDecompressor = lz4factory.fastDecompressor
+  private lazy val lz4factory = LZ4Factory.fastestInstance
+  private lazy val compressor: LZ4Compressor = lz4factory.fastCompressor
+  private lazy val decompressor: LZ4FastDecompressor = lz4factory.fastDecompressor
 
   protected def compressVolumeBucket(data: Array[Byte], expectedUncompressedBucketSize: Int): Array[Byte] =
     if (data.length == expectedUncompressedBucketSize) {

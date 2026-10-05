@@ -179,12 +179,7 @@ export function DatasetIdentityBlock({
   return (
     <div className="info-tab-identity">
       <div className="info-tab-identity-line">
-        <Typography.Text
-          className="info-tab-title info-tab-title-ellipsis"
-          ellipsis={{ tooltip: dataset.name }}
-        >
-          {dataset.name}
-        </Typography.Text>
+        <Typography.Text className="info-tab-title">{dataset.name}</Typography.Text>
         <DatasetSettingsButton dataset={dataset} activeUser={activeUser} />
       </div>
       {dataset.description ? (

@@ -1,0 +1,492 @@
+import {
+  CloseOutlined,
+  LockOutlined,
+  RocketOutlined,
+  SendOutlined,
+  UnlockOutlined,
+} from "@ant-design/icons";
+import { sendUpgradeRequestEmail, type UpgradeRequest } from "admin/api/organization";
+import { getUsers } from "admin/rest_api";
+import { Button, Checkbox, Flex, Input, InputNumber, Modal, Typography, theme } from "antd";
+import { formatCountToDataAmountUnit, formatNumber } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
+import type React from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getThemeFromUser } from "theme";
+import type { APIOrganization } from "types/api_types";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { getActiveUserCount } from "../pricing_plan_utils";
+import {
+  formatPaidUntil,
+  getCreditBalance,
+  getDefaultSelection,
+  getEffectiveTier,
+  getPlanTier,
+  getUpgradeItems,
+  getUpgradeTargetTier,
+  hasPlanEndDate,
+  type ItemDef,
+  type ItemId,
+  type ItemSelection,
+  isTierAtLeast,
+  type Selection,
+} from "./upgrade_request_items";
+
+const MAX_NOTE_LENGTH = 1000;
+// The design asks for a fixed two-column layout that is a bit wider than ModalWidth.Large.
+const MODAL_WIDTH = 840;
+
+const SidePanelColors = {
+  light: "#1f1f1f",
+  dark: "#2a2a2a",
+  tile: "rgba(255,255,255,0.08)",
+  divider: "rgba(255,255,255,0.12)",
+  text: "rgba(255,255,255,0.85)",
+  textStrong: "#fff",
+  textSecondary: "rgba(255,255,255,0.65)",
+  textTertiary: "rgba(255,255,255,0.45)",
+  link: "#a8b4ff",
+};
+
+function StatusRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <Flex justify="space-between" gap={8}>
+      <span style={{ color: SidePanelColors.textTertiary }}>{label}</span>
+      <span>{value}</span>
+    </Flex>
+  );
+}
+
+function SidePanel({
+  organization,
+  activeUserCount,
+  isDarkMode,
+}: {
+  organization: APIOrganization;
+  activeUserCount: number | null;
+  isDarkMode: boolean;
+}) {
+  const { token } = theme.useToken();
+  const isPersonal = getPlanTier(organization.pricingPlan) === "Personal";
+  const includedUsers =
+    organization.includedUsers === Number.POSITIVE_INFINITY
+      ? "∞"
+      : formatNumber(organization.includedUsers);
+  const includedStorage =
+    organization.includedStorageBytes === Number.POSITIVE_INFINITY
+      ? "∞"
+      : formatCountToDataAmountUnit(organization.includedStorageBytes, true);
+
+  return (
+    <div
+      className="upgrade-request-modal-side-panel"
+      style={{
+        background: isDarkMode ? SidePanelColors.dark : SidePanelColors.light,
+        color: SidePanelColors.text,
+        padding: "28px 24px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      }}
+    >
+      <Flex
+        align="center"
+        justify="center"
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: token.borderRadiusLG,
+          background: SidePanelColors.tile,
+        }}
+      >
+        <RocketOutlined style={{ fontSize: 24, color: token.colorPrimary }} />
+      </Flex>
+      <div
+        style={{
+          color: SidePanelColors.textStrong,
+          fontSize: 24,
+          fontWeight: 700,
+          lineHeight: 1.3,
+        }}
+      >
+        Upgrade your organization
+      </div>
+      <div style={{ color: SidePanelColors.textSecondary }}>
+        Pick everything you need. We send it to sales as one request.
+      </div>
+      <Flex
+        vertical
+        gap={10}
+        className="upgrade-request-modal-status"
+        style={{
+          fontSize: 13,
+          borderTop: `1px solid ${SidePanelColors.divider}`,
+          paddingTop: 16,
+        }}
+      >
+        <StatusRow label="Plan" value={organization.pricingPlan.replace("_", " ")} />
+        <StatusRow label="Users" value={`${activeUserCount ?? "–"} of ${includedUsers}`} />
+        <StatusRow
+          label="Storage"
+          value={`${formatCountToDataAmountUnit(organization.usedStorageBytes, true)} of ${includedStorage}`}
+        />
+        {isPersonal ? (
+          <StatusRow label="AI Add-on" value="Not available" />
+        ) : (
+          <>
+            <StatusRow
+              label="AI credits"
+              value={`${formatNumber(getCreditBalance(organization))} left`}
+            />
+            {hasPlanEndDate(organization) ? (
+              <StatusRow label="Renews" value={formatPaidUntil(organization)} />
+            ) : null}
+          </>
+        )}
+      </Flex>
+      <div style={{ flex: 1 }} />
+      <div style={{ color: SidePanelColors.textTertiary, fontSize: 12 }}>
+        No payment now. Sales replies with a quote within 1 business day.
+      </div>
+      <a
+        href="https://webknossos.org/pricing"
+        target="_blank"
+        rel="noreferrer"
+        style={{ color: SidePanelColors.link }}
+      >
+        Compare all plans
+      </a>
+    </div>
+  );
+}
+
+function AmountPicker({
+  item,
+  selection,
+  onChange,
+}: {
+  item: ItemDef;
+  selection: ItemSelection;
+  onChange: (selection: ItemSelection) => void;
+}) {
+  if (item.amounts == null) return null;
+
+  if (selection.custom) {
+    return (
+      <InputNumber
+        min={1}
+        precision={0}
+        autoFocus
+        value={selection.value}
+        onChange={(value) => onChange({ custom: true, value: value ?? undefined })}
+        style={{ width: 160 }}
+      />
+    );
+  }
+
+  const chipStyle = { height: 28, paddingInline: 12 };
+  return (
+    <Flex gap={8} wrap>
+      {item.amounts.map((amount) => {
+        const isSelected = selection.value === amount.value;
+        return (
+          <Button
+            key={amount.value}
+            color={isSelected ? "primary" : "default"}
+            variant="outlined"
+            style={{ ...chipStyle, fontWeight: isSelected ? 600 : undefined }}
+            onClick={() => onChange({ value: amount.value })}
+          >
+            {amount.label}
+          </Button>
+        );
+      })}
+      {item.allowCustom ? (
+        <Button
+          type="dashed"
+          style={chipStyle}
+          onClick={() => onChange({ custom: true, value: selection.value })}
+        >
+          <Typography.Text type="secondary">Other</Typography.Text>
+        </Button>
+      ) : null}
+    </Flex>
+  );
+}
+
+function ItemRow({
+  item,
+  selection,
+  isLocked,
+  isLast,
+  onToggle,
+  onChange,
+}: {
+  item: ItemDef;
+  selection: ItemSelection | undefined;
+  isLocked: boolean;
+  isLast: boolean;
+  onToggle: (checked: boolean) => void;
+  onChange: (selection: ItemSelection) => void;
+}) {
+  const { token } = theme.useToken();
+  const isChecked = selection != null;
+  const delta = isChecked ? item.delta(selection.value) : null;
+
+  let rightSide: React.ReactNode = null;
+  if (delta != null) {
+    rightSide = (
+      <Typography.Text type="secondary">
+        {delta.from} → <Typography.Text strong>{delta.to}</Typography.Text>
+      </Typography.Text>
+    );
+  } else if (!isLocked) {
+    rightSide = <Typography.Text type="secondary">{item.hint}</Typography.Text>;
+  }
+
+  return (
+    <Flex
+      vertical
+      gap={10}
+      style={{
+        padding: `${token.paddingSM}px ${token.padding}px`,
+        background: isChecked ? token.colorPrimaryBg : undefined,
+        borderBottom: isLast ? undefined : `1px solid ${token.colorSplit}`,
+      }}
+    >
+      <Checkbox
+        checked={isChecked}
+        disabled={isLocked}
+        onChange={(event) => onToggle(event.target.checked)}
+        style={{ width: "100%" }}
+        styles={{ label: { flex: 1, paddingInlineStart: 10 } }}
+      >
+        <Flex justify="space-between" gap={8}>
+          <span style={{ fontWeight: isChecked ? 600 : undefined }}>{item.label}</span>
+          {rightSide}
+        </Flex>
+      </Checkbox>
+      {isChecked && item.amounts != null ? (
+        <div style={{ paddingInlineStart: 26 }}>
+          <AmountPicker item={item} selection={selection} onChange={onChange} />
+        </div>
+      ) : null}
+    </Flex>
+  );
+}
+
+function GroupLabel({ isUnlocked, tier }: { isUnlocked: boolean; tier: string }) {
+  const { token } = theme.useToken();
+  return (
+    <Flex
+      align="center"
+      gap={8}
+      style={{
+        padding: `${token.paddingXS}px ${token.padding}px`,
+        background: token.colorFillAlter,
+        borderBottom: `1px solid ${token.colorSplit}`,
+        color: token.colorTextSecondary,
+        fontSize: 12,
+        fontWeight: 700,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+      }}
+    >
+      {isUnlocked ? <UnlockOutlined style={{ color: token.colorPrimary }} /> : <LockOutlined />}
+      {isUnlocked ? `Unlocked with ${tier}` : `Needs ${tier} plan`}
+    </Flex>
+  );
+}
+
+function buildUpgradeRequest(
+  organization: APIOrganization,
+  selection: Selection,
+  note: string,
+): UpgradeRequest {
+  const targetTier = getUpgradeTargetTier(getPlanTier(organization.pricingPlan));
+  return {
+    plan: selection.plan != null && targetTier != null ? targetTier : undefined,
+    users: selection.users?.value,
+    storageTB: selection.storage?.value,
+    aiAddon: selection.aiAddon != null ? true : undefined,
+    credits: selection.credits?.value,
+    extendYears: selection.extend?.value,
+    note: note.trim() || undefined,
+  };
+}
+
+export default function UpgradeRequestModal({
+  initialItems,
+  destroy,
+}: {
+  initialItems: ItemId[];
+  destroy: () => void;
+}) {
+  const { token } = theme.useToken();
+  const organization = useWkSelector((state) =>
+    enforceActiveOrganization(state.activeOrganization),
+  );
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const isDarkMode = getThemeFromUser(activeUser) === "dark";
+
+  const items = useMemo(() => getUpgradeItems(organization), [organization]);
+  const currentTier = getPlanTier(organization.pricingPlan);
+  const targetTier = getUpgradeTargetTier(currentTier);
+
+  const [selection, setSelection] = useState<Selection>(() => {
+    const initialSelection: Selection = {};
+    for (const item of items) {
+      if (initialItems.includes(item.id)) initialSelection[item.id] = getDefaultSelection(item);
+    }
+    // Preselecting an item that needs a higher plan also adds that plan upgrade to the request.
+    const planItem = items.find((item) => item.id === "plan");
+    const needsPlanUpgrade = items.some(
+      (item) => initialSelection[item.id] != null && !isTierAtLeast(currentTier, item.minPlan),
+    );
+    if (needsPlanUpgrade && planItem != null) initialSelection.plan = {};
+    return initialSelection;
+  });
+  const [note, setNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeUserCount, setActiveUserCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    getUsers().then((result) => {
+      if (result.ok) setActiveUserCount(getActiveUserCount(result.value));
+    });
+  }, []);
+
+  const effectiveTier = getEffectiveTier(currentTier, selection);
+  const isLocked = (item: ItemDef) => !isTierAtLeast(effectiveTier, item.minPlan);
+  const hasLockableItems = items.some((item) => !isTierAtLeast(currentTier, item.minPlan));
+
+  const toggleItem = (item: ItemDef, checked: boolean) => {
+    setSelection((previous) => {
+      const next = { ...previous };
+      if (checked) {
+        next[item.id] = getDefaultSelection(item);
+        return next;
+      }
+      delete next[item.id];
+      if (item.id === "plan") {
+        // Items that were only unlocked by the plan upgrade are dropped together with it.
+        for (const otherItem of items) {
+          if (!isTierAtLeast(currentTier, otherItem.minPlan)) delete next[otherItem.id];
+        }
+      }
+      return next;
+    });
+  };
+
+  const updateItem = (itemId: ItemId, itemSelection: ItemSelection) => {
+    setSelection((previous) => ({ ...previous, [itemId]: itemSelection }));
+  };
+
+  const selectedItems = items.filter((item) => selection[item.id] != null);
+  const hasIncompleteAmount = selectedItems.some(
+    (item) => item.amounts != null && selection[item.id]?.value == null,
+  );
+  const canSubmit = selectedItems.length > 0 && !hasIncompleteAmount;
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      await sendUpgradeRequestEmail(buildUpgradeRequest(organization, selection, note));
+      Toast.success("Request sent. Sales will reply within 1 business day.");
+      destroy();
+    } catch (error) {
+      console.error(error);
+      Toast.error("Could not send the upgrade request. Please try again.");
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onCancel={destroy}
+      footer={null}
+      closable={false}
+      width={MODAL_WIDTH}
+      zIndex={10000} // overlay everything
+      styles={{
+        container: { padding: 0, overflow: "hidden", borderRadius: token.borderRadiusLG },
+      }}
+    >
+      <div className="upgrade-request-modal">
+        <SidePanel
+          organization={organization}
+          activeUserCount={activeUserCount}
+          isDarkMode={isDarkMode}
+        />
+        <Flex vertical gap={16} style={{ padding: token.paddingLG, minWidth: 0 }}>
+          <Flex justify="space-between" align="flex-start">
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>What do you need?</div>
+              <Typography.Text type="secondary">Tick one or more</Typography.Text>
+            </div>
+            <Button
+              type="text"
+              size="small"
+              aria-label="Close"
+              icon={<CloseOutlined style={{ color: token.colorTextSecondary }} />}
+              onClick={destroy}
+            />
+          </Flex>
+
+          <div
+            style={{
+              border: `1px solid ${token.colorSplit}`,
+              borderRadius: token.borderRadius,
+              overflow: "hidden",
+            }}
+          >
+            {items.map((item, index) => (
+              <div key={item.id}>
+                <ItemRow
+                  item={item}
+                  selection={selection[item.id]}
+                  isLocked={isLocked(item)}
+                  isLast={index === items.length - 1}
+                  onToggle={(checked) => toggleItem(item, checked)}
+                  onChange={(itemSelection) => updateItem(item.id, itemSelection)}
+                />
+                {item.id === "plan" && hasLockableItems && targetTier != null ? (
+                  <GroupLabel isUnlocked={selection.plan != null} tier={targetTier} />
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          <Flex vertical gap={6}>
+            <div>
+              <Typography.Text strong>Anything else?</Typography.Text>{" "}
+              <Typography.Text type="secondary">Optional</Typography.Text>
+            </div>
+            <Input.TextArea
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              autoSize={{ minRows: 2 }}
+              maxLength={MAX_NOTE_LENGTH}
+              placeholder="E.g. a purchase order number, a different billing contact or a custom amount"
+            />
+          </Flex>
+
+          <Flex justify="flex-end" gap={8}>
+            <Button onClick={destroy}>Cancel</Button>
+            <Button
+              type="primary"
+              icon={<SendOutlined />}
+              disabled={!canSubmit}
+              loading={isSubmitting}
+              onClick={handleSubmit}
+            >
+              Send request
+            </Button>
+          </Flex>
+        </Flex>
+      </div>
+    </Modal>
+  );
+}

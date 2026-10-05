@@ -219,6 +219,27 @@ export async function sendUpgradeAiAddonEmail(): Promise<void> {
   });
 }
 
+export type UpgradeRequest = {
+  plan?: string;
+  users?: number;
+  storageTB?: number;
+  aiAddon?: boolean;
+  credits?: number;
+  extendYears?: number;
+  note?: string;
+};
+
+// TODO: Replace with a single backend endpoint that also forwards the note and the
+// number of years for an extension. Until then, one email is sent per requested item.
+export async function sendUpgradeRequestEmail(request: UpgradeRequest): Promise<void> {
+  if (request.plan != null) await sendUpgradePricingPlanEmail(request.plan);
+  if (request.users != null) await sendUpgradePricingPlanUserEmail(request.users);
+  if (request.storageTB != null) await sendUpgradePricingPlanStorageEmail(request.storageTB);
+  if (request.aiAddon) await sendUpgradeAiAddonEmail();
+  if (request.credits != null) await sendOrderCreditsEmail(request.credits);
+  if (request.extendYears != null) await sendExtendPricingPlanEmail();
+}
+
 export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
   return Request.receiveJSON("/api/pricing/status");
 }

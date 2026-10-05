@@ -420,7 +420,7 @@ export class DataBucket {
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
-    if (this.isNeeded()) this.cube.triggerRenderedBucketDataChanged();
+    if (this.isNeeded()) this.cube.triggerNeededBucketDataChanged();
   }
 
   isNeeded(): boolean {
@@ -722,7 +722,7 @@ export class DataBucket {
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
-        if (this.isNeeded()) this.cube.triggerRenderedBucketDataChanged();
+        if (this.isNeeded()) this.cube.triggerNeededBucketDataChanged();
         break;
       }
 

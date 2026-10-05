@@ -327,7 +327,7 @@ describe("DataCube", () => {
     cube.finishBucketPicking();
     expect(bucket.isNeeded()).toBe(false);
 
-    const triggerSpy = vi.spyOn(cube, "triggerRenderedBucketDataChanged");
+    const triggerSpy = vi.spyOn(cube, "triggerNeededBucketDataChanged");
     // E.g., because getData was called for the bucket.
     bucket.markAsNeeded();
     expect(bucket.isNeeded()).toBe(true);

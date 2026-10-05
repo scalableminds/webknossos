@@ -88,7 +88,7 @@ function createMockedCubeAndQueue(
 
   const mockedCube = {
     isSegmentation: true,
-    triggerRenderedBucketDataChanged: () => {},
+    triggerNeededBucketDataChanged: () => {},
     currentBucketPickerTick: 0,
     previousBucketPickerTick: 0,
     onBucketMarkedAsNeeded: () => {},

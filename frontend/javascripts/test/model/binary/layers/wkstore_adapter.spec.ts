@@ -30,7 +30,7 @@ const mockedCube = {
     [1, 1, 1],
     [2, 2, 2],
   ]),
-  triggerRenderedBucketDataChanged: () => {},
+  triggerNeededBucketDataChanged: () => {},
   currentBucketPickerTick: 0,
   previousBucketPickerTick: 0,
   onBucketMarkedAsNeeded: () => {},

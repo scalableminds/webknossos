@@ -32,7 +32,7 @@ function makeMockCube(overrides: Partial<ReturnType<typeof makeMockCubeBase>> = 
 function makeMockCubeBase() {
   return {
     isSegmentation: false,
-    triggerRenderedBucketDataChanged: () => {},
+    triggerNeededBucketDataChanged: () => {},
     currentBucketPickerTick: 0,
     previousBucketPickerTick: 0,
     onBucketMarkedAsNeeded: () => {},

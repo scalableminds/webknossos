@@ -419,7 +419,7 @@ class DataCube {
     // fewer buckets were marked as needed (compared to before) and new new buckets
     // were needed.
     if (this.didNeedNewBucket || this.neededBucketCount !== this.neededBucketCountInPreviousTick) {
-      this.triggerRenderedBucketDataChanged();
+      this.triggerNeededBucketDataChanged();
     }
   }
 
@@ -428,7 +428,7 @@ class DataCube {
     // marked during the current tick.
     this.neededBucketCount++;
     if (this.isBucketPickingInProgress) {
-      // Don't trigger triggerRenderedBucketDataChanged, because we can do that once
+      // Don't trigger triggerNeededBucketDataChanged, because we can do that once
       // in `finishBucketPicking`.
       if (!wasNeededInPreviousTick) {
         this.didNeedNewBucket = true;
@@ -438,7 +438,7 @@ class DataCube {
       // for it while hovering). No finishBucketPicking will follow, so emit right away.
       // This is also necessary if the bucket was needed in the previous tick, because the
       // current tick's set of needed buckets didn't contain it so far.
-      this.triggerRenderedBucketDataChanged();
+      this.triggerNeededBucketDataChanged();
     }
   }
 
@@ -542,8 +542,12 @@ class DataCube {
     this.bucketIterator = notCollectedBuckets.length;
   }
 
-  triggerRenderedBucketDataChanged(): void {
-    this.emitter.emit("renderedBucketDataChanged");
+  triggerNeededBucketDataChanged(): void {
+    // Signals that the set of needed buckets or the data of a needed bucket changed.
+    // Note that needed buckets include buckets that were only accessed (see DataBucket.markAsNeeded)
+    // and not only the rendered ones. Consumers use this to keep the value set
+    // (see getValueSetForAllNeededBuckets) up to date.
+    this.emitter.emit("neededBucketDataChanged");
   }
 
   shouldEagerlyMaintainUsedValueSet() {

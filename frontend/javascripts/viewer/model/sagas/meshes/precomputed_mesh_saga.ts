@@ -18,6 +18,7 @@ import type {
   APIMeshFileInfo,
   APISegmentationLayer,
 } from "types/api_types";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
@@ -353,6 +354,7 @@ function* _getChunkLoadingDescriptors(
   }
 
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
+  console.time(`[mesh timing] segment ${segmentId}: listing, listMeshChunks only`);
   const segmentInfo = yield* call(listMeshChunks, {
     dataStoreUrl: dataset.dataStore.url,
     datasetId: dataset.id,
@@ -368,6 +370,7 @@ function* _getChunkLoadingDescriptors(
       editableMapping != null && tracing ? { tracingStoreUrl, tracingId: tracing.tracingId } : null,
     annotationVersion,
   });
+  console.timeEnd(`[mesh timing] segment ${segmentId}: listing, listMeshChunks only`);
   segmentInfo.lods.forEach((meshLodInfo, lodIndex) => {
     availableChunksMap[lodIndex] = meshLodInfo?.chunks;
     loadingOrder.push(lodIndex);
@@ -455,6 +458,23 @@ function* loadPrecomputedMeshesInChunksForLod(
     yieldToEventLoop: 0,
   };
   let bufferGeometries: UnmergedBufferGeometryWithInfo[] = [];
+  function* addChunkGeometryToScene(bufferGeometry: UnmergedBufferGeometryWithInfo): Saga<void> {
+    yield* call(
+      {
+        context: segmentMeshController,
+        fn: segmentMeshController.addMeshFromGeometry,
+      },
+      bufferGeometry,
+      segmentId,
+      // Apply the scale from the segment info, which includes dataset scale and mag
+      getGlobalScale(lod),
+      lod,
+      layerName,
+      additionalCoordinates,
+      opacity,
+      false,
+    );
+  }
   const createLoadTask = (chunks: meshApi.MeshChunk[]) =>
     function* loadChunks(): Saga<void> {
       const dataForChunks = yield* call(getMeshChunkData, meshFileLocation, segmentId, chunks);
@@ -492,21 +512,9 @@ function* loadPrecomputedMeshesInChunksForLod(
           // as soon as possible. These chunks will be removed later and then
           // replaced by a merged geometry so that we have better performance
           // for large meshes.
-          yield* call(
-            {
-              context: segmentMeshController,
-              fn: segmentMeshController.addMeshFromGeometry,
-            },
-            bufferGeometry,
-            segmentId,
-            // Apply the scale from the segment info, which includes dataset scale and mag
-            getGlobalScale(lod),
-            lod,
-            layerName,
-            additionalCoordinates,
-            opacity,
-            false,
-          );
+          if (WkDevFlags.meshing.addPrecomputedMeshChunksToSceneEagerly) {
+            yield* call(addChunkGeometryToScene, bufferGeometry);
+          }
           timings.addToScene += performance.now() - stepStart;
 
           bufferGeometries.push(bufferGeometry);
@@ -583,6 +591,11 @@ function* loadPrecomputedMeshesInChunksForLod(
     console.warn(
       `Falling back to the unmerged mesh chunks for segment ${segmentId}. See errors above for details.`,
     );
+    if (!WkDevFlags.meshing.addPrecomputedMeshChunksToSceneEagerly) {
+      for (const bufferGeometry of bufferGeometries) {
+        yield* call(addChunkGeometryToScene, bufferGeometry);
+      }
+    }
     return;
   }
 

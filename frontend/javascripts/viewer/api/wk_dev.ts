@@ -49,6 +49,9 @@ export const WkDevFlags = {
   },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,
+    // TEMPORARY for measurements. If true, each chunk of a precomputed mesh is shown as soon as it
+    // is decoded. If false, the mesh only appears once all chunks are merged.
+    addPrecomputedMeshChunksToSceneEagerly: true,
   },
   datasetComposition: {
     allowThinPlateSplines: false,

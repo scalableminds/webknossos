@@ -56,7 +56,10 @@ export async function listMeshChunks(
     }
   }
   const adaptedParams = { ...params, editableMappingTracingId: params.editableMapping?.tracingId };
+  const timingLabel = `[mesh timing] segment ${params.segmentId}: listing, normal listing request`;
+  console.time(timingLabel);
   const listing = await meshApi.getMeshFileChunksForSegment(adaptedParams);
+  console.timeEnd(timingLabel);
   cache.addChunkLists(listing);
   return listing;
 }
@@ -104,21 +107,33 @@ async function tryToListMeshChunksFromCache(
   params: ListMeshChunksParamsWithTracingStoreURL,
   editableMapping: TracingStoreURLAndTracingId,
 ): Promise<MeshSegmentInfo | null> {
+  const timingLabel = `[mesh timing] segment ${params.segmentId}: listing`;
   try {
+    console.time(`${timingLabel}, tracingstore segmentsForAgglomerate request`);
     const segmentIds = await getSegmentsOfEditedAgglomerate(editableMapping, params.segmentId);
+    console.timeEnd(`${timingLabel}, tracingstore segmentsForAgglomerate request`);
     if (segmentIds == null) {
+      console.log(`${timingLabel}: agglomerate not edited, using the normal listing`);
       return null;
     }
     const uncachedSegmentIds = segmentIds.filter((id) => !cache.hasChunkListForSegmentId(id));
+    console.log(
+      `${timingLabel}: ${segmentIds.length} segments, ${uncachedSegmentIds.length} without cached chunk list`,
+    );
     if (uncachedSegmentIds.length > segmentIds.length * MAX_UNCACHED_SEGMENT_FRACTION) {
       // Listing that many segments by their ids costs more than the normal listing.
       return null;
     }
     if (uncachedSegmentIds.length > 0) {
+      console.time(`${timingLabel}, datastore forSegments request`);
       await addChunkListsOfSegments(cache, params, uncachedSegmentIds);
+      console.timeEnd(`${timingLabel}, datastore forSegments request`);
     }
+    console.time(`${timingLabel}, assemble from cache`);
     // Null if none of the segments has a mesh. The normal listing then reports this as an error.
-    return cache.getMeshSegmentInfoOfSegmentIds(segmentIds);
+    const listing = cache.getMeshSegmentInfoOfSegmentIds(segmentIds);
+    console.timeEnd(`${timingLabel}, assemble from cache`);
+    return listing;
   } catch (exception) {
     // E.g., an older data store without the endpoint for listing several segments.
     console.warn(

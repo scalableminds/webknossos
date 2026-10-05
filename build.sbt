@@ -7,6 +7,8 @@ ThisBuild / semanticdbEnabled := false
 // fix jni for scala version 3
 sbtJniCoreScope := Compile
 
+// An env var (unlike -D flags) reliably reaches a server started by `sbt --client`.
+// CI sets it for every sbt job, so all jobs share identical scalacOptions and thus zinc's incremental compile cache.
 val failOnWarning = if (sys.env.contains("WK_FAIL_ON_WARNING")) Seq("-Werror") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-explain", // More detailed compiler output

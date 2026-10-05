@@ -122,11 +122,12 @@ jobs:
         if: github.ref_type == 'branch'
         uses: actions/cache@v6
         with:
-          path: |
+          # YAML anchors, reused by the other dependency cache steps below.
+          path: &sbt-deps-cache-paths |
             ~/.cache/coursier
             ~/.ivy2/cache
             ~/.sbt
-          key: sbt-deps-${{ hashFiles('build.sbt', 'project/*.sbt', 'project/*.scala', 'project/build.properties') }}
+          key: &sbt-deps-cache-key sbt-deps-${{ hashFiles('build.sbt', 'project/*.sbt', 'project/*.scala', 'project/build.properties') }}
       # Falls back to the latest master build, so that a branch's first push
       # only recompiles what changed relative to master.
       - name: Cache incremental compilation
@@ -135,7 +136,8 @@ jobs:
         with:
           # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
           # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
-          path: |
+          # YAML anchor, reused by the other compile cache steps below.
+          path: &zinc-cache-paths |
             target/*
             */target/*
             project/project/target/*
@@ -207,24 +209,13 @@ jobs:
         if: env.RESTORE_CACHES == 'true'
         uses: actions/cache/restore@v6
         with:
-          path: |
-            ~/.cache/coursier
-            ~/.ivy2/cache
-            ~/.sbt
-          key: sbt-deps-${{ hashFiles('build.sbt', 'project/*.sbt', 'project/*.scala', 'project/build.properties') }}
+          path: *sbt-deps-cache-paths
+          key: *sbt-deps-cache-key
       - name: Restore incremental compile cache
         if: env.RESTORE_CACHES == 'true'
         uses: actions/cache/restore@v6
         with:
-          # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
-          # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
-          path: |
-            target/*
-            */target/*
-            project/project/target/*
-            !**/target/universal
-            !**/target/web
-            !**/target/global-logging
+          path: *zinc-cache-paths
           key: zinc-build-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
             zinc-build-${{ github.ref_name }}-
@@ -297,25 +288,14 @@ jobs:
         if: env.SAVE_CACHES == 'true'
         uses: actions/cache/save@v6
         with:
-          # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
-          # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
-          path: |
-            target/*
-            */target/*
-            project/project/target/*
-            !**/target/universal
-            !**/target/web
-            !**/target/global-logging
+          path: *zinc-cache-paths
           key: zinc-build-${{ github.ref_name }}-${{ github.sha }}
       - name: Save sbt dependencies cache
         if: env.SAVE_CACHES == 'true' && steps.restore-sbt-deps.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
-          path: |
-            ~/.cache/coursier
-            ~/.ivy2/cache
-            ~/.sbt
-          key: sbt-deps-${{ hashFiles('build.sbt', 'project/*.sbt', 'project/*.scala', 'project/build.properties') }}
+          path: *sbt-deps-cache-paths
+          key: *sbt-deps-cache-key
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 

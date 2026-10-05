@@ -9,6 +9,15 @@
   }
 }
 
+/** Actions of an annotation list row, stacked vertically. */
+.annotation-row-actions {
+  display: flex;
+  flex-direction: column;
+  row-gap: 2px;
+  padding-right: 30px;
+  white-space: nowrap;
+}
+
 /** Container for the description of a task type, allowing for long text wrapping and optional height capping. */
 .task-type-description {
   max-width: 700px;
@@ -190,39 +199,197 @@ pre.dataset-import-folder-structure-hint {
   }
 }
 
-/** Fixed-size square thumbnail for datasets in the dashboard table. */
+/** Thumbnail for datasets in the dashboard table. */
 .dataset-table-thumbnail {
-  width: 80px;
-  height: 80px;
   border-radius: 5px;
-  margin-right: 20px;
 }
 
 /** Styling for the dataset name within the dashboard table. */
 .dataset-table-name {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 500;
-  display: block;
   min-height: 30px;
+  word-break: break-word;
+  margin-inline-end: 15px;
 }
 
-/** Container for the dataset name to handle vertical alignment and max-width. */
+/** Container for the dataset name to handle vertical alignment. */
 .dataset-table-name-container {
   display: inline-block;
   vertical-align: middle;
-  max-width: 520px;
 }
 
 
 /** Wrapper for the dataset metadata table in the dashboard, ensuring bold headers. */
 .dashboard-metadata-table-wrapper {
   th {
-    font-weight: bold !important;
+    font-style: italic !important;
+  }
+}
+
+/** Header bar above the dashboard tables, holding a summary count plus filter/sort dropdowns.
+    Pairs with .dashboard-list-table */
+.dashboard-list-filter-bar {
+  border: 1px solid var(--ant-color-border);
+  border-radius: var(--ant-border-radius) var(--ant-border-radius) 0 0;
+  padding: 8px 16px;
+  background: var(--ant-color-fill-alter);
+}
+
+/** Headerless, bordered table used for the dashboard lists.
+    Removes the top border/radius so it reads as a continuation of
+    .dashboard-list-filter-bar above it. */
+.dashboard-list-table {
+  .ant-table-container {
+    border-top: none !important;
+    border-radius: 0 0 var(--ant-border-radius) var(--ant-border-radius) !important;
+    // match header bar border-color
+    border-color: var(--ant-color-border) !important;
   }
 
-  /** Placeholder text shown when a metadata table is empty. */
-  .empty-metadata-placeholder {
-    padding: 16px;
-    text-align: center;
+  .ant-table-tbody > tr > .ant-table-cell:last-child {
+    border-right-color: var(--ant-color-border) !important;
   }
+  .ant-table-tbody > tr:last-child > .ant-table-cell {
+    border-bottom-color: var(--ant-color-border) !important;
+  }
+
+  .ant-card {
+    box-shadow: none;
+  }
+}
+
+.dashboard-list-table-borderless-cell {
+  border-inline-end: none !important;
+}
+
+.dashboard-list-table-thumbnail-cell {
+  padding-inline-end: 5px !important;
+}
+
+/** Single-line row of meta info shown beneath a dataset/annotation row's
+    title, with entries separated by a dot. */
+.dashboard-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--ant-color-text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
+
+  a {
+    color: inherit;
+
+    &:hover {
+      color: var(--ant-color-link);
+    }
+  }
+
+  &-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &-dot {
+    margin: 0 10px;
+    font-weight: bold;
+    color: var(--ant-color-text-tertiary);
+  }
+}
+
+// read-only and locked labels for annotations
+.dashboard-annotation-status-label.ant-btn:disabled {
+  margin-inline-end: 8px;
+  color: var(--ant-color-text-description);
+  // Disabled buttons don't reliably pass hover events on to the tooltip wrapper.
+  pointer-events: none;
+}
+
+.dashboard-annotation-name {
+  font-size: 17px;
+}
+
+// Together with the end margin of the preceding name or label, this matches the spacing
+// between the dataset name and its tags.
+.dashboard-annotation-tags {
+  margin-inline-start: 7px;
+}
+
+.dashboard-details-sidebar {
+  width: 300px;
+  padding: 16px;
+  position: sticky;
+  top: var(--navbar-height);
+  // When used directly as a grid item, don't stretch to the full row height.
+  align-self: start;
+  max-height: calc(100vh - var(--navbar-height));
+  overflow-y: auto;
+
+  // The info tab rows are reused here, but should align with the other sidebar entries.
+  .info-tab-row {
+    padding-inline: 0;
+  }
+
+  .info-tab-identity {
+    padding: 0 0 10px 0;
+  }
+  .info-tab-title {
+    font-size: 18px;
+    font-weight: var(--ant-font-weight-strong);
+  }
+}
+
+.dashboard-details-dataset {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-details-status-labels {
+  margin-bottom: 10px;
+}
+
+.dashboard-details-section {
+  margin-bottom: 10px;
+
+  .sidebar-label {
+    line-height: 18px;
+  }
+}
+
+.dashboard-details-section-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  // Blocks that bring their own margins (e.g. the annotation stats or dataset dimensions).
+  > .info-tab-block {
+    align-self: stretch;
+    margin: 0 !important;
+  }
+}
+
+.ant-tag.dashboard-team-tag {
+  line-height: 16px;
+}
+
+.dashboard-details-sidebar .ant-tag,
+.dashboard-list-table .ant-tag {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+:root {
+  --dashboard-list-max-width: 100rem;
+}
+
+.dashboard-list-with-sidebar {
+  display: grid;
+  grid-template-columns:
+    minmax(min(60%, var(--dashboard-list-max-width)), var(--dashboard-list-max-width))
+    auto;
+  justify-content: center;
 }

@@ -72,5 +72,12 @@ export function createWorker<TExposed extends UseCreateWorkerToUseMe<AnyFn> | An
     throw new Error(`Worker not found: ${pathToWorker}`);
   }
 
-  return wrap(new workerConstructor({ type: "module" }));
+  // Spawn the worker on the first call. Modules call createWorker() at import time, so eagerly
+  // instantiating here would start (and download) every worker on each page load, including
+  // the dashboard where none of them is needed.
+  let wrappedWorker: AnyFn | undefined;
+  return (...params: Parameters<UnwrapExposedWorkerFn<TExposed>>) => {
+    const worker = (wrappedWorker ??= wrap(new workerConstructor({ type: "module" })));
+    return worker(...params);
+  };
 }

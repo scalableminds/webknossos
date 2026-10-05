@@ -14,7 +14,6 @@ export function DashboardTopBar({
   handleOnSearch,
   handleSearchChanged,
   searchQuery,
-  toggleShowArchived,
   shouldShowArchivedAnnotations,
   archiveAll,
 }: {
@@ -22,7 +21,6 @@ export function DashboardTopBar({
   handleOnSearch: SearchProps["onSearch"];
   handleSearchChanged: (event: React.ChangeEvent<HTMLInputElement>) => void;
   searchQuery: string;
-  toggleShowArchived: () => void;
   shouldShowArchivedAnnotations: boolean;
   archiveAll: () => void;
 }) {
@@ -32,6 +30,7 @@ export function DashboardTopBar({
 
   const search = (
     <Search
+      autoFocus
       style={{
         width: 200,
       }}
@@ -50,9 +49,6 @@ export function DashboardTopBar({
         onClick={() => dispatch(setDropzoneModalVisibilityAction(true))}
       >
         Upload Annotation(s)
-      </Button>
-      <Button onClick={toggleShowArchived}>
-        Show {shouldShowArchivedAnnotations ? "Open" : "Archived"} Annotations
       </Button>
       {!shouldShowArchivedAnnotations ? <Button onClick={archiveAll}>Archive All</Button> : null}
       {search}

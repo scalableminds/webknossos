@@ -6,7 +6,6 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  SettingOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
@@ -14,18 +13,14 @@ import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { getJobs } from "admin/rest_api";
 import {
   Alert,
-  Badge,
   Button,
   Col,
   Dropdown,
   Flex,
   Input,
-  type MenuProps,
-  Radio,
   Row,
   Select,
   Space,
-  Spin,
   Tooltip,
   Typography,
 } from "antd";
@@ -67,7 +62,9 @@ type Props = {
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
-  scrollContainerRef?: React.RefObject<HTMLElement | null>;
+  // Custom content shown as the table's empty state instead of the regular hint text.
+  // Used for cards for a brand-new organizations.
+  emptyStateContent?: React.ReactNode;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -109,7 +106,7 @@ function DatasetView({
   onSelectDataset,
   selectedDatasets,
   onSelectFolder,
-  scrollContainerRef,
+  emptyStateContent,
 }: Props) {
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
@@ -168,13 +165,23 @@ function DatasetView({
     }
   }
 
+  function clearSearchAndFilters() {
+    setSearchQuery(null);
+    setSearchTags([]);
+    setDatasetFilteringMode("onlyShowReported");
+  }
+
   function handleSearch(event: React.SyntheticEvent<HTMLInputElement>) {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const value = event.target.value;
     setSearchQuery(value);
   }
 
-  function renderTable(filteredDatasets: APIDatasetCompact[], subfolders: FolderItem[]) {
+  function renderTable(
+    filteredDatasets: APIDatasetCompact[],
+    subfolders: FolderItem[],
+    isLoading: boolean,
+  ) {
     return (
       <DatasetTable
         context={context}
@@ -184,45 +191,25 @@ function DatasetView({
         selectedDatasets={selectedDatasets}
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
+        setSearchTags={setSearchTags}
         onSelectFolder={onSelectFolder}
         isUserAdminOrDatasetManager={isUserAdminOrDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
+        setDatasetFilteringMode={setDatasetFilteringMode}
         updateDataset={context.updateCachedDataset}
         addTagToSearch={addTagToSearch}
-        scrollContainerRef={scrollContainerRef}
+        onClearSearchAndFilters={clearSearchAndFilters}
+        isLoading={isLoading}
+        emptyStateContent={emptyStateContent}
       />
     );
   }
-
-  const createFilteringModeRadio = (key: DatasetFilteringMode, label: string) => (
-    <Radio
-      onChange={() => {
-        setDatasetFilteringMode(key);
-      }}
-      checked={datasetFilteringMode === key}
-    >
-      {label}
-    </Radio>
-  );
-
-  const filterMenu: MenuProps = {
-    items: [
-      { label: createFilteringModeRadio("showAllDatasets", "Show all datasets"), key: "all" },
-      {
-        label: createFilteringModeRadio("onlyShowReported", "Only show available datasets"),
-        key: "available",
-      },
-      {
-        label: createFilteringModeRadio("onlyShowUnreported", "Only show missing datasets"),
-        key: "missing",
-      },
-    ],
-  };
 
   const searchBox = (
     <Input
       prefix={<SearchOutlined />}
       allowClear
+      autoFocus
       style={{
         width: 200,
       }}
@@ -235,22 +222,6 @@ function DatasetView({
   const isUserAnAdminOrDatasetManager = isUserAdminOrDatasetManager(user);
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAnAdminOrDatasetManager || isUserTeamManager(user);
-  const search = isUserAnAdminOrDatasetManager ? (
-    <Space.Compact>
-      {searchBox}
-      <Dropdown menu={filterMenu} trigger={["click"]}>
-        <Button
-          icon={
-            <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
-              <SettingOutlined />
-            </Badge>
-          }
-        />
-      </Dropdown>
-    </Space.Compact>
-  ) : (
-    searchBox
-  );
 
   const adminHeader = isUserAdminOrDatasetManagerOrTeamManager ? (
     <Space>
@@ -272,10 +243,10 @@ function DatasetView({
           Add Folder
         </PricingEnforcedButton>
       )}
-      {search}
+      {searchBox}
     </Space>
   ) : (
-    search
+    searchBox
   );
 
   const datasets = context.datasets;
@@ -287,9 +258,7 @@ function DatasetView({
     datasets.length === 0 &&
     datasetFilteringMode !== "onlyShowUnreported" &&
     subfolders.length === 0;
-  const content = isEmpty
-    ? renderPlaceholder(context, user, searchQuery)
-    : renderTable(filteredDatasets, subfolders);
+  const isLoading = datasets.length === 0 && context.isLoading;
 
   return (
     <div>
@@ -313,9 +282,7 @@ function DatasetView({
       />
       {!searchQuery && <FolderBreadcrumb context={context} />}
       <NewJobsAlert jobs={jobs} />
-      <Spin size="large" spinning={datasets.length === 0 && context.isLoading}>
-        {content}
-      </Spin>
+      {renderTable(filteredDatasets, subfolders, isLoading)}
     </div>
   );
 }
@@ -395,7 +362,12 @@ function GlobalSearchHeader({
     // when the back-end search is used. The frontend search doesn't have
     // this restriction which is why isEmpty is checked, too).
     return isEmpty ? (
-      <p>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</p>
+      <Typography.Title level={3}>
+        <Space>
+          <SearchOutlined />
+          <span>Enter at least {MINIMUM_SEARCH_QUERY_LENGTH} characters to search</span>
+        </Space>
+      </Typography.Title>
     ) : null;
   }
 
@@ -405,7 +377,7 @@ function GlobalSearchHeader({
         <Typography.Title level={3}>
           <Space>
             <SearchOutlined />
-            <span>Search Results for &quot;{searchQuery}&quot;</span>
+            <span>Search Results for “{searchQuery}”</span>
           </Space>
         </Typography.Title>
         {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
@@ -519,40 +491,6 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
       showIcon
       icon={<HourglassOutlined />}
     />
-  );
-}
-
-function renderPlaceholder(
-  context: DatasetCollectionContextValue,
-  user: APIUser,
-  searchQuery: string | null,
-) {
-  if (context.isLoading) {
-    // A spinner is rendered by the parent above this component which is
-    // why a height is necessary to avoid the spinner sticking to the top
-    // (and being cropped).
-    return <div style={{ height: 200 }} />;
-  }
-
-  if (searchQuery) {
-    return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH
-      ? "No datasets match your search."
-      : null;
-  }
-
-  const emptyListHintText = isUserAdminOrDatasetManager(user)
-    ? "There are no datasets in this folder. Import one or move a dataset from another folder."
-    : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
-
-  return (
-    <div
-      style={{
-        marginTop: 24,
-        textAlign: "center",
-      }}
-    >
-      {emptyListHintText}
-    </div>
   );
 }
 

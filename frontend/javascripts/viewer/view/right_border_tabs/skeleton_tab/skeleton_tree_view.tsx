@@ -1,6 +1,6 @@
 import type { Tree as AntdTree, GetRef, TreeProps } from "antd";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
@@ -19,6 +19,7 @@ import {
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
+import { LIST_ROW_HEIGHT } from "../shared/list_row";
 import { TreeSwitcherIcon } from "../shared/tree_switcher_icon";
 import { useTreeContextMenu } from "../shared/use_tree_context_menu";
 import { ContextMenuContainer } from "../sidebar_context_menu";
@@ -53,21 +54,23 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
   const activeGroupId = useWkSelector((state) => state.localSkeletonState.activeGroupId);
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
-  const {
-    contextMenuPosition,
-    contextMenu,
-    openContextMenu,
-    hideContextMenu,
-    onRenameStart,
-    onRenameEnd,
-    getIsRenaming,
-  } = useTreeContextMenu(CONTEXT_MENU_CLASS);
+  const { contextMenuPosition, contextMenu, openContextMenu, hideContextMenu } =
+    useTreeContextMenu(CONTEXT_MENU_CLASS);
 
-  const buildTreeContextMenu = useTreeContextMenuBuilder(selection, hideContextMenu);
+  // At most one row is editable at a time. Owning the key here (instead of letting each
+  // row keep its own state) lets the "Rename" context menu entry start an edit, and lets
+  // drag & drop be suspended while one is running, so that selecting text in the input
+  // doesn't start a drag.
+  const [renamingNodeKey, setRenamingNodeKey] = useState<string | null>(null);
+  const startRenaming = useCallback((nodeKey: string) => setRenamingNodeKey(nodeKey), []);
+  const finishRenaming = useCallback(() => setRenamingNodeKey(null), []);
+
+  const buildTreeContextMenu = useTreeContextMenuBuilder(selection, hideContextMenu, startRenaming);
   const buildGroupContextMenu = useGroupContextMenuBuilder(
     selection,
     groupOperations,
     hideContextMenu,
+    startRenaming,
   );
 
   const onTreeNodeContextMenu = useCallback(
@@ -222,7 +225,7 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
   };
 
   const isNodeDraggable = (node: SkeletonUiNode): boolean =>
-    allowUpdate && !getIsRenaming() && !isRootGroupNode(node);
+    allowUpdate && renamingNodeKey == null && !isRootGroupNode(node);
 
   // selectedKeys is mainly used for highlighting, i.e. blueish background color.
   const selectedKeys =
@@ -246,21 +249,31 @@ export function SkeletonTreeView({ hierarchy, selection, groupOperations }: Prop
                 <ScrollableVirtualizedTree<SkeletonUiNode>
                   treeData={hierarchy.roots}
                   height={height}
+                  itemHeight={LIST_ROW_HEIGHT}
                   ref={treeRef}
+                  className="list-tree"
                   titleRender={(node) =>
                     node.type === "tree" ? (
                       <TreeNodeTitle
                         node={node}
+                        isActive={activeTreeId === node.tree.treeId}
+                        isSelected={selection.selectedTreeIds.includes(node.tree.treeId)}
+                        isExpanded={
+                          selection.selectedTreeIds.length === 1 &&
+                          selection.selectedTreeIds[0] === node.tree.treeId
+                        }
+                        isRenaming={renamingNodeKey === node.key}
                         onContextMenu={onTreeNodeContextMenu}
-                        onRenameStart={onRenameStart}
-                        onRenameEnd={onRenameEnd}
+                        onStartRenaming={startRenaming}
+                        onFinishRenaming={finishRenaming}
                       />
                     ) : (
                       <GroupNodeTitle
                         node={node}
+                        isRenaming={renamingNodeKey === node.key}
                         onContextMenu={onGroupNodeContextMenu}
-                        onRenameStart={onRenameStart}
-                        onRenameEnd={onRenameEnd}
+                        onStartRenaming={startRenaming}
+                        onFinishRenaming={finishRenaming}
                       />
                     )
                   }

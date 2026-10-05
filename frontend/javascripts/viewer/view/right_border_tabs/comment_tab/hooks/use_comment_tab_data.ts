@@ -65,6 +65,7 @@ export function useCommentTabData(sorting: CommentSorting): {
         type: "tree",
         tree,
         isLeaf: false,
+        title: "",
         children: tree.comments
           .slice()
           .sort(commentComparator)
@@ -73,6 +74,7 @@ export function useCommentTabData(sorting: CommentSorting): {
             type: "comment",
             comment,
             isLeaf: true,
+            title: "",
           })),
       }));
 

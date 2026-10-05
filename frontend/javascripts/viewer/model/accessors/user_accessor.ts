@@ -11,9 +11,11 @@ export function enforceActiveUser(activeUser: APIUser | null | undefined): APIUs
   }
 }
 
+type UserNameFields = Pick<APIUserBase, "id" | "firstName" | "lastName">;
+
 export function formatUserName(
-  activeUser: APIUserBase | null | undefined,
-  user: APIUserBase | undefined | null,
+  activeUser: UserNameFields | null | undefined,
+  user: UserNameFields | undefined | null,
 ) {
   if (!user) {
     return "Unknown";

@@ -146,7 +146,9 @@ export async function initialize(
     } else {
       const unversionedAnnotationResult = await getUnversionedAnnotationInformation(annotationId);
       if (!unversionedAnnotationResult.ok) {
-        throw new Error(`Could not load annotation: ${unversionedAnnotationResult.error.message}`);
+        // Rethrow the original error so that its HTTP status is preserved. The controller
+        // relies on it to detect 404s (e.g., for annotations of another organization).
+        throw unversionedAnnotationResult.error.cause;
       }
       let unversionedAnnotation = unversionedAnnotationResult.value;
       annotationProto = await getAnnotationProto(

@@ -68,6 +68,7 @@ exports[`Task API  (E2E) > getAnnotationsForTask() 1`] = `
     ],
     "collaborationMode": "OwnerOnly",
     "contributors": [],
+    "created": 0,
     "dataSetName": "2012-06-28_Cortex",
     "dataStore": {
       "allowsUpload": true,
@@ -130,7 +131,6 @@ exports[`Task API  (E2E) > getAnnotationsForTask() 1`] = `
     "stats": {},
     "tags": [
       "2012-06-28_Cortex",
-      "skeleton",
     ],
     "task": {
       "boundingBox": null,
@@ -621,6 +621,7 @@ exports[`Task API  (E2E) > requestTask() 1`] = `
   ],
   "collaborationMode": "OwnerOnly",
   "contributors": [],
+  "created": "created",
   "dataSetName": "confocal-multi_knossos",
   "dataStore": {
     "allowsUpload": true,
@@ -683,7 +684,6 @@ exports[`Task API  (E2E) > requestTask() 1`] = `
   "stats": {},
   "tags": [
     "confocal-multi_knossos",
-    "skeleton",
   ],
   "task": {
     "boundingBox": null,

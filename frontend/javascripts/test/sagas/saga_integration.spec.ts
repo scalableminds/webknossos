@@ -39,7 +39,7 @@ describe("Saga Integration Tests", () => {
     const treeWithEmptyName = skeletonTracing.trees.getOrThrow(1);
     const treeWithCorrectName = {
       ...treeWithEmptyName,
-      name: generateTreeName(state, treeWithEmptyName.timestamp, treeWithEmptyName.treeId),
+      name: generateTreeName(treeWithEmptyName.treeId),
     };
     const expectedSaveQueue = createSaveQueueFromUpdateActions(
       [[updateTree(treeWithCorrectName, skeletonTracing.tracingId)]],

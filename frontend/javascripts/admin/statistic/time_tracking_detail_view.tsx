@@ -41,7 +41,7 @@ const renderRow = (
             <a href={`annotations/${timeEntry.annotation}`}>Annotation: {timeEntry.annotation} </a>
           </Col>
           <Col span={STATISTICS_SPAN}>
-            <AnnotationStats stats={timeEntry.annotationLayerStats} withMargin={false} />
+            <AnnotationStats stats={timeEntry.annotationLayerStats} />
           </Col>
           <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>
         </Row>
@@ -60,7 +60,7 @@ const renderRow = (
             <a href={`annotations/${timeEntry.annotation}`}>Task: {timeEntry.task}</a>
           </Col>
           <Col span={STATISTICS_SPAN}>
-            <AnnotationStats stats={timeEntry.annotationLayerStats} withMargin={false} />
+            <AnnotationStats stats={timeEntry.annotationLayerStats} />
           </Col>
           <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>
         </Row>

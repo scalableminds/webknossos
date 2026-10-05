@@ -1,51 +1,17 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { deleteDatasetOnDisk } from "admin/rest_api";
-import { App, Button, Col, Row } from "antd";
-import Toast from "libs/toast";
-import messages from "messages";
-import { useCallback, useState } from "react";
+import { Button, Col, Row } from "antd";
+import { useDeleteDatasetsModal } from "dashboard/advanced_dataset/delete_datasets_modal";
 import { useNavigate } from "react-router";
+import { convertDatasetToCompact } from "types/api_types";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 const DatasetSettingsDeleteTab = () => {
   const { dataset } = useDatasetSettingsContext();
-  const [isDeleting, setIsDeleting] = useState(false);
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { modal } = App.useApp();
-
-  const handleDeleteButtonClicked = useCallback(async () => {
-    if (!dataset) {
-      return;
-    }
-
-    const deleteDataset = await modal.confirm({
-      title: `Deleting a dataset on disk cannot be undone. Are you certain to delete dataset ${dataset.name}? Note that the name of a dataset is not guaranteed to be free to use afterwards.`,
-      okText: "Yes, Delete Dataset on Disk now",
-    });
-
-    if (!deleteDataset) {
-      return;
-    }
-
-    setIsDeleting(true);
-    await deleteDatasetOnDisk(dataset.id);
-    Toast.success(
-      messages["dataset.delete_success"]({
-        datasetName: dataset.name,
-      }),
-    );
-    setIsDeleting(false);
-    // Invalidate the dataset list cache to exclude the deleted dataset
-    queryClient.invalidateQueries({
-      queryKey: ["datasetsByFolder", dataset.folderId],
-    });
-    queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
-
-    navigate("/dashboard");
-  }, [dataset, navigate, queryClient, modal]);
+  const { openDeleteModal, deleteModal } = useDeleteDatasetsModal({
+    onDeleted: () => navigate("/dashboard"),
+  });
 
   return (
     <div>
@@ -58,14 +24,14 @@ const DatasetSettingsDeleteTab = () => {
               <>
                 <p>Deleting a dataset on disk cannot be undone. Please be certain.</p>
                 <p>
-                  Note that annotations for the dataset stay downloadable and the name stays
-                  reserved.
-                </p>
-                <p>
-                  Admins, dataset managers and team managers of the datasets' team(s) are allowed to
+                  Admins, dataset managers and team managers of the datasets’ team(s) are allowed to
                   delete datasets.
                 </p>
-                <Button danger loading={isDeleting} onClick={handleDeleteButtonClicked}>
+                <Button
+                  danger
+                  disabled={dataset == null}
+                  onClick={() => dataset && openDeleteModal([convertDatasetToCompact(dataset)])}
+                >
                   Delete Dataset on Disk
                 </Button>
               </>
@@ -73,6 +39,7 @@ const DatasetSettingsDeleteTab = () => {
           />
         </Col>
       </Row>
+      {deleteModal}
     </div>
   );
 };

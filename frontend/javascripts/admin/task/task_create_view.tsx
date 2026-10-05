@@ -33,7 +33,7 @@ const TaskCreateView = () => {
     const nextTab = key as TaskCreateMode;
     setActiveTab(nextTab);
     const hash = nextTab === TaskCreateMode.Single ? "" : `#${nextTab}`;
-    window.history.replaceState(null, "", `${window.location.pathname}${hash}`);
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${hash}`);
   };
 
   return (

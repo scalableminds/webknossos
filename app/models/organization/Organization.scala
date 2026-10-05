@@ -452,7 +452,7 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
     }
 
   /* Records that the organization was warned about crossing the given storage usage thresholds.
-     Like insertPlanExpiryReminders, the returned count is the number of thresholds that were not recorded before. */
+     returns number of thresholds that were not recorded before. */
   def insertStorageWarnings(organizationId: String, thresholdsPercent: Seq[Int]): Fox[Int] =
     if (thresholdsPercent.isEmpty) Fox.successful(0)
     else {

@@ -245,6 +245,15 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
   }
 }
 
+function handleFocusTask(focusedTask: string | null) {
+  if (focusedTask == null) return;
+  const elementId = `task-panel-${focusedTask}`;
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+}
+
 export default function TaskListView({
   report,
   tasksWithHierarchy,
@@ -282,15 +291,6 @@ export default function TaskListView({
     setExpandedTasks([highlightedTask]);
     handleFocusTask(highlightedTask);
   }, [highlightedTask]);
-
-  function handleFocusTask(focusedTask: string | null) {
-    if (focusedTask == null) return;
-    const elementId = `task-panel-${focusedTask}`;
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
-  }
 
   const miniSearch = useMemo(() => {
     const miniSearch: MiniSearch<VoxelyticsTaskConfig> = new MiniSearch({
@@ -391,20 +391,20 @@ export default function TaskListView({
   }
 
   async function downloadLog() {
+    if (singleRunId == null) {
+      message.error("Please select a specific run for log download.");
+      return;
+    }
+    const singleRun = report.runs.find((r) => r.id === singleRunId);
+    const beginTime = singleRun?.beginTime;
+    const endTime = singleRun?.endTime ?? new Date();
+
+    if (beginTime == null) {
+      message.error("Run hasn't started yet.");
+      return;
+    }
+
     try {
-      if (singleRunId == null) {
-        message.error("Please select a specific run for log download.");
-        return;
-      }
-      const singleRun = report.runs.find((r) => r.id === singleRunId);
-      const beginTime = singleRun?.beginTime;
-      const endTime = singleRun?.endTime ?? new Date();
-
-      if (beginTime == null) {
-        message.error("Run hasn't started yet.");
-        return;
-      }
-
       const logText = (
         await getVoxelyticsLogs(
           singleRunId,

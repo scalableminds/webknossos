@@ -249,6 +249,17 @@ jobs:
           run: curl -v --fail-with-body "http://localhost:9050/tracings/health"
           retries: 20
           retry_delay_seconds: 5
+      - name: Check that the certificate public key is baked into the build
+        # Without a baked-in public key, the certificate is not checked and expiresAt is 0.
+        # Skipped if the secret is not available (e.g. for dependabot).
+        if: env.CERTIFICATE_PUBLIC_KEY != ''
+        run: |
+          response=$(curl -sS "http://localhost:9000/api/checkCertificate")
+          echo "$response"
+          echo "$response" | jq -e '.expiresAt > 0' > /dev/null || {
+            echo "::error::Certificate public key is not baked into the webknossos build (expiresAt is 0)."
+            exit 1
+          }
       - name: Stop webknossos, datastore and tracingstore
         run: docker compose --file .github/docker-compose.yml down --volumes --remove-orphans
 

@@ -25,7 +25,7 @@ import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
 // than a theme token.
-export const commandEntryColor = ColorWKBlue;
+const commandEntryColor = ColorWKBlue;
 
 type ExtendedCommand = Command & {
   shortcut?: string;

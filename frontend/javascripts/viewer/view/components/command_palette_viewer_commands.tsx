@@ -5,6 +5,7 @@ import compact from "lodash-es/compact";
 import noop from "lodash-es/noop";
 import { useEffect, useMemo } from "react";
 import { useDispatch } from "react-redux";
+import { ColorWKBlue } from "theme";
 import { ViewModeValues } from "viewer/constants";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
@@ -17,7 +18,7 @@ import {
 } from "../action_bar/use_tracing_view_menu_items";
 import { viewDatasetMenu } from "../action_bar/view_dataset_actions_view";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
-import { type CommandWithoutId, commandEntryColor, setViewerCommands } from "./command_palette";
+import { type CommandWithoutId, setViewerCommands } from "./command_palette";
 
 const getLabelForAction = (action: NonNullable<ItemType>) => {
   if ("title" in action && action.title != null) {
@@ -39,7 +40,7 @@ const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutI
       return {
         name: getLabelForAction(action),
         command: onClickAction,
-        color: commandEntryColor,
+        color: ColorWKBlue,
       };
     }),
   );
@@ -101,7 +102,7 @@ export function CommandPaletteViewerCommands() {
           name: `Switch to ${tool.readableName}`,
           command: () => dispatch(setToolAction(tool)),
           shortcut: shortCutDictForTools[tool.id] || "",
-          color: commandEntryColor,
+          color: ColorWKBlue,
         });
       });
       return commands;
@@ -113,12 +114,12 @@ export function CommandPaletteViewerCommands() {
         command: () => {
           dispatch(setViewModeAction(mode));
         },
-        color: commandEntryColor,
+        color: ColorWKBlue,
       }));
       commands.push({
         name: "Reset layout",
         command: () => layoutEmitter.emit(LayoutEvents.resetLayout),
-        color: commandEntryColor,
+        color: ColorWKBlue,
       });
       return commands;
     };
@@ -132,7 +133,7 @@ export function CommandPaletteViewerCommands() {
           commands.push({
             name: `Toggle ${getPhraseFromCamelCaseString(key)}`,
             command: () => dispatch(updateUserSettingAction(key, !userConfig[key])),
-            color: commandEntryColor,
+            color: ColorWKBlue,
           });
         }
       });

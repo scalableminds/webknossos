@@ -40,7 +40,6 @@ import HelpButton from "viewer/view/help/help_button";
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
 
-// The Model and the API are only set up when the viewer is loaded (see viewer/viewer_entry.ts).
 setStore(UnthrottledStore);
 startSaga(warnIfEmailIsUnverified);
 

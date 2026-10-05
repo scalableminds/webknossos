@@ -552,7 +552,7 @@ export const switchTo = async (org: APIOrganizationCompact) => {
   // current datasets path before reloading the page (which is done in
   // switchToOrganization).
   if (window.location.pathname.startsWith("/dashboard/datasets/")) {
-    window.history.replaceState({}, "", "/dashboard/datasets/");
+    window.history.replaceState(window.history.state, "", "/dashboard/datasets/");
   }
 
   await switchToOrganization(org.id);

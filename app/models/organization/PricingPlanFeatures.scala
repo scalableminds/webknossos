@@ -19,10 +19,7 @@ object PricingPlanFeatures {
   )
 
   private val powerPlanFeatureHighlights = List(
-    "Up to Unlimited Users",
     "Segmentation Proof-Reading Tool",
-    "On-premise or dedicated hosting solutions available",
-    "Integration with your HPC and storage servers",
     "Eligible for the AI Add-on and AI model training"
   )
 

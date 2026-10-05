@@ -364,9 +364,9 @@ function useManagedUrlParams(
       // Use folderName-folderId in path or only folderId if name is empty (e.g., because
       // not loaded yet).
       // Don't use useNavigate because this would lose the input search
-      // focus.
+      // focus. Keep the existing history state, since react-router stores its own data there.
       window.history.replaceState(
-        {},
+        window.history.state,
         "",
         `/dashboard/datasets/${folderName}${folderName ? "-" : ""}${activeFolderId}`,
       );
@@ -392,9 +392,9 @@ function useManagedUrlParams(
       const paramStr = params.toString();
 
       // Don't use useNavigate because this would lose the input search
-      // focus.
+      // focus. Keep the existing history state, since react-router stores its own data there.
       window.history.replaceState(
-        {},
+        window.history.state,
         "",
         `/dashboard/datasets${paramStr === "" ? "" : "?"}${paramStr}`,
       );

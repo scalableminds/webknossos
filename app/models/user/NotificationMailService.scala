@@ -215,7 +215,7 @@ class NotificationMailService @Inject() (
       }
     } yield ()
 
-  private def annotationName(annotation: Annotation): String = annotation.nameOpt.getOrElse("Unnamed Annotation")
+  private def annotationName(annotation: Annotation): String = annotation.nameOpt.getOrElse("Unnamed annotation")
 
   private def inBackground(description: String)(notification: => Fox[Unit]): Unit =
     notification.onComplete {

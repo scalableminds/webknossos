@@ -65,6 +65,24 @@ import {
 
 const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
 
+// TEMPORARY measurement of where the time of a precomputed mesh load goes. The per-chunk steps run
+// in up to PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT tasks at once, so their summed times can exceed
+// the wall-clock time. The decoding time includes waiting for a free draco worker.
+type ChunkStepTimings = {
+  chunkCount: number;
+  decode: number;
+  prepareGeometry: number;
+  addToScene: number;
+  yieldToEventLoop: number;
+};
+
+function logChunkStepTimings(label: string, timings: ChunkStepTimings): void {
+  const toMs = (milliseconds: number) => `${milliseconds.toFixed(0)} ms`;
+  console.log(
+    `${label}: ${timings.chunkCount} chunks, summed over all chunks: decode ${toMs(timings.decode)}, prepare geometry ${toMs(timings.prepareGeometry)}, add to scene ${toMs(timings.addToScene)}, yield to event loop ${toMs(timings.yieldToEventLoop)}`,
+  );
+}
+
 // Avoid redundant fetches of mesh files for the same layer by
 // storing Deferreds per layer lazily.
 let fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFileInfo>, unknown>> = {};
@@ -226,13 +244,18 @@ function* loadPrecomputedMeshForSegmentId(
   // the first meshes are fully visible earlier and the memory pressure of
   // in-flight chunk buffers stays bounded. Note that the loading state for
   // this segment was already set above so that the UI reflects the pending load.
+  const timingLabel = `[mesh timing] segment ${segmentId}`;
+  console.time(`${timingLabel}: total after mesh file check`);
+  console.time(`${timingLabel}: wait for mesh worker slot`);
   yield call(acquireMeshWorker);
+  console.timeEnd(`${timingLabel}: wait for mesh worker slot`);
   try {
     let availableChunksMap: ChunksMap = {};
     let chunkScale: Vector3 | null = null;
     let loadingOrder: number[] | null = null;
     let lods: MeshLodInfo[] | null = null;
     try {
+      console.time(`${timingLabel}: listing`);
       const chunkDescriptors = yield* call(
         _getChunkLoadingDescriptors,
         segmentId,
@@ -245,6 +268,7 @@ function* loadPrecomputedMeshForSegmentId(
       availableChunksMap = chunkDescriptors.availableChunksMap;
       chunkScale = chunkDescriptors.segmentInfo.chunkScale;
       loadingOrder = chunkDescriptors.loadingOrder;
+      console.timeEnd(`${timingLabel}: listing`);
     } catch (exception) {
       Toast.warning(messages["tracing.mesh_listing_failed"](segmentId));
       console.warn(
@@ -280,6 +304,7 @@ function* loadPrecomputedMeshForSegmentId(
     yield* call(releaseMeshWorker);
   }
 
+  console.timeEnd(`${timingLabel}: total after mesh file check`);
   yield* put(finishedLoadingMeshAction(layerName, segmentId));
 }
 
@@ -421,6 +446,14 @@ function* loadPrecomputedMeshesInChunksForLod(
     MIN_BATCH_SIZE_IN_BYTES,
   );
 
+  const timingLabel = `[mesh timing] segment ${segmentId}, lod ${lod}`;
+  const timings: ChunkStepTimings = {
+    chunkCount: 0,
+    decode: 0,
+    prepareGeometry: 0,
+    addToScene: 0,
+    yieldToEventLoop: 0,
+  };
   let bufferGeometries: UnmergedBufferGeometryWithInfo[] = [];
   const createLoadTask = (chunks: meshApi.MeshChunk[]) =>
     function* loadChunks(): Saga<void> {
@@ -434,10 +467,14 @@ function* loadPrecomputedMeshesInChunksForLod(
             throw new Error("Unexpected null value.");
           }
           const position = chunk.position;
+          timings.chunkCount++;
+          let stepStart = performance.now();
           const bufferGeometry = (yield* call(
             loader.decodeDracoFileAsync,
             data,
           )) as UnmergedBufferGeometryWithInfo;
+          timings.decode += performance.now() - stepStart;
+          stepStart = performance.now();
           bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
           if (chunkScale != null) {
             bufferGeometry.scale(...chunkScale);
@@ -448,6 +485,8 @@ function* loadPrecomputedMeshesInChunksForLod(
           // within the chunk-specific code (instead of after all chunks are merged)
           // to distribute the workload a bit over time.
           bufferGeometry.computeVertexNormals();
+          timings.prepareGeometry += performance.now() - stepStart;
+          stepStart = performance.now();
 
           // Eagerly add the chunk geometry so that they will be rendered
           // as soon as possible. These chunks will be removed later and then
@@ -468,6 +507,7 @@ function* loadPrecomputedMeshesInChunksForLod(
             opacity,
             false,
           );
+          timings.addToScene += performance.now() - stepStart;
 
           bufferGeometries.push(bufferGeometry);
         } catch (error) {
@@ -478,7 +518,9 @@ function* loadPrecomputedMeshesInChunksForLod(
         // geometries is mostly synchronous and would otherwise form a tight
         // loop that starves rendering and can even stop the saga middleware
         // silently (see https://github.com/redux-saga/redux-saga/issues/1592).
+        const yieldStart = performance.now();
         yield* call(sleep, 0);
+        timings.yieldToEventLoop += performance.now() - yieldStart;
       }
 
       if (errorsWithDetails.length > 0) {
@@ -490,10 +532,13 @@ function* loadPrecomputedMeshesInChunksForLod(
 
   // Cached batches don't make requests, so they get their own pool instead of waiting for the
   // request slots. Otherwise, one kind of batch would hold up the other.
+  console.time(`${timingLabel}: all chunks (wall clock)`);
   const errors = yield* all([
     call(processTasksAndReturnError, missingBatches.map(createLoadTask)),
     call(processTasksAndReturnError, cachedBatches.map(createLoadTask)),
   ]);
+  console.timeEnd(`${timingLabel}: all chunks (wall clock)`);
+  logChunkStepTimings(timingLabel, timings);
   const error = errors.find((errorOfPool) => errorOfPool != null);
   if (error != null) {
     Toast.warning(`Some mesh chunks could not be loaded for segment ${segmentId}.`);
@@ -511,12 +556,18 @@ function* loadPrecomputedMeshesInChunksForLod(
   // cannot be allocated because of memory pressure).
   let mergedGeometry: BufferGeometryWithInfo | null = null;
   try {
+    console.time(`${timingLabel}: merge geometries`);
     mergedGeometry = (
       sortedBufferGeometries.length > 0 ? mergeGeometries(sortedBufferGeometries, false) : null
     ) as BufferGeometryWithInfo | null;
+    console.timeEnd(`${timingLabel}: merge geometries`);
     if (mergedGeometry != null) {
+      console.time(`${timingLabel}: vertex segment mapping`);
       mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedBufferGeometries);
+      console.timeEnd(`${timingLabel}: vertex segment mapping`);
+      console.time(`${timingLabel}: compute bvh`);
       mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
+      console.timeEnd(`${timingLabel}: compute bvh`);
     }
   } catch (exception) {
     mergedGeometry?.dispose();
@@ -535,6 +586,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     return;
   }
 
+  console.time(`${timingLabel}: replace chunks with merged mesh in scene`);
   // Remove the eagerly added chunks (see above).
   yield* call(
     {
@@ -562,6 +614,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     opacity,
     true,
   );
+  console.timeEnd(`${timingLabel}: replace chunks with merged mesh in scene`);
 }
 
 export default function* precomputedMeshSaga(): Saga<void> {

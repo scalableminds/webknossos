@@ -62,7 +62,7 @@ import {
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
 export function generateTreeName(treeId: number) {
-  return `Skeleton ${treeId}`;
+  return `Tree ${treeId}`;
 }
 function getMinimumNodeId(trees: TreeMap | MutableTreeMap): number {
   const minNodeId = min(trees.values().flatMap((tree) => tree.nodes.map((n) => n.id)));

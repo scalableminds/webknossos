@@ -38,6 +38,7 @@ describe("TemporalBucketManager", () => {
       currentBucketPickerTick: 0,
       previousBucketPickerTick: 0,
       onBucketMarkedAsNeeded: vi.fn(),
+      getEffectiveBucketVoxelCount: () => 32 ** 3,
     };
 
     const manager = new TemporalBucketManager(pullQueue as any, pushQueue as any);

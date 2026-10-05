@@ -10,7 +10,6 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.{LayerCategory, StaticLayer}
 import models.annotation.AnnotationDAO
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO}
-import models.organization.{Organization, OrganizationDAO}
 import models.shortlinks.ShortLinkDAO
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.box.Full
@@ -31,7 +30,6 @@ object OpenGraphPageType extends ExtendedEnumeration {
 
 class OpenGraphService @Inject() (
     datasetDAO: DatasetDAO,
-    organizationDAO: OrganizationDAO,
     datasetLayerDAO: DatasetLayerDAO,
     annotationDAO: AnnotationDAO,
     shortLinkDAO: ShortLinkDAO,
@@ -155,11 +153,10 @@ class OpenGraphService @Inject() (
       }
       layers <- datasetLayerDAO.findAllForDataset(dataset._id)
       layerOpt = layers.find(_.category == LayerCategory.color)
-      organization <- organizationDAO.findOne(dataset._organization)
     } yield OpenGraphTags(
       Some(s"${dataset.name} | WEBKNOSSOS"),
       Some("View this dataset in WEBKNOSSOS"),
-      thumbnailUri(dataset, layerOpt, organization, token)
+      thumbnailUri(dataset, layerOpt, token)
     )
 
   private def annotationOpenGraphTags(uriPath: String, token: Option[String])(using
@@ -172,13 +169,12 @@ class OpenGraphService @Inject() (
           annotationIdValidated <- ObjectId.fromString(annotationId)
           annotation <- annotationDAO.findOne(annotationIdValidated)
           dataset: Dataset <- datasetDAO.findOne(annotation._dataset)
-          organization <- organizationDAO.findOne(dataset._organization)
           layers <- datasetLayerDAO.findAllForDataset(dataset._id)
           layerOpt = layers.find(_.category == LayerCategory.color)
         } yield OpenGraphTags(
           Some(s"${annotation.nameOpt.getOrElse(dataset.name)} | WEBKNOSSOS"),
           Some(s"View this annotation on dataset ${dataset.name} in WEBKNOSSOS"),
-          thumbnailUri(dataset, layerOpt, organization, token)
+          thumbnailUri(dataset, layerOpt, token)
         )
       case _ => Fox.failure("not a matching uri")
     }
@@ -186,7 +182,6 @@ class OpenGraphService @Inject() (
   private def thumbnailUri(
       dataset: Dataset,
       layerOpt: Option[StaticLayer],
-      organization: Organization,
       token: Option[String]
   ): Option[String] =
     layerOpt.map { layer =>

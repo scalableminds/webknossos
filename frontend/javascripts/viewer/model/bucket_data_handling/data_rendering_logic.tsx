@@ -13,8 +13,8 @@ import {
   UnsignedByteType,
   UnsignedShortType,
 } from "three";
-import type { ElementClass } from "types/api_types";
-import constants from "viewer/constants";
+import type { AdditionalAxis, ElementClass } from "types/api_types";
+import constants, { getEffectiveBucketDepth, usesTRecycling } from "viewer/constants";
 import type { TypedArrayConstructor } from "../helpers/typed_buffer";
 
 export type GpuSpecs = {
@@ -26,36 +26,57 @@ export type DataTextureSizeAndCount = {
   textureSize: number;
   textureCount: number;
   packingDegree: number;
+  // The number of voxels a single bucket occupies in this layer's atlas. Equal to
+  // constants.BUCKET_SIZE, unless the layer has a degenerate (e.g., z-extent-1) axis,
+  // in which case buckets are packed with a smaller footprint. See getEffectiveBucketDepth.
+  bucketVoxelCount: number;
 };
+
+// A data texture is a flat 2D atlas in which each bucket occupies a whole number of texture
+// rows; a row is never shared by two buckets. Layers with a small bucket footprint (e.g. 2D)
+// pack into less than one row and get rounded up, wasting the remainder — supporting several
+// buckets per row would be possible future work.
+export function getBucketHeightInTexture(
+  textureWidth: number,
+  packingDegree: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
+): number {
+  const packedBucketSize = bucketVoxelCount / packingDegree;
+  return Math.max(1, packedBucketSize / textureWidth);
+}
+
+export function getBucketsPerTexture(
+  textureWidth: number,
+  packingDegree: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
+): number {
+  return textureWidth / getBucketHeightInTexture(textureWidth, packingDegree, bucketVoxelCount);
+}
 
 export function getBucketCapacity(
   dataTextureCount: number,
   textureWidth: number,
   packingDegree: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
 ): number {
   const theoreticalBucketCapacity =
-    (packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
+    dataTextureCount * getBucketsPerTexture(textureWidth, packingDegree, bucketVoxelCount);
   // RAM-wise we already impose a limit of how many buckets should be held. This limit
   // should not be exceeded.
   return Math.min(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, theoreticalBucketCapacity);
 }
 
-function getNecessaryVoxelCount(requiredBucketCapacity: number) {
-  return requiredBucketCapacity * constants.BUCKET_SIZE;
-}
-
-function getAvailableVoxelCount(textureSize: number, packingDegree: number) {
-  return packingDegree * textureSize ** 2;
-}
-
+// Must go through getBucketsPerTexture rather than dividing the required voxels by the
+// texture's voxel area: a sub-row bucket's row padding cannot hold another bucket, so
+// area-based sizing would pick a texture too small for requiredBucketCapacity buckets.
 function getDataTextureCount(
   textureSize: number,
   packingDegree: number,
   requiredBucketCapacity: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
 ) {
   return Math.ceil(
-    getNecessaryVoxelCount(requiredBucketCapacity) /
-      getAvailableVoxelCount(textureSize, packingDegree),
+    requiredBucketCapacity / getBucketsPerTexture(textureSize, packingDegree, bucketVoxelCount),
   );
 }
 
@@ -64,6 +85,7 @@ export function calculateTextureSizeAndCountForLayer(
   specs: GpuSpecs,
   elementClass: ElementClass,
   requiredBucketCapacity: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
 ): DataTextureSizeAndCount {
   let textureSize = specs.supportedTextureSize;
   const { packingDegree } = getDtypeConfigForElementClass(elementClass);
@@ -72,17 +94,23 @@ export function calculateTextureSizeAndCountForLayer(
   // data textures. This ensures that we maximize the number of simultaneously
   // renderable layers.
   while (
-    getDataTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity) <=
-    getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity)
+    getDataTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity, bucketVoxelCount) <=
+    getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity, bucketVoxelCount)
   ) {
     textureSize /= 2;
   }
 
-  const textureCount = getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity);
+  const textureCount = getDataTextureCount(
+    textureSize,
+    packingDegree,
+    requiredBucketCapacity,
+    bucketVoxelCount,
+  );
   return {
     textureSize,
     textureCount,
     packingDegree,
+    bucketVoxelCount,
   };
 }
 
@@ -90,6 +118,11 @@ function buildTextureInformationMap<
   Layer extends {
     elementClass: ElementClass;
     category: "color" | "segmentation";
+    boundingBox: { depth: number };
+    additionalAxes: Array<AdditionalAxis> | null;
+    // Set for layers backed by a volume tracing (see APISegmentationLayer). Needed here
+    // because atlas sizing has to make the same t-recycling decision the runtime does.
+    tracingId?: string;
   },
 >(
   layers: Array<Layer>,
@@ -98,10 +131,22 @@ function buildTextureInformationMap<
 ): Map<Layer, DataTextureSizeAndCount> {
   const textureInformationPerLayer = new Map();
   layers.forEach((layer) => {
+    const hasTAxis = layer.additionalAxes?.some((axis) => axis.name === "t") ?? false;
+    // A t-recycling layer needs its atlas sized for full-depth buckets despite being
+    // z-degenerate, hence the shared helper.
+    const bucketVoxelCount = usesTRecycling(
+      layer.boundingBox.depth,
+      hasTAxis,
+      layer.tracingId != null,
+    )
+      ? constants.BUCKET_SIZE
+      : constants.BUCKET_SIZE_2D *
+        getEffectiveBucketDepth(layer.boundingBox.depth, layer.tracingId != null);
     const sizeAndCount = calculateTextureSizeAndCountForLayer(
       specs,
       layer.elementClass,
       requiredBucketCapacity,
+      bucketVoxelCount,
     );
     textureInformationPerLayer.set(layer, sizeAndCount);
   });
@@ -118,6 +163,7 @@ function getSmallestCommonBucketCapacity<
       sizeAndCount.textureCount,
       sizeAndCount.textureSize,
       sizeAndCount.packingDegree,
+      sizeAndCount.bucketVoxelCount,
     ),
   );
   return min(capacities) || 0;
@@ -164,12 +210,20 @@ function getRenderSupportedLayerCount<
   };
 }
 
-export function computeDataTexturesSetup<
-  Layer extends {
-    elementClass: ElementClass;
-    category: "color" | "segmentation";
-  },
->(specs: GpuSpecs, layers: Array<Layer>, hasSegmentation: boolean, requiredBucketCapacity: number) {
+export type LayerLike = {
+  elementClass: ElementClass;
+  category: "color" | "segmentation";
+  boundingBox: { depth: number };
+  additionalAxes: Array<AdditionalAxis> | null;
+  tracingId?: string;
+};
+
+export function computeDataTexturesSetup<Layer extends LayerLike>(
+  specs: GpuSpecs,
+  layers: Array<Layer>,
+  hasSegmentation: boolean,
+  requiredBucketCapacity: number,
+) {
   const textureInformationPerLayer = buildTextureInformationMap(
     layers,
     specs,

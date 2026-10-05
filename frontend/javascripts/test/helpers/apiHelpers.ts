@@ -5,6 +5,7 @@ import {
   getDataset,
   getEdgesForAgglomerateMinCut,
   getEditableAgglomerateTreeAsSkeletonTracing,
+  getImportedDataset,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
   getUpdateActionLog,
@@ -249,6 +250,7 @@ vi.mock("admin/rest_api.ts", async () => {
   return {
     ...actual,
     getDataset: vi.fn(),
+    getImportedDataset: vi.fn(),
     sendSaveRequestWithToken: mockedSendRequestWithToken,
     getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
     getMappingsForDatasetLayer: vi.fn(() => []),
@@ -625,6 +627,15 @@ export async function setupWebknossosForTesting(
   );
 
   vi.mocked(getDataset).mockImplementation(
+    async (
+      _datasetId: string,
+      _sharingToken?: string | null | undefined,
+      _options: RequestOptions = {},
+    ) => {
+      return cloneDeep(dataset);
+    },
+  );
+  vi.mocked(getImportedDataset).mockImplementation(
     async (
       _datasetId: string,
       _sharingToken?: string | null | undefined,

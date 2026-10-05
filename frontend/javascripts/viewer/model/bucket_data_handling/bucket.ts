@@ -118,6 +118,9 @@ export class DataBucket {
   // The bucket-picker tick during which this bucket was last marked as needed.
   lastNeededTick: number = -1;
   data: BucketDataArray | null | undefined;
+  // The full wire-format buffer `data` was extracted from (for most layers this is identical to
+  // `data`; for a t-recycling layer's bucket, this is the *shared* 32-t-slice buffer.
+  rawBucketData: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
   cube: DataCube;
   _fallbackBucket: Bucket | null | undefined;
@@ -146,6 +149,7 @@ export class DataBucket {
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
     this.data = null;
+    this.rawBucketData = null;
 
     if (this.cube.isSegmentation) {
       this.throttledTriggerLabeled = throttle(() => this.trigger("bucketLabeled"), 10);
@@ -212,6 +216,7 @@ export class DataBucket {
     // so that at least the big memory hog is tamed (unfortunately,
     // this doesn't help against references which point directly to this.data)
     this.data = null;
+    this.rawBucketData = null;
     this.invalidateValueSet();
     this.trigger("bucketCollected");
     // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
@@ -250,6 +255,12 @@ export class DataBucket {
 
   getAdditionalCoordinates(): AdditionalCoordinate[] | undefined | null {
     return this.zoomedAddress[4];
+  }
+
+  // The "t" (time) additional coordinate.
+  // Returns 0 if the layer has no t-axis; not worth caching.
+  getT(): number {
+    return this.getAdditionalCoordinates()?.find((coord) => coord.name === "t")?.value ?? 0;
   }
 
   is3DVoxelInsideBucket = (voxel: Vector3, zoomStep: number) => {
@@ -452,7 +463,7 @@ export class DataBucket {
      */
     if (this.data == null) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
-      this.data = new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
+      this.data = new TypedArrayClass(channelCount * this.cube.getEffectiveBucketVoxelCount());
 
       if (!this.isMissing()) {
         this.temporalBucketManager.addBucket(this);
@@ -654,17 +665,26 @@ export class DataBucket {
   receiveData(
     arrayBuffer: Uint8Array<ArrayBuffer> | null | undefined,
     computeValueSet: boolean = false,
+    voxelOffsetInWireData: number = 0,
   ): void {
-    const data = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
+    if (!this.isRequested()) {
+      this.unexpectedState();
+    }
+
+    // The backend always sends a full 32^3-voxel cube, which is validated below and then
+    // sliced down to this layer's (possibly shrunk) bucket footprint. A batched request (see
+    // PullQueue.pullBatch) covers several buckets, and voxelOffsetInWireData picks this one's
+    // window out of it.
+    const wireData = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [_TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
-    if (data.length !== channelCount * Constants.BUCKET_SIZE) {
+    if (wireData.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo = // Disable this conditional if you need verbose output here.
         import.meta.env.MODE === "test"
           ? " (<omitted>)"
           : {
               arrayBuffer,
-              actual: data.length,
+              actual: wireData.length,
               expected: channelCount * Constants.BUCKET_SIZE,
               channelCount,
             };
@@ -675,6 +695,18 @@ export class DataBucket {
       ErrorHandling.notify(error);
       throw error;
     }
+
+    this.rawBucketData = wireData;
+
+    const effectiveVoxelCount = this.cube.getEffectiveBucketVoxelCount();
+    const data =
+      effectiveVoxelCount === Constants.BUCKET_SIZE && voxelOffsetInWireData === 0
+        ? wireData
+        : // subarray creates a view on the data; no data is copied here.
+          (wireData.subarray(
+            channelCount * voxelOffsetInWireData,
+            channelCount * (voxelOffsetInWireData + effectiveVoxelCount),
+          ) as BucketDataArray);
 
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {

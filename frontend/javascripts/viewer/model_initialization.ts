@@ -32,6 +32,7 @@ import type {
   APICompoundType,
   APIDataLayer,
   APIDataset,
+  APIMaybeUnimportedDataset,
   APISegmentationLayer,
   APITracingStoreAnnotation,
   MutableAPIDataset,
@@ -145,7 +146,9 @@ export async function initialize(
     } else {
       const unversionedAnnotationResult = await getUnversionedAnnotationInformation(annotationId);
       if (!unversionedAnnotationResult.ok) {
-        throw new Error(`Could not load annotation: ${unversionedAnnotationResult.error.message}`);
+        // Rethrow the original error so that its HTTP status is preserved. The controller
+        // relies on it to detect 404s (e.g., for annotations of another organization).
+        throw unversionedAnnotationResult.error.cause;
       }
       let unversionedAnnotation = unversionedAnnotationResult.value;
       annotationProto = await getAnnotationProto(
@@ -205,11 +208,13 @@ export async function initialize(
   const [apiDataset, initialUserSettings, serverTracings, keyboardShortcutsConfig] =
     await fetchParallel(annotation, datasetId, version);
   assertUsableDataset(apiDataset as StoreDataset, initialCommandType);
-  maybeFixDatasetNameInURL(apiDataset, initialCommandType);
+  // assertUsableDataset already guaranteed (and threw a HANDLED_ERROR otherwise) that
+  // the dataset actually has data layers, i.e., that it was imported successfully.
+  maybeFixDatasetNameInURL(apiDataset as APIDataset, initialCommandType);
 
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
-  const dataset = preprocessDataset(apiDataset, serverTracings);
+  const dataset = preprocessDataset(apiDataset as APIDataset, serverTracings);
   initializeDataset(initialFetch, dataset);
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
@@ -323,7 +328,14 @@ async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
   datasetId: string,
   version: number | undefined | null,
-): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>, Partial<KeyboardShortcutsMap>]> {
+): Promise<
+  [
+    APIMaybeUnimportedDataset,
+    UserConfiguration,
+    Array<ServerTracing>,
+    Partial<KeyboardShortcutsMap>,
+  ]
+> {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation

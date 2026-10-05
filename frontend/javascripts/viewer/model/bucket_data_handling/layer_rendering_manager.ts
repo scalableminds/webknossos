@@ -13,6 +13,7 @@ import memoizeOne from "memoize-one";
 import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BucketAddress, Vector3, Vector4, ViewMode } from "viewer/constants";
+import constants from "viewer/constants";
 import {
   getElementClass,
   getLayerByName,
@@ -105,6 +106,31 @@ function consumeBucketsFromArrayBuffer(
   return bucketsWithPriorities;
 }
 
+// Whether two additional-coordinate sets differ only in "t", and only within one
+// aligned 32-t batch (i.e. floor(t / BUCKET_WIDTH) is unchanged). Such a change needs no
+// work at all on a t-recycling layer — see updateDataTextures.
+function isWithinSameTBatch(
+  oldCoordinates: AdditionalCoordinate[] | null,
+  newCoordinates: AdditionalCoordinate[] | null,
+): boolean {
+  if (oldCoordinates == null || newCoordinates == null) {
+    return false;
+  }
+  const getT = (coordinates: AdditionalCoordinate[]) =>
+    coordinates.find((coord) => coord.name === "t")?.value;
+  const oldT = getT(oldCoordinates);
+  const newT = getT(newCoordinates);
+  if (oldT == null || newT == null) {
+    return false;
+  }
+  const withoutT = (coordinates: AdditionalCoordinate[]) =>
+    coordinates.filter((coord) => coord.name !== "t");
+  return (
+    Math.floor(oldT / constants.BUCKET_WIDTH) === Math.floor(newT / constants.BUCKET_WIDTH) &&
+    isEqual(withoutT(oldCoordinates), withoutT(newCoordinates))
+  );
+}
+
 export function getGlobalLayerIndexForLayerName(
   layerName: string,
   optSanitizer?: (arg: string) => string,
@@ -165,6 +191,7 @@ export default class LayerRenderingManager {
       this.textureWidth,
       this.dataTextureCount,
       elementClass,
+      this.cube,
     );
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);
@@ -221,16 +248,32 @@ export default class LayerRenderingManager {
     const additionalCoordinates = state.flycam.additionalCoordinates;
     const maximumZoomForAllMags = state.flycamInfoCache.maximumZoomForAllMags[this.name];
 
-    if (
+    const otherThingsChanged =
       !isEqual(this.lastZoomedMatrix, matrix) ||
       viewMode !== this.lastViewMode ||
       sphericalCapRadius !== this.lastSphericalCapRadius ||
       isVisible !== this.lastIsVisible ||
       rects !== this.lastRects ||
-      !isEqual(additionalCoordinates, this.additionalCoordinates) ||
       !isEqual(maximumZoomForAllMags, this.maximumZoomForAllMags) ||
-      this.needsRefresh
+      this.needsRefresh;
+    const additionalCoordinatesChanged = !isEqual(
+      additionalCoordinates,
+      this.additionalCoordinates,
+    );
+
+    if (
+      !otherThingsChanged &&
+      additionalCoordinatesChanged &&
+      this.textureBucketManager.usesTRecycling &&
+      isWithinSameTBatch(this.additionalCoordinates, additionalCoordinates)
     ) {
+      // Pure t-scrubbing within a resident batch needs no work at all: buckets are keyed by
+      // t-batch and already hold all 32 slices, so the shader just reads a different z-sub-slot.
+      this.additionalCoordinates = additionalCoordinates;
+      return;
+    }
+
+    if (otherThingsChanged || additionalCoordinatesChanged) {
       this.lastZoomedMatrix = matrix;
       this.lastViewMode = viewMode;
       this.lastSphericalCapRadius = sphericalCapRadius;

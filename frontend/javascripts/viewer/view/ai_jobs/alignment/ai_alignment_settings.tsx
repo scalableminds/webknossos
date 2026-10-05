@@ -1,5 +1,7 @@
+import { InfoCircleOutlined } from "@ant-design/icons";
 import type { FormProps } from "antd";
-import { Col, Form, Input, Row, Typography } from "antd";
+import { Checkbox, Col, Form, Input, Row, Space, Typography } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
@@ -8,7 +10,7 @@ import { AdvancedSettings } from "../components/job_layout";
 import { getFormValidationState } from "../components/job_requirements";
 import { JobSection } from "../components/job_section";
 import { ShouldUseManualMatchesFormItem } from "../components/should_use_trees_form_item";
-import { useAlignmentJobContext } from "./ai_alignment_job_context";
+import { FINE_ALIGNMENT_MAX_JUMP_SIZE, useAlignmentJobContext } from "./ai_alignment_job_context";
 
 export const AiAlignmentSettings: React.FC = () => {
   const {
@@ -20,6 +22,8 @@ export const AiAlignmentSettings: React.FC = () => {
     setCustomConfiguration,
     setSettingsFormState,
     stepStatuses,
+    fineAlignmentOnly,
+    setFineAlignmentOnly,
   } = useAlignmentJobContext();
 
   const [form] = Form.useForm();
@@ -44,12 +48,16 @@ export const AiAlignmentSettings: React.FC = () => {
     if ("customConfiguration" in changedValues) {
       setCustomConfiguration(changedValues.customConfiguration);
     }
+    if ("fineAlignmentOnly" in changedValues) {
+      setFineAlignmentOnly(changedValues.fineAlignmentOnly);
+    }
   };
 
   const formFields = [
     { name: ["newDatasetName"], value: newDatasetName },
     { name: ["useAnnotation"], value: shouldUseManualMatches },
     { name: ["customConfiguration"], value: customConfiguration },
+    { name: ["fineAlignmentOnly"], value: fineAlignmentOnly },
   ];
 
   return (
@@ -84,7 +92,19 @@ export const AiAlignmentSettings: React.FC = () => {
           Optional: connected skeleton nodes between adjacent sections are used as alignment guides.
         </Typography.Paragraph>
 
-        <AdvancedSettings hint="Custom configuration">
+        <AdvancedSettings hint="Fine alignment, custom configuration">
+          <Form.Item>
+            <Space>
+              <Form.Item name="fineAlignmentOnly" valuePropName="checked" noStyle>
+                <Checkbox>Perform fine alignment only</Checkbox>
+              </Form.Item>
+              <FastTooltip
+                title={`Enable this if the dataset is already roughly aligned and only needs fine-tuning, rather than a full alignment from scratch. Fine alignment assumes that no major rotations or jumps larger than ${FINE_ALIGNMENT_MAX_JUMP_SIZE} voxels need to be solved.`}
+              >
+                <InfoCircleOutlined />
+              </FastTooltip>
+            </Space>
+          </Form.Item>
           <KeyValuePairsFormItem name="customConfiguration" label="Custom configuration" />
         </AdvancedSettings>
       </Form>

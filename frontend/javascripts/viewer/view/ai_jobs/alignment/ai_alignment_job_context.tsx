@@ -20,6 +20,10 @@ import {
 } from "../components/job_requirements";
 import type { AlignmentTask } from "./ai_alignment_model_selector";
 
+// Maximum jump size (in voxels) that fine alignment is assumed to have to bridge. This defines the
+// contract of what "fine alignment only" means and is intentionally not exposed in the UI for now.
+export const FINE_ALIGNMENT_MAX_JUMP_SIZE = 500;
+
 interface AlignmentJobContextType {
   handleStartAnalysis: () => void;
   newDatasetName: string;
@@ -33,6 +37,8 @@ interface AlignmentJobContextType {
   customConfiguration: KeyValuePairs;
   setCustomConfiguration: (config: KeyValuePairs) => void;
   setSettingsFormState: (state: FormValidationState) => void;
+  fineAlignmentOnly: boolean;
+  setFineAlignmentOnly: (fineAlignmentOnly: boolean) => void;
   areParametersValid: boolean;
   requirements: JobRequirement[];
   stepStatuses: { task: StepStatus; settings: StepStatus };
@@ -48,6 +54,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
   const [shouldUseManualMatches, setShouldUseManualMatches] = useState(false);
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
   const [settingsFormState, setSettingsFormState] = useState(EMPTY_FORM_VALIDATION_STATE);
+  const [fineAlignmentOnly, setFineAlignmentOnly] = useState(false);
   const dispatch = useDispatch();
 
   const dataset = useWkSelector((state) => state.dataset);
@@ -101,6 +108,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
         newDatasetName,
         manualMatchesAnnotationId,
         customConfiguration,
+        fineAlignmentOnly ? FINE_ALIGNMENT_MAX_JUMP_SIZE : undefined,
       );
       Toast.success("Alignment started successfully!");
       dispatch(setAIJobDrawerStateAction("invisible"));
@@ -116,6 +124,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     annotationId,
     shouldUseManualMatches,
     customConfiguration,
+    fineAlignmentOnly,
   ]);
 
   const value = {
@@ -131,6 +140,8 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     customConfiguration,
     setCustomConfiguration,
     setSettingsFormState,
+    fineAlignmentOnly,
+    setFineAlignmentOnly,
     areParametersValid,
     requirements,
     stepStatuses,

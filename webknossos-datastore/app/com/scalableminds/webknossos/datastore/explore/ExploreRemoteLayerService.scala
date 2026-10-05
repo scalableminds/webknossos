@@ -112,7 +112,7 @@ class ExploreRemoteLayerService @Inject() (
     } yield layersWithVoxelSizes
 
   // Rewrites s3://bucket/key to s3://s3.<region>.amazonaws.com/bucket/key, since not all clients (e.g. the python
-  // library) support the short style. Falls back to the global endpoint if the region cannot be looked up.
+  // library) support the short style. Falls back to the global endpoint if the region cannot be determined.
   private def insertS3EndpointIfMissing(upath: UPath, credentialOpt: Option[DataVaultCredential])(implicit
       ec: ExecutionContext
   ): Fox[UPath] =

@@ -29,6 +29,9 @@ export type ListMeshChunksParamsWithTracingStoreURL = Omit<
 
 // If more than this fraction of an agglomerate's segments have no cached chunk list, the normal
 // listing of the agglomerate is requested instead of listing the uncached segments by their ids.
+// Both are a single request, and listing by ids needs less work on the server and a smaller
+// response. But it uploads the ids, and request bodies are not compressed. If most segments are
+// uncached, this upload costs more than listing and downloading the cached segments again.
 const MAX_UNCACHED_SEGMENT_FRACTION = 0.5;
 
 /*

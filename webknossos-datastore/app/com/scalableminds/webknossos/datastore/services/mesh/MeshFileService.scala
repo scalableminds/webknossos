@@ -26,11 +26,6 @@ case class ListMeshChunksRequest(
     annotationVersion: Option[Long]
 ) derives JsonAutoFormat
 
-case class ListMeshChunksForSegmentsRequest(
-    meshFileName: String,
-    segmentIds: Seq[UnsignedLong]
-) derives JsonAutoFormat
-
 case class MeshChunkDataRequest(
     byteOffset: Long,
     byteSize: Int,

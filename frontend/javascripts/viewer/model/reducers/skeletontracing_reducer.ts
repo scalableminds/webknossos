@@ -2,7 +2,6 @@ import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
 import DiffableMap from "libs/diffable_map";
 import Toast from "libs/toast";
-import { zeroPad } from "libs/utils";
 import clamp from "lodash-es/clamp";
 import identity from "lodash-es/identity";
 import orderBy from "lodash-es/orderBy";
@@ -47,6 +46,7 @@ import {
   deleteNode,
   deleteTrees,
   ensureTreeNames,
+  generateTreeName,
   getMaximumNodeId,
   getOrCreateTree,
   mergeTrees,
@@ -1157,7 +1157,7 @@ function SkeletonTracingReducer(
 
     case "ADD_TREES_AND_GROUPS": {
       const { trees, treeGroups, assignNewGroupId, targetGroupId } = action;
-      const treesWithNames = ensureTreeNames(state, trees);
+      const treesWithNames = ensureTreeNames(trees);
       const treesResult = addTreesAndGroups(
         skeletonTracing,
         treesWithNames,
@@ -1335,7 +1335,7 @@ function SkeletonTracingReducer(
         return state;
       }
 
-      const defaultName = `Tree${zeroPad(tree.treeId, 3)}`;
+      const defaultName = generateTreeName(tree.treeId);
       const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         name: action.name || defaultName,

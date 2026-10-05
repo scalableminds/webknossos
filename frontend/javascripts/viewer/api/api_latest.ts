@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import { requestTask } from "admin/api/tasks";
 import {
   doWithToken,
@@ -1808,7 +1809,9 @@ class DataApi {
       Store.getState(),
       layerName,
     );
-    return getMappingsForDatasetLayer(dataset.dataStore.url, dataset, segmentationLayer.name);
+    return unwrapOrThrow(
+      await getMappingsForDatasetLayer(dataset.dataStore.url, dataset, segmentationLayer.name),
+    );
   }
 
   /**

@@ -181,9 +181,8 @@ export default function* watchActivatedMappings(): Saga<void> {
     function* handler(action: EnsureLayerMappingsAreLoadedAction) {
       const layerName =
         action.layerName || (yield* select((state) => getVisibleSegmentationLayer(state)?.name));
-      if (layerName) {
-        yield* loadLayerMappings(layerName, true);
-      }
+      const layerMappings = layerName ? yield* loadLayerMappings(layerName, true) : [];
+      action.callback(layerMappings != null);
     },
   );
   yield* takeEvery("DEBUG__RELOAD_HDF5_MAPPING", reloadHdf5Mapping);

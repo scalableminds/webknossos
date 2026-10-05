@@ -71,6 +71,7 @@ export const tracing: ServerSkeletonTracing = {
 export const annotation: APIAnnotation = {
   datasetId: "datasetId-66f3c82966010034942e9740",
   modified: 1529066010230,
+  created: 1529066010230,
   state: "Active",
   id: "annotationId-5b1fd1cf97000027049c67ee",
   name: "",

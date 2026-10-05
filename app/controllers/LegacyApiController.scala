@@ -207,7 +207,8 @@ class LegacyApiController @Inject() (
           folderId,
           includeSubfolders,
           searchQuery,
-          limit
+          limit,
+          includeAnnotationCount = None
         )(request)
       )
     else

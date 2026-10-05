@@ -14,8 +14,6 @@ env:
   POSTGRES_URL: "jdbc:postgresql://localhost:5434/webknossos"
   POSTGRES_USER: "webknossos_user"
   POSTGRES_PASSWORD: "secret_password"
-  CERTIFICATE: ${{ secrets.CERTIFICATE_FOR_CI_ONLY }}
-  CERTIFICATE_PUBLIC_KEY: ${{ secrets.CERTIFICATE_PUBLIC_KEY }}
 
 jobs:
   frontend-tests:
@@ -127,6 +125,10 @@ jobs:
 
   build-smoketest-push:
     runs-on: ubuntu-22.04
+    env:
+      # Only set for this job, so that tests run against builds without a baked-in public key.
+      CERTIFICATE: ${{ secrets.CERTIFICATE_FOR_CI_ONLY }}
+      CERTIFICATE_PUBLIC_KEY: ${{ secrets.CERTIFICATE_PUBLIC_KEY }}
     steps:
       - uses: actions/checkout@v7
         with:

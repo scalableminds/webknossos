@@ -65,7 +65,7 @@ exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
   "defaultToLegacyBindings": false,
   "discussionBoard": "https://forum.image.sc/tag/webknossos",
   "discussionBoardRequiresAdmin": false,
-  "editableMappingsEnabled": true,
+  "editableMappingsEnabled": false,
   "exportTiffMaxEdgeLengthVx": 8192,
   "exportTiffMaxVolumeMVx": 1024,
   "hideNavbarLogin": false,

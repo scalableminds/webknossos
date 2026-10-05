@@ -586,7 +586,8 @@ export function getReadableAnnotations(
 
 export async function getAnnotationCountForDataset(datasetId: string): Promise<number> {
   const { headers } = await Request.receiveJSONWithHeaders(
-    `/api/annotations/readable?limit=1&includeTotalCount=true&datasetId=${datasetId}`,
+    // Only count non-archived annotations to match the default annotation list.
+    `/api/annotations/readable?isFinished=false&limit=1&includeTotalCount=true&datasetId=${datasetId}`,
     // Callers treat the count as optional, e.g. when viewing public data without being authorized to list annotations.
     { showErrorToast: false, doNotInvestigate: true },
   );
@@ -1335,6 +1336,7 @@ export async function getDatasets(
   searchQuery: string | null = null,
   includeSubfolders: boolean | null = null,
   limit: number | null = null,
+  includeAnnotationCount: boolean = false,
 ): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
@@ -1351,6 +1353,9 @@ export async function getDatasets(
   }
   if (includeSubfolders != null) {
     params.set("includeSubfolders", includeSubfolders ? "true" : "false");
+  }
+  if (includeAnnotationCount) {
+    params.set("includeAnnotationCount", "true");
   }
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);

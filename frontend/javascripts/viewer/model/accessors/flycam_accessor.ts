@@ -18,7 +18,6 @@ import type {
   OrthoViewRects,
   Vector2,
   Vector3,
-  Vector4,
   ViewMode,
 } from "viewer/constants";
 import constants, { OrthoViews } from "viewer/constants";
@@ -62,16 +61,14 @@ function calculateTotalBucketCountForZoomLevel(
   viewportRects: OrthoViewRects,
   unzoomedMatrix: Matrix4x4,
   abortLimit: number,
+  obliquePicker: typeof determineBucketsForPlane,
 ) {
   const mag = denseMags[currentMagIndex];
   const logZoomStep = Math.log2(Math.max(...mag));
 
   let counter = 0;
-
-  const addresses = [];
-  const enqueueFunction = (bucketAddress: Vector4) => {
+  const enqueueFunction = () => {
     counter++;
-    addresses.push(bucketAddress);
   };
 
   // Define dummy values
@@ -90,7 +87,7 @@ function calculateTotalBucketCountForZoomLevel(
       abortLimit,
     );
   } else {
-    determineBucketsForPlane(
+    obliquePicker(
       loadingStrategy,
       denseMags,
       position,
@@ -125,6 +122,8 @@ export function _getMaximumZoomForAllMags(
   maximumCapacity: number,
   layerMatrix: Matrix4x4,
   flycamMatrix: Matrix4x4,
+  // TEMPORARY (revert before merging): only for the dev-only comparison of bucket pickers.
+  obliquePicker: typeof determineBucketsForPlane = determineBucketsForPlane,
 ): Array<number> {
   const unzoomedMatrix = M4x4.mul(layerMatrix, flycamMatrix);
 
@@ -176,6 +175,7 @@ export function _getMaximumZoomForAllMags(
       // Increment the limit by one, so that rendering is still possible
       // when exactly meeting the limit.
       maximumCapacity + 1,
+      obliquePicker,
     );
 
     if (nextCapacity > maximumCapacity) {

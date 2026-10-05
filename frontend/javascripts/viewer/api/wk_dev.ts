@@ -37,6 +37,13 @@ export const WkDevFlags = {
     visualizeBucketsOnGPU: false,
     // For visualizing buckets which are prefetched
     visualizePrefetchedBuckets: false,
+    // TEMPORARY (revert before merging): if true, every oblique pick and every
+    // getMaximumZoomForAllMags computation additionally runs master's scan-line picker and the
+    // flood fill picker of #10010 (each with the priority queue they used), on the same input and
+    // purely for timing. Only the results of the current code are used. Statistics are logged to
+    // the consoles of the bucket picker worker (every 100 picks) and of the
+    // getMaximumZoomForAllMags worker (every call).
+    compareObliquePickers: true,
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,

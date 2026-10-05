@@ -19,6 +19,10 @@ env:
   # Compile with -Werror in all sbt jobs (see build.sbt). Identical scalacOptions are required so that
   # the jobs can share zinc's incremental compile cache.
   WK_FAIL_ON_WARNING: "true"
+  # Caching policy: feature branches restore the sbt dependency and incremental compile caches.
+  # master and tags never restore them and always build from scratch. master still saves its clean build,
+  # which is the fallback for feature branches. Caches are scoped to the branch (and master) that saved them.
+  # Note: a cache's path list is part of its version, changing it invalidates all entries.
 
 jobs:
   frontend-tests:
@@ -82,7 +86,7 @@ jobs:
           fetch-depth: 5
           persist-credentials: false
 
-      # No `cache: sbt` here: this job only resolves the build's plugins. It would save its incomplete
+      # No sbt dependency cache here: this job only resolves the build's plugins. It would save its incomplete
       # dependency cache first, under the same key the compiling jobs need to save the full one.
       - uses: actions/setup-java@v5
         with:
@@ -111,13 +115,20 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "21"
-          cache: sbt
       - uses: sbt/setup-sbt@v1
 
-      # Incremental compile cache. Note: the path list is part of the cache version, changing it invalidates all entries.
+      # This job only runs on feature branches, so it always uses the caches (see caching policy above).
+      - name: Cache sbt dependencies
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cache/coursier
+            ~/.ivy2/cache
+            ~/.sbt
+          key: sbt-deps-${{ hashFiles('build.sbt', 'project/*.sbt', 'project/*.scala', 'project/build.properties') }}
       # Falls back to the latest master build, so that a branch's first push
       # only recompiles what changed relative to master.
-      - name: Restore incremental compile cache
+      - name: Cache incremental compilation
         uses: actions/cache@v6
         with:
           # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
@@ -173,6 +184,9 @@ jobs:
 
   build-smoketest-push:
     runs-on: ubuntu-22.04
+    env:
+      RESTORE_CACHES: ${{ github.ref_type == 'branch' && github.ref_name != 'master' }}
+      SAVE_CACHES: ${{ github.ref_type == 'branch' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -183,10 +197,20 @@ jobs:
         with:
           driver: docker
 
-      # Incremental compile cache. Release (tag) builds always compile from scratch.
+      # Restore and save are separate steps so master can save its clean build without restoring (see caching policy above).
+      - name: Restore sbt dependencies cache
+        id: restore-sbt-deps
+        if: env.RESTORE_CACHES == 'true'
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/.cache/coursier
+            ~/.ivy2/cache
+            ~/.sbt
+          key: sbt-deps-${{ hashFiles('build.sbt', 'project/*.sbt', 'project/*.scala', 'project/build.properties') }}
       - name: Restore incremental compile cache
-        if: github.ref_type != 'tag'
-        uses: actions/cache@v6
+        if: env.RESTORE_CACHES == 'true'
+        uses: actions/cache/restore@v6
         with:
           # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
           # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
@@ -214,7 +238,6 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "21"
-          cache: sbt
       - uses: sbt/setup-sbt@v1
 
       - name: "Custom environment variables (Not Pull Request)"
@@ -263,6 +286,30 @@ jobs:
         run: |
           sbt --client "stage; webknossosDatastore/stage; webknossosTracingstore/stage"
           sbt --client shutdown
+
+      - name: Save incremental compile cache
+        if: env.SAVE_CACHES == 'true'
+        uses: actions/cache/save@v6
+        with:
+          # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
+          # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
+          path: |
+            target/*
+            */target/*
+            project/project/target/*
+            !**/target/universal
+            !**/target/web
+            !**/target/global-logging
+          key: zinc-build-${{ github.ref_name }}-${{ github.sha }}
+      - name: Save sbt dependencies cache
+        if: env.SAVE_CACHES == 'true' && steps.restore-sbt-deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/.cache/coursier
+            ~/.ivy2/cache
+            ~/.sbt
+          key: sbt-deps-${{ hashFiles('build.sbt', 'project/*.sbt', 'project/*.scala', 'project/build.properties') }}
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 

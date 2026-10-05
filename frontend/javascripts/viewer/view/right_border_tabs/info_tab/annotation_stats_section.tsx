@@ -34,20 +34,18 @@ type StatEntry = {
 export function AnnotationStats({
   stats,
   orientation = "vertical",
-  hideZeroCounts = false,
 }: {
   stats: TracingStats | EmptyObject;
   // "vertical" (default) stacks the stats as rows (e.g. in time tracking).
   // "horizontal" lays them out side by side (e.g. in the dashboard list views).
   orientation?: "vertical" | "horizontal";
-  hideZeroCounts?: boolean;
 }) {
   const skeletonStats = getSkeletonStats(stats);
   const volumeStats = getVolumeStats(stats);
   const totalSegmentCount = volumeStats.reduce((sum, [_, volume]) => sum + volume.segmentCount, 0);
   const boundingBoxCount = getBoundingBoxCountWithPrecedence(stats);
 
-  let entries: StatEntry[] = [];
+  const entries: StatEntry[] = [];
   if (skeletonStats) {
     entries.push({
       key: "skeleton",
@@ -77,9 +75,6 @@ export function AnnotationStats({
     });
   }
 
-  if (hideZeroCounts) {
-    entries = entries.filter((entry) => entry.count > 0);
-  }
   if (entries.length === 0) return null;
 
   if (orientation === "horizontal") {

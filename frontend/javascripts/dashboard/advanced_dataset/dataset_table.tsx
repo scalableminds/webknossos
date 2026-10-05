@@ -428,11 +428,8 @@ class DatasetRenderer {
   }
   renderTags(): React.ReactNode {
     return this.data.isActive ? (
-      <DatasetTags
-        dataset={this.data}
-        onClickTag={this.datasetTable.props.addTagToSearch}
-        updateDataset={this.datasetTable.props.updateDataset}
-      />
+      // Tags are edited in the details sidebar, so they are only clickable for filtering here.
+      <DatasetTags dataset={this.data} onClickTag={this.datasetTable.props.addTagToSearch} />
     ) : (
       <FastTooltip title="No tags available for inactive datasets">
         <WarningOutlined
@@ -963,8 +960,10 @@ export function DatasetTags({
 }: {
   dataset: APIDatasetCompact;
   onClickTag?: (t: string) => void;
-  updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
+  // Without it, the tags are read-only.
+  updateDataset?: (datasetId: string, updater: DatasetUpdater) => void;
 }) {
+  const isEditable = dataset.isEditable && updateDataset != null;
   const editTagFromDataset = (
     shouldAddTag: boolean,
     tag: string,
@@ -992,7 +991,7 @@ export function DatasetTags({
       };
     }
 
-    updateDataset(dataset.id, updater);
+    updateDataset?.(dataset.id, updater);
   };
 
   return (
@@ -1004,10 +1003,10 @@ export function DatasetTags({
           kind="datasets"
           onClick={partial(onClickTag || noop, tag)}
           onClose={partial(editTagFromDataset, false, tag)}
-          closable={dataset.isEditable}
+          closable={isEditable}
         />
       ))}
-      {dataset.isEditable ? (
+      {isEditable ? (
         <EditableTextIcon
           icon={<PlusOutlined />}
           onChange={partial(editTagFromDataset, true)}

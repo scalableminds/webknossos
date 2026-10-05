@@ -60,10 +60,7 @@ import {
 } from "types/api_types";
 import type { Comparator } from "types/type_utils";
 import {
-  getBoundingBoxCountWithPrecedence,
-  getSkeletonStats,
   getStatsOfAnnotationInfo,
-  getVolumeStats,
   isAnnotationEditableByNonOwners,
 } from "viewer/model/accessors/annotation_accessor";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
@@ -609,10 +606,10 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     );
   };
 
-  renderTags = (annotation: APIAnnotationInfo, className?: string) => (
+  renderTags = (annotation: APIAnnotationInfo, isEditable: boolean, className?: string) => (
     <AnnotationTags
       annotation={annotation}
-      isEditable={!this.state.shouldShowArchivedAnnotations}
+      isEditable={isEditable && !this.state.shouldShowArchivedAnnotations}
       onClickTag={this.addTagToSearch}
       onAddTag={(tag) => this.editTagFromAnnotation(annotation, true, tag)}
       onRemoveTag={(tag, event) => this.editTagFromAnnotation(annotation, false, tag, event)}
@@ -622,11 +619,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
   renderAnnotationRow = (annotation: APIAnnotationInfo) => {
     const stats = getStatsOfAnnotationInfo(annotation);
-    // Checked here as well, so that no dangling separator dot is rendered for an empty stats item.
-    const hasNonZeroStats =
-      (getSkeletonStats(stats)?.treeCount ?? 0) > 0 ||
-      getVolumeStats(stats).some(([_tracingId, volumeStats]) => volumeStats.segmentCount > 0) ||
-      (getBoundingBoxCountWithPrecedence(stats) ?? 0) > 0;
     const teamTags = annotation.teams.map((team) => (
       <Tag
         key={team.id}
@@ -645,7 +637,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           isReadOnly={!this.isAnnotationEditable(annotation)}
           isLocked={annotation.isLockedByOwner}
         />
-        {this.renderTags(annotation, "dashboard-annotation-tags")}
+        {/* Tags are edited in the details sidebar, so they are only clickable for filtering here. */}
+        {this.renderTags(annotation, false, "dashboard-annotation-tags")}
         <RowMetaLine
           items={[
             this.renderCreatedMetaItem(annotation),
@@ -654,8 +647,9 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
                 <TeamOutlined /> shared with teams {teamTags}
               </span>
             ) : null,
-            hasNonZeroStats ? (
-              <AnnotationStats key="stats" stats={stats} orientation="horizontal" hideZeroCounts />
+            // Checked here as well, so that no dangling separator dot is rendered for an empty stats item.
+            Object.keys(stats).length > 0 ? (
+              <AnnotationStats key="stats" stats={stats} orientation="horizontal" />
             ) : null,
           ]}
         />
@@ -948,7 +942,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           tags={
             selectedAnnotation != null &&
             (selectedAnnotation.tags.length > 0 || !this.state.shouldShowArchivedAnnotations)
-              ? this.renderTags(selectedAnnotation)
+              ? this.renderTags(selectedAnnotation, true)
               : null
           }
           onRename={

@@ -44,7 +44,7 @@ export function AnnotationDetailsSidebar({
   annotation: APIAnnotationInfo | null;
   activeUser: APIUser;
   isReadOnly: boolean;
-  // The (editable) tags, rendered by the list so that they behave the same in both places.
+  // The editable tags, rendered by the list, which handles the tag changes.
   tags: React.ReactNode;
   // Only passed if the annotation may be renamed by the active user.
   onRename?: (newName: string) => void;
@@ -89,7 +89,7 @@ function AnnotationDetails({
   annotation: APIAnnotationInfo;
   activeUser: APIUser;
   isReadOnly: boolean;
-  // The (editable) tags, rendered by the list so that they behave the same in both places.
+  // The editable tags, rendered by the list, which handles the tag changes.
   tags: React.ReactNode;
   onRename?: (newName: string) => void;
   onArchive?: () => Promise<void>;

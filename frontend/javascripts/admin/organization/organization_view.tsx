@@ -9,7 +9,7 @@ import { Breadcrumb, Flex, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import constants from "viewer/constants";
-import { OrganizationSidebarUpsell } from "./organization_sidebar_upsell";
+import { OrganizationSidebarPlanHint } from "./organization_sidebar_plan_hint";
 
 const { Sider, Content } = Layout;
 
@@ -96,7 +96,7 @@ const OrganizationView = () => {
         <Flex
           vertical
           style={{
-            // Keeps the upsell card at the bottom of the viewport on long pages.
+            // Keeps the plan hint card at the bottom of the viewport on long pages.
             position: "sticky",
             top: constants.DEFAULT_NAVBAR_HEIGHT,
             height: `calc(100vh - ${constants.DEFAULT_NAVBAR_HEIGHT}px)`,
@@ -110,7 +110,7 @@ const OrganizationView = () => {
             onClick={({ key }) => navigate(`/organization/${key}`)}
           />
           <div style={{ marginTop: "auto", padding: "0 24px 24px" }}>
-            <OrganizationSidebarUpsell />
+            <OrganizationSidebarPlanHint />
           </div>
         </Flex>
       </Sider>

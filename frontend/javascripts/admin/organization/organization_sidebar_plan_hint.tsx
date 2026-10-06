@@ -1,9 +1,7 @@
-import { FieldTimeOutlined, RobotOutlined, TeamOutlined } from "@ant-design/icons";
 import { App, Button, Flex, Progress, Typography } from "antd";
 import dayjs from "dayjs";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
-import type React from "react";
 import type { APIOrganization } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import {
@@ -18,12 +16,12 @@ import {
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
-type SidebarUpsell =
+type SidebarPlanHint =
   | { kind: "planExpiring"; daysLeft: number }
   | { kind: "teamUpgrade" }
   | { kind: "aiAddon"; includedCredits: number };
 
-function getSidebarUpsell(organization: APIOrganization): SidebarUpsell | null {
+function getSidebarPlanHint(organization: APIOrganization): SidebarPlanHint | null {
   const daysLeft = getDaysUntilPlanExpires(organization);
   if (
     daysLeft != null &&
@@ -44,25 +42,23 @@ function getSidebarUpsell(organization: APIOrganization): SidebarUpsell | null {
   return null;
 }
 
-function useSidebarUpsell(): SidebarUpsell | null {
+function useSidebarPlanHint(): SidebarPlanHint | null {
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
   const canRequestUpgrades = useWkSelector((state) =>
     state.activeUser ? isUserAllowedToRequestUpgrades(state.activeUser) : false,
   );
-  return canRequestUpgrades ? getSidebarUpsell(organization) : null;
+  return canRequestUpgrades ? getSidebarPlanHint(organization) : null;
 }
 
-function UpsellCard({
-  icon,
+function PlanHintCard({
   title,
   description,
   progressPercent,
   actionLabel,
   onAction,
 }: {
-  icon: React.ReactNode;
   title: string;
   description: string;
   progressPercent?: number;
@@ -80,10 +76,7 @@ function UpsellCard({
         background: "var(--ant-color-primary-bg)",
       }}
     >
-      <Flex gap={8} align="baseline">
-        <span style={{ color: "var(--ant-color-primary)", fontSize: 14 }}>{icon}</span>
-        <Typography.Text strong>{title}</Typography.Text>
-      </Flex>
+      <Typography.Text strong>{title}</Typography.Text>
       {progressPercent != null ? (
         <Progress
           percent={progressPercent}
@@ -103,7 +96,7 @@ function UpsellCard({
   );
 }
 
-function PlanExpiringUpsellCard({ daysLeft }: { daysLeft: number }) {
+function PlanExpiringHintCard({ daysLeft }: { daysLeft: number }) {
   const { modal } = App.useApp();
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
@@ -115,8 +108,7 @@ function PlanExpiringUpsellCard({ daysLeft }: { daysLeft: number }) {
   const elapsedDays = Math.max(0, PLAN_EXPIRATION_REMINDER_DAYS - daysLeft);
 
   return (
-    <UpsellCard
-      icon={<FieldTimeOutlined />}
+    <PlanHintCard
       title={`${planLabel} ends in ${daysLeft} ${pluralize("day", daysLeft)}`}
       progressPercent={(elapsedDays / PLAN_EXPIRATION_REMINDER_DAYS) * 100}
       description={`Keep ${featuresLabel} features after ${dayjs(organization.paidUntil).format("D MMM")}.`}
@@ -126,13 +118,12 @@ function PlanExpiringUpsellCard({ daysLeft }: { daysLeft: number }) {
   );
 }
 
-function TeamUpgradeUpsellCard() {
+function TeamUpgradeHintCard() {
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
   return (
-    <UpsellCard
-      icon={<TeamOutlined />}
+    <PlanHintCard
       title="Working with others?"
       description="Team adds collaborative annotation and project management."
       actionLabel="Upgrade to Team"
@@ -143,10 +134,9 @@ function TeamUpgradeUpsellCard() {
   );
 }
 
-function AiAddonUpsellCard({ includedCredits }: { includedCredits: number }) {
+function AiAddonHintCard({ includedCredits }: { includedCredits: number }) {
   return (
-    <UpsellCard
-      icon={<RobotOutlined />}
+    <PlanHintCard
       title="Train your own AI models"
       description={`The AI Add-on includes GPU compute and ${includedCredits.toLocaleString("en-US")} credits.`}
       actionLabel="Get AI Add-on"
@@ -155,15 +145,15 @@ function AiAddonUpsellCard({ includedCredits }: { includedCredits: number }) {
   );
 }
 
-export function OrganizationSidebarUpsell() {
-  const upsell = useSidebarUpsell();
-  switch (upsell?.kind) {
+export function OrganizationSidebarPlanHint() {
+  const planHint = useSidebarPlanHint();
+  switch (planHint?.kind) {
     case "planExpiring":
-      return <PlanExpiringUpsellCard daysLeft={upsell.daysLeft} />;
+      return <PlanExpiringHintCard daysLeft={planHint.daysLeft} />;
     case "teamUpgrade":
-      return <TeamUpgradeUpsellCard />;
+      return <TeamUpgradeHintCard />;
     case "aiAddon":
-      return <AiAddonUpsellCard includedCredits={upsell.includedCredits} />;
+      return <AiAddonHintCard includedCredits={planHint.includedCredits} />;
     default:
       return null;
   }

@@ -7,7 +7,13 @@ import {
   moveFolder,
   updateFolder,
 } from "admin/api/folders";
-import { type DatasetUpdater, getDataset, getDatasets, updateDatasetPartial } from "admin/rest_api";
+import {
+  type DatasetListOptions,
+  type DatasetUpdater,
+  getDataset,
+  getDatasets,
+  updateDatasetPartial,
+} from "admin/rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { conjugate, diffArrays, pluralize } from "libs/utils";
@@ -25,6 +31,11 @@ import {
 } from "types/api_types";
 
 export const SEARCH_RESULTS_LIMIT = 100;
+// Filtering and sorting of the dashboard dataset list, applied by the backend.
+export type DatasetListParams = Pick<
+  DatasetListOptions,
+  "tags" | "isUnreported" | "isActive" | "onlyMyOrganization" | "sortBy"
+>;
 export const MINIMUM_SEARCH_QUERY_LENGTH = 3;
 const FOLDER_TREE_REFETCH_INTERVAL = 30000;
 // Keeps a folder tree that was prefetched during app startup (see main.tsx) from being fetched
@@ -68,22 +79,32 @@ export function useDatasetSearchQuery(
   query: string | null,
   folderId: string | null,
   searchRecursively: boolean,
+  listParams: DatasetListParams,
 ) {
-  const queryKey = ["dataset", "search", query, "in", folderId, "recursive?", searchRecursively];
+  const queryKey = [
+    "dataset",
+    "search",
+    query,
+    "in",
+    folderId,
+    "recursive?",
+    searchRecursively,
+    listParams,
+  ];
   return useQuery({
     queryKey,
     queryFn: async () => {
       if (query == null || query.length < MINIMUM_SEARCH_QUERY_LENGTH) {
         return [];
       }
-      return await getDatasets(
-        null,
+      return await getDatasets({
+        ...listParams,
         folderId,
-        query,
-        searchRecursively,
-        SEARCH_RESULTS_LIMIT,
-        true,
-      );
+        searchQuery: query,
+        includeSubfolders: searchRecursively,
+        limit: SEARCH_RESULTS_LIMIT,
+        includeAnnotationCount: true,
+      });
     },
     refetchOnWindowFocus: false,
     enabled: query != null,
@@ -111,7 +132,7 @@ export function useFolderHierarchyQuery() {
 
 const LIST_REQUEST_DURATION_THRESHOLD = 500;
 const DATASET_POLLING_INTERVAL = 60 * 1000;
-export function useDatasetsInFolderQuery(folderId: string | null) {
+export function useDatasetsInFolderQuery(folderId: string | null, listParams: DatasetListParams) {
   /*
    * This query is a bit more complex. The default behavior of react-query
    * would be to show the cached data, fetch new data and then update the
@@ -137,7 +158,9 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
    */
 
   const queryClient = useQueryClient();
-  const queryKey = ["datasetsByFolder", folderId];
+  const queryKey = ["datasetsByFolder", folderId, listParams];
+  const fetchDatasets = () =>
+    getDatasets({ ...listParams, folderId, includeAnnotationCount: true });
   const fetchedDatasetsRef = useRef<APIDatasetCompact[] | null>(null);
 
   const queryData = useQuery({
@@ -157,7 +180,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
         return datasets;
       }
 
-      return getDatasets(null, folderId, null, null, null, true);
+      return fetchDatasets();
     },
     refetchOnWindowFocus: false,
     enabled: false,
@@ -174,7 +197,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
 
     let effectWasCancelled = false;
     const startTime = performance.now();
-    getDatasets(null, folderId, null, null, null, true)
+    fetchDatasets()
       .then((newDatasets) => {
         if (effectWasCancelled) {
           return;
@@ -243,7 +266,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
             if (timeoutId == null) {
               return;
             }
-            const newDatasets = await getDatasets(null, folderId, null, null, null, true);
+            const newDatasets = await fetchDatasets();
             const oldDatasets = (queryClient.getQueryData(queryKey) || []) as APIDatasetCompact[];
             queryClient.setQueryData(
               queryKey,
@@ -268,7 +291,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
       }
       Toast.close(`new-datasets-are-available-${folderId || null}`);
     };
-  }, [folderId]);
+  }, [folderId, JSON.stringify(listParams)]);
 
   return queryData;
 }
@@ -413,33 +436,37 @@ export function useUpdateDatasetMutation(folderId: string | null) {
     mutationKey,
     onSuccess: (updatedDataset: APIMaybeUnimportedDataset) => {
       // The full dataset doesn't contain the annotation count, so carry it over from the list.
-      const previousAnnotationCount = (
-        queryClient.getQueryData(mutationKey) as APIDatasetCompact[] | undefined
-      )?.find((ds) => ds.id === updatedDataset.id)?.annotationCount;
+      const previousAnnotationCount = queryClient
+        .getQueriesData<APIDatasetCompact[]>({ queryKey: mutationKey })
+        .flatMap(([_key, datasets]) => datasets ?? [])
+        .find((ds) => ds.id === updatedDataset.id)?.annotationCount;
       const toCompact = (dataset: APIMaybeUnimportedDataset): APIDatasetCompact => ({
         ...convertDatasetToCompact(dataset),
         annotationCount: previousAnnotationCount,
       });
-      queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
-        (oldItems || [])
-          .map((oldDataset: APIDatasetCompact) => {
-            return oldDataset.id === updatedDataset.id
-              ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
-                toCompact({
-                  ...updatedDataset,
-                  lastUsedByUser: oldDataset.lastUsedByUser,
-                })
-              : oldDataset;
-          })
-          .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
+      // The folder is cached once per filter/sort combination, so update all of them.
+      queryClient.setQueriesData(
+        { queryKey: mutationKey },
+        (oldItems: APIDatasetCompact[] | undefined) =>
+          oldItems
+            ?.map((oldDataset: APIDatasetCompact) => {
+              return oldDataset.id === updatedDataset.id
+                ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
+                  toCompact({
+                    ...updatedDataset,
+                    lastUsedByUser: oldDataset.lastUsedByUser,
+                  })
+                : oldDataset;
+            })
+            .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
       );
       // Also update the cached dataset under the key "datasetById".
       queryClient.setQueryData(["datasetById", updatedDataset.id], updatedDataset);
       const targetFolderId = updatedDataset.folderId;
       if (targetFolderId !== folderId) {
         // The dataset was moved to another folder. Add the dataset to that target folder
-        queryClient.setQueryData(
-          ["datasetsByFolder", targetFolderId],
+        queryClient.setQueriesData(
+          { queryKey: ["datasetsByFolder", targetFolderId] },
           (oldItems: APIDatasetCompact[] | undefined) => {
             if (oldItems == null) {
               // Don't update the query data, if it doesn't exist, yet.

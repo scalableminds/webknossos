@@ -49,7 +49,10 @@ import { CategorizationSearch } from "viewer/view/components/categorization_labe
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import { FolderBreadcrumb } from "./advanced_dataset/folder_breadcrumb";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
-import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
+import type {
+  DatasetCollectionContextValue,
+  DatasetFilteringMode,
+} from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
   SEARCH_RESULTS_LIMIT,
@@ -66,7 +69,6 @@ type Props = {
   // Used for cards for a brand-new organizations.
   emptyStateContent?: React.ReactNode;
 };
-export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
   searchQuery: string;
   datasetFilteringMode: DatasetFilteringMode;
@@ -87,12 +89,6 @@ const persistence = new Persistence<PersistenceState>(
   "datasetList",
 );
 
-function filterDatasetsForUsersOrganization(datasets: APIDatasetCompact[], user: APIUser) {
-  return features().isWkorgInstance
-    ? datasets.filter((d) => d.owningOrganization === user.organization)
-    : datasets;
-}
-
 const refreshMenuItems: ItemType[] = [
   {
     key: "1",
@@ -110,9 +106,7 @@ function DatasetView({
 }: Props) {
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
-  const [searchTags, setSearchTags] = useState<string[]>([]);
-  const [datasetFilteringMode, setDatasetFilteringMode] =
-    useState<DatasetFilteringMode>("onlyShowReported");
+  const { searchTags, setSearchTags, datasetFilteringMode, setDatasetFilteringMode } = context;
   const [jobs, setJobs] = useState<APIJob[]>([]);
   const { data: folder } = useFolderQuery(context.activeFolderId);
 
@@ -129,7 +123,7 @@ function DatasetView({
     if (state.datasetFilteringMode != null) {
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
-  }, [setSearchQuery]);
+  }, [setSearchQuery, setDatasetFilteringMode]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -178,14 +172,14 @@ function DatasetView({
   }
 
   function renderTable(
-    filteredDatasets: APIDatasetCompact[],
+    datasets: APIDatasetCompact[],
     subfolders: FolderItem[],
     isLoading: boolean,
   ) {
     return (
       <DatasetTable
         context={context}
-        datasets={filteredDatasets}
+        datasets={datasets}
         subfolders={subfolders}
         onSelectDataset={onSelectDataset}
         selectedDatasets={selectedDatasets}
@@ -252,7 +246,6 @@ function DatasetView({
   const datasets = context.datasets;
   // Don't show subfolders when the search is active
   const subfolders = searchQuery == null ? context.getActiveSubfolders() : [];
-  const filteredDatasets = filterDatasetsForUsersOrganization(datasets, user);
 
   const isEmpty =
     datasets.length === 0 &&
@@ -269,7 +262,7 @@ function DatasetView({
         <GlobalSearchHeader
           searchQuery={searchQuery}
           isEmpty={isEmpty}
-          filteredDatasets={filteredDatasets}
+          filteredDatasets={datasets}
           context={context}
         />
       )}
@@ -282,7 +275,7 @@ function DatasetView({
       />
       {!searchQuery && <FolderBreadcrumb context={context} />}
       <NewJobsAlert jobs={jobs} />
-      {renderTable(filteredDatasets, subfolders, isLoading)}
+      {renderTable(datasets, subfolders, isLoading)}
     </div>
   );
 }

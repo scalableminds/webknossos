@@ -104,7 +104,7 @@ export async function applyViewConfigurationToDatasetsInFolder(
 ): Promise<void> {
   const [sourceConfiguration, datasetsInFolder] = await Promise.all([
     getDatasetDefaultConfiguration(sourceDataset.id),
-    getDatasets(null, sourceDataset.folderId),
+    getDatasets({ folderId: sourceDataset.folderId }),
   ]);
   const targetDatasets = datasetsInFolder.filter(
     (dataset) => dataset.id !== sourceDataset.id && dataset.isActive && dataset.isEditable,

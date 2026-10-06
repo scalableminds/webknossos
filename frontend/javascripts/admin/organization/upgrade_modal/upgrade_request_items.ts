@@ -45,10 +45,27 @@ export function getPlanTier(pricingPlan: PricingPlanEnum): PlanTier {
   }
 }
 
+const RANK_TO_TIER: PlanTier[] = ["Personal", "Team", "Power"];
+
+// The plans that can be requested from the current one. The first one is the default.
+export function getUpgradeTargetTiers(currentTier: PlanTier): PlanTier[] {
+  return RANK_TO_TIER.filter((tier) => TIER_RANK[tier] > TIER_RANK[currentTier]);
+}
+
 export function getUpgradeTargetTier(currentTier: PlanTier): PlanTier | null {
-  if (currentTier === "Personal") return "Team";
-  if (currentTier === "Team") return "Power";
-  return null;
+  return getUpgradeTargetTiers(currentTier)[0] ?? null;
+}
+
+// The value of the plan selection is the rank of the requested plan. It is only set when
+// there is more than one plan to choose from.
+export function getRequestedTier(currentTier: PlanTier, selection: Selection): PlanTier | null {
+  if (selection.plan == null) return null;
+  const { value } = selection.plan;
+  return value != null ? RANK_TO_TIER[value] : getUpgradeTargetTier(currentTier);
+}
+
+export function getTierRank(tier: PlanTier): number {
+  return TIER_RANK[tier];
 }
 
 export function isTierAtLeast(tier: PlanTier, minTier: PlanTier): boolean {
@@ -56,15 +73,14 @@ export function isTierAtLeast(tier: PlanTier, minTier: PlanTier): boolean {
 }
 
 export function getEffectiveTier(currentTier: PlanTier, selection: Selection): PlanTier {
-  const targetTier = getUpgradeTargetTier(currentTier);
-  return selection.plan != null && targetTier != null ? targetTier : currentTier;
+  return getRequestedTier(currentTier, selection) ?? currentTier;
 }
 
-function formatUserCount(count: number): string {
+export function formatUserCount(count: number): string {
   return count === Number.POSITIVE_INFINITY ? "∞" : formatNumber(count);
 }
 
-function formatStorage(bytes: number): string {
+export function formatStorage(bytes: number): string {
   return bytes === Number.POSITIVE_INFINITY ? "∞" : formatCountToDataAmountUnit(bytes, true);
 }
 
@@ -91,7 +107,7 @@ export function getUpgradeItems(
   canOrderCredits: boolean,
 ): ItemDef[] {
   const currentTier = getPlanTier(organization.pricingPlan);
-  const targetTier = getUpgradeTargetTier(currentTier);
+  const targetTiers = getUpgradeTargetTiers(currentTier);
   const isPersonal = currentTier === "Personal";
 
   // On Personal, all quota upgrades are based on what the Team plan includes.
@@ -101,16 +117,29 @@ export function getUpgradeItems(
     : organization.includedStorageBytes;
   const creditBalance = getCreditBalance(organization);
 
-  const plan: ItemDef | null =
-    targetTier != null
-      ? {
-          id: "plan",
-          label: `Upgrade to ${targetTier} plan`,
-          hint: `${currentTier} → ${targetTier}`,
-          minPlan: "Personal",
-          delta: () => ({ from: currentTier, to: targetTier }),
-        }
-      : null;
+  let plan: ItemDef | null = null;
+  if (targetTiers.length === 1) {
+    const [targetTier] = targetTiers;
+    plan = {
+      id: "plan",
+      label: `Upgrade to ${targetTier} plan`,
+      hint: `${currentTier} → ${targetTier}`,
+      minPlan: "Personal",
+      delta: () => ({ from: currentTier, to: targetTier }),
+    };
+  } else if (targetTiers.length > 1) {
+    plan = {
+      id: "plan",
+      label: "Upgrade plan",
+      hint: `${currentTier} → ${targetTiers.join(" or ")}`,
+      amounts: targetTiers.map((tier) => ({ label: tier, value: TIER_RANK[tier] })),
+      minPlan: "Personal",
+      delta: (value) => ({
+        from: currentTier,
+        to: value != null ? RANK_TO_TIER[value] : targetTiers[0],
+      }),
+    };
+  }
 
   const users: ItemDef = {
     id: "users",

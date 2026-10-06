@@ -68,12 +68,16 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
     <Row gutter={24}>
       <Col span={12}>
         <TeamPlanUpgradeCard
-          teamUpgradeCallback={() => UpgradePricingPlanModal.upgradePricingPlan()}
+          teamUpgradeCallback={() =>
+            UpgradePricingPlanModal.upgradePricingPlan(PricingPlanEnum.Team)
+          }
         />
       </Col>
       <Col span={12}>
         <PowerPlanUpgradeCard
-          powerUpgradeCallback={() => UpgradePricingPlanModal.upgradePricingPlan()}
+          powerUpgradeCallback={() =>
+            UpgradePricingPlanModal.upgradePricingPlan(PricingPlanEnum.Power)
+          }
         />
       </Col>
     </Row>

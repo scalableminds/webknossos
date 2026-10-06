@@ -209,6 +209,15 @@ class OrganizationController @Inject() (
       case _                                           => "AI Add-on"
     }
 
+  // Only paid, non-trial plans that rank above the current one can be requested.
+  private def isValidPlanUpgrade(currentPlan: PricingPlan.PricingPlan, requestedPlan: PricingPlan.PricingPlan) =
+    (requestedPlan == PricingPlan.Team || requestedPlan == PricingPlan.Power) &&
+      PricingPlan.isUpgrade(currentPlan, requestedPlan)
+
+  // The AI Add-on needs at least the Team plan (possibly as part of the same request) and must not be active yet.
+  private def canRequestAiAddon(organization: Organization, effectivePlan: PricingPlan.PricingPlan) =
+    organization.aiPlan.isEmpty && PricingPlan.tierRank(effectivePlan) >= PricingPlan.tierRank(PricingPlan.Team)
+
   private def pluralize(count: Int, singular: String): String =
     s"$count $singular${if (count == 1) "" else "s"}"
 
@@ -241,6 +250,11 @@ class OrganizationController @Inject() (
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
           request.identity._organization
         ) ~> NOT_FOUND
+        _ <- Fox.fromBool(upgradeRequest.plan.forall(isValidPlanUpgrade(organization.pricingPlan, _))) ?~>
+          Msg.Organization.upgradeRequestInvalidPlan
+        effectivePlan = upgradeRequest.plan.getOrElse(organization.pricingPlan)
+        _ <- Fox.fromBool(!upgradeRequest.aiAddon.contains(true) || canRequestAiAddon(organization, effectivePlan)) ?~>
+          Msg.Organization.upgradeRequestAiAddonNotAvailable
         requestedChanges = describeUpgradeRequest(upgradeRequest, organization)
         _ <- Fox.fromBool(requestedChanges.nonEmpty) ?~> Msg.Organization.upgradeRequestEmpty
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)

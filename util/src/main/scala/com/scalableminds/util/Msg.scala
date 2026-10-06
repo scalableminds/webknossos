@@ -274,6 +274,9 @@ object Msg {
       "You do not have permission to order WEBKNOSSOS credits for your organization. Please contact the organization owner."
     val upgradeRequestEmpty: String = "The upgrade request does not contain any changes."
     val upgradeRequestInvalidAmount: String = "All requested amounts must be positive."
+    val upgradeRequestInvalidPlan: String = "Only an upgrade to the Team or Power plan can be requested."
+    val upgradeRequestAiAddonNotAvailable: String =
+      "The AI Add-on is already active or requires at least the Team plan."
     def upgradeRequestNoteTooLong(maxLength: Int): String =
       s"The note of the upgrade request must not be longer than $maxLength characters."
     val alreadyJoined: String = "Your account is already associated with the selected organization."

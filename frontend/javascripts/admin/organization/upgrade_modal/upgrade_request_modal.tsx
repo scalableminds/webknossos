@@ -19,10 +19,14 @@ import { enforceActiveOrganization } from "viewer/model/accessors/organization_a
 import { getActiveUserCount } from "../pricing_plan_utils";
 import {
   formatPaidUntil,
+  formatStorage,
+  formatUserCount,
   getCreditBalance,
   getDefaultSelection,
   getEffectiveTier,
   getPlanTier,
+  getRequestedTier,
+  getTierRank,
   getUpgradeItems,
   getUpgradeTargetTier,
   hasPlanEndDate,
@@ -30,10 +34,13 @@ import {
   type ItemId,
   type ItemSelection,
   isTierAtLeast,
+  type PlanTier,
   type Selection,
 } from "./upgrade_request_items";
 
 const MAX_NOTE_LENGTH = 1000;
+// Keeps custom amounts well within the backend's Int range.
+const MAX_CUSTOM_AMOUNT = 1_000_000;
 // The design asks for a fixed two-column layout that is a bit wider than ModalWidth.Large.
 const MODAL_WIDTH = 840;
 
@@ -69,14 +76,8 @@ function SidePanel({
 }) {
   const { token } = theme.useToken();
   const isPersonal = getPlanTier(organization.pricingPlan) === "Personal";
-  const includedUsers =
-    organization.includedUsers === Number.POSITIVE_INFINITY
-      ? "∞"
-      : formatNumber(organization.includedUsers);
-  const includedStorage =
-    organization.includedStorageBytes === Number.POSITIVE_INFINITY
-      ? "∞"
-      : formatCountToDataAmountUnit(organization.includedStorageBytes, true);
+  const includedUsers = formatUserCount(organization.includedUsers);
+  const includedStorage = formatStorage(organization.includedStorageBytes);
 
   return (
     <div
@@ -176,6 +177,7 @@ function AmountPicker({
     return (
       <InputNumber
         min={1}
+        max={MAX_CUSTOM_AMOUNT}
         precision={0}
         autoFocus
         value={selection.value}
@@ -304,9 +306,8 @@ function buildUpgradeRequest(
   selection: Selection,
   note: string,
 ): UpgradeRequest {
-  const targetTier = getUpgradeTargetTier(getPlanTier(organization.pricingPlan));
   return {
-    plan: selection.plan != null && targetTier != null ? targetTier : undefined,
+    plan: getRequestedTier(getPlanTier(organization.pricingPlan), selection) ?? undefined,
     users: selection.users?.value,
     storageTB: selection.storage?.value,
     aiAddon: selection.aiAddon != null ? true : undefined,
@@ -318,9 +319,12 @@ function buildUpgradeRequest(
 
 export default function UpgradeRequestModal({
   initialItems,
+  initialPlan,
   destroy,
 }: {
   initialItems: ItemId[];
+  // Preselects this plan if the plan row offers a choice between several plans.
+  initialPlan?: PlanTier;
   destroy: () => void;
 }) {
   const { token } = theme.useToken();
@@ -348,7 +352,16 @@ export default function UpgradeRequestModal({
     const needsPlanUpgrade = items.some(
       (item) => initialSelection[item.id] != null && !isTierAtLeast(currentTier, item.minPlan),
     );
-    if (needsPlanUpgrade && planItem != null) initialSelection.plan = {};
+    if (needsPlanUpgrade && planItem != null && initialSelection.plan == null) {
+      initialSelection.plan = getDefaultSelection(planItem);
+    }
+    const initialPlanRank = initialPlan != null ? getTierRank(initialPlan) : null;
+    if (
+      initialSelection.plan != null &&
+      planItem?.amounts?.some((amount) => amount.value === initialPlanRank)
+    ) {
+      initialSelection.plan = { value: initialPlanRank ?? undefined };
+    }
     return initialSelection;
   });
   const [note, setNote] = useState("");
@@ -457,7 +470,10 @@ export default function UpgradeRequestModal({
                   onChange={(itemSelection) => updateItem(item.id, itemSelection)}
                 />
                 {item.id === "plan" && hasLockableItems && targetTier != null ? (
-                  <GroupLabel isUnlocked={selection.plan != null} tier={targetTier} />
+                  <GroupLabel
+                    isUnlocked={selection.plan != null}
+                    tier={selection.plan != null ? effectiveTier : targetTier}
+                  />
                 ) : null}
               </div>
             ))}

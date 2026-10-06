@@ -117,8 +117,8 @@ describe("Mesh chunk provider", () => {
       expect(info.lods[0].transform).toEqual(transform);
       expect(listingMock).toHaveBeenCalledTimes(2);
       expect(listingForSegmentsMock).not.toHaveBeenCalled();
-      // The segments are always asked at the newest version.
-      expect(getSegmentsMock).toHaveBeenLastCalledWith("http://tracingstore", "tracing", 1n);
+      // The segments are asked at the annotation version of the client.
+      expect(getSegmentsMock).toHaveBeenLastCalledWith("http://tracingstore", "tracing", 1n, 5);
     });
 
     it("lists the agglomerates of a split from the cache", async () => {

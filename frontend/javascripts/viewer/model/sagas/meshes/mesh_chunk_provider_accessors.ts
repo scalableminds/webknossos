@@ -61,14 +61,13 @@ export async function listMeshChunks(
 async function getSegmentsOfEditedAgglomerate(
   editableMapping: TracingStoreURLAndTracingId,
   agglomerateId: bigint,
+  annotationVersion: number | undefined,
 ): Promise<bigint[] | null> {
-  // Asked at the newest version on purpose. A refresh should show the newest state anyway, and a
-  // read at an older version can return a state from before an edit if the tracingstore applied
-  // several update groups at once.
   const { segmentIds, agglomerateIdIsPresent } = await getSegmentsForAgglomerateFromTracingStore(
     editableMapping.tracingStoreUrl,
     editableMapping.tracingId,
     agglomerateId,
+    annotationVersion,
   );
   return agglomerateIdIsPresent && segmentIds.length > 0 ? segmentIds : null;
 }
@@ -101,7 +100,11 @@ async function tryToListMeshChunksFromCache(
   editableMapping: TracingStoreURLAndTracingId,
 ): Promise<MeshSegmentInfo | null> {
   try {
-    const segmentIds = await getSegmentsOfEditedAgglomerate(editableMapping, params.segmentId);
+    const segmentIds = await getSegmentsOfEditedAgglomerate(
+      editableMapping,
+      params.segmentId,
+      params.annotationVersion ?? undefined,
+    );
     if (segmentIds == null) {
       return null;
     }

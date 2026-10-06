@@ -1,4 +1,10 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   createFolder,
   deleteFolder,
@@ -108,6 +114,7 @@ export function useDatasetSearchQuery(
     },
     refetchOnWindowFocus: false,
     enabled: query != null,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -184,12 +191,15 @@ export function useDatasetsInFolderQuery(folderId: string | null, listParams: Da
     },
     refetchOnWindowFocus: false,
     enabled: false,
+    // Keep showing the old datasets while a changed filter/sorting is loading, but not when switching folders.
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[1] === folderId ? previousData : undefined,
   });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether further dependencies are necessary.
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    if (queryData.data == null || queryData.data.length === 0) {
+    if (queryData.data == null || queryData.data.length === 0 || queryData.isPlaceholderData) {
       // No data exists in the cache. Allow the query to fetch.
       queryData.refetch();
       return undefined;

@@ -297,6 +297,7 @@ export default function DatasetCollectionContextProvider({
       ? datasetSearchQuery.isFetching
       : folderHierarchyQuery.isPending ||
         datasetsInFolderQuery.isFetching ||
+        datasetsInFolderQuery.isPlaceholderData ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): omitted to maintain stability as underlying data dependencies are already tracked

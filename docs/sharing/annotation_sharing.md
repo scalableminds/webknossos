@@ -155,7 +155,7 @@ To share an annotation with a certain team, follow these steps:
 
 ![Enable Team Sharing for your annotation](../images/sharing_modal_team.png)
 
-Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](../dashboard/annotations.md). By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.
+Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](../dashboard/annotations.md). Team members who could not see the annotation before are notified by email. By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.
 
 To collaboratively work on the same annotation with multiple users from your team, you can share an annotation and allow modifications. Select "Everybody who can view" under "Who can edit this annotation?" from the sharing UI.
 

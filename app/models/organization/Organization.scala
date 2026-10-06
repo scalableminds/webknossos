@@ -451,4 +451,28 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
               ON CONFLICT DO NOTHING""".asUpdate)
     }
 
+  /* Records that the organization was warned about crossing the given storage usage thresholds.
+     returns number of thresholds that were not recorded before. */
+  def insertStorageWarnings(organizationId: String, thresholdsPercent: Seq[Int]): Fox[Int] =
+    if (thresholdsPercent.isEmpty) Fox.successful(0)
+    else {
+      val values = SqlToken.joinBySeparator(
+        thresholdsPercent.map(thresholdPercent => q"($organizationId, $thresholdPercent)"),
+        ", "
+      )
+      run(q"""INSERT INTO webknossos.organization_storageWarnings(_organization, thresholdPercent)
+              VALUES $values
+              ON CONFLICT DO NOTHING""".asUpdate)
+    }
+
+  // Re-arms the warnings for the given thresholds, so that crossing them again sends a new warning.
+  def deleteStorageWarnings(organizationId: String, thresholdsPercent: Seq[Int]): Fox[Unit] =
+    if (thresholdsPercent.isEmpty) Fox.successful(())
+    else
+      for {
+        _ <- run(q"""DELETE FROM webknossos.organization_storageWarnings
+                     WHERE _organization = $organizationId
+                     AND thresholdPercent IN ${SqlToken.tupleFromList(thresholdsPercent.toList)}""".asUpdate)
+      } yield ()
+
 }

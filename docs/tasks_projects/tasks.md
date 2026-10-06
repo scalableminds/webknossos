@@ -129,6 +129,8 @@ Manual assignments can be done by:
 4. Select a user for the assignment from the dropdown
 5. Confirm the assignment with "ok"
 
+The user is notified about the manual assignment by email, including a link to start the task.
+
 Existing, active and finished task instances can also be transferred to other users, e.g. for proofreading, continued annotation or to change ownership:
 
 1. Navigate to the task list
@@ -137,6 +139,8 @@ Existing, active and finished task instances can also be transferred to other us
 4. From the `Actions` menu on the right-hand side, select "Transfer"
 5. Select a user for the task transferal from the dropdown
 6. Confirm the task transfer with "ok"
+
+The new owner of a transferred annotation is notified by email.
 
 ![Transfer a task instance to a new user and additional task administration actions.](../images/task_instance_actions.jpg)
 /// caption

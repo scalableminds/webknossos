@@ -28,7 +28,7 @@ The overview tab provides a summary of your organization, including:
 
 This tab allows admins to configure email notifications for the organization:
 
-- **WEBKNOSSOS Plan & Subscription:** The email address to receive plan and subscription notifications.
+- **WEBKNOSSOS Plan & Subscription:** The email address to receive plan and subscription notifications. The owner and the admins of the organization are also warned by email when its used storage reaches 90% and 100% of the included storage.
 - **AI Job Completion:** Configure who receives notifications about completed AI [jobs](../automation/jobs.md).
 - **New User Signup:** The email address to receive notifications about new user signups.
 

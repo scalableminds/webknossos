@@ -1,13 +1,25 @@
-import { Divider, Typography } from "antd";
+import { Divider, Flex, Typography } from "antd";
 
 const { Text } = Typography;
 
-export function SettingsTitle({ title, description }: { title: string; description: string }) {
+export function SettingsTitle({
+  title,
+  description,
+  tag,
+}: {
+  title: string;
+  description: string;
+  // Shown next to the title, e.g. the organization's plan.
+  tag?: React.ReactNode;
+}) {
   return (
     <div>
-      <Typography.Title level={2} style={{ marginBottom: 0 }}>
-        {title}
-      </Typography.Title>
+      <Flex align="center" gap={12}>
+        <Typography.Title level={2} style={{ marginBottom: 0 }}>
+          {title}
+        </Typography.Title>
+        {tag}
+      </Flex>
       <Text type="secondary" style={{ display: "block" }}>
         {description}
       </Text>

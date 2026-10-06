@@ -1,7 +1,8 @@
+import { DeleteOutlined } from "@ant-design/icons";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteOrganization } from "admin/api/organization";
-import { App, Button, Typography } from "antd";
+import { App, Button, Typography, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
 import { ModalWidth } from "theme";
@@ -13,6 +14,7 @@ export function OrganizationDangerZoneView() {
   );
   const [isDeleting, setIsDeleting] = useState(false);
   const { modal } = App.useApp();
+  const { token } = theme.useToken();
 
   async function handleDeleteButtonClicked(): Promise<void> {
     const isDeleteConfirmed = await modal.confirm({
@@ -55,13 +57,11 @@ export function OrganizationDangerZoneView() {
       />
       <SettingsCard
         title="Danger Zone"
-        content={
-          <Button
-            danger
-            loading={isDeleting}
-            onClick={handleDeleteButtonClicked}
-            style={{ marginTop: 10 }}
-          >
+        icon={<DeleteOutlined style={{ color: token.colorError }} />}
+        content={`Delete ${organization.name}`}
+        hint="Removes all annotations, datasets and user accounts. This cannot be undone."
+        footerAction={
+          <Button danger loading={isDeleting} onClick={handleDeleteButtonClicked}>
             Delete Organization
           </Button>
         }

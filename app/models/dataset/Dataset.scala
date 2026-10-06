@@ -262,7 +262,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         includeSubfolders,
         None,
         None,
-        Nil
+        List.empty
       )
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery".as[DatasetsRow])
@@ -280,7 +280,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       includeSubfolders: Boolean = false,
       statusOpt: Option[String] = None,
       createdSinceOpt: Option[Instant] = None,
-      tags: List[String] = Nil,
+      tags: List[String] = List.empty,
       sortByOpt: Option[DatasetSortBy] = None,
       limitOpt: Option[Int] = None,
       requestingUserOrga: Option[String] = None,

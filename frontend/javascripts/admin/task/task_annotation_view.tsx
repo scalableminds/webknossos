@@ -205,7 +205,8 @@ function TaskAnnotationView({ task }: Props) {
                   <div>{getViewOrOpenLabel(annotation)}</div>
                   <Dropdown menu={getDropdownMenu(annotation)} trigger={["click"]}>
                     <a className="ant-dropdown-link">
-                      Actions <DownOutlined />
+                      <DownOutlined className="icon-margin-right" />
+                      Actions
                     </a>
                   </Dropdown>
                 </td>

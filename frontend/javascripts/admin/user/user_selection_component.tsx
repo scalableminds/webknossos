@@ -1,16 +1,22 @@
 import { unwrapOrThrow } from "admin/api/api_result";
 import { getUsers } from "admin/rest_api";
+import DeactivatedUserTag from "admin/user/deactivated_user_tag";
 import { Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
 import sortBy from "lodash-es/sortBy";
 import { useState } from "react";
+import type { APIUser } from "types/api_types";
 
 type Props = {
-  handleSelection: (arg0: string) => void;
+  handleSelection: (userId: string, user: APIUser | undefined) => void;
+  includeDeactivatedUsers?: boolean;
 };
 
-export default function UserSelectionComponent({ handleSelection }: Props) {
+export default function UserSelectionComponent({
+  handleSelection,
+  includeDeactivatedUsers = false,
+}: Props) {
   const [currentUserIdValue, setCurrentUserIdValue] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -18,9 +24,9 @@ export default function UserSelectionComponent({ handleSelection }: Props) {
     async () => {
       try {
         const users = unwrapOrThrow(await getUsers());
-        const activeUsers = users.filter((u) => u.isActive);
+        const selectableUsers = includeDeactivatedUsers ? users : users.filter((u) => u.isActive);
 
-        return sortBy(activeUsers, "lastName");
+        return sortBy(selectableUsers, "lastName");
       } catch (error) {
         handleGenericError(error as Error);
         return [];
@@ -34,7 +40,10 @@ export default function UserSelectionComponent({ handleSelection }: Props) {
 
   function handleSelectChange(userId: string) {
     setCurrentUserIdValue(userId);
-    handleSelection(userId);
+    handleSelection(
+      userId,
+      users.find((user) => user.id === userId),
+    );
   }
 
   return isLoading ? (
@@ -44,10 +53,9 @@ export default function UserSelectionComponent({ handleSelection }: Props) {
   ) : (
     <Select
       showSearch={{
-        optionFilterProp: "label",
+        optionFilterProp: "searchText",
         filterOption: (input, option) =>
-          // @ts-expect-error ts-migrate (2532) FIXME: Object is possibly 'undefined'.
-          option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0,
+          option?.searchText.toLowerCase().includes(input.toLowerCase()) ?? false,
       }}
       placeholder="Select a New User"
       value={currentUserIdValue}
@@ -55,10 +63,20 @@ export default function UserSelectionComponent({ handleSelection }: Props) {
       style={{
         width: "100%",
       }}
-      options={users.map((user) => ({
-        value: user.id,
-        label: `${user.lastName}, ${user.firstName} (${user.email})`,
-      }))}
+      options={users.map((user) => {
+        const userString = `${user.lastName}, ${user.firstName} (${user.email})`;
+        return {
+          value: user.id,
+          searchText: userString,
+          label: user.isActive ? (
+            userString
+          ) : (
+            <>
+              {userString} <DeactivatedUserTag />
+            </>
+          ),
+        };
+      })}
     />
   );
 }

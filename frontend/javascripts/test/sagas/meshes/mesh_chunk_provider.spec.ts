@@ -169,14 +169,26 @@ describe("Mesh chunk provider", () => {
       expect(listingForSegmentsMock).toHaveBeenCalledTimes(1);
     });
 
-    it("requests the normal listing if most segments are unknown", async () => {
+    it("lists unknown segments by their ids even if most segments are unknown", async () => {
       await loadAgglomerate1();
 
       mockSegmentsOfAgglomerate([10n, 40n, 41n]);
-      listingMock.mockResolvedValueOnce(listing([chunk(10n, 0), chunk(40n, 50), chunk(41n, 60)]));
+      listingForSegmentsMock.mockResolvedValueOnce(listing([chunk(40n, 50), chunk(41n, 60)]));
       const info = await listMeshChunks(paramsFor(1n));
 
-      expect(listedChunks(info)).toHaveLength(3);
+      expect(listedChunks(info)).toEqual([chunk(10n, 0), chunk(40n, 50), chunk(41n, 60)]);
+      expect(listingForSegmentsMock.mock.calls[0][4]).toEqual([40n, 41n]);
+      expect(listingMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("requests the normal listing if none of the segments is cached", async () => {
+      await loadAgglomerate1();
+
+      mockSegmentsOfAgglomerate([40n, 41n]);
+      listingMock.mockResolvedValueOnce(listing([chunk(40n, 50), chunk(41n, 60)]));
+      const info = await listMeshChunks(paramsFor(4n));
+
+      expect(listedChunks(info)).toHaveLength(2);
       expect(listingForSegmentsMock).not.toHaveBeenCalled();
       expect(listingMock).toHaveBeenCalledTimes(2);
     });

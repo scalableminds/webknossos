@@ -27,12 +27,6 @@ export type ListMeshChunksParamsWithTracingStoreURL = Omit<
   editableMapping: TracingStoreURLAndTracingId | null;
 };
 
-// If more than this fraction of an agglomerate's segments have no cached chunk list, the normal
-// listing of the agglomerate is requested instead of listing the uncached segments by their ids.
-// Both are a single request. Listing by ids needs less work on the server and a smaller response,
-// but it has to upload the ids. If most segments are uncached, it saves little.
-const MAX_UNCACHED_SEGMENT_FRACTION = 0.5;
-
 /*
  * Lists the chunks of segmentId, which is an agglomerate id if a mapping is given. Returns the same
  * as meshApi.getMeshFileChunksForSegment, but answers from the cache where it can.
@@ -96,7 +90,10 @@ async function addChunkListsOfSegments(
 
 /*
  * Builds the listing of an agglomerate of the editable mapping from the cached chunk lists of its
- * segments. Returns null if a normal listing should be requested instead.
+ * segments. The chunk lists of uncached segments are requested by their ids in one request, which
+ * needs less work on the server and a smaller response than the normal listing of the agglomerate.
+ * Returns null if a normal listing should be requested instead, e.g., because none of the segments
+ * is cached.
  */
 async function tryToListMeshChunksFromCache(
   cache: MeshFileCache,
@@ -109,8 +106,7 @@ async function tryToListMeshChunksFromCache(
       return null;
     }
     const uncachedSegmentIds = segmentIds.filter((id) => !cache.hasChunkListForSegmentId(id));
-    if (uncachedSegmentIds.length > segmentIds.length * MAX_UNCACHED_SEGMENT_FRACTION) {
-      // Listing that many segments by their ids would save little, see above.
+    if (uncachedSegmentIds.length === segmentIds.length) {
       return null;
     }
     if (uncachedSegmentIds.length > 0) {

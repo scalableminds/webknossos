@@ -29,6 +29,8 @@ export type ListMeshChunksParamsWithTracingStoreURL = Omit<
 
 // If more than this fraction of an agglomerate's segments have no cached chunk list, the normal
 // listing of the agglomerate is requested instead of listing the uncached segments by their ids.
+// Both are a single request. Listing by ids needs less work on the server and a smaller response,
+// but it has to upload the ids. If most segments are uncached, it saves little.
 const MAX_UNCACHED_SEGMENT_FRACTION = 0.5;
 
 /*
@@ -108,7 +110,7 @@ async function tryToListMeshChunksFromCache(
     }
     const uncachedSegmentIds = segmentIds.filter((id) => !cache.hasChunkListForSegmentId(id));
     if (uncachedSegmentIds.length > segmentIds.length * MAX_UNCACHED_SEGMENT_FRACTION) {
-      // Listing that many segments by their ids costs more than the normal listing.
+      // Listing that many segments by their ids would save little, see above.
       return null;
     }
     if (uncachedSegmentIds.length > 0) {

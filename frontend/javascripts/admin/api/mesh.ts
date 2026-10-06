@@ -2,6 +2,7 @@ import Request from "libs/request";
 import { retryAsyncFunction } from "libs/utils";
 import type { APIMeshFileInfo } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
+import { serializeProtoListOfLong } from "viewer/model/helpers/proto_helpers";
 import { doWithToken } from "./token";
 
 export type MeshChunk = {
@@ -88,11 +89,6 @@ export function getMeshFileChunksForSegment({
   );
 }
 
-type ListMeshChunksForSegmentsRequest = {
-  meshFileName: string;
-  segmentIds: Array<bigint>;
-};
-
 /*
  * Lists the chunks of several unmapped segment ids in one request. Unlike
  * getMeshFileChunksForSegment, segments without a mesh don't make the request fail. They are
@@ -109,14 +105,15 @@ export function getMeshFileChunksForSegments(
 ): Promise<MeshSegmentInfo> {
   return retryAsyncFunction(() =>
     doWithToken((token) => {
-      const payload: ListMeshChunksForSegmentsRequest = {
-        meshFileName: meshFile.name,
-        segmentIds,
-      };
-      return Request.sendJSONReceiveJSON(
-        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/forSegments?token=${token}`,
+      const params = new URLSearchParams({ token, meshFileName: meshFile.name });
+      // The ids are sent as protobuf, which takes about 4 bytes per id instead of about 50 bytes in
+      // the JSON encoding of bigints. Request bodies are not compressed.
+      return Request.receiveJSON(
+        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/forSegments?${params}`,
         {
-          data: payload,
+          method: "POST",
+          body: serializeProtoListOfLong(segmentIds),
+          headers: { "Content-Type": "application/octet-stream" },
           showErrorToast: false,
         },
       );

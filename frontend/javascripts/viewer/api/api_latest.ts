@@ -74,7 +74,6 @@ import {
   getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
 import {
-  findTreeByNodeId,
   getActiveNode,
   getActiveTree,
   getActiveTreeGroup,
@@ -465,18 +464,14 @@ class TracingApi {
     if (!isNumber(nodeId)) {
       throw new Error("Node id is missing.");
     }
-    const tree =
+    const treeAndNode = getTreeAndNode(skeletonTracing, null, nodeId, treeId);
+    assertExists(
+      treeAndNode,
       treeId != null
-        ? skeletonTracing.trees.getNullable(treeId)
-        : findTreeByNodeId(skeletonTracing.trees, nodeId);
-    assertExists(tree, `Couldn't find node ${nodeId}.`);
-    if (treeId != null) {
-      assertExists(
-        tree.nodes.getNullable(nodeId),
-        `Couldn't find node ${nodeId} in tree ${treeId}.`,
-      );
-    }
-    return tree;
+        ? `Couldn't find node ${nodeId} in tree ${treeId}.`
+        : `Couldn't find node ${nodeId}.`,
+    );
+    return treeAndNode[0];
   }
 
   /**

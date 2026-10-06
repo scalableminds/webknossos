@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import messages from "messages";
 import type { APIOrganization, APIUser } from "types/api_types";
 import Constants from "viewer/constants";
@@ -111,6 +112,16 @@ export function hasSomePaidPlan(organization: APIOrganization | null) {
 
 export function hasAiPlan(organization: APIOrganization | null) {
   return organization?.aiPlan != null;
+}
+
+export function formatIncludedUsers(includedUsers: number): string {
+  return Number.isFinite(includedUsers) ? includedUsers.toString() : "∞";
+}
+
+export function formatIncludedStorage(includedStorageBytes: number): string {
+  return Number.isFinite(includedStorageBytes)
+    ? formatCountToDataAmountUnit(includedStorageBytes, true)
+    : "∞";
 }
 
 export function isTrialPlan(pricingPlan: PricingPlanEnum): boolean {

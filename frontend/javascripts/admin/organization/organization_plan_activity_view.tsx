@@ -4,13 +4,13 @@ import { getPricingPlanUpdates } from "admin/api/organization";
 import { Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import FormattedDate from "components/formatted_date";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { scrollToTop } from "libs/utils";
 import { useMemo } from "react";
 import type { APIOrganizationPricingPlanUpdate } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { PlanSummaryBar } from "./organization_summary_bars";
+import { formatIncludedStorage, formatIncludedUsers } from "./pricing_plan_utils";
 
 const { Text } = Typography;
 const UNCHANGED_LABEL = <Text type="secondary">Unchanged</Text>;
@@ -88,7 +88,7 @@ export function OrganizationPlanActivityView() {
           if (value === null) {
             return CLEARED_LABEL;
           }
-          return Number.isFinite(value) ? value : "∞";
+          return formatIncludedUsers(value);
         },
       },
       {
@@ -103,7 +103,7 @@ export function OrganizationPlanActivityView() {
           if (value === null) {
             return CLEARED_LABEL;
           }
-          return Number.isFinite(value) ? formatCountToDataAmountUnit(value, true) : "∞";
+          return formatIncludedStorage(value);
         },
       },
       {

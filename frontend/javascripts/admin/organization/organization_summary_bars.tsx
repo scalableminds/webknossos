@@ -7,7 +7,7 @@ import {
 import { App, Button, Flex, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
-import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/format_utils";
+import { formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import type React from "react";
@@ -16,8 +16,12 @@ import type { APICreditTransaction } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import {
   canUpgradePricingPlan,
+  formatIncludedStorage,
+  formatIncludedUsers,
   getDaysUntilPlanExpires,
+  hasPricingPlanExpired,
   PLAN_EXPIRATION_REMINDER_DAYS,
+  PricingPlanEnum,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 import { useCanRequestUpgrades } from "./use_can_request_upgrades";
@@ -35,7 +39,8 @@ const summaryCellStyle: React.CSSProperties = { padding: "20px 24px" };
 const summaryValueStyle: React.CSSProperties = { fontSize: 22, fontWeight: 700 };
 
 type CreditSummary = {
-  milliCreditBalance: number;
+  // null when the organization has no credit account.
+  milliCreditBalance: number | null;
   milliCreditsSpent: number;
   runwayDays: number | null;
   isLow: boolean;
@@ -43,7 +48,7 @@ type CreditSummary = {
 
 function useCreditSummary(transactions: APICreditTransaction[]): CreditSummary {
   const milliCreditBalance = useWkSelector(
-    (state) => state.activeOrganization?.milliCreditBalance ?? 0,
+    (state) => state.activeOrganization?.milliCreditBalance ?? null,
   );
   return useMemo(() => {
     const windowStart = dayjs().subtract(SPENDING_WINDOW_DAYS, "day").valueOf();
@@ -52,6 +57,9 @@ function useCreditSummary(transactions: APICreditTransaction[]): CreditSummary {
       .filter((transaction) => transaction.paidJob != null && transaction.createdAt >= windowStart)
       .reduce((sum, transaction) => sum + transaction.creditChange, 0);
     const milliCreditsSpent = Math.max(0, -netJobCreditChange);
+    if (milliCreditBalance == null) {
+      return { milliCreditBalance, milliCreditsSpent, runwayDays: null, isLow: false };
+    }
     const runwayDays =
       milliCreditsSpent > 0
         ? milliCreditBalance / (milliCreditsSpent / SPENDING_WINDOW_DAYS)
@@ -113,7 +121,9 @@ export function CreditActivitySummaryBar({
     >
       <SummaryStat label="Balance" hasDivider>
         <DollarCircleOutlined style={{ fontSize: 18, color: "var(--ant-color-warning)" }} />
-        <span style={summaryValueStyle}>{formatMilliCreditsString(milliCreditBalance)}</span>
+        <span style={summaryValueStyle}>
+          {milliCreditBalance != null ? formatMilliCreditsString(milliCreditBalance) : "N/A"}
+        </span>
         {isLow ? (
           <Typography.Text type="warning" style={{ fontSize: 13 }}>
             Low
@@ -148,28 +158,30 @@ export function PlanSummaryBar() {
   );
   const daysLeft = getDaysUntilPlanExpires(organization);
   const canRequestUpgrades = useCanRequestUpgrades();
-  const usersLabel = Number.isFinite(organization.includedUsers)
-    ? `${organization.includedUsers} ${pluralize("user", organization.includedUsers)}`
-    : "unlimited users";
-  const storageLabel = Number.isFinite(organization.includedStorageBytes)
-    ? formatCountToDataAmountUnit(organization.includedStorageBytes, true)
-    : "unlimited storage";
+  const hasExpired = daysLeft != null && hasPricingPlanExpired(organization);
+  const canExtend = daysLeft != null && organization.pricingPlan !== PricingPlanEnum.Personal;
 
   return (
     <Flex align="center" gap={16} style={{ ...summaryBarStyle, ...summaryCellStyle }}>
       <CrownOutlined style={{ fontSize: 18, color: "var(--ant-color-primary)" }} />
       <div style={{ flex: 1 }}>
-        <Typography.Text strong>{organization.pricingPlan}</Typography.Text> · {usersLabel} ·{" "}
-        {storageLabel}
+        <Typography.Text strong>{organization.pricingPlan}</Typography.Text> ·{" "}
+        {formatIncludedUsers(organization.includedUsers)}{" "}
+        {pluralize("user", organization.includedUsers)} ·{" "}
+        {formatIncludedStorage(organization.includedStorageBytes)} storage
         {daysLeft != null ? (
           <>
             {" "}
             · paid until <FormattedDate timestamp={organization.paidUntil} dateOnly />{" "}
-            <Typography.Text
-              type={daysLeft <= PLAN_EXPIRATION_REMINDER_DAYS ? "warning" : "secondary"}
-            >
-              ({daysLeft} {pluralize("day", daysLeft)} left)
-            </Typography.Text>
+            {hasExpired ? (
+              <Typography.Text type="danger">(expired)</Typography.Text>
+            ) : (
+              <Typography.Text
+                type={daysLeft <= PLAN_EXPIRATION_REMINDER_DAYS ? "warning" : "secondary"}
+              >
+                ({daysLeft} {pluralize("day", daysLeft)} left)
+              </Typography.Text>
+            )}
           </>
         ) : null}
       </div>
@@ -178,7 +190,7 @@ export function PlanSummaryBar() {
           Upgrade
         </Button>
       ) : null}
-      {canRequestUpgrades && daysLeft != null ? (
+      {canRequestUpgrades && canExtend ? (
         <Button
           type="primary"
           icon={<FieldTimeOutlined />}

@@ -22,6 +22,8 @@ import {
 import { PowerPlanUpgradeCard } from "./plan_upgrade_cards";
 import {
   formatAiPlanLabel,
+  formatIncludedStorage,
+  formatIncludedUsers,
   getActiveUserCount,
   isAiAddonEligiblePlan,
   PricingPlanEnum,
@@ -88,13 +90,8 @@ export function OrganizationOverviewView() {
     dispatch(setActiveOrganizationAction(updatedOrganization));
   }
 
-  const maxUsersCountLabel =
-    organization.includedUsers === Number.POSITIVE_INFINITY ? "∞" : organization.includedUsers;
-
-  const includedStorageLabel =
-    organization.includedStorageBytes === Number.POSITIVE_INFINITY
-      ? "∞"
-      : formatCountToDataAmountUnit(organization.includedStorageBytes, true);
+  const maxUsersCountLabel = formatIncludedUsers(organization.includedUsers);
+  const includedStorageLabel = formatIncludedStorage(organization.includedStorageBytes);
 
   const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes, true);
   const aiPlanLabel = formatAiPlanLabel(organization);

@@ -141,8 +141,8 @@ export function OrganizationCreditActivityView() {
         title="Credit Activity"
         description="Review credit purchases, spending, and refunds for your organization."
       />
-      <CreditActivitySummaryBar transactions={organizationTransactions} />
       <Spin spinning={isLoading}>
+        <CreditActivitySummaryBar transactions={organizationTransactions} />
         <Table
           dataSource={organizationTransactions}
           rowKey="id"

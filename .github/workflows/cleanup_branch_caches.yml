@@ -1,0 +1,21 @@
+name: Clean up branch caches
+
+# GitHub does not delete a branch's Actions caches when the branch is merged or deleted. They are only evicted
+# after 7 days without access, or when the repository exceeds its cache size limit. Merged branches are deleted
+# automatically, so free their caches (see build_test_deploy.yml) right away.
+on:
+  delete: {}
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    if: github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete caches of the deleted branch
+        run: gh cache delete --all --succeed-on-no-caches --ref "refs/heads/$BRANCH" --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event.ref }}

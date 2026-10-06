@@ -35,6 +35,13 @@ const viteConfig = {
             { name: "convertStyleToAttrs" }, // converts <SVG style="..."> to individual attrs
             {
               name: "preset-default",
+              params: {
+                overrides: {
+                  // Keep the viewBox so that icons scale with the 1em size set by svgr's icon option.
+                  // Otherwise, icons whose width/height match the viewBox would be clipped.
+                  removeViewBox: false,
+                },
+              },
             },
           ],
         },
@@ -82,7 +89,7 @@ const viteConfig = {
         changeOrigin: true,
       },
     },
-    hmr: false, // disable Hot Module Replacement for now
+    hmr: process.env.VITE_HMR === "true", // disabled by default, opt in via VITE_HMR=true
     watch: {
       ignored: [
         "**/node_modules/**",

@@ -446,9 +446,6 @@ export function formatSeconds(durationSeconds: number): string {
 export function formatDateMedium(date: Date | number): string {
   return dayjs(date).format("lll");
 }
-export function formatTimeInterval(start: Date | number, end: Date | number): string {
-  return dayjs.duration(dayjs(start).diff(dayjs(end))).humanize(true);
-}
 export function formatTimeIntervalStrict(start: Date | number, end: Date | number): string {
   const duration = dayjs.duration(dayjs(start).diff(dayjs(end)));
   return formatDurationStrict(duration);

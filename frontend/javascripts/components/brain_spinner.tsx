@@ -1,7 +1,7 @@
 import brainImage from "@images/brain.svg";
 import { switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
-import { Button, Card, Col, Row, Typography } from "antd";
+import { Button, Card, Col, Flex, Row, Typography } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import messages from "messages";
 import type * as React from "react";
@@ -79,19 +79,12 @@ export function BrainSpinnerWithError({
           <div className="initialization-error-message" style={{ textAlign: "center" }}>
             {gotUnhandledError ? messages["tracing.unhandled_initialization_error"] : message}
           </div>
-          <div className="flex-center-child" style={{ gap: 8 }}>
-            {organizationToSwitchTo != null ? <div>{switchToOwningOrganizationButton}</div> : null}
-            <div>
-              <Link
-                to="/"
-                style={{
-                  marginTop: 16,
-                }}
-              >
-                <Button type="primary">Return to dashboard</Button>
-              </Link>
-            </div>
-          </div>
+          <Flex justify="center" gap={8} wrap={false}>
+            {organizationToSwitchTo != null ? switchToOwningOrganizationButton : null}
+            <Link to="/">
+              <Button type="primary">Return to dashboard</Button>
+            </Link>
+          </Flex>
         </>
       }
       isLoading={false}

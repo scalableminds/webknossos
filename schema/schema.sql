@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(184);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(185);
 COMMIT TRANSACTION;
 
 
@@ -221,7 +221,8 @@ CREATE TABLE webknossos.dataset_mags(
 CREATE TABLE webknossos.dataset_lastUsedTimes(
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
-  lastUsedTime TIMESTAMPTZ NOT NULL
+  lastUsedTime TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (_dataset, _user)
 );
 
 CREATE TABLE webknossos.dataset_thumbnails(

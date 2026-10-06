@@ -110,7 +110,7 @@ Things this design deliberately does *not* support. Each is argued where it come
 
 - **Mag lists that are not a chain.** Every mag must be an integer multiple of the next-finer one, so that the list is totally ordered by resolution. A layer offering both `4-4-1` and `2-2-2` would violate this — neither divides the other, since one is finer in x/y and the other in z — and mag propagation (§5.4) would have no defined path between them. Standard pyramids, including anisotropic ones like `1-1-1, 2-2-1, 4-4-2`, are chains and are fine. Today's resampling does not support the non-chain case either, so this is not a regression.
 - **Coarse mags exactly matching a re-downsampling of the finest mag.** They are derived from the write sequence and are order-dependent; see principle 2 and §9.
-- **`overwrite-empty-only` as a guarantee about data the user cannot see.** The predicate is evaluated against loaded source-mag content only, so it protects neither finer detail hidden inside a coarse voxel nor buckets that have not finished loading. It is a guard against overwriting what is on screen, not an invariant over the layer; see §5.4.
+- **`overwrite-empty-only` as a guarantee about data the user cannot see.** The predicate is evaluated against loaded source-mag content only, so it protects neither finer detail hidden inside a coarse voxel nor buckets that have not finished loading — and, when erasing, neither other segments in those places. It is a guard against overwriting what is on screen, not an invariant over the layer; see §5.4.
 - **Multi-valued transactions.** One user interaction writes one segment ID. This is relied on by the write-set representation (§4) and by the equivalence argument in §5.4.
 
 ---
@@ -195,6 +195,11 @@ interface EditContext {
   additionalCoordinates: AdditionalCoordinate[] | null;
   activeSegmentId: SegmentId;
   overwriteMode: OverwriteMode;
+  /**
+   * Under overwrite-empty-only, the value a voxel must currently hold to be
+   * written: 0n when painting, the active segment when erasing (§5.3).
+   */
+  overwritableValue: SegmentId;
   /** Annotation-level restriction; the rasterizer clips against it. */
   editableBoundingBox: BoundingBox | null;
 }
@@ -309,6 +314,7 @@ classDiagram
         +sourceMagIndex : MagIndex
         +activeSegmentId : SegmentId
         +overwriteMode : OverwriteMode
+        +overwritableValue : SegmentId
         +editableBoundingBox : BoundingBox, optional
     }
     class BoundingBox {
@@ -413,7 +419,7 @@ classDiagram
         <<interface, one bucket write cursor>>
         +mark(index)
         +markRun(start, length)
-        +isBackground : predicate, optional
+        +isOverwritable : predicate, optional
     }
     class VolumeTransaction {
         +id : TransactionId
@@ -478,7 +484,7 @@ classDiagram
         <<interface>>
         +getLoadedDataOrUndefined(address) loaded data, optional
         +applyWrites(address, write)
-        +getIsBackgroundFunction(address) predicate, optional
+        +getIsOverwritableFunction(address, value) predicate, optional
     }
     class LoadingVoxelCube {
         <<interface, extends TransactionCube>>
@@ -839,14 +845,14 @@ function emitSpan(w: BucketWriter, start: VoxelIndex, length: number, ctx: EditC
   const current = w.current;
   if (current == null) {
     // Absent or pending (§1.1): no authoritative content to test against.
-    // Paint optimistically — overwrite mode protects what is visible, and an
+    // Write optimistically — overwrite mode protects what is visible, and an
     // unloaded bucket renders as background. See §5.4.
     w.markRun(start, length);
     return;
   }
   let runStart = -1;
   for (let i = start; i < start + length; i++) {
-    if (current[i] === 0n) {
+    if (current[i] === ctx.overwritableValue) {
       if (runStart < 0) runStart = i;
     } else if (runStart >= 0) {
       w.markRun(runStart, i - runStart);
@@ -861,7 +867,7 @@ Three things this buys over the per-voxel formulation. The overwrite predicate r
 
 **The rasterizer runs exactly once per transaction, at the source mag.** Every other mag's content is derived by §5.4, never by re-rasterizing the same geometry at a different resolution. Rasterizing independently per mag would (a) cost N× and (b) produce boundary disagreements — a circle rasterized at mag 1 and a circle rasterized at mag 2 do not agree about their edges, so the pyramid would be internally inconsistent in a way no downsampling rule could repair.
 
-Erasing is not a special case: it is a rasterization with `activeSegmentId = 0n` and `overwriteMode = "overwrite-all"`.
+Erasing is almost not a special case: it is a rasterization with `activeSegmentId = 0n`. The one difference is what `overwrite-empty-only` protects. Painting may only write over background, so its `overwritableValue` is `0n`; erasing may only remove the active segment, so its `overwritableValue` is that segment's id — which is what the UI promises for the mode ("in case of erasing, only the current segment ID is overwritten"). An earlier version of this section equated erasing with `overwrite-all`, which under `overwrite-empty-only` would have compared `0n` against itself and erased nothing.
 
 ### 5.4 `MagPropagationService`
 
@@ -947,7 +953,7 @@ Note the loop nest is over `f[1] * f[2]`, not `f[0] * f[1] * f[2] * length` — 
 
 **Overwrite mode is evaluated against what the user can see, and nothing else.** The predicate runs once, in §5.3, against loaded source-mag data. Two consequences follow from the same principle, and both are deliberate:
 
-- *Finer detail is not protected.* The upsample writes unconditionally, so in `overwrite-empty-only` at mag 4, a coarse voxel that reads as empty may still contain labeled finest-mag voxels, and those get overwritten. Re-evaluating the predicate per finest-mag voxel would require those buckets to be loaded — turning every coarse-mag stroke into hundreds of fetches.
+- *Finer detail is not protected.* The upsample writes unconditionally, so in `overwrite-empty-only` at mag 4, a coarse voxel that reads as empty may still contain labeled finest-mag voxels, and those get overwritten. Re-evaluating the predicate per finest-mag voxel would require those buckets to be loaded — turning every coarse-mag stroke into hundreds of fetches. The same holds for erasing: a coarse voxel that holds the active segment is erased in every finer mag underneath it, including finest-mag voxels of other segments. The predicate is exact at the source mag only, by decision.
 - *Not-yet-loaded data is not protected.* Where the source-mag bucket is `absent` or `pending`, there is no authoritative content to test, and `emitSpan` paints optimistically rather than skipping the span.
 
 The unifying rule is that `overwrite-empty-only` protects what is *visible*, not what exists. Data hidden inside a coarse voxel and data that has not arrived yet are both invisible to the user, and in the second case the viewport is literally rendering background — so painting is what the user sees themselves doing. Failing the other way, skipping unloaded spans, would punch holes into a stroke over a region that looks empty, contradicting the display for the sake of a guarantee the mode never made.
@@ -1332,7 +1338,7 @@ sequenceDiagram
 
   U->>B: pointer-down
   B->>B: freeze EditContext
-  Note right of B: sourceMagIndex, activeSegmentId,<br/>overwriteMode, additionalCoordinates,<br/>editableBoundingBox
+  Note right of B: sourceMagIndex, activeSegmentId,<br/>overwriteMode, overwritableValue,<br/>additionalCoordinates, editableBoundingBox
   B->>T: open(EditContext)
   Note right of B: EditIntent { kind: "brush",<br/>path: [p0], radius, planeAxis }
 
@@ -1347,7 +1353,7 @@ sequenceDiagram
       C-->>T: BigUint64Array, or undefined if absent/pending
       T-->>R: BucketWriter
       opt overwrite-empty-only AND loaded
-        R->>R: split each scanline where current[i] is not 0n
+        R->>R: split each scanline where current[i] is not overwritableValue
       end
       R->>T: markRun(start, length) per scanline
       Note over T: BucketVoxelMask bit-fill,<br/>4 KB per touched bucket

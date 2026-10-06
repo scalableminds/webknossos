@@ -294,6 +294,9 @@ export function* editVolumeLayerAsync(): Saga<never> {
             overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY
               ? "overwrite-empty-only"
               : "overwrite-all",
+          // As in labelWithVoxelBuffer2D: under overwrite-empty, painting only
+          // writes over background, and erasing only removes the active segment.
+          overwritableValue: contourTracingMode === ContourModeEnum.DELETE ? activeCellId : 0n,
           additionalCoordinates: additionalCoordinates ?? null,
           radius,
           planeAxis,
@@ -301,7 +304,6 @@ export function* editVolumeLayerAsync(): Saga<never> {
         toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
       );
       brushStroke = { driver, magInfo: segmentationLayer.cube.magInfo };
-      wroteVoxelsBox.value = true;
     }
 
     let lastPosition = startEditingAction.positionInLayerSpace;
@@ -340,7 +342,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
       if (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing)) {
         // Close the polygon. When brushing, this causes an auto-fill which is why
-        // it's only performed when drawing (not when erasing).
+        // it's only performed when drawing (not when erasing): a common way to
+        // clean up an overfilled cell is to erase along its membrane, and an
+        // auto-fill would then erase the whole cell instead of just the stroke.
+        // See https://github.com/scalableminds/webknossos/issues/4624.
         currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
       }
 
@@ -357,39 +362,40 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     if (brushStroke != null) {
       // Pointer-up: mag propagation runs once over the coalesced write set.
-      const { bucketDiffs } = brushStroke.driver.finish();
-      const { magInfo } = brushStroke;
-      // The core's BucketAddress is structurally the viewer's, additional
-      // coordinates included, so it goes into createSendBucketInfo as-is.
-      yield* put(
-        pushSaveQueueTransaction(
-          bucketDiffs.map((diff) =>
-            updateBucketPartial(
-              createSendBucketInfo(diff.address, magInfo),
-              encodeBucketDiffBase64(diff),
-              volumeTracing.tracingId,
+      const { voxels, bucketDiffs } = brushStroke.driver.finish();
+      // Only a stroke that wrote something counts, so that the "no voxels
+      // were changed" hint below still fires when overwrite-empty skipped all.
+      if (voxels > 0) wroteVoxelsBox.value = true;
+      if (bucketDiffs.length > 0) {
+        const { magInfo } = brushStroke;
+        // The core's BucketAddress is structurally the viewer's, additional
+        // coordinates included, so it goes into createSendBucketInfo as-is.
+        yield* put(
+          pushSaveQueueTransaction(
+            bucketDiffs.map((diff) =>
+              updateBucketPartial(
+                createSendBucketInfo(diff.address, magInfo),
+                encodeBucketDiffBase64(diff),
+                volumeTracing.tracingId,
+              ),
             ),
           ),
-        ),
-      );
-      // currentSectionLabeler.updateArea(...) above ran regardless of which
-      // path drew the stroke, so its centroid tracking is accurate here too.
-      // Without this, volume interpolation (which reads this via
-      // getLastLabelAction/getLabelActionFromPreviousSlice) never sees a
-      // previous slice and always reports "all recent label actions were
-      // performed on the current slice" — mirrors finishSectionLabeler below.
-      yield* put(registerLabelPointAction(currentSectionLabeler.getUnzoomedCentroid()));
-    } else {
-      yield* call(
-        finishSectionLabeler,
-        currentSectionLabeler,
-        activeTool,
-        contourTracingMode,
-        overwriteMode,
-        labeledZoomStep,
-        wroteVoxelsBox,
-      );
+        );
+      }
     }
+    // For every tool, including the brush: fills the area enclosed by the
+    // stroke if there is one (for the brush, only when it is released near its
+    // start), within the same undo step, and registers the stroke for volume
+    // interpolation.
+    yield* call(
+      finishSectionLabeler,
+      currentSectionLabeler,
+      activeTool,
+      contourTracingMode,
+      overwriteMode,
+      labeledZoomStep,
+      wroteVoxelsBox,
+    );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     yield* put(
       updateSegmentAction(
@@ -442,7 +448,10 @@ export function* finishSectionLabeler(
     );
   }
 
-  yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
+  const centroid = sectionLabeler.getUnzoomedCentroid();
+  if (centroid != null) {
+    yield* put(registerLabelPointAction(centroid));
+  }
 }
 
 function* ensureSegmentExists(

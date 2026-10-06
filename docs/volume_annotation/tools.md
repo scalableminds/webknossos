@@ -56,7 +56,7 @@ The following interactions and modes become available when working with some of 
 **Overwrite Everything**: When using the brush or trace tool for labeling, you can annotate any voxel without considering whether it has already been labeled as a different segment or if it is unlabelled. This allows you to draw over existing segments.
 
 ![Overwrite Empty Voxels Modifier](./images/overwrite-empty-modifier.jpg){align=left width="60"} 
-**Only Overwrite Empty Areas**: In contrast to the `Overwrite Everything` modifier, this modifier forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
+**Only Overwrite Empty Areas**: In contrast to the `Overwrite Everything` mode, this mode forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites. In case of erasing, only the current segment ID is overwritten. Both modes share one toggle button in the toolbar: its icon shows the current mode and the button is highlighted while `Only Overwrite Empty Areas` is active. Holding ++ctrl++ / ++cmd++ temporarily switches to the other mode.
 
 ![Interpolation Button](./images/interpolation-modifier.jpg){align=left width="60"} 
 **Interpolation**: Annotate a segment, skip a few sections in the Z direction, and annotate it again. Now, you can interpolate between the two segments. Read more on the [interpolation](#volume-interpolation) below. 

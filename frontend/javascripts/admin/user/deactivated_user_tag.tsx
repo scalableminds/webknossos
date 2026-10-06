@@ -1,5 +1,5 @@
 import { Tag } from "antd";
 
 export default function DeactivatedUserTag() {
-  return <Tag color="default">deactivated</Tag>;
+  return <Tag color="warning">deactivated</Tag>;
 }

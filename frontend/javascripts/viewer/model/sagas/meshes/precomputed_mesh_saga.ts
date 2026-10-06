@@ -424,6 +424,9 @@ function* loadPrecomputedMeshesInChunksForLod(
 
   let bufferGeometries: UnmergedBufferGeometryWithInfo[] = [];
   const cachedChunkGeometries: UnmergedBufferGeometryWithInfo[] = [];
+  // Chunks that aren't shown by an intermediate mesh (see below). Only these need to be added to
+  // the scene if the final merge fails.
+  const chunkGeometriesWithoutIntermediateMesh: UnmergedBufferGeometryWithInfo[] = [];
 
   function* addGeometryToScene(geometry: BufferGeometry, isMerged: boolean): Saga<void> {
     yield* call(
@@ -453,6 +456,8 @@ function* loadPrecomputedMeshesInChunksForLod(
     const geometry = mergeGeometriesOrNull(chunkGeometries);
     if (geometry != null) {
       yield* call(addGeometryToScene, geometry, false);
+    } else {
+      chunkGeometriesWithoutIntermediateMesh.push(...chunkGeometries);
     }
   }
 
@@ -529,6 +534,8 @@ function* loadPrecomputedMeshesInChunksForLod(
     // only be shown for a moment. Not rendering it saves some workload. Thus, the merged mesh is shown faster.
     if (missingBatches.length > 0) {
       yield* call(addIntermediateMesh, cachedChunkGeometries);
+    } else {
+      chunkGeometriesWithoutIntermediateMesh.push(...cachedChunkGeometries);
     }
     return error;
   }
@@ -571,7 +578,26 @@ function* loadPrecomputedMeshesInChunksForLod(
     console.error(`Failed to merge mesh chunks for segment ${segmentId}:`, exception);
   }
 
-  // Remove the intermediate meshes (see above).
+  if (mergedGeometry == null) {
+    // Don't fail hard. Instead, keep the intermediate meshes and show the remaining chunks as
+    // separate meshes so that the mesh is still rendered. Only features that require the merged
+    // geometry (e.g., highlighting of unmapped segments during proofreading) won't work for this
+    // mesh.
+    if (sortedBufferGeometries.length > 0) {
+      Toast.error(
+        `The mesh chunks of segment ${segmentId} could not be merged. The mesh is shown in parts, so some features like highlighting segments in the mesh won't work for it. This might be due to not having enough RAM. Consider reloading.`,
+      );
+    }
+    console.warn(
+      `Falling back to the unmerged mesh chunks for segment ${segmentId}. See errors above for details.`,
+    );
+    for (const bufferGeometry of chunkGeometriesWithoutIntermediateMesh) {
+      yield* call(addGeometryToScene, bufferGeometry, false);
+    }
+    return;
+  }
+
+  // Replace the intermediate meshes (see above) with the merged mesh.
   yield* call(
     {
       context: segmentMeshController,
@@ -581,21 +607,6 @@ function* loadPrecomputedMeshesInChunksForLod(
     layerName,
     { lod },
   );
-
-  if (mergedGeometry == null) {
-    // Don't fail hard. Instead, show the chunks as separate meshes so that the
-    // mesh is still rendered. Only features that require the merged geometry
-    // (e.g., highlighting of unmapped segments during proofreading) won't work
-    // for this mesh.
-    console.warn(
-      `Falling back to the unmerged mesh chunks for segment ${segmentId}. See errors above for details.`,
-    );
-    for (const bufferGeometry of bufferGeometries) {
-      yield* call(addGeometryToScene, bufferGeometry, false);
-    }
-    return;
-  }
-
   yield* call(addGeometryToScene, mergedGeometry, true);
 }
 

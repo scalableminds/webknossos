@@ -13,7 +13,7 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { getThemeFromUser } from "theme";
+import { getThemeFromUser, ModalWidth } from "theme";
 import type { APIOrganization } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { getActiveUserCount } from "../pricing_plan_utils";
@@ -41,8 +41,6 @@ import {
 const MAX_NOTE_LENGTH = 1000;
 // Keeps custom amounts well within the backend's Int range.
 const MAX_CUSTOM_AMOUNT = 1_000_000;
-// The design asks for a fixed two-column layout that is a bit wider than ModalWidth.Large.
-const MODAL_WIDTH = 840;
 
 const SidePanelColors = {
   light: "#1f1f1f",
@@ -425,7 +423,7 @@ export default function UpgradeRequestModal({
       onCancel={destroy}
       footer={null}
       closable={false}
-      width={MODAL_WIDTH}
+      width={ModalWidth.Large}
       zIndex={10000} // overlay everything
       styles={{
         container: { padding: 0, overflow: "hidden", borderRadius: token.borderRadiusLG },

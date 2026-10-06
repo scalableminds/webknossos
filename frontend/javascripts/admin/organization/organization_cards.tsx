@@ -1,5 +1,10 @@
-import { FieldTimeOutlined, PlusCircleOutlined, RobotOutlined } from "@ant-design/icons";
-import { Alert, App, Button, Card, Col, Row, Space } from "antd";
+import {
+  CrownOutlined,
+  FieldTimeOutlined,
+  PlusCircleOutlined,
+  RobotOutlined,
+} from "@ant-design/icons";
+import { Alert, App, Button, Card, Col, Flex, Row, Space, Typography, theme } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { useWkSelector } from "libs/react_hooks";
@@ -86,19 +91,68 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
   );
 }
 
+// Plans ending within this many weeks are highlighted as about to expire.
+const PLAN_EXPIRATION_WARNING_WEEKS = 6;
+
+function isPlanAboutToExpire(organization: APIOrganization): boolean {
+  return (
+    dayjs.duration(dayjs(organization.paidUntil).diff(dayjs())).asWeeks() <=
+      PLAN_EXPIRATION_WARNING_WEEKS && !hasPricingPlanExpired(organization)
+  );
+}
+
 export function PlanExpirationCard({ organization }: { organization: APIOrganization }) {
   const { modal } = App.useApp();
+  const { token } = theme.useToken();
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   if (organization.paidUntil === Constants.MAXIMUM_DATE_TIMESTAMP) return null;
 
+  const hasExpired = hasPricingPlanExpired(organization);
+  const isUrgent = hasExpired || isPlanAboutToExpire(organization);
+  const timeLeft = dayjs(organization.paidUntil).fromNow(true);
+  const planName = organization.pricingPlan.replace("_", " ");
+
+  let statusText: React.ReactNode;
+  if (hasExpired) {
+    statusText = "Your plan has ended. Extend it to restore all users and features.";
+  } else if (isUrgent) {
+    statusText = `Your plan ends in ${timeLeft}. Extend it to keep all users and features.`;
+  } else {
+    statusText = `Your next renewal is in ${timeLeft}.`;
+  }
+
   return (
-    <Card style={{ marginBottom: 36 }}>
-      <Row gutter={24}>
-        <Col flex="auto">
-          Your current plan is paid until{" "}
-          <FormattedDate timestamp={organization.paidUntil} dateOnly />
-        </Col>
-        <Col span={6}>
+    <Card>
+      <Flex align="center" gap={24} wrap>
+        <Flex
+          align="center"
+          justify="center"
+          style={{
+            width: 48,
+            height: 48,
+            flex: "none",
+            borderRadius: token.borderRadiusLG,
+            background: isUrgent ? token.colorWarningBg : token.colorPrimaryBg,
+            color: isUrgent ? token.colorWarning : token.colorPrimary,
+            fontSize: 22,
+          }}
+        >
+          <CrownOutlined />
+        </Flex>
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+          <Typography.Text strong style={{ fontSize: 16, display: "block" }}>
+            {planName} · {hasExpired ? "expired on" : "paid until"}{" "}
+            <FormattedDate timestamp={organization.paidUntil} dateOnly />
+          </Typography.Text>
+          <Typography.Text type={isUrgent ? "warning" : "secondary"}>
+            {statusText}{" "}
+            <a href="https://webknossos.org/pricing" target="_blank" rel="noopener noreferrer">
+              Compare all plans
+            </a>
+          </Typography.Text>
+        </div>
+        {activeUser && isUserAllowedToRequestUpgrades(activeUser) ? (
           <Button
             type="primary"
             icon={<FieldTimeOutlined />}
@@ -106,8 +160,8 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
           >
             Extend Now
           </Button>
-        </Col>
-      </Row>
+        ) : null}
+      </Flex>
     </Card>
   );
 }
@@ -152,11 +206,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
 export function PlanAboutToExceedAlert({ organization }: { organization: APIOrganization }) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const { modal } = App.useApp();
-  const isAboutToExpire =
-    dayjs.duration(dayjs(organization.paidUntil).diff(dayjs())).asWeeks() <= 6 &&
-    !hasPricingPlanExpired(organization);
-
-  if (isAboutToExpire) {
+  if (isPlanAboutToExpire(organization)) {
     const actionButton = (
       <Button
         size="small"
@@ -171,7 +221,7 @@ export function PlanAboutToExceedAlert({ organization }: { organization: APIOrga
       <Alert
         showIcon
         type="warning"
-        title="Your WEBKNOSSOS plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
+        title={`Your WEBKNOSSOS plan ends ${dayjs(organization.paidUntil).fromNow()}. Extend it to keep all users and features.`}
         action={activeUser && isUserAllowedToRequestUpgrades(activeUser) ? actionButton : null}
         style={{ marginBottom: 20 }}
       />

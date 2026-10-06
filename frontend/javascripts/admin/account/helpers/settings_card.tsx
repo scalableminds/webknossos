@@ -56,7 +56,7 @@ export function SettingsCard({
         </span>
         <div
           style={{
-            fontSize: size === "stat" ? 24 : 16,
+            fontSize: size === "stat" ? 20 : 16,
             fontWeight: 600,
             minWidth: 0,
             overflowWrap: "anywhere",
@@ -70,8 +70,11 @@ export function SettingsCard({
     );
 
   return (
-    <Card style={{ minHeight: 105, height: "100%", ...style }}>
-      <Flex vertical gap={12}>
+    <Card
+      style={{ minHeight: 105, height: "100%", ...style }}
+      styles={{ body: { height: "100%" } }}
+    >
+      <Flex vertical gap={12} style={{ height: "100%" }}>
         <Typography.Text type="secondary" style={{ fontSize: 14 }}>
           <Flex justify="space-between" align="center">
             <Space size="small">
@@ -115,7 +118,8 @@ export function SettingsCard({
           </div>
         ) : null}
         {children}
-        {footerAction != null ? <div>{footerAction}</div> : null}
+        {/* Pushed to the bottom so buttons line up across cards of different content height. */}
+        {footerAction != null ? <div style={{ marginTop: "auto" }}>{footerAction}</div> : null}
       </Flex>
     </Card>
   );
@@ -124,7 +128,7 @@ export function SettingsCard({
 // Secondary text after a stat value, e.g. the "/ 5" in "4 / 5".
 export function StatSuffix({ children }: { children: React.ReactNode }) {
   return (
-    <Typography.Text type="secondary" style={{ fontSize: 16, fontWeight: 400 }}>
+    <Typography.Text type="secondary" style={{ fontSize: 14, fontWeight: 400 }}>
       {" "}
       {children}
     </Typography.Text>

@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanStatus, updateOrganization } from "admin/api/organization";
 import { getUsers } from "admin/rest_api";
-import { Button, Col, Row, Space, Spin, Tag, Typography, theme } from "antd";
+import { Button, Col, Row, Space, Spin, Typography, theme } from "antd";
 import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/format_utils";
 import { useApi, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -33,7 +33,6 @@ import {
 } from "../account/helpers/settings_card";
 import {
   AiAddonUpgradeCard,
-  PlanAboutToExceedAlert,
   PlanExceededAlert,
   PlanExpirationCard,
   PlanUpgradeCard,
@@ -128,7 +127,6 @@ export function OrganizationOverviewView() {
     key: "users",
     title: "Users",
     icon: <TeamOutlined />,
-    size: "stat",
     content: (
       <>
         {activeUsersCount}
@@ -173,7 +171,6 @@ export function OrganizationOverviewView() {
     key: "storage",
     title: "Storage",
     icon: <DatabaseOutlined />,
-    size: "stat",
     content: (
       <>
         {formatCountToDataAmountUnit(organization.usedStorageBytes, true)}
@@ -218,7 +215,6 @@ export function OrganizationOverviewView() {
     key: "credits",
     title: "AI Credits",
     icon: <DollarCircleOutlined style={{ color: ColorWKGold }} />,
-    size: "stat",
     content:
       creditBalance != null ? (
         <>
@@ -289,7 +285,7 @@ export function OrganizationOverviewView() {
           editable={{
             onChange: setOrganizationName,
           }}
-          style={{ fontWeight: "inherit" }}
+          style={{ fontSize: "inherit", fontWeight: "inherit" }}
         >
           {organization.name}
         </Typography.Text>
@@ -300,6 +296,17 @@ export function OrganizationOverviewView() {
       title: "Owner",
       icon: <UserOutlined />,
       content: organization.ownerName,
+    },
+    {
+      key: "plan",
+      title: "Current Plan",
+      icon: <CrownOutlined />,
+      content: organization.pricingPlan.replace("_", " "),
+      tooltip: (
+        <a href="https://webknossos.org/pricing" target="_blank" rel="noopener noreferrer">
+          Compare all plans
+        </a>
+      ),
     },
   ];
   const rowTwoStats: StatCardProps[] = [usersStat, storageStat, creditsStat, aiAddonStat];
@@ -354,33 +361,22 @@ export function OrganizationOverviewView() {
 
   return (
     <>
-      <SettingsTitle
-        title={organization.name}
-        description="Manage your organization."
-        tag={
-          <Tag icon={isPersonal ? undefined : <CrownOutlined />}>
-            {organization.pricingPlan.replace("_", " ")}
-          </Tag>
-        }
-      />
+      <SettingsTitle title={organization.name} description="Manage your organization." />
       {pricingPlanStatus?.isExceeded ? <PlanExceededAlert organization={organization} /> : null}
-      {pricingPlanStatus?.isAlmostExceeded && !pricingPlanStatus.isExceeded ? (
-        <PlanAboutToExceedAlert organization={organization} />
-      ) : null}
-      <Space orientation="vertical" size="large">
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <Spin spinning={isFetchingData}>
-          <Space orientation="vertical" size={24}>
+          <Space orientation="vertical" size={24} style={{ width: "100%" }}>
             <Row gutter={[24, 24]}>
               {rowOneStats.map(({ key, ...stat }) => (
-                <Col span={12} key={key}>
-                  <SettingsCard {...stat} />
+                <Col span={8} key={key}>
+                  <SettingsCard size="stat" {...stat} />
                 </Col>
               ))}
             </Row>
             <Row gutter={[24, 24]}>
               {rowTwoStats.map(({ key, ...stat }) => (
                 <Col span={6} key={key}>
-                  <SettingsCard {...stat} />
+                  <SettingsCard size="stat" {...stat} />
                 </Col>
               ))}
             </Row>

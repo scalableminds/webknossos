@@ -10,6 +10,7 @@ import {
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { removeMeshAction } from "viewer/model/actions/annotation_actions";
 import {
   type MinCutAgglomerateWithPositionAction,
   type MinCutPartitionsAction,
@@ -319,10 +320,15 @@ export function* handleProofreadMerge(action: ProofreadMergeAction, ctx: Operati
       ),
     );
 
+    // The early returns below skip the mesh refresh at the end, which would remove the mesh of the
+    // target segment item that was merged away above. So it is removed in these cases here.
     const postProcessResult = yield* call(() =>
       syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo, ctx),
     );
-    if (!postProcessResult) return;
+    if (!postProcessResult) {
+      yield* put(removeMeshAction(volumeTracingId, targetAgglomerateId));
+      return;
+    }
     ({ sourceInfo, targetInfo } = postProcessResult);
 
     // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
@@ -337,6 +343,7 @@ export function* handleProofreadMerge(action: ProofreadMergeAction, ctx: Operati
       Toast.error(
         `Could not reload the agglomerate information for proofreading operation segments.`,
       );
+      yield* put(removeMeshAction(volumeTracingId, targetAgglomerateId));
       return;
     }
     activeMapping = newInfo.activeMapping;

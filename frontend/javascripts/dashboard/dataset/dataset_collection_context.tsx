@@ -43,8 +43,7 @@ export type FolderModalState =
   | { mode: "create"; parentFolderId: string };
 
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
-// Sort options the user can pick explicitly. Search results are sorted by relevance until the user picks one.
-export type DatasetSortOption = Exclude<DatasetSortBy, "searchRelevance">;
+type DatasetSortOption = Exclude<DatasetSortBy, "searchRelevance">;
 
 export type DatasetCollectionContextValue = {
   datasets: Array<APIDatasetCompact>;
@@ -72,9 +71,9 @@ export type DatasetCollectionContextValue = {
   setSearchTags: (tags: string[]) => void;
   datasetFilteringMode: DatasetFilteringMode;
   setDatasetFilteringMode: (mode: DatasetFilteringMode) => void;
-  sortOption: DatasetSortOption;
-  setSortOption: (option: DatasetSortOption) => void;
-  isSortedBySearchRelevance: boolean;
+  sortBy: DatasetSortBy;
+  setSortBy: (sortBy: DatasetSortBy) => void;
+  canSortBySearchRelevance: boolean;
   getBreadcrumbs: (dataset: APIDatasetCompactWithoutStatusAndLayerNames) => string[] | null;
   getActiveSubfolders: () => FolderItem[];
   folderModalState: FolderModalState | null;
@@ -136,11 +135,16 @@ export default function DatasetCollectionContextProvider({
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] =
     useState<DatasetFilteringMode>("onlyShowReported");
-  const [sortOption, setSortOptionInner] = useState<DatasetSortOption>("lastUsed");
+  // Sort order used when not sorting by search relevance.
+  const [sortOption, setSortOption] = useState<DatasetSortOption>("lastUsed");
   const [hasUserSetSort, setHasUserSetSort] = useState(false);
-  const setSortOption = useCallback((option: DatasetSortOption) => {
-    setSortOptionInner(option);
-    setHasUserSetSort(true);
+  const setSortBy = useCallback((sortBy: DatasetSortBy) => {
+    if (sortBy === "searchRelevance") {
+      setHasUserSetSort(false);
+    } else {
+      setSortOption(sortBy);
+      setHasUserSetSort(true);
+    }
   }, []);
   const queryClient = useQueryClient();
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -154,10 +158,10 @@ export default function DatasetCollectionContextProvider({
       setHasUserSetSort(false);
     }
   }, [isSearchActive]);
-  const isSortedBySearchRelevance =
-    globalSearchQuery != null &&
-    globalSearchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH &&
-    !hasUserSetSort;
+  const canSortBySearchRelevance =
+    globalSearchQuery != null && globalSearchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH;
+  const sortBy: DatasetSortBy =
+    canSortBySearchRelevance && !hasUserSetSort ? "searchRelevance" : sortOption;
 
   const listParams: DatasetListParams = useMemo(
     () => ({
@@ -171,15 +175,9 @@ export default function DatasetCollectionContextProvider({
       // Only admins and dataset managers see datasets without usable layers.
       isActive: isAdminOrDatasetManager ? undefined : true,
       onlyMyOrganization: features().isWkorgInstance || undefined,
-      sortBy: isSortedBySearchRelevance ? "searchRelevance" : sortOption,
+      sortBy,
     }),
-    [
-      searchTags,
-      datasetFilteringMode,
-      isAdminOrDatasetManager,
-      isSortedBySearchRelevance,
-      sortOption,
-    ],
+    [searchTags, datasetFilteringMode, isAdminOrDatasetManager, sortBy],
   );
 
   // Keep url GET parameters in sync with search and active folder
@@ -353,9 +351,9 @@ export default function DatasetCollectionContextProvider({
       setSearchTags,
       datasetFilteringMode,
       setDatasetFilteringMode,
-      sortOption,
-      setSortOption,
-      isSortedBySearchRelevance,
+      sortBy,
+      setSortBy,
+      canSortBySearchRelevance,
       queries: {
         folderHierarchyQuery,
         datasetsInFolderQuery,
@@ -395,9 +393,9 @@ export default function DatasetCollectionContextProvider({
       folderModalState,
       searchTags,
       datasetFilteringMode,
-      sortOption,
-      setSortOption,
-      isSortedBySearchRelevance,
+      sortBy,
+      setSortBy,
+      canSortBySearchRelevance,
     ],
   );
 

@@ -9,7 +9,7 @@ import fileLightIcon from "@images/file-light.png";
 import folderThumbnailIcon from "@images/folder-thumbnail.svg";
 import IconSort from "@images/icons/icon-sort.svg?react";
 import inactiveDatasetThumbnail from "@images/inactive-dataset-thumbnail.svg";
-import type { DatasetUpdater } from "admin/rest_api";
+import type { DatasetSortBy, DatasetUpdater } from "admin/rest_api";
 import { App, Button, Dropdown, type MenuProps, Radio, Space, Table, Tag, Tooltip } from "antd";
 import type { ColumnType } from "antd/es/table/interface";
 import classNames from "classnames";
@@ -22,7 +22,6 @@ import { DraggableDatasetType } from "dashboard/advanced_dataset/dnd_types";
 import type {
   DatasetCollectionContextValue,
   DatasetFilteringMode,
-  DatasetSortOption,
 } from "dashboard/dataset/dataset_collection_context";
 import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "dashboard/dataset/queries";
 import {
@@ -66,7 +65,8 @@ type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
 const { ThinSpace } = Unicode;
 
-const DATASET_SORT_OPTIONS: Array<{ key: DatasetSortOption; label: string }> = [
+const DATASET_SORT_OPTIONS: Array<{ key: DatasetSortBy; label: string }> = [
+  { key: "searchRelevance", label: "Search Relevance" },
   { key: "lastUsed", label: "Last used" },
   { key: "createdDesc", label: "Newest" },
   { key: "createdAsc", label: "Oldest" },
@@ -634,12 +634,14 @@ class DatasetTable extends PureComponent<Props, State> {
       },
     ];
 
-    const { sortOption } = context;
+    const { sortBy } = context;
     const availableSortOptions = DATASET_SORT_OPTIONS.filter(
-      (option) => option.key !== "storage" || this.shouldShowStorage(),
+      (option) =>
+        (option.key !== "storage" || this.shouldShowStorage()) &&
+        (option.key !== "searchRelevance" || context.canSortBySearchRelevance),
     );
     const currentSortLabel =
-      availableSortOptions.find((option) => option.key === sortOption)?.label ?? "Last used";
+      availableSortOptions.find((option) => option.key === sortBy)?.label ?? "Last used";
 
     return (
       <DndProvider backend={HTML5Backend}>
@@ -706,8 +708,8 @@ class DatasetTable extends PureComponent<Props, State> {
               {availableSortOptions.map((option) => (
                 <Radio
                   key={option.key}
-                  checked={sortOption === option.key}
-                  onChange={() => context.setSortOption(option.key)}
+                  checked={sortBy === option.key}
+                  onChange={() => context.setSortBy(option.key)}
                 >
                   {option.label}
                 </Radio>

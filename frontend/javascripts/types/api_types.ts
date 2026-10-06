@@ -336,6 +336,7 @@ export type APIUserBase = APIUserCompact & {
   readonly teams: Array<APITeamMembership>;
   readonly isAdmin: boolean;
   readonly isDatasetManager: boolean;
+  readonly isActive: boolean;
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;

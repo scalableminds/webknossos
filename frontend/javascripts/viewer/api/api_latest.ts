@@ -470,6 +470,12 @@ class TracingApi {
         ? skeletonTracing.trees.getNullable(treeId)
         : findTreeByNodeId(skeletonTracing.trees, nodeId);
     assertExists(tree, `Couldn't find node ${nodeId}.`);
+    if (treeId != null) {
+      assertExists(
+        tree.nodes.getNullable(nodeId),
+        `Couldn't find node ${nodeId} in tree ${treeId}.`,
+      );
+    }
     return tree;
   }
 

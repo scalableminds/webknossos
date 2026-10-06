@@ -14,6 +14,7 @@ import { scrollToTop } from "libs/utils";
 import { useMemo } from "react";
 import type { APICreditTransaction, APIJob } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { CreditActivitySummaryBar } from "./organization_summary_bars";
 
 const { Column } = Table;
 
@@ -140,13 +141,13 @@ export function OrganizationCreditActivityView() {
         title="Credit Activity"
         description="Review credit purchases, spending, and refunds for your organization."
       />
+      <CreditActivitySummaryBar transactions={organizationTransactions} />
       <Spin spinning={isLoading}>
         <Table
           dataSource={organizationTransactions}
           rowKey="id"
           pagination={{ defaultPageSize: 50, onChange: scrollToTop }}
           locale={{ emptyText: "No credit activity recorded yet." }}
-          style={{ marginTop: 16 }}
           summary={(pageData) => {
             const totalCredits = pageData.reduce(
               (sum, transaction) => sum + transaction.creditChange,

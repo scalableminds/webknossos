@@ -1,5 +1,7 @@
+import dayjs from "dayjs";
 import messages from "messages";
 import type { APIOrganization, APIUser } from "types/api_types";
+import Constants from "viewer/constants";
 
 export enum PricingPlanEnum {
   Personal = "Personal",
@@ -48,6 +50,9 @@ export const aiAddonFeatures = [
 ];
 
 export const maxIncludedUsersInPersonalPlan = 1;
+
+// Paid plans are highlighted as expiring once they are this close to their end date.
+export const PLAN_EXPIRATION_REMINDER_DAYS = 30;
 
 export function getActiveUserCount(users: APIUser[]): number {
   return users.filter((user) => user.isActive && !user.isUnlisted && !user.isGuest).length;
@@ -106,6 +111,31 @@ export function hasSomePaidPlan(organization: APIOrganization | null) {
 
 export function hasAiPlan(organization: APIOrganization | null) {
   return organization?.aiPlan != null;
+}
+
+export function isTrialPlan(pricingPlan: PricingPlanEnum): boolean {
+  return pricingPlan === PricingPlanEnum.TeamTrial || pricingPlan === PricingPlanEnum.PowerTrial;
+}
+
+// Maps trial plans to the plan they are a trial of, e.g. "Power_Trial" -> "Power".
+export function getBasePricingPlan(pricingPlan: PricingPlanEnum): PricingPlanEnum {
+  if (pricingPlan === PricingPlanEnum.TeamTrial) return PricingPlanEnum.Team;
+  if (pricingPlan === PricingPlanEnum.PowerTrial) return PricingPlanEnum.Power;
+  return pricingPlan;
+}
+
+export function canUpgradePricingPlan(pricingPlan: PricingPlanEnum): boolean {
+  return !isPricingPlanGreaterEqualThan(pricingPlan, PricingPlanEnum.Power);
+}
+
+// Returns null for plans without an expiration date.
+export function getDaysUntilPlanExpires(organization: APIOrganization): number | null {
+  if (organization.paidUntil === Constants.MAXIMUM_DATE_TIMESTAMP) return null;
+  return Math.max(0, Math.ceil(dayjs(organization.paidUntil).diff(dayjs(), "day", true)));
+}
+
+export function getAiAddonIncludedCredits(pricingPlan: PricingPlanEnum): number {
+  return isPricingPlanGreaterEqualThan(pricingPlan, PricingPlanEnum.Power) ? 1000 : 400;
 }
 
 export function isAiAddonEligiblePlan(pricingPlan: PricingPlanEnum): boolean {

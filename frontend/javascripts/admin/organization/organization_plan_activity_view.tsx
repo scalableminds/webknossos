@@ -10,6 +10,7 @@ import { scrollToTop } from "libs/utils";
 import { useMemo } from "react";
 import type { APIOrganizationPricingPlanUpdate } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { PlanSummaryBar } from "./organization_summary_bars";
 
 const { Text } = Typography;
 const UNCHANGED_LABEL = <Text type="secondary">Unchanged</Text>;
@@ -122,6 +123,7 @@ export function OrganizationPlanActivityView() {
         title="Plan Updates"
         description="Track recent changes to your organization's subscription."
       />
+      <PlanSummaryBar />
       <Table<APIOrganizationPricingPlanUpdate>
         rowKey={(update) => `${update.organizationId}-${update.created}-${update.pricingPlan}`}
         loading={isFetching}

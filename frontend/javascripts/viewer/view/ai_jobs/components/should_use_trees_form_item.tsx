@@ -41,7 +41,7 @@ export function ShouldUseManualMatchesFormItem() {
       label={
         <Space>
           <div style={{}}>
-            Manual matches{" "}
+            Manual Matches{" "}
             <Tooltip title="Please select whether the alignment should take connected skeleton nodes between adjacent sections as alignment guideline whenever available.">
               <InfoCircleOutlined />
             </Tooltip>

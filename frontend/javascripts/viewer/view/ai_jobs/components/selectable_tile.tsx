@@ -114,7 +114,7 @@ export function SelectableTile({
             />
             <div style={{ position: "absolute", top: 8, right: 8 }}>
               {isSelected && <SelectedIcon size={20} />}
-              {isDisabled && <Tag style={{ marginInlineEnd: 0 }}>Coming soon</Tag>}
+              {isDisabled && <Tag style={{ marginInlineEnd: 0 }}>Coming Soon</Tag>}
             </div>
           </div>
         )

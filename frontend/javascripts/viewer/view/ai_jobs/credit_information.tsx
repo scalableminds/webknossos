@@ -122,7 +122,7 @@ export const AlignmentCreditInformation: React.FC = () => {
       startButtonTitle="Start alignment"
       areParametersValid={areParametersValid}
       requirements={requirements}
-      selectionLabel="Selected task"
+      selectionLabel="Selected Task"
     />
   );
 };
@@ -165,8 +165,8 @@ export const TrainingCreditInformation: React.FC = () => {
       startButtonTitle="Start training"
       areParametersValid={areParametersValid}
       requirements={requirements}
-      selectionLabel="Selected task"
-      volume={{ label: "Training volume", voxelCount: totalVolume }}
+      selectionLabel="Selected Task"
+      volume={{ label: "Training Volume", voxelCount: totalVolume }}
     />
   );
 };
@@ -180,7 +180,7 @@ interface CreditInformationProps {
   areParametersValid: boolean;
   requirements: JobRequirement[];
   selectionLabel?: string;
-  // Replaces the default "Dataset size" row, which shows the volume of the selected bounding box.
+  // Replaces the default "Dataset Size" row, which shows the volume of the selected bounding box.
   volume?: { label: string; voxelCount: number };
 }
 
@@ -207,7 +207,7 @@ function BeforeYouStart({ requirements }: { requirements: JobRequirement[] }) {
       }}
     >
       <Text strong style={{ display: "block", marginBottom: 6 }}>
-        Before you start
+        Before You Start
       </Text>
       {requirements.map(({ label, severity }) => (
         <Flex key={label} gap="small" align="baseline">
@@ -227,7 +227,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
   startButtonTitle,
   areParametersValid,
   requirements,
-  selectionLabel = "Selected model",
+  selectionLabel = "Selected Model",
   volume,
 }) => {
   const { cssVar } = theme.useToken();
@@ -322,7 +322,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           marginBottom: 20,
         }}
       >
-        <Text>Available credits</Text>
+        <Text>Available Credits</Text>
         <Text strong>{formatMilliCreditsString(organizationMilliCredits)}</Text>
       </Flex>
       <Flex vertical gap="small">
@@ -331,7 +331,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           label={
             volume?.label ?? (
               <Space size="small">
-                Dataset size
+                Dataset Size
                 <Tooltip title="Displayed size respects selected bounding boxes and magnifications.">
                   <InfoCircleOutlined />
                 </Tooltip>
@@ -341,7 +341,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           value={getBoundingBoxinVoxels()}
         />
         <CreditRow
-          label="Credits per gigavoxel"
+          label="Credits per Gigavoxel"
           value={
             selectedJobType && jobTypeToCreditCostPerGVxInMillis[selectedJobType] != null
               ? formatMilliCreditsString(jobTypeToCreditCostPerGVxInMillis[selectedJobType])
@@ -351,7 +351,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
       </Flex>
       <Divider style={{ margin: "20px 0" }} />
       <Flex justify="space-between" align="baseline" style={{ marginBottom: 20 }}>
-        <Text strong>Total cost</Text>
+        <Text strong>Total Cost</Text>
         {isFetching && selectedBoundingBox && selectedModel ? (
           <Spin size="small" />
         ) : (

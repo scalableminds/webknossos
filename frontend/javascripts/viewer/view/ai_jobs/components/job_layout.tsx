@@ -49,7 +49,7 @@ export function AdvancedSettings({ hint, children }: AdvancedSettingsProps) {
             key: "advanced",
             label: (
               <Space size="small">
-                Advanced settings
+                Advanced Settings
                 {hint && <Typography.Text type="secondary">{hint}</Typography.Text>}
               </Space>
             ),

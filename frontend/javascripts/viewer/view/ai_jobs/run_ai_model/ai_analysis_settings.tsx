@@ -141,7 +141,7 @@ export const AiAnalysisSettings: React.FC = () => {
           <Col span={12}>
             <Form.Item
               name="newDatasetName"
-              label="New dataset name"
+              label="New Dataset Name"
               rules={getDatasetNameRules(activeUser)}
             >
               <Input placeholder={`e.g. ${dataset.name}_neurons`} />
@@ -150,7 +150,7 @@ export const AiAnalysisSettings: React.FC = () => {
           <Col span={12}>
             <Form.Item
               name="selectedLayer"
-              label="Image data layer"
+              label="Image Data Layer"
               rules={[
                 { required: true, message: "Please select an image data layer" },
                 colorLayerMustNotBeUint24Rule,
@@ -166,7 +166,7 @@ export const AiAnalysisSettings: React.FC = () => {
 
         <Form.Item
           name="selectedBoundingBox"
-          label="Bounding box"
+          label="Bounding Box"
           extra="Tip: draw one with the bounding box tool in the viewport."
           rules={[
             { required: true, message: "Please select a bounding box" },
@@ -183,7 +183,11 @@ export const AiAnalysisSettings: React.FC = () => {
                       selectedJobType,
                       aiModelId,
                     );
-                  } catch {
+                  } catch (error) {
+                    console.error(
+                      `Could not determine the magnification for model ${aiModelId}:`,
+                      error,
+                    );
                     return Promise.reject(
                       new Error("The selected model cannot be used. Please choose another model."),
                     );
@@ -204,7 +208,7 @@ export const AiAnalysisSettings: React.FC = () => {
           <BoundingBoxSelector />
         </Form.Item>
 
-        <AdvancedSettings hint="Custom configuration">
+        <AdvancedSettings hint="Custom Configuration">
           <Row gutter={24}>
             {isInstanceModel && (
               <Col span={12}>
@@ -218,7 +222,7 @@ export const AiAnalysisSettings: React.FC = () => {
               </Col>
             )}
           </Row>
-          <KeyValuePairsFormItem name="customConfiguration" label="Custom configuration" />
+          <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
 
           {isNeuronModel && (
             <CollapsibleSplitMergerEvaluationSettings

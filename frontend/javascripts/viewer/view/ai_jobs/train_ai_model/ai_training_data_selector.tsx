@@ -146,7 +146,7 @@ const AiTrainingDataSelector = ({
       </Flex>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, padding: 16 }}>
         <Form.Item
-          label="Image data layer"
+          label="Image Data Layer"
           required
           style={{ marginBottom: 0 }}
           rules={[
@@ -161,7 +161,7 @@ const AiTrainingDataSelector = ({
           />
         </Form.Item>
         <Form.Item
-          label="Ground truth layer"
+          label="Ground Truth Layer"
           required
           style={{ marginBottom: 0 }}
           rules={[
@@ -209,7 +209,7 @@ const AiTrainingDataSelector = ({
       </div>
       <Flex gap="large" style={{ padding: "0 16px 16px" }}>
         <Text type="secondary">
-          Bounding boxes <Text strong>{userBoundingBoxes.length}</Text>
+          Bounding Boxes <Text strong>{userBoundingBoxes.length}</Text>
         </Text>
         <Text type="secondary">
           Volume <Text strong>{formatVoxels(getTrainingVolume(selectedAnnotation))}</Text>

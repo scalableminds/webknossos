@@ -55,7 +55,7 @@ export const AiTrainingSettings: React.FC = () => {
           <Col span={12}>
             <Form.Item
               name="modelName"
-              label="Model name"
+              label="Model Name"
               rules={[{ required: true, message: "Please provide a name for the new model" }]}
             >
               <Input placeholder="e.g. l4_neurons_v2" />
@@ -63,7 +63,7 @@ export const AiTrainingSettings: React.FC = () => {
             {selectedTask?.jobType === APIJobCommand.TRAIN_INSTANCE_MODEL && (
               <Form.Item
                 name="instanceDiameterNm"
-                label="Instance diameter (nm)"
+                label="Instance Diameter (nm)"
                 rules={[{ required: true, message: "Please enter a positive number" }]}
                 tooltip='The maximum cross-section length ("diameter") for each identified object in nm e.g. Nuclei: 1000nm, Vesicles: 80nm'
               >
@@ -78,8 +78,8 @@ export const AiTrainingSettings: React.FC = () => {
           </Col>
         </Row>
 
-        <AdvancedSettings hint="Custom configuration">
-          <KeyValuePairsFormItem name="customConfiguration" label="Custom configuration" />
+        <AdvancedSettings hint="Custom Configuration">
+          <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
         </AdvancedSettings>
       </Form>
     </JobSection>

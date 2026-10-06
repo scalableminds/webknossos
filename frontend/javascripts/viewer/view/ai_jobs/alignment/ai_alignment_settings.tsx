@@ -78,7 +78,7 @@ export const AiAlignmentSettings: React.FC = () => {
           <Col span={12}>
             <Form.Item
               name="newDatasetName"
-              label="New dataset name"
+              label="New Dataset Name"
               rules={[{ required: true, message: "Please provide a name for the new dataset" }]}
             >
               <Input placeholder={`e.g. ${dataset.name}_aligned`} />
@@ -92,7 +92,7 @@ export const AiAlignmentSettings: React.FC = () => {
           Optional: connected skeleton nodes between adjacent sections are used as alignment guides.
         </Typography.Paragraph>
 
-        <AdvancedSettings hint="Fine alignment, custom configuration">
+        <AdvancedSettings hint="Fine Alignment, Custom Configuration">
           <Form.Item>
             <Space>
               <Form.Item name="fineAlignmentOnly" valuePropName="checked" noStyle>
@@ -105,7 +105,7 @@ export const AiAlignmentSettings: React.FC = () => {
               </FastTooltip>
             </Space>
           </Form.Item>
-          <KeyValuePairsFormItem name="customConfiguration" label="Custom configuration" />
+          <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
         </AdvancedSettings>
       </Form>
     </JobSection>

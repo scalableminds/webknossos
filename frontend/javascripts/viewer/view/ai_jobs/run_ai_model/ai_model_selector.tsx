@@ -133,7 +133,7 @@ export const AiModelSelector: React.FC = () => {
         <Spin />
       ) : (
         <>
-          <TileGroupLabel title="Pre-trained models" count={filteredPretrainedModels.length} />
+          <TileGroupLabel title="Pre-trained Models" count={filteredPretrainedModels.length} />
           {filteredPretrainedModels.length === 0 ? (
             <Text type="secondary">
               {searchTerm.length > 0
@@ -159,7 +159,7 @@ export const AiModelSelector: React.FC = () => {
           )}
 
           <div style={{ marginTop: 20 }}>
-            <TileGroupLabel title="Your custom models" count={filteredCustomModels.length} />
+            <TileGroupLabel title="Your Custom Models" count={filteredCustomModels.length} />
           </div>
           {filteredCustomModels.length === 0 ? (
             <Text type="secondary">{noCustomModelsText}</Text>

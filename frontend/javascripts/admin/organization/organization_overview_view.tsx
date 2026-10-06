@@ -123,7 +123,7 @@ export function OrganizationOverviewView() {
     organization.pricingPlan === PricingPlanEnum.PowerTrial;
   const hasUserLimit = organization.includedUsers !== Number.POSITIVE_INFINITY;
   const hasStorageLimit = organization.includedStorageBytes !== Number.POSITIVE_INFINITY;
-  const canRequestAiPlan = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
+  const canRequestUpgrades = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
   const isEligibleForAiAddon = isAiAddonEligiblePlan(organization.pricingPlan);
   const showAiAddonCard = organization.aiPlan == null && isEligibleForAiAddon;
 
@@ -146,7 +146,7 @@ export function OrganizationOverviewView() {
   } else if (isPersonal) {
     usersStat.hint = "Upgrade to Team for more";
   }
-  if (isPersonal) {
+  if (isPersonal && canRequestUpgrades) {
     usersStat.footerAction = (
       <Button
         type="primary"
@@ -161,7 +161,7 @@ export function OrganizationOverviewView() {
     usersStat.hint =
       seatsLeft > 0 ? `${seatsLeft} ${pluralize("seat", seatsLeft)} left` : "No seats left";
   }
-  if (canBuyMoreUsersAndStorage) {
+  if (canBuyMoreUsersAndStorage && canRequestUpgrades) {
     usersStat.footerAction = (
       <Button
         type="primary"
@@ -201,7 +201,7 @@ export function OrganizationOverviewView() {
   } else if (storageMeter != null) {
     storageStat.hint = `${Math.round(storageMeter * 100)}% used`;
   }
-  if (isPersonal) {
+  if (isPersonal && canRequestUpgrades) {
     storageStat.footerAction = (
       <Button
         type="primary"
@@ -212,7 +212,7 @@ export function OrganizationOverviewView() {
       </Button>
     );
   }
-  if (canBuyMoreUsersAndStorage) {
+  if (canBuyMoreUsersAndStorage && canRequestUpgrades) {
     storageStat.footerAction = (
       <Button
         type="primary"
@@ -241,7 +241,7 @@ export function OrganizationOverviewView() {
       ),
     hint: isCreditBalanceLow ? "Low balance" : "Pays for AI jobs like segmentation",
     hintType: isCreditBalanceLow ? "warning" : "secondary",
-    footerAction: (
+    footerAction: canRequestUpgrades ? (
       <Button
         type="primary"
         icon={<PlusOutlined />}
@@ -249,7 +249,7 @@ export function OrganizationOverviewView() {
       >
         Buy credits
       </Button>
-    ),
+    ) : null,
   };
 
   let aiAddonStat: StatCardProps;
@@ -270,7 +270,7 @@ export function OrganizationOverviewView() {
       icon: <RobotOutlined style={{ color: token.colorTextDisabled }} />,
       content: "Not active",
       hint: `Model training + ${includedCredits} credits`,
-      footerAction: canRequestAiPlan ? (
+      footerAction: canRequestUpgrades ? (
         <Button
           type="primary"
           icon={<PlusCircleOutlined />}

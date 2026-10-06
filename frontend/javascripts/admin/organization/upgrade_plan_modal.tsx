@@ -213,7 +213,8 @@ function upgradePricingPlan(
 
   if (targetPlan === undefined) {
     switch (organization.pricingPlan) {
-      case PricingPlanEnum.Personal: {
+      case PricingPlanEnum.Personal:
+      case PricingPlanEnum.OpenSource: {
         target = "TeamAndPower";
         break;
       }
@@ -222,7 +223,6 @@ function upgradePricingPlan(
         target = PricingPlanEnum.Power;
         break;
       }
-      case PricingPlanEnum.Custom:
       default:
         return;
     }

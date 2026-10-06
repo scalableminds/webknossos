@@ -431,7 +431,7 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
                       WHERE paidUntil IS NOT NULL
                       AND paidUntil > NOW()
                       AND paidUntil <= $expiryThreshold
-                      AND pricingPlan <> ${PricingPlan.Personal}
+                      AND pricingPlan NOT IN (${PricingPlan.Personal}, ${PricingPlan.Open_Source})
                       ORDER BY paidUntil""".as[OrganizationsRow])
       parsed <- parseAll(rows)
     } yield parsed

@@ -140,7 +140,7 @@ class OrganizationService @Inject() (
       _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> Msg.Organization.idTaken
       initialPricingParameters =
         if (conf.Features.isWkorgInstance) (PricingPlan.Personal, Some(1), Some(50000000000L))
-        else (PricingPlan.Custom, None, None)
+        else (PricingPlan.Enterprise, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
 
       organization = Organization(

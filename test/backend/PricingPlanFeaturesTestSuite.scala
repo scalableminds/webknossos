@@ -76,6 +76,26 @@ class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
       )
     }
 
+    "treat Open_Source like Personal and Enterprise like Power" in {
+      assert(
+        highlightsOf(PricingPlan.Open_Source, PricingPlan.Team) == highlightsOf(PricingPlan.Personal, PricingPlan.Team)
+      )
+      assert(
+        highlightsOf(PricingPlan.Personal, PricingPlan.Enterprise) == highlightsOf(
+          PricingPlan.Personal,
+          PricingPlan.Power
+        )
+      )
+      assert(
+        PricingPlanFeatures
+          .unlockedBy(PricingPlan.Team, PricingPlan.Enterprise)
+          .map(_.planLabel)
+          .contains(PricingPlan.label(PricingPlan.Enterprise))
+      )
+      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Open_Source).isEmpty)
+      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Power, PricingPlan.Enterprise).isEmpty)
+    }
+
     "be empty if the plan did not change tier" in {
       assert(PricingPlanFeatures.unlockedBy(PricingPlan.Team, PricingPlan.Team).isEmpty)
       assert(PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Personal).isEmpty)
@@ -87,11 +107,6 @@ class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
       assert(PricingPlanFeatures.unlockedBy(PricingPlan.Power, PricingPlan.Team).isEmpty)
       assert(PricingPlanFeatures.unlockedBy(PricingPlan.Team, PricingPlan.Personal).isEmpty)
       assert(PricingPlanFeatures.unlockedBy(PricingPlan.Power_Trial, PricingPlan.Team_Trial).isEmpty)
-    }
-
-    "be empty for tiers without defined highlights" in {
-      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Custom).isEmpty)
-      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Custom, PricingPlan.Power).isEmpty)
     }
 
     "never yield an empty set of highlights" in {

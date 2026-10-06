@@ -7,7 +7,24 @@ export enum PricingPlanEnum {
   Power = "Power",
   TeamTrial = "Team_Trial",
   PowerTrial = "Power_Trial",
-  Custom = "Custom",
+  OpenSource = "Open_Source",
+  Enterprise = "Enterprise",
+}
+
+// Mirrors PricingPlan.label in app/models/organization/PricingPlan.scala
+const PRICING_PLAN_LABELS: Partial<Record<PricingPlanEnum, string>> = {
+  [PricingPlanEnum.TeamTrial]: "Team (Trial)",
+  [PricingPlanEnum.PowerTrial]: "Power (Trial)",
+  [PricingPlanEnum.OpenSource]: "Open-Source",
+};
+
+export function formatPricingPlanLabel(pricingPlan: PricingPlanEnum): string {
+  return PRICING_PLAN_LABELS[pricingPlan] ?? pricingPlan;
+}
+
+// Open-Source behaves like Personal
+export function isFreePlan(pricingPlan: PricingPlanEnum): boolean {
+  return pricingPlan === PricingPlanEnum.Personal || pricingPlan === PricingPlanEnum.OpenSource;
 }
 
 export enum AiPlanEnum {
@@ -69,13 +86,15 @@ export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {
   return user.isAdmin || user.isOrganizationOwner;
 }
 
-const PLAN_TO_RANK = {
+// Mirrors PricingPlan.tierRank in app/models/organization/PricingPlan.scala
+const PLAN_TO_RANK: Record<PricingPlanEnum, number> = {
   [PricingPlanEnum.Personal]: 0,
+  [PricingPlanEnum.OpenSource]: 0,
   [PricingPlanEnum.Team]: 1,
   [PricingPlanEnum.TeamTrial]: 1,
   [PricingPlanEnum.Power]: 2,
   [PricingPlanEnum.PowerTrial]: 2,
-  [PricingPlanEnum.Custom]: 2,
+  [PricingPlanEnum.Enterprise]: 2,
 };
 
 function isPricingPlanGreaterEqualThan(planA: PricingPlanEnum, planB: PricingPlanEnum): boolean {
@@ -109,13 +128,7 @@ export function hasAiPlan(organization: APIOrganization | null) {
 }
 
 export function isAiAddonEligiblePlan(pricingPlan: PricingPlanEnum): boolean {
-  return (
-    pricingPlan === PricingPlanEnum.Team ||
-    pricingPlan === PricingPlanEnum.TeamTrial ||
-    pricingPlan === PricingPlanEnum.Power ||
-    pricingPlan === PricingPlanEnum.PowerTrial ||
-    pricingPlan === PricingPlanEnum.Custom
-  );
+  return !isFreePlan(pricingPlan);
 }
 
 export function formatAiPlanLabel(organization: APIOrganization): string {

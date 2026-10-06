@@ -24,15 +24,15 @@ object PricingPlanFeatures {
   )
 
   private def featureHighlightsOf(plan: PricingPlan): Option[List[String]] = plan match {
-    case PricingPlan.Team | PricingPlan.Team_Trial   => Some(teamPlanFeatureHighlights)
-    case PricingPlan.Power | PricingPlan.Power_Trial => Some(powerPlanFeatureHighlights)
-    case _                                           => None
+    case PricingPlan.Team | PricingPlan.Team_Trial                            => Some(teamPlanFeatureHighlights)
+    case PricingPlan.Power | PricingPlan.Power_Trial | PricingPlan.Enterprise => Some(powerPlanFeatureHighlights)
+    case _                                                                    => None
   }
 
   // The feature highlights an organization gains by moving from previousPlan to newPlan, labelled with the new plan.
   // Skipped tiers are folded in, so an upgrade from Personal to Power also lists the Team highlights, with the
   // highlights shared between the tiers listed only once.
-  // None if newPlan is not an upgrade, or if it is a tier we have no highlights for (Custom).
+  // None if newPlan is not an upgrade.
   def unlockedBy(previousPlan: PricingPlan, newPlan: PricingPlan): Option[PricingPlanFeatures] =
     featureHighlightsOf(newPlan).filter(_ => PricingPlan.isUpgrade(previousPlan, newPlan)).map { _ =>
       val gainedTiers = List(PricingPlan.Team, PricingPlan.Power).filter(tier =>

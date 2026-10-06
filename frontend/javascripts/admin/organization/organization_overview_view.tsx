@@ -22,8 +22,10 @@ import {
 import { PowerPlanUpgradeCard } from "./plan_upgrade_cards";
 import {
   formatAiPlanLabel,
+  formatPricingPlanLabel,
   getActiveUserCount,
   isAiAddonEligiblePlan,
+  isFreePlan,
   isUserAllowedToRequestUpgrades,
   PricingPlanEnum,
 } from "./pricing_plan_utils";
@@ -108,7 +110,7 @@ export function OrganizationOverviewView() {
   let upgradeAiPlanAction: React.ReactNode = null;
 
   if (
-    organization.pricingPlan === PricingPlanEnum.Personal ||
+    isFreePlan(organization.pricingPlan) ||
     organization.pricingPlan === PricingPlanEnum.Team ||
     organization.pricingPlan === PricingPlanEnum.TeamTrial
   ) {
@@ -120,7 +122,7 @@ export function OrganizationOverviewView() {
         key="upgradeUsersAction"
         icon={<PlusOutlined />}
         onClick={
-          organization.pricingPlan === PricingPlanEnum.Personal
+          isFreePlan(organization.pricingPlan)
             ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
             : UpgradePricingPlanModal.upgradeUserQuota
         }
@@ -135,7 +137,7 @@ export function OrganizationOverviewView() {
         key="upgradeStorageAction"
         icon={<PlusOutlined />}
         onClick={
-          organization.pricingPlan === PricingPlanEnum.Personal
+          isFreePlan(organization.pricingPlan)
             ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
             : UpgradePricingPlanModal.upgradeStorageQuota
         }
@@ -190,7 +192,7 @@ export function OrganizationOverviewView() {
     {
       key: "plan",
       title: "Current Plan",
-      content: organization.pricingPlan,
+      content: formatPricingPlanLabel(organization.pricingPlan),
       tooltip: (
         <a href="https://webknossos.org/pricing" target="_blank" rel="noopener noreferrer">
           Compare all plans
@@ -227,7 +229,7 @@ export function OrganizationOverviewView() {
   ];
 
   function renderUpgradeCards() {
-    const isPersonal = organization.pricingPlan === PricingPlanEnum.Personal;
+    const isPersonal = isFreePlan(organization.pricingPlan);
     const isTeamOrTeamTrial =
       organization.pricingPlan === PricingPlanEnum.Team ||
       organization.pricingPlan === PricingPlanEnum.TeamTrial;

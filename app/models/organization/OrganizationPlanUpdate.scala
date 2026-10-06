@@ -24,6 +24,13 @@ case class OrganizationPlanUpdate(
   lazy val paidUntilFlat: Option[Instant] = paidUntil.flatten
   lazy val includedUsersFlat: Option[Int] = includedUsers.flatten
   lazy val includedStorageFlat: Option[Long] = includedStorageBytes.flatten.map(_.numBytes)
+
+  // Enterprise always comes with unlimited users and storage, so any requested limits are overridden.
+  // effectivePricingPlan is the plan the organization has after this update.
+  def withQuotasOfPlan(effectivePricingPlan: PricingPlan): OrganizationPlanUpdate =
+    if (effectivePricingPlan == PricingPlan.Enterprise)
+      copy(includedUsers = Some(None), includedStorageBytes = Some(None))
+    else this
 }
 
 object OrganizationPlanUpdate extends TristateOptionJsonHelper {

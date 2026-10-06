@@ -42,7 +42,7 @@ class PricingPlanExpiryReminderTestSuite extends AsyncWordSpec {
     "use the regular lead times for all other plans" in {
       assert(leadTimesDaysFor(PricingPlan.Team, leadTimesDays, trialLeadTimesDays) == leadTimesDays)
       assert(leadTimesDaysFor(PricingPlan.Power, leadTimesDays, trialLeadTimesDays) == leadTimesDays)
-      assert(leadTimesDaysFor(PricingPlan.Custom, leadTimesDays, trialLeadTimesDays) == leadTimesDays)
+      assert(leadTimesDaysFor(PricingPlan.Enterprise, leadTimesDays, trialLeadTimesDays) == leadTimesDays)
     }
     "let a trial reminder fire only once, 7 days before expiry" in {
       val trialLeadTimes = leadTimesDaysFor(PricingPlan.Team_Trial, leadTimesDays, trialLeadTimesDays)

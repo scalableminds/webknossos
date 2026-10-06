@@ -19,10 +19,6 @@ const ROOT = path.resolve(".");
 const DEFAULT_PATTERN = "frontend/javascripts/**/*.{ts,tsx}";
 // Test files and type declarations are not compiled by the real build.
 const IGNORE = ["**/test/**", "**/*.spec.{ts,tsx}", "**/*.d.ts"];
-// Same cheap pre-filter as reactCompilerPreset() in @vitejs/plugin-react. Files
-// that do not match it are never given to the compiler by the build.
-const CODE_FILTER =
-  /forwardRef|memo|(?:const|let|var|function)\s+(?:[A-Z]|use[A-Z0-9])|(?:[A-Z]|use[A-Z0-9])[^\s:=(){}[\],;]*\s*(?:\(|[:=]\s*(?:function|\())/;
 
 const args = process.argv.slice(2);
 const asJson = args.includes("--json");
@@ -51,7 +47,6 @@ function shorten(text, maxLength = 200) {
 
 function analyzeFile(file) {
   const code = fs.readFileSync(file, "utf8");
-  if (!CODE_FILTER.test(code)) return { compiled: 0, failures: [] };
 
   const lines = code.split("\n");
   // One function can produce several errors. They are grouped by function.

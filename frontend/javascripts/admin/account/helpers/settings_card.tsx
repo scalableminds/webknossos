@@ -2,6 +2,7 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import { Card, Flex, Popover, Progress, Space, Typography, theme } from "antd";
 
 // From this fill level on, a meter (and its hint) is shown as a warning.
+// Above 1, i.e. over the limit, it is shown as an error.
 const METER_WARNING_THRESHOLD = 0.8;
 
 export type SettingsCardProps = {
@@ -15,19 +16,23 @@ export type SettingsCardProps = {
   icon?: React.ReactNode;
   // "stat" renders the value larger, for numbers like "4 / 5".
   size?: "default" | "stat";
-  // Fill level between 0 and 1, e.g. for usage quotas.
+  // Fill level, e.g. for usage quotas. 1 means the limit is reached, above 1 it is exceeded.
   meter?: number;
   // One short line below the value.
   hint?: React.ReactNode;
-  hintType?: "secondary" | "warning";
+  hintType?: "secondary" | "warning" | "danger";
   // Labeled button at the bottom of the card, e.g. "Add users".
   footerAction?: React.ReactNode;
   // Additional content below the value row, e.g. an edit form.
   children?: React.ReactNode;
 };
 
-export function isMeterWarning(meter: number | undefined): boolean {
+function isMeterWarning(meter: number | undefined): boolean {
   return meter != null && meter >= METER_WARNING_THRESHOLD;
+}
+
+function isMeterExceeded(meter: number | undefined): boolean {
+  return meter != null && meter > 1;
 }
 
 export function SettingsCard({
@@ -45,7 +50,12 @@ export function SettingsCard({
   children,
 }: SettingsCardProps) {
   const { token } = theme.useToken();
-  const isWarning = hintType === "warning" || (hintType == null && isMeterWarning(meter));
+  const derivedHintType = isMeterExceeded(meter)
+    ? "danger"
+    : isMeterWarning(meter)
+      ? "warning"
+      : "secondary";
+  const effectiveHintType = hintType ?? derivedHintType;
 
   // Cards without an icon keep the plain value style, since their content is usually a form.
   const valueRow =
@@ -54,16 +64,16 @@ export function SettingsCard({
         <span style={{ fontSize: 20, lineHeight: 1, color: token.colorPrimary, flex: "none" }}>
           {icon}
         </span>
-        <div
+        <Typography.Text
+          strong
           style={{
             fontSize: size === "stat" ? 20 : 16,
-            fontWeight: 600,
             minWidth: 0,
             overflowWrap: "anywhere",
           }}
         >
           {content}
-        </div>
+        </Typography.Text>
       </Flex>
     ) : (
       <div style={{ fontSize: 16 }}>{content}</div>
@@ -103,19 +113,20 @@ export function SettingsCard({
             percent={Math.min(meter, 1) * 100}
             showInfo={false}
             size={{ height: 6 }}
-            strokeColor={isMeterWarning(meter) ? token.colorWarning : undefined}
+            strokeColor={
+              isMeterExceeded(meter)
+                ? token.colorError
+                : isMeterWarning(meter)
+                  ? token.colorWarning
+                  : undefined
+            }
             style={{ margin: 0, lineHeight: 1 }}
           />
         ) : null}
         {hint != null ? (
-          <div
-            style={{
-              fontSize: 13,
-              color: isWarning ? token.colorWarningText : token.colorTextSecondary,
-            }}
-          >
+          <Typography.Text type={effectiveHintType} style={{ fontSize: 13 }}>
             {hint}
-          </div>
+          </Typography.Text>
         ) : null}
         {children}
         {/* Pushed to the bottom so buttons line up across cards of different content height. */}

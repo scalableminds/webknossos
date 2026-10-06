@@ -25,12 +25,7 @@ import { useDispatch } from "react-redux";
 import { ColorWKGold } from "theme";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import {
-  isMeterWarning,
-  SettingsCard,
-  type SettingsCardProps,
-  StatSuffix,
-} from "../account/helpers/settings_card";
+import { SettingsCard, type SettingsCardProps, StatSuffix } from "../account/helpers/settings_card";
 import {
   AiAddonUpgradeCard,
   PlanExceededAlert,
@@ -50,6 +45,11 @@ import UpgradePricingPlanModal from "./upgrade_plan_modal";
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
 // Below this many credits, the balance is shown as low.
 const LOW_CREDIT_BALANCE = 10;
+
+// Keeps round amounts in their natural unit ("100 GB", not "0.1 TB") and drops a trailing ".0".
+function formatStorage(bytes: number): string {
+  return formatCountToDataAmountUnit(bytes).replace(/\.0(?=\D)/, "");
+}
 
 type StatCardProps = SettingsCardProps & { key: Key };
 
@@ -116,6 +116,11 @@ export function OrganizationOverviewView() {
   const isTeamOrTeamTrial =
     organization.pricingPlan === PricingPlanEnum.Team ||
     organization.pricingPlan === PricingPlanEnum.TeamTrial;
+  // Personal has to upgrade the plan instead, and Custom limits are negotiated individually.
+  const canBuyMoreUsersAndStorage =
+    isTeamOrTeamTrial ||
+    organization.pricingPlan === PricingPlanEnum.Power ||
+    organization.pricingPlan === PricingPlanEnum.PowerTrial;
   const hasUserLimit = organization.includedUsers !== Number.POSITIVE_INFINITY;
   const hasStorageLimit = organization.includedStorageBytes !== Number.POSITIVE_INFINITY;
   const canRequestAiPlan = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
@@ -135,26 +140,31 @@ export function OrganizationOverviewView() {
     ),
     meter: usersMeter,
   };
+  const usersOverLimit = hasUserLimit ? activeUsersCount - organization.includedUsers : 0;
+  if (usersOverLimit > 0) {
+    usersStat.hint = `${usersOverLimit} ${pluralize("user", usersOverLimit)} over the limit`;
+  } else if (isPersonal) {
+    usersStat.hint = "Upgrade to Team for more";
+  }
   if (isPersonal) {
-    usersStat.hint = `Personal is limited to ${organization.includedUsers} ${pluralize("user", organization.includedUsers)}`;
     usersStat.footerAction = (
       <Button
         type="primary"
-        icon={<UserAddOutlined />}
+        icon={<CrownOutlined />}
         onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
       >
-        Invite your team
+        Upgrade to Team
       </Button>
     );
-  } else if (hasUserLimit) {
-    const seatsLeft = Math.max(organization.includedUsers - activeUsersCount, 0);
+  } else if (hasUserLimit && usersOverLimit <= 0) {
+    const seatsLeft = -usersOverLimit;
     usersStat.hint =
       seatsLeft > 0 ? `${seatsLeft} ${pluralize("seat", seatsLeft)} left` : "No seats left";
   }
-  if (isTeamOrTeamTrial) {
+  if (canBuyMoreUsersAndStorage) {
     usersStat.footerAction = (
       <Button
-        type={isMeterWarning(usersMeter) ? "primary" : "default"}
+        type="primary"
         icon={<UserAddOutlined />}
         onClick={UpgradePricingPlanModal.upgradeUserQuota}
       >
@@ -173,34 +183,39 @@ export function OrganizationOverviewView() {
     icon: <DatabaseOutlined />,
     content: (
       <>
-        {formatCountToDataAmountUnit(organization.usedStorageBytes, true)}
+        {formatStorage(organization.usedStorageBytes)}
         <StatSuffix>
-          /{" "}
-          {hasStorageLimit
-            ? formatCountToDataAmountUnit(organization.includedStorageBytes, true)
-            : "∞"}
+          / {hasStorageLimit ? formatStorage(organization.includedStorageBytes) : "∞"}
         </StatSuffix>
       </>
     ),
     meter: storageMeter,
   };
-  if (isPersonal) {
-    storageStat.hint = "Team includes 1 TB";
-    storageStat.footerAction = (
-      <Button
-        icon={<PlusOutlined />}
-        onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
-      >
-        Get more storage
-      </Button>
-    );
+  const storageOverLimit = hasStorageLimit
+    ? organization.usedStorageBytes - organization.includedStorageBytes
+    : 0;
+  if (storageOverLimit > 0) {
+    storageStat.hint = `${formatStorage(storageOverLimit)} over the limit`;
+  } else if (isPersonal) {
+    storageStat.hint = "Upgrade to Team for more";
   } else if (storageMeter != null) {
     storageStat.hint = `${Math.round(storageMeter * 100)}% used`;
   }
-  if (isTeamOrTeamTrial) {
+  if (isPersonal) {
     storageStat.footerAction = (
       <Button
-        type={isMeterWarning(storageMeter) ? "primary" : "default"}
+        type="primary"
+        icon={<CrownOutlined />}
+        onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
+      >
+        Upgrade to Team
+      </Button>
+    );
+  }
+  if (canBuyMoreUsersAndStorage) {
+    storageStat.footerAction = (
+      <Button
+        type="primary"
         icon={<PlusOutlined />}
         onClick={UpgradePricingPlanModal.upgradeStorageQuota}
       >
@@ -228,7 +243,7 @@ export function OrganizationOverviewView() {
     hintType: isCreditBalanceLow ? "warning" : "secondary",
     footerAction: (
       <Button
-        type={isCreditBalanceLow ? "primary" : "default"}
+        type="primary"
         icon={<PlusOutlined />}
         onClick={UpgradePricingPlanModal.orderWebknossosCredits}
       >

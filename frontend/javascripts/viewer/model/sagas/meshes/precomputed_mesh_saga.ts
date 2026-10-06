@@ -536,7 +536,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   function* loadBatchesFromBackend(): Saga<unknown> {
     return yield* call(
       processTasksAndReturnError,
-      cachedBatches.map((chunks) => createLoadTask(chunks, false)),
+      missingBatches.map((chunks) => createLoadTask(chunks, false)),
     );
   }
 

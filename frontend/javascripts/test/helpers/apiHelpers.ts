@@ -269,8 +269,11 @@ vi.mock("admin/rest_api.ts", async () => {
     getDataset: vi.fn(),
     getImportedDataset: vi.fn(),
     sendSaveRequestWithToken: mockedSendRequestWithToken,
-    getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
-    getMappingsForDatasetLayer: vi.fn(() => []),
+    getAgglomeratesForDatasetLayer: vi.fn(async () => ({
+      ok: true,
+      value: [sampleHdf5AgglomerateName],
+    })),
+    getMappingsForDatasetLayer: vi.fn(async () => ({ ok: true, value: [] })),
     getMeshFilesForDatasetLayer,
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,

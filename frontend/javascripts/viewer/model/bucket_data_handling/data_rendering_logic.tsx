@@ -1,6 +1,3 @@
-import ErrorHandling from "libs/error_handling";
-import Toast from "libs/toast";
-import { document } from "libs/window";
 import memoize from "lodash-es/memoize";
 import {
   ByteType,
@@ -14,148 +11,83 @@ import {
   UnsignedByteType,
   UnsignedShortType,
 } from "three";
-import type { ElementClass } from "types/api_types";
-import constants from "viewer/constants";
+import type { AdditionalAxis, ElementClass } from "types/api_types";
+import constants, { getEffectiveBucketDepth, usesTRecycling } from "viewer/constants";
 import type { TypedArrayConstructor } from "../helpers/typed_buffer";
 
-type GpuSpecs = {
+export type GpuSpecs = {
   supportedTextureSize: number;
   maxTextureCount: number;
   // Maximum number of slices per texture array, i.e. per pool.
   maxArrayTextureLayers: number;
 };
-export function getSupportedTextureSpecs(): GpuSpecs {
-  const canvas = document.createElement("canvas");
-  const contextProvider =
-    "getContext" in canvas
-      ? (ctxName: "webgl2") => canvas.getContext(ctxName)
-      : (ctxName: string) => ({
-          MAX_TEXTURE_SIZE: 0,
-          MAX_TEXTURE_IMAGE_UNITS: 1,
-          MAX_ARRAY_TEXTURE_LAYERS: 2,
 
-          getParameter(param: number) {
-            if (ctxName === "webgl2") {
-              const dummyValues: Record<string, any> = {
-                "0": 4096,
-                "1": 16,
-                "2": 2048,
-                "4": "debugInfo.UNMASKED_RENDERER_WEBGL",
-                "7937": "Radeon R9 200 Series",
-              };
-              return dummyValues[param];
-            }
-
-            throw new Error(`Unknown call to getParameter: ${param}`);
-          },
-
-          getExtension(param: string) {
-            if (param === "WEBGL_debug_renderer_info") {
-              return {
-                UNMASKED_RENDERER_WEBGL: 4,
-              };
-            }
-
-            throw new Error(`Unknown call to getExtension: ${param}`);
-          },
-        });
-  const gl = contextProvider("webgl2");
-
-  if (!gl) {
-    Toast.error(
-      <span>
-        Your browser does not seem to support WebGL 2. Please upgrade your browser or hardware and
-        ensure that WebGL 2 is supported. You might want to use{" "}
-        <a href="https://get.webgl.org/webgl2/" target="_blank" rel="noreferrer">
-          this site
-        </a>{" "}
-        to check the WebGL support yourself.
-      </span>,
-      {
-        sticky: true,
-      },
-    );
-    throw new Error("WebGL2 context could not be constructed.");
-  }
-
-  const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-  const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
-
-  if (import.meta.env.MODE !== "test") {
-    console.log("maxTextureImageUnits", maxTextureImageUnits);
-  }
-
-  return {
-    supportedTextureSize,
-    maxTextureCount: guardAgainstMesaLimit(maxTextureImageUnits, gl),
-    maxArrayTextureLayers: gl.getParameter(gl.MAX_ARRAY_TEXTURE_LAYERS),
-  };
+// A data texture is a flat 2D atlas in which each bucket occupies a whole number of texture
+// rows; a row is never shared by two buckets. Layers with a small bucket footprint (e.g. 2D)
+// pack into less than one row and get rounded up, wasting the remainder — supporting several
+// buckets per row would be possible future work.
+export function getBucketHeightInTexture(
+  textureWidth: number,
+  packingDegree: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
+): number {
+  const packedBucketSize = bucketVoxelCount / packingDegree;
+  return Math.max(1, packedBucketSize / textureWidth);
 }
 
-function guardAgainstMesaLimit(maxSamplers: number, gl: any) {
-  // Adapted from here: https://github.com/pixijs/pixi.js/pull/6354/files
-
-  try {
-    let renderer = gl.getParameter(gl.RENDERER);
-    if (renderer == null) {
-      const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
-
-      if (debugInfo != null) {
-        renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-      }
-    }
-
-    // Mesa drivers may crash with more than 16 samplers and Firefox
-    // will actively refuse to create shaders with more than 16 samplers.
-    if (renderer && renderer.slice(0, 4).toUpperCase() === "MESA") {
-      maxSamplers = Math.min(16, maxSamplers);
-    }
-  } catch (exception) {
-    ErrorHandling.notify(exception as Error, {}, "warning");
-  }
-
-  return maxSamplers;
+export function getBucketsPerTexture(
+  textureWidth: number,
+  packingDegree: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
+): number {
+  return textureWidth / getBucketHeightInTexture(textureWidth, packingDegree, bucketVoxelCount);
 }
 
-export function validateMinimumRequirements(specs: GpuSpecs): void {
-  if (specs.supportedTextureSize < 4096 || specs.maxTextureCount < 8) {
-    const msg =
-      "Your GPU is not able to render datasets in WEBKNOSSOS. The graphic card should support at least a texture size of 4096 and 8 textures.";
-    Toast.error(msg, {
-      sticky: true,
-    });
-    throw new Error(msg);
-  }
-}
 export function getBucketCapacity(
   dataTextureCount: number,
   textureWidth: number,
   packingDegree: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
 ): number {
   const theoreticalBucketCapacity =
-    (packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
+    dataTextureCount * getBucketsPerTexture(textureWidth, packingDegree, bucketVoxelCount);
   // RAM-wise we already impose a limit of how many buckets should be held. This limit
   // should not be exceeded.
   return Math.min(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, theoreticalBucketCapacity);
 }
 
-function getNecessaryVoxelCount(requiredBucketCapacity: number) {
-  return requiredBucketCapacity * constants.BUCKET_SIZE;
-}
-
-function getAvailableVoxelCount(textureSize: number, packingDegree: number) {
-  return packingDegree * textureSize ** 2;
-}
-
+// Must go through getBucketsPerTexture rather than dividing the required voxels by the
+// texture's voxel area: a sub-row bucket's row padding cannot hold another bucket, so
+// area-based sizing would pick a texture too small for requiredBucketCapacity buckets.
 function getDataTextureCount(
   textureSize: number,
   packingDegree: number,
   requiredBucketCapacity: number,
+  bucketVoxelCount: number = constants.BUCKET_SIZE,
 ) {
   return Math.ceil(
-    getNecessaryVoxelCount(requiredBucketCapacity) /
-      getAvailableVoxelCount(textureSize, packingDegree),
+    requiredBucketCapacity / getBucketsPerTexture(textureSize, packingDegree, bucketVoxelCount),
   );
+}
+
+export type LayerLike = {
+  elementClass: ElementClass;
+  category: "color" | "segmentation";
+  boundingBox: { depth: number };
+  additionalAxes: Array<AdditionalAxis> | null;
+  tracingId?: string;
+};
+
+// The number of voxels one bucket of this layer occupies on the GPU. Smaller
+// than constants.BUCKET_SIZE for layers with a degenerate depth (see
+// getEffectiveBucketDepth).
+export function getGpuBucketVoxelCountForLayer(layer: LayerLike): number {
+  const hasTAxis = layer.additionalAxes?.some((axis) => axis.name === "t") ?? false;
+  // A t-recycling layer needs full-depth slots despite being z-degenerate.
+  return usesTRecycling(layer.boundingBox.depth, hasTAxis, layer.tracingId != null)
+    ? constants.BUCKET_SIZE
+    : constants.BUCKET_SIZE_2D *
+        getEffectiveBucketDepth(layer.boundingBox.depth, layer.tracingId != null);
 }
 
 // The buckets of all layers that share a GPU texture format are stored in one
@@ -176,8 +108,8 @@ export const LAYER_POOLS = [
   LayerPool.S16,
 ] as const;
 
-// Width and height of every pool texture. Only the depth differs between
-// pools (see computeLayerPoolAssignments).
+// Width and height of every pool texture; 2048 is the smallest MAX_TEXTURE_SIZE
+// that WebGL2 guarantees. Only the depth differs between pools.
 export const LAYER_POOL_TEXTURE_WIDTH = 2048;
 
 export function getLayerPoolForElementClass(elementClass: ElementClass): LayerPool {
@@ -256,14 +188,6 @@ export function getDtypeNormalizerForLayer(textureLayerInfo: {
   }
 }
 
-// Number of pool slices a layer needs for requiredBucketCapacity buckets.
-export function getDataTextureCountForFixedWidth(
-  packingDegree: number,
-  requiredBucketCapacity: number,
-): number {
-  return getDataTextureCount(LAYER_POOL_TEXTURE_WIDTH, packingDegree, requiredBucketCapacity);
-}
-
 const BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY = 4;
 // Keeps layers from getting so few buckets that they constantly reload.
 const MINIMUM_BUCKET_CAPACITY_PER_LAYER = 128;
@@ -300,20 +224,22 @@ export function getBucketCountSoftLimitPerLayer(layerCount: number): number {
   return scalePerLayerBudgetByLayerCount(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, layerCount);
 }
 
+// Lookup-table entries store a bucket address in 21 bits; the largest value
+// means "not yet committed" (see TextureBucketManager).
+const MAX_BUCKET_ADDRESS = 2 ** 21 - 2;
+
 export type LayerPoolAssignment = {
   pool: LayerPool;
   baseSlice: number;
   dataTextureCount: number;
-  packingDegree: number;
+  bucketsPerSlice: number;
 };
 
-// Assigns every layer (color and segmentation) to its pool and reserves the
-// slices [baseSlice, baseSlice + dataTextureCount) of that pool for it. Also
-// returns each pool's total depth, which must be known up front, because
-// texStorage3D allocates storage that can't grow later.
-export function computeLayerPoolAssignments<
-  Layer extends { name: string; elementClass: ElementClass },
->(
+// Assigns every layer to its pool and reserves the slices
+// [baseSlice, baseSlice + dataTextureCount) of that pool for it. Also returns
+// each pool's total depth, which must be known up front, because texStorage3D
+// allocates storage that can't grow later.
+export function computeLayerPoolAssignments<Layer extends LayerLike & { name: string }>(
   layers: Array<Layer>,
   requiredBucketCapacity: number,
 ): {
@@ -332,21 +258,30 @@ export function computeLayerPoolAssignments<
   for (const layer of layers) {
     const pool = getLayerPoolForElementClass(layer.elementClass);
     const { packingDegree } = getDtypeConfigForElementClass(layer.elementClass);
-    const dataTextureCount = getDataTextureCountForFixedWidth(
+    const bucketVoxelCount = getGpuBucketVoxelCountForLayer(layer);
+    const dataTextureCount = getDataTextureCount(
+      LAYER_POOL_TEXTURE_WIDTH,
       packingDegree,
       requiredBucketCapacity,
+      bucketVoxelCount,
+    );
+    const bucketsPerSlice = getBucketsPerTexture(
+      LAYER_POOL_TEXTURE_WIDTH,
+      packingDegree,
+      bucketVoxelCount,
     );
     const baseSlice = poolDepths[pool];
     poolDepths[pool] += dataTextureCount;
-    assignmentByLayerName.set(layer.name, { pool, baseSlice, dataTextureCount, packingDegree });
+    assignmentByLayerName.set(layer.name, { pool, baseSlice, dataTextureCount, bucketsPerSlice });
   }
 
   return { assignmentByLayerName, poolDepths };
 }
 
 // Lowers the per-layer bucket capacity until every pool fits into
-// maxPoolDepth slices (the GPU's MAX_ARRAY_TEXTURE_LAYERS).
-export function computeLayerPoolPlan<Layer extends { name: string; elementClass: ElementClass }>(
+// maxPoolDepth slices (the GPU's MAX_ARRAY_TEXTURE_LAYERS) and every bucket
+// address fits into the lookup table.
+export function computeLayerPoolPlan<Layer extends LayerLike & { name: string }>(
   layers: Array<Layer>,
   requiredBucketCapacity: number,
   maxPoolDepth: number,
@@ -357,14 +292,25 @@ export function computeLayerPoolPlan<Layer extends { name: string; elementClass:
 } {
   let bucketCapacity = requiredBucketCapacity;
   let plan = computeLayerPoolAssignments(layers, bucketCapacity);
-  let deepestPool = Math.max(...Object.values(plan.poolDepths));
-  while (deepestPool > maxPoolDepth && bucketCapacity > 1) {
+  const getOverflowRatio = () => {
+    const deepestPool = Math.max(...Object.values(plan.poolDepths));
+    const largestAddressCount = Math.max(
+      0,
+      ...Array.from(plan.assignmentByLayerName.values()).map(
+        ({ baseSlice, dataTextureCount, bucketsPerSlice }) =>
+          (baseSlice + dataTextureCount) * bucketsPerSlice,
+      ),
+    );
+    return Math.max(deepestPool / maxPoolDepth, largestAddressCount / (MAX_BUCKET_ADDRESS + 1));
+  };
+  let overflowRatio = getOverflowRatio();
+  while (overflowRatio > 1 && bucketCapacity > 1) {
     // Slice counts are rounded up, so the proportional estimate may still be
     // too big; the loop then shrinks further.
-    const estimate = Math.floor((bucketCapacity * maxPoolDepth) / deepestPool);
+    const estimate = Math.floor(bucketCapacity / overflowRatio);
     bucketCapacity = Math.max(1, Math.min(bucketCapacity - 1, estimate));
     plan = computeLayerPoolAssignments(layers, bucketCapacity);
-    deepestPool = Math.max(...Object.values(plan.poolDepths));
+    overflowRatio = getOverflowRatio();
   }
   return { bucketCapacity, ...plan };
 }

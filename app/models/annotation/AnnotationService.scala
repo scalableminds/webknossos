@@ -43,7 +43,6 @@ import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.WkConf
@@ -100,8 +99,6 @@ class AnnotationService @Inject() (
     extends ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {
-
-  implicit val actorSystem: ActorSystem = ActorSystem()
 
   val DefaultAnnotationListLimit = 1000
 
@@ -789,6 +786,7 @@ class AnnotationService @Inject() (
       contributorsJs <- Fox.serialCombined(contributors)(c => userJsonForAnnotation(c._id, Some(c)))
     } yield Json.obj(
       "modified" -> annotation.modified,
+      "created" -> annotation.created,
       "state" -> annotation.state,
       "isLockedByOwner" -> annotation.isLockedByOwner,
       "id" -> annotation.id,
@@ -809,7 +807,7 @@ class AnnotationService @Inject() (
       "settings" -> settings,
       "tracingTime" -> annotation.tracingTime,
       "teams" -> teamsJson,
-      "tags" -> (annotation.tags ++ Set(dataset.name, annotation.tracingType.toString)),
+      "tags" -> (annotation.tags ++ Set(dataset.name)),
       "user" -> userJson,
       "owner" -> userJson,
       "contributors" -> contributorsJs,
@@ -888,9 +886,9 @@ class AnnotationService @Inject() (
         "stats" -> annotationInfo.annotationLayerStatistics(idx)
       )
     )
-    val tracingType: String = getAnnotationTypeForTag(annotationInfo)
     Json.obj(
       "modified" -> annotationInfo.modified,
+      "created" -> annotationInfo.created,
       "state" -> annotationInfo.state,
       "id" -> annotationInfo.id,
       "name" -> annotationInfo.name,
@@ -900,11 +898,12 @@ class AnnotationService @Inject() (
       "isLockedByOwner" -> annotationInfo.isLockedByOwner,
       "annotationLayers" -> annotationLayerJson,
       "dataSetName" -> annotationInfo.dataSetName,
+      "datasetId" -> annotationInfo.dataSetId,
       "organization" -> annotationInfo.organization,
       "visibility" -> annotationInfo.visibility,
       "tracingTime" -> annotationInfo.tracingTime,
       "teams" -> teamsJson,
-      "tags" -> (annotationInfo.tags ++ Set(annotationInfo.dataSetName, tracingType)),
+      "tags" -> (annotationInfo.tags ++ Set(annotationInfo.dataSetName)),
       "owner" -> Json.obj(
         "id" -> annotationInfo.ownerId.toString,
         "firstName" -> annotationInfo.ownerFirstName,
@@ -912,18 +911,6 @@ class AnnotationService @Inject() (
       ),
       "collaborationMode" -> annotationInfo.collaborationMode
     )
-  }
-
-  private def getAnnotationTypeForTag(annotationInfo: AnnotationCompactInfo): String = {
-    val skeletonPresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Skeleton.toString)
-    val volumePresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Volume.toString)
-    if (skeletonPresent && volumePresent) {
-      "hybrid"
-    } else if (skeletonPresent) {
-      "skeleton"
-    } else {
-      "volume"
-    }
   }
 
   def updateStatistics(annotationId: ObjectId, statistics: JsObject): Unit =

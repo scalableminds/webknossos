@@ -6,7 +6,6 @@ import {
   PlusOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
-import metadataTeaserImage from "@images/backgrounds/metadata-teaser.svg";
 import {
   Button,
   Dropdown,
@@ -15,7 +14,6 @@ import {
   type InputNumberProps,
   type MenuProps,
   Select,
-  Tag,
 } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import {
@@ -31,7 +29,7 @@ import uniq from "lodash-es/uniq";
 import type React from "react";
 import { type ReactElement, useEffect, useState } from "react";
 import {
-  type APIDataset,
+  type APIMaybeUnimportedDataset,
   type APIMetadataEntry,
   APIMetadataEnum,
   type Folder,
@@ -84,22 +82,11 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
   addNewEntryMenuItems,
 }) => {
   return (
-    <Tag variant="outlined">
-      <div className="flex-center-child empty-metadata-placeholder">
-        <img
-          src={metadataTeaserImage}
-          alt="Metadata preview"
-          style={{ width: "60%", marginBottom: 16 }}
-        />
-        <span style={{ marginTop: 10 }}>
-          <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
-            <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>
-              Add First Metadata Entry
-            </Button>
-          </Dropdown>
-        </span>
-      </div>
-    </Tag>
+    <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
+      <Button size="small" icon={<PlusOutlined />} className="small-add-button">
+        Add Metadata Entry
+      </Button>
+    </Dropdown>
   );
 };
 
@@ -189,7 +176,7 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
 };
 
 const saveCurrentMetadata = async (
-  datasetOrFolderToUpdate: APIDataset | Folder,
+  datasetOrFolderToUpdate: APIMaybeUnimportedDataset | Folder,
   metadata: APIMetadataWithError[],
   context: DatasetCollectionContextValue,
   setIsSaving: (isSaving: boolean) => void,
@@ -201,7 +188,7 @@ const saveCurrentMetadata = async (
   }
   setIsSaving(true);
   const metadataWithoutIndexAndError = metadata.map(({ error: _ignored, ...rest }) => rest);
-  let serverResponse: APIDataset | Folder;
+  let serverResponse: APIMaybeUnimportedDataset | Folder;
   const isADataset = isDataset(datasetOrFolderToUpdate);
   const datasetOrFolderString = isADataset ? "dataset" : "folder";
   try {
@@ -262,15 +249,16 @@ const saveMetadataDebounced = debounce(
 
 const getKeyInputIdForIndex = (index: number) => `metadata-key-input-id-${index}`;
 
-const isDataset = (datasetOrFolder: APIDataset | Folder): datasetOrFolder is APIDataset =>
-  "folderId" in datasetOrFolder;
+const isDataset = (
+  datasetOrFolder: APIMaybeUnimportedDataset | Folder,
+): datasetOrFolder is APIMaybeUnimportedDataset => "folderId" in datasetOrFolder;
 
 // !Important! It is necessary to remount the component when the dataset or folder changes
 // to ensure the metadata is displayed and saved correctly.
 export default function MetadataTable({
   datasetOrFolder,
 }: {
-  datasetOrFolder: APIDataset | Folder;
+  datasetOrFolder: APIMaybeUnimportedDataset | Folder;
 }) {
   const context = useDatasetCollectionContext();
   const [metadata, metadataRef, setMetadata] = useStateWithRef<APIMetadataWithError[]>(

@@ -1,6 +1,7 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { SettingsCard, type SettingsCardProps } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/rest_api";
 import { Col, Form, Input, InputNumber, Row, Select, Switch, Table, Tooltip } from "antd";
 import { Slider } from "components/slider";
@@ -20,7 +21,7 @@ const FormItem = Form.Item;
 
 export default function DatasetSettingsViewConfigTab() {
   const { dataset } = useDatasetSettingsContext();
-  if (dataset == null) {
+  if (dataset == null || !dataset.isActive) {
     return null;
   }
   return <DatasetSettingsViewConfigTabWithDataset dataset={dataset} />;
@@ -55,10 +56,14 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
             if (!dataset) {
               throw new Error("Dataset is not defined.");
             }
-            const jsonAndAgglomerateMappings = await Promise.all([
+            const [mappingsResult, agglomeratesResult] = await Promise.all([
               getMappingsForDatasetLayer(dataStoreURL, dataset, layerName),
               getAgglomeratesForDatasetLayer(dataStoreURL, dataset, layerName),
             ]);
+            const jsonAndAgglomerateMappings: [string[], string[]] = [
+              unwrapOrThrow(mappingsResult),
+              unwrapOrThrow(agglomeratesResult),
+            ];
             setAvailableMappingsPerLayer((prev) => ({
               ...prev,
               [layerName]: jsonAndAgglomerateMappings,

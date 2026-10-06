@@ -239,6 +239,21 @@ describe("DataCube", () => {
     expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
   });
 
+  it<TestContext>("receiveData should reject a bucket that is not requested without mutating it", ({
+    cube,
+  }) => {
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
+    assertNonNullBucket(bucket);
+    bucket.markAsRequested();
+    bucket.receiveData(new Uint8Array(4 * 32 ** 3));
+
+    // The bucket is LOADED now, so a second receiveData call is a programming error. It has to be
+    // rejected *before* anything is written.
+    const rawBucketDataBefore = bucket.rawBucketData;
+    expect(() => bucket.receiveData(new Uint8Array(4 * 32 ** 3))).toThrow();
+    expect(bucket.rawBucketData).toBe(rawBucketDataBefore);
+  });
+
   it<TestContext>("Voxel Labeling should only instantiate one bucket when labeling the same bucket twice", async ({
     cube,
   }) => {
@@ -297,6 +312,26 @@ describe("DataCube", () => {
       [3, 3, 3, 0],
       [2, 2, 2, 0],
     ]);
+  });
+
+  it<TestContext>("should notify when a bucket dropped by the latest pick is needed again outside of picking", ({
+    cube,
+  }) => {
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
+    assertNonNullBucket(bucket);
+    cube.startBucketPicking();
+    bucket.markAsNeeded();
+    cube.finishBucketPicking();
+    // The next pick doesn't contain the bucket anymore.
+    cube.startBucketPicking();
+    cube.finishBucketPicking();
+    expect(bucket.isNeeded()).toBe(false);
+
+    const triggerSpy = vi.spyOn(cube, "triggerNeededBucketDataChanged");
+    // E.g., because getData was called for the bucket.
+    bucket.markAsNeeded();
+    expect(bucket.isNeeded()).toBe(true);
+    expect(triggerSpy).toHaveBeenCalledTimes(1);
   });
 
   it<TestContext>("removeAllBuckets() should keep a bucket whose request is still in flight", ({

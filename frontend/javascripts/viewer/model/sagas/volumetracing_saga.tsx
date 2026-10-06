@@ -4,7 +4,7 @@ import messages from "messages";
 import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
-import type { ContourMode, OverwriteMode } from "viewer/constants";
+import type { ContourMode, OverwriteMode, Vector3 } from "viewer/constants";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
 import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
@@ -57,6 +57,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import Dimensions from "viewer/model/dimensions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
@@ -68,8 +69,10 @@ import {
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
-import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
-import type { TransformedSectionLabeler } from "viewer/model/volumetracing/section_labeling";
+import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
+import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
+import type { TransformedSectionLabeler } from "viewer/model/volumetracing/legacy/section_labeling";
 import { api, Model } from "viewer/singletons";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -78,6 +81,16 @@ import { type BooleanBox, createSectionLabeler, labelWithVoxelBuffer2D } from ".
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
+
+// Brushing runs through viewer/model/volumetracing, not the VoxelBuffer2D
+// path. Buckets are mutated in place; nothing reaches the save queue or the
+// undo stack (design doc §12.2). The trace tool is unaffected — it keeps
+// using the section labeler.
+
+/** Global (mag-1) layer-space position -> source-mag voxel coordinates. */
+function toMagVoxel(position: Vector3, mag: Vector3): Vector3 {
+  return [position[0] / mag[0], position[1] / mag[1], position[2] / mag[2]];
+}
 
 function* watchVolumeTracingAsync(): Saga<void> {
   yield* call(ensureWkInitialized);
@@ -243,15 +256,46 @@ export function* editVolumeLayerAsync(): Saga<never> {
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
+    // Only the brush is driven from viewer/model/volumetracing; the trace
+    // tool below still builds up a section labeler.
+    let brushDriver: BrushDriver | null = null;
+
     if (isBrushTool(activeTool)) {
-      yield* call(
-        labelWithVoxelBuffer2D,
-        currentSectionLabeler.getCircleVoxelBuffer2D(startEditingAction.positionInLayerSpace),
-        contourTracingMode,
-        overwriteMode,
-        labeledZoomStep,
-        currentSectionLabeler.getPlane(),
-        wroteVoxelsBox,
+      const segmentationLayer = yield* call(
+        [Model, Model.getSegmentationTracingLayer],
+        volumeTracing.tracingId,
+      );
+      const brushSize = yield* select((state) => state.userConfiguration.brushSize);
+      const voxelSize = yield* select((state) => state.dataset.dataSource.scale);
+      const dimIndices = Dimensions.getIndices(startEditingAction.planeId);
+      const planeAxis = dimIndices[2] as 0 | 1 | 2;
+      // brushSize is a diameter in "base voxels" — units of the finest axis of
+      // the voxel size. Converting it to a per-axis voxel radius therefore
+      // folds in both the voxel size (so the brush is a sphere in physical
+      // space, not an ellipsoid) and the mag.
+      const baseVoxelFactors = getBaseVoxelFactorsInUnit(voxelSize);
+      const unzoomedRadius = Math.round(brushSize / 2);
+      const radius: Vector3 = [0, 1, 2].map(
+        (axis) => (unzoomedRadius * baseVoxelFactors[axis]) / labeledMag[axis],
+      ) as Vector3;
+      brushDriver = new BrushDriver(
+        {
+          cube: segmentationLayer.cube,
+          denseMags: segmentationLayer.cube.magInfo.getDenseMags(),
+          magIndex: labeledZoomStep,
+          segmentId: contourTracingMode === ContourModeEnum.DELETE ? 0n : activeCellId,
+          overwriteMode:
+            overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY
+              ? "overwrite-empty-only"
+              : "overwrite-all",
+          // As in labelWithVoxelBuffer2D: under overwrite-empty, painting only
+          // writes over background, and erasing only removes the active segment.
+          overwritableValue: contourTracingMode === ContourModeEnum.DELETE ? activeCellId : 0n,
+          additionalCoordinates: additionalCoordinates ?? null,
+          radius,
+          planeAxis,
+        },
+        toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
       );
     }
 
@@ -291,42 +335,32 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
       if (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing)) {
         // Close the polygon. When brushing, this causes an auto-fill which is why
-        // it's only performed when drawing (not when erasing).
+        // it's only performed when drawing (not when erasing): a common way to
+        // clean up an overfilled cell is to erase along its membrane, and an
+        // auto-fill would then erase the whole cell instead of just the stroke.
+        // See https://github.com/scalableminds/webknossos/issues/4624.
         currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
       }
 
-      if (isBrushTool(activeTool)) {
-        const rectangleVoxelBuffer2D = currentSectionLabeler.getRectangleVoxelBuffer2D(
-          lastPosition,
-          addToContourListAction.positionInLayerSpace,
-        );
-
-        if (rectangleVoxelBuffer2D) {
-          yield* call(
-            labelWithVoxelBuffer2D,
-            rectangleVoxelBuffer2D,
-            contourTracingMode,
-            overwriteMode,
-            labeledZoomStep,
-            currentSectionLabeler.getPlane(),
-            wroteVoxelsBox,
-          );
-        }
-
-        yield* call(
-          labelWithVoxelBuffer2D,
-          currentSectionLabeler.getCircleVoxelBuffer2D(addToContourListAction.positionInLayerSpace),
-          contourTracingMode,
-          overwriteMode,
-          labeledZoomStep,
-          currentSectionLabeler.getPlane(),
-          wroteVoxelsBox,
-        );
+      if (brushDriver != null) {
+        // One incremental capsule per pointer-move; the transaction's write set
+        // coalesces overlap, and mag propagation is deferred to pointer-up.
+        brushDriver.extend(toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag));
       }
 
       lastPosition = addToContourListAction.positionInLayerSpace;
     }
 
+    if (brushDriver != null) {
+      // Pointer-up: mag propagation runs once over the coalesced write set.
+      // Only a stroke that wrote something counts, so that the "no voxels
+      // were changed" hint below still fires when overwrite-empty skipped all.
+      if (brushDriver.finish().voxels > 0) wroteVoxelsBox.value = true;
+    }
+    // For every tool, including the brush: fills the area enclosed by the
+    // stroke if there is one (for the brush, only when it is released near its
+    // start), within the same undo step, and registers the stroke for volume
+    // interpolation.
     yield* call(
       finishSectionLabeler,
       currentSectionLabeler,
@@ -388,7 +422,10 @@ export function* finishSectionLabeler(
     );
   }
 
-  yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
+  const centroid = sectionLabeler.getUnzoomedCentroid();
+  if (centroid != null) {
+    yield* put(registerLabelPointAction(centroid));
+  }
 }
 
 function* ensureSegmentExists(

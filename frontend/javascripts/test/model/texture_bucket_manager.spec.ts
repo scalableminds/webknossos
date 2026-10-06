@@ -1,13 +1,14 @@
 import "test/mocks/updatable_texture.mock";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
+import { UpdatableTextureArray } from "libs/UpdatableTexture";
+import { RGBAFormat } from "three";
 import type { Vector4 } from "viewer/constants";
 import { DataBucket, NULL_BUCKET } from "viewer/model/bucket_data_handling/bucket";
-import {
-  LAYER_POOL_TEXTURE_WIDTH,
-  LayerPool,
-} from "viewer/model/bucket_data_handling/data_rendering_logic";
-import PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
-import TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
+import { getBucketHeightInTexture } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import type PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
+import TextureBucketManager, {
+  type LayerPoolBinding,
+} from "viewer/model/bucket_data_handling/texture_bucket_manager";
 import { beforeEach, describe, expect, it } from "vitest";
 
 // Mock storage for texture data
@@ -30,10 +31,24 @@ const temporalBucketManagerMock = {
   isEmpty: () => true,
 };
 
-const mockedCube = {
-  isSegmentation: false,
-  triggerRenderedBucketDataChanged: () => {},
-};
+function makeMockCube(overrides: Partial<ReturnType<typeof makeMockCubeBase>> = {}) {
+  return { ...makeMockCubeBase(), ...overrides };
+}
+function makeMockCubeBase() {
+  return {
+    isSegmentation: false,
+    triggerNeededBucketDataChanged: () => {},
+    currentBucketPickerTick: 0,
+    previousBucketPickerTick: 0,
+    onBucketMarkedAsNeeded: () => {},
+    effectiveBucketDepth: 32,
+    additionalAxes: {} as Record<string, { bounds: [number, number]; index: number; name: string }>,
+    usesTRecycling: false,
+    getEffectiveBucketVoxelCount: () => 32 ** 3,
+  };
+}
+
+const mockedCube = makeMockCube();
 
 const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
   const bucket = new DataBucket(
@@ -51,6 +66,24 @@ const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
   return bucket;
 };
 
+// A pool texture backed by the texture mock, so tests can inspect its content.
+type TestPool = { binding: LayerPoolBinding; texture: Uint8Array };
+const createPool = (
+  textureWidth: number,
+  depth: number,
+  { baseSlice = 0, bucketCapacity = Number.POSITIVE_INFINITY } = {},
+): TestPool => {
+  const textureArray = new UpdatableTextureArray(textureWidth, textureWidth, depth, RGBAFormat);
+  const poolTextureManager = {
+    textureArray,
+    isInitialized: () => true,
+  } as unknown as PoolTextureManager;
+  return {
+    binding: { poolTextureManager, baseSlice, bucketCapacity },
+    texture: (textureArray as unknown as { texture: Uint8Array }).texture,
+  };
+};
+
 const setActiveBucketsAndWait = (tbm: TextureBucketManager, activeBuckets: DataBucket[]) => {
   tbm.setActiveBuckets(activeBuckets);
   // Depending on timing, processWriterQueue has to be called n times in the slowest case
@@ -59,20 +92,9 @@ const setActiveBucketsAndWait = (tbm: TextureBucketManager, activeBuckets: DataB
   });
 };
 
-const createTbm = (dataTextureCount: number) => {
-  const pool = new PoolTextureManager(LayerPool.U8, dataTextureCount);
-  const tbm = new TextureBucketManager(LAYER_POOL_TEXTURE_WIDTH, dataTextureCount, "uint8", {
-    poolTextureManager: pool,
-    baseSlice: 0,
-    bucketCapacity: Number.POSITIVE_INFINITY,
-  });
-  tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
-  return { tbm, pool };
-};
-
 const expectBucket = (
   tbm: TextureBucketManager,
-  pool: PoolTextureManager,
+  pool: TestPool,
   bucket: DataBucket,
   expectedFirstByte: number,
 ) => {
@@ -89,8 +111,7 @@ const expectBucket = (
   }
 
   const bucketLocation = tbm.getPackedBucketSize() * bucketAddress;
-  // @ts-expect-error - texture is available in our mock but not in the real type
-  expect(pool.textureArray.texture[bucketLocation]).toBe(expectedFirstByte);
+  expect(pool.texture[bucketLocation]).toBe(expectedFirstByte);
 };
 
 describe("TextureBucketManager", () => {
@@ -101,7 +122,9 @@ describe("TextureBucketManager", () => {
   });
 
   it("basic functionality", () => {
-    const { tbm, pool } = createTbm(1);
+    const pool = createPool(2048, 1);
+    const tbm = new TextureBucketManager(2048, 1, "uint8", mockedCube as any, pool.binding);
+    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     const activeBuckets = [
       buildBucket([1, 1, 1, 0], 100),
@@ -116,7 +139,9 @@ describe("TextureBucketManager", () => {
   });
 
   it("changing active buckets", () => {
-    const { tbm, pool } = createTbm(2);
+    const pool = createPool(2048, 2);
+    const tbm = new TextureBucketManager(2048, 2, "uint8", mockedCube as any, pool.binding);
+    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     const activeBuckets = [
       buildBucket([0, 0, 0, 0], 100),
@@ -135,50 +160,353 @@ describe("TextureBucketManager", () => {
     expectBucket(tbm, pool, activeBuckets[5], 202);
   });
 
-  it("pooled mode writes into the shared pool texture, offset by baseSlice", () => {
-    const pool = new PoolTextureManager(LayerPool.U8, /* depth */ 4);
-    const baseSlice = 2; // simulates another layer already having reserved slices 0-1
-    const tbm = new TextureBucketManager(LAYER_POOL_TEXTURE_WIDTH, 2, "uint8", {
-      poolTextureManager: pool,
-      baseSlice,
-      bucketCapacity: 1024,
+  it("supports a shrunk bucket footprint (e.g., 2D datasets)", () => {
+    const textureWidth = 2048;
+    const bucketVoxelCount = 32 * 32 * 1; // z-degenerate (2D) layer, no t-axis
+    const shrunkMockedCube = makeMockCube({
+      effectiveBucketDepth: 1,
+      getEffectiveBucketVoxelCount: () => bucketVoxelCount,
     });
+    const buildShrunkBucket = (zoomedAddress: Vector4, firstByte: number) => {
+      const bucket = new DataBucket(
+        "uint8",
+        zoomedAddress,
+        temporalBucketManagerMock as any,
+        { type: "full" },
+        shrunkMockedCube as any,
+      );
+      bucket._fallbackBucket = NULL_BUCKET;
+      bucket.markAsRequested();
+      // The wire format always delivers a full 32^3 cube; DataBucket.receiveData
+      // slices it down to the layer's effective (here: shrunk) footprint.
+      const data = new Uint8Array(32 ** 3);
+      data[0] = firstByte;
+      bucket.receiveData(data);
+      return bucket;
+    };
+
+    const pool = createPool(textureWidth, 1);
+    const tbm = new TextureBucketManager(
+      textureWidth,
+      1,
+      "uint8",
+      shrunkMockedCube as any,
+      pool.binding,
+    );
+    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+
+    const activeBuckets = [
+      buildShrunkBucket([1, 1, 1, 0], 100),
+      buildShrunkBucket([1, 1, 2, 0], 101),
+    ];
+    setActiveBucketsAndWait(tbm, activeBuckets);
+
+    const bucketHeightInTexture = getBucketHeightInTexture(
+      textureWidth,
+      tbm.packingDegree,
+      bucketVoxelCount,
+    );
+    // Sanity-check that this test actually exercises the whole-row-clamped path
+    // (packedBucketSize = 1024 / 4 = 256, well below the 2048-wide texture).
+    expect(bucketHeightInTexture).toBe(1);
+
+    for (const [bucket, expectedFirstByte] of [
+      [activeBuckets[0], 100],
+      [activeBuckets[1], 101],
+    ] as const) {
+      const bucketAddress = tbm.lookUpCuckooTable.get([
+        bucket.zoomedAddress[0],
+        bucket.zoomedAddress[1],
+        bucket.zoomedAddress[2],
+        bucket.zoomedAddress[3],
+        LAYER_INDEX,
+      ]);
+
+      if (bucketAddress == null) {
+        throw new Error("Bucket address is null");
+      }
+
+      const bucketLocation = bucketHeightInTexture * textureWidth * bucketAddress;
+      expect(pool.texture[bucketLocation]).toBe(expectedFirstByte);
+    }
+  });
+
+  it("t-recycling: uploads a bucket's whole shared batch buffer in one shot, addressed via the t-batch", () => {
+    const textureWidth = 256;
+    const t = 45; // batch index = floor(45/32) = 1, zSlot = 45 % 32 = 13
+    const sliceVoxelCount = 32 * 32; // effectiveBucketDepth === 1
+    const tRecyclingMockedCube = makeMockCube({
+      effectiveBucketDepth: 1,
+      additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
+      usesTRecycling: true,
+      // CPU-side data for a t-recycling layer stays shrunk to one z-slice.
+      getEffectiveBucketVoxelCount: () => sliceVoxelCount,
+    });
+
+    const bucket = new DataBucket(
+      "uint8",
+      [1, 1, 0, 0, [{ name: "t", value: t }]] as any,
+      temporalBucketManagerMock as any,
+      { type: "full" },
+      tRecyclingMockedCube as any,
+    );
+    bucket._fallbackBucket = NULL_BUCKET;
+    bucket.markAsRequested();
+    // Simulates a real batched fetch (see PullQueue.handleBatchedBucketResult): the wire
+    // payload covers the whole 32-t batch, and this bucket's own t-slice is placed at its
+    // corresponding offset within it, not at offset 0.
+    const zSlot = t % 32;
+    const rawBatchBuffer = new Uint8Array(32 ** 3);
+    rawBatchBuffer[zSlot * sliceVoxelCount] = 77;
+    bucket.receiveData(rawBatchBuffer, false, zSlot * sliceVoxelCount);
+
+    const pool = createPool(textureWidth, 1);
+    const tbm = new TextureBucketManager(
+      textureWidth,
+      1,
+      "uint8",
+      tRecyclingMockedCube as any,
+      pool.binding,
+    );
+    expect(tbm.usesTRecycling).toBe(true);
+    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+
+    setActiveBucketsAndWait(tbm, [bucket]);
+
+    // Looked up via the t-batch index (1), not the bucket's real (always-0) z.
+    const bucketAddress = tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX]);
+    if (bucketAddress == null) {
+      throw new Error("Bucket address is null");
+    }
+
+    const bucketHeightInTexture = getBucketHeightInTexture(
+      textureWidth,
+      tbm.packingDegree,
+      tbm.bucketVoxelCount,
+    );
+    expect(bucketHeightInTexture).toBe(32);
+    const bucketLocation =
+      bucketHeightInTexture * bucketAddress * textureWidth + zSlot * sliceVoxelCount;
+    expect(pool.texture[bucketLocation]).toBe(77);
+  });
+
+  it("t-recycling: a batch's whole shared buffer lands on the GPU from just its active (primary) bucket", () => {
+    const textureWidth = 256;
+    const primaryT = 32; // batch 1, zSlot 0
+    const siblingT = 40; // batch 1, zSlot 8
+    const sliceVoxelCount = 32 * 32;
+
+    const tRecyclingMockedCube = makeMockCube({
+      effectiveBucketDepth: 1,
+      additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
+      usesTRecycling: true,
+      getEffectiveBucketVoxelCount: () => sliceVoxelCount,
+    });
+
+    // Simulates the real PullQueue flow: one network response for the whole batch,
+    // shared verbatim across every t within it (see handleBatchedBucketResult) —
+    // both markers below live in the very same buffer.
+    const rawBatchBuffer = new Uint8Array(32 ** 3);
+    rawBatchBuffer[(primaryT % 32) * sliceVoxelCount] = 11;
+    rawBatchBuffer[(siblingT % 32) * sliceVoxelCount] = 22;
+
+    const buildTRecyclingBucket = (t: number) => {
+      const bucket = new DataBucket(
+        "uint8",
+        [1, 1, 0, 0, [{ name: "t", value: t }]] as any,
+        temporalBucketManagerMock as any,
+        { type: "full" },
+        tRecyclingMockedCube as any,
+      );
+      bucket._fallbackBucket = NULL_BUCKET;
+      bucket.markAsRequested();
+      bucket.receiveData(rawBatchBuffer, false, (t % 32) * sliceVoxelCount);
+      return bucket;
+    };
+
+    const primaryBucket = buildTRecyclingBucket(primaryT);
+    // Note: this sibling is never passed to setActiveBuckets, nor looked up via
+    // getOrCreateBucket by the manager. With the new design that's fine: its data
+    // already rode along in the primary's single bulk upload of the shared buffer.
+    buildTRecyclingBucket(siblingT);
+
+    const pool = createPool(textureWidth, 1);
+    const tbm = new TextureBucketManager(
+      textureWidth,
+      1,
+      "uint8",
+      tRecyclingMockedCube as any,
+      pool.binding,
+    );
+    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+
+    setActiveBucketsAndWait(tbm, [primaryBucket]);
+
+    const bucketAddress = tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX]);
+    if (bucketAddress == null) {
+      throw new Error("Bucket address is null");
+    }
+
+    const bucketHeightInTexture = getBucketHeightInTexture(
+      textureWidth,
+      tbm.packingDegree,
+      tbm.bucketVoxelCount,
+    );
+    for (const [t, expectedFirstByte] of [
+      [primaryT, 11],
+      [siblingT, 22],
+    ] as const) {
+      const zSlot = t % 32;
+      const bucketLocation =
+        bucketHeightInTexture * bucketAddress * textureWidth + zSlot * sliceVoxelCount;
+      expect(pool.texture[bucketLocation]).toBe(expectedFirstByte);
+    }
+  });
+
+  it("t-recycling: a lone slice without a batch buffer lands in its own t-slot", () => {
+    // Not reachable in practice now that editable layers are excluded from t-recycling
+    // (see usesTRecycling), since such layers always upload a whole shared batch
+    // buffer. Guards the placement arithmetic against silently rendering at t=0 anyway.
+    const textureWidth = 256;
+    const t = 45; // batch 1, zSlot 13
+    const sliceVoxelCount = 32 * 32;
+    const tRecyclingMockedCube = makeMockCube({
+      effectiveBucketDepth: 1,
+      additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
+      usesTRecycling: true,
+      getEffectiveBucketVoxelCount: () => sliceVoxelCount,
+    });
+
+    const bucket = new DataBucket(
+      "uint8",
+      [1, 1, 0, 0, [{ name: "t", value: t }]] as any,
+      temporalBucketManagerMock as any,
+      { type: "full" },
+      tRecyclingMockedCube as any,
+    );
+    bucket._fallbackBucket = NULL_BUCKET;
+    bucket.markAsRequested();
+    // Locally created data (no wire response), so there is no rawBucketData behind it.
+    const localData = new Uint8Array(sliceVoxelCount);
+    localData[0] = 55;
+    bucket.data = localData;
+    expect(bucket.rawBucketData).toBeNull();
+
+    const pool = createPool(textureWidth, 1);
+    const tbm = new TextureBucketManager(
+      textureWidth,
+      1,
+      "uint8",
+      tRecyclingMockedCube as any,
+      pool.binding,
+    );
+    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    setActiveBucketsAndWait(tbm, [bucket]);
+
+    const bucketAddress = tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX]);
+    if (bucketAddress == null) {
+      throw new Error("Bucket address is null");
+    }
+    const bucketHeightInTexture = getBucketHeightInTexture(
+      textureWidth,
+      tbm.packingDegree,
+      tbm.bucketVoxelCount,
+    );
+    const regionStart = bucketHeightInTexture * bucketAddress * textureWidth;
+    // The marker belongs at the start of slot 13, not at the start of the region.
+    expect(pool.texture[regionStart + (t % 32) * sliceVoxelCount]).toBe(55);
+    expect(pool.texture[regionStart]).toBe(0);
+  });
+
+  it("t-recycling: crossing a batch boundary re-keys and re-uploads", () => {
+    const textureWidth = 256;
+    const oldT = 40; // batch 1, zSlot 8
+    const newT = 64; // batch 2, zSlot 0
+    const sliceVoxelCount = 32 * 32;
+
+    const tRecyclingMockedCube = makeMockCube({
+      effectiveBucketDepth: 1,
+      additionalAxes: { t: { name: "t", bounds: [0, 1000], index: 3 } },
+      usesTRecycling: true,
+      getEffectiveBucketVoxelCount: () => sliceVoxelCount,
+    });
+
+    const batch1Buffer = new Uint8Array(32 ** 3);
+    batch1Buffer[(oldT % 32) * sliceVoxelCount] = 22;
+    const batch2Buffer = new Uint8Array(32 ** 3);
+    batch2Buffer[(newT % 32) * sliceVoxelCount] = 33;
+
+    const buildTRecyclingBucket = (t: number, rawBatchBuffer: Uint8Array<ArrayBuffer>) => {
+      const bucket = new DataBucket(
+        "uint8",
+        [1, 1, 0, 0, [{ name: "t", value: t }]] as any,
+        temporalBucketManagerMock as any,
+        { type: "full" },
+        tRecyclingMockedCube as any,
+      );
+      bucket._fallbackBucket = NULL_BUCKET;
+      bucket.markAsRequested();
+      bucket.receiveData(rawBatchBuffer, false, (t % 32) * sliceVoxelCount);
+      return bucket;
+    };
+
+    const pool = createPool(textureWidth, 1);
+    const tbm = new TextureBucketManager(
+      textureWidth,
+      1,
+      "uint8",
+      tRecyclingMockedCube as any,
+      pool.binding,
+    );
+    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+
+    setActiveBucketsAndWait(tbm, [buildTRecyclingBucket(oldT, batch1Buffer)]);
+    expect(tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX])).not.toBeNull();
+
+    // Crossing a batch boundary goes through the regular re-pick path (see
+    // LayerRenderingManager.updateDataTextures), i.e. plain setActiveBuckets with the
+    // freshly picked buckets. The old batch's key must be gone and the new one populated.
+    setActiveBucketsAndWait(tbm, [buildTRecyclingBucket(newT, batch2Buffer)]);
+    expect(tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX])).toBeNull();
+
+    const newBucketAddress = tbm.lookUpCuckooTable.get([1, 1, 2, 0, LAYER_INDEX]);
+    if (newBucketAddress == null) {
+      throw new Error("New bucket address is null");
+    }
+    const bucketHeightInTexture = getBucketHeightInTexture(
+      textureWidth,
+      tbm.packingDegree,
+      tbm.bucketVoxelCount,
+    );
+    const newBucketLocation =
+      bucketHeightInTexture * newBucketAddress * textureWidth + (newT % 32) * sliceVoxelCount;
+    expect(pool.texture[newBucketLocation]).toBe(33);
+  });
+
+  it("pooled: writes into the pool's slices from baseSlice on, and stores pool-wide addresses", () => {
+    const textureWidth = 2048;
+    const baseSlice = 2; // simulates another layer owning slices 0-1
+    const pool = createPool(textureWidth, 4, { baseSlice });
+    const tbm = new TextureBucketManager(textureWidth, 2, "uint8", mockedCube as any, pool.binding);
     tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     const bucket = buildBucket([1, 1, 1, 0], 100);
     setActiveBucketsAndWait(tbm, [bucket]);
 
-    const bucketAddress = tbm.lookUpCuckooTable.get([
-      bucket.zoomedAddress[0],
-      bucket.zoomedAddress[1],
-      bucket.zoomedAddress[2],
-      bucket.zoomedAddress[3],
-      LAYER_INDEX,
-    ]);
+    const bucketAddress = tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX]);
     if (bucketAddress == null) {
       throw new Error("Bucket address is null");
     }
-
-    const bucketsPerTexture =
-      (LAYER_POOL_TEXTURE_WIDTH * LAYER_POOL_TEXTURE_WIDTH) / tbm.getPackedBucketSize();
-    // The stored address includes the layer's baseSlice.
-    expect(bucketAddress).toBeGreaterThanOrEqual(baseSlice * bucketsPerTexture);
-    expect(bucketAddress).toBeLessThan((baseSlice + 1) * bucketsPerTexture);
-
-    // The layer's first bucket lands in the pool texture's baseSlice-th slice.
-    const sliceByteOffset = baseSlice * LAYER_POOL_TEXTURE_WIDTH * LAYER_POOL_TEXTURE_WIDTH;
-    // @ts-expect-error - texture is available in our mock but not in the real type
-    expect(pool.textureArray.texture[sliceByteOffset]).toBe(100);
+    const bucketsPerSlice = (textureWidth * textureWidth) / tbm.getPackedBucketSize();
+    expect(bucketAddress).toBeGreaterThanOrEqual(baseSlice * bucketsPerSlice);
+    expect(bucketAddress).toBeLessThan((baseSlice + 1) * bucketsPerSlice);
+    expect(pool.texture[tbm.getPackedBucketSize() * bucketAddress]).toBe(100);
   });
 
-  it("pooled mode caps the capacity at bucketCapacity", () => {
-    const pool = new PoolTextureManager(LayerPool.U8, /* depth */ 2);
+  it("pooled: caps the capacity at bucketCapacity", () => {
     // Two uint8 slices could hold 1024 buckets.
-    const tbm = new TextureBucketManager(LAYER_POOL_TEXTURE_WIDTH, 2, "uint8", {
-      poolTextureManager: pool,
-      baseSlice: 0,
-      bucketCapacity: 600,
-    });
+    const pool = createPool(2048, 2, { bucketCapacity: 600 });
+    const tbm = new TextureBucketManager(2048, 2, "uint8", mockedCube as any, pool.binding);
     expect(tbm.maximumCapacity).toBe(600);
   });
 });

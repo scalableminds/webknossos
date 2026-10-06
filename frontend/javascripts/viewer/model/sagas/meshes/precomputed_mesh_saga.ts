@@ -81,8 +81,35 @@ type ChunkStepTimings = {
 function logChunkStepTimings(label: string, timings: ChunkStepTimings): void {
   const toMs = (milliseconds: number) => `${milliseconds.toFixed(0)} ms`;
   console.log(
-    `${label}: ${timings.chunkCount} chunks, summed over all chunks: decode ${toMs(timings.decode)}, prepare geometry ${toMs(timings.prepareGeometry)}, merge and add intermediate meshes ${toMs(timings.addToScene)}, yield to event loop ${toMs(timings.yieldToEventLoop)}`,
+    `${label}: ${timings.chunkCount} chunks, summed over all chunks: decode ${toMs(timings.decode)}, prepare geometry ${toMs(timings.prepareGeometry)}, add intermediate meshes to scene ${toMs(timings.addToScene)}, yield to event loop ${toMs(timings.yieldToEventLoop)}`,
   );
+}
+
+// TEMPORARY measurement of how smooth the page stays while a mesh loads. Rendering happens outside
+// of the saga, so its cost only shows up in the time between two animation frames.
+function startFrameTimeMonitor(label: string): () => void {
+  if (typeof requestAnimationFrame === "undefined") {
+    // E.g., in tests.
+    return () => {};
+  }
+  const frameTimes: number[] = [];
+  let lastTimestamp: number | null = null;
+  let requestId = requestAnimationFrame(function onFrame(timestamp) {
+    if (lastTimestamp != null) {
+      frameTimes.push(timestamp - lastTimestamp);
+    }
+    lastTimestamp = timestamp;
+    requestId = requestAnimationFrame(onFrame);
+  });
+  return () => {
+    cancelAnimationFrame(requestId);
+    const totalTime = frameTimes.reduce((total, frameTime) => total + frameTime, 0);
+    const sortedFrameTimes = [...frameTimes].sort((a, b) => a - b);
+    const percentile95 = sortedFrameTimes[Math.floor(sortedFrameTimes.length * 0.95)] ?? 0;
+    console.log(
+      `${label}: frames while loading (${WkDevFlags.meshing.precomputedMeshProgressiveRendering}): ${frameTimes.length} frames in ${totalTime.toFixed(0)} ms, ${((frameTimes.length / totalTime) * 1000).toFixed(1)} fps, 95th percentile frame ${percentile95.toFixed(0)} ms, longest frame ${(sortedFrameTimes.at(-1) ?? 0).toFixed(0)} ms, ${frameTimes.filter((frameTime) => frameTime > 50).length} frames over 50 ms`,
+    );
+  };
 }
 
 // Avoid redundant fetches of mesh files for the same layer by
@@ -284,21 +311,27 @@ function* loadPrecomputedMeshForSegmentId(
     }
 
     for (const lod of loadingOrder) {
-      yield* call(
-        loadPrecomputedMeshesInChunksForLod,
-        dataset,
-        layerName,
-        meshFile,
-        segmentationLayer,
-        segmentId,
-        seedPosition,
-        availableChunksMap,
-        lod,
-        (lod: number) => extractScaleFromMatrix(lods[lod].transform),
-        chunkScale,
-        additionalCoordinates,
-        opacity,
-      );
+      const stopFrameTimeMonitor = startFrameTimeMonitor(`${timingLabel}, lod ${lod}`);
+      try {
+        yield* call(
+          loadPrecomputedMeshesInChunksForLod,
+          dataset,
+          layerName,
+          meshFile,
+          segmentationLayer,
+          segmentId,
+          seedPosition,
+          availableChunksMap,
+          lod,
+          (lod: number) => extractScaleFromMatrix(lods[lod].transform),
+          chunkScale,
+          additionalCoordinates,
+          opacity,
+        );
+      } finally {
+        // Also stops when the load is cancelled.
+        stopFrameTimeMonitor();
+      }
     }
   } finally {
     // Also release worker token even when cancelled by a REMOVE_MESH
@@ -485,7 +518,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   function* addIntermediateMesh(chunkGeometries: UnmergedBufferGeometryWithInfo[]): Saga<void> {
     if (
       chunkGeometries.length === 0 ||
-      !WkDevFlags.meshing.addPrecomputedMeshChunksToSceneEagerly
+      WkDevFlags.meshing.precomputedMeshProgressiveRendering !== "mergedBatches"
     ) {
       return;
     }
@@ -543,6 +576,11 @@ function* loadPrecomputedMeshesInChunksForLod(
           bufferGeometry.computeVertexNormals();
           timings.prepareGeometry += performance.now() - stepStart;
 
+          if (WkDevFlags.meshing.precomputedMeshProgressiveRendering === "perChunk") {
+            stepStart = performance.now();
+            yield* call(addGeometryToScene, bufferGeometry, false);
+            timings.addToScene += performance.now() - stepStart;
+          }
           batchGeometries.push(bufferGeometry);
           bufferGeometries.push(bufferGeometry);
         } catch (error) {

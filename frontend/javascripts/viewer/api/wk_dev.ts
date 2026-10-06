@@ -49,9 +49,11 @@ export const WkDevFlags = {
   },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,
-    // TEMPORARY for measurements. If true, each chunk of a precomputed mesh is shown as soon as it
-    // is decoded. If false, the mesh only appears once all chunks are merged.
-    addPrecomputedMeshChunksToSceneEagerly: true,
+    // TEMPORARY for measurements. How a precomputed mesh is shown while its chunks load:
+    // - "mergedBatches": each batch of chunks is merged into one intermediate mesh.
+    // - "perChunk": each chunk is added to the scene as its own mesh.
+    // - "none": the mesh only appears once all chunks are merged.
+    precomputedMeshProgressiveRendering: "mergedBatches" as "mergedBatches" | "perChunk" | "none",
   },
   datasetComposition: {
     allowThinPlateSplines: false,

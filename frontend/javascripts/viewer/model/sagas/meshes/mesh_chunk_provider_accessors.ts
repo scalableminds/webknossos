@@ -106,7 +106,8 @@ async function tryToListMeshChunksFromCache(
       return null;
     }
     const uncachedSegmentIds = segmentIds.filter((id) => !cache.hasChunkListForSegmentId(id));
-    if (uncachedSegmentIds.length === segmentIds.length) {
+    const hasNoChunkCached = uncachedSegmentIds.length === segmentIds.length;
+    if (hasNoChunkCached) {
       return null;
     }
     if (uncachedSegmentIds.length > 0) {

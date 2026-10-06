@@ -518,28 +518,29 @@ function* loadPrecomputedMeshesInChunksForLod(
       }
     };
 
+  // Split batches that operate on cached chunks and those on non-cached chunks to separate worker pools.
+  // This makes the cached mesh chunks appear faster in the UI as they don't need to wait for request responses.
   function* loadCachedBatches(): Saga<unknown> {
     const error = yield* call(
       processTasksAndReturnError,
       cachedBatches.map((chunks) => createLoadTask(chunks, true)),
     );
     // If all chunks are cached, the merged mesh follows right away, so an intermediate mesh would
-    // only be shown for a moment.
+    // only be shown for a moment. Not rendering it saves some workload. Thus, the merged mesh is shown faster.
     if (missingBatches.length > 0) {
       yield* call(addIntermediateMesh, cachedChunkGeometries);
     }
     return error;
   }
 
-  // Cached batches don't make requests, so they get their own pool instead of waiting for the
-  // request slots. Otherwise, one kind of batch would hold up the other.
-  const errors = yield* all([
-    call(
+  function* loadBatchesFromBackend(): Saga<unknown> {
+    return yield* call(
       processTasksAndReturnError,
-      missingBatches.map((chunks) => createLoadTask(chunks, false)),
-    ),
-    call(loadCachedBatches),
-  ]);
+      cachedBatches.map((chunks) => createLoadTask(chunks, false)),
+    );
+  }
+
+  const errors = yield* all([call(loadBatchesFromBackend), call(loadCachedBatches)]);
   const error = errors.find((errorOfPool) => errorOfPool != null);
   if (error != null) {
     Toast.warning(`Some mesh chunks could not be loaded for segment ${segmentId}.`);

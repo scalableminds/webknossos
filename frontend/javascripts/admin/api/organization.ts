@@ -183,42 +183,6 @@ export async function isWorkflowAccessibleBySwitching(
   };
 }
 
-export async function sendUpgradePricingPlanEmail(requestedPlan: string): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestUpgrade?requestedPlan=${requestedPlan}`, {
-    method: "POST",
-  });
-}
-
-export async function sendExtendPricingPlanEmail(): Promise<void> {
-  return Request.receiveJSON("/api/pricing/requestExtension", {
-    method: "POST",
-  });
-}
-
-export async function sendUpgradePricingPlanUserEmail(requestedUsers: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestUsers?requestedUsers=${requestedUsers}`, {
-    method: "POST",
-  });
-}
-
-export async function sendUpgradePricingPlanStorageEmail(requestedStorage: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage}`, {
-    method: "POST",
-  });
-}
-
-export async function sendOrderCreditsEmail(requestedCredits: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestCredits?requestedCredits=${requestedCredits}`, {
-    method: "POST",
-  });
-}
-
-export async function sendUpgradeAiAddonEmail(): Promise<void> {
-  return Request.receiveJSON("/api/pricing/requestAiAddon", {
-    method: "POST",
-  });
-}
-
 export type UpgradeRequest = {
   plan?: string;
   users?: number;
@@ -229,15 +193,12 @@ export type UpgradeRequest = {
   note?: string;
 };
 
-// TODO: Replace with a single backend endpoint that also forwards the note and the
-// number of years for an extension. Until then, one email is sent per requested item.
-export async function sendUpgradeRequestEmail(request: UpgradeRequest): Promise<void> {
-  if (request.plan != null) await sendUpgradePricingPlanEmail(request.plan);
-  if (request.users != null) await sendUpgradePricingPlanUserEmail(request.users);
-  if (request.storageTB != null) await sendUpgradePricingPlanStorageEmail(request.storageTB);
-  if (request.aiAddon) await sendUpgradeAiAddonEmail();
-  if (request.credits != null) await sendOrderCreditsEmail(request.credits);
-  if (request.extendYears != null) await sendExtendPricingPlanEmail();
+// Sends one email to the sales team that lists all requested upgrades.
+export async function sendUpgradeRequestEmail(upgradeRequest: UpgradeRequest): Promise<void> {
+  return Request.sendJSONReceiveJSON("/api/pricing/upgradeRequest", {
+    method: "POST",
+    data: upgradeRequest,
+  });
 }
 
 export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {

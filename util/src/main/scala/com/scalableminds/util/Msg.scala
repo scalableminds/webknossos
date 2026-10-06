@@ -272,7 +272,10 @@ object Msg {
     val listPlanUpdatesOnlyAdmin: String = "Only organization admins can list plan updates."
     val creditOrdersOnlyOwner: String =
       "You do not have permission to order WEBKNOSSOS credits for your organization. Please contact the organization owner."
-    val creditOrdersNotPositive: String = "Cannot order a negative number of WEBKNOSSOS credits."
+    val upgradeRequestEmpty: String = "The upgrade request does not contain any changes."
+    val upgradeRequestInvalidAmount: String = "All requested amounts must be positive."
+    def upgradeRequestNoteTooLong(maxLength: Int): String =
+      s"The note of the upgrade request must not be longer than $maxLength characters."
     val alreadyJoined: String = "Your account is already associated with the selected organization."
     val ambiguous: String = "Registration without invite is not allowed for instances with multiple organizations."
     val organizationCreationNotEnabled: String = "Organization creation is not enabled for this WEBKNOSSOS instance."

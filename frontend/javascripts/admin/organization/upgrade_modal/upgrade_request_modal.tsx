@@ -330,7 +330,11 @@ export default function UpgradeRequestModal({
   const activeUser = useWkSelector((state) => state.activeUser);
   const isDarkMode = getThemeFromUser(activeUser) === "dark";
 
-  const items = useMemo(() => getUpgradeItems(organization), [organization]);
+  const canOrderCredits = activeUser?.isOrganizationOwner ?? false;
+  const items = useMemo(
+    () => getUpgradeItems(organization, canOrderCredits),
+    [organization, canOrderCredits],
+  );
   const currentTier = getPlanTier(organization.pricingPlan);
   const targetTier = getUpgradeTargetTier(currentTier);
 

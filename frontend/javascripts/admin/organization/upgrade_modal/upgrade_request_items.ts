@@ -85,7 +85,11 @@ export function formatPaidUntil(organization: APIOrganization): string {
  * Returns the items that the organization may request, in display order.
  * Items that need a higher plan than the effective one are still returned, they are shown locked.
  */
-export function getUpgradeItems(organization: APIOrganization): ItemDef[] {
+export function getUpgradeItems(
+  organization: APIOrganization,
+  // Only the organization owner may order credits.
+  canOrderCredits: boolean,
+): ItemDef[] {
   const currentTier = getPlanTier(organization.pricingPlan);
   const targetTier = getUpgradeTargetTier(currentTier);
   const isPersonal = currentTier === "Personal";
@@ -146,18 +150,20 @@ export function getUpgradeItems(organization: APIOrganization): ItemDef[] {
         delta: () => ({ from: "Not active", to: "Active" }),
       };
 
-  const credits: ItemDef = {
-    id: "credits",
-    label: "AI credits",
-    hint: isPersonal ? "For AI jobs" : `${formatNumber(creditBalance)} left`,
-    amounts: [1000, 5000, 10000].map((value) => ({ label: `+${formatNumber(value)}`, value })),
-    allowCustom: true,
-    minPlan: "Team",
-    delta: (value = 0) => ({
-      from: formatNumber(creditBalance),
-      to: formatNumber(creditBalance + value),
-    }),
-  };
+  const credits: ItemDef | null = !canOrderCredits
+    ? null
+    : {
+        id: "credits",
+        label: "AI credits",
+        hint: isPersonal ? "For AI jobs" : `${formatNumber(creditBalance)} left`,
+        amounts: [1000, 5000, 10000].map((value) => ({ label: `+${formatNumber(value)}`, value })),
+        allowCustom: true,
+        minPlan: "Team",
+        delta: (value = 0) => ({
+          from: formatNumber(creditBalance),
+          to: formatNumber(creditBalance + value),
+        }),
+      };
 
   const extend: ItemDef | null =
     isPersonal || !hasPlanEndDate(organization)

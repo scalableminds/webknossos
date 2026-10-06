@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import {
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
@@ -352,7 +353,11 @@ async function fetchEditableMappings(
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
     .filter((tracing) => tracing.hasEditableMapping)
-    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id, annotationId, version));
+    .map(async (tracing) =>
+      unwrapOrThrow(
+        await getEditableMappingInfo(tracingStoreUrl, tracing.id, annotationId, version),
+      ),
+    );
   return Promise.all(promises);
 }
 

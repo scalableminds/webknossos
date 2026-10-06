@@ -13,6 +13,7 @@ import {
   PricingPlanEnum,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
+import { useCanRequestUpgrades } from "./use_can_request_upgrades";
 
 export function AiAddonUpgradeCard() {
   return (
@@ -88,6 +89,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
 
 export function PlanExpirationCard({ organization }: { organization: APIOrganization }) {
   const { modal } = App.useApp();
+  const canRequestUpgrades = useCanRequestUpgrades();
 
   if (organization.paidUntil === Constants.MAXIMUM_DATE_TIMESTAMP) return null;
 
@@ -98,15 +100,17 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
           Your current plan is paid until{" "}
           <FormattedDate timestamp={organization.paidUntil} dateOnly />
         </Col>
-        <Col span={6}>
-          <Button
-            type="primary"
-            icon={<FieldTimeOutlined />}
-            onClick={() => UpgradePricingPlanModal.extendPricingPlan(modal, organization)}
-          >
-            Extend Now
-          </Button>
-        </Col>
+        {canRequestUpgrades ? (
+          <Col span={6}>
+            <Button
+              type="primary"
+              icon={<FieldTimeOutlined />}
+              onClick={() => UpgradePricingPlanModal.extendPricingPlan(modal, organization)}
+            >
+              Extend Now
+            </Button>
+          </Col>
+        ) : null}
       </Row>
     </Card>
   );

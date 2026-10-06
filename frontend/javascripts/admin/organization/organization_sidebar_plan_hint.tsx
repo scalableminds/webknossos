@@ -10,11 +10,11 @@ import {
   getDaysUntilPlanExpires,
   isAiAddonEligiblePlan,
   isTrialPlan,
-  isUserAllowedToRequestUpgrades,
   PLAN_EXPIRATION_REMINDER_DAYS,
   PricingPlanEnum,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
+import { useCanRequestUpgrades } from "./use_can_request_upgrades";
 
 type SidebarPlanHint =
   | { kind: "planExpiring"; daysLeft: number }
@@ -46,9 +46,7 @@ function useSidebarPlanHint(): SidebarPlanHint | null {
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
-  const canRequestUpgrades = useWkSelector((state) =>
-    state.activeUser ? isUserAllowedToRequestUpgrades(state.activeUser) : false,
-  );
+  const canRequestUpgrades = useCanRequestUpgrades();
   return canRequestUpgrades ? getSidebarPlanHint(organization) : null;
 }
 

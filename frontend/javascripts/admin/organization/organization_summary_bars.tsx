@@ -20,6 +20,7 @@ import {
   PLAN_EXPIRATION_REMINDER_DAYS,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
+import { useCanRequestUpgrades } from "./use_can_request_upgrades";
 
 const SPENDING_WINDOW_DAYS = 30;
 const LOW_BALANCE_RUNWAY_DAYS = 7;
@@ -99,6 +100,7 @@ export function CreditActivitySummaryBar({
 }) {
   const { milliCreditBalance, milliCreditsSpent, runwayDays, isLow } =
     useCreditSummary(transactions);
+  const canRequestUpgrades = useCanRequestUpgrades();
 
   return (
     <div
@@ -125,13 +127,15 @@ export function CreditActivitySummaryBar({
         <span style={summaryValueStyle}>{formatRunway(runwayDays)}</span>
       </SummaryStat>
       <div style={summaryCellStyle}>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={UpgradePricingPlanModal.orderWebknossosCredits}
-        >
-          Buy credits
-        </Button>
+        {canRequestUpgrades ? (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={UpgradePricingPlanModal.orderWebknossosCredits}
+          >
+            Buy credits
+          </Button>
+        ) : null}
       </div>
     </div>
   );
@@ -143,6 +147,7 @@ export function PlanSummaryBar() {
     enforceActiveOrganization(state.activeOrganization),
   );
   const daysLeft = getDaysUntilPlanExpires(organization);
+  const canRequestUpgrades = useCanRequestUpgrades();
   const usersLabel = Number.isFinite(organization.includedUsers)
     ? `${organization.includedUsers} ${pluralize("user", organization.includedUsers)}`
     : "unlimited users";
@@ -168,12 +173,12 @@ export function PlanSummaryBar() {
           </>
         ) : null}
       </div>
-      {canUpgradePricingPlan(organization.pricingPlan) ? (
+      {canRequestUpgrades && canUpgradePricingPlan(organization.pricingPlan) ? (
         <Button onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}>
           Upgrade
         </Button>
       ) : null}
-      {daysLeft != null ? (
+      {canRequestUpgrades && daysLeft != null ? (
         <Button
           type="primary"
           icon={<FieldTimeOutlined />}

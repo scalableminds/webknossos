@@ -172,7 +172,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
   const { modal } = App.useApp();
 
   const message = hasPlanExpired
-    ? "Your WEBKNOSSOS plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
+    ? "Your WEBKNOSSOS plan has expired. Extend it to restore all users and features."
     : "Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account from being blocked.";
   const actionButton = hasPlanExpired ? (
     <Button

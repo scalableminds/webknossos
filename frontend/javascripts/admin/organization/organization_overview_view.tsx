@@ -161,7 +161,8 @@ export function OrganizationOverviewView() {
     usersStat.hint =
       seatsLeft > 0 ? `${seatsLeft} ${pluralize("seat", seatsLeft)} left` : "No seats left";
   }
-  if (canBuyMoreUsersAndStorage && canRequestUpgrades) {
+  // Unlimited quotas need no top-up.
+  if (canBuyMoreUsersAndStorage && canRequestUpgrades && hasUserLimit) {
     usersStat.footerAction = (
       <Button
         type="primary"
@@ -212,7 +213,7 @@ export function OrganizationOverviewView() {
       </Button>
     );
   }
-  if (canBuyMoreUsersAndStorage && canRequestUpgrades) {
+  if (canBuyMoreUsersAndStorage && canRequestUpgrades && hasStorageLimit) {
     storageStat.footerAction = (
       <Button
         type="primary"

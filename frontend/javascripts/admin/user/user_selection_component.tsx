@@ -1,5 +1,6 @@
 import { unwrapOrThrow } from "admin/api/api_result";
 import { getUsers } from "admin/rest_api";
+import DeactivatedUserTag from "admin/user/deactivated_user_tag";
 import { Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
@@ -52,10 +53,9 @@ export default function UserSelectionComponent({
   ) : (
     <Select
       showSearch={{
-        optionFilterProp: "label",
+        optionFilterProp: "searchText",
         filterOption: (input, option) =>
-          // @ts-expect-error ts-migrate (2532) FIXME: Object is possibly 'undefined'.
-          option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0,
+          option?.searchText.toLowerCase().includes(input.toLowerCase()) ?? false,
       }}
       placeholder="Select a New User"
       value={currentUserIdValue}
@@ -63,10 +63,20 @@ export default function UserSelectionComponent({
       style={{
         width: "100%",
       }}
-      options={users.map((user) => ({
-        value: user.id,
-        label: `${user.lastName}, ${user.firstName} (${user.email})${user.isActive ? "" : " [deactivated]"}`,
-      }))}
+      options={users.map((user) => {
+        const userString = `${user.lastName}, ${user.firstName} (${user.email})`;
+        return {
+          value: user.id,
+          searchText: userString,
+          label: user.isActive ? (
+            userString
+          ) : (
+            <>
+              {userString} <DeactivatedUserTag />
+            </>
+          ),
+        };
+      })}
     />
   );
 }

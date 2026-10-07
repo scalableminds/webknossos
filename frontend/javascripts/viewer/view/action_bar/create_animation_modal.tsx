@@ -1,8 +1,8 @@
 import { InfoCircleOutlined, LockOutlined } from "@ant-design/icons";
 import animationExamplePoster from "@images/animation-example-poster.jpg";
+import { useIsJobAvailable } from "admin/job/job_hooks";
 import {
   isFeatureAllowedByPricingPlan,
-  isJobAvailable,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { startRenderAnimationJob } from "admin/rest_api";
@@ -367,10 +367,11 @@ function CreateAnimationModal(props: Props) {
     onClose?.(evt);
   };
 
-  const isFeatureDisabled = !(
-    dataset.dataStore.jobsEnabled &&
-    isJobAvailable(dataset.dataStore, APIJobCommand.RENDER_ANIMATION, activeOrganization)
+  const isRenderAnimationJobAvailable = useIsJobAvailable(
+    dataset.dataStore,
+    APIJobCommand.RENDER_ANIMATION,
   );
+  const isFeatureDisabled = !(dataset.dataStore.jobsEnabled && isRenderAnimationJobAvailable);
 
   const fieldLabel = (label: string) => (
     <Typography.Text strong style={{ display: "block", fontSize: 13, marginBottom: 8 }}>

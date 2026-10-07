@@ -13,7 +13,7 @@ import Icon, {
   WarningOutlined,
 } from "@ant-design/icons";
 import BrushIcon from "@images/icons/icon-brush.svg?react";
-import { isJobAvailable } from "admin/organization/pricing_plan_utils";
+import { useIsJobAvailable } from "admin/job/job_hooks";
 import {
   clearCache,
   findDataPositionForLayer,
@@ -125,7 +125,10 @@ export default function LayerSettingsHeader({
   const dispatch = useDispatch();
   const { modal } = App.useApp();
   const dataset = useWkSelector((state) => state.dataset);
-  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  const isSegmentIndexFileJobAvailable = useIsJobAvailable(
+    dataset.dataStore,
+    APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
+  );
   const annotation = useWkSelector((state) => state.annotation);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isAdminOrManager = useWkSelector((state) =>
@@ -535,8 +538,7 @@ export default function LayerSettingsHeader({
     isHistogramAvailable && !isDisabled ? getEditMinMaxItem() : null,
     hasHistogram && !isDisabled ? getClipItem() : null,
     !isLayerWithoutTransformationConfigSupport(layer) ? getEditLayerTransformsItem() : null,
-    dataset.dataStore.jobsEnabled &&
-    isJobAvailable(dataset.dataStore, APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE, activeOrganization)
+    dataset.dataStore.jobsEnabled && isSegmentIndexFileJobAvailable
       ? getComputeSegmentIndexFileItem()
       : null,
   ];

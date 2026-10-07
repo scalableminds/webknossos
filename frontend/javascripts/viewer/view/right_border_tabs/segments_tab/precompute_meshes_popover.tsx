@@ -1,3 +1,4 @@
+import { useIsJobAvailable } from "admin/job/job_hooks";
 import {
   areJobsAllowedByPricingPlan,
   getFeatureNotAvailableInPlanMessage,
@@ -37,6 +38,10 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const activeUser = useWkSelector((state) => state.activeUser);
   const dataset = useWkSelector((state) => state.dataset);
+  const isMeshFileJobAvailable = useIsJobAvailable(
+    dataset.dataStore,
+    APIJobCommand.COMPUTE_MESH_FILE,
+  );
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
   const hasVolumeTracing = useWkSelector((state) => state.annotation.volumes.length > 0);
   const preferredQualityForMeshPrecomputation = useWkSelector(
@@ -106,9 +111,7 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
       };
     }
 
-    if (
-      !dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.COMPUTE_MESH_FILE)
-    ) {
+    if (!isMeshFileJobAvailable) {
       title = "Mesh computation jobs are not enabled for this WEBKNOSSOS instance.";
     } else if (activeUser == null) {
       title = "Please log in to precompute the meshes of this dataset.";

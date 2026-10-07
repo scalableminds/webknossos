@@ -16,7 +16,7 @@ UPDATE webknossos.organization_plan_updates SET pricingPlan = 'Enterprise' WHERE
 DROP TYPE webknossos.PRICING_PLANS;
 CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Personal', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Open_Source', 'Enterprise');
 ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan TYPE webknossos.PRICING_PLANS USING pricingPlan::webknossos.PRICING_PLANS;
-ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan SET DEFAULT 'Enterprise'::webknossos.PRICING_PLANS;
+ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan SET DEFAULT 'Open_Source'::webknossos.PRICING_PLANS;
 ALTER TABLE webknossos.organization_plan_updates ALTER COLUMN pricingPlan TYPE webknossos.PRICING_PLANS USING pricingPlan::webknossos.PRICING_PLANS;
 
 -- Open_Source organizations get no AI credits

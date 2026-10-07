@@ -257,10 +257,10 @@ class OrganizationController @Inject() (
 
   private def aiAddonLabelForPricingPlan(pricingPlan: PricingPlan.PricingPlan): String =
     pricingPlan match {
-      case PricingPlan.Team | PricingPlan.Team_Trial   => "Team AI"
-      case PricingPlan.Power | PricingPlan.Power_Trial => "Power AI"
-      case PricingPlan.Enterprise                      => "Enterprise AI"
-      case _                                           => "AI Add-on"
+      case PricingPlan.Team | PricingPlan.Team_Trial => "Team AI"
+      // Enterprise unlocks the features of Power, so it gets the Power AI add-on
+      case PricingPlan.Power | PricingPlan.Power_Trial | PricingPlan.Enterprise => "Power AI"
+      case _                                                                    => "AI Add-on"
     }
 
   def sendUpgradeAiAddonEmail(): Action[AnyContent] =

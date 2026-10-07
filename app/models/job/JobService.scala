@@ -278,6 +278,13 @@ class JobService @Inject() (
       _ <- Fox.fromBool(PricingPlan.allowsJobs(organization.pricingPlan)) ?~> Msg.Job.notAvailableInPlan ~> FORBIDDEN
     } yield ()
 
+  // Retries do not go through submitJob, so the pricing plan of the job owner's organization is checked here.
+  def assertJobCanBeRetriedByPricingPlan(job: Job): Fox[Unit] =
+    for {
+      owner <- userDAO.findOne(job._owner)(using GlobalAccessContext) ?~> Msg.User.notFound(job._owner)
+      _ <- assertJobsAllowedByPricingPlan(owner)
+    } yield ()
+
   private def assertStorageNotExceededFor(command: JobCommand, owner: User): Fox[Unit] =
     for {
       _ <- Fox.runIf(JobCommand.jobsWritingToStorage.contains(command)) {

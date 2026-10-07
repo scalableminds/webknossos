@@ -371,7 +371,7 @@ CREATE TABLE webknossos.organizations(
   _rootFolder TEXT CONSTRAINT _rootFolder_objectId CHECK (_rootFolder ~ '^[0-9a-f]{24}$') NOT NULL UNIQUE,
   newUserMailingList TEXT NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT FALSE,
-  pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Enterprise',
+  pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Open_Source',
   aiPlan webknossos.AI_PLANS DEFAULT NULL,
   paidUntil TIMESTAMPTZ DEFAULT NULL,
   includedUsers INTEGER DEFAULT NULL,

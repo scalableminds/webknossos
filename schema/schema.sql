@@ -1211,8 +1211,8 @@ BEGIN
     -- Calculate the first day of the next month
     next_month_first_day := DATE_TRUNC('MONTH', NOW()) + INTERVAL '1 MONTH';
 
-    -- Loop through all organizations
-    FOR organization_id IN (SELECT _id FROM webknossos.organizations) LOOP
+    -- Loop through all organizations, except for Open_Source ones, which have no access to AI credits
+    FOR organization_id IN (SELECT _id FROM webknossos.organizations WHERE pricingPlan <> 'Open_Source') LOOP
         -- Check if there is already a free credit transaction for this organization in the current month
         SELECT COUNT(*) INTO existing_transaction_count
         FROM webknossos.credit_transactions

@@ -1,4 +1,5 @@
 import { useStartAndPollJob } from "admin/job/job_hooks";
+import { isJobAvailable } from "admin/organization/pricing_plan_utils";
 import { doWithToken, downloadWithFilename, startExportTiffJob } from "admin/rest_api";
 import { Alert, Button, Checkbox, Col, Divider, Flex, Row, Segmented, Typography } from "antd";
 import type { SegmentedOptions } from "antd/es/segmented";
@@ -175,6 +176,7 @@ export function DownloadTiffTab({
 }) {
   const annotation = useWkSelector((state) => state.annotation);
   const dataset = useWkSelector((state) => state.dataset);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const rawUserBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
   const isMergerModeEnabled = useWkSelector(
     (state) => state.temporaryConfiguration.isMergerModeEnabled,
@@ -275,7 +277,7 @@ export function DownloadTiffTab({
         </a>{" "}
         to track progress and download results.
       </Typography.Paragraph>
-      {!dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.EXPORT_TIFF) ? (
+      {!isJobAvailable(dataset.dataStore, APIJobCommand.EXPORT_TIFF, activeOrganization) ? (
         <WorkerInfo />
       ) : (
         <div>

@@ -19,6 +19,36 @@ ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan TYPE webknossos.PR
 ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan SET DEFAULT 'Enterprise'::webknossos.PRICING_PLANS;
 ALTER TABLE webknossos.organization_plan_updates ALTER COLUMN pricingPlan TYPE webknossos.PRICING_PLANS USING pricingPlan::webknossos.PRICING_PLANS;
 
+-- Open_Source organizations get no AI credits
+CREATE OR REPLACE FUNCTION webknossos.hand_out_monthly_free_credits(free_milli_credits_amount INT) RETURNS VOID AS $$
+DECLARE
+    organization_id TEXT;
+    next_month_first_day DATE;
+    existing_transaction_count INT;
+BEGIN
+    -- Calculate the first day of the next month
+    next_month_first_day := DATE_TRUNC('MONTH', NOW()) + INTERVAL '1 MONTH';
+
+    -- Loop through all organizations, except for Open_Source ones, which have no access to AI credits
+    FOR organization_id IN (SELECT _id FROM webknossos.organizations WHERE pricingPlan <> 'Open_Source') LOOP
+        -- Check if there is already a free credit transaction for this organization in the current month
+        SELECT COUNT(*) INTO existing_transaction_count
+        FROM webknossos.credit_transactions
+        WHERE _organization = organization_id
+          AND DATE_TRUNC('MONTH', expiration_date) = next_month_first_day;
+
+        -- Insert free credits only if no record exists for this month
+        IF existing_transaction_count = 0 THEN
+            INSERT INTO webknossos.credit_transactions
+                (_id, _organization, milli_credit_delta, comment, transaction_state, credit_state, expiration_date)
+            VALUES
+                (webknossos.generate_object_id(), organization_id, free_milli_credits_amount,
+                 'Complimentary credits (' || TO_CHAR(NOW(), 'YYYY-MM') || ')', 'Complete', 'Pending', next_month_first_day);
+        END IF;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Recreate views
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.userInfos AS

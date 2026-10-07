@@ -1,3 +1,4 @@
+import { isAiQuickSelectAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -18,7 +19,12 @@ import performQuickSelectML from "./quick_select_ml_saga";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);
-  return useHeuristic || !features().segmentAnythingEnabled;
+  const activeOrganization = yield* select((state) => state.activeOrganization);
+  return (
+    useHeuristic ||
+    !features().segmentAnythingEnabled ||
+    !isAiQuickSelectAllowedByPricingPlan(activeOrganization)
+  );
 }
 
 export default function* listenToQuickSelect(): Saga<void> {

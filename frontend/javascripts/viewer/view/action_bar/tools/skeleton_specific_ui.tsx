@@ -3,6 +3,7 @@ import MergerModeIcon from "@images/icons/icon-merger-mode.svg?react";
 import PenIcon from "@images/icons/icon-pen.svg?react";
 import SomaClickingIcon from "@images/icons/icon-single-node-tree.svg?react";
 import SkeletonNewTreeIcon from "@images/icons/icon-skeleton-new-tree.svg?react";
+import { isJobAvailable } from "admin/organization/pricing_plan_utils";
 import { Badge, Space } from "antd";
 import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -40,6 +41,7 @@ export function SkeletonSpecificButtons() {
     dispatch(updateUserSettingAction("continuousNodeCreation", !isContinuousNodeCreationEnabled));
 
   const dataset = useWkSelector((state) => state.dataset);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const isUserAdminOrManager = useIsActiveUserAdminOrManager();
 
   const segmentationTracingLayer = useWkSelector((state) => getActiveSegmentationTracing(state));
@@ -61,10 +63,11 @@ export function SkeletonSpecificButtons() {
 
   const toggleMergerMode = () => dispatch(setMergerModeEnabledAction(!isMergerModeEnabled));
 
-  const isMaterializeVolumeAnnotationEnabled =
-    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-      APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION,
-    );
+  const isMaterializeVolumeAnnotationEnabled = isJobAvailable(
+    dataset.dataStore,
+    APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION,
+    activeOrganization,
+  );
 
   return (
     <Space.Compact

@@ -15,15 +15,18 @@ class OrganizationPlanUpdateTestSuite extends AsyncWordSpec {
 
   "OrganizationPlanUpdate.withQuotasOfPlan" should {
 
-    "set unlimited users and storage for Enterprise" in {
-      val update = limitedUpdate.withQuotasOfPlan(PricingPlan.Enterprise)
-      assert(update.includedUsersChanged && update.includedUsersFlat.isEmpty)
-      assert(update.includedStorageChanged && update.includedStorageFlat.isEmpty)
+    "set unlimited users and storage for Enterprise and Open_Source" in {
+      for (plan <- List(PricingPlan.Enterprise, PricingPlan.Open_Source)) {
+        val update = limitedUpdate.withQuotasOfPlan(plan)
+        assert(update.includedUsersChanged && update.includedUsersFlat.isEmpty)
+        assert(update.includedStorageChanged && update.includedStorageFlat.isEmpty)
+      }
+      succeed
     }
 
     "keep the requested limits for other plans" in {
       assert(limitedUpdate.withQuotasOfPlan(PricingPlan.Power) == limitedUpdate)
-      assert(limitedUpdate.withQuotasOfPlan(PricingPlan.Open_Source) == limitedUpdate)
+      assert(limitedUpdate.withQuotasOfPlan(PricingPlan.Personal) == limitedUpdate)
     }
   }
 }

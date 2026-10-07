@@ -13,6 +13,7 @@ import Icon, {
   WarningOutlined,
 } from "@ant-design/icons";
 import BrushIcon from "@images/icons/icon-brush.svg?react";
+import { isJobAvailable } from "admin/organization/pricing_plan_utils";
 import {
   clearCache,
   findDataPositionForLayer,
@@ -124,6 +125,7 @@ export default function LayerSettingsHeader({
   const dispatch = useDispatch();
   const { modal } = App.useApp();
   const dataset = useWkSelector((state) => state.dataset);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const annotation = useWkSelector((state) => state.annotation);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isAdminOrManager = useWkSelector((state) =>
@@ -534,9 +536,7 @@ export default function LayerSettingsHeader({
     hasHistogram && !isDisabled ? getClipItem() : null,
     !isLayerWithoutTransformationConfigSupport(layer) ? getEditLayerTransformsItem() : null,
     dataset.dataStore.jobsEnabled &&
-    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-      APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
-    )
+    isJobAvailable(dataset.dataStore, APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE, activeOrganization)
       ? getComputeSegmentIndexFileItem()
       : null,
   ];

@@ -76,10 +76,11 @@ class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
       )
     }
 
-    "treat Open_Source like Personal and Enterprise like Power" in {
+    "treat Open_Source like Team and Enterprise like Power" in {
       assert(
-        highlightsOf(PricingPlan.Open_Source, PricingPlan.Team) == highlightsOf(PricingPlan.Personal, PricingPlan.Team)
+        highlightsOf(PricingPlan.Open_Source, PricingPlan.Power) == highlightsOf(PricingPlan.Team, PricingPlan.Power)
       )
+      assert(PricingPlanFeatures.unlockedBy(PricingPlan.Open_Source, PricingPlan.Team).isEmpty)
       assert(
         highlightsOf(PricingPlan.Personal, PricingPlan.Enterprise) == highlightsOf(
           PricingPlan.Personal,

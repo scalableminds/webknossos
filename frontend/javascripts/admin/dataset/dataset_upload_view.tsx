@@ -15,6 +15,7 @@ import {
 import {
   getLeftOverStorageBytes,
   hasPricingPlanExceededStorage,
+  isJobAvailable,
 } from "admin/organization/pricing_plan_utils";
 import {
   cancelDatasetUpload,
@@ -712,8 +713,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       : this.getDatastoreForUrl(this.state.datastoreUrl);
 
     return (
-      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobCommand.CONVERT_TO_WKW) ||
-      false
+      selectedDatastore != null &&
+      isJobAvailable(selectedDatastore, APIJobCommand.CONVERT_TO_WKW, this.props.organization)
     );
   };
 

@@ -1,4 +1,5 @@
 import { QuestionCircleOutlined } from "@ant-design/icons";
+import { isAiQuickSelectAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
 import { Radio, type RadioChangeEvent } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
@@ -26,9 +27,17 @@ const OPTIONS_WITH_DISABLED = [
   { label: "Light Segment", value: "light" },
 ];
 
+function useIsAISelectAvailable() {
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  return (
+    Boolean(features().segmentAnythingEnabled) &&
+    isAiQuickSelectAllowedByPricingPlan(activeOrganization)
+  );
+}
+
 export function QuickSelectControls() {
   const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
-  const isAISelectAvailable = features().segmentAnythingEnabled;
+  const isAISelectAvailable = useIsAISelectAvailable();
   const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
 
   return isQuickSelectHeuristic ? <HeuristicQuickSelectControls /> : <AiQuickSelectControls />;
@@ -90,13 +99,16 @@ function HeuristicQuickSelectControls() {
   );
 
   const dispatch = useDispatch();
-  const isAISelectAvailable = features().segmentAnythingEnabled;
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  const isAISelectAvailable = useIsAISelectAvailable();
   const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
   const quickSelectTooltipText = isAISelectAvailable
     ? isQuickSelectHeuristic
       ? "The quick select tool is now working without AI. Activate AI for better results."
       : "The quick select tool is now working with AI."
-    : "The quick select tool with AI is only available on webknossos.org";
+    : !isAiQuickSelectAllowedByPricingPlan(activeOrganization)
+      ? "The quick select tool with AI is not available in the Open-Source plan."
+      : "The quick select tool with AI is only available on webknossos.org";
   const toggleQuickSelectStrategy = () => {
     dispatch(
       updateUserSettingAction("quickSelect", {

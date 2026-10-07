@@ -2,6 +2,7 @@ import { InfoCircleOutlined, LockOutlined } from "@ant-design/icons";
 import animationExamplePoster from "@images/animation-example-poster.jpg";
 import {
   isFeatureAllowedByPricingPlan,
+  isJobAvailable,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { startRenderAnimationJob } from "admin/rest_api";
@@ -368,7 +369,7 @@ function CreateAnimationModal(props: Props) {
 
   const isFeatureDisabled = !(
     dataset.dataStore.jobsEnabled &&
-    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.RENDER_ANIMATION)
+    isJobAvailable(dataset.dataStore, APIJobCommand.RENDER_ANIMATION, activeOrganization)
   );
 
   const fieldLabel = (label: string) => (

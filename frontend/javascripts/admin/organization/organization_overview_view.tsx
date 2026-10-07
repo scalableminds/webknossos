@@ -25,7 +25,6 @@ import {
   formatPricingPlanLabel,
   getActiveUserCount,
   isAiAddonEligiblePlan,
-  isFreePlan,
   isUserAllowedToRequestUpgrades,
   PricingPlanEnum,
 } from "./pricing_plan_utils";
@@ -110,7 +109,7 @@ export function OrganizationOverviewView() {
   let upgradeAiPlanAction: React.ReactNode = null;
 
   if (
-    isFreePlan(organization.pricingPlan) ||
+    organization.pricingPlan === PricingPlanEnum.Personal ||
     organization.pricingPlan === PricingPlanEnum.Team ||
     organization.pricingPlan === PricingPlanEnum.TeamTrial
   ) {
@@ -122,7 +121,7 @@ export function OrganizationOverviewView() {
         key="upgradeUsersAction"
         icon={<PlusOutlined />}
         onClick={
-          isFreePlan(organization.pricingPlan)
+          organization.pricingPlan === PricingPlanEnum.Personal
             ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
             : UpgradePricingPlanModal.upgradeUserQuota
         }
@@ -137,7 +136,7 @@ export function OrganizationOverviewView() {
         key="upgradeStorageAction"
         icon={<PlusOutlined />}
         onClick={
-          isFreePlan(organization.pricingPlan)
+          organization.pricingPlan === PricingPlanEnum.Personal
             ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
             : UpgradePricingPlanModal.upgradeStorageQuota
         }
@@ -229,7 +228,7 @@ export function OrganizationOverviewView() {
   ];
 
   function renderUpgradeCards() {
-    const isPersonal = isFreePlan(organization.pricingPlan);
+    const isPersonal = organization.pricingPlan === PricingPlanEnum.Personal;
     const isTeamOrTeamTrial =
       organization.pricingPlan === PricingPlanEnum.Team ||
       organization.pricingPlan === PricingPlanEnum.TeamTrial;

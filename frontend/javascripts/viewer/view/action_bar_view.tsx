@@ -1,6 +1,7 @@
 import Icon from "@ant-design/icons";
 import AiAnalysisIcon from "@images/icons/icon-ai-analysis.svg?react";
 import { withAuthentication } from "admin/auth/authentication_modal";
+import { isJobAvailable } from "admin/organization/pricing_plan_utils";
 import { createExplorational } from "admin/rest_api";
 import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
@@ -394,16 +395,15 @@ class ActionBarView extends PureComponent<Props, State> {
       this.props;
     const isAdminOrManager = isUserAdminOrManager(activeUser);
     const isViewMode = controlMode === ControlModeEnum.VIEW;
-    const getIsAIAnalysisEnabled = () => {
-      const jobsEnabled =
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.INFER_NEURONS) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-          APIJobCommand.INFER_MITOCHONDRIA,
-        ) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.INFER_INSTANCES) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.ALIGN_SECTIONS);
-      return jobsEnabled;
-    };
+    const getIsAIAnalysisEnabled = () =>
+      [
+        APIJobCommand.INFER_NEURONS,
+        APIJobCommand.INFER_MITOCHONDRIA,
+        APIJobCommand.INFER_INSTANCES,
+        APIJobCommand.ALIGN_SECTIONS,
+      ].some((jobCommand) =>
+        isJobAvailable(dataset.dataStore, jobCommand, this.props.activeOrganization),
+      );
 
     const layoutMenu = getLayoutMenu({
       ...layoutProps,

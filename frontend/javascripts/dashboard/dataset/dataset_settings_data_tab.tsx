@@ -3,6 +3,7 @@ import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useStartAndPollJob } from "admin/job/job_hooks";
+import { isJobAvailable } from "admin/organization/pricing_plan_utils";
 import { startFindLargestSegmentIdJob } from "admin/rest_api";
 import {
   Button,
@@ -410,6 +411,7 @@ function SimpleLayerForm({
 }) {
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"], form);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
 
   const layerCategorySavedOnServer =
     dataset != null && "dataLayers" in dataset.dataSource
@@ -706,8 +708,11 @@ function SimpleLayerForm({
                   <DelegatePropsToFirstChild>
                     {/* stringMode keeps full precision for uint64 segment ids (beyond 2**53). */}
                     <InputNumber stringMode precision={0} />
-                    {dataset?.dataStore.jobsSupportedByAvailableWorkers.includes(
+                    {dataset != null &&
+                    isJobAvailable(
+                      dataset.dataStore,
                       APIJobCommand.FIND_LARGEST_SEGMENT_ID,
+                      activeOrganization,
                     ) ? (
                       <Tooltip
                         title={

@@ -32,7 +32,7 @@ import models.dataset.explore.{
   WKExploreRemoteLayerService
 }
 import models.folder.FolderService
-import models.organization.OrganizationDAO
+import models.organization.{OrganizationDAO, PricingPlan}
 import models.storage.UsedStorageService
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
@@ -646,6 +646,10 @@ class DatasetController @Inject() (
         for {
           _ <- Fox.fromBool(conf.Features.segmentAnythingEnabled) ?~> Msg.SegmentAnything.notEnabled
           _ <- Fox.fromBool(conf.SegmentAnything.uri.nonEmpty) ?~> Msg.SegmentAnything.noUri
+          userOrganization <- organizationDAO.findOne(request.identity._organization)
+          _ <- Fox.fromBool(
+            PricingPlan.allowsAiQuickSelect(userOrganization.pricingPlan)
+          ) ?~> Msg.SegmentAnything.notAvailableInPlan ~> FORBIDDEN
           dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
           usableDataSource <- datasetService.usableDataSourceFor(dataset)
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName).toFox ?~> Msg.Dataset.noLayers

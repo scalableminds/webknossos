@@ -8,6 +8,7 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import MipIcon from "@images/icons/icon-mip.svg?react";
+import { isJobAvailable } from "admin/organization/pricing_plan_utils";
 import {
   Divider,
   Empty,
@@ -96,6 +97,7 @@ export default function BoundingBoxTab() {
   const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
   const dataset = useWkSelector((state) => state.dataset);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
   // Select the bounding boxes (and the id of their tracing) directly instead of the
   // whole annotation so that this tab only re-renders when the boxes actually change.
@@ -319,8 +321,10 @@ export default function BoundingBoxTab() {
       "Copy this annotation to your account to adapt the bounding boxes.";
   }
 
-  const isExportEnabled = dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+  const isExportEnabled = isJobAvailable(
+    dataset.dataStore,
     APIJobCommand.EXPORT_TIFF,
+    activeOrganization,
   );
 
   useEffect(() => {

@@ -17,8 +17,6 @@ import BoundingBox from "../bucket_data_handling/bounding_box";
 import {
   cosineLocationOfRotationInMatrix,
   doAllLayersHaveTheSameRotation,
-  fromCenterToOriginAsAffine,
-  fromOriginToCenterAsAffine,
   getRotationMatrixAroundAxis,
   isTranslationOnly,
   sinusLocationOfRotationInMatrix,

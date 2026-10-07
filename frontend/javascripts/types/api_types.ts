@@ -281,6 +281,8 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   status: MutableAPIDataSourceBase["status"];
   colorLayerNames: Array<string>;
   segmentationLayerNames: Array<string>;
+  // Active explorational annotations the user can list. Only present if requested.
+  annotationCount?: number;
 };
 
 export function convertDatasetToCompact(dataset: APIMaybeUnimportedDataset): APIDatasetCompact {
@@ -334,6 +336,7 @@ export type APIUserBase = APIUserCompact & {
   readonly teams: Array<APITeamMembership>;
   readonly isAdmin: boolean;
   readonly isDatasetManager: boolean;
+  readonly isActive: boolean;
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
@@ -525,6 +528,7 @@ export type APIAnnotationInfo = {
   readonly organization: string;
   readonly description: string;
   readonly modified: number;
+  readonly created: number;
   readonly id: string;
   readonly name: string;
   // Not used by the front-end anymore, but the
@@ -546,6 +550,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     dataSetName,
     description,
     modified,
+    created,
     id,
     datasetId,
     name,
@@ -567,6 +572,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     organization,
     description,
     modified,
+    created,
     id,
     isLockedByOwner,
     name,

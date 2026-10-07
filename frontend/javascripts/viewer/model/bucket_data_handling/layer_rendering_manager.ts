@@ -348,13 +348,19 @@ export default class LayerRenderingManager {
 
       pickingPromise.then(
         (buffer) => {
-          this.cube.markBucketsAsUnneeded();
+          // During bucket picking, we want to mark picked buckets as "needed". This property can
+          // be used to GC unused buckets. The marking mechanism works by notifying the DataCube
+          // about the start/stop of the picking (which does house keeping regarding "tick counters").
+          // Then, consumeBucketsFromArrayBuffer marks all picked buckets as needed for this tick.
+          // Unused buckets don't have to be marked explicitly (see DataBucket.isNeeded()).
+          this.cube.startBucketPicking();
           const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
             buffer,
             this.cube,
             this.textureBucketManager.maximumCapacity,
             this.additionalCoordinates,
           );
+          this.cube.finishBucketPicking();
           const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
           this.textureBucketManager.setActiveBuckets(buckets);
           // In general, pull buckets which are not available but should be sent to the GPU

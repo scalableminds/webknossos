@@ -25,7 +25,7 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/rest_api";
-import { App, Button, Input, Spin, Table, Tooltip } from "antd";
+import { App, Button, Input, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { handleGenericError } from "libs/error_handling";
@@ -320,7 +320,9 @@ function ProjectListView() {
             render={(owner: APIUserBase) => (
               <>
                 <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
-                <div>{owner.email ? `(${owner.email})` : "-"}</div>
+                {owner.email ? (
+                  <Typography.Text type="secondary">{owner.email}</Typography.Text>
+                ) : null}
               </>
             )}
             filters={uniqBy(

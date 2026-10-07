@@ -347,15 +347,17 @@ vi.mock("libs/draco.ts", async () => {
 
 vi.mock("admin/api/mesh", async () => {
   const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
-  // Every segment has a single chunk.
+  // Every segment has a single chunk. Each chunk gets its own byte range, like in a real mesh
+  // file, because the mesh chunk provider caches chunk bytes by byte offset.
+  const chunkByteSize = 666;
   const createListingWithOneChunkPerSegment = (segmentIds: bigint[]): MeshSegmentInfo => ({
     meshFormat: "draco",
     lods: [
       {
         chunks: segmentIds.map((segmentId) => ({
           position: [0, 0, 0],
-          byteOffset: 0,
-          byteSize: 666,
+          byteOffset: Number(segmentId) * chunkByteSize,
+          byteSize: chunkByteSize,
           unmappedSegmentId: segmentId,
         })),
         transform: [

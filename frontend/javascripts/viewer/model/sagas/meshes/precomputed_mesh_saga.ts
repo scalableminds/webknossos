@@ -106,8 +106,13 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   const deferred = new Deferred<Array<APIMeshFileInfo>, unknown>();
   fetchDeferredsPerLayer[layerName] = deferred;
   if (mustRequest) {
-    // The mesh files might have been recomputed, so cached chunks can't be trusted anymore.
-    GlobalMeshChunkProvider.clear();
+    // The mesh files of this layer might have been recomputed, so their cached chunks can't be
+    // trusted anymore.
+    GlobalMeshChunkProvider.clearForLayer({
+      dataStoreUrl: dataset.dataStore.url,
+      datasetId: dataset.id,
+      layerName: getBaseSegmentationName(segmentationLayer),
+    });
   }
 
   const availableMeshFiles = yield* call(

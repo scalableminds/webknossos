@@ -55,6 +55,11 @@ export class LruMap<K, V> {
   }
 
   // From least to most recently used. Doesn't change the order.
+  keys(): IterableIterator<K> {
+    return this.entries.keys();
+  }
+
+  // From least to most recently used. Doesn't change the order.
   values(): IterableIterator<V> {
     return this.entries.values();
   }

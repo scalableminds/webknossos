@@ -173,14 +173,24 @@ export class MeshChunkProvider {
   private readonly meshFileCaches = new LruMap<string, MeshFileCache>();
 
   getCacheForMeshFile(location: MeshFileLocation): MeshFileCache {
-    const { dataStoreUrl, datasetId, layerName, meshFileName } = location;
-    const key = [dataStoreUrl, datasetId, layerName, meshFileName].join("|");
+    const key = getMeshFileCacheKey(location);
     let cache = this.meshFileCaches.get(key);
     if (cache == null) {
       cache = new MeshFileCache(() => this.evictIfNeeded());
       this.meshFileCaches.set(key, cache);
     }
     return cache;
+  }
+
+  /** Clears the caches of all mesh files of the given layer. */
+  clearForLayer(layerLocation: Omit<MeshFileLocation, "meshFileName">): void {
+    // The mesh file name comes last, so that the keys of all mesh files of a layer share a prefix.
+    const keyPrefix = getMeshFileCacheKey({ ...layerLocation, meshFileName: "" });
+    for (const key of [...this.meshFileCaches.keys()]) {
+      if (key.startsWith(keyPrefix)) {
+        this.meshFileCaches.delete(key);
+      }
+    }
   }
 
   clear(): void {
@@ -198,6 +208,11 @@ export class MeshChunkProvider {
       MAX_CACHED_CHUNK_LIST_ENTRIES,
     );
   }
+}
+
+function getMeshFileCacheKey(location: MeshFileLocation): string {
+  const { dataStoreUrl, datasetId, layerName, meshFileName } = location;
+  return [dataStoreUrl, datasetId, layerName, meshFileName].join("|");
 }
 
 // Evicts from the maps of the least recently used mesh files first.

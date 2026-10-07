@@ -344,5 +344,23 @@ describe("Mesh chunk provider", () => {
         20, 30,
       ]);
     });
+
+    it("clears only the caches of the mesh files of the given layer", async () => {
+      mockChunkData();
+      const otherMeshFileOfLayer = { ...location, meshFileName: "other_meshfile" };
+      const meshFileOfOtherLayer = { ...location, layerName: "other_segmentation" };
+      for (const meshFileLocation of [location, otherMeshFileOfLayer, meshFileOfOtherLayer]) {
+        await getMeshChunkData(meshFileLocation, 1n, [chunk(10n, 0)]);
+      }
+
+      GlobalMeshChunkProvider.clearForLayer(location);
+
+      const hasCachedChunk = (meshFileLocation: typeof location) =>
+        GlobalMeshChunkProvider.getCacheForMeshFile(meshFileLocation).getChunkData(chunk(10n, 0)) !=
+        null;
+      expect(hasCachedChunk(location)).toBe(false);
+      expect(hasCachedChunk(otherMeshFileOfLayer)).toBe(false);
+      expect(hasCachedChunk(meshFileOfOtherLayer)).toBe(true);
+    });
   });
 });

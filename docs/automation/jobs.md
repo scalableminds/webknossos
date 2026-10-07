@@ -11,7 +11,7 @@ Example workflows:
 - [mesh file (pre)-computation](../meshes/loading_meshes.md)
 - [applying a merger mode annotation](../proofreading/merger_mode.md)
 - automatic inference of a segmentation layer's large segment ID
-- [dataset & annotation export as Tiff files](../data/export_ui.md)
+- [dataset & annotation export as TIFF or OME-Zarr files](../data/export_ui.md)
 - [creating engaging animations of datasets](./animations.md)
 - downsampling volume annotations
 

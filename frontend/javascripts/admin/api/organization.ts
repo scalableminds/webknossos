@@ -1,3 +1,4 @@
+import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import Request from "libs/request";
 import { location } from "libs/window";
 import memoize from "lodash-es/memoize";
@@ -185,7 +186,7 @@ export async function isWorkflowAccessibleBySwitching(
 
 export type UpgradeRequest = {
   // Matches the plans the backend accepts for an upgrade request.
-  plan?: "Team" | "Power";
+  plan?: PricingPlanEnum.Team | PricingPlanEnum.Power;
   users?: number;
   storageTB?: number;
   aiAddon?: boolean;

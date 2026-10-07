@@ -5,6 +5,7 @@ import type { APIOrganization } from "types/api_types";
 import Constants from "viewer/constants";
 import {
   hasAiPlan,
+  PLAN_TO_RANK,
   PricingPlanEnum,
   teamPlanIncludedStorageTB,
   teamPlanIncludedUsers,
@@ -12,7 +13,8 @@ import {
 
 export type ItemId = "plan" | "users" | "storage" | "aiAddon" | "credits" | "extend";
 
-export type PlanTier = "Personal" | "Team" | "Power";
+// Trials and custom plans are mapped to the plan whose features they unlock, see getPlanTier.
+export type PlanTier = PricingPlanEnum.Personal | PricingPlanEnum.Team | PricingPlanEnum.Power;
 
 export type ItemSelection = { value?: number; custom?: boolean };
 export type Selection = Partial<Record<ItemId, ItemSelection>>;
@@ -29,29 +31,28 @@ export type ItemDef = {
   getDelta: (value: number | undefined) => { from: string; to: string };
 };
 
-const TIER_RANK: Record<PlanTier, number> = { Personal: 0, Team: 1, Power: 2 };
 const BYTES_PER_TB = 1e12;
 const DATE_FORMAT = "D MMM YYYY";
 
 export function getPlanTier(pricingPlan: PricingPlanEnum): PlanTier {
   switch (pricingPlan) {
     case PricingPlanEnum.Personal:
-      return "Personal";
+      return PricingPlanEnum.Personal;
     case PricingPlanEnum.Team:
     case PricingPlanEnum.TeamTrial:
-      return "Team";
+      return PricingPlanEnum.Team;
     default:
-      return "Power";
+      return PricingPlanEnum.Power;
   }
 }
 
 // The plans that sales can be asked for.
-export type UpgradeTargetTier = Exclude<PlanTier, "Personal">;
-const UPGRADE_TARGET_TIERS: UpgradeTargetTier[] = ["Team", "Power"];
+export type UpgradeTargetTier = PricingPlanEnum.Team | PricingPlanEnum.Power;
+const UPGRADE_TARGET_TIERS: UpgradeTargetTier[] = [PricingPlanEnum.Team, PricingPlanEnum.Power];
 
 // The plans that can be requested from the current one. The first one is the default.
 export function getUpgradeTargetTiers(currentTier: PlanTier): UpgradeTargetTier[] {
-  return UPGRADE_TARGET_TIERS.filter((tier) => TIER_RANK[tier] > TIER_RANK[currentTier]);
+  return UPGRADE_TARGET_TIERS.filter((tier) => PLAN_TO_RANK[tier] > PLAN_TO_RANK[currentTier]);
 }
 
 export function getUpgradeTargetTier(currentTier: PlanTier): UpgradeTargetTier | null {
@@ -67,15 +68,15 @@ export function getRequestedTier(
   if (selection.plan == null) return null;
   const { value } = selection.plan;
   if (value == null) return getUpgradeTargetTier(currentTier);
-  return UPGRADE_TARGET_TIERS.find((tier) => TIER_RANK[tier] === value) ?? null;
+  return UPGRADE_TARGET_TIERS.find((tier) => PLAN_TO_RANK[tier] === value) ?? null;
 }
 
 export function getTierRank(tier: PlanTier): number {
-  return TIER_RANK[tier];
+  return PLAN_TO_RANK[tier];
 }
 
 export function isTierAtLeast(tier: PlanTier, minTier: PlanTier): boolean {
-  return TIER_RANK[tier] >= TIER_RANK[minTier];
+  return PLAN_TO_RANK[tier] >= PLAN_TO_RANK[minTier];
 }
 
 export function getEffectiveTier(currentTier: PlanTier, selection: Selection): PlanTier {
@@ -114,7 +115,7 @@ export function getUpgradeItems(
 ): ItemDef[] {
   const currentTier = getPlanTier(organization.pricingPlan);
   const targetTiers = getUpgradeTargetTiers(currentTier);
-  const isPersonal = currentTier === "Personal";
+  const isPersonal = currentTier === PricingPlanEnum.Personal;
 
   // On Personal, all quota upgrades are based on what the Team plan includes.
   const baseUsers = isPersonal ? teamPlanIncludedUsers : organization.includedUsers;
@@ -130,7 +131,7 @@ export function getUpgradeItems(
       id: "plan",
       label: `Upgrade to ${targetTier} plan`,
       hint: `${currentTier} → ${targetTier}`,
-      minPlan: "Personal",
+      minPlan: PricingPlanEnum.Personal,
       getDelta: () => ({ from: currentTier, to: targetTier }),
     };
   } else if (targetTiers.length > 1) {
@@ -138,11 +139,11 @@ export function getUpgradeItems(
       id: "plan",
       label: "Upgrade plan",
       hint: `${currentTier} → ${targetTiers.join(" or ")}`,
-      amounts: targetTiers.map((tier) => ({ label: tier, value: TIER_RANK[tier] })),
-      minPlan: "Personal",
+      amounts: targetTiers.map((tier) => ({ label: tier, value: PLAN_TO_RANK[tier] })),
+      minPlan: PricingPlanEnum.Personal,
       getDelta: (value) => ({
         from: currentTier,
-        to: UPGRADE_TARGET_TIERS.find((tier) => TIER_RANK[tier] === value) ?? targetTiers[0],
+        to: UPGRADE_TARGET_TIERS.find((tier) => PLAN_TO_RANK[tier] === value) ?? targetTiers[0],
       }),
     };
   }
@@ -153,7 +154,7 @@ export function getUpgradeItems(
     hint: isPersonal ? `Team includes ${teamPlanIncludedUsers}` : formatUserCount(baseUsers),
     amounts: (isPersonal ? [1, 3, 5] : [1, 5, 10]).map((value) => ({ label: `+${value}`, value })),
     allowCustom: true,
-    minPlan: "Team",
+    minPlan: PricingPlanEnum.Team,
     getDelta: (value = 0) => ({
       from: formatUserCount(baseUsers),
       to: formatUserCount(baseUsers + value),
@@ -168,7 +169,7 @@ export function getUpgradeItems(
       : formatStorage(baseStorageBytes),
     amounts: [1, 5, 10].map((value) => ({ label: `+${value} TB`, value })),
     allowCustom: true,
-    minPlan: "Team",
+    minPlan: PricingPlanEnum.Team,
     getDelta: (value = 0) => ({
       from: formatStorage(baseStorageBytes),
       to: formatStorage(baseStorageBytes + value * BYTES_PER_TB),
@@ -181,7 +182,7 @@ export function getUpgradeItems(
         id: "aiAddon",
         label: "AI Add-on",
         hint: "Not active",
-        minPlan: "Team",
+        minPlan: PricingPlanEnum.Team,
         getDelta: () => ({ from: "Not active", to: "Active" }),
       };
 
@@ -193,7 +194,7 @@ export function getUpgradeItems(
         hint: isPersonal ? "For AI jobs" : `${formatNumber(creditBalance)} left`,
         amounts: [1000, 5000, 10000].map((value) => ({ label: `+${formatNumber(value)}`, value })),
         allowCustom: true,
-        minPlan: "Team",
+        minPlan: PricingPlanEnum.Team,
         getDelta: (value = 0) => ({
           from: formatNumber(creditBalance),
           to: formatNumber(creditBalance + value),
@@ -211,7 +212,7 @@ export function getUpgradeItems(
             { label: "1 year", value: 1 },
             { label: "2 years", value: 2 },
           ],
-          minPlan: "Team",
+          minPlan: PricingPlanEnum.Team,
           getDelta: (value = 1) => ({
             from: formatPaidUntil(organization),
             to: formatDateInLocalTimeZone(

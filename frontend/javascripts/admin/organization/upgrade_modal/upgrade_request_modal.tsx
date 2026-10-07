@@ -26,7 +26,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getAntdTheme, ModalWidth } from "theme";
 import type { APIOrganization } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
-import { getActiveUserCount } from "../pricing_plan_utils";
+import { getActiveUserCount, PricingPlanEnum } from "../pricing_plan_utils";
 import {
   formatPaidUntil,
   formatStorage,
@@ -44,8 +44,8 @@ import {
   type ItemId,
   type ItemSelection,
   isTierAtLeast,
-  type PlanTier,
   type Selection,
+  type UpgradeTargetTier,
 } from "./upgrade_request_items";
 
 // Matches UpgradeRequest.maxNoteLength in the backend.
@@ -72,7 +72,7 @@ function SidePanelContent({
 }) {
   // Rendered inside the dark theme (see SidePanel), so all tokens are the dark ones.
   const { token } = theme.useToken();
-  const isPersonal = getPlanTier(organization.pricingPlan) === "Personal";
+  const isPersonal = getPlanTier(organization.pricingPlan) === PricingPlanEnum.Personal;
   const includedUsers = formatUserCount(organization.includedUsers);
   const includedStorage = formatStorage(organization.includedStorageBytes);
 
@@ -316,7 +316,7 @@ export default function UpgradeRequestModal({
 }: {
   initialItems: ItemId[];
   // Preselects this plan if the plan row offers a choice between several plans.
-  initialPlan?: PlanTier;
+  initialPlan?: UpgradeTargetTier;
   destroy: () => void;
 }) {
   const { token } = theme.useToken();

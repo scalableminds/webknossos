@@ -1,10 +1,9 @@
 import renderIndependently from "libs/render_independently";
-import type { PricingPlanEnum } from "./pricing_plan_utils";
-import { getPlanTier, type ItemId, type PlanTier } from "./upgrade_modal/upgrade_request_items";
+import type { ItemId, UpgradeTargetTier } from "./upgrade_modal/upgrade_request_items";
 import UpgradeRequestModal from "./upgrade_modal/upgrade_request_modal";
 
 // All upgrade requests share one modal. Each entry point only differs in the item it preselects.
-function openUpgradeRequestModal(initialItems: ItemId[], initialPlan?: PlanTier) {
+function openUpgradeRequestModal(initialItems: ItemId[], initialPlan?: UpgradeTargetTier) {
   renderIndependently((destroyCallback) => (
     <UpgradeRequestModal
       initialItems={initialItems}
@@ -31,8 +30,8 @@ export function requestAiPlanUpgrade() {
 }
 
 // Without a target plan, the next higher plan is preselected.
-function upgradePricingPlan(targetPlan?: PricingPlanEnum.Team | PricingPlanEnum.Power) {
-  openUpgradeRequestModal(["plan"], targetPlan != null ? getPlanTier(targetPlan) : undefined);
+function upgradePricingPlan(targetPlan?: UpgradeTargetTier) {
+  openUpgradeRequestModal(["plan"], targetPlan);
 }
 
 function orderWebknossosCredits() {

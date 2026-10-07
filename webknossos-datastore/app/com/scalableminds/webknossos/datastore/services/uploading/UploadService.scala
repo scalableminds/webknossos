@@ -801,7 +801,6 @@ class UploadService @Inject() (
       localDatasetDeletionService.moveToTrash(
         datasetId,
         unpackToDir,
-        dataSourceId.organizationId,
         dataSourceId.directoryName,
         Some(reason)
       )

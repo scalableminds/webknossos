@@ -66,9 +66,7 @@ const getSharedLookUpCuckooTable = memoizeOne(
   () => new CuckooTableVec5(LOOKUP_CUCKOO_TEXTURE_WIDTH),
 );
 
-// Lazily-initialized singleton, created once per dataset: every layer's
-// slice range plus the 5 pool textures.
-const getLayerPoolPlan = memoizeOne(() => {
+function createLayerPoolPlan() {
   const { dataset, temporaryConfiguration } = Store.getState();
   // Computed at init by computeLayerPoolPlan, so that every pool fits the
   // GPU's limit of slices per texture array.
@@ -81,7 +79,24 @@ const getLayerPoolPlan = memoizeOne(() => {
     LAYER_POOLS.map((pool) => [pool, new PoolTextureManager(pool, poolDepths[pool])]),
   );
   return { assignmentByLayerName, poolTextureManagers, bucketCapacity };
-});
+}
+
+// Lazily-initialized singleton, created once per dataset: every layer's
+// slice range plus the 5 pool textures.
+let layerPoolPlan: ReturnType<typeof createLayerPoolPlan> | null = null;
+function getLayerPoolPlan() {
+  if (layerPoolPlan == null) {
+    layerPoolPlan = createLayerPoolPlan();
+  }
+  return layerPoolPlan;
+}
+
+function destroyLayerPoolPlan() {
+  for (const poolTextureManager of layerPoolPlan?.poolTextureManagers.values() ?? []) {
+    poolTextureManager.destroy();
+  }
+  layerPoolPlan = null;
+}
 
 // The pool textures are shared by all layers, so PlaneMaterialFactory
 // gets them here instead of from a single layer's LayerRenderingManager.
@@ -384,7 +399,7 @@ export default class LayerRenderingManager {
       this.textureBucketManager.destroy();
     }
     getSharedLookUpCuckooTable.clear();
-    getLayerPoolPlan.clear();
+    destroyLayerPoolPlan();
     asyncBucketPick.clear();
     shaderEditor.destroy();
     this.colorCuckooTable = undefined;

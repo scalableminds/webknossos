@@ -27,7 +27,6 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest,
   WebknossosDataRequest
 }
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshRequest, MappingType}
 import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, TSAnnotationService}
@@ -39,12 +38,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TemporaryMergedVolumeStatsStore,
   TracingSelector
 }
-import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteDatastoreClient,
-  TSRemoteWebknossosClient,
-  TracingStoreAccessTokenService,
-  TracingStoreConfig
-}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
@@ -56,8 +50,6 @@ import scala.concurrent.duration.DurationInt
 
 class VolumeTracingController @Inject() (
     val volumeTracingService: VolumeTracingService,
-    val config: TracingStoreConfig,
-    val remoteDataStoreClient: TSRemoteDatastoreClient,
     val accessTokenService: TracingStoreAccessTokenService,
     annotationService: TSAnnotationService,
     editableMappingService: EditableMappingService,
@@ -67,8 +59,7 @@ class VolumeTracingController @Inject() (
     volumeSegmentStatisticsService: VolumeSegmentStatisticsService,
     volumeSegmentIndexService: VolumeSegmentIndexService,
     fullMeshService: TSFullMeshService,
-    temporaryMergedVolumeStatsStore: TemporaryMergedVolumeStatsStore,
-    val rpc: RPC
+    temporaryMergedVolumeStatsStore: TemporaryMergedVolumeStatsStore
 )(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
     with ProtoGeometryConversions

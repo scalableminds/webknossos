@@ -184,7 +184,8 @@ export async function isWorkflowAccessibleBySwitching(
 }
 
 export type UpgradeRequest = {
-  plan?: string;
+  // Matches the plans the backend accepts for an upgrade request.
+  plan?: "Team" | "Power";
   users?: number;
   storageTB?: number;
   aiAddon?: boolean;

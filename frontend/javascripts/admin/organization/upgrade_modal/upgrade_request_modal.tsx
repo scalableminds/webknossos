@@ -7,13 +7,23 @@ import {
 } from "@ant-design/icons";
 import { sendUpgradeRequestEmail, type UpgradeRequest } from "admin/api/organization";
 import { getUsers } from "admin/rest_api";
-import { Button, Checkbox, Flex, Input, InputNumber, Modal, Typography, theme } from "antd";
+import {
+  Button,
+  Checkbox,
+  ConfigProvider,
+  Flex,
+  Input,
+  InputNumber,
+  Modal,
+  Typography,
+  theme,
+} from "antd";
 import { formatCountToDataAmountUnit, formatNumber } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { getThemeFromUser, ModalWidth } from "theme";
+import { getAntdTheme, ModalWidth } from "theme";
 import type { APIOrganization } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { getActiveUserCount } from "../pricing_plan_utils";
@@ -43,51 +53,37 @@ const MAX_NOTE_LENGTH = 10000;
 // Keeps custom amounts well within the backend's Int range.
 const MAX_CUSTOM_AMOUNT = 1_000_000;
 
-const SidePanelColors = {
-  light: "#1f1f1f",
-  dark: "#2a2a2a",
-  tile: "rgba(255,255,255,0.08)",
-  divider: "rgba(255,255,255,0.12)",
-  text: "rgba(255,255,255,0.85)",
-  textStrong: "#fff",
-  textSecondary: "rgba(255,255,255,0.65)",
-  textTertiary: "rgba(255,255,255,0.45)",
-  link: "#a8b4ff",
-};
-
 function StatusRow({ label, value }: { label: string; value: React.ReactNode }) {
+  const { token } = theme.useToken();
   return (
     <Flex justify="space-between" gap={8}>
-      <span style={{ color: SidePanelColors.textTertiary }}>{label}</span>
+      <span style={{ color: token.colorTextTertiary }}>{label}</span>
       <span>{value}</span>
     </Flex>
   );
 }
 
-function SidePanel({
+function SidePanelContent({
   organization,
   activeUserCount,
-  isDarkMode,
 }: {
   organization: APIOrganization;
   activeUserCount: number | null;
-  isDarkMode: boolean;
 }) {
+  // Rendered inside the dark theme (see SidePanel), so all tokens are the dark ones.
   const { token } = theme.useToken();
   const isPersonal = getPlanTier(organization.pricingPlan) === "Personal";
   const includedUsers = formatUserCount(organization.includedUsers);
   const includedStorage = formatStorage(organization.includedStorageBytes);
 
   return (
-    <div
-      className="upgrade-request-modal-side-panel"
+    <Flex
+      vertical
+      gap={16}
       style={{
-        background: isDarkMode ? SidePanelColors.dark : SidePanelColors.light,
-        color: SidePanelColors.text,
-        padding: "28px 24px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 16,
+        background: token.colorBgContainer,
+        color: token.colorText,
+        padding: `${token.paddingXL - 4}px ${token.paddingLG}px`,
       }}
     >
       <Flex
@@ -97,32 +93,25 @@ function SidePanel({
           width: 44,
           height: 44,
           borderRadius: token.borderRadiusLG,
-          background: SidePanelColors.tile,
+          background: token.colorFillSecondary,
         }}
       >
         <RocketOutlined style={{ fontSize: 24, color: token.colorPrimary }} />
       </Flex>
-      <div
-        style={{
-          color: SidePanelColors.textStrong,
-          fontSize: 24,
-          fontWeight: 700,
-          lineHeight: 1.3,
-        }}
-      >
+      <Typography.Title level={3} style={{ margin: 0 }}>
         Upgrade your organization
-      </div>
-      <div style={{ color: SidePanelColors.textSecondary }}>
+      </Typography.Title>
+      <Typography.Text type="secondary">
         Pick everything you need. We send it to sales as one request.
-      </div>
+      </Typography.Text>
       <Flex
         vertical
         gap={10}
         className="upgrade-request-modal-status"
         style={{
           fontSize: 13,
-          borderTop: `1px solid ${SidePanelColors.divider}`,
-          paddingTop: 16,
+          borderTop: `1px solid ${token.colorSplit}`,
+          paddingTop: token.padding,
         }}
       >
         <StatusRow label="Plan" value={organization.pricingPlan.replace("_", " ")} />
@@ -146,18 +135,22 @@ function SidePanel({
         )}
       </Flex>
       <div style={{ flex: 1 }} />
-      <div style={{ color: SidePanelColors.textTertiary, fontSize: 12 }}>
+      <span style={{ color: token.colorTextTertiary, fontSize: token.fontSizeSM }}>
         No payment now. Sales replies with a quote within 1 business day.
-      </div>
-      <a
-        href="https://webknossos.org/pricing"
-        target="_blank"
-        rel="noreferrer"
-        style={{ color: SidePanelColors.link }}
-      >
+      </span>
+      <Typography.Link href="https://webknossos.org/pricing" target="_blank" rel="noreferrer">
         Compare all plans
-      </a>
-    </div>
+      </Typography.Link>
+    </Flex>
+  );
+}
+
+// The side panel is dark in both the light and the dark app theme.
+function SidePanel(props: { organization: APIOrganization; activeUserCount: number | null }) {
+  return (
+    <ConfigProvider theme={getAntdTheme("dark")}>
+      <SidePanelContent {...props} />
+    </ConfigProvider>
   );
 }
 
@@ -233,7 +226,7 @@ function ItemRow({
 }) {
   const { token } = theme.useToken();
   const isChecked = selection != null;
-  const delta = isChecked ? item.delta(selection.value) : null;
+  const delta = isChecked ? item.getDelta(selection.value) : null;
 
   let rightSide: React.ReactNode = null;
   if (delta != null) {
@@ -331,7 +324,6 @@ export default function UpgradeRequestModal({
     enforceActiveOrganization(state.activeOrganization),
   );
   const activeUser = useWkSelector((state) => state.activeUser);
-  const isDarkMode = getThemeFromUser(activeUser) === "dark";
 
   const canOrderCredits = activeUser?.isOrganizationOwner ?? false;
   const items = useMemo(
@@ -431,11 +423,7 @@ export default function UpgradeRequestModal({
       }}
     >
       <div className="upgrade-request-modal">
-        <SidePanel
-          organization={organization}
-          activeUserCount={activeUserCount}
-          isDarkMode={isDarkMode}
-        />
+        <SidePanel organization={organization} activeUserCount={activeUserCount} />
         <Flex vertical gap={16} style={{ padding: token.paddingLG, minWidth: 0 }}>
           <Flex justify="space-between" align="flex-start">
             <div>

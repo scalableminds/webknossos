@@ -26,7 +26,7 @@ export type ItemDef = {
   amounts?: Amount[];
   allowCustom?: boolean;
   minPlan: PlanTier;
-  delta: (value: number | undefined) => { from: string; to: string };
+  getDelta: (value: number | undefined) => { from: string; to: string };
 };
 
 const TIER_RANK: Record<PlanTier, number> = { Personal: 0, Team: 1, Power: 2 };
@@ -45,23 +45,29 @@ export function getPlanTier(pricingPlan: PricingPlanEnum): PlanTier {
   }
 }
 
-const RANK_TO_TIER: PlanTier[] = ["Personal", "Team", "Power"];
+// The plans that sales can be asked for.
+export type UpgradeTargetTier = Exclude<PlanTier, "Personal">;
+const UPGRADE_TARGET_TIERS: UpgradeTargetTier[] = ["Team", "Power"];
 
 // The plans that can be requested from the current one. The first one is the default.
-export function getUpgradeTargetTiers(currentTier: PlanTier): PlanTier[] {
-  return RANK_TO_TIER.filter((tier) => TIER_RANK[tier] > TIER_RANK[currentTier]);
+export function getUpgradeTargetTiers(currentTier: PlanTier): UpgradeTargetTier[] {
+  return UPGRADE_TARGET_TIERS.filter((tier) => TIER_RANK[tier] > TIER_RANK[currentTier]);
 }
 
-export function getUpgradeTargetTier(currentTier: PlanTier): PlanTier | null {
+export function getUpgradeTargetTier(currentTier: PlanTier): UpgradeTargetTier | null {
   return getUpgradeTargetTiers(currentTier)[0] ?? null;
 }
 
 // The value of the plan selection is the rank of the requested plan. It is only set when
 // there is more than one plan to choose from.
-export function getRequestedTier(currentTier: PlanTier, selection: Selection): PlanTier | null {
+export function getRequestedTier(
+  currentTier: PlanTier,
+  selection: Selection,
+): UpgradeTargetTier | null {
   if (selection.plan == null) return null;
   const { value } = selection.plan;
-  return value != null ? RANK_TO_TIER[value] : getUpgradeTargetTier(currentTier);
+  if (value == null) return getUpgradeTargetTier(currentTier);
+  return UPGRADE_TARGET_TIERS.find((tier) => TIER_RANK[tier] === value) ?? null;
 }
 
 export function getTierRank(tier: PlanTier): number {
@@ -125,7 +131,7 @@ export function getUpgradeItems(
       label: `Upgrade to ${targetTier} plan`,
       hint: `${currentTier} → ${targetTier}`,
       minPlan: "Personal",
-      delta: () => ({ from: currentTier, to: targetTier }),
+      getDelta: () => ({ from: currentTier, to: targetTier }),
     };
   } else if (targetTiers.length > 1) {
     plan = {
@@ -134,9 +140,9 @@ export function getUpgradeItems(
       hint: `${currentTier} → ${targetTiers.join(" or ")}`,
       amounts: targetTiers.map((tier) => ({ label: tier, value: TIER_RANK[tier] })),
       minPlan: "Personal",
-      delta: (value) => ({
+      getDelta: (value) => ({
         from: currentTier,
-        to: value != null ? RANK_TO_TIER[value] : targetTiers[0],
+        to: UPGRADE_TARGET_TIERS.find((tier) => TIER_RANK[tier] === value) ?? targetTiers[0],
       }),
     };
   }
@@ -148,7 +154,7 @@ export function getUpgradeItems(
     amounts: (isPersonal ? [1, 3, 5] : [1, 5, 10]).map((value) => ({ label: `+${value}`, value })),
     allowCustom: true,
     minPlan: "Team",
-    delta: (value = 0) => ({
+    getDelta: (value = 0) => ({
       from: formatUserCount(baseUsers),
       to: formatUserCount(baseUsers + value),
     }),
@@ -163,7 +169,7 @@ export function getUpgradeItems(
     amounts: [1, 5, 10].map((value) => ({ label: `+${value} TB`, value })),
     allowCustom: true,
     minPlan: "Team",
-    delta: (value = 0) => ({
+    getDelta: (value = 0) => ({
       from: formatStorage(baseStorageBytes),
       to: formatStorage(baseStorageBytes + value * BYTES_PER_TB),
     }),
@@ -176,7 +182,7 @@ export function getUpgradeItems(
         label: "AI Add-on",
         hint: "Not active",
         minPlan: "Team",
-        delta: () => ({ from: "Not active", to: "Active" }),
+        getDelta: () => ({ from: "Not active", to: "Active" }),
       };
 
   const credits: ItemDef | null = !canOrderCredits
@@ -188,7 +194,7 @@ export function getUpgradeItems(
         amounts: [1000, 5000, 10000].map((value) => ({ label: `+${formatNumber(value)}`, value })),
         allowCustom: true,
         minPlan: "Team",
-        delta: (value = 0) => ({
+        getDelta: (value = 0) => ({
           from: formatNumber(creditBalance),
           to: formatNumber(creditBalance + value),
         }),
@@ -206,7 +212,7 @@ export function getUpgradeItems(
             { label: "2 years", value: 2 },
           ],
           minPlan: "Team",
-          delta: (value = 1) => ({
+          getDelta: (value = 1) => ({
             from: formatPaidUntil(organization),
             to: formatDateInLocalTimeZone(
               dayjs(organization.paidUntil).add(value, "year").valueOf(),

@@ -1,4 +1,8 @@
 _id_old,id,additionalinformation,logoUrl,name,_rootFolder,newusermailinglist,enableautoverify,pricingPlan,aiPlan,paidUntil,includedUsers,includedStorage,lastStorageScanTime,created,isdeleted
-'5ab0c6a674d0af7b003b23ac','Organization_X','lorem ipsum','/images/mpi-logos.svg','Organization_X',570b9f4e4bb848d0885ea917,'',f,'Enterprise',,,4,,,0,'2000-01-01 09:30:31.91+01','2018-03-20 09:30:31.91+01',f
+'5ab0c6a674d0af7b003b23ac','Organization_X','lorem ipsum','/images/mpi-logos.svg','Organization_X',570b9f4e4bb848d0885ea917,'',f,'Power',,,4,,,0,'2000-01-01 09:30:31.91+01','2018-03-20 09:30:31.91+01',f
 '6bb0c6a674d0af7b003b23bd','Organization_Y','foo bar','/images/mpi-logos.svg','Organization_Y','570b9f4e4bb848d088a83aef','',f,'Enterprise',,,,,,0,'2000-01-01 09:30:31.91+01','2018-03-24 09:30:31.91+01',f
 '6bb0c6a674d0af7b003b23be','Organization_Z','foo bar','/images/mpi-logos.svg','Organization_Z','570b9f4e4bb848d088a83aff','',f,'Personal',,,2,,,0,'2000-01-01 09:30:31.91+01','2018-03-24 09:30:31.91+01',f
+'6bb0c6a674d0af7b003b23c1','Organization_Team','foo bar','/images/mpi-logos.svg','Organization_Team','570b9f4e4bb848d088a83b01','',f,'Team',,,5,1000000000000,,0,'2000-01-01 09:30:31.91+01','2018-03-24 09:30:31.91+01',f
+'6bb0c6a674d0af7b003b23c2','Organization_Team_Trial','foo bar','/images/mpi-logos.svg','Organization_Team_Trial','570b9f4e4bb848d088a83b02','',f,'Team_Trial',,,5,1000000000000,,0,'2000-01-01 09:30:31.91+01','2018-03-24 09:30:31.91+01',f
+'6bb0c6a674d0af7b003b23c3','Organization_Power_Trial','foo bar','/images/mpi-logos.svg','Organization_Power_Trial','570b9f4e4bb848d088a83b03','',f,'Power_Trial',,,,,,0,'2000-01-01 09:30:31.91+01','2018-03-24 09:30:31.91+01',f
+'6bb0c6a674d0af7b003b23c4','Organization_Open_Source','foo bar','/images/mpi-logos.svg','Organization_Open_Source','570b9f4e4bb848d088a83b04','',f,'Open_Source',,,,,,0,'2000-01-01 09:30:31.91+01','2018-03-24 09:30:31.91+01',f

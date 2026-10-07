@@ -10,7 +10,6 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerAttachmentDataformat}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -24,8 +23,7 @@ import scala.concurrent.duration.DurationInt
 class AgglomerateService @Inject() (
     zarrAgglomerateService: ZarrAgglomerateService,
     hdf5AgglomerateService: Hdf5AgglomerateService,
-    pcgAgglomerateService: PcgAgglomerateService,
-    config: DataStoreConfig
+    pcgAgglomerateService: PcgAgglomerateService
 ) extends LazyLogging {
 
   private val agglomerateFileKeyCache: AlfuCache[(DataSourceId, String, String), AgglomerateFileKey] =

@@ -224,6 +224,7 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   allowedTeams: Array<APITeam>;
   allowedTeamsCumulative: Array<APITeam>;
   created: number;
+  thumbnailCacheVersion: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
   metadata: APIMetadataEntry[] | null | undefined;
@@ -283,12 +284,15 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "tags"
   | "isUnreported"
   | "usedStorageBytes"
+  | "thumbnailCacheVersion"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id: string;
   status: MutableAPIDataSourceBase["status"];
   colorLayerNames: Array<string>;
   segmentationLayerNames: Array<string>;
+  // Active explorational annotations the user can list. Only present if requested.
+  annotationCount?: number;
 };
 
 export function convertDatasetToCompact(dataset: APIMaybeUnimportedDataset): APIDatasetCompact {
@@ -313,6 +317,7 @@ export function convertDatasetToCompact(dataset: APIMaybeUnimportedDataset): API
     colorLayerNames: colorLayerNames,
     segmentationLayerNames: segmentationLayerNames,
     usedStorageBytes: dataset.usedStorageBytes,
+    thumbnailCacheVersion: dataset.thumbnailCacheVersion,
   };
 }
 
@@ -341,6 +346,7 @@ export type APIUserBase = APIUserCompact & {
   readonly teams: Array<APITeamMembership>;
   readonly isAdmin: boolean;
   readonly isDatasetManager: boolean;
+  readonly isActive: boolean;
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
@@ -532,6 +538,7 @@ export type APIAnnotationInfo = {
   readonly organization: string;
   readonly description: string;
   readonly modified: number;
+  readonly created: number;
   readonly id: string;
   readonly name: string;
   // Not used by the front-end anymore, but the
@@ -553,6 +560,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     dataSetName,
     description,
     modified,
+    created,
     id,
     datasetId,
     name,
@@ -574,6 +582,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     organization,
     description,
     modified,
+    created,
     id,
     isLockedByOwner,
     name,
@@ -800,6 +809,12 @@ export type APIFeatureToggles = {
 };
 
 export type APIJobState = "PENDING" | "STARTED" | "SUCCESS" | "FAILURE" | "CANCELLED";
+
+export enum APIExportFormat {
+  OME_TIFF = "ome_tiff",
+  TIFF_STACK = "tiff_stack",
+  OZX = "ozx",
+}
 
 export enum APIJobCommand {
   ALIGN_SECTIONS = "align_sections",
@@ -1351,6 +1366,7 @@ export enum MOVIE_DURATIONS {
 
 export type RenderAnimationOptions = {
   layerName: string;
+  segmentationLayerName?: string;
   meshes: ({
     layerName: string;
     tracingId: string | null;

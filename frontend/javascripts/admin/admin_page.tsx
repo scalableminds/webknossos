@@ -1,5 +1,5 @@
-import { InfoCircleOutlined } from "@ant-design/icons";
-import { Flex, Grid, Space, Tooltip, Typography, theme } from "antd";
+import { LinkOutlined } from "@ant-design/icons";
+import { Flex, Grid, Space, Typography, theme } from "antd";
 import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { cloneElement, isValidElement } from "react";
 
@@ -58,21 +58,14 @@ export default function AdminPage({
     >
       <Space vertical size="large" style={{ width: "100%" }}>
         <div>
-          <Flex justify="space-between" align="flex-start" wrap gap="middle">
+          <Flex justify="space-between" align="flex-end" wrap gap="middle">
             <div style={{ maxWidth: "min(100ch, 100%)" }}>
-              <Typography.Title
-                level={2}
-                style={{
-                  margin: 0,
-                  textTransform: "uppercase",
-                }}
-              >
+              <Typography.Title level={3} style={{ margin: 0 }}>
                 {title}
               </Typography.Title>
               {description != null ? (
                 <Typography.Paragraph
-                  type="secondary"
-                  style={{ margin: `${token.marginXXS}px 0 0` }}
+                  style={{ margin: `${token.marginXXS}px 0 0`, color: token.colorTextSecondary }}
                 >
                   {description}
                   {descriptionURI != null ? (
@@ -84,9 +77,7 @@ export default function AdminPage({
                         marginInlineStart: token.marginXS,
                       }}
                     >
-                      <Tooltip title="Read more in the documentation">
-                        <InfoCircleOutlined />
-                      </Tooltip>
+                      Documentation <LinkOutlined />
                     </a>
                   ) : null}
                 </Typography.Paragraph>

@@ -246,7 +246,7 @@ class DataSourceController @Inject() (
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             before <- Instant.nowFox
-            pathStorageReports <- storageUsageService.measureStorageForPaths(request.body.paths, organizationId)
+            pathStorageReports <- storageUsageService.measureStorageForPaths(request.body.paths)
             _ = if (Instant.since(before) > (10 seconds)) {
               Instant.logSince(
                 before,
@@ -304,7 +304,6 @@ class DataSourceController @Inject() (
             .moveToTrash(
               datasetId,
               Path.of(rootPath),
-              dataSourceId.organizationId,
               dataSourceId.directoryName,
               reason = Some("the user wants to delete the dataset")
             )

@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import { requestTask } from "admin/api/tasks";
 import {
   doWithToken,
@@ -13,6 +14,7 @@ import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
+import { createTween } from "libs/tween_group";
 import UserLocalStorage from "libs/user_local_storage";
 import { coalesce, map3, mod, sleep } from "libs/utils";
 import window, { location } from "libs/window";
@@ -22,7 +24,6 @@ import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
-import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -73,7 +74,6 @@ import {
   getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
 import {
-  findTreeByNodeId,
   getActiveNode,
   getActiveTree,
   getActiveTreeGroup,
@@ -136,6 +136,7 @@ import {
   centerActiveNodeAction,
   createCommentAction,
   createTreeAction,
+  deleteCommentAction,
   deleteNodeAction,
   deleteTreeAction,
   resetSkeletonTracingAction,
@@ -185,7 +186,7 @@ import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_s
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
 import { fetchAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
-import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
+import { applyVoxelMap } from "viewer/model/volumetracing/legacy/volume_annotation_sampling";
 import { api, Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
@@ -430,27 +431,47 @@ class TracingApi {
   }
 
   /**
-   * Sets the comment for a node.
+   * Sets the comment for a node. Passing an empty string deletes the comment.
    *
    * @example
    * const activeNodeId = api.tracing.getActiveNodeId();
    * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
    */
   setCommentForNode(commentText: string, nodeId: number, treeId?: number): void {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
     assertExists(commentText, "Comment text is missing.");
+    if (commentText === "") {
+      this.deleteCommentForNode(nodeId, treeId);
+      return;
+    }
+    const tree = this._getTreeOfNode(nodeId, treeId);
+    Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
+  }
 
-    // Convert nodeId to node
-    if (isNumber(nodeId)) {
-      const tree =
-        treeId != null
-          ? skeletonTracing.trees.getNullable(treeId)
-          : findTreeByNodeId(skeletonTracing.trees, nodeId);
-      assertExists(tree, `Couldn't find node ${nodeId}.`);
-      Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
-    } else {
+  /**
+   * Deletes the comment of a node.
+   *
+   * @example
+   * const activeNodeId = api.tracing.getActiveNodeId();
+   * api.tracing.deleteCommentForNode(activeNodeId);
+   */
+  deleteCommentForNode(nodeId: number, treeId?: number): void {
+    const tree = this._getTreeOfNode(nodeId, treeId);
+    Store.dispatch(deleteCommentAction(nodeId, tree.treeId));
+  }
+
+  _getTreeOfNode(nodeId: number, treeId?: number): Tree {
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
+    if (!isNumber(nodeId)) {
       throw new Error("Node id is missing.");
     }
+    const treeAndNode = getTreeAndNode(skeletonTracing, null, nodeId, treeId);
+    assertExists(
+      treeAndNode,
+      treeId != null
+        ? `Couldn't find node ${nodeId} in tree ${treeId}.`
+        : `Couldn't find node ${nodeId}.`,
+    );
+    return treeAndNode[0];
   }
 
   /**
@@ -1466,7 +1487,7 @@ class TracingApi {
     // The given offset is added when going to a position in the center of a voxel.
     const targetPosition = useVoxelCenter ? V3.add(V3.floor(position), [0.5, 0.5, 0.5]) : position;
 
-    const tween = new TWEEN.Tween({
+    const tween = createTween({
       positionX: curPosition[0],
       positionY: curPosition[1],
       positionZ: curPosition[2],
@@ -1480,10 +1501,12 @@ class TracingApi {
         },
         200,
       )
-      .onUpdate(function (this: Tweener, t: number) {
-        // needs to be a normal (non-bound) function
+      .onUpdate((tweenState: Tweener, t: number) => {
         Store.dispatch(
-          setPositionAction([this.positionX, this.positionY, this.positionZ], dimensionToSkip),
+          setPositionAction(
+            [tweenState.positionX, tweenState.positionY, tweenState.positionZ],
+            dimensionToSkip,
+          ),
         );
         // Interpolating rotation via quaternions to get shortest rotation.
         const interpolatedQuaternion = new Quaternion().slerpQuaternions(
@@ -1806,7 +1829,9 @@ class DataApi {
       Store.getState(),
       layerName,
     );
-    return getMappingsForDatasetLayer(dataset.dataStore.url, dataset, segmentationLayer.name);
+    return unwrapOrThrow(
+      await getMappingsForDatasetLayer(dataset.dataStore.url, dataset, segmentationLayer.name),
+    );
   }
 
   /**
@@ -2439,7 +2464,7 @@ class DataApi {
 
         let labelMap = currentLabeledVoxelMap.get(bucketZoomedAddress);
         if (!labelMap) {
-          labelMap = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
+          labelMap = new Uint8Array(Constants.BUCKET_SIZE_2D);
           currentLabeledVoxelMap.set(bucketZoomedAddress, labelMap);
         }
 

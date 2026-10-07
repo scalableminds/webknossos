@@ -588,7 +588,6 @@ class TSAnnotationService @Inject() (
     tracingDataStore.editableMappingsInfo.get(volumeTracingId, version = version)(fromProtoBytes[EditableMappingInfo])
 
   private def editableMappingUpdaterFor(
-      annotationId: ObjectId,
       tracingId: String,
       remoteFallbackLayer: RemoteFallbackLayer,
       editableMappingInfo: EditableMappingInfo,
@@ -596,7 +595,6 @@ class TSAnnotationService @Inject() (
       targetVersion: Long
   )(using tc: TokenContext): EditableMappingUpdater =
     new EditableMappingUpdater(
-      annotationId,
       tracingId,
       editableMappingInfo.baseMappingName,
       currentMaterializedVersion,
@@ -619,7 +617,6 @@ class TSAnnotationService @Inject() (
     for {
       remoteFallbackLayer <- remoteFallbackLayerForVolumeTracing(volumeTracing, annotationId)
     } yield editableMappingUpdaterFor(
-      annotationId,
       tracingId,
       remoteFallbackLayer,
       editableMappingInfo,

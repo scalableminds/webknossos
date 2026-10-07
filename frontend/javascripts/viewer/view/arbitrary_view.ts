@@ -1,6 +1,7 @@
 import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
+import { updateTweens } from "libs/tween_group";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
 import {
@@ -10,7 +11,6 @@ import {
   PerspectiveCamera,
   Vector3 as ThreeVector3,
 } from "three";
-import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector3, Viewport } from "viewer/constants";
 import Constants, { FLIGHT_CAM_DISTANCE, FlightViewport, OrthoViews } from "viewer/constants";
 import getSceneController, {
@@ -191,7 +191,7 @@ class FlightModeView {
 
   renderFunction() {
     this.animationRequestId = null;
-    TWEEN.update();
+    updateTweens();
 
     if (this.needsRerender) {
       const { camera, geometries } = this;

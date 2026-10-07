@@ -188,10 +188,10 @@ const vec3 voxelSizeFactorInverted = <%= formatVector3AsVec3(voxelSizeFactorInve
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
-// Only layers whose global index is below this have entries in the
+<% if (isVertexAlignmentCapped) { %>// Only layers whose global index is below this have entries in the
 // outputMagIdx/outputSeed/outputAddress varyings.
 const uint VERTEX_ALIGNMENT_LAYER_CAP = <%= vertexAlignmentLayerCap %>u;
-`;
+<% } %>`;
 
 export default function getMainFragmentShader(params: Params) {
   const hasSegmentation = params.segmentationLayerNames.length > 0;
@@ -445,6 +445,9 @@ void main() {
       1,
       Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
     ),
+    // Only emit the cap checks if some layer is actually above the cap. They
+    // change the generated code, which measurably slowed down rendering.
+    isVertexAlignmentCapped: params.vertexBucketAlignmentLayerCap < params.globalLayerCount,
     ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
@@ -629,11 +632,11 @@ void main() {
 
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
 
-  // Layers at or above VERTEX_ALIGNMENT_LAYER_CAP do the full lookup per
-  // fragment instead (see getColorForCoords64).
   <% each(layerNamesWithSegmentation, function(name, layerIndex) { %>
+  <% if (isVertexAlignmentCapped) { %>// Layers at or above VERTEX_ALIGNMENT_LAYER_CAP do the full lookup per
+  // fragment instead (see getColorForCoords64).
   if (!<%= name %>_has_transform
-      && availableLayerIndexToGlobalLayerIndex[<%= layerIndex %>u] < VERTEX_ALIGNMENT_LAYER_CAP) {
+      && availableLayerIndexToGlobalLayerIndex[<%= layerIndex %>u] < VERTEX_ALIGNMENT_LAYER_CAP) {<% } else { %>if (!<%= name %>_has_transform) {<% } %>
     float bucketAddress;
     uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[<%= layerIndex %>u];
     uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
@@ -669,6 +672,9 @@ void main() {
       1,
       Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
     ),
+    // Only emit the cap checks if some layer is actually above the cap. They
+    // change the generated code, which measurably slowed down rendering.
+    isVertexAlignmentCapped: params.vertexBucketAlignmentLayerCap < params.globalLayerCount,
     ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),

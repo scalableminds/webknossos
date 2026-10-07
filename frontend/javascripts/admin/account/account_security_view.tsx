@@ -1,4 +1,4 @@
-import { EditOutlined, LockOutlined } from "@ant-design/icons";
+import { EditOutlined, LockOutlined, LogoutOutlined } from "@ant-design/icons";
 import { unwrapOrThrow } from "admin/api/api_result";
 import { changePassword, logoutUserEverywhere } from "admin/rest_api";
 import { Alert, App, Button, Col, Form, Input, Row, Space } from "antd";
@@ -153,9 +153,7 @@ function AccountSecurityView() {
           </Space>
         </FormItem>
       </Form>
-    ) : (
-      "***********"
-    );
+    ) : null;
   }
 
   const handleLogoutEverywhere = () => {
@@ -168,7 +166,10 @@ function AccountSecurityView() {
   const securityItems: SettingsCardProps[] = [
     {
       title: "Password",
-      content: getPasswordComponent(),
+      icon: <LockOutlined />,
+      content: "•••••••••••",
+      hint: "Changing it logs you out on all devices",
+      children: getPasswordComponent(),
       action: (
         <Button
           type="default"
@@ -181,6 +182,7 @@ function AccountSecurityView() {
     },
     {
       title: "Log out everywhere",
+      icon: <LogoutOutlined />,
       content: (
         <Button type="default" onClick={handleLogoutEverywhere}>
           Log out on all devices
@@ -217,7 +219,7 @@ function AccountSecurityView() {
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         {securityItems.map((item) => (
           <Col span={12} key={item.title}>
-            <SettingsCard title={item.title} content={item.content} action={item.action} />
+            <SettingsCard {...item} />
           </Col>
         ))}
       </Row>

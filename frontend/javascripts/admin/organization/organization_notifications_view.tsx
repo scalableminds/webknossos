@@ -1,4 +1,4 @@
-import { MailOutlined, SaveOutlined } from "@ant-design/icons";
+import { MailOutlined, RobotOutlined, SaveOutlined, UserAddOutlined } from "@ant-design/icons";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { unwrapOrThrow } from "admin/api/api_result";
@@ -55,7 +55,6 @@ export function OrganizationNotificationsView() {
       <Form
         form={form}
         onFinish={onFinish}
-        style={{ marginTop: 10 }}
         layout="inline"
         initialValues={{
           newUserMailingList: organization.newUserMailingList,
@@ -101,6 +100,7 @@ export function OrganizationNotificationsView() {
           <SettingsCard
             title="WEBKNOSSOS Plan & Subscription"
             tooltip="Get notified when your WK subscription is about to expire or reach user and storage limits."
+            icon={<MailOutlined />}
             content={ownerEmail}
           />
         </Col>
@@ -108,6 +108,7 @@ export function OrganizationNotificationsView() {
           <SettingsCard
             title="AI Job Completion"
             tooltip="Get notified when a background conversion or AI job is completed."
+            icon={<RobotOutlined />}
             content="Users are notified individually."
           />
         </Col>
@@ -115,8 +116,11 @@ export function OrganizationNotificationsView() {
           <SettingsCard
             title="New User Signup"
             tooltip="Get notified when a new user signs up to your organization."
-            content={getNewUserNotificationsSettings()}
-          />
+            icon={<UserAddOutlined />}
+            content="Mailing list"
+          >
+            {getNewUserNotificationsSettings()}
+          </SettingsCard>
         </Col>
       </Row>
     </>

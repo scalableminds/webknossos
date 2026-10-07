@@ -24,7 +24,7 @@ import play.api.libs.json.*
 import play.silhouette.api.LoginInfo
 import play.silhouette.api.services.IdentityService
 import play.silhouette.api.util.PasswordInfo
-import security.{LoginInfoAdapter, PasswordHasher, TokenDAO}
+import security.{LoginInfoAdapter, PasswordHasher}
 import utils.sql.SqlEscaping
 import utils.WkConf
 
@@ -44,7 +44,6 @@ class UserService @Inject() (
     projectDAO: ProjectDAO,
     teamMembershipService: TeamMembershipService,
     datasetDAO: DatasetDAO,
-    tokenDAO: TokenDAO,
     inviteDAO: InviteDAO,
     emailVerificationService: EmailVerificationService,
     defaultMails: DefaultMails,

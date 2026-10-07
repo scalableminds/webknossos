@@ -302,6 +302,13 @@ class JobController @Inject() (
       }
     }
 
+  private def exportFileExtensionFor(exportFormat: String): Option[String] = exportFormat match {
+    case "ome_tiff"   => Some("ome.tif")
+    case "tiff_stack" => Some("zip")
+    case "ozx"        => Some("ozx")
+    case _            => None
+  }
+
   def runExportTiffJob(
       datasetId: ObjectId,
       bbox: String,
@@ -310,7 +317,7 @@ class JobController @Inject() (
       mag: Option[String],
       annotationLayerName: Option[String],
       annotationId: Option[ObjectId],
-      asOmeTiff: Boolean
+      exportFormat: String
   ): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
@@ -321,6 +328,7 @@ class JobController @Inject() (
           ) ?~> Msg.Organization.notFound(dataset._organization)
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
+          fileExtension <- exportFileExtensionFor(exportFormat).toFox ?~> Msg.Job.ExportTiff.invalidFormat
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
           additionalAxesOpt <- Fox.runOptional(layerName)(layerName =>
             datasetLayerAdditionalAxesDAO.findAllForDatasetAndDataLayerName(dataset._id, layerName)
@@ -348,10 +356,9 @@ class JobController @Inject() (
             requireLocal = true
           )
           exportFileName =
-            if (asOmeTiff)
-              s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.ome.tif"
-            else
-              s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
+            s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName
+                .map(_ => "volume")
+                .getOrElse(layerName.getOrElse(""))}.$fileExtension"
 
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
@@ -361,6 +368,7 @@ class JobController @Inject() (
             "dataset_name" -> dataset.name,
             "nd_bbox" -> ndBoundingBox.toWkLibsDict,
             "export_file_name" -> exportFileName,
+            "export_format" -> exportFormat,
             "layer_name" -> layerName,
             "mag" -> mag,
             "annotation_layer_name" -> annotationLayerName,

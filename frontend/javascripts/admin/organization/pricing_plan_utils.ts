@@ -56,12 +56,15 @@ const AI_PLAN_LABELS: Record<AiPlanEnum, string> = {
   [AiPlanEnum.PowerAI]: "Power AI",
 };
 
+export const teamPlanIncludedUsers = 5;
+export const teamPlanIncludedStorageTB = 1;
+
 export const teamPlanFeatures = [
   "Everything from Personal plan",
   "Collaborative Annotation",
   "Project Management",
   "Dataset Management and Access Control",
-  "5 Users / 1TB Storage (upgradable)",
+  `${teamPlanIncludedUsers} Users / ${teamPlanIncludedStorageTB}TB Storage (upgradable)`,
   "Eligible for the AI Add-on and AI model training",
   "Priority Email Support",
 ];
@@ -108,7 +111,7 @@ export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {
 // Open-Source unlocks the collaboration features of Team, Enterprise the features of Power. The features that
 // Open-Source lacks are checked separately, see areJobsAllowedByPricingPlan and isAiQuickSelectAllowedByPricingPlan.
 // Mirrors PricingPlan.tierRank in app/models/organization/PricingPlan.scala
-const PLAN_TO_RANK: Record<PricingPlanEnum, number> = {
+export const PLAN_TO_RANK: Record<PricingPlanEnum, number> = {
   [PricingPlanEnum.Personal]: 0,
   [PricingPlanEnum.Team]: 1,
   [PricingPlanEnum.TeamTrial]: 1,

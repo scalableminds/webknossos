@@ -172,7 +172,7 @@ For more commands, see the `scripts` section in [package.json](package.json).
 
 ## Passkeys
 
-Passkeys are only supported with HTTPS. You can generate self-signed certificates for local development with `./tools/proxy/gen-ssl-dev-certs.sh`. 
+Passkeys are only supported with HTTPS. You can generate self-signed certificates for local development with `./tools/gen-ssl-dev-certs.sh`. 
 
 You must also update `conf/application.conf`:
 - Set `http.uri` to `https://localhost:<port>`

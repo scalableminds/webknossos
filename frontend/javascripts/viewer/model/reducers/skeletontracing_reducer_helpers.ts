@@ -768,9 +768,12 @@ export function deleteComment(
   _skeletonTracing: SkeletonTracing,
   tree: Tree,
   node: Node,
-): CommentType[] {
+): CommentType[] | null {
   const { comments } = tree;
   const commentsWithoutActiveNodeComment = comments.filter((comment) => comment.nodeId !== node.id);
+  if (commentsWithoutActiveNodeComment.length === comments.length) {
+    return null;
+  }
 
   return commentsWithoutActiveNodeComment;
 }

@@ -55,7 +55,7 @@ export function ShouldUseManualMatchesFormItem() {
         },
       ]}
     >
-      <Checkbox> Use manual matches from skeleton. </Checkbox>
+      <Checkbox>Use manual matches from skeleton</Checkbox>
     </Form.Item>
   );
 }

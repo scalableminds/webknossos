@@ -235,7 +235,10 @@ export function DownloadTiffTab({
     ([key]) => key === exportKey(selectedLayerInfos, mag),
   );
   const isDownloadButtonDisabled =
-    !isExportable || isCurrentlyRunningExportJob || isMergerModeEnabled;
+    !isExportTiffJobAvailable ||
+    !isExportable ||
+    isCurrentlyRunningExportJob ||
+    isMergerModeEnabled;
 
   const handleKeepWindowOpenChecked = (e: any) => {
     setKeepWindowOpen(e.target.checked);

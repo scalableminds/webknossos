@@ -35,23 +35,35 @@
   background-color: var(--ant-color-border-secondary)
 }
 
+// We configure the splitter to be almost invisible in code (just 1px) and use a transparent ::before overlay to enlarge
+// the mouse click/drag target instead. Pointer events on the pseudo element are dispatched to the splitter itself.
 .flexlayout__splitter {
   z-index: 21;
   background-color: var(--ant-color-border);
+  position: relative;
 
   &::before {
     content: "";
+    position: absolute;
     background-color: transparent;
   }
 }
 
-// We configure the splitter to be almost invisible in code (just 1px) and use CSS transparent ::before pseudo to increase to mouse click/drag target instead. 
-.flexlayout__splitter_vert::before {
-  width: 11px;
-  display: inline-block;
-  height: 100%;
-  position: relative;
+// flexlayout names splitters after the orientation of the row they split, not after the direction of the line:
+// _horz splitters separate side-by-side panes (vertical line), _vert splitters separate stacked panes (horizontal line).
+.flexlayout__splitter_horz::before {
+  top: 0;
+  bottom: 0;
   left: -5px;
+  right: -5px;
+}
+
+// Only extend upwards: the pane below starts with its tab bar, which sits on top of the splitter (see .flexlayout__tabset_tabbar_outer below).
+.flexlayout__splitter_vert::before {
+  left: 0;
+  right: 0;
+  top: -10px;
+  bottom: 0;
 }
 
 // remove a 1px line of white pixel at the very left/right side of the screen
@@ -65,15 +77,6 @@
   width: 0;
 }
 
-
-.flexlayout__splitter_horz::before {
-  height: 11px;
-  display: inline-block;
-  width: 100%;
-  position: relative;
-  // Somehow the before content is 10px below the splitter.
-  top: -15px;
-}
 
 .flexlayout__tabset_tabbar_outer {
   height: 22px;

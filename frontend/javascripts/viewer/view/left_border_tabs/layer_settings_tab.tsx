@@ -16,6 +16,7 @@ import { type RecommendedConfiguration, settings, settingsTooltips } from "messa
 import React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
+import { ModalWidth } from "theme";
 import { APIAnnotationTypeEnum, type APIDataLayer } from "types/api_types";
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
 import type { ValueOf } from "types/type_utils";
@@ -236,7 +237,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     dataSource.push(...additionalData);
     this.props.modal.confirm({
       title: "Save current view configuration as default?",
-      width: 700,
+      width: ModalWidth.Large,
       content: (
         <>
           Do you really want to save your current view configuration as the dataset's default?

@@ -3,9 +3,9 @@ name: CI Pipeline
 on:
   push:
     branches:
-      - "*"
+      - "**"
     tags:
-      - "*"
+      - "**"
   workflow_dispatch: {}
 
 env:
@@ -16,16 +16,24 @@ env:
   POSTGRES_PASSWORD: "secret_password"
   CERTIFICATE: ${{ secrets.CERTIFICATE_FOR_CI_ONLY }}
   CERTIFICATE_PUBLIC_KEY: ${{ secrets.CERTIFICATE_PUBLIC_KEY }}
+  # Compile with -Werror in all sbt jobs (see build.sbt). Identical scalacOptions are required so that
+  # the jobs can share zinc's incremental compile cache.
+  WK_FAIL_ON_WARNING: "true"
+  # Caching policy: feature branches restore the sbt dependency and incremental compile caches.
+  # master and tags never restore them and always build from scratch. master still saves its clean build,
+  # which is the fallback for feature branches. Caches are scoped to the branch (and master) that saved them.
+  # Note: a cache's path list is part of its version, changing it invalidates all entries.
 
 jobs:
   frontend-tests:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 5
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: corepack enable
@@ -33,7 +41,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Lint frontend code and check formatting
-        run: yarn run check-frontend
+        run: yarn run check-frontend-ci
       - name: Typecheck frontend code
         run: yarn typecheck
       - name: Check for cyclic dependencies in frontend
@@ -43,10 +51,13 @@ jobs:
       - name:
           Download Coverage Artifacts
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
+        id: coverage-baseline
+        continue-on-error: true # the GitHub API intermittently fails to serve the artifact, which must not fail the build
         run: |
           gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
           [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
           gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
+          echo "baseline=$OUTPUT_DIR/coverage-summary.json" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT_NAME: vitest-coverage-master
@@ -55,41 +66,101 @@ jobs:
         uses: davelosert/vitest-coverage-report-action@v2
         with:
           comment-on: none # alternative: pr
-          json-summary-compare-path: coverage-master/coverage-summary.json
+          # Empty if no baseline could be downloaded, in which case the action skips the comparison
+          json-summary-compare-path: ${{ steps.coverage-baseline.outputs.baseline }}
       - name: "Upload Coverage"
         if: github.ref == 'refs/heads/master'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vitest-coverage-master
           path: coverage
 
-  backend-tests:
+  # Separate job, so that formatting/linting runs in parallel to compiling and testing.
+  # scalafmt and the (syntactic) scalafix rules do not need compiled code.
+  backend-lint:
     runs-on: ubuntu-22.04
     if: github.ref != 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 5
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: corepack enable
-
-      - uses: actions/setup-java@v4
+      # No sbt dependency cache here: this job only resolves the build's plugins. It would save its incomplete
+      # dependency cache first, under the same key the compiling jobs need to save the full one.
+      - uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "21"
       - uses: sbt/setup-sbt@v1
 
+      - name: Check backend formatting and lint
+        run: sbt "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
+
+  backend-tests:
+    runs-on: ubuntu-22.04
+    if: github.ref != 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 5
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: corepack enable
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
+      - uses: sbt/setup-sbt@v1
+
+      # This job does not run on master. On tags it skips the caches (see caching policy above).
+      - name: Cache sbt dependencies
+        if: github.ref_type == 'branch'
+        uses: actions/cache@v6
+        with:
+          # YAML anchors, reused by the other dependency cache steps below.
+          path: &sbt-deps-cache-paths |
+            ~/.cache/coursier
+            ~/.ivy2/cache
+            ~/.sbt
+          key: &sbt-deps-cache-key sbt-deps-${{ hashFiles('build.sbt', 'project/*.sbt', 'project/*.scala', 'project/build.properties') }}
+      # Falls back to the latest master build, so that a branch's first push
+      # only recompiles what changed relative to master.
+      - name: Cache incremental compilation
+        if: github.ref_type == 'branch'
+        uses: actions/cache@v6
+        with:
+          # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
+          # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
+          # YAML anchor, reused by the other compile cache steps below.
+          path: &zinc-cache-paths |
+            target/*
+            */target/*
+            project/project/target/*
+            !**/target/universal
+            !**/target/web
+            !**/target/global-logging
+          key: zinc-test-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            zinc-test-${{ github.ref_name }}-
+            zinc-build-${{ github.ref_name }}-
+            zinc-build-master-
+
       - name: Start Docker Services Postgres, Redis
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
-      - name: Install frontend dependencies
-        run: yarn install --immutable
-
-      - name: "Install System Dependencies"
-        run: sudo apt-get update && sudo apt-get install -y libdraco-dev
+      - name: Install frontend and system dependencies
+        run: |
+          (sudo apt-get update -qq && sudo apt-get install -y -qq libdraco-dev) > "$RUNNER_TEMP/apt.log" 2>&1 &
+          apt_pid=$!
+          yarn_status=0
+          yarn install --immutable || yarn_status=$?
+          wait $apt_pid || { cat "$RUNNER_TEMP/apt.log"; exit 1; }
+          exit $yarn_status
 
       - name: Assert unique evolution numbers
         run: tools/postgres/dbtool.js assert-unique-evolution-numbers
@@ -99,8 +170,6 @@ jobs:
         run: tools/assert-complete-migrations.sh
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
-      - name: Check backend formatting and lint
-        run: sbt --client "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
       - name: Run backend unit tests
         run: sbt --client -v "testOnly backend.*"
 
@@ -121,31 +190,50 @@ jobs:
 
   build-smoketest-push:
     runs-on: ubuntu-22.04
+    env:
+      RESTORE_CACHES: ${{ github.ref_type == 'branch' && github.ref_name != 'master' }}
+      SAVE_CACHES: ${{ github.ref_type == 'branch' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 5
+          persist-credentials: false
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
         with:
           driver: docker
+
+      # Restore and save are separate steps so master can save its clean build without restoring (see caching policy above).
+      - name: Restore sbt dependencies cache
+        id: restore-sbt-deps
+        if: env.RESTORE_CACHES == 'true'
+        uses: actions/cache/restore@v6
+        with:
+          path: *sbt-deps-cache-paths
+          key: *sbt-deps-cache-key
+      - name: Restore incremental compile cache
+        if: env.RESTORE_CACHES == 'true'
+        uses: actions/cache/restore@v6
+        with:
+          path: *zinc-cache-paths
+          key: zinc-build-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            zinc-build-${{ github.ref_name }}-
+            zinc-build-master-
 
       - name: Start Docker Services Postgres, Redis
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: corepack enable
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "21"
       - uses: sbt/setup-sbt@v1
-
-      - name: "Install System Dependencies"
-        run: sudo apt-get update && sudo apt-get install -y libdraco-dev
 
       - name: "Custom environment variables (Not Pull Request)"
         run: |
@@ -165,26 +253,54 @@ jobs:
       - name: Prepare Dependency Folders
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
 
-      - name: Install frontend dependencies
-        run: yarn install --immutable
+      - name: Install frontend and system dependencies
+        run: |
+          (sudo apt-get update -qq && sudo apt-get install -y -qq libdraco-dev) > "$RUNNER_TEMP/apt.log" 2>&1 &
+          apt_pid=$!
+          yarn_status=0
+          yarn install --immutable || yarn_status=$?
+          wait $apt_pid || { cat "$RUNNER_TEMP/apt.log"; exit 1; }
+          exit $yarn_status
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 
-      - name: Build webknossos (vite)
-        run: yarn build
-
-      - name: Build frontend documentation
-        run: yarn run docs --project-version "$WK_VERSION"
+      # The frontend build is only needed by `stage`, not by `compile`, so both run concurrently to save time.
+      - name: Build frontend (vite, docs) and compile webknossos, datastore and tracingstore (sbt)
+        run: |
+          (yarn build && yarn run docs --project-version "$WK_VERSION") > "$RUNNER_TEMP/frontend-build.log" 2>&1 &
+          frontend_pid=$!
+          sbt --client compile
+          frontend_status=0
+          wait $frontend_pid || frontend_status=$?
+          echo "::group::Frontend build output"
+          cat "$RUNNER_TEMP/frontend-build.log"
+          echo "::endgroup::"
+          exit $frontend_status
         env:
           WK_VERSION: ${{ github.run_id }}
 
-      - name: Compile and stage webknossos, datastore and tracingstore (sbt)
-        run: sbt -DfailOnWarning "compile; stage; webknossosDatastore/stage; webknossosTracingstore/stage"
+      - name: Stage webknossos, datastore and tracingstore (sbt)
+        run: |
+          sbt --client "stage; webknossosDatastore/stage; webknossosTracingstore/stage"
+          sbt --client shutdown
+
+      - name: Save incremental compile cache
+        if: env.SAVE_CACHES == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: *zinc-cache-paths
+          key: zinc-build-${{ github.ref_name }}-${{ github.sha }}
+      - name: Save sbt dependencies cache
+        if: env.SAVE_CACHES == 'true' && steps.restore-sbt-deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: *sbt-deps-cache-paths
+          key: *sbt-deps-cache-key
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
       - name: Build webknossos docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           file: .github/Dockerfile.webknossos
           context: .
@@ -195,7 +311,7 @@ jobs:
           outputs: |
             type=image
       - name: Build webknossos-datastore docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           file: .github/Dockerfile.datastore
           context: webknossos-datastore
@@ -206,7 +322,7 @@ jobs:
           outputs: |
             type=image
       - name: Build webknossos-tracingstore docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           file: .github/Dockerfile.tracingstore
           context: webknossos-tracingstore
@@ -242,10 +358,23 @@ jobs:
           run: curl -v --fail-with-body "http://localhost:9050/tracings/health"
           retries: 20
           retry_delay_seconds: 5
+      - name: Check that the certificate public key is baked into the build
+        # Without a baked-in public key, the certificate is not checked and expiresAt is 0.
+        # expiresAt > 0 means the certificate's signature was verified with the baked-in key.
+        # isValid is deliberately not checked, so that an expiring CI certificate does not break builds.
+        # Skipped if the secret is not available (e.g. for dependabot).
+        if: env.CERTIFICATE_PUBLIC_KEY != ''
+        run: |
+          response=$(curl -sS "http://localhost:9000/api/checkCertificate")
+          echo "$response"
+          echo "$response" | jq -e '.expiresAt > 0' > /dev/null || {
+            echo "::error::Certificate public key is not baked into the webknossos build (expiresAt is 0)."
+            exit 1
+          }
       - name: Stop webknossos, datastore and tracingstore
         run: docker compose --file .github/docker-compose.yml down --volumes --remove-orphans
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         if: ${{ github.actor != 'dependabot[bot]' }}
         with:
           username: ${{ secrets.DOCKER_USER }}

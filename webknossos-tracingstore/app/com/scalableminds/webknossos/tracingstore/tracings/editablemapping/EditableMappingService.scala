@@ -35,6 +35,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreConversions,
   RemoteFallbackLayer,
   TracingDataStore,
+  VersionedFossilDbIterator,
   VersionedKeyValuePair
 }
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}

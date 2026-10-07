@@ -14,7 +14,6 @@ import {
   Button,
   Col,
   Divider,
-  Flex,
   Form,
   Input,
   InputNumber,
@@ -22,6 +21,7 @@ import {
   type RadioChangeEvent,
   Row,
   Select,
+  Space,
   Spin,
   Tooltip,
   Typography,
@@ -43,8 +43,15 @@ import omitBy from "lodash-es/omitBy";
 import uniq from "lodash-es/uniq";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_types";
+import { useNavigate, useParams } from "react-router";
+import { ModalWidth } from "theme";
+import type {
+  APIDatasetCompact,
+  APIProject,
+  APIScript,
+  APITask,
+  APITaskType,
+} from "types/api_types";
 import type { BoundingBoxObject } from "types/bounding_box";
 import type { Vector3, Vector6 } from "viewer/constants";
 import type {
@@ -196,22 +203,37 @@ export function handleTaskCreationResponse(
       "Too many failed tasks to show, please use the CSV download for a full list."
     );
 
+  const downloadFailedTasksButton = (
+    <Button
+      onClick={() => {
+        const blob = new Blob([failedTasksAsString], {
+          type: "text/plain;charset=utf-8",
+        });
+        saveAs(blob, "failed-tasks.csv");
+      }}
+      icon={<DownloadOutlined />}
+    >
+      Download failed task info as CSV
+    </Button>
+  );
+
+  const downloadSuccessfulTasksButton = (
+    <Button
+      onClick={() => downloadTasksAsCSV(successfulTasks)}
+      type="primary"
+      icon={<DownloadOutlined />}
+    >
+      Download task info as CSV
+    </Button>
+  );
+
   modal.info({
     title: `${successfulTasks.length} ${pluralize("task", successfulTasks.length)} successfully created, ${failedTasks.length} ${pluralize("task", failedTasks.length)} failed. ${warnings.length} ${pluralize("warning", warnings.length)}.`,
     content: (
-      <div>
+      <Space orientation="vertical">
         {warningsContent}
         {successfulTasks.length > 0 ? (
           <div>
-            <Flex justify="center" style={{ margin: 20 }}>
-              <Button
-                onClick={() => downloadTasksAsCSV(successfulTasks)}
-                type="primary"
-                icon={<DownloadOutlined />}
-              >
-                Download task info as CSV
-              </Button>
-            </Flex>
             <Typography.Text strong>Successful Tasks:</Typography.Text>
             <div style={displayResultsStyle}>{successfulTasksContent}</div>
           </div>
@@ -220,32 +242,24 @@ export function handleTaskCreationResponse(
           <React.Fragment>
             <Divider />
             <div>
-              <Flex
-                justify="center"
-                style={{
-                  margin: 20,
-                }}
-              >
-                <Button
-                  onClick={() => {
-                    const blob = new Blob([failedTasksAsString], {
-                      type: "text/plain;charset=utf-8",
-                    });
-                    saveAs(blob, "failed-tasks.csv");
-                  }}
-                  icon={<DownloadOutlined />}
-                >
-                  Download failed task info as CSV
-                </Button>
-              </Flex>
               <Typography.Text strong>Failed Tasks:</Typography.Text>
               <div style={displayResultsStyle}> {failedTasksContent}</div>
             </div>
           </React.Fragment>
         ) : null}
-      </div>
+      </Space>
     ),
-    width: 600,
+    footer:
+      successfulTasks.length > 0 || failedTasks.length > 0
+        ? (_, { OkBtn }) => (
+            <Space>
+              {successfulTasks.length > 0 ? downloadSuccessfulTasksButton : null}
+              {failedTasks.length > 0 ? downloadFailedTasksButton : null}
+              <OkBtn />
+            </Space>
+          )
+        : undefined,
+    width: ModalWidth.Large,
   });
 }
 
@@ -297,7 +311,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const { token } = theme.useToken();
   const [form] = Form.useForm<FormValues>();
 
-  const [datasets, setDatasets] = useState<APIDataset[]>([]);
+  const [datasets, setDatasets] = useState<APIDatasetCompact[]>([]);
   const [taskTypes, setTaskTypes] = useState<APITaskType[]>([]);
   const [projects, setProjects] = useState<APIProject[]>([]);
   const [scripts, setScripts] = useState<APIScript[]>([]);
@@ -537,7 +551,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                 style={fullWidth}
                 disabled={isEditingMode || specificationType === SpecificationEnum.BaseAnnotation}
                 loading={isFetchingData}
-                options={datasets.map((dataset: APIDataset) => ({
+                options={datasets.map((dataset: APIDatasetCompact) => ({
                   label: dataset.name,
                   value: dataset.id,
                 }))}

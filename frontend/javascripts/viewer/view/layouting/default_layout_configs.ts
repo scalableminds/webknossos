@@ -203,20 +203,18 @@ function buildLayout(settings, borders, mainLayout): ModelConfig {
   };
 }
 
-// As long as the content of the left border is not responsive, this border needs a fixed width.
-// As soon as the content is responsive the normal DEFAULT_BORDER_WIDTH should be used.
-const leftBorderWidth = 365;
+// The left border content is not responsive and needs a fixed width.
+// The right border uses the same width for symmetry in the default layout.
+const sidebarWidth = 365;
 
 const _getDefaultLayouts = () => {
   const isInIframe = getIsInIframe();
-  const defaultBorderWidth = isInIframe
-    ? Constants.DEFAULT_BORDER_WIDTH_IN_IFRAME
-    : Constants.DEFAULT_BORDER_WIDTH;
+  const rightBorderWidth = isInIframe ? Constants.DEFAULT_BORDER_WIDTH_IN_IFRAME : sidebarWidth;
   const borderIsOpenByDefault = !isInIframe;
   const leftBorder = buildBorder(
     "left",
     [borderTabs.LayerSettingsTab, borderTabs.ControlsAndRenderingSettingsTab],
-    leftBorderWidth,
+    sidebarWidth,
     borderIsOpenByDefault,
   );
   const rightBorderWithSkeleton = buildBorder(
@@ -230,7 +228,7 @@ const _getDefaultLayouts = () => {
       borderTabs.AbstractTreeTab,
       borderTabs.ConnectomeView,
     ],
-    defaultBorderWidth,
+    rightBorderWidth,
     borderIsOpenByDefault,
   );
   const rightBorderWithoutSkeleton = buildBorder(
@@ -241,7 +239,7 @@ const _getDefaultLayouts = () => {
       borderTabs.SegmentsView,
       borderTabs.ConnectomeView,
     ],
-    defaultBorderWidth,
+    rightBorderWidth,
     borderIsOpenByDefault,
   );
   const OrthoMainLayout = buildMainLayout([

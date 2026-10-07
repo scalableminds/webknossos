@@ -52,12 +52,12 @@ import {
   isUserAdminOrManager,
   isUserAdminOrTeamManager,
 } from "libs/utils";
-import window, { location } from "libs/window";
+import window, { document, location } from "libs/window";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
@@ -86,32 +86,69 @@ const ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT = 10;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
+const OLVY_SCRIPT_URL = "https://app.olvy.co/script.js";
+
+const OLVY_CONFIG = {
+  organisation: "webknossos",
+  // This target needs to be an empty string as else olvy will eagerly init the modal and thus fetch all its contents.
+  target: "",
+  type: "modal",
+  view: {
+    showSearch: false,
+    compact: false,
+    showHeader: true,
+    // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
+    showUnreadIndicator: false,
+    // Kept as a literal: this is configuration handed to the third-party Olvy widget, which
+    // renders in its own iframe and cannot resolve our CSS variables.
+    unreadIndicatorColor: "#cc1919",
+    unreadIndicatorPosition: "top-right",
+  },
+};
+
+function loadOlvyScript(onLoad: () => void): () => void {
+  const script = document.createElement("script");
+  script.src = OLVY_SCRIPT_URL;
+  script.async = true;
+  script.onload = onLoad;
+  document.head.appendChild(script);
+  return () => {
+    script.onload = null;
+  };
+}
+
 function useOlvy() {
   const [isInitialized, setIsInitialized] = useState(false);
-  // Initialize Olvy after mounting
+  // The third-party script is only needed for the "what's new" badge. Load it once the browser is
+  // idle, so that it does not compete with the app's own startup requests.
   useEffect(() => {
-    const OlvyConfig = {
-      organisation: "webknossos",
-      // This target needs to be an empty string as else olvy will eagerly init the modal and thus fetch all its contents.
-      target: "",
-      type: "modal",
-      view: {
-        showSearch: false,
-        compact: false,
-        showHeader: true,
-        // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
-        showUnreadIndicator: false,
-        // Kept as a literal: this is configuration handed to the third-party Olvy widget, which
-        // renders in its own iframe and cannot resolve our CSS variables.
-        unreadIndicatorColor: "#cc1919",
-        unreadIndicatorPosition: "top-right",
-      },
-    };
-
-    if (window.Olvy != null) {
-      window.Olvy.init(OlvyConfig);
+    let cancelLoad: (() => void) | undefined;
+    const initOlvy = () => {
+      if (window.Olvy == null) {
+        return;
+      }
+      window.Olvy.init(OLVY_CONFIG);
       setIsInitialized(true);
+    };
+    const startLoading = () => {
+      if (window.Olvy != null) {
+        initOlvy();
+      } else {
+        cancelLoad = loadOlvyScript(initOlvy);
+      }
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const handle = window.requestIdleCallback(startLoading, { timeout: 5000 });
+      return () => {
+        window.cancelIdleCallback(handle);
+        cancelLoad?.();
+      };
     }
+    const timeoutId = setTimeout(startLoading, 2000);
+    return () => {
+      clearTimeout(timeoutId);
+      cancelLoad?.();
+    };
   }, []);
   return isInitialized;
 }
@@ -516,7 +553,7 @@ export const switchTo = async (org: APIOrganizationCompact) => {
   // current datasets path before reloading the page (which is done in
   // switchToOrganization).
   if (window.location.pathname.startsWith("/dashboard/datasets/")) {
-    window.history.replaceState({}, "", "/dashboard/datasets/");
+    window.history.replaceState(window.history.state, "", "/dashboard/datasets/");
   }
 
   await switchToOrganization(org.id);

@@ -141,7 +141,7 @@ A reload is necessary to return to a valid state.`,
     "These snippets are pre-configured and contain your personal access token and <%- typeName %> meta data. Do not share this information with anyone you do not trust!",
   ),
   "download.export_as_tiff": template(
-    "Export your <%- typeName %> as TIFF images. Large exports may take a few minutes.",
+    "Export your <%- typeName %> as TIFF or OME-Zarr. Large exports may take a few minutes.",
   ),
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "data.enabled_render_missing_data_black":
@@ -327,12 +327,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
-  "dataset.clear_cache_success": template(
-    "The dataset <%- datasetName %> was reloaded successfully.",
-  ),
-  "dataset.delete_success": template(
-    "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
-  ),
+  "dataset.clear_cache_success": "The dataset was reloaded successfully.",
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "task.tooltip_explain_reset":
     "Resets this task instance to its initial state, undoing any annotation work of the assigned user. The task will remain assigned to this user for further annotation work.",
@@ -356,9 +351,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The explored data has a different voxel size from the datasource that was already loaded. The explored voxel size was:",
   "dataset.segmentationlayer_not_existing": "This annotation has no segmentation layer.",
   "dataset.invalid_datasource_json":
-    "The datasource-properties.json on disk is invalid. Please review all properties below to use the dataset. You can always go back and change the values later.",
+    "The datasource-properties.json on disk is invalid. Please contact an administrator to fix this dataset.",
   "dataset.missing_datasource_json":
-    "A datasource-properties.json file was not found. Please review all properties below to use the dataset. You can always go back and change the values later.",
+    "A datasource-properties.json file was not found. Please contact an administrator to fix this dataset.",
   "dataset.import_complete":
     "A valid datasource-properties.json file was found. The dataset is imported and ready to use. You may still change the properties below.",
   "dataset.confirm_signup":

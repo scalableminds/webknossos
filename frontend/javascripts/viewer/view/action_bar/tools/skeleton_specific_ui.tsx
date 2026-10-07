@@ -8,6 +8,7 @@ import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
+import { UserThemeConfigProvider } from "theme_provider";
 import { APIJobCommand } from "types/api_types";
 import { getActiveTree } from "viewer/model/accessors/skeletontracing_accessor";
 import { Toolkit } from "viewer/model/accessors/tool_accessor";
@@ -111,9 +112,11 @@ export function SkeletonSpecificButtons() {
         />
       )}
       {isMaterializeVolumeAnnotationEnabled && showMaterializeVolumeAnnotationModal && (
-        <MaterializeVolumeAnnotationModal
-          handleClose={() => setShowMaterializeVolumeAnnotationModal(false)}
-        />
+        <UserThemeConfigProvider>
+          <MaterializeVolumeAnnotationModal
+            handleClose={() => setShowMaterializeVolumeAnnotationModal(false)}
+          />
+        </UserThemeConfigProvider>
       )}
     </Space.Compact>
   );

@@ -25,7 +25,6 @@ import models.task.{TaskDAO, TaskService}
 import models.team.{TeamDAO, TeamService}
 import models.user.time.*
 import models.user.{User, UserDAO, UserService}
-import org.apache.pekko.util.Timeout
 import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
@@ -83,7 +82,6 @@ class AnnotationController @Inject() (
     extends Controller
     with UserAwareRequestLogging {
 
-  implicit val timeout: Timeout = Timeout(5 seconds)
   private val taskReopenAllowed = conf.Features.taskReopenAllowed + (10 seconds)
 
   private val numberOfIdsToReservePerRequest = 10
@@ -423,7 +421,8 @@ class AnnotationController @Inject() (
       isFinished: Option[Boolean],
       limit: Option[Int],
       pageNumber: Option[Int] = None,
-      includeTotalCount: Option[Boolean] = None
+      includeTotalCount: Option[Boolean] = None,
+      datasetId: Option[ObjectId] = None
   ): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       for {
@@ -431,11 +430,12 @@ class AnnotationController @Inject() (
           isFinished,
           None,
           filterOwnedOrShared = true,
+          datasetId,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0)
         )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllListableExplorationals(isFinished)
+          annotationDAO.countAllListableExplorationals(isFinished, datasetId)
         ) ?~> Msg.Annotation.countListableFailed
         annotationInfosJsons = annotationInfos.map(annotationService.writeCompactInfo)
         _ = userDAO.updateLastActivity(request.identity._id)(using GlobalAccessContext)

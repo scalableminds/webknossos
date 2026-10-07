@@ -7,7 +7,7 @@ import Toast from "libs/toast";
 import { clamp } from "libs/utils";
 import { zip } from "lodash-es";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router";
 import type { APIDataset, CoordinateTransformation } from "types/api_types";
 import { TracingTypeEnum } from "types/api_types";
 import { Identity4x4, type Vector3 } from "viewer/constants";
@@ -340,9 +340,14 @@ function AlignDatasetsView() {
     let cancelled = false;
     getDataset(datasetId)
       .then((fetchedDataset) => {
-        if (!cancelled) {
-          setDataset(fetchedDataset);
+        if (cancelled) {
+          return;
         }
+        if (!fetchedDataset.isActive) {
+          setDatasetError("This dataset is not active, so its layers cannot be aligned.");
+          return;
+        }
+        setDataset(fetchedDataset);
       })
       .catch(() => {
         if (!cancelled) {
@@ -600,6 +605,10 @@ function AlignDatasetsView() {
     }
     try {
       const freshDataset = await getDataset(dataset.id);
+      if (!freshDataset.isActive) {
+        Toast.error("The dataset is not active anymore.");
+        return;
+      }
       const layerIndex = freshDataset.dataSource.dataLayers.findIndex(
         (layer) => layer.name === layerBName,
       );

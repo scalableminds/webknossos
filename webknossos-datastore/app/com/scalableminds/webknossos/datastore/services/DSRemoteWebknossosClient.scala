@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.services
 
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
-import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
@@ -58,7 +57,7 @@ class DSRemoteWebknossosClient @Inject() (
     rpc: RPC,
     config: DataStoreConfig,
     val lifecycle: ApplicationLifecycle,
-    @Named("webknossos-datastore") val actorSystem: ActorSystem
+    val actorSystem: ActorSystem
 )(implicit val ec: ExecutionContext)
     extends RemoteWebknossosClient
     with IntervalScheduler

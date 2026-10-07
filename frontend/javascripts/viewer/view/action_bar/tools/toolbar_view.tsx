@@ -27,7 +27,11 @@ import { BigWarpAlignmentButtons } from "./bigwarp_specific_ui";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
-import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE } from "./tool_helpers";
+import {
+  ACTIONBAR_MARGIN_LEFT,
+  NARROW_BUTTON_STYLE,
+  UnderlyingActiveToolContext,
+} from "./tool_helpers";
 import {
   CreateSegmentButton,
   FloodFillSettings,
@@ -128,13 +132,17 @@ export default function ToolbarView() {
 
   return (
     <>
-      <Radio.Group onChange={handleSetTool} value={adaptedActiveTool.id}>
-        {toolsForButtons.map((tool) => {
-          const ToolButton = ToolIdToComponent[tool.id];
-          return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
-        })}
-        {isBigWarpWorker ? null : <ToolDropdown />}
-      </Radio.Group>
+      <UnderlyingActiveToolContext.Provider
+        value={activeTool !== adaptedActiveTool ? activeTool.id : null}
+      >
+        <Radio.Group onChange={handleSetTool} value={adaptedActiveTool.id}>
+          {toolsForButtons.map((tool) => {
+            const ToolButton = ToolIdToComponent[tool.id];
+            return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
+          })}
+          {isBigWarpWorker ? null : <ToolDropdown />}
+        </Radio.Group>
+      </UnderlyingActiveToolContext.Provider>
 
       <ToolSpecificSettings
         hasSkeleton={hasSkeleton}

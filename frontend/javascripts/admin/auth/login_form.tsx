@@ -8,7 +8,7 @@ import features from "features";
 import { getIsInIframe } from "libs/utils";
 import messages from "messages";
 import { useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 

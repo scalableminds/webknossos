@@ -16,6 +16,7 @@ import noop from "lodash-es/noop";
 import { switchTo } from "navbar";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { ModalWidth } from "theme";
 import type { APIUser } from "types/api_types";
 import FormattedDate from "./formatted_date";
 
@@ -145,7 +146,7 @@ function AcceptTermsOfServiceModal({
       title="Terms of Services"
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
       onCancel={acceptanceInfo.acceptanceDeadlinePassed ? noop : closeModal}
-      width={850}
+      width={ModalWidth.ExtraLarge}
       mask={{ closable: false }}
       footer={[
         <OrganizationSwitchMenu

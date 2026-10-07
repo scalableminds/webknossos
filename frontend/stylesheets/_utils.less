@@ -44,24 +44,6 @@ td.nowrap * {
   flex-grow: 1;
 }
 
-.centered-items {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-
-  &>* {
-    margin: 6px;
-  }
-
-  &:first-child {
-    margin-left: 0px;
-  }
-
-  &:last-child {
-    margin-right: 0px;
-  }
-}
-
 .pull-right {
   float: right !important;
 }
@@ -115,6 +97,17 @@ td.nowrap * {
 
 .text-center {
   text-align: center;
+}
+
+// Small button for adding an entry, e.g. "Add Tag".
+.ant-btn.ant-btn-sm.small-add-button {
+  height: 22px;
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+
+  &.ant-btn-icon-only {
+    width: 22px;
+  }
 }
 
 .deemphasized {

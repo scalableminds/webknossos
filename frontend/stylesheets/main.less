@@ -10,6 +10,7 @@
 @import "trace_view/_status_bar.less";
 @import "trace_view/_action_bar.less";
 @import "trace_view/_right_menu.less";
+@import "trace_view/_info_tab.less";
 @import "antd_overwrites.less";
 @import "olvy_overwrites.less";
 @import "flex_layout_overwrites.less";
@@ -17,20 +18,28 @@
 @import "dark.less";
 @import "command_palette.less";
 @import "_voxelytics.less";
+@import "_ai_jobs.less";
 
+// Nunito is a variable font with a wght axis spanning 200-1000. The font-weight range has to be
+// declared, otherwise the browser treats each face as a single normal-weight font and synthesizes
+// bold instead of using the axis.
 @font-face {
-  font-family: "Nunito";
+  font-family: Nunito;
   src:
     local("Nunito"),
-    url("Nunito-VariableFont_wght.ttf") format("truetype");
+    url("Nunito-VariableFont_wght.woff2") format("woff2");
+  font-weight: 200 1000;
+  font-display: swap;
 }
 
 @font-face {
-  font-family: "Nunito";
+  font-family: Nunito;
   src:
     local("Nunito"),
-    url("Nunito-Italic-VariableFont_wght.ttf") format("truetype");
+    url("Nunito-Italic-VariableFont_wght.woff2") format("woff2");
+  font-weight: 200 1000;
   font-style: italic;
+  font-display: swap;
 }
 
 // ----------------------- MAIN STYLES
@@ -482,27 +491,6 @@ body {
 
   >div:last-of-type {
     margin-bottom: 15px;
-  }
-}
-
-/** Interactive list items used for selection (e.g. in the AI job selector). */
-.hoverable-list-item {
-  // used in AI Job Drawer for selecting models, tasks etc.
-  transition: background-color 0.2s ease-in-out;
-  border: 1px solid #d9d9d9 !important;
-  border-radius: 8px !important;
-  margin-bottom: 16px !important;
-  padding: 16px !important;
-
-  &:hover,
-  &.selected {
-    border-color: var(--color-wk-blue) !important;
-    background-color: var(--ant-color-info-text-hover);
-
-    .ant-typography,
-    .ant-list-item-meta-description {
-      color: var(--ant-color-primary-bg) !important;
-    }
   }
 }
 

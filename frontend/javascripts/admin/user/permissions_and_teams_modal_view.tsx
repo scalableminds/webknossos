@@ -107,7 +107,6 @@ export function PermissionsAndTeamsComponent({
   function getTeamComponent(team: APITeam, isDisabled: boolean) {
     return (
       <Checkbox
-        value={team.name}
         checked={has(selectedTeams, team.name)}
         disabled={isDisabled}
         onChange={(event) => {

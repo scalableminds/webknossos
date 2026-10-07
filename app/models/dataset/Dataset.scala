@@ -48,6 +48,7 @@ import com.scalableminds.webknossos.schema.Tables.{
   GetResultDatasetsRow
 }
 import controllers.DatasetUpdatePartialParameters
+import models.annotation.{AnnotationAccessQueries, AnnotationState, AnnotationType}
 import models.dataset.DatasetCreationType.DatasetCreationType
 
 import javax.inject.Inject
@@ -90,7 +91,8 @@ case class Dataset(
     rootRealPath: Option[String] = None,
     mirrorPath: Option[String] = None,
     created: Instant = Instant.now,
-    isDeleted: Boolean = false
+    isDeleted: Boolean = false,
+    thumbnailCacheVersion: Int = 0
 )
 
 case class DatasetCompactInfo(
@@ -108,7 +110,10 @@ case class DatasetCompactInfo(
     isUnreported: Boolean,
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
-    usedStorageBytes: Long
+    usedStorageBytes: Long,
+    thumbnailCacheVersion: Int,
+    // Active explorationals listable by the requesting user. Only set if requested.
+    annotationCount: Option[Long] = None
 ) derives JsonAutoFormat {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
 }
@@ -182,7 +187,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       r.rootrealpath,
       r.mirrorpath,
       Instant.fromSql(r.created),
-      r.isdeleted
+      r.isdeleted,
+      r.thumbnailcacheversion
     )
 
   override def anonymousReadAccessQ(token: Option[String]): SqlToken = {
@@ -273,7 +279,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       statusOpt: Option[String] = None,
       createdSinceOpt: Option[Instant] = None,
       limitOpt: Option[Int] = None,
-      requestingUserOrga: Option[String] = None
+      requestingUserOrga: Option[String] = None,
+      includeAnnotationCount: Boolean = false
   )(using ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(
@@ -288,6 +295,24 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         createdSinceOpt
       )
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
+      (annotationCountColumn, annotationCountJoin) = requestingUserIdOpt match {
+        case Some(requestingUserId) if includeAnnotationCount =>
+          // annotationCount join is designed for best index use.
+          // The dataset access check is skipped, since only already-checked datasets are joined.
+          (
+            q"COALESCE(annotationCounts.count, 0)",
+            q"""LEFT JOIN (
+                  SELECT a._dataset, COUNT(*) AS count
+                  FROM webknossos.annotations_ a
+                  WHERE a.typ = ${AnnotationType.Explorational}
+                  AND a.state = ${AnnotationState.Active}
+                  AND ${AnnotationAccessQueries.ownedOrSharedQ(requestingUserId, q"a.")}
+                  GROUP BY a._dataset
+                ) annotationCounts
+                  ON annotationCounts._dataset = d._id"""
+          )
+        case _ => (q"NULL::BIGINT", q"")
+      }
       query = q"""
             SELECT
               d._id,
@@ -324,7 +349,9 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               d.tags,
               cl.names AS colorLayerNames,
               sl.names AS segmentationLayerNames,
-              COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes
+              COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes,
+              d.thumbnailCacheVersion,
+              $annotationCountColumn AS annotationCount
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
             JOIN webknossos.organizations o
@@ -341,6 +368,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               ON d._id = magStorage._dataset
             LEFT JOIN (SELECT _dataset, COALESCE(SUM(usedStorageBytes), 0) AS storage FROM webknossos.organization_usedStorage_attachments GROUP BY _dataset) attachmentStorage
               ON d._id = attachmentStorage._dataset
+            $annotationCountJoin
             """
       rows <- run(
         query.as[
@@ -358,7 +386,9 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               String,
               String,
               String,
-              Long
+              Long,
+              Int,
+              Option[Long]
           )
         ]
       )
@@ -379,7 +409,9 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         colorLayerNames = parseArrayLiteral(row._12),
         segmentationLayerNames = parseArrayLiteral(row._13),
         // Only include usedStorage for datasets of your own organization.
-        usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L
+        usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L,
+        thumbnailCacheVersion = row._15,
+        annotationCount = row._16
       )
     )
 
@@ -715,6 +747,13 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       _ <- assertUpdateAccess(datasetId)
       _ <- run(q"""UPDATE webknossos.datasets
                    SET mirrorPath = $mirrorPath
+                   WHERE _id = $datasetId""".asUpdate)
+    } yield ()
+
+  def incrementThumbnailCacheVersion(datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.datasets
+                   SET thumbnailCacheVersion = thumbnailCacheVersion + 1
                    WHERE _id = $datasetId""".asUpdate)
     } yield ()
 
@@ -1340,15 +1379,12 @@ class DatasetLastUsedTimesDAO @Inject() (sqlClient: SqlClient)(implicit ec: Exec
       r <- rList.headOption.toFox
     } yield r
 
-  def updateForDatasetAndUser(datasetId: ObjectId, userId: ObjectId): Fox[Unit] = {
-    val clearQuery =
-      q"DELETE FROM webknossos.dataset_lastUsedTimes WHERE _dataset = $datasetId AND _user = $userId".asUpdate
-    val insertQuery =
-      q"INSERT INTO webknossos.dataset_lastUsedTimes(_dataset, _user, lastUsedTime) VALUES($datasetId, $userId, NOW())".asUpdate
+  def updateForDatasetAndUser(datasetId: ObjectId, userId: ObjectId): Fox[Unit] =
     for {
-      _ <- runAsSerializableTransaction(List(clearQuery, insertQuery))
+      _ <- run(q"""INSERT INTO webknossos.dataset_lastUsedTimes(_dataset, _user, lastUsedTime)
+                   VALUES($datasetId, $userId, NOW())
+                   ON CONFLICT (_dataset, _user) DO UPDATE SET lastUsedTime = NOW()""".asUpdate)
     } yield ()
-  }
 }
 
 case class StorageRelevantDataLayerAttachment(

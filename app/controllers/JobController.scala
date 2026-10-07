@@ -49,14 +49,16 @@ case class AnimationJobOptions(
     annotationId: Option[ObjectId],
     includeSkeletons: Boolean,
     hideImageData: Boolean,
-    saveBlenderFile: Boolean
+    saveBlenderFile: Boolean,
+    segmentationLayerName: Option[String]
 ) derives JsonAutoFormat
 
 case class AlignSectionsJobOptions(
     layerName: String,
     newDatasetName: String,
     annotationId: Option[ObjectId],
-    customConfiguration: Option[JsObject]
+    customConfiguration: Option[JsObject],
+    fineAlignmentMaxJumpSize: Option[Int]
 ) derives JsonAutoFormat
 
 class JobController @Inject() (
@@ -282,7 +284,8 @@ class JobController @Inject() (
             "new_dataset_name" -> request.body.newDatasetName,
             "layer_name" -> request.body.layerName,
             "annotation_id" -> request.body.annotationId,
-            "custom_configuration" -> request.body.customConfiguration
+            "custom_configuration" -> request.body.customConfiguration,
+            "fine_alignment_max_jump_size" -> request.body.fineAlignmentMaxJumpSize
           )
           creditTransactionComment = s"Align dataset ${dataset.name}"
           job <- jobService.submitPaidJob(
@@ -494,6 +497,7 @@ class JobController @Inject() (
           }
           layerName = animationJobOptions.layerName
           _ <- datasetService.assertValidLayerNameLax(layerName)
+          _ <- Fox.runOptional(animationJobOptions.segmentationLayerName)(datasetService.assertValidLayerNameLax)
           dataStoreClient <- datasetService.clientFor(dataset)
           userOrganizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(
             request.identity._organization,
@@ -509,6 +513,7 @@ class JobController @Inject() (
             "dataset_directory_name" -> dataset.directoryName,
             "export_file_name" -> exportFileName,
             "layer_name" -> animationJobOptions.layerName,
+            "segmentation_layer_name" -> animationJobOptions.segmentationLayerName,
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,
             "include_watermark" -> animationJobOptions.includeWatermark,
             "meshes" -> animationJobOptions.meshes,

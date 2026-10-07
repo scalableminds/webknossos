@@ -1,14 +1,19 @@
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
-import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/rest_api";
+import {
+  clearCache,
+  type DatasetUpdater,
+  getDatastores,
+  triggerDatasetCheck,
+} from "admin/rest_api";
 import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import last from "lodash-es/last";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
-  APIDataset,
   APIDatasetCompact,
   APIDatasetCompactWithoutStatusAndLayerNames,
+  APIMaybeUnimportedDataset,
   FolderItem,
 } from "types/api_types";
 import {
@@ -38,8 +43,11 @@ export type DatasetCollectionContextValue = {
   isChecking: boolean;
   checkDatasets: (organizationId: string | undefined) => Promise<void>;
   fetchDatasets: () => void;
-  reloadDataset: (datasetId: string, datasetsToUpdate?: Array<APIDatasetCompact>) => Promise<void>;
-  updateCachedDataset: (datasetId: string, updater: DatasetUpdater) => Promise<APIDataset>;
+  clearCacheAndReloadDataset: (datasetId: string) => Promise<void>;
+  updateCachedDataset: (
+    datasetId: string,
+    updater: DatasetUpdater,
+  ) => Promise<APIMaybeUnimportedDataset>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
@@ -146,6 +154,20 @@ export default function DatasetCollectionContextProvider({
   ]);
 
   const folderHierarchyQuery = useFolderHierarchyQuery();
+
+  // A selected subfolder only makes sense within the active folder.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only clear when the active folder changes.
+  useEffect(() => {
+    setSelectedFolder(null);
+  }, [activeFolderId]);
+
+  // Clear the selected subfolder once it's gone (e.g., after deleting it).
+  useEffect(() => {
+    const itemById = folderHierarchyQuery.data?.itemById;
+    if (selectedFolder != null && itemById != null && itemById[selectedFolder.key] == null) {
+      setSelectedFolder(null);
+    }
+  }, [folderHierarchyQuery.data, selectedFolder]);
   const datasetsInFolderQuery = useDatasetsInFolderQuery(
     globalSearchQuery == null ? activeFolderId : null,
   );
@@ -168,8 +190,9 @@ export default function DatasetCollectionContextProvider({
     datasetSearchQuery.refetch();
   }
 
-  async function reloadDataset(datasetId: string) {
-    await updateDatasetMutation.mutateAsync(datasetId);
+  async function clearCacheAndReloadDataset(datasetId: string) {
+    const dataset = await updateDatasetMutation.mutateAsync(datasetId);
+    await clearCache(dataset);
   }
 
   async function updateCachedDataset(datasetId: string, updater: DatasetUpdater) {
@@ -212,7 +235,7 @@ export default function DatasetCollectionContextProvider({
         datasetsInFolderQuery.isRefetching) || isMutating;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): omitted to maintain stability as underlying data dependencies are already tracked
-  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(clearCacheAndReloadDataset): omitted to maintain stability as underlying data dependencies are already tracked
   // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): omitted to maintain stability as underlying data dependencies are already tracked
   const value: DatasetCollectionContextValue = useMemo(
     () => ({
@@ -220,7 +243,7 @@ export default function DatasetCollectionContextProvider({
       datasets,
       isLoading,
       fetchDatasets,
-      reloadDataset,
+      clearCacheAndReloadDataset,
       updateCachedDataset,
       activeFolderId,
       setActiveFolderId,
@@ -355,9 +378,9 @@ function useManagedUrlParams(
       // Use folderName-folderId in path or only folderId if name is empty (e.g., because
       // not loaded yet).
       // Don't use useNavigate because this would lose the input search
-      // focus.
+      // focus. Keep the existing history state, since react-router stores its own data there.
       window.history.replaceState(
-        {},
+        window.history.state,
         "",
         `/dashboard/datasets/${folderName}${folderName ? "-" : ""}${activeFolderId}`,
       );
@@ -383,9 +406,9 @@ function useManagedUrlParams(
       const paramStr = params.toString();
 
       // Don't use useNavigate because this would lose the input search
-      // focus.
+      // focus. Keep the existing history state, since react-router stores its own data there.
       window.history.replaceState(
-        {},
+        window.history.state,
         "",
         `/dashboard/datasets${paramStr === "" ? "" : "?"}${paramStr}`,
       );

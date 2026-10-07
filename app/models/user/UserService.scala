@@ -466,6 +466,7 @@ class UserService @Inject() (
       "lastName" -> multiUser.lastName,
       "isAdmin" -> user.isAdmin,
       "isDatasetManager" -> user.isDatasetManager,
+      "isActive" -> !user.isDeactivated,
       "isAnonymous" -> false,
       "teams" -> teamMembershipsJs
     )

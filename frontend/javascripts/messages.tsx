@@ -141,7 +141,7 @@ A reload is necessary to return to a valid state.`,
     "These snippets are pre-configured and contain your personal access token and <%- typeName %> meta data. Do not share this information with anyone you do not trust!",
   ),
   "download.export_as_tiff": template(
-    "Export your <%- typeName %> as TIFF images. Large exports may take a few minutes.",
+    "Export your <%- typeName %> as TIFF or OME-Zarr. Large exports may take a few minutes.",
   ),
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "data.enabled_render_missing_data_black":

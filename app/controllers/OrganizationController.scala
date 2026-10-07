@@ -259,6 +259,7 @@ class OrganizationController @Inject() (
     pricingPlan match {
       case PricingPlan.Team | PricingPlan.Team_Trial                            => "Team AI"
       case PricingPlan.Power | PricingPlan.Power_Trial | PricingPlan.Enterprise => "Power AI"
+      case PricingPlan.Enterprise                                               => "Enterprise AI"
       case _                                                                    => "AI Add-on"
     }
 

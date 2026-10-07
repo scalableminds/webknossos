@@ -95,7 +95,7 @@ Samplecountry
       additionalInformation,
       "/images/logo.svg",
       "Sample Organization",
-      PricingPlan.Enterprise,
+      PricingPlan.Power,
       Some(AiPlan.Power_AI),
       None,
       None,

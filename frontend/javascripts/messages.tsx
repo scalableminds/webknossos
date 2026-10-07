@@ -278,7 +278,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "webgl.context_recovery":
     "The WebGL context has been recovered. If you experience unusual behavior, consider reloading the page.",
   "webgl.too_many_active_layers": template(
-    "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the left sidebar settings.",
+    "Not all color layers of this dataset can be rendered simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> color layers are enabled in the left sidebar settings.",
   ),
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now annotating a new task with the following description",

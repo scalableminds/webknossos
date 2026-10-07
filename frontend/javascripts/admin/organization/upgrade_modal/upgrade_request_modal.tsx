@@ -38,7 +38,8 @@ import {
   type Selection,
 } from "./upgrade_request_items";
 
-const MAX_NOTE_LENGTH = 1000;
+// Matches UpgradeRequest.maxNoteLength in the backend.
+const MAX_NOTE_LENGTH = 10000;
 // Keeps custom amounts well within the backend's Int range.
 const MAX_CUSTOM_AMOUNT = 1_000_000;
 

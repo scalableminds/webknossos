@@ -19,5 +19,5 @@ case class UpgradeRequest(
 }
 
 object UpgradeRequest {
-  val maxNoteLength = 1000
+  val maxNoteLength = 10000
 }

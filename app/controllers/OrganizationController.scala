@@ -218,22 +218,19 @@ class OrganizationController @Inject() (
   private def canRequestAiAddon(organization: Organization, effectivePlan: PricingPlan.PricingPlan) =
     organization.aiPlan.isEmpty && PricingPlan.tierRank(effectivePlan) >= PricingPlan.tierRank(PricingPlan.Team)
 
-  private def pluralize(count: Int, singular: String): String =
-    s"$count $singular${if (count == 1) "" else "s"}"
-
   // Only the items that were actually requested are listed in the email.
   private def describeUpgradeRequest(upgradeRequest: UpgradeRequest, organization: Organization): Seq[String] = {
     val currentPlanLabel = PricingPlan.label(organization.pricingPlan)
     val effectivePlan = upgradeRequest.plan.getOrElse(organization.pricingPlan)
     Seq(
       upgradeRequest.plan.map(plan => s"Upgrade from $currentPlanLabel to ${PricingPlan.label(plan)} plan"),
-      upgradeRequest.users.map(users => pluralize(users, "additional user")),
+      upgradeRequest.users.map(users => formatCount(users, "additional user")),
       upgradeRequest.storageTB.map(storageTB => s"$storageTB TB additional storage"),
       Option.when(upgradeRequest.aiAddon.contains(true))(
         s"AI Add-on (${aiAddonLabelForPricingPlan(effectivePlan)})"
       ),
-      upgradeRequest.credits.map(credits => pluralize(credits, "WEBKNOSSOS credit")),
-      upgradeRequest.extendYears.map(years => s"Plan extension by ${pluralize(years, "year")}")
+      upgradeRequest.credits.map(credits => formatCount(credits, "WEBKNOSSOS credit")),
+      upgradeRequest.extendYears.map(years => s"Plan extension by ${formatCount(years, "year")}")
     ).flatten
   }
 

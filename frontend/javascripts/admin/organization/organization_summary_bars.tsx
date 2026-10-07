@@ -27,7 +27,6 @@ import UpgradePricingPlanModal from "./upgrade_plan_modal";
 import { useCanRequestUpgrades } from "./use_can_request_upgrades";
 
 const SPENDING_WINDOW_DAYS = 30;
-const LOW_BALANCE_RUNWAY_DAYS = 7;
 
 const summaryBarStyle: React.CSSProperties = {
   background: "var(--ant-color-bg-container)",
@@ -42,8 +41,6 @@ type CreditSummary = {
   // null when the organization has no credit account.
   milliCreditBalance: number | null;
   milliCreditsSpent: number;
-  runwayDays: number | null;
-  isLow: boolean;
 };
 
 function useCreditSummary(transactions: APICreditTransaction[]): CreditSummary {
@@ -56,25 +53,8 @@ function useCreditSummary(transactions: APICreditTransaction[]): CreditSummary {
     const netJobCreditChange = transactions
       .filter((transaction) => transaction.paidJob != null && transaction.createdAt >= windowStart)
       .reduce((sum, transaction) => sum + transaction.creditChange, 0);
-    const milliCreditsSpent = Math.max(0, -netJobCreditChange);
-    if (milliCreditBalance == null) {
-      return { milliCreditBalance, milliCreditsSpent, runwayDays: null, isLow: false };
-    }
-    const runwayDays =
-      milliCreditsSpent > 0
-        ? milliCreditBalance / (milliCreditsSpent / SPENDING_WINDOW_DAYS)
-        : null;
-    const isLow =
-      milliCreditBalance <= 0 || (runwayDays != null && runwayDays <= LOW_BALANCE_RUNWAY_DAYS);
-    return { milliCreditBalance, milliCreditsSpent, runwayDays, isLow };
+    return { milliCreditBalance, milliCreditsSpent: Math.max(0, -netJobCreditChange) };
   }, [transactions, milliCreditBalance]);
-}
-
-function formatRunway(runwayDays: number | null): string {
-  if (runwayDays == null) return "—";
-  if (runwayDays < 1) return "<1 day";
-  const days = Math.round(runwayDays);
-  return `~${days} ${pluralize("day", days)}`;
 }
 
 function SummaryStat({
@@ -106,8 +86,7 @@ export function CreditActivitySummaryBar({
 }: {
   transactions: APICreditTransaction[];
 }) {
-  const { milliCreditBalance, milliCreditsSpent, runwayDays, isLow } =
-    useCreditSummary(transactions);
+  const { milliCreditBalance, milliCreditsSpent } = useCreditSummary(transactions);
   const canRequestUpgrades = useCanRequestUpgrades();
 
   return (
@@ -115,7 +94,7 @@ export function CreditActivitySummaryBar({
       style={{
         ...summaryBarStyle,
         display: "grid",
-        gridTemplateColumns: "repeat(3, minmax(0, 1fr)) auto",
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr)) auto",
         alignItems: "center",
       }}
     >
@@ -124,17 +103,14 @@ export function CreditActivitySummaryBar({
         <span style={summaryValueStyle}>
           {milliCreditBalance != null ? formatMilliCreditsString(milliCreditBalance) : "N/A"}
         </span>
-        {isLow ? (
+        {milliCreditBalance != null && milliCreditBalance <= 0 ? (
           <Typography.Text type="warning" style={{ fontSize: 13 }}>
             Low
           </Typography.Text>
         ) : null}
       </SummaryStat>
-      <SummaryStat label={`Spent, last ${SPENDING_WINDOW_DAYS} days`} hasDivider>
+      <SummaryStat label={`Spent, last ${SPENDING_WINDOW_DAYS} days`}>
         <span style={summaryValueStyle}>{formatMilliCreditsString(milliCreditsSpent)}</span>
-      </SummaryStat>
-      <SummaryStat label="Balance runs out in">
-        <span style={summaryValueStyle}>{formatRunway(runwayDays)}</span>
       </SummaryStat>
       <div style={summaryCellStyle}>
         {canRequestUpgrades ? (

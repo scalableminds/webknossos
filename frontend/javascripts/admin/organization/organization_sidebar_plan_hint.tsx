@@ -23,9 +23,10 @@ type SidebarPlanHint =
 
 function getSidebarPlanHint(organization: APIOrganization): SidebarPlanHint | null {
   const daysLeft = getDaysUntilPlanExpires(organization);
+  // Expired plans (0 days left) are included, so they get the extension hint rather than another offer.
   if (
     daysLeft != null &&
-    daysLeft > 0 &&
+    organization.pricingPlan !== PricingPlanEnum.Personal &&
     (isTrialPlan(organization.pricingPlan) || daysLeft <= PLAN_EXPIRATION_REMINDER_DAYS)
   ) {
     return { kind: "planExpiring", daysLeft };
@@ -102,6 +103,19 @@ function PlanExpiringHintCard({ daysLeft }: { daysLeft: number }) {
   const planLabel = isTrialPlan(organization.pricingPlan) ? "Trial" : "Plan";
   const basePlan = getBasePricingPlan(organization.pricingPlan);
   const featuresLabel = basePlan === PricingPlanEnum.Custom ? "your plan's" : basePlan;
+  const extendPlan = () => UpgradePricingPlanModal.extendPricingPlan(modal, organization);
+
+  if (daysLeft === 0) {
+    return (
+      <PlanHintCard
+        title={`${planLabel} expired`}
+        description={`Extend it to get ${featuresLabel} features back.`}
+        actionLabel="Extend Plan"
+        onAction={extendPlan}
+      />
+    );
+  }
+
   // The progress bar fills up over the reminder window, not the whole (unknown) plan duration.
   const elapsedDays = Math.max(0, PLAN_EXPIRATION_REMINDER_DAYS - daysLeft);
 
@@ -111,7 +125,7 @@ function PlanExpiringHintCard({ daysLeft }: { daysLeft: number }) {
       progressPercent={(elapsedDays / PLAN_EXPIRATION_REMINDER_DAYS) * 100}
       description={`Keep ${featuresLabel} features after ${dayjs(organization.paidUntil).format("D MMM")}.`}
       actionLabel="Extend Plan"
-      onAction={() => UpgradePricingPlanModal.extendPricingPlan(modal, organization)}
+      onAction={extendPlan}
     />
   );
 }

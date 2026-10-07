@@ -14,7 +14,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
-import { App, Input, Space, Spin, Table, Tooltip } from "antd";
+import { App, Input, Space, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
@@ -606,7 +606,7 @@ function JobListView() {
             render={(job: APIJob) => (
               <>
                 <div>{`${job.ownerLastName}, ${job.ownerFirstName}`}</div>
-                <div>{`(${job.ownerEmail})`}</div>
+                <Typography.Text type="secondary">{job.ownerEmail}</Typography.Text>
               </>
             )}
           />

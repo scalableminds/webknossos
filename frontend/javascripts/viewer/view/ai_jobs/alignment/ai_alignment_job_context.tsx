@@ -10,6 +10,14 @@ import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import { getBoundingBoxesForLayers } from "viewer/view/ai_jobs/utils";
+import {
+  collectRequirements,
+  EMPTY_FORM_VALIDATION_STATE,
+  type FormValidationState,
+  isFormValid,
+  type JobRequirement,
+  type StepStatus,
+} from "../components/job_requirements";
 import type { AlignmentTask } from "./ai_alignment_model_selector";
 
 // Maximum jump size (in voxels) that fine alignment is assumed to have to bridge. This defines the
@@ -28,9 +36,12 @@ interface AlignmentJobContextType {
   setShouldUseManualMatches: (shouldUseManualMatches: boolean) => void;
   customConfiguration: KeyValuePairs;
   setCustomConfiguration: (config: KeyValuePairs) => void;
+  setSettingsFormState: (state: FormValidationState) => void;
   fineAlignmentOnly: boolean;
   setFineAlignmentOnly: (fineAlignmentOnly: boolean) => void;
   areParametersValid: boolean;
+  requirements: JobRequirement[];
+  stepStatuses: { task: StepStatus; settings: StepStatus };
 }
 
 const AlignmentJobContext = createContext<AlignmentJobContextType | undefined>(undefined);
@@ -42,6 +53,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
   const [newDatasetName, setNewDatasetName] = useState("");
   const [shouldUseManualMatches, setShouldUseManualMatches] = useState(false);
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
+  const [settingsFormState, setSettingsFormState] = useState(EMPTY_FORM_VALIDATION_STATE);
   const [fineAlignmentOnly, setFineAlignmentOnly] = useState(false);
   const dispatch = useDispatch();
 
@@ -64,18 +76,37 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     refreshOrganizationCredits();
   }, []);
 
-  const areParametersValid = useMemo(
-    () => Boolean(selectedTask?.jobType && newDatasetName),
-    [selectedTask, newDatasetName],
+  const requirements = useMemo(
+    () =>
+      collectRequirements(
+        [
+          { label: "Select an alignment task", isMissing: !selectedTask?.jobType },
+          {
+            label: "Enter a new dataset name",
+            isMissing: !newDatasetName,
+            field: "newDatasetName",
+          },
+        ],
+        settingsFormState,
+      ),
+    [selectedTask, newDatasetName, settingsFormState],
   );
 
+  const areParametersValid = requirements.length === 0;
+  const stepStatuses = {
+    task: selectedTask ? "done" : "pending",
+    settings: newDatasetName && isFormValid(settingsFormState) ? "done" : "pending",
+  } as const;
+
   const handleStartAnalysis = useCallback(async () => {
+    const manualMatchesAnnotationId = shouldUseManualMatches ? annotationId : undefined;
+
     try {
       await startAlignSectionsJob(
         dataset.id,
         colorLayer.name,
         newDatasetName,
-        shouldUseManualMatches ? annotationId : undefined,
+        manualMatchesAnnotationId,
         customConfiguration,
         fineAlignmentOnly ? FINE_ALIGNMENT_MAX_JUMP_SIZE : undefined,
       );
@@ -108,9 +139,12 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     setShouldUseManualMatches,
     customConfiguration,
     setCustomConfiguration,
+    setSettingsFormState,
     fineAlignmentOnly,
     setFineAlignmentOnly,
     areParametersValid,
+    requirements,
+    stepStatuses,
   };
 
   return <AlignmentJobContext.Provider value={value}>{children}</AlignmentJobContext.Provider>;

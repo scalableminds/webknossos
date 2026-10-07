@@ -72,7 +72,7 @@ Right-click a bounding box for additional actions:
 
 - **Register all segments in this bounding box:** Registers every segment located within the box and moves them into a new group in the [`Segments` tab](../volume_annotation/segments_list.md). This is a quick way to collect all segments of a region at once.
 - **Go to center:** Centers the viewports on the middle of the box.
-- **Export data:** Exports the data within the box (for example as a TIFF stack); see [exporting through the UI](../data/export_ui.md). This runs as a [long-running job](../automation/jobs.md) and may be unavailable on deployments without a worker.
+- **Export data:** Exports the data within the box (as TIFF or OME-Zarr); see [exporting through the UI](../data/export_ui.md). This runs as a [long-running job](../automation/jobs.md) and may be unavailable on deployments without a worker.
 
 ### Finding a Bounding Box
 

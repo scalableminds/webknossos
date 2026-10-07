@@ -388,7 +388,7 @@ class AuthenticationController @Inject() (
         bogusForm => Fox.failure(bogusForm.toString),
         formEmail =>
           for {
-            resultBox <- sendResetPasswordMail(formEmail.toLowerCase).shiftBox
+            _ <- sendResetPasswordMail(formEmail.toLowerCase).shiftBox
             // We send Ok even if the Box is not Full! This is not to leak existing account info via this route.
           } yield Ok
       )

@@ -645,7 +645,7 @@ Adding a tool means adding an `EditIntent` variant and one producer case — not
 - **Byte order.** Reinterpreting wider typed arrays as bytes is platform-endian-dependent; a byte array has one unambiguous meaning across a worker or WASM boundary.
 - **Simplicity at the producer.** One byte per voxel is what a thresholded model output looks like anyway, and it spares every tool author the bit-packing convention.
 
-The cost is 8× the memory of a packed bitset — 256 KB rather than 32 KB for a `512×512` patch — and it is paid only transiently, by tools that fire once per click rather than once per pointer-move. Packing it is a straightforward later optimization (§11.2) that touches only the producers and the mask-to-write-set conversion.
+The cost is 8× the memory of a packed bitset — 256 KB rather than 32 KB for a `512×512` patch — and it is paid only transiently, by tools that fire once per click rather than once per pointer-move. Packing it is a straightforward later optimization (§11.3) that touches only the producers and the mask-to-write-set conversion.
 
 #### Two producers, one output
 
@@ -1302,7 +1302,9 @@ Encoding notes:
 
 **Why runs, specifically.** Worth writing down, because the obvious justification is the wrong one and the alternatives are better than they first look.
 
-*Not* for the compression ratio. The transport is compressed anyway, and gzip is excellent at exactly the shape run records have — near-identical structs with starts in arithmetic progression. Any argument for runs that rests on pre-compression byte counts is an argument against a straw man.
+*Not* for the compression ratio on the wire. Save requests are gzipped in production, and gzip should do well on run records — near-identical structs with starts in arithmetic progression — so for the transport, an argument from pre-compression byte counts is weak.
+
+It is not weak for storage. Each update group is persisted in FossilDB (`annotationUpdates`) as JSON, with the payload base64-encoded inside, and nothing at the application level compresses it. Payloads are kept for every version, so raw size does matter there. How much is unmeasured, and so is how well a general-purpose compressor does on run records: `updateBucketPartial` in `update_actions.ts` assumes LZ4 would gain little and skips it. §11.2 lists the format changes worth measuring.
 
 The real comparison is against three specific alternatives:
 
@@ -1311,8 +1313,8 @@ The real comparison is against three specific alternatives:
 - **Compressing the in-memory representation.** Also viable, and not hypothetical: `frontend/javascripts/viewer/model/bucket_data_handling/bucket_snapshot.ts` does exactly this today, gzipping bucket clones for undo snapshots. The cost is not CPU but **asynchrony** — encode and decode become promises, and that file's comments document the resulting race conditions and redundant-compression caveats. Runs are small enough to keep uncompressed, so `rebuild` (§5.7) stays a tight synchronous fold and log entries stay directly inspectable.
 
 What is left, once the size argument is discarded, is narrow but solid: runs are the rasterizer's **native output** (it emits scanline spans, so no conversion step exists in either direction), they need no materialization, they stay synchronous in memory, and both client and backend **apply them as range writes** rather than decompressing a blob and scattering per voxel.
-- **Runs are runs along x**, because the flat index is `x + y·32 + z·1024`. XY and XZ strokes both scan along x and encode well. A YZ stroke (x constant) is the one bad case: y steps by 32 and z by 1024, so every run degenerates to length 1 — a radius-10 disk becomes ~314 runs instead of ~20. See §11 if that turns out to matter.
-- **Block fills encode compactly**, which is part of what makes coarse-mag editing viable: the upsample of one mag-16 voxel into a finest-mag bucket is a solid `16×16×16` block, i.e. 256 runs of length 16 — about 1 KB against 256 KB for the full bucket. Note runs cannot merge across rows (§4), so a *fully* written bucket costs 1024 runs (4 KB) rather than one; §11.1 is the lever if that ever matters.
+- **Runs are runs along x**, because the flat index is `x + y·32 + z·1024`. XY and XZ strokes both scan along x and encode well. A YZ stroke (x constant) is the one bad case: y steps by 32 and z by 1024, so every run degenerates to length 1 — a radius-10 disk becomes ~314 runs instead of ~20. See §11.1 and §11.2 if that turns out to matter.
+- **Block fills encode compactly**, which is part of what makes coarse-mag editing viable: the upsample of one mag-16 voxel into a finest-mag bucket is a solid `16×16×16` block, i.e. 256 runs of length 16 — about 1 KB against 256 KB for the full bucket. Note runs cannot merge across rows (§4), so a *fully* written bucket costs 1024 runs (4 KB) rather than one; §11.1 and §11.2 are the levers if that ever matters.
 - **base64 is a transport artifact, not part of the format.** `runs` is a `Uint8Array` everywhere it is built, stored in the log, and applied. It becomes a string only at the JSON boundary, because the update stream is a heterogeneous array of JSON actions and JSON cannot carry binary. Apply it last, after compression, as `wkstore_adapter.ts` does today (LZ4 in a worker, then base64) — the 33% expansion then lands on an already-compressed payload rather than on the raw bytes. If the update stream ever moves to a binary framing (multipart, CBOR, protobuf), the base64 step disappears and nothing else about the format changes.
 - **One action per touched bucket; one versioned group per transaction.** This gives the backend (and later, other clients) the transaction boundary explicitly instead of making it infer grouping from timing.
 - **Ordering and idempotency.** Transactions are submitted in `sequence` order and are idempotent on retry, so a reconnect can safely resend the tail of the queue.
@@ -1696,11 +1698,36 @@ This is preferable to the more obvious fix of adding a **stride** to each run (`
 
 The degenerate case of `BOX_MASK` — box = the whole bucket — is just "a `32³` bitmask plus one value", the alternative weighed in §5.8. It is a fixed 4 KB and therefore beats runs for densely-written buckets while losing badly for lightly-grazed ones. Letting the encoder choose per bucket is what makes the two complementary rather than competing.
 
-Measure first. The transport is compressed, and 314 near-identical records with starts in arithmetic progression compress extremely well, so the gap after gzip is likely far smaller than the raw numbers suggest. Raw size matters more in the in-memory undo log — but note that compressing *there* is also possible (`bucket_snapshot.ts` does it today) at the cost of making access asynchronous, so the comparison is against that complexity rather than against nothing.
+Measure first. The transport is compressed, and 314 near-identical records with starts in arithmetic progression compress extremely well, so on the wire the gap after gzip is likely far smaller than the raw numbers suggest. Raw size matters more where nothing compresses it: in FossilDB, where update groups are stored uncompressed (§5.8), and in the in-memory undo log — but note that compressing *there* is also possible (`bucket_snapshot.ts` does it today) at the cost of making access asynchronous, so the comparison is against that complexity rather than against nothing.
 
 Note this does not help the CPU side: filling the mask for a YZ stroke is bit-at-a-time, because `markRun`'s word-fill only applies along x (§4). For a brush dab that is a few hundred OR operations — negligible, and O(voxels) either way.
 
-### 11.2 Pack `MaskShape.selected` into a bitset
+### 11.2 Varint gaps, merged runs and a per-bucket axis order
+
+A variant of the run format (§5.8) that stays a run list but encodes it more tightly:
+
+```
+uint8   formatVersion
+uint8   axisOrder          // fastest-varying axis: x, y or z
+uint64  value
+varint  runCount
+repeat runCount times:
+  varint  gap              // voxels between the previous run's end and this run's start
+  varint  length           // runs may cross rows and slices
+```
+
+- **Varints.** Gap and length usually fit into one byte each, so a typical brush run costs 2 B instead of 4 B.
+- **Merged runs.** With relative gaps and unbounded lengths, a run may cross row and slice boundaries, so a fully written bucket is one run instead of 1024. Merge only when encoding; mag propagation keeps working with per-row runs (§4). This helps less than it seems for the common mag-16 upsample: a `16³` block covers half of each row, so the gaps still separate the rows. There, the gain comes from the varints.
+- **Axis order.** Fixes the YZ case (§5.8) without §11.1's sub-box: with y or z as the fast axis, a YZ stroke gets the same run counts as an XY stroke. Take the axis from the brush's viewport plane rather than trying all three orders — `BucketVoxelMask` stores x-rows as words, so extracting y- or z-ordered runs is bit by bit. It does not help block fills, which come from mag propagation, where x order is already the best. The backend's `applyVoxelRuns` maps each run back to bucket indices for the given order.
+- **Run count.** Kept as a varint (1–2 B) instead of ending at the end of the buffer, so that a truncated buffer fails to decode rather than decoding into a shorter diff that looks valid.
+
+Compared with §11.1, this is a smaller change to the existing decoder. It covers brush strokes and the YZ case, while §11.1 covers block fills. The two do not exclude each other: with a version byte, the encoder can choose per bucket.
+
+**Add the version byte before payloads are stored in production,** whatever is chosen here. Update groups stay in FossilDB permanently and have to remain decodable; without a version byte, every later change to the format needs some other way to mark itself, such as a new action name. The version byte is also what §11.1's shape header would be.
+
+Measure first, and against the simplest alternative too: compressing the existing payload before base64, as `updateBucket` does with LZ4. That is the least code, and may get most of the gain from varints and merged runs.
+
+### 11.3 Pack `MaskShape.selected` into a bitset
 
 `MaskShape` carries one byte per voxel (§5.1), which is 8× a packed bitset — 256 KB rather than 32 KB for a `512×512` patch, and 16 MB rather than 2 MB for a `256³` volume patch. Simplicity was chosen over density because the format is an interchange boundary: byte arrays impose no alignment constraint on the producer, have unambiguous byte order across worker and WASM boundaries, and match what a thresholded model output already looks like.
 
@@ -1711,7 +1738,7 @@ Packing it is a contained change — the producers, and the loop that converts a
 
 Worth doing when a tool starts producing large 3D patches. For the 2D patches quick-select emits today, the absolute numbers are small and transient — the mask is discarded as soon as it becomes a write set.
 
-### 11.3 Others, tracked in §10
+### 11.4 Others, tracked in §10
 
 Two further performance items are open questions rather than designed improvements, and are listed in §10: keeping the upsample fully symbolic to flatten the commit-time spike on coarse-mag strokes, and moving the rasterizer into a Web Worker.
 

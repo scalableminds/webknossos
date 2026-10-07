@@ -21,14 +21,7 @@ class DataLayer {
   fallbackLayerInfo: DataLayerType | null | undefined;
   isSegmentation: boolean;
 
-  constructor(
-    layerInfo: DataLayerType,
-    textureWidth: number,
-    dataTextureCount: number,
-    tracingId: string,
-    bucketCapacity: number,
-    totalLayerCount: number,
-  ) {
+  constructor(layerInfo: DataLayerType, tracingId: string, totalLayerCount: number) {
     this.name = layerInfo.name;
     this.fallbackLayer =
       "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
@@ -62,14 +55,7 @@ class DataLayer {
       this.mappings = new Mappings(layerInfo.name);
     }
 
-    this.layerRenderingManager = new LayerRenderingManager(
-      this.name,
-      this.pullQueue,
-      this.cube,
-      textureWidth,
-      dataTextureCount,
-      bucketCapacity,
-    );
+    this.layerRenderingManager = new LayerRenderingManager(this.name, this.pullQueue, this.cube);
   }
 
   destroy() {

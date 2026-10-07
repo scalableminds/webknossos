@@ -33,7 +33,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_1"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_1",
@@ -42,7 +41,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_2",
@@ -79,7 +77,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_1"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_1",
@@ -88,7 +85,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_2",
@@ -97,7 +93,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["segmentationLayer"]: {
             isColor: true,
             packingDegree: 1.0,
-            dataTextureCount: 4,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "segmentationLayer",
@@ -130,7 +125,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_1"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_1",
@@ -139,7 +133,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_2",
@@ -148,7 +141,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["segmentationLayer"]: {
             isColor: true,
             packingDegree: 1.0,
-            dataTextureCount: 4,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "segmentationLayer",
@@ -178,7 +170,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_1"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_1",
@@ -187,7 +178,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_2",
@@ -196,7 +186,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["segmentationLayer"]: {
             isColor: false,
             packingDegree: 1.0,
-            dataTextureCount: 4,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "segmentationLayer",
@@ -227,7 +216,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_1"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_1",
@@ -236,7 +224,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_2",
@@ -266,7 +253,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_1"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_1",
@@ -275,7 +261,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_2",
@@ -284,7 +269,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["segmentationLayer"]: {
             isColor: false,
             packingDegree: 1.0,
-            dataTextureCount: 4,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "segmentationLayer",
@@ -314,7 +298,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_1"]: {
             isColor: true,
             packingDegree: 1.0,
-            dataTextureCount: 1,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_1",
@@ -323,7 +306,6 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
-            dataTextureCount: 2,
             isSigned: false,
             glslPrefix: "",
             unsanitizedName: "color_layer_2",

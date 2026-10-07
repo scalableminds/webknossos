@@ -11,6 +11,10 @@ import constants, {
   PLANE_SUBDIVISION,
   ViewModeValuesIndices,
 } from "viewer/constants";
+import {
+  getLayerPoolForElementClass,
+  LAYER_POOL_SAMPLERS,
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { MAPPING_TEXTURE_WIDTH } from "viewer/model/bucket_data_handling/mappings";
 import {
@@ -58,7 +62,6 @@ export type Params = {
     string,
     {
       packingDegree: number;
-      dataTextureCount: number;
       isSigned: boolean;
       glslPrefix: "" | "i" | "u";
       elementClass: ElementClass;
@@ -103,8 +106,12 @@ uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
 uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
+// One texture array per pool (see LayerPool in data_rendering_logic.ts).
+<% each(layerPoolSamplers, function(sampler) { %>
+  uniform highp <%= sampler.glslType %> <%= sampler.uniformName %>;
+<% }) %>
+
 <% each(layerNamesWithSegmentation, function(name) { %>
-  uniform highp <%= textureLayerInfos[name].glslPrefix %>sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
   uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_gammaCorrectionValue;
@@ -431,6 +438,9 @@ void main() {
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
+    layerPoolSamplers: Object.values(LAYER_POOL_SAMPLERS),
+    getPoolSamplerName: (elementClass: ElementClass) =>
+      LAYER_POOL_SAMPLERS[getLayerPoolForElementClass(elementClass)].uniformName,
     vertexAlignmentLayerCap: Math.max(
       1,
       Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
@@ -655,6 +665,9 @@ void main() {
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
+    layerPoolSamplers: Object.values(LAYER_POOL_SAMPLERS),
+    getPoolSamplerName: (elementClass: ElementClass) =>
+      LAYER_POOL_SAMPLERS[getLayerPoolForElementClass(elementClass)].uniformName,
     vertexAlignmentLayerCap: Math.max(
       1,
       Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),

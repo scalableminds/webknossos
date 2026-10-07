@@ -72,11 +72,13 @@ function ExperienceModalView({
     // adds the number of users with this domain (sharedByCount) to all domains
     const allDomainsWithCount = allDomains.map((domain) => ({
       domain,
-      sharedByCount: users.filter((user) => domain in user.experiences).length,
+      sharedByCount: users.filter((user) => Object.hasOwn(user.experiences, domain)).length,
     }));
     // create a table entry for each domain
     const tableEntries = allDomainsWithCount.map((entry) => {
-      const usersValues = users.map((user) => user.experiences[entry.domain]);
+      const usersValues = users.map((user) =>
+        Object.hasOwn(user.experiences, entry.domain) ? user.experiences[entry.domain] : undefined,
+      );
 
       const minVal = min(usersValues);
 

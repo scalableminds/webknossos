@@ -277,31 +277,15 @@ export function* refreshAffectedMeshes(layerName: string, items: AgglomerateChan
   // adapted.
   const additionalCoordinates = undefined;
 
-  // Capture the opacity and visibility of all old meshes up front, i.e. before any of them are
-  // removed below, so that reloaded meshes keep the user-chosen opacity and visibility. This must
-  // happen before the removal loop because removing one item's old mesh must not prevent another
-  // item from reading the original properties.
-  const displayPropsByOldAgglomerateId = yield* call(
-    getMeshDisplayPropsByOldAgglomerateId,
-    layerName,
-    items.map((item) => item.oldAgglomerateId),
-    additionalCoordinates,
-  );
-
   // Remember which meshes were removed in this saga
   // and which were fetched again to avoid doing redundant work.
   const removedIds = new Set();
   const newlyLoadedIds = new Set();
   const meshLoadingEffects = [];
   for (const item of items) {
-    // Opacity and visibility are either passed in explicitly (e.g. by the rebasing saga, which
-    // removes the old mesh before this saga runs) or taken from the old mesh captured above.
-    const oldDisplayProps =
-      item.oldAgglomerateId != null
-        ? displayPropsByOldAgglomerateId.get(item.oldAgglomerateId)
-        : undefined;
-    const opacity = item.opacity ?? oldDisplayProps?.opacity;
-    const isVisible = item.isVisible ?? oldDisplayProps?.isVisible;
+    // The callers already took the opacity and visibility from the old meshes before removing
+    // them (see AgglomerateChangeItem).
+    const { opacity, isVisible } = item;
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
     if (item.oldAgglomerateId && !removedIds.has(item.oldAgglomerateId)) {
       yield* put(removeMeshAction(layerName, item.oldAgglomerateId));

@@ -39,9 +39,9 @@ export type PreservedMeshDisplayProps = {
 // A single old-agglomerate-id -> new-agglomerate-id change that a proofreading action (or
 // incorporating a foreign one) produces. segment_and_mesh_refresh_sagas.ts uses it to update the
 // segment items and to refresh the affected meshes.
-// Opacity and visibility to apply to the reloaded mesh. If unset, the values of the old
-// mesh (oldAgglomerateId) are used before its removal (see refreshAffectedMeshes in
-// segment_and_mesh_refresh_sagas.ts).
+// Opacity and visibility to apply to the reloaded mesh. The callers take them from the old mesh
+// before it is removed: refreshProofreadingSegmentsAndMeshes for the user's own proofreading
+// actions and incorporate_update_actions_sagas.tsx for foreign ones.
 export type AgglomerateChangeItem = {
   oldAgglomerateId?: bigint;
   newAgglomerateId: bigint;

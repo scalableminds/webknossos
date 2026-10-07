@@ -13,7 +13,6 @@ object Msg {
   val zipFileNotFound: String = "No or invalid zip file specified."
   val notAllowed: String = "You are not authorized to view or edit this resource."
   val notFound: String = "Could not find or access the requested resource."
-  val invalidJson: String = "Invalid json format."
   object AgglomerateGraph {
     val failed: String = "Could not look up an agglomerate graph for requested agglomerate."
   }
@@ -57,7 +56,6 @@ object Msg {
     val publicWritesFailed: String = "Could not convert annotation to json."
     val sandboxSkeletonOnly: String = "Sandbox annotations are currently available as skeleton only."
     val createFailed: String = "Could not create annotation."
-    val createForbidden: String = "You do not have permission to create annotations for this dataset."
     val createTracingsFailed: String = "Could not set up annotation layers."
     val finishFailed: String = "Could not finish/archive the annotation."
     val finished: String = "Annotation is archived."
@@ -454,8 +452,6 @@ object Msg {
         "Dataset is marked as usable but has no voxel size."
       val noBoundingBox: String =
         "Dataset has no bounding box. Please make sure this dataset is imported correctly."
-      val alreadyPresent: String =
-        "A datasource-properties.json file already exists at the target location."
       val updateFileFailed: String = "Could not update datasource-properties.json file."
       val addPathsNotAllowed: String =
         "Cannot directly add a data source with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths."
@@ -562,7 +558,6 @@ object Msg {
       val setUploaderForbidden: String = "No permission to set uploader for this dataset."
       val validationFailed: String = "Could not validate dataset information for upload."
       val magUploadOnlyVirtual: String = "Adding mags to existing datasets is only allowed for virtual datasets."
-      val magAlreadyPending: String = "This mag is already pending."
       val magNotPending: String = "This mag is not marked as pending."
       val attachmentNotPending: String = "This attachment is not marked as pending."
       val magPathNotSet: String = "Mag path is required in upload."
@@ -755,7 +750,6 @@ object Msg {
     def notFound(id: ObjectId): String = s"Team “$id” could not be found or accessed."
     def inUseByProjects(count: Int): String = s"Team is referenced by $count projects."
     def inUseByTaskTypes(count: Int): String = s"Team is referenced by $count task types."
-    def inUseByAnnotations(count: Int): String = s"Team is referenced by $count annotations."
     def adminNotPossibleBy(teamName: String, userName: String): String =
       s"User “$userName” cannot be assigned administrative rights in team “$teamName” because they are not in the same organization."
     val deleteSuccess: String = "Team was successfully deleted."
@@ -866,7 +860,6 @@ object Msg {
   }
   object Image {
     val createFailed: String = "Could not create 2d image from underlying image data."
-    val pageFailed: String = "Could not get page from 2d image sprite sheet."
   }
   object TimeTracking {
     val invalidTeamIds: String = "Invalid team ids."

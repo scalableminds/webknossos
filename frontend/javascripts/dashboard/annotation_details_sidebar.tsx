@@ -5,7 +5,7 @@ import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import { Space, Spin, Tag, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FastTooltip from "components/fast_tooltip";
-import FormattedDate, { isToday } from "components/formatted_date";
+import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import { stringToTagColor } from "libs/colors";
 import { mayUserEditDataset } from "libs/utils";
@@ -170,21 +170,10 @@ function AnnotationDetails({
         </SidebarSection>
       ) : null}
       <SidebarSection label="Created">
-        <span>
-          <FormattedDate timestamp={annotation.created} />
-          {annotation.modified - annotation.created > 60 * 1000 ? (
-            <Typography.Text type="secondary">
-              {" "}
-              (modified{" "}
-              <FormattedDate
-                timestamp={annotation.modified}
-                // If both dates are today, the time alone is unambiguous.
-                includeTodayLabel={!isToday(annotation.created)}
-              />
-              )
-            </Typography.Text>
-          ) : null}
-        </span>
+        <FormattedDate timestamp={annotation.created} />
+      </SidebarSection>
+      <SidebarSection label="Last Modified">
+        <FormattedDate timestamp={annotation.modified} />
       </SidebarSection>
       <SidebarSection label="ID">
         <Tag variant="outlined">

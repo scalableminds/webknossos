@@ -149,8 +149,6 @@ class ThumbnailService @Inject() (
           zoom,
           mag1Width,
           mag1Height,
-          width,
-          height,
           hasColorLayers
         )
       )
@@ -227,8 +225,6 @@ class ThumbnailService @Inject() (
       zoom: Double,
       mag1Width: Int,
       mag1Height: Int,
-      outputWidth: Int,
-      outputHeight: Int,
       hasColorLayers: Boolean
   ): DatasetThumbnailLayerParameters = {
     val isSegmentation = layer.category == LayerCategory.segmentation
@@ -238,8 +234,8 @@ class ThumbnailService @Inject() (
     val opacity = readOpacity(viewConfiguration, layer.name, isSegmentation, hasColorLayers)
     // Each layer may pick a different native mag (e.g. if it lacks a mag the other layers have), but
     // mag1Width/mag1Height (the physical area covered) are fixed and shared across all layers, so the
-    // target-mag voxel counts fetched here differ instead. The datastore resizes the result to
-    // (outputWidth, outputHeight) before compositing, so this stays pixel-aligned across layers.
+    // target-mag voxel counts fetched here differ instead. The datastore resizes the result to the
+    // request's output size before compositing, so this stays pixel-aligned across layers.
     val mag = magForZoom(layer, zoom)
     val targetMagWidth = math.max(1, mag1Width / mag.x)
     val targetMagHeight = math.max(1, mag1Height / mag.y)

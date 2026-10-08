@@ -23,7 +23,7 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging {
       byteRange: ByteRange = ByteRange.complete
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      (bytes, encoding, rangeHeader) <- dataVault.readBytesPlusEncodingAndRangeHeader(
+      (bytes, encoding, _) <- dataVault.readBytesPlusEncodingAndRangeHeader(
         this,
         byteRange
       ) ?-> "Failed to read from vault path"

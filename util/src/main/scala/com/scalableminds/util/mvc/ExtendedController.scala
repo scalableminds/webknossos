@@ -205,7 +205,7 @@ trait ValidationHelpers {
 }
 
 trait RequestTokenHelper {
-  implicit def tokenContextForRequest(implicit request: Request[Any]): TokenContext =
+  implicit protected def tokenContextForRequest(implicit request: Request[Any]): TokenContext =
     TokenContext(request.target.getQueryParameter("token").orElse(request.headers.get("X-Auth-Token")))
 }
 

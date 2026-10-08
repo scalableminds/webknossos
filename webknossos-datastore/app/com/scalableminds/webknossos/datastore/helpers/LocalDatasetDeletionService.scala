@@ -13,7 +13,6 @@ class LocalDatasetDeletionService @Inject() extends LazyLogging with DirectoryCo
   def moveToTrash(
       datasetId: ObjectId,
       path: Path,
-      organizationId: String,
       directoryName: String,
       reason: Option[String] = None
   ): Box[Unit] =

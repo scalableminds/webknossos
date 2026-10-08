@@ -74,7 +74,6 @@ import {
   getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
 import {
-  findTreeByNodeId,
   getActiveNode,
   getActiveTree,
   getActiveTreeGroup,
@@ -137,6 +136,7 @@ import {
   centerActiveNodeAction,
   createCommentAction,
   createTreeAction,
+  deleteCommentAction,
   deleteNodeAction,
   deleteTreeAction,
   resetSkeletonTracingAction,
@@ -431,27 +431,47 @@ class TracingApi {
   }
 
   /**
-   * Sets the comment for a node.
+   * Sets the comment for a node. Passing an empty string deletes the comment.
    *
    * @example
    * const activeNodeId = api.tracing.getActiveNodeId();
    * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
    */
   setCommentForNode(commentText: string, nodeId: number, treeId?: number): void {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
     assertExists(commentText, "Comment text is missing.");
+    if (commentText === "") {
+      this.deleteCommentForNode(nodeId, treeId);
+      return;
+    }
+    const tree = this._getTreeOfNode(nodeId, treeId);
+    Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
+  }
 
-    // Convert nodeId to node
-    if (isNumber(nodeId)) {
-      const tree =
-        treeId != null
-          ? skeletonTracing.trees.getNullable(treeId)
-          : findTreeByNodeId(skeletonTracing.trees, nodeId);
-      assertExists(tree, `Couldn't find node ${nodeId}.`);
-      Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
-    } else {
+  /**
+   * Deletes the comment of a node.
+   *
+   * @example
+   * const activeNodeId = api.tracing.getActiveNodeId();
+   * api.tracing.deleteCommentForNode(activeNodeId);
+   */
+  deleteCommentForNode(nodeId: number, treeId?: number): void {
+    const tree = this._getTreeOfNode(nodeId, treeId);
+    Store.dispatch(deleteCommentAction(nodeId, tree.treeId));
+  }
+
+  _getTreeOfNode(nodeId: number, treeId?: number): Tree {
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
+    if (!isNumber(nodeId)) {
       throw new Error("Node id is missing.");
     }
+    const treeAndNode = getTreeAndNode(skeletonTracing, null, nodeId, treeId);
+    assertExists(
+      treeAndNode,
+      treeId != null
+        ? `Couldn't find node ${nodeId} in tree ${treeId}.`
+        : `Couldn't find node ${nodeId}.`,
+    );
+    return treeAndNode[0];
   }
 
   /**

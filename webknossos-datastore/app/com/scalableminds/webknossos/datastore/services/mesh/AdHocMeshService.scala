@@ -69,7 +69,7 @@ class AdHocMeshService(
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  implicit val timeout: Timeout = Timeout(adHocMeshTimeout)
+  implicit private val timeout: Timeout = Timeout(adHocMeshTimeout)
 
   private val marchingCubesChunkSize = 32
 

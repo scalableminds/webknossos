@@ -25,7 +25,6 @@ import models.task.{TaskDAO, TaskService}
 import models.team.{TeamDAO, TeamService}
 import models.user.time.*
 import models.user.{User, UserDAO, UserService}
-import org.apache.pekko.util.Timeout
 import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
@@ -83,7 +82,6 @@ class AnnotationController @Inject() (
     extends Controller
     with UserAwareRequestLogging {
 
-  implicit val timeout: Timeout = Timeout(5 seconds)
   private val taskReopenAllowed = conf.Features.taskReopenAllowed + (10 seconds)
 
   private val numberOfIdsToReservePerRequest = 10

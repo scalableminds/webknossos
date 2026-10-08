@@ -352,7 +352,7 @@ const routes: RouteObject[] = [
       {
         path: "/alignmentProjects",
         element: (
-          <SecuredRoute requiresAdminOrManagerRole>
+          <SecuredRoute requiresAdminOrDatasetManagerRole>
             <AlignmentProjectListView />
           </SecuredRoute>
         ),
@@ -360,7 +360,7 @@ const routes: RouteObject[] = [
       {
         path: "/alignmentProjects/:alignmentProjectId",
         element: (
-          <SecuredRoute requiresAdminOrManagerRole>
+          <SecuredRoute requiresAdminOrDatasetManagerRole>
             <AlignmentProjectDetailView />
           </SecuredRoute>
         ),

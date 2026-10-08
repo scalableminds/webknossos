@@ -1,5 +1,7 @@
 import {
+  CheckOutlined,
   CloseCircleOutlined,
+  CloseOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
@@ -17,9 +19,11 @@ import {
   Card,
   Descriptions,
   Result,
+  Select,
   Space,
   Spin,
   Table,
+  Tag,
   Tooltip,
   Typography,
 } from "antd";
@@ -34,13 +38,13 @@ import { compareBy } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import type { Vector3 } from "viewer/constants";
+import { AllUnits, LongUnitToShortUnitMap, type UnitLong, type Vector3 } from "viewer/constants";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import {
   type APIAlignmentProjectRun,
   cancelAlignmentProjectRun,
+  formatSectionRange,
   getAlignmentProject,
-  getSectionCount,
   updateAlignmentProject,
 } from "./alignment_project_mock_data";
 import {
@@ -57,7 +61,11 @@ function AlignmentProjectDetailView() {
   const queryClient = useQueryClient();
   const { modal } = App.useApp();
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
-  const [isEditingVoxelSize, setIsEditingVoxelSize] = useState(false);
+  // Non-null while the voxel size is being edited.
+  const [voxelSizeDraft, setVoxelSizeDraft] = useState<{
+    voxelSize: Vector3;
+    unit: UnitLong;
+  } | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
@@ -80,19 +88,32 @@ function AlignmentProjectDetailView() {
   }
 
   const handleUpdate = async (update: Parameters<typeof updateAlignmentProject>[1]) => {
-    await updateAlignmentProject(project.id, update);
+    try {
+      await updateAlignmentProject(project.id, update);
+    } catch (error) {
+      Toast.error((error as Error).message);
+    }
     await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
   };
 
-  // Called on blur (also triggered by pressing enter).
-  const handleVoxelSizeChange = (voxelSize: Vector3) => {
-    setIsEditingVoxelSize(false);
-    if (voxelSize.some((el) => !(el > 0))) {
+  const saveVoxelSizeDraft = () => {
+    if (voxelSizeDraft == null) return;
+    if (voxelSizeDraft.voxelSize.some((el) => !(el > 0))) {
       Toast.error("Each component of the voxel size must be larger than 0.");
       return;
     }
-    handleUpdate({ voxelSize });
+    handleUpdate({ voxelSize: voxelSizeDraft.voxelSize, voxelSizeUnit: voxelSizeDraft.unit });
+    setVoxelSizeDraft(null);
   };
+
+  const startDisabledReason =
+    project.status === "UPLOADING"
+      ? "The upload of this project has not finished yet."
+      : project.status === "INVALID"
+        ? "The uploaded CSV could not be parsed."
+        : project.isInputDataDeleted
+          ? "The input data of this project was deleted. Please create a new alignment project to start another alignment."
+          : null;
 
   const handleDeleted = async (mode: AlignmentProjectDeletionMode) => {
     if (mode === "project") {
@@ -173,17 +194,11 @@ function AlignmentProjectDetailView() {
           <Button danger icon={<DeleteOutlined />} onClick={() => setIsDeleteModalOpen(true)}>
             Delete
           </Button>
-          <Tooltip
-            title={
-              project.isInputDataDeleted
-                ? "The input data of this project was deleted. Please create a new alignment project to start another alignment."
-                : null
-            }
-          >
+          <Tooltip title={startDisabledReason}>
             <Button
               type="primary"
               icon={<PlayCircleOutlined />}
-              disabled={project.isInputDataDeleted}
+              disabled={startDisabledReason != null}
               onClick={() => setIsStartModalOpen(true)}
             >
               Start Alignment
@@ -193,6 +208,23 @@ function AlignmentProjectDetailView() {
       }
     >
       <Card title="Uploaded Files">
+        {project.status === "UPLOADING" && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            title="The upload of this project has not finished yet."
+          />
+        )}
+        {project.status === "INVALID" && (
+          <Alert
+            type="error"
+            showIcon
+            style={{ marginBottom: 16 }}
+            title="The uploaded CSV is invalid. Please create a new alignment project with a corrected CSV."
+            description={project.invalidReason}
+          />
+        )}
         {project.isInputDataDeleted && (
           <Alert
             type="info"
@@ -212,27 +244,56 @@ function AlignmentProjectDetailView() {
             {project.fileCount.toLocaleString()}
           </Descriptions.Item>
           <Descriptions.Item label="Sections">
-            {project.sectionRange.first}–{project.sectionRange.last} (
-            {getSectionCount(project.sectionRange).toLocaleString()} sections)
+            {project.sectionRange != null ? formatSectionRange(project.sectionRange) : "-"}
           </Descriptions.Item>
           <Descriptions.Item label="Total Size">
             {formatBytes(project.totalSizeInBytes, 1)}
           </Descriptions.Item>
           <Descriptions.Item label="Voxel Size">
-            {isEditingVoxelSize ? (
-              <Vector3Input
-                size="small"
-                allowDecimals
-                autoFocus
-                changeOnlyOnBlur
-                value={project.voxelSize}
-                onChange={handleVoxelSizeChange}
-                onPressEnter={(event) => event.currentTarget.blur()}
-              />
+            {voxelSizeDraft != null ? (
+              <Space size={4}>
+                <Vector3Input
+                  size="small"
+                  allowDecimals
+                  autoFocus
+                  value={voxelSizeDraft.voxelSize}
+                  onChange={(voxelSize) => setVoxelSizeDraft({ ...voxelSizeDraft, voxelSize })}
+                  onPressEnter={saveVoxelSizeDraft}
+                />
+                <Select
+                  size="small"
+                  value={voxelSizeDraft.unit}
+                  onChange={(unit) => setVoxelSizeDraft({ ...voxelSizeDraft, unit })}
+                  popupMatchSelectWidth={false}
+                  options={AllUnits.map((unit) => ({
+                    value: unit,
+                    label: LongUnitToShortUnitMap[unit],
+                  }))}
+                />
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<CheckOutlined />}
+                  onClick={saveVoxelSizeDraft}
+                />
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<CloseOutlined />}
+                  onClick={() => setVoxelSizeDraft(null)}
+                />
+              </Space>
             ) : (
               <Space size={4}>
-                {project.voxelSize.join(" × ")} nm
-                <Typography.Link onClick={() => setIsEditingVoxelSize(true)}>
+                {project.voxelSize.join(" × ")} {LongUnitToShortUnitMap[project.voxelSizeUnit]}
+                <Typography.Link
+                  onClick={() =>
+                    setVoxelSizeDraft({
+                      voxelSize: project.voxelSize,
+                      unit: project.voxelSizeUnit,
+                    })
+                  }
+                >
                   <EditOutlined />
                 </Typography.Link>
               </Space>
@@ -265,20 +326,21 @@ function AlignmentProjectDetailView() {
           <Column
             title="Sections"
             key="sectionRange"
-            render={(run: APIAlignmentProjectRun) =>
-              `${run.sectionRange.first}–${run.sectionRange.last} (${getSectionCount(run.sectionRange).toLocaleString()})`
-            }
+            render={(run: APIAlignmentProjectRun) => formatSectionRange(run.sectionRange)}
           />
           <Column
             title="Output Dataset"
             key="outputDataset"
-            render={(run: APIAlignmentProjectRun) =>
-              run.outputDataset != null ? (
-                <Link to={getViewDatasetURL(run.outputDataset)}>{run.outputDataset.name}</Link>
-              ) : (
-                "-"
-              )
-            }
+            render={(run: APIAlignmentProjectRun) => (
+              <Space size={4}>
+                {run.outputDataset != null ? (
+                  <Link to={getViewDatasetURL(run.outputDataset)}>{run.outputDataset.name}</Link>
+                ) : (
+                  "-"
+                )}
+                {run.renderUnaligned && <Tag>Unaligned</Tag>}
+              </Space>
+            )}
           />
           <Column
             title="Owner"
@@ -336,12 +398,15 @@ function AlignmentProjectDetailView() {
           onDeleted={handleDeleted}
         />
       )}
-      <StartAlignmentProjectModal
-        project={project}
-        isOpen={isStartModalOpen}
-        onClose={() => setIsStartModalOpen(false)}
-        onStarted={() => queryClient.invalidateQueries({ queryKey })}
-      />
+      {project.sectionRange != null && (
+        <StartAlignmentProjectModal
+          project={project}
+          sectionRange={project.sectionRange}
+          isOpen={isStartModalOpen}
+          onClose={() => setIsStartModalOpen(false)}
+          onStarted={() => queryClient.invalidateQueries({ queryKey })}
+        />
+      )}
     </AdminPage>
   );
 }

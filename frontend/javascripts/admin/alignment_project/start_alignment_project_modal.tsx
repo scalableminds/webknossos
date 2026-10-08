@@ -2,9 +2,7 @@ import { CreditCardOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-de
 import {
   Button,
   Card,
-  Checkbox,
   Col,
-  Collapse,
   Divider,
   Flex,
   Form,
@@ -16,73 +14,85 @@ import {
   Space,
   Typography,
 } from "antd";
-import { KeyValuePairsFormItem } from "components/key_value_pairs";
+import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
+import FolderSelection from "dashboard/folders/folder_selection";
 import { formatBytes, formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
 import { ColorWKBlue, ColorWKGold, ModalWidth } from "theme";
 import {
-  AlignmentProjectTaskType,
   type APIAlignmentProject,
-  getAlignmentProjectTaskTypeName,
+  getAlignmentRunTypeName,
   getMockAlignmentCostInMilliCredits,
   getMockCostPerSectionInMilliCredits,
   getSectionCount,
+  type SectionRange,
   startAlignmentProjectJob,
 } from "./alignment_project_mock_data";
 
 const { Text, Title } = Typography;
 
 type FormValues = {
+  mode: "align" | "renderUnaligned";
   newDatasetName: string;
-  shouldRenderUnalignedPreview: boolean;
+  folderId: string | null;
   sectionRangeMode: "all" | "subset";
   firstSection: number;
   lastSection: number;
-  customConfiguration: Record<string, unknown>;
 };
 
 export function StartAlignmentProjectModal({
   project,
+  sectionRange,
   isOpen,
   onClose,
   onStarted,
 }: {
   project: APIAlignmentProject;
+  // Passed separately because only projects with a known section range can be aligned.
+  sectionRange: SectionRange;
   isOpen: boolean;
   onClose: () => void;
   onStarted: () => void;
 }) {
   const [form] = Form.useForm<FormValues>();
+  const mode = Form.useWatch("mode", form);
   const sectionRangeMode = Form.useWatch("sectionRangeMode", form);
   const firstSection = Form.useWatch("firstSection", form);
   const lastSection = Form.useWatch("lastSection", form);
-  const { first: minSection, last: maxSection } = project.sectionRange;
-  const selectedTaskType = project.detectedTaskType;
+  const renderUnaligned = mode === "renderUnaligned";
+  const { first: minSection, last: maxSection } = sectionRange;
   const [isStarting, setIsStarting] = useState(false);
   const organizationMilliCredits = useWkSelector(
     (state) => state.activeOrganization?.milliCreditBalance || 0,
   );
+  const { data: folderHierarchy } = useFolderHierarchyQuery();
+  const rootFolderId = folderHierarchy?.tree[0]?.key ?? null;
 
   useEffect(() => {
-    const suffix =
-      selectedTaskType === AlignmentProjectTaskType.ALIGN_SECTIONS ? "aligned" : "stitched";
+    const suffix = renderUnaligned ? "unaligned" : "aligned";
     form.setFieldValue(
       "newDatasetName",
       `${project.name.replace(/[^\w-]+/g, "_").toLowerCase()}_${suffix}_v${project.runs.length + 1}`,
     );
-  }, [form, project, selectedTaskType]);
+  }, [form, project, renderUnaligned]);
 
-  const selectedSectionRange: [number, number] | null =
+  useEffect(() => {
+    if (rootFolderId != null && form.getFieldValue("folderId") == null) {
+      form.setFieldValue("folderId", rootFolderId);
+    }
+  }, [form, rootFolderId]);
+
+  const selectedSectionRange: SectionRange | null =
     sectionRangeMode !== "subset"
-      ? [minSection, maxSection]
+      ? sectionRange
       : firstSection != null && lastSection != null && firstSection <= lastSection
-        ? [firstSection, lastSection]
+        ? { first: firstSection, last: lastSection }
         : null;
   const costInMilliCredits =
     selectedSectionRange != null
-      ? getMockAlignmentCostInMilliCredits(project, selectedTaskType, selectedSectionRange)
+      ? getMockAlignmentCostInMilliCredits(project, renderUnaligned, selectedSectionRange)
       : null;
   const hasEnoughCredits =
     costInMilliCredits != null && costInMilliCredits <= organizationMilliCredits;
@@ -91,14 +101,20 @@ export function StartAlignmentProjectModal({
     const values = await form.validateFields();
     setIsStarting(true);
     try {
-      await startAlignmentProjectJob(project.id, selectedTaskType, {
+      await startAlignmentProjectJob(project.id, {
         newDatasetName: values.newDatasetName,
-        shouldRenderUnalignedPreview: values.shouldRenderUnalignedPreview,
+        folderId: values.folderId ?? rootFolderId,
+        renderUnaligned: values.mode === "renderUnaligned",
         sectionRange:
-          values.sectionRangeMode === "subset" ? [values.firstSection, values.lastSection] : null,
-        customConfiguration: values.customConfiguration ?? {},
+          values.sectionRangeMode === "subset"
+            ? { first: values.firstSection, last: values.lastSection }
+            : null,
       });
-      Toast.success("Alignment started successfully!");
+      Toast.success(
+        values.mode === "renderUnaligned"
+          ? "Rendering of unaligned data started successfully!"
+          : "Alignment started successfully!",
+      );
       onStarted();
       onClose();
     } catch (error) {
@@ -123,7 +139,7 @@ export function StartAlignmentProjectModal({
           form={form}
           layout="vertical"
           initialValues={{
-            shouldRenderUnalignedPreview: false,
+            mode: "align",
             sectionRangeMode: "all",
             firstSection: minSection,
             lastSection: maxSection,
@@ -142,9 +158,9 @@ export function StartAlignmentProjectModal({
             >
               <Typography.Paragraph>
                 {project.fileCount.toLocaleString()} files (
-                {formatBytes(project.totalSizeInBytes, 1)}
-                ), with tile positions listed in <Text code>{project.csvFileName}</Text>. The result
-                will be written to a new dataset.
+                {formatBytes(project.totalSizeInBytes, 1)}), with tile positions listed in{" "}
+                <Text code>{project.csvFileName}</Text>. The result will be written to a new
+                dataset.
               </Typography.Paragraph>
               <Form.Item name="sectionRangeMode" label="Sections">
                 <Radio.Group
@@ -197,35 +213,44 @@ export function StartAlignmentProjectModal({
               }
             >
               <Form.Item
-                name="newDatasetName"
-                label="Output Dataset Name"
-                rules={[{ required: true, message: "Please provide a name for the new dataset" }]}
+                name="mode"
+                label="Output"
+                extra={
+                  renderUnaligned
+                    ? "Writes only the unaligned data, e.g. to inspect it before running an alignment."
+                    : "Aligns the tiles and sections and writes the aligned data."
+                }
               >
-                <Input />
+                <Radio.Group
+                  optionType="button"
+                  options={[
+                    { value: "align", label: "Align" },
+                    { value: "renderUnaligned", label: "Render unaligned only" },
+                  ]}
+                />
               </Form.Item>
-              <Form.Item
-                name="shouldRenderUnalignedPreview"
-                valuePropName="checked"
-                tooltip="Renders the input data without alignment, so that you can preview it while the alignment is still running."
-                label="Preview"
-              >
-                <Checkbox>Render unaligned data as a preview</Checkbox>
-              </Form.Item>
-              <Collapse
-                ghost
-                items={[
-                  {
-                    key: "advanced",
-                    label: "Advanced Settings",
-                    children: (
-                      <KeyValuePairsFormItem
-                        name="customConfiguration"
-                        label="Custom Configuration"
-                      />
-                    ),
-                  },
-                ]}
-              />
+              <Row gutter={24}>
+                <Col span={12}>
+                  <Form.Item
+                    name="newDatasetName"
+                    label="Output Dataset Name"
+                    rules={[
+                      { required: true, message: "Please provide a name for the new dataset" },
+                    ]}
+                  >
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="folderId"
+                    label="Target Folder"
+                    tooltip="The folder into which the output dataset will be placed."
+                  >
+                    <FolderSelection disableNotEditableFolders />
+                  </Form.Item>
+                </Col>
+              </Row>
             </Card>
           </Flex>
         </Form>
@@ -251,10 +276,10 @@ export function StartAlignmentProjectModal({
             <Title level={5}>Cost Breakdown:</Title>
             <Row justify="space-between">
               <Col>
-                <Text>Task:</Text>
+                <Text>Output:</Text>
               </Col>
               <Col>
-                <Text strong>{getAlignmentProjectTaskTypeName(selectedTaskType)}</Text>
+                <Text strong>{getAlignmentRunTypeName(renderUnaligned)}</Text>
               </Col>
             </Row>
             <Row justify="space-between">
@@ -264,10 +289,7 @@ export function StartAlignmentProjectModal({
               <Col>
                 <Text strong>
                   {selectedSectionRange != null
-                    ? getSectionCount({
-                        first: selectedSectionRange[0],
-                        last: selectedSectionRange[1],
-                      }).toLocaleString()
+                    ? getSectionCount(selectedSectionRange).toLocaleString()
                     : "-"}
                 </Text>
               </Col>
@@ -279,7 +301,7 @@ export function StartAlignmentProjectModal({
               <Col>
                 <Text strong>
                   {formatMilliCreditsString(
-                    getMockCostPerSectionInMilliCredits(project, selectedTaskType),
+                    getMockCostPerSectionInMilliCredits(project, renderUnaligned),
                   )}
                 </Text>
               </Col>
@@ -306,7 +328,7 @@ export function StartAlignmentProjectModal({
               loading={isStarting}
               onClick={handleStart}
             >
-              Start alignment
+              {renderUnaligned ? "Start rendering" : "Start alignment"}
               {costInMilliCredits != null && !hasEnoughCredits ? " (not enough credits)" : ""}
             </Button>
           </Card>

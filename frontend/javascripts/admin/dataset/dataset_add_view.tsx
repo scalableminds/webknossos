@@ -10,7 +10,10 @@ import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { getDatastores } from "admin/rest_api";
 import { Layout, Tabs, type TabsProps } from "antd";
+import features from "features";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
+import { isUserAdminOrDatasetManager } from "libs/utils";
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
@@ -35,6 +38,9 @@ const ALIGNMENT_PROJECT_TAB_KEY = "alignmentProject";
 function DatasetAddView() {
   const navigate = useNavigate();
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
+  const canUseAlignmentProjects = useWkSelector(
+    (state) => features().jobsEnabled && isUserAdminOrDatasetManager(state.activeUser),
+  );
   const [datasetId, setDatasetId] = useState("");
   const [uploadedDatasetName, setUploadedDatasetName] = useState("");
   const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
@@ -112,12 +118,16 @@ function DatasetAddView() {
         />
       ),
     },
-    {
-      icon: <AppstoreOutlined />,
-      label: "Upload Files for Alignment Project",
-      key: ALIGNMENT_PROJECT_TAB_KEY,
-      children: <AlignmentProjectUploadView datastores={datastores} />,
-    },
+    ...(canUseAlignmentProjects
+      ? [
+          {
+            icon: <AppstoreOutlined />,
+            label: "Upload Files for Alignment Project",
+            key: ALIGNMENT_PROJECT_TAB_KEY,
+            children: <AlignmentProjectUploadView datastores={datastores} />,
+          },
+        ]
+      : []),
   ];
 
   return (

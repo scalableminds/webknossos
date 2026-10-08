@@ -1,14 +1,14 @@
 import { InboxOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
-import { Alert, Button, Col, Form, Input, Row, Upload, type UploadFile } from "antd";
+import { Alert, Button, Col, Form, Input, Row, Select, Upload, type UploadFile } from "antd";
 import { formatBytes } from "libs/format_utils";
 import Toast from "libs/toast";
 import { Vector3Input } from "libs/vector_input";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import type { APIDataStore } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer/constants";
 import { createAlignmentProject } from "./alignment_project_mock_data";
 
 type FormValues = {
@@ -16,6 +16,7 @@ type FormValues = {
   description: string;
   datastoreUrl: string;
   voxelSize: Vector3;
+  voxelSizeUnit: UnitLong;
 };
 
 export default function AlignmentProjectUploadView({ datastores }: { datastores: APIDataStore[] }) {
@@ -56,6 +57,7 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
         dataStoreName:
           datastores.find((datastore) => datastore.url === values.datastoreUrl)?.name ?? "",
         voxelSize: values.voxelSize,
+        voxelSizeUnit: values.voxelSizeUnit,
         csvFileName: csvFiles[0].name,
         fileCount: files.length,
         totalSizeInBytes,
@@ -63,6 +65,8 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
       await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
       Toast.success("Alignment project uploaded successfully.");
       navigate(`/alignmentProjects/${project.id}`);
+    } catch (error) {
+      Toast.error((error as Error).message);
     } finally {
       setIsUploading(false);
     }
@@ -74,7 +78,12 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
         title="Upload Files for Alignment Project"
         subtitle="Upload unaligned (tiled) image data together with a CSV that lists the tile positions. You can then start one or more alignments from the project page."
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{ voxelSizeUnit: UnitLong.nm }}
+        >
           <DatastoreFormItem datastores={datastores} hidden={datastores.length <= 1} />
           <Row gutter={24}>
             <Col span={12}>
@@ -86,14 +95,24 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
                 <Input placeholder="e.g. Mouse Cortex L4 – Serial Sections" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col span={8}>
               <Form.Item
                 name="voxelSize"
-                label="Voxel Size (nm)"
+                label="Voxel Size"
                 tooltip="The extent (x, y, z) of one voxel. Used for the aligned output datasets."
                 rules={[{ required: true, message: "Please provide a voxel size." }]}
               >
                 <Vector3Input allowDecimals placeholder="e.g. 4, 4, 35" />
+              </Form.Item>
+            </Col>
+            <Col span={4}>
+              <Form.Item name="voxelSizeUnit" label="Unit" rules={[{ required: true }]}>
+                <Select
+                  options={AllUnits.map((unit) => ({
+                    value: unit,
+                    label: LongUnitToShortUnitMap[unit],
+                  }))}
+                />
               </Form.Item>
             </Col>
           </Row>

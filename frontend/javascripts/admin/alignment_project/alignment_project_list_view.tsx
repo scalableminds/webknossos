@@ -1,7 +1,7 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
-import { Button, Input, Spin, Table, Tag } from "antd";
+import { Button, Input, Spin, Table, Tag, Tooltip } from "antd";
 import FormattedDate from "components/formatted_date";
 import { formatBytes } from "libs/format_utils";
 import { compareBy, filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
@@ -10,6 +10,19 @@ import { Link } from "react-router";
 import { type APIAlignmentProject, getAlignmentProjects } from "./alignment_project_mock_data";
 
 const { Column } = Table;
+
+function AlignmentProjectStatusTag({ project }: { project: APIAlignmentProject }) {
+  if (project.status === "UPLOADING") return <Tag color="processing">Uploading</Tag>;
+  if (project.status === "INVALID") {
+    return (
+      <Tooltip title={project.invalidReason}>
+        <Tag color="error">Invalid</Tag>
+      </Tooltip>
+    );
+  }
+  if (project.isInputDataDeleted) return <Tag>Input data deleted</Tag>;
+  return <Tag color="success">Ready</Tag>;
+}
 
 function AlignmentProjectListView() {
   const { data: projects, isLoading } = useQuery({
@@ -56,16 +69,26 @@ function AlignmentProjectListView() {
             )}
           />
           <Column
+            title="Status"
+            key="status"
+            width={160}
+            filters={[
+              { text: "Uploading", value: "UPLOADING" },
+              { text: "Ready", value: "READY" },
+              { text: "Invalid", value: "INVALID" },
+            ]}
+            onFilter={(value, project: APIAlignmentProject) => project.status === value}
+            render={(project: APIAlignmentProject) => (
+              <AlignmentProjectStatusTag project={project} />
+            )}
+          />
+          <Column
             title="Files"
             key="files"
             align="right"
             sorter={compareBy<APIAlignmentProject>((p) => p.fileCount)}
             render={(project: APIAlignmentProject) =>
-              project.isInputDataDeleted ? (
-                <Tag>Input data deleted</Tag>
-              ) : (
-                `${project.fileCount.toLocaleString()} (${formatBytes(project.totalSizeInBytes, 1)})`
-              )
+              `${project.fileCount.toLocaleString()} (${formatBytes(project.totalSizeInBytes, 1)})`
             }
           />
           <Column

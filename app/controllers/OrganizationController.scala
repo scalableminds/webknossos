@@ -204,8 +204,7 @@ class OrganizationController @Inject() (
 
   private def aiAddonLabelForPricingPlan(pricingPlan: PricingPlan.PricingPlan): String =
     pricingPlan match {
-      case PricingPlan.Team | PricingPlan.Team_Trial => "Team AI"
-      // Enterprise unlocks the features of Power, so it gets the Power AI add-on
+      case PricingPlan.Team | PricingPlan.Team_Trial                            => "Team AI"
       case PricingPlan.Power | PricingPlan.Power_Trial | PricingPlan.Enterprise => "Power AI"
       case _                                                                    => "AI Add-on"
     }
@@ -216,7 +215,6 @@ class OrganizationController @Inject() (
       PricingPlan.isUpgrade(currentPlan, requestedPlan)
 
   // The AI Add-on needs at least the Team plan (possibly as part of the same request) and must not be active yet.
-  // Open_Source has no access to WEBKNOSSOS workers, so it can't use the AI Add-on.
   private def canRequestAiAddon(organization: Organization, effectivePlan: PricingPlan.PricingPlan) =
     organization.aiPlan.isEmpty && PricingPlan.tierRank(effectivePlan) >= PricingPlan.tierRank(PricingPlan.Team) &&
       PricingPlan.allowsJobs(effectivePlan)

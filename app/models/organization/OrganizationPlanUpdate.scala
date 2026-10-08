@@ -25,9 +25,7 @@ case class OrganizationPlanUpdate(
   lazy val includedUsersFlat: Option[Int] = includedUsers.flatten
   lazy val includedStorageFlat: Option[Long] = includedStorageBytes.flatten.map(_.numBytes)
 
-  // Some plans always come with unlimited users and storage. Setting such a plan lifts the limits, and any limits
-  // requested for an organization on such a plan are overridden. Limits that this update leaves unchanged stay
-  // unchanged. effectivePricingPlan is the plan the organization has after this update.
+  // Plans with unlimited quotas override requested limits; limits this update leaves unchanged stay unchanged.
   def withQuotasOfPlan(effectivePricingPlan: PricingPlan): OrganizationPlanUpdate =
     if (!PricingPlan.hasUnlimitedQuotas(effectivePricingPlan)) this
     else if (pricingPlan.isDefined) copy(includedUsers = Some(None), includedStorageBytes = Some(None))

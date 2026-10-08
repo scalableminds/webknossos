@@ -278,7 +278,7 @@ class JobService @Inject() (
       _ <- Fox.fromBool(PricingPlan.allowsJobs(organization.pricingPlan)) ?~> Msg.Job.notAvailableInPlan ~> FORBIDDEN
     } yield ()
 
-  // Retries do not go through submitJob, so the pricing plan of the job owner's organization is checked here.
+  // Retries bypass submitJob
   def assertJobCanBeRetriedByPricingPlan(job: Job): Fox[Unit] =
     for {
       owner <- userDAO.findOne(job._owner)(using GlobalAccessContext) ?~> Msg.User.notFound(job._owner)
@@ -335,7 +335,7 @@ class JobService @Inject() (
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
-      // Checked here as well, as a failure in submitJob would only be reported as a generic error after the refund
+      // Also checked here, since a failure in submitJob is only reported as a generic error
       _ <- assertJobsAllowedByPricingPlan(user)
       _ <- assertStorageNotExceededFor(command, user)
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)

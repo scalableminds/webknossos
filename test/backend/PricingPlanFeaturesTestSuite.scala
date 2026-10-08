@@ -8,6 +8,45 @@ class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
   private def highlightsOf(previousPlan: PricingPlan.PricingPlan, newPlan: PricingPlan.PricingPlan): List[String] =
     PricingPlanFeatures.unlockedBy(previousPlan, newPlan).map(_.featureHighlights).getOrElse(List.empty)
 
+  private def plansWith(isAllowed: PricingPlan.PricingPlan => Boolean): Set[PricingPlan.PricingPlan] =
+    PricingPlan.values.filter(isAllowed).toSet
+
+  private val allPlansExceptOpenSource = PricingPlan.values.toSet - PricingPlan.Open_Source
+
+  // Follows the feature matrix of https://home.webknossos.org/pricing. Enterprise is Power with unlimited quotas.
+  "PricingPlan" should {
+
+    "unlock collaboration, project and dataset management for Team and up, including Open-Source" in
+      assert(
+        plansWith(PricingPlan.tierRank(_) >= PricingPlan.tierRank(PricingPlan.Team)) == Set(
+          PricingPlan.Team,
+          PricingPlan.Team_Trial,
+          PricingPlan.Power,
+          PricingPlan.Power_Trial,
+          PricingPlan.Open_Source,
+          PricingPlan.Enterprise
+        )
+      )
+
+    "unlock the features of Power for Enterprise" in
+      assert(
+        plansWith(PricingPlan.tierRank(_) >= PricingPlan.tierRank(PricingPlan.Power)) ==
+          Set(PricingPlan.Power, PricingPlan.Power_Trial, PricingPlan.Enterprise)
+      )
+
+    "allow worker jobs for all plans except Open-Source" in
+      assert(plansWith(PricingPlan.allowsJobs) == allPlansExceptOpenSource)
+
+    "allow the AI-based quick-select tool for all plans except Open-Source" in
+      assert(plansWith(PricingPlan.allowsAiQuickSelect) == allPlansExceptOpenSource)
+
+    "come with unlimited users and storage for Open-Source and Enterprise only" in
+      assert(plansWith(PricingPlan.hasUnlimitedQuotas) == Set(PricingPlan.Open_Source, PricingPlan.Enterprise))
+
+    "treat Personal and Open-Source as free plans" in
+      assert(plansWith(PricingPlan.isFreePlan) == Set(PricingPlan.Personal, PricingPlan.Open_Source))
+  }
+
   "PricingPlanFeatures.unlockedBy" should {
 
     "label the highlights with the new plan when upgrading from Personal to Team" in {

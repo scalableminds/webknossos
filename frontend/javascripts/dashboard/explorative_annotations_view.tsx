@@ -589,8 +589,10 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     return formatUserName(owner);
   };
 
-  renderModifiedMetaItem = (annotation: APIAnnotationInfo) => {
+  renderDateMetaItem = (annotation: APIAnnotationInfo) => {
     const { owner } = annotation;
+    // The date shown matches the date the list is sorted by.
+    const showCreated = this.state.sortOption === "newest" || this.state.sortOption === "oldest";
     let ownerText: string | null = null;
     if (owner != null) {
       ownerText =
@@ -599,8 +601,9 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           : formatUserName(owner);
     }
     return (
-      <span key="modified">
-        last modified <FormattedDate timestamp={annotation.modified} />
+      <span key="date">
+        {showCreated ? "created" : "last modified"}{" "}
+        <FormattedDate timestamp={showCreated ? annotation.created : annotation.modified} />
         {ownerText != null ? ` · owned by ${ownerText}` : null}
       </span>
     );
@@ -641,7 +644,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         {this.renderTags(annotation, false, "dashboard-annotation-tags")}
         <RowMetaLine
           items={[
-            this.renderModifiedMetaItem(annotation),
+            this.renderDateMetaItem(annotation),
             teamTags.length > 0 ? (
               <span key="teams" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <TeamOutlined /> shared with teams {teamTags}

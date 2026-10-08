@@ -1,4 +1,4 @@
-import { App, Button, Flex, Progress, Typography } from "antd";
+import { Button, Flex, Progress, Typography } from "antd";
 import dayjs from "dayjs";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
@@ -96,14 +96,13 @@ function PlanHintCard({
 }
 
 function PlanExpiringHintCard({ daysLeft }: { daysLeft: number }) {
-  const { modal } = App.useApp();
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
   const planLabel = isTrialPlan(organization.pricingPlan) ? "Trial" : "Plan";
   const basePlan = getBasePricingPlan(organization.pricingPlan);
   const featuresLabel = basePlan === PricingPlanEnum.Custom ? "your plan's" : basePlan;
-  const extendPlan = () => UpgradePricingPlanModal.extendPricingPlan(modal, organization);
+  const extendPlan = () => UpgradePricingPlanModal.extendPricingPlan();
 
   if (daysLeft === 0) {
     return (
@@ -131,17 +130,12 @@ function PlanExpiringHintCard({ daysLeft }: { daysLeft: number }) {
 }
 
 function TeamUpgradeHintCard() {
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
   return (
     <PlanHintCard
       title="Working with others?"
       description="Team adds collaborative annotation and project management."
       actionLabel="Upgrade to Team"
-      onAction={() =>
-        UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Team)
-      }
+      onAction={() => UpgradePricingPlanModal.upgradePricingPlan(PricingPlanEnum.Team)}
     />
   );
 }

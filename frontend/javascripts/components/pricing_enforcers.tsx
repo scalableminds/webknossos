@@ -43,10 +43,7 @@ function getUpgradeNowButton(
 ) {
   return activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
     <div style={{ marginTop: 8 }}>
-      <Button
-        size="small"
-        onClick={() => UpgradePricingPlanModal.upgradePricingPlan(activeOrganization)}
-      >
+      <Button size="small" onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}>
         Upgrade Now
       </Button>
     </div>

@@ -31,6 +31,10 @@ trait Formatter {
   protected def formatHash(id: String): String =
     id.takeRight(6)
 
+  // A count followed by the matching singular or plural form of the noun, e.g. “1 year” or “3 years”
+  protected def formatCount(count: Int, singularNoun: String): String =
+    s"$count ${TextUtils.pluralize(singularNoun, count)}"
+
   protected def formatDuration(duration: FiniteDuration): String = {
     val minuteRoundingThresholdMillisForRenderingMillis = 59995
     val minuteRoundingThresholdMillisForRenderingSeconds = 59499

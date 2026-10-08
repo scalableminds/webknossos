@@ -116,11 +116,7 @@ export function OrganizationOverviewView() {
         size="small"
         key="upgradeUsersAction"
         icon={<PlusOutlined />}
-        onClick={
-          organization.pricingPlan === PricingPlanEnum.Personal
-            ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
-            : UpgradePricingPlanModal.upgradeUserQuota
-        }
+        onClick={() => UpgradePricingPlanModal.upgradeUserQuota()}
       />
     );
 
@@ -131,11 +127,7 @@ export function OrganizationOverviewView() {
         size="small"
         key="upgradeStorageAction"
         icon={<PlusOutlined />}
-        onClick={
-          organization.pricingPlan === PricingPlanEnum.Personal
-            ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
-            : UpgradePricingPlanModal.upgradeStorageQuota
-        }
+        onClick={() => UpgradePricingPlanModal.upgradeStorageQuota()}
       />
     );
   }
@@ -146,7 +138,7 @@ export function OrganizationOverviewView() {
       icon={<PlusOutlined />}
       size="small"
       key="buyMoreCreditsAction"
-      onClick={UpgradePricingPlanModal.orderWebknossosCredits}
+      onClick={() => UpgradePricingPlanModal.orderWebknossosCredits()}
     />
   ) : null;
 
@@ -243,9 +235,7 @@ export function OrganizationOverviewView() {
           <Col span={showAiAddonCard ? 12 : 24}>
             <PowerPlanUpgradeCard
               description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
-              powerUpgradeCallback={() =>
-                UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Power)
-              }
+              powerUpgradeCallback={() => UpgradePricingPlanModal.upgradePricingPlan()}
             />
           </Col>
           {showAiAddonCard && (

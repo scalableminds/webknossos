@@ -4,7 +4,7 @@ import {
   FieldTimeOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import { App, Button, Flex, Typography } from "antd";
+import { Button, Flex, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { formatMilliCreditsString } from "libs/format_utils";
@@ -128,7 +128,6 @@ export function CreditActivitySummaryBar({
 }
 
 export function PlanSummaryBar() {
-  const { modal } = App.useApp();
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
@@ -162,15 +161,13 @@ export function PlanSummaryBar() {
         ) : null}
       </div>
       {canRequestUpgrades && canUpgradePricingPlan(organization.pricingPlan) ? (
-        <Button onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}>
-          Upgrade
-        </Button>
+        <Button onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}>Upgrade</Button>
       ) : null}
       {canRequestUpgrades && canExtend ? (
         <Button
           type="primary"
           icon={<FieldTimeOutlined />}
-          onClick={() => UpgradePricingPlanModal.extendPricingPlan(modal, organization)}
+          onClick={() => UpgradePricingPlanModal.extendPricingPlan()}
         >
           Extend Now
         </Button>

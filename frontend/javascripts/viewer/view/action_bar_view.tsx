@@ -6,7 +6,7 @@ import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
 import { useWkSelector } from "libs/react_hooks";
-import { hasUrlParam, isUserAdminOrManager } from "libs/utils";
+import { isUserAdminOrManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import type React from "react";
 import { Fragment, PureComponent, useState } from "react";
@@ -43,6 +43,7 @@ import TracingActionsView, {
   type LayoutProps,
 } from "viewer/view/action_bar/tracing_actions_view";
 import ViewDatasetActionsView from "viewer/view/action_bar/view_dataset_actions_view";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import {
   addNewLayout,
   deleteLayout,
@@ -276,12 +277,11 @@ function ModesView() {
   const isOrthoMode = useWkSelector(
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );
-  // BigWarp-style alignment workers get their toolkit forced to a fixed, restricted
-  // set (see controller.tsx) - don't offer a way to switch away from it.
-  const isBigWarpWorker = hasUrlParam("bigwarpWorker");
+  // The dataset alignment workers use a fixed toolkit (see bigwarp_worker.ts).
+  const isToolkitFixed = isBigWarpWorker();
 
   // The outer div is necessary for proper spacing.
-  return isViewMode || isReadOnly || !isOrthoMode || isBigWarpWorker ? null : (
+  return isViewMode || isReadOnly || !isOrthoMode || isToolkitFixed ? null : (
     <div>
       <Space.Compact>
         <ToolkitView />

@@ -301,9 +301,7 @@ const _getDefaultLayouts = () => {
 
 const getDefaultLayouts = memoize(_getDefaultLayouts);
 
-// Finds the tabset containing the given tab id (searching the row/tabset tree
-// depth-first) and marks it as flexlayout-react's native "maximized" tabset - mutates
-// in place, so callers must pass an already-cloned tree.
+// Marks the tabset that contains the given tab as maximized. Mutates the node in place.
 function markTabsetAsMaximized(node: RowOrTabsetNode, tabId: string): boolean {
   if (node.type === "tabset") {
     if (node.children.some((tab) => tab.id === tabId)) {
@@ -315,13 +313,8 @@ function markTabsetAsMaximized(node: RowOrTabsetNode, tabId: string): boolean {
   return node.children.some((child) => markTabsetAsMaximized(child, tabId));
 }
 
-// Layout for a BigWarp-style dataset-alignment "worker" iframe (see
-// viewer/view/layouting/align_datasets_view.tsx and BIGWARP_ALIGNMENT_PLAN.md §0.18):
-// takes the normal layout a skeleton annotation would use in this context (same
-// borders/tabs/shortcuts as any other WK view - importantly the right border's
-// Skeleton tab) and marks the XY viewport's tabset as maximized via flexlayout-react's
-// own maximize mechanism, so it starts full-size but the "." shortcut and friends keep
-// working exactly like elsewhere - only the *initial* state differs.
+// The dataset alignment workers use the normal layout, but start with the XY viewport
+// maximized. The user can restore the other viewports as usual.
 export const getBigWarpWorkerLayoutConfig = (baseLayout: ModelConfig): ModelConfig => {
   const layout = cloneDeep(baseLayout);
   markTabsetAsMaximized(layout.layout, OrthoViews.PLANE_XY);

@@ -204,11 +204,9 @@
   flex-direction: row-reverse;
 }
 
-// flexlayout-react's own light.css centers .flexlayout__tab_toolbar's children
-// (align-items: center) but not .flexlayout__tabset_leading's, leaving our left-border
-// toggle button (rendered into "leading") 1px lower than the right-border one (rendered
-// into "buttons", i.e. inside .flexlayout__tab_toolbar) despite both being the same
-// component/size.
+// flexlayout-react centers the children of .flexlayout__tab_toolbar (where the
+// right-border toggle button is), but not of .flexlayout__tabset_leading (where the
+// left-border toggle button is). Without this, the left button is 1px lower.
 .flexlayout__tabset_leading {
   align-items: center;
 }

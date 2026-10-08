@@ -2,7 +2,7 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-09-09 (v12 — alignment actions moved into the primary worker's toolbar, drawer replaced by a resizable in-flow panel, see §0.19; redo button unhidden in the workers, §0.20)
+Last updated: 2026-10-08 (v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
@@ -13,6 +13,10 @@ Last updated: 2026-09-09 (v12 — alignment actions moved into the primary worke
 ---
 
 ## 0. Implementation progress (v1 build, 2026-08-31)
+
+> **Note on names:** §0.1-§0.20 name files, functions and cross-origin commands as they
+> were at the time of writing. The refactor in §0.21 moved and renamed many of them. §0.21
+> and §11 list the current names.
 
 Everything below in §0 reflects a from-scratch v1 implementation pass on top of the
 architecture in §3, done in this session. **Not yet manually tested in a browser** —
@@ -799,12 +803,123 @@ even though it works fine. Fixed by dropping that class for `bigwarpWorker` mode
 worker's toolbar is stripped down to the landmark-clicking essentials anyway, so both
 buttons fit comfortably.
 
+### 0.21 Refactor for maintainability + sync bug fixes (2026-10-07)
+
+Michael asked for the branch to be refactored into a version that is easier to maintain
+and follows the style of the frontend code. Before that, `/code-review` was run against
+master. It found 10 bugs. Most of them are fixed as part of the refactor (see below).
+Typecheck, lint, the cycle check and all unit tests pass. **This has not been tried in a
+browser yet.**
+
+**New structure.** The 889-line `layouting/align_datasets_view.tsx` was replaced by the
+folder `frontend/javascripts/viewer/view/align_datasets/`:
+- `align_datasets_view.tsx` - the route component. Loads the dataset and the landmark
+  annotation id with `useQuery`, shows the layer pair picker or the workspace. The
+  workspace gets `key=<layer pair>`, so choosing another pair starts with fresh iframes
+  and fresh sync state.
+- `layer_pair_picker.tsx` - the picker (unchanged behavior).
+- `alignment_workspace.tsx` - holds the iframes and the alignment actions (align, reset,
+  toggle other layer, sync view, force save, store as default).
+- `landmark_panel.tsx` - buttons, shortcut hint and the landmark table.
+- `resizable_side_panel.tsx` - generic resizable panel at the left edge (drag handle,
+  arrow keys, overlay above the iframes while dragging).
+- `use_iframe_bridge.ts` - `useIframeBridge()` (send a cross-origin command and wait for
+  the reply, wait for an iframe's "init") and `useWorkerCommands()` (receive commands from
+  the workers). Only messages whose `event.source` is one of the three iframes are handled.
+- `use_landmark_sync.ts` - loads the stored landmarks into the workers, then polls the
+  workers and copies new landmarks into the landmark annotation.
+- `alignment_helpers.ts` - pure logic: landmark pairing, residuals, transform estimation,
+  tree group path, localStorage lookup, "Store as Default". Unit test:
+  `test/misc/align_datasets_helpers.spec.ts`.
+- `bigwarp_protocol.ts` - everything both sides need to know: the URL params
+  (`isBigWarpWorker()`, `isBigWarpPrimaryWorker()`, `getBigWarpWorkerLayerName()`), the URLs
+  of the page and the workers, and the commands a worker sends (`BigWarpCommand`). This
+  replaces about ten scattered `hasUrlParam("bigwarpWorker")` calls.
+- `bigwarp_worker.ts` - code that runs inside a worker: the `t`/`x`/`y` key relay hook,
+  the navigation blocker and the initial worker settings (moved out of `controller.tsx`
+  and `cross_origin_api.ts`).
+- Styles moved from `main.less` to `frontend/stylesheets/_align_datasets.less`, with
+  readable class names instead of `.adv-*`.
+
+**Protocol change.** The worker now maps the keys to commands itself (`t` → `align`,
+`x` → `toggleOtherLayer`, `y` → `syncOtherView`). The page receives only one message type,
+`bigwarpCommand`, both for keys and for the toolbar buttons. The side is taken from
+`event.source`.
+
+**Cross-origin API.** The feature-specific commands were replaced by general ones:
+- `exportTreesAsNmlString({ treeIds?, groupId? })` replaces `exportTreesInGroupAsNmlString`
+  and `exportTreesByIdsAsNmlString`. It includes hidden trees and leaves out tree groups.
+- `importNml(nml, targetGroupId?)` replaces `importNmlIntoGroup`. `importNmlAsString` now
+  returns the ids of the imported trees.
+- `ensureTreeGroupPath(groupNames)` replaces `ensureLandmarkGroups`. It finds or creates a
+  nested group path, matched by name level by level.
+- `getTransformsForLayer` was removed (unused). The `await` on `getAvailableMeshFiles`
+  was restored (removing it had broken that existing command).
+
+**Smaller cleanups in existing files.** `controller.tsx` keeps master's `beforeUnload`
+unchanged and only picks the blocker. The navbar no longer has two copies of the logo
+link. The router uses a second top-level route with `RootLayout showNavbar={false}`
+instead of checking the path string. `save_actions.tsx` lost its duplicated return block.
+The stale right-border guard in `flex_layout_wrapper.tsx` (§0.17) was removed, because the
+workers have a right border again since §0.18. Comments no longer point to plan sections
+or describe history.
+
+**Bugs fixed (found by the review):**
+1. Sync ticks could overlap (`setInterval` with an async callback), so a landmark could be
+   stored twice. Now `usePolling`, which waits for one run to finish.
+2. After a reload, the worker's trees were inside the imported group hierarchy, so every
+   sync nested another copy of the groups in the store, and those landmarks were lost on
+   the next reload. Exports now leave out groups.
+3. Hidden trees were left out of every NML export, which shifted all following pairs.
+   Exports now include hidden trees.
+4. The ids of already stored worker trees were guessed from the store's ids. Now they are
+   the ids returned by `importNml`. A landmark clicked while loading is still stored.
+5. The sync loop could start before the stored landmarks were imported. Now it starts
+   only after the import.
+6. The settings-saga guard skipped saving settings for **every** sandbox. Now it only
+   applies to alignment workers (`isBigWarpWorker()`).
+7. Changing the layer pair in the same page kept the old sync state. Fixed by the `key`
+   on the workspace.
+8. The overlay toggle state was inverted. Each worker now hides the other layer when it
+   is ready, matching the initial button state.
+9. "Store as Default" appended the transform to layer B's existing transforms, so clicking
+   twice applied it twice. The transform maps raw B coordinates to raw A coordinates, so
+   layer B now gets `[BtoA, ...transforms of layer A]`, replacing its old list. The button
+   is disabled if the user can't edit the dataset.
+
+**Still open from the review:** if the annotation id in localStorage points to a deleted
+or foreign annotation, the store iframe never sends "init" and the page waits forever
+(§0.2 point 4). Every NML export also fetches `/api/buildinfo`, which is about four
+requests per second while the page is open.
+
+### 0.22 Landmarks in a single z slice (2026-10-08, per Michael's request)
+
+Users often place all landmarks in one z slice of each layer. Then all landmarks lie in
+one plane, and no 3D affine transform can be estimated from them. The dataset composition
+wizard (`admin/dataset/composition_wizard/04_configure_new_dataset.tsx`) already has a
+fallback for this: it copies every landmark to the next slice (`z + 1`) on both sides and
+estimates the transform from the landmarks and their copies.
+
+`estimateTransformBtoA` in `alignment_helpers.ts` now does the same. It first tries the
+landmarks as they are. Only if that fails, it adds the copies and tries again. If that
+also fails (e.g. all landmarks lie on one line), it shows an error. The copies only exist
+inside this function. They are never added to an annotation and never saved. The residual
+column still uses only the real landmarks. When the fallback was used, a toast says that
+the alignment assumes the layers are only shifted against each other along z. The
+fallback assumes that one z slice of layer B corresponds to one z slice of layer A, so it
+can't recover a scaling or rotation along z.
+
+Because three landmark pairs always lie in one plane, the minimum number of pairs was
+lowered from 4 to 3 (three pairs only work through the fallback). Unlike the wizard, the
+tool doesn't ask for confirmation, since `t` is pressed often.
+
 ### 0.3 Not started / explicitly out of scope for this pass
 
 - **Manual browser QA in progress** (started 2026-08-31, see §0.4) - the single bug
   found so far is fixed; still needs a full click-through: worker chrome-less mode
   rendering correctly, landmarks syncing into the store, alignment visually snapping
-  layers, persistence round-tripping.
+  layers, persistence round-tripping. The refactor in §0.21 and the single-slice
+  fallback in §0.22 also still need to be checked in a browser.
 - **TPS transform** (§5.5/§8): still affine-only, as planned for v1. TPS remains
   tracked, not forgotten.
 - **XY-only viewport restriction**: **now implemented** (see §0.1) - this closes the
@@ -831,7 +946,8 @@ registering two (mis-)aligned layers of a dataset, but in WEBKNOSSOS style. Two
 annotation views of the same dataset are shown side by side (as iframes), each
 showing only one of the two layers to align. The user navigates each side
 independently, finds a matching structure, and drops a single-node skeleton tree
-("landmark") at that spot in both views. Once ≥4 non-coplanar landmark pairs exist,
+("landmark") at that spot in both views. Once ≥4 non-coplanar landmark pairs exist
+(or ≥3 pairs in a single z slice, §0.22),
 pressing a shortcut computes a transform (affine now, TPS later) from the moving
 layer's landmarks to the fixed layer's landmarks and live-applies it to both iframes,
 so the user visually sees layer B snap onto layer A. Iterate, refine, and once happy,
@@ -1201,9 +1317,10 @@ pulled). Solves a related but narrower problem: landmark-based affine transforms
 2. **v2 cross-worker ghost landmarks** (§3) — design is recorded, not scheduled; open sub-question of whether WK supports true tree/group edit-locking or whether "read-only" starts convention-only.
 3. **Landmark annotation discovery** (§0.2 point 3, new this pass) — v1 uses `localStorage`, not shared across devices/users. Needs a backend-queryable mechanism (metadata convention or a list endpoint) to become more than a single-browser demo.
 4. **Deletion sync** (§0.2 point 2, new this pass) — v1's sync is additions-only; removing a landmark in a worker doesn't remove it from the persisted store. The originally-planned `diffTrees`-based approach is still the right target if/when this is picked up.
-5. **No manual browser QA yet** (§0.3) — the v1 implementation has only been typechecked/linted/unit-tested, never clicked through in a running instance.
+5. **Manual browser QA** (§0.3) — started in §0.4, but the refactor (§0.21) and the single-slice fallback (§0.22) have not been tried in a running instance yet.
+6. **Stale landmark annotation id** (§0.2 point 4, §0.21) — if the id in localStorage points to a deleted or foreign annotation, the page waits forever. Needs an existence check and a way to create a new annotation.
 
-Resolved: XY-only viewport restriction (§0.1, done via a dedicated single-tab FlexLayout config, no "maximize" mechanism needed); layer-pair picker UX (§0.1, done, minimal inline picker); one shared annotation vs. two (§3); annotation lifecycle (persistent/revisitable, user-triggered creation, not auto); affine-first with TPS tracked as future (§5.5); coplanar handling = reject with message (§5.5, §0.1); coordinator has no viewport (§3/§5.2, achieved via the hidden-iframe design, §0.2); tree-group visibility = internal-only (§3); layer choice = coordinator-owned but worker keeps its own cosmetic layer-settings tab, via permanent per-worker `nativelyRenderedLayerName` pinning, **no #7270 workaround needed** (§3, §0.1); entry points = both dashboard "..." menu and dataset settings data tab (§5.1, §0.1); cross-worker landmark display = deferred to v2, design recorded (§3).
+Resolved: XY-only viewport restriction (§0.1, done via a dedicated single-tab FlexLayout config, no "maximize" mechanism needed); layer-pair picker UX (§0.1, done, minimal inline picker); one shared annotation vs. two (§3); annotation lifecycle (persistent/revisitable, user-triggered creation, not auto); affine-first with TPS tracked as future (§5.5); coplanar handling = copy the landmarks to z + 1 if they lie in one plane, reject with a message only if that also fails (§0.22, was "reject with message" in §5.5/§0.1); coordinator has no viewport (§3/§5.2, achieved via the hidden-iframe design, §0.2); tree-group visibility = internal-only (§3); layer choice = coordinator-owned but worker keeps its own cosmetic layer-settings tab, via permanent per-worker `nativelyRenderedLayerName` pinning, **no #7270 workaround needed** (§3, §0.1); entry points = both dashboard "..." menu and dataset settings data tab (§5.1, §0.1); cross-worker landmark display = deferred to v2, design recorded (§3).
 
 ---
 
@@ -1217,7 +1334,7 @@ Resolved: XY-only viewport restriction (§0.1, done via a dedicated single-tab F
 4. ✅ **Sync**: implemented as additions-only import-based merging rather than a full `diffTrees` round trip — see §0.2 point 2 for why, and open question §9.4 for the gap this leaves (no delete propagation).
 5. ✅ **Reload flow**: pushes known landmarks into a fresh worker sandbox via `importNml` on load.
 6. ✅ **Shortcuts**: `t`/`f`/`q`, focus-aware (via `event.source`, no separate focus-tracking needed).
-7. ✅ **Persistence**: "Store as Default" reusing `getDataset`/`updateDatasetPartial` (already on `master`) - plain append rather than `applyAffineOnTopOfTransforms` (unmerged PR #9591), see §0.1.
+7. ✅ **Persistence**: "Store as Default" reusing `getDataset`/`updateDatasetPartial` (already on `master`). Since §0.21, layer B's transforms are replaced by `[BtoA, ...transforms of layer A]` instead of appending (not using `applyAffineOnTopOfTransforms` from the unmerged PR #9591).
 8. ✅ **Entry points**: dashboard "..." menu item + dataset settings data tab, both driving the shared inline layer-pair picker → find-or-create landmark annotation → coordinator view.
 9. **Manual browser QA** (not started, §0.3) — needs a running instance + a real multi-layer dataset. Do this before anything else below.
 10. **TPS support**: swap in `createThinPlateSplineTransform` once there's a model-selection trigger.
@@ -1227,25 +1344,26 @@ Resolved: XY-only viewport restriction (§0.1, done via a dedicated single-tab F
 
 ## 11. File index (for quick navigation next session)
 
-- `frontend/javascripts/viewer/view/layouting/align_datasets_view.tsx` — the coordinator (§0.1 v1 rewrite; correspondence table redesigned in §0.6, `x`/`y` shortcut rename + landmark colors in §0.11; residual-error column in §0.15). As of §0.19 the antd `Drawer` is gone: the tools live in a resizable, in-flow `.adv-panel` (drag handle + `window`-level drag listeners + an overlay so the iframes don't swallow the drag), toggled by a `"bigwarpCommand"` postMessage from worker A's *toolbar*.
-- `frontend/javascripts/viewer/view/action_bar/tools/bigwarp_specific_ui.tsx` — `BigWarpAlignmentButtons`: the align / force-save / show-table toolbar buttons shown in the primary worker only, relaying `"bigwarpCommand"` messages to the coordinator (§0.19).
-- `frontend/javascripts/viewer/view/action_bar/tools/toolbar_view.tsx` — `ToolSpecificSettings` hides `SkeletonSpecificButtons` for `bigwarpWorker` mode (§0.6) and renders `BigWarpAlignmentButtons` for the primary worker; the "more tools" `ToolDropdown` is dropped for workers (§0.19).
-- `frontend/javascripts/viewer/view/action_bar/dataset_position_view.tsx` — hides the `ShareButton` in the position/rotation group for `bigwarpWorker` mode (§0.19).
-- `frontend/stylesheets/main.less` — the coordinator's layout: `.adv-parent` (flex row) with `.adv-worker`, plus `.adv-panel`/`.adv-divider`/`.adv-resize-overlay` for the resizable landmark panel (§0.19).
-- `frontend/javascripts/viewer/view/action_bar/undo_redo_actions.tsx` — drops the redo button's `hide-on-small-screen` class for `bigwarpWorker` mode, since a worker iframe is always below that breakpoint (§0.20).
-- `frontend/javascripts/viewer/view/action_bar/save_actions.tsx` — `SaveActions` hides `SandboxActions` ("Sandbox" tag + "Copy To My Account") for `bigwarpWorker` mode, keeping `UndoRedoActions` (§0.11).
-- `frontend/javascripts/viewer/api/cross_origin_api.ts` — iframe postMessage bridge; has the v1 additions (`ensureLandmarkGroups`, `importNmlIntoGroup`, `exportTreesInGroupAsNmlString`, `exportTreesByIdsAsNmlString`, the `bigwarpShortcut` keydown relay, now `x`/`y` instead of `f`/`q` per §0.11) plus `save` (§0.9, backs the "Force Save" button); the "init" handshake itself was rewritten in §0.10 (general WK correctness fix, not BigWarp-specific).
-- `frontend/javascripts/viewer/api/api_latest.ts` — backing implementations of the above cross-origin commands.
-- `frontend/javascripts/viewer/controller.tsx` — `applyBigWarpWorkerSettingsIfNeeded()` (§0.1/§0.5, now also auto-jumps to a data position via `findDataPositionForLayer` per §0.11) + the align-mode navigation blocker (§0.5).
-- `frontend/javascripts/viewer/view/layouting/default_layout_configs.ts` — `getBigWarpWorkerLayoutConfig(baseLayout)` (originally XY-only/no-right-border in §0.1; as of §0.18 takes the normal layout and marks XY's tabset `maximized: true` instead, so the full layout/shortcuts stay available).
-- `frontend/javascripts/viewer/view/layouting/flex_layout_wrapper.tsx` — `loadCurrentModel()` actually applies `getBigWarpWorkerLayoutConfig()` for `bigwarpWorker` mode as of §0.16 (this, not `tracing_layout_view.tsx`, is where the rendered FlexLayout `Model` is built - §0.1's original wiring into `TracingLayoutView.state.model` was dead code, since that state is never read by the renderer); `adaptModelToConditionalTabs` guarded against a missing right border in §0.17 (no longer hit by BigWarp workers after §0.18, but a correct guard regardless).
-- `frontend/javascripts/viewer/view/layouting/tracing_layout_view.tsx` — no longer branches on `bigwarpWorker` itself as of §0.16; its `state.model` is just `FlexLayoutWrapper`'s pre-mount placeholder.
-- `frontend/javascripts/router/router.tsx` — the `/align-datasets/:datasetNameAndId` route. `RootLayout` rendered `<Navbar />` unconditionally as of §0.5, but as of §0.13 skips it entirely for that one route (the coordinator's own top-level navbar) - worker iframes' own navbars are a separate thing, unaffected.
-- `frontend/javascripts/navbar.tsx` — restricts navigation-away affordances for `bigwarpWorker` mode while keeping the `navbarTracingSlot` portal target (§0.5); drops the WK logo entirely for `bigwarpWorker` mode as of §0.11 (previously kept as a non-clickable label), then as of §0.13 brings it back **just for the left/"primary" worker** as a real `target="_top"` link - the `navbarAlignToolsSlot` portal target from §0.8 is gone (dead once the coordinator's own navbar stopped rendering), and §0.13's "Alignment Tools" button is gone too as of §0.19 (replaced by the toolbar's "show table" toggle).
+- `frontend/javascripts/viewer/view/align_datasets/` — the alignment page and the shared worker code, see §0.21 for what each file does: `align_datasets_view.tsx` (route), `alignment_workspace.tsx`, `landmark_panel.tsx`, `resizable_side_panel.tsx`, `layer_pair_picker.tsx`, `use_iframe_bridge.ts`, `use_landmark_sync.ts`, `alignment_helpers.ts` (pure logic incl. the single-slice fallback, §0.22), `bigwarp_protocol.ts` (URL params, URLs, `BigWarpCommand`), `bigwarp_worker.ts` (key relay, navigation blocker, initial worker settings).
+- `frontend/javascripts/test/misc/align_datasets_helpers.spec.ts` — unit test for `alignment_helpers.ts`.
+- `frontend/stylesheets/_align_datasets.less` — layout of the page and the resizable panel (§0.21; was `.adv-*` in `main.less`).
+- `frontend/javascripts/viewer/view/action_bar/tools/bigwarp_specific_ui.tsx` — `BigWarpAlignmentButtons`: the align / force-save / show-table toolbar buttons shown in the primary worker only. They send `BigWarpCommand`s to the page (§0.19, §0.21).
+- `frontend/javascripts/viewer/view/action_bar/tools/toolbar_view.tsx` — hides `SkeletonSpecificButtons` and the "more tools" `ToolDropdown` in workers and shows `BigWarpAlignmentButtons` in the primary worker (§0.6, §0.19).
+- `frontend/javascripts/viewer/view/action_bar/dataset_position_view.tsx` — hides the `ShareButton` in workers (§0.19).
+- `frontend/javascripts/viewer/view/action_bar/undo_redo_actions.tsx` — keeps the redo button visible in workers (§0.20).
+- `frontend/javascripts/viewer/view/action_bar/save_actions.tsx` — hides `SandboxActions` in workers (§0.11).
+- `frontend/javascripts/viewer/view/action_bar_view.tsx` — `ModesView` hides the toolkit switcher in workers (§0.5).
+- `frontend/javascripts/viewer/api/cross_origin_api.ts` — iframe postMessage bridge. Commands used by this feature: `exportTreesAsNmlString`, `importNml` (optional target group, returns tree ids), `ensureTreeGroupPath`, `save`, `getCameraPosition`, `centerPositionAnimated`, `setLayerVisibility`, `setAffineLayerTransforms` (§0.21). Also calls `useBigWarpShortcutRelay()`. The "init" handshake was rewritten in §0.10 (general WK fix).
+- `frontend/javascripts/viewer/api/api_latest.ts` — backing implementations of the above (`importNmlAsString`, `exportTreesAsNmlString`, `ensureTreeGroupPath`, `setLayerVisibility`).
+- `frontend/javascripts/viewer/controller.tsx` — picks `blockBigWarpWorkerNavigation` instead of the normal `beforeUnload` blocker in workers and calls `applyBigWarpWorkerSettings()` (both in `bigwarp_worker.ts`).
+- `frontend/javascripts/viewer/view/layouting/default_layout_configs.ts` — `getBigWarpWorkerLayoutConfig(baseLayout)`: the normal layout with the XY tabset maximized (§0.18).
+- `frontend/javascripts/viewer/view/layouting/flex_layout_wrapper.tsx` — `loadCurrentModel()` applies `getBigWarpWorkerLayoutConfig()` in workers (§0.16).
+- `frontend/javascripts/router/router.tsx` — the `/align-datasets/:datasetNameAndId` route, in its own top-level route with `RootLayout showNavbar={false}` (§0.13, §0.21).
+- `frontend/javascripts/navbar.tsx` — in workers: no menus, the logo only in the primary worker as a `target="_top"` link (§0.5, §0.13).
 - `frontend/javascripts/viewer/model/accessors/tool_accessor.ts` — `Toolkit.BIGWARP_LANDMARKS` (§0.5).
-- `frontend/javascripts/viewer/view/action_bar_view.tsx` — `ModesView` hides the toolkit switcher for `bigwarpWorker` mode (§0.5).
-- `frontend/javascripts/viewer/model/sagas/settings_saga.ts` — `pushUserSettingsAsync`/`pushDatasetSettingsAsync` SANDBOX guards (§0.5, general WK bug fix, same class as §0.4's).
+- `frontend/javascripts/viewer/model/sagas/settings_saga.ts` — doesn't save user and dataset settings in workers (§0.5, narrowed to workers in §0.21).
 - `frontend/javascripts/viewer/model/accessors/annotation_accessor.ts` — `mayEditAnnotationViewConfig` (§0.4, general WK bug fix found via this feature's QA).
+- `frontend/javascripts/admin/dataset/composition_wizard/04_configure_new_dataset.tsx` — the composition wizard's "augment landmarks" fallback that §0.22 copies.
 - `frontend/javascripts/viewer/model/helpers/transformation_helpers.ts` — `Transform` type, affine/TPS creation.
 - `frontend/javascripts/viewer/model/accessors/dataset_layer_transformation_accessor.ts` — layer transform resolution logic (cleaned up in §0.1, no BigWarp-specific code belongs here after all - see §3).
 - `frontend/javascripts/libs/estimate_affine.ts` — least-squares affine estimation.

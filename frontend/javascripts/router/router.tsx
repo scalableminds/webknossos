@@ -33,15 +33,7 @@ import DashboardView from "dashboard/dashboard_view";
 import PublicationDetailView from "dashboard/publication_details_view";
 import loadable from "libs/lazy_loader";
 import Navbar from "navbar";
-import { useEffect } from "react";
-import {
-  createBrowserRouter,
-  Navigate,
-  Outlet,
-  type RouteObject,
-  redirect,
-  useLocation,
-} from "react-router";
+import { createBrowserRouter, Navigate, Outlet, type RouteObject, redirect } from "react-router";
 import type { EmptyObject } from "types/type_utils";
 import { CommandPalette } from "viewer/view/components/command_palette";
 
@@ -61,7 +53,7 @@ import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metad
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
 import DatasetSettingsStorageTab from "dashboard/dataset/dataset_settings_storage_tab";
 import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
-import AlignDatasetsView from "viewer/view/layouting/align_datasets_view";
+import AlignDatasetsView from "viewer/view/align_datasets/align_datasets_view";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -85,35 +77,11 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
   () => import("admin/voxelytics/workflow_list_view"),
 );
 
-function RootLayout() {
-  // Note: BigWarp-style alignment workers (viewer/view/layouting/align_datasets_view.tsx,
-  // the two visible iframes) still keep THEIR OWN navbar - it's the only way to reach
-  // the tool/position/rotation controls, which live in a portal target rendered by
-  // Navbar. Navbar itself restricts navigation away from the page while `bigwarpWorker`
-  // is set. The *coordinator's own* top-level navbar (this component, for the
-  // /align-datasets route itself) is a different thing - it's dropped entirely below,
-  // to avoid stacking two navbar-height bars on top of each other (the coordinator's
-  // own, plus each worker iframe's). Navigation and the "Open Alignment Tools" trigger
-  // now live in the left worker's own navbar instead - see BIGWARP_ALIGNMENT_PLAN.md
-  // §0.13.
-  const location = useLocation();
-  const isAlignDatasetsCoordinator = location.pathname.startsWith("/align-datasets");
-  // body's global `padding-top: var(--navbar-height)` (main.less) assumes a navbar is
-  // always present - normally kept correct by Navbar's own banners re-measuring and
-  // re-setting this CSS variable on every mount (banners.tsx's useSetNavbarHeight), but
-  // since <Navbar/> doesn't render at all here, that never happens and the variable is
-  // just left at whatever it was before navigating here, leaving a phantom gap above
-  // the coordinator's content. No cleanup needed: navigating away remounts <Navbar/>,
-  // whose banners set the correct value again on their own via the same mechanism.
-  useEffect(() => {
-    if (isAlignDatasetsCoordinator) {
-      document.documentElement.style.setProperty("--navbar-height", "0px");
-    }
-  }, [isAlignDatasetsCoordinator]);
+function RootLayout({ showNavbar = true }: { showNavbar?: boolean }) {
   return (
-    <Layout style={{ height: "100%" }}>
+    <Layout className={showNavbar ? undefined : "no-navbar"}>
       <CommandPalette />
-      {!isAlignDatasetsCoordinator && <Navbar />}
+      {showNavbar && <Navbar />}
       <Content>
         <ErrorBoundary>
           <Outlet />
@@ -505,14 +473,6 @@ const routes: RouteObject[] = [
       { path: "/links/:key", element: <ShortLinksRouteWrapper /> },
       { path: "/onboarding", element: <OnboardingRouteWrapper /> },
       {
-        path: "/align-datasets/:datasetNameAndId",
-        element: (
-          <SecuredRoute>
-            <AlignDatasetsView />
-          </SecuredRoute>
-        ),
-      },
-      {
         path: "/account",
         element: (
           <SecuredRoute>
@@ -527,6 +487,21 @@ const routes: RouteObject[] = [
         ],
       },
       { path: "*", element: <PageNotFoundView /> },
+    ],
+  },
+  {
+    // The dataset alignment page has no navbar of its own, because each of its worker
+    // iframes shows one.
+    element: <RootLayout showNavbar={false} />,
+    children: [
+      {
+        path: "/align-datasets/:datasetNameAndId",
+        element: (
+          <SecuredRoute>
+            <AlignDatasetsView />
+          </SecuredRoute>
+        ),
+      },
     ],
   },
 ];

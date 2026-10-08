@@ -1,0 +1,56 @@
+// Dataset alignment page (align_datasets_view.tsx): an optional resizable panel and the
+// two worker iframes, side by side.
+.align-datasets-workspace {
+  display: flex;
+  height: 100%;
+
+  .align-datasets-worker {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    border: none;
+
+    & + .align-datasets-worker {
+      border-left: 4px solid var(--ant-color-primary);
+    }
+  }
+
+  .landmark-color {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 4px;
+    border-radius: 50%;
+  }
+}
+
+.resizable-side-panel {
+  flex: 0 0 auto;
+  overflow: auto;
+  padding: 8px;
+  background-color: var(--ant-color-bg-base);
+}
+
+.resizable-side-panel-divider {
+  flex: 0 0 5px;
+  cursor: col-resize;
+  background-color: var(--ant-color-border);
+  // It is a button so that it can be focused and resized with the keyboard, but it
+  // should look like a plain divider.
+  padding: 0;
+  border: none;
+  appearance: none;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--ant-color-primary);
+  }
+}
+
+// Shown while the divider is dragged, see resizable_side_panel.tsx.
+.resizable-side-panel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  cursor: col-resize;
+}

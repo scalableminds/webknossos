@@ -1,49 +1,39 @@
 import { AimOutlined, SaveOutlined, TableOutlined } from "@ant-design/icons";
 import { Space } from "antd";
-import { useCallback, useState } from "react";
+import { useState } from "react";
+import { sendCommandToAlignmentPage } from "viewer/view/align_datasets/bigwarp_protocol";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE } from "./tool_helpers";
 
-// The alignment actions of the BigWarp-style dataset alignment tool (see
-// viewer/view/layouting/align_datasets_view.tsx and BIGWARP_ALIGNMENT_PLAN.md §0.19).
-// They live in the *primary* (left) worker iframe's toolbar, right where a tool's own
-// sub-options are shown, because the coordinator page has no chrome of its own to put
-// them in. All of them are implemented by the coordinator, so they are merely relayed
-// up via postMessage here.
-export type BigWarpCommand = "align" | "forceSave" | "toggleTable";
-
+// Buttons for the dataset alignment page, shown in the toolbar of its primary worker.
+// The alignment page has no toolbar of its own and performs the actions itself.
 export function BigWarpAlignmentButtons() {
-  const [isTableOpen, setIsTableOpen] = useState(false);
+  // Only this button opens and closes the landmark panel, so tracking the state here is
+  // enough.
+  const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(false);
 
-  const sendCommand = useCallback((command: BigWarpCommand) => {
-    window.parent.postMessage({ type: "bigwarpCommand", command }, "*");
-  }, []);
-
-  const toggleTable = useCallback(() => {
-    // This button is the only thing that opens/closes the coordinator's landmark panel,
-    // so mirroring its state locally is enough to give the button proper on/off feedback
-    // (no need for the coordinator to report the state back down).
-    setIsTableOpen((isOpen) => !isOpen);
-    sendCommand("toggleTable");
-  }, [sendCommand]);
+  const toggleLandmarkPanel = () => {
+    setIsLandmarkPanelOpen((isOpen) => !isOpen);
+    sendCommandToAlignmentPage("toggleLandmarkPanel");
+  };
 
   return (
     <Space.Compact style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}>
       <ButtonComponent
-        onClick={() => sendCommand("align")}
+        onClick={() => sendCommandToAlignmentPage("align")}
         style={NARROW_BUTTON_STYLE}
         title="Align the two layers by fitting a transform to the current landmark pairs (T)"
         icon={<AimOutlined />}
       />
       <ButtonComponent
-        onClick={() => sendCommand("forceSave")}
+        onClick={() => sendCommandToAlignmentPage("forceSave")}
         style={NARROW_BUTTON_STYLE}
         title="Save the landmark annotation right away instead of waiting for the next auto-save"
         icon={<SaveOutlined />}
       />
       <ToggleButton
-        active={isTableOpen}
-        onClick={toggleTable}
+        active={isLandmarkPanelOpen}
+        onClick={toggleLandmarkPanel}
         style={NARROW_BUTTON_STYLE}
         title="Show/hide the landmark table and the remaining alignment tools"
         icon={<TableOutlined />}

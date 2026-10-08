@@ -5,7 +5,6 @@ import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { handleGenericError } from "libs/error_handling";
 import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
-import { hasUrlParam } from "libs/utils";
 import { useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import Constants, { ControlModeEnum } from "viewer/constants";
@@ -21,6 +20,10 @@ import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import Store from "viewer/store";
+import {
+  isBigWarpPrimaryWorker,
+  isBigWarpWorker,
+} from "viewer/view/align_datasets/bigwarp_protocol";
 import ButtonComponent from "viewer/view/components/button_component";
 import { ToolDropdown } from "../tool_dropdown";
 import { BigWarpAlignmentButtons } from "./bigwarp_specific_ui";
@@ -81,13 +84,10 @@ export default function ToolbarView() {
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
-  // BigWarp-style alignment workers are always narrow (two iframes side by side) but
-  // their toolkit only holds two tools anyway, so there is no reason to fold them into
-  // the "more tools" dropdown - which is dropped for workers below. See
-  // BIGWARP_ALIGNMENT_PLAN.md §0.19.
-  const isBigWarpWorker = hasUrlParam("bigwarpWorker");
+  // The dataset alignment workers are always narrow, but their toolkit only has two tools.
+  const isAlignmentWorker = isBigWarpWorker();
   const showAllTools =
-    isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode || isBigWarpWorker;
+    isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode || isAlignmentWorker;
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -140,7 +140,7 @@ export default function ToolbarView() {
             const ToolButton = ToolIdToComponent[tool.id];
             return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
           })}
-          {isBigWarpWorker ? null : <ToolDropdown />}
+          {isAlignmentWorker ? null : <ToolDropdown />}
         </Radio.Group>
       </UnderlyingActiveToolContext.Provider>
 
@@ -182,18 +182,10 @@ function ToolSpecificSettings({
   isControlOrMetaPressed: boolean;
   isShiftPressed: boolean;
 }) {
-  // BigWarp workers force single-node-tree mode on permanently and restrict the
-  // toolkit to Move + Skeleton (see controller.tsx's
-  // applyBigWarpWorkerSettingsIfNeeded) - these buttons would let the user turn that
-  // (and merger mode / continuous node creation) back off, which isn't meaningful for
-  // landmark placement.
-  const isBigWarpWorker = hasUrlParam("bigwarpWorker");
+  // The dataset alignment workers always create one tree per node (see
+  // bigwarp_worker.ts), so the skeleton tool options are hidden there.
   const showSkeletonButtons =
-    hasSkeleton && adaptedActiveTool === AnnotationTool.SKELETON && !isBigWarpWorker;
-  // The coordinator's alignment actions are hosted by the *primary* (left) worker only,
-  // so they don't show up twice. Unlike the buttons below they are not tied to a
-  // specific tool - aligning/saving is meaningful with either of the worker's two tools.
-  const isBigWarpPrimaryWorker = isBigWarpWorker && hasUrlParam("bigwarpPrimary");
+    hasSkeleton && adaptedActiveTool === AnnotationTool.SKELETON && !isBigWarpWorker();
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationTool.BOUNDING_BOX;
   const showCreateCellButton = hasVolume && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =
@@ -204,7 +196,7 @@ function ToolSpecificSettings({
 
   return (
     <>
-      {isBigWarpPrimaryWorker ? <BigWarpAlignmentButtons /> : null}
+      {isBigWarpPrimaryWorker() ? <BigWarpAlignmentButtons /> : null}
 
       {showSkeletonButtons ? <SkeletonSpecificButtons /> : null}
 

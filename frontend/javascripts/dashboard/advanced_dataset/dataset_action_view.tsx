@@ -20,6 +20,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
+import { getAlignmentPageUrl } from "viewer/view/align_datasets/bigwarp_protocol";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
 
 function NewAnnotationLink({
@@ -174,11 +175,6 @@ export function getDatasetActionContextMenu({
     return getNoActionsAvailableMenu(hideContextMenu);
   }
   const dataset = datasets[0];
-  console.log(
-    "dataset.isActive && dataset.colorLayerNames.length + dataset.segmentationLayerNames.length >= 2",
-    dataset.isActive,
-    dataset.colorLayerNames.length + dataset.segmentationLayerNames.length >= 2,
-  );
 
   return {
     onClick: hideContextMenu,
@@ -219,7 +215,7 @@ export function getDatasetActionContextMenu({
                 icon: <NodeIndexOutlined className="icon-margin-right" />,
                 label: "Align Layers…",
                 onClick: () => {
-                  window.location.href = `/align-datasets/${getReadableURLPart(dataset)}`;
+                  window.location.href = getAlignmentPageUrl(dataset);
                 },
               }
             : null,

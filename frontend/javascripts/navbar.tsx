@@ -47,7 +47,6 @@ import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
 import {
   filterWithSearchQueryAND,
-  hasUrlParam,
   isUserAdmin,
   isUserAdminOrManager,
   isUserAdminOrTeamManager,
@@ -71,6 +70,10 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_actions";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
+import {
+  isBigWarpPrimaryWorker,
+  isBigWarpWorker,
+} from "viewer/view/align_datasets/bigwarp_protocol";
 import { HelpModal } from "viewer/view/help/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
@@ -915,64 +918,36 @@ function Navbar() {
   const isAdminOrManager = isUserAdminOrManager(activeUser);
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
-  // BigWarp-style alignment workers (viewer/view/layouting/align_datasets_view.tsx)
-  // need this navbar for its tool/position/rotation controls (rendered into the
-  // PortalTarget below), but must not offer a way to navigate away from the page -
-  // leaving loses that worker's yet-to-be-synced landmarks and breaks the tool's
-  // dual-iframe setup. See BIGWARP_ALIGNMENT_PLAN.md §5.3.
-  const isBigWarpWorker = hasUrlParam("bigwarpWorker");
-  // The coordinator's own top-level navbar is dropped entirely for the
-  // /align-datasets route (router.tsx's RootLayout), to avoid stacking it on top of
-  // each worker iframe's own navbar - so the *left* ("primary") worker's navbar is now
-  // the only place left to reach the dashboard. The alignment actions themselves live
-  // in that worker's toolbar (see action_bar/tools/bigwarp_specific_ui.tsx) instead.
-  // See BIGWARP_ALIGNMENT_PLAN.md §0.13/§0.19.
-  const isBigWarpPrimaryWorker = isBigWarpWorker && hasUrlParam("bigwarpPrimary");
-  // The right worker still drops the logo entirely - it isn't useful there, and
-  // showing it on both sides would just reintroduce the "double chrome" feeling this
-  // was meant to fix.
-  const menuItems: ItemType[] =
-    isBigWarpWorker && !isBigWarpPrimaryWorker
-      ? []
-      : [
-          {
-            key: "0",
-            label: isBigWarpPrimaryWorker ? (
-              // target="_top" makes the browser navigate the outermost page instead of
-              // this iframe - the standard, built-in way for an iframe to forward a
-              // navigation to its parent, no postMessage plumbing needed.
-              <Link
-                to="/dashboard"
-                target="_top"
-                style={{
-                  verticalAlign: "middle",
-                }}
-              >
-                {getCollapsibleMenuTitle(
-                  "WEBKNOSSOS",
-                  <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-                  collapseAllNavItems,
-                )}
-              </Link>
-            ) : (
-              <Link
-                to="/dashboard"
-                style={{
-                  verticalAlign: "middle",
-                }}
-              >
-                {getCollapsibleMenuTitle(
-                  "WEBKNOSSOS",
-                  <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-                  collapseAllNavItems,
-                )}
-              </Link>
-            ),
-          },
-        ];
+  // The dataset alignment workers keep the navbar because it contains the toolbar, but
+  // must not offer navigation away from the alignment page. Only the primary worker shows
+  // the logo, which links to the dashboard in the top-level window.
+  const isAlignmentWorker = isBigWarpWorker();
+  const showLogo = !isAlignmentWorker || isBigWarpPrimaryWorker();
+  const menuItems: ItemType[] = showLogo
+    ? [
+        {
+          key: "0",
+          label: (
+            <Link
+              to="/dashboard"
+              target={isAlignmentWorker ? "_top" : undefined}
+              style={{
+                verticalAlign: "middle",
+              }}
+            >
+              {getCollapsibleMenuTitle(
+                "WEBKNOSSOS",
+                <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+                collapseAllNavItems,
+              )}
+            </Link>
+          ),
+        },
+      ]
+    : [];
   const trailingNavItems = [];
 
-  if (isAuthenticated && !isBigWarpWorker) {
+  if (isAuthenticated && !isAlignmentWorker) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
     menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
@@ -999,11 +974,11 @@ function Navbar() {
     );
   }
 
-  if (!(isAuthenticated || hideNavbarLogin) && !isBigWarpWorker) {
+  if (!(isAuthenticated || hideNavbarLogin) && !isAlignmentWorker) {
     trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
 
-  if (!isBigWarpWorker) {
+  if (!isAlignmentWorker) {
     menuItems.push(
       getHelpSubMenu(
         version,
@@ -1019,9 +994,7 @@ function Navbar() {
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
   const separator = <div className="navbar-separator" />;
-  // The right worker's menuItems is empty (no logo, see above), so the separator would
-  // otherwise render as an orphaned vertical line with nothing to its left.
-  const showSeparator = isInAnnotationView && !(isBigWarpWorker && !isBigWarpPrimaryWorker);
+  const showSeparator = isInAnnotationView && menuItems.length > 0;
 
   return (
     <Header

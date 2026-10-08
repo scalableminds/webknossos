@@ -4,7 +4,6 @@ import { createExplorational } from "admin/rest_api";
 import { Button, type ButtonProps, Space, Tooltip } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { hasUrlParam } from "libs/utils";
 import { location } from "libs/window";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
@@ -22,6 +21,7 @@ import { setDuplicateAnnotationModalVisibilityAction } from "viewer/model/action
 import { api, Model } from "viewer/singletons";
 import Store from "viewer/store";
 import SaveButton from "viewer/view/action_bar/save_button";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import ButtonComponent from "viewer/view/components/button_component";
 import UndoRedoActions from "./undo_redo_actions";
 
@@ -139,23 +139,14 @@ function SaveActions() {
   }
 
   if (!restrictions.allowSave) {
-    // BigWarp-style alignment workers are sandboxes by design (see
-    // BIGWARP_ALIGNMENT_PLAN.md §3/§7.1) but their landmarks are transparently synced
-    // out into the persisted "landmark annotation" by the coordinator - "copy this
-    // sandbox to your account" would create an unrelated, disconnected annotation that
-    // doesn't fit that flow, so it (and the "Sandbox" tag explaining it) are hidden
-    // here rather than being generally meaningful to a BigWarp user.
-    if (hasUrlParam("bigwarpWorker")) {
-      return (
-        <Space.Compact>
-          <UndoRedoActions hasTracing={hasTracing} isBusy={isBusy} />
-        </Space.Compact>
-      );
-    }
+    // The landmarks of the dataset alignment workers are saved by the alignment page, so
+    // copying a worker's sandbox to the user's account makes no sense.
     return (
       <Space.Compact>
         <UndoRedoActions hasTracing={hasTracing} isBusy={isBusy} />
-        <SandboxActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />
+        {isBigWarpWorker() ? null : (
+          <SandboxActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />
+        )}
       </Space.Compact>
     );
   }

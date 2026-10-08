@@ -5,7 +5,6 @@ import { copyToClipboard } from "libs/clipboard";
 import { formatNumberToLength, formatVoxelsForHighNumbers } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
-import { hasUrlParam } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type React from "react";
@@ -18,6 +17,7 @@ import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 import { ShareButton } from "viewer/view/action_bar/share_modal_view";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import ButtonComponent from "viewer/view/components/button_component";
 import DatasetRotationPopoverButtonView from "./dataset_rotation_popover_view";
 
@@ -35,7 +35,6 @@ const positionInputErrorStyle: React.CSSProperties = {
 };
 
 function DatasetPositionView() {
-  const isBigWarpWorker = hasUrlParam("bigwarpWorker");
   const flycam = useWkSelector((state) => state.flycam);
   const dataset = useWkSelector((state) => state.dataset);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
@@ -151,10 +150,9 @@ function DatasetPositionView() {
           />
         </FastTooltip>
         <DatasetRotationPopoverButtonView style={iconColoringStyle} />
-        {/* Sharing a link to a BigWarp worker's throw-away sandbox annotation isn't
-        meaningful - the shared link would drop the coordinator around it (see
-        BIGWARP_ALIGNMENT_PLAN.md §0.19). */}
-        {isBigWarpWorker ? null : <ShareButton dataset={dataset} style={iconColoringStyle} />}
+        {/* A link to a dataset alignment worker would open the worker without the
+        alignment page around it. */}
+        {isBigWarpWorker() ? null : <ShareButton dataset={dataset} style={iconColoringStyle} />}
       </Space.Compact>
     </FastTooltip>
   );

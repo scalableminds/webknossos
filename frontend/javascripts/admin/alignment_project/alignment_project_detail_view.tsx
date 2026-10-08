@@ -40,6 +40,7 @@ import {
   type APIAlignmentProjectRun,
   cancelAlignmentProjectRun,
   getAlignmentProject,
+  getSectionCount,
   updateAlignmentProject,
 } from "./alignment_project_mock_data";
 import {
@@ -210,6 +211,10 @@ function AlignmentProjectDetailView() {
           <Descriptions.Item label="Uploaded Files">
             {project.fileCount.toLocaleString()}
           </Descriptions.Item>
+          <Descriptions.Item label="Sections">
+            {project.sectionRange.first}–{project.sectionRange.last} (
+            {getSectionCount(project.sectionRange).toLocaleString()} sections)
+          </Descriptions.Item>
           <Descriptions.Item label="Total Size">
             {formatBytes(project.totalSizeInBytes, 1)}
           </Descriptions.Item>
@@ -256,6 +261,13 @@ function AlignmentProjectDetailView() {
             key="id"
             width={120}
             render={(id) => <FormattedId id={id} />}
+          />
+          <Column
+            title="Sections"
+            key="sectionRange"
+            render={(run: APIAlignmentProjectRun) =>
+              `${run.sectionRange.first}–${run.sectionRange.last} (${getSectionCount(run.sectionRange).toLocaleString()})`
+            }
           />
           <Column
             title="Output Dataset"

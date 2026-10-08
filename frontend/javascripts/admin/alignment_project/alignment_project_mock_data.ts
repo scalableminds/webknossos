@@ -10,6 +10,7 @@ export enum AlignmentProjectTaskType {
 export type APIAlignmentProjectRun = {
   readonly id: string;
   readonly taskType: AlignmentProjectTaskType;
+  readonly sectionRange: { readonly first: number; readonly last: number };
   readonly state: APIJobState;
   readonly created: number;
   readonly ownerFirstName: string;
@@ -35,6 +36,8 @@ export type APIAlignmentProject = {
   readonly fileCount: number;
   // Auto-detected from the uploaded files (e.g. by the backend or worker).
   readonly detectedTaskType: AlignmentProjectTaskType;
+  // Inclusive section numbers, extracted from the CSV.
+  readonly sectionRange: { readonly first: number; readonly last: number };
   readonly totalSizeInBytes: number;
   // The uploaded files were deleted to free storage. Metadata and past runs are kept.
   readonly isInputDataDeleted: boolean;
@@ -64,12 +67,14 @@ let mockProjects: APIAlignmentProject[] = [
     csvFileName: "mouse_cortex_l4_tiles.csv",
     fileCount: 10_801,
     detectedTaskType: AlignmentProjectTaskType.ALIGN_AND_STITCH_TILES,
+    sectionRange: { first: 0, last: 1199 },
     totalSizeInBytes: 1.62 * 1024 ** 4,
     isInputDataDeleted: false,
     runs: [
       {
         id: "6708f1a2c3d4e5f6000000a1",
         taskType: AlignmentProjectTaskType.ALIGN_AND_STITCH_TILES,
+        sectionRange: { first: 0, last: 1199 },
         state: "SUCCESS",
         created: now - 19 * DAY,
         ...owner,
@@ -81,6 +86,7 @@ let mockProjects: APIAlignmentProject[] = [
       {
         id: "6708f1a2c3d4e5f6000000a2",
         taskType: AlignmentProjectTaskType.ALIGN_AND_STITCH_TILES,
+        sectionRange: { first: 0, last: 199 },
         state: "FAILURE",
         created: now - 12 * DAY,
         ...owner,
@@ -92,6 +98,7 @@ let mockProjects: APIAlignmentProject[] = [
       {
         id: "6708f1a2c3d4e5f6000000a3",
         taskType: AlignmentProjectTaskType.ALIGN_AND_STITCH_TILES,
+        sectionRange: { first: 0, last: 1199 },
         state: "STARTED",
         created: now - 2 * 60 * 60 * 1000,
         ...owner,
@@ -114,12 +121,14 @@ let mockProjects: APIAlignmentProject[] = [
     csvFileName: "zf_hindbrain_sections.csv",
     fileCount: 641,
     detectedTaskType: AlignmentProjectTaskType.ALIGN_SECTIONS,
+    sectionRange: { first: 1, last: 640 },
     totalSizeInBytes: 96 * 1024 ** 3,
     isInputDataDeleted: false,
     runs: [
       {
         id: "6708f1a2c3d4e5f6000000b1",
         taskType: AlignmentProjectTaskType.ALIGN_SECTIONS,
+        sectionRange: { first: 1, last: 640 },
         state: "SUCCESS",
         created: now - 6 * DAY,
         ownerFirstName: "Jane",
@@ -133,12 +142,13 @@ let mockProjects: APIAlignmentProject[] = [
       {
         id: "6708f1a2c3d4e5f6000000b2",
         taskType: AlignmentProjectTaskType.ALIGN_SECTIONS,
+        sectionRange: { first: 1, last: 320 },
         state: "STARTED",
         created: now - 25 * 60 * 1000,
         ownerFirstName: "Jane",
         ownerLastName: "Doe",
         ownerEmail: "jane.doe@example.com",
-        costInMilliCredits: 38_400,
+        costInMilliCredits: 19_200,
         voxelyticsWorkflowHash: "e5f6a7b8c9d0",
         outputDataset: null,
         errorMessage: null,
@@ -157,6 +167,7 @@ let mockProjects: APIAlignmentProject[] = [
     csvFileName: "vnc_pilot.csv",
     fileCount: 257,
     detectedTaskType: AlignmentProjectTaskType.ALIGN_AND_STITCH_TILES,
+    sectionRange: { first: 100, last: 163 },
     totalSizeInBytes: 12.4 * 1024 ** 3,
     isInputDataDeleted: false,
     runs: [],
@@ -193,6 +204,7 @@ export async function createAlignmentProject(
   const newProject: APIAlignmentProject = {
     ...project,
     detectedTaskType: AlignmentProjectTaskType.ALIGN_AND_STITCH_TILES,
+    sectionRange: { first: 0, last: 99 },
     isInputDataDeleted: false,
     id: Math.random().toString(16).slice(2, 14).padEnd(24, "0"),
     created: Date.now(),
@@ -234,22 +246,35 @@ export async function deleteAlignmentProject(id: string): Promise<void> {
   mockProjects = mockProjects.filter((p) => p.id !== id);
 }
 
+export type AlignmentRunSettings = {
+  newDatasetName: string;
+  shouldRenderUnalignedPreview: boolean;
+  // Inclusive section numbers. null means all sections.
+  sectionRange: [number, number] | null;
+  customConfiguration: Record<string, unknown>;
+};
+
 export async function startAlignmentProjectJob(
   projectId: string,
   taskType: AlignmentProjectTaskType,
-  _newDatasetName: string,
-  _customConfiguration: Record<string, unknown>,
+  settings: AlignmentRunSettings,
 ): Promise<void> {
   await simulateLatency();
   const project = mockProjects.find((p) => p.id === projectId);
   const run: APIAlignmentProjectRun = {
     id: Math.random().toString(16).slice(2, 14).padEnd(24, "0"),
     taskType,
+    sectionRange:
+      settings.sectionRange != null
+        ? { first: settings.sectionRange[0], last: settings.sectionRange[1] }
+        : (project?.sectionRange ?? { first: 0, last: 0 }),
     state: "PENDING",
     created: Date.now(),
     ...owner,
     // Credits are charged when the job is started.
-    costInMilliCredits: project ? getMockAlignmentCostInMilliCredits(project, taskType) : null,
+    costInMilliCredits: project
+      ? getMockAlignmentCostInMilliCredits(project, taskType, settings.sectionRange)
+      : null,
     voxelyticsWorkflowHash: null,
     outputDataset: null,
     errorMessage: null,
@@ -279,13 +304,29 @@ export const MOCK_MILLI_CREDITS_PER_GIGABYTE: Record<AlignmentProjectTaskType, n
   [AlignmentProjectTaskType.ALIGN_AND_STITCH_TILES]: 250,
 };
 
-export function getMockAlignmentCostInMilliCredits(
+export function getSectionCount(range: { first: number; last: number }): number {
+  return range.last - range.first + 1;
+}
+
+export function getMockCostPerSectionInMilliCredits(
   project: APIAlignmentProject,
   taskType: AlignmentProjectTaskType,
 ): number {
-  return Math.round(
-    (project.totalSizeInBytes / 1024 ** 3) * MOCK_MILLI_CREDITS_PER_GIGABYTE[taskType],
-  );
+  const totalCost =
+    (project.totalSizeInBytes / 1024 ** 3) * MOCK_MILLI_CREDITS_PER_GIGABYTE[taskType];
+  return totalCost / getSectionCount(project.sectionRange);
+}
+
+export function getMockAlignmentCostInMilliCredits(
+  project: APIAlignmentProject,
+  taskType: AlignmentProjectTaskType,
+  sectionRange: [number, number] | null,
+): number {
+  const sectionCount =
+    sectionRange == null
+      ? getSectionCount(project.sectionRange)
+      : getSectionCount({ first: sectionRange[0], last: sectionRange[1] });
+  return Math.round(getMockCostPerSectionInMilliCredits(project, taskType) * sectionCount);
 }
 
 export function getAlignmentProjectTaskTypeName(taskType: AlignmentProjectTaskType): string {

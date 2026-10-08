@@ -2,13 +2,16 @@ import { CreditCardOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-de
 import {
   Button,
   Card,
+  Checkbox,
   Col,
   Collapse,
   Divider,
   Flex,
   Form,
   Input,
+  InputNumber,
   Modal,
+  Radio,
   Row,
   Space,
   Typography,
@@ -24,6 +27,8 @@ import {
   type APIAlignmentProject,
   getAlignmentProjectTaskTypeName,
   getMockAlignmentCostInMilliCredits,
+  getMockCostPerSectionInMilliCredits,
+  getSectionCount,
   startAlignmentProjectJob,
 } from "./alignment_project_mock_data";
 
@@ -31,6 +36,10 @@ const { Text, Title } = Typography;
 
 type FormValues = {
   newDatasetName: string;
+  shouldRenderUnalignedPreview: boolean;
+  sectionRangeMode: "all" | "subset";
+  firstSection: number;
+  lastSection: number;
   customConfiguration: Record<string, unknown>;
 };
 
@@ -46,6 +55,10 @@ export function StartAlignmentProjectModal({
   onStarted: () => void;
 }) {
   const [form] = Form.useForm<FormValues>();
+  const sectionRangeMode = Form.useWatch("sectionRangeMode", form);
+  const firstSection = Form.useWatch("firstSection", form);
+  const lastSection = Form.useWatch("lastSection", form);
+  const { first: minSection, last: maxSection } = project.sectionRange;
   const selectedTaskType = project.detectedTaskType;
   const [isStarting, setIsStarting] = useState(false);
   const organizationMilliCredits = useWkSelector(
@@ -61,19 +74,30 @@ export function StartAlignmentProjectModal({
     );
   }, [form, project, selectedTaskType]);
 
-  const costInMilliCredits = getMockAlignmentCostInMilliCredits(project, selectedTaskType);
-  const hasEnoughCredits = costInMilliCredits <= organizationMilliCredits;
+  const selectedSectionRange: [number, number] | null =
+    sectionRangeMode !== "subset"
+      ? [minSection, maxSection]
+      : firstSection != null && lastSection != null && firstSection <= lastSection
+        ? [firstSection, lastSection]
+        : null;
+  const costInMilliCredits =
+    selectedSectionRange != null
+      ? getMockAlignmentCostInMilliCredits(project, selectedTaskType, selectedSectionRange)
+      : null;
+  const hasEnoughCredits =
+    costInMilliCredits != null && costInMilliCredits <= organizationMilliCredits;
 
   const handleStart = async () => {
     const values = await form.validateFields();
     setIsStarting(true);
     try {
-      await startAlignmentProjectJob(
-        project.id,
-        selectedTaskType,
-        values.newDatasetName,
-        values.customConfiguration ?? {},
-      );
+      await startAlignmentProjectJob(project.id, selectedTaskType, {
+        newDatasetName: values.newDatasetName,
+        shouldRenderUnalignedPreview: values.shouldRenderUnalignedPreview,
+        sectionRange:
+          values.sectionRangeMode === "subset" ? [values.firstSection, values.lastSection] : null,
+        customConfiguration: values.customConfiguration ?? {},
+      });
       Toast.success("Alignment started successfully!");
       onStarted();
       onClose();
@@ -95,38 +119,97 @@ export function StartAlignmentProjectModal({
       destroyOnHidden
     >
       <Flex gap={24}>
-        <Flex flex="2" vertical gap={24}>
-          <Card
-            type="inner"
-            title={
-              <Space align="center">
-                <InfoCircleOutlined style={{ color: ColorWKBlue }} />
-                Input Data
-              </Space>
-            }
-          >
-            <Text>
-              {project.fileCount.toLocaleString()} files ({formatBytes(project.totalSizeInBytes, 1)}
-              ), with tile positions listed in <Text code>{project.csvFileName}</Text>. The result
-              will be written to a new dataset.
-            </Text>
-          </Card>
-          <Card
-            type="inner"
-            title={
-              <Space align="center">
-                <SettingOutlined style={{ color: ColorWKBlue }} />
-                Alignment Settings
-              </Space>
-            }
-          >
-            <Form form={form} layout="vertical">
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            shouldRenderUnalignedPreview: false,
+            sectionRangeMode: "all",
+            firstSection: minSection,
+            lastSection: maxSection,
+          }}
+          style={{ flex: 2 }}
+        >
+          <Flex vertical gap={24}>
+            <Card
+              type="inner"
+              title={
+                <Space align="center">
+                  <InfoCircleOutlined style={{ color: ColorWKBlue }} />
+                  Input Data
+                </Space>
+              }
+            >
+              <Typography.Paragraph>
+                {project.fileCount.toLocaleString()} files (
+                {formatBytes(project.totalSizeInBytes, 1)}
+                ), with tile positions listed in <Text code>{project.csvFileName}</Text>. The result
+                will be written to a new dataset.
+              </Typography.Paragraph>
+              <Form.Item name="sectionRangeMode" label="Sections">
+                <Radio.Group
+                  options={[
+                    {
+                      value: "all",
+                      label: `All sections (${minSection}–${maxSection})`,
+                    },
+                    { value: "subset", label: "Subset of sections" },
+                  ]}
+                />
+              </Form.Item>
+              {sectionRangeMode === "subset" && (
+                <Space align="start">
+                  <Form.Item
+                    name="firstSection"
+                    label="First Section"
+                    rules={[{ required: true, message: "Please enter the first section." }]}
+                  >
+                    <InputNumber min={minSection} max={maxSection} precision={0} />
+                  </Form.Item>
+                  <Form.Item
+                    name="lastSection"
+                    label="Last Section"
+                    dependencies={["firstSection"]}
+                    rules={[
+                      { required: true, message: "Please enter the last section." },
+                      ({ getFieldValue }) => ({
+                        validator: (_rule, value) =>
+                          value == null || value >= getFieldValue("firstSection")
+                            ? Promise.resolve()
+                            : Promise.reject(
+                                new Error("Must not be smaller than the first section."),
+                              ),
+                      }),
+                    ]}
+                  >
+                    <InputNumber min={minSection} max={maxSection} precision={0} />
+                  </Form.Item>
+                </Space>
+              )}
+            </Card>
+            <Card
+              type="inner"
+              title={
+                <Space align="center">
+                  <SettingOutlined style={{ color: ColorWKBlue }} />
+                  Alignment Settings
+                </Space>
+              }
+            >
               <Form.Item
                 name="newDatasetName"
-                label="New Dataset Name"
+                label="Output Dataset Name"
                 rules={[{ required: true, message: "Please provide a name for the new dataset" }]}
               >
                 <Input />
+              </Form.Item>
+              <Form.Item
+                name="shouldRenderUnalignedPreview"
+                valuePropName="checked"
+                tooltip="Renders the input data without alignment, so that you can preview it while the alignment is still running."
+                label="Preview"
+              >
+                <Checkbox>Render unaligned data as a preview</Checkbox>
               </Form.Item>
               <Collapse
                 ghost
@@ -143,9 +226,9 @@ export function StartAlignmentProjectModal({
                   },
                 ]}
               />
-            </Form>
-          </Card>
-        </Flex>
+            </Card>
+          </Flex>
+        </Form>
         <Flex flex="1" vertical>
           <Card
             type="inner"
@@ -176,10 +259,29 @@ export function StartAlignmentProjectModal({
             </Row>
             <Row justify="space-between">
               <Col>
-                <Text>Input Size:</Text>
+                <Text>Sections:</Text>
               </Col>
               <Col>
-                <Text strong>{formatBytes(project.totalSizeInBytes, 1)}</Text>
+                <Text strong>
+                  {selectedSectionRange != null
+                    ? getSectionCount({
+                        first: selectedSectionRange[0],
+                        last: selectedSectionRange[1],
+                      }).toLocaleString()
+                    : "-"}
+                </Text>
+              </Col>
+            </Row>
+            <Row justify="space-between">
+              <Col>
+                <Text>Credits per Section:</Text>
+              </Col>
+              <Col>
+                <Text strong>
+                  {formatMilliCreditsString(
+                    getMockCostPerSectionInMilliCredits(project, selectedTaskType),
+                  )}
+                </Text>
               </Col>
             </Row>
             <Divider />
@@ -189,7 +291,9 @@ export function StartAlignmentProjectModal({
               </Col>
               <Col>
                 <Title level={3} style={{ margin: 0 }}>
-                  {formatMilliCreditsString(costInMilliCredits)} credits
+                  {costInMilliCredits != null
+                    ? `${formatMilliCreditsString(costInMilliCredits)} credits`
+                    : "-"}
                 </Title>
               </Col>
             </Row>
@@ -202,7 +306,8 @@ export function StartAlignmentProjectModal({
               loading={isStarting}
               onClick={handleStart}
             >
-              Start alignment{hasEnoughCredits ? "" : " (not enough credits)"}
+              Start alignment
+              {costInMilliCredits != null && !hasEnoughCredits ? " (not enough credits)" : ""}
             </Button>
           </Card>
         </Flex>

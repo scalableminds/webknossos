@@ -27,6 +27,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
 export async function getJobs(
   command?: string,
   skipForDeletedDatasets?: boolean,
+  alignmentProjectId?: string,
 ): Promise<APIJob[]> {
   const params = new URLSearchParams();
   if (command) {
@@ -34,6 +35,9 @@ export async function getJobs(
   }
   if (skipForDeletedDatasets != null) {
     params.set("skipForDeletedDatasets", skipForDeletedDatasets ? "true" : "false");
+  }
+  if (alignmentProjectId != null) {
+    params.set("alignmentProjectId", alignmentProjectId);
   }
 
   const jobs = await Request.receiveJSON(`/api/jobs?${params}`);

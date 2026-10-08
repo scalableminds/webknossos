@@ -1,13 +1,13 @@
+import {
+  type APIAlignmentProject,
+  deleteAlignmentProject,
+  deleteAlignmentProjectInputData,
+} from "admin/api/alignment_projects";
 import { Alert, Flex, Modal, Radio, Typography } from "antd";
 import { formatBytes } from "libs/format_utils";
 import Toast from "libs/toast";
 import { useState } from "react";
 import { ModalWidth } from "theme";
-import {
-  type APIAlignmentProject,
-  deleteAlignmentProject,
-  deleteAlignmentProjectInputData,
-} from "./alignment_project_mock_data";
 
 export type AlignmentProjectDeletionMode = "inputData" | "project";
 
@@ -15,18 +15,17 @@ const { Text } = Typography;
 
 export function DeleteAlignmentProjectModal({
   project,
+  hasActiveJobs,
   isOpen,
   onClose,
   onDeleted,
 }: {
   project: APIAlignmentProject;
+  hasActiveJobs: boolean;
   isOpen: boolean;
   onClose: () => void;
   onDeleted: (mode: AlignmentProjectDeletionMode) => void;
 }) {
-  const hasActiveRuns = project.runs.some(
-    (run) => run.state === "PENDING" || run.state === "STARTED",
-  );
   const [mode, setMode] = useState<AlignmentProjectDeletionMode>(
     project.isInputDataDeleted ? "project" : "inputData",
   );
@@ -37,7 +36,11 @@ export function DeleteAlignmentProjectModal({
     try {
       if (mode === "inputData") {
         await deleteAlignmentProjectInputData(project.id);
-        Toast.success(`Deleted input data and freed ${formatBytes(project.totalSizeInBytes, 1)}.`);
+        Toast.success(
+          project.totalSizeInBytes != null
+            ? `Deleted input data and freed ${formatBytes(project.totalSizeInBytes, 1)}.`
+            : "Deleted input data.",
+        );
       } else {
         await deleteAlignmentProject(project.id);
         Toast.success("Alignment project deleted.");
@@ -73,7 +76,9 @@ export function DeleteAlignmentProjectModal({
             <Text type="secondary">
               {project.isInputDataDeleted
                 ? "The input data was already deleted."
-                : `Deletes the ${project.fileCount.toLocaleString()} uploaded files and frees ${formatBytes(project.totalSizeInBytes, 1)} of storage. The project and its list of alignments are kept, but no new alignments can be started.`}
+                : project.fileCount != null && project.totalSizeInBytes != null
+                  ? `Deletes the ${project.fileCount.toLocaleString()} uploaded files and frees ${formatBytes(project.totalSizeInBytes, 1)} of storage. The project and its list of alignments are kept, but no new alignments can be started.`
+                  : "Deletes the uploaded files. The project and its list of alignments are kept, but no new alignments can be started."}
             </Text>
           </Radio>
           <Radio value="project">
@@ -88,7 +93,7 @@ export function DeleteAlignmentProjectModal({
         <Text type="secondary">
           Datasets that were created by alignments of this project are kept in both cases.
         </Text>
-        {hasActiveRuns && (
+        {hasActiveJobs && (
           <Alert
             type="warning"
             showIcon

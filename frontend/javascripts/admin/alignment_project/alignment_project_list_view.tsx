@@ -1,13 +1,13 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { type APIAlignmentProject, getAlignmentProjects } from "admin/api/alignment_projects";
 import { Button, Input, Spin, Table, Tag, Tooltip } from "antd";
 import FormattedDate from "components/formatted_date";
 import { formatBytes } from "libs/format_utils";
 import { compareBy, filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import { useState } from "react";
 import { Link } from "react-router";
-import { type APIAlignmentProject, getAlignmentProjects } from "./alignment_project_mock_data";
 
 const { Column } = Table;
 
@@ -54,7 +54,7 @@ function AlignmentProjectListView() {
         <Table
           dataSource={filterWithSearchQueryAND(
             projects || [],
-            ["name", "description", "csvFileName"],
+            ["name", "description", "csvPath"],
             searchQuery,
           )}
           rowKey="id"
@@ -86,17 +86,19 @@ function AlignmentProjectListView() {
             title="Files"
             key="files"
             align="right"
-            sorter={compareBy<APIAlignmentProject>((p) => p.fileCount)}
+            sorter={compareBy<APIAlignmentProject>((p) => p.fileCount ?? 0)}
             render={(project: APIAlignmentProject) =>
-              `${project.fileCount.toLocaleString()} (${formatBytes(project.totalSizeInBytes, 1)})`
+              project.fileCount != null && project.totalSizeInBytes != null
+                ? `${project.fileCount.toLocaleString()} (${formatBytes(project.totalSizeInBytes, 1)})`
+                : "-"
             }
           />
           <Column
             title="Alignments"
-            key="runs"
+            key="jobCount"
             align="right"
-            sorter={compareBy<APIAlignmentProject>((p) => p.runs.length)}
-            render={(project: APIAlignmentProject) => project.runs.length}
+            sorter={compareBy<APIAlignmentProject>((p) => p.jobCount)}
+            render={(project: APIAlignmentProject) => project.jobCount}
           />
           <Column
             title="Owner"

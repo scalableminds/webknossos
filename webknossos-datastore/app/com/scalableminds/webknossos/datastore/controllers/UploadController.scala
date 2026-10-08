@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.services.{
@@ -9,6 +10,7 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  AlignmentProjectUploadInfo,
   AttachmentUploadInfo,
   DatasetUploadInfo,
   MagUploadInfo,
@@ -97,6 +99,36 @@ class UploadController @Inject() (
       }
     }
 
+  def reserveAlignmentProjectUpload(): Action[AlignmentProjectUploadInfo] =
+    Action.fox(validateJson[AlignmentProjectUploadInfo]) { implicit request =>
+      // WEBKNOSSOS checks the more specific permissions when reserving.
+      accessTokenService.validateAccessFromTokenContext(
+        UserAccessRequest.administrateDatasets(request.body.organizationId)
+      ) {
+        for {
+          isKnownUpload <- uploadService.isKnownUpload(
+            request.body.resumableUploadInfo.uploadId,
+            UploadDomain.alignmentProject
+          )
+          _ <- Fox.runIf(!isKnownUpload) {
+            for {
+              additionalInfo <- dsRemoteWebknossosClient.reserveAlignmentProjectUpload(
+                request.body
+              ) ?~> "alignmentProject.upload.validation.failed"
+              _ <- uploadService.reserveAlignmentProjectUpload(request.body, additionalInfo.newAlignmentProjectId)
+            } yield ()
+          }
+        } yield Ok
+      }
+    }
+
+  // For alignment projects, the id stored with the upload is the alignment project id.
+  private def writeAccessRequestForUpload(uploadDomain: UploadDomain.Value, id: ObjectId): UserAccessRequest =
+    uploadDomain match {
+      case UploadDomain.alignmentProject => UserAccessRequest.writeAlignmentProject(id)
+      case _                             => UserAccessRequest.writeDataset(id)
+    }
+
   def getUnfinishedUploads(organizationName: String, uploadDomain: String): Action[AnyContent] =
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDatasets(organizationName)) {
@@ -153,7 +185,9 @@ class UploadController @Inject() (
                   uploadId,
                   uploadDomainValidated
                 ) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId, uploadDomain)
-                result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+                result <- accessTokenService.validateAccessFromTokenContext(
+                  writeAccessRequestForUpload(uploadDomainValidated, datasetId)
+                ) {
                   for {
                     isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId, uploadDomainValidated)
                     _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
@@ -182,7 +216,9 @@ class UploadController @Inject() (
         uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
         datasetId <- uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated) ?~> Msg.Dataset.Upload
           .noSuchUpload(uploadId, uploadDomain)
-        result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+        result <- accessTokenService.validateAccessFromTokenContext(
+          writeAccessRequestForUpload(uploadDomainValidated, datasetId)
+        ) {
           for {
             isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier, uploadDomainValidated)
             _ <- Fox.fromBool(isKnownUpload) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId, uploadDomain)
@@ -199,14 +235,27 @@ class UploadController @Inject() (
           uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
           datasetId <- uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated) ?~> Msg.Dataset.Upload
             .noSuchUpload(uploadId, uploadDomain)
-          response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-            for {
-              _ <- (uploadDomainValidated match {
-                case UploadDomain.dataset    => uploadService.finishDatasetUpload(uploadId, datasetId)
-                case UploadDomain.mag        => uploadService.finishMagUpload(uploadId, datasetId)
-                case UploadDomain.attachment => uploadService.finishAttachmentUpload(uploadId, datasetId)
-              }) ?~> Msg.Dataset.Upload.finishFailed(datasetId, uploadDomain)
-            } yield Ok(Json.obj("datasetId" -> datasetId))
+          response <- accessTokenService.validateAccessFromTokenContext(
+            writeAccessRequestForUpload(uploadDomainValidated, datasetId)
+          ) {
+            uploadDomainValidated match {
+              case UploadDomain.alignmentProject =>
+                for {
+                  _ <- uploadService.finishAlignmentProjectUpload(
+                    uploadId,
+                    datasetId
+                  ) ?~> "Could not finish the alignment project upload."
+                } yield Ok(Json.obj("alignmentProjectId" -> datasetId))
+              case _ =>
+                for {
+                  _ <- (uploadDomainValidated match {
+                    case UploadDomain.dataset    => uploadService.finishDatasetUpload(uploadId, datasetId)
+                    case UploadDomain.mag        => uploadService.finishMagUpload(uploadId, datasetId)
+                    case UploadDomain.attachment => uploadService.finishAttachmentUpload(uploadId, datasetId)
+                    case _                       => Fox.failure(s"Unsupported upload domain $uploadDomainValidated")
+                  }) ?~> Msg.Dataset.Upload.finishFailed(datasetId, uploadDomain)
+                } yield Ok(Json.obj("datasetId" -> datasetId))
+            }
           }
         } yield response
       }

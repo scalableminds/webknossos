@@ -1,4 +1,11 @@
 import { CreditCardOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
+import {
+  type APIAlignmentProject,
+  getAlignmentProjectJobCreditCost,
+  type SectionRange,
+  startAlignmentProjectJob,
+} from "admin/api/alignment_projects";
 import {
   Button,
   Card,
@@ -17,19 +24,10 @@ import {
 import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { formatBytes, formatMilliCreditsString } from "libs/format_utils";
-import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
 import { ColorWKBlue, ColorWKGold, ModalWidth } from "theme";
-import {
-  type APIAlignmentProject,
-  getAlignmentRunTypeName,
-  getMockAlignmentCostInMilliCredits,
-  getMockCostPerSectionInMilliCredits,
-  getSectionCount,
-  type SectionRange,
-  startAlignmentProjectJob,
-} from "./alignment_project_mock_data";
+import { getAlignmentRunTypeName, getSectionCount } from "./alignment_project_utils";
 
 const { Text, Title } = Typography;
 
@@ -64,9 +62,6 @@ export function StartAlignmentProjectModal({
   const renderUnaligned = mode === "renderUnaligned";
   const { first: minSection, last: maxSection } = sectionRange;
   const [isStarting, setIsStarting] = useState(false);
-  const organizationMilliCredits = useWkSelector(
-    (state) => state.activeOrganization?.milliCreditBalance || 0,
-  );
   const { data: folderHierarchy } = useFolderHierarchyQuery();
   const rootFolderId = folderHierarchy?.tree[0]?.key ?? null;
 
@@ -74,7 +69,7 @@ export function StartAlignmentProjectModal({
     const suffix = renderUnaligned ? "unaligned" : "aligned";
     form.setFieldValue(
       "newDatasetName",
-      `${project.name.replace(/[^\w-]+/g, "_").toLowerCase()}_${suffix}_v${project.runs.length + 1}`,
+      `${project.name.replace(/[^\w-]+/g, "_").toLowerCase()}_${suffix}_v${project.jobCount + 1}`,
     );
   }, [form, project, renderUnaligned]);
 
@@ -90,12 +85,25 @@ export function StartAlignmentProjectModal({
       : firstSection != null && lastSection != null && firstSection <= lastSection
         ? { first: firstSection, last: lastSection }
         : null;
+  const { data: creditCostInfo, isFetching: isFetchingCost } = useQuery({
+    queryKey: [
+      "alignmentProjectJobCreditCost",
+      project.id,
+      renderUnaligned,
+      selectedSectionRange?.first,
+      selectedSectionRange?.last,
+    ],
+    queryFn: () =>
+      getAlignmentProjectJobCreditCost(project.id, renderUnaligned, selectedSectionRange),
+    enabled: isOpen && selectedSectionRange != null,
+  });
   const costInMilliCredits =
-    selectedSectionRange != null
-      ? getMockAlignmentCostInMilliCredits(project, renderUnaligned, selectedSectionRange)
+    selectedSectionRange != null ? creditCostInfo?.costInMilliCredits : null;
+  const hasEnoughCredits = costInMilliCredits != null && creditCostInfo?.hasEnoughCredits === true;
+  const costPerSectionInMilliCredits =
+    costInMilliCredits != null && selectedSectionRange != null
+      ? costInMilliCredits / getSectionCount(selectedSectionRange)
       : null;
-  const hasEnoughCredits =
-    costInMilliCredits != null && costInMilliCredits <= organizationMilliCredits;
 
   const handleStart = async () => {
     const values = await form.validateFields();
@@ -157,10 +165,9 @@ export function StartAlignmentProjectModal({
               }
             >
               <Typography.Paragraph>
-                {project.fileCount.toLocaleString()} files (
-                {formatBytes(project.totalSizeInBytes, 1)}), with tile positions listed in{" "}
-                <Text code>{project.csvFileName}</Text>. The result will be written to a new
-                dataset.
+                {(project.fileCount ?? 0).toLocaleString()} files (
+                {formatBytes(project.totalSizeInBytes ?? 0, 1)}), with tile positions listed in{" "}
+                <Text code>{project.csvPath}</Text>. The result will be written to a new dataset.
               </Typography.Paragraph>
               <Form.Item name="sectionRangeMode" label="Sections">
                 <Radio.Group
@@ -269,7 +276,11 @@ export function StartAlignmentProjectModal({
                 <Text>Available Credits</Text>
               </Col>
               <Col>
-                <Text strong>{formatMilliCreditsString(organizationMilliCredits)}</Text>
+                <Text strong>
+                  {creditCostInfo != null
+                    ? formatMilliCreditsString(creditCostInfo.organizationMilliCredits)
+                    : "-"}
+                </Text>
               </Col>
             </Row>
             <Divider />
@@ -300,9 +311,9 @@ export function StartAlignmentProjectModal({
               </Col>
               <Col>
                 <Text strong>
-                  {formatMilliCreditsString(
-                    getMockCostPerSectionInMilliCredits(project, renderUnaligned),
-                  )}
+                  {costPerSectionInMilliCredits != null
+                    ? formatMilliCreditsString(costPerSectionInMilliCredits)
+                    : "-"}
                 </Text>
               </Col>
             </Row>
@@ -324,7 +335,7 @@ export function StartAlignmentProjectModal({
               block
               size="large"
               style={{ marginTop: 24 }}
-              disabled={!hasEnoughCredits}
+              disabled={!hasEnoughCredits || isFetchingCost}
               loading={isStarting}
               onClick={handleStart}
             >

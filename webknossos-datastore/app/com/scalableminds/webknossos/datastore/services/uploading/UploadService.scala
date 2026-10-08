@@ -50,9 +50,12 @@ import org.apache.commons.io.FileUtils
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
 import java.io.{File, RandomAccessFile}
+import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters.*
 import scala.jdk.FutureConverters.*
+import scala.util.Using
 
 case class ResumableUploadInfo(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -124,11 +127,32 @@ case class ReportAttachmentUploadParameters(
 case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
     derives JsonAutoFormat
 
+case class AlignmentProjectUploadInfo(
+    resumableUploadInfo: ResumableUploadInfo,
+    name: String,
+    description: Option[String],
+    organizationId: String,
+    voxelSizeFactor: Vec3Double,
+    voxelSizeUnit: LengthUnit
+) derives JsonAutoFormat
+
+case class AlignmentProjectUploadAdditionalInfo(newAlignmentProjectId: ObjectId) derives JsonAutoFormat
+
+case class ReportAlignmentProjectUploadParameters(
+    alignmentProjectId: ObjectId,
+    csvPath: Option[String], // relative to the alignment project directory
+    fileCount: Long,
+    totalSizeInBytes: Long,
+    sectionRange: Option[SectionRange], // set if the CSV is valid
+    invalidReason: Option[String] // set if the CSV is invalid
+) derives JsonAutoFormat
+
 class UploadService @Inject() (
     dataSourceService: DataSourceService,
     datasetUploadMetadataStore: DatasetUploadMetadataStore,
     magUploadMetadataStore: MagUploadMetadataStore,
     attachmentUploadMetadataStore: AttachmentUploadMetadataStore,
+    alignmentProjectUploadMetadataStore: AlignmentProjectUploadMetadataStore,
     dataVaultService: DataVaultService,
     exploreLocalLayerService: ExploreLocalLayerService,
     baseDirService: BaseDirService,
@@ -146,9 +170,10 @@ class UploadService @Inject() (
   actorSystem.scheduler.scheduleOnce(10 seconds)(cleanUpOrphanUploads())
 
   private def selectUploadMetadataStore(uploadDomain: UploadDomain) = uploadDomain match {
-    case UploadDomain.dataset    => datasetUploadMetadataStore
-    case UploadDomain.mag        => magUploadMetadataStore
-    case UploadDomain.attachment => attachmentUploadMetadataStore
+    case UploadDomain.dataset          => datasetUploadMetadataStore
+    case UploadDomain.mag              => magUploadMetadataStore
+    case UploadDomain.attachment       => attachmentUploadMetadataStore
+    case UploadDomain.alignmentProject => alignmentProjectUploadMetadataStore
   }
 
   def isKnownUploadByFileId(uploadFileId: String, uploadDomain: UploadDomain): Fox[Boolean] =
@@ -236,6 +261,14 @@ class UploadService @Inject() (
       _ <- attachmentUploadMetadataStore.insertAttachmentType(uploadId, attachmentUploadInfo.attachmentType)
       _ <- attachmentUploadMetadataStore.insertLayerName(uploadId, attachmentUploadInfo.layerName)
     } yield ()
+
+  def reserveAlignmentProjectUpload(uploadInfo: AlignmentProjectUploadInfo, alignmentProjectId: ObjectId): Fox[Unit] =
+    reserveResumableUpload(
+      uploadInfo.resumableUploadInfo,
+      alignmentProjectId,
+      DataSourceId(alignmentProjectId.toString, uploadInfo.organizationId),
+      UploadDomain.alignmentProject
+    )
 
   private def reserveResumableUpload(
       resumableUploadInfo: ResumableUploadInfo,
@@ -529,6 +562,99 @@ class UploadService @Inject() (
         ReportAttachmentUploadParameters(datasetId, layerName, attachmentType, attachmentAdapted, attachmentSizeBytes)
       )
     } yield ()
+
+  // The uploaded files are kept as they are. The worker reads them via the path of the tile CSV.
+  def finishAlignmentProjectUpload(uploadId: String, alignmentProjectId: ObjectId): Fox[Unit] =
+    for {
+      dataSourceId <- alignmentProjectUploadMetadataStore.findDataSourceId(uploadId)
+      _ = logger.info(
+        s"Finishing ${uploadFullName(UploadDomain.alignmentProject, uploadId, alignmentProjectId, dataSourceId)}..."
+      )
+      uploadDir <- uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.alignmentProject).toFox
+      _ <- checkWithinRequestedFileSize(
+        uploadDir,
+        uploadId,
+        alignmentProjectId,
+        UploadDomain.alignmentProject
+      ) ?~> Msg.Dataset.Upload.fileSizeCheckFailed
+      _ <- checkAllChunksUploaded(
+        uploadId,
+        UploadDomain.alignmentProject
+      ) ?~> Msg.Dataset.Upload.allChunksUploadedCheckFailed
+      targetDir <- alignmentProjectDirFor(dataSourceId.organizationId, alignmentProjectId).toFox
+      _ <- Fox.fromBool(!Files.exists(targetDir)) ?~> s"Alignment project directory $targetDir already exists."
+      _ <- PathUtils.ensureDirectoryBox(targetDir.getParent).toFox
+      _ <- unpackOrMoveAlignmentProjectUpload(uploadDir, targetDir, alignmentProjectId)
+      _ <- cleanUpUploaded(uploadId, reason = "Upload complete, data unpacked.", UploadDomain.alignmentProject)
+      allFiles <- tryo(
+        Using.resource(Files.walk(targetDir))(_.iterator.asScala.filter(Files.isRegularFile(_)).toList)
+      ).toFox
+      totalSizeInBytes <- measureDirectorySizeBytes(targetDir) ?~> Msg.Dataset.Upload.measureTotalSizeFailed
+      csvFiles = allFiles.filter(_.getFileName.toString.toLowerCase.endsWith(".csv"))
+      sectionRangeBox = csvFiles match {
+        case List(csvFile) =>
+          tryo(
+            Using.resource(scala.io.Source.fromFile(csvFile.toFile, StandardCharsets.UTF_8.name))(source =>
+              TileCsvParser.parseSectionRange(source.getLines())
+            )
+          ).flatMap(identity)
+        case Nil => Failure("No CSV file was found among the uploaded files.")
+        case _   =>
+          Failure(
+            s"Expected exactly one CSV file, found ${csvFiles.length}: ${csvFiles.map(targetDir.relativize).mkString(", ")}."
+          )
+      }
+      invalidReasonOpt = sectionRangeBox match {
+        case f: Failure => Some(f.msg)
+        case Empty      => Some("The CSV file could not be read.")
+        case Full(_)    => None
+      }
+      _ <- remoteWebknossosClient.reportAlignmentProjectUpload(
+        ReportAlignmentProjectUploadParameters(
+          alignmentProjectId,
+          csvFiles.headOption.filter(_ => csvFiles.length == 1).map(targetDir.relativize(_).toString),
+          allFiles.length,
+          totalSizeInBytes,
+          sectionRangeBox.toOption,
+          invalidReasonOpt
+        )
+      ) ?~> "Could not report the alignment project upload to WEBKNOSSOS."
+    } yield ()
+
+  // A single uploaded zip is unpacked, otherwise the uploaded files are moved as they are.
+  private def unpackOrMoveAlignmentProjectUpload(
+      uploadDir: Path,
+      targetDir: Path,
+      alignmentProjectId: ObjectId
+  ): Fox[Unit] =
+    for {
+      uploadedFiles <- PathUtils.listFilesRecursive(uploadDir, silent = false, maxDepth = 10).toFox
+      _ <- Fox.fromBool(uploadedFiles.nonEmpty) ?~> Msg.Dataset.Upload.noFiles
+      _ <- uploadedFiles match {
+        case List(zipFile) if zipFile.getFileName.toString.toLowerCase.endsWith(".zip") =>
+          logger.info(s"finishUpload for alignment project $alignmentProjectId: Unzipping to $targetDir...")
+          ZipIO
+            .unzipToDirectory(
+              zipFile.toFile,
+              targetDir,
+              includeHiddenFiles = false,
+              hiddenFilesWhitelist = List.empty,
+              truncateCommonPrefix = false,
+              boundaryDirNames = None
+            )
+            .toFox
+            .map(_ => ()) ?~> "Could not unzip the uploaded file."
+        case _ =>
+          tryo(
+            FileUtils.moveDirectory(uploadDir.toFile, targetDir.toFile)
+          ).toFox ?~> Msg.Dataset.Upload.moveToTargetFailed
+      }
+    } yield ()
+
+  private def alignmentProjectDirFor(organizationId: String, alignmentProjectId: ObjectId): Box[Path] =
+    for {
+      orgaDir <- baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true)
+    } yield orgaDir.resolve(alignmentProjectsDir).resolve(alignmentProjectId.toString)
 
   private def checkWithinRequestedFileSize(
       uploadDir: Path,
@@ -1093,6 +1219,7 @@ class UploadService @Inject() (
       _ <- cleanUpOrphanUploadsForOrgaAndDomain(organizationDir, UploadDomain.dataset)
       _ <- cleanUpOrphanUploadsForOrgaAndDomain(organizationDir, UploadDomain.mag)
       _ <- cleanUpOrphanUploadsForOrgaAndDomain(organizationDir, UploadDomain.attachment)
+      _ <- cleanUpOrphanUploadsForOrgaAndDomain(organizationDir, UploadDomain.alignmentProject)
     } yield ()
 
   private def cleanUpOrphanUploadsForOrgaAndDomain(organizationDir: Path, uploadDomain: UploadDomain): Fox[Unit] = {
@@ -1123,7 +1250,8 @@ class UploadService @Inject() (
       fromDataset <- datasetUploadMetadataStore.isKnownUpload(uploadId)
       fromMag <- magUploadMetadataStore.isKnownUpload(uploadId)
       fromAttachment <- attachmentUploadMetadataStore.isKnownUpload(uploadId)
-    } yield fromDataset || fromMag || fromAttachment
+      fromAlignmentProject <- alignmentProjectUploadMetadataStore.isKnownUpload(uploadId)
+    } yield fromDataset || fromMag || fromAttachment || fromAlignmentProject
 
 }
 

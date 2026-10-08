@@ -19,7 +19,7 @@ object AccessMode extends ExtendedEnumeration {
 
 object AccessResourceType extends ExtendedEnumeration {
   type AccessResourceType = Value
-  val dataset, tracing, annotation, webknossos, jobExport = Value
+  val dataset, tracing, annotation, webknossos, jobExport, alignmentProject = Value
 }
 
 case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None) derives JsonAutoFormat
@@ -54,6 +54,9 @@ object UserAccessRequest {
 
   def writeAnnotation(annotationId: ObjectId): UserAccessRequest =
     UserAccessRequest(Some(annotationId.toString), AccessResourceType.annotation, AccessMode.write)
+
+  def writeAlignmentProject(alignmentProjectId: ObjectId): UserAccessRequest =
+    UserAccessRequest(Some(alignmentProjectId.toString), AccessResourceType.alignmentProject, AccessMode.write)
 
   def downloadJobExport(jobId: ObjectId): UserAccessRequest =
     UserAccessRequest(Some(jobId.toString), AccessResourceType.jobExport, AccessMode.read)

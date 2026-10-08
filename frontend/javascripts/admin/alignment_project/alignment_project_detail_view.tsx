@@ -11,6 +11,12 @@ import {
 } from "@ant-design/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import {
+  getAlignmentProject,
+  getAlignmentProjectJobs,
+  updateAlignmentProject,
+} from "admin/api/alignment_projects";
+import { cancelJob } from "admin/api/jobs";
 import { JobState } from "admin/job/job_list_view";
 import {
   Alert,
@@ -38,15 +44,9 @@ import { compareBy } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import type { APIJob } from "types/api_types";
 import { AllUnits, LongUnitToShortUnitMap, type UnitLong, type Vector3 } from "viewer/constants";
-import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import {
-  type APIAlignmentProjectRun,
-  cancelAlignmentProjectRun,
-  formatSectionRange,
-  getAlignmentProject,
-  updateAlignmentProject,
-} from "./alignment_project_mock_data";
+import { formatSectionRange } from "./alignment_project_utils";
 import {
   type AlignmentProjectDeletionMode,
   DeleteAlignmentProjectModal,
@@ -54,6 +54,7 @@ import {
 import { StartAlignmentProjectModal } from "./start_alignment_project_modal";
 
 const { Column } = Table;
+const JOB_REFRESH_INTERVAL = 5000;
 
 function AlignmentProjectDetailView() {
   const { alignmentProjectId = "" } = useParams();
@@ -63,13 +64,14 @@ function AlignmentProjectDetailView() {
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   // Non-null while the voxel size is being edited.
   const [voxelSizeDraft, setVoxelSizeDraft] = useState<{
-    voxelSize: Vector3;
+    factor: Vector3;
     unit: UnitLong;
   } | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   const queryKey = ["alignmentProjects", alignmentProjectId];
+  const jobsQueryKey = ["alignmentProjects", alignmentProjectId, "jobs"];
   const {
     data: project,
     isLoading,
@@ -78,6 +80,12 @@ function AlignmentProjectDetailView() {
     queryKey,
     queryFn: () => getAlignmentProject(alignmentProjectId),
     retry: false,
+  });
+  const { data: jobs, isLoading: areJobsLoading } = useQuery({
+    queryKey: jobsQueryKey,
+    queryFn: () => getAlignmentProjectJobs(alignmentProjectId),
+    refetchInterval: JOB_REFRESH_INTERVAL,
+    enabled: project != null,
   });
 
   if (isError) {
@@ -90,19 +98,19 @@ function AlignmentProjectDetailView() {
   const handleUpdate = async (update: Parameters<typeof updateAlignmentProject>[1]) => {
     try {
       await updateAlignmentProject(project.id, update);
-    } catch (error) {
-      Toast.error((error as Error).message);
+    } catch (_error) {
+      // The request library already shows the error, e.g. for a duplicate name.
     }
     await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
   };
 
   const saveVoxelSizeDraft = () => {
     if (voxelSizeDraft == null) return;
-    if (voxelSizeDraft.voxelSize.some((el) => !(el > 0))) {
+    if (voxelSizeDraft.factor.some((el) => !(el > 0))) {
       Toast.error("Each component of the voxel size must be larger than 0.");
       return;
     }
-    handleUpdate({ voxelSize: voxelSizeDraft.voxelSize, voxelSizeUnit: voxelSizeDraft.unit });
+    handleUpdate({ voxelSize: voxelSizeDraft });
     setVoxelSizeDraft(null);
   };
 
@@ -123,19 +131,19 @@ function AlignmentProjectDetailView() {
     await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
   };
 
-  const renderActions = (run: APIAlignmentProjectRun) => {
-    if (run.state === "PENDING" || run.state === "STARTED") {
+  const renderActions = (job: APIJob) => {
+    if (job.state === "PENDING" || job.state === "STARTED") {
       return (
         <AsyncLink
           onClick={async () => {
             const isCancelConfirmed = await modal.confirm({
-              title: <p>Are you sure you want to cancel job {run.id}?</p>,
+              title: <p>Are you sure you want to cancel job {job.id}?</p>,
               okText: "Yes, cancel job",
               cancelText: "No, keep it",
             });
             if (isCancelConfirmed) {
-              await cancelAlignmentProjectRun(project.id, run.id);
-              await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
+              await cancelJob(job.id);
+              await queryClient.invalidateQueries({ queryKey: jobsQueryKey });
             }
           }}
           icon={<CloseCircleOutlined className="icon-margin-right" />}
@@ -144,19 +152,25 @@ function AlignmentProjectDetailView() {
         </AsyncLink>
       );
     }
-    if (run.state === "SUCCESS" && run.outputDataset != null) {
+    if (job.state === "SUCCESS" && job.resultLink != null) {
       return (
-        <Link to={getViewDatasetURL(run.outputDataset)}>
+        <Link to={job.resultLink}>
           <LinkButton icon={<EyeOutlined />}>View</LinkButton>
         </Link>
       );
     }
-    if (run.state === "FAILURE" && run.errorMessage != null) {
+    if (job.state === "FAILURE" && job.errorDetails != null) {
+      const message =
+        job.errorDetails.message != null ? (
+          <p>{job.errorDetails.message as string}</p>
+        ) : (
+          <pre style={{ maxHeight: 400, overflow: "auto" }}>
+            {JSON.stringify(job.errorDetails, null, 2)}
+          </pre>
+        );
       return (
         <a
-          onClick={() =>
-            modal.error({ title: "Job Error Details", width: 600, content: run.errorMessage })
-          }
+          onClick={() => modal.error({ title: "Job Error Details", width: 600, content: message })}
         >
           <WarningOutlined className="icon-margin-right" />
           Show Error
@@ -164,6 +178,15 @@ function AlignmentProjectDetailView() {
       );
     }
     return null;
+  };
+
+  const renderSectionRange = (job: APIJob) => {
+    const sectionRange = job.args.sectionRange;
+    if (sectionRange != null) {
+      return formatSectionRange({ first: sectionRange[0], last: sectionRange[1] });
+    }
+    // null means all sections of the project.
+    return project.sectionRange != null ? formatSectionRange(project.sectionRange) : "All";
   };
 
   return (
@@ -235,19 +258,23 @@ function AlignmentProjectDetailView() {
         )}
         <Descriptions column={{ xs: 1, md: 2, xl: 3 }}>
           <Descriptions.Item label="Tile CSV">
-            <Space size={4}>
-              <FileTextOutlined />
-              <Typography.Text code>{project.csvFileName}</Typography.Text>
-            </Space>
+            {project.csvPath != null ? (
+              <Space size={4}>
+                <FileTextOutlined />
+                <Typography.Text code>{project.csvPath}</Typography.Text>
+              </Space>
+            ) : (
+              "-"
+            )}
           </Descriptions.Item>
           <Descriptions.Item label="Uploaded Files">
-            {project.fileCount.toLocaleString()}
+            {project.fileCount != null ? project.fileCount.toLocaleString() : "-"}
           </Descriptions.Item>
           <Descriptions.Item label="Sections">
             {project.sectionRange != null ? formatSectionRange(project.sectionRange) : "-"}
           </Descriptions.Item>
           <Descriptions.Item label="Total Size">
-            {formatBytes(project.totalSizeInBytes, 1)}
+            {project.totalSizeInBytes != null ? formatBytes(project.totalSizeInBytes, 1) : "-"}
           </Descriptions.Item>
           <Descriptions.Item label="Voxel Size">
             {voxelSizeDraft != null ? (
@@ -256,8 +283,8 @@ function AlignmentProjectDetailView() {
                   size="small"
                   allowDecimals
                   autoFocus
-                  value={voxelSizeDraft.voxelSize}
-                  onChange={(voxelSize) => setVoxelSizeDraft({ ...voxelSizeDraft, voxelSize })}
+                  value={voxelSizeDraft.factor}
+                  onChange={(factor) => setVoxelSizeDraft({ ...voxelSizeDraft, factor })}
                   onPressEnter={saveVoxelSizeDraft}
                 />
                 <Select
@@ -285,15 +312,9 @@ function AlignmentProjectDetailView() {
               </Space>
             ) : (
               <Space size={4}>
-                {project.voxelSize.join(" × ")} {LongUnitToShortUnitMap[project.voxelSizeUnit]}
-                <Typography.Link
-                  onClick={() =>
-                    setVoxelSizeDraft({
-                      voxelSize: project.voxelSize,
-                      unit: project.voxelSizeUnit,
-                    })
-                  }
-                >
+                {project.voxelSize.factor.join(" × ")}{" "}
+                {LongUnitToShortUnitMap[project.voxelSize.unit]}
+                <Typography.Link onClick={() => setVoxelSizeDraft(project.voxelSize)}>
                   <EditOutlined />
                 </Typography.Link>
               </Space>
@@ -311,7 +332,8 @@ function AlignmentProjectDetailView() {
 
       <Card title="Alignments">
         <Table
-          dataSource={project.runs}
+          dataSource={jobs ?? []}
+          loading={areJobsLoading}
           rowKey="id"
           pagination={false}
           locale={{ emptyText: "No alignments have been run for this project yet." }}
@@ -323,32 +345,28 @@ function AlignmentProjectDetailView() {
             width={120}
             render={(id) => <FormattedId id={id} />}
           />
-          <Column
-            title="Sections"
-            key="sectionRange"
-            render={(run: APIAlignmentProjectRun) => formatSectionRange(run.sectionRange)}
-          />
+          <Column title="Sections" key="sectionRange" render={renderSectionRange} />
           <Column
             title="Output Dataset"
             key="outputDataset"
-            render={(run: APIAlignmentProjectRun) => (
+            render={(job: APIJob) => (
               <Space size={4}>
-                {run.outputDataset != null ? (
-                  <Link to={getViewDatasetURL(run.outputDataset)}>{run.outputDataset.name}</Link>
+                {job.resultLink != null ? (
+                  <Link to={job.resultLink}>{job.args.newDatasetName}</Link>
                 ) : (
-                  "-"
+                  (job.args.newDatasetName ?? "-")
                 )}
-                {run.renderUnaligned && <Tag>Unaligned</Tag>}
+                {job.args.renderUnaligned && <Tag>Unaligned</Tag>}
               </Space>
             )}
           />
           <Column
             title="Owner"
             key="owner"
-            render={(run: APIAlignmentProjectRun) => (
+            render={(job: APIJob) => (
               <>
-                <div>{`${run.ownerLastName}, ${run.ownerFirstName}`}</div>
-                <div>{`(${run.ownerEmail})`}</div>
+                <div>{`${job.ownerLastName}, ${job.ownerFirstName}`}</div>
+                <div>{`(${job.ownerEmail})`}</div>
               </>
             )}
           />
@@ -356,26 +374,26 @@ function AlignmentProjectDetailView() {
             title="Cost in Credits"
             key="costInMilliCredits"
             align="right"
-            render={(run: APIAlignmentProjectRun) =>
-              run.costInMilliCredits ? formatMilliCreditsString(run.costInMilliCredits) : "-"
+            render={(job: APIJob) =>
+              job.costInMilliCredits ? formatMilliCreditsString(job.costInMilliCredits) : "-"
             }
           />
           <Column
             title="Date"
             key="created"
             width={190}
-            sorter={compareBy<APIAlignmentProjectRun>((run) => run.created)}
+            sorter={compareBy<APIJob>((job) => job.created)}
             defaultSortOrder="descend"
-            render={(run: APIAlignmentProjectRun) => <FormattedDate timestamp={run.created} />}
+            render={(job: APIJob) => <FormattedDate timestamp={job.created} />}
           />
           {isCurrentUserSuperUser ? (
             <Column
               title="Voxelytics"
               key="workflow"
               width={150}
-              render={(run: APIAlignmentProjectRun) =>
-                run.voxelyticsWorkflowHash != null ? (
-                  <Link to={`/workflows/${run.voxelyticsWorkflowHash}`}>Workflow</Link>
+              render={(job: APIJob) =>
+                job.voxelyticsWorkflowHash != null ? (
+                  <Link to={`/workflows/${job.voxelyticsWorkflowHash}`}>Workflow</Link>
                 ) : null
               }
             />
@@ -384,7 +402,7 @@ function AlignmentProjectDetailView() {
             title="State"
             key="state"
             width={120}
-            render={(run: APIAlignmentProjectRun) => <JobState job={run} />}
+            render={(job: APIJob) => <JobState job={job} />}
           />
           <Column title="Action" key="actions" width={150} render={renderActions} />
         </Table>
@@ -393,6 +411,9 @@ function AlignmentProjectDetailView() {
       {isDeleteModalOpen && (
         <DeleteAlignmentProjectModal
           project={project}
+          hasActiveJobs={(jobs ?? []).some(
+            (job) => job.state === "PENDING" || job.state === "STARTED",
+          )}
           isOpen
           onClose={() => setIsDeleteModalOpen(false)}
           onDeleted={handleDeleted}
@@ -404,7 +425,7 @@ function AlignmentProjectDetailView() {
           sectionRange={project.sectionRange}
           isOpen={isStartModalOpen}
           onClose={() => setIsStartModalOpen(false)}
-          onStarted={() => queryClient.invalidateQueries({ queryKey })}
+          onStarted={() => queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] })}
         />
       )}
     </AdminPage>

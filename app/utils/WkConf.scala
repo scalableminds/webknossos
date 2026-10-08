@@ -162,6 +162,10 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     val nucleiInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.nucleiInferralCostInMilliCreditsPerGVx")
     val instancesInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.instancesInferralCostInMilliCreditsPerGVx")
     val alignmentCostInMilliCreditsPerGVx: Int = get[Int]("features.alignmentCostInMilliCreditsPerGVx")
+    val alignmentProjectAlignCostInMilliCreditsPerGB: Int =
+      get[Int]("features.alignmentProjectAlignCostInMilliCreditsPerGB")
+    val alignmentProjectRenderUnalignedCostInMilliCreditsPerGB: Int =
+      get[Int]("features.alignmentProjectRenderUnalignedCostInMilliCreditsPerGB")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")

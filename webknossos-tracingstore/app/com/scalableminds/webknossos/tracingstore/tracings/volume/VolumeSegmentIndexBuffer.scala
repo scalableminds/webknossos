@@ -250,12 +250,13 @@ class VolumeSegmentIndexBuffer(
       case _ => Fox.successful(List.empty)
     }
 
-  lazy val emptyBucketArrayForElementClass: Array[Byte] =
+  // Single element is enough, as this will only be passed to collectSegmentIds
+  lazy val emptySingleElementBucketArrayForElementClass: Array[Byte] =
     Array.fill[Byte](ElementClass.bytesPerElement(elementClass))(0)
 
   def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]]): Box[Array[Byte]] =
     bytesBox match {
-      case Empty       => Full(emptyBucketArrayForElementClass)
+      case Empty       => Full(emptySingleElementBucketArrayForElementClass)
       case Full(bytes) => Full(bytes)
       case f: Failure  => f
     }

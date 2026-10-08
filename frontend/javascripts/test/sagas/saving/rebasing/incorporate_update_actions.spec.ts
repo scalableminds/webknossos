@@ -121,6 +121,7 @@ const actionNamesHelper: Record<ServerUpdateAction["name"], true> = {
   deleteUserBoundingBoxInVolumeTracing: true,
   updateUserBoundingBoxInVolumeTracing: true,
   updateBucket: true,
+  updateBucketPartial: true,
   deleteSegmentData: true,
   mergeAgglomerate: true,
   splitAgglomerate: true,
@@ -556,6 +557,53 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
                 mag: [1, 1, 1] as Vector3,
                 cubeSize: 1024,
                 base64Data: undefined,
+              },
+            },
+          ],
+          1,
+        );
+      });
+      await task.toPromise();
+
+      expect(await api.data.getDataValue(volumeTracingLayerName, position)).toBe(newCellId);
+    });
+
+    it<WebknossosTestContext>("evicts and reloads the affected bucket for updateBucketPartial", async ({
+      api,
+      mocks,
+    }) => {
+      // Same handling as updateBucket: the runs themselves are not applied
+      // locally, the bucket is dropped and re-fetched from the server, which
+      // has already folded them in.
+      const oldCellId = 11;
+      const newCellId = 2;
+      const position = [0, 0, 0] as Vector3;
+      const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
+
+      vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+        createBucketResponseFunction(layerNameToElementClass, oldCellId, 5),
+      );
+      await api.data.reloadAllBuckets();
+
+      const task = startSaga(function* () {
+        expect(yield call(() => api.data.getDataValue(volumeTracingLayerName, position))).toBe(
+          oldCellId,
+        );
+
+        vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+          createBucketResponseFunction(layerNameToElementClass, newCellId, 5),
+        );
+
+        yield* incorporateActionsEffect(
+          [
+            {
+              name: "updateBucketPartial" as const,
+              value: {
+                actionTracingId: volumeTracingLayerName,
+                position,
+                additionalCoordinates: undefined,
+                mag: [1, 1, 1] as Vector3,
+                voxelRunsBase64: "",
               },
             },
           ],

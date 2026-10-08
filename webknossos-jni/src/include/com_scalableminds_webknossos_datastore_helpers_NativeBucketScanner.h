@@ -55,6 +55,14 @@ JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nativ
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_deleteSegmentFromBucket
   (JNIEnv *, jobject, jbyteArray, jint, jboolean, jlong);
 
+/*
+ * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
+ * Method:     applyVoxelRuns
+ * Signature:  ([BIZ[B)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applyVoxelRuns
+  (JNIEnv *, jobject, jbyteArray, jint, jboolean, jbyteArray);
+
 #ifdef __cplusplus
 }
 #endif

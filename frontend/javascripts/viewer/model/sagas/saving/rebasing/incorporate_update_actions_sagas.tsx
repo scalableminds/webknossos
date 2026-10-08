@@ -168,7 +168,12 @@ export function* tryToIncorporateActions(
         /////////////
         // Volume
         /////////////
-        case "updateBucket": {
+        // updateBucketPartial carries the same bucket-addressing fields as
+        // updateBucket, only with a run-length diff instead of the whole
+        // bucket, so the same "drop the local cache, force a re-fetch"
+        // handling is correct for it.
+        case "updateBucket":
+        case "updateBucketPartial": {
           const { value } = action;
           const cube = Model.getCubeByLayerName(value.actionTracingId);
 

@@ -68,6 +68,7 @@ exports[`Task API  (E2E) > getAnnotationsForTask() 1`] = `
     ],
     "collaborationMode": "OwnerOnly",
     "contributors": [],
+    "created": 0,
     "dataSetName": "2012-06-28_Cortex",
     "dataStore": {
       "allowsUpload": true,
@@ -87,6 +88,7 @@ exports[`Task API  (E2E) > getAnnotationsForTask() 1`] = `
       "email": "user_a@scalableminds.com",
       "firstName": "user_A",
       "id": "570b9f4d2a7c0e4d008da6ef",
+      "isActive": true,
       "isAdmin": true,
       "isAnonymous": false,
       "isDatasetManager": true,
@@ -130,7 +132,6 @@ exports[`Task API  (E2E) > getAnnotationsForTask() 1`] = `
     "stats": {},
     "tags": [
       "2012-06-28_Cortex",
-      "skeleton",
     ],
     "task": {
       "boundingBox": null,
@@ -195,6 +196,7 @@ exports[`Task API  (E2E) > getAnnotationsForTask() 1`] = `
       "email": "user_a@scalableminds.com",
       "firstName": "user_A",
       "id": "570b9f4d2a7c0e4d008da6ef",
+      "isActive": true,
       "isAdmin": true,
       "isAnonymous": false,
       "isDatasetManager": true,
@@ -621,6 +623,7 @@ exports[`Task API  (E2E) > requestTask() 1`] = `
   ],
   "collaborationMode": "OwnerOnly",
   "contributors": [],
+  "created": "created",
   "dataSetName": "confocal-multi_knossos",
   "dataStore": {
     "allowsUpload": true,
@@ -640,6 +643,7 @@ exports[`Task API  (E2E) > requestTask() 1`] = `
     "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
+    "isActive": true,
     "isAdmin": true,
     "isAnonymous": false,
     "isDatasetManager": true,
@@ -683,7 +687,6 @@ exports[`Task API  (E2E) > requestTask() 1`] = `
   "stats": {},
   "tags": [
     "confocal-multi_knossos",
-    "skeleton",
   ],
   "task": {
     "boundingBox": null,
@@ -748,6 +751,7 @@ exports[`Task API  (E2E) > requestTask() 1`] = `
     "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
+    "isActive": true,
     "isAdmin": true,
     "isAnonymous": false,
     "isDatasetManager": true,

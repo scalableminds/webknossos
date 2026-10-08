@@ -38,8 +38,8 @@ WEBKNOSSOS is also a platform for [showcasing datasets](https://webknossos.org) 
 ![Flight Mode](./images/screenshot_flight_mode.png)
 
 ![Managing Datasets](./images/screenshot_DS_management.png)
-![Working on Tasks](./images/screenshot_tasks.png)
-![Showcasing Datasets](./images/screenshot_featured_publications.png)
+![Working on Tasks](./images/dashboard_tasks.jpeg)
+![Showcasing Datasets](./images/dashboard_featured_publications.png)
 
 # Built for Science
 

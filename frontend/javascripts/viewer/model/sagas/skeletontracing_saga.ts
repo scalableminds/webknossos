@@ -261,7 +261,7 @@ function* watchTreeNames(): Saga<void> {
   // rename trees with an empty/default tree name
   for (const tree of enforceSkeletonTracing(state.annotation).trees.values()) {
     if (tree.name === "") {
-      const newName = generateTreeName(state, tree.timestamp, tree.treeId);
+      const newName = generateTreeName(tree.treeId);
       yield* put(setTreeNameAction(newName, tree.treeId));
     }
   }

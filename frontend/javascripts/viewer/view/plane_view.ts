@@ -2,6 +2,7 @@ import { sendAnalyticsEvent } from "admin/rest_api";
 import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
+import { updateTweens } from "libs/tween_group";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
@@ -12,7 +13,6 @@ import {
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
 } from "three";
-import TWEEN from "tween.js";
 import type {
   OrthoViewMap,
   OrthoViewWithoutTDMap,
@@ -181,7 +181,7 @@ class PlaneView {
   renderFunction(forceRender: boolean = false): void {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
-    TWEEN.update();
+    updateTweens();
     const sceneController = getSceneController();
 
     // skip rendering if nothing has changed

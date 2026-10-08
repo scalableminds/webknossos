@@ -1,10 +1,10 @@
-import { SettingOutlined } from "@ant-design/icons";
 import type { FormProps } from "antd";
-import { Card, Col, Collapse, ConfigProvider, Form, Input, InputNumber, Row, Space } from "antd";
+import { Col, Form, Input, InputNumber, Row } from "antd";
 import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import type React from "react";
-import { ColorWKBlue } from "theme";
 import { APIJobCommand } from "types/api_types";
+import { AdvancedSettings } from "../components/job_layout";
+import { JobSection } from "../components/job_section";
 import { useAiTrainingJobContext } from "./ai_training_job_context";
 
 export const AiTrainingSettings: React.FC = () => {
@@ -18,6 +18,7 @@ export const AiTrainingSettings: React.FC = () => {
     setInstanceDiameterNm,
     customConfiguration,
     setCustomConfiguration,
+    stepStatuses,
   } = useAiTrainingJobContext();
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues) => {
@@ -43,14 +44,11 @@ export const AiTrainingSettings: React.FC = () => {
   ];
 
   return (
-    <Card
-      type="inner"
-      title={
-        <Space align="center">
-          <SettingOutlined style={{ color: ColorWKBlue }} />
-          Training Settings
-        </Space>
-      }
+    <JobSection
+      step={3}
+      title="Training Settings"
+      description="Name the resulting model and configure its training."
+      status={stepStatuses.settings}
     >
       <Form layout="vertical" onValuesChange={handleValuesChange} fields={formFields}>
         <Row gutter={24}>
@@ -60,7 +58,7 @@ export const AiTrainingSettings: React.FC = () => {
               label="Model Name"
               rules={[{ required: true, message: "Please provide a name for the new model" }]}
             >
-              <Input />
+              <Input placeholder="e.g. l4_neurons_v2" />
             </Form.Item>
             {selectedTask?.jobType === APIJobCommand.TRAIN_INSTANCE_MODEL && (
               <Form.Item
@@ -80,20 +78,10 @@ export const AiTrainingSettings: React.FC = () => {
           </Col>
         </Row>
 
-        <ConfigProvider
-          theme={{
-            components: {
-              Collapse: { headerPadding: "12px 0px" },
-            },
-          }}
-        >
-          <Collapse ghost bordered={false}>
-            <Collapse.Panel header="Advanced Settings" key="1">
-              <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
-            </Collapse.Panel>
-          </Collapse>
-        </ConfigProvider>
+        <AdvancedSettings hint="Custom Configuration">
+          <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+        </AdvancedSettings>
       </Form>
-    </Card>
+    </JobSection>
   );
 };

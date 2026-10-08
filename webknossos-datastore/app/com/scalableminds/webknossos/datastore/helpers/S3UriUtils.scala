@@ -105,6 +105,22 @@ object S3UriUtils {
   def isNonAmazonHost(uri: URI): Boolean =
     styleOf(uri).contains(PathStyle) && !uri.getHost.endsWith(".amazonaws.com")
 
+  def isShortStyle(uri: URI): Boolean =
+    uri.getScheme == PathSchemes.schemeS3 && styleOf(uri).contains(ShortStyle)
+
+  // Without a region, the global endpoint is used.
+  def awsEndpointHost(regionOpt: Option[String]): String =
+    regionOpt.map(region => s"s3.$region.amazonaws.com").getOrElse("s3.amazonaws.com")
+
+  // s3://bucket-name/key-name to s3://endpoint/bucket-name/key-name
+  def withEndpointHost(shortStyleUri: URI, endpointHost: String): String =
+    s"${shortStyleUri.getScheme}://$endpointHost/${shortStyleUri.getHost}${Option(shortStyleUri.getRawPath).getOrElse("")}"
+
+  // Keeps the endpoint of path style uris, so that keys found by listing stay reachable via the same endpoint.
+  def uriLiteralForObjectKey(uri: URI, bucket: String, objectKey: String): String =
+    if (styleOf(uri).contains(PathStyle)) s"${uri.getScheme}://${uri.getAuthority}/$bucket/$objectKey"
+    else s"${uri.getScheme}://$bucket/$objectKey"
+
   private def checkSchemeIsS3(uri: URI): Box[Unit] =
     Box
       .fromBool(uri.getScheme == PathSchemes.schemeS3) ?~> Msg.UPath.schemaMismatch(uri.getScheme, PathSchemes.schemeS3)

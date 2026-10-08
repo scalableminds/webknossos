@@ -23,6 +23,10 @@ export type CommentRowNode = {
   readonly type: "comment";
   readonly comment: CommentType;
   readonly isLeaf: true;
+  // Rows are rendered via titleRender, but antd's <Tree /> also uses the plain
+  // `title` field as the node wrapper's native title attribute, defaulting to the
+  // string "---" when it is missing. Always set to "" to suppress that fallback.
+  readonly title: string;
 };
 
 export type TreeRowNode = {
@@ -31,6 +35,8 @@ export type TreeRowNode = {
   readonly tree: Tree;
   readonly children: CommentRowNode[];
   readonly isLeaf: false;
+  // See the comment on CommentRowNode.title.
+  readonly title: string;
 };
 
 export type CommentTabNode = TreeRowNode | CommentRowNode;

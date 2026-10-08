@@ -26,7 +26,7 @@ To get started, navigate to the `Featured Publications` tab on your [dashboard](
 There, you find a list of all available public datasets.
 Click on the dataset name to open the dataset.
 
-![The list of available datasets](./images/screenshot_featured_publications.png)
+![The list of available datasets](./images/dashboard_featured_publications.png)
 /// caption
 The list of available datasets
 ///

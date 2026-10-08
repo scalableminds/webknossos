@@ -1,4 +1,5 @@
 import { V3 } from "libs/mjs";
+import { createTween } from "libs/tween_group";
 import { waitForElementWithId } from "libs/utils";
 import { PureComponent } from "react";
 import {
@@ -10,7 +11,6 @@ import {
   Quaternion,
   Vector3 as ThreeVector3,
 } from "three";
-import TWEEN from "tween.js";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView, TDViewPerspectiveFov } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
@@ -433,15 +433,12 @@ export function rotate3DViewTo(
       top: tdCamera.top,
       bottom: tdCamera.bottom,
     };
-    const tween = new TWEEN.Tween(from);
+    const tween = createTween(from);
     const time = 800;
     tween
       .to(to, time)
-      .onUpdate(function updater(this: TweenState, t: number) {
-        // TweenJS passes the current state via the `this` object.
-        // However, for better type checking, we pass it as an explicit
-        // parameter.
-        updateCameraTDView(this, t);
+      .onUpdate((tweenState: TweenState, t: number) => {
+        updateCameraTDView(tweenState, t);
       })
       .onComplete(() => {
         onComplete?.();

@@ -6,7 +6,6 @@ import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.UnsignedLong
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
@@ -63,8 +62,7 @@ case class ConnectomeFileKey(dataSourceId: DataSourceId, layerName: String, atta
 
 class ConnectomeFileService @Inject() (
     hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
-    zarrConnectomeFileService: ZarrConnectomeFileService,
-    config: DataStoreConfig
+    zarrConnectomeFileService: ZarrConnectomeFileService
 ) extends LazyLogging {
 
   private val connectomeFileKeyCache: AlfuCache[(DataSourceId, String, String), ConnectomeFileKey] =

@@ -101,6 +101,15 @@ const shortCutDictForTools: Record<string, string> = {
   [AnnotationTool.PROOFREAD.id]: "Ctrl + K, O",
 };
 
+function isEditableElement(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
 export const CommandPalette = () => {
   const dispatch = useDispatch();
 
@@ -119,6 +128,26 @@ export const CommandPalette = () => {
 
   const navigate = useNavigate();
   const [paletteKey, setPaletteKey] = useState(0);
+  const [isOpenRequested, setIsOpenRequested] = useState(false);
+
+  // The palette's own hotkey handling ignores key events from text inputs, so the browser's
+  // print dialog would open instead. Handle the hotkey for those elements here.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isHotkey =
+        (event.ctrlKey || event.metaKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        // event.code also covers non-Latin keyboard layouts, where event.key isn't "p".
+        (event.key.toLowerCase() === "p" || event.code === "KeyP");
+      if (isHotkey && isEditableElement(event.target)) {
+        event.preventDefault();
+        setIsOpenRequested(true);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, []);
 
   const props: TracingViewMenuProps = {
     restrictions,
@@ -458,6 +487,7 @@ export const CommandPalette = () => {
   }, [allowUpdate, userConfig]);
 
   const closePalette = () => {
+    setIsOpenRequested(false);
     setPaletteKey((prevKey) => prevKey + 1);
   };
 
@@ -472,13 +502,17 @@ export const CommandPalette = () => {
       commands={commandsWithIds}
       key={paletteKey}
       hotKeys={["ctrl+p", "command+p"]}
+      open={isOpenRequested}
       trigger={null}
       maxDisplayed={100}
       theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
       onSelect={handleSelect}
       showSpinnerOnSelect={false}
       resetInputOnOpen
-      onRequestClose={() => setCommands(allStaticCommands)}
+      onRequestClose={() => {
+        setIsOpenRequested(false);
+        setCommands(allStaticCommands);
+      }}
       closeOnSelect={false}
       renderCommand={(command) => {
         const { shortcut, highlight: maybeDirtyString, name } = command as ExtendedCommand;

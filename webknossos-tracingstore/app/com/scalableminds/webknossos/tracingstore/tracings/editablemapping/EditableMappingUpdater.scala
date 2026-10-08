@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Empty, Failure, Full}
-import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
@@ -35,7 +34,6 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 // this results in only one version increment in the db per update group
 
 class EditableMappingUpdater(
-    annotationId: ObjectId,
     tracingId: String,
     baseMappingName: String,
     oldVersion: Long,
@@ -501,7 +499,6 @@ class EditableMappingUpdater(
 
   def newWithTargetVersion(currentMaterializedVersion: Long, targetVersion: Long): EditableMappingUpdater =
     new EditableMappingUpdater(
-      annotationId,
       tracingId,
       baseMappingName,
       currentMaterializedVersion,

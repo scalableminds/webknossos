@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
 class ParsingTestSuite extends AsyncWordSpec with WKWDataFormatHelper with VolumeDataZipHelper {
   // Test a couple of regexes and parsers
 
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
+  implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 
   "Reading mags from header paths" should {
     "yield correct mags" in {

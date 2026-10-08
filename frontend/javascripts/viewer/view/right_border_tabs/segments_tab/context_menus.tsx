@@ -89,7 +89,8 @@ export type ContextMenuDependencies = {
   meshFiles: MeshFiles;
   openStatisticsModal: (target: SegmentStatisticsTarget) => void;
   hideContextMenu: () => void;
-  // Puts the row with this node key into rename mode. The context menu is the discoverable way to rename (besides double-click).
+  // Puts the row with this node key into rename mode. The rows no longer carry an edit
+  // pencil, so the context menu is the discoverable way to rename (besides double-click).
   startRenaming: (nodeKey: string) => void;
 };
 
@@ -464,7 +465,9 @@ export function useSegmentContextMenuBuilder(
             label: "Delete Segment's Data",
           },
           listItems.segmentStatisticsItem,
-          // The mesh actions close the menu.
+          // The mesh actions close the menu: they are the least frequent entries, and the
+          // mesh of a single segment used to be managed from its own child row in the tree,
+          // which is gone. Everything it offered lives here (and on the mesh chip).
           { key: "meshActionDivider", type: "divider" },
           {
             key: "loadPrecomputedMesh",

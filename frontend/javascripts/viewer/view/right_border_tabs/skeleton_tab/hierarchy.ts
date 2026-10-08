@@ -20,6 +20,10 @@ export type TreeUiNode = BasicDataNode & {
   tree: Tree;
   isLeaf: true;
   children?: undefined;
+  // Rows are rendered via titleRender, but antd's <Tree /> also uses the plain
+  // `title` field as the node wrapper's native title attribute, defaulting to the
+  // string "---" when it is missing. Always set to "" to suppress that fallback.
+  title: string;
 };
 
 export type GroupUiNode = BasicDataNode & {
@@ -29,6 +33,10 @@ export type GroupUiNode = BasicDataNode & {
   children: SkeletonUiNode[];
   // Whether any tree exists in this group or one of its descendants.
   containsTrees: boolean;
+  // How many trees this group contains, including those of its subgroups.
+  treeCount: number;
+  // See the comment on TreeUiNode.title.
+  title: string;
 };
 
 export type SkeletonUiNode = TreeUiNode | GroupUiNode;
@@ -91,6 +99,7 @@ export function buildSkeletonHierarchy(
       key: getTreeUiNodeKey(tree.treeId),
       tree,
       isLeaf: true,
+      title: "",
     };
     nodesByKey.set(node.key, node);
     if (tree.isVisible) {
@@ -115,8 +124,13 @@ export function buildSkeletonHierarchy(
       children,
       containsTrees:
         treeNodes.length > 0 || childGroupNodes.some((childNode) => childNode.containsTrees),
+      treeCount: childGroupNodes.reduce(
+        (sum, childGroup) => sum + childGroup.treeCount,
+        treeNodes.length,
+      ),
       // Groups without any content cannot be toggled.
       disableCheckbox: children.length === 0,
+      title: "",
     };
     groupNodesById.set(group.groupId, node);
     nodesByKey.set(node.key, node);

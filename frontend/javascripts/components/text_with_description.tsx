@@ -1,24 +1,26 @@
-import { AlignCenterOutlined } from "@ant-design/icons";
+import { AlignLeftOutlined } from "@ant-design/icons";
 import { Button, Popover, Tooltip } from "antd";
 import Markdown from "libs/markdown_adapter";
 import type React from "react";
-import type { EditableTextLabelProp } from "viewer/view/components/editable_text_label";
-import EditableTextLabel from "viewer/view/components/editable_text_label";
+import { Link } from "react-router";
 
-type EditableProps = EditableTextLabelProp & {
-  isEditable: true;
-  description: string;
-};
-type NonEditableProps = {
-  markdown?: boolean;
-  isEditable: false;
-  description: string;
+type Props = {
   value: string;
+  // Shown when `value` is empty.
+  placeholder?: string;
+  description: string;
+  linkTarget?: string;
+  linkTitle?: string;
 };
-type Props = EditableProps | NonEditableProps;
 
-const TextWithDescription: React.FC<Props> = (props) => {
-  const { isEditable, description, ...editableProps } = props;
+const TextWithDescription: React.FC<Props> = ({
+  value,
+  placeholder,
+  description,
+  linkTarget,
+  linkTitle,
+}) => {
+  const text = value.trim() ? value : placeholder;
   const hasDescription = description !== "";
   const markdownDescription = (
     <div
@@ -30,46 +32,33 @@ const TextWithDescription: React.FC<Props> = (props) => {
     </div>
   );
   return (
-    <span
-      className={hasDescription ? "flex-container" : ""}
-      style={{
-        alignItems: "center",
-      }}
-    >
+    <span style={{ wordBreak: "break-word" }}>
       <span
-        className={hasDescription ? "flex-item" : ""}
         style={{
-          flexGrow: 0,
+          display: "inline-block",
         }}
       >
-        {hasDescription ? (
-          <Tooltip title="Show description" placement="bottom">
-            <Popover title="Description" trigger="click" content={markdownDescription}>
-              <Button size="small" color="default" variant="text" icon={<AlignCenterOutlined />} />
-            </Popover>
-          </Tooltip>
-        ) : null}
-      </span>
-      <span className={hasDescription ? "flex-item" : undefined}>
-        {isEditable ? (
-          <EditableTextLabel {...(editableProps as EditableTextLabelProp)} />
+        {linkTarget != null ? (
+          <Link to={linkTarget} title={linkTitle} className="incognito-link">
+            {text}
+          </Link>
         ) : (
-          <span
-            style={{
-              margin: "0 10px",
-              display: "inline-block",
-            }}
-          >
-            {(props as NonEditableProps).markdown ? (
-              <span>
-                <Markdown>{(props as NonEditableProps).value}</Markdown>
-              </span>
-            ) : (
-              (props as NonEditableProps).value
-            )}
-          </span>
+          text
         )}
       </span>
+      {hasDescription ? (
+        <Tooltip title="Show description" placement="bottom">
+          <Popover title="Description" trigger="click" content={markdownDescription}>
+            <Button
+              size="small"
+              color="default"
+              variant="text"
+              icon={<AlignLeftOutlined />}
+              style={{ marginInlineStart: 4 }}
+            />
+          </Popover>
+        </Tooltip>
+      ) : null}
     </span>
   );
 };

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.storage
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.S3UriUtils
 import play.api.libs.ws.WSClient
 import software.amazon.awssdk.auth.credentials.{
@@ -18,11 +19,15 @@ import software.amazon.awssdk.http.Protocol
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
+import software.amazon.awssdk.services.s3.model.{HeadBucketRequest, S3Exception}
+import software.amazon.awssdk.http.SdkHttpResponse
 
 import java.net.URI
+import java.util.concurrent.CompletionException
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.DurationConverters.ScalaDurationOps
+import scala.jdk.FutureConverters.*
 import scala.jdk.OptionConverters.RichOptional
 import scala.util.{Failure as TryFailure, Success as TrySuccess}
 
@@ -66,6 +71,38 @@ class S3ClientPool(ws: WSClient) {
         _ => Fox.successful(buildS3Client(credentialsProvider, customEndpointOpt, isForUpload))
       )
     } yield client
+  }
+
+  // HeadBucket responses carry the region in a header, even for anonymous requests and when access is denied.
+  def getBucketRegion(credentialOpt: Option[S3AccessKeyCredential], uri: URI, bucket: String)(implicit
+      ec: ExecutionContext
+  ): Fox[String] =
+    for {
+      client <- getS3Client(credentialOpt, uri, isForUpload = false)
+      region <- getBucketRegionFromHeadBucket(client, bucket)
+    } yield region
+
+  private def getBucketRegionFromHeadBucket(client: S3AsyncClient, bucket: String)(implicit
+      ec: ExecutionContext
+  ): Fox[String] = {
+    val responseFuture: Future[Option[SdkHttpResponse]] =
+      client.headBucket(HeadBucketRequest.builder().bucket(bucket).build()).asScala.transform {
+        case TrySuccess(response)  => TrySuccess(Option(response.sdkHttpResponse()))
+        case TryFailure(exception) =>
+          val cause = exception match {
+            case ce: CompletionException => ce.getCause
+            case e                       => e
+          }
+          TrySuccess(cause match {
+            case s3Exception: S3Exception =>
+              Option(s3Exception.awsErrorDetails()).flatMap(d => Option(d.sdkHttpResponse()))
+            case _ => None
+          })
+      }
+    for {
+      responseOpt <- Fox.fromFuture(responseFuture)
+      region <- responseOpt.flatMap(_.firstMatchingHeader("x-amz-bucket-region").toScala).toFox
+    } yield region
   }
 
   private def isHetznerEndpoint(customEndpointOpt: Option[URI]): Boolean =

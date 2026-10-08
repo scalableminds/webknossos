@@ -1,7 +1,16 @@
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import AdminPage from "admin/admin_page";
 import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/rest_api";
-import { Button, DatePicker, Select, Space, Spin, Table, type TimeRangePickerProps } from "antd";
+import {
+  Button,
+  DatePicker,
+  Select,
+  Space,
+  Spin,
+  Table,
+  type TimeRangePickerProps,
+  Typography,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import LinkButton from "components/link_button";
@@ -140,8 +149,12 @@ function TimeTrackingOverview() {
       title: "User",
       dataIndex: "user",
       key: "user",
-      render: (user: APITimeTrackingPerUser["user"]) =>
-        `${user.lastName}, ${user.firstName} (${user.email})`,
+      render: (user: APITimeTrackingPerUser["user"]) => (
+        <>
+          <div>{`${user.lastName}, ${user.firstName}`}</div>
+          <Typography.Text type="secondary">{user.email}</Typography.Text>
+        </>
+      ),
       sorter: localeCompareBy<APITimeTrackingPerUser>(
         (timeEntry) =>
           `${timeEntry.user.lastName}, ${timeEntry.user.firstName} (${timeEntry.user.email})`,

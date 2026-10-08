@@ -1068,7 +1068,7 @@ describe("SkeletonTracing", () => {
     const newState = SkeletonTracingReducer(initialState, setTreeName);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees.getOrThrow(1).name).toBe("Tree001");
+    expect(newSkeletonTracing.trees.getOrThrow(1).name).toBe("Tree 1");
   });
 
   it("should increase the activeTreeId", () => {

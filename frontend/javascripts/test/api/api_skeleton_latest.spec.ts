@@ -97,6 +97,29 @@ describe("API Skeleton", () => {
     expect(comment).toBe(COMMENT);
   });
 
+  it<WebknossosTestContext>("setCommentForNode should delete the comment when given an empty string", ({
+    api,
+  }) => {
+    api.tracing.setCommentForNode("", 3);
+    expect(api.tracing.getCommentForNode(3)).toBeNull();
+  });
+
+  it<WebknossosTestContext>("deleteCommentForNode should delete the comment of a node", ({
+    api,
+  }) => {
+    api.tracing.deleteCommentForNode(3);
+    expect(api.tracing.getCommentForNode(3)).toBeNull();
+  });
+
+  it<WebknossosTestContext>("deleteCommentForNode should not change the state if the node has no comment", ({
+    api,
+  }) => {
+    expect(api.tracing.getCommentForNode(2)).toBeNull();
+    const stateBefore = Store.getState();
+    api.tracing.deleteCommentForNode(2);
+    expect(Store.getState()).toBe(stateBefore);
+  });
+
   it<WebknossosTestContext>("setCommentForNode should throw an error if the supplied nodeId doesn't exist", ({
     api,
   }) => {

@@ -18,9 +18,9 @@ import scala.util.Properties
 class CertificateValidationService @Inject() (implicit ec: ExecutionContext) extends LazyLogging {
 
   // The publicKeyBox is empty if no public key is provided, Failure if decoding the public key failed or Full if there is a valid public key.
-  private lazy val publicKeyBox: Box[PublicKey] = webknossos.BuildInfo.toMap.get("certificatePublicKey") match {
-    case Some(value: String) => deserializePublicKey(value)
-    case _                   => Empty
+  private lazy val publicKeyBox: Box[PublicKey] = webknossos.BuildInfo.certificatePublicKey match {
+    case Some(value) => deserializePublicKey(value)
+    case None        => Empty
   }
 
   private lazy val cache: AlfuCache[String, (Boolean, Long)] = AlfuCache(timeToLive = 1 hour)
@@ -47,8 +47,8 @@ class CertificateValidationService @Inject() (implicit ec: ExecutionContext) ext
         token <- JwtJson.decodeJson(certificate, publicKey, JwtOptions(expiration = false)).toOption
         expirationInSeconds <- (token \ "exp").asOpt[Long]
         currentTimeInSeconds = System.currentTimeMillis() / 1000
-        isExpired = currentTimeInSeconds < expirationInSeconds
-      } yield (isExpired, expirationInSeconds)).getOrElse((false, 0L))
+        isStillValid = currentTimeInSeconds < expirationInSeconds
+      } yield (isStillValid, expirationInSeconds)).getOrElse((false, 0L))
     case Empty => (true, 0L) // No public key provided, so certificate is always valid.
     case _     => (false, 0L) // Invalid public key provided, so certificate is always invalid.
   }

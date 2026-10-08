@@ -26,6 +26,7 @@ import {
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
+import { LIST_ROW_HEIGHT } from "../shared/list_row";
 import { TreeSwitcherIcon } from "../shared/tree_switcher_icon";
 import { useTreeContextMenu } from "../shared/use_tree_context_menu";
 import { ContextMenuContainer } from "../sidebar_context_menu";
@@ -55,11 +56,6 @@ const CONTEXT_MENU_CLASS = "segment-list-context-menu-overlay";
 const SCROLL_DELAY_MS = 100;
 
 type Props = Omit<ContextMenuDependencies, "hideContextMenu" | "startRenaming">;
-
-// The height of a segment/group row, matching @segment-row-height in _right_menu.less.
-// The virtualized list only uses it to estimate how many rows to render; the row that is
-// expanded for a long name measures itself.
-const ROW_HEIGHT = 30;
 
 /*
  * Reacts to the "benchmark:segmentlist:scroll" event (emitted from the dev console)
@@ -392,9 +388,9 @@ export function SegmentTreeView(props: Props) {
                 <ScrollableVirtualizedTree<SegmentsUiNode>
                   treeData={hierarchy.roots}
                   height={height}
-                  itemHeight={ROW_HEIGHT}
+                  itemHeight={LIST_ROW_HEIGHT}
                   ref={treeRef}
-                  className="segments-tree"
+                  className="list-tree"
                   titleRender={(node) =>
                     node.type === "segment" ? (
                       <SegmentNodeTitle

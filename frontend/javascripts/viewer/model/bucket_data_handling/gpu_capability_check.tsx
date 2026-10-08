@@ -1,6 +1,7 @@
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { document } from "libs/window";
+import { readGpuInfo } from "viewer/controller/renderer";
 import type { GpuSpecs } from "./data_rendering_logic";
 
 // Probing the GPU requires a WebGL context and reports problems via Toast/Airbrake, so this
@@ -62,6 +63,8 @@ export function getSupportedTextureSpecs(): GpuSpecs {
 
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
   const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
+  // Remember the GPU vendor, so that analytics events don't need to create yet another context.
+  readGpuInfo(gl as WebGL2RenderingContext);
 
   if (import.meta.env.MODE !== "test") {
     console.log("maxTextureImageUnits", maxTextureImageUnits);

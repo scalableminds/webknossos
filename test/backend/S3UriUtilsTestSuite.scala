@@ -190,6 +190,49 @@ class S3UriUtilsTestSuite extends AsyncWordSpec {
       "reject a local upath" in
         assert(S3UriUtils.endpointFromUPath(UPath.fromStringUnsafe("/binaryData/organization")).isEmpty)
     }
+
+    "inserting an endpoint into a short style uri" should {
+
+      "detect short style s3 uris only" in {
+        assert(S3UriUtils.isShortStyle(uri("s3://my-bucket/dataset")))
+        assert(!S3UriUtils.isShortStyle(uri("s3://s3.amazonaws.com/my-bucket/dataset")))
+        assert(!S3UriUtils.isShortStyle(uri("s3://minio.example.com/my-bucket/dataset")))
+        assert(!S3UriUtils.isShortStyle(uri("https://my-bucket/dataset")))
+      }
+
+      "insert a regional endpoint" in {
+        val withEndpoint =
+          S3UriUtils.withEndpointHost(
+            uri("s3://my-bucket/dataset/color/"),
+            S3UriUtils.awsEndpointHost(Some("eu-west-1"))
+          )
+        assert(withEndpoint == "s3://s3.eu-west-1.amazonaws.com/my-bucket/dataset/color/")
+        assert(S3UriUtils.hostBucketFromUri(uri(withEndpoint)).contains("my-bucket"))
+        assert(S3UriUtils.objectKeyFromUri(uri(withEndpoint)).contains("dataset/color/"))
+      }
+
+      "insert the global endpoint without a region" in
+        assert(
+          S3UriUtils.withEndpointHost(uri("s3://my-bucket"), S3UriUtils.awsEndpointHost(None)) ==
+            "s3://s3.amazonaws.com/my-bucket"
+        )
+    }
+
+    "building a uri for a listed object key" should {
+
+      "keep the endpoint of a path style uri" in
+        assert(
+          S3UriUtils
+            .uriLiteralForObjectKey(uri("s3://localhost:9000/my-bucket/dataset/"), "my-bucket", "dataset/color/")
+            == "s3://localhost:9000/my-bucket/dataset/color/"
+        )
+
+      "keep a short style uri short" in
+        assert(
+          S3UriUtils.uriLiteralForObjectKey(uri("s3://my-bucket/dataset/"), "my-bucket", "dataset/color/")
+            == "s3://my-bucket/dataset/color/"
+        )
+    }
   }
 
 }

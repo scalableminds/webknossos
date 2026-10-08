@@ -176,7 +176,7 @@ class AlignmentProjectController @Inject() (
             request.identity,
             project._dataStore,
             alignmentProjectId = Some(project._id)
-          ) ?~> Msg.AlignmentProject.submitFailed
+          )
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }

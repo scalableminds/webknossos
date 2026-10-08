@@ -29,17 +29,14 @@ class TileCsvParserTestSuite extends AnyWordSpec {
       assert(parse(csv) == Full(SectionRange(3, 4)))
     }
 
-    "reject gaps in the section numbers" in {
+    "reject gaps in the section numbers" in
       assert(failureMessage("57,0,0,./a.tif\n59,0,0,./b.tif\n").contains("section 58 is missing"))
-    }
 
-    "ignore additional columns after the path" in {
+    "ignore additional columns after the path" in
       assert(parse("1,0,0,./a.tif,extra,0.5\n2,0,0,./b.tif\n") == Full(SectionRange(1, 2)))
-    }
 
-    "reject rows with too few columns, with the row number" in {
+    "reject rows with too few columns, with the row number" in
       assert(failureMessage("1,0,0,./a.tif\n2,0,./b.tif\n").contains("Row 2: expected at least 4 columns"))
-    }
 
     "reject non-integer sections and non-numeric positions" in {
       assert(failureMessage("two,0,0,./a.tif\n").contains("not an integer"))

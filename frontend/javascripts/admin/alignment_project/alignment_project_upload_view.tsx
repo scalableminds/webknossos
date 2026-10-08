@@ -64,6 +64,16 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
+
+  // The datastores are loaded asynchronously, so the initial value of the (possibly hidden) field
+  // would be empty. Select the first one once they are known.
+  useEffect(() => {
+    if (uploadableDatastores.length > 0 && form.getFieldValue("datastoreUrl") == null) {
+      form.setFieldValue("datastoreUrl", uploadableDatastores[0].url);
+    }
+  }, [form, uploadableDatastores]);
+
   const csvFiles = files.filter((file) => file.name.toLowerCase().endsWith(".csv"));
   // A single zip is unpacked by the datastore, which then checks for the CSV.
   const isZipUpload = files.length === 1 && files[0].name.toLowerCase().endsWith(".zip");
@@ -172,10 +182,16 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
+          onFinishFailed={({ errorFields }) =>
+            Toast.error(errorFields.flatMap((field) => field.errors).join(" "))
+          }
           initialValues={{ voxelSizeUnit: UnitLong.nm }}
           disabled={isUploading}
         >
-          <DatastoreFormItem datastores={datastores} hidden={datastores.length <= 1} />
+          <DatastoreFormItem
+            datastores={uploadableDatastores}
+            hidden={uploadableDatastores.length <= 1}
+          />
           <Row gutter={24}>
             <Col span={12}>
               <Form.Item

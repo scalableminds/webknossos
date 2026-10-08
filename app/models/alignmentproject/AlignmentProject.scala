@@ -12,7 +12,11 @@ import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.SectionRange
-import com.scalableminds.webknossos.schema.Tables.{Alignmentprojects, AlignmentprojectsRow, GetResultAlignmentprojectsRow}
+import com.scalableminds.webknossos.schema.Tables.{
+  Alignmentprojects,
+  AlignmentprojectsRow,
+  GetResultAlignmentprojectsRow
+}
 import controllers.PathDeletionService
 import models.alignmentproject.AlignmentProjectStatus.AlignmentProjectStatus
 import models.dataset.{DataStoreDAO, WKRemoteDataStoreClient}
@@ -64,10 +68,11 @@ class AlignmentProjectDAO @Inject() (sqlClient: SqlClient)(implicit ec: Executio
         .fromList(parseArrayLiteral(r.voxelsizefactor).map(_.toDouble))
         .toFox ?~> "Could not parse the voxel size of the alignment project."
       voxelSizeUnit <- LengthUnit.fromString(r.voxelsizeunit).toFox
-      sectionRange = for {
-        first <- r.firstsection
-        last <- r.lastsection
-      } yield SectionRange(first, last)
+      sectionRange =
+        for {
+          first <- r.firstsection
+          last <- r.lastsection
+        } yield SectionRange(first, last)
     } yield AlignmentProject(
       ObjectId(r._id),
       r._organization,
@@ -180,7 +185,9 @@ class AlignmentProjectService @Inject() (
   def assertMayAccessAlignmentProjects(user: User): Fox[Unit] =
     for {
       _ <- Fox.fromBool(wkConf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
-      _ <- Fox.fromBool(user.isAdmin || user.isDatasetManager) ?~> Msg.AlignmentProject.noAdminOrDatasetManager ~> FORBIDDEN
+      _ <- Fox.fromBool(
+        user.isAdmin || user.isDatasetManager
+      ) ?~> Msg.AlignmentProject.noAdminOrDatasetManager ~> FORBIDDEN
     } yield ()
 
   def assertValidName(organizationId: String, name: String, excludedId: Option[ObjectId] = None): Fox[Unit] =

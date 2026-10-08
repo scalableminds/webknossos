@@ -23,9 +23,14 @@ object TileCsvParser {
   private val headerFirstCell = "section"
 
   def parseSectionRange(lines: Iterator[String]): Box[SectionRange] = {
-    val rows = lines.map(_.stripPrefix("\uFEFF")).filter(_.trim.nonEmpty).zipWithIndex.map { case (line, index) =>
-      (splitRow(line), index + 1)
-    }.buffered
+    val rows = lines
+      .map(_.stripPrefix("\uFEFF"))
+      .filter(_.trim.nonEmpty)
+      .zipWithIndex
+      .map { case (line, index) =>
+        (splitRow(line), index + 1)
+      }
+      .buffered
     if (rows.headOption.exists(_._1.headOption.exists(_.equalsIgnoreCase(headerFirstCell)))) rows.next()
 
     val sections = mutable.HashSet[Int]()

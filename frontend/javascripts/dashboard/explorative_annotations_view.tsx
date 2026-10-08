@@ -591,7 +591,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
   renderDateMetaItem = (annotation: APIAnnotationInfo) => {
     const { owner } = annotation;
-    // The date shown matches the date the list is sorted by.
+    // When sorting by creation date, both dates are shown.
     const showCreated = this.state.sortOption === "newest" || this.state.sortOption === "oldest";
     let ownerText: string | null = null;
     if (owner != null) {
@@ -602,8 +602,12 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     }
     return (
       <span key="date">
-        {showCreated ? "created" : "last modified"}{" "}
-        <FormattedDate timestamp={showCreated ? annotation.created : annotation.modified} />
+        {showCreated ? (
+          <>
+            created <FormattedDate timestamp={annotation.created} />,{" "}
+          </>
+        ) : null}
+        last modified <FormattedDate timestamp={annotation.modified} />
         {ownerText != null ? ` · owned by ${ownerText}` : null}
       </span>
     );

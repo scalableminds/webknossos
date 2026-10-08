@@ -105,18 +105,11 @@ export function StartAlignmentProjectModal({
               </Space>
             }
           >
-            <Space vertical>
-              <Text>
-                {project.fileCount.toLocaleString()} files (
-                {formatBytes(project.totalSizeInBytes, 1)}), with tile positions listed in{" "}
-                <Text code>{project.csvFileName}</Text>. The result will be written to a new
-                dataset.
-              </Text>
-              <Text>
-                Detected alignment task:{" "}
-                <Text strong>{getAlignmentProjectTaskTypeName(selectedTaskType)}</Text>
-              </Text>
-            </Space>
+            <Text>
+              {project.fileCount.toLocaleString()} files ({formatBytes(project.totalSizeInBytes, 1)}
+              ), with tile positions listed in <Text code>{project.csvFileName}</Text>. The result
+              will be written to a new dataset.
+            </Text>
           </Card>
           <Card
             type="inner"

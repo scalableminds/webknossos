@@ -614,13 +614,30 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           ? "you"
           : formatUserName(owner);
     }
+    const { sortOption } = this.state;
+    const isSortedByCreation = sortOption === "newest" || sortOption === "oldest";
+    if (!isSortedByCreation && ownerText == null) {
+      return null;
+    }
     return (
       <span key="created">
-        created <FormattedDate timestamp={annotation.created} />
+        created
+        {isSortedByCreation ? (
+          <>
+            {" "}
+            <FormattedDate timestamp={annotation.created} />
+          </>
+        ) : null}
         {ownerText != null ? ` by ${ownerText}` : null}
       </span>
     );
   };
+
+  renderModifiedMetaItem = (annotation: APIAnnotationInfo) => (
+    <span key="modified">
+      modified <FormattedDate timestamp={annotation.modified} />
+    </span>
+  );
 
   renderTags = (annotation: APIAnnotationInfo, isEditable: boolean, className?: string) => (
     <AnnotationTags
@@ -658,6 +675,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         <RowMetaLine
           items={[
             this.renderCreatedMetaItem(annotation),
+            this.renderModifiedMetaItem(annotation),
             teamTags.length > 0 ? (
               <span key="teams" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <TeamOutlined /> shared with teams {teamTags}

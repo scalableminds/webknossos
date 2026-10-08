@@ -5,10 +5,11 @@ import {
   MailOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Breadcrumb, Layout, Menu } from "antd";
+import { Breadcrumb, Flex, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import constants from "viewer/constants";
+import { OrganizationSidebarPlanHint } from "./organization_sidebar_plan_hint";
 
 const { Sider, Content } = Layout;
 
@@ -85,14 +86,33 @@ const OrganizationView = () => {
         backgroundColor: "var(--ant-layout-body-bg)",
       }}
     >
-      <Sider width={250}>
-        <Menu
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          style={{ height: "100%", padding: 24 }}
-          items={MENU_ITEMS}
-          onClick={({ key }) => navigate(`/organization/${key}`)}
-        />
+      <Sider
+        width={250}
+        style={{
+          background: "var(--ant-color-bg-container)",
+          borderInlineEnd: "1px solid var(--ant-color-split)",
+        }}
+      >
+        <Flex
+          vertical
+          style={{
+            // Keeps the plan hint card at the bottom of the viewport on long pages.
+            position: "sticky",
+            top: constants.DEFAULT_NAVBAR_HEIGHT,
+            height: `calc(100vh - ${constants.DEFAULT_NAVBAR_HEIGHT}px)`,
+          }}
+        >
+          <Menu
+            mode="inline"
+            selectedKeys={[selectedKey]}
+            style={{ padding: 24, borderInlineEnd: "none" }}
+            items={MENU_ITEMS}
+            onClick={({ key }) => navigate(`/organization/${key}`)}
+          />
+          <div style={{ marginTop: "auto", padding: "0 24px 24px" }}>
+            <OrganizationSidebarPlanHint />
+          </div>
+        </Flex>
       </Sider>
       <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1200 }}>
         <Breadcrumb style={{ marginBottom: "16px" }} items={breadcrumbItems} />

@@ -3,6 +3,7 @@
 import GripLinesIcon from "@images/icons/icon-grip-lines.svg";
 import app from "app";
 import window, { document } from "libs/window";
+import { FontFamilyMono } from "theme";
 
 export default {
   addBucketManagers(textureBucketManager) {
@@ -136,7 +137,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
   input.setAttribute(
     "style",
     `background: white;
-     font-family: monospace;
+     font-family: ${FontFamilyMono};
     `,
   );
   input.addEventListener("keydown", (evt) => {

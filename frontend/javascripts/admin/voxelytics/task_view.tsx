@@ -2,6 +2,7 @@ import { Flex, Progress, Tabs, type TabsProps, Tooltip } from "antd";
 import { formatNumber } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { JSONTree, type LabelRenderer, type ShouldExpandNodeInitially } from "react-json-tree";
+import { FontFamilyMono } from "theme";
 import {
   type VoxelyticsArtifactConfig,
   VoxelyticsRunState,
@@ -49,7 +50,7 @@ function TaskView({
   const configTab = (
     <>
       <p>
-        Class: <span style={{ fontFamily: "monospace" }}>{task.task}</span>
+        Class: <span style={{ fontFamily: FontFamilyMono }}>{task.task}</span>
       </p>
       <JSONTree
         data={task.config}
@@ -185,7 +186,7 @@ function TaskView({
             </Flex>
           </Tooltip>
           Current Execution ID:&nbsp;
-          <span style={{ fontFamily: "monospace" }}>
+          <span style={{ fontFamily: FontFamilyMono }}>
             {taskInfo.currentExecutionId != null ? taskInfo.currentExecutionId : "-"}
           </span>
         </Flex>

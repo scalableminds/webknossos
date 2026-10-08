@@ -288,14 +288,11 @@
 
 .navbar-header,
 .statusbar-footer {
-  // Dark mode for UI within navbar and footer
-  // Mirrors ColorDarkBg in frontend/javascripts/theme.ts (NavAndStatusBarTheme) – keep in sync.
-  @dark-bg: #383d48;
-  @dark-fg: #f1f1f1;
-  @dark-border: #585868;
-  // Basically, redefines var(--ant-color-text-secondary) because
-  // that variable turns black-ish in light mode (in spite of
-  // ConfigProvider around the status bar).
+  // Dark mode for UI within navbar and footer.
+  // The antd components in here are wrapped in a dark ConfigProvider (NavAndStatusBarTheme or
+  // getAntdTheme("dark")), so `var(--ant-…)` resolves to dark values on them. The header/footer
+  // elements themselves are not, which is why their own text color is hardcoded below:
+  // var(--ant-color-text-secondary) would turn black-ish there in light mode.
   @color-text-secondary: rgba(255, 255, 255, 0.67);
 
   color: @color-text-secondary;
@@ -337,7 +334,7 @@
   .ant-input-number,
   .ant-radio-button-wrapper,
   .ant-select > .ant-select-selector {
-    color: @dark-fg !important;
+    color: var(--ant-color-text) !important;
 
     &.upgrade-banner-button {
       background-color: var(--ant-button-primary-color) !important;
@@ -357,11 +354,11 @@
 
   .ant-btn[disabled],
   .ant-btn[disabled]:hover {
-    color: mix(gray, @dark-fg, 70%) !important;
+    color: var(--ant-color-text-disabled) !important;
   }
 
   .ant-select-arrow {
-    color: @dark-fg;
+    color: var(--ant-color-text);
   }
 
   .ant-btn-danger {
@@ -382,9 +379,9 @@
     height: auto;
     line-height: 10px;
     // Match the gray of the other statusbar icons. The footer's
-    // `.ant-btn { color: @dark-fg !important }` rule would otherwise force the
+    // `.ant-btn { color: var(--ant-color-text) !important }` rule would otherwise force the
     // icon (which uses fill: currentColor) to near-white, so override it here.
-    color: @color-text-secondary !important;
+    color: var(--ant-color-text-secondary) !important;
     background-color: inherit;
   }
 

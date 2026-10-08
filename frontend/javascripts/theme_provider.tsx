@@ -3,7 +3,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { ToastContextMountRoot } from "libs/toast";
 import type React from "react";
 import { useEffect } from "react";
-import { ColorBlack, ColorWhite, getAntdTheme, getThemeFromUser } from "theme";
+import { ColorViewerInk, ColorWhite, getAntdTheme, getThemeFromUser } from "theme";
 
 export default function GlobalThemeProvider({
   children,
@@ -20,7 +20,7 @@ export default function GlobalThemeProvider({
   useEffect(() => {
     // body is outside of the ReactDOM, so we have to manually update it
     if (isDarkMode) {
-      document.body.style.backgroundColor = ColorBlack;
+      document.body.style.backgroundColor = ColorViewerInk;
     } else {
       document.body.style.backgroundColor = ColorWhite;
     }

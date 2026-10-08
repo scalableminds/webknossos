@@ -21,7 +21,7 @@ import { isEqual } from "lodash-es";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
-import { ModalWidth } from "theme";
+import { FontFamilyMono, ModalWidth } from "theme";
 import { setKeyboardShortcutsConfigAction } from "viewer/model/actions/settings_actions";
 import {
   ALL_KEYBOARD_SHORTCUT_IDS,
@@ -537,7 +537,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
             rows={18}
             value={jsonString}
             onChange={(e) => onChangeJson(e.target.value)}
-            style={{ fontFamily: "monospace" }}
+            style={{ fontFamily: FontFamilyMono }}
           />
           {jsonError && <Text type="danger">JSON Error: {jsonError}</Text>}
         </>

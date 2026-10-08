@@ -1017,8 +1017,8 @@ export function updateBucketPartial(
       mag,
       // Base64 of the binary run encoding (encodeBucketDiff in
       // viewer/model/volumetracing/core/bucket_diff.ts). Deliberately not LZ4'd:
-      // RLE is already a compression, and a few hundred (start, length) pairs
-      // give LZ4 almost nothing to work with.
+      // RLE is already a compression, and LZ4 saved almost nothing on recorded
+      // brush strokes.
       voxelRunsBase64: runsBase64,
     },
   } as const;

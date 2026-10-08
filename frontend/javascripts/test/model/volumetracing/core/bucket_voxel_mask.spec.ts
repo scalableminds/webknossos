@@ -2,6 +2,7 @@ import {
   BUCKET_VOXEL_COUNT,
   BUCKET_WIDTH,
   BucketVoxelMask,
+  type RunAxis,
   voxelIndexOf,
 } from "viewer/model/volumetracing/core";
 import { describe, expect, it } from "vitest";
@@ -135,5 +136,82 @@ describe("volume annotation core — BucketVoxelMask", () => {
     const mask = new BucketVoxelMask();
     expect(runsOf(mask)).toEqual([]);
     expect([...mask.indices()]).toEqual([]);
+    for (const axis of [0, 1, 2] as const) expect([...mask.orderedRuns(axis)]).toEqual([]);
+  });
+
+  describe("orderedRuns", () => {
+    // Linear index of (x, y, z) in the order whose fastest axis is `axis`.
+    const linearIndexOf = (x: number, y: number, z: number, axis: RunAxis) =>
+      axis === 0
+        ? x + 32 * y + 1024 * z
+        : axis === 1
+          ? y + 32 * z + 1024 * x
+          : z + 32 * x + 1024 * y;
+
+    // Reference: visit every voxel in linear order and merge adjacent ones.
+    function naiveOrderedRuns(mask: BucketVoxelMask, axis: RunAxis): Array<[number, number]> {
+      const set = new Uint8Array(BUCKET_VOXEL_COUNT);
+      for (const index of mask.indices()) {
+        const x = index % 32;
+        const y = Math.floor(index / 32) % 32;
+        const z = Math.floor(index / 1024);
+        set[linearIndexOf(x, y, z, axis)] = 1;
+      }
+      const runs: Array<[number, number]> = [];
+      for (let i = 0; i < BUCKET_VOXEL_COUNT; i++) {
+        if (set[i] === 0) continue;
+        const last = runs.at(-1);
+        if (last != null && last[0] + last[1] === i) last[1]++;
+        else runs.push([i, 1]);
+      }
+      return runs;
+    }
+
+    const orderedRunsOf = (mask: BucketVoxelMask, axis: RunAxis): Array<[number, number]> =>
+      [...mask.orderedRuns(axis)].map(({ start, length }) => [start, length]);
+
+    it("matches a voxel-by-voxel reference for random masks in every order", () => {
+      let seed = 12345;
+      const random = () => {
+        seed = (seed * 1103515245 + 12345) >>> 0;
+        return seed / 2 ** 32;
+      };
+      for (let trial = 0; trial < 20; trial++) {
+        const mask = new BucketVoxelMask();
+        // Sparse voxels, short runs and a few full rows, so that both the bit
+        // scan and the all-ones fast path are exercised.
+        for (let i = 0; i < 200; i++) mask.mark(Math.floor(random() * BUCKET_VOXEL_COUNT));
+        for (let i = 0; i < 20; i++) {
+          const row = Math.floor(random() * 1024);
+          mask.markRun(row * 32, random() < 0.3 ? 32 : 1 + Math.floor(random() * 31));
+        }
+        for (const axis of [0, 1, 2] as const) {
+          expect(orderedRunsOf(mask, axis)).toEqual(naiveOrderedRuns(mask, axis));
+        }
+      }
+    });
+
+    it("merges a full bucket into one run in every order", () => {
+      const mask = new BucketVoxelMask();
+      mask.markRun(0, BUCKET_VOXEL_COUNT);
+      for (const axis of [0, 1, 2] as const) {
+        expect(orderedRunsOf(mask, axis)).toEqual([[0, BUCKET_VOXEL_COUNT]]);
+      }
+    });
+
+    it("makes a YZ slice one run in y order and an XZ slice one run in z order", () => {
+      const yzSlice = new BucketVoxelMask();
+      const xzSlice = new BucketVoxelMask();
+      for (let a = 0; a < 32; a++) {
+        for (let b = 0; b < 32; b++) {
+          yzSlice.mark(voxelIndexOf(5, a, b));
+          xzSlice.mark(voxelIndexOf(a, 5, b));
+        }
+      }
+      expect(orderedRunsOf(yzSlice, 1)).toEqual([[5 * 1024, 1024]]);
+      expect(orderedRunsOf(xzSlice, 2)).toEqual([[5 * 1024, 1024]]);
+      // In x order, the YZ slice is one voxel per row.
+      expect(orderedRunsOf(yzSlice, 0)).toHaveLength(1024);
+    });
   });
 });

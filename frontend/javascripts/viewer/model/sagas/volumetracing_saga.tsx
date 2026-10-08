@@ -75,7 +75,11 @@ import {
   updateBucketPartial,
 } from "viewer/model/sagas/volume/update_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import { encodeBucketDiffBase64 } from "viewer/model/volumetracing/core/bucket_diff";
+import {
+  encodeBucketDiffBase64,
+  runAxisForPlane,
+} from "viewer/model/volumetracing/core/bucket_diff";
+import type { RunAxis } from "viewer/model/volumetracing/core/bucket_voxel_mask";
 import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/legacy/section_labeling";
@@ -264,7 +268,12 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     // Only the brush is driven from viewer/model/volumetracing; the trace
     // tool below still builds up a section labeler.
-    let brushStroke: { driver: BrushDriver; magInfo: MagInfo } | null = null;
+    let brushStroke: {
+      driver: BrushDriver;
+      magInfo: MagInfo;
+      // Run order of the wire encoding, in which this viewport's strokes are contiguous.
+      runAxis: RunAxis;
+    } | null = null;
 
     if (isBrushTool(activeTool)) {
       const segmentationLayer = yield* call(
@@ -303,7 +312,11 @@ export function* editVolumeLayerAsync(): Saga<never> {
         },
         toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
       );
-      brushStroke = { driver, magInfo: segmentationLayer.cube.magInfo };
+      brushStroke = {
+        driver,
+        magInfo: segmentationLayer.cube.magInfo,
+        runAxis: runAxisForPlane(planeAxis),
+      };
     }
 
     let lastPosition = startEditingAction.positionInLayerSpace;
@@ -367,7 +380,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       // were changed" hint below still fires when overwrite-empty skipped all.
       if (voxels > 0) wroteVoxelsBox.value = true;
       if (bucketDiffs.length > 0) {
-        const { magInfo } = brushStroke;
+        const { magInfo, runAxis } = brushStroke;
         // The core's BucketAddress is structurally the viewer's, additional
         // coordinates included, so it goes into createSendBucketInfo as-is.
         yield* put(
@@ -375,7 +388,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
             bucketDiffs.map((diff) =>
               updateBucketPartial(
                 createSendBucketInfo(diff.address, magInfo),
-                encodeBucketDiffBase64(diff),
+                encodeBucketDiffBase64(diff, runAxis),
                 volumeTracing.tracingId,
               ),
             ),

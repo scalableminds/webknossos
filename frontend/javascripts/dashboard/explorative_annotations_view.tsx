@@ -17,11 +17,12 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Button, Radio, Space, Table, Tag, Typography } from "antd";
+import { Avatar, Button, Radio, Space, Table, Tag, Typography, theme } from "antd";
 import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import { Identicon } from "components/identicon";
 import TextWithDescription from "components/text_with_description";
 import {
   FilterChip,
@@ -129,6 +130,22 @@ const persistence = new Persistence<PartialState>(
   },
   "explorativeList",
 );
+
+const IDENTICON_SIZE = 48;
+
+function AnnotationIdenticon({ annotation }: { annotation: APIAnnotationInfo }) {
+  const { token } = theme.useToken();
+  return (
+    <Link to={`/annotations/${annotation.id}`} title="Open Annotation">
+      <Avatar
+        shape="square"
+        size={IDENTICON_SIZE}
+        icon={<Identicon seed={annotation.id} size={IDENTICON_SIZE * 0.6} />}
+        style={{ background: token.colorFillTertiary }}
+      />
+    </Link>
+  );
+}
 
 function formatUserName(user: APIUserCompact) {
   return `${user.firstName} ${user.lastName}`;
@@ -750,6 +767,14 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     const mayHaveMoreAnnotations = lastLoadedPage >= 0 && !loadedAllAnnotations;
 
     const columns: ColumnType<APIAnnotationInfo>[] = [
+      {
+        width: IDENTICON_SIZE + 16, // 16 = the cell's remaining (left-side only) padding
+        key: "identicon",
+        className: "dashboard-list-table-borderless-cell dashboard-list-table-thumbnail-cell",
+        render: (__: any, annotation: APIAnnotationInfo) => (
+          <AnnotationIdenticon annotation={annotation} />
+        ),
+      },
       {
         dataIndex: "name",
         key: "name",

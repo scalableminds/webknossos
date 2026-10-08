@@ -185,6 +185,7 @@ export const annotation: APIAnnotation = {
       organization: "Connectomics department",
     },
   ],
+  bookmarks: [],
 };
 export const annotationProto: APITracingStoreAnnotation = {
   description: "task-annotation-description",
@@ -198,4 +199,5 @@ export const annotationProto: APITracingStoreAnnotation = {
     },
   ],
   userStates: [],
+  bookmarks: [],
 };

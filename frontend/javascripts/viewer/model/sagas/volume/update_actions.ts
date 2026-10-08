@@ -126,6 +126,7 @@ export type AddLayerToAnnotationUpdateAction = ReturnType<typeof addLayerToAnnot
 export type DeleteAnnotationLayerUpdateAction = ReturnType<typeof deleteAnnotationLayer>;
 export type UpdateAnnotationLayerNameUpdateAction = ReturnType<typeof updateAnnotationLayerName>;
 export type UpdateMetadataOfAnnotationUpdateAction = ReturnType<typeof updateMetadataOfAnnotation>;
+export type AddBookmarkUpdateAction = ReturnType<typeof addBookmark>;
 export type SplitAgglomerateUpdateAction = ReturnType<typeof splitAgglomerate>;
 export type MergeAgglomerateUpdateAction = ReturnType<typeof mergeAgglomerate>;
 
@@ -279,6 +280,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteAnnotationLayerUpdateAction
   | UpdateAnnotationLayerNameUpdateAction
   | UpdateMetadataOfAnnotationUpdateAction
+  | AddBookmarkUpdateAction
   | SplitAgglomerateUpdateAction
   | MergeAgglomerateUpdateAction;
 
@@ -1249,6 +1251,18 @@ export function updateMetadataOfAnnotation(description: string) {
   return {
     name: "updateMetadataOfAnnotation",
     value: { description },
+  } as const;
+}
+
+export function addBookmark(bookmark: {
+  id: number;
+  created: number;
+  name: string | null;
+  stateHash: string;
+}) {
+  return {
+    name: "addBookmark",
+    value: bookmark,
   } as const;
 }
 

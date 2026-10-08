@@ -9,6 +9,7 @@ import play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator
 import play.silhouette.crypto.{JcaSigner, JcaSignerSettings}
 import play.silhouette.impl.authenticators.{CookieAuthenticator, *}
 import models.user.UserService
+import play.api.http.HeaderNames
 import play.api.mvc.*
 import utils.WkConf
 
@@ -36,10 +37,13 @@ case class CombinedAuthenticatorService(
     idGenerator: IDGenerator,
     clock: Clock,
     userService: UserService,
+    shortLivedTokenService: ShortLivedTokenService,
     conf: WkConf
 )(implicit val executionContext: ExecutionContext)
     extends AuthenticatorService[CombinedAuthenticator]
     with Logger {
+
+  private val bearerPrefix = "Bearer "
 
   private val cookieSigner = new JcaSigner(JcaSignerSettings(conf.Silhouette.CookieAuthenticator.signerSecret))
 
@@ -55,7 +59,15 @@ case class CombinedAuthenticatorService(
   )
 
   val tokenAuthenticatorService =
-    new WebknossosBearerTokenAuthenticatorService(tokenSettings, tokenDao, idGenerator, clock, userService, conf)
+    new WebknossosBearerTokenAuthenticatorService(
+      tokenSettings,
+      tokenDao,
+      idGenerator,
+      clock,
+      userService,
+      shortLivedTokenService,
+      conf
+    )
 
   // is actually createCookie, called as "create" because it is the default
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] =
@@ -78,9 +90,48 @@ case class CombinedAuthenticatorService(
     for {
       optionCookie <- cookieAuthenticatorService.retrieve(using request)
       optionCookieUnlessSignedOutEverywhere <- cookieUnlessSignedOutEverywhere(optionCookie)
+      // Silhouette only reads the X-Auth-Token header. Authorization: Bearer is handled separately below.
       optionToken <- tokenAuthenticatorService.retrieve(using request)
-    } yield optionCookieUnlessSignedOutEverywhere.map(CombinedAuthenticator(_)).orElse {
-      optionToken.map(CombinedAuthenticator(_))
+      optionTokenOrBearer <- optionToken match {
+        case Some(_) => Future.successful(optionToken)
+        case None    => retrieveByAuthorizationHeader(request)
+      }
+    } yield optionCookieUnlessSignedOutEverywhere
+      .map(CombinedAuthenticator(_))
+      .orElse(optionTokenOrBearer.map(CombinedAuthenticator(_)))
+      .orElse(retrieveShortLived(request).map(CombinedAuthenticator(_)))
+
+  private def retrieveByAuthorizationHeader(request: RequestHeader): Future[Option[BearerTokenAuthenticator]] =
+    bearerAuthorizationHeaderValue(request) match {
+      case None        => Future.successful(None)
+      case Some(value) => tokenDao.findOneByValue(value).toFutureOption
+    }
+
+  /*
+   * Short-lived tokens are held in memory only (see ShortLivedTokenService), so they are not found by the
+   * silhouette token retrieval, which looks them up in the database. They are synthesized into a
+   * BearerTokenAuthenticator here so that they authenticate all API routes just like a regular token.
+   * Note that idleTimeout must stay None: silhouette only calls AuthenticatorService.update (which would
+   * try to write to the database) for authenticators that define an idle timeout.
+   */
+  private def retrieveShortLived(request: RequestHeader): Option[BearerTokenAuthenticator] =
+    tokenValueFromRequest(request).flatMap(shortLivedTokenService.findValid).map { shortLivedToken =>
+      BearerTokenAuthenticator(
+        id = shortLivedToken.value,
+        loginInfo = LoginInfoAdapter.loginInfoFromUserId(shortLivedToken.userId),
+        lastUsedDateTime = clock.now,
+        expirationDateTime = shortLivedToken.expiresAt.toZonedDateTime,
+        idleTimeout = None
+      )
+    }
+
+  private def tokenValueFromRequest(request: RequestHeader): Option[String] =
+    request.headers.get(tokenSettings.fieldName).orElse(bearerAuthorizationHeaderValue(request))
+
+  private def bearerAuthorizationHeaderValue(request: RequestHeader): Option[String] =
+    request.headers.get(HeaderNames.AUTHORIZATION).map(_.trim).collect {
+      case header if header.toLowerCase.startsWith(bearerPrefix.toLowerCase) =>
+        header.drop(bearerPrefix.length).trim
     }
 
   private def cookieUnlessSignedOutEverywhere(
@@ -145,6 +196,8 @@ case class CombinedAuthenticatorService(
   ): Future[AuthenticatorResult] =
     authenticator.actualAuthenticator match {
       case a: CookieAuthenticator      => cookieAuthenticatorService.discard(a, result)
-      case a: BearerTokenAuthenticator => tokenAuthenticatorService.discard(a, result)
+      case a: BearerTokenAuthenticator =>
+        shortLivedTokenService.remove(a.id)
+        tokenAuthenticatorService.discard(a, result)
     }
 }

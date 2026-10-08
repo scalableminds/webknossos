@@ -7,6 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import files.WkTempFileService
 import mail.{Mailer, MailerConfig}
+import mcp.McpBundleService
 import models.annotation.AnnotationDAO
 import models.dataset.ThumbnailCachingService
 import models.user.InviteService
@@ -35,7 +36,8 @@ class Startup @Inject() (
     inviteService: InviteService,
     thumbnailCachingService: ThumbnailCachingService,
     sqlClient: SqlClient,
-    slackNotificationService: SlackNotificationService
+    slackNotificationService: SlackNotificationService,
+    mcpBundleService: McpBundleService
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
 
@@ -44,6 +46,8 @@ class Startup @Inject() (
   logger.info("Executing Startup: Start actors, register cleanup services and stop hooks...")
 
   startActors(actorSystem)
+
+  mcpBundleService.warmUp()
 
   private val tokenAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 

@@ -162,6 +162,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   // retrieve the items of the currently rendered page (while respecting
   // the active search and filters).
   currentPageData: Readonly<APIAnnotationInfo[]> = [];
+  // Ensures the default selection only happens once, so later deselecting by the user sticks.
+  hasAutoSelectedAnnotation = false;
 
   componentDidMount() {
     const partialState: Partial<State> = {
@@ -180,6 +182,20 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
     if (this.state.shouldShowArchivedAnnotations !== prevState.shouldShowArchivedAnnotations) {
       this.fetchNextPage(0);
+    }
+
+    if (
+      !this.hasAutoSelectedAnnotation &&
+      prevState.isLoading &&
+      !this.state.isLoading &&
+      this.state.selectedAnnotationId == null
+    ) {
+      // Select the first entry by default so that the details sidebar is visible right away.
+      const firstAnnotation = this.currentPageData[0];
+      if (firstAnnotation != null) {
+        this.hasAutoSelectedAnnotation = true;
+        this.setState({ selectedAnnotationId: firstAnnotation.id });
+      }
     }
 
     if (this.props.datasetNameFilter !== prevProps.datasetNameFilter) {

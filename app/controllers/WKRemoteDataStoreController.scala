@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
+import com.scalableminds.webknossos.datastore.models.{UnfinishedUpload, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
   DataSourceId,
@@ -18,17 +18,21 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithRootPathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  AlignmentProjectUploadAdditionalInfo,
+  AlignmentProjectUploadInfo,
   AttachmentUploadAdditionalInfo,
   AttachmentUploadInfo,
   DatasetUploadAdditionalInfo,
   DatasetUploadInfo,
   MagUploadAdditionalInfo,
   MagUploadInfo,
+  ReportAlignmentProjectUploadParameters,
   ReportAttachmentUploadParameters,
   ReportDatasetUploadParameters,
   ReportMagUploadParameters
 }
 import com.typesafe.scalalogging.LazyLogging
+import models.alignmentproject.{AlignmentProject, AlignmentProjectDAO, AlignmentProjectService, AlignmentProjectStatus}
 import models.dataset.*
 import models.dataset.credential.CredentialDAO
 import models.job.{JobDAO, JobService}
@@ -61,6 +65,8 @@ class WKRemoteDataStoreController @Inject() (
     uploadToPathsService: UploadToPathsService,
     jobService: JobService,
     credentialDAO: CredentialDAO,
+    alignmentProjectDAO: AlignmentProjectDAO,
+    alignmentProjectService: AlignmentProjectService,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -181,6 +187,72 @@ class WKRemoteDataStoreController @Inject() (
             dummyAttachmentPath
           )
         } yield Ok(Json.toJson(AttachmentUploadAdditionalInfo(dataSource.id)))
+      }
+    }
+
+  def reserveAlignmentProjectUpload(name: String, key: String, token: String): Action[AlignmentProjectUploadInfo] =
+    Action.fox(validateJson[AlignmentProjectUploadInfo]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        val uploadInfo = request.body
+        for {
+          user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
+          _ <- alignmentProjectService.assertMayAccessAlignmentProjects(user)
+          _ <- Fox.fromBool(uploadInfo.organizationId == user._organization) ?~> Msg.notAllowed ~> FORBIDDEN
+          organization <- organizationDAO.findOne(uploadInfo.organizationId)(using
+            GlobalAccessContext
+          ) ?~> Msg.Organization.notFound(uploadInfo.organizationId) ~> NOT_FOUND
+          _ <- organizationService.assertUsedStorageNotExceeded(
+            organization,
+            uploadInfo.resumableUploadInfo.totalFileSizeInBytes
+          ) ?~> Msg.Dataset.Upload.storageExceeded ~> FORBIDDEN
+          _ <- Fox.fromBool(
+            dataStore.onlyAllowedOrganization.forall(_ == organization._id)
+          ) ?~> Msg.Dataset.Upload.datastoreRestricted
+          projectName = uploadInfo.name.trim
+          voxelSize = VoxelSize(uploadInfo.voxelSizeFactor, uploadInfo.voxelSizeUnit)
+          _ <- alignmentProjectService.assertValidName(organization._id, projectName)
+          _ <- alignmentProjectService.assertValidVoxelSize(voxelSize)
+          project = AlignmentProject(
+            ObjectId.generate,
+            organization._id,
+            user._id,
+            dataStore.name,
+            projectName,
+            uploadInfo.description.getOrElse(""),
+            AlignmentProjectStatus.UPLOADING,
+            invalidReason = None,
+            voxelSize,
+            csvPath = None,
+            fileCount = None,
+            totalSizeInBytes = None,
+            sectionRange = None
+          )
+          _ <- alignmentProjectDAO.insertOne(project)
+        } yield Ok(Json.toJson(AlignmentProjectUploadAdditionalInfo(project._id)))
+      }
+    }
+
+  def reportAlignmentProjectUpload(name: String, key: String): Action[ReportAlignmentProjectUploadParameters] =
+    Action.fox(validateJson[ReportAlignmentProjectUploadParameters]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        val report = request.body
+        for {
+          project <- alignmentProjectDAO.findOne(report.alignmentProjectId)(using
+            GlobalAccessContext
+          ) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
+          _ <- Fox.fromBool(project._dataStore == dataStore.name) ?~> Msg.notAllowed ~> FORBIDDEN
+          _ <- Fox.fromBool(project.status == AlignmentProjectStatus.UPLOADING) ?~> Msg.AlignmentProject.notUploading
+          isValid = report.sectionRange.isDefined && report.invalidReason.isEmpty
+          _ <- alignmentProjectDAO.finishUpload(
+            project._id,
+            if (isValid) AlignmentProjectStatus.READY else AlignmentProjectStatus.INVALID,
+            report.invalidReason,
+            report.csvPath,
+            report.fileCount,
+            report.totalSizeInBytes,
+            report.sectionRange.filter(_ => isValid)
+          )
+        } yield Ok
       }
     }
 

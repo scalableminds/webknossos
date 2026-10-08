@@ -45,6 +45,22 @@ object Msg {
       val zeroAnnotations: String = "Need at least one training annotation for model training."
     }
   }
+  object AlignmentProject {
+    val notFound: String = "Could not find the requested alignment project."
+    val noAdminOrDatasetManager: String =
+      "Alignment projects are only available to administrators and dataset managers."
+    def nameTaken(name: String): String =
+      s"An alignment project with the name “$name” already exists. Please choose a different name."
+    val emptyName: String = "The name of an alignment project must not be empty."
+    val notUploading: String = "The upload of this alignment project has already been finished."
+    val notReady: String = "Alignments can only be started for alignment projects with a valid, fully uploaded CSV."
+    val inputDataDeleted: String = "The input data of this alignment project has been deleted."
+    val invalidSectionRange: String = "The selected section range is not within the sections of the alignment project."
+    val invalidVoxelSize: String = "Each component of the voxel size must be larger than 0."
+    val deleteFailed: String = "Could not delete the alignment project."
+    val deleteInputDataFailed: String = "Could not delete the input data of the alignment project."
+  }
+
   object Annotation {
     val fetchOldPrecedenceLayerNeedsAnnotationId: String =
       "Annotation id is required to fetch old precedence layer."

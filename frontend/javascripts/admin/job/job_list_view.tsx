@@ -134,7 +134,7 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
   "jobList",
 );
 
-export function JobState({ job }: { job: APIJob }) {
+export function JobState({ job }: { job: Pick<APIJob, "state"> }) {
   const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
 
   const jobStateNormalized = capitalize(job.state.toLowerCase());
@@ -163,6 +163,7 @@ export function getJobTypeName(command: APIJobCommand): string {
     [APIJobCommand.INFER_MITOCHONDRIA]: "AI Mitochondria Inference",
     [APIJobCommand.INFER_INSTANCES]: "AI Instance Segmentation",
     [APIJobCommand.ALIGN_SECTIONS]: "Align Sections",
+    [APIJobCommand.ALIGN]: "Alignment Project",
     [APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION]: "Materialize Annotation",
     [APIJobCommand.TRAIN_NEURON_MODEL]: "Train Neuron Model",
     [APIJobCommand.TRAIN_INSTANCE_MODEL]: "Train Instance Model",
@@ -330,6 +331,20 @@ function JobListView() {
           <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
+    } else if (job.command === APIJobCommand.ALIGN) {
+      const action = job.args.renderUnaligned ? "Render unaligned data" : "Align";
+      return (
+        <span>
+          {action} into new dataset <i>{job.args.newDatasetName}</i>
+          {job.alignmentProjectId != null ? (
+            <>
+              {" "}
+              from{" "}
+              <Link to={`/alignmentProjects/${job.alignmentProjectId}`}>alignment project</Link>
+            </>
+          ) : null}
+        </span>
+      );
     } else if (
       job.command === APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION &&
       linkToDataset != null
@@ -462,7 +477,8 @@ function JobListView() {
     } else if (
       job.command === APIJobCommand.CONVERT_TO_WKW ||
       job.command === APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE ||
-      job.command === APIJobCommand.ALIGN_SECTIONS
+      job.command === APIJobCommand.ALIGN_SECTIONS ||
+      job.command === APIJobCommand.ALIGN
     ) {
       return (
         <span>

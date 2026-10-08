@@ -326,3 +326,9 @@ class AttachmentUploadMetadataStore @Inject() (protected val store: DataStoreRed
       _ <- super.refreshExpiry(uploadId)
     } yield ()
 }
+
+// Alignment projects need no metadata beyond the generic one. The datasetId slot holds the alignment project id.
+class AlignmentProjectUploadMetadataStore @Inject() (protected val store: DataStoreRedisStore)
+    extends UploadMetadataStore {
+  protected val domain: UploadDomain = UploadDomain.alignmentProject
+}

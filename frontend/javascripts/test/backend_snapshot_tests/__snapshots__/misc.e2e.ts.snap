@@ -60,6 +60,8 @@ exports[`Misc APIs (E2E)  > datastores() 1`] = `
 exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
 {
   "alignmentCostInMilliCreditsPerGVx": 500,
+  "alignmentProjectAlignCostInMilliCreditsPerGB": 500,
+  "alignmentProjectRenderUnalignedCostInMilliCreditsPerGB": 100,
   "allowDeleteDatasets": true,
   "bucketSaveWarningThreshold": 1000,
   "defaultToLegacyBindings": false,

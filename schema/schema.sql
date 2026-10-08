@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(185);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(186);
 COMMIT TRANSACTION;
 
 
@@ -630,7 +630,32 @@ CREATE TABLE webknossos.jobs(
   lastRetry TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  _alignmentProject TEXT CONSTRAINT _alignmentProject_objectId CHECK (_alignmentProject ~ '^[0-9a-f]{24}$'),
   CONSTRAINT latestRunErrorDetailsIsJsonObject CHECK(jsonb_typeof(latestRunErrorDetails) = 'object')
+);
+
+CREATE TYPE webknossos.ALIGNMENT_PROJECT_STATUS AS ENUM ('UPLOADING', 'READY', 'INVALID');
+
+CREATE TABLE webknossos.alignmentProjects(
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _organization TEXT NOT NULL,
+  _owner TEXT CONSTRAINT _owner_objectId CHECK (_owner ~ '^[0-9a-f]{24}$') NOT NULL,
+  _dataStore TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  status webknossos.ALIGNMENT_PROJECT_STATUS NOT NULL DEFAULT 'UPLOADING',
+  invalidReason TEXT,
+  voxelSizeFactor webknossos.VECTOR3 NOT NULL,
+  voxelSizeUnit webknossos.LENGTH_UNIT NOT NULL,
+  csvPath TEXT, -- relative to the project directory
+  fileCount BIGINT,
+  totalSizeInBytes BIGINT,
+  firstSection INT,
+  lastSection INT,
+  isInputDataDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  CONSTRAINT sectionRangeIsValid CHECK (firstSection IS NULL OR lastSection IS NULL OR firstSection <= lastSection)
 );
 
 
@@ -881,6 +906,7 @@ CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDele
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
+CREATE VIEW webknossos.alignmentProjects_ AS SELECT * FROM webknossos.alignmentProjects WHERE NOT isDeleted;
 CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT isDeleted;
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
@@ -949,6 +975,8 @@ CREATE INDEX ON webknossos.annotation_sharedTeams(_team);
 CREATE INDEX ON webknossos.folder_paths(_descendant);
 CREATE INDEX ON webknossos.jobs(state, _dataStore, created);
 CREATE INDEX ON webknossos.jobs(_worker);
+CREATE INDEX ON webknossos.jobs(_alignmentProject);
+CREATE UNIQUE INDEX ON webknossos.alignmentProjects(_organization, name) WHERE NOT isDeleted;
 CREATE INDEX ON webknossos.credit_transactions(_paid_job);
 CREATE INDEX ON webknossos.credit_transactions(_organization);
 
@@ -1028,7 +1056,12 @@ ALTER TABLE webknossos.experienceDomains
 ALTER TABLE webknossos.jobs
   ADD CONSTRAINT owner_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE,
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE,
-  ADD CONSTRAINT worker_ref FOREIGN KEY(_worker) REFERENCES webknossos.workers(_id) DEFERRABLE;
+  ADD CONSTRAINT worker_ref FOREIGN KEY(_worker) REFERENCES webknossos.workers(_id) DEFERRABLE,
+  ADD CONSTRAINT alignmentProject_ref FOREIGN KEY(_alignmentProject) REFERENCES webknossos.alignmentProjects(_id) ON DELETE SET NULL DEFERRABLE;
+ALTER TABLE webknossos.alignmentProjects
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE,
+  ADD CONSTRAINT owner_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE,
+  ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
 ALTER TABLE webknossos.workers
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
 ALTER TABLE webknossos.annotation_privateLinks

@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
+import models.alignmentproject.{AlignmentProjectDAO, AlignmentProjectService}
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job.*
 import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, PricingPlan}
@@ -78,7 +79,9 @@ class JobController @Inject() (
     creditTransactionService: CreditTransactionService,
     creditTransactionDAO: CreditTransactionDAO,
     dataStoreDAO: DataStoreDAO,
-    userService: UserService
+    userService: UserService,
+    alignmentProjectDAO: AlignmentProjectDAO,
+    alignmentProjectService: AlignmentProjectService
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper {
@@ -96,12 +99,29 @@ class JobController @Inject() (
     } yield Ok(jsStatus)
   }
 
-  def list(command: Option[String], skipForDeletedDatasets: Option[Boolean]): Action[AnyContent] =
+  def list(
+      command: Option[String],
+      skipForDeletedDatasets: Option[Boolean],
+      alignmentProjectId: Option[ObjectId]
+  ): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
         commandValidatedOpt <- Fox.runOptional(command)(JobCommand.fromString(_).toFox)
-        jobsCompact <- jobDAO.findAllCompact(commandValidatedOpt, skipForDeletedDatasets.getOrElse(false))
+        jobsCompact <- alignmentProjectId match {
+          // Everyone who may access the alignment project sees all of its jobs, regardless of their owner.
+          case Some(projectId) =>
+            for {
+              _ <- alignmentProjectService.assertMayAccessAlignmentProjects(request.identity)
+              _ <- alignmentProjectDAO.findOne(projectId) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
+              jobs <- jobDAO.findAllCompact(
+                commandValidatedOpt,
+                skipForDeletedDatasets.getOrElse(false),
+                Some(projectId)
+              )(using GlobalAccessContext)
+            } yield jobs
+          case None => jobDAO.findAllCompact(commandValidatedOpt, skipForDeletedDatasets.getOrElse(false))
+        }
       } yield Ok(Json.toJson(jobsCompact.map(_.enrich)))
     }
 
@@ -123,12 +143,7 @@ class JobController @Inject() (
     for {
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
       job <- jobDAO.findOne(id)
-      _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
-      _ <- Fox.runIf(job.state == JobState.PENDING || job.state == JobState.STARTED) {
-        creditTransactionService.refundTransactionForJob(job._id, isCancelled = true)(using
-          GlobalAccessContext
-        ) ?~> Msg.Job.Credits.refundFailed
-      }
+      _ <- jobService.cancelJob(job)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
@@ -143,6 +158,12 @@ class JobController @Inject() (
       job <- jobDAO.findOne(id) ?~> Msg.Job.notFound
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
       _ <- Fox.fromBool(multiUser.isSuperUser || job.lastRetry.isEmpty) ?~> Msg.Job.alreadyRetried ~> FORBIDDEN
+      _ <- Fox.runOptional(job._alignmentProject) { alignmentProjectId =>
+        for {
+          project <- alignmentProjectDAO.findOne(alignmentProjectId)(using GlobalAccessContext)
+          _ <- Fox.fromBool(!project.isInputDataDeleted) ?~> Msg.AlignmentProject.inputDataDeleted
+        } yield ()
+      }
       _ <- creditTransactionService.reserveCreditsForRetry(job._id)
       _ <- jobDAO.retryOne(id, retriedBySuperUser = multiUser.isSuperUser)
       js <- jobService.publicWrites(job)

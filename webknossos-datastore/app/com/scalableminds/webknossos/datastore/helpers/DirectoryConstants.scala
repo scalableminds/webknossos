@@ -6,4 +6,5 @@ trait DirectoryConstants {
   val trashDir = ".trash"
   val uploadingDir: String = ".uploading"
   val unpackedDir = ".unpacked"
+  val alignmentProjectsDir = ".alignmentProjects"
 }

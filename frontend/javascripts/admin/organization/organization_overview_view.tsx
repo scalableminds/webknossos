@@ -22,12 +22,14 @@ import {
 import { PowerPlanUpgradeCard } from "./plan_upgrade_cards";
 import {
   formatAiPlanLabel,
+  formatIncludedStorage,
+  formatIncludedUsers,
   getActiveUserCount,
   isAiAddonEligiblePlan,
-  isUserAllowedToRequestUpgrades,
   PricingPlanEnum,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
+import { useCanRequestUpgrades } from "./use_can_request_upgrades";
 
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
 
@@ -36,7 +38,6 @@ export function OrganizationOverviewView() {
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
-  const activeUser = useWkSelector((state) => state.activeUser);
 
   const {
     data: users = [],
@@ -89,17 +90,12 @@ export function OrganizationOverviewView() {
     dispatch(setActiveOrganizationAction(updatedOrganization));
   }
 
-  const maxUsersCountLabel =
-    organization.includedUsers === Number.POSITIVE_INFINITY ? "∞" : organization.includedUsers;
-
-  const includedStorageLabel =
-    organization.includedStorageBytes === Number.POSITIVE_INFINITY
-      ? "∞"
-      : formatCountToDataAmountUnit(organization.includedStorageBytes, true);
+  const maxUsersCountLabel = formatIncludedUsers(organization.includedUsers);
+  const includedStorageLabel = formatIncludedStorage(organization.includedStorageBytes);
 
   const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes, true);
   const aiPlanLabel = formatAiPlanLabel(organization);
-  const canRequestAiPlan = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
+  const canRequestUpgrades = useCanRequestUpgrades();
   const isEligibleForAiAddon = isAiAddonEligiblePlan(organization.pricingPlan);
   const showAiAddonCard = organization.aiPlan == null && isEligibleForAiAddon;
 
@@ -108,9 +104,10 @@ export function OrganizationOverviewView() {
   let upgradeAiPlanAction: React.ReactNode = null;
 
   if (
-    organization.pricingPlan === PricingPlanEnum.Personal ||
-    organization.pricingPlan === PricingPlanEnum.Team ||
-    organization.pricingPlan === PricingPlanEnum.TeamTrial
+    canRequestUpgrades &&
+    (organization.pricingPlan === PricingPlanEnum.Personal ||
+      organization.pricingPlan === PricingPlanEnum.Team ||
+      organization.pricingPlan === PricingPlanEnum.TeamTrial)
   ) {
     upgradeUsersAction = (
       <Button
@@ -134,7 +131,7 @@ export function OrganizationOverviewView() {
       />
     );
   }
-  const buyMoreCreditsAction = (
+  const buyMoreCreditsAction = canRequestUpgrades ? (
     <Button
       type="primary"
       shape="circle"
@@ -143,9 +140,9 @@ export function OrganizationOverviewView() {
       key="buyMoreCreditsAction"
       onClick={() => UpgradePricingPlanModal.orderWebknossosCredits()}
     />
-  );
+  ) : null;
 
-  if (canRequestAiPlan && showAiAddonCard) {
+  if (canRequestUpgrades && showAiAddonCard) {
     upgradeAiPlanAction = (
       <Button
         shape="circle"
@@ -224,7 +221,7 @@ export function OrganizationOverviewView() {
       organization.pricingPlan === PricingPlanEnum.Team ||
       organization.pricingPlan === PricingPlanEnum.TeamTrial;
 
-    if (!isPersonal && !isTeamOrTeamTrial && !showAiAddonCard) {
+    if (!canRequestUpgrades || (!isPersonal && !isTeamOrTeamTrial && !showAiAddonCard)) {
       return null;
     }
 

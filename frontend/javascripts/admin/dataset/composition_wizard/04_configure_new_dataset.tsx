@@ -24,17 +24,26 @@ import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { formatNumber } from "libs/format_utils";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { isUserAdminOrDatasetManager } from "libs/utils";
+import { isPowerOfTwo, isUserAdminOrDatasetManager } from "libs/utils";
 import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import React, { useState } from "react";
-import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_types";
+import type { APIDataLayer, APIDataset, APITeam, LayerLink, VoxelSize } from "types/api_types";
 import { syncValidator } from "types/validation";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  buildLiveTransforms,
+  flatToNestedMatrix,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { checkLandmarksForThinPlateSpline } from "viewer/model/helpers/transformation_helpers";
+import {
+  areVoxelSizesPowerOfTwoMultiples,
+  getFinestVoxelSize,
+  getVoxelSizeScaleFactor,
+} from "viewer/model/scaleinfo";
 import type { WizardComponentProps } from "./common";
 
 const FormItem = Form.Item;
@@ -47,6 +56,103 @@ async function guardedWithErrorToast(fn: () => Promise<any>) {
     console.error(error);
     ErrorHandling.notify(error as Error);
   }
+}
+
+// Scale factors this close to 1 are treated as identity, so that layers whose voxel size already
+// matches the new dataset's keep their empty transformation list.
+const VOXEL_SIZE_SCALE_EPSILON = 1e-6;
+
+// The scaling of a layer happens about the coordinate origin: a voxel at index p lies at the
+// physical position p * sourceVoxelSize, i.e. at p * scale in the new dataset's voxel grid. Passing
+// a bounding box that is centered on the origin makes the two enclosing translations of the
+// transformation chain identities, so that the chain is exactly that scaling.
+const ORIGIN_CENTERED_BOUNDING_BOX = new BoundingBox({ min: [0, 0, 0], max: [0, 0, 0] });
+
+// Adds a scaling transform to each layer that compensates for the difference between its source
+// dataset's voxel size and the voxel size of the dataset that is about to be created.
+// The transform is emitted in the same 7-matrix format that the Layer Transforms editor produces,
+// so that the result stays editable there.
+export function withVoxelSizeTransforms(
+  layers: LayerLink[],
+  linkedDatasets: APIDataset[],
+  targetVoxelSize: VoxelSize,
+): LayerLink[] {
+  return layers.map((layer) => {
+    const sourceDataset = linkedDatasets.find((dataset) => dataset.id === layer.sourceDatasetId);
+    if (sourceDataset == null) {
+      return layer;
+    }
+    const scale = getVoxelSizeScaleFactor(sourceDataset.dataSource.scale, targetVoxelSize);
+    if (scale.every((value) => Math.abs(value - 1) < VOXEL_SIZE_SCALE_EPSILON)) {
+      return layer;
+    }
+    return {
+      ...layer,
+      transformations: [
+        ...layer.transformations,
+        ...buildLiveTransforms(scale, [0, 0, 0], [0, 0, 0], ORIGIN_CENTERED_BOUNDING_BOX),
+      ],
+    };
+  });
+}
+
+// Returns the linked datasets that the given layers actually stem from, in the order in which they
+// were linked. Layers can be removed in this wizard step, so this can be a subset of all datasets
+// that were selected in the previous step.
+export function getUsedDatasets(layers: LayerLink[], linkedDatasets: APIDataset[]): APIDataset[] {
+  const usedDatasetIds = new Set(layers.map((layer) => layer.sourceDatasetId));
+  return linkedDatasets.filter((dataset) => usedDatasetIds.has(dataset.id));
+}
+
+// Returns whether the given voxel sizes are not all the same (up to the scale factor epsilon, so
+// that voxel sizes which only differ in their unit are still considered equal).
+export function doVoxelSizesDiffer(voxelSizes: VoxelSize[]): boolean {
+  if (voxelSizes.length === 0) {
+    return false;
+  }
+  const finestVoxelSize = getFinestVoxelSize(voxelSizes);
+  return voxelSizes.some((voxelSize) =>
+    getVoxelSizeScaleFactor(voxelSize, finestVoxelSize).some(
+      (factor) => Math.abs(factor - 1) >= VOXEL_SIZE_SCALE_EPSILON,
+    ),
+  );
+}
+
+// The backend can respect differing voxel sizes exactly and without any transformations by rebasing
+// the mags of each layer onto the finest voxel size. It does so when no layer carries a
+// transformation (see ComposeService.createDatasource), which requires that all resulting mags are
+// powers of two (see ExploreLayerUtils.rescaleLayersByCommonVoxelSize). That path yields a dataset
+// whose layers stay untransformed, so it is preferred over adding scaling transformations.
+export function canBackendRespectVoxelSizes(
+  layers: LayerLink[],
+  linkedDatasets: APIDataset[],
+): boolean {
+  if (layers.some((layer) => layer.transformations.length > 0)) {
+    return false;
+  }
+  const usedDatasets = getUsedDatasets(layers, linkedDatasets);
+  if (!areVoxelSizesPowerOfTwoMultiples(usedDatasets.map((dataset) => dataset.dataSource.scale))) {
+    return false;
+  }
+  return layers.every((layerLink) => {
+    const sourceLayer = linkedDatasets
+      .find((dataset) => dataset.id === layerLink.sourceDatasetId)
+      ?.dataSource.dataLayers.find((layer) => layer.name === layerLink.sourceLayerName);
+    return (
+      sourceLayer != null && sourceLayer.mags.every((mag) => mag.mag.every((v) => isPowerOfTwo(v)))
+    );
+  });
+}
+
+// Returns whether the user should be able to decide about scaling the layers according to their
+// voxel sizes. This is only the case if the voxel sizes actually differ and if the backend cannot
+// respect them on its own.
+function shouldOfferVoxelSizeScaling(layers: LayerLink[], linkedDatasets: APIDataset[]): boolean {
+  const usedDatasets = getUsedDatasets(layers, linkedDatasets);
+  return (
+    doVoxelSizesDiffer(usedDatasets.map((dataset) => dataset.dataSource.scale)) &&
+    !canBackendRespectVoxelSizes(layers, linkedDatasets)
+  );
 }
 
 export function ConfigureNewDataset(props: WizardComponentProps) {
@@ -102,6 +208,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     }
     const layersWithoutTransforms = form.getFieldValue(["layers"]) as LayerLink[];
     const useThinPlateSplines = (form.getFieldValue("useThinPlateSplines") ?? false) as boolean;
+    const respectVoxelSize = (form.getFieldValue("respectVoxelSize") ?? false) as boolean;
 
     const affineMeanError = { meanError: 0 };
 
@@ -172,6 +279,29 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       }
     }
 
+    // Layers can be removed in this step, so only the datasets that the remaining layers stem from
+    // may influence the voxel size of the new dataset.
+    const usedDatasets = getUsedDatasets(layersWithTransforms, linkedDatasets);
+    if (usedDatasets.length === 0) {
+      Toast.error("Please keep at least one layer.");
+      return;
+    }
+    // When the voxel sizes should be respected, the new dataset uses the finest voxel size of all
+    // used source datasets so that no layer needs to be downscaled.
+    const targetVoxelSize = respectVoxelSize
+      ? getFinestVoxelSize(usedDatasets.map((dataset) => dataset.dataSource.scale))
+      : usedDatasets.slice(-1)[0].dataSource.scale;
+    // Scaling transformations are only needed if the backend cannot respect the voxel sizes itself.
+    const needsVoxelSizeTransforms =
+      respectVoxelSize && shouldOfferVoxelSizeScaling(layersWithTransforms, linkedDatasets);
+    if (needsVoxelSizeTransforms) {
+      layersWithTransforms = withVoxelSizeTransforms(
+        layersWithTransforms,
+        usedDatasets,
+        targetVoxelSize,
+      );
+    }
+
     const newDatasetName = form.getFieldValue(["name"]);
     setIsLoading(true);
     try {
@@ -180,7 +310,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         newDatasetName,
         targetFolderId: form.getFieldValue(["targetFolderId"]),
         organizationId: activeUser.organization,
-        voxelSize: linkedDatasets.slice(-1)[0].dataSource.scale,
+        voxelSize: targetVoxelSize,
         layers: layersWithTransforms,
       });
 
@@ -199,7 +329,9 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
           "",
           "The layers were combined " +
             (sourcePoints.length === 0
-              ? "without any transforms"
+              ? needsVoxelSizeTransforms
+                ? "without any transforms, except for a scaling that compensates for the differing voxel sizes of the source datasets"
+                : "without any transforms"
               : `with ${
                   useThinPlateSplines
                     ? `Thin-Plate-Splines (${sourcePoints.length} correspondences)`
@@ -289,6 +421,24 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
               <Checkbox>Use Thin-Plate-Splines (Experimental)</Checkbox>
             </FormItem>
           )}
+        {wizardContext.sourcePoints.length === 0 && (
+          <Form.Item
+            noStyle
+            shouldUpdate={(prevValues, curValues) => prevValues.layers !== curValues.layers}
+          >
+            {({ getFieldValue }) =>
+              shouldOfferVoxelSizeScaling(getFieldValue("layers") || [], linkedDatasets) ? (
+                <FormItem name={["respectVoxelSize"]} valuePropName="checked">
+                  <Checkbox>
+                    <Tooltip title="The voxel sizes of the selected datasets differ in a way that WEBKNOSSOS cannot express as mags. Enable this option to scale each layer so that it keeps its physical size. The new dataset then uses the finest voxel size of the selected datasets.">
+                      Respect voxel size
+                    </Tooltip>
+                  </Checkbox>
+                </FormItem>
+              ) : null
+            }
+          </Form.Item>
+        )}
 
         <FormItem
           style={{

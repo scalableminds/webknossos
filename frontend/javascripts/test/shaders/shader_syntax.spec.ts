@@ -58,6 +58,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         useInterpolation: false,
         tpsTransformPerLayer: {},
         isWindows: false,
+        vertexBucketAlignmentLayerCap: 8,
       });
 
       /*
@@ -112,6 +113,58 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         isWindows: true,
+        vertexBucketAlignmentLayerCap: 8,
+      });
+      parser.parse(code);
+      expect(warningEmittedCount).toBe(0);
+    });
+
+    it<TestContext>("Ortho Mode (vertexBucketAlignmentLayerCap of 1, more layers than the cap)", ({
+      warningEmittedCount,
+    }) => {
+      // The smallest cap (for GPUs with the WebGL2 minimum of varyings).
+      const code = getShader({
+        globalLayerCount: 3,
+        colorLayerNames: ["color_layer_1", "color_layer_2"],
+        textureLayerInfos: {
+          ["color_layer_1"]: {
+            isColor: true,
+            packingDegree: 4.0,
+            dataTextureCount: 1,
+            isSigned: false,
+            glslPrefix: "",
+            unsanitizedName: "color_layer_1",
+            elementClass: "uint8",
+          },
+          ["color_layer_2"]: {
+            isColor: true,
+            packingDegree: 4.0,
+            dataTextureCount: 1,
+            isSigned: false,
+            glslPrefix: "",
+            unsanitizedName: "color_layer_2",
+            elementClass: "uint8",
+          },
+          ["segmentationLayer"]: {
+            isColor: true,
+            packingDegree: 1.0,
+            dataTextureCount: 4,
+            isSigned: false,
+            glslPrefix: "",
+            unsanitizedName: "segmentationLayer",
+            elementClass: "uint8",
+          },
+        },
+        orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
+        segmentationLayerNames: ["segmentationLayer"],
+        magnificationsCount: mags.length,
+        voxelSizeFactor: [1, 1, 1],
+        isOrthogonal: true,
+        useInterpolation: false,
+        voxelSizeFactorInverted: [1, 1, 1],
+        tpsTransformPerLayer: {},
+        isWindows: false,
+        vertexBucketAlignmentLayerCap: 1,
       });
       parser.parse(code);
       expect(warningEmittedCount).toBe(0);
@@ -159,6 +212,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         isWindows: true,
+        vertexBucketAlignmentLayerCap: 8,
       });
 
       parser.parse(code);
@@ -198,6 +252,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         isWindows: true,
+        vertexBucketAlignmentLayerCap: 8,
       });
       parser.parse(code);
       expect(warningEmittedCount).toBe(0);
@@ -245,6 +300,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         isWindows: false,
+        vertexBucketAlignmentLayerCap: 8,
       });
       parser.parse(code);
       expect(warningEmittedCount).toBe(0);
@@ -283,6 +339,7 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
         isWindows: true,
+        vertexBucketAlignmentLayerCap: 8,
       });
       parser.parse(code);
       expect(warningEmittedCount).toBe(0);

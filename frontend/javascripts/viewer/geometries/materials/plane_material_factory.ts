@@ -15,6 +15,7 @@ import keyBy from "lodash-es/keyBy";
 import mapValues from "lodash-es/mapValues";
 import partition from "lodash-es/partition";
 import throttle from "lodash-es/throttle";
+import memoizeOne from "memoize-one";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
 import type { ValueOf } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -28,6 +29,7 @@ import {
   type Vector3,
   ViewModeValues,
 } from "viewer/constants";
+import { getRenderer } from "viewer/controller/renderer";
 import {
   getColorLayers,
   getDataLayers,
@@ -95,6 +97,23 @@ export type Uniforms = Record<
 >;
 
 const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
+
+// Varying vectors reserved for the shader's other varyings.
+const RESERVED_BASELINE_VARYING_ROWS = 12;
+const VARYING_ROWS_PER_LAYER = 3;
+// The vertex shader precomputes a bucket address per layer and passes it on
+// via the outputMagIdx/outputSeed/outputAddress varyings. WebGL2 only
+// guarantees 15 varying vectors, and exceeding the driver's limit fails with
+// "Could not pack varying". So only layers whose global index is below this
+// cap get these varyings; the others do the full lookup per fragment.
+const getVertexBucketAlignmentLayerCap = memoizeOne((): number => {
+  const gl = getRenderer().getContext() as WebGL2RenderingContext;
+  const maxVaryingVectors: number = gl.getParameter(gl.MAX_VARYING_VECTORS);
+  return Math.max(
+    1,
+    Math.floor((maxVaryingVectors - RESERVED_BASELINE_VARYING_ROWS) / VARYING_ROWS_PER_LAYER),
+  );
+});
 
 function sanitizeName(name: string | null | undefined): string {
   if (WkDevFlags.bucketDebugging.disableLayerNameSanitization) {
@@ -1201,6 +1220,7 @@ class PlaneMaterialFactory {
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
       isWindows: isWindows(),
+      vertexBucketAlignmentLayerCap: getVertexBucketAlignmentLayerCap(),
     });
     return [
       code,
@@ -1242,6 +1262,7 @@ class PlaneMaterialFactory {
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
       isWindows: isWindows(),
+      vertexBucketAlignmentLayerCap: getVertexBucketAlignmentLayerCap(),
     });
   }
 

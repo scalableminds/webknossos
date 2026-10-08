@@ -49,9 +49,17 @@ function useCreditSummary(transactions: APICreditTransaction[]): CreditSummary {
   );
   return useMemo(() => {
     const windowStart = dayjs().subtract(SPENDING_WINDOW_DAYS, "day").valueOf();
-    // Job charges and their refunds both reference the paid job, so summing them yields the net spending.
+    // Refunds don't reference the job, only the charge they refund (relatedTransaction).
+    const jobChargeIds = new Set(
+      transactions
+        .filter((transaction) => transaction.paidJob != null)
+        .map((transaction) => transaction.id),
+    );
+    const isJobRelated = (transaction: APICreditTransaction) =>
+      transaction.paidJob != null ||
+      (transaction.relatedTransaction != null && jobChargeIds.has(transaction.relatedTransaction));
     const netJobCreditChange = transactions
-      .filter((transaction) => transaction.paidJob != null && transaction.createdAt >= windowStart)
+      .filter((transaction) => transaction.createdAt >= windowStart && isJobRelated(transaction))
       .reduce((sum, transaction) => sum + transaction.creditChange, 0);
     return { milliCreditBalance, milliCreditsSpent: Math.max(0, -netJobCreditChange) };
   }, [transactions, milliCreditBalance]);

@@ -1739,7 +1739,7 @@ Nothing below revises the design. This section records where the code currently 
 | `VolumeEditingSession` | 5 | `not_yet_integrated/volume_editing_session.ts` | the app opens transactions from the sagas instead |
 | Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill` |
 
-The running app reaches the new code at exactly two call sites: brushing in `volumetracing_saga.tsx` and flood fill in `floodfill_saga.tsx`. Both are now the only path for those tools — the old `VoxelBuffer2D` brush branch and `DataCube.floodFill` are gone, along with the toggle that used to select between them. The trace tool still uses the section labeler. Writes land in real buckets; nothing else about the existing pipeline changes.
+The running app reaches the new code at exactly two call sites: brushing in `volumetracing_saga.tsx` and flood fill in `floodfill_saga.tsx`. Both are now the only path for those tools — the old `VoxelBuffer2D` brush branch and `DataCube.floodFill` are gone, along with the toggle that used to select between them. The trace tool still uses the section labeler. The brush uses it only to compute its auto-fill, which joins the stroke's transaction as a `MaskShape`, so that stroke and fill are propagated and saved as one. Writes land in real buckets; nothing else about the existing pipeline changes.
 
 ### 12.2 Skipped, and why
 

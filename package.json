@@ -157,7 +157,6 @@
     "dagre": "^0.8.5",
     "dayjs": "^1.11.13",
     "deep-freeze": "0.0.1",
-    "dice-coefficient": "^2.1.0",
     "distance-transform": "https://github.com/scalableminds/distance-transform",
     "dompurify": "^3.4.16",
     "file-saver": "^2.0.1",

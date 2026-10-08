@@ -1330,31 +1330,61 @@ export async function reserveIdsForAnnotation(
 
 // ### Datasets
 
+export type DatasetSortBy =
+  | "lastUsed"
+  | "createdDesc"
+  | "createdAsc"
+  | "name"
+  | "storage"
+  | "annotationCount"
+  | "searchRelevance";
+
+export type DatasetListOptions = {
+  isActive?: boolean;
+  isUnreported?: boolean;
+  onlyMyOrganization?: boolean;
+  folderId?: string | null;
+  searchQuery?: string | null;
+  includeSubfolders?: boolean;
+  // Datasets must have all of these tags.
+  tags?: string[];
+  sortBy?: DatasetSortBy;
+  limit?: number;
+  includeAnnotationCount?: boolean;
+};
+
 export async function getDatasets(
-  isUnreported: boolean | null | undefined = null,
-  folderId: string | null = null,
-  searchQuery: string | null = null,
-  includeSubfolders: boolean | null = null,
-  limit: number | null = null,
-  includeAnnotationCount: boolean = false,
+  options: DatasetListOptions = {},
 ): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
-  if (isUnreported != null) {
-    params.set("isUnreported", String(isUnreported));
+  if (options.isActive != null) {
+    params.set("isActive", String(options.isActive));
   }
-  if (folderId != null && folderId !== "") {
-    params.set("folderId", folderId);
+  if (options.isUnreported != null) {
+    params.set("isUnreported", String(options.isUnreported));
   }
-  if (searchQuery != null) {
-    params.set("searchQuery", searchQuery.trim());
+  if (options.onlyMyOrganization) {
+    params.set("onlyMyOrganization", "true");
   }
-  if (limit != null) {
-    params.set("limit", String(limit));
+  if (options.folderId != null && options.folderId !== "") {
+    params.set("folderId", options.folderId);
   }
-  if (includeSubfolders != null) {
-    params.set("includeSubfolders", includeSubfolders ? "true" : "false");
+  if (options.searchQuery != null) {
+    params.set("searchQuery", options.searchQuery.trim());
   }
-  if (includeAnnotationCount) {
+  if (options.includeSubfolders != null) {
+    params.set("includeSubfolders", options.includeSubfolders ? "true" : "false");
+  }
+  for (const tag of options.tags ?? []) {
+    params.append("tags", tag);
+  }
+  if (options.sortBy != null) {
+    params.set("sortBy", options.sortBy);
+  }
+  if (options.limit != null) {
+    params.set("limit", String(options.limit));
+  }
+  if (options.includeAnnotationCount) {
     params.set("includeAnnotationCount", "true");
   }
 

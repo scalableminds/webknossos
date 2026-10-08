@@ -19,6 +19,7 @@ import {
   getDatasets,
   getEditableTeams,
   triggerDatasetCheck,
+  updateDatasetPartial,
   updateDatasetTeams,
 } from "admin/rest_api";
 import sortBy from "lodash-es/sortBy";
@@ -62,6 +63,53 @@ describe("Dataset API (E2E)", () => {
     datasets = sortBy(datasets, (d) => d.name);
 
     expect(replaceVolatileValues(datasets)).toMatchSnapshot();
+  });
+
+  it("getDatasets filters by tags containing special characters", async () => {
+    const dataset = await getFirstDataset();
+    const tags = ["with space", "a&b=c?d#e", "comma,separated", "100%"];
+    await updateDatasetPartial(dataset.id, { tags });
+    try {
+      const matching = await getDatasets({ tags });
+      expect(matching.map((d) => d.id)).toEqual([dataset.id]);
+      expect(matching[0].tags).toEqual(tags);
+
+      const singleTagMatching = await getDatasets({ tags: ["a&b=c?d#e"] });
+      expect(singleTagMatching.map((d) => d.id)).toEqual([dataset.id]);
+
+      // All tags must be present.
+      const notMatching = await getDatasets({ tags: ["with space", "with"] });
+      expect(notMatching).toEqual([]);
+    } finally {
+      await updateDatasetPartial(dataset.id, { tags: dataset.tags });
+    }
+  });
+
+  it("getDatasets filters by status", async () => {
+    const all = await getDatasets();
+    const unreported = await getDatasets({ isUnreported: true });
+    const reported = await getDatasets({ isUnreported: false });
+    expect(unreported.every((d) => d.isUnreported)).toBe(true);
+    expect(reported.every((d) => !d.isUnreported)).toBe(true);
+    expect(unreported.length + reported.length).toBe(all.length);
+  });
+
+  it("getDatasets sorts before applying the limit", async () => {
+    const byCreation = await getDatasets({ sortBy: "createdAsc" });
+    const createdTimestamps = byCreation.map((d) => d.created);
+    expect(createdTimestamps).toEqual([...createdTimestamps].sort((a, b) => a - b));
+
+    const firstTwo = await getDatasets({ sortBy: "createdAsc", limit: 2 });
+    expect(firstTwo.map((d) => d.id)).toEqual(byCreation.slice(0, 2).map((d) => d.id));
+
+    const newest = await getDatasets({ sortBy: "createdDesc", limit: 1 });
+    expect(newest[0].id).toBe(byCreation[byCreation.length - 1].id);
+  });
+
+  it("getDatasets sorts exact name matches first when sorting by search relevance", async () => {
+    const results = await getDatasets({ searchQuery: "l4_sample", sortBy: "searchRelevance" });
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].name).toBe("l4_sample");
   });
 
   it("getDatasetAccessList", async () => {

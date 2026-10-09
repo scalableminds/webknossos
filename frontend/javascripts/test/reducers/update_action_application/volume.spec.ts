@@ -30,13 +30,14 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
+import { combinedReducer } from "viewer/model/reducers/root_reducer";
 import { diffVolumeTracing } from "viewer/model/sagas/diffing/volume_diffing";
 import type {
   ApplicableVolumeServerUpdateAction,
   ApplicableVolumeUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import { combinedReducer, type WebknossosState } from "viewer/store";
+import type { WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { afterAll, describe, expect, it, test } from "vitest";
 

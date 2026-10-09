@@ -39,12 +39,11 @@ const MARKDOWN_HEADING_COMPONENTS = Object.fromEntries(
   ]),
 );
 
-const ReactMarkdown = loadable<Props>(
-  () => import("react-markdown") as Promise<any>,
+const ReactMarkdown = loadable<Props>(() => import("react-markdown") as Promise<any>, {
   // If react-markdown cannot be loaded, fall back to rendering the raw markdown text
   // as this is less intrusive than rendering an error message.
-  ({ children }) => <>{children}</>,
-);
+  ErrorComponent: ({ children }) => <>{children}</>,
+});
 
 export default function Markdown({ children, components }: Props) {
   return (

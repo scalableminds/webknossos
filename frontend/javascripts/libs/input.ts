@@ -12,7 +12,7 @@ import extend from "lodash-es/extend";
 import { createNanoEvents, type Emitter } from "nanoevents";
 import type { ValueOf } from "types/type_utils";
 import type { OrthoView, Point2 } from "viewer/constants";
-import constants from "viewer/constants";
+import constants, { KEYBOARD_BUTTON_LOOP_INTERVAL } from "viewer/constants";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { addEventListenerWithDelegation, isNoEditableElementFocused } from "./utils";
 
@@ -31,7 +31,6 @@ initializeKeystrokes();
 // provide similar public interfaces for the input methods.
 // In most cases the heavy lifting is done by libraries in the background.
 
-export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 5;
 
 // Keyboard related types

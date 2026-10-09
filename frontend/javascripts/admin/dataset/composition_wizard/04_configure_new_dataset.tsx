@@ -33,8 +33,10 @@ import { syncValidator } from "types/validation";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { checkLandmarksForThinPlateSpline } from "viewer/model/helpers/transformation_helpers";
+import {
+  checkLandmarksForThinPlateSpline,
+  flatToNestedMatrix,
+} from "viewer/model/helpers/transformation_helpers";
 import type { WizardComponentProps } from "./common";
 
 const FormItem = Form.Item;

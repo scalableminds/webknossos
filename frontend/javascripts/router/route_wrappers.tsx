@@ -5,11 +5,13 @@ import {
 import Onboarding from "admin/onboarding";
 import { createExplorational, getShortLink } from "admin/rest_api";
 import { Typography } from "antd";
+import BrainSpinner from "components/brain_spinner";
 import AsyncRedirect from "components/redirect";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import features from "features";
+import loadable from "libs/lazy_loader";
 import { useWkSelector } from "libs/react_hooks";
 import { coalesce, getUrlParamsObjectFromString } from "libs/utils";
 import window from "libs/window";
@@ -20,8 +22,14 @@ import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "t
 import { ControlModeEnum, PerformanceMarkEnum } from "viewer/constants";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { Store } from "viewer/singletons";
-import TracingLayoutView from "viewer/view/layouting/tracing_layout_view";
 import { PageNotFoundView } from "./page_not_found_view";
+
+// The viewer is only loaded when it is opened (see viewer/viewer_entry.ts). While its code is
+// loading, show the same spinner that the viewer shows while it loads the dataset, so that both
+// phases appear as one.
+const TracingLayoutView = loadable(() => import("viewer/viewer_entry"), {
+  fallback: <BrainSpinner />,
+});
 
 function markTracingViewLoadStartEffect() {
   const markName = PerformanceMarkEnum.TRACING_VIEW_LOAD;

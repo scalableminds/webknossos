@@ -9,10 +9,9 @@ import noop from "lodash-es/noop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router";
-import constants from "viewer/constants";
+import constants, { KEYBOARD_BUTTON_LOOP_INTERVAL } from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
 import { bigIntReplacer } from "./bigint_helpers";
-import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
 /**
  * Hook that returns the previous value of a state or prop.

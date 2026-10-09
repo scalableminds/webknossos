@@ -20,7 +20,7 @@ import type {
   DataLayerWithTransformations,
   DatasourceConfiguration,
 } from "types/schemas/datasource.types";
-import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import type { RotationAndMirroringSettings } from "viewer/model/helpers/dataset_rotation_helpers";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 import { AddRemoteLayer } from "./remote/add_remote_layer";
 

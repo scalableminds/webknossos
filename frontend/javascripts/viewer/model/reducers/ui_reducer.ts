@@ -1,13 +1,10 @@
 import defaultState from "viewer/default_state";
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
-import {
-  getNextTool,
-  getPreviousTool,
-  setToolReducer,
-} from "viewer/model/reducers/reducer_helpers";
-import { hideBrushReducer } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import type { WebknossosState } from "viewer/store";
+
+// Note that this reducer is also part of the store outside of the viewer (see viewer/store.ts).
+// Therefore, it must not depend on the viewer's heavier modules (e.g., via the accessors).
 
 function UiReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
@@ -73,21 +70,6 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       return updateKey(state, "uiInformation", {
         borderOpenStatus: action.borderOpenStatus,
       });
-    }
-
-    case "SET_TOOL": {
-      return setToolReducer(hideBrushReducer(state), action.tool);
-    }
-
-    case "CYCLE_TOOL": {
-      const nextTool = action.backwards ? getPreviousTool(state) : getNextTool(state);
-
-      if (nextTool == null) {
-        // Don't change the current tool if another tool could not be selected.
-        return state;
-      }
-
-      return setToolReducer(hideBrushReducer(state), nextTool);
     }
 
     case "SET_THEME": {

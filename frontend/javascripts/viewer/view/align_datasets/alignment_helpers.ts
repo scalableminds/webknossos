@@ -38,7 +38,7 @@ export type LandmarkPair = {
 
 // Three pairs always lie in one plane, so they only work with the fallback in
 // estimateTransformBtoA.
-const MIN_LANDMARK_PAIR_COUNT = 3;
+export const MIN_LANDMARK_PAIR_COUNT = 3;
 // If the smallest extent of a point cloud is below this fraction of its largest extent,
 // the points are treated as lying in one plane (or on one line).
 const MIN_EXTENT_RATIO = 1e-6;

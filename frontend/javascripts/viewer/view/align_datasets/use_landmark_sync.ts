@@ -24,16 +24,22 @@ type IframeBridge = Pick<ReturnType<typeof useIframeBridge>, "whenReady" | "send
  *    workers are polled. When the landmarks of a worker changed (added, deleted, moved,
  *    undo, ...), the group of that side in the landmark annotation is replaced with the
  *    trees of the worker.
- * Returns the current landmarks of both workers, and whether they were loaded from the
- * workers at least once.
+ * Returns the current landmarks of both workers, whether they were loaded from the workers at
+ * least once, and whether changed landmarks still have to be written to the landmark
+ * annotation.
  */
 export function useLandmarkSync(
   { whenReady, sendMessage }: IframeBridge,
   fixedLayerName: string,
   movingLayerName: string,
-): { landmarks: Record<Side, Landmark[]>; hasLoadedLandmarks: boolean } {
+): {
+  landmarks: Record<Side, Landmark[]>;
+  hasLoadedLandmarks: boolean;
+  hasUnsyncedLandmarks: boolean;
+} {
   const [landmarks, setLandmarks] = useState<Record<Side, Landmark[]>>({ A: [], B: [] });
   const [hasLoadedLandmarks, setHasLoadedLandmarks] = useState(false);
+  const [hasUnsyncedLandmarks, setHasUnsyncedLandmarks] = useState(false);
   // The ids of the tree groups that hold the landmarks of each side in the landmark
   // annotation. Null until the stored landmarks were imported into the workers.
   const [groupIds, setGroupIds] = useState<Record<Side, number> | null>(null);
@@ -104,8 +110,12 @@ export function useLandmarkSync(
         const newLandmarks = { A: workerA.landmarks, B: workerB.landmarks };
         setLandmarks((previous) => (isEqual(previous, newLandmarks) ? previous : newLandmarks));
         setHasLoadedLandmarks(true);
+        setHasUnsyncedLandmarks(
+          SIDES.some((side) => !isEqual(newLandmarks[side], storedLandmarksRef.current[side])),
+        );
         await storeChangedLandmarks("A", workerA, groupIds.A);
         await storeChangedLandmarks("B", workerB, groupIds.B);
+        setHasUnsyncedLandmarks(false);
       } catch (error) {
         console.error("Could not sync the landmarks:", error);
       }
@@ -114,5 +124,5 @@ export function useLandmarkSync(
     [groupIds],
   );
 
-  return { landmarks, hasLoadedLandmarks };
+  return { landmarks, hasLoadedLandmarks, hasUnsyncedLandmarks };
 }

@@ -3,7 +3,11 @@ import isObject from "lodash-es/isObject";
 import type React from "react";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Side } from "./alignment_helpers";
-import { BIG_WARP_COMMAND_MESSAGE_TYPE, type BigWarpCommand } from "./bigwarp_protocol";
+import {
+  BIG_WARP_COMMAND_MESSAGE_TYPE,
+  BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE,
+  type BigWarpCommand,
+} from "./bigwarp_protocol";
 
 // The alignment page embeds three annotation views of this app as iframes: the two
 // visible workers ("A" and "B") and a hidden one that holds the persisted landmark
@@ -17,6 +21,8 @@ type IncomingMessage = {
   type?: string;
   // Set for BIG_WARP_COMMAND_MESSAGE_TYPE.
   command?: BigWarpCommand;
+  // Set for BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE.
+  isSaved?: boolean;
   // Set for replies to sendMessage. The type of a reply is "ack" or "err".
   messageId?: string;
   returnValue?: unknown;
@@ -126,4 +132,25 @@ export function useWorkerCommands(
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [iframesRef]);
+}
+
+// Whether the alignment annotation in the store iframe is saved, as reported by that iframe.
+export function useStoreSavedState(iframesRef: IframeRefs): boolean {
+  const [isSaved, setIsSaved] = useState(true);
+  useEffect(() => {
+    const onMessage = (event: MessageEvent<IncomingMessage>) => {
+      const { data } = event;
+      if (
+        getRoleOfSender(iframesRef, event) === "store" &&
+        isObject(data) &&
+        data.type === BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE &&
+        data.isSaved != null
+      ) {
+        setIsSaved(data.isSaved);
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [iframesRef]);
+  return isSaved;
 }

@@ -37,6 +37,7 @@ The landmarks are saved automatically. Use the save button in the toolbar of the
 Press **t** (or the align button in the toolbar of the left view) to compute the alignment.
 The moving layer is then shown transformed in the left view, and the fixed layer inversely transformed in the right view.
 When you open an alignment, it is computed automatically as soon as its landmarks are loaded.
+To compute it again after every new, moved or deleted landmark, switch on **Align automatically after every change** in the side panel (see below).
 
 An alignment needs at least four landmark pairs that don't all lie in one plane.
 If all landmarks lie in a single z slice, three pairs are enough. WEBKNOSSOS then assumes that the two layers are only shifted against each other along z.
@@ -46,12 +47,14 @@ More shortcuts, which work in the view that has the keyboard focus:
 - **x**: show or hide the other layer in this view.
 - **y**: move the other view to the position that corresponds to the position of this view (needs a computed alignment).
 
-The table button in the toolbar of the left view opens a panel with all landmark pairs.
-Its **Error** column shows how far apart each pair still is after the alignment. A pair with a much higher error than the others was probably placed imprecisely.
+The table button in the toolbar of the left view opens a side panel. It shows whether the layers are aligned and whether the landmarks changed since the last alignment, lets you show the other layer in each view, and lists all landmark pairs.
+For each pair, the list shows how far apart its two landmarks still are after the alignment. A pair whose error is much higher than that of the others is highlighted, because it was probably placed imprecisely.
+The list also shows the coordinates of both landmarks of each pair. Use the target button of a pair to move both views to it.
+The name and description of the alignment can be edited at the top of the side panel.
 
 ## Storing the Alignment
 
-Click **Store as Default** in the landmark panel to store the alignment as the default transform of the moving layer.
+Click **Store as default…** in the side panel to store the alignment as the default transform of the moving layer.
 This replaces the transforms that the moving layer had before. It requires the right to edit the dataset.
 
 ## Aligning More Than Two Layers

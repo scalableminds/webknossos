@@ -87,7 +87,7 @@ function AlignmentView() {
       dataset={dataset}
       fixedLayerName={layerNames.A}
       movingLayerName={layerNames.B}
-      landmarkAnnotationId={annotation.id}
+      landmarkAnnotation={annotation}
     />
   );
 }

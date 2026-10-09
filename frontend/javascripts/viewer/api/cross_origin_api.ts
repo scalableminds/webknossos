@@ -91,6 +91,16 @@ const onMessage = async (event) => {
       break;
     }
 
+    case "setAnnotationName": {
+      api.tracing.setAnnotationName(args[0]);
+      break;
+    }
+
+    case "setAnnotationDescription": {
+      await api.tracing.setAnnotationDescription(args[0]);
+      break;
+    }
+
     case "save": {
       await api.tracing.save();
       break;

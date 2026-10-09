@@ -1,8 +1,9 @@
 import { App, Flex, Splitter } from "antd";
 import classnames from "classnames";
 import Toast from "libs/toast";
+import isEqual from "lodash-es/isEqual";
 import { useEffect, useEffectEvent, useState } from "react";
-import type { APIDataset } from "types/api_types";
+import type { APIAnnotation, APIDataset } from "types/api_types";
 import { Identity4x4, type Vector3 } from "viewer/constants";
 import {
   getTransformPointUnscaledFn,
@@ -11,6 +12,7 @@ import {
 } from "viewer/model/helpers/transformation_helpers";
 import {
   estimateTransformBtoA,
+  type Landmark,
   type LayerNames,
   OTHER_SIDE,
   SIDES,
@@ -19,7 +21,7 @@ import {
 } from "./alignment_helpers";
 import { type BigWarpCommand, getBigWarpStoreUrl, getBigWarpWorkerUrl } from "./bigwarp_protocol";
 import { LandmarkPanel } from "./landmark_panel";
-import { useIframeBridge, useWorkerCommands } from "./use_iframe_bridge";
+import { useIframeBridge, useStoreSavedState, useWorkerCommands } from "./use_iframe_bridge";
 import { useLandmarkSync } from "./use_landmark_sync";
 
 const DEFAULT_LANDMARK_PANEL_WIDTH = 380;
@@ -30,20 +32,36 @@ type Props = {
   dataset: APIDataset;
   fixedLayerName: string;
   movingLayerName: string;
-  landmarkAnnotationId: string;
+  landmarkAnnotation: APIAnnotation;
+};
+
+// The transform that is shown in the workers, and what it was computed from.
+type Alignment = {
+  transformBtoA: Transform;
+  landmarks: Record<Side, Landmark[]>;
+  // See estimateTransformBtoA.
+  usedCopiesInNextSlice: boolean;
 };
 
 export function AlignmentWorkspace({
   dataset,
   fixedLayerName,
   movingLayerName,
-  landmarkAnnotationId,
+  landmarkAnnotation,
 }: Props) {
   const layerNames: LayerNames = { A: fixedLayerName, B: movingLayerName };
   const { modal } = App.useApp();
   const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(false);
   const [landmarkPanelWidth, setLandmarkPanelWidth] = useState(DEFAULT_LANDMARK_PANEL_WIDTH);
-  const [transformBtoA, setTransformBtoA] = useState<Transform | null>(null);
+  const [alignment, setAlignment] = useState<Alignment | null>(null);
+  const transformBtoA = alignment?.transformBtoA ?? null;
+  // Edited here, but saved by the store iframe, which has the alignment annotation open.
+  const [annotationName, setAnnotationName] = useState(landmarkAnnotation.name);
+  const [annotationDescription, setAnnotationDescription] = useState(
+    landmarkAnnotation.description,
+  );
+  // If enabled, the transform is computed again whenever the landmarks change.
+  const [isAutoAlignEnabled, setIsAutoAlignEnabled] = useState(false);
   // Whether a worker also shows the layer of the other worker.
   const [isOtherLayerVisible, setIsOtherLayerVisible] = useState<Record<Side, boolean>>({
     A: false,
@@ -51,11 +69,32 @@ export function AlignmentWorkspace({
   });
 
   const { iframesRef, whenReady, sendMessage } = useIframeBridge();
-  const { landmarks, hasLoadedLandmarks } = useLandmarkSync(
+  const { landmarks, hasLoadedLandmarks, hasUnsyncedLandmarks } = useLandmarkSync(
     { whenReady, sendMessage },
     fixedLayerName,
     movingLayerName,
   );
+
+  const isStoreSaved = useStoreSavedState(iframesRef);
+  const hasUnsavedChanges = hasUnsyncedLandmarks || !isStoreSaved;
+
+  // Asks before leaving the page while the alignment annotation has unsaved changes.
+  // This can't be left to the store iframe, although it has the normal "unsaved changes"
+  // check of the viewer: browsers only show this dialog for a frame that the user interacted
+  // with, and nobody interacts with the hidden store iframe. The user's clicks in the
+  // workers count as interaction with this page, though.
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return;
+    }
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Older browsers need returnValue to be set to show the dialog.
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Each worker initially shows only its own layer.
   useEffect(() => {
@@ -84,25 +123,31 @@ export function AlignmentWorkspace({
       }
       return;
     }
-    if (result.usedCopiesInNextSlice) {
-      Toast.info(
-        "The landmarks lie in one plane. The alignment assumes that both layers are only shifted against each other along z.",
-      );
-    }
-    setTransformBtoA(result.transform);
+    setAlignment({
+      transformBtoA: result.transform,
+      landmarks,
+      usedCopiesInNextSlice: result.usedCopiesInNextSlice,
+    });
     await showTransformInWorkers(result.transform);
   };
 
-  // Shows the alignment of the stored landmarks right after opening the alignment annotation.
+  // Aligns right after the stored landmarks were loaded, and after every change of the
+  // landmarks if auto-align is enabled.
   const alignAutomatically = useEffectEvent(() => align({ isAutomatic: true }));
   useEffect(() => {
     if (hasLoadedLandmarks) {
       alignAutomatically();
     }
   }, [hasLoadedLandmarks]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Runs again whenever the landmarks change.
+  useEffect(() => {
+    if (isAutoAlignEnabled && hasLoadedLandmarks) {
+      alignAutomatically();
+    }
+  }, [isAutoAlignEnabled, hasLoadedLandmarks, landmarks]);
 
   const resetAlignment = async () => {
-    setTransformBtoA(null);
+    setAlignment(null);
     await showTransformInWorkers(null);
   };
 
@@ -215,13 +260,35 @@ export function AlignmentWorkspace({
           <LandmarkPanel
             layerNames={layerNames}
             landmarks={landmarks}
+            annotationName={annotationName}
+            annotationDescription={annotationDescription}
+            onChangeAnnotationName={(name) => {
+              setAnnotationName(name);
+              sendMessage("store", "setAnnotationName", [name]);
+            }}
+            onChangeAnnotationDescription={(description) => {
+              setAnnotationDescription(description);
+              sendMessage("store", "setAnnotationDescription", [description]);
+            }}
             transformBtoA={transformBtoA}
+            isAlignmentOutdated={alignment != null && !isEqual(alignment.landmarks, landmarks)}
+            usedCopiesInNextSlice={alignment?.usedCopiesInNextSlice ?? false}
+            isAutoAlignEnabled={isAutoAlignEnabled}
+            onAutoAlignChange={setIsAutoAlignEnabled}
             isOtherLayerVisible={isOtherLayerVisible}
             canStoreAlignment={dataset.isEditable}
+            onAlign={() => align()}
             onToggleOtherLayer={toggleOtherLayer}
             onResetAlignment={resetAlignment}
             onStoreAlignment={() => transformBtoA != null && storeAlignment(transformBtoA)}
-            onFocusLandmark={focusPosition}
+            onFocusPair={(pair) => {
+              for (const side of SIDES) {
+                const landmark = pair.landmarks[side];
+                if (landmark != null) {
+                  focusPosition(side, landmark.position);
+                }
+              }
+            }}
           />
         ) : null}
       </Splitter.Panel>
@@ -244,7 +311,7 @@ export function AlignmentWorkspace({
             }}
             title="Landmark annotation"
             style={{ display: "none" }}
-            src={getBigWarpStoreUrl(landmarkAnnotationId)}
+            src={getBigWarpStoreUrl(landmarkAnnotation.id)}
           />
         </Flex>
       </Splitter.Panel>

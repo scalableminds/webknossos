@@ -79,6 +79,10 @@ export function sendCommandToAlignmentPage(command: BigWarpCommand) {
   );
 }
 
+// Sent by the store iframe whenever the alignment annotation gets saved or gets unsaved
+// changes.
+export const BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE = "bigwarpStoreSavedState";
+
 export type AlignmentEditBlocker = "notOwner" | "archived" | "locked";
 
 // Only the owner can work on an alignment annotation in the alignment view, and only while

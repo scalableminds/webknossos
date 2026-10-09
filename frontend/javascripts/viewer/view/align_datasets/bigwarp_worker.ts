@@ -10,15 +10,18 @@ import {
   updateDatasetSettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
+import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import {
+  BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE,
   type BigWarpCommand,
   getBigWarpWorkerLayerName,
   isBigWarpWorker,
   sendCommandToAlignmentPage,
 } from "./bigwarp_protocol";
 
-// Code that runs inside a worker iframe of the dataset alignment page.
+// Code that runs inside the iframes of the alignment view.
 
 // These letters are not bound in WEBKNOSSOS' plane mode. The listener below does not stop
 // propagation, so a bound key would trigger both actions.
@@ -54,15 +57,18 @@ export function useBigWarpShortcutRelay() {
   }, []);
 }
 
-// Leaving a worker breaks the alignment page, so navigation is always blocked. The
-// worker's own annotation is a sandbox and never counts as unsaved, so the regular
-// "unsaved changes" blocker would not fire here.
+// Navigating within a worker iframe (e.g. via a link in its navbar) breaks the alignment view,
+// so it is always blocked. The worker's own annotation is a sandbox and never counts as
+// unsaved, so the regular "unsaved changes" blocker would not fire here.
+// The browser's own "leave page?" dialog is not used: it would also appear whenever the
+// alignment view itself is left. The alignment view shows that dialog only if the alignment
+// annotation has unsaved changes (see alignment_workspace.tsx).
 export function blockBigWarpWorkerNavigation(
   args: BeforeUnloadEvent | BlockerFunction,
 ): boolean | undefined {
   if ("preventDefault" in args) {
-    // The native event requires a truthy return value to show the browser's own dialog.
-    return true;
+    // The native event requires an empty return value to not show a dialog.
+    return;
   }
   const shouldLeave = confirm(
     "Leaving this view is not allowed while aligning layers. Leave anyway?",
@@ -99,4 +105,18 @@ export async function applyBigWarpWorkerSettings() {
   } catch (error) {
     console.error("Could not find a data position for layer", layerName, error);
   }
+}
+
+// Tells the alignment view whether the alignment annotation has unsaved changes. Runs in the
+// store iframe.
+export function reportBigWarpStoreSavedState() {
+  listenToStoreProperty(
+    () => Model.stateSaved(),
+    (isSaved) =>
+      window.parent.postMessage(
+        { type: BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE, isSaved },
+        window.location.origin,
+      ),
+    true,
+  );
 }

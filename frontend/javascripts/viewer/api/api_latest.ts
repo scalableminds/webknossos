@@ -113,6 +113,8 @@ import {
   dispatchMaybeFetchMeshFilesAsync,
   refreshMeshesAction,
   removeMeshAction,
+  setAnnotationDescriptionAction,
+  setAnnotationNameAction,
   updateCurrentMeshFileAction,
   updateMeshOpacityAction,
   updateMeshVisibilityAction,
@@ -172,6 +174,7 @@ import type { Bucket, DataBucket } from "viewer/model/bucket_data_handling/bucke
 import type DataLayer from "viewer/model/data_layer";
 import Dimensions from "viewer/model/dimensions";
 import dimensions from "viewer/model/dimensions";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import { parseNml, serializeToNml } from "viewer/model/helpers/nml_helpers";
 import { overwriteAction } from "viewer/model/helpers/overwrite_action_middleware";
@@ -701,6 +704,28 @@ class TracingApi {
       treeGroups: [],
     };
     return serializeToNml(state, state.annotation, exportedTracing, buildInfo, false);
+  }
+
+  /**
+   * Renames the annotation.
+   *
+   * @example
+   * api.tracing.setAnnotationName("Cell 7 reconstruction");
+   */
+  setAnnotationName(name: string) {
+    Store.dispatch(setAnnotationNameAction(name));
+  }
+
+  /**
+   * Sets the description of the annotation. Markdown is supported.
+   *
+   * @example
+   * api.tracing.setAnnotationDescription("Traced by **Jane**.");
+   */
+  async setAnnotationDescription(description: string) {
+    // An edit made during an active rebase would otherwise be lost.
+    await waitUntilRebaseFinished();
+    Store.dispatch(setAnnotationDescriptionAction(description));
   }
 
   /**

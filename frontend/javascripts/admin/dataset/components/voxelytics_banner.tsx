@@ -13,7 +13,7 @@ export default function VoxelyticsBanner() {
         coverImage={{ src: segmentationEmOverlay, alt: "Automated segmentation of an EM dataset" }}
         eyebrow="AI add-on"
         title="Segment and align this dataset yourself."
-        description="The Al add-on let's your train segmentation models on your datasets. Fit custom models to your data, directly in WEBKNOSSOS."
+        description="The AI add-on lets you train segmentation models on your datasets. Fit custom models to your data, directly in WEBKNOSSOS."
         ctaLabel="Explore the AI add-on"
         ctaHref="https://webknossos.org/pricing"
         footnote="Credit-based · Available to Team & Power Plan"

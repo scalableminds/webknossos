@@ -1,4 +1,3 @@
-import { AlignmentServicesAd } from "admin/ads/ai_job_ads";
 import { AiJobLayout } from "../components/job_layout";
 import { AlignmentCreditInformation } from "../credit_information";
 import { AlignmentJobContextProvider } from "./ai_alignment_job_context";
@@ -11,7 +10,6 @@ export const AiImageAlignmentJob = () => {
       <AiJobLayout
         description="Align sections of your dataset to correct for shifts and rotations. Select an alignment task and configure settings to start the alignment process."
         sidebar={<AlignmentCreditInformation />}
-        ad={<AlignmentServicesAd />}
       >
         <AiAlignmentModelSelector />
         <AiAlignmentSettings />

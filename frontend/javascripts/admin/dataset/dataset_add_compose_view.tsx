@@ -45,16 +45,18 @@ export default function DatasetAddComposeView(props: Props) {
   const CurrentWizardComponent = WIZARD_STEPS[currentWizardStep].component;
 
   return (
-    <CardContainer
-      title="Compose a dataset from existing dataset layers"
-      subtitle={dataPrivacyInfo}
-    >
-      <CurrentWizardComponent
-        wizardContext={wizardContext}
-        setWizardContext={setWizardContext}
-        datastores={props.datastores}
-        onAdded={props.onAdded}
-      />
-    </CardContainer>
+    <div style={{ padding: 5 }}>
+      <CardContainer
+        title="Compose a dataset from existing dataset layers"
+        subtitle={dataPrivacyInfo}
+      >
+        <CurrentWizardComponent
+          wizardContext={wizardContext}
+          setWizardContext={setWizardContext}
+          datastores={props.datastores}
+          onAdded={props.onAdded}
+        />
+      </CardContainer>
+    </div>
   );
 }

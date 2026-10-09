@@ -1,4 +1,3 @@
-import { ProofreadingAd } from "admin/ads/ai_job_ads";
 import { AiJobLayout } from "../components/job_layout";
 import { RunAiModelCreditInformation } from "../credit_information";
 import { AiAnalysisSettings } from "./ai_analysis_settings";
@@ -11,7 +10,6 @@ export const AiImageSegmentationJob = () => {
       <AiJobLayout
         description="Run pre-trained or custom AI models on your data to automatically segment structures. Select a model and configure analysis settings to start the inference job."
         sidebar={<RunAiModelCreditInformation />}
-        ad={<ProofreadingAd />}
       >
         <AiModelSelector />
         <AiAnalysisSettings />

@@ -739,7 +739,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const isActiveUserAdmin = this.props.activeUser?.isAdmin;
 
     return (
-      <div className="dataset-administration">
+      <div
+        className="dataset-administration"
+        style={{
+          padding: 5,
+        }}
+      >
         <CardContainer withoutCard={withoutCard} title="Upload Dataset" subtitle={dataPrivacyInfo}>
           {hasPricingPlanExceededStorage(this.props.organization) ? (
             <Alert

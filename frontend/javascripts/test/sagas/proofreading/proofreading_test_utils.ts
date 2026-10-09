@@ -683,6 +683,9 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
 export const mockEdgesForPartitionedAgglomerateMinCut = (
   mocks: WebknossosTestContext["mocks"],
   expectedRequestedVersion: number,
+  // Removed in addition to the two edges between the partitions. Used to simulate a cut that also
+  // separates the segments of one partition from each other, resulting in more than two agglomerates.
+  additionalEdgesToRemove: MinCutTargetEdge[] = [],
 ) =>
   vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockImplementation(
     async (
@@ -721,6 +724,7 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
             segmentId1: 3n,
             segmentId2: 1337n,
           },
+          ...additionalEdgesToRemove,
         ];
       }
       throw new Error("Unexpected min cut request");

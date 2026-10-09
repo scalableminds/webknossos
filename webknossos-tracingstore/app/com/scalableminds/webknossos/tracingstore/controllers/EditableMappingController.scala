@@ -63,7 +63,7 @@ class EditableMappingController @Inject() (
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId)
+            tracing <- annotationService.findVolume(annotationId, tracingId, version)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
               .getAgglomerateGraphForId(tracingId, version.getOrElse(tracing.version), agglomerateId)

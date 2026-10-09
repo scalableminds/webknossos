@@ -148,8 +148,8 @@ class Hdf5MeshFileService @Inject() extends NeuroglancerMeshHelper with MeshFile
     Full((dataSorted.flatMap(d => d._1).toArray, meshFormat))
   }
 
-  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(implicit
-      ec: ExecutionContext
+  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long], failOnZeroChunks: Boolean)(
+      implicit ec: ExecutionContext
   ): Fox[WebknossosSegmentInfo] =
     for {
       (meshFormat, lodScaleMultiplier, transform) <- readMeshFileMetadata(meshFileKey).toFox
@@ -159,9 +159,11 @@ class Hdf5MeshFileService @Inject() extends NeuroglancerMeshHelper with MeshFile
         lodScaleMultiplier,
         transform
       )
-      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> Msg.Mesh.File
+      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty || !failOnZeroChunks) ?~> Msg.Mesh.File
         .zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
-      wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, meshFormat).toFox
+      wkChunkInfos <- WebknossosSegmentInfo
+        .fromMeshInfosAndMetadataAllowingNoChunks(meshChunksForUnmappedSegments, meshFormat)
+        .toFox
     } yield wkChunkInfos
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int =

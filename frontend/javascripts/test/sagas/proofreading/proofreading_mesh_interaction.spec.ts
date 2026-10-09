@@ -4,7 +4,7 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import type { MeshSegmentInfo } from "admin/api/mesh";
+import type { ListMeshChunksParams, MeshSegmentInfo } from "admin/api/mesh";
 import {
   getAgglomeratesForSegmentsFromTracingstore,
   type MinCutTargetEdge,
@@ -12,7 +12,6 @@ import {
 } from "admin/rest_api";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import isEqual from "lodash-es/isEqual";
-import type { APIMeshFileInfo } from "types/api_types";
 import { actionChannel, call, put, take } from "redux-saga/effects";
 import type { Vector3 } from "viewer/constants";
 import { PARTITION_COLORS } from "viewer/controller/segment_mesh_controller";
@@ -72,13 +71,9 @@ const SUPERVOXELS_BY_AGGLOMERATE_ID = new Map<bigint, bigint[]>([
 // resolve its individual supervoxels. This override returns one chunk per constituent supervoxel
 // (each decoded to a unit cube by the mocked draco loader), so the precomputed mesh's real
 // VertexSegmentMapping — built in precomputed_mesh_saga — resolves those supervoxels.
-async function getMultiSupervoxelChunksForSegment(
-  _dataStoreUrl: string,
-  _datasetId: string,
-  _layerName: string,
-  _meshFile: APIMeshFileInfo,
-  segmentId: bigint,
-): Promise<MeshSegmentInfo> {
+async function getMultiSupervoxelChunksForSegment({
+  segmentId,
+}: ListMeshChunksParams): Promise<MeshSegmentInfo> {
   const supervoxels = SUPERVOXELS_BY_AGGLOMERATE_ID.get(segmentId) ?? [segmentId];
   return {
     meshFormat: "draco",

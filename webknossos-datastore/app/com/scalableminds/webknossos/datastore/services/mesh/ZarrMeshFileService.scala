@@ -190,7 +190,8 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       lod: Int
   ): Array[Array[Double]] = transform
 
-  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(using
+  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long], failOnZeroChunks: Boolean)(
+      using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[WebknossosSegmentInfo] =
@@ -201,10 +202,10 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
         segmentIds,
         meshFileAttributes
       ) ?~> Msg.Mesh.File.listChunksFailed(segmentIds.mkString(","), meshFileKey.attachment.name)
-      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> Msg.Mesh.File
+      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty || !failOnZeroChunks) ?~> Msg.Mesh.File
         .zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
       wkChunkInfos <- WebknossosSegmentInfo
-        .fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, meshFileAttributes.meshFormat)
+        .fromMeshInfosAndMetadataAllowingNoChunks(meshChunksForUnmappedSegments, meshFileAttributes.meshFormat)
         .toFox
     } yield wkChunkInfos
 

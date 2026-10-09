@@ -25,7 +25,7 @@ import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, APIBuildInfoWk } from "types/api_types";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { Writeable } from "types/type_utils";
@@ -58,7 +58,10 @@ import {
 } from "viewer/controller/combinations/skeleton_handlers";
 import UrlManager from "viewer/controller/url_manager";
 import type { WebKnossosModel } from "viewer/model";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  mayEditAnnotation,
+  mayEditAnnotationProperties,
+} from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -246,6 +249,25 @@ function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
 
   return annotation.skeleton;
 }
+// The build info is only needed for the header of exported NMLs. The dataset alignment page
+// exports trees several times per second, so the build info is fetched only once.
+let buildInfoPromise: Promise<APIBuildInfoWk> | null = null;
+function getBuildInfoForNmlExport(): Promise<APIBuildInfoWk> {
+  if (buildInfoPromise == null) {
+    buildInfoPromise = getBuildInfo().catch((error) => {
+      buildInfoPromise = null;
+      throw error;
+    });
+  }
+  return buildInfoPromise;
+}
+
+function assertMayEditAnnotationProperties() {
+  if (!mayEditAnnotationProperties(Store.getState())) {
+    throw new Error("The name and description of this annotation can't be changed.");
+  }
+}
+
 function assertVolume(state: WebknossosState): VolumeTracing {
   if (state.annotation.volumes.length === 0) {
     throw new Error(
@@ -690,7 +712,7 @@ class TracingApi {
    * const nmlString = await api.tracing.exportTreesAsNmlString({ groupId: 3 });
    */
   async exportTreesAsNmlString(filter: { groupId?: number } = {}): Promise<string> {
-    const buildInfo = await getBuildInfo();
+    const buildInfo = await getBuildInfoForNmlExport();
     const state = Store.getState();
     const skeletonTracing = assertSkeleton(state.annotation);
     const exportedTrees = skeletonTracing.trees
@@ -713,6 +735,7 @@ class TracingApi {
    * api.tracing.setAnnotationName("Cell 7 reconstruction");
    */
   setAnnotationName(name: string) {
+    assertMayEditAnnotationProperties();
     Store.dispatch(setAnnotationNameAction(name));
   }
 
@@ -723,6 +746,7 @@ class TracingApi {
    * api.tracing.setAnnotationDescription("Traced by **Jane**.");
    */
   async setAnnotationDescription(description: string) {
+    assertMayEditAnnotationProperties();
     // An edit made during an active rebase would otherwise be lost.
     await waitUntilRebaseFinished();
     Store.dispatch(setAnnotationDescriptionAction(description));

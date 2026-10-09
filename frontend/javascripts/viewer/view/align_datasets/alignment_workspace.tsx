@@ -1,7 +1,8 @@
-import { App, Flex, Splitter } from "antd";
+import { App, Button, Flex, Result, Spin, Splitter, Typography } from "antd";
 import classnames from "classnames";
 import Toast from "libs/toast";
 import { useEffect, useEffectEvent, useState } from "react";
+import { useBlocker } from "react-router";
 import type { APIAnnotation, APIDataset } from "types/api_types";
 import { Identity4x4, type Vector3 } from "viewer/constants";
 import {
@@ -16,13 +17,14 @@ import {
   type LayerNames,
   OTHER_SIDE,
   SIDES,
+  SINGLE_PLANE_ALIGNMENT_HINT,
   type Side,
   storeAlignmentInDataset,
 } from "./alignment_helpers";
 import { type BigWarpCommand, getBigWarpStoreUrl, getBigWarpWorkerUrl } from "./bigwarp_protocol";
 import { LandmarkPanel } from "./landmark_panel";
 import { useIframeBridge } from "./use_iframe_bridge";
-import { useLandmarkSync } from "./use_landmark_sync";
+import { type LandmarkSyncStatus, useLandmarkSync } from "./use_landmark_sync";
 
 const DEFAULT_LANDMARK_PANEL_WIDTH = 380;
 const MIN_LANDMARK_PANEL_WIDTH = 260;
@@ -54,10 +56,13 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: 
 
   // handleWorkerCommand is a function declaration further below, so it can be used here.
   const { iframesRef, sendMessage, isStoreSaved } = useIframeBridge(handleWorkerCommand);
-  const { landmarks, hasLoadedLandmarks, hasUnsyncedLandmarks } = useLandmarkSync(
-    sendMessage,
-    layerNames,
-  );
+  const {
+    landmarks,
+    status: syncStatus,
+    hasUnsyncedLandmarks,
+    fetchLandmarks,
+  } = useLandmarkSync(sendMessage, layerNames);
+  const isSyncReady = syncStatus === "ready";
   const hasUnsavedChanges = hasUnsyncedLandmarks || !isStoreSaved;
 
   // Asks before leaving the page while the alignment annotation has unsaved changes.
@@ -77,6 +82,19 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: 
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [hasUnsavedChanges]);
+  // Navigation within the app (e.g. with the browser's back button) doesn't fire
+  // "beforeunload".
+  const blocker = useBlocker(
+    () =>
+      hasUnsavedChanges &&
+      !confirm("The landmark annotation has unsaved changes that may be lost. Leave anyway?"),
+  );
+  useEffect(() => {
+    // The user chose to stay, so the next navigation must be checked again.
+    if (blocker.state === "blocked") {
+      blocker.reset();
+    }
+  }, [blocker]);
 
   // Each worker initially shows only its own layer.
   useEffect(() => {
@@ -96,9 +114,20 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: 
     ]);
   };
 
-  // When aligning automatically, too few landmarks are not reported to the user.
+  // When aligning automatically, problems are not reported to the user.
   const align = async ({ isAutomatic }: { isAutomatic: boolean } = { isAutomatic: false }) => {
-    const result = estimateTransformBtoA(landmarks);
+    // The synced landmarks may miss a landmark that was placed right before.
+    const currentLandmarks = await fetchLandmarks().catch((error) => {
+      console.error(error);
+      return null;
+    });
+    if (currentLandmarks == null) {
+      if (!isAutomatic) {
+        Toast.error("Could not read the landmarks of the views.");
+      }
+      return;
+    }
+    const result = estimateTransformBtoA(currentLandmarks);
     if ("errorMessage" in result) {
       if (!isAutomatic) {
         Toast.warning(result.errorMessage);
@@ -107,9 +136,12 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: 
     }
     setAlignment({
       transformBtoA: result.transform,
-      landmarks,
+      landmarks: currentLandmarks,
       usedCopiesInNextSlice: result.usedCopiesInNextSlice,
     });
+    if (!isAutomatic && result.usedCopiesInNextSlice) {
+      Toast.info(SINGLE_PLANE_ALIGNMENT_HINT);
+    }
     await showTransformInWorkers(result.transform);
   };
 
@@ -117,16 +149,16 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: 
   // landmarks if auto-align is enabled.
   const alignAutomatically = useEffectEvent(() => align({ isAutomatic: true }));
   useEffect(() => {
-    if (hasLoadedLandmarks) {
+    if (isSyncReady) {
       alignAutomatically();
     }
-  }, [hasLoadedLandmarks]);
+  }, [isSyncReady]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Runs again whenever the landmarks change.
   useEffect(() => {
-    if (isAutoAlignEnabled && hasLoadedLandmarks) {
+    if (isAutoAlignEnabled && isSyncReady) {
       alignAutomatically();
     }
-  }, [isAutoAlignEnabled, hasLoadedLandmarks, landmarks]);
+  }, [isAutoAlignEnabled, isSyncReady, landmarks]);
 
   const resetAlignment = async () => {
     setAlignment(null);
@@ -285,7 +317,7 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: 
         ) : null}
       </Splitter.Panel>
       <Splitter.Panel>
-        <Flex style={{ height: "100%" }}>
+        <Flex style={{ height: "100%", position: "relative" }}>
           {SIDES.map((side) => (
             <iframe
               key={side}
@@ -305,8 +337,35 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: 
             style={{ display: "none" }}
             src={getBigWarpStoreUrl(landmarkAnnotation.id)}
           />
+          {syncStatus !== "ready" ? <LandmarkSyncOverlay status={syncStatus} /> : null}
         </Flex>
       </Splitter.Panel>
     </Splitter>
+  );
+}
+
+// Covers the workers until the stored landmarks were imported. Pairs are matched by tree id,
+// so a landmark placed before the import would shift all pairs by one.
+function LandmarkSyncOverlay({ status }: { status: Exclude<LandmarkSyncStatus, "ready"> }) {
+  return (
+    <Flex className="align-datasets-overlay" vertical justify="center" align="center" gap={8}>
+      {status === "loading" ? (
+        <>
+          <Spin size="large" />
+          <Typography.Text>Loading the landmarks…</Typography.Text>
+        </>
+      ) : (
+        <Result
+          status="error"
+          title="Could not load the stored landmarks"
+          subTitle="New landmarks can't be saved. Reload the page to try again."
+          extra={
+            <Button type="primary" onClick={() => location.reload()}>
+              Reload
+            </Button>
+          }
+        />
+      )}
+    </Flex>
   );
 }

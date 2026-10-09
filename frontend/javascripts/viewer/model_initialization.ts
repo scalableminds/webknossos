@@ -99,11 +99,8 @@ import type {
   UserConfiguration,
 } from "viewer/store";
 import Store from "viewer/store";
-import {
-  getAlignmentEditBlocker,
-  getAlignmentViewUrl,
-  isBigWarpStore,
-} from "viewer/view/align_datasets/bigwarp_protocol";
+import { getAlignmentEditBlocker } from "viewer/view/align_datasets/alignment_edit_blocker";
+import { getAlignmentViewUrl, isBigWarpStore } from "viewer/view/align_datasets/bigwarp_protocol";
 import { initializeKeyboardLayoutMap } from "viewer/view/keyboard_shortcuts/keyboard_layout_utils";
 import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {

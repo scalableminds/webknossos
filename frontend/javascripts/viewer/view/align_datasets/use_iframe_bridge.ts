@@ -1,5 +1,6 @@
 import Deferred from "libs/async/deferred";
 import isObject from "lodash-es/isObject";
+import type React from "react";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Side } from "./alignment_helpers";
 import {
@@ -14,6 +15,9 @@ import {
 // (cross_origin_api.ts).
 export type IframeRole = Side | "store";
 const IFRAME_ROLES: IframeRole[] = ["A", "B", "store"];
+// A command that throws sends an "err" reply, but a reply can still get lost, e.g. if the
+// iframe reloads. Generous, because "save" waits for the server.
+const REPLY_TIMEOUT_MS = 30_000;
 
 // The messages that the iframes send to this page.
 type IncomingMessage = {
@@ -28,6 +32,14 @@ type IncomingMessage = {
   message?: string;
 };
 
+type IframeRefs = React.RefObject<Record<IframeRole, HTMLIFrameElement | null>>;
+
+function getRoleOfSender(iframesRef: IframeRefs, event: MessageEvent): IframeRole | undefined {
+  return event.source == null
+    ? undefined
+    : IFRAME_ROLES.find((role) => iframesRef.current[role]?.contentWindow === event.source);
+}
+
 export type SendMessage = <T = unknown>(
   role: IframeRole,
   type: string,
@@ -37,7 +49,8 @@ export type SendMessage = <T = unknown>(
 /** Connects the alignment page with its iframes. The returned iframesRef must be attached to
  * the three iframes.
  * - sendMessage calls a command of the cross-origin API of an iframe and resolves with its
- *   return value. It waits until the API of that iframe is ready.
+ *   return value. It waits until the API of that iframe is ready, and rejects if the
+ *   command fails or no reply arrives in time.
  * - onWorkerCommand is called for each command that a worker sends (see bigwarp_protocol.ts).
  * - isStoreSaved tells whether the alignment annotation in the store iframe is saved.
  */
@@ -73,10 +86,7 @@ export function useIframeBridge(onWorkerCommand: (side: Side, command: BigWarpCo
     };
 
     const onMessage = (event: MessageEvent<IncomingMessage>) => {
-      const role =
-        event.source == null
-          ? undefined
-          : IFRAME_ROLES.find((role) => iframesRef.current[role]?.contentWindow === event.source);
+      const role = getRoleOfSender(iframesRef, event);
       const { data } = event;
       if (role == null || !isObject(data)) {
         return;
@@ -115,8 +125,17 @@ export function useIframeBridge(onWorkerCommand: (side: Side, command: BigWarpCo
       const messageId = String(++messageCounterRef.current);
       const deferred = new Deferred<unknown, Error>();
       pendingRepliesRef.current.set(messageId, deferred);
+      const timeoutId = setTimeout(() => {
+        if (pendingRepliesRef.current.delete(messageId)) {
+          deferred.reject(new Error(`The "${role}" iframe did not reply to "${type}" in time.`));
+        }
+      }, REPLY_TIMEOUT_MS);
       iframeWindow.postMessage({ type, args, messageId }, window.location.origin);
-      return (await deferred.promise()) as T;
+      try {
+        return (await deferred.promise()) as T;
+      } finally {
+        clearTimeout(timeoutId);
+      }
     },
     [readyDeferreds],
   );

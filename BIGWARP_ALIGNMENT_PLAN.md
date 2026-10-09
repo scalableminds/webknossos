@@ -14,74 +14,57 @@ Last updated: 2026-10-09 (v15 — alignment annotations get stored in the backen
 
 ## Before human review: open items
 
-Collected from the `/code-review` run (2026-10-07) and the file-by-file walkthrough of the
-refactored code (2026-10-08). Resolve or consciously accept each item before the PR goes
-to a human reviewer. Items marked **decide** may be fine as they are, but the reviewer
-will likely ask about them.
+Collected from the `/code-review` runs (2026-10-07, 2026-10-09) and the file-by-file
+walkthrough (2026-10-08). Worked through on 2026-10-09: done items are checked, decided
+items say what was decided and why.
 
-**Robustness of the iframe communication** (`use_iframe_bridge.ts`)
-- [ ] **No timeout for replies.** `sendMessage` waits forever if an iframe never replies.
-  This happens when a cross-origin command throws (the async `onMessage` handler in
-  `cross_origin_api.ts` has no try/catch around the commands, so no `err` reply is sent)
-  or when the iframe reloads while a request is pending. Because `usePolling` waits for
-  the current run to finish, one lost reply stops the whole landmark sync, and the
-  entry stays in `pendingRepliesRef`. Fix: reject the promise after e.g. 10 s and delete
-  the entry. Consider also wrapping the command switch in `cross_origin_api.ts` in a
-  try/catch that sends an `err` reply.
-- [ ] **Stale landmark annotation id** (found by the review, also §0.2 point 4 and §9).
-  **Goes away with the next iteration** (section below): the id no longer comes from
-  localStorage, and the alignment view checks `restrictions.allowUpdate` before it
-  starts.
-  If the id in localStorage points to a deleted, archived or foreign annotation, the
-  store iframe shows an error page and never sends "init". `whenReady("store")` never
-  resolves, the page waits forever, and new landmarks are silently not saved. The
-  localStorage key also doesn't contain the user id, so a second user in the same
-  browser reuses the first user's annotation. Fix: check that the annotation exists and
-  belongs to the user before reusing the id (or add a timeout on `whenReady("store")`),
-  and then create a new annotation. Add the user id to the key.
-- [ ] **Reloaded iframe** (low priority). If an iframe reloads, its ready Deferred is
-  already resolved, so the page sends commands before the new "init" arrives. Workers
-  block navigation and the store iframe is hidden, so this is unlikely in practice.
+**Iframe communication** (`use_iframe_bridge.ts`, `cross_origin_api.ts`)
+- [x] No timeout for replies. `sendMessage` now rejects after 30 s (generous, because
+  "save" waits for the server). `cross_origin_api.ts` sends an `err` reply when a command
+  throws.
+- [x] Stale landmark annotation id. Gone: alignment annotations come from the backend.
+- [x] Commands sent before an iframe is ready. `sendMessage` waits for the iframe's "init".
+- [ ] **accepted: reloaded iframe.** If an iframe reloads, its ready Deferred is already
+  resolved, so commands may be sent before the new "init". Workers block navigation and
+  the store iframe is hidden, so this is unlikely. A lost reply now times out.
+- [ ] **accepted: no timeout while waiting for "init".** Loading a worker can take long on
+  slow connections, so a timeout would cause false errors. If the store iframe never
+  loads, the "Loading the landmarks" overlay stays.
 
 **Landmark sync** (`use_landmark_sync.ts`)
-- [ ] **`/api/buildinfo` on every export.** Each `exportTreesAsNmlString` call fetches the
-  build info for the NML header, so the sync loop sends about four requests per second
-  while the page is open. Fix: cache the build info in `api_latest.ts`, or add an export
-  path that doesn't need it.
-- [x] ~~Deletions and moved landmarks are not synced.~~ Fixed in §0.23: each worker now
-  mirrors its whole side into the landmark annotation.
-- [ ] **Landmark order after an early click.** Pairs are matched by tree id order. If the
-  user clicks a landmark in a worker before the stored landmarks were imported, that
-  tree gets the lowest id and all pairs shift by one. Fix: cover the workers with a
-  spinner or overlay until the import is done.
-- [ ] **Failed initial import stops the sync silently.** If loading the stored landmarks
-  fails, a toast appears, but the sync loop never starts, so new landmarks are not saved
-  for the rest of the session. Fix: retry, or show a permanent error state.
-- [ ] **decide: landmarks can be up to 500 ms old when aligning.** `align` uses the last
-  synced landmarks. Pressing `t` right after placing a landmark may leave it out of the
-  fit. Fix: fetch fresh landmarks inside `align` (two extra round trips per `t`).
+- [x] `/api/buildinfo` on every export. `exportTreesAsNmlString` fetches it only once.
+- [x] Deletions and moved landmarks are synced (§0.23).
+- [x] Landmark order after an early click. An overlay covers the workers until the stored
+  landmarks were imported.
+- [x] Failed initial import. The overlay shows an error with a reload button.
+- [x] Landmarks up to 500 ms old when aligning. `align` reads fresh landmarks from both
+  workers (decided: fetch fresh).
 
 **Alignment and persistence** (`alignment_workspace.tsx`, `alignment_helpers.ts`)
-- [ ] **decide: "Store as Default" replaces layer B's transforms** with
-  `[BtoA, ...transforms of layer A]` (§0.21). This is correct for landmarks placed in raw
-  layer coordinates, but any transform layer B had before is dropped without a warning.
-  Consider a confirmation dialog that says so.
-- [ ] **decide: the preview ignores existing dataset transforms.** `setAffineLayerTransforms`
-  replaces the layer's transforms in the worker, so transforms the dataset already had
-  don't show in the preview. Consistent with the point above, but worth a sentence in the
-  PR description.
-- [ ] **decide: single-slice fallback without confirmation** (§0.22). The composition
-  wizard asks before copying landmarks to `z + 1`; this tool only shows a toast.
-- [ ] **decide: `dataset.isEditable` is read once when the page loads.** It only enables or
-  disables "Store as Default"; the server checks permissions on save anyway.
+- [x] "Store as default" replaces layer B's transforms. The confirmation dialog says so.
+- [ ] **accepted: the preview ignores existing dataset transforms.** Mention in the PR
+  description.
+- [x] Single-slice fallback. Decided: no confirmation; a toast on manual align, and the hint
+  in the landmark panel.
+- [ ] **accepted: `dataset.isEditable` is read once when the page loads.** The server checks
+  permissions on save anyway.
+- [x] In-app navigation is blocked with `useBlocker` while there are unsaved changes.
+- [ ] **accepted: worker iframes only block React Router navigation**, not full page loads.
+  A native dialog in a worker would also appear whenever the alignment page itself is
+  left (comment in `blockBigWarpWorkerNavigation`).
+- [x] `setAnnotationName` / `setAnnotationDescription` in the public API check
+  `mayEditAnnotationProperties`; the cross-origin wrappers check that the argument is a
+  string.
 
-**Feature-level gaps** (already known, listed for completeness)
-- [ ] ~~decide: landmark annotation discovery uses localStorage~~ (§0.2 point 3).
-  **Replaced by the next iteration** (section below): alignment annotations are stored
-  and found through the backend.
-- [ ] Manual browser QA of the refactor (§0.21) and the single-slice fallback (§0.22).
+**Still open**
+- [ ] Manual browser QA, especially the refactored iframe bridge, the loading overlay, the
+  navigation blocker and the single-slice fallback.
+- [ ] decide: naming is mixed ("bigwarp", "alignment", "align_datasets"), and `Side` is
+  "A"/"B" instead of "fixed"/"moving".
+- [ ] decide: revert the rename `transformPointUnscaled` → `getTransformPointUnscaledFn`
+  (8 unrelated files) or move it into its own PR.
 - [ ] Remove or move this plan file out of the PR, and fill in the PR template
-  (`.github/PULL_REQUEST_TEMPLATE.md`).
+  (`.github/PULL_REQUEST_TEMPLATE.md`). Mention the accepted items above.
 
 ---
 

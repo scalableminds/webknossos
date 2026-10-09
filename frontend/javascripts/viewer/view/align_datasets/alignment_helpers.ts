@@ -111,6 +111,10 @@ function addCopiesInNextSlice(positions: Vector3[]): Vector3[] {
 // and their copies. This assumes that one z slice of layer B corresponds to one z slice of
 // layer A. The dataset composition wizard uses the same fallback. The copies only exist
 // here and are never added to an annotation.
+// Shown when estimateTransformBtoA needed the copies in the next slice.
+export const SINGLE_PLANE_ALIGNMENT_HINT =
+  "The landmarks lie in one plane, so the alignment assumes that the layers are only shifted against each other along z.";
+
 export function estimateTransformBtoA(
   landmarks: Record<Side, Landmark[]>,
 ): { transform: Transform; usedCopiesInNextSlice: boolean } | { errorMessage: string } {

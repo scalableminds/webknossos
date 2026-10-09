@@ -1,5 +1,4 @@
 import { usePolling } from "libs/react_hooks";
-import Toast from "libs/toast";
 import isEqual from "lodash-es/isEqual";
 import { useEffect, useRef, useState } from "react";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
@@ -15,6 +14,11 @@ import type { SendMessage } from "./use_iframe_bridge";
 
 const SYNC_INTERVAL_MS = 500;
 
+// "loading" until the stored landmarks were imported into the workers and the landmarks of
+// the workers were read once. "failed" if the import failed. Then nothing is synced, because
+// the workers would overwrite the stored landmarks with their incomplete ones.
+export type LandmarkSyncStatus = "loading" | "ready" | "failed";
+
 /** Keeps the landmarks of the two workers and the persisted landmark annotation in sync:
  * 1. Once all iframes are ready, the stored landmarks of each side are imported into
  *    the worker of that side. The worker annotations are sandboxes and start empty.
@@ -22,20 +26,21 @@ const SYNC_INTERVAL_MS = 500;
  *    workers are polled. When the landmarks of a worker changed (added, deleted, moved,
  *    undo, ...), the group of that side in the landmark annotation is replaced with the
  *    trees of the worker.
- * Returns the current landmarks of both workers, whether they were loaded from the workers at
- * least once, and whether changed landmarks still have to be written to the landmark
- * annotation.
+ * Returns the current landmarks of both workers, the status of the sync, whether changed
+ * landmarks still have to be written to the landmark annotation, and a function that reads
+ * the landmarks from the workers right away.
  */
 export function useLandmarkSync(
   sendMessage: SendMessage,
   layerNames: LayerNames,
 ): {
   landmarks: Record<Side, Landmark[]>;
-  hasLoadedLandmarks: boolean;
+  status: LandmarkSyncStatus;
   hasUnsyncedLandmarks: boolean;
+  fetchLandmarks: () => Promise<Record<Side, Landmark[]>>;
 } {
   const [landmarks, setLandmarks] = useState<Record<Side, Landmark[]>>({ A: [], B: [] });
-  const [hasLoadedLandmarks, setHasLoadedLandmarks] = useState(false);
+  const [status, setStatus] = useState<LandmarkSyncStatus>("loading");
   const [hasUnsyncedLandmarks, setHasUnsyncedLandmarks] = useState(false);
   // The ids of the tree groups that hold the landmarks of each side in the landmark
   // annotation. Null until the stored landmarks were imported into the workers.
@@ -69,8 +74,10 @@ export function useLandmarkSync(
         setGroupIds({ A: groupIdA, B: groupIdB });
       }
     })().catch((error) => {
-      console.error(error);
-      Toast.error("Could not load the stored landmarks.");
+      console.error("Could not load the stored landmarks:", error);
+      if (!isCancelled) {
+        setStatus("failed");
+      }
     });
 
     return () => {
@@ -78,9 +85,17 @@ export function useLandmarkSync(
     };
   }, [sendMessage, fixedLayerName, movingLayerName]);
 
-  const fetchWorkerLandmarks = async (side: Side) => {
+  const fetchLandmarksOfWorker = async (side: Side) => {
     const nmlString = await sendMessage<string>(side, "exportTreesAsNmlString");
     return { nmlString, landmarks: getLandmarks((await parseNml(nmlString)).trees) };
+  };
+
+  // Reads the landmarks of both workers and updates the returned landmarks.
+  const fetchWorkerLandmarks = async () => {
+    const [workerA, workerB] = await Promise.all(SIDES.map(fetchLandmarksOfWorker));
+    const newLandmarks = { A: workerA.landmarks, B: workerB.landmarks };
+    setLandmarks((previous) => (isEqual(previous, newLandmarks) ? previous : newLandmarks));
+    return { workerA, workerB, newLandmarks };
   };
 
   const storeChangedLandmarks = async (
@@ -103,10 +118,8 @@ export function useLandmarkSync(
         return;
       }
       try {
-        const [workerA, workerB] = await Promise.all(SIDES.map(fetchWorkerLandmarks));
-        const newLandmarks = { A: workerA.landmarks, B: workerB.landmarks };
-        setLandmarks((previous) => (isEqual(previous, newLandmarks) ? previous : newLandmarks));
-        setHasLoadedLandmarks(true);
+        const { workerA, workerB, newLandmarks } = await fetchWorkerLandmarks();
+        setStatus("ready");
         setHasUnsyncedLandmarks(
           SIDES.some((side) => !isEqual(newLandmarks[side], storedLandmarksRef.current[side])),
         );
@@ -121,5 +134,7 @@ export function useLandmarkSync(
     [groupIds],
   );
 
-  return { landmarks, hasLoadedLandmarks, hasUnsyncedLandmarks };
+  const fetchLandmarks = async () => (await fetchWorkerLandmarks()).newLandmarks;
+
+  return { landmarks, status, hasUnsyncedLandmarks, fetchLandmarks };
 }

@@ -10,7 +10,7 @@ import { useBigWarpShortcutRelay } from "viewer/view/align_datasets/bigwarp_work
 // Currently, this is only used for a couple of API functions, but the interface may be extended in the future
 // Usage: postMessage({type: "setMapping", args: [mappingObj, options]}, "*")
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-const onMessage = async (event) => {
+const handleMessage = async (event) => {
   // We could use this to restrict usage of this api to specific domains
   // if (event.origin !== "https://connectome-viewer.org") {
   //   return;
@@ -92,11 +92,17 @@ const onMessage = async (event) => {
     }
 
     case "setAnnotationName": {
+      if (!isString(args[0])) {
+        throw new Error("The first argument needs to be the new name as a string.");
+      }
       api.tracing.setAnnotationName(args[0]);
       break;
     }
 
     case "setAnnotationDescription": {
+      if (!isString(args[0])) {
+        throw new Error("The first argument needs to be the new description as a string.");
+      }
       await api.tracing.setAnnotationDescription(args[0]);
       break;
     }
@@ -190,6 +196,24 @@ const onMessage = async (event) => {
     },
     "*",
   );
+};
+
+// Replies with an error if a command throws, so that the sender doesn't wait for a reply
+// forever.
+const onMessage = async (event: MessageEvent) => {
+  try {
+    await handleMessage(event);
+  } catch (error) {
+    console.error(error);
+    event.source?.postMessage(
+      {
+        type: "err",
+        messageId: event.data.messageId,
+        message: error instanceof Error ? error.message : String(error),
+      },
+      { targetOrigin: "*" },
+    );
+  }
 };
 
 function CrossOriginApi() {

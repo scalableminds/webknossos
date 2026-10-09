@@ -4,11 +4,12 @@ import type React from "react";
 type AiJobLayoutProps = {
   description: string;
   sidebar: React.ReactNode;
+  ad?: React.ReactNode;
   children: React.ReactNode;
 };
 
 /** Shared layout of an AI job tab: lead text, the job's sections and the sticky credit sidebar. */
-export function AiJobLayout({ description, sidebar, children }: AiJobLayoutProps) {
+export function AiJobLayout({ description, sidebar, ad, children }: AiJobLayoutProps) {
   const { cssVar } = theme.useToken();
   return (
     <>
@@ -21,8 +22,9 @@ export function AiJobLayout({ description, sidebar, children }: AiJobLayoutProps
         <Flex flex="2" vertical gap="middle" style={{ minWidth: 0 }}>
           {children}
         </Flex>
-        <Flex flex="1" vertical style={{ position: "sticky", top: 0 }}>
+        <Flex flex="1" vertical gap="middle" style={{ position: "sticky", top: 0 }}>
           {sidebar}
+          {ad}
         </Flex>
       </Flex>
     </>

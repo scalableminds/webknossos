@@ -38,6 +38,7 @@ import {
 import { Model } from "viewer/singletons";
 import type { RestrictionsAndSettings, Task } from "viewer/store";
 import Store from "viewer/store";
+import { openInMenu } from "viewer/view/action_bar/open_in/open_in_menu";
 import {
   renderAnimationMenuItem,
   screenshotMenuItem,
@@ -186,6 +187,7 @@ export const useTracingViewMenuItems = (
       icon: <LinkOutlined />,
       label: "Zarr Links",
     });
+    menuItems.push(openInMenu);
 
     if (activeUser != null) {
       menuItems.push({

@@ -18,6 +18,7 @@ import {
   canUpgradePricingPlan,
   formatIncludedStorage,
   formatIncludedUsers,
+  formatPricingPlanLabel,
   getDaysUntilPlanExpires,
   hasPricingPlanExpired,
   PLAN_EXPIRATION_REMINDER_DAYS,
@@ -148,8 +149,8 @@ export function PlanSummaryBar() {
     <Flex align="center" gap={16} style={{ ...summaryBarStyle, ...summaryCellStyle }}>
       <CrownOutlined style={{ fontSize: 18, color: "var(--ant-color-primary)" }} />
       <div style={{ flex: 1 }}>
-        <Typography.Text strong>{organization.pricingPlan}</Typography.Text> ·{" "}
-        {formatIncludedUsers(organization.includedUsers)}{" "}
+        <Typography.Text strong>{formatPricingPlanLabel(organization.pricingPlan)}</Typography.Text>{" "}
+        · {formatIncludedUsers(organization.includedUsers)}{" "}
         {pluralize("user", organization.includedUsers)} ·{" "}
         {formatIncludedStorage(organization.includedStorageBytes)} storage
         {daysLeft != null ? (

@@ -24,6 +24,7 @@ import {
   formatAiPlanLabel,
   formatIncludedStorage,
   formatIncludedUsers,
+  formatPricingPlanLabel,
   getActiveUserCount,
   isAiAddonEligiblePlan,
   PricingPlanEnum,
@@ -179,7 +180,7 @@ export function OrganizationOverviewView() {
     {
       key: "plan",
       title: "Current Plan",
-      content: organization.pricingPlan,
+      content: formatPricingPlanLabel(organization.pricingPlan),
       tooltip: (
         <a href="https://webknossos.org/pricing" target="_blank" rel="noopener noreferrer">
           Compare all plans

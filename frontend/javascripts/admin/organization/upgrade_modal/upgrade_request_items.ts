@@ -4,6 +4,7 @@ import { formatCountToDataAmountUnit, formatNumber } from "libs/format_utils";
 import type { APIOrganization } from "types/api_types";
 import Constants from "viewer/constants";
 import {
+  areJobsAllowedByPricingPlan,
   hasAiPlan,
   PLAN_TO_RANK,
   PricingPlanEnum,
@@ -13,7 +14,7 @@ import {
 
 export type ItemId = "plan" | "users" | "storage" | "aiAddon" | "credits" | "extend";
 
-// Trials and custom plans are mapped to the plan whose features they unlock, see getPlanTier.
+// Trials, Open-Source and Enterprise are mapped to the plan whose features they unlock, see getPlanTier.
 export type PlanTier = PricingPlanEnum.Personal | PricingPlanEnum.Team | PricingPlanEnum.Power;
 
 export type ItemSelection = { value?: number; custom?: boolean };
@@ -40,8 +41,11 @@ export function getPlanTier(pricingPlan: PricingPlanEnum): PlanTier {
       return PricingPlanEnum.Personal;
     case PricingPlanEnum.Team:
     case PricingPlanEnum.TeamTrial:
+    case PricingPlanEnum.OpenSource:
       return PricingPlanEnum.Team;
-    default:
+    case PricingPlanEnum.Power:
+    case PricingPlanEnum.PowerTrial:
+    case PricingPlanEnum.Enterprise:
       return PricingPlanEnum.Power;
   }
 }
@@ -176,30 +180,38 @@ export function getUpgradeItems(
     }),
   };
 
-  const aiAddon: ItemDef | null = hasAiPlan(organization)
-    ? null
-    : {
-        id: "aiAddon",
-        label: "AI Add-on",
-        hint: "Not active",
-        minPlan: PricingPlanEnum.Team,
-        getDelta: () => ({ from: "Not active", to: "Active" }),
-      };
+  // Open-Source organizations have no access to WEBKNOSSOS workers, so they can't use AI features.
+  const canUseAi = areJobsAllowedByPricingPlan(organization);
 
-  const credits: ItemDef | null = !canOrderCredits
-    ? null
-    : {
-        id: "credits",
-        label: "AI credits",
-        hint: isPersonal ? "For AI jobs" : `${formatNumber(creditBalance)} left`,
-        amounts: [1000, 5000, 10000].map((value) => ({ label: `+${formatNumber(value)}`, value })),
-        allowCustom: true,
-        minPlan: PricingPlanEnum.Team,
-        getDelta: (value = 0) => ({
-          from: formatNumber(creditBalance),
-          to: formatNumber(creditBalance + value),
-        }),
-      };
+  const aiAddon: ItemDef | null =
+    hasAiPlan(organization) || !canUseAi
+      ? null
+      : {
+          id: "aiAddon",
+          label: "AI Add-on",
+          hint: "Not active",
+          minPlan: PricingPlanEnum.Team,
+          getDelta: () => ({ from: "Not active", to: "Active" }),
+        };
+
+  const credits: ItemDef | null =
+    !canOrderCredits || !canUseAi
+      ? null
+      : {
+          id: "credits",
+          label: "AI credits",
+          hint: isPersonal ? "For AI jobs" : `${formatNumber(creditBalance)} left`,
+          amounts: [1000, 5000, 10000].map((value) => ({
+            label: `+${formatNumber(value)}`,
+            value,
+          })),
+          allowCustom: true,
+          minPlan: PricingPlanEnum.Team,
+          getDelta: (value = 0) => ({
+            from: formatNumber(creditBalance),
+            to: formatNumber(creditBalance + value),
+          }),
+        };
 
   const extend: ItemDef | null =
     isPersonal || !hasPlanEndDate(organization)

@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(185);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(186);
 COMMIT TRANSACTION;
 
 
@@ -360,7 +360,7 @@ CREATE TABLE webknossos.timespans(
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Personal', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
+CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Personal', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Open_Source', 'Enterprise');
 CREATE TYPE webknossos.AI_PLANS AS ENUM ('Team_AI', 'Power_AI');
 CREATE TABLE webknossos.organizations(
   _id_old TEXT CONSTRAINT _id_old_objectId CHECK (_id_old ~ '^[0-9a-f]{24}$') DEFAULT NULL,
@@ -371,7 +371,7 @@ CREATE TABLE webknossos.organizations(
   _rootFolder TEXT CONSTRAINT _rootFolder_objectId CHECK (_rootFolder ~ '^[0-9a-f]{24}$') NOT NULL UNIQUE,
   newUserMailingList TEXT NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT FALSE,
-  pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
+  pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Open_Source',
   aiPlan webknossos.AI_PLANS DEFAULT NULL,
   paidUntil TIMESTAMPTZ DEFAULT NULL,
   includedUsers INTEGER DEFAULT NULL,
@@ -1211,8 +1211,8 @@ BEGIN
     -- Calculate the first day of the next month
     next_month_first_day := DATE_TRUNC('MONTH', NOW()) + INTERVAL '1 MONTH';
 
-    -- Loop through all organizations
-    FOR organization_id IN (SELECT _id FROM webknossos.organizations) LOOP
+    -- Loop through all organizations, except for Open_Source ones, which have no access to AI credits
+    FOR organization_id IN (SELECT _id FROM webknossos.organizations WHERE pricingPlan <> 'Open_Source') LOOP
         -- Check if there is already a free credit transaction for this organization in the current month
         SELECT COUNT(*) INTO existing_transaction_count
         FROM webknossos.credit_transactions

@@ -204,9 +204,9 @@ class OrganizationController @Inject() (
 
   private def aiAddonLabelForPricingPlan(pricingPlan: PricingPlan.PricingPlan): String =
     pricingPlan match {
-      case PricingPlan.Team | PricingPlan.Team_Trial   => "Team AI"
-      case PricingPlan.Power | PricingPlan.Power_Trial => "Power AI"
-      case _                                           => "AI Add-on"
+      case PricingPlan.Team | PricingPlan.Team_Trial                            => "Team AI"
+      case PricingPlan.Power | PricingPlan.Power_Trial | PricingPlan.Enterprise => "Power AI"
+      case _                                                                    => "AI Add-on"
     }
 
   // Only paid, non-trial plans that rank above the current one can be requested.
@@ -216,7 +216,8 @@ class OrganizationController @Inject() (
 
   // The AI Add-on needs at least the Team plan (possibly as part of the same request) and must not be active yet.
   private def canRequestAiAddon(organization: Organization, effectivePlan: PricingPlan.PricingPlan) =
-    organization.aiPlan.isEmpty && PricingPlan.tierRank(effectivePlan) >= PricingPlan.tierRank(PricingPlan.Team)
+    organization.aiPlan.isEmpty && PricingPlan.tierRank(effectivePlan) >= PricingPlan.tierRank(PricingPlan.Team) &&
+      PricingPlan.allowsJobs(effectivePlan)
 
   // Only the items that were actually requested are listed in the email.
   private def describeUpgradeRequest(upgradeRequest: UpgradeRequest, organization: Organization): Seq[String] = {
@@ -292,8 +293,9 @@ class OrganizationController @Inject() (
         organization <- organizationDAO.findOne(request.body.organizationId) ?~> Msg.Organization.notFound(
           request.body.organizationId
         ) ~> NOT_FOUND
-        _ <- organizationDAO.insertPlanUpdate(organization._id, request.body)
-        _ <- organizationDAO.updatePlan(organization._id, request.body)
+        planUpdate = request.body.withQuotasOfPlan(request.body.pricingPlan.getOrElse(organization.pricingPlan))
+        _ <- organizationDAO.insertPlanUpdate(organization._id, planUpdate)
+        _ <- organizationDAO.updatePlan(organization._id, planUpdate)
         // Note that this logs its failures rather than propagating them, as the plan update above has
         // already been persisted at this point.
         _ <- Fox.runOptional(request.body.pricingPlan)(newPricingPlan =>

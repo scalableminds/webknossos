@@ -5,6 +5,7 @@ import { pluralize } from "libs/utils";
 import type { APIOrganization } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import {
+  formatPricingPlanLabel,
   getAiAddonIncludedCredits,
   getBasePricingPlan,
   getDaysUntilPlanExpires,
@@ -101,7 +102,7 @@ function PlanExpiringHintCard({ daysLeft }: { daysLeft: number }) {
   );
   const planLabel = isTrialPlan(organization.pricingPlan) ? "Trial" : "Plan";
   const basePlan = getBasePricingPlan(organization.pricingPlan);
-  const featuresLabel = basePlan === PricingPlanEnum.Custom ? "your plan's" : basePlan;
+  const featuresLabel = formatPricingPlanLabel(basePlan);
   const extendPlan = () => UpgradePricingPlanModal.extendPricingPlan();
 
   if (daysLeft === 0) {

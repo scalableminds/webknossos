@@ -8,6 +8,7 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import MipIcon from "@images/icons/icon-mip.svg?react";
+import { useIsJobAvailable } from "admin/job/job_hooks";
 import {
   Divider,
   Empty,
@@ -319,9 +320,7 @@ export default function BoundingBoxTab() {
       "Copy this annotation to your account to adapt the bounding boxes.";
   }
 
-  const isExportEnabled = dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-    APIJobCommand.EXPORT_TIFF,
-  );
+  const isExportEnabled = useIsJobAvailable(dataset.dataStore, APIJobCommand.EXPORT_TIFF);
 
   useEffect(() => {
     if (bboxTableRef.current != null && activeBoundingBoxId != null) {

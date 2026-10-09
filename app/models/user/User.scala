@@ -89,7 +89,7 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def resultConverter = GetResultUsersRow
 
   private val pricingPlansAllowingGuestsQuery =
-    q"""(${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial})"""
+    q"""(${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial}, ${PricingPlan.Enterprise})"""
 
   protected def parse(r: UsersRow): Fox[User] =
     for {

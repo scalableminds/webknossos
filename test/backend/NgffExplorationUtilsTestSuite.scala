@@ -15,20 +15,41 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffMultiscalesItem,
   NgffOmeroMetadata
 }
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.explore.NgffExplorationUtils
+import com.scalableminds.webknossos.datastore.datavault.{FileSystemDataVault, VaultPath}
+import com.scalableminds.webknossos.datastore.explore.{NgffExplorationUtils, NgffV0_5Explorer}
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
-import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, StaticLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalAxis,
+  ElementClass,
+  StaticColorLayer,
+  StaticLayer,
+  StaticSegmentationLayer
+}
+import org.apache.commons.io.FileUtils
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AsyncWordSpec
 import play.api.libs.json.{JsBoolean, JsNumber, Json}
 
+import java.nio.file.{Files, Path}
+
 /*
  * The helpers under test are protected members of NgffExplorationUtils, so the suite mixes the trait in.
- * The abstract members of the trait all need a VaultPath (and therefore network access) and are not exercised here.
+ * getShape is stubbed with fixed shapes per dataset path. The other abstract members are not exercised here.
+ * The explorer tests at the end read metadata of small OME NGFF v0.5 images from the local file system.
  */
-class NgffExplorationUtilsTestSuite extends AsyncWordSpec with NgffExplorationUtils {
+class NgffExplorationUtilsTestSuite extends AsyncWordSpec with BeforeAndAfterAll with NgffExplorationUtils {
 
-  override protected def getShape(dataset: NgffDataset, path: VaultPath)(using tc: TokenContext): Fox[Array[Long]] = ???
+  private given TokenContext = TokenContext(None)
+
+  private val stubbedShapes: Map[String, Array[Long]] = Map(
+    "tczyx" -> Array(5L, 2, 16, 32, 64),
+    "ctzyx" -> Array(2L, 5, 16, 32, 64),
+    "zytx" -> Array(16L, 32, 5, 64)
+  )
+
+  override protected def getShape(dataset: NgffDataset, path: VaultPath)(using tc: TokenContext): Fox[Array[Long]] =
+    Fox.successful(stubbedShapes(dataset.path))
 
   override protected def createLayer(
       remotePath: VaultPath,
@@ -50,6 +71,78 @@ class NgffExplorationUtilsTestSuite extends AsyncWordSpec with NgffExplorationUt
     NgffAxis(name = name, `type` = "space", unit = unit)
 
   private def channelAxis: NgffAxis = NgffAxis(name = "c", `type` = "channel")
+
+  private def timeAxis(name: String = "t"): NgffAxis = NgffAxis(name = name, `type` = "time")
+
+  private val rootPath: Path = Files.createTempDirectory("ngff-exploration-utils-test")
+
+  override def afterAll(): Unit = FileUtils.deleteDirectory(rootPath.toFile)
+
+  private def vaultPath(relativePath: String) =
+    new VaultPath(UPath.fromLocalPath(rootPath.resolve(relativePath)), FileSystemDataVault.create)
+
+  private def write(relativePath: String, content: String): Unit = {
+    val path = rootPath.resolve(relativePath)
+    Files.createDirectories(path.getParent)
+    Files.writeString(path, content)
+  }
+
+  private def arrayHeader(shape: List[Int], dataType: String): String =
+    s"""{
+      "zarr_format": 3,
+      "node_type": "array",
+      "shape": [${shape.mkString(", ")}],
+      "data_type": "$dataType",
+      "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": [${shape.mkString(", ")}]}},
+      "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
+      "fill_value": 0,
+      "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}]
+    }"""
+
+  private def groupHeaderV0_5(name: String, axes: String, scale: String): String =
+    s"""{
+      "zarr_format": 3,
+      "node_type": "group",
+      "attributes": {"ome": {
+        "version": "0.5",
+        "multiscales": [{
+          "name": "$name",
+          "axes": $axes,
+          "datasets": [{"path": "s0", "coordinateTransformations": [{"type": "scale", "scale": $scale}]}]
+        }]
+      }}
+    }"""
+
+  private val ctzyxAxesJson = """[
+    {"name": "c", "type": "channel"},
+    {"name": "t", "type": "time"},
+    {"name": "z", "type": "space", "unit": "nanometer"},
+    {"name": "y", "type": "space", "unit": "nanometer"},
+    {"name": "x", "type": "space", "unit": "nanometer"}
+  ]"""
+
+  private val tzyxAxesJson = """[
+    {"name": "t", "type": "time"},
+    {"name": "z", "type": "space", "unit": "nanometer"},
+    {"name": "y", "type": "space", "unit": "nanometer"},
+    {"name": "x", "type": "space", "unit": "nanometer"}
+  ]"""
+
+  override def beforeAll(): Unit = {
+    // An image with a label image. The channel axis comes before the time axis.
+    write("withLabels.zarr/zarr.json", groupHeaderV0_5("raw", ctzyxAxesJson, "[1, 1, 8, 4, 4]"))
+    write("withLabels.zarr/s0/zarr.json", arrayHeader(List(2, 5, 16, 32, 64), "uint8"))
+    write(
+      "withLabels.zarr/labels/zarr.json",
+      """{"zarr_format": 3, "node_type": "group", "attributes": {"ome": {"version": "0.5", "labels": ["cells"]}}}"""
+    )
+    write("withLabels.zarr/labels/cells/zarr.json", groupHeaderV0_5("cells", tzyxAxesJson, "[1, 8, 4, 4]"))
+    write("withLabels.zarr/labels/cells/s0/zarr.json", arrayHeader(List(5, 16, 32, 64), "uint32"))
+
+    // An image without a labels group
+    write("withoutLabels.zarr/zarr.json", groupHeaderV0_5("raw", ctzyxAxesJson, "[1, 1, 8, 4, 4]"))
+    write("withoutLabels.zarr/s0/zarr.json", arrayHeader(List(2, 5, 16, 32, 64), "uint8"))
+  }
 
   private def scaleTransform(scale: List[Double]): NgffCoordinateTransformation =
     NgffCoordinateTransformation(`type` = "scale", scale = Some(scale), translation = None)
@@ -336,6 +429,81 @@ class NgffExplorationUtilsTestSuite extends AsyncWordSpec with NgffExplorationUt
         assert(viewConfiguration.isEmpty)
         assert(name == "someDataset")
       }
+    }
+
+    "extracting the additional axes" should {
+
+      def multiscaleWithAxes(datasetPath: String, axes: List[NgffAxis]) =
+        NgffMultiscalesItem(
+          name = None,
+          axes = axes,
+          datasets = List(NgffDataset(datasetPath, List(scaleTransform(axes.map(_ => 1.0)))))
+        )
+
+      val unusedPath = new VaultPath(UPath.fromLocalPath(Path.of("/unused")), FileSystemDataVault.create)
+
+      "use the array index of an additional axis that comes first" in
+        getAdditionalAxes(
+          multiscaleWithAxes("tczyx", List(timeAxis(), channelAxis, spaceAxis("z"), spaceAxis("y"), spaceAxis("x"))),
+          unusedPath
+        ).futureBox.map {
+          case Full(axes) => assert(axes == Seq(AdditionalAxis("t", Seq(0, 5), 0)))
+          case other      => fail(s"expected Full, got $other")
+        }
+
+      "use the array index of an additional axis that comes after the channel axis" in
+        getAdditionalAxes(
+          multiscaleWithAxes("ctzyx", List(channelAxis, timeAxis(), spaceAxis("z"), spaceAxis("y"), spaceAxis("x"))),
+          unusedPath
+        ).futureBox.map {
+          case Full(axes) => assert(axes == Seq(AdditionalAxis("t", Seq(0, 5), 1)))
+          case other      => fail(s"expected Full, got $other")
+        }
+
+      "use the array index of an additional axis between the space axes" in
+        getAdditionalAxes(
+          multiscaleWithAxes("zytx", List(spaceAxis("z"), spaceAxis("y"), timeAxis(), spaceAxis("x"))),
+          unusedPath
+        ).futureBox.map {
+          case Full(axes) => assert(axes == Seq(AdditionalAxis("t", Seq(0, 5), 2)))
+          case other      => fail(s"expected Full, got $other")
+        }
+
+      "be case insensitive in the names of the default axes" in
+        getAdditionalAxes(
+          multiscaleWithAxes(
+            "ctzyx",
+            List(NgffAxis("C", "channel"), timeAxis("T"), spaceAxis("Z"), spaceAxis("Y"), spaceAxis("X"))
+          ),
+          unusedPath
+        ).futureBox.map {
+          case Full(axes) => assert(axes == Seq(AdditionalAxis("T", Seq(0, 5), 1)))
+          case other      => fail(s"expected Full, got $other")
+        }
+    }
+
+    "exploring an OME NGFF v0.5 image" should {
+
+      "find the label images listed in the zarr.json of the labels group" in
+        new NgffV0_5Explorer().explore(vaultPath("withLabels.zarr"), None).futureBox.map {
+          case Full(layersWithVoxelSizes) =>
+            val layers = layersWithVoxelSizes.map(_._1)
+            assert(layers.map(_.name) == List("raw", "raw", "labels-cells"))
+            assert(layers.take(2).forall(_.isInstanceOf[StaticColorLayer]))
+            assert(layers(2).isInstanceOf[StaticSegmentationLayer])
+            assert(layers(2).elementClass == ElementClass.uint32)
+            // The time axis is at index 1 of the image and at index 0 of the label image
+            assert(layers.take(2).forall(_.additionalAxes.contains(Seq(AdditionalAxis("t", Seq(0, 5), 1)))))
+            assert(layers(2).additionalAxes.contains(Seq(AdditionalAxis("t", Seq(0, 5), 0))))
+            assert(layersWithVoxelSizes.map(_._2.factor).distinct == List(Vec3Double(4.0, 4.0, 8.0)))
+          case other => fail(s"Exploration failed: $other")
+        }
+
+      "succeed without a labels group" in
+        new NgffV0_5Explorer().explore(vaultPath("withoutLabels.zarr"), None).futureBox.map {
+          case Full(layersWithVoxelSizes) => assert(layersWithVoxelSizes.map(_._1.name) == List("raw", "raw"))
+          case other                      => fail(s"Exploration failed: $other")
+        }
     }
 
     "converting a v0.5 multiscales item to v0.4" should {

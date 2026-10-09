@@ -7,6 +7,7 @@ import isString from "lodash-es/isString";
 import uniq from "lodash-es/uniq";
 import Messages from "messages";
 import { useState } from "react";
+import { FontFamilyMono } from "theme";
 import type { Vector3 } from "viewer/constants";
 import {
   type NewTask,
@@ -266,8 +267,7 @@ function TaskCreateBulkView() {
               }}
               styles={{
                 textarea: {
-                  fontFamily:
-                    'SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace',
+                  fontFamily: FontFamilyMono,
                 },
               }}
             />

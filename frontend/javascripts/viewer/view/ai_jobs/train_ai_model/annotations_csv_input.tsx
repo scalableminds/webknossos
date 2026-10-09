@@ -1,6 +1,7 @@
 import { Button, Form, Input, Space } from "antd";
 import type { RuleObject } from "antd/es/form";
 import { useCallback } from "react";
+import { FontFamilyMono } from "theme";
 import { fetchAnnotationInfos } from "../hooks/fetch_annotation_infos";
 import {
   type AiTrainingAnnotationSelection,
@@ -83,8 +84,7 @@ export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
             autoSize={{ minRows: 6 }}
             styles={{
               textarea: {
-                fontFamily:
-                  'SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace',
+                fontFamily: FontFamilyMono,
               },
             }}
           />

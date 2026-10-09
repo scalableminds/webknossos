@@ -46,6 +46,35 @@ const ColorDarkBg = "#383d48";
 const ColorDarkBorder = "#4e4e4e";
 const ColorDarkDisabledBg = "#313131";
 
+// Dark theme palette, following the 2026 brand guidelines ("on ink").
+export const ColorViewerInk = "#0c0d18"; // Dark surface / page background
+const ColorIndigoLight = "#8a90ff"; // Links and accents on dark surfaces
+const ColorIndigoLighter = "#b3b7ff"; // Link hover on dark surfaces
+const ColorIndigoDeep = "#3d45d6"; // Hover/active state of primary elements
+const ColorInkTextSecondary = "#a7a9c6";
+const ColorInkHover = "#1b1e33"; // Ink lifted slightly for hovered rows
+
+const darkDesignToken: Partial<AliasToken> = {
+  colorBgBase: ColorViewerInk,
+  colorTextBase: ColorWhite,
+  colorTextSecondary: ColorInkTextSecondary,
+  // Typography.Text type="secondary" resolves to colorTextDescription.
+  colorTextDescription: ColorInkTextSecondary,
+  colorLink: ColorIndigoLight,
+  colorLinkHover: ColorIndigoLighter,
+  colorLinkActive: ColorIndigoLight,
+  colorPrimaryHover: ColorIndigoDeep,
+  colorPrimaryActive: ColorIndigoDeep,
+};
+
+// Brand typography: Hanken Grotesk for display and body, IBM Plex Mono for labels, code and
+// data. Nunito is reserved for the logo. The @font-face rules live in main.less and the stacks
+// are mirrored as @font-family / @font-family-mono in _variables.less – keep both in sync.
+export const FontFamily =
+  '"Hanken Grotesk", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif';
+export const FontFamilyMono =
+  '"IBM Plex Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+
 // Ant Design Customizations
 const globalDesignToken: Partial<AliasToken> = {
   colorPrimary: ColorWKBlue,
@@ -54,8 +83,8 @@ const globalDesignToken: Partial<AliasToken> = {
   colorInfo: ColorWKBlue,
   blue: ColorWKBlue,
   borderRadius: 4,
-  fontFamily:
-    '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif',
+  fontFamily: FontFamily,
+  fontFamilyCode: FontFamilyMono,
 };
 
 const lightGlobalToken = theme.getDesignToken({
@@ -64,7 +93,7 @@ const lightGlobalToken = theme.getDesignToken({
 });
 
 const darkGlobalToken = theme.getDesignToken({
-  token: globalDesignToken,
+  token: { ...globalDesignToken, ...darkDesignToken },
   algorithm: theme.darkAlgorithm,
 });
 
@@ -177,11 +206,12 @@ export function getThemeFromUser(activeUser: APIUser | null | undefined): Theme 
 
 export function getAntdTheme(userTheme: Theme) {
   let algorithm = theme.defaultAlgorithm;
+  let token = clone(globalDesignToken);
   const components: OverrideToken = {
     Layout: {
       headerBg: ColorWKDarkGrey,
       footerBg: ColorWKDarkGrey,
-      siderBg: userTheme === "dark" ? ColorBlack : ColorWhite,
+      siderBg: userTheme === "dark" ? ColorViewerInk : ColorWhite,
     },
     Menu: {
       darkItemBg: ColorWKDarkGrey,
@@ -202,14 +232,15 @@ export function getAntdTheme(userTheme: Theme) {
     components.Tree = {
       ...components.Tree,
       nodeSelectedBg: ColorWKBlue,
-      nodeHoverBg: ColorWKDarkGrey,
+      nodeHoverBg: ColorInkHover,
     };
+    token = { ...token, ...darkDesignToken };
   }
   return {
     algorithm,
     // Without the clone(), the default theme shows dark backgrounds in various components.
     // Apparently, antd mutates this variable?
-    token: clone(globalDesignToken),
+    token,
     components,
     // Disable inheriting from the parent theme, in case we are nesting dark and light mode components
     inherit: false,

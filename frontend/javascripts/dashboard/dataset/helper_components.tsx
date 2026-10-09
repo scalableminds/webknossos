@@ -4,11 +4,12 @@ import { Divider, Form, Tooltip } from "antd";
 import type { FormItemProps, Rule } from "antd/es/form";
 import type { NamePath } from "antd/es/form/interface";
 import sum from "lodash-es/sum";
+import { FontFamilyMono } from "theme";
 
 const FormItem = Form.Item;
 
 export const jsonEditStyle = {
-  fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+  fontFamily: FontFamilyMono,
 };
 
 export function Hideable({ children, hidden }: { children: React.ReactNode; hidden: boolean }) {

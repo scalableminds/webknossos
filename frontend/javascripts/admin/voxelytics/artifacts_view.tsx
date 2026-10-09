@@ -5,6 +5,7 @@ import { copyToClipboard } from "libs/clipboard";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { JSONTree } from "react-json-tree";
 import { Link } from "react-router";
+import { FontFamilyMono } from "theme";
 import type { VoxelyticsArtifactConfig } from "types/api_types";
 import { isObjectEmpty, useTheme } from "./utils";
 
@@ -12,7 +13,7 @@ export function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
   return (
     <div
       style={{
-        fontFamily: "monospace",
+        fontFamily: FontFamilyMono,
         border: "1px solid #aaa",
         padding: 10,
         position: "relative",

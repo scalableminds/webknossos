@@ -1,8 +1,14 @@
-import { createExplorational, getDataset, updateDatasetPartial } from "admin/rest_api";
+import {
+  duplicateAnnotation,
+  editLockedState,
+  getDataset,
+  reOpenAnnotation,
+  updateDatasetPartial,
+} from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import zip from "lodash-es/zip";
 import { Matrix, SingularValueDecomposition } from "ml-matrix";
-import { TracingTypeEnum } from "types/api_types";
+import type { APIAnnotationInfo, APIDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
@@ -11,6 +17,7 @@ import {
   type Transform,
 } from "viewer/model/helpers/transformation_helpers";
 import type { MutableTreeMap } from "viewer/model/types/tree_types";
+import type { AlignmentEditBlocker } from "./bigwarp_protocol";
 
 // "A" is the fixed layer, "B" is the moving layer that gets transformed onto A.
 export type Side = "A" | "B";
@@ -131,21 +138,11 @@ export function getLandmarkGroupPath(layerNames: LayerNames, side: Side): string
   return [`Layer pair: ${layerNames.A} × ${layerNames.B}`, `${layerNames[side]} landmarks`];
 }
 
-// The landmarks of a layer pair are stored in one skeleton annotation. Its id is only
-// remembered in the local storage of the browser, so other browsers and users create
-// their own annotation.
-export async function findOrCreateLandmarkAnnotationId(
-  datasetId: string,
-  layerNames: LayerNames,
-): Promise<string> {
-  const storageKey = `bigwarp-landmark-annotation:${datasetId}:${layerNames.A}:${layerNames.B}`;
-  const existingId = window.localStorage.getItem(storageKey);
-  if (existingId != null) {
-    return existingId;
-  }
-  const annotation = await createExplorational(datasetId, TracingTypeEnum.skeleton, false);
-  window.localStorage.setItem(storageKey, annotation.id);
-  return annotation.id;
+// The layers of the alignment that don't exist in the dataset (anymore), e.g. because they
+// were renamed.
+export function getMissingLayerNames(dataset: APIDataset, layerNames: LayerNames): string[] {
+  const datasetLayerNames = new Set(dataset.dataSource.dataLayers.map((layer) => layer.name));
+  return SIDES.map((side) => layerNames[side]).filter((name) => !datasetLayerNames.has(name));
 }
 
 // Stores the alignment in the dataset. The transform maps the untransformed coordinates
@@ -178,4 +175,29 @@ export async function storeAlignmentInDataset(
       ),
     },
   });
+}
+
+export const EDIT_BLOCKER_ACTION_LABELS: Record<AlignmentEditBlocker, string> = {
+  notOwner: "Copy to my account",
+  archived: "Unarchive",
+  locked: "Unlock",
+};
+
+// Removes what keeps the user from working on the alignment annotation (see
+// getAlignmentEditBlocker). Resolves with the id of the annotation to open, which is a new
+// copy if the user isn't the owner. A copy stays an alignment annotation.
+export async function resolveAlignmentEditBlocker(
+  annotation: APIAnnotationInfo,
+  blocker: AlignmentEditBlocker,
+): Promise<string> {
+  switch (blocker) {
+    case "notOwner":
+      return (await duplicateAnnotation(annotation.id, annotation.typ)).id;
+    case "archived":
+      await reOpenAnnotation(annotation.id, annotation.typ);
+      return annotation.id;
+    case "locked":
+      await editLockedState(annotation.id, annotation.typ, false);
+      return annotation.id;
+  }
 }

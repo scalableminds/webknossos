@@ -24,14 +24,16 @@ type IframeBridge = Pick<ReturnType<typeof useIframeBridge>, "whenReady" | "send
  *    workers are polled. When the landmarks of a worker changed (added, deleted, moved,
  *    undo, ...), the group of that side in the landmark annotation is replaced with the
  *    trees of the worker.
- * Returns the current landmarks of both workers.
+ * Returns the current landmarks of both workers, and whether they were loaded from the
+ * workers at least once.
  */
 export function useLandmarkSync(
   { whenReady, sendMessage }: IframeBridge,
   fixedLayerName: string,
   movingLayerName: string,
-): Record<Side, Landmark[]> {
+): { landmarks: Record<Side, Landmark[]>; hasLoadedLandmarks: boolean } {
   const [landmarks, setLandmarks] = useState<Record<Side, Landmark[]>>({ A: [], B: [] });
+  const [hasLoadedLandmarks, setHasLoadedLandmarks] = useState(false);
   // The ids of the tree groups that hold the landmarks of each side in the landmark
   // annotation. Null until the stored landmarks were imported into the workers.
   const [groupIds, setGroupIds] = useState<Record<Side, number> | null>(null);
@@ -101,6 +103,7 @@ export function useLandmarkSync(
         const [workerA, workerB] = await Promise.all(SIDES.map(fetchWorkerLandmarks));
         const newLandmarks = { A: workerA.landmarks, B: workerB.landmarks };
         setLandmarks((previous) => (isEqual(previous, newLandmarks) ? previous : newLandmarks));
+        setHasLoadedLandmarks(true);
         await storeChangedLandmarks("A", workerA, groupIds.A);
         await storeChangedLandmarks("B", workerB, groupIds.B);
       } catch (error) {
@@ -111,5 +114,5 @@ export function useLandmarkSync(
     [groupIds],
   );
 
-  return landmarks;
+  return { landmarks, hasLoadedLandmarks };
 }

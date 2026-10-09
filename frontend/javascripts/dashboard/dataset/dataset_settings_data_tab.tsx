@@ -32,7 +32,7 @@ import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
-import { getAlignmentPageUrl } from "viewer/view/align_datasets/bigwarp_protocol";
+import { getAlignmentSelectionUrl } from "viewer/view/align_datasets/bigwarp_protocol";
 import {
   AxisRotationSettingForDataset,
   getDatasetBoundingBoxFromLayers,
@@ -52,7 +52,9 @@ export default function DatasetSettingsDataTab() {
           "dataLayers" in dataset.dataSource &&
           dataset.dataSource.dataLayers.length >= 2 && (
             <Tooltip title="Interactively align two layers of this dataset by placing matching landmarks in each">
-              <Button onClick={() => navigate(getAlignmentPageUrl(dataset))}>Align Layers…</Button>
+              <Button onClick={() => navigate(getAlignmentSelectionUrl(dataset))}>
+                Align Layers…
+              </Button>
             </Tooltip>
           )}
       </Flex>

@@ -99,6 +99,11 @@ import type {
   UserConfiguration,
 } from "viewer/store";
 import Store from "viewer/store";
+import {
+  getAlignmentEditBlocker,
+  getAlignmentViewUrl,
+  isBigWarpStore,
+} from "viewer/view/align_datasets/bigwarp_protocol";
 import { initializeKeyboardLayoutMap } from "viewer/view/keyboard_shortcuts/keyboard_layout_utils";
 import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {
@@ -120,6 +125,23 @@ import {
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
+
+// Alignment annotations are worked on in the alignment view, so the user who may work on
+// one there is redirected. Everybody else sees it in the normal viewer, which offers to
+// copy it. The hidden store iframe of the alignment view is never redirected.
+function getAlignmentViewUrlToRedirectTo(annotation: APIAnnotation): string | null {
+  if (
+    annotation.layerAlignment == null ||
+    isBigWarpStore() ||
+    getAlignmentEditBlocker(annotation, Store.getState().activeUser?.id) != null
+  ) {
+    return null;
+  }
+  return getAlignmentViewUrl(
+    { name: annotation.dataSetName, id: annotation.datasetId },
+    annotation.id,
+  );
+}
 
 export async function initialize(
   initialMaybeCompoundType: APICompoundType | null,
@@ -152,6 +174,12 @@ export async function initialize(
         throw unversionedAnnotationResult.error.cause;
       }
       let unversionedAnnotation = unversionedAnnotationResult.value;
+      const alignmentViewUrl = getAlignmentViewUrlToRedirectTo(unversionedAnnotation);
+      if (alignmentViewUrl != null) {
+        location.replace(alignmentViewUrl);
+        // Keep showing the loading spinner until the browser has left this page.
+        await new Promise(() => {});
+      }
       annotationProto = await getAnnotationProto(
         unversionedAnnotation.tracingStore.url,
         unversionedAnnotation.id,

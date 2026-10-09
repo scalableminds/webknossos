@@ -53,7 +53,8 @@ import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metad
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
 import DatasetSettingsStorageTab from "dashboard/dataset/dataset_settings_storage_tab";
 import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
-import AlignDatasetsView from "viewer/view/align_datasets/align_datasets_view";
+import AlignmentSelectionView from "viewer/view/align_datasets/alignment_selection_view";
+import AlignmentView from "viewer/view/align_datasets/alignment_view";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -256,6 +257,14 @@ const routes: RouteObject[] = [
         element: (
           <SecuredRoute requiresAdminOrManagerRole>
             <DatasetAddView />
+          </SecuredRoute>
+        ),
+      },
+      {
+        path: "/datasets/:datasetNameAndId/align",
+        element: (
+          <SecuredRoute>
+            <AlignmentSelectionView />
           </SecuredRoute>
         ),
       },
@@ -490,15 +499,15 @@ const routes: RouteObject[] = [
     ],
   },
   {
-    // The dataset alignment page has no navbar of its own, because each of its worker
-    // iframes shows one.
+    // The alignment view has no navbar of its own, because each of its worker iframes shows
+    // one.
     element: <RootLayout showNavbar={false} />,
     children: [
       {
-        path: "/align-datasets/:datasetNameAndId",
+        path: "/datasets/:datasetNameAndId/align/:annotationId",
         element: (
           <SecuredRoute>
-            <AlignDatasetsView />
+            <AlignmentView />
           </SecuredRoute>
         ),
       },

@@ -257,7 +257,26 @@ Michael wants a stack later, once the whole feature is done. Planned layers, bot
    internal state of `AnnotationList`; search query, tags, archived toggle and selection are
    controlled by the page.
 3. Alignment view by annotation id, viewer redirect with store-iframe guard, error states,
-   auto-align, removal of localStorage.
+   auto-align, removal of localStorage. **Implemented 2026-10-09** (not yet reviewed or tried
+   in the browser):
+   - Routes `/datasets/:datasetNameAndId/align` (`alignment_selection_view.tsx`, for now only
+     the layer picker, which creates a new alignment annotation and opens it) and
+     `/datasets/:datasetNameAndId/align/:annotationId` (`alignment_view.tsx`, renamed from
+     `align_datasets_view.tsx`). The `/align-datasets` route is gone. REST:
+     `createLayerAlignment`, `getLayerAlignments`.
+   - Editability rule `getAlignmentEditBlocker` in `bigwarp_protocol.ts`: owner, not archived,
+     not locked. For the owner this is exactly what `restrictions.allowUpdate` checks, and it
+     also works on the compact list data, so the redirect, the view and (in step 4) the list
+     use the same function instead of reading `restrictions`.
+   - Redirect in `model_initialization.ts` right after the annotation info request; the store
+     iframe loads `/annotations/:id?bigwarpStore` and is never redirected.
+   - Not editable → notice with "Copy to my account" / "Unarchive" / "Unlock"
+     (`resolveAlignmentEditBlocker`, reusable for step 4). Missing layer → error naming it.
+   - Auto-align once the stored landmarks were loaded (no message if there are too few).
+   - "Store as Default" asks for confirmation first; the dialog says that the moving layer's
+     transforms are replaced and, if the fixed layer has transforms, that the alignment builds
+     on them (Q6 b; also covers the "replaces layer B's transforms" item in "Before human
+     review").
 4. Selection page, entry points, badge in the annotation list, docs page, multi-layer hint.
 
 ### Decision log (2026-10-09)

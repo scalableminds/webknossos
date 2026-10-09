@@ -20,7 +20,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import { getAlignmentPageUrl } from "viewer/view/align_datasets/bigwarp_protocol";
+import { getAlignmentSelectionUrl } from "viewer/view/align_datasets/bigwarp_protocol";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
 
 function NewAnnotationLink({
@@ -215,7 +215,7 @@ export function getDatasetActionContextMenu({
                 icon: <NodeIndexOutlined className="icon-margin-right" />,
                 label: "Align Layers…",
                 onClick: () => {
-                  window.location.href = getAlignmentPageUrl(dataset);
+                  window.location.href = getAlignmentSelectionUrl(dataset);
                 },
               }
             : null,

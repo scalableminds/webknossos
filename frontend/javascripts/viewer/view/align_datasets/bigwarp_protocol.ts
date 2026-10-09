@@ -1,14 +1,16 @@
 import { getUrlParamValue, hasUrlParam } from "libs/utils";
-import type { APIDataset } from "types/api_types";
+import type { APIAnnotationInfo, APIDataset } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 
-// The dataset alignment page (align_datasets_view.tsx) embeds two normal sandbox views of
-// the same dataset as iframes, one per layer. These views are called "workers". A worker
-// is recognized by the URL params below. This module holds everything that both the
-// alignment page and the workers need to know about each other.
+// The alignment view (alignment_view.tsx) embeds two normal sandbox views of the same
+// dataset as iframes, one per layer. These views are called "workers". A third, hidden
+// iframe loads the alignment annotation itself, which stores the landmarks ("store"). The
+// iframes are recognized by the URL params below. This module holds everything that the
+// alignment view, the iframes and the rest of the app need to know about each other.
 
 const WORKER_LAYER_URL_PARAM = "bigwarpWorker";
 const PRIMARY_WORKER_URL_PARAM = "bigwarpPrimary";
+const STORE_URL_PARAM = "bigwarpStore";
 
 export function isBigWarpWorker(): boolean {
   return hasUrlParam(WORKER_LAYER_URL_PARAM);
@@ -25,8 +27,26 @@ export function getBigWarpWorkerLayerName(): string {
   return getUrlParamValue(WORKER_LAYER_URL_PARAM);
 }
 
-export function getAlignmentPageUrl(dataset: { name: string; id: string }): string {
-  return `/align-datasets/${getReadableURLPart(dataset)}`;
+export function isBigWarpStore(): boolean {
+  return hasUrlParam(STORE_URL_PARAM);
+}
+
+// The page that lists the alignment annotations of a dataset and creates new ones.
+export function getAlignmentSelectionUrl(dataset: { name: string; id: string }): string {
+  return `/datasets/${getReadableURLPart(dataset)}/align`;
+}
+
+export function getAlignmentViewUrl(
+  dataset: { name: string; id: string },
+  annotationId: string,
+): string {
+  return `${getAlignmentSelectionUrl(dataset)}/${annotationId}`;
+}
+
+// The store iframe must open the alignment annotation in the normal viewer instead of being
+// redirected to the alignment view again.
+export function getBigWarpStoreUrl(annotationId: string): string {
+  return `/annotations/${annotationId}?${STORE_URL_PARAM}`;
 }
 
 export function getBigWarpWorkerUrl(
@@ -57,4 +77,25 @@ export function sendCommandToAlignmentPage(command: BigWarpCommand) {
     { type: BIG_WARP_COMMAND_MESSAGE_TYPE, command },
     window.location.origin,
   );
+}
+
+export type AlignmentEditBlocker = "notOwner" | "archived" | "locked";
+
+// Only the owner can work on an alignment annotation in the alignment view, and only while
+// it is neither archived nor locked. Everyone else can copy it to their own account.
+// Returns null if the user can work on it.
+export function getAlignmentEditBlocker(
+  annotation: APIAnnotationInfo,
+  activeUserId: string | null | undefined,
+): AlignmentEditBlocker | null {
+  if (annotation.owner?.id == null || annotation.owner.id !== activeUserId) {
+    return "notOwner";
+  }
+  if (annotation.state === "Finished") {
+    return "archived";
+  }
+  if (annotation.isLockedByOwner) {
+    return "locked";
+  }
+  return null;
 }

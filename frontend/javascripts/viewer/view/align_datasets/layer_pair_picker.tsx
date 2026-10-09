@@ -1,4 +1,5 @@
-import { Button, Select, Space, Typography } from "antd";
+import { Select, Space, Typography } from "antd";
+import { AsyncButton } from "components/async_clickables";
 import { useState } from "react";
 import type { APIDataset } from "types/api_types";
 
@@ -7,7 +8,7 @@ export function LayerPairPicker({
   onPick,
 }: {
   dataset: APIDataset;
-  onPick: (fixedLayerName: string, movingLayerName: string) => void;
+  onPick: (fixedLayerName: string, movingLayerName: string) => Promise<void>;
 }) {
   const layerNames = dataset.dataSource.dataLayers.map((layer) => layer.name);
   const [fixedLayerName, setFixedLayerName] = useState<string | null>(null);
@@ -40,17 +41,17 @@ export function LayerPairPicker({
           onChange={setMovingLayerName}
           options={getOptions(fixedLayerName)}
         />
-        <Button
+        <AsyncButton
           type="primary"
           disabled={fixedLayerName == null || movingLayerName == null}
-          onClick={() =>
-            fixedLayerName != null &&
-            movingLayerName != null &&
-            onPick(fixedLayerName, movingLayerName)
-          }
+          onClick={async () => {
+            if (fixedLayerName != null && movingLayerName != null) {
+              await onPick(fixedLayerName, movingLayerName);
+            }
+          }}
         >
-          Start aligning
-        </Button>
+          Create alignment
+        </AsyncButton>
       </Space>
     </div>
   );

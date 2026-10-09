@@ -1,11 +1,14 @@
+import type { APIAnnotationInfo, APIDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import type { MutableTreeMap } from "viewer/model/types/tree_types";
 import {
   estimateTransformBtoA,
   getLandmarkPairs,
   getLandmarks,
+  getMissingLayerNames,
   type Landmark,
 } from "viewer/view/align_datasets/alignment_helpers";
+import { getAlignmentEditBlocker } from "viewer/view/align_datasets/bigwarp_protocol";
 import { describe, expect, it } from "vitest";
 
 const RED: Vector3 = [1, 0, 0];
@@ -152,5 +155,35 @@ describe("Dataset alignment helpers", () => {
     expect(pairs[1].landmarks.B?.position).toEqual(POSITIONS_B[1]);
     expect(pairs[3].landmarks.B).toBeUndefined();
     expect(pairs.every((pair) => pair.residual == null)).toBe(true);
+  });
+});
+
+describe("Alignment annotation helpers", () => {
+  const createAnnotation = (overrides: Partial<APIAnnotationInfo>) =>
+    ({
+      owner: { id: "owner", firstName: "A", lastName: "B" },
+      state: "Active",
+      isLockedByOwner: false,
+      ...overrides,
+    }) as APIAnnotationInfo;
+
+  it("lets only the owner work on an active, unlocked alignment", () => {
+    expect(getAlignmentEditBlocker(createAnnotation({}), "owner")).toBeNull();
+    expect(getAlignmentEditBlocker(createAnnotation({}), "someone else")).toBe("notOwner");
+    expect(getAlignmentEditBlocker(createAnnotation({}), null)).toBe("notOwner");
+    expect(getAlignmentEditBlocker(createAnnotation({ state: "Finished" }), "owner")).toBe(
+      "archived",
+    );
+    expect(getAlignmentEditBlocker(createAnnotation({ isLockedByOwner: true }), "owner")).toBe(
+      "locked",
+    );
+  });
+
+  it("finds the layers of an alignment that the dataset doesn't have", () => {
+    const dataset = {
+      dataSource: { dataLayers: [{ name: "color_1" }, { name: "color_2" }] },
+    } as APIDataset;
+    expect(getMissingLayerNames(dataset, { A: "color_1", B: "color_2" })).toEqual([]);
+    expect(getMissingLayerNames(dataset, { A: "color_1", B: "renamed" })).toEqual(["renamed"]);
   });
 });

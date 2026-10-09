@@ -1,5 +1,6 @@
+import { App } from "antd";
 import Toast from "libs/toast";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import type { APIDataset } from "types/api_types";
 import { Identity4x4, type Vector3 } from "viewer/constants";
 import {
@@ -15,7 +16,7 @@ import {
   type Side,
   storeAlignmentInDataset,
 } from "./alignment_helpers";
-import { type BigWarpCommand, getBigWarpWorkerUrl } from "./bigwarp_protocol";
+import { type BigWarpCommand, getBigWarpStoreUrl, getBigWarpWorkerUrl } from "./bigwarp_protocol";
 import { LandmarkPanel } from "./landmark_panel";
 import { ResizableSidePanel } from "./resizable_side_panel";
 import { useIframeBridge, useWorkerCommands } from "./use_iframe_bridge";
@@ -35,6 +36,7 @@ export function AlignmentWorkspace({
   landmarkAnnotationId,
 }: Props) {
   const layerNames: LayerNames = { A: fixedLayerName, B: movingLayerName };
+  const { modal } = App.useApp();
   const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(false);
   const [transformBtoA, setTransformBtoA] = useState<Transform | null>(null);
   // Whether a worker also shows the layer of the other worker.
@@ -44,7 +46,11 @@ export function AlignmentWorkspace({
   });
 
   const { iframesRef, whenReady, sendMessage } = useIframeBridge();
-  const landmarks = useLandmarkSync({ whenReady, sendMessage }, fixedLayerName, movingLayerName);
+  const { landmarks, hasLoadedLandmarks } = useLandmarkSync(
+    { whenReady, sendMessage },
+    fixedLayerName,
+    movingLayerName,
+  );
 
   // Each worker initially shows only its own layer.
   useEffect(() => {
@@ -64,10 +70,13 @@ export function AlignmentWorkspace({
     ]);
   };
 
-  const align = async () => {
+  // When aligning automatically, too few landmarks are not reported to the user.
+  const align = async ({ isAutomatic }: { isAutomatic: boolean } = { isAutomatic: false }) => {
     const result = estimateTransformBtoA(landmarks);
     if ("errorMessage" in result) {
-      Toast.warning(result.errorMessage);
+      if (!isAutomatic) {
+        Toast.warning(result.errorMessage);
+      }
       return;
     }
     if (result.usedCopiesInNextSlice) {
@@ -78,6 +87,14 @@ export function AlignmentWorkspace({
     setTransformBtoA(result.transform);
     await showTransformInWorkers(result.transform);
   };
+
+  // Shows the alignment of the stored landmarks right after opening the alignment annotation.
+  const alignAutomatically = useEffectEvent(() => align({ isAutomatic: true }));
+  useEffect(() => {
+    if (hasLoadedLandmarks) {
+      alignAutomatically();
+    }
+  }, [hasLoadedLandmarks]);
 
   const resetAlignment = async () => {
     setTransformBtoA(null);
@@ -117,17 +134,34 @@ export function AlignmentWorkspace({
     }
   };
 
-  const storeAlignment = async () => {
-    if (transformBtoA == null) {
-      return;
-    }
-    try {
-      await storeAlignmentInDataset(dataset.id, layerNames, transformBtoA);
-      Toast.success(`Stored the current alignment as the default transform for "${layerNames.B}".`);
-    } catch (error) {
-      console.error(error);
-      Toast.error("Could not store the alignment as the dataset's default transform.");
-    }
+  const storeAlignment = (transform: Transform) => {
+    const fixedLayer = dataset.dataSource.dataLayers.find((layer) => layer.name === fixedLayerName);
+    const fixedLayerHasTransforms = (fixedLayer?.coordinateTransformations ?? []).length > 0;
+    modal.confirm({
+      title: `Store the alignment as the default transform of "${movingLayerName}"?`,
+      content: (
+        <>
+          <p>This replaces the transforms that "{movingLayerName}" currently has in the dataset.</p>
+          {fixedLayerHasTransforms ? (
+            <p>
+              "{fixedLayerName}" has transforms itself. The stored alignment builds on them, so
+              changing the transforms of "{fixedLayerName}" later makes this alignment outdated.
+            </p>
+          ) : null}
+        </>
+      ),
+      onOk: async () => {
+        try {
+          await storeAlignmentInDataset(dataset.id, layerNames, transform);
+          Toast.success(
+            `Stored the current alignment as the default transform of "${movingLayerName}".`,
+          );
+        } catch (error) {
+          console.error(error);
+          Toast.error("Could not store the alignment as the dataset's default transform.");
+        }
+      },
+    });
   };
 
   const handleWorkerCommand = (side: Side, command: BigWarpCommand) => {
@@ -164,7 +198,7 @@ export function AlignmentWorkspace({
             canStoreAlignment={dataset.isEditable}
             onToggleOtherLayer={toggleOtherLayer}
             onResetAlignment={resetAlignment}
-            onStoreAlignment={storeAlignment}
+            onStoreAlignment={() => transformBtoA != null && storeAlignment(transformBtoA)}
             onFocusLandmark={focusPosition}
           />
         </ResizableSidePanel>
@@ -186,7 +220,7 @@ export function AlignmentWorkspace({
         }}
         title="Landmark annotation"
         style={{ display: "none" }}
-        src={`/annotations/${landmarkAnnotationId}`}
+        src={getBigWarpStoreUrl(landmarkAnnotationId)}
       />
     </div>
   );

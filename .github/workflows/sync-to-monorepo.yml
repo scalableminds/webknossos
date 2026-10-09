@@ -17,10 +17,6 @@ on:
   push:
     branches: [master]
 
-concurrency:
-  group: sync-to-monorepo
-  cancel-in-progress: true
-
 permissions: {}
 
 env:
@@ -31,6 +27,10 @@ jobs:
   dispatch:
     if: ${{ !contains(github.event.head_commit.message, 'Mono-RevId:') }}
     runs-on: ubuntu-latest
+    # on the job, not the workflow: skipped runs must not cancel a pending dispatch
+    concurrency:
+      group: sync-to-monorepo
+      cancel-in-progress: true
     steps:
       - name: Check credentials
         id: check

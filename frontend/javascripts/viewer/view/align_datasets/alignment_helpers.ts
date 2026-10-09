@@ -1,14 +1,9 @@
-import {
-  duplicateAnnotation,
-  editLockedState,
-  getDataset,
-  reOpenAnnotation,
-  updateDatasetPartial,
-} from "admin/rest_api";
+import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import { V3 } from "libs/mjs";
+import mean from "lodash-es/mean";
 import zip from "lodash-es/zip";
 import { Matrix, SingularValueDecomposition } from "ml-matrix";
-import type { APIAnnotationInfo, APIDataset } from "types/api_types";
+import type { APIDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
@@ -17,7 +12,6 @@ import {
   type Transform,
 } from "viewer/model/helpers/transformation_helpers";
 import type { MutableTreeMap } from "viewer/model/types/tree_types";
-import type { AlignmentEditBlocker } from "./bigwarp_protocol";
 
 // "A" is the fixed layer, "B" is the moving layer that gets transformed onto A.
 export type Side = "A" | "B";
@@ -34,6 +28,14 @@ export type LandmarkPair = {
   // higher than in the other pairs usually means that this pair was placed imprecisely.
   // Null if no transform was estimated yet or if one of the landmarks is missing.
   residual: number | null;
+};
+
+// The transform that is shown in the workers, and what it was computed from.
+export type Alignment = {
+  transformBtoA: Transform;
+  landmarks: Record<Side, Landmark[]>;
+  // See estimateTransformBtoA.
+  usedCopiesInNextSlice: boolean;
 };
 
 // Three pairs always lie in one plane, so they only work with the fallback in
@@ -70,6 +72,12 @@ export function getLandmarkPairs(
         ? V3.length(V3.sub(landmarkA.position, transformPointBtoA(landmarkB.position)))
         : null,
   }));
+}
+
+// Null if no pair has a residual.
+export function getMeanResidual(pairs: LandmarkPair[]): number | null {
+  const residuals = pairs.flatMap((pair) => (pair.residual != null ? [pair.residual] : []));
+  return residuals.length > 0 ? mean(residuals) : null;
 }
 
 // The affine estimation needs points that span all three dimensions. It doesn't reliably
@@ -175,29 +183,4 @@ export async function storeAlignmentInDataset(
       ),
     },
   });
-}
-
-export const EDIT_BLOCKER_ACTION_LABELS: Record<AlignmentEditBlocker, string> = {
-  notOwner: "Copy to my account",
-  archived: "Unarchive",
-  locked: "Unlock",
-};
-
-// Removes what keeps the user from working on the alignment annotation (see
-// getAlignmentEditBlocker). Resolves with the id of the annotation to open, which is a new
-// copy if the user isn't the owner. A copy stays an alignment annotation.
-export async function resolveAlignmentEditBlocker(
-  annotation: APIAnnotationInfo,
-  blocker: AlignmentEditBlocker,
-): Promise<string> {
-  switch (blocker) {
-    case "notOwner":
-      return (await duplicateAnnotation(annotation.id, annotation.typ)).id;
-    case "archived":
-      await reOpenAnnotation(annotation.id, annotation.typ);
-      return annotation.id;
-    case "locked":
-      await editLockedState(annotation.id, annotation.typ, false);
-      return annotation.id;
-  }
 }

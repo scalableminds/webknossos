@@ -8,7 +8,7 @@ import {
   getDataset,
   getLayerAlignments,
 } from "admin/rest_api";
-import { Alert, Divider, Flex, Input, Spin, Typography } from "antd";
+import { Alert, Divider, Flex, Input, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import { AnnotationDetailsSidebar } from "dashboard/annotation_details_sidebar";
 import {
@@ -27,9 +27,13 @@ import { Link, useNavigate, useParams } from "react-router";
 import type { APIAnnotationInfo, APIDataset } from "types/api_types";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
-import { EDIT_BLOCKER_ACTION_LABELS, resolveAlignmentEditBlocker } from "./alignment_helpers";
-import { ErrorMessage } from "./alignment_view";
-import { getAlignmentEditBlocker, getAlignmentViewUrl } from "./bigwarp_protocol";
+import {
+  EDIT_BLOCKER_ACTION_LABELS,
+  getAlignmentEditBlocker,
+  resolveAlignmentEditBlocker,
+} from "./alignment_edit_blocker";
+import { AlignmentPageError, AlignmentPageSpinner } from "./alignment_page_status_views";
+import { getAlignmentViewUrl } from "./bigwarp_protocol";
 import { LayerPairPicker } from "./layer_pair_picker";
 
 const ALIGNING_LAYERS_DOCS_URL =
@@ -49,17 +53,19 @@ function AlignmentSelectionView() {
 
   if (datasetId == null) {
     return (
-      <ErrorMessage text="This page needs a dataset id in the URL. Please open it via the dataset actions menu in the dataset list in the dashboard." />
+      <AlignmentPageError text="This page needs a dataset id in the URL. Please open it via the dataset actions menu in the dataset list in the dashboard." />
     );
   }
   if (datasetQuery.isError) {
-    return <ErrorMessage text="Could not load this dataset." />;
+    return <AlignmentPageError text="Could not load this dataset." />;
   }
   if (dataset == null) {
-    return <Spin style={{ margin: 40 }} />;
+    return <AlignmentPageSpinner />;
   }
   if (!dataset.isActive) {
-    return <ErrorMessage text="This dataset is not active, so its layers cannot be aligned." />;
+    return (
+      <AlignmentPageError text="This dataset is not active, so its layers cannot be aligned." />
+    );
   }
   return <AlignmentSelection dataset={dataset} />;
 }

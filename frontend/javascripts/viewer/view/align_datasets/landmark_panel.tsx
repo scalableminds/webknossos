@@ -3,14 +3,15 @@ import { Button, Empty, Flex, Switch, Table, Tag, Tooltip, Typography } from "an
 import type { ColumnsType } from "antd/es/table";
 import { SidebarSection } from "dashboard/sidebar_section";
 import Markdown from "libs/markdown_adapter";
-import mean from "lodash-es/mean";
+import isEqual from "lodash-es/isEqual";
 import { useEffect, useRef, useState } from "react";
 import type { Vector3 } from "viewer/constants";
-import type { Transform } from "viewer/model/helpers/transformation_helpers";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
 import { InlineIconButton } from "viewer/view/right_border_tabs/info_tab/info_tab_layout";
 import {
+  type Alignment,
   getLandmarkPairs,
+  getMeanResidual,
   type Landmark,
   type LandmarkPair,
   type LayerNames,
@@ -21,8 +22,10 @@ import {
 } from "./alignment_helpers";
 
 // A pair whose error is this many times higher than the mean error is highlighted, because it
-// was probably placed imprecisely.
+// was probably placed imprecisely. Errors below MIN_HIGH_RESIDUAL (in voxels) are never
+// highlighted: if the landmarks fit exactly, all errors are just floating point noise.
 const HIGH_RESIDUAL_FACTOR = 2;
+const MIN_HIGH_RESIDUAL = 1;
 
 // The pair list is virtualized, which needs fixed column widths and a fixed body height.
 const PAIR_COLUMN_WIDTHS = { index: 56, position: 150, residual: 72, focus: 40 };
@@ -57,11 +60,7 @@ type Props = {
   onChangeAnnotationDescription: (description: string) => void;
   layerNames: LayerNames;
   landmarks: Record<Side, Landmark[]>;
-  transformBtoA: Transform | null;
-  // Whether the landmarks changed since the shown transform was computed.
-  isAlignmentOutdated: boolean;
-  // Whether the shown transform needed the fallback for landmarks in one plane.
-  usedCopiesInNextSlice: boolean;
+  alignment: Alignment | null;
   isAutoAlignEnabled: boolean;
   onAutoAlignChange: (isEnabled: boolean) => void;
   isOtherLayerVisible: Record<Side, boolean>;
@@ -80,25 +79,22 @@ function rgbColorString(color: Vector3): string {
 function AlignmentStatus({
   layerNames,
   landmarks,
-  pairs,
-  transformBtoA,
-  isAlignmentOutdated,
-  usedCopiesInNextSlice,
+  alignment,
+  meanResidual,
 }: {
   layerNames: LayerNames;
   landmarks: Record<Side, Landmark[]>;
-  pairs: LandmarkPair[];
-  transformBtoA: Transform | null;
-  isAlignmentOutdated: boolean;
-  usedCopiesInNextSlice: boolean;
+  alignment: Alignment | null;
+  meanResidual: number | null;
 }) {
   const completePairCount = Math.min(landmarks.A.length, landmarks.B.length);
-  const residuals = pairs.flatMap((pair) => (pair.residual != null ? [pair.residual] : []));
+  const isAlignmentOutdated = alignment != null && !isEqual(alignment.landmarks, landmarks);
   return (
     <Flex vertical gap={4}>
-      {transformBtoA != null ? (
+      {alignment != null ? (
         <Typography.Text>
-          Aligned · {completePairCount} pairs · mean error {mean(residuals).toFixed(1)}
+          Aligned · {completePairCount} pairs
+          {meanResidual != null ? ` · mean error ${meanResidual.toFixed(1)}` : null}
         </Typography.Text>
       ) : (
         <Typography.Text type="secondary">
@@ -111,7 +107,7 @@ function AlignmentStatus({
           {landmarks.B.length} in {layerNames.B}).
         </Typography.Text>
       ) : null}
-      {transformBtoA != null && usedCopiesInNextSlice ? (
+      {alignment?.usedCopiesInNextSlice ? (
         <Typography.Text type="secondary">
           The landmarks lie in one plane, so the alignment assumes that the layers are only shifted
           against each other along z.
@@ -196,7 +192,7 @@ function AnnotationHeader({
 
 function getPairColumns(
   layerNames: LayerNames,
-  meanResidual: number,
+  meanResidual: number | null,
   onFocusPair: Props["onFocusPair"],
 ): ColumnsType<LandmarkPair> {
   const positionColumns = SIDES.map((side) => ({
@@ -240,7 +236,9 @@ function getPairColumns(
         if (pair.residual == null) {
           return null;
         }
-        const isHigh = pair.residual > HIGH_RESIDUAL_FACTOR * meanResidual;
+        const isHigh =
+          meanResidual != null &&
+          pair.residual > Math.max(HIGH_RESIDUAL_FACTOR * meanResidual, MIN_HIGH_RESIDUAL);
         return <Tag color={isHigh ? "warning" : undefined}>{pair.residual.toFixed(1)}</Tag>;
       },
     },
@@ -269,9 +267,7 @@ export function LandmarkPanel({
   onChangeAnnotationDescription,
   layerNames,
   landmarks,
-  transformBtoA,
-  isAlignmentOutdated,
-  usedCopiesInNextSlice,
+  alignment,
   isAutoAlignEnabled,
   onAutoAlignChange,
   isOtherLayerVisible,
@@ -282,10 +278,8 @@ export function LandmarkPanel({
   onStoreAlignment,
   onFocusPair,
 }: Props) {
-  const pairs = getLandmarkPairs(landmarks, transformBtoA);
-  const meanResidual = mean(
-    pairs.flatMap((pair) => (pair.residual != null ? [pair.residual] : [])),
-  );
+  const pairs = getLandmarkPairs(landmarks, alignment?.transformBtoA ?? null);
+  const meanResidual = getMeanResidual(pairs);
   const [pairListRef, pairListHeight] = useElementHeight();
 
   return (
@@ -302,10 +296,8 @@ export function LandmarkPanel({
         <AlignmentStatus
           layerNames={layerNames}
           landmarks={landmarks}
-          pairs={pairs}
-          transformBtoA={transformBtoA}
-          isAlignmentOutdated={isAlignmentOutdated}
-          usedCopiesInNextSlice={usedCopiesInNextSlice}
+          alignment={alignment}
+          meanResidual={meanResidual}
         />
         <Flex gap={8} wrap style={{ marginTop: 8 }}>
           <Button onClick={onAlign}>Align (T)</Button>
@@ -319,13 +311,13 @@ export function LandmarkPanel({
             <Button
               type="primary"
               onClick={onStoreAlignment}
-              disabled={transformBtoA == null || !canStoreAlignment}
+              disabled={alignment == null || !canStoreAlignment}
             >
               Store as default…
             </Button>
           </Tooltip>
           <Tooltip title="Show both layers untransformed again">
-            <Button type="link" onClick={onResetAlignment} disabled={transformBtoA == null}>
+            <Button type="link" onClick={onResetAlignment} disabled={alignment == null}>
               Reset
             </Button>
           </Tooltip>
@@ -385,7 +377,7 @@ export function LandmarkPanel({
             dataSource={pairs}
             scroll={{
               x: PAIR_TABLE_WIDTH,
-              y: Math.max(pairListHeight - PAIR_TABLE_HEADER_HEIGHT, MIN_PAIR_LIST_HEIGHT),
+              y: Math.max(pairListHeight, MIN_PAIR_LIST_HEIGHT) - PAIR_TABLE_HEADER_HEIGHT,
             }}
           />
         )}

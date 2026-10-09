@@ -1,7 +1,6 @@
 import { App, Flex, Splitter } from "antd";
 import classnames from "classnames";
 import Toast from "libs/toast";
-import isEqual from "lodash-es/isEqual";
 import { useEffect, useEffectEvent, useState } from "react";
 import type { APIAnnotation, APIDataset } from "types/api_types";
 import { Identity4x4, type Vector3 } from "viewer/constants";
@@ -11,8 +10,9 @@ import {
   type Transform,
 } from "viewer/model/helpers/transformation_helpers";
 import {
+  type Alignment,
   estimateTransformBtoA,
-  type Landmark,
+  type LandmarkPair,
   type LayerNames,
   OTHER_SIDE,
   SIDES,
@@ -21,7 +21,7 @@ import {
 } from "./alignment_helpers";
 import { type BigWarpCommand, getBigWarpStoreUrl, getBigWarpWorkerUrl } from "./bigwarp_protocol";
 import { LandmarkPanel } from "./landmark_panel";
-import { useIframeBridge, useStoreSavedState, useWorkerCommands } from "./use_iframe_bridge";
+import { useIframeBridge } from "./use_iframe_bridge";
 import { useLandmarkSync } from "./use_landmark_sync";
 
 const DEFAULT_LANDMARK_PANEL_WIDTH = 380;
@@ -30,32 +30,16 @@ const MAX_LANDMARK_PANEL_WIDTH = "70%";
 
 type Props = {
   dataset: APIDataset;
-  fixedLayerName: string;
-  movingLayerName: string;
+  layerNames: LayerNames;
   landmarkAnnotation: APIAnnotation;
 };
 
-// The transform that is shown in the workers, and what it was computed from.
-type Alignment = {
-  transformBtoA: Transform;
-  landmarks: Record<Side, Landmark[]>;
-  // See estimateTransformBtoA.
-  usedCopiesInNextSlice: boolean;
-};
-
-export function AlignmentWorkspace({
-  dataset,
-  fixedLayerName,
-  movingLayerName,
-  landmarkAnnotation,
-}: Props) {
-  const layerNames: LayerNames = { A: fixedLayerName, B: movingLayerName };
+export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: Props) {
   const { modal } = App.useApp();
   const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(false);
   const [landmarkPanelWidth, setLandmarkPanelWidth] = useState(DEFAULT_LANDMARK_PANEL_WIDTH);
   const [alignment, setAlignment] = useState<Alignment | null>(null);
   const transformBtoA = alignment?.transformBtoA ?? null;
-  // Edited here, but saved by the store iframe, which has the alignment annotation open.
   const [annotationName, setAnnotationName] = useState(landmarkAnnotation.name);
   const [annotationDescription, setAnnotationDescription] = useState(
     landmarkAnnotation.description,
@@ -68,14 +52,12 @@ export function AlignmentWorkspace({
     B: false,
   });
 
-  const { iframesRef, whenReady, sendMessage } = useIframeBridge();
+  // handleWorkerCommand is a function declaration further below, so it can be used here.
+  const { iframesRef, sendMessage, isStoreSaved } = useIframeBridge(handleWorkerCommand);
   const { landmarks, hasLoadedLandmarks, hasUnsyncedLandmarks } = useLandmarkSync(
-    { whenReady, sendMessage },
-    fixedLayerName,
-    movingLayerName,
+    sendMessage,
+    layerNames,
   );
-
-  const isStoreSaved = useStoreSavedState(iframesRef);
   const hasUnsavedChanges = hasUnsyncedLandmarks || !isStoreSaved;
 
   // Asks before leaving the page while the alignment annotation has unsaved changes.
@@ -98,18 +80,18 @@ export function AlignmentWorkspace({
 
   // Each worker initially shows only its own layer.
   useEffect(() => {
-    whenReady("A").then(() => sendMessage("A", "setLayerVisibility", [movingLayerName, false]));
-    whenReady("B").then(() => sendMessage("B", "setLayerVisibility", [fixedLayerName, false]));
-  }, [whenReady, sendMessage, fixedLayerName, movingLayerName]);
+    sendMessage("A", "setLayerVisibility", [layerNames.B, false]);
+    sendMessage("B", "setLayerVisibility", [layerNames.A, false]);
+  }, [sendMessage, layerNames.A, layerNames.B]);
 
   // Shows layer B transformed in worker A and layer A transformed (inversely) in worker B.
   const showTransformInWorkers = async (transform: Transform | null) => {
     await sendMessage("A", "setAffineLayerTransforms", [
-      movingLayerName,
+      layerNames.B,
       transform?.affineMatrix ?? Identity4x4,
     ]);
     await sendMessage("B", "setAffineLayerTransforms", [
-      fixedLayerName,
+      layerNames.A,
       transform?.affineMatrixInv ?? Identity4x4,
     ]);
   };
@@ -161,6 +143,15 @@ export function AlignmentWorkspace({
     sendMessage(side, "centerPositionAnimated", [position]);
   };
 
+  const focusPair = (pair: LandmarkPair) => {
+    for (const side of SIDES) {
+      const landmark = pair.landmarks[side];
+      if (landmark != null) {
+        focusPosition(side, landmark.position);
+      }
+    }
+  };
+
   // Moves the other worker to the position that corresponds to the position of this one.
   const syncOtherViewTo = async (side: Side) => {
     if (transformBtoA == null) {
@@ -184,7 +175,19 @@ export function AlignmentWorkspace({
     }
   };
 
+  // Edited here, but saved by the store iframe, which has the alignment annotation open.
+  const updateAnnotation = (
+    command: "setAnnotationName" | "setAnnotationDescription",
+    value: string,
+  ) => {
+    sendMessage("store", command, [value]).catch((error) => {
+      console.error(error);
+      Toast.error("Could not update the landmark annotation.");
+    });
+  };
+
   const storeAlignment = (transform: Transform) => {
+    const { A: fixedLayerName, B: movingLayerName } = layerNames;
     const fixedLayer = dataset.dataSource.dataLayers.find((layer) => layer.name === fixedLayerName);
     const fixedLayerHasTransforms = (fixedLayer?.coordinateTransformations ?? []).length > 0;
     modal.confirm({
@@ -214,7 +217,7 @@ export function AlignmentWorkspace({
     });
   };
 
-  const handleWorkerCommand = (side: Side, command: BigWarpCommand) => {
+  function handleWorkerCommand(side: Side, command: BigWarpCommand) {
     switch (command) {
       case "align":
         align();
@@ -232,9 +235,7 @@ export function AlignmentWorkspace({
         syncOtherViewTo(side);
         break;
     }
-  };
-
-  useWorkerCommands(iframesRef, handleWorkerCommand);
+  }
 
   return (
     <Splitter
@@ -264,15 +265,13 @@ export function AlignmentWorkspace({
             annotationDescription={annotationDescription}
             onChangeAnnotationName={(name) => {
               setAnnotationName(name);
-              sendMessage("store", "setAnnotationName", [name]);
+              updateAnnotation("setAnnotationName", name);
             }}
             onChangeAnnotationDescription={(description) => {
               setAnnotationDescription(description);
-              sendMessage("store", "setAnnotationDescription", [description]);
+              updateAnnotation("setAnnotationDescription", description);
             }}
-            transformBtoA={transformBtoA}
-            isAlignmentOutdated={alignment != null && !isEqual(alignment.landmarks, landmarks)}
-            usedCopiesInNextSlice={alignment?.usedCopiesInNextSlice ?? false}
+            alignment={alignment}
             isAutoAlignEnabled={isAutoAlignEnabled}
             onAutoAlignChange={setIsAutoAlignEnabled}
             isOtherLayerVisible={isOtherLayerVisible}
@@ -281,14 +280,7 @@ export function AlignmentWorkspace({
             onToggleOtherLayer={toggleOtherLayer}
             onResetAlignment={resetAlignment}
             onStoreAlignment={() => transformBtoA != null && storeAlignment(transformBtoA)}
-            onFocusPair={(pair) => {
-              for (const side of SIDES) {
-                const landmark = pair.landmarks[side];
-                if (landmark != null) {
-                  focusPosition(side, landmark.position);
-                }
-              }
-            }}
+            onFocusPair={focusPair}
           />
         ) : null}
       </Splitter.Panel>

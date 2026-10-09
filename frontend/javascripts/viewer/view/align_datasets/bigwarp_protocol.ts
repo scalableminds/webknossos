@@ -1,5 +1,5 @@
 import { getUrlParamValue, hasUrlParam } from "libs/utils";
-import type { APIAnnotationInfo, APIDataset } from "types/api_types";
+import type { APIDataset } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 
 // The alignment view (alignment_view.tsx) embeds two normal sandbox views of the same
@@ -82,24 +82,3 @@ export function sendCommandToAlignmentPage(command: BigWarpCommand) {
 // Sent by the store iframe whenever the alignment annotation gets saved or gets unsaved
 // changes.
 export const BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE = "bigwarpStoreSavedState";
-
-export type AlignmentEditBlocker = "notOwner" | "archived" | "locked";
-
-// Only the owner can work on an alignment annotation in the alignment view, and only while
-// it is neither archived nor locked. Everyone else can copy it to their own account.
-// Returns null if the user can work on it.
-export function getAlignmentEditBlocker(
-  annotation: APIAnnotationInfo,
-  activeUserId: string | null | undefined,
-): AlignmentEditBlocker | null {
-  if (annotation.owner?.id == null || annotation.owner.id !== activeUserId) {
-    return "notOwner";
-  }
-  if (annotation.state === "Finished") {
-    return "archived";
-  }
-  if (annotation.isLockedByOwner) {
-    return "locked";
-  }
-  return null;
-}

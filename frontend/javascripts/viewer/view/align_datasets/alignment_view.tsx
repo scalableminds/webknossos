@@ -1,22 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { getDataset, getUnversionedAnnotationInformation } from "admin/rest_api";
-import { Space, Spin, Typography } from "antd";
+import { Space, Typography } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { handleGenericError } from "libs/error_handling";
 import { useApi, useWkSelector } from "libs/react_hooks";
 import { useNavigate, useParams } from "react-router";
 import type { APIAnnotation } from "types/api_types";
 import {
-  EDIT_BLOCKER_ACTION_LABELS,
-  getMissingLayerNames,
-  resolveAlignmentEditBlocker,
-} from "./alignment_helpers";
-import { AlignmentWorkspace } from "./alignment_workspace";
-import {
   type AlignmentEditBlocker,
+  EDIT_BLOCKER_ACTION_LABELS,
   getAlignmentEditBlocker,
-  getAlignmentViewUrl,
-} from "./bigwarp_protocol";
+  getEditBlockerDescription,
+  resolveAlignmentEditBlocker,
+} from "./alignment_edit_blocker";
+import { getMissingLayerNames, type LayerNames } from "./alignment_helpers";
+import { AlignmentPageError, AlignmentPageSpinner } from "./alignment_page_status_views";
+import { AlignmentWorkspace } from "./alignment_workspace";
+import { getAlignmentViewUrl } from "./bigwarp_protocol";
 
 /**  Aligns one layer of a dataset ("moving" layer) to another ("fixed" layer) by placing
  * matching landmarks in both, similar to the BigWarp plugin of Fiji. The landmarks are stored
@@ -33,6 +33,9 @@ function AlignmentView() {
     queryKey: ["alignDatasets", "annotation", annotationId],
     queryFn: () => getUnversionedAnnotationInformation(annotationId),
     refetchOnWindowFocus: false,
+    // The workspace edits the name and description of the annotation, so it must not start
+    // with a cached version when the page is opened again.
+    gcTime: 0,
     meta: { persist: false },
   });
   const annotation = annotationQuery.data;
@@ -44,14 +47,14 @@ function AlignmentView() {
   const dataset = datasetQuery.data;
 
   if (annotationQuery.isError) {
-    return <ErrorMessage text="Could not load this annotation." />;
+    return <AlignmentPageError text="Could not load this annotation." />;
   }
   if (annotation == null) {
-    return <Spin style={{ margin: 40 }} />;
+    return <AlignmentPageSpinner />;
   }
   const { layerAlignment } = annotation;
   if (layerAlignment == null) {
-    return <ErrorMessage text="This annotation is not an alignment annotation." />;
+    return <AlignmentPageError text="This annotation is not an alignment annotation." />;
   }
   const editBlocker = getAlignmentEditBlocker(annotation, activeUserId);
   if (editBlocker != null) {
@@ -64,19 +67,24 @@ function AlignmentView() {
     );
   }
   if (datasetQuery.isError) {
-    return <ErrorMessage text="Could not load the dataset of this annotation." />;
+    return <AlignmentPageError text="Could not load the dataset of this annotation." />;
   }
   if (dataset == null) {
-    return <Spin style={{ margin: 40 }} />;
+    return <AlignmentPageSpinner />;
   }
   if (!dataset.isActive) {
-    return <ErrorMessage text="This dataset is not active, so its layers cannot be aligned." />;
+    return (
+      <AlignmentPageError text="This dataset is not active, so its layers cannot be aligned." />
+    );
   }
-  const layerNames = { A: layerAlignment.fixedLayerName, B: layerAlignment.movingLayerName };
+  const layerNames: LayerNames = {
+    A: layerAlignment.fixedLayerName,
+    B: layerAlignment.movingLayerName,
+  };
   const missingLayerNames = getMissingLayerNames(dataset, layerNames);
   if (missingLayerNames.length > 0) {
     return (
-      <ErrorMessage
+      <AlignmentPageError
         text={`The dataset has no layer named ${missingLayerNames.map((name) => `"${name}"`).join(" or ")} anymore, so this alignment can't be opened.`}
       />
     );
@@ -85,22 +93,11 @@ function AlignmentView() {
     <AlignmentWorkspace
       key={annotation.id}
       dataset={dataset}
-      fixedLayerName={layerNames.A}
-      movingLayerName={layerNames.B}
+      layerNames={layerNames}
       landmarkAnnotation={annotation}
     />
   );
 }
-
-const EDIT_BLOCKER_DESCRIPTIONS: Record<
-  AlignmentEditBlocker,
-  (annotation: APIAnnotation) => string
-> = {
-  notOwner: (annotation) =>
-    `This alignment belongs to ${annotation.owner != null ? `${annotation.owner.firstName} ${annotation.owner.lastName}` : "another user"}. Copy it to your account to work on it.`,
-  archived: () => "This alignment is archived. Unarchive it to work on it.",
-  locked: () => "This alignment is locked. Unlock it to work on it.",
-};
 
 function EditBlockerNotice({
   annotation,
@@ -133,19 +130,11 @@ function EditBlockerNotice({
 
   return (
     <Space orientation="vertical" style={{ margin: 40 }}>
-      <Typography.Text>{EDIT_BLOCKER_DESCRIPTIONS[editBlocker](annotation)}</Typography.Text>
+      <Typography.Text>{getEditBlockerDescription(annotation, editBlocker)}</Typography.Text>
       <AsyncButton type="primary" onClick={resolveEditBlocker}>
         {EDIT_BLOCKER_ACTION_LABELS[editBlocker]}
       </AsyncButton>
     </Space>
-  );
-}
-
-export function ErrorMessage({ text }: { text: string }) {
-  return (
-    <Typography.Text type="danger" style={{ display: "block", margin: 40 }}>
-      {text}
-    </Typography.Text>
   );
 }
 

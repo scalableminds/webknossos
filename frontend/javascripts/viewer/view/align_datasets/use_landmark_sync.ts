@@ -11,11 +11,9 @@ import {
   SIDES,
   type Side,
 } from "./alignment_helpers";
-import type { useIframeBridge } from "./use_iframe_bridge";
+import type { SendMessage } from "./use_iframe_bridge";
 
 const SYNC_INTERVAL_MS = 500;
-
-type IframeBridge = Pick<ReturnType<typeof useIframeBridge>, "whenReady" | "sendMessage">;
 
 /** Keeps the landmarks of the two workers and the persisted landmark annotation in sync:
  * 1. Once all iframes are ready, the stored landmarks of each side are imported into
@@ -29,9 +27,8 @@ type IframeBridge = Pick<ReturnType<typeof useIframeBridge>, "whenReady" | "send
  * annotation.
  */
 export function useLandmarkSync(
-  { whenReady, sendMessage }: IframeBridge,
-  fixedLayerName: string,
-  movingLayerName: string,
+  sendMessage: SendMessage,
+  layerNames: LayerNames,
 ): {
   landmarks: Record<Side, Landmark[]>;
   hasLoadedLandmarks: boolean;
@@ -45,17 +42,18 @@ export function useLandmarkSync(
   const [groupIds, setGroupIds] = useState<Record<Side, number> | null>(null);
   // The landmarks of each side as they were last written to the landmark annotation.
   const storedLandmarksRef = useRef<Record<Side, Landmark[]>>({ A: [], B: [] });
+  // The effect below depends on the names, not on the object, which is created anew on every
+  // render.
+  const { A: fixedLayerName, B: movingLayerName } = layerNames;
 
   useEffect(() => {
-    const layerNames: LayerNames = { A: fixedLayerName, B: movingLayerName };
     let isCancelled = false;
 
     const importStoredLandmarks = async (side: Side): Promise<number> => {
       const groupId = await sendMessage<number>("store", "ensureTreeGroupPath", [
-        getLandmarkGroupPath(layerNames, side),
+        getLandmarkGroupPath({ A: fixedLayerName, B: movingLayerName }, side),
       ]);
       const nmlString = await sendMessage<string>("store", "exportTreesAsNmlString", [{ groupId }]);
-      await whenReady(side);
       if (isCancelled) {
         return groupId;
       }
@@ -65,7 +63,6 @@ export function useLandmarkSync(
     };
 
     (async () => {
-      await whenReady("store");
       const groupIdA = await importStoredLandmarks("A");
       const groupIdB = await importStoredLandmarks("B");
       if (!isCancelled) {
@@ -79,7 +76,7 @@ export function useLandmarkSync(
     return () => {
       isCancelled = true;
     };
-  }, [whenReady, sendMessage, fixedLayerName, movingLayerName]);
+  }, [sendMessage, fixedLayerName, movingLayerName]);
 
   const fetchWorkerLandmarks = async (side: Side) => {
     const nmlString = await sendMessage<string>(side, "exportTreesAsNmlString");

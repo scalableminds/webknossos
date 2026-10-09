@@ -1,14 +1,15 @@
 import type { APIAnnotationInfo, APIDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import type { MutableTreeMap } from "viewer/model/types/tree_types";
+import { getAlignmentEditBlocker } from "viewer/view/align_datasets/alignment_edit_blocker";
 import {
   estimateTransformBtoA,
   getLandmarkPairs,
   getLandmarks,
+  getMeanResidual,
   getMissingLayerNames,
   type Landmark,
 } from "viewer/view/align_datasets/alignment_helpers";
-import { getAlignmentEditBlocker } from "viewer/view/align_datasets/bigwarp_protocol";
 import { describe, expect, it } from "vitest";
 
 const RED: Vector3 = [1, 0, 0];
@@ -155,6 +156,16 @@ describe("Dataset alignment helpers", () => {
     expect(pairs[1].landmarks.B?.position).toEqual(POSITIONS_B[1]);
     expect(pairs[3].landmarks.B).toBeUndefined();
     expect(pairs.every((pair) => pair.residual == null)).toBe(true);
+    expect(getMeanResidual(pairs)).toBeNull();
+  });
+
+  it("computes the mean residual of the pairs that have one", () => {
+    const pairs = [
+      { key: 0, landmarks: {}, residual: 1 },
+      { key: 1, landmarks: {}, residual: null },
+      { key: 2, landmarks: {}, residual: 3 },
+    ];
+    expect(getMeanResidual(pairs)).toBe(2);
   });
 });
 

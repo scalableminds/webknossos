@@ -1,6 +1,5 @@
 import Deferred from "libs/async/deferred";
 import isObject from "lodash-es/isObject";
-import type React from "react";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Side } from "./alignment_helpers";
 import {
@@ -29,16 +28,20 @@ type IncomingMessage = {
   message?: string;
 };
 
-type IframeRefs = React.RefObject<Record<IframeRole, HTMLIFrameElement | null>>;
+export type SendMessage = <T = unknown>(
+  role: IframeRole,
+  type: string,
+  args?: unknown[],
+) => Promise<T>;
 
-function getRoleOfSender(iframesRef: IframeRefs, event: MessageEvent): IframeRole | undefined {
-  return event.source == null
-    ? undefined
-    : IFRAME_ROLES.find((role) => iframesRef.current[role]?.contentWindow === event.source);
-}
-
-/** Lets the page call cross-origin API commands in its iframes and wait for their replies. */
-export function useIframeBridge() {
+/** Connects the alignment page with its iframes. The returned iframesRef must be attached to
+ * the three iframes.
+ * - sendMessage calls a command of the cross-origin API of an iframe and resolves with its
+ *   return value. It waits until the API of that iframe is ready.
+ * - onWorkerCommand is called for each command that a worker sends (see bigwarp_protocol.ts).
+ * - isStoreSaved tells whether the alignment annotation in the store iframe is saved.
+ */
+export function useIframeBridge(onWorkerCommand: (side: Side, command: BigWarpCommand) => void) {
   const iframesRef = useRef<Record<IframeRole, HTMLIFrameElement | null>>({
     A: null,
     B: null,
@@ -52,6 +55,8 @@ export function useIframeBridge() {
   }));
   const pendingRepliesRef = useRef(new Map<string, Deferred<unknown, Error>>());
   const messageCounterRef = useRef(0);
+  const [isStoreSaved, setIsStoreSaved] = useState(true);
+  const handleWorkerCommand = useEffectEvent(onWorkerCommand);
 
   useEffect(() => {
     const handleReply = (messageId: string, reply: IncomingMessage) => {
@@ -68,7 +73,10 @@ export function useIframeBridge() {
     };
 
     const onMessage = (event: MessageEvent<IncomingMessage>) => {
-      const role = getRoleOfSender(iframesRef, event);
+      const role =
+        event.source == null
+          ? undefined
+          : IFRAME_ROLES.find((role) => iframesRef.current[role]?.contentWindow === event.source);
       const { data } = event;
       if (role == null || !isObject(data)) {
         return;
@@ -77,6 +85,18 @@ export function useIframeBridge() {
         readyDeferreds[role].resolve();
       } else if (data.messageId != null) {
         handleReply(data.messageId, data);
+      } else if (
+        data.type === BIG_WARP_COMMAND_MESSAGE_TYPE &&
+        role !== "store" &&
+        data.command != null
+      ) {
+        handleWorkerCommand(role, data.command);
+      } else if (
+        data.type === BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE &&
+        role === "store" &&
+        data.isSaved != null
+      ) {
+        setIsStoreSaved(data.isSaved);
       }
     };
 
@@ -84,73 +104,22 @@ export function useIframeBridge() {
     return () => window.removeEventListener("message", onMessage);
   }, [readyDeferreds]);
 
-  const whenReady = useCallback(
-    (role: IframeRole) => readyDeferreds[role].promise(),
-    [readyDeferreds],
-  );
-
-  // Calls a command of the cross-origin API of the given iframe and resolves with its
-  // return value.
-  const sendMessage = useCallback(
-    <T = unknown>(role: IframeRole, type: string, args: unknown[] = []): Promise<T> => {
+  const sendMessage: SendMessage = useCallback(
+    async <T = unknown>(role: IframeRole, type: string, args: unknown[] = []): Promise<T> => {
+      // An iframe drops messages that arrive before its API is ready.
+      await readyDeferreds[role].promise();
       const iframeWindow = iframesRef.current[role]?.contentWindow;
       if (iframeWindow == null) {
-        return Promise.reject(new Error(`The "${role}" iframe is not mounted.`));
+        throw new Error(`The "${role}" iframe is not mounted.`);
       }
       const messageId = String(++messageCounterRef.current);
       const deferred = new Deferred<unknown, Error>();
       pendingRepliesRef.current.set(messageId, deferred);
       iframeWindow.postMessage({ type, args, messageId }, window.location.origin);
-      return deferred.promise() as Promise<T>;
+      return (await deferred.promise()) as T;
     },
-    [],
+    [readyDeferreds],
   );
 
-  return { iframesRef, whenReady, sendMessage };
-}
-
-/**  Calls onCommand for each command that a worker sends (see bigwarp_protocol.ts). */
-export function useWorkerCommands(
-  iframesRef: IframeRefs,
-  onCommand: (side: Side, command: BigWarpCommand) => void,
-) {
-  const handleCommand = useEffectEvent(onCommand);
-  useEffect(() => {
-    const onMessage = (event: MessageEvent<IncomingMessage>) => {
-      const role = getRoleOfSender(iframesRef, event);
-      const { data } = event;
-      if (
-        role != null &&
-        role !== "store" &&
-        isObject(data) &&
-        data.type === BIG_WARP_COMMAND_MESSAGE_TYPE &&
-        data.command != null
-      ) {
-        handleCommand(role, data.command);
-      }
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [iframesRef]);
-}
-
-// Whether the alignment annotation in the store iframe is saved, as reported by that iframe.
-export function useStoreSavedState(iframesRef: IframeRefs): boolean {
-  const [isSaved, setIsSaved] = useState(true);
-  useEffect(() => {
-    const onMessage = (event: MessageEvent<IncomingMessage>) => {
-      const { data } = event;
-      if (
-        getRoleOfSender(iframesRef, event) === "store" &&
-        isObject(data) &&
-        data.type === BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE &&
-        data.isSaved != null
-      ) {
-        setIsSaved(data.isSaved);
-      }
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [iframesRef]);
-  return isSaved;
+  return { iframesRef, sendMessage, isStoreSaved };
 }

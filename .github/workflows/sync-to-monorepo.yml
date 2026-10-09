@@ -1,0 +1,57 @@
+name: Sync to monorepo
+
+# Triggers "Sync from spokes" (sync-pull.yml) in scalableminds/mono, which pulls
+# the new commits of this repository into its subdirectory there with Copybara.
+#
+# Commits that came from the monorepo (Copybara adds a Mono-RevId trailer to
+# them) are not synced back.
+#
+# Always dispatches spoke=all: sync-pull keeps only one pending run per
+# concurrency group, so per-spoke dispatches could cancel each other.
+#
+# Credentials: GitHub App "scm-copybara" with Actions: read & write on
+# scalableminds/mono. Secrets COPYBARA_CLIENT_ID (the app's client ID) and
+# COPYBARA_APP_PRIVATE_KEY.
+
+on:
+  push:
+    branches: [master]
+
+permissions: {}
+
+env:
+  COPYBARA_CLIENT_ID: ${{ secrets.COPYBARA_CLIENT_ID }}
+
+jobs:
+  dispatch:
+    if: ${{ !contains(github.event.head_commit.message, 'Mono-RevId:') }}
+    runs-on: ubuntu-latest
+    # on the job, not the workflow: skipped runs must not cancel a pending dispatch
+    concurrency:
+      group: sync-to-monorepo
+      cancel-in-progress: true
+    steps:
+      - name: Check credentials
+        id: check
+        run: |
+          if [ -z "$COPYBARA_CLIENT_ID" ]; then
+            echo "::warning::COPYBARA_CLIENT_ID is not configured, not triggering the monorepo sync"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Mint GitHub App token
+        id: app
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ env.COPYBARA_CLIENT_ID }}
+          private-key: ${{ secrets.COPYBARA_APP_PRIVATE_KEY }}
+          owner: scalableminds
+          repositories: mono
+          permission-actions: write
+
+      - name: Trigger sync in scalableminds/mono
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: gh workflow run sync-pull.yml -R scalableminds/mono --ref master -f spoke=all

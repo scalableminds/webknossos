@@ -213,7 +213,7 @@ function DatasetAddRemoteView(props: Props) {
   const hideDatasetUI = maybeDataLayers == null || maybeDataLayers.length === 0;
   return (
     // Using Forms here only to validate fields and for easy layout
-    <div style={{ padding: 5 }}>
+    <div>
       {showLoadingOverlay ? <BrainSpinner /> : null}
       <CardContainer
         title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset"

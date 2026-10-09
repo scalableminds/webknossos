@@ -249,7 +249,13 @@ Michael wants a stack later, once the whole feature is done. Planned layers, bot
    field in `APIAnnotationInfo` added; e2e snapshots edited by hand (not re-run).
    Compiled via the running dev server; `yarn fix-backend`, backend tests and e2e tests
    were not run in that session.
-2. Extract the annotation list component (refactor only).
+2. Extract the annotation list component (refactor only). **Implemented 2026-10-09** (not
+   yet reviewed or tried in the browser): `dashboard/annotation_list.tsx` (`AnnotationList`
+   and `isAnnotationEditable`) holds the filter header, filtering, sorting, rows, empty text,
+   paging and row selection. `explorative_annotations_view.tsx` keeps data loading, the top
+   bar, the details sidebar and the annotation actions. Owner/team filter and sort are
+   internal state of `AnnotationList`; search query, tags, archived toggle and selection are
+   controlled by the page.
 3. Alignment view by annotation id, viewer redirect with store-iframe guard, error states,
    auto-align, removal of localStorage.
 4. Selection page, entry points, badge in the annotation list, docs page, multi-layer hint.

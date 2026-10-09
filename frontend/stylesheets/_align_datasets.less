@@ -1,7 +1,17 @@
-// Alignment view (alignment_view.tsx): an optional resizable panel and the
-// two worker iframes, side by side.
+// Alignment view (alignment_view.tsx): the resizable landmark panel (closed by default)
+// and the two worker iframes, side by side.
 .align-datasets-workspace {
   height: 100%;
+
+  &:not(.is-landmark-panel-closed) .landmark-panel {
+    padding: 8px;
+    background-color: var(--ant-color-bg-base);
+  }
+
+  // A closed landmark panel has a width of 0 and must not leave a resize bar behind.
+  &.is-landmark-panel-closed > .ant-splitter-bar {
+    display: none;
+  }
 
   .align-datasets-worker {
     flex: 1 1 0;
@@ -21,35 +31,4 @@
     margin-right: 4px;
     border-radius: 50%;
   }
-}
-
-.resizable-side-panel {
-  flex: 0 0 auto;
-  overflow: auto;
-  padding: 8px;
-  background-color: var(--ant-color-bg-base);
-}
-
-.resizable-side-panel-divider {
-  flex: 0 0 5px;
-  cursor: col-resize;
-  background-color: var(--ant-color-border);
-  // It is a button so that it can be focused and resized with the keyboard, but it
-  // should look like a plain divider.
-  padding: 0;
-  border: none;
-  appearance: none;
-
-  &:hover,
-  &:focus-visible {
-    background-color: var(--ant-color-primary);
-  }
-}
-
-// Shown while the divider is dragged, see resizable_side_panel.tsx.
-.resizable-side-panel-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  cursor: col-resize;
 }

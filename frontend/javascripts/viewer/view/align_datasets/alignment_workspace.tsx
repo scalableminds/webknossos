@@ -1,4 +1,5 @@
-import { App, Flex } from "antd";
+import { App, Flex, Splitter } from "antd";
+import classnames from "classnames";
 import Toast from "libs/toast";
 import { useEffect, useEffectEvent, useState } from "react";
 import type { APIDataset } from "types/api_types";
@@ -18,9 +19,12 @@ import {
 } from "./alignment_helpers";
 import { type BigWarpCommand, getBigWarpStoreUrl, getBigWarpWorkerUrl } from "./bigwarp_protocol";
 import { LandmarkPanel } from "./landmark_panel";
-import { ResizableSidePanel } from "./resizable_side_panel";
 import { useIframeBridge, useWorkerCommands } from "./use_iframe_bridge";
 import { useLandmarkSync } from "./use_landmark_sync";
+
+const DEFAULT_LANDMARK_PANEL_WIDTH = 380;
+const MIN_LANDMARK_PANEL_WIDTH = 260;
+const MAX_LANDMARK_PANEL_WIDTH = "70%";
 
 type Props = {
   dataset: APIDataset;
@@ -38,6 +42,7 @@ export function AlignmentWorkspace({
   const layerNames: LayerNames = { A: fixedLayerName, B: movingLayerName };
   const { modal } = App.useApp();
   const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(false);
+  const [landmarkPanelWidth, setLandmarkPanelWidth] = useState(DEFAULT_LANDMARK_PANEL_WIDTH);
   const [transformBtoA, setTransformBtoA] = useState<Transform | null>(null);
   // Whether a worker also shows the layer of the other worker.
   const [isOtherLayerVisible, setIsOtherLayerVisible] = useState<Record<Side, boolean>>({
@@ -187,9 +192,26 @@ export function AlignmentWorkspace({
   useWorkerCommands(iframesRef, handleWorkerCommand);
 
   return (
-    <Flex className="align-datasets-workspace">
-      {isLandmarkPanelOpen ? (
-        <ResizableSidePanel>
+    <Splitter
+      className={classnames("align-datasets-workspace", {
+        "is-landmark-panel-closed": !isLandmarkPanelOpen,
+      })}
+      onResize={([panelWidth]) => {
+        if (isLandmarkPanelOpen) {
+          setLandmarkPanelWidth(panelWidth);
+        }
+      }}
+    >
+      {/* Both panels are always rendered, because the iframes would reload if their position
+      in the tree changed. A closed landmark panel has a width of 0. */}
+      <Splitter.Panel
+        className="landmark-panel"
+        size={isLandmarkPanelOpen ? landmarkPanelWidth : 0}
+        min={isLandmarkPanelOpen ? MIN_LANDMARK_PANEL_WIDTH : 0}
+        max={MAX_LANDMARK_PANEL_WIDTH}
+        resizable={isLandmarkPanelOpen}
+      >
+        {isLandmarkPanelOpen ? (
           <LandmarkPanel
             layerNames={layerNames}
             landmarks={landmarks}
@@ -201,27 +223,31 @@ export function AlignmentWorkspace({
             onStoreAlignment={() => transformBtoA != null && storeAlignment(transformBtoA)}
             onFocusLandmark={focusPosition}
           />
-        </ResizableSidePanel>
-      ) : null}
-      {SIDES.map((side) => (
-        <iframe
-          key={side}
-          ref={(element) => {
-            iframesRef.current[side] = element;
-          }}
-          className="align-datasets-worker"
-          title={`${side === "A" ? "Fixed" : "Moving"} layer (${layerNames[side]})`}
-          src={getBigWarpWorkerUrl(dataset, layerNames[side], side === "A")}
-        />
-      ))}
-      <iframe
-        ref={(element) => {
-          iframesRef.current.store = element;
-        }}
-        title="Landmark annotation"
-        style={{ display: "none" }}
-        src={getBigWarpStoreUrl(landmarkAnnotationId)}
-      />
-    </Flex>
+        ) : null}
+      </Splitter.Panel>
+      <Splitter.Panel>
+        <Flex style={{ height: "100%" }}>
+          {SIDES.map((side) => (
+            <iframe
+              key={side}
+              ref={(element) => {
+                iframesRef.current[side] = element;
+              }}
+              className="align-datasets-worker"
+              title={`${side === "A" ? "Fixed" : "Moving"} layer (${layerNames[side]})`}
+              src={getBigWarpWorkerUrl(dataset, layerNames[side], side === "A")}
+            />
+          ))}
+          <iframe
+            ref={(element) => {
+              iframesRef.current.store = element;
+            }}
+            title="Landmark annotation"
+            style={{ display: "none" }}
+            src={getBigWarpStoreUrl(landmarkAnnotationId)}
+          />
+        </Flex>
+      </Splitter.Panel>
+    </Splitter>
   );
 }

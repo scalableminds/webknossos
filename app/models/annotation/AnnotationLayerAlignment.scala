@@ -24,7 +24,10 @@ case class AnnotationLayerAlignment(fixedLayerName: String, movingLayerName: Str
 object AnnotationLayerAlignment {
   implicit val jsonFormat: OFormat[AnnotationLayerAlignment] = Json.format[AnnotationLayerAlignment]
 
-  def fromColumns(fixedLayerNameOpt: Option[String], movingLayerNameOpt: Option[String]): Option[AnnotationLayerAlignment] =
+  def fromColumns(
+      fixedLayerNameOpt: Option[String],
+      movingLayerNameOpt: Option[String]
+  ): Option[AnnotationLayerAlignment] =
     (fixedLayerNameOpt, movingLayerNameOpt) match {
       case (Some(fixed), Some(moving)) => Some(AnnotationLayerAlignment(fixed, moving))
       case _                           => None

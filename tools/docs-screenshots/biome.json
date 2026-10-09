@@ -1,0 +1,5 @@
+{
+  "root": false,
+  "extends": "//",
+  "files": { "includes": ["**/*.mjs", "**/*.json"] }
+}

@@ -1,4 +1,4 @@
-import { PlayCircleOutlined } from "@ant-design/icons";
+import { PlayCircleOutlined, SearchOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import {
   createLayerAlignment,
@@ -8,7 +8,7 @@ import {
   getDataset,
   getLayerAlignments,
 } from "admin/rest_api";
-import { Alert, Flex, Spin, Typography } from "antd";
+import { Alert, Divider, Flex, Input, Spin, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import { AnnotationDetailsSidebar } from "dashboard/annotation_details_sidebar";
 import {
@@ -69,6 +69,7 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [fixedLayerName, setFixedLayerName] = useState<string | null>(null);
   const [movingLayerName, setMovingLayerName] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
@@ -207,18 +208,35 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
           onCreate={createAlignment}
         />
       </Flex>
-      <Typography.Title level={4} style={{ marginTop: 32 }}>
-        Existing alignments
-      </Typography.Title>
+      <Divider
+        plain
+        // The default divider color is barely visible in the light theme.
+        style={{ marginBlock: 40, borderBlockStartColor: "var(--ant-color-border)" }}
+      >
+        or continue an existing alignment
+      </Divider>
       <div className="dashboard-list-with-sidebar">
         <div>
+          <Flex justify="space-between" align="center" gap={16} style={{ marginBottom: 8 }}>
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              Existing alignments
+            </Typography.Title>
+            <Input
+              prefix={<SearchOutlined />}
+              placeholder="Search alignments"
+              allowClear
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              style={{ width: 240 }}
+            />
+          </Flex>
           <AnnotationList
             annotations={shownAlignments}
             activeUser={activeUser}
             isAdminView={false}
             isLoading={alignmentsQuery.isLoading}
             hasMoreAnnotations={false}
-            searchQuery=""
+            searchQuery={searchQuery}
             tags={tags}
             onTagsChange={setTags}
             showArchived={showArchived}
@@ -234,6 +252,7 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
               </Typography.Text>
             }
             onClearFilters={() => {
+              setSearchQuery("");
               setTags([]);
               setShowArchived(false);
             }}

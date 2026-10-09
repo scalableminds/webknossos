@@ -33,7 +33,12 @@ import { type APIAnnotationInfo, type APIUser, annotationToCompact } from "types
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { AnnotationDetailsSidebar } from "./annotation_details_sidebar";
-import { AnnotationList, isAnnotationEditable } from "./annotation_list";
+import {
+  AnnotationList,
+  isAnnotationEditable,
+  mayArchiveAnnotation,
+  mayLockAnnotation,
+} from "./annotation_list";
 import { AnnotationTags } from "./annotation_tags";
 import { DashboardEmptyAnnotationsPlaceholder } from "./dashboard_empty_annotations_placeholder";
 import { DashboardTopBar } from "./dashboard_top_bar";
@@ -441,23 +446,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     }
   };
 
-  mayArchiveAnnotation(annotation: APIAnnotationInfo): boolean {
-    return (
-      annotation.typ === "Explorational" &&
-      annotation.state === "Active" &&
-      this.isAnnotationEditable(annotation) &&
-      !annotation.isLockedByOwner
-    );
-  }
-
-  mayLockAnnotation(annotation: APIAnnotationInfo): boolean {
-    return (
-      annotation.typ === "Explorational" &&
-      annotation.state === "Active" &&
-      annotation.owner?.id === this.props.activeUser.id
-    );
-  }
-
   isAnnotationEditable(annotation: APIAnnotationInfo): boolean {
     return isAnnotationEditable(annotation, this.props.activeUser);
   }
@@ -570,12 +558,14 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
               : undefined
           }
           onArchive={
-            selectedAnnotation != null && this.mayArchiveAnnotation(selectedAnnotation)
+            selectedAnnotation != null &&
+            mayArchiveAnnotation(selectedAnnotation, this.props.activeUser)
               ? () => this.finishOrReopenAnnotation("finish", selectedAnnotation)
               : undefined
           }
           onToggleLock={
-            selectedAnnotation != null && this.mayLockAnnotation(selectedAnnotation)
+            selectedAnnotation != null &&
+            mayLockAnnotation(selectedAnnotation, this.props.activeUser)
               ? () => this.setLockedState(selectedAnnotation, !selectedAnnotation.isLockedByOwner)
               : undefined
           }

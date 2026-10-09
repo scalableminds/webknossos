@@ -1,4 +1,4 @@
-import { App } from "antd";
+import { App, Flex } from "antd";
 import Toast from "libs/toast";
 import { useEffect, useEffectEvent, useState } from "react";
 import type { APIDataset } from "types/api_types";
@@ -187,7 +187,7 @@ export function AlignmentWorkspace({
   useWorkerCommands(iframesRef, handleWorkerCommand);
 
   return (
-    <div className="align-datasets-workspace">
+    <Flex className="align-datasets-workspace">
       {isLandmarkPanelOpen ? (
         <ResizableSidePanel>
           <LandmarkPanel
@@ -222,6 +222,6 @@ export function AlignmentWorkspace({
         style={{ display: "none" }}
         src={getBigWarpStoreUrl(landmarkAnnotationId)}
       />
-    </div>
+    </Flex>
   );
 }

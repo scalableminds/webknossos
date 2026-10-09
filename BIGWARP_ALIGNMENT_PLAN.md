@@ -278,6 +278,14 @@ Michael wants a stack later, once the whole feature is done. Planned layers, bot
      on them (Q6 b; also covers the "replaces layer B's transforms" item in "Before human
      review").
 4. Selection page, entry points, badge in the annotation list, docs page, multi-layer hint.
+   **Implemented 2026-10-09** (not yet reviewed or tried in the browser):
+   `alignment_selection_view.tsx` (title, multi-layer hint with docs link, controlled
+   `LayerPairPicker` that filters the list and creates new alignments, `AnnotationList` with
+   `AnnotationDetailsSidebar`; archived alignments are filtered on the client).
+   Row action: "Open", or the edit-blocker action, which then opens the alignment (for a copy,
+   the new copy). Badge in `AnnotationList` rows (`hideAlignmentPrefix` on the selection
+   page). `mayArchiveAnnotation`/`mayLockAnnotation` moved to `annotation_list.tsx`. Docs page
+   `docs/datasets/aligning_layers.md`, linked from `docs/datasets/index.md`.
 
 ### Decision log (2026-10-09)
 | # | Question | Decision | Alternatives |

@@ -1,4 +1,4 @@
-import Icon, { TeamOutlined } from "@ant-design/icons";
+import Icon, { NodeIndexOutlined, TeamOutlined } from "@ant-design/icons";
 import IconSort from "@images/icons/icon-sort.svg?react";
 import { Button, Radio, Space, Table, Tag } from "antd";
 import type { ColumnType } from "antd/es/table/interface";
@@ -83,6 +83,23 @@ export function isAnnotationEditable(annotation: APIAnnotationInfo, activeUser: 
   return annotation.owner?.id === activeUser.id || isAnnotationEditableByNonOwners(annotation);
 }
 
+export function mayArchiveAnnotation(annotation: APIAnnotationInfo, activeUser: APIUser): boolean {
+  return (
+    annotation.typ === "Explorational" &&
+    annotation.state === "Active" &&
+    isAnnotationEditable(annotation, activeUser) &&
+    !annotation.isLockedByOwner
+  );
+}
+
+export function mayLockAnnotation(annotation: APIAnnotationInfo, activeUser: APIUser): boolean {
+  return (
+    annotation.typ === "Explorational" &&
+    annotation.state === "Active" &&
+    annotation.owner?.id === activeUser.id
+  );
+}
+
 type Props = {
   annotations: Array<APIAnnotationInfo>;
   activeUser: APIUser;
@@ -104,6 +121,9 @@ type Props = {
   onClearFilters: () => void;
   // Called with the annotations shown on the current page (after search, filters and sorting).
   onCurrentPageDataChange?: (annotations: Readonly<APIAnnotationInfo[]>) => void;
+  // Alignment annotations are marked with their layer pair, e.g. "Alignment: color_2 → color_1".
+  // Lists that only contain alignment annotations can leave out the "Alignment:" prefix.
+  hideAlignmentPrefix?: boolean;
 };
 
 // A list of annotations with a header to filter and sort them, as shown in the dashboard.
@@ -124,6 +144,7 @@ export function AnnotationList({
   emptyPlaceholder,
   onClearFilters,
   onCurrentPageDataChange,
+  hideAlignmentPrefix = false,
 }: Props) {
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -212,6 +233,12 @@ export function AnnotationList({
           isReadOnly={!isAnnotationEditable(annotation, activeUser)}
           isLocked={annotation.isLockedByOwner}
         />
+        {annotation.layerAlignment != null ? (
+          <Tag icon={<NodeIndexOutlined />} variant="outlined">
+            {hideAlignmentPrefix ? null : "Alignment: "}
+            {annotation.layerAlignment.movingLayerName} → {annotation.layerAlignment.fixedLayerName}
+          </Tag>
+        ) : null}
         {/* Tags are edited in the details sidebar, so they are only clickable for filtering here. */}
         <AnnotationTags
           annotation={annotation}

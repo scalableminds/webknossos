@@ -217,6 +217,8 @@ export function AnnotationList({
     ));
     const ownerText =
       owner == null ? null : isOwnedByActiveUser(owner) ? "you" : formatUserName(owner);
+    // The creation date is only shown when sorting by it. The modification date is always shown.
+    const isSortedByCreation = sortOption === "newest" || sortOption === "oldest";
 
     return (
       <div>
@@ -250,9 +252,20 @@ export function AnnotationList({
         />
         <RowMetaLine
           items={[
-            <span key="created">
-              created <FormattedDate timestamp={annotation.created} />
-              {ownerText != null ? ` by ${ownerText}` : null}
+            isSortedByCreation || ownerText != null ? (
+              <span key="created">
+                created
+                {isSortedByCreation ? (
+                  <>
+                    {" "}
+                    <FormattedDate timestamp={annotation.created} />
+                  </>
+                ) : null}
+                {ownerText != null ? ` by ${ownerText}` : null}
+              </span>
+            ) : null,
+            <span key="modified">
+              modified <FormattedDate timestamp={annotation.modified} />
             </span>,
             teamTags.length > 0 ? (
               <span key="teams" style={{ display: "flex", alignItems: "center", gap: 4 }}>

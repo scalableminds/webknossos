@@ -2,7 +2,7 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-10-09 (v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
+Last updated: 2026-10-09 (v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
@@ -29,6 +29,9 @@ will likely ask about them.
   the entry. Consider also wrapping the command switch in `cross_origin_api.ts` in a
   try/catch that sends an `err` reply.
 - [ ] **Stale landmark annotation id** (found by the review, also §0.2 point 4 and §9).
+  **Goes away with the next iteration** (section below): the id no longer comes from
+  localStorage, and the alignment view checks `restrictions.allowUpdate` before it
+  starts.
   If the id in localStorage points to a deleted, archived or foreign annotation, the
   store iframe shows an error page and never sends "init". `whenReady("store")` never
   resolves, the page waits forever, and new landmarks are silently not saved. The
@@ -73,11 +76,217 @@ will likely ask about them.
   disables "Store as Default"; the server checks permissions on save anyway.
 
 **Feature-level gaps** (already known, listed for completeness)
-- [ ] **decide: landmark annotation discovery uses localStorage** (§0.2 point 3), so the
-  annotation is not found from other browsers or devices.
+- [ ] ~~decide: landmark annotation discovery uses localStorage~~ (§0.2 point 3).
+  **Replaced by the next iteration** (section below): alignment annotations are stored
+  and found through the backend.
 - [ ] Manual browser QA of the refactor (§0.21) and the single-slice fallback (§0.22).
 - [ ] Remove or move this plan file out of the PR, and fill in the PR template
   (`.github/PULL_REQUEST_TEMPLATE.md`).
+
+---
+
+## Next iteration: alignment annotations stored in the backend (design decided 2026-10-09)
+
+Decided in a question-and-answer round with Michael (2026-10-09). The numbers Q1-Q21 refer
+to that round and are listed in the decision log at the end of this section. Michael's
+mockups were only used during that round; the text below is the source of truth (the
+selection page now differs from his mockup of it).
+
+### Goals
+1. Alignment annotations are real, findable annotations: stored and found through the
+   backend, not through localStorage, so they work across browsers, devices and users.
+2. The first version has a usable UI: opening an existing alignment or creating a new one
+   is easy, and users are nudged to reuse existing alignments of the same layer pair.
+3. Datasets with more than two layers can be aligned in a **star**: one fixed reference
+   layer, every other layer aligned to it, one pair at a time (e.g. 2 → 1, 3 → 1). Each
+   alignment annotation stores the transform of its own moving layer, without touching
+   the others. **Chains** (2 → 1, then 3 → 2) are not supported in this iteration.
+
+### Data model (backend)
+New table, one row per alignment annotation:
+
+```sql
+CREATE TABLE webknossos.annotation_layerAlignments(
+  _annotation TEXT PRIMARY KEY,   -- references annotations._id
+  fixedLayerName TEXT NOT NULL,
+  movingLayerName TEXT NOT NULL,
+  CHECK (fixedLayerName <> movingLayerName)
+);
+```
+
+The dataset is already on the annotation (`annotations._dataset`). A separate table keeps
+the general `annotations` table free of this feature and leaves room for more fields
+later. Needs an evolution and a reversion.
+
+The layer **names** are stored. If a layer is renamed or deleted later, the alignment
+points to a missing layer (Q21, see "Error states").
+
+### Backend API
+- `POST /datasets/:datasetId/layerAlignments`, body `{fixedLayerName, movingLayerName}`:
+  checks that both layers exist and differ, then creates a skeleton annotation (explorational)
+  plus the row in one step. Default name:
+  `<dataset name, cut to about 15 characters with "…"> Alignment: <moving> → <fixed>` (Q7).
+  Returns the annotation info.
+- `GET /datasets/:datasetId/layerAlignments`: all alignment annotations of the dataset
+  that the user can list, with the same rule as the normal annotation list: own
+  annotations plus annotations shared with one of the user's teams (Q11). Returns compact
+  annotation infos (the same format the annotation list uses).
+- The annotation info JSON (full info and compact info) gets the field
+  `layerAlignment: {fixedLayerName, movingLayerName} | null`. The normal annotation list
+  needs it for the badge (Q5, Q14), the viewer for the redirect.
+- **Duplicate** (`AnnotationController.duplicateAnnotation`, used by "Duplicate" and "Copy to
+  my account"): also copies the row, so a copy stays an alignment annotation (Q3, Q16).
+  The copy gets the default name again, because duplicating doesn't copy the name today.
+- Backend e2e snapshots and the frontend type-check snapshots need updating for the new
+  info field.
+
+### Routes (Q1: option C, for consistency with `/datasets/…/view` and `/datasets/…/edit`)
+- `/datasets/:datasetNameAndId/align`: the **selection page**, with the normal navbar.
+- `/datasets/:datasetNameAndId/align/:annotationId`: the **alignment view** (the current
+  workspace), without navbar, because each worker iframe shows its own.
+- The old `/align-datasets/...` routes are removed. They were never released, so no
+  redirect is needed. The routes must come before the dataset catch-all routes in
+  `router.tsx`.
+- Option A was `/align-datasets/:datasetNameAndId` and `/align-datasets/:datasetNameAndId/:annotationId`.
+  Michael chose C; the PR description lists both for the reviewer.
+
+### Selection page (`/datasets/:datasetNameAndId/align`)
+Entry points: the dashboard dataset context menu ("Align Layers…") and the button in the
+dataset settings data tab. Both open this page. From top to bottom (Q2: option c, Q12):
+1. **Title**: "Align layers of <dataset>".
+2. **Multi-layer hint**, only if the dataset has more than two layers: a short text that
+   describes the star workflow (pick one reference layer, align every other layer to it,
+   one pair at a time; aligning to a layer that was moved itself is not supported) and
+   links to a new docs page `docs/datasets/aligning_layers.md` (next to `composing.md`)
+   with the details (Q17: option a).
+3. **Two layer selects** (fixed, moving) and a **create button** below them. The selects
+   also filter the list below to the chosen pair. If alignments for that pair already
+   exist, the button is secondary and a hint says how many exist; if none exist, the button
+   is primary. This way nobody creates an alignment without seeing the existing ones for
+   exactly that pair first.
+4. **The list** of the dataset's alignment annotations, filtered by the selected pair,
+   with the details sidebar on the right.
+
+**The list** reuses the annotation list of the dashboard (Q8: option b, Q13: option a):
+- First, the list is extracted from `dashboard/explorative_annotations_view.tsx` into a
+  reusable component: header with filters (Tags, Owner, Teams, Status) and sort, the rows,
+  and paging. It gets the annotations as a prop and the row actions from outside. Data
+  loading stays in each page. This extraction is a refactor without behavior changes and
+  can later become its own PR in the stack.
+- Rows look like in the annotation list (no table columns, Q9): name, tags, "created … by
+  …", and the stats icons. Because each landmark is a tree with one node, the tree count
+  is the landmark count.
+- The **layer pair is shown as a badge** next to the name, e.g. `layer2 → layer1` (Q14),
+  because the name can be renamed and must not be the only place for the pair. The normal
+  annotation list shows the same badge as `Alignment: layer2 → layer1` (Q5).
+- Sort: last modified, newest first (Q10). There is no "last opened" timestamp in WK.
+- Status filter: active alignments by default, archived ones only when selected (Q15).
+- **Row action** depends on the editability rule (Q19, see below): "Open" if the user may
+  edit; otherwise "Copy to my account" for others, and "Unarchive" / "Unlock" for the
+  owner of an archived or locked alignment. "Copy to my account" goes straight into the
+  alignment view of the new copy (Q18).
+- The details sidebar is the existing `AnnotationDetailsSidebar`, with the same actions as
+  in the annotation list: rename, archive, lock/unlock (Q20).
+
+### Who may open the alignment view (Q3: option a, Q19: option a)
+- The rule is the backend's `restrictions.allowUpdate` from the full annotation info. It
+  covers owner, archived and locked. The list rows don't get `restrictions`, so they use
+  the same rule computed from the list data: owner is the current user, not archived, not
+  locked.
+- Q3 decided owner-only for the first version, instead of the backend's edit rules, which
+  also let team members edit annotations whose collaboration mode allows it. Shared
+  editing is deferred to keep the first version simple (live collaboration currently only
+  works for editable-mapping annotations, not for skeletons, so it isn't a reason here).
+  With `allowUpdate`, a shared annotation in such a mode would still pass the rule, so the
+  alignment view and the redirect also check that the current user is the owner
+  (confirmed by Michael). The PR description lists both options for the reviewer.
+
+### Opening an alignment annotation from elsewhere (Q16)
+- **`/annotations/:id`** (e.g. from the normal annotation list): right after the annotation
+  info is fetched (`model_initialization.ts`, before tracings and the 3D view load), the
+  viewer checks `layerAlignment != null` and the rule above. If both hold, it redirects
+  (`location.replace`) to `/datasets/<dataset>/align/<id>`. If the rule fails, it opens the
+  normal read-only viewer, which already offers "Copy to my account". The copy belongs to
+  the user and keeps the alignment row, so its "Open" button leads to the alignment view
+  through this same redirect.
+- **Store iframe guard**: the hidden store iframe loads `/annotations/:id` too. It gets its
+  own URL param (e.g. `bigwarpStore`, defined in `bigwarp_protocol.ts`) that turns the
+  redirect off. Without it, the page would nest itself endlessly.
+- **`/datasets/…/align/:id`** opened by someone who may not edit it (e.g. a shared link):
+  the page shows "This alignment belongs to <name>." (or "is archived" / "is locked")
+  with the matching button instead of the iframes.
+
+### Alignment view changes
+- Loads the annotation info by the id in the URL. Dataset, fixed layer and moving layer
+  come from `layerAlignment`. No `layerA`/`layerB` URL params and no localStorage anymore
+  (`findOrCreateLandmarkAnnotationId` is removed; old test annotations created that way
+  are not migrated).
+- **Auto-align on open**: after the stored landmarks were imported, the transform is
+  computed and shown right away if there are enough landmark pairs. If there aren't, no
+  message is shown.
+- **Error states**: a layer of the alignment no longer exists in the dataset (Q21: option
+  a) → error message naming the layer; the list row shows the stored names, marked as
+  missing. Not editable → see above.
+
+### Storing the transform (star only, Q6)
+- "Store as Default" keeps writing only the moving layer's `coordinateTransformations`
+  (`[BtoA, ...transforms of the fixed layer]`), so alignments of other layers aren't
+  touched.
+- New: if the fixed layer itself has transforms, a warning says that the stored alignment
+  builds on the fixed layer's current transforms, and that changing them later makes this
+  alignment outdated (Q6: option b).
+- The transform is not stored in the annotation. It is always computed again from the
+  landmarks.
+
+### Implementation order (all on this branch, no stacking yet, Q4)
+Michael wants a stack later, once the whole feature is done. Planned layers, bottom to top:
+1. Backend: table, evolution/reversion, endpoints, info field, duplicate. **Implemented
+   2026-10-09** (not yet reviewed): evolution 186 `annotation_layerAlignments`,
+   `models/annotation/AnnotationLayerAlignment.scala` (case class + DAO),
+   `AnnotationController.createLayerAlignment` / `listLayerAlignments` (routes
+   `POST`/`GET /api/datasets/:datasetId/layerAlignments`), `layerAlignment` in the full and
+   compact annotation JSON, copied on duplicate. Frontend type `APILayerAlignment` and the
+   field in `APIAnnotationInfo` added; e2e snapshots edited by hand (not re-run).
+   Compiled via the running dev server; `yarn fix-backend`, backend tests and e2e tests
+   were not run in that session.
+2. Extract the annotation list component (refactor only).
+3. Alignment view by annotation id, viewer redirect with store-iframe guard, error states,
+   auto-align, removal of localStorage.
+4. Selection page, entry points, badge in the annotation list, docs page, multi-layer hint.
+
+### Decision log (2026-10-09)
+| # | Question | Decision | Alternatives |
+|---|---|---|---|
+| — | Where to store "this is an alignment of layer X onto Y" | New table `annotation_layerAlignments` | Tags (user-editable, fragile), general annotation metadata (more work, also user-editable), inside the tracing proto (not queryable by the server) |
+| Q1 | URLs | C: `/datasets/:id/align` + `/datasets/:id/align/:annotationId` | A: `/align-datasets/…` |
+| Q2/Q12 | Order on the selection page | Layer selects (filter + create) on top, list below | List on top, picker below (mockup 3); create on top without filter |
+| Q3 | Who opens the alignment view directly | Owner only | Backend edit rules incl. collaboration modes |
+| Q4 | PR stacking | Not yet; one branch until the feature is done | Stack now |
+| Q5 | Marker in the normal annotation list | Yes, badge | — |
+| Q6 | Chains | Star only; warning if the fixed layer has transforms | Handle chains now |
+| Q7 | Default name | `<dataset…> Alignment: moving → fixed` | No name |
+| Q8 | List component | Extract from the annotation list view | New small table |
+| Q9 | Row layout | Like the annotation list rows, no table columns | Table with columns |
+| Q10 | Sort | Last modified | New "last opened" tracking |
+| Q11 | Which alignments are listed | Own + team-shared | Also organization-wide "Internal" ones |
+| Q13 | Scope of the extracted component | Header (filters, sort), rows, paging; actions from outside | Rows only |
+| Q14 | Layer pair in a row | Badge next to the name | — |
+| Q15 | Archived alignments | Hidden by default, shown via status filter | Never shown |
+| Q16 | Opening via `/annotations/:id` | Redirect only if editable; else normal read-only viewer with "Copy to my account" | — |
+| Q17 | Star workflow help | Hint + docs page | Also preselect the usual fixed layer and warn about chains (follow-up) |
+| Q18 | After copying from the list | Go straight into the alignment view | Stay on the list |
+| Q19 | Rule for "editable" | `restrictions.allowUpdate` (+ owner check, Q3) | Owner only, archived/locked handled separately |
+| Q20 | Sidebar actions | Same as the annotation list (rename, archive, lock) | Details only |
+| Q21 | Renamed/deleted layer | Error message, row marks the missing layer | Backend updates rows on rename (follow-up) |
+
+### Follow-ups (not in this iteration)
+- Preselect the fixed layer used most often by the dataset's existing alignments, and warn
+  when the chosen fixed layer is the moving layer of another alignment (Q17: option b).
+- Update the alignment rows in the backend when a dataset layer is renamed (Q21: option b).
+- Chains (2 → 1, then 3 → 2), e.g. by recomputing dependent layers (Q6: option c).
+- "Last opened" tracking for annotations, for a better sort order (Q10: option b).
+- Opening shared alignments for editing by team members (Q3: option b).
+- Read-only alignment view (instead of only offering a copy).
 
 ---
 

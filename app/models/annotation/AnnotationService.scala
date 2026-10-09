@@ -74,6 +74,7 @@ class AnnotationService @Inject() (
     savedTracingInformationHandler: SavedTracingInformationHandler,
     annotationDAO: AnnotationDAO,
     annotationLayerDAO: AnnotationLayerDAO,
+    annotationLayerAlignmentDAO: AnnotationLayerAlignmentDAO,
     userDAO: UserDAO,
     taskTypeDAO: TaskTypeDAO,
     taskService: TaskService,
@@ -293,9 +294,13 @@ class AnnotationService @Inject() (
       _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
     } yield newAnnotationLayers
 
-  def createExplorationalFor(user: User, dataset: Dataset, annotationLayerParameters: List[AnnotationLayerParameters])(
-      using ctx: DBAccessContext
-  ): Fox[Annotation] = {
+  def createExplorationalFor(
+      user: User,
+      dataset: Dataset,
+      annotationLayerParameters: List[AnnotationLayerParameters],
+      name: String = AnnotationDefaults.defaultName,
+      layerAlignment: Option[AnnotationLayerAlignment] = None
+  )(using ctx: DBAccessContext): Fox[Annotation] = {
     val newAnnotationId = ObjectId.generate
     val datasetId = dataset._id
     for {
@@ -304,10 +309,39 @@ class AnnotationService @Inject() (
         newAnnotationId,
         annotationLayerParameters
       ) ?~> Msg.Annotation.createTracingsFailed
-      annotation = Annotation(newAnnotationId, datasetId, None, user._id, annotationLayers)
-      _ <- annotationDAO.insertOne(annotation)
+      annotation = Annotation(newAnnotationId, datasetId, None, user._id, annotationLayers, name = name)
+      _ <- annotationDAO.insertOne(annotation, layerAlignment)
     } yield annotation
   }
+
+  // Creates a skeleton annotation whose landmarks map the moving layer onto the fixed layer.
+  def createLayerAlignmentFor(user: User, dataset: Dataset, layerAlignment: AnnotationLayerAlignment)(using
+      ctx: DBAccessContext
+  ): Fox[Annotation] =
+    for {
+      _ <- Fox.fromBool(
+        layerAlignment.fixedLayerName != layerAlignment.movingLayerName
+      ) ?~> Msg.Annotation.LayerAlignment.sameLayers
+      dataSource <- datasetService.usableDataSourceFor(dataset)
+      layerNames = dataSource.dataLayers.map(_.name)
+      _ <- Fox.serialCombined(List(layerAlignment.fixedLayerName, layerAlignment.movingLayerName))(layerName =>
+        Fox.fromBool(layerNames.contains(layerName)) ?~> Msg.Annotation.LayerAlignment.layerNotFound(layerName)
+      )
+      skeletonLayerParameters = AnnotationLayerParameters(
+        AnnotationLayerType.Skeleton,
+        fallbackLayerName = None,
+        magRestrictions = None,
+        name = None,
+        additionalAxes = None
+      )
+      annotation <- createExplorationalFor(
+        user,
+        dataset,
+        List(skeletonLayerParameters),
+        layerAlignment.defaultAnnotationName(dataset.name),
+        Some(layerAlignment)
+      )
+    } yield annotation
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
   def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(using
@@ -783,6 +817,7 @@ class AnnotationService @Inject() (
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
       contributors <- userDAO.findContributorsForAnnotation(annotation._id)
       contributorsJs <- Fox.serialCombined(contributors)(c => userJsonForAnnotation(c._id, Some(c)))
+      layerAlignment <- annotationLayerAlignmentDAO.findOneForAnnotation(annotation._id)
     } yield Json.obj(
       "modified" -> annotation.modified,
       "created" -> annotation.created,
@@ -810,7 +845,8 @@ class AnnotationService @Inject() (
       "user" -> userJson,
       "owner" -> userJson,
       "contributors" -> contributorsJs,
-      "collaborationMode" -> annotation.collaborationMode
+      "collaborationMode" -> annotation.collaborationMode,
+      "layerAlignment" -> layerAlignment
     )
   }
 
@@ -908,7 +944,8 @@ class AnnotationService @Inject() (
         "firstName" -> annotationInfo.ownerFirstName,
         "lastName" -> annotationInfo.ownerLastName
       ),
-      "collaborationMode" -> annotationInfo.collaborationMode
+      "collaborationMode" -> annotationInfo.collaborationMode,
+      "layerAlignment" -> annotationInfo.layerAlignment
     )
   }
 

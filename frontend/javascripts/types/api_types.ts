@@ -521,6 +521,13 @@ export type EditableLayerProperties = {
 export type AnnotationCollaborationMode = "OwnerOnly" | "Exclusive" | "Concurrent";
 export const AnnotationCollaborationModes = ["OwnerOnly", "Exclusive", "Concurrent"] as const;
 
+// Set if the annotation is a layer alignment: its landmarks map the moving layer onto the
+// fixed layer of the dataset.
+export type APILayerAlignment = {
+  readonly fixedLayerName: string;
+  readonly movingLayerName: string;
+};
+
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly datasetId: string;
@@ -543,6 +550,7 @@ export type APIAnnotationInfo = {
   readonly owner?: APIUserCompact;
   readonly teams: APITeam[];
   readonly collaborationMode: AnnotationCollaborationMode;
+  readonly layerAlignment: APILayerAlignment | null;
 };
 
 export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfo {
@@ -563,6 +571,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     collaborationMode,
     organization,
     annotationLayers,
+    layerAlignment,
   } = annotation;
 
   return {
@@ -582,6 +591,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     owner,
     teams,
     collaborationMode,
+    layerAlignment,
   };
 }
 

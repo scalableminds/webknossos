@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import type { APIDataset } from "types/api_types";
 import { Identity4x4, type Vector3 } from "viewer/constants";
 import {
+  getTransformPointUnscaledFn,
   invertTransform,
   type Transform,
-  transformPointUnscaled,
 } from "viewer/model/helpers/transformation_helpers";
 import {
   estimateTransformBtoA,
@@ -102,7 +102,7 @@ export function AlignmentWorkspace({
     }
     const position = await sendMessage<Vector3>(side, "getCameraPosition");
     const transformToOtherSide = side === "A" ? invertTransform(transformBtoA) : transformBtoA;
-    focusPosition(OTHER_SIDE[side], transformPointUnscaled(transformToOtherSide)(position));
+    focusPosition(OTHER_SIDE[side], getTransformPointUnscaledFn(transformToOtherSide)(position));
   };
 
   // Saves the landmark annotation right away instead of waiting for its auto-save.

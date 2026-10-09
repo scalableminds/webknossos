@@ -1,14 +1,14 @@
 import { createExplorational, getDataset, updateDatasetPartial } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import zip from "lodash-es/zip";
+import { Matrix, SingularValueDecomposition } from "ml-matrix";
 import { TracingTypeEnum } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
-  checkLandmarksForThinPlateSpline,
   createAffineTransform,
+  getTransformPointUnscaledFn,
   type Transform,
-  transformPointUnscaled,
 } from "viewer/model/helpers/transformation_helpers";
 import type { MutableTreeMap } from "viewer/model/types/tree_types";
 
@@ -32,6 +32,9 @@ export type LandmarkPair = {
 // Three pairs always lie in one plane, so they only work with the fallback in
 // estimateTransformBtoA.
 const MIN_LANDMARK_PAIR_COUNT = 3;
+// If the smallest extent of a point cloud is below this fraction of its largest extent,
+// the points are treated as lying in one plane (or on one line).
+const MIN_EXTENT_RATIO = 1e-6;
 
 // Each node is one landmark. Landmarks are paired by their order: the n-th landmark of
 // one side belongs to the n-th landmark of the other side. The order is given by the
@@ -50,7 +53,8 @@ export function getLandmarkPairs(
   landmarks: Record<Side, Landmark[]>,
   transformBtoA: Transform | null,
 ): LandmarkPair[] {
-  const transformPointBtoA = transformBtoA != null ? transformPointUnscaled(transformBtoA) : null;
+  const transformPointBtoA =
+    transformBtoA != null ? getTransformPointUnscaledFn(transformBtoA) : null;
   return zip(landmarks.A, landmarks.B).map(([landmarkA, landmarkB], index) => ({
     key: index,
     landmarks: { A: landmarkA, B: landmarkB },
@@ -61,13 +65,25 @@ export function getLandmarkPairs(
   }));
 }
 
+// The affine estimation needs points that span all three dimensions. It doesn't reliably
+// throw for points in one plane, but returns a matrix with huge values instead.
+function spansThreeDimensions(positions: Vector3[]): boolean {
+  const center = V3.scale(
+    positions.reduce((sum, position) => V3.add(sum, position)),
+    1 / positions.length,
+  );
+  const centeredPositions = new Matrix(positions.map((position) => V3.sub(position, center)));
+  // The singular values are sorted descending. They measure the extent of the centered
+  // points along their three main directions.
+  const [largestExtent, , smallestExtent] = new SingularValueDecomposition(centeredPositions, {
+    computeLeftSingularVectors: false,
+    computeRightSingularVectors: false,
+  }).diagonal;
+  return smallestExtent > largestExtent * MIN_EXTENT_RATIO;
+}
+
 function canEstimateTransform(sourcePositions: Vector3[], targetPositions: Vector3[]) {
-  try {
-    checkLandmarksForThinPlateSpline(sourcePositions, targetPositions);
-    return true;
-  } catch {
-    return false;
-  }
+  return spansThreeDimensions(sourcePositions) && spansThreeDimensions(targetPositions);
 }
 
 function addCopiesInNextSlice(positions: Vector3[]): Vector3[] {

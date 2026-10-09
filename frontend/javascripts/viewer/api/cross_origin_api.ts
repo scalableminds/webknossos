@@ -58,8 +58,7 @@ const onMessage = async (event) => {
       const nmlAsString = args[0];
 
       if (isString(nmlAsString)) {
-        // The optional second argument is the id of the tree group to import into.
-        returnValue = await api.tracing.importNmlAsString(nmlAsString, args[1]);
+        await api.tracing.importNmlAsString(nmlAsString);
       } else {
         const errorMessage = "The first argument needs to be the content of the nml as a string.";
         console.warn(errorMessage);
@@ -79,6 +78,11 @@ const onMessage = async (event) => {
 
     case "exportTreesAsNmlString": {
       returnValue = await api.tracing.exportTreesAsNmlString(args[0]);
+      break;
+    }
+
+    case "replaceTreesInGroup": {
+      await api.tracing.replaceTreesInGroup(args[0], args[1]);
       break;
     }
 

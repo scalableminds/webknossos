@@ -98,6 +98,36 @@ describe("Dataset alignment helpers", () => {
     }
   });
 
+  it("estimates a transform from realistic landmarks in a single z slice", () => {
+    // With these coordinates, the affine solver returns huge values instead of throwing.
+    const positionsA: Vector3[] = [
+      [1203, 4511, 7],
+      [3810, 402, 7],
+      [2290, 3001, 7],
+      [517, 980, 7],
+      [4100, 4400, 7],
+    ];
+    const positionsB = positionsA.map(([x, y]): Vector3 => [x + 12, y - 30, 3]);
+    const landmarks = { A: toLandmarks(positionsA), B: toLandmarks(positionsB) };
+    const result = estimateTransformBtoA(landmarks);
+    if (!("transform" in result)) {
+      throw new Error(result.errorMessage);
+    }
+
+    expect(result.usedCopiesInNextSlice).toBe(true);
+    for (const pair of getLandmarkPairs(landmarks, result.transform)) {
+      expect(pair.residual).toBeCloseTo(0, 3);
+    }
+  });
+
+  it("accepts two landmarks at the same position", () => {
+    const landmarks = {
+      A: toLandmarks([...POSITIONS_A, POSITIONS_A[0]]),
+      B: toLandmarks([...POSITIONS_B, POSITIONS_B[0]]),
+    };
+    expect(estimateTransformBtoA(landmarks)).toHaveProperty("transform");
+  });
+
   it("estimates a transform that maps the landmarks of B onto A", () => {
     const landmarks = { A: toLandmarks(POSITIONS_A), B: toLandmarks(POSITIONS_B) };
     const result = estimateTransformBtoA(landmarks);

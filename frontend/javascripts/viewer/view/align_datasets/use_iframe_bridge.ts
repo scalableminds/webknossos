@@ -31,6 +31,7 @@ function getRoleOfSender(iframesRef: IframeRefs, event: MessageEvent): IframeRol
     : IFRAME_ROLES.find((role) => iframesRef.current[role]?.contentWindow === event.source);
 }
 
+/** Lets the page call cross-origin API commands in its iframes and wait for their replies. */
 export function useIframeBridge() {
   const iframesRef = useRef<Record<IframeRole, HTMLIFrameElement | null>>({
     A: null,
@@ -93,7 +94,7 @@ export function useIframeBridge() {
       const messageId = String(++messageCounterRef.current);
       const deferred = new Deferred<unknown, Error>();
       pendingRepliesRef.current.set(messageId, deferred);
-      iframeWindow.postMessage({ type, args, messageId }, "*");
+      iframeWindow.postMessage({ type, args, messageId }, window.location.origin);
       return deferred.promise() as Promise<T>;
     },
     [],
@@ -102,7 +103,7 @@ export function useIframeBridge() {
   return { iframesRef, whenReady, sendMessage };
 }
 
-// Calls onCommand for each command that a worker sends (see bigwarp_protocol.ts).
+/**  Calls onCommand for each command that a worker sends (see bigwarp_protocol.ts). */
 export function useWorkerCommands(
   iframesRef: IframeRefs,
   onCommand: (side: Side, command: BigWarpCommand) => void,

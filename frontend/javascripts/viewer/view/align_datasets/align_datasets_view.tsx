@@ -37,7 +37,7 @@ function AlignDatasetsView() {
 
   if (datasetId == null) {
     return (
-      <ErrorMessage text="This page needs a dataset id in the URL. Please open it via the dataset actions menu." />
+      <ErrorMessage text="This page needs a dataset id in the URL. Please open it via the dataset actions menu in the dataset list in the dashboard." />
     );
   }
   if (datasetQuery.isError) {

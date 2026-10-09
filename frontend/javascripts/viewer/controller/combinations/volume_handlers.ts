@@ -26,8 +26,8 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import {
+  getTransformPointUnscaledFn,
   invertTransform,
-  transformPointUnscaled,
 } from "viewer/model/helpers/transformation_helpers";
 import { api, Model, Store } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
@@ -58,7 +58,7 @@ function getUntransformedSegmentationPosition(state: WebknossosState, globalPosR
     layer,
     nativelyRenderedLayerName,
   );
-  const layerPos = transformPointUnscaled(invertTransform(segmentationTransforms))(
+  const layerPos = getTransformPointUnscaledFn(invertTransform(segmentationTransforms))(
     globalPosRounded,
   );
   return layerPos;

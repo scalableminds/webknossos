@@ -53,5 +53,8 @@ export type BigWarpCommand =
 export const BIG_WARP_COMMAND_MESSAGE_TYPE = "bigwarpCommand";
 
 export function sendCommandToAlignmentPage(command: BigWarpCommand) {
-  window.parent.postMessage({ type: BIG_WARP_COMMAND_MESSAGE_TYPE, command }, "*");
+  window.parent.postMessage(
+    { type: BIG_WARP_COMMAND_MESSAGE_TYPE, command },
+    window.location.origin,
+  );
 }

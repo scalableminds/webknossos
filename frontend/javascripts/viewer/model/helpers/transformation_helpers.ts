@@ -162,7 +162,7 @@ export function chainTransforms(transformsA: Transform | null, transformsB: Tran
   );
 }
 
-export const transformPointUnscaled = (transforms: Transform) => {
+export const getTransformPointUnscaledFn = (transforms: Transform) => {
   if (transforms.type === "affine") {
     const matrix = M4x4.transpose(transforms.affineMatrix);
     return (pos: Vector3) => M4x4.transformVectorsAffine(matrix, [pos])[0];

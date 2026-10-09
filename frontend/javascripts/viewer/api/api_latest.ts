@@ -140,6 +140,7 @@ import {
   deleteCommentAction,
   deleteNodeAction,
   deleteTreeAction,
+  deleteTreesAction,
   resetSkeletonTracingAction,
   setActiveNodeAction,
   setActiveTreeAction,
@@ -650,59 +651,48 @@ class TracingApi {
     Store.dispatch(setTreeGroupAction(groupId, treeId));
   }
 
-  /**
-   * Imports the trees and tree groups of an NML string. By default, they are added at the
-   * root level. Pass targetGroupId to nest them into an existing tree group instead.
-   * Resolves with the ids that were assigned to the imported trees (empty if the
-   * annotation can't be edited).
-   *
-   * @example
-   * const treeIds = await api.tracing.importNmlAsString(nmlString);
-   */
-  async importNmlAsString(
-    nmlString: string,
-    targetGroupId: number = MISSING_GROUP_ID,
-  ): Promise<number[]> {
+  async importNmlAsString(nmlString: string) {
     const { treeGroups, trees } = await parseNml(nmlString);
-    let importedTreeIds: number[] = [];
-    // The reducer calls the callback synchronously, but only if the import is allowed.
-    Store.dispatch(
-      addTreesAndGroupsAction(
-        trees,
-        treeGroups,
-        (treeIds) => {
-          importedTreeIds = treeIds;
-        },
-        true,
-        targetGroupId,
-      ),
-    );
-    return importedTreeIds;
+    Store.dispatch(addTreesAndGroupsAction(trees, treeGroups));
   }
 
   /**
-   * Serializes trees to an NML string. If treeIds is given, only these trees are exported.
-   * If groupId is given, only the trees directly inside that group are exported.
-   * Unlike the NML download, hidden trees are included and tree groups are left out, so
-   * importing the result puts all trees at the root level (or into the target group).
+   * Replaces the trees directly inside the given tree group with the trees of an NML
+   * string. Subgroups and their trees are kept.
    *
    * @example
-   * const nmlString = await api.tracing.exportTreesAsNmlString({ treeIds: [1, 2] });
+   * await api.tracing.replaceTreesInGroup(nmlString, groupId);
    */
-  async exportTreesAsNmlString(
-    filter: { treeIds?: number[]; groupId?: number } = {},
-  ): Promise<string> {
+  async replaceTreesInGroup(nmlString: string, groupId: number) {
+    const { treeGroups, trees } = await parseNml(nmlString);
+    // Parse before deleting, so that no save can happen between deleting and adding.
+    const oldTreeIds = assertSkeleton(Store.getState().annotation)
+      .trees.values()
+      .filter((tree) => tree.groupId === groupId)
+      .map((tree) => tree.treeId)
+      .toArray();
+    if (oldTreeIds.length > 0) {
+      Store.dispatch(deleteTreesAction(oldTreeIds, true));
+    }
+    Store.dispatch(addTreesAndGroupsAction(trees, treeGroups, undefined, true, groupId));
+  }
+
+  /**
+   * Serializes trees to an NML string. If groupId is given, only the trees directly inside
+   * that group are exported. Unlike the NML download, hidden trees are included and tree
+   * groups are left out, so importing the result puts all trees at the root level (or
+   * into the target group of replaceTreesInGroup).
+   *
+   * @example
+   * const nmlString = await api.tracing.exportTreesAsNmlString({ groupId: 3 });
+   */
+  async exportTreesAsNmlString(filter: { groupId?: number } = {}): Promise<string> {
     const buildInfo = await getBuildInfo();
     const state = Store.getState();
     const skeletonTracing = assertSkeleton(state.annotation);
-    const treeIds = filter.treeIds != null ? new Set(filter.treeIds) : null;
     const exportedTrees = skeletonTracing.trees
       .values()
-      .filter(
-        (tree) =>
-          (treeIds == null || treeIds.has(tree.treeId)) &&
-          (filter.groupId == null || tree.groupId === filter.groupId),
-      )
+      .filter((tree) => filter.groupId == null || tree.groupId === filter.groupId)
       .map((tree): [number, Tree] => [tree.treeId, { ...tree, isVisible: true, groupId: null }])
       .toArray();
     const exportedTracing = {

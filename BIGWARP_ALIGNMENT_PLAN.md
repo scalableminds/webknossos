@@ -2,13 +2,82 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-10-08 (v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22)
+Last updated: 2026-10-09 (v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
 > compacted, so this file is the durable memory: what the feature is, what already
 > exists, what's hacky/broken, what's decided, and what's still open. Edit it freely —
 > it's a living doc, not something regenerated from scratch each session.
+
+---
+
+## Before human review: open items
+
+Collected from the `/code-review` run (2026-10-07) and the file-by-file walkthrough of the
+refactored code (2026-10-08). Resolve or consciously accept each item before the PR goes
+to a human reviewer. Items marked **decide** may be fine as they are, but the reviewer
+will likely ask about them.
+
+**Robustness of the iframe communication** (`use_iframe_bridge.ts`)
+- [ ] **No timeout for replies.** `sendMessage` waits forever if an iframe never replies.
+  This happens when a cross-origin command throws (the async `onMessage` handler in
+  `cross_origin_api.ts` has no try/catch around the commands, so no `err` reply is sent)
+  or when the iframe reloads while a request is pending. Because `usePolling` waits for
+  the current run to finish, one lost reply stops the whole landmark sync, and the
+  entry stays in `pendingRepliesRef`. Fix: reject the promise after e.g. 10 s and delete
+  the entry. Consider also wrapping the command switch in `cross_origin_api.ts` in a
+  try/catch that sends an `err` reply.
+- [ ] **Stale landmark annotation id** (found by the review, also §0.2 point 4 and §9).
+  If the id in localStorage points to a deleted, archived or foreign annotation, the
+  store iframe shows an error page and never sends "init". `whenReady("store")` never
+  resolves, the page waits forever, and new landmarks are silently not saved. The
+  localStorage key also doesn't contain the user id, so a second user in the same
+  browser reuses the first user's annotation. Fix: check that the annotation exists and
+  belongs to the user before reusing the id (or add a timeout on `whenReady("store")`),
+  and then create a new annotation. Add the user id to the key.
+- [ ] **Reloaded iframe** (low priority). If an iframe reloads, its ready Deferred is
+  already resolved, so the page sends commands before the new "init" arrives. Workers
+  block navigation and the store iframe is hidden, so this is unlikely in practice.
+
+**Landmark sync** (`use_landmark_sync.ts`)
+- [ ] **`/api/buildinfo` on every export.** Each `exportTreesAsNmlString` call fetches the
+  build info for the NML header, so the sync loop sends about four requests per second
+  while the page is open. Fix: cache the build info in `api_latest.ts`, or add an export
+  path that doesn't need it.
+- [x] ~~Deletions and moved landmarks are not synced.~~ Fixed in §0.23: each worker now
+  mirrors its whole side into the landmark annotation.
+- [ ] **Landmark order after an early click.** Pairs are matched by tree id order. If the
+  user clicks a landmark in a worker before the stored landmarks were imported, that
+  tree gets the lowest id and all pairs shift by one. Fix: cover the workers with a
+  spinner or overlay until the import is done.
+- [ ] **Failed initial import stops the sync silently.** If loading the stored landmarks
+  fails, a toast appears, but the sync loop never starts, so new landmarks are not saved
+  for the rest of the session. Fix: retry, or show a permanent error state.
+- [ ] **decide: landmarks can be up to 500 ms old when aligning.** `align` uses the last
+  synced landmarks. Pressing `t` right after placing a landmark may leave it out of the
+  fit. Fix: fetch fresh landmarks inside `align` (two extra round trips per `t`).
+
+**Alignment and persistence** (`alignment_workspace.tsx`, `alignment_helpers.ts`)
+- [ ] **decide: "Store as Default" replaces layer B's transforms** with
+  `[BtoA, ...transforms of layer A]` (§0.21). This is correct for landmarks placed in raw
+  layer coordinates, but any transform layer B had before is dropped without a warning.
+  Consider a confirmation dialog that says so.
+- [ ] **decide: the preview ignores existing dataset transforms.** `setAffineLayerTransforms`
+  replaces the layer's transforms in the worker, so transforms the dataset already had
+  don't show in the preview. Consistent with the point above, but worth a sentence in the
+  PR description.
+- [ ] **decide: single-slice fallback without confirmation** (§0.22). The composition
+  wizard asks before copying landmarks to `z + 1`; this tool only shows a toast.
+- [ ] **decide: `dataset.isEditable` is read once when the page loads.** It only enables or
+  disables "Store as Default"; the server checks permissions on save anyway.
+
+**Feature-level gaps** (already known, listed for completeness)
+- [ ] **decide: landmark annotation discovery uses localStorage** (§0.2 point 3), so the
+  annotation is not found from other browsers or devices.
+- [ ] Manual browser QA of the refactor (§0.21) and the single-slice fallback (§0.22).
+- [ ] Remove or move this plan file out of the PR, and fill in the PR template
+  (`.github/PULL_REQUEST_TEMPLATE.md`).
 
 ---
 
@@ -849,8 +918,10 @@ folder `frontend/javascripts/viewer/view/align_datasets/`:
 **Cross-origin API.** The feature-specific commands were replaced by general ones:
 - `exportTreesAsNmlString({ treeIds?, groupId? })` replaces `exportTreesInGroupAsNmlString`
   and `exportTreesByIdsAsNmlString`. It includes hidden trees and leaves out tree groups.
+  (§0.23 removed the `treeIds` filter again.)
 - `importNml(nml, targetGroupId?)` replaces `importNmlIntoGroup`. `importNmlAsString` now
-  returns the ids of the imported trees.
+  returns the ids of the imported trees. (§0.23 replaced this with `replaceTreesInGroup`
+  and restored `importNml` to its master version.)
 - `ensureTreeGroupPath(groupNames)` replaces `ensureLandmarkGroups`. It finds or creates a
   nested group path, matched by name level by level.
 - `getTransformsForLayer` was removed (unused). The `await` on `getAvailableMeshFiles`
@@ -874,6 +945,7 @@ or describe history.
    Exports now include hidden trees.
 4. The ids of already stored worker trees were guessed from the store's ids. Now they are
    the ids returned by `importNml`. A landmark clicked while loading is still stored.
+   (Since §0.23, no tree ids are tracked anymore.)
 5. The sync loop could start before the stored landmarks were imported. Now it starts
    only after the import.
 6. The settings-saga guard skipped saving settings for **every** sandbox. Now it only
@@ -887,7 +959,7 @@ or describe history.
    layer B now gets `[BtoA, ...transforms of layer A]`, replacing its old list. The button
    is disabled if the user can't edit the dataset.
 
-**Still open from the review:** if the annotation id in localStorage points to a deleted
+**Still open from the review** (tracked in "Before human review" at the top): if the annotation id in localStorage points to a deleted
 or foreign annotation, the store iframe never sends "init" and the page waits forever
 (§0.2 point 4). Every NML export also fetches `/api/buildinfo`, which is about four
 requests per second while the page is open.
@@ -909,9 +981,57 @@ the alignment assumes the layers are only shifted against each other along z. Th
 fallback assumes that one z slice of layer B corresponds to one z slice of layer A, so it
 can't recover a scaling or rotation along z.
 
+**Correction (2026-10-09):** the "can a transform be estimated?" check first reused
+`checkLandmarksForThinPlateSpline`, which builds a TPS only to see whether it throws. A
+test with realistic coordinates showed that the affine solver (`ml-matrix`'s `solve`)
+does not throw for landmarks in one plane, but returns values around 1e17 because of
+rounding. The TPS check caught this only by chance, and it also rejected valid input
+(e.g. two landmarks at the same position). It was replaced by `spansThreeDimensions` in
+`alignment_helpers.ts`: a singular value decomposition of the centered landmarks, which
+treats them as planar if the smallest extent is below 1e-6 of the largest. The tool is
+still affine only, as decided for v1; TPS stays a later step.
+
 Because three landmark pairs always lie in one plane, the minimum number of pairs was
 lowered from 4 to 3 (three pairs only work through the fallback). Unlike the wizard, the
 tool doesn't ask for confirmation, since `t` is pressed often.
+
+### 0.23 Sync mirrors each side, so deletions and moves are saved (2026-10-09, per Michael's request)
+
+During the code walkthrough, Michael pointed out that the additions-only sync (§0.2
+point 2) is a real problem: deleting a landmark (also via undo) or moving it in a worker
+didn't change the landmark annotation. The table reads the workers, so it looked correct
+until the next reload. Then deleted landmarks came back, moved ones jumped back to their
+old position, and all later pairs shifted, which gives a wrong alignment without any
+visible reason.
+
+Two fixes were compared: (A) remember which store tree belongs to which worker tree and
+send single changes (needs extra commands for deleting trees and moving nodes, plus more
+state that can get out of sync), or (B) treat each worker as the only source of truth for
+its side and mirror the whole side. B was chosen.
+
+How it works now (`use_landmark_sync.ts`):
+- After the stored landmarks were imported into a worker (phase 1), the hook remembers
+  that side's landmark list (`storedLandmarksRef`).
+- Every 500 ms it exports both workers. If a worker's landmark list differs from the
+  remembered one (`isEqual`), it sends the worker's whole NML to the store with the new
+  cross-origin command `replaceTreesInGroup(nml, groupId)` and remembers the new list.
+- `replaceTreesInGroup` (`api_latest.ts`) parses the NML first, then deletes all trees
+  directly inside the group (`deleteTreesAction`) and imports the new ones into the group.
+  Parsing first means no save can run between deleting and adding.
+- This covers adding, deleting, undo, redo and moving with one code path. Writing the same
+  content twice gives the same result, so a retry after a lost reply is harmless.
+- `setLandmarks` now keeps the previous object if nothing changed, so the page no longer
+  re-renders twice per second.
+
+Trade-offs: every change rewrites the whole side in the store, which adds one "delete
+all + add all" step to the store's version history per change, and the store's tree ids
+change each time (nothing refers to them). A worker must never be mirrored before it
+received the stored landmarks, or it would wipe them. The `groupIds == null` check
+ensures this.
+
+Leftovers removed: the per-side `storedTreeIdsRef`, the `treeIds` filter of
+`exportTreesAsNmlString`, and the target group and returned ids of
+`importNmlAsString`/`importNml` (back to their master versions).
 
 ### 0.3 Not started / explicitly out of scope for this pass
 
@@ -1316,7 +1436,7 @@ pulled). Solves a related but narrower problem: landmark-based affine transforms
 1. **Left/right ↔ fixed/moving convention mismatch**: the v1 implementation (§0) settled on "A/fixed" + "B/moving" consistently in code and UI copy, which resolves the *internal* inconsistency, but doesn't reconcile with the Notion doc's opposite left/right convention. Low priority - internally consistent now, just not matching that external reference.
 2. **v2 cross-worker ghost landmarks** (§3) — design is recorded, not scheduled; open sub-question of whether WK supports true tree/group edit-locking or whether "read-only" starts convention-only.
 3. **Landmark annotation discovery** (§0.2 point 3, new this pass) — v1 uses `localStorage`, not shared across devices/users. Needs a backend-queryable mechanism (metadata convention or a list endpoint) to become more than a single-browser demo.
-4. **Deletion sync** (§0.2 point 2, new this pass) — v1's sync is additions-only; removing a landmark in a worker doesn't remove it from the persisted store. The originally-planned `diffTrees`-based approach is still the right target if/when this is picked up.
+4. ✅ **Deletion sync** (§0.2 point 2) — resolved in §0.23: each worker mirrors its whole side into the landmark annotation, which covers deletions, moves and undo.
 5. **Manual browser QA** (§0.3) — started in §0.4, but the refactor (§0.21) and the single-slice fallback (§0.22) have not been tried in a running instance yet.
 6. **Stale landmark annotation id** (§0.2 point 4, §0.21) — if the id in localStorage points to a deleted or foreign annotation, the page waits forever. Needs an existence check and a way to create a new annotation.
 
@@ -1331,7 +1451,7 @@ Resolved: XY-only viewport restriction (§0.1, done via a dedicated single-tab F
 1. ✅ **Cleanup pass**: reverted `edge_shader.ts`/`dataset_saga.ts` hacks; deleted the `dataset_layer_transformation_accessor.ts` change.
 2. ✅ **Coordinator shell**: implemented as a plain page talking to a hidden "store" iframe rather than a headless Redux-hosting fork of `TracingLayoutView` — see §0.2 point 1 for why, and reconsider that choice here if it ever becomes a real limitation.
 3. ✅ **Worker chrome-less mode**: `bigwarpWorker=<layerName>` URL param, navbar hidden, single-viewport (XY-only) layout, `newNodeNewTree` auto-enabled, permanent per-worker `nativelyRenderedLayerName` pinning.
-4. ✅ **Sync**: implemented as additions-only import-based merging rather than a full `diffTrees` round trip — see §0.2 point 2 for why, and open question §9.4 for the gap this leaves (no delete propagation).
+4. ✅ **Sync**: first implemented as additions-only import-based merging (§0.2 point 2), since §0.23 each worker mirrors its whole side into the landmark annotation (`replaceTreesInGroup`).
 5. ✅ **Reload flow**: pushes known landmarks into a fresh worker sandbox via `importNml` on load.
 6. ✅ **Shortcuts**: `t`/`f`/`q`, focus-aware (via `event.source`, no separate focus-tracking needed).
 7. ✅ **Persistence**: "Store as Default" reusing `getDataset`/`updateDatasetPartial` (already on `master`). Since §0.21, layer B's transforms are replaced by `[BtoA, ...transforms of layer A]` instead of appending (not using `applyAffineOnTopOfTransforms` from the unmerged PR #9591).
@@ -1353,8 +1473,8 @@ Resolved: XY-only viewport restriction (§0.1, done via a dedicated single-tab F
 - `frontend/javascripts/viewer/view/action_bar/undo_redo_actions.tsx` — keeps the redo button visible in workers (§0.20).
 - `frontend/javascripts/viewer/view/action_bar/save_actions.tsx` — hides `SandboxActions` in workers (§0.11).
 - `frontend/javascripts/viewer/view/action_bar_view.tsx` — `ModesView` hides the toolkit switcher in workers (§0.5).
-- `frontend/javascripts/viewer/api/cross_origin_api.ts` — iframe postMessage bridge. Commands used by this feature: `exportTreesAsNmlString`, `importNml` (optional target group, returns tree ids), `ensureTreeGroupPath`, `save`, `getCameraPosition`, `centerPositionAnimated`, `setLayerVisibility`, `setAffineLayerTransforms` (§0.21). Also calls `useBigWarpShortcutRelay()`. The "init" handshake was rewritten in §0.10 (general WK fix).
-- `frontend/javascripts/viewer/api/api_latest.ts` — backing implementations of the above (`importNmlAsString`, `exportTreesAsNmlString`, `ensureTreeGroupPath`, `setLayerVisibility`).
+- `frontend/javascripts/viewer/api/cross_origin_api.ts` — iframe postMessage bridge. Commands used by this feature: `exportTreesAsNmlString` (optional group filter), `importNml` (unchanged from master), `replaceTreesInGroup` (§0.23), `ensureTreeGroupPath`, `save`, `getCameraPosition`, `centerPositionAnimated`, `setLayerVisibility`, `setAffineLayerTransforms` (§0.21). Also calls `useBigWarpShortcutRelay()`. The "init" handshake was rewritten in §0.10 (general WK fix).
+- `frontend/javascripts/viewer/api/api_latest.ts` — backing implementations of the above (`exportTreesAsNmlString`, `replaceTreesInGroup`, `ensureTreeGroupPath`, `setLayerVisibility`).
 - `frontend/javascripts/viewer/controller.tsx` — picks `blockBigWarpWorkerNavigation` instead of the normal `beforeUnload` blocker in workers and calls `applyBigWarpWorkerSettings()` (both in `bigwarp_worker.ts`).
 - `frontend/javascripts/viewer/view/layouting/default_layout_configs.ts` — `getBigWarpWorkerLayoutConfig(baseLayout)`: the normal layout with the XY tabset maximized (§0.18).
 - `frontend/javascripts/viewer/view/layouting/flex_layout_wrapper.tsx` — `loadCurrentModel()` applies `getBigWarpWorkerLayoutConfig()` in workers (§0.16).

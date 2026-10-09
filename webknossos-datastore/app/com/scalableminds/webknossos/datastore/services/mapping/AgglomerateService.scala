@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -21,7 +22,8 @@ import scala.concurrent.duration.DurationInt
 
 class AgglomerateService @Inject() (
     zarrAgglomerateService: ZarrAgglomerateService,
-    hdf5AgglomerateService: Hdf5AgglomerateService
+    hdf5AgglomerateService: Hdf5AgglomerateService,
+    pcgAgglomerateService: PcgAgglomerateService
 ) extends LazyLogging {
 
   private val agglomerateFileKeyCache: AlfuCache[(DataSourceId, String, String), AgglomerateFileKey] =
@@ -43,7 +45,11 @@ class AgglomerateService @Inject() (
       agglomerateFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(agglomerateFileKey.layerName == _)
     }
 
-    clearedHdf5Count + clearedZarrCount
+    val clearedPcgCount = pcgAgglomerateService.clearCache { agglomerateFileKey =>
+      agglomerateFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(agglomerateFileKey.layerName == _)
+    }
+
+    clearedHdf5Count + clearedZarrCount + clearedPcgCount
   }
 
   def lookUpAgglomerateFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, mappingName: String)(implicit
@@ -83,6 +89,8 @@ class AgglomerateService @Inject() (
           zarrAgglomerateService.applyAgglomerate(agglomerateFileKey, elementClass)(data)
         case LayerAttachmentDataformat.hdf5 =>
           hdf5AgglomerateService.applyAgglomerate(agglomerateFileKey, request)(data).toFox
+        case LayerAttachmentDataformat.pcg =>
+          pcgAgglomerateService.applyAgglomerate(agglomerateFileKey, elementClass)(data)
         case _ => unsupportedDataFormat(agglomerateFileKey)
       }
     } yield data
@@ -98,6 +106,8 @@ class AgglomerateService @Inject() (
           zarrAgglomerateService.generateTree(agglomerateFileKey, agglomerateId)
         case LayerAttachmentDataformat.hdf5 =>
           hdf5AgglomerateService.generateTree(agglomerateFileKey, agglomerateId).toFox
+        case LayerAttachmentDataformat.pcg =>
+          pcgAgglomerateService.generateTree(agglomerateFileKey, agglomerateId)
         case _ => unsupportedDataFormat(agglomerateFileKey)
       }
       _ = if (Instant.since(before) > (100 milliseconds)) {
@@ -117,6 +127,7 @@ class AgglomerateService @Inject() (
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 => zarrAgglomerateService.largestAgglomerateId(agglomerateFileKey)
       case LayerAttachmentDataformat.hdf5  => hdf5AgglomerateService.largestAgglomerateId(agglomerateFileKey).toFox
+      case LayerAttachmentDataformat.pcg   => pcgAgglomerateService.largestAgglomerateId(agglomerateFileKey)
       case _                               => unsupportedDataFormat(agglomerateFileKey)
     }
 
@@ -129,6 +140,8 @@ class AgglomerateService @Inject() (
         zarrAgglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
       case LayerAttachmentDataformat.hdf5 =>
         hdf5AgglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId).toFox
+      case LayerAttachmentDataformat.pcg =>
+        pcgAgglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
@@ -141,10 +154,21 @@ class AgglomerateService @Inject() (
         zarrAgglomerateService.agglomerateIdsForSegmentIds(agglomerateFileKey, segmentIds)
       case LayerAttachmentDataformat.hdf5 =>
         hdf5AgglomerateService.agglomerateIdsForSegmentIds(agglomerateFileKey, segmentIds).toFox
+      case LayerAttachmentDataformat.pcg =>
+        pcgAgglomerateService.agglomerateIdsForSegmentIds(agglomerateFileKey, segmentIds)
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
-  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long)(using
+  /** `datasetId` and `dataLayer` are only used by the PCG branch, which has no stored positions and has to find one by
+    * reading the layer itself. The file formats keep positions in the agglomerate file and ignore both.
+    */
+  def positionForSegmentId(
+      agglomerateFileKey: AgglomerateFileKey,
+      segmentId: Long,
+      datasetId: Option[ObjectId],
+      dataLayer: DataLayer,
+      loadBucket: DataServiceDataRequest => Fox[Array[Byte]]
+  )(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Vec3Int] =
@@ -153,6 +177,8 @@ class AgglomerateService @Inject() (
         zarrAgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId)
       case LayerAttachmentDataformat.hdf5 =>
         hdf5AgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId).toFox
+      case LayerAttachmentDataformat.pcg =>
+        pcgAgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId, datasetId, dataLayer, loadBucket)
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
@@ -165,6 +191,8 @@ class AgglomerateService @Inject() (
         zarrAgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId)
       case LayerAttachmentDataformat.hdf5 =>
         hdf5AgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId).toFox
+      case LayerAttachmentDataformat.pcg =>
+        pcgAgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId)
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 

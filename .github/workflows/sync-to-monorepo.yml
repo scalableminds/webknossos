@@ -10,7 +10,7 @@ name: Sync to monorepo
 # concurrency group, so per-spoke dispatches could cancel each other.
 #
 # Credentials: GitHub App "scm-copybara" with Actions: read & write on
-# scalableminds/mono. COPYBARA_APP_ID (variable or secret) and secret
+# scalableminds/mono. Secrets COPYBARA_CLIENT_ID (the app's client ID) and
 # COPYBARA_APP_PRIVATE_KEY.
 
 on:
@@ -20,8 +20,7 @@ on:
 permissions: {}
 
 env:
-  # the App ID may be stored as a variable or as a secret
-  COPYBARA_APP_ID: ${{ vars.COPYBARA_APP_ID || secrets.COPYBARA_APP_ID }}
+  COPYBARA_CLIENT_ID: ${{ secrets.COPYBARA_CLIENT_ID }}
 
 jobs:
   dispatch:
@@ -35,8 +34,8 @@ jobs:
       - name: Check credentials
         id: check
         run: |
-          if [ -z "$COPYBARA_APP_ID" ]; then
-            echo "::warning::COPYBARA_APP_ID is not configured, not triggering the monorepo sync"
+          if [ -z "$COPYBARA_CLIENT_ID" ]; then
+            echo "::warning::COPYBARA_CLIENT_ID is not configured, not triggering the monorepo sync"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -45,7 +44,7 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ env.COPYBARA_APP_ID }}
+          client-id: ${{ env.COPYBARA_CLIENT_ID }}
           private-key: ${{ secrets.COPYBARA_APP_PRIVATE_KEY }}
           owner: scalableminds
           repositories: mono

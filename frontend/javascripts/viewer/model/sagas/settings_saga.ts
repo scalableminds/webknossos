@@ -15,6 +15,7 @@ import {
   SETTINGS_RETRY_DELAY,
 } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import { mayEditAnnotation } from "../accessors/annotation_accessor";
 import { getMappingFromLayerNameToBaseDatasetLayerName } from "../accessors/dataset_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
@@ -23,6 +24,9 @@ import { ensureWkInitialized } from "./ready_sagas";
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
+  // The dataset alignment workers force some settings (see bigwarp_worker.ts) which must
+  // not end up in the user's account.
+  if (isBigWarpWorker()) return;
   const userConfiguration = yield* select((state) => state.userConfiguration);
   yield* retry(
     SETTINGS_MAX_RETRY_COUNT,
@@ -36,6 +40,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
   yield* delay(Constants.SETTING_SAVE_DEBOUNCE_MS);
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
+  if (isBigWarpWorker()) return;
   const dataset = yield* select((state) => state.dataset);
   const layerNamesOfDatasetToFallbackNameMaybe =
     getMappingFromLayerNameToBaseDatasetLayerName(dataset);

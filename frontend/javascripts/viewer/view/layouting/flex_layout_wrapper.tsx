@@ -23,10 +23,12 @@ import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { BorderOpenStatus, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import InputCatcher from "viewer/view/input_catcher";
 import type { LayoutKeys } from "viewer/view/layouting/default_layout_configs";
 import {
   DEFAULT_LAYOUT_NAME,
+  getBigWarpWorkerLayoutConfig,
   getTabDescriptorForBorderTab,
   resetDefaultLayouts,
 } from "viewer/view/layouting/default_layout_configs";
@@ -168,7 +170,8 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   loadCurrentModel() {
     const { layoutName, layoutKey } = this.props;
-    const layout = getLayoutConfig(layoutKey, layoutName);
+    const baseLayout = getLayoutConfig(layoutKey, layoutName);
+    const layout = isBigWarpWorker() ? getBigWarpWorkerLayoutConfig(baseLayout) : baseLayout;
     const model = Model.fromJson(layout);
     return model;
   }

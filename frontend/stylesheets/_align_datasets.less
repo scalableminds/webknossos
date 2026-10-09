@@ -1,0 +1,40 @@
+// Alignment view (alignment_view.tsx): the resizable landmark panel (closed by default)
+// and the two worker iframes, side by side.
+.align-datasets-workspace {
+  height: 100%;
+
+  &:not(.is-landmark-panel-closed) .landmark-panel {
+    padding: 16px 12px 8px;
+    background-color: var(--ant-color-bg-base);
+  }
+
+  // A closed landmark panel has a width of 0 and must not leave a resize bar behind.
+  &.is-landmark-panel-closed > .ant-splitter-bar {
+    display: none;
+  }
+
+  .align-datasets-worker {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    border: none;
+
+    & + .align-datasets-worker {
+      border-left: 4px solid var(--ant-color-primary);
+    }
+  }
+
+  .align-datasets-overlay {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--ant-color-bg-base) 70%, transparent);
+  }
+
+  .landmark-color {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 4px;
+    border-radius: 50%;
+  }
+}

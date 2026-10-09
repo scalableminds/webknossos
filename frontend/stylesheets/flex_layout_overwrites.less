@@ -204,6 +204,13 @@
   flex-direction: row-reverse;
 }
 
+// flexlayout-react centers the children of .flexlayout__tab_toolbar (where the
+// right-border toggle button is), but not of .flexlayout__tabset_leading (where the
+// left-border toggle button is). Without this, the left button is 1px lower.
+.flexlayout__tabset_leading {
+  align-items: center;
+}
+
 // Select the first vertical border splitter and ignore all its pointer events to disable resizing of the border.
 // This is only active when the left border is open and therefore only disables the splitter of the left border.
 // More info about this css trick: https://stackoverflow.com/questions/2717480/css-selector-for-first-element-with-class.

@@ -21,6 +21,7 @@ import { setDuplicateAnnotationModalVisibilityAction } from "viewer/model/action
 import { api, Model } from "viewer/singletons";
 import Store from "viewer/store";
 import SaveButton from "viewer/view/action_bar/save_button";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import ButtonComponent from "viewer/view/components/button_component";
 import UndoRedoActions from "./undo_redo_actions";
 
@@ -138,10 +139,14 @@ function SaveActions() {
   }
 
   if (!restrictions.allowSave) {
+    // The landmarks of the dataset alignment workers are saved by the alignment page, so
+    // copying a worker's sandbox to the user's account makes no sense.
     return (
       <Space.Compact>
         <UndoRedoActions hasTracing={hasTracing} isBusy={isBusy} />
-        <SandboxActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />
+        {isBigWarpWorker() ? null : (
+          <SandboxActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />
+        )}
       </Space.Compact>
     );
   }

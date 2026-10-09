@@ -20,6 +20,7 @@
 @import "command_palette.less";
 @import "_voxelytics.less";
 @import "_ai_jobs.less";
+@import "_align_datasets.less";
 
 // Nunito is a variable font with a wght axis spanning 200-1000. The font-weight range has to be
 // declared, otherwise the browser treats each face as a single normal-weight font and synthesizes
@@ -53,6 +54,16 @@ body {
   -webkit-font-smoothing: antialiased;
   height: 100vh;
   padding-top: var(--navbar-height);
+}
+
+/** Pages without a navbar (e.g. the dataset alignment page). The variable is overridden on body
+ * because the navbar sets it inline on the html element, which a stylesheet rule cannot beat. */
+body:has(.no-navbar) {
+  --navbar-height: 0px;
+}
+
+.no-navbar {
+  height: 100%;
 }
 
 /** Ensures the main layout header stays at the top within the main container section. */

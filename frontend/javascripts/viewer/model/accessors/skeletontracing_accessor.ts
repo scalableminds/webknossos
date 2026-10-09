@@ -18,7 +18,7 @@ import {
 import type { NumberLike, SkeletonTracing, StoreAnnotation, WebknossosState } from "viewer/store";
 import { findGroup } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { max } from "../helpers/iterator_utils";
-import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
+import { getTransformPointUnscaledFn, invertTransform } from "../helpers/transformation_helpers";
 import {
   getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,
   getTransformsForSkeletonLayer,
@@ -306,14 +306,14 @@ export function transformNodePosition(position: Vector3, state: WebknossosState)
   const dataset = state.dataset;
   const { nativelyRenderedLayerName } = state.datasetConfiguration;
   const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
-  return transformPointUnscaled(currentTransforms)(position);
+  return getTransformPointUnscaledFn(currentTransforms)(position);
 }
 
 export function untransformNodePosition(position: Vector3, state: WebknossosState): Vector3 {
   const dataset = state.dataset;
   const { nativelyRenderedLayerName } = state.datasetConfiguration;
   const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
-  return transformPointUnscaled(invertTransform(currentTransforms))(position);
+  return getTransformPointUnscaledFn(invertTransform(currentTransforms))(position);
 }
 
 function getMaxNodeIdInTree(tree: Tree): number | null {

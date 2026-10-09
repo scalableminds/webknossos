@@ -70,6 +70,10 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_actions";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
+import {
+  isBigWarpPrimaryWorker,
+  isBigWarpWorker,
+} from "viewer/view/align_datasets/bigwarp_protocol";
 import { HelpModal } from "viewer/view/help/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
@@ -914,28 +918,36 @@ function Navbar() {
   const isAdminOrManager = isUserAdminOrManager(activeUser);
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
-  const menuItems: ItemType[] = [
-    {
-      key: "0",
-      label: (
-        <Link
-          to="/dashboard"
-          style={{
-            verticalAlign: "middle",
-          }}
-        >
-          {getCollapsibleMenuTitle(
-            "WEBKNOSSOS",
-            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-            collapseAllNavItems,
-          )}
-        </Link>
-      ),
-    },
-  ];
+  // The dataset alignment workers keep the navbar because it contains the toolbar, but
+  // must not offer navigation away from the alignment page. Only the primary worker shows
+  // the logo, which links to the dashboard in the top-level window.
+  const isAlignmentWorker = isBigWarpWorker();
+  const showLogo = !isAlignmentWorker || isBigWarpPrimaryWorker();
+  const menuItems: ItemType[] = showLogo
+    ? [
+        {
+          key: "0",
+          label: (
+            <Link
+              to="/dashboard"
+              target={isAlignmentWorker ? "_top" : undefined}
+              style={{
+                verticalAlign: "middle",
+              }}
+            >
+              {getCollapsibleMenuTitle(
+                "WEBKNOSSOS",
+                <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+                collapseAllNavItems,
+              )}
+            </Link>
+          ),
+        },
+      ]
+    : [];
   const trailingNavItems = [];
 
-  if (isAuthenticated) {
+  if (isAuthenticated && !isAlignmentWorker) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
     menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
@@ -962,24 +974,27 @@ function Navbar() {
     );
   }
 
-  if (!(isAuthenticated || hideNavbarLogin)) {
+  if (!(isAuthenticated || hideNavbarLogin) && !isAlignmentWorker) {
     trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
 
-  menuItems.push(
-    getHelpSubMenu(
-      version,
-      polledVersion,
-      isAuthenticated,
-      isAdminOrManager,
-      collapseAllNavItems,
-      () => setIsHelpModalOpen(true),
-    ),
-  );
+  if (!isAlignmentWorker) {
+    menuItems.push(
+      getHelpSubMenu(
+        version,
+        polledVersion,
+        isAuthenticated,
+        isAdminOrManager,
+        collapseAllNavItems,
+        () => setIsHelpModalOpen(true),
+      ),
+    );
+  }
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
   const separator = <div className="navbar-separator" />;
+  const showSeparator = isInAnnotationView && menuItems.length > 0;
 
   return (
     <Header
@@ -1008,7 +1023,7 @@ function Navbar() {
         disabledOverflow
         items={menuItems}
       />
-      {isInAnnotationView ? separator : null}
+      {showSeparator ? separator : null}
       <HelpModal
         isModalOpen={isHelpModalOpen}
         onCancel={() => setIsHelpModalOpen(false)}

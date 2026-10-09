@@ -5,6 +5,7 @@ import { entries, getIsInIframe, keys } from "libs/utils";
  *  - the different layout types which specify which tabs exist in which layout and what their default arrangement is
  *  - a `determineLayout` function which decides which layout type has to be chosen
  */
+import cloneDeep from "lodash-es/cloneDeep";
 import memoize from "lodash-es/memoize";
 import type { BorderTabType, ControlMode, ViewMode } from "viewer/constants";
 import Constants, {
@@ -299,6 +300,26 @@ const _getDefaultLayouts = () => {
 };
 
 const getDefaultLayouts = memoize(_getDefaultLayouts);
+
+// Marks the tabset that contains the given tab as maximized. Mutates the node in place.
+function markTabsetAsMaximized(node: RowOrTabsetNode, tabId: string): boolean {
+  if (node.type === "tabset") {
+    if (node.children.some((tab) => tab.id === tabId)) {
+      node.maximized = true;
+      return true;
+    }
+    return false;
+  }
+  return node.children.some((child) => markTabsetAsMaximized(child, tabId));
+}
+
+// The dataset alignment workers use the normal layout, but start with the XY viewport
+// maximized. The user can restore the other viewports as usual.
+export const getBigWarpWorkerLayoutConfig = (baseLayout: ModelConfig): ModelConfig => {
+  const layout = cloneDeep(baseLayout);
+  markTabsetAsMaximized(layout.layout, OrthoViews.PLANE_XY);
+  return layout;
+};
 
 export const resetDefaultLayouts = () => {
   // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message

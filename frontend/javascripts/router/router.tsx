@@ -53,6 +53,8 @@ import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metad
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
 import DatasetSettingsStorageTab from "dashboard/dataset/dataset_settings_storage_tab";
 import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
+import AlignmentSelectionView from "viewer/view/align_datasets/alignment_selection_view";
+import AlignmentView from "viewer/view/align_datasets/alignment_view";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -76,11 +78,11 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
   () => import("admin/voxelytics/workflow_list_view"),
 );
 
-function RootLayout() {
+function RootLayout({ showNavbar = true }: { showNavbar?: boolean }) {
   return (
-    <Layout>
+    <Layout className={showNavbar ? undefined : "no-navbar"}>
       <CommandPalette />
-      <Navbar />
+      {showNavbar && <Navbar />}
       <Content>
         <ErrorBoundary>
           <Outlet />
@@ -255,6 +257,14 @@ const routes: RouteObject[] = [
         element: (
           <SecuredRoute requiresAdminOrManagerRole>
             <DatasetAddView />
+          </SecuredRoute>
+        ),
+      },
+      {
+        path: "/datasets/:datasetNameAndId/align",
+        element: (
+          <SecuredRoute>
+            <AlignmentSelectionView />
           </SecuredRoute>
         ),
       },
@@ -486,6 +496,21 @@ const routes: RouteObject[] = [
         ],
       },
       { path: "*", element: <PageNotFoundView /> },
+    ],
+  },
+  {
+    // The alignment view has no navbar of its own, because each of its worker iframes shows
+    // one.
+    element: <RootLayout showNavbar={false} />,
+    children: [
+      {
+        path: "/datasets/:datasetNameAndId/align/:annotationId",
+        element: (
+          <SecuredRoute>
+            <AlignmentView />
+          </SecuredRoute>
+        ),
+      },
     ],
   },
 ];

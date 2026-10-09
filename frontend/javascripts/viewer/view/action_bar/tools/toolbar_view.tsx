@@ -20,8 +20,13 @@ import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import Store from "viewer/store";
+import {
+  isBigWarpPrimaryWorker,
+  isBigWarpWorker,
+} from "viewer/view/align_datasets/bigwarp_protocol";
 import ButtonComponent from "viewer/view/components/button_component";
 import { ToolDropdown } from "../tool_dropdown";
+import { BigWarpAlignmentButtons } from "./bigwarp_specific_ui";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
@@ -79,7 +84,10 @@ export default function ToolbarView() {
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
-  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
+  // The dataset alignment workers are always narrow, but their toolkit only has two tools.
+  const isAlignmentWorker = isBigWarpWorker();
+  const showAllTools =
+    isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode || isAlignmentWorker;
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -132,7 +140,7 @@ export default function ToolbarView() {
             const ToolButton = ToolIdToComponent[tool.id];
             return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
           })}
-          <ToolDropdown />
+          {isAlignmentWorker ? null : <ToolDropdown />}
         </Radio.Group>
       </UnderlyingActiveToolContext.Provider>
 
@@ -174,7 +182,10 @@ function ToolSpecificSettings({
   isControlOrMetaPressed: boolean;
   isShiftPressed: boolean;
 }) {
-  const showSkeletonButtons = hasSkeleton && adaptedActiveTool === AnnotationTool.SKELETON;
+  // The dataset alignment workers always create one tree per node (see
+  // bigwarp_worker.ts), so the skeleton tool options are hidden there.
+  const showSkeletonButtons =
+    hasSkeleton && adaptedActiveTool === AnnotationTool.SKELETON && !isBigWarpWorker();
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationTool.BOUNDING_BOX;
   const showCreateCellButton = hasVolume && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =
@@ -185,6 +196,8 @@ function ToolSpecificSettings({
 
   return (
     <>
+      {isBigWarpPrimaryWorker() ? <BigWarpAlignmentButtons /> : null}
+
       {showSkeletonButtons ? <SkeletonSpecificButtons /> : null}
 
       {showNewBoundingBoxButton ? (

@@ -43,6 +43,7 @@ import TracingActionsView, {
   type LayoutProps,
 } from "viewer/view/action_bar/tracing_actions_view";
 import ViewDatasetActionsView from "viewer/view/action_bar/view_dataset_actions_view";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import {
   addNewLayout,
   deleteLayout,
@@ -276,9 +277,11 @@ function ModesView() {
   const isOrthoMode = useWkSelector(
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );
+  // The dataset alignment workers use a fixed toolkit (see bigwarp_worker.ts).
+  const isToolkitFixed = isBigWarpWorker();
 
   // The outer div is necessary for proper spacing.
-  return isViewMode || isReadOnly || !isOrthoMode ? null : (
+  return isViewMode || isReadOnly || !isOrthoMode || isToolkitFixed ? null : (
     <div>
       <Space.Compact>
         <ToolkitView />

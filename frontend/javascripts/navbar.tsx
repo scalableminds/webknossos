@@ -9,6 +9,7 @@ import Icon, {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import WkLogoWithWordmark from "@images/logo.svg?react";
 import WkLogoIcon from "@images/wk-logo.svg?react";
 import { unwrapOrThrow } from "admin/api/api_result";
 import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
@@ -920,14 +921,21 @@ function Navbar() {
       label: (
         <Link
           to="/dashboard"
+          aria-label="WEBKNOSSOS"
           style={{
             verticalAlign: "middle",
           }}
         >
-          {getCollapsibleMenuTitle(
-            "WEBKNOSSOS",
-            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-            collapseAllNavItems,
+          {collapseAllNavItems ? (
+            getCollapsibleMenuTitle(
+              "WEBKNOSSOS",
+              <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+              true,
+            )
+          ) : (
+            // The wordmark is set in Nunito, which is only shipped as outlined paths in this SVG
+            // instead of as a web font.
+            <Icon component={WkLogoWithWordmark} className="logo-with-wordmark" />
           )}
         </Link>
       ),

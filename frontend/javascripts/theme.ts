@@ -61,6 +61,7 @@ const ColorOutlineOnInkHover = "rgba(255, 255, 255, 0.32)";
 const ColorOutlineOnInkPressed = "rgba(255, 255, 255, 0.24)";
 const ColorOutlineOnPaperHover = "rgba(20, 21, 43, 0.32)";
 const ColorOutlineOnPaperPressed = "rgba(20, 21, 43, 0.45)";
+const ColorHairlineOnPaper = "rgba(20, 21, 43, 0.12)"; // light counterpart of "Hairline on ink"
 const ColorShadowOnInk = "rgba(0, 0, 0, 0.6)"; // replaces antd's white (glowing) dark shadow
 // antd's dark disabled background (8% white), pre-blended onto Ink-2 to make it opaque.
 const ColorInk2Disabled = "#27293b";
@@ -281,6 +282,8 @@ export function getAntdTheme(userTheme: Theme) {
     Typography: TypographyHeadingToken,
     Modal: ModalToken,
     Button: isDark ? darkButtonToken : lightButtonToken,
+    // The default #f0f0f0 tab bar line is barely visible on Paper.
+    Tabs: { colorBorderSecondary: ColorHairlineOnPaper },
   };
 
   if (isDark) {
@@ -296,6 +299,7 @@ export function getAntdTheme(userTheme: Theme) {
       horizontalItemSelectedColor: ColorIndigoLight,
     };
     components.Tabs = {
+      colorBorderSecondary: ColorHairlineOnInk,
       itemSelectedColor: ColorIndigoLight,
       itemHoverColor: ColorIndigoLightHover,
       itemActiveColor: ColorIndigoLight,

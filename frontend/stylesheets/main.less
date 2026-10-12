@@ -165,6 +165,28 @@ body {
     }
   }
 
+  // logo.svg: the mark followed by the "WEBKNOSSOS" wordmark (viewBox 1920 x 395).
+  .logo-with-wordmark {
+    @logo-height: 30px;
+    height: @logo-height;
+    margin-top: -2px;
+    vertical-align: middle;
+    overflow: hidden;
+
+    svg {
+      color: white;
+      height: @logo-height;
+      width: (@logo-height * 1920 / 395);
+      // antd renders the icon wrapper as inline-flex; don't shrink when clipped on smartphones.
+      flex-shrink: 0;
+    }
+
+    // Only show the mark, which is the square on the left of the SVG.
+    @media @smartphones {
+      width: @logo-height;
+    }
+  }
+
   @media @smartphones {
     a[href="/"] span {
       font-size: 0px; // hide text

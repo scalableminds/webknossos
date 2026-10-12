@@ -22,6 +22,58 @@ curl http://localhost:9001/health/ready
 curl -H "X-Auth-Token: $WK_TOKEN" http://localhost:9001/api/v16/teams
 ```
 
+## Running the full local stack
+
+The Rust application backend and datastore run as separate processes next to the Scala tracingstore, FossilDB and Redis. PostgreSQL and Redis must be running (see `../DEV_INSTALL.md`). Adjust the example credentials and secrets to your setup. Use one terminal per component:
+
+1. **Application backend** (from `backend-rust/`, serves on `127.0.0.1:9001`):
+   ```sh
+   DATABASE_URL='postgres://postgres:postgresD@localhost:5432/webknossos' \
+   WK_JOBS_ENABLED=true \
+   WK_COOKIE_SIGNER_SECRET=something-secure \
+   LOG_FORMAT=pretty \
+   cargo run --locked
+   ```
+2. **Standalone datastore** (port 9090). `WK_DS_KEY` must match the key registered in the DB below:
+   ```sh
+   WK_DS_KEY="something-secur3" cargo run --manifest-path=datastore/Cargo.toml --locked
+   ```
+3. **Scala tracingstore** (from the repo root, port 9050):
+   ```sh
+   sbt -J-Xmx8G "project webknossosTracingstore" "run 9050 -Dconfig.resource=standalone-tracingstore.conf"
+   ```
+4. **FossilDB** (from the repo root; also make sure Redis is running, e.g. `brew services start redis`):
+   ```sh
+   yarn start-fossildb
+   ```
+
+### Point the database at the standalone stores
+
+Register the standalone datastore and tracingstore (names and keys must match the respective configs) and move existing datasets to the new datastore, e.g. via `psql`:
+
+```sql
+-- 1. Datastore
+INSERT INTO webknossos.dataStores (name, url, publicUrl, key, allowsUpload, allowsUploadToPaths, isScratch, reportUsedStorageEnabled)
+VALUES ('standalone-9090', 'http://localhost:9090', 'http://localhost:9090', 'something-secur3', true, true, false, false)
+ON CONFLICT (name) DO UPDATE SET
+  url = 'http://localhost:9090',
+  publicUrl = 'http://localhost:9090',
+  key = 'something-secur3';
+
+-- 2. Move existing datasets to the new datastore (adjust the WHERE clause)
+UPDATE webknossos.datasets
+SET _dataStore = 'standalone-9090'
+WHERE _dataStore = 'localhost';
+
+-- 3. Tracingstore
+INSERT INTO webknossos.tracingStores (name, url, publicUrl, key)
+VALUES ('standalone-9050', 'http://localhost:9050', 'http://localhost:9050', 'something-secur3')
+ON CONFLICT (name) DO UPDATE SET
+  url = 'http://localhost:9050',
+  publicUrl = 'http://localhost:9050',
+  key = 'something-secur3';
+```
+
 Use an existing WEBKNOSSOS authentication/API token from the target database. `Authorization: Bearer …`, `X-Auth-Token`, and the legacy `?token=…` transport are supported. Invalid, expired, idle-expired, revoked, or conflicting credentials fail closed; inactive/deleted identities and organizations are denied. Authenticated clients can fetch/create/revoke an API token, generate datastore tokens, log out, and revoke all account identities. Password login (`POST /auth/login`) issues Play/Silhouette-compatible signed cookies when `WK_COOKIE_SIGNER_SECRET` is set (use Play's signer secret to share sessions); a valid cookie takes priority over a bearer token. Registration, organization onboarding, invites, password reset/change, organization switching and email verification are available. Mail is written to the log only (`LogMailer`), not delivered. OIDC login/callback and Discourse SSO are available (`WK_OIDC_*`, `WK_SSO_KEY`); WebAuthn ceremonies are in progress. `Job` tokens are accepted as application credentials for worker operations, with the same expiry, idle timeout and revocation checks. `ResetPassword` tokens are rejected as application credentials.
 
 ## Implemented foundation and resources

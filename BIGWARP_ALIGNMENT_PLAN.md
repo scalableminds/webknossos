@@ -2,7 +2,7 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-10-09 (v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
+Last updated: 2026-10-12 (v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
@@ -24,9 +24,9 @@ items say what was decided and why.
   throws.
 - [x] Stale landmark annotation id. Gone: alignment annotations come from the backend.
 - [x] Commands sent before an iframe is ready. `sendMessage` waits for the iframe's "init".
-- [ ] **accepted: reloaded iframe.** If an iframe reloads, its ready Deferred is already
-  resolved, so commands may be sent before the new "init". Workers block navigation and
-  the store iframe is hidden, so this is unlikely. A lost reply now times out.
+- [x] Reloaded iframe. The alignment view detects a second page load of any iframe and
+  restarts the workspace (§0.24). Before, a reloaded worker came back empty and the sync
+  would have deleted that side's stored landmarks.
 - [ ] **accepted: no timeout while waiting for "init".** Loading a worker can take long on
   slow connections, so a timeout would cause false errors. If the store iframe never
   loads, the "Loading the landmarks" overlay stays.
@@ -49,16 +49,16 @@ items say what was decided and why.
 - [ ] **accepted: `dataset.isEditable` is read once when the page loads.** The server checks
   permissions on save anyway.
 - [x] In-app navigation is blocked with `useBlocker` while there are unsaved changes.
-- [ ] **accepted: worker iframes only block React Router navigation**, not full page loads.
-  A native dialog in a worker would also appear whenever the alignment page itself is
-  left (comment in `blockBigWarpWorkerNavigation`).
+- [x] Worker iframes block React Router navigation completely (no "leave anyway"), the
+  command palette and the right sidebar are gone in workers, and full page loads are
+  detected and handled by a restart (§0.24).
 - [x] `setAnnotationName` / `setAnnotationDescription` in the public API check
   `mayEditAnnotationProperties`; the cross-origin wrappers check that the argument is a
   string.
 
 **Still open**
 - [ ] Manual browser QA, especially the refactored iframe bridge, the loading overlay, the
-  navigation blocker and the single-slice fallback.
+  navigation blocker, the restart after a reload (§0.24) and the single-slice fallback.
 - [ ] decide: naming is mixed ("bigwarp", "alignment", "align_datasets"), and `Side` is
   "A"/"B" instead of "fixed"/"moving".
 - [ ] decide: revert the rename `transformPointUnscaled` → `getTransformPointUnscaledFn`
@@ -1257,6 +1257,39 @@ ensures this.
 Leftovers removed: the per-side `storedTreeIdsRef`, the `treeIds` filter of
 `exportTreesAsNmlString`, and the target group and returned ids of
 `importNmlAsString`/`importNml` (back to their master versions).
+
+### 0.24 Worker settings and navigation lock-down (2026-10-12, Michael's feedback)
+
+Feedback from trying the tool: the camera jumped to every new landmark, the right sidebar
+of a worker offered ways to break the view (Michael left a worker via a link in the
+dataset info tab), and the command palette could navigate away, too.
+
+- **Auto-center off:** `applyBigWarpWorkerSettings` sets `centerNewNode` to false. Like
+  the other forced settings, it isn't persisted; the user can turn it on again in the
+  skeleton layer settings of the left sidebar.
+- **Right sidebar locked:** all ways to open the right border (toggle button, keyboard
+  shortcut, command palette, "show skeleton/segments tab") go through
+  `FlexLayoutWrapper.toggleBorder` and `openRightBorderTabById`. Both return early if the
+  new `isBorderLocked(side)` is true (right side in workers). The toggle button isn't
+  rendered, and `getBigWarpWorkerLayoutConfig` closes the right border initially, because
+  the user's saved layout may have it open.
+- **No command palette in workers:** `RootLayout` doesn't render it. It offered dataset and
+  annotation switching, flight mode, logout and toggles for the forced worker settings.
+- **In-app navigation hard-blocked:** `blockBigWarpWorkerNavigation` no longer asks "leave
+  anyway?" but blocks and shows a toast that points to the logo in the left worker (which
+  navigates the top window, not the iframe).
+- **Restart after a reload:** browsers can't block a full page load without the native
+  dialog. While checking this, a data-loss case came up: the left sidebar calls
+  `location.reload()` in some places; the reloaded worker is an empty sandbox, and the sync
+  would mirror the empty list into the store, deleting that side's landmarks. Now
+  `useIframeBridge` counts the `load` events of each iframe (ignoring an initial
+  `about:blank`) and calls `onIframeReloaded` on the second one. The workspace then stops
+  the sync right away (`stopSync`, checked before every write), saves the store if the
+  store wasn't the reloaded iframe, shows a toast and a "Restarting…" overlay, and calls
+  `onRestart`. `AlignmentView` refetches the annotation (the name/description may have
+  been edited) and increases a counter in the workspace's `key`, which mounts it anew
+  with fresh iframes and imports the stored landmarks again. Only the transform preview
+  is lost, and the automatic align after loading computes it again.
 
 ### 0.3 Not started / explicitly out of scope for this pass
 

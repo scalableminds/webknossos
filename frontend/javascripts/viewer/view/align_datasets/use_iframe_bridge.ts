@@ -40,6 +40,16 @@ function getRoleOfSender(iframesRef: IframeRefs, event: MessageEvent): IframeRol
     : IFRAME_ROLES.find((role) => iframesRef.current[role]?.contentWindow === event.source);
 }
 
+// Some browsers fire a load event for the initial empty document of an iframe, too. The
+// location of a document from another origin can't be read, so that counts as a new page.
+function isEmptyDocument(iframe: HTMLIFrameElement): boolean {
+  try {
+    return iframe.contentWindow?.location.href === "about:blank";
+  } catch {
+    return false;
+  }
+}
+
 export type SendMessage = <T = unknown>(
   role: IframeRole,
   type: string,
@@ -47,14 +57,19 @@ export type SendMessage = <T = unknown>(
 ) => Promise<T>;
 
 /** Connects the alignment page with its iframes. The returned iframesRef must be attached to
- * the three iframes.
+ * the three iframes, and handleIframeLoad to their onLoad events.
  * - sendMessage calls a command of the cross-origin API of an iframe and resolves with its
  *   return value. It waits until the API of that iframe is ready, and rejects if the
  *   command fails or no reply arrives in time.
  * - onWorkerCommand is called for each command that a worker sends (see bigwarp_protocol.ts).
+ * - onIframeReloaded is called when an iframe loads a second page, e.g. because it was
+ *   reloaded or navigated away. The iframe then no longer shows the state the page expects.
  * - isStoreSaved tells whether the alignment annotation in the store iframe is saved.
  */
-export function useIframeBridge(onWorkerCommand: (side: Side, command: BigWarpCommand) => void) {
+export function useIframeBridge(
+  onWorkerCommand: (side: Side, command: BigWarpCommand) => void,
+  onIframeReloaded: (role: IframeRole) => void,
+) {
   const iframesRef = useRef<Record<IframeRole, HTMLIFrameElement | null>>({
     A: null,
     B: null,
@@ -69,6 +84,7 @@ export function useIframeBridge(onWorkerCommand: (side: Side, command: BigWarpCo
   const pendingRepliesRef = useRef(new Map<string, Deferred<unknown, Error>>());
   const messageCounterRef = useRef(0);
   const [isStoreSaved, setIsStoreSaved] = useState(true);
+  const loadCountsRef = useRef<Record<IframeRole, number>>({ A: 0, B: 0, store: 0 });
   const handleWorkerCommand = useEffectEvent(onWorkerCommand);
 
   useEffect(() => {
@@ -140,5 +156,16 @@ export function useIframeBridge(onWorkerCommand: (side: Side, command: BigWarpCo
     [readyDeferreds],
   );
 
-  return { iframesRef, sendMessage, isStoreSaved };
+  const handleIframeLoad = (role: IframeRole) => {
+    const iframe = iframesRef.current[role];
+    if (iframe == null || isEmptyDocument(iframe)) {
+      return;
+    }
+    loadCountsRef.current[role] += 1;
+    if (loadCountsRef.current[role] > 1) {
+      onIframeReloaded(role);
+    }
+  };
+
+  return { iframesRef, sendMessage, handleIframeLoad, isStoreSaved };
 }

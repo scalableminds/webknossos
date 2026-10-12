@@ -4,6 +4,7 @@ import { Space, Typography } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { handleGenericError } from "libs/error_handling";
 import { useApi, useWkSelector } from "libs/react_hooks";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import type { APIAnnotation } from "types/api_types";
 import {
@@ -28,6 +29,8 @@ import { getAlignmentViewUrl } from "./bigwarp_protocol";
 function AlignmentView() {
   const { annotationId = "" } = useParams();
   const activeUserId = useWkSelector((state) => state.activeUser?.id);
+  // Increased to mount the workspace anew, see AlignmentWorkspace's onRestart.
+  const [workspaceRestartCount, setWorkspaceRestartCount] = useState(0);
 
   const annotationQuery = useApi({
     queryKey: ["alignDatasets", "annotation", annotationId],
@@ -91,10 +94,16 @@ function AlignmentView() {
   }
   return (
     <AlignmentWorkspace
-      key={annotation.id}
+      key={`${annotation.id}-${workspaceRestartCount}`}
       dataset={dataset}
       layerNames={layerNames}
       landmarkAnnotation={annotation}
+      onRestart={async () => {
+        // The workspace starts with the name and description of the loaded annotation, which
+        // may have been edited since.
+        await annotationQuery.refetch();
+        setWorkspaceRestartCount((count) => count + 1);
+      }}
     />
   );
 }

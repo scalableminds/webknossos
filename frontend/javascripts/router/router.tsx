@@ -35,6 +35,7 @@ import loadable from "libs/lazy_loader";
 import Navbar from "navbar";
 import { createBrowserRouter, Navigate, Outlet, type RouteObject, redirect } from "react-router";
 import type { EmptyObject } from "types/type_utils";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
@@ -81,7 +82,9 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 function RootLayout({ showNavbar = true }: { showNavbar?: boolean }) {
   return (
     <Layout className={showNavbar ? undefined : "no-navbar"}>
-      <CommandPalette />
+      {/* The command palette can leave the view or undo the forced settings of the dataset
+      alignment workers. Thus, don't allow them in BigWarp iframes. */}
+      {isBigWarpWorker() ? null : <CommandPalette />}
       {showNavbar && <Navbar />}
       <Content>
         <ErrorBoundary>

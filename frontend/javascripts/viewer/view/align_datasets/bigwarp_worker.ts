@@ -1,8 +1,8 @@
 import { findDataPositionForLayer } from "admin/rest_api";
+import Toast from "libs/toast";
 import { isNoEditableElementFocused } from "libs/utils";
 import { useEffect } from "react";
 import type { BlockerFunction } from "react-router";
-import UrlManager from "viewer/controller/url_manager";
 import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
 import { Toolkit } from "viewer/model/accessors/tool_accessor";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
@@ -57,12 +57,12 @@ export function useBigWarpShortcutRelay() {
   }, []);
 }
 
-// Navigating within a worker iframe (e.g. via a link in its navbar) breaks the alignment view,
-// so it is always blocked. The worker's own annotation is a sandbox and never counts as
-// unsaved, so the regular "unsaved changes" blocker would not fire here.
-// The browser's own "leave page?" dialog is not used: it would also appear whenever the
-// alignment view itself is left. The alignment view shows that dialog only if the alignment
-// annotation has unsaved changes (see alignment_workspace.tsx).
+// Navigating within a worker iframe breaks the alignment view, so navigation within the app
+// is always blocked. The worker's own annotation is a sandbox and never counts as unsaved,
+// so the regular "unsaved changes" blocker would not fire here.
+// Full page loads (e.g. a reload) can't be blocked without the browser's own "leave page?"
+// dialog, which would also appear whenever the alignment view itself is left. Instead, the
+// alignment view restarts when a worker loads a new page (see useIframeBridge).
 export function blockBigWarpWorkerNavigation(
   args: BeforeUnloadEvent | BlockerFunction,
 ): boolean | undefined {
@@ -70,15 +70,10 @@ export function blockBigWarpWorkerNavigation(
     // The native event requires an empty return value to not show a dialog.
     return;
   }
-  const shouldLeave = confirm(
-    "Leaving this view is not allowed while aligning layers. Leave anyway?",
+  Toast.warning(
+    "This view can't be left while aligning layers. To leave the alignment, click the WEBKNOSSOS logo in the left view.",
   );
-  if (shouldLeave) {
-    // Same reason as in the regular blocker in controller.tsx: don't overwrite the target
-    // history entry with the annotation URL.
-    UrlManager.stopUrlUpdater();
-  }
-  return !shouldLeave;
+  return true;
 }
 
 // Configures the worker right after the annotation was loaded: render the worker's own

@@ -23,7 +23,7 @@ import {
 } from "./alignment_helpers";
 import { type BigWarpCommand, getBigWarpStoreUrl, getBigWarpWorkerUrl } from "./bigwarp_protocol";
 import { LandmarkPanel } from "./landmark_panel";
-import { useIframeBridge } from "./use_iframe_bridge";
+import { type IframeRole, useIframeBridge } from "./use_iframe_bridge";
 import { type LandmarkSyncStatus, useLandmarkSync } from "./use_landmark_sync";
 
 const DEFAULT_LANDMARK_PANEL_WIDTH = 380;
@@ -34,9 +34,14 @@ type Props = {
   dataset: APIDataset;
   layerNames: LayerNames;
   landmarkAnnotation: APIAnnotation;
+  // Called after one of the iframes loaded a new page, e.g. because it was reloaded (see
+  // restartAfterReload). The parent must then mount the workspace anew, with fresh iframes.
+  onRestart: () => void;
 };
 
-export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: Props) {
+type OverlayStatus = Exclude<LandmarkSyncStatus, "ready"> | "restarting";
+
+export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, onRestart }: Props) {
   const { modal } = App.useApp();
   const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(false);
   const [landmarkPanelWidth, setLandmarkPanelWidth] = useState(DEFAULT_LANDMARK_PANEL_WIDTH);
@@ -53,15 +58,26 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: 
     A: false,
     B: false,
   });
+  const [isRestarting, setIsRestarting] = useState(false);
 
-  // handleWorkerCommand is a function declaration further below, so it can be used here.
-  const { iframesRef, sendMessage, isStoreSaved } = useIframeBridge(handleWorkerCommand);
+  // handleWorkerCommand and restartAfterReload are function declarations further below, so
+  // they can be used here.
+  const { iframesRef, sendMessage, handleIframeLoad, isStoreSaved } = useIframeBridge(
+    handleWorkerCommand,
+    restartAfterReload,
+  );
   const {
     landmarks,
     status: syncStatus,
     hasUnsyncedLandmarks,
     fetchLandmarks,
+    stopSync,
   } = useLandmarkSync(sendMessage, layerNames);
+  const overlayStatus: OverlayStatus | null = isRestarting
+    ? "restarting"
+    : syncStatus !== "ready"
+      ? syncStatus
+      : null;
   const isSyncReady = syncStatus === "ready";
   const hasUnsavedChanges = hasUnsyncedLandmarks || !isStoreSaved;
 
@@ -249,6 +265,24 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: 
     });
   };
 
+  // A reloaded iframe has lost its state: a worker its landmarks, the store iframe its
+  // unsaved changes. Restarting loads all iframes again and imports the stored landmarks.
+  async function restartAfterReload(reloadedRole: IframeRole) {
+    if (isRestarting) {
+      return;
+    }
+    setIsRestarting(true);
+    stopSync();
+    Toast.warning(
+      "A view was reloaded or left, so the alignment view is restarted. The stored landmarks are kept.",
+    );
+    if (reloadedRole !== "store") {
+      // Saves the landmarks that were synced before the reload.
+      await sendMessage("store", "save").catch((error) => console.error(error));
+    }
+    onRestart();
+  }
+
   function handleWorkerCommand(side: Side, command: BigWarpCommand) {
     switch (command) {
       case "align":
@@ -327,6 +361,7 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: 
               className="align-datasets-worker"
               title={`${side === "A" ? "Fixed" : "Moving"} layer (${layerNames[side]})`}
               src={getBigWarpWorkerUrl(dataset, layerNames[side], side === "A")}
+              onLoad={() => handleIframeLoad(side)}
             />
           ))}
           <iframe
@@ -336,23 +371,26 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation }: 
             title="Landmark annotation"
             style={{ display: "none" }}
             src={getBigWarpStoreUrl(landmarkAnnotation.id)}
+            onLoad={() => handleIframeLoad("store")}
           />
-          {syncStatus !== "ready" ? <LandmarkSyncOverlay status={syncStatus} /> : null}
+          {overlayStatus != null ? <WorkspaceOverlay status={overlayStatus} /> : null}
         </Flex>
       </Splitter.Panel>
     </Splitter>
   );
 }
 
-// Covers the workers until the stored landmarks were imported. Pairs are matched by tree id,
-// so a landmark placed before the import would shift all pairs by one.
-function LandmarkSyncOverlay({ status }: { status: Exclude<LandmarkSyncStatus, "ready"> }) {
+// Covers the workers until the stored landmarks were imported, and while restarting. Pairs
+// are matched by tree id, so a landmark placed before the import would shift all pairs by one.
+function WorkspaceOverlay({ status }: { status: OverlayStatus }) {
   return (
     <Flex className="align-datasets-overlay" vertical justify="center" align="center" gap={8}>
-      {status === "loading" ? (
+      {status !== "failed" ? (
         <>
           <Spin size="large" />
-          <Typography.Text>Loading the landmarks…</Typography.Text>
+          <Typography.Text>
+            {status === "loading" ? "Loading the landmarks…" : "Restarting the alignment view…"}
+          </Typography.Text>
         </>
       ) : (
         <Result

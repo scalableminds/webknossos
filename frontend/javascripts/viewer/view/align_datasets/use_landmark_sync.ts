@@ -27,8 +27,8 @@ export type LandmarkSyncStatus = "loading" | "ready" | "failed";
  *    undo, ...), the group of that side in the landmark annotation is replaced with the
  *    trees of the worker.
  * Returns the current landmarks of both workers, the status of the sync, whether changed
- * landmarks still have to be written to the landmark annotation, and a function that reads
- * the landmarks from the workers right away.
+ * landmarks still have to be written to the landmark annotation, a function that reads
+ * the landmarks from the workers right away, and a function that stops the sync for good.
  */
 export function useLandmarkSync(
   sendMessage: SendMessage,
@@ -38,6 +38,7 @@ export function useLandmarkSync(
   status: LandmarkSyncStatus;
   hasUnsyncedLandmarks: boolean;
   fetchLandmarks: () => Promise<Record<Side, Landmark[]>>;
+  stopSync: () => void;
 } {
   const [landmarks, setLandmarks] = useState<Record<Side, Landmark[]>>({ A: [], B: [] });
   const [status, setStatus] = useState<LandmarkSyncStatus>("loading");
@@ -47,6 +48,9 @@ export function useLandmarkSync(
   const [groupIds, setGroupIds] = useState<Record<Side, number> | null>(null);
   // The landmarks of each side as they were last written to the landmark annotation.
   const storedLandmarksRef = useRef<Record<Side, Landmark[]>>({ A: [], B: [] });
+  // Set when a worker was reloaded. Its landmarks are then missing until the stored ones are
+  // imported again, so writing them to the landmark annotation would delete landmarks.
+  const isStoppedRef = useRef(false);
   // The effect below depends on the names, not on the object, which is created anew on every
   // render.
   const { A: fixedLayerName, B: movingLayerName } = layerNames;
@@ -103,7 +107,7 @@ export function useLandmarkSync(
     worker: { nmlString: string; landmarks: Landmark[] },
     groupId: number,
   ) => {
-    if (isEqual(worker.landmarks, storedLandmarksRef.current[side])) {
+    if (isStoppedRef.current || isEqual(worker.landmarks, storedLandmarksRef.current[side])) {
       return;
     }
     await sendMessage("store", "replaceTreesInGroup", [worker.nmlString, groupId]);
@@ -114,7 +118,7 @@ export function useLandmarkSync(
   // can't overlap.
   usePolling(
     async () => {
-      if (groupIds == null) {
+      if (groupIds == null || isStoppedRef.current) {
         return;
       }
       try {
@@ -136,5 +140,9 @@ export function useLandmarkSync(
 
   const fetchLandmarks = async () => (await fetchWorkerLandmarks()).newLandmarks;
 
-  return { landmarks, status, hasUnsyncedLandmarks, fetchLandmarks };
+  const stopSync = () => {
+    isStoppedRef.current = true;
+  };
+
+  return { landmarks, status, hasUnsyncedLandmarks, fetchLandmarks, stopSync };
 }

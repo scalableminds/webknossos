@@ -95,7 +95,8 @@ export function CreditActivitySummaryBar({
   transactions: APICreditTransaction[];
 }) {
   const { milliCreditBalance, milliCreditsSpent } = useCreditSummary(transactions);
-  const canRequestUpgrades = useCanRequestUpgrades();
+  // The backend only accepts credit orders from the organization owner.
+  const canOrderCredits = useWkSelector((state) => state.activeUser?.isOrganizationOwner ?? false);
 
   return (
     <div
@@ -121,7 +122,7 @@ export function CreditActivitySummaryBar({
         <span style={summaryValueStyle}>{formatMilliCreditsString(milliCreditsSpent)}</span>
       </SummaryStat>
       <div style={summaryCellStyle}>
-        {canRequestUpgrades ? (
+        {canOrderCredits ? (
           <Button
             type="primary"
             icon={<PlusOutlined />}

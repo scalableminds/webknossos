@@ -314,10 +314,16 @@ function markTabsetAsMaximized(node: RowOrTabsetNode, tabId: string): boolean {
 }
 
 // The dataset alignment workers use the normal layout, but start with the XY viewport
-// maximized. The user can restore the other viewports as usual.
+// maximized and the right border closed. The user can restore the other viewports as usual.
+// The right border can't be opened in workers (see FlexLayoutWrapper.isBorderLocked).
 export const getBigWarpWorkerLayoutConfig = (baseLayout: ModelConfig): ModelConfig => {
   const layout = cloneDeep(baseLayout);
   markTabsetAsMaximized(layout.layout, OrthoViews.PLANE_XY);
+  for (const border of layout.borders) {
+    if (border.location === "right") {
+      border.selected = -1;
+    }
+  }
   return layout;
 };
 

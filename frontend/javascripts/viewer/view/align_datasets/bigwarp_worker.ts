@@ -83,12 +83,14 @@ export function blockBigWarpWorkerNavigation(
 
 // Configures the worker right after the annotation was loaded: render the worker's own
 // layer natively (so landmark positions are in that layer's coordinates), create a new
-// tree per node, restrict the tools to landmark clicking and move to a position that
-// contains data. These settings are not persisted (see settings_saga.ts).
+// tree per node, don't move the camera to new nodes, restrict the tools to landmark
+// clicking and move to a position that contains data. These settings are not persisted
+// (see settings_saga.ts).
 export async function applyBigWarpWorkerSettings() {
   const layerName = getBigWarpWorkerLayerName();
   Store.dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layerName));
   Store.dispatch(updateUserSettingAction("newNodeNewTree", true));
+  Store.dispatch(updateUserSettingAction("centerNewNode", false));
   Store.dispatch(updateUserSettingAction("activeToolkit", Toolkit.BIGWARP_LANDMARKS));
 
   try {

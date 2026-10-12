@@ -177,6 +177,9 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   }
 
   openRightBorderTabById(tabType: BorderTabType) {
+    if (this.isBorderLocked("right")) {
+      return;
+    }
     const rightBorderId = "right-border-tab-container";
     const node = this.state.model.getNodeById(rightBorderId);
     if (node?.getType() !== "tab") return;
@@ -522,7 +525,16 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     return action;
   };
 
+  // The right border of the dataset alignment workers contains tabs (e.g. the dataset info
+  // with its links) that break the alignment view, so it stays closed.
+  isBorderLocked(side: BorderOpenStatusKeys) {
+    return side === "right" && isBigWarpWorker();
+  }
+
   toggleBorder(side: BorderOpenStatusKeys, toggleInternalState: boolean = true) {
+    if (this.isBorderLocked(side)) {
+      return;
+    }
     // The most recent version of borderOpenStatus is needed as two border toggles might be executed directly after another.
     // If borderOpenStatus was passed via props, the first update  of borderOpenStatus will overwritten by the second update.
     const borderOpenStatusCopy = cloneDeep(Store.getState().uiInformation.borderOpenStatus);
@@ -550,7 +562,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   ) => {
     const { isTopMost, isRightMost, isLeftMost } = getPositionStatusOf(tabSetNode);
 
-    if (isTopMost && isRightMost) {
+    if (isTopMost && isRightMost && !this.isBorderLocked("right")) {
       renderValues.buttons.push(
         <BorderToggleButton side="right" key="right-border-toggle-button-top" />,
       );

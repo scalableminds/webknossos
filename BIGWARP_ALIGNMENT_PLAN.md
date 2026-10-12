@@ -1293,6 +1293,18 @@ dataset info tab), and the command palette could navigate away, too.
   `z + 1` fallback was distracting, so it's gone. The landmark panel's status shows the
   hint as a warning instead (was secondary text). The text moved from the
   `SINGLE_PLANE_ALIGNMENT_HINT` constant into `landmark_panel.tsx`, its only user.
+- **No "alignment outdated" warning with auto-align:** while dragging a landmark with
+  auto-align on, the warning appeared after each sync tick and disappeared once the
+  automatic align had finished (one round trip later), so it flickered. With auto-align a
+  new alignment is computed anyway, so `AlignmentStatus` only shows the warning when
+  auto-align is off. Accepted gap: if auto-align fails (e.g. too few landmarks), the
+  alignment stays outdated without a warning.
+- **Name and description like in the info tab:** `AnnotationHeader` in `landmark_panel.tsx`
+  now reuses `AnnotationIdentity` from `right_border_tabs/info_tab/identity_block.tsx` (the
+  store-independent variant of the info tab's identity block) instead of its own title,
+  "Description" section and markdown modal. Only the layer-pair tag stays panel-specific.
+  `_align_datasets.less` removes the block's own padding inside the panel, like the
+  dashboard does.
 - **Show the result of a manual align:** after aligning with `t`, the toolbar button or the
   panel's align button, both workers show the other layer (`setOtherLayerVisibility`), so
   the transform is visible right away. Automatic aligns (after loading, auto-align) don't

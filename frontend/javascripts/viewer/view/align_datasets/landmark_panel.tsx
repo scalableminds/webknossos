@@ -1,13 +1,11 @@
-import { AimOutlined, EditOutlined, NodeIndexOutlined } from "@ant-design/icons";
+import { AimOutlined, NodeIndexOutlined } from "@ant-design/icons";
 import { Button, Empty, Flex, Switch, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { SidebarSection } from "dashboard/sidebar_section";
-import Markdown from "libs/markdown_adapter";
 import isEqual from "lodash-es/isEqual";
 import { useEffect, useRef, useState } from "react";
 import type { Vector3 } from "viewer/constants";
-import { MarkdownModal } from "viewer/view/components/markdown_modal";
-import { InlineIconButton } from "viewer/view/right_border_tabs/info_tab/info_tab_layout";
+import { AnnotationIdentity } from "viewer/view/right_border_tabs/info_tab/identity_block";
 import {
   type Alignment,
   getLandmarkPairs,
@@ -137,22 +135,14 @@ function AnnotationHeader({
   onChangeName: (name: string) => void;
   onChangeDescription: (description: string) => void;
 }) {
-  const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false);
   return (
     <>
-      <Typography.Title
-        level={5}
-        style={{ marginTop: 0, marginBottom: 12 }}
-        editable={{
-          // Start editing with the actual name, not the placeholder.
-          text: name,
-          tooltip: "Rename the alignment",
-          // antd calls onChange whenever editing ends, even if nothing was changed.
-          onChange: (newName) => newName !== name && onChangeName(newName),
-        }}
-      >
-        {name !== "" ? name : "Unnamed alignment"}
-      </Typography.Title>
+      <AnnotationIdentity
+        name={name}
+        description={description}
+        onChangeName={onChangeName}
+        onChangeDescription={onChangeDescription}
+      />
       <Tag
         icon={<NodeIndexOutlined />}
         variant="outlined"
@@ -161,33 +151,6 @@ function AnnotationHeader({
       >
         {layerNames.B} → {layerNames.A}
       </Tag>
-      <SidebarSection label="Description">
-        <Flex align="start" gap={4}>
-          {description !== "" ? (
-            // Markdown renders its blocks without a wrapper, so they would become separate
-            // items of the flex row.
-            <div>
-              <Markdown>{description}</Markdown>
-            </div>
-          ) : (
-            <Typography.Text type="secondary">No description</Typography.Text>
-          )}
-          <InlineIconButton
-            icon={<EditOutlined />}
-            tooltip="Edit description"
-            ariaLabel="Edit description"
-            onClick={() => setIsDescriptionModalOpen(true)}
-          />
-        </Flex>
-        <MarkdownModal
-          label="Alignment Description"
-          placeholder="[No description]"
-          source={description}
-          isOpen={isDescriptionModalOpen}
-          onOk={() => setIsDescriptionModalOpen(false)}
-          onChange={onChangeDescription}
-        />
-      </SidebarSection>
     </>
   );
 }

@@ -8,6 +8,12 @@
     background-color: var(--ant-color-bg-base);
   }
 
+  // The name and description block of the info tab (AnnotationIdentity) brings its own
+  // padding, but the panel already has one.
+  .landmark-panel .info-tab-identity {
+    padding: 0 0 8px;
+  }
+
   // A closed landmark panel has a width of 0 and must not leave a resize bar behind.
   &.is-landmark-panel-closed > .ant-splitter-bar {
     display: none;

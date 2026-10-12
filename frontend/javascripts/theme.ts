@@ -1,7 +1,6 @@
-import { type ThemeConfig, theme } from "antd";
+import { type MappingAlgorithm, type ThemeConfig, theme } from "antd";
 import type { AliasToken, OverrideToken } from "antd/es/theme/interface";
 import window from "libs/window";
-import clone from "lodash-es/clone";
 import merge from "lodash-es/merge";
 import type { APIUser } from "types/api_types";
 
@@ -34,38 +33,124 @@ export type Theme = "light" | "dark";
 //
 //  4. One of the brand constants below — only for colors that must stay identical in both the
 //     light and the dark theme.
-export const ColorWKBlue = "#5660ff"; // WK ~blue/purple
-const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
-const ColorWKDarkGrey = "#1f1f1f";
-export const ColorWKBlueZircon = "#59f8e8"; // WK Cyan
+export const ColorWKBlue = "#5660ff"; // DS "Indigo" (primary)
+export const ColorWKBlueZircon = "#59f8e8"; // DS "Mint", apply by hand for rare highlights only
 export const ColorWKGold = "#ddbc00"; // WK Gold, used for the credit/billing iconography
 export const ColorWhite = "white";
-export const ColorBlack = "black";
-const ColorDarkBg = "#383d48";
-// Borders and disabled backgrounds of the always-dark navbar/status bar.
-const ColorDarkBorder = "#4e4e4e";
-const ColorDarkDisabledBg = "#313131";
+const ColorWKDarkGrey = "#1f1f1f";
+
+// Colors of the WEBKNOSSOS design system (theme v2.1). The names match the design guidelines.
+const ColorIndigoLight = "#8a90ff"; // DS "Indigo Light": indigo used as text/links on ink
+const ColorViewerInk = "#0c0d18"; // DS "Viewer Ink": dark page background
+const ColorPaper = "#f5f5fa"; // DS "Paper": light page background
+const ColorTextOnInkPrimary = "#ffffff";
+const ColorTextOnInkSecondary = "#a7a9c6";
+const ColorHairlineOnInk = "rgba(255, 255, 255, 0.12)";
+const ColorTextOnPaperPrimary = "#14152b";
+const ColorInk2 = "#14162a"; // DS "Ink-2": background of the always-dark navbar and status bar
+
+// Colors introduced for the product UI that are not (yet) part of the design system.
+const ColorInkCard = "#161721"; // cards on ink
+const ColorInkElevated = "#1f202a"; // popovers, dropdowns, modals
+const ColorTextOnInkMuted = "#8c8ead"; // labels, descriptions
+const ColorTextOnInkSubtle = "#6e7194"; // hints, icons
+const ColorIndigoLightHover = "#a9aeff";
+const ColorIndigoLightPressed = "#7c82f0";
+const ColorOutlineOnInkHover = "rgba(255, 255, 255, 0.32)";
+const ColorOutlineOnInkPressed = "rgba(255, 255, 255, 0.24)";
+const ColorOutlineOnPaperHover = "rgba(20, 21, 43, 0.32)";
+const ColorOutlineOnPaperPressed = "rgba(20, 21, 43, 0.45)";
+const ColorShadowOnInk = "rgba(0, 0, 0, 0.6)"; // replaces antd's white (glowing) dark shadow
+// antd's dark disabled background (8% white), pre-blended onto Ink-2 to make it opaque.
+const ColorInk2Disabled = "#27293b";
+
+// Hanken Grotesk / IBM Plex Mono are bundled (see main.less); the rest of each stack only
+// appears if the web font fails to load. Keep in sync with @font-family in _variables.less.
+export const WK_FONT =
+  "'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+export const WK_MONO =
+  "'IBM Plex Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace";
 
 // Ant Design Customizations
+// Principle: override as little as possible and let antd derive the rest, so that antd upgrades
+// keep flowing without a full re-review.
 const globalDesignToken: Partial<AliasToken> = {
-  colorPrimary: ColorWKBlue,
-  colorLink: ColorWKBlue,
-  colorLinkHover: ColorWKLinkHover,
+  colorPrimary: ColorWKBlue, // fills: primary buttons, switches, sliders, selection
   colorInfo: ColorWKBlue,
   blue: ColorWKBlue,
   borderRadius: 4,
-  fontFamily:
-    '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif',
+  fontFamily: WK_FONT,
+  fontFamilyCode: WK_MONO,
+  controlOutlineWidth: 0, // no indigo halo around focused inputs (the border still turns indigo)
+};
+
+const lightDesignToken: Partial<AliasToken> = {
+  colorBgLayout: ColorPaper,
+};
+
+// `colorShadow` is consumed by antd at runtime (it derives all box shadows), but is missing from
+// its public AliasToken type.
+const darkDesignToken: Partial<AliasToken> & { colorShadow: string } = {
+  // Surfaces. colorBgBase is intentionally not set, since it would tint every derived grey.
+  colorBgLayout: ColorViewerInk, // page background
+  colorBgContainer: ColorInkCard, // cards
+  colorBgElevated: ColorInkElevated, // popovers, dropdowns, modals
+
+  // Lines
+  colorBorderSecondary: ColorHairlineOnInk, // card borders, table rules
+  colorSplit: ColorHairlineOnInk, // dividers
+
+  // Text: grey for normal text, white only for headings
+  colorText: ColorTextOnInkSecondary,
+  colorTextHeading: ColorTextOnInkPrimary,
+  colorTextSecondary: ColorTextOnInkMuted,
+  colorTextTertiary: ColorTextOnInkSubtle,
+
+  // Indigo used as text becomes Indigo Light
+  colorPrimaryText: ColorIndigoLight,
+  colorPrimaryTextHover: ColorIndigoLightHover,
+  colorPrimaryTextActive: ColorIndigoLightPressed,
+  // colorLink is a seed token that the dark algorithm would dim, see darkAlgorithm below.
+  colorLinkHover: ColorIndigoLightHover,
+  colorLinkActive: ColorIndigoLightPressed,
+
+  colorShadow: ColorShadowOnInk,
+};
+
+// antd's dark algorithm derives colorLink from the seed's palette, which dims Indigo Light by ~15%.
+// Wrapping the algorithm pins the exact design-system color instead.
+const darkAlgorithm: MappingAlgorithm = (seedToken, mapToken) => ({
+  ...theme.darkAlgorithm(seedToken, mapToken),
+  colorLink: ColorIndigoLight,
+});
+
+const flatButtonToken = { primaryShadow: "none", defaultShadow: "none", dangerShadow: "none" };
+
+// Default/dashed buttons get a neutral outline on hover/press. Indigo is reserved for solid fills.
+const lightButtonToken = {
+  ...flatButtonToken,
+  defaultHoverColor: ColorTextOnPaperPrimary,
+  defaultHoverBorderColor: ColorOutlineOnPaperHover,
+  defaultActiveColor: ColorTextOnPaperPrimary,
+  defaultActiveBorderColor: ColorOutlineOnPaperPressed,
+};
+
+const darkButtonToken = {
+  ...flatButtonToken,
+  defaultHoverColor: ColorTextOnInkPrimary,
+  defaultHoverBorderColor: ColorOutlineOnInkHover,
+  defaultActiveColor: ColorTextOnInkPrimary,
+  defaultActiveBorderColor: ColorOutlineOnInkPressed,
 };
 
 const lightGlobalToken = theme.getDesignToken({
-  token: globalDesignToken,
+  token: { ...globalDesignToken, ...lightDesignToken },
   algorithm: theme.defaultAlgorithm,
 });
 
 const darkGlobalToken = theme.getDesignToken({
-  token: globalDesignToken,
-  algorithm: theme.darkAlgorithm,
+  token: { ...globalDesignToken, ...darkDesignToken },
+  algorithm: darkAlgorithm,
 });
 
 // The heading scale WEBKNOSSOS has always used. It used to be enforced by global
@@ -137,24 +222,21 @@ export const ModalWidth = {
   Full: "85%",
 } as const;
 
+// The navbar and status bar are always dark, regardless of the user's theme. They use the regular
+// dark theme, except that their surface is Ink-2 instead of the card/page colors.
 const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
   components: {
+    // Checked radio buttons (e.g. the tool selection) are solid fills instead of outlines.
     Radio: {
       buttonCheckedBg: darkGlobalToken.colorPrimary,
       buttonSolidCheckedBg: darkGlobalToken.colorPrimary,
-      buttonBg: ColorDarkBg,
-    },
-    Button: {
-      primaryShadow: "none",
     },
   },
   token: {
-    colorBgContainer: ColorDarkBg,
-    colorBorder: ColorDarkBorder,
-    colorPrimaryBorder: ColorDarkBorder,
+    colorBgContainer: ColorInk2,
     // Use a non-transparent color for disabled backgrounds. Otherwise the
     // erase-buttons which hide under their neighbors would not hide properly.
-    colorBgContainerDisabled: ColorDarkDisabledBg,
+    colorBgContainerDisabled: ColorInk2Disabled,
   },
 };
 export const NavAndStatusBarTheme = merge(
@@ -175,17 +257,26 @@ export function getThemeFromUser(activeUser: APIUser | null | undefined): Theme 
   return activeUser.selectedTheme;
 }
 
+// The page background, for elements outside of antd's CSS variable scope (e.g. <body>).
+export function getLayoutBackgroundColor(userTheme: Theme): string {
+  return userTheme === "dark" ? darkGlobalToken.colorBgLayout : lightGlobalToken.colorBgLayout;
+}
+
 export function getAntdTheme(userTheme: Theme) {
-  let algorithm = theme.defaultAlgorithm;
+  const isDark = userTheme === "dark";
   const components: OverrideToken = {
     Layout: {
-      headerBg: ColorWKDarkGrey,
-      footerBg: ColorWKDarkGrey,
-      siderBg: userTheme === "dark" ? ColorBlack : ColorWhite,
+      headerBg: ColorInk2,
+      footerBg: ColorInk2,
+      siderBg: isDark ? ColorViewerInk : ColorWhite,
     },
     Menu: {
-      darkItemBg: ColorWKDarkGrey,
-      darkPopupBg: ColorWKDarkGrey,
+      // The navbar menus use theme="dark" in both user themes, so their text colors follow the
+      // dark theme here, too.
+      darkItemBg: ColorInk2,
+      darkPopupBg: ColorInkElevated,
+      darkItemColor: ColorTextOnInkSecondary,
+      darkItemHoverColor: ColorTextOnInkPrimary,
     },
     Tree: {
       colorBgContainer: "transparent",
@@ -195,21 +286,32 @@ export function getAntdTheme(userTheme: Theme) {
     },
     Typography: TypographyHeadingToken,
     Modal: ModalToken,
+    Button: isDark ? darkButtonToken : lightButtonToken,
   };
 
-  if (userTheme === "dark") {
-    algorithm = theme.darkAlgorithm;
+  if (isDark) {
     components.Tree = {
       ...components.Tree,
       nodeSelectedBg: ColorWKBlue,
       nodeHoverBg: ColorWKDarkGrey,
     };
+    // These components color selected *text* with colorPrimary directly.
+    components.Menu = {
+      ...components.Menu,
+      itemSelectedColor: ColorIndigoLight,
+      horizontalItemSelectedColor: ColorIndigoLight,
+    };
+    components.Tabs = {
+      itemSelectedColor: ColorIndigoLight,
+      itemHoverColor: ColorIndigoLightHover,
+      itemActiveColor: ColorIndigoLight,
+    };
   }
   return {
-    algorithm,
-    // Without the clone(), the default theme shows dark backgrounds in various components.
+    algorithm: isDark ? darkAlgorithm : theme.defaultAlgorithm,
+    // Without the copy, the default theme shows dark backgrounds in various components.
     // Apparently, antd mutates this variable?
-    token: clone(globalDesignToken),
+    token: { ...globalDesignToken, ...(isDark ? darkDesignToken : lightDesignToken) },
     components,
     // Disable inheriting from the parent theme, in case we are nesting dark and light mode components
     inherit: false,

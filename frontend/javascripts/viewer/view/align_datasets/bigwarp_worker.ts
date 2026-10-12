@@ -3,11 +3,13 @@ import Toast from "libs/toast";
 import { isNoEditableElementFocused } from "libs/utils";
 import { useEffect } from "react";
 import type { BlockerFunction } from "react-router";
+import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
 import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
 import { Toolkit } from "viewer/model/accessors/tool_accessor";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
+  updateLayerSettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
@@ -76,13 +78,16 @@ export function blockBigWarpWorkerNavigation(
   return true;
 }
 
-// Configures the worker right after the annotation was loaded: render the worker's own
-// layer natively (so landmark positions are in that layer's coordinates), create a new
-// tree per node, don't move the camera to new nodes, restrict the tools to landmark
+// Configures the worker right after the annotation was loaded: show and natively render only
+// the worker's own layer (so landmark positions are in that layer's coordinates), create a
+// new tree per node, don't move the camera to new nodes, restrict the tools to landmark
 // clicking and move to a position that contains data. These settings are not persisted
 // (see settings_saga.ts).
 export async function applyBigWarpWorkerSettings() {
   const layerName = getBigWarpWorkerLayerName();
+  for (const layer of getDataLayers(Store.getState().dataset)) {
+    Store.dispatch(updateLayerSettingAction(layer.name, "isDisabled", layer.name !== layerName));
+  }
   Store.dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layerName));
   Store.dispatch(updateUserSettingAction("newNodeNewTree", true));
   Store.dispatch(updateUserSettingAction("centerNewNode", false));

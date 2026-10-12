@@ -1278,6 +1278,17 @@ dataset info tab), and the command palette could navigate away, too.
 - **In-app navigation hard-blocked:** `blockBigWarpWorkerNavigation` no longer asks "leave
   anyway?" but blocks and shows a toast that points to the logo in the left worker (which
   navigates the top window, not the iframe).
+- **Only the worker's own layer is visible initially:** `applyBigWarpWorkerSettings` sets
+  `isDisabled` for every dataset layer except the worker's own one, which it enables
+  explicitly (the user's saved view configuration may have it disabled). Before, the page
+  only hid the other layer of the pair, so additional layers of the dataset stayed visible.
+  The page no longer sends the initial `setLayerVisibility` itself. Only the other layer of
+  the pair is toggled by the tool (`x`, overlay buttons, manual align); other layers can be
+  shown via the left sidebar.
+- **Show the result of a manual align:** after aligning with `t`, the toolbar button or the
+  panel's align button, both workers show the other layer (`setOtherLayerVisibility`), so
+  the transform is visible right away. Automatic aligns (after loading, auto-align) don't
+  change the visibility.
 - **Restart after a reload:** browsers can't block a full page load without the native
   dialog. While checking this, a data-loss case came up: the left sidebar calls
   `location.reload()` in some places; the reloaded worker is an empty sandbox, and the sync

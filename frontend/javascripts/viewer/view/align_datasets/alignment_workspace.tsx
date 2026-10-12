@@ -53,7 +53,8 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
   );
   // If enabled, the transform is computed again whenever the landmarks change.
   const [isAutoAlignEnabled, setIsAutoAlignEnabled] = useState(false);
-  // Whether a worker also shows the layer of the other worker.
+  // Whether a worker also shows the layer of the other worker. Each worker initially shows
+  // only its own layer (see applyBigWarpWorkerSettings).
   const [isOtherLayerVisible, setIsOtherLayerVisible] = useState<Record<Side, boolean>>({
     A: false,
     B: false,
@@ -112,12 +113,6 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     }
   }, [blocker]);
 
-  // Each worker initially shows only its own layer.
-  useEffect(() => {
-    sendMessage("A", "setLayerVisibility", [layerNames.B, false]);
-    sendMessage("B", "setLayerVisibility", [layerNames.A, false]);
-  }, [sendMessage, layerNames.A, layerNames.B]);
-
   // Shows layer B transformed in worker A and layer A transformed (inversely) in worker B.
   const showTransformInWorkers = async (transform: Transform | null) => {
     await sendMessage("A", "setAffineLayerTransforms", [
@@ -130,7 +125,17 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     ]);
   };
 
-  // When aligning automatically, problems are not reported to the user.
+  const setOtherLayerVisibility = (side: Side, isVisible: boolean) => {
+    setIsOtherLayerVisible((previous) => ({ ...previous, [side]: isVisible }));
+    sendMessage(side, "setLayerVisibility", [layerNames[OTHER_SIDE[side]], isVisible]);
+  };
+
+  const toggleOtherLayer = (side: Side) => {
+    setOtherLayerVisibility(side, !isOtherLayerVisible[side]);
+  };
+
+  // When aligning automatically, problems are not reported to the user. When aligning
+  // manually, both workers show the other layer, so that the user sees the result.
   const align = async ({ isAutomatic }: { isAutomatic: boolean } = { isAutomatic: false }) => {
     // The synced landmarks may miss a landmark that was placed right before.
     const currentLandmarks = await fetchLandmarks().catch((error) => {
@@ -159,6 +164,11 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       Toast.info(SINGLE_PLANE_ALIGNMENT_HINT);
     }
     await showTransformInWorkers(result.transform);
+    if (!isAutomatic) {
+      for (const side of SIDES) {
+        setOtherLayerVisibility(side, true);
+      }
+    }
   };
 
   // Aligns right after the stored landmarks were loaded, and after every change of the
@@ -179,12 +189,6 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
   const resetAlignment = async () => {
     setAlignment(null);
     await showTransformInWorkers(null);
-  };
-
-  const toggleOtherLayer = (side: Side) => {
-    const isVisible = !isOtherLayerVisible[side];
-    setIsOtherLayerVisible((previous) => ({ ...previous, [side]: isVisible }));
-    sendMessage(side, "setLayerVisibility", [layerNames[OTHER_SIDE[side]], isVisible]);
   };
 
   const focusPosition = (side: Side, position: Vector3) => {

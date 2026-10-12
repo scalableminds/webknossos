@@ -2,7 +2,7 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-10-12 (v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
+Last updated: 2026-10-12 (v17 — landmark download as BigWarp CSV / NML for the dataset composition, §0.25; v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
@@ -1321,6 +1321,33 @@ dataset info tab), and the command palette could navigate away, too.
   been edited) and increases a counter in the workspace's `key`, which mounts it anew
   with fresh iframes and imports the stored landmarks again. Only the transform preview
   is lost, and the automatic align after loading computes it again.
+
+### 0.25 Landmark download for the dataset composition (2026-10-12, Michael's request)
+
+The landmark panel has a "Download" dropdown next to the "Landmark pairs" heading. Both
+entries produce files that the dataset composition wizard
+(`admin/dataset/composition_wizard/02_upload_files.tsx`) accepts:
+- **BigWarp CSV:** one line per complete pair: `"Pt-<n>",true,<moving x,y,z>,<fixed x,y,z>`.
+  The wizard transforms the first position onto the second, so the moving layer (B) comes
+  first. Built by `getLandmarksAsBigWarpCsv` in `landmark_export.ts` with the shared
+  `transformToCSVRow`, which quotes the numbers (its regex range `+-@` includes digits);
+  the wizard strips the quotes. Unit test: `test/misc/align_datasets_landmark_export.spec.ts`.
+- **NML files (one per layer):** the wizard needs two NMLs with matching trees and nodes and
+  transforms the first onto the second. The worker exports (`exportTreesAsNmlString`, raw
+  positions, dataset id in the header) are saved as `…_1_moving_<layer>.nml` and
+  `…_2_fixed_<layer>.nml`. Both are read before either is saved. The browser may ask once
+  whether the page may download multiple files.
+
+The landmarks are read fresh from the workers (`downloadLandmarks` in
+`alignment_workspace.tsx`). The dropdown is disabled while there are no landmarks or the
+views have a different number of landmarks, because the wizard rejects that for NML.
+
+### 0.26 "Store as default" renamed to "Apply to dataset" (2026-10-12)
+
+Button, tooltip, confirmation dialog (now with an "Apply" button) and toasts say "apply the
+alignment to the dataset". The code names follow: `applyAlignmentToDataset` (helper),
+`applyAlignment` (workspace), `onApplyAlignmentToDataset` / `canApplyAlignmentToDataset`
+(panel props). Behavior is unchanged (§0.21: layer B gets `[BtoA, ...transforms of A]`).
 
 ### 0.3 Not started / explicitly out of scope for this pass
 

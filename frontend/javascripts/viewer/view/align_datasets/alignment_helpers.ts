@@ -153,10 +153,10 @@ export function getMissingLayerNames(dataset: APIDataset, layerNames: LayerNames
   return SIDES.map((side) => layerNames[side]).filter((name) => !datasetLayerNames.has(name));
 }
 
-// Stores the alignment in the dataset. The transform maps the untransformed coordinates
+// Applies the alignment to the dataset. The transform maps the untransformed coordinates
 // of layer B to the untransformed coordinates of layer A. So layer B gets this transform,
 // followed by the transforms of layer A. Its previous transforms are replaced.
-export async function storeAlignmentInDataset(
+export async function applyAlignmentToDataset(
   datasetId: string,
   layerNames: LayerNames,
   transformBtoA: Transform,

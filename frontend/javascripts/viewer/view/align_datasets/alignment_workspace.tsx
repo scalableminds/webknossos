@@ -12,15 +12,22 @@ import {
 } from "viewer/model/helpers/transformation_helpers";
 import {
   type Alignment,
+  applyAlignmentToDataset,
   estimateTransformBtoA,
   type LandmarkPair,
   type LayerNames,
   OTHER_SIDE,
   SIDES,
   type Side,
-  storeAlignmentInDataset,
 } from "./alignment_helpers";
 import { type BigWarpCommand, getBigWarpStoreUrl, getBigWarpWorkerUrl } from "./bigwarp_protocol";
+import {
+  getBigWarpCsvFileName,
+  getLandmarksAsBigWarpCsv,
+  getNmlFileName,
+  type LandmarkExportFormat,
+  saveTextFile,
+} from "./landmark_export";
 import { LandmarkPanel } from "./landmark_panel";
 import { type IframeRole, useIframeBridge } from "./use_iframe_bridge";
 import { type LandmarkSyncStatus, useLandmarkSync } from "./use_landmark_sync";
@@ -211,6 +218,28 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     focusPosition(OTHER_SIDE[side], getTransformPointUnscaledFn(transformToOtherSide)(position));
   };
 
+  // Downloads the current landmarks of the workers in a format that the dataset composition
+  // wizard can import.
+  const downloadLandmarks = async (format: LandmarkExportFormat) => {
+    try {
+      if (format === "csv") {
+        const currentLandmarks = await fetchLandmarks();
+        saveTextFile(getLandmarksAsBigWarpCsv(currentLandmarks), getBigWarpCsvFileName(layerNames));
+      } else {
+        // Both files are read before saving any, so that a failure doesn't leave only one.
+        const [nmlStringA, nmlStringB] = await Promise.all([
+          sendMessage<string>("A", "exportTreesAsNmlString"),
+          sendMessage<string>("B", "exportTreesAsNmlString"),
+        ]);
+        saveTextFile(nmlStringA, getNmlFileName(layerNames, "A"));
+        saveTextFile(nmlStringB, getNmlFileName(layerNames, "B"));
+      }
+    } catch (error) {
+      console.error(error);
+      Toast.error("Could not download the landmarks.");
+    }
+  };
+
   // Saves the landmark annotation right away instead of waiting for its auto-save.
   // Reloading this page closes all iframes at once, which may interrupt the auto-save.
   const forceSave = async () => {
@@ -234,12 +263,13 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     });
   };
 
-  const storeAlignment = (transform: Transform) => {
+  const applyAlignment = (transform: Transform) => {
     const { A: fixedLayerName, B: movingLayerName } = layerNames;
     const fixedLayer = dataset.dataSource.dataLayers.find((layer) => layer.name === fixedLayerName);
     const fixedLayerHasTransforms = (fixedLayer?.coordinateTransformations ?? []).length > 0;
     modal.confirm({
-      title: `Store the alignment as the default transform of "${movingLayerName}"?`,
+      title: `Apply the alignment to "${movingLayerName}" in the dataset?`,
+      okText: "Apply",
       content: (
         <>
           <p>This replaces the transforms that "{movingLayerName}" currently has in the dataset.</p>
@@ -253,13 +283,11 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       ),
       onOk: async () => {
         try {
-          await storeAlignmentInDataset(dataset.id, layerNames, transform);
-          Toast.success(
-            `Stored the current alignment as the default transform of "${movingLayerName}".`,
-          );
+          await applyAlignmentToDataset(dataset.id, layerNames, transform);
+          Toast.success(`Applied the alignment to "${movingLayerName}" in the dataset.`);
         } catch (error) {
           console.error(error);
-          Toast.error("Could not store the alignment as the dataset's default transform.");
+          Toast.error("Could not apply the alignment to the dataset.");
         }
       },
     });
@@ -368,12 +396,13 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
             isAutoAlignEnabled={isAutoAlignEnabled}
             onAutoAlignChange={setIsAutoAlignEnabled}
             isOtherLayerVisible={isOtherLayerVisible}
-            canStoreAlignment={dataset.isEditable}
+            canApplyAlignmentToDataset={dataset.isEditable}
             onAlign={() => align()}
             onToggleOtherLayer={toggleOtherLayer}
             onResetAlignment={resetAlignment}
-            onStoreAlignment={() => transformBtoA != null && storeAlignment(transformBtoA)}
+            onApplyAlignmentToDataset={() => transformBtoA != null && applyAlignment(transformBtoA)}
             onFocusPair={focusPair}
+            onDownloadLandmarks={downloadLandmarks}
           />
         ) : null}
       </Splitter.Panel>

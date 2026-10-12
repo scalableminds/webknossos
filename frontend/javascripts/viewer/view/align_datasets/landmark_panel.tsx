@@ -1,5 +1,16 @@
-import { AimOutlined, NodeIndexOutlined } from "@ant-design/icons";
-import { Button, Empty, Flex, Switch, Table, Tag, Tooltip, Typography } from "antd";
+import { AimOutlined, DownloadOutlined, NodeIndexOutlined } from "@ant-design/icons";
+import {
+  Button,
+  Dropdown,
+  Empty,
+  Flex,
+  type MenuProps,
+  Switch,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { SidebarSection } from "dashboard/sidebar_section";
 import isEqual from "lodash-es/isEqual";
@@ -18,6 +29,7 @@ import {
   SIDES,
   type Side,
 } from "./alignment_helpers";
+import type { LandmarkExportFormat } from "./landmark_export";
 
 // A pair whose error is this many times higher than the mean error is highlighted, because it
 // was probably placed imprecisely. Errors below MIN_HIGH_RESIDUAL (in voxels) are never
@@ -62,12 +74,13 @@ type Props = {
   isAutoAlignEnabled: boolean;
   onAutoAlignChange: (isEnabled: boolean) => void;
   isOtherLayerVisible: Record<Side, boolean>;
-  canStoreAlignment: boolean;
+  canApplyAlignmentToDataset: boolean;
   onAlign: () => void;
   onToggleOtherLayer: (side: Side) => void;
   onResetAlignment: () => void;
-  onStoreAlignment: () => void;
+  onApplyAlignmentToDataset: () => void;
   onFocusPair: (pair: LandmarkPair) => void;
+  onDownloadLandmarks: (format: LandmarkExportFormat) => void;
 };
 
 function rgbColorString(color: Vector3): string {
@@ -119,6 +132,44 @@ function AlignmentStatus({
         </Typography.Text>
       ) : null}
     </Flex>
+  );
+}
+
+const DOWNLOAD_MENU_ITEMS: MenuProps["items"] = [
+  { key: "csv" satisfies LandmarkExportFormat, label: "BigWarp CSV" },
+  { key: "nml" satisfies LandmarkExportFormat, label: "NML files (one per layer)" },
+];
+
+// Both formats can be uploaded in the dataset composition wizard. They need the same number of
+// landmarks in both views.
+function LandmarkDownloadButton({
+  landmarks,
+  onDownload,
+}: {
+  landmarks: Record<Side, Landmark[]>;
+  onDownload: (format: LandmarkExportFormat) => void;
+}) {
+  const disabledReason =
+    landmarks.A.length === 0
+      ? "Place landmarks first."
+      : landmarks.A.length !== landmarks.B.length
+        ? "Both views need the same number of landmarks."
+        : null;
+  return (
+    <Tooltip title={disabledReason ?? "Download the landmarks for the dataset composition"}>
+      <Dropdown
+        disabled={disabledReason != null}
+        trigger={["click"]}
+        menu={{
+          items: DOWNLOAD_MENU_ITEMS,
+          onClick: ({ key }) => onDownload(key as LandmarkExportFormat),
+        }}
+      >
+        <Button size="small" type="text" icon={<DownloadOutlined />}>
+          Download
+        </Button>
+      </Dropdown>
+    </Tooltip>
   );
 }
 
@@ -236,12 +287,13 @@ export function LandmarkPanel({
   isAutoAlignEnabled,
   onAutoAlignChange,
   isOtherLayerVisible,
-  canStoreAlignment,
+  canApplyAlignmentToDataset,
   onAlign,
   onToggleOtherLayer,
   onResetAlignment,
-  onStoreAlignment,
+  onApplyAlignmentToDataset,
   onFocusPair,
+  onDownloadLandmarks,
 }: Props) {
   const pairs = getLandmarkPairs(landmarks, alignment?.transformBtoA ?? null);
   const meanResidual = getMeanResidual(pairs);
@@ -269,17 +321,17 @@ export function LandmarkPanel({
           <Button onClick={onAlign}>Align (T)</Button>
           <Tooltip
             title={
-              canStoreAlignment
-                ? `Store the alignment as the default transform of "${layerNames.B}" in the dataset`
+              canApplyAlignmentToDataset
+                ? `Apply the alignment to "${layerNames.B}" in the dataset, so that it is used everywhere`
                 : "You don't have the permission to edit this dataset."
             }
           >
             <Button
               type="primary"
-              onClick={onStoreAlignment}
-              disabled={alignment == null || !canStoreAlignment}
+              onClick={onApplyAlignmentToDataset}
+              disabled={alignment == null || !canApplyAlignmentToDataset}
             >
-              Store as default…
+              Apply to dataset…
             </Button>
           </Tooltip>
           <Tooltip title="Show both layers untransformed again">
@@ -318,7 +370,10 @@ export function LandmarkPanel({
           </Flex>
         ))}
       </SidebarSection>
-      <div className="sidebar-label">Landmark pairs ({pairs.length})</div>
+      <Flex justify="space-between" align="center">
+        <div className="sidebar-label">Landmark pairs ({pairs.length})</div>
+        <LandmarkDownloadButton landmarks={landmarks} onDownload={onDownloadLandmarks} />
+      </Flex>
       <Flex vertical ref={pairListRef} style={{ flex: 1, minHeight: MIN_PAIR_LIST_HEIGHT }}>
         {pairs.length === 0 ? (
           <Empty

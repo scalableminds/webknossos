@@ -310,6 +310,9 @@
 
   &.navbar-header {
     width: 100%;
+    // Divider towards the page content (DS "Hairline on ink"). With border-box sizing this
+    // stays within --navbar-height; the 1px the menu overflows is clipped by overflow-y.
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   .navbar-separator {
@@ -412,10 +415,13 @@
 }
 
 .flex-layout-container {
+  // Small gap between the navbar and the viewer panels. The render canvas behind the layout
+  // still starts at the top, but viewport positions are measured relative to it, so this is safe.
+  @navbar-gap: 4px;
   left: 0px;
-  top: 0px;
+  top: @navbar-gap;
   right: 0px;
-  height: calc(100% - var(--footer-height));
+  height: calc(100% - var(--footer-height) - @navbar-gap);
   position: absolute;
   overflow: hidden;
 }

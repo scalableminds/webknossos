@@ -48,6 +48,7 @@ const ColorTextOnInkSecondary = "#a7a9c6";
 const ColorHairlineOnInk = "rgba(255, 255, 255, 0.12)";
 const ColorTextOnPaperPrimary = "#14152b";
 const ColorInk2 = "#14162a"; // DS "Ink-2": background of the always-dark navbar and status bar
+const ColorInk3 = "#282c4e"; // DS "Ink-3": controls (buttons, inputs, …) on Ink-2
 
 // Colors introduced for the product UI that are not (yet) part of the design system.
 const ColorInkCard = "#161721"; // cards on ink
@@ -223,17 +224,10 @@ export const ModalWidth = {
 } as const;
 
 // The navbar and status bar are always dark, regardless of the user's theme. They use the regular
-// dark theme, except that their surface is Ink-2 instead of the card/page colors.
+// dark theme, except that their surface is Ink-2 and the controls on it are Ink-3.
 const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
-  components: {
-    // Checked radio buttons (e.g. the tool selection) are solid fills instead of outlines.
-    Radio: {
-      buttonCheckedBg: darkGlobalToken.colorPrimary,
-      buttonSolidCheckedBg: darkGlobalToken.colorPrimary,
-    },
-  },
   token: {
-    colorBgContainer: ColorInk2,
+    colorBgContainer: ColorInk3,
     // Use a non-transparent color for disabled backgrounds. Otherwise the
     // erase-buttons which hide under their neighbors would not hide properly.
     colorBgContainerDisabled: ColorInk2Disabled,

@@ -1285,6 +1285,10 @@ dataset info tab), and the command palette could navigate away, too.
   The page no longer sends the initial `setLayerVisibility` itself. Only the other layer of
   the pair is toggled by the tool (`x`, overlay buttons, manual align); other layers can be
   shown via the left sidebar.
+- **Landmark panel on the right:** the workers' right sidebar (with the skeleton tab) is
+  gone, so the landmark panel took its place: it's now the second panel of the `Splitter`
+  in `alignment_workspace.tsx`, and `onResize` reads the second size. The toggle button
+  stays in the left worker's toolbar.
 - **Show the result of a manual align:** after aligning with `t`, the toolbar button or the
   panel's align button, both workers show the other layer (`setOtherLayerVisibility`), so
   the transform is visible right away. Automatic aligns (after loading, auto-align) don't

@@ -312,14 +312,41 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       className={classnames("align-datasets-workspace", {
         "is-landmark-panel-closed": !isLandmarkPanelOpen,
       })}
-      onResize={([panelWidth]) => {
+      onResize={([, panelWidth]) => {
         if (isLandmarkPanelOpen) {
           setLandmarkPanelWidth(panelWidth);
         }
       }}
     >
       {/* Both panels are always rendered, because the iframes would reload if their position
-      in the tree changed. A closed landmark panel has a width of 0. */}
+      in the tree changed. A closed landmark panel has a width of 0. The landmark panel is on
+      the right, where the viewer normally shows the skeleton tab (it's hidden in workers). */}
+      <Splitter.Panel>
+        <Flex style={{ height: "100%", position: "relative" }}>
+          {SIDES.map((side) => (
+            <iframe
+              key={side}
+              ref={(element) => {
+                iframesRef.current[side] = element;
+              }}
+              className="align-datasets-worker"
+              title={`${side === "A" ? "Fixed" : "Moving"} layer (${layerNames[side]})`}
+              src={getBigWarpWorkerUrl(dataset, layerNames[side], side === "A")}
+              onLoad={() => handleIframeLoad(side)}
+            />
+          ))}
+          <iframe
+            ref={(element) => {
+              iframesRef.current.store = element;
+            }}
+            title="Landmark annotation"
+            style={{ display: "none" }}
+            src={getBigWarpStoreUrl(landmarkAnnotation.id)}
+            onLoad={() => handleIframeLoad("store")}
+          />
+          {overlayStatus != null ? <WorkspaceOverlay status={overlayStatus} /> : null}
+        </Flex>
+      </Splitter.Panel>
       <Splitter.Panel
         className="landmark-panel"
         size={isLandmarkPanelOpen ? landmarkPanelWidth : 0}
@@ -353,32 +380,6 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
             onFocusPair={focusPair}
           />
         ) : null}
-      </Splitter.Panel>
-      <Splitter.Panel>
-        <Flex style={{ height: "100%", position: "relative" }}>
-          {SIDES.map((side) => (
-            <iframe
-              key={side}
-              ref={(element) => {
-                iframesRef.current[side] = element;
-              }}
-              className="align-datasets-worker"
-              title={`${side === "A" ? "Fixed" : "Moving"} layer (${layerNames[side]})`}
-              src={getBigWarpWorkerUrl(dataset, layerNames[side], side === "A")}
-              onLoad={() => handleIframeLoad(side)}
-            />
-          ))}
-          <iframe
-            ref={(element) => {
-              iframesRef.current.store = element;
-            }}
-            title="Landmark annotation"
-            style={{ display: "none" }}
-            src={getBigWarpStoreUrl(landmarkAnnotation.id)}
-            onLoad={() => handleIframeLoad("store")}
-          />
-          {overlayStatus != null ? <WorkspaceOverlay status={overlayStatus} /> : null}
-        </Flex>
       </Splitter.Panel>
     </Splitter>
   );

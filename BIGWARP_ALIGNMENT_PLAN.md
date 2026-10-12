@@ -2,7 +2,7 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-10-12 (v17 — landmark download as BigWarp CSV / NML for the dataset composition, §0.25; v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
+Last updated: 2026-10-12 (v18 — pairing made visible: same color per pair, focus on hover, next-step hint, select and delete pairs in the table, §0.27; v17 — landmark download as BigWarp CSV / NML for the dataset composition, §0.25; v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
@@ -1348,6 +1348,37 @@ Button, tooltip, confirmation dialog (now with an "Apply" button) and toasts say
 alignment to the dataset". The code names follow: `applyAlignmentToDataset` (helper),
 `applyAlignment` (workspace), `onApplyAlignmentToDataset` / `canApplyAlignmentToDataset`
 (panel props). Behavior is unchanged (§0.21: layer B gets `[BtoA, ...transforms of A]`).
+
+### 0.27 Making the pairing visible (2026-10-12, from a UX review with Michael)
+
+Pairs exist only by their order (n-th landmark left ↔ n-th landmark right). The review found
+that the user couldn't see which landmarks form a pair, and that a stray click or a deletion
+on one side silently shifts all later pairs. Implemented, all browser-untested:
+
+- **Same color per pair, without recoloring.** A new tree gets the color
+  `distinctColorForId(treeId)` and the id `max tree id + 1`. When a worker imports the stored
+  landmarks, the new cross-origin command `importLandmarks` (worker only,
+  `bigwarp_worker.ts`) renumbers the trees to 1..n in landmark order and colors them by their
+  new id (`renumberLandmarkTrees`). Then the n-th landmark has the same id and color on both
+  sides, and so do new landmarks. Deleting a landmark in the middle on one side only makes
+  the colors differ, which is the visible sign of shifted pairs. Before, the stored ids were
+  kept (left 1..n, right n+1..2n after a reload), so the colors of new pairs always differed.
+  Recoloring trees during the session was rejected: `SET_TREE_COLOR` is undoable, so Ctrl+Z
+  would undo the recolor, the next sync would recolor again, and the landmark itself could
+  never be undone.
+- The sync compares only the **positions** with the stored state (`storedPositionsRef`),
+  because ids and colors are renumbered on every import anyway.
+- **Focus on hover:** a worker iframe gets the keyboard focus when the mouse enters it, unless
+  a text input (also inside a worker) has the focus. Before, a click was needed to focus a
+  view for `t`/`x`/`y`, and that click placed a landmark.
+- **Next-step hint:** while the views have different landmark counts, the view with fewer
+  shows "Landmark n: click the matching spot in this view" with the pair's color
+  (`getNextMissingLandmark`, `NextLandmarkHint`).
+- **Table:** clicking a row makes the pair's nodes the active nodes in both workers (new
+  cross-origin command `setActiveNode`) and centers both views; this replaces the target
+  button. A delete button (with confirmation) deletes both landmarks of the pair (new commands
+  `deleteTree` / `deleteNode`), so later pairs don't shift. The color is now shown per side.
+- Known limitation: undo is per worker. Undoing a pair deletion needs Ctrl+Z in both views.
 
 ### 0.3 Not started / explicitly out of scope for this pass
 

@@ -30,6 +30,12 @@ Each side shows only its own layer at first.
 3. Repeat this for several structures that are spread over the dataset.
 
 Landmarks are paired by their order: the first landmark on the left belongs to the first landmark on the right, and so on.
+Both landmarks of a pair have the same color.
+While one view has fewer landmarks than the other, a hint in that view shows which landmark you place next.
+
+To remove a pair, use its delete button in the side panel (see below), which deletes the landmark in both views.
+If you delete a landmark in only one view, all following landmarks of that view move up by one pair.
+Their colors then no longer match those in the other view.
 The landmarks are saved automatically. Use the save button in the toolbar of the left view to save right away.
 
 ## Computing the Alignment
@@ -42,14 +48,15 @@ To compute it again after every new, moved or deleted landmark, switch on **Alig
 An alignment needs at least four landmark pairs that don't all lie in one plane.
 If all landmarks lie in a single z slice, three pairs are enough. WEBKNOSSOS then assumes that the two layers are only shifted against each other along z.
 
-More shortcuts, which work in the view that has the keyboard focus:
+More shortcuts, which work in the view under the mouse pointer:
 
 - **x**: show or hide the other layer in this view.
 - **y**: move the other view to the position that corresponds to the position of this view (needs a computed alignment).
 
 The table button in the toolbar of the left view opens a side panel. It shows whether the layers are aligned and whether the landmarks changed since the last alignment, lets you show the other layer in each view, and lists all landmark pairs.
 For each pair, the list shows how far apart its two landmarks still are after the alignment. A pair whose error is much higher than that of the others is highlighted, because it was probably placed imprecisely.
-The list also shows the coordinates of both landmarks of each pair. Use the target button of a pair to move both views to it.
+The list also shows the color and the coordinates of both landmarks of each pair.
+Click a pair to select its landmarks in both views and move both views to them.
 The name and description of the alignment can be edited at the top of the side panel.
 
 ## Storing the Alignment

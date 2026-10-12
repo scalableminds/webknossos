@@ -3,7 +3,11 @@ import isObject from "lodash-es/isObject";
 import isString from "lodash-es/isString";
 import { useEffect } from "react";
 import { api } from "viewer/singletons";
-import { useBigWarpShortcutRelay } from "viewer/view/align_datasets/bigwarp_worker";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
+import {
+  importLandmarks,
+  useBigWarpShortcutRelay,
+} from "viewer/view/align_datasets/bigwarp_worker";
 
 // This component allows cross origin communication, for example, between a host page
 // and an embedded webKnossos iframe.
@@ -73,6 +77,31 @@ const handleMessage = async (event) => {
         return;
       }
 
+      break;
+    }
+
+    case "importLandmarks": {
+      if (!isBigWarpWorker() || !isString(args[0])) {
+        throw new Error(
+          "Only available in the dataset alignment view. The first argument needs to be the content of the nml as a string.",
+        );
+      }
+      await importLandmarks(args[0]);
+      break;
+    }
+
+    case "setActiveNode": {
+      api.tracing.setActiveNode(args[0], args[1], args[2]);
+      break;
+    }
+
+    case "deleteNode": {
+      api.tracing.deleteNode(args[0], args[1]);
+      break;
+    }
+
+    case "deleteTree": {
+      api.tracing.deleteTree(args[0]);
       break;
     }
 

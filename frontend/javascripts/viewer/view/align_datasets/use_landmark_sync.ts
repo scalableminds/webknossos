@@ -1,6 +1,7 @@
 import { usePolling } from "libs/react_hooks";
 import isEqual from "lodash-es/isEqual";
 import { useEffect, useRef, useState } from "react";
+import type { Vector3 } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   getLandmarkGroupPath,
@@ -13,6 +14,10 @@ import {
 import type { SendMessage } from "./use_iframe_bridge";
 
 const SYNC_INTERVAL_MS = 500;
+
+function getPositions(landmarks: Landmark[]): Vector3[] {
+  return landmarks.map((landmark) => landmark.position);
+}
 
 // "loading" until the stored landmarks were imported into the workers and the landmarks of
 // the workers were read once. "failed" if the import failed. Then nothing is synced, because
@@ -46,8 +51,9 @@ export function useLandmarkSync(
   // The ids of the tree groups that hold the landmarks of each side in the landmark
   // annotation. Null until the stored landmarks were imported into the workers.
   const [groupIds, setGroupIds] = useState<Record<Side, number> | null>(null);
-  // The landmarks of each side as they were last written to the landmark annotation.
-  const storedLandmarksRef = useRef<Record<Side, Landmark[]>>({ A: [], B: [] });
+  // The landmark positions of each side as they were last written to the landmark annotation.
+  // Tree ids and colors are left out: the workers renumber the trees when they import them.
+  const storedPositionsRef = useRef<Record<Side, Vector3[]>>({ A: [], B: [] });
   // Set when a worker was reloaded. Its landmarks are then missing until the stored ones are
   // imported again, so writing them to the landmark annotation would delete landmarks.
   const isStoppedRef = useRef(false);
@@ -66,8 +72,10 @@ export function useLandmarkSync(
       if (isCancelled) {
         return groupId;
       }
-      await sendMessage(side, "importNml", [nmlString]);
-      storedLandmarksRef.current[side] = getLandmarks((await parseNml(nmlString)).trees);
+      await sendMessage(side, "importLandmarks", [nmlString]);
+      storedPositionsRef.current[side] = getPositions(
+        getLandmarks((await parseNml(nmlString)).trees),
+      );
       return groupId;
     };
 
@@ -107,11 +115,12 @@ export function useLandmarkSync(
     worker: { nmlString: string; landmarks: Landmark[] },
     groupId: number,
   ) => {
-    if (isStoppedRef.current || isEqual(worker.landmarks, storedLandmarksRef.current[side])) {
+    const positions = getPositions(worker.landmarks);
+    if (isStoppedRef.current || isEqual(positions, storedPositionsRef.current[side])) {
       return;
     }
     await sendMessage("store", "replaceTreesInGroup", [worker.nmlString, groupId]);
-    storedLandmarksRef.current[side] = worker.landmarks;
+    storedPositionsRef.current[side] = positions;
   };
 
   // usePolling waits for one run to finish before it schedules the next one, so runs
@@ -125,7 +134,9 @@ export function useLandmarkSync(
         const { workerA, workerB, newLandmarks } = await fetchWorkerLandmarks();
         setStatus("ready");
         setHasUnsyncedLandmarks(
-          SIDES.some((side) => !isEqual(newLandmarks[side], storedLandmarksRef.current[side])),
+          SIDES.some(
+            (side) => !isEqual(getPositions(newLandmarks[side]), storedPositionsRef.current[side]),
+          ),
         );
         await storeChangedLandmarks("A", workerA, groupIds.A);
         await storeChangedLandmarks("B", workerB, groupIds.B);

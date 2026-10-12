@@ -14,6 +14,7 @@ import {
   type Alignment,
   applyAlignmentToDataset,
   estimateTransformBtoA,
+  getNextMissingLandmark,
   type LandmarkPair,
   type LayerNames,
   OTHER_SIDE,
@@ -28,7 +29,7 @@ import {
   type LandmarkExportFormat,
   saveTextFile,
 } from "./landmark_export";
-import { LandmarkPanel } from "./landmark_panel";
+import { LandmarkPanel, rgbColorString } from "./landmark_panel";
 import { type IframeRole, useIframeBridge } from "./use_iframe_bridge";
 import { type LandmarkSyncStatus, useLandmarkSync } from "./use_landmark_sync";
 
@@ -87,6 +88,7 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       : null;
   const isSyncReady = syncStatus === "ready";
   const hasUnsavedChanges = hasUnsyncedLandmarks || !isStoreSaved;
+  const nextMissingLandmark = overlayStatus == null ? getNextMissingLandmark(landmarks) : null;
 
   // Asks before leaving the page while the alignment annotation has unsaved changes.
   // This can't be left to the store iframe, although it has the normal "unsaved changes"
@@ -198,12 +200,46 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     sendMessage(side, "centerPositionAnimated", [position]);
   };
 
-  const focusPair = (pair: LandmarkPair) => {
+  // Makes the landmarks of the pair the active nodes, which highlights them, and moves both
+  // views to them.
+  const selectPair = (pair: LandmarkPair) => {
     for (const side of SIDES) {
       const landmark = pair.landmarks[side];
       if (landmark != null) {
+        sendMessage(side, "setActiveNode", [landmark.nodeId, false, true]);
         focusPosition(side, landmark.position);
       }
+    }
+  };
+
+  // Deletes both landmarks of the pair, so that the following pairs keep their partners.
+  // Deleting a landmark in one view only would shift them.
+  const deletePair = async (pair: LandmarkPair) => {
+    try {
+      for (const side of SIDES) {
+        const landmark = pair.landmarks[side];
+        if (landmark == null) {
+          continue;
+        }
+        // Each click creates a tree with one node. Deleting only the node would leave an empty
+        // tree behind, which shifts the tree ids that the colors depend on.
+        const isOnlyLandmarkOfTree =
+          landmarks[side].filter(({ treeId }) => treeId === landmark.treeId).length === 1;
+        await (isOnlyLandmarkOfTree
+          ? sendMessage(side, "deleteTree", [landmark.treeId])
+          : sendMessage(side, "deleteNode", [landmark.nodeId, landmark.treeId]));
+      }
+    } catch (error) {
+      console.error(error);
+      Toast.error("Could not delete the landmark pair.");
+    }
+  };
+
+  // The shortcuts go to the view that has the keyboard focus. Clicking into a view to focus
+  // it would place a landmark, so a view gets the focus when the mouse enters it instead.
+  const focusWorker = (side: Side) => {
+    if (!isTextInputFocused()) {
+      iframesRef.current[side]?.contentWindow?.focus();
     }
   };
 
@@ -348,16 +384,24 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       <Splitter.Panel>
         <Flex style={{ height: "100%", position: "relative" }}>
           {SIDES.map((side) => (
-            <iframe
-              key={side}
-              ref={(element) => {
-                iframesRef.current[side] = element;
-              }}
-              className="align-datasets-worker"
-              title={`${side === "A" ? "Fixed" : "Moving"} layer (${layerNames[side]})`}
-              src={getBigWarpWorkerUrl(dataset, layerNames[side], side === "A")}
-              onLoad={() => handleIframeLoad(side)}
-            />
+            <div key={side} className="align-datasets-worker">
+              <iframe
+                ref={(element) => {
+                  iframesRef.current[side] = element;
+                }}
+                title={`${side === "A" ? "Fixed" : "Moving"} layer (${layerNames[side]})`}
+                src={getBigWarpWorkerUrl(dataset, layerNames[side], side === "A")}
+                onLoad={() => handleIframeLoad(side)}
+                onMouseEnter={() => focusWorker(side)}
+              />
+              {nextMissingLandmark?.side === side ? (
+                <NextLandmarkHint
+                  pairNumber={nextMissingLandmark.pairNumber}
+                  missingCount={nextMissingLandmark.missingCount}
+                  color={nextMissingLandmark.color}
+                />
+              ) : null}
+            </div>
           ))}
           <iframe
             ref={(element) => {
@@ -401,12 +445,51 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
             onToggleOtherLayer={toggleOtherLayer}
             onResetAlignment={resetAlignment}
             onApplyAlignmentToDataset={() => transformBtoA != null && applyAlignment(transformBtoA)}
-            onFocusPair={focusPair}
+            onSelectPair={selectPair}
+            onDeletePair={deletePair}
             onDownloadLandmarks={downloadLandmarks}
           />
         ) : null}
       </Splitter.Panel>
     </Splitter>
+  );
+}
+
+// The element that has the keyboard focus, also if it is inside one of the iframes.
+function getFocusedElement(): Element | null {
+  let element = document.activeElement;
+  while (element instanceof HTMLIFrameElement && element.contentDocument != null) {
+    element = element.contentDocument.activeElement;
+  }
+  return element;
+}
+
+function isTextInputFocused(): boolean {
+  const element = getFocusedElement();
+  return (
+    element != null &&
+    (["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName) ||
+      (element as HTMLElement).isContentEditable)
+  );
+}
+
+// Shown in the view that misses the next landmark, so that the user sees which pair the next
+// click belongs to. The color is that of the landmark in the other view.
+function NextLandmarkHint({
+  pairNumber,
+  missingCount,
+  color,
+}: {
+  pairNumber: number;
+  missingCount: number;
+  color: Vector3;
+}) {
+  return (
+    <div className="align-datasets-next-landmark-hint">
+      <span className="landmark-color" style={{ background: rgbColorString(color) }} />
+      Landmark {pairNumber}: click the matching spot in this view.
+      {missingCount > 1 ? ` ${missingCount} landmarks still need a partner here.` : null}
+    </div>
   );
 }
 

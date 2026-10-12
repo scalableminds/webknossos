@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import type { BlockerFunction } from "react-router";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
 import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { Toolkit } from "viewer/model/accessors/tool_accessor";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import {
@@ -12,9 +13,13 @@ import {
   updateLayerSettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
+import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
+import { parseNml } from "viewer/model/helpers/nml_helpers";
+import { getMaximumTreeId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
+import { renumberLandmarkTrees } from "./alignment_helpers";
 import {
   BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE,
   type BigWarpCommand,
@@ -107,6 +112,19 @@ export async function applyBigWarpWorkerSettings() {
   } catch (error) {
     console.error("Could not find a data position for layer", layerName, error);
   }
+}
+
+// Imports the stored landmarks of this worker's side, renumbered so that the two landmarks of
+// a pair get the same color in both workers (see renumberLandmarkTrees).
+export async function importLandmarks(nmlString: string) {
+  const { trees, treeGroups } = await parseNml(nmlString);
+  const existingTrees = enforceSkeletonTracing(Store.getState().annotation).trees;
+  Store.dispatch(
+    addTreesAndGroupsAction(
+      renumberLandmarkTrees(trees, getMaximumTreeId(existingTrees)),
+      treeGroups,
+    ),
+  );
 }
 
 // Tells the alignment view whether the alignment annotation has unsaved changes. Runs in the

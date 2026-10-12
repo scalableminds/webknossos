@@ -1,4 +1,5 @@
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
+import ColorGenerator from "libs/color_generator";
 import { V3 } from "libs/mjs";
 import mean from "lodash-es/mean";
 import zip from "lodash-es/zip";
@@ -11,7 +12,7 @@ import {
   getTransformPointUnscaledFn,
   type Transform,
 } from "viewer/model/helpers/transformation_helpers";
-import type { MutableTreeMap } from "viewer/model/types/tree_types";
+import { MutableTreeMap } from "viewer/model/types/tree_types";
 
 // "A" is the fixed layer, "B" is the moving layer that gets transformed onto A.
 export type Side = "A" | "B";
@@ -19,7 +20,8 @@ export const SIDES: Side[] = ["A", "B"];
 export const OTHER_SIDE: Record<Side, Side> = { A: "B", B: "A" };
 export type LayerNames = Record<Side, string>;
 
-export type Landmark = { position: Vector3; color: Vector3 };
+// The ids refer to the tree and node in the worker of the landmark's side.
+export type Landmark = { treeId: number; nodeId: number; position: Vector3; color: Vector3 };
 
 export type LandmarkPair = {
   key: number;
@@ -54,8 +56,55 @@ export function getLandmarks(trees: MutableTreeMap): Landmark[] {
     .flatMap((tree) =>
       Array.from(tree.nodes.values())
         .toSorted((a, b) => a.id - b.id)
-        .map((node) => ({ position: node.untransformedPosition, color: tree.color })),
+        .map((node) => ({
+          treeId: tree.treeId,
+          nodeId: node.id,
+          position: node.untransformedPosition,
+          color: tree.color,
+        })),
     );
+}
+
+// Gives the trees the ids following maxExistingTreeId in the order of their landmarks, and
+// the color that a new tree with that id gets. Both workers renumber the stored landmarks
+// like this when they import them. Then the two landmarks of a pair have the same tree id
+// and color, and so have the landmarks that are placed afterwards, because a new tree gets
+// the next free id. This holds until a landmark in the middle is deleted on one side only,
+// which also shifts the pairs. The pairs then show different colors.
+export function renumberLandmarkTrees(
+  trees: MutableTreeMap,
+  maxExistingTreeId: number,
+): MutableTreeMap {
+  const renumberedTrees = new MutableTreeMap();
+  Array.from(trees.values())
+    .toSorted((a, b) => a.treeId - b.treeId)
+    .forEach((tree, index) => {
+      const treeId = maxExistingTreeId + index + 1;
+      renumberedTrees.mutableSet(treeId, {
+        ...tree,
+        treeId,
+        color: ColorGenerator.distinctColorForId(treeId),
+      });
+    });
+  return renumberedTrees;
+}
+
+// The landmark that the user has to place next to complete a pair, or null if all pairs are
+// complete. The color is that of the other landmark of the pair.
+export function getNextMissingLandmark(
+  landmarks: Record<Side, Landmark[]>,
+): { side: Side; pairNumber: number; missingCount: number; color: Vector3 } | null {
+  const side = SIDES.find((side) => landmarks[side].length < landmarks[OTHER_SIDE[side]].length);
+  if (side == null) {
+    return null;
+  }
+  const placedCount = landmarks[side].length;
+  return {
+    side,
+    pairNumber: placedCount + 1,
+    missingCount: landmarks[OTHER_SIDE[side]].length - placedCount,
+    color: landmarks[OTHER_SIDE[side]][placedCount].color,
+  };
 }
 
 export function getLandmarkPairs(

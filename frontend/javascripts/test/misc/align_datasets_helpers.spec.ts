@@ -1,3 +1,4 @@
+import ColorGenerator from "libs/color_generator";
 import type { APIAnnotationInfo, APIDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import type { MutableTreeMap } from "viewer/model/types/tree_types";
@@ -8,14 +9,21 @@ import {
   getLandmarks,
   getMeanResidual,
   getMissingLayerNames,
+  getNextMissingLandmark,
   type Landmark,
+  renumberLandmarkTrees,
 } from "viewer/view/align_datasets/alignment_helpers";
 import { describe, expect, it } from "vitest";
 
 const RED: Vector3 = [1, 0, 0];
 
 function toLandmarks(positions: Vector3[]): Landmark[] {
-  return positions.map((position) => ({ position, color: RED }));
+  return positions.map((position, index) => ({
+    treeId: index + 1,
+    nodeId: index + 1,
+    position,
+    color: RED,
+  }));
 }
 
 // The corners of a tetrahedron, so that the landmarks don't lie in one plane.
@@ -166,6 +174,45 @@ describe("Dataset alignment helpers", () => {
       { key: 2, landmarks: {}, residual: 3 },
     ];
     expect(getMeanResidual(pairs)).toBe(2);
+  });
+
+  it("renumbers the landmark trees in their order and colors them by their new id", () => {
+    const createTree = (treeId: number) => ({ treeId, color: RED, name: `Tree ${treeId}` });
+    const trees = new Map([
+      [9, createTree(9)],
+      [4, createTree(4)],
+    ]) as unknown as MutableTreeMap;
+
+    const renumberedTrees = Array.from(renumberLandmarkTrees(trees, 2).values());
+
+    expect(renumberedTrees.map((tree) => [tree.treeId, tree.name])).toEqual([
+      [3, "Tree 4"],
+      [4, "Tree 9"],
+    ]);
+    expect(renumberedTrees.map((tree) => tree.color)).toEqual([
+      ColorGenerator.distinctColorForId(3),
+      ColorGenerator.distinctColorForId(4),
+    ]);
+  });
+
+  it("finds the landmark that is missing to complete the next pair", () => {
+    const blue: Vector3 = [0, 0, 1];
+    const landmarksA = toLandmarks(POSITIONS_A.slice(0, 3)).map((landmark, index) =>
+      index === 1 ? { ...landmark, color: blue } : landmark,
+    );
+
+    expect(
+      getNextMissingLandmark({ A: landmarksA, B: toLandmarks(POSITIONS_B.slice(0, 3)) }),
+    ).toBeNull();
+    expect(
+      getNextMissingLandmark({ A: landmarksA, B: toLandmarks(POSITIONS_B.slice(0, 1)) }),
+    ).toEqual({ side: "B", pairNumber: 2, missingCount: 2, color: blue });
+    expect(getNextMissingLandmark({ A: [], B: toLandmarks(POSITIONS_B.slice(0, 1)) })).toEqual({
+      side: "A",
+      pairNumber: 1,
+      missingCount: 1,
+      color: RED,
+    });
   });
 });
 

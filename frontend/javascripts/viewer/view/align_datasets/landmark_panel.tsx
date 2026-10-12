@@ -1,10 +1,11 @@
-import { AimOutlined, DownloadOutlined, NodeIndexOutlined } from "@ant-design/icons";
+import { DeleteOutlined, DownloadOutlined, NodeIndexOutlined } from "@ant-design/icons";
 import {
   Button,
   Dropdown,
   Empty,
   Flex,
   type MenuProps,
+  Popconfirm,
   Switch,
   Table,
   Tag,
@@ -38,12 +39,12 @@ const HIGH_RESIDUAL_FACTOR = 2;
 const MIN_HIGH_RESIDUAL = 1;
 
 // The pair list is virtualized, which needs fixed column widths and a fixed body height.
-const PAIR_COLUMN_WIDTHS = { index: 56, position: 150, residual: 72, focus: 40 };
+const PAIR_COLUMN_WIDTHS = { index: 40, position: 160, residual: 72, delete: 40 };
 const PAIR_TABLE_WIDTH =
   PAIR_COLUMN_WIDTHS.index +
   2 * PAIR_COLUMN_WIDTHS.position +
   PAIR_COLUMN_WIDTHS.residual +
-  PAIR_COLUMN_WIDTHS.focus;
+  PAIR_COLUMN_WIDTHS.delete;
 const PAIR_TABLE_HEADER_HEIGHT = 40;
 const MIN_PAIR_LIST_HEIGHT = 200;
 
@@ -79,11 +80,12 @@ type Props = {
   onToggleOtherLayer: (side: Side) => void;
   onResetAlignment: () => void;
   onApplyAlignmentToDataset: () => void;
-  onFocusPair: (pair: LandmarkPair) => void;
+  onSelectPair: (pair: LandmarkPair) => void;
+  onDeletePair: (pair: LandmarkPair) => void;
   onDownloadLandmarks: (format: LandmarkExportFormat) => void;
 };
 
-function rgbColorString(color: Vector3): string {
+export function rgbColorString(color: Vector3): string {
   return `rgb(${color.map((component) => Math.round(component * 255)).join(",")})`;
 }
 
@@ -209,8 +211,10 @@ function AnnotationHeader({
 function getPairColumns(
   layerNames: LayerNames,
   meanResidual: number | null,
-  onFocusPair: Props["onFocusPair"],
+  onDeletePair: Props["onDeletePair"],
 ): ColumnsType<LandmarkPair> {
+  // The color of a landmark is shown next to its position. Both landmarks of a pair normally
+  // have the same color, so different colors point to shifted pairs.
   const positionColumns = SIDES.map((side) => ({
     title: layerNames[side],
     key: side,
@@ -219,7 +223,10 @@ function getPairColumns(
     render: (_value: unknown, pair: LandmarkPair) => {
       const landmark = pair.landmarks[side];
       return landmark != null ? (
-        landmark.position.join(", ")
+        <>
+          <span className="landmark-color" style={{ background: rgbColorString(landmark.color) }} />
+          {landmark.position.join(", ")}
+        </>
       ) : (
         <Typography.Text type="warning">missing</Typography.Text>
       );
@@ -230,17 +237,7 @@ function getPairColumns(
       title: "#",
       key: "index",
       width: PAIR_COLUMN_WIDTHS.index,
-      render: (_value, pair, index) => {
-        const color = (pair.landmarks.A ?? pair.landmarks.B)?.color;
-        return (
-          <span style={{ whiteSpace: "nowrap" }}>
-            {color != null ? (
-              <span className="landmark-color" style={{ background: rgbColorString(color) }} />
-            ) : null}
-            {index + 1}
-          </span>
-        );
-      },
+      render: (_value, _pair, index) => index + 1,
     },
     ...positionColumns,
     {
@@ -259,18 +256,24 @@ function getPairColumns(
       },
     },
     {
-      key: "focus",
-      width: PAIR_COLUMN_WIDTHS.focus,
-      render: (_value, pair) => (
-        <Tooltip title="Move both views to this pair">
-          <Button
-            type="text"
-            size="small"
-            icon={<AimOutlined />}
-            aria-label="Move both views to this pair"
-            onClick={() => onFocusPair(pair)}
-          />
-        </Tooltip>
+      key: "delete",
+      width: PAIR_COLUMN_WIDTHS.delete,
+      render: (_value, pair, index) => (
+        // A click on a row selects the pair, but not a click on this button.
+        <span onClick={(event) => event.stopPropagation()}>
+          <Popconfirm
+            title={`Delete landmark pair ${index + 1} in both views?`}
+            okText="Delete"
+            onConfirm={() => onDeletePair(pair)}
+          >
+            <Button
+              type="text"
+              size="small"
+              icon={<DeleteOutlined />}
+              aria-label="Delete this pair in both views"
+            />
+          </Popconfirm>
+        </span>
       ),
     },
   ];
@@ -292,7 +295,8 @@ export function LandmarkPanel({
   onToggleOtherLayer,
   onResetAlignment,
   onApplyAlignmentToDataset,
-  onFocusPair,
+  onSelectPair,
+  onDeletePair,
   onDownloadLandmarks,
 }: Props) {
   const pairs = getLandmarkPairs(landmarks, alignment?.transformBtoA ?? null);
@@ -394,8 +398,13 @@ export function LandmarkPanel({
             virtual
             size="small"
             pagination={false}
-            columns={getPairColumns(layerNames, meanResidual, onFocusPair)}
+            columns={getPairColumns(layerNames, meanResidual, onDeletePair)}
             dataSource={pairs}
+            onRow={(pair) => ({
+              onClick: () => onSelectPair(pair),
+              style: { cursor: "pointer" },
+              title: "Select this pair in both views",
+            })}
             scroll={{
               x: PAIR_TABLE_WIDTH,
               y: Math.max(pairListHeight, MIN_PAIR_LIST_HEIGHT) - PAIR_TABLE_HEADER_HEIGHT,
@@ -404,7 +413,7 @@ export function LandmarkPanel({
         )}
       </Flex>
       <Typography.Text type="secondary" style={{ fontSize: 12, marginTop: 8 }}>
-        In the focused view: <Typography.Text keyboard>T</Typography.Text> align ·{" "}
+        In the view under the mouse: <Typography.Text keyboard>T</Typography.Text> align ·{" "}
         <Typography.Text keyboard>X</Typography.Text> show the other layer ·{" "}
         <Typography.Text keyboard>Y</Typography.Text> move the other view here
       </Typography.Text>

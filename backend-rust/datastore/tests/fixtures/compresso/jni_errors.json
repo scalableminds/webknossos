@@ -1,0 +1,92 @@
+[
+  {
+    "name": "error_control_0",
+    "error": "An error occurred in native code: Error while decoding with compresso: 2",
+    "success": false
+  },
+  {
+    "name": "error_control_1",
+    "error": "An error occurred in native code: Error while decoding with compresso: 3",
+    "success": false
+  },
+  {
+    "name": "error_control_2",
+    "error": "An error occurred in native code: Error while decoding with compresso: 4",
+    "success": false
+  },
+  {
+    "name": "error_control_3",
+    "error": "An error occurred in native code: Error while decoding with compresso: 5",
+    "success": false
+  },
+  {
+    "name": "error_control_4",
+    "error": "An error occurred in native code: Error while decoding with compresso: 6",
+    "success": false
+  },
+  {
+    "name": "error_control_5",
+    "error": "An error occurred in native code: Error while decoding with compresso: 7",
+    "success": false
+  },
+  {
+    "name": "error_no_locations",
+    "error": "An error occurred in native code: Error while decoding with compresso: 1",
+    "success": false
+  },
+  {
+    "name": "literal_escape",
+    "error": "",
+    "success": true
+  },
+  {
+    "name": "literal_inline",
+    "error": "",
+    "success": true
+  },
+  {
+    "name": "error_header_0",
+    "error": "An error occurred in native code: Error while decoding with compresso: Expected at least 36 bytes of input for the compresso header, got 0",
+    "success": false
+  },
+  {
+    "name": "error_header_1",
+    "error": "An error occurred in native code: Error while decoding with compresso: Expected at least 36 bytes of input for the compresso header, got 1",
+    "success": false
+  },
+  {
+    "name": "error_header_35",
+    "error": "An error occurred in native code: Error while decoding with compresso: Expected at least 36 bytes of input for the compresso header, got 35",
+    "success": false
+  },
+  {
+    "name": "error_magic",
+    "error": "An error occurred in native code: Error while decoding with compresso: 12",
+    "success": false
+  },
+  {
+    "name": "error_version",
+    "error": "An error occurred in native code: Error while decoding with compresso: 12",
+    "success": false
+  },
+  {
+    "name": "error_width",
+    "error": "An error occurred in native code: Error while decoding with compresso: 12",
+    "success": false
+  },
+  {
+    "name": "error_connectivity",
+    "error": "An error occurred in native code: Error while decoding with compresso: 12",
+    "success": false
+  },
+  {
+    "name": "error_width_zero",
+    "error": "An error occurred in native code: Error while decoding with compresso: output length as read from header must be >0, got 0",
+    "success": false
+  },
+  {
+    "name": "error_shape_zero",
+    "error": "An error occurred in native code: Error while decoding with compresso: output length as read from header must be >0, got 0",
+    "success": false
+  }
+]

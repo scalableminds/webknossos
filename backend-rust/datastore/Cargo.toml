@@ -1,0 +1,57 @@
+[package]
+name = "webknossos-datastore"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+publish = false
+license = "AGPL-3.0-only"
+description = "Rust implementation of the WEBKNOSSOS datastore service"
+
+[dependencies]
+async-trait = "0.1"
+futures = "0.3"
+inventory = "0.3"
+jpeg-encoder = { version = "0.7.1", default-features = false, features = ["std"] }
+axum = { version = "0.8", features = ["json", "query", "tokio", "http1", "multipart"] }
+base64 = "0.22"
+brotli-decompressor = "5"
+bytes = "1"
+flate2 = "1"
+lz4_flex = { version = "0.14", default-features = false, features = ["std", "safe-encode", "safe-decode"] }
+percent-encoding = "2"
+prost = "0.14"
+quick-xml = "0.42"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+ring = "0.17"
+ruzstd = "0.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "sync", "time", "fs", "io-util"] }
+tower-http = { version = "0.6", features = ["request-id", "trace", "timeout", "catch-panic", "cors"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+url = "2"
+zarrs = { version = "=0.23.14", default-features = false, features = ["async", "sharding", "transpose", "crc32c"] }
+zip = { version = "9.0.1", default-features = false, features = ["deflate-flate2"] }
+zune-jpeg = { version = "=0.5.15", default-features = false, features = ["std"] }
+hdf5-reader = { version = "=0.9.1", default-features = false }
+lru = "=0.16.4"
+draco-core = { version = "=2.3.2", default-features = false, features = ["decoder", "edgebreaker_valence_decode", "legacy_bitstream_decode"] }
+
+[build-dependencies]
+prost-build = "0.14"
+protox = "0.10"
+
+[dev-dependencies]
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[profile.release]
+lto = "thin"
+strip = true
+
+[target."cfg(unix)".dependencies]
+rustix = { version = "1.1.5", features = ["fs"] }

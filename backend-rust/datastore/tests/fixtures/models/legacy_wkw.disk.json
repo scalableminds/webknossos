@@ -1,0 +1,46 @@
+{
+  "id" : {
+    "name" : "legacy",
+    "team" : "sample_organization"
+  },
+  "dataLayers" : [ {
+    "category" : "color",
+    "name" : "color",
+    "dataFormat" : "wkw",
+    "boundingBox" : {
+      "topLeft" : [ 0, 0, 0 ],
+      "width" : 512,
+      "height" : 512,
+      "depth" : 256
+    },
+    "elementClass" : "uint8",
+    "mags" : [ {
+      "mag" : [ 1, 1, 1 ]
+    }, {
+      "mag" : [ 2, 2, 1 ]
+    } ],
+    "numChannels" : 1
+  }, {
+    "category" : "segmentation",
+    "name" : "segmentation",
+    "dataFormat" : "wkw",
+    "boundingBox" : {
+      "topLeft" : [ 0, 0, 0 ],
+      "width" : 512,
+      "height" : 512,
+      "depth" : 256
+    },
+    "elementClass" : "uint32",
+    "mags" : [ {
+      "mag" : [ 1, 1, 1 ],
+      "path" : "./segmentation/1"
+    } ],
+    "mappings" : [ "agglomerate_view_5", "agglomerate_view_10" ],
+    "largestSegmentId" : 2504697,
+    "numChannels" : 1
+  } ],
+  "scale" : {
+    "factor" : [ 11.24, 11.24, 28 ],
+    "unit" : "nanometer"
+  }
+}

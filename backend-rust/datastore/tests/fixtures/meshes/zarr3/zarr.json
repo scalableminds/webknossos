@@ -1,0 +1,1 @@
+{"zarr_format": 3, "node_type": "group", "attributes": {"voxelytics": {"artifact_schema_version": 7, "artifact_attributes": {"mesh_format": "draco", "lod_scale_multiplier": 0.75, "transform": [[2.0, 0.5, 1.0, 10.0], [0.25, 3.0, 0.75, 20.0], [1.0, 0.5, 4.0, 30.0]], "hash_function": "identity", "n_buckets": 2}}}}

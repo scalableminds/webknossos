@@ -26,8 +26,10 @@ export function DeleteAlignmentProjectModal({
   onClose: () => void;
   onDeleted: (mode: AlignmentProjectDeletionMode) => void;
 }) {
+  const isUploading = project.status === "UPLOADING";
+  const canDeleteInputDataOnly = !project.isInputDataDeleted && !isUploading;
   const [mode, setMode] = useState<AlignmentProjectDeletionMode>(
-    project.isInputDataDeleted ? "project" : "inputData",
+    canDeleteInputDataOnly ? "inputData" : "project",
   );
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -70,15 +72,17 @@ export function DeleteAlignmentProjectModal({
           onChange={(event) => setMode(event.target.value)}
           style={{ display: "flex", flexDirection: "column", gap: 12 }}
         >
-          <Radio value="inputData" disabled={project.isInputDataDeleted}>
+          <Radio value="inputData" disabled={!canDeleteInputDataOnly}>
             <Text strong>Delete input data only</Text>
             <br />
             <Text type="secondary">
               {project.isInputDataDeleted
                 ? "The input data was already deleted."
-                : project.fileCount != null && project.totalSizeInBytes != null
-                  ? `Deletes the ${project.fileCount.toLocaleString()} uploaded files and frees ${formatBytes(project.totalSizeInBytes, 1)} of storage. The project and its list of alignments are kept, but no new alignments can be started.`
-                  : "Deletes the uploaded files. The project and its list of alignments are kept, but no new alignments can be started."}
+                : isUploading
+                  ? "Not available while the upload is unfinished. Deleting the whole project cancels the upload."
+                  : project.fileCount != null && project.totalSizeInBytes != null
+                    ? `Deletes the ${project.fileCount.toLocaleString()} uploaded files and frees ${formatBytes(project.totalSizeInBytes, 1)} of storage. The project and its list of alignments are kept, but no new alignments can be started.`
+                    : "Deletes the uploaded files. The project and its list of alignments are kept, but no new alignments can be started."}
             </Text>
           </Radio>
           <Radio value="project">

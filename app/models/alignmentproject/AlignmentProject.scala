@@ -233,11 +233,16 @@ class AlignmentProjectService @Inject() (
   def deleteInputData(project: AlignmentProject): Fox[Unit] =
     for {
       _ <- cancelUnfinishedJobs(project)
-      _ <- Fox.runIf(!project.isInputDataDeleted && project.status != AlignmentProjectStatus.UPLOADING) {
+      _ <- Fox.runIf(!project.isInputDataDeleted) {
         for {
           dataStore <- dataStoreDAO.findOneByName(project._dataStore)(using GlobalAccessContext)
+          dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+          // Removes the partially uploaded files. The final directory is deleted anyway, in case the upload just finished.
+          _ <- Fox.runIf(project.status == AlignmentProjectStatus.UPLOADING)(
+            dataStoreClient.cancelAlignmentProjectUpload(project._id)
+          )
           directory <- directoryOnDataStore(project)
-          _ <- pathDeletionService.deletePaths(new WKRemoteDataStoreClient(dataStore, rpc), Seq(directory))
+          _ <- pathDeletionService.deletePaths(dataStoreClient, Seq(directory))
         } yield ()
       }
       _ <- alignmentProjectDAO.markInputDataDeleted(project._id)

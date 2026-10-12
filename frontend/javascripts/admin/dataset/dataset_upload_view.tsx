@@ -1,11 +1,4 @@
-import {
-  FileOutlined,
-  FolderOutlined,
-  HourglassOutlined,
-  InboxOutlined,
-  InfoCircleOutlined,
-  LoadingOutlined,
-} from "@ant-design/icons";
+import { HourglassOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import {
   AllowedTeamsFormItem,
   CardContainer,
@@ -27,25 +20,8 @@ import {
   sendFailedRequestAnalyticsEvent,
   type UnfinishedUpload,
 } from "admin/rest_api";
-import {
-  Alert,
-  Avatar,
-  Button,
-  Col,
-  Form,
-  List,
-  Modal,
-  Popover,
-  Progress,
-  Row,
-  Select,
-  Space,
-  Spin,
-  Tooltip,
-  Typography,
-} from "antd";
+import { Alert, Button, Col, Form, Popover, Row, Select, Space, Tooltip, Typography } from "antd";
 import type { FormInstance } from "antd/es/form";
-import classnames from "classnames";
 import FolderSelection from "dashboard/folders/folder_selection";
 import dayjs from "dayjs";
 import features from "features";
@@ -65,7 +41,7 @@ import uniqBy from "lodash-es/uniqBy";
 import without from "lodash-es/without";
 import messages from "messages";
 import React from "react";
-import { type FileWithPath, useDropzone } from "react-dropzone";
+import type { FileWithPath } from "react-dropzone";
 import { connect } from "react-redux";
 import { type BlockerFunction, Link } from "react-router";
 import {
@@ -80,6 +56,11 @@ import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import type { WebknossosState } from "viewer/store";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
+import {
+  FileDropzone,
+  UploadedFileList,
+  UploadProgressModal,
+} from "./components/upload_components";
 
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
@@ -508,51 +489,15 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     const { isRetrying, isFinishing, uploadProgress, isUploading } = this.state;
     return (
-      <Modal
+      <UploadProgressModal
         title="Dataset Upload"
-        open={isUploading}
-        keyboard={false}
-        mask={{ closable: false }}
-        footer={null}
+        label={`dataset ${form.getFieldValue("name")}`}
+        isOpen={isUploading}
+        isFinishing={isFinishing}
+        isRetrying={isRetrying}
+        progress={uploadProgress}
         onCancel={this.cancelUpload}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            flexDirection: "column",
-          }}
-        >
-          {isFinishing ? (
-            <>
-              <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
-              <br />
-              Processing uploaded files …
-            </>
-          ) : (
-            <>
-              <FolderOutlined
-                style={{
-                  fontSize: 50,
-                  marginBottom: 8,
-                }}
-              />
-              {isRetrying
-                ? `Upload of dataset ${form.getFieldValue("name")} froze.`
-                : `Uploading Dataset ${form.getFieldValue("name")}.`}
-              <br />
-              {isRetrying ? "Retrying to continue the upload …" : null}
-              <br />
-              <Progress
-                // Round to 1 digit after the comma, but use floor
-                // to avoid that 100% are displayed even though the progress is lower.
-                percent={Math.floor(uploadProgress * 1000) / 10}
-                status="active"
-              />
-            </>
-          )}
-        </div>
-      </Modal>
+      />
     );
   };
 
@@ -1125,258 +1070,165 @@ function FileUploadArea({
   isDatasetConversionEnabled: boolean;
 }) {
   const onDropAccepted = (acceptedFiles: FileWithPath[]) => {
-    // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
     onChange(uniqBy(fileList.concat(acceptedFiles), (file) => file.path));
   };
 
-  const removeFile = (file: FileWithPath) => {
-    onChange(without(fileList, file));
-  };
-
-  const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({
-    onDropAccepted,
-  });
-  const acceptedFiles = fileList;
-  const files: React.ReactNode[] = acceptedFiles.map((file: FileWithPath) => (
-    <li key={file.path}>{file.path}</li>
-  ));
-  const showSmallFileList = files.length > 10;
-
-  const list = (
-    <List
-      itemLayout="horizontal"
-      dataSource={acceptedFiles}
-      size={showSmallFileList ? "small" : "default"}
-      renderItem={(item: FileWithPath) => (
-        <List.Item
-          actions={[
-            <a key="list-loadmore-edit" onClick={() => removeFile(item)}>
-              remove
-            </a>,
-          ]}
-        >
-          <List.Item.Meta
-            avatar={
-              !showSmallFileList && (
-                <Avatar>
-                  <FileOutlined />
-                </Avatar>
-              )
-            }
-            title={
-              <span>
-                {showSmallFileList && <FileOutlined />}{" "}
-                <span
-                  style={{
-                    color: "darkgrey",
-                  }}
-                >{`${item.path?.split("/").slice(0, -1).join("/")}/`}</span>
-                {item.name}
-              </span>
-            }
-          />
-        </List.Item>
-      )}
-    />
-  );
-
   return (
     <div>
-      <div
-        {...getRootProps({
-          className: classnames("dataset-upload-dropzone", {
-            "dataset-upload-dropzone-active": isDragActive,
-            "dataset-upload-dropzone-accept": isDragAccept,
-            "dataset-upload-dropzone-rejct": isDragReject,
-          }),
-        })}
-      >
-        <input {...getInputProps()} />
-        <InboxOutlined
-          style={{
-            fontSize: 48,
-            color: "var(--ant-color-primary)",
-          }}
-        />
-        <div
-          style={{
-            textAlign: "center",
-            display: "inline-block",
-            marginTop: 8,
-            lineHeight: "1.7em",
-          }}
-        >
-          {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (
-            <>
-              Drag and drop your files in WEBKNOSSOS format.
-              <div
-                style={{
-                  textAlign: "left",
-                  display: "list-item",
-                  maxWidth: 475,
-                  marginTop: 10,
-                }}
-              >
-                Need to upload files in other formats? Switch to{" "}
-                <a href="https://webknossos.org" onClick={(e) => e.stopPropagation()}>
-                  webknossos.org
-                </a>{" "}
-                for more file types support and automatic conversion.
-                <a
-                  href="https://webknossos.org/self-hosted-upgrade"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {" "}
-                  Learn more!
-                </a>
-              </div>
-            </>
-          ) : (
-            <div style={{ marginTop: 8 }}>
-              Drag your file(s) to this area to upload them. Either add individual image files, a
-              zip archive or a folder.
-            </div>
-          )}
-          {isDatasetConversionEnabled ? (
+      <FileDropzone onDropAccepted={onDropAccepted}>
+        {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (
+          <>
+            Drag and drop your files in WEBKNOSSOS format.
             <div
               style={{
                 textAlign: "left",
-                display: "inline-block",
+                display: "list-item",
+                maxWidth: 475,
                 marginTop: 10,
               }}
             >
-              The following file formats are supported:
-              <ul>
-                <li>
-                  <Popover content={<Zarr3Example />} trigger="hover">
-                    Zarr or WKW dataset
-                    <InfoCircleOutlined
-                      style={{
-                        marginLeft: 4,
-                      }}
-                    />
-                  </Popover>
-                </li>
-
-                <li>
-                  <Popover content={<SingleLayerImageStackExample />} trigger="hover">
-                    Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4 etc.)
-                    <InfoCircleOutlined
-                      style={{
-                        marginLeft: 4,
-                      }}
-                    />
-                  </Popover>
-                </li>
-
-                <li>
-                  <Popover content={<MultiLayerImageStackExample />} trigger="hover">
-                    Multi-Layer Image File Sequence
-                    <InfoCircleOutlined
-                      style={{
-                        marginLeft: 4,
-                      }}
-                    />
-                  </Popover>
-                </li>
-                <li>
-                  <Popover
-                    content={
-                      <a
-                        href="https://docs.webknossos.org/webknossos/data/zarr.html"
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Read more in docs
-                      </a>
-                    }
-                    trigger="hover"
-                  >
-                    OME-Zarr 0.4+ (NGFF) datasets{" "}
-                    <InfoCircleOutlined
-                      style={{
-                        marginLeft: 4,
-                      }}
-                    />
-                  </Popover>
-                </li>
-                <li>
-                  <Popover
-                    content={
-                      <a
-                        href="https://docs.webknossos.org/webknossos/data/neuroglancer_precomputed.html"
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Read more in docs
-                      </a>
-                    }
-                    trigger="hover"
-                  >
-                    Neuroglancer Precomputed datasets{" "}
-                    <InfoCircleOutlined
-                      style={{
-                        marginLeft: 4,
-                      }}
-                    />
-                  </Popover>
-                </li>
-                <li>
-                  <Popover
-                    content={
-                      <a
-                        href="https://docs.webknossos.org/webknossos/data/n5.html"
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Read more in docs
-                      </a>
-                    }
-                    trigger="hover"
-                  >
-                    N5 datasets{" "}
-                    <InfoCircleOutlined
-                      style={{
-                        marginLeft: 4,
-                      }}
-                    />
-                  </Popover>
-                </li>
-                <li>Single-file images (tif, czi, nifti, raw, ims etc.)</li>
-              </ul>
-              Have a look at{" "}
+              Need to upload files in other formats? Switch to{" "}
+              <a href="https://webknossos.org" onClick={(e) => e.stopPropagation()}>
+                webknossos.org
+              </a>{" "}
+              for more file types support and automatic conversion.
               <a
-                href="https://docs.webknossos.org/webknossos/data/image_stacks.html"
+                href="https://webknossos.org/self-hosted-upgrade"
                 onClick={(e) => e.stopPropagation()}
               >
-                our documentation
-              </a>{" "}
-              to learn more.
+                {" "}
+                Learn more!
+              </a>
             </div>
-          ) : null}
-        </div>
-      </div>
-
-      {files.length > 0 ? (
-        <div
-          style={{
-            marginTop: 8,
-          }}
-        >
-          <Typography.Title level={5}>Files</Typography.Title>
+          </>
+        ) : (
+          <div style={{ marginTop: 8 }}>
+            Drag your file(s) to this area to upload them. Either add individual image files, a zip
+            archive or a folder.
+          </div>
+        )}
+        {isDatasetConversionEnabled ? (
           <div
             style={{
-              maxHeight: 600,
-              overflowY: "auto",
+              textAlign: "left",
+              display: "inline-block",
+              marginTop: 10,
             }}
           >
-            {list}
+            The following file formats are supported:
+            <ul>
+              <li>
+                <Popover content={<Zarr3Example />} trigger="hover">
+                  Zarr or WKW dataset
+                  <InfoCircleOutlined
+                    style={{
+                      marginLeft: 4,
+                    }}
+                  />
+                </Popover>
+              </li>
+
+              <li>
+                <Popover content={<SingleLayerImageStackExample />} trigger="hover">
+                  Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4 etc.)
+                  <InfoCircleOutlined
+                    style={{
+                      marginLeft: 4,
+                    }}
+                  />
+                </Popover>
+              </li>
+
+              <li>
+                <Popover content={<MultiLayerImageStackExample />} trigger="hover">
+                  Multi-Layer Image File Sequence
+                  <InfoCircleOutlined
+                    style={{
+                      marginLeft: 4,
+                    }}
+                  />
+                </Popover>
+              </li>
+              <li>
+                <Popover
+                  content={
+                    <a
+                      href="https://docs.webknossos.org/webknossos/data/zarr.html"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Read more in docs
+                    </a>
+                  }
+                  trigger="hover"
+                >
+                  OME-Zarr 0.4+ (NGFF) datasets{" "}
+                  <InfoCircleOutlined
+                    style={{
+                      marginLeft: 4,
+                    }}
+                  />
+                </Popover>
+              </li>
+              <li>
+                <Popover
+                  content={
+                    <a
+                      href="https://docs.webknossos.org/webknossos/data/neuroglancer_precomputed.html"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Read more in docs
+                    </a>
+                  }
+                  trigger="hover"
+                >
+                  Neuroglancer Precomputed datasets{" "}
+                  <InfoCircleOutlined
+                    style={{
+                      marginLeft: 4,
+                    }}
+                  />
+                </Popover>
+              </li>
+              <li>
+                <Popover
+                  content={
+                    <a
+                      href="https://docs.webknossos.org/webknossos/data/n5.html"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Read more in docs
+                    </a>
+                  }
+                  trigger="hover"
+                >
+                  N5 datasets{" "}
+                  <InfoCircleOutlined
+                    style={{
+                      marginLeft: 4,
+                    }}
+                  />
+                </Popover>
+              </li>
+              <li>Single-file images (tif, czi, nifti, raw, ims etc.)</li>
+            </ul>
+            Have a look at{" "}
+            <a
+              href="https://docs.webknossos.org/webknossos/data/image_stacks.html"
+              onClick={(e) => e.stopPropagation()}
+            >
+              our documentation
+            </a>{" "}
+            to learn more.
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </FileDropzone>
+      <UploadedFileList files={fileList} onRemove={(file) => onChange(without(fileList, file))} />
     </div>
   );
 }

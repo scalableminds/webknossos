@@ -1,31 +1,27 @@
-import { InboxOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  deleteAlignmentProject,
   finishAlignmentProjectUpload,
   reserveAlignmentProjectUpload,
 } from "admin/api/alignment_projects";
 import { refreshToken } from "admin/api/token";
+import {
+  FileDropzone,
+  UploadedFileList,
+  UploadProgressModal,
+} from "admin/dataset/components/upload_components";
 import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
 import { createResumableUpload } from "admin/rest_api";
-import {
-  Alert,
-  Button,
-  Col,
-  Form,
-  Input,
-  Progress,
-  Row,
-  Select,
-  Typography,
-  Upload,
-  type UploadFile,
-} from "antd";
-import { formatBytes } from "libs/format_utils";
+import { Alert, App, Button, Col, Form, Input, Row, Select } from "antd";
 import { useWkSelector } from "libs/react_hooks";
+import type ResumableUpload from "libs/resumable_upload/resumable_upload";
 import type { ResumableUploadEvent } from "libs/resumable_upload/resumable_upload";
 import Toast from "libs/toast";
 import { Vector3Input } from "libs/vector_input";
-import { useEffect, useState } from "react";
+import uniqBy from "lodash-es/uniqBy";
+import without from "lodash-es/without";
+import { useEffect, useRef, useState } from "react";
+import type { FileWithPath } from "react-dropzone";
 import { useNavigate } from "react-router";
 import type { APIDataStore } from "types/api_types";
 import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer/constants";
@@ -38,6 +34,20 @@ type FormValues = {
   voxelSizeUnit: UnitLong;
 };
 
+type UploadState = {
+  isUploading: boolean;
+  isFinishing: boolean;
+  isRetrying: boolean;
+  progress: number;
+};
+
+const initialUploadState: UploadState = {
+  isUploading: false,
+  isFinishing: false,
+  isRetrying: false,
+  progress: 0,
+};
+
 function generateUploadId(): string {
   const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
   const randomString = Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join(
@@ -46,25 +56,23 @@ function generateUploadId(): string {
   return `${new Date().toISOString().replace(/[:.]/g, "-")}__alignmentProject__${randomString}`;
 }
 
-// The resumable upload identifies files by their `path`, which react-dropzone sets for dataset
-// uploads. Here, it is derived from the path relative to the selected folder.
-function withPath(file: File): File & { path: string } {
-  if (!("path" in file)) {
-    Object.defineProperty(file, "path", { value: file.webkitRelativePath || file.name });
-  }
-  return file as File & { path: string };
-}
-
 export default function AlignmentProjectUploadView({ datastores }: { datastores: APIDataStore[] }) {
   const [form] = Form.useForm<FormValues>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { modal } = App.useApp();
   const activeUser = useWkSelector((state) => state.activeUser);
-  const [files, setFiles] = useState<UploadFile[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [files, setFiles] = useState<FileWithPath[]>([]);
+  const [uploadState, setUploadState] = useState<UploadState>(initialUploadState);
+  const resumableUploadRef = useRef<ResumableUpload | null>(null);
+  const alignmentProjectIdRef = useRef<string | null>(null);
+  const isCancellingRef = useRef(false);
 
   const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
+  const csvFiles = files.filter((file) => file.name.toLowerCase().endsWith(".csv"));
+  // A single zip is unpacked by the datastore, which then checks for the CSV.
+  const isZipUpload = files.length === 1 && files[0].name.toLowerCase().endsWith(".zip");
+  const totalSizeInBytes = files.reduce((sum, file) => sum + file.size, 0);
 
   // The datastores are loaded asynchronously, so the initial value of the (possibly hidden) field
   // would be empty. Select the first one once they are known.
@@ -74,17 +82,12 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
     }
   }, [form, uploadableDatastores]);
 
-  const csvFiles = files.filter((file) => file.name.toLowerCase().endsWith(".csv"));
-  // A single zip is unpacked by the datastore, which then checks for the CSV.
-  const isZipUpload = files.length === 1 && files[0].name.toLowerCase().endsWith(".zip");
-  const totalSizeInBytes = files.reduce((sum, file) => sum + (file.size ?? 0), 0);
-
   useEffect(() => {
-    if (!isUploading) return;
+    if (!uploadState.isUploading) return;
     const warnBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
     window.addEventListener("beforeunload", warnBeforeUnload);
     return () => window.removeEventListener("beforeunload", warnBeforeUnload);
-  }, [isUploading]);
+  }, [uploadState.isUploading]);
 
   const getFileAlert = () => {
     if (files.length === 0 || isZipUpload) return null;
@@ -94,7 +97,7 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
     if (csvFiles.length > 1) {
       return {
         type: "error" as const,
-        title: `Found ${csvFiles.length} CSV files (${csvFiles.map((f) => f.name).join(", ")}). Only one is allowed.`,
+        title: `Found ${csvFiles.length} CSV files (${csvFiles.map((f) => f.path).join(", ")}). Only one is allowed.`,
       };
     }
     return null;
@@ -103,8 +106,33 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
 
   const handleUploadFailure = (message: string) => {
     Toast.error(message);
-    setIsUploading(false);
-    setUploadProgress(0);
+    setUploadState(initialUploadState);
+  };
+
+  // Deleting the project makes WEBKNOSSOS cancel the upload on the datastore, removing the uploaded files.
+  const cancelUpload = async () => {
+    const resumableUpload = resumableUploadRef.current;
+    if (resumableUpload == null) return;
+    isCancellingRef.current = true;
+    resumableUpload.pause();
+    const shouldCancel = await modal.confirm({
+      title:
+        "Cancelling the running upload will delete already uploaded files on the server and cannot be undone. Are you sure you want to cancel the upload?",
+      okText: "Yes, cancel the upload",
+      cancelText: "No, keep it running",
+    });
+    if (!shouldCancel) {
+      isCancellingRef.current = false;
+      resumableUpload.upload();
+      return;
+    }
+    resumableUpload.cancel();
+    if (alignmentProjectIdRef.current != null) {
+      await deleteAlignmentProject(alignmentProjectIdRef.current);
+    }
+    setUploadState(initialUploadState);
+    await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
+    Toast.success("The upload was cancelled.");
   };
 
   const handleSubmit = async (values: FormValues) => {
@@ -115,19 +143,17 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
       return;
     }
     if (activeUser == null) return;
-    const filesWithPath = files.flatMap((file) =>
-      file.originFileObj != null ? [withPath(file.originFileObj)] : [],
-    );
     const uploadId = generateUploadId();
     const datastoreUrl = values.datastoreUrl;
-    setIsUploading(true);
+    isCancellingRef.current = false;
+    setUploadState({ ...initialUploadState, isUploading: true });
     try {
       await refreshToken();
-      await reserveAlignmentProjectUpload(datastoreUrl, {
+      const { newAlignmentProjectId } = await reserveAlignmentProjectUpload(datastoreUrl, {
         resumableUploadInfo: {
           uploadId,
-          totalFileCount: filesWithPath.length,
-          filePaths: filesWithPath.map((file) => file.path),
+          totalFileCount: files.length,
+          filePaths: files.map((file) => file.path ?? file.name),
           totalFileSizeInBytes: totalSizeInBytes,
         },
         name: values.name,
@@ -136,25 +162,31 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
         voxelSizeFactor: values.voxelSize,
         voxelSizeUnit: values.voxelSizeUnit,
       });
+      alignmentProjectIdRef.current = newAlignmentProjectId;
     } catch (_error) {
       // The request library already shows the error, e.g. for a duplicate name.
-      setIsUploading(false);
+      setUploadState(initialUploadState);
       return;
     }
 
     const resumableUpload = await createResumableUpload(datastoreUrl, uploadId, "alignmentProject");
+    resumableUploadRef.current = resumableUpload;
     let finishUploadCalled = false;
     resumableUpload.addEventListener("complete", async (event: ResumableUploadEvent) => {
       if (
         event.detail.type !== "complete" ||
         !event.detail.didUploadCompleteSuccessfully ||
+        isCancellingRef.current ||
         finishUploadCalled
       ) {
         return;
       }
       finishUploadCalled = true;
+      resumableUpload.pause();
+      setUploadState((state) => ({ ...state, isFinishing: true }));
       try {
         const { alignmentProjectId } = await finishAlignmentProjectUpload(datastoreUrl, uploadId);
+        setUploadState(initialUploadState);
         await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
         Toast.success("Alignment project uploaded successfully.");
         navigate(`/alignmentProjects/${alignmentProjectId}`);
@@ -164,12 +196,20 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
     });
     resumableUpload.addEventListener("filesAdded", () => resumableUpload.upload());
     resumableUpload.addEventListener("progress", () =>
-      setUploadProgress(resumableUpload.progress()),
+      setUploadState((state) => ({
+        ...state,
+        isRetrying: false,
+        progress: resumableUpload.progress(),
+      })),
     );
+    resumableUpload.addEventListener("fileRetry", () =>
+      setUploadState((state) => ({ ...state, isRetrying: true })),
+    );
+    // terminalFileError is triggered when a normal fileError could not be recovered by refreshing the token.
     resumableUpload.addEventListener("terminalFileError", (event: ResumableUploadEvent) => {
       if (event.detail.type === "terminalFileError") handleUploadFailure(event.detail.message);
     });
-    resumableUpload.addFiles(filesWithPath);
+    resumableUpload.addFiles(files as File[]);
   };
 
   return (
@@ -186,7 +226,6 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
             Toast.error(errorFields.flatMap((field) => field.errors).join(" "))
           }
           initialValues={{ voxelSizeUnit: UnitLong.nm }}
-          disabled={isUploading}
         >
           <DatastoreFormItem
             datastores={uploadableDatastores}
@@ -227,57 +266,19 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
             <Input.TextArea rows={3} />
           </Form.Item>
 
-          <Form.Item
-            label="Files"
-            required
-            tooltip="The tile images plus one CSV, either as a folder or as a single ZIP file. Each CSV row is section,x,y,path with the path relative to the CSV, e.g. 5,0,240,./005_000_001_000_n_00.tif"
-            extra={
-              files.length > 0 ? (
-                <Typography.Link onClick={() => setFiles([])}>Clear selection</Typography.Link>
-              ) : (
-                <>
-                  Alternatively,{" "}
-                  <Upload
-                    accept=".zip"
-                    showUploadList={false}
-                    beforeUpload={() => false}
-                    onChange={({ file }) => setFiles([file])}
-                  >
-                    <Typography.Link>select a ZIP file</Typography.Link>
-                  </Upload>{" "}
-                  containing the tile images and the tile CSV.
-                </>
-              )
-            }
-          >
-            <Upload.Dragger
-              multiple
-              directory
-              showUploadList={false}
-              fileList={files}
-              beforeUpload={() => false}
-              onChange={({ fileList }) => setFiles(fileList)}
+          <Form.Item label="Files" required>
+            <FileDropzone
+              onDropAccepted={(acceptedFiles) =>
+                setFiles(uniqBy(files.concat(acceptedFiles), (file) => file.path))
+              }
             >
-              <p className="ant-upload-drag-icon">
-                <InboxOutlined />
-              </p>
-              {files.length === 0 ? (
-                <p className="ant-upload-text">
-                  Drop the folder containing the tile images and the tile CSV (or a ZIP file of it)
-                  here or click to select the folder
-                </p>
-              ) : isZipUpload ? (
-                <p className="ant-upload-text">
-                  {files[0].name} selected ({formatBytes(totalSizeInBytes, 1)}), will be unpacked
-                  after the upload
-                </p>
-              ) : (
-                <p className="ant-upload-text">
-                  {files.length.toLocaleString()} files selected ({formatBytes(totalSizeInBytes, 1)}
-                  )
-                </p>
-              )}
-            </Upload.Dragger>
+              Drag the tile images and the tile CSV to this area, either as a folder or as a single
+              ZIP archive.
+              <br />
+              Each CSV row is <code>section,x,y,path</code>, with the path relative to the CSV, e.g.{" "}
+              <code>5,0,240,./005_000_001_000_n_00.tif</code>
+            </FileDropzone>
+            <UploadedFileList files={files} onRemove={(file) => setFiles(without(files, file))} />
           </Form.Item>
 
           {fileAlert != null && (
@@ -289,13 +290,20 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
             />
           )}
 
-          {isUploading && <Progress percent={Math.round(uploadProgress * 100)} />}
-
-          <Button type="primary" htmlType="submit" size="large" block loading={isUploading}>
+          <Button type="primary" htmlType="submit" size="large" block>
             Upload
           </Button>
         </Form>
       </CardContainer>
+      <UploadProgressModal
+        title="Alignment Project Upload"
+        label={`alignment project ${form.getFieldValue("name") ?? ""}`}
+        isOpen={uploadState.isUploading}
+        isFinishing={uploadState.isFinishing}
+        isRetrying={uploadState.isRetrying}
+        progress={uploadState.progress}
+        onCancel={cancelUpload}
+      />
     </div>
   );
 }

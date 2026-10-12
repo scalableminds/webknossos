@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  AlignmentProjectUploadAdditionalInfo,
   AlignmentProjectUploadInfo,
   AttachmentUploadInfo,
   DatasetUploadInfo,
@@ -110,14 +111,29 @@ class UploadController @Inject() (
             request.body.resumableUploadInfo.uploadId,
             UploadDomain.alignmentProject
           )
-          _ <- Fox.runIf(!isKnownUpload) {
-            for {
-              additionalInfo <- dsRemoteWebknossosClient.reserveAlignmentProjectUpload(
-                request.body
-              ) ?~> "alignmentProject.upload.validation.failed"
-              _ <- uploadService.reserveAlignmentProjectUpload(request.body, additionalInfo.newAlignmentProjectId)
-            } yield ()
-          }
+          alignmentProjectId <-
+            if (isKnownUpload)
+              uploadService.getDatasetIdByUploadId(
+                request.body.resumableUploadInfo.uploadId,
+                UploadDomain.alignmentProject
+              )
+            else
+              for {
+                additionalInfo <- dsRemoteWebknossosClient.reserveAlignmentProjectUpload(
+                  request.body
+                ) ?~> "alignmentProject.upload.validation.failed"
+                _ <- uploadService.reserveAlignmentProjectUpload(request.body, additionalInfo.newAlignmentProjectId)
+              } yield additionalInfo.newAlignmentProjectId
+        } yield Ok(Json.toJson(AlignmentProjectUploadAdditionalInfo(alignmentProjectId)))
+      }
+    }
+
+  /* Called by WEBKNOSSOS when an alignment project is deleted */
+  def cancelAlignmentProjectUpload(alignmentProjectId: ObjectId): Action[AnyContent] =
+    Action.fox { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+        for {
+          _ <- uploadService.cancelAlignmentProjectUpload(alignmentProjectId)
         } yield Ok
       }
     }

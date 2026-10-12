@@ -263,12 +263,27 @@ class UploadService @Inject() (
     } yield ()
 
   def reserveAlignmentProjectUpload(uploadInfo: AlignmentProjectUploadInfo, alignmentProjectId: ObjectId): Fox[Unit] =
-    reserveResumableUpload(
-      uploadInfo.resumableUploadInfo,
-      alignmentProjectId,
-      DataSourceId(alignmentProjectId.toString, uploadInfo.organizationId),
-      UploadDomain.alignmentProject
-    )
+    for {
+      _ <- reserveResumableUpload(
+        uploadInfo.resumableUploadInfo,
+        alignmentProjectId,
+        DataSourceId(alignmentProjectId.toString, uploadInfo.organizationId),
+        UploadDomain.alignmentProject
+      )
+      _ <- alignmentProjectUploadMetadataStore.insertUploadIdByAlignmentProjectId(
+        alignmentProjectId,
+        uploadInfo.resumableUploadInfo.uploadId
+      )
+    } yield ()
+
+  // Called when WEBKNOSSOS deletes an alignment project. Unknown uploads (finished or expired) are ignored.
+  def cancelAlignmentProjectUpload(alignmentProjectId: ObjectId): Fox[Unit] =
+    for {
+      uploadIdBox <- alignmentProjectUploadMetadataStore.findUploadIdByAlignmentProjectId(alignmentProjectId).shiftBox
+      _ <- Fox.runOptional(uploadIdBox.toOption)(uploadId =>
+        cleanUpUploaded(uploadId, reason = "Alignment project was deleted", UploadDomain.alignmentProject)
+      )
+    } yield ()
 
   private def reserveResumableUpload(
       resumableUploadInfo: ResumableUploadInfo,

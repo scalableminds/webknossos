@@ -112,7 +112,7 @@ export type AlignmentProjectUploadInfo = {
 export function reserveAlignmentProjectUpload(
   datastoreUrl: string,
   uploadInfo: AlignmentProjectUploadInfo,
-): Promise<void> {
+): Promise<{ newAlignmentProjectId: string }> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `/data/datasets/upload/alignmentProject/reserveUpload?token=${token}`,

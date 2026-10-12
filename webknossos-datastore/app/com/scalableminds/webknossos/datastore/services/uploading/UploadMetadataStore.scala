@@ -327,8 +327,32 @@ class AttachmentUploadMetadataStore @Inject() (protected val store: DataStoreRed
     } yield ()
 }
 
-// Alignment projects need no metadata beyond the generic one. The datasetId slot holds the alignment project id.
+// The datasetId slot holds the alignment project id.
 class AlignmentProjectUploadMetadataStore @Inject() (protected val store: DataStoreRedisStore)
     extends UploadMetadataStore {
   protected val domain: UploadDomain = UploadDomain.alignmentProject
+
+  private def redisKeyForUploadIdByAlignmentProjectId(alignmentProjectId: ObjectId): String =
+    s"${keyPrefix}___${alignmentProjectId}___alignmentProjectId"
+
+  // Here, the uploadId is the value. Used to cancel the upload when WEBKNOSSOS deletes the project.
+  def insertUploadIdByAlignmentProjectId(alignmentProjectId: ObjectId, uploadId: String): Fox[Unit] =
+    store.insert(redisKeyForUploadIdByAlignmentProjectId(alignmentProjectId), uploadId, Some(uploadIdleExpiry))
+
+  def findUploadIdByAlignmentProjectId(alignmentProjectId: ObjectId): Fox[String] =
+    store.find(redisKeyForUploadIdByAlignmentProjectId(alignmentProjectId))
+
+  override def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      alignmentProjectId <- findDatasetId(uploadId)
+      _ <- store.remove(redisKeyForUploadIdByAlignmentProjectId(alignmentProjectId))
+      _ <- super.cleanUp(uploadId)
+    } yield ()
+
+  override def refreshExpiry(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      alignmentProjectId <- findDatasetId(uploadId)
+      _ <- store.expire(redisKeyForUploadIdByAlignmentProjectId(alignmentProjectId), uploadIdleExpiry)
+      _ <- super.refreshExpiry(uploadId)
+    } yield ()
 }

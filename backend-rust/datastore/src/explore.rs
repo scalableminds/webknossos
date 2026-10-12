@@ -1873,6 +1873,11 @@ impl ExploreRemoteLayerService<'_> {
             }
             None => None,
         };
+        let parsed = self
+            .ctx
+            .vaults
+            .insert_s3_endpoint_if_missing(&parsed, credential.as_ref())
+            .await?;
         let upath = match &parsed {
             UPath::ZipEntry(..) => parsed.clone(),
             _ if [".zip", ".ozx"]

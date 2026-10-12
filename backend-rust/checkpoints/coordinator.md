@@ -1,6 +1,16 @@
 # Rust migration coordinator checkpoint
 
-## Active datastore ownership — Claude Code, 2026-10-12 02:10 local
+## Active datastore ownership — Codex, 2026-10-12
+
+LATEST short-S3 exploration rewrite DONE: regional or global endpoint insertion, explicit credential lookup, raw-path preservation, archive outer paths and denied-request no-effect tests.16 actual Scala URI helper goldens; whole datastore **416 passed, zero failures/ignored**, fmt/clippy/inventories clean; `/tmp/webknossos-rust-ds-s3-uri-final-tests.log`; details datastore-ds1-s3-rewrite.md. Next zip vaults and DS6.
+
+LATEST legacy API milestone DONE: versions10–14 safe-ID metadata, versions10–13 old uploads, authorized old linked-layer lookup, v10 manual reserve and unversioned chunks. Compiled Scala DTO/default/error goldens and actual HTTP/token/denial/version tests pass. Whole datastore **414 passed, zero failures/ignored**, fmt/clippy/inventories clean; `/tmp/webknossos-rust-ds-legacy-tests.log`; restart datastore-ds4-legacy.md. Latest registrations132/132 unchanged;56 versioned legacy +2 unversioned chunk registrations added. Next regional short-S3 rewrite, zip vaults and DS6.
+
+LATEST managed-S3 milestone DONE: streamed signed PUT/multipart transfers, native AWS SDK signing goldens, dataset/mag/attachment finish receipts, failure retention, aborts and denial. Whole datastore **406 passed, zero failures/ignored**, fmt/all-target clippy/inventories clean; log `/tmp/webknossos-rust-ds-managed-s3-tests.log`. Registrations remain 132/132; restart datastore-ds4-managed-s3.md. Next legacy/version overrides, regional short-S3 rewrite, zip vaults and DS6.
+
+User reconfirmed that Claude is stopped and Codex should continue owning the datastore. This supersedes the 02:10 Claude entry below. Compresso is now integrated and independently/native verified: 1,848 oracle cases, 324 checked-in cases, 18 actual JNI error/literal cases and 12 plain/raw-shard/gzip-shard end-to-end datasets. Complete datastore **393 passed, zero failures/ignored**, fmt/all-target clippy/inventories clean; log `/tmp/webknossos-rust-ds-compresso-tests.log`. Registrations remain132/132; see datastore-ds5-compresso.md. Next managed-S3 upload targets, legacy/version overrides, regional short-S3 rewrite and DS6 differential/performance/config/cutover. No migration-completion or production-cutover claim.
+
+## Historical datastore ownership — Claude Code, 2026-10-12 02:10 local
 
 User re-issued the resume goal to this Claude Code session after Codex's 127/132 milestone (Codex's last datastore edit 2026-10-11 22:46, no build running). Claude owns `backend-rust/datastore/**` and the datastore checkpoints again, building on all Codex code unchanged. Current task: the 5 connectome routes. If you are Codex resuming, coordinate with the user before editing datastore files.
 
@@ -51,7 +61,7 @@ Updated 2026-10-10 22:45 UTC (usage-limit pauses 12:20-16:40 and ~18:00-22:10 UT
 
 ## Objective and constraints
 
-The full Rust backend migration goal remains active: main application first, then datastore and tracingstore engines. A completed route batch is not completion. User requests Sol 6.1 subagents, small bounded assignments, and durable checkpoints. Keep changes inside backend-rust; preserve unrelated tools/worktree. No rm on macOS. No commit, deployment or PR requested. Scala controllers/DAOs/protos/schema185 are authoritative; no placeholder behavior or route-count parity claims.
+The full Rust backend migration goal remains active: main application first, then datastore and tracingstore engines (tracingstore engine: postponed for later). A completed route batch is not completion. User requests Sol 6.1 subagents, small bounded assignments, and durable checkpoints. Keep changes inside backend-rust; preserve unrelated tools/worktree. No rm on macOS. No commit, deployment or PR requested. Scala controllers/DAOs/protos/schema185 are authoritative; no placeholder behavior or route-count parity claims.
 
 Every agent writes Status / Done / Next / Evidence at milestones and about every three minutes, and sends a concise report to parent. Finish the stated batch before accepting more. Parent owns src/lib.rs, config.rs, Cargo files, README, inventory and central verification. Coordinate shared-file edits before changing them. Never bootstrap schema.sql into an existing database; only fresh generated TestDb databases.
 
@@ -135,7 +145,7 @@ Datastore engine plan: checkpoints/datastore-plan.md (separate Cargo package bac
 3. R2 datastore uploads7: split reservations and reports/unfinished list. R4 remaining update-report1 needs timewriter, createTracing1 needs tracing initialization.
 4. Annotation info typed/untyped + sandbox/createExplorational, then duplicate/reset/merge/task assignment; task allocation/creation; annotation IO upload/download. Split each group to roughly2–5 routes, taking prerequisites first.
 5. OIDC3 and WebAuthn ceremonies4; SMTP delivery and deferred integrations/background tasks.
-6. Differential Play tests, observability/performance, schema ownership and staged cutover. Then datastore engine, then tracingstore engine including binary formats/codecs/FossilDB/update concurrency.
+6. Differential Play tests, observability/performance, schema ownership and staged cutover. Then datastore engine, then tracingstore engine including binary formats/codecs/FossilDB/update concurrency (tracingstore engine: postponed for later; the Scala tracingstore is kept for now).
 
 ## Reproducible verification
 

@@ -1,14 +1,11 @@
 //! Scala `UploadService.finish*Upload`: checks, unzip/move, post-processing and the final move to
 //! the organization directory, then the report to WEBKNOSSOS.
-//!
-//! Not yet supported (explicit 501 instead of a partial result): organizations whose upload
-//! target is managed S3 (needs S3 PutObject support).
+//! Managed-S3 targets copy staged files before publishing adapted remote paths.
 use std::{
     path::{Component, Path, PathBuf},
     sync::atomic::{AtomicU32, Ordering},
 };
 
-use axum::http::StatusCode;
 use serde_json::{Value, json};
 
 use crate::{
@@ -578,13 +575,6 @@ fn generate_object_id() -> String {
     id.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-fn not_supported(what: &str) -> DsError {
-    DsError::failure(format!(
-        "{what} is not yet supported by the Rust datastore."
-    ))
-    .with_status(StatusCode::NOT_IMPLEMENTED)
-}
-
 /// Everything `finish*Upload` needs.
 pub struct FinishContext<'a> {
     pub uploads: &'a UploadService,
@@ -602,16 +592,11 @@ async fn blocking<T: Send + 'static>(
 }
 
 impl FinishContext<'_> {
-    fn ensure_no_s3_upload(&self, organization: &str) -> DsResult<()> {
-        if self
-            .uploads
+    fn s3_upload_base(&self, organization: &str) -> Option<UPath> {
+        self.uploads
             .base_dirs()
             .get_one_for_org(organization, true, false, true)
-            .is_ok()
-        {
-            return Err(not_supported("Uploading to managed S3"));
-        }
-        Ok(())
+            .ok()
     }
 
     fn orga_dir(&self, organization: &str) -> DsResult<PathBuf> {
@@ -807,7 +792,6 @@ impl FinishContext<'_> {
             .find_extra_json(upload_id, "linkedLayerIdentifier")
             .await?
             .ok_or_else(DsError::empty)?;
-        self.ensure_no_s3_upload(&source.organization_id)?;
         let upload_dir =
             self.uploads
                 .upload_directory_for(&source.organization_id, upload_id, domain)?;
@@ -1021,7 +1005,7 @@ impl FinishContext<'_> {
         Ok(())
     }
 
-    /// Scala `moveUnpackedDatasetToTarget` (local targets).
+    /// Scala `moveUnpackedDatasetToTarget` (local and managed-S3 targets).
     async fn move_unpacked_dataset_to_target(
         &self,
         unpacked: &Path,
@@ -1063,17 +1047,25 @@ impl FinishContext<'_> {
             Ok(())
         })
         .await?;
-        let target = orga_dir.join(&source.directory_name);
-        tracing::info!(
-            "finishUpload for {dataset_id}: Moving data to final local path {}...",
-            target.display()
-        );
-        let (from, to) = (unpacked.to_path_buf(), target.clone());
-        blocking(move || move_directory(&from, &to)).await?;
-        let adapted = DataSourceService::resolve_paths_in_new_base_path(
-            &usable,
-            &UPath::from_local_path(&target),
-        );
+        let new_base = if let Some(base) = self.s3_upload_base(&source.organization_id) {
+            let target = base.join(&source.directory_name);
+            tracing::info!("finishUpload for {dataset_id}: Copying data to {target}...");
+            self.data_sources
+                .vaults()
+                .upload_directory_to_s3(unpacked, &target)
+                .await?;
+            target
+        } else {
+            let target = orga_dir.join(&source.directory_name);
+            tracing::info!(
+                "finishUpload for {dataset_id}: Moving data to final local path {}...",
+                target.display()
+            );
+            let (from, to) = (unpacked.to_path_buf(), target.clone());
+            blocking(move || move_directory(&from, &to)).await?;
+            UPath::from_local_path(&target)
+        };
+        let adapted = DataSourceService::resolve_paths_in_new_base_path(&usable, &new_base);
         let dir = unpacked.to_path_buf();
         let _ = blocking(move || delete_directory_recursively(&dir)).await;
         Ok(Some(adapted))
@@ -1121,7 +1113,6 @@ impl FinishContext<'_> {
                 (None, Some((attachment, kind)))
             }
         };
-        self.ensure_no_s3_upload(&source.organization_id)?;
         let upload_dir =
             self.uploads
                 .upload_directory_for(&source.organization_id, upload_id, domain)?;
@@ -1162,18 +1153,31 @@ impl FinishContext<'_> {
             ),
             _ => unreachable!("mag or attachment"),
         };
-        let target = self
-            .orga_dir(&source.organization_id)?
-            .join(&source.directory_name)
-            .join(&layer_name)
-            .join(&dir_name);
-        tracing::info!(
-            "finishUpload for {domain} ({dataset_id}): Moving data to final local path {}...",
-            target.display()
-        );
-        let (from, to) = (unpack_to.clone(), target.clone());
-        blocking(move || move_directory(&from, &to)).await?;
-        let final_path = UPath::from_local_path(&target);
+        let final_path = if let Some(base) = self.s3_upload_base(&source.organization_id) {
+            let target = base
+                .join(&source.directory_name)
+                .join(&layer_name)
+                .join(&dir_name);
+            tracing::info!("finishUpload for {domain} ({dataset_id}): Copying data to {target}...");
+            self.data_sources
+                .vaults()
+                .upload_directory_to_s3(&unpack_to, &target)
+                .await?;
+            target
+        } else {
+            let target = self
+                .orga_dir(&source.organization_id)?
+                .join(&source.directory_name)
+                .join(&layer_name)
+                .join(&dir_name);
+            tracing::info!(
+                "finishUpload for {domain} ({dataset_id}): Moving data to final local path {}...",
+                target.display()
+            );
+            let (from, to) = (unpack_to.clone(), target.clone());
+            blocking(move || move_directory(&from, &to)).await?;
+            UPath::from_local_path(&target)
+        };
         match (mag, attachment) {
             (Some(mag), _) => {
                 let mag = MagLocator {

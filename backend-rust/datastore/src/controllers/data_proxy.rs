@@ -237,7 +237,7 @@ async fn proxy_attachment(
     .await?)
 }
 
-async fn proxy_datasource(
+pub(super) async fn proxy_datasource(
     State(state): State<AppState>,
     tc: TokenContext,
     Path(id): Path<String>,

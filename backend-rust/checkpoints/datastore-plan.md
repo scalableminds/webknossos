@@ -94,10 +94,10 @@ Baseline before this batch: 238 passed; only `write_blosc_outputs_for_java_oracl
 | B5 JSON mappings | 2 (+mapping application) | MappingService (JSON mapping files), listMappings, mappingJson | DONE (routes; JSON mapping application lands with adHocMesh) |
 | B6 Zarr streaming, annotation private links | 32 | WK annotation-source RPC + tracingstore volume proxy | DONE |
 | B7 thumbnails | 2 | renderer, color maps, pure-Rust JPEG encoder, histogram (B2) | DONE |
-| B8 uploads | 9 | resumable chunk store, Redis upload state, unpack/finish | DONE (managed-S3 upload targets answer 501 until S3 PutObject exists) |
+| B8 uploads | 9 | resumable chunk store, Redis upload state, unpack/finish | DONE (managed-S3 signed streaming/multipart uploads verified) |
 | B9 exploreRemote | 1 | explore module (2.1k Scala lines) | DONE (also used by finishUpload) |
 | DS5 (HDF5-backed) | 26 | agglomerates 6, connectomes 5, meshes 4 + adHocMesh 1, segment index/statistics 11 (minus pure-geometry parts) — pure-Rust HDF5 subset first | queued |
-| Legacy versioned overrides | n/a | DSLegacyApiController | queued |
+| Legacy versioned overrides | n/a | DSLegacyApiController | DONE (DTO/native golden + HTTP verification) |
 
 Order: B1 → B2 → B3 → B4 → B5, then B6–B9 and DS5. Each batch ends with focused router tests (mock WK), whole datastore suite, fmt, clippy and `python3 tools/datastore_route_inventory.py --check`.
 
@@ -123,3 +123,11 @@ Order: B1 → B2 → B3 → B4 → B5, then B6–B9 and DS5. Each batch ends wit
 
 
 2026-10-12 Codex connectomes DONE: last5 latest routes, HDF5/Zarr3 CSR/CSC synapses, positions, unsigned partners and legends; exact actual compiled Scala service/Set/JSON/numeric/boundary goldens, caches/reload/current-token/auth verified. Direct JHDF5 callback replay also corrected dataset unsigned and integer→Float32 conversion behavior in the shared HDF5 adapter. Whole datastore384 tests passed, zero failures/ignored, fmt/all-target clippy/inventories clean; /tmp/webknossos-rust-ds-connectomes-tests.log. Latest registrations132/132; Compresso, managed-S3/legacy and DS6 still open. Details/restart datastore-ds5-connectomes.md. Full goal active; no cutover/parity claim.
+
+2026-10-12 Codex Compresso milestone DONE (user reconfirmed Claude stopped/Codex owns datastore): pure-Rust decoder integrated into precomputed plain and raw/gzip sharded reads. Independent compresso3.2.2 encoder → repository C++ decoder → Rust matched1,848 valid cases;324 checked-in cases,18 actual JNI error/literal goldens and12 offset/ragged/missing/sharded volumes. Headers must match metadata shape/label width; exact JNI error prefix and zero-output precedence preserved. Actual authenticated router/current-token/cache/reload/denial and malformed bounds verified. Whole datastore **393 passed,0failed,0ignored**, fmt/all-target clippy/inventories clean; log /tmp/webknossos-rust-ds-compresso-tests.log. Registrations132/132; durable evidence datastore-ds5-compresso.md. Next managed-S3/legacy/regional short-S3 rewrite and DS6; conversion remains unfinished.
+
+2026-10-12 Codex managed-S3 milestone DONE: directory transfers with matching global credentials, signed streamed PUT/multipart, bounded memory, 10-attempt transient/regional retries, embedded HTTP-200 errors and failed/cancelled multipart aborts. Dataset/mag/attachment finish routes report adapted remote paths only after successful transfers; conversion stays local, denials have no storage effects, failures retain staged data. Native pinned AWS SDK signing goldens match. Whole datastore **406 passed, 0 failed, 0 ignored**, fmt/clippy/inventories clean; log /tmp/webknossos-rust-ds-managed-s3-tests.log. Evidence datastore-ds4-managed-s3.md. Next legacy/version overrides, regional short-S3 rewrite, zip vaults and DS6; migration unfinished.
+
+2026-10-12 Codex legacy milestone DONE: all versioned overrides plus unversioned old chunk routes; exact compiled Scala DTO/default/error cases, safe-ID envelope downgrade, linked-layer resolution/authorization, manual reservation without Redis, finish body/response adaptation and version boundaries. Whole datastore **414 passed, 0 failed, 0 ignored**, fmt/clippy/inventories clean; `/tmp/webknossos-rust-ds-legacy-tests.log`; restart datastore-ds4-legacy.md. Latest132/132 unchanged; next regional short-S3 rewrite, zip vaults and DS6.
+
+2026-10-12 Codex short-S3 exploration rewrite DONE: HeadBucket region response (including denied response headers), explicit credential/environment behavior, global fallback on missing/error lookup, raw URI and zip outer-path rewriting match actual Scala helper goldens; authenticated exploreRemote returns rewritten paths and denied requests never reach storage. Whole datastore **416 passed,0failed,0ignored**, fmt/clippy/inventories clean; `/tmp/webknossos-rust-ds-s3-uri-final-tests.log`; datastore-ds1-s3-rewrite.md. Next zip vaults and DS6.

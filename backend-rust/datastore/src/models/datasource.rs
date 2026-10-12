@@ -1301,7 +1301,7 @@ fn remove_key_recursively(value: Value, key: &str) -> Value {
 }
 
 /// Scala `patchKeyRecursively(_, "largestSegmentId")(UnsignedLong.downgradeToPlainNumberIfSafe)`.
-fn patch_largest_segment_id(value: Value) -> Value {
+pub(crate) fn patch_largest_segment_id(value: Value) -> Value {
     match value {
         Value::Object(object) => Value::Object(
             object

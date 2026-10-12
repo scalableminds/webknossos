@@ -75,7 +75,7 @@ fn domain(name: &str) -> DsResult<UploadDomain> {
 }
 
 /// Scala `ObjectIdFormat.reads`.
-fn read_object_id(json: &Value) -> JsResult<String> {
+pub(super) fn read_object_id(json: &Value) -> JsResult<String> {
     let id = read_string(json)?;
     if id.len() == 24 && id.bytes().all(|b| b.is_ascii_hexdigit()) {
         Ok(id.to_ascii_lowercase())
@@ -87,7 +87,7 @@ fn read_object_id(json: &Value) -> JsResult<String> {
 }
 
 /// Scala `LinkedLayerIdentifier` (re-written like `Json.toJson`).
-fn read_linked_layer(json: &Value) -> JsResult<Value> {
+pub(super) fn read_linked_layer(json: &Value) -> JsResult<Value> {
     let mut f = Fields::new(json);
     let dataset_id = f.req("datasetId", read_object_id);
     let layer_name = f.req("layerName", read_string);
@@ -187,7 +187,7 @@ fn data_source_id_from(value: &Value, key: &str) -> DsResult<DataSourceId> {
         })
 }
 
-async fn reserve_dataset_upload(
+pub(super) async fn reserve_dataset_upload(
     State(state): State<AppState>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
@@ -367,7 +367,7 @@ async fn reserve_attachment_upload(
     Ok(StatusCode::OK.into_response())
 }
 
-async fn unfinished_uploads(
+pub(super) async fn unfinished_uploads(
     State(state): State<AppState>,
     tc: TokenContext,
     Path(upload_domain): Path<String>,
@@ -417,7 +417,7 @@ fn form_number(
     value.trim().parse::<i64>().map_err(|_| "error.number")
 }
 
-async fn upload_chunk(
+pub(super) async fn upload_chunk(
     State(state): State<AppState>,
     tc: TokenContext,
     Path(upload_domain): Path<String>,
@@ -513,7 +513,7 @@ async fn upload_chunk(
     Ok(StatusCode::OK.into_response())
 }
 
-async fn test_chunk(
+pub(super) async fn test_chunk(
     State(state): State<AppState>,
     tc: TokenContext,
     Path(upload_domain): Path<String>,
@@ -615,7 +615,7 @@ async fn clean_up_upload_files(
     Ok(StatusCode::OK)
 }
 
-async fn finish_upload(
+pub(super) async fn finish_upload(
     State(state): State<AppState>,
     tc: TokenContext,
     Path(upload_domain): Path<String>,

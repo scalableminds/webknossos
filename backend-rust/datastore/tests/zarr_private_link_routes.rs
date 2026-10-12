@@ -178,6 +178,46 @@ async fn combines_dataset_and_annotation_layers() {
 }
 
 #[tokio::test]
+async fn legacy_private_link_metadata_downgrades_annotation_ids_and_forwards_the_correct_token() {
+    for private in [true, false] {
+        let (_, app) = start(private).await;
+        for version in 10..=16 {
+            for format in ["zarr", "zarr3", "zarr3_experimental"] {
+                let (status, headers, bytes) = get(
+                    &app,
+                    &format!(
+                        "/data/v{version}/annotations/{format}/{LINK}/datasource-properties.json"
+                    ),
+                )
+                .await;
+                assert_eq!(
+                    status,
+                    StatusCode::OK,
+                    "{}",
+                    String::from_utf8_lossy(&bytes)
+                );
+                let body: Value = serde_json::from_slice(&bytes).unwrap();
+                assert_eq!(
+                    body["dataLayers"][1]["largestSegmentId"],
+                    if version <= 14 {
+                        json!(5)
+                    } else {
+                        json!({"customJsonEncoding":"bigint","value":"5"})
+                    }
+                );
+                assert_eq!(header(&headers, "cache-control"), Some("no-cache"));
+            }
+        }
+        let (status, _, _) = get(
+            &app,
+            "/data/v14/annotations/zarr/unknown/datasource-properties.json",
+        )
+        .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+    }
+}
+
+#[tokio::test]
 async fn proxies_annotation_layers_to_the_tracingstore() {
     let (_wk, app) = start(true).await;
     let base = format!("/data/annotations/zarr/{LINK}");

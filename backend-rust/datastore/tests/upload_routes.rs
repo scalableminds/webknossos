@@ -420,14 +420,17 @@ async fn cancels_uploads_and_lists_unfinished() {
 
     // Scala stores the upload id JSON-encoded but reads it raw, so enrichment never finds the
     // file paths and the list stays empty (kept for parity).
-    let (status, body) = request(
-        &f.app,
-        "GET",
+    for path in [
         "/data/datasets/upload/dataset/unfinishedUploads?organizationName=org",
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK);
-    assert_eq!(serde_json::from_slice::<Value>(&body).unwrap(), json!([]));
+        "/data/v10/datasets/unfinishedUploads?organizationName=org",
+        "/data/v11/datasets/unfinishedUploads?organizationName=org",
+        "/data/v12/datasets/unfinishedUploads?organizationName=org",
+        "/data/v13/datasets/unfinishedUploads?organizationName=org",
+    ] {
+        let (status, body) = request(&f.app, "GET", path).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(serde_json::from_slice::<Value>(&body).unwrap(), json!([]));
+    }
     let (status, _) = request(
         &f.app,
         "GET",

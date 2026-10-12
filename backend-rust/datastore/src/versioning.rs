@@ -5,7 +5,7 @@
 //!   prefix is stripped before routing and the requested version is kept as a request extension.
 //! - Exception: paths Scala routes to `DSLegacyApiController` for that version are NOT rewritten,
 //!   so they can never reach a latest-version handler with an incompatible contract. They stay at
-//!   `/data/v{n}/…` where the legacy handlers will be registered (DS4); until then they 404.
+//!   `/data/v{n}/…` where the dedicated legacy adapters are registered.
 
 /// Scala `ApiVersioning.CURRENT_API_VERSION`.
 pub const CURRENT_API_VERSION: u64 = 16;
@@ -55,7 +55,10 @@ pub fn latest_alias(method: &str, path: &str) -> Option<(u64, String)> {
     if !(OLDEST_SUPPORTED_API_VERSION..=CURRENT_API_VERSION).contains(&version) {
         return None;
     }
-    if is_legacy_override(version, method, rest) {
+    // The unversioned chunk compatibility route must not become a latest-version alias.
+    if (version >= 14 && rest == "datasets" && matches!(method, "GET" | "HEAD" | "POST"))
+        || is_legacy_override(version, method, rest)
+    {
         return None;
     }
     Some((version, format!("/data/{rest}")))
@@ -63,6 +66,7 @@ pub fn latest_alias(method: &str, path: &str) -> Option<(u64, String)> {
 
 /// Routes declared before `-> /v{n}/ datastore.latest.Routes` in `datastore.versioned.routes`.
 fn is_legacy_override(version: u64, method: &str, rest: &str) -> bool {
+    let method = if method == "HEAD" { "GET" } else { method };
     let segments: Vec<&str> = rest.split('/').collect();
     const PROPS: &str = "datasource-properties.json";
     let is_zarr = |s: &str| matches!(s, "zarr" | "zarr3" | "zarr3_experimental");

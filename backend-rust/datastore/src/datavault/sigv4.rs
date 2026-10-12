@@ -1,7 +1,7 @@
 //! AWS Signature Version 4 (header-based) for S3 requests, implemented with `ring`.
 //!
-//! Replaces the AWS SDK signer used by Scala `S3DataVault`. Only what S3 reads need: `GET`/`HEAD`
-//! with an empty payload, signed headers chosen by the caller.
+//! Replaces the AWS SDK signer used by Scala `S3DataVault`. Read and upload requests
+//! use caller-supplied payload hashes and signed headers.
 
 use std::{fmt, time::SystemTime};
 

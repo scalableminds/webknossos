@@ -342,7 +342,7 @@ fn zarr_source_json(source: &UsableDataSource, layers: Vec<Value>) -> DsResult<V
     Ok(value)
 }
 
-async fn data_source<const V: u8>(
+pub(super) async fn data_source<const V: u8>(
     State(state): State<AppState>,
     tc: TokenContext,
     Path(id): Path<String>,
@@ -664,7 +664,7 @@ async fn private_source_dir<const V: u8>(
     )))
 }
 
-async fn private_data_source<const V: u8>(
+pub(super) async fn private_data_source<const V: u8>(
     State(state): State<AppState>,
     tc: TokenContext,
     Path(access_token): Path<String>,

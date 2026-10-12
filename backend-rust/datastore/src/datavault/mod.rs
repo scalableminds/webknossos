@@ -16,6 +16,7 @@ pub mod s3;
 mod service;
 pub mod sigv4;
 mod uri;
+mod zip;
 
 use std::{fmt, future::Future, io::Read, pin::Pin, sync::Arc};
 
@@ -38,6 +39,7 @@ pub use service::{
 };
 pub use sigv4::AwsCredentials;
 pub use uri::RemoteUri;
+pub use zip::ZipDataVault;
 
 /// Boxed future used by the object-safe vault traits.
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;

@@ -6,6 +6,7 @@ pub mod data_proxy;
 pub mod data_source;
 pub mod exports;
 pub(crate) mod helpers;
+pub mod legacy;
 pub mod meshes;
 pub mod segment_statistics;
 pub mod thumbnails;

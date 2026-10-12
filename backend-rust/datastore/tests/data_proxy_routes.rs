@@ -62,7 +62,9 @@ fn source(root: &Path) -> Value {
 }
 
 async fn app(root: &Path) -> (MockWk, Router) {
-    let returned = source(root);
+    app_with_source(source(root)).await
+}
+async fn app_with_source(returned: Value) -> (MockWk, Router) {
     let wk = MockWk::start(move |call| {
         if call.path.ends_with("/validateUserAccess") {
             assert_eq!(
@@ -82,6 +84,77 @@ async fn app(root: &Path) -> (MockWk, Router) {
     .await;
     let state = webknossos_datastore::AppState::new(wk.config());
     (wk, router(state))
+}
+
+#[tokio::test]
+async fn legacy_proxy_metadata_downgrades_only_safe_largest_ids_and_keeps_access_and_headers() {
+    let root = layer_dir();
+    let mut source = source(&root);
+    let mut large = source["dataLayers"][0].clone();
+    large["name"] = json!("large");
+    large["largestSegmentId"] = json!({"customJsonEncoding":"bigint","value":"9007199254740992"});
+    source["dataLayers"].as_array_mut().unwrap().push(large);
+    let (wk, app) = app_with_source(source).await;
+    for version in 10..=16 {
+        let (status, headers, bytes) = get(
+            &app,
+            &format!("/data/v{version}/datasets/{ID}/proxy/datasource-properties.json"),
+            "good",
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let body: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(
+            body["dataLayers"][0]["largestSegmentId"],
+            if version <= 14 {
+                json!(5)
+            } else {
+                json!({"customJsonEncoding":"bigint","value":"5"})
+            }
+        );
+        assert_eq!(
+            body["dataLayers"][1]["largestSegmentId"],
+            json!({"customJsonEncoding":"bigint","value":"9007199254740992"})
+        );
+        assert_eq!(header(&headers, "cache-control"), Some("no-cache"));
+        if version <= 14 {
+            assert_eq!(header(&headers, "access-control-allow-origin"), Some("*"));
+        }
+    }
+    let (status, headers, body) = send(
+        app.clone(),
+        Request::head(format!(
+            "/data/v14/datasets/{ID}/proxy/datasource-properties.json"
+        ))
+        .header("x-auth-token", "good")
+        .body(Body::empty())
+        .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body.is_empty());
+    assert_eq!(header(&headers, "access-control-allow-origin"), Some("*"));
+    let before = wk
+        .calls()
+        .iter()
+        .filter(|c| !c.path.ends_with("/validateUserAccess"))
+        .count();
+    let (status, _, _) = get(
+        &app,
+        &format!("/data/v14/datasets/{ID}/proxy/datasource-properties.json"),
+        "bad",
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        wk.calls()
+            .iter()
+            .filter(|c| !c.path.ends_with("/validateUserAccess"))
+            .count(),
+        before
+    );
 }
 
 async fn get(

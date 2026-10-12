@@ -235,6 +235,7 @@ pub fn router(state: AppState) -> Router {
         .merge(controllers::thumbnails::router().layer(DefaultBodyLimit::max(json_body_limit)))
         .merge(controllers::zarr_streaming::router())
         .merge(controllers::exports::router().layer(DefaultBodyLimit::max(json_body_limit)))
+        .merge(controllers::legacy::router(json_body_limit))
         .fallback(|| async { DsError::route_not_found() })
         .method_not_allowed_fallback(|| async {
             DsError::failure("Method not allowed.").with_status(StatusCode::METHOD_NOT_ALLOWED)

@@ -82,18 +82,28 @@ async fn unsupported_api_versions_answer_scala_404() {
 }
 
 #[tokio::test]
-async fn legacy_override_paths_are_not_served_by_latest_handlers() {
+async fn legacy_override_binders_and_missing_newer_chunk_routes_are_preserved() {
     let port = closed_port().await;
     let (status, _, body) = get(
         router(state_with_redis_port(port)),
         "/data/v14/zarr/abc/datasource-properties.json",
     )
     .await;
-    assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(
-        json(&body)["messages"][0]["error"],
-        "Route not implemented by the Rust datastore."
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(
+        json(&body)["messages"][0]["error"]
+            .as_str()
+            .unwrap()
+            .contains("Cannot parse URI path parameter datasetId")
     );
+    for version in 14..=16 {
+        let (status, _, _) = get(
+            router(state_with_redis_port(port)),
+            &format!("/data/v{version}/datasets"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+    }
 }
 
 #[tokio::test]

@@ -60,7 +60,9 @@ fn source() -> Value {
 }
 
 async fn app() -> (MockWk, Router) {
-    let source = source();
+    app_with_source(source()).await
+}
+async fn app_with_source(source: Value) -> (MockWk, Router) {
     let wk = MockWk::start(move |call| {
         if call.path.ends_with("/validateUserAccess") {
             let granted = call.query_value("token").as_deref() == Some("good");
@@ -72,6 +74,42 @@ async fn app() -> (MockWk, Router) {
     .await;
     let state = AppState::new(wk.config());
     (wk, router(state))
+}
+
+#[tokio::test]
+async fn legacy_zarr_metadata_downgrades_largest_ids_across_versions_and_keeps_defaults() {
+    let mut source = source();
+    source["dataLayers"][0]["category"] = json!("segmentation");
+    source["dataLayers"][0]["largestSegmentId"] =
+        json!({"customJsonEncoding":"bigint", "value":"9007199254740991"});
+    let (_, app) = app_with_source(source).await;
+    for version in 10..=16 {
+        for format in ["zarr", "zarr3", "zarr3_experimental"] {
+            let (status, body) = get_json(
+                &app,
+                &format!("/data/v{version}/{format}/{ID}/datasource-properties.json"),
+            )
+            .await;
+            assert_eq!(status, StatusCode::OK, "{body}");
+            assert_eq!(
+                body["dataLayers"][0]["largestSegmentId"],
+                if version <= 14 {
+                    json!(9007199254740991u64)
+                } else {
+                    json!({"customJsonEncoding":"bigint","value":"9007199254740991"})
+                }
+            );
+        }
+    }
+    let (status, _, _) = get_as(
+        &app,
+        &format!("/data/v14/zarr/{ID}/datasource-properties.json"),
+        "bad",
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, _, _) = get(&app, "/data/v14/zarr/invalid/datasource-properties.json").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
 }
 
 async fn get(app: &Router, path: &str) -> (StatusCode, HeaderMap, Vec<u8>) {

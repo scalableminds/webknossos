@@ -29,6 +29,9 @@ use super::{
 };
 use crate::error::DsError;
 
+#[path = "s3_upload.rs"]
+mod upload;
+
 pub const SCHEME_S3: &str = "s3";
 /// Region of the SDK clients in Scala (`Region.US_EAST_1`).
 pub const DEFAULT_REGION: &str = "us-east-1";
@@ -643,6 +646,21 @@ impl S3DataVault {
         range: Option<String>,
         region: &str,
     ) -> VaultResult<S3Response> {
+        self.send_once_with_payload(method, bucket, key, query, range, region, None)
+            .await
+    }
+
+    #[allow(clippy::too_many_arguments)] // Read requests and replayable upload payloads share signing.
+    async fn send_once_with_payload(
+        &self,
+        method: Method,
+        bucket: &str,
+        key: Option<&str>,
+        query: &[(String, String)],
+        range: Option<String>,
+        region: &str,
+        payload: Option<&upload::UploadBody>,
+    ) -> VaultResult<S3Response> {
         let (base, bucket_path, signing_region) = self.target(bucket, region).await;
         let path = match key {
             Some(key) => format!("{bucket_path}/{}", sigv4::uri_encode(key, false)),
@@ -667,13 +685,15 @@ impl S3DataVault {
         if let Some(range) = range {
             headers.push(("range".into(), range));
         }
+        let payload_sha256 = payload.map_or(sigv4::EMPTY_PAYLOAD_SHA256, |p| p.sha256());
+        if let Some(payload) = payload {
+            headers.push(("content-length".into(), payload.length().to_string()));
+            headers.push(("content-type".into(), payload.content_type().into()));
+        }
         let credentials = self.credentials()?;
         if let Some(credentials) = credentials {
             let amz_date = sigv4::amz_date(SystemTime::now());
-            headers.push((
-                "x-amz-content-sha256".into(),
-                sigv4::EMPTY_PAYLOAD_SHA256.into(),
-            ));
+            headers.push(("x-amz-content-sha256".into(), payload_sha256.into()));
             headers.push(("x-amz-date".into(), amz_date.clone()));
             if let Some(token) = &credentials.session_token {
                 headers.push(("x-amz-security-token".into(), token.clone()));
@@ -685,7 +705,7 @@ impl S3DataVault {
                     canonical_uri: url.path(),
                     query,
                     headers: &headers,
-                    payload_sha256: sigv4::EMPTY_PAYLOAD_SHA256,
+                    payload_sha256,
                 },
                 &signing_region,
                 "s3",
@@ -696,6 +716,9 @@ impl S3DataVault {
         let mut request = self.client.request(method, url).timeout(REQUEST_TIMEOUT);
         for (name, value) in headers.iter().filter(|(n, _)| n != "host") {
             request = request.header(name.as_str(), value.as_str());
+        }
+        if let Some(payload) = payload {
+            request = request.body(payload.body().await?);
         }
         let response = request.send().await.map_err(transport_failure)?;
         let status = response.status();

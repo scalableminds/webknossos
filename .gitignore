@@ -130,3 +130,4 @@ tsconfig.tsbuildinfo
 diffy-report.html
 
 local.sbt
+.zed/debug.json

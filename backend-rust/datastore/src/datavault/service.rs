@@ -122,6 +122,124 @@ struct Inner {
 }
 
 impl DataVaultService {
+    /// Scala ExploreRemoteLayerService.insertS3EndpointIfMissing, including archive outer paths.
+    /// Exploration uses its explicit credential (or the environment), not managed-write keys.
+    pub async fn insert_s3_endpoint_if_missing(
+        &self,
+        path: &UPath,
+        credential: Option<&DataVaultCredential>,
+    ) -> DsResult<UPath> {
+        let (plain, inner) = match path {
+            UPath::ZipEntry(outer, inner) => (outer.as_ref(), Some(inner)),
+            other => (other, None),
+        };
+        let Ok(uri) = plain.to_remote_uri() else {
+            return Ok(path.clone());
+        };
+        if !super::s3::is_short_style(&uri) {
+            return Ok(path.clone());
+        }
+        let key = credential
+            .and_then(DataVaultCredential::s3_access_key)
+            .map(|(id, secret)| AwsCredentials::new(id, secret));
+        let vault = S3DataVault::new(
+            uri.clone(),
+            key,
+            self.inner.s3_client.clone(),
+            &self.inner.options.s3,
+        );
+        let region = match vault.bucket_region().await {
+            Ok(region) => Some(region),
+            Err(super::VaultError::NotFound) => None,
+            Err(error) => {
+                tracing::info!(
+                    "Could not look up S3 bucket region, using global endpoint: {error}"
+                );
+                None
+            }
+        };
+        let host = super::s3::aws_endpoint_host(region.as_deref());
+        let rewritten = UPath::parse(&super::s3::with_endpoint_host(&uri, &host))?;
+        Ok(match inner {
+            Some(inner) => UPath::ZipEntry(Box::new(rewritten), inner.clone()),
+            None => rewritten,
+        })
+    }
+
+    /// Scala ManagedS3Service + UploadService.uploadDirectoryToS3. Managed writes require a
+    /// matching global access-key credential; anonymous/environment fallback is for readers.
+    pub async fn upload_directory_to_s3(&self, source: &Path, target: &UPath) -> DsResult<()> {
+        use futures::StreamExt;
+        let credential = self.find_global_credential_for(target).ok_or_else(|| {
+            DsError::failure("S3 upload is not properly configured, cannot get S3 client")
+        })?;
+        let (id, secret) = credential.s3_access_key().ok_or_else(|| {
+            DsError::failure("S3 upload is not properly configured, cannot get S3 client")
+        })?;
+        let uri = target.to_remote_uri()?;
+        super::s3::host_bucket_from_upath(target)?;
+        let vault = Arc::new(S3DataVault::new(
+            uri,
+            Some(AwsCredentials::new(id, secret)),
+            self.inner.s3_client.clone(),
+            &self.inner.options.s3,
+        ));
+        let root = source.to_owned();
+        let files = tokio::task::spawn_blocking(move || {
+            let mut directories = vec![root.clone()];
+            let mut files = Vec::new();
+            while let Some(directory) = directories.pop() {
+                for entry in std::fs::read_dir(&directory)? {
+                    let entry = entry?;
+                    let kind = entry.file_type()?;
+                    // AWS SDK's UploadDirectoryRequest defaults to not following symbolic links.
+                    if kind.is_dir() {
+                        directories.push(entry.path());
+                    } else if kind.is_file() {
+                        let path = entry.path();
+                        let relative = path
+                            .strip_prefix(&root)
+                            .expect("walk stays below root")
+                            .to_owned();
+                        files.push((path, relative));
+                    }
+                }
+            }
+            files.sort_by(|a, b| a.1.cmp(&b.1));
+            Ok::<_, std::io::Error>(files)
+        })
+        .await
+        .map_err(DsError::from_exception)?
+        .map_err(DsError::from_exception)?;
+        let failures: Vec<String> = futures::stream::iter(files)
+            .map(|(path, relative)| {
+                let vault = Arc::clone(&vault);
+                let target = target.join(&super::sigv4::uri_encode(
+                    &relative.to_string_lossy(),
+                    false,
+                ));
+                async move {
+                    vault
+                        .upload_file(&path, &target)
+                        .await
+                        .err()
+                        .map(|error| format!("{}: {error}", relative.display()))
+                }
+            })
+            .buffer_unordered(30)
+            .filter_map(|failure| async move { failure })
+            .collect()
+            .await;
+        if failures.is_empty() {
+            Ok(())
+        } else {
+            Err(DsError::failure(format!(
+                "Some files failed to upload to S3: {}",
+                failures.join(", ")
+            )))
+        }
+    }
+
     pub fn new(
         options: DataVaultServiceOptions,
         credential_lookup: Arc<dyn CredentialLookup>,
@@ -351,10 +469,13 @@ impl DataVaultService {
             if matches!(**outer, UPath::ZipEntry(..)) {
                 return Err(DsError::failure("Nested zip paths are not supported."));
             }
-            // TODO(DS1c): Scala `ZipDataVault` over the outer vault path.
-            return Err(DsError::failure(format!(
-                "Zip data vaults are not supported by the Rust datastore yet: {upath}"
-            )));
+            let outer_key =
+                CredentializedUPath::new(outer.as_ref().clone(), credentialized.credential.clone());
+            let outer_vault = self.create_plain_vault(&outer_key)?;
+            return Ok(Arc::new(super::ZipDataVault::new(VaultPath::new(
+                outer.as_ref().clone(),
+                outer_vault,
+            ))));
         }
         let result = self.create_plain_vault(credentialized);
         match &result {

@@ -40,8 +40,6 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
   }
 
   object WebKnossos {
-    val tabTitle: String = get[String]("webKnossos.tabTitle")
-
     object User {
       val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
       val timeTrackingOnlyWithSignificantChanges: Boolean =

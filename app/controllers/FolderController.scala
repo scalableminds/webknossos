@@ -7,8 +7,6 @@ import com.scalableminds.util.tools.Fox
 import models.dataset.DatasetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
-import models.team.{TeamDAO, TeamService}
-import models.user.UserService
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
@@ -20,9 +18,6 @@ import scala.concurrent.ExecutionContext
 class FolderController @Inject() (
     folderDAO: FolderDAO,
     folderService: FolderService,
-    teamDAO: TeamDAO,
-    userService: UserService,
-    teamService: TeamService,
     datasetDAO: DatasetDAO,
     organizationDAO: OrganizationDAO,
     sil: Silhouette[WkEnv]

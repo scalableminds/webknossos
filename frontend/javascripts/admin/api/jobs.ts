@@ -6,6 +6,7 @@ import type {
   AdditionalCoordinate,
   AiModel,
   APIAnnotationType,
+  APIExportFormat,
   APIJob,
   RenderAnimationOptions,
   VoxelSize,
@@ -114,9 +115,9 @@ export async function startExportTiffJob(
   mag: string | null | undefined,
   annotationId: string | null | undefined,
   annotationLayerName: string | null | undefined,
-  asOmeTiff: boolean,
+  exportFormat: APIExportFormat,
 ): Promise<APIJob> {
-  const params = new URLSearchParams({ bbox: bbox.join(","), asOmeTiff: asOmeTiff.toString() });
+  const params = new URLSearchParams({ bbox: bbox.join(","), exportFormat });
   if (layerName != null) {
     params.append("layerName", layerName);
   }

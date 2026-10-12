@@ -28,6 +28,7 @@ import { setActiveOrganizationAction } from "viewer/model/actions/organization_a
 import { SettingsCard, type SettingsCardProps, StatSuffix } from "../account/helpers/settings_card";
 import {
   AiAddonUpgradeCard,
+  PlanAboutToExceedAlert,
   PlanExceededAlert,
   PlanExpirationCard,
   PlanUpgradeCard,
@@ -37,10 +38,10 @@ import {
   formatAiPlanLabel,
   getActiveUserCount,
   isAiAddonEligiblePlan,
-  isUserAllowedToRequestUpgrades,
   PricingPlanEnum,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
+import { useCanRequestUpgrades } from "./use_can_request_upgrades";
 
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
 // Below this many credits, the balance is shown as low.
@@ -58,7 +59,6 @@ export function OrganizationOverviewView() {
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
-  const activeUser = useWkSelector((state) => state.activeUser);
   const { token } = theme.useToken();
 
   const {
@@ -123,7 +123,7 @@ export function OrganizationOverviewView() {
     organization.pricingPlan === PricingPlanEnum.PowerTrial;
   const hasUserLimit = organization.includedUsers !== Number.POSITIVE_INFINITY;
   const hasStorageLimit = organization.includedStorageBytes !== Number.POSITIVE_INFINITY;
-  const canRequestUpgrades = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
+  const canRequestUpgrades = useCanRequestUpgrades();
   const isEligibleForAiAddon = isAiAddonEligiblePlan(organization.pricingPlan);
   const showAiAddonCard = organization.aiPlan == null && isEligibleForAiAddon;
 
@@ -151,7 +151,7 @@ export function OrganizationOverviewView() {
       <Button
         type="primary"
         icon={<CrownOutlined />}
-        onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
+        onClick={() => UpgradePricingPlanModal.upgradePricingPlan(PricingPlanEnum.Team)}
       >
         Upgrade to Team
       </Button>
@@ -167,7 +167,7 @@ export function OrganizationOverviewView() {
       <Button
         type="primary"
         icon={<UserAddOutlined />}
-        onClick={UpgradePricingPlanModal.upgradeUserQuota}
+        onClick={() => UpgradePricingPlanModal.upgradeUserQuota()}
       >
         Add users
       </Button>
@@ -207,7 +207,7 @@ export function OrganizationOverviewView() {
       <Button
         type="primary"
         icon={<CrownOutlined />}
-        onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
+        onClick={() => UpgradePricingPlanModal.upgradePricingPlan(PricingPlanEnum.Team)}
       >
         Upgrade to Team
       </Button>
@@ -218,7 +218,7 @@ export function OrganizationOverviewView() {
       <Button
         type="primary"
         icon={<PlusOutlined />}
-        onClick={UpgradePricingPlanModal.upgradeStorageQuota}
+        onClick={() => UpgradePricingPlanModal.upgradeStorageQuota()}
       >
         Add storage
       </Button>
@@ -246,7 +246,7 @@ export function OrganizationOverviewView() {
       <Button
         type="primary"
         icon={<PlusOutlined />}
-        onClick={UpgradePricingPlanModal.orderWebknossosCredits}
+        onClick={() => UpgradePricingPlanModal.orderWebknossosCredits()}
       >
         Buy credits
       </Button>
@@ -328,7 +328,7 @@ export function OrganizationOverviewView() {
   const rowTwoStats: StatCardProps[] = [usersStat, storageStat, creditsStat, aiAddonStat];
 
   function renderUpgradeCards() {
-    if (!isPersonal && !isTeamOrTeamTrial && !showAiAddonCard) {
+    if (!canRequestUpgrades || (!isPersonal && !isTeamOrTeamTrial && !showAiAddonCard)) {
       return null;
     }
 
@@ -343,7 +343,7 @@ export function OrganizationOverviewView() {
             <PowerPlanUpgradeCard
               description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
               powerUpgradeCallback={() =>
-                UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Power)
+                UpgradePricingPlanModal.upgradePricingPlan(PricingPlanEnum.Power)
               }
             />
           </Col>
@@ -379,6 +379,9 @@ export function OrganizationOverviewView() {
     <>
       <SettingsTitle title={organization.name} description="Manage your organization." />
       {pricingPlanStatus?.isExceeded ? <PlanExceededAlert organization={organization} /> : null}
+      {pricingPlanStatus?.isAlmostExceeded && !pricingPlanStatus.isExceeded ? (
+        <PlanAboutToExceedAlert organization={organization} />
+      ) : null}
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <Spin spinning={isFetchingData}>
           <Space orientation="vertical" size={24} style={{ width: "100%" }}>

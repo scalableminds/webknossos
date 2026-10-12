@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 
@@ -16,7 +15,6 @@ import scala.concurrent.ExecutionContext
  */
 
 class BinaryDataServiceHolder @Inject() (
-    config: DataStoreConfig,
     dataVaultService: DataVaultService,
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
     chunkCacheService: DSChunkCacheService,

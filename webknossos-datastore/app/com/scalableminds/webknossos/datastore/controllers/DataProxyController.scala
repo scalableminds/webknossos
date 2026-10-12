@@ -37,7 +37,7 @@ class DataProxyController @Inject() (
         for {
           _ <- validatePath(path)
           magValidated <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag)
-          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Layer
+          (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Layer
             .notFound(dataLayerName) ~> NOT_FOUND
           magLocator <- dataLayer.mags.find(_.mag == magValidated).toFox ?~> Msg.Dataset.Layer
             .magNotFound(dataLayerName, mag) ~> NOT_FOUND
@@ -56,7 +56,7 @@ class DataProxyController @Inject() (
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Layer
+          (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Layer
             .notFound(dataLayerName) ~> NOT_FOUND
           magLocator <- dataLayer.mags.headOption.toFox ?~> Msg.Dataset.Layer.zeroMags(dataLayerName) ~> NOT_FOUND
           magPath <- dataVaultService.vaultPathFor(magLocator)

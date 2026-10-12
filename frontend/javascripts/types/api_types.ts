@@ -336,6 +336,7 @@ export type APIUserBase = APIUserCompact & {
   readonly teams: Array<APITeamMembership>;
   readonly isAdmin: boolean;
   readonly isDatasetManager: boolean;
+  readonly isActive: boolean;
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
@@ -798,6 +799,12 @@ export type APIFeatureToggles = {
 };
 
 export type APIJobState = "PENDING" | "STARTED" | "SUCCESS" | "FAILURE" | "CANCELLED";
+
+export enum APIExportFormat {
+  OME_TIFF = "ome_tiff",
+  TIFF_STACK = "tiff_stack",
+  OZX = "ozx",
+}
 
 export enum APIJobCommand {
   ALIGN_SECTIONS = "align_sections",

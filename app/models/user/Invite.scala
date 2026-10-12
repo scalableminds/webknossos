@@ -56,7 +56,7 @@ class InviteService @Inject() (
       invite <- Fox.fromFuture(generateInvite(sender._organization, autoActivate, isAdmin, isDatasetManager))
       _ <- inviteDAO.insertOne(invite)
       _ <- inviteDAO.insertTeamMemberships(invite._id, teamMemberships)
-      _ <- sendInviteMail(recipient, sender, senderMultiUser, invite)
+      _ <- sendInviteMail(recipient, senderMultiUser, invite)
     } yield ()
 
   private def generateInvite(
@@ -77,7 +77,7 @@ class InviteService @Inject() (
       Instant.in(conf.WebKnossos.User.inviteExpiry)
     )
 
-  private def sendInviteMail(recipient: String, sender: User, senderMultiUser: MultiUser, invite: Invite)(using
+  private def sendInviteMail(recipient: String, senderMultiUser: MultiUser, invite: Invite)(using
       ctx: DBAccessContext
   ): Fox[Unit] =
     for {

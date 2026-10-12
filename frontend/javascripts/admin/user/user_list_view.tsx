@@ -226,15 +226,13 @@ function UserListView() {
   function renderUpgradePlanAlert() {
     return (
       <Alert
-        title="You reached the maximum number of users"
-        description={
+        title={
           <>
-            Your organization has reached the maximum number of users allowed in your current plan.
-            Email invites are only permitted for existing users of paid organizations, who will join
-            as non-billed guests. <br />
-            Consider upgrading your WEBKNOSSOS plan to accommodate more new users or deactivate
-            existing user accounts. Your organization currently has {getActiveUserCount(users)}{" "}
-            active users out of {activeOrganization.includedUsers} allowed by your plan.
+            <Typography.Text strong>
+              {getActiveUserCount(users)} of {activeOrganization.includedUsers} users active.
+            </Typography.Text>{" "}
+            Your plan is full. Only users of other paid organizations can still join as guests.{" "}
+            <Link to={`/organizations/${activeUser.organization}`}>Details</Link>
           </>
         }
         type="warning"

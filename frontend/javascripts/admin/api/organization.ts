@@ -1,3 +1,4 @@
+import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import Request from "libs/request";
 import { location } from "libs/window";
 import memoize from "lodash-es/memoize";
@@ -183,39 +184,22 @@ export async function isWorkflowAccessibleBySwitching(
   };
 }
 
-export async function sendUpgradePricingPlanEmail(requestedPlan: string): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestUpgrade?requestedPlan=${requestedPlan}`, {
-    method: "POST",
-  });
-}
+export type UpgradeRequest = {
+  // Matches the plans the backend accepts for an upgrade request.
+  plan?: PricingPlanEnum.Team | PricingPlanEnum.Power;
+  users?: number;
+  storageTB?: number;
+  aiAddon?: boolean;
+  credits?: number;
+  extendYears?: number;
+  note?: string;
+};
 
-export async function sendExtendPricingPlanEmail(): Promise<void> {
-  return Request.receiveJSON("/api/pricing/requestExtension", {
+// Sends one email to the sales team that lists all requested upgrades.
+export async function sendUpgradeRequestEmail(upgradeRequest: UpgradeRequest): Promise<void> {
+  return Request.sendJSONReceiveJSON("/api/pricing/upgradeRequest", {
     method: "POST",
-  });
-}
-
-export async function sendUpgradePricingPlanUserEmail(requestedUsers: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestUsers?requestedUsers=${requestedUsers}`, {
-    method: "POST",
-  });
-}
-
-export async function sendUpgradePricingPlanStorageEmail(requestedStorage: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage}`, {
-    method: "POST",
-  });
-}
-
-export async function sendOrderCreditsEmail(requestedCredits: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestCredits?requestedCredits=${requestedCredits}`, {
-    method: "POST",
-  });
-}
-
-export async function sendUpgradeAiAddonEmail(): Promise<void> {
-  return Request.receiveJSON("/api/pricing/requestAiAddon", {
-    method: "POST",
+    data: upgradeRequest,
   });
 }
 

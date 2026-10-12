@@ -1020,7 +1020,7 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       _ <- if (updateQueries.nonEmpty) runAsSerializableTransaction(updateQueries) else Fox.successful(())
     } yield ()
 
-  implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
+  implicit private def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
     r => {
       val datasetId = ObjectId(r.nextString())
       val layerName = r.nextString()
@@ -1655,7 +1655,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
            """.asUpdate)
     } yield ()
 
-  implicit def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =
+  implicit private def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =
     r =>
       StorageRelevantDataLayerAttachment(
         ObjectId(r.nextString()),

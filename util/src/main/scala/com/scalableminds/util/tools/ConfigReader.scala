@@ -7,7 +7,7 @@ import play.api.{ConfigLoader, Configuration}
 trait ConfigReader {
   val raw: Configuration
 
-  implicit val instantConfigLoader: ConfigLoader[Instant] = (rootConfig: Config, path: String) => {
+  implicit protected val instantConfigLoader: ConfigLoader[Instant] = (rootConfig: Config, path: String) => {
     val literal = rootConfig.getString(path)
     Instant.fromString(literal).getOrElse {
       throw new IllegalArgumentException(
@@ -16,7 +16,7 @@ trait ConfigReader {
     }
   }
 
-  implicit val bigDecimalConfigLoader: ConfigLoader[BigDecimal] = (rootConfig: Config, path: String) => {
+  implicit protected val bigDecimalConfigLoader: ConfigLoader[BigDecimal] = (rootConfig: Config, path: String) => {
     val literal = rootConfig.getString(path)
     BigDecimal(literal)
   }

@@ -1,0 +1,18 @@
+@(name: String, email: String, organizationName: String, requestedChanges: Seq[String], note: Option[String], additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name}</p>
+<p>Thank you for your upgrade request. Our sales team will contact you shortly.</p>
+<p>Organization: @organizationName<br />Requested by: @name (<a href="mailto:@email">@email</a>)</p>
+<p>Requested changes:</p>
+<ul>
+  @for(change <- requestedChanges) {
+  <li>@change</li>
+  }
+</ul>
+@for(noteText <- note) {
+<p>Note:</p>
+<p style="white-space: pre-wrap">@noteText</p>
+}
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

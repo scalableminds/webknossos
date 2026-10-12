@@ -141,7 +141,7 @@ A reload is necessary to return to a valid state.`,
     "These snippets are pre-configured and contain your personal access token and <%- typeName %> meta data. Do not share this information with anyone you do not trust!",
   ),
   "download.export_as_tiff": template(
-    "Export your <%- typeName %> as TIFF images. Large exports may take a few minutes.",
+    "Export your <%- typeName %> as TIFF or OME-Zarr. Large exports may take a few minutes.",
   ),
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "data.enabled_render_missing_data_black":
@@ -503,10 +503,6 @@ instead. Only enable this option if you understand its effect. All layers will n
   "ui.moving_center_tab_into_border_error": "You cannot move this tab into a sidebar!",
   "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
   "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
-  "organization.plan.upgrage_request_sent":
-    "An email with your upgrade request has been sent to the WEBKNOSSOS sales team.",
-  "organization.credit_request_sent":
-    "An email with your credit request has been sent to the WEBKNOSSOS sales team.",
   "organization.plan.feature_not_available": (
     requiredPlan: string,
     organizationOwnerName: string,

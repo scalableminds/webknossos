@@ -81,11 +81,13 @@ function AlignmentStatus({
   landmarks,
   alignment,
   meanResidual,
+  isAutoAlignEnabled,
 }: {
   layerNames: LayerNames;
   landmarks: Record<Side, Landmark[]>;
   alignment: Alignment | null;
   meanResidual: number | null;
+  isAutoAlignEnabled: boolean;
 }) {
   const completePairCount = Math.min(landmarks.A.length, landmarks.B.length);
   const isAlignmentOutdated = alignment != null && !isEqual(alignment.landmarks, landmarks);
@@ -113,7 +115,7 @@ function AlignmentStatus({
           against each other along z.
         </Typography.Text>
       ) : null}
-      {isAlignmentOutdated ? (
+      {isAlignmentOutdated && !isAutoAlignEnabled ? (
         <Typography.Text type="warning">
           The landmarks changed since the last alignment. Align again to update it.
         </Typography.Text>
@@ -298,6 +300,7 @@ export function LandmarkPanel({
           landmarks={landmarks}
           alignment={alignment}
           meanResidual={meanResidual}
+          isAutoAlignEnabled={isAutoAlignEnabled}
         />
         <Flex gap={8} wrap style={{ marginTop: 8 }}>
           <Button onClick={onAlign}>Align (T)</Button>

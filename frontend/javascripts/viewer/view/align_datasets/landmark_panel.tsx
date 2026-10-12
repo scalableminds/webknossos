@@ -18,7 +18,6 @@ import {
   MIN_LANDMARK_PAIR_COUNT,
   OTHER_SIDE,
   SIDES,
-  SINGLE_PLANE_ALIGNMENT_HINT,
   type Side,
 } from "./alignment_helpers";
 
@@ -109,7 +108,10 @@ function AlignmentStatus({
         </Typography.Text>
       ) : null}
       {alignment?.usedCopiesInNextSlice ? (
-        <Typography.Text type="secondary">{SINGLE_PLANE_ALIGNMENT_HINT}</Typography.Text>
+        <Typography.Text type="warning">
+          The landmarks lie in one plane, so the alignment assumes that the layers are only shifted
+          against each other along z.
+        </Typography.Text>
       ) : null}
       {isAlignmentOutdated ? (
         <Typography.Text type="warning">

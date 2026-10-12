@@ -17,7 +17,6 @@ import {
   type LayerNames,
   OTHER_SIDE,
   SIDES,
-  SINGLE_PLANE_ALIGNMENT_HINT,
   type Side,
   storeAlignmentInDataset,
 } from "./alignment_helpers";
@@ -160,9 +159,6 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       landmarks: currentLandmarks,
       usedCopiesInNextSlice: result.usedCopiesInNextSlice,
     });
-    if (!isAutomatic && result.usedCopiesInNextSlice) {
-      Toast.info(SINGLE_PLANE_ALIGNMENT_HINT);
-    }
     await showTransformInWorkers(result.transform);
     if (!isAutomatic) {
       for (const side of SIDES) {

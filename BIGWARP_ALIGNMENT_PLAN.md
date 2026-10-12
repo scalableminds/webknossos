@@ -44,8 +44,8 @@ items say what was decided and why.
 - [x] "Store as default" replaces layer B's transforms. The confirmation dialog says so.
 - [ ] **accepted: the preview ignores existing dataset transforms.** Mention in the PR
   description.
-- [x] Single-slice fallback. Decided: no confirmation; a toast on manual align, and the hint
-  in the landmark panel.
+- [x] Single-slice fallback. Decided: no confirmation and no toast (it reappeared on every
+  align); a warning in the landmark panel (§0.24).
 - [ ] **accepted: `dataset.isEditable` is read once when the page loads.** The server checks
   permissions on save anyway.
 - [x] In-app navigation is blocked with `useBlocker` while there are unsaved changes.
@@ -1289,6 +1289,10 @@ dataset info tab), and the command palette could navigate away, too.
   gone, so the landmark panel took its place: it's now the second panel of the `Splitter`
   in `alignment_workspace.tsx`, and `onResize` reads the second size. The toggle button
   stays in the left worker's toolbar.
+- **Single-slice warning only in the panel:** the toast on every manual align that used the
+  `z + 1` fallback was distracting, so it's gone. The landmark panel's status shows the
+  hint as a warning instead (was secondary text). The text moved from the
+  `SINGLE_PLANE_ALIGNMENT_HINT` constant into `landmark_panel.tsx`, its only user.
 - **Show the result of a manual align:** after aligning with `t`, the toolbar button or the
   panel's align button, both workers show the other layer (`setOtherLayerVisibility`), so
   the transform is visible right away. Automatic aligns (after loading, auto-align) don't

@@ -1297,13 +1297,19 @@ async fn service_mag_credentials_lookup_legacy_and_errors() {
 }
 
 #[tokio::test]
-async fn service_zip_paths_are_not_supported_yet() {
+async fn service_zip_paths_bind_lazy_outer_vaults_and_share_the_archive_root_scope() {
     let service = service_with(Arc::default(), &[]);
-    let error = service
+    let first = service
         .vault_path_for(&upath("s3://bucket/archive.zip|zip:inner/file"))
         .await
-        .unwrap_err();
-    assert_eq!(error.message, MSG_SETUP_FAILED);
+        .unwrap();
+    let second = service
+        .vault_path_for(&upath("s3://bucket/archive.zip|zip:other/file"))
+        .await
+        .unwrap();
+    assert_eq!(first.vault().kind(), "ZipDataVault");
+    assert!(Arc::ptr_eq(first.vault(), second.vault()));
+    assert_eq!(service.cached_vault_count(), 1);
 }
 
 #[tokio::test]

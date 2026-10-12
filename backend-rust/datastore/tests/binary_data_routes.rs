@@ -425,6 +425,167 @@ async fn all_native_reader_fixtures_replay_through_authorized_read_data_route() 
 }
 
 #[tokio::test]
+async fn stored_zip_native_array_fixtures_replay_through_authorized_data_routes() {
+    use std::io::Write;
+    let root = temp();
+    let archive = root.join("readers.ozx");
+    let mut writer = zip::ZipWriter::new(std::fs::File::create(&archive).unwrap());
+    let options =
+        zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    fn add(
+        writer: &mut zip::ZipWriter<std::fs::File>,
+        path: &Path,
+        prefix: &str,
+        options: zip::write::SimpleFileOptions,
+    ) {
+        for entry in std::fs::read_dir(path).unwrap() {
+            let entry = entry.unwrap();
+            let name = format!("{prefix}/{}", entry.file_name().to_string_lossy());
+            if entry.path().is_dir() {
+                writer.add_directory(format!("{name}/"), options).unwrap();
+                add(writer, &entry.path(), &name, options);
+            } else {
+                writer.start_file(name, options).unwrap();
+                writer
+                    .write_all(&std::fs::read(entry.path()).unwrap())
+                    .unwrap();
+            }
+        }
+    }
+    for (dir, prefix) in [
+        ("zarr3/shard_end", "zarr3"),
+        ("n5/real_gzip", "n5"),
+        ("precomputed/shard_murmur", "precomputed"),
+        ("wkw/lz4hc", "wkw"),
+        ("compresso/volumes/u4_shard_gzip", "compresso"),
+    ] {
+        writer.add_directory(format!("{prefix}/"), options).unwrap();
+        add(&mut writer, &fixtures(dir), prefix, options);
+    }
+    let (zarr, _) = synthetic();
+    writer.add_directory("zarr/", options).unwrap();
+    add(&mut writer, &zarr, "zarr", options);
+    writer.finish().unwrap();
+    for (format, inner, element, origin, size, bounds, axis, expected) in [
+        (
+            "zarr3",
+            "zarr3",
+            "uint16",
+            [1, 1, 1],
+            [6, 5, 4],
+            bbox([0, 0, 0], [7, 6, 5]),
+            json!({"c":0,"x":1,"y":2,"z":3}),
+            "zarr3/shard_end/expected.bin",
+        ),
+        (
+            "n5",
+            "n5",
+            "uint16",
+            [1, 2, 3],
+            [8, 8, 8],
+            bbox([1, 2, 3], [8, 8, 8]),
+            json!({"x":0,"y":1,"z":2}),
+            "n5/real_gzip/expected.bin",
+        ),
+        (
+            "neuroglancerPrecomputed",
+            "precomputed/1",
+            "uint16",
+            [6, 8, 12],
+            [4, 3, 2],
+            bbox([5, 7, 11], [5, 4, 3]),
+            json!({"x":0,"y":1,"z":2}),
+            "precomputed/shard_murmur/expected.bin",
+        ),
+        (
+            "neuroglancerPrecomputed",
+            "compresso/1",
+            "uint32",
+            [5, 7, 11],
+            [7, 5, 3],
+            bbox([5, 7, 11], [7, 5, 3]),
+            json!({"x":0,"y":1,"z":2}),
+            "compresso/volumes/u4_shard_gzip/expected_full.raw",
+        ),
+    ] {
+        let mut data_source = source(format, &root, element, bounds, axis);
+        data_source["dataLayers"][0]["mags"][0]["path"] =
+            json!(format!("{}|zip:{inner}", archive.display()));
+        let (_, _, app, _) = app(data_source).await;
+        let (status, headers, bytes) = post(
+            &app,
+            &url("readData"),
+            json!({"position":origin,"mag":[1,1,1],"cubeSize":size}),
+            "good",
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "{format}: {}",
+            String::from_utf8_lossy(&bytes)
+        );
+        success_headers(&headers);
+        assert_eq!(
+            bytes,
+            std::fs::read(fixtures(expected)).unwrap(),
+            "{format}"
+        );
+        let (status, _, _) = post(
+            &app,
+            &url("readData"),
+            json!({"position":origin,"mag":[1,1,1],"cubeSize":size}),
+            "denied",
+        )
+        .await;
+        assert_eq!(status, StatusCode::FORBIDDEN);
+    }
+    for (format, inner, element, size) in [
+        ("zarr", "zarr", "uint8", [32, 32, 32]),
+        ("wkw", "wkw", "uint24", [16, 8, 8]),
+    ] {
+        let mut data_source = source(
+            format,
+            &root,
+            element,
+            bbox([0, 0, 0], size),
+            if format == "wkw" {
+                Value::Null
+            } else {
+                json!({"x":0,"y":1,"z":2})
+            },
+        );
+        data_source["dataLayers"][0]["mags"][0]["path"] =
+            json!(format!("{}|zip:{inner}", archive.display()));
+        let (_, _, app, _) = app(data_source).await;
+        let (status, headers, bytes) = post(
+            &app,
+            &url("readData"),
+            json!({"position":[0,0,0],"mag":[1,1,1],"cubeSize":size}),
+            "good",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        success_headers(&headers);
+        let mut expected = Vec::new();
+        for z in 0..size[2] {
+            for y in 0..size[1] {
+                for x in 0..size[0] {
+                    if format == "wkw" {
+                        for c in 0..3 {
+                            expected.push((c + 3 * x + 11 * y + 37 * z) as u8);
+                        }
+                    } else {
+                        expected.push(value(x, y, z));
+                    }
+                }
+            }
+        }
+        assert_eq!(bytes, expected, "{format}");
+    }
+}
+
+#[tokio::test]
 async fn json_parser_memory_limit_is_enforced_before_authentication() {
     let (_, s) = synthetic();
     let (wk, _, _, _) = app(s).await;

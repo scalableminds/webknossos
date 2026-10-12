@@ -240,8 +240,8 @@ fn extend_zip64(entry: &mut Entry, extra: &[u8]) -> VaultResult<()> {
     while extra.len().saturating_sub(pos) >= 4 {
         let tag = u16_at(extra, pos)?;
         let count = usize::from(u16_at(extra, pos + 2)?);
-        let field = bytes_at(extra, pos + 4, count)?;
         if tag == 1 {
+            let field = &extra[pos + 4..];
             let mut p = 0;
             for (value, name) in [
                 (&mut entry.size, "uncompressedSize"),
@@ -270,15 +270,20 @@ fn extend_zip64(entry: &mut Entry, extra: &[u8]) -> VaultResult<()> {
 /// Scala Map1..4 retain insertion order. Larger maps iterate CHAMP payloads first, then children;
 /// string hashes use UTF-16 Java hashCode and scala.collection.Hashing.improve.
 fn scala_map_order(entries: &[Entry]) -> Vec<usize> {
-    let mut indices: Vec<_> = (0..entries.len()).collect();
-    if entries.len() <= 4 {
+    scala_key_order(
+        &entries.iter().map(|e| e.name.as_str()).collect::<Vec<_>>(),
+        false,
+    )
+}
+fn scala_key_order(names: &[&str], force_hash: bool) -> Vec<usize> {
+    let indices: Vec<_> = (0..names.len()).collect();
+    if !force_hash && names.len() <= 4 {
         return indices;
     }
-    let hashes: Vec<u32> = entries
+    let hashes: Vec<u32> = names
         .iter()
-        .map(|e| {
-            let h = e
-                .name
+        .map(|name| {
+            let h = name
                 .encode_utf16()
                 .fold(0u32, |h, c| h.wrapping_mul(31).wrapping_add(u32::from(c)));
             let h = h.wrapping_add(!(h << 9));
@@ -309,7 +314,6 @@ fn scala_map_order(entries: &[Entry]) -> Vec<usize> {
     }
     let mut out = Vec::with_capacity(indices.len());
     visit(&indices, &hashes, 0, &mut out);
-    indices.clear();
     out
 }
 
@@ -350,6 +354,9 @@ impl DataVault for ZipDataVault {
                 ByteRange::StartEnd { start, end } => (start.min(entry.size), end.min(entry.size)),
                 ByteRange::Suffix { length } => (entry.size.saturating_sub(length), entry.size),
             };
+            if end < start {
+                return Err(failure("Invalid zip entry range: end is before start"));
+            }
             if end.saturating_sub(start) > MAX_READ_BYTES {
                 return Err(failure("Zip entry read exceeds 300 MiB limit"));
             }
@@ -389,16 +396,29 @@ impl DataVault for ZipDataVault {
             if max == 0 {
                 return Ok(paths);
             }
-            for &index in &directory.listing_order {
-                let entry = &directory.entries[index];
-                if let Some(rest) = entry.name.strip_prefix(&prefix)
-                    && !rest.is_empty()
+            // HashKeySet.map recomputes hashes after dropping the directory prefix. This
+            // determines which children take(max) selects; the later VaultPath identity hash
+            // only reorders that selected set, so Rust keeps this stable string traversal.
+            let selected: Vec<_> = directory
+                .listing_order
+                .iter()
+                .filter_map(|&index| {
+                    directory.entries[index]
+                        .name
+                        .strip_prefix(&prefix)
+                        .map(|rest| (index, rest))
+                })
+                .collect();
+            let names: Vec<_> = selected.iter().map(|(_, rest)| *rest).collect();
+            for index in scala_key_order(&names, selected.len() > 4) {
+                let (entry_index, rest) = selected[index];
+                if !rest.is_empty()
                     && !rest[..rest.len() - rest.chars().next_back().expect("nonempty").len_utf8()]
                         .contains('/')
                 {
                     paths.push(UPath::ZipEntry(
                         Box::new(self.outer.upath().clone()),
-                        entry.name.clone(),
+                        directory.entries[entry_index].name.clone(),
                     ));
                     if paths.len() == max {
                         break;

@@ -1,9 +1,11 @@
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
-import { formatCountToDataAmountUnit, formatNumber } from "libs/format_utils";
+import { formatNumber } from "libs/format_utils";
 import type { APIOrganization } from "types/api_types";
-import Constants from "viewer/constants";
 import {
+  canExtendPricingPlan,
+  formatIncludedStorage,
+  formatIncludedUsers,
   hasAiPlan,
   PLAN_TO_RANK,
   PricingPlanEnum,
@@ -83,21 +85,8 @@ export function getEffectiveTier(currentTier: PlanTier, selection: Selection): P
   return getRequestedTier(currentTier, selection) ?? currentTier;
 }
 
-export function formatUserCount(count: number): string {
-  return count === Number.POSITIVE_INFINITY ? "∞" : formatNumber(count);
-}
-
-export function formatStorage(bytes: number): string {
-  return bytes === Number.POSITIVE_INFINITY ? "∞" : formatCountToDataAmountUnit(bytes, true);
-}
-
 export function getCreditBalance(organization: APIOrganization): number {
   return Math.floor((organization.milliCreditBalance ?? 0) / 1000);
-}
-
-// Plans without an end date can't be extended.
-export function hasPlanEndDate(organization: APIOrganization): boolean {
-  return organization.paidUntil !== Constants.MAXIMUM_DATE_TIMESTAMP;
 }
 
 export function formatPaidUntil(organization: APIOrganization): string {
@@ -151,13 +140,13 @@ export function getUpgradeItems(
   const users: ItemDef = {
     id: "users",
     label: isPersonal ? "Extra user seats" : "User seats",
-    hint: isPersonal ? `Team includes ${teamPlanIncludedUsers}` : formatUserCount(baseUsers),
+    hint: isPersonal ? `Team includes ${teamPlanIncludedUsers}` : formatIncludedUsers(baseUsers),
     amounts: (isPersonal ? [1, 3, 5] : [1, 5, 10]).map((value) => ({ label: `+${value}`, value })),
     allowCustom: true,
     minPlan: PricingPlanEnum.Team,
     getDelta: (value = 0) => ({
-      from: formatUserCount(baseUsers),
-      to: formatUserCount(baseUsers + value),
+      from: formatIncludedUsers(baseUsers),
+      to: formatIncludedUsers(baseUsers + value),
     }),
   };
 
@@ -166,13 +155,13 @@ export function getUpgradeItems(
     label: isPersonal ? "Extra storage" : "Storage",
     hint: isPersonal
       ? `Team includes ${teamPlanIncludedStorageTB} TB`
-      : formatStorage(baseStorageBytes),
+      : formatIncludedStorage(baseStorageBytes),
     amounts: [1, 5, 10].map((value) => ({ label: `+${value} TB`, value })),
     allowCustom: true,
     minPlan: PricingPlanEnum.Team,
     getDelta: (value = 0) => ({
-      from: formatStorage(baseStorageBytes),
-      to: formatStorage(baseStorageBytes + value * BYTES_PER_TB),
+      from: formatIncludedStorage(baseStorageBytes),
+      to: formatIncludedStorage(baseStorageBytes + value * BYTES_PER_TB),
     }),
   };
 
@@ -201,26 +190,25 @@ export function getUpgradeItems(
         }),
       };
 
-  const extend: ItemDef | null =
-    isPersonal || !hasPlanEndDate(organization)
-      ? null
-      : {
-          id: "extend",
-          label: "Extend plan",
-          hint: `Ends ${formatPaidUntil(organization)}`,
-          amounts: [
-            { label: "1 year", value: 1 },
-            { label: "2 years", value: 2 },
-          ],
-          minPlan: PricingPlanEnum.Team,
-          getDelta: (value = 1) => ({
-            from: formatPaidUntil(organization),
-            to: formatDateInLocalTimeZone(
-              dayjs(organization.paidUntil).add(value, "year").valueOf(),
-              DATE_FORMAT,
-            ),
-          }),
-        };
+  const extend: ItemDef | null = !canExtendPricingPlan(organization)
+    ? null
+    : {
+        id: "extend",
+        label: "Extend plan",
+        hint: `Ends ${formatPaidUntil(organization)}`,
+        amounts: [
+          { label: "1 year", value: 1 },
+          { label: "2 years", value: 2 },
+        ],
+        minPlan: PricingPlanEnum.Team,
+        getDelta: (value = 1) => ({
+          from: formatPaidUntil(organization),
+          to: formatDateInLocalTimeZone(
+            dayjs(organization.paidUntil).add(value, "year").valueOf(),
+            DATE_FORMAT,
+          ),
+        }),
+      };
 
   const orderedItems = isPersonal
     ? [plan, users, storage, aiAddon, credits]

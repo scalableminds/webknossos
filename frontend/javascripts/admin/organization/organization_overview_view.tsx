@@ -13,39 +13,42 @@ import {
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { getPricingPlanStatus, updateOrganization } from "admin/api/organization";
-import { getUsers } from "admin/rest_api";
+import { getPricingPlanStatus } from "admin/api/organization";
 import { Button, Col, Row, Space, Spin, Typography, theme } from "antd";
 import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/format_utils";
-import { useApi, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import { type Key, useEffect } from "react";
-import { useDispatch } from "react-redux";
 import { ColorWKGold } from "theme";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
-import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { SettingsCard, type SettingsCardProps, StatSuffix } from "../account/helpers/settings_card";
 import {
-  AiAddonUpgradeCard,
   PlanAboutToExceedAlert,
   PlanExceededAlert,
   PlanExpirationCard,
-  PlanUpgradeCard,
 } from "./organization_cards";
-import { PowerPlanUpgradeCard } from "./plan_upgrade_cards";
+import {
+  useActiveOrganization,
+  useCanManageOrganization,
+  useCanOrderCredits,
+  useCanRequestUpgrades,
+  useOrganizationUsers,
+  useUpdateActiveOrganization,
+} from "./organization_hooks";
+import { UpgradeOfferCards } from "./plan_upgrade_cards";
 import {
   formatAiPlanLabel,
+  formatIncludedUsers,
+  formatPricingPlanName,
   getActiveUserCount,
+  getAiAddonIncludedCredits,
   isAiAddonEligiblePlan,
+  isCreditBalanceLow,
+  PRICING_PAGE_URL,
   PricingPlanEnum,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
-import { useCanRequestUpgrades } from "./use_can_request_upgrades";
 
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
-// Below this many credits, the balance is shown as low.
-const LOW_CREDIT_BALANCE = 10;
 
 // Keeps round amounts in their natural unit ("100 GB", not "0.1 TB") and drops a trailing ".0".
 function formatStorage(bytes: number): string {
@@ -55,20 +58,13 @@ function formatStorage(bytes: number): string {
 type StatCardProps = SettingsCardProps & { key: Key };
 
 export function OrganizationOverviewView() {
-  const dispatch = useDispatch();
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
+  const organization = useActiveOrganization();
+  const updateActiveOrganization = useUpdateActiveOrganization();
+  const canManageOrganization = useCanManageOrganization();
+  const canOrderCredits = useCanOrderCredits();
   const { token } = theme.useToken();
 
-  const {
-    data: users = [],
-    isFetching: isFetchingUsers,
-    error: usersError,
-  } = useApi({
-    queryKey: ["users"],
-    queryFn: () => getUsers(),
-  });
+  const { data: users = [], isFetching: isFetchingUsers } = useOrganizationUsers();
 
   const {
     data: pricingPlanStatus,
@@ -78,13 +74,6 @@ export function OrganizationOverviewView() {
     queryKey: ["pricingPlanStatus"],
     queryFn: getPricingPlanStatus,
   });
-
-  useEffect(() => {
-    if (usersError) {
-      Toast.error("Could not load users.");
-      console.error(usersError);
-    }
-  }, [usersError]);
 
   useEffect(() => {
     if (pricingPlanError) {
@@ -104,12 +93,7 @@ export function OrganizationOverviewView() {
       return;
     }
 
-    const updatedOrganization = await updateOrganization(
-      organization.id,
-      newOrgaName,
-      organization.newUserMailingList,
-    );
-    dispatch(setActiveOrganizationAction(updatedOrganization));
+    await updateActiveOrganization({ name: newOrgaName });
   }
 
   const isPersonal = organization.pricingPlan === PricingPlanEnum.Personal;
@@ -125,7 +109,6 @@ export function OrganizationOverviewView() {
   const hasStorageLimit = organization.includedStorageBytes !== Number.POSITIVE_INFINITY;
   const canRequestUpgrades = useCanRequestUpgrades();
   const isEligibleForAiAddon = isAiAddonEligiblePlan(organization.pricingPlan);
-  const showAiAddonCard = organization.aiPlan == null && isEligibleForAiAddon;
 
   const usersMeter = hasUserLimit ? activeUsersCount / organization.includedUsers : undefined;
   const usersStat: StatCardProps = {
@@ -135,7 +118,7 @@ export function OrganizationOverviewView() {
     content: (
       <>
         {activeUsersCount}
-        <StatSuffix>/ {hasUserLimit ? organization.includedUsers : "∞"}</StatSuffix>
+        <StatSuffix>/ {formatIncludedUsers(organization.includedUsers)}</StatSuffix>
       </>
     ),
     meter: usersMeter,
@@ -226,7 +209,7 @@ export function OrganizationOverviewView() {
   }
 
   const creditBalance = organization.milliCreditBalance;
-  const isCreditBalanceLow = creditBalance != null && creditBalance < LOW_CREDIT_BALANCE * 1000;
+  const isBalanceLow = isCreditBalanceLow(creditBalance);
   const creditsStat: StatCardProps = {
     key: "credits",
     title: "AI Credits",
@@ -240,9 +223,9 @@ export function OrganizationOverviewView() {
       ) : (
         "N/A"
       ),
-    hint: isCreditBalanceLow ? "Low balance" : "Pays for AI jobs like segmentation",
-    hintType: isCreditBalanceLow ? "warning" : "secondary",
-    footerAction: canRequestUpgrades ? (
+    hint: isBalanceLow ? "Low balance" : "Pays for AI jobs like segmentation",
+    hintType: isBalanceLow ? "warning" : "secondary",
+    footerAction: canOrderCredits ? (
       <Button
         type="primary"
         icon={<PlusOutlined />}
@@ -264,7 +247,9 @@ export function OrganizationOverviewView() {
       style: { background: token.colorFillQuaternary },
     };
   } else if (organization.aiPlan == null) {
-    const includedCredits = isTeamOrTeamTrial ? "400" : "1,000";
+    const includedCredits = getAiAddonIncludedCredits(organization.pricingPlan).toLocaleString(
+      "en-US",
+    );
     aiAddonStat = {
       key: "ai-plan",
       title: "AI Add-on",
@@ -298,9 +283,7 @@ export function OrganizationOverviewView() {
       icon: <BankOutlined />,
       content: (
         <Typography.Text
-          editable={{
-            onChange: setOrganizationName,
-          }}
+          editable={canManageOrganization ? { onChange: setOrganizationName } : false}
           style={{ fontSize: "inherit", fontWeight: "inherit" }}
         >
           {organization.name}
@@ -317,63 +300,15 @@ export function OrganizationOverviewView() {
       key: "plan",
       title: "Current Plan",
       icon: <CrownOutlined />,
-      content: organization.pricingPlan.replace("_", " "),
+      content: formatPricingPlanName(organization.pricingPlan),
       tooltip: (
-        <a href="https://webknossos.org/pricing" target="_blank" rel="noopener noreferrer">
+        <a href={PRICING_PAGE_URL} target="_blank" rel="noopener noreferrer">
           Compare all plans
         </a>
       ),
     },
   ];
   const rowTwoStats: StatCardProps[] = [usersStat, storageStat, creditsStat, aiAddonStat];
-
-  function renderUpgradeCards() {
-    if (!canRequestUpgrades || (!isPersonal && !isTeamOrTeamTrial && !showAiAddonCard)) {
-      return null;
-    }
-
-    let upgradeContent: React.ReactNode = null;
-
-    if (isPersonal) {
-      upgradeContent = <PlanUpgradeCard organization={organization} />;
-    } else if (isTeamOrTeamTrial) {
-      upgradeContent = (
-        <Row gutter={24} style={{ marginTop: 24 }}>
-          <Col span={showAiAddonCard ? 12 : 24}>
-            <PowerPlanUpgradeCard
-              description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
-              powerUpgradeCallback={() =>
-                UpgradePricingPlanModal.upgradePricingPlan(PricingPlanEnum.Power)
-              }
-            />
-          </Col>
-          {showAiAddonCard && (
-            <Col span={12}>
-              <AiAddonUpgradeCard />
-            </Col>
-          )}
-        </Row>
-      );
-    } else if (showAiAddonCard) {
-      upgradeContent = (
-        <Row gutter={24} style={{ marginTop: 24 }}>
-          <Col span={24}>
-            <AiAddonUpgradeCard />
-          </Col>
-        </Row>
-      );
-    }
-
-    return (
-      <div>
-        <SettingsTitle
-          title="Unlock more features"
-          description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
-        />
-        {upgradeContent}
-      </div>
-    );
-  }
 
   return (
     <>
@@ -402,7 +337,7 @@ export function OrganizationOverviewView() {
             <PlanExpirationCard organization={organization} />
           </Space>
         </Spin>
-        {renderUpgradeCards()}
+        <UpgradeOfferCards organization={organization} />
       </Space>
     </>
   );

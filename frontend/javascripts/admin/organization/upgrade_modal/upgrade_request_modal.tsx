@@ -19,18 +19,23 @@ import {
   theme,
 } from "antd";
 import { formatCountToDataAmountUnit, formatNumber } from "libs/format_utils";
-import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { getAntdTheme, ModalWidth } from "theme";
 import type { APIOrganization } from "types/api_types";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
-import { getActiveUserCount, PricingPlanEnum } from "../pricing_plan_utils";
+import { useActiveOrganization, useCanOrderCredits } from "../organization_hooks";
+import {
+  formatIncludedStorage,
+  formatIncludedUsers,
+  formatPricingPlanName,
+  getActiveUserCount,
+  hasPlanEndDate,
+  PRICING_PAGE_URL,
+  PricingPlanEnum,
+} from "../pricing_plan_utils";
 import {
   formatPaidUntil,
-  formatStorage,
-  formatUserCount,
   getCreditBalance,
   getDefaultSelection,
   getEffectiveTier,
@@ -39,7 +44,6 @@ import {
   getTierRank,
   getUpgradeItems,
   getUpgradeTargetTier,
-  hasPlanEndDate,
   type ItemDef,
   type ItemId,
   type ItemSelection,
@@ -73,8 +77,8 @@ function SidePanelContent({
   // Rendered inside the dark theme (see SidePanel), so all tokens are the dark ones.
   const { token } = theme.useToken();
   const isPersonal = getPlanTier(organization.pricingPlan) === PricingPlanEnum.Personal;
-  const includedUsers = formatUserCount(organization.includedUsers);
-  const includedStorage = formatStorage(organization.includedStorageBytes);
+  const includedUsers = formatIncludedUsers(organization.includedUsers);
+  const includedStorage = formatIncludedStorage(organization.includedStorageBytes);
 
   return (
     <Flex
@@ -114,7 +118,7 @@ function SidePanelContent({
           paddingTop: token.padding,
         }}
       >
-        <StatusRow label="Plan" value={organization.pricingPlan.replace("_", " ")} />
+        <StatusRow label="Plan" value={formatPricingPlanName(organization.pricingPlan)} />
         <StatusRow label="Users" value={`${activeUserCount ?? "–"} of ${includedUsers}`} />
         <StatusRow
           label="Storage"
@@ -138,7 +142,7 @@ function SidePanelContent({
       <span style={{ color: token.colorTextTertiary, fontSize: token.fontSizeSM }}>
         No payment now. Sales replies with a quote within 1 business day.
       </span>
-      <Typography.Link href="https://webknossos.org/pricing" target="_blank" rel="noreferrer">
+      <Typography.Link href={PRICING_PAGE_URL} target="_blank" rel="noreferrer">
         Compare all plans
       </Typography.Link>
     </Flex>
@@ -320,12 +324,8 @@ export default function UpgradeRequestModal({
   destroy: () => void;
 }) {
   const { token } = theme.useToken();
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
-  const activeUser = useWkSelector((state) => state.activeUser);
-
-  const canOrderCredits = activeUser?.isOrganizationOwner ?? false;
+  const organization = useActiveOrganization();
+  const canOrderCredits = useCanOrderCredits();
   const items = useMemo(
     () => getUpgradeItems(organization, canOrderCredits),
     [organization, canOrderCredits],

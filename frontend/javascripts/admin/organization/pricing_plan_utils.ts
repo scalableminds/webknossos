@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
+import { formatCountToDataAmountUnit, formatNumber } from "libs/format_utils";
 import messages from "messages";
 import type { APIOrganization, APIUser } from "types/api_types";
 import Constants from "viewer/constants";
@@ -22,6 +22,8 @@ const AI_PLAN_LABELS: Record<AiPlanEnum, string> = {
   [AiPlanEnum.TeamAI]: "Team AI",
   [AiPlanEnum.PowerAI]: "Power AI",
 };
+
+export const PRICING_PAGE_URL = "https://webknossos.org/pricing";
 
 export const teamPlanIncludedUsers = 5;
 export const teamPlanIncludedStorageTB = 1;
@@ -58,6 +60,13 @@ export const maxIncludedUsersInPersonalPlan = 1;
 // Paid plans are highlighted as expiring once they are this close to their end date.
 export const PLAN_EXPIRATION_REMINDER_DAYS = 30;
 
+// Below this many credits, the balance is shown as low.
+const LOW_CREDIT_BALANCE = 10;
+
+export function formatPricingPlanName(pricingPlan: PricingPlanEnum): string {
+  return pricingPlan.replaceAll("_", " ");
+}
+
 export function getActiveUserCount(users: APIUser[]): number {
   return users.filter((user) => user.isActive && !user.isUnlisted && !user.isGuest).length;
 }
@@ -76,6 +85,21 @@ export function getLeftOverStorageBytes(organization: APIOrganization): number {
 
 export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {
   return user.isAdmin || user.isOrganizationOwner;
+}
+
+// The backend only accepts credit orders from the organization owner.
+export function isUserAllowedToOrderCredits(user: APIUser): boolean {
+  return user.isOrganizationOwner;
+}
+
+// Renaming and deleting the organization, its notification settings and the activity logs are
+// restricted to admins by the backend.
+export function isUserAllowedToManageOrganization(user: APIUser): boolean {
+  return user.isAdmin;
+}
+
+export function isCreditBalanceLow(milliCreditBalance: number | null | undefined): boolean {
+  return milliCreditBalance != null && milliCreditBalance < LOW_CREDIT_BALANCE * 1000;
 }
 
 export const PLAN_TO_RANK: Record<PricingPlanEnum, number> = {
@@ -118,7 +142,7 @@ export function hasAiPlan(organization: APIOrganization | null) {
 }
 
 export function formatIncludedUsers(includedUsers: number): string {
-  return Number.isFinite(includedUsers) ? includedUsers.toString() : "∞";
+  return Number.isFinite(includedUsers) ? formatNumber(includedUsers) : "∞";
 }
 
 export function formatIncludedStorage(includedStorageBytes: number): string {
@@ -142,10 +166,29 @@ export function canUpgradePricingPlan(pricingPlan: PricingPlanEnum): boolean {
   return !isPricingPlanGreaterEqualThan(pricingPlan, PricingPlanEnum.Power);
 }
 
+export function hasPlanEndDate(organization: APIOrganization): boolean {
+  return organization.paidUntil !== Constants.MAXIMUM_DATE_TIMESTAMP;
+}
+
+// Personal plans and plans without an end date can't be extended.
+export function canExtendPricingPlan(organization: APIOrganization): boolean {
+  return organization.pricingPlan !== PricingPlanEnum.Personal && hasPlanEndDate(organization);
+}
+
 // Returns null for plans without an expiration date.
 export function getDaysUntilPlanExpires(organization: APIOrganization): number | null {
-  if (organization.paidUntil === Constants.MAXIMUM_DATE_TIMESTAMP) return null;
+  if (!hasPlanEndDate(organization)) return null;
   return Math.max(0, Math.ceil(dayjs(organization.paidUntil).diff(dayjs(), "day", true)));
+}
+
+// Expired plans are not "about to expire", see hasPricingPlanExpired.
+export function isPlanAboutToExpire(organization: APIOrganization): boolean {
+  const daysLeft = getDaysUntilPlanExpires(organization);
+  return (
+    daysLeft != null &&
+    daysLeft <= PLAN_EXPIRATION_REMINDER_DAYS &&
+    !hasPricingPlanExpired(organization)
+  );
 }
 
 export function getAiAddonIncludedCredits(pricingPlan: PricingPlanEnum): number {

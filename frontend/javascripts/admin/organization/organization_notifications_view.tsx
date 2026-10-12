@@ -1,16 +1,14 @@
 import { MailOutlined, RobotOutlined, SaveOutlined, UserAddOutlined } from "@ant-design/icons";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { unwrapOrThrow } from "admin/api/api_result";
-import { updateOrganization } from "admin/api/organization";
-import { getUsers } from "admin/rest_api";
 import { Button, Col, Form, Input, Row } from "antd";
-import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
-import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import {
+  useActiveOrganization,
+  useCanManageOrganization,
+  useOrganizationUsers,
+  useUpdateActiveOrganization,
+} from "./organization_hooks";
 
 const FormItem = Form.Item;
 
@@ -20,33 +18,17 @@ type FormValues = {
 };
 
 export function OrganizationNotificationsView() {
-  const dispatch = useDispatch();
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
+  const organization = useActiveOrganization();
+  const updateActiveOrganization = useUpdateActiveOrganization();
+  const canManageOrganization = useCanManageOrganization();
   const [form] = Form.useForm<FormValues>();
-  const [ownerEmail, setOwnerEmail] = useState<string>("");
-
-  useEffect(() => {
-    async function fetchOwnerEmail() {
-      const users = unwrapOrThrow(await getUsers());
-      const owner = users.find(
-        (user) => user.isOrganizationOwner && user.organization === organization.id,
-      );
-      if (owner) {
-        setOwnerEmail(owner.email);
-      }
-    }
-    fetchOwnerEmail();
-  }, [organization.id]);
+  const { data: users = [] } = useOrganizationUsers();
+  const ownerEmail =
+    users.find((user) => user.isOrganizationOwner && user.organization === organization.id)
+      ?.email ?? "";
 
   async function onFinish(formValues: FormValues) {
-    const updatedOrganization = await updateOrganization(
-      organization.id,
-      organization.name,
-      formValues.newUserMailingList,
-    );
-    dispatch(setActiveOrganizationAction(updatedOrganization));
+    await updateActiveOrganization({ newUserMailingList: formValues.newUserMailingList });
     Toast.success("Notification settings were saved successfully.");
   }
 
@@ -56,6 +38,7 @@ export function OrganizationNotificationsView() {
         form={form}
         onFinish={onFinish}
         layout="inline"
+        disabled={!canManageOrganization}
         initialValues={{
           newUserMailingList: organization.newUserMailingList,
         }}

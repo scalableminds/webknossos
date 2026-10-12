@@ -8,23 +8,27 @@ import { Button, Flex, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { formatMilliCreditsString } from "libs/format_utils";
-import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import type React from "react";
 import { useMemo } from "react";
 import type { APICreditTransaction } from "types/api_types";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import {
+  useActiveOrganization,
+  useCanOrderCredits,
+  useCanRequestUpgrades,
+} from "./organization_hooks";
+import {
+  canExtendPricingPlan,
   canUpgradePricingPlan,
   formatIncludedStorage,
   formatIncludedUsers,
+  formatPricingPlanName,
   getDaysUntilPlanExpires,
   hasPricingPlanExpired,
-  PLAN_EXPIRATION_REMINDER_DAYS,
-  PricingPlanEnum,
+  isCreditBalanceLow,
+  isPlanAboutToExpire,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
-import { useCanRequestUpgrades } from "./use_can_request_upgrades";
 
 const SPENDING_WINDOW_DAYS = 30;
 
@@ -44,9 +48,7 @@ type CreditSummary = {
 };
 
 function useCreditSummary(transactions: APICreditTransaction[]): CreditSummary {
-  const milliCreditBalance = useWkSelector(
-    (state) => state.activeOrganization?.milliCreditBalance ?? null,
-  );
+  const milliCreditBalance = useActiveOrganization().milliCreditBalance ?? null;
   return useMemo(() => {
     const windowStart = dayjs().subtract(SPENDING_WINDOW_DAYS, "day").valueOf();
     // Refunds don't reference the job, only the charge they refund (relatedTransaction).
@@ -95,8 +97,7 @@ export function CreditActivitySummaryBar({
   transactions: APICreditTransaction[];
 }) {
   const { milliCreditBalance, milliCreditsSpent } = useCreditSummary(transactions);
-  // The backend only accepts credit orders from the organization owner.
-  const canOrderCredits = useWkSelector((state) => state.activeUser?.isOrganizationOwner ?? false);
+  const canOrderCredits = useCanOrderCredits();
 
   return (
     <div
@@ -112,7 +113,7 @@ export function CreditActivitySummaryBar({
         <span style={summaryValueStyle}>
           {milliCreditBalance != null ? formatMilliCreditsString(milliCreditBalance) : "N/A"}
         </span>
-        {milliCreditBalance != null && milliCreditBalance <= 0 ? (
+        {isCreditBalanceLow(milliCreditBalance) ? (
           <Typography.Text type="warning" style={{ fontSize: 13 }}>
             Low
           </Typography.Text>
@@ -126,7 +127,7 @@ export function CreditActivitySummaryBar({
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={UpgradePricingPlanModal.orderWebknossosCredits}
+            onClick={() => UpgradePricingPlanModal.orderWebknossosCredits()}
           >
             Buy credits
           </Button>
@@ -137,20 +138,17 @@ export function CreditActivitySummaryBar({
 }
 
 export function PlanSummaryBar() {
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
+  const organization = useActiveOrganization();
   const daysLeft = getDaysUntilPlanExpires(organization);
   const canRequestUpgrades = useCanRequestUpgrades();
   const hasExpired = daysLeft != null && hasPricingPlanExpired(organization);
-  const canExtend = daysLeft != null && organization.pricingPlan !== PricingPlanEnum.Personal;
 
   return (
     <Flex align="center" gap={16} style={{ ...summaryBarStyle, ...summaryCellStyle }}>
       <CrownOutlined style={{ fontSize: 18, color: "var(--ant-color-primary)" }} />
       <div style={{ flex: 1 }}>
-        <Typography.Text strong>{organization.pricingPlan}</Typography.Text> ·{" "}
-        {formatIncludedUsers(organization.includedUsers)}{" "}
+        <Typography.Text strong>{formatPricingPlanName(organization.pricingPlan)}</Typography.Text>{" "}
+        · {formatIncludedUsers(organization.includedUsers)}{" "}
         {pluralize("user", organization.includedUsers)} ·{" "}
         {formatIncludedStorage(organization.includedStorageBytes)} storage
         {daysLeft != null ? (
@@ -160,9 +158,7 @@ export function PlanSummaryBar() {
             {hasExpired ? (
               <Typography.Text type="danger">(expired)</Typography.Text>
             ) : (
-              <Typography.Text
-                type={daysLeft <= PLAN_EXPIRATION_REMINDER_DAYS ? "warning" : "secondary"}
-              >
+              <Typography.Text type={isPlanAboutToExpire(organization) ? "warning" : "secondary"}>
                 ({daysLeft} {pluralize("day", daysLeft)} left)
               </Typography.Text>
             )}
@@ -172,7 +168,7 @@ export function PlanSummaryBar() {
       {canRequestUpgrades && canUpgradePricingPlan(organization.pricingPlan) ? (
         <Button onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}>Upgrade</Button>
       ) : null}
-      {canRequestUpgrades && canExtend ? (
+      {canRequestUpgrades && canExtendPricingPlan(organization) ? (
         <Button
           type="primary"
           icon={<FieldTimeOutlined />}

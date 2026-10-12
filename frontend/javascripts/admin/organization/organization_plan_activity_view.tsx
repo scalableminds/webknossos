@@ -4,11 +4,10 @@ import { getPricingPlanUpdates } from "admin/api/organization";
 import { Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import FormattedDate from "components/formatted_date";
-import { useWkSelector } from "libs/react_hooks";
 import { scrollToTop } from "libs/utils";
 import { useMemo } from "react";
 import type { APIOrganizationPricingPlanUpdate } from "types/api_types";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { useActiveOrganization } from "./organization_hooks";
 import { PlanSummaryBar } from "./organization_summary_bars";
 import { formatIncludedStorage, formatIncludedUsers } from "./pricing_plan_utils";
 
@@ -18,9 +17,7 @@ const CLEARED_LABEL = <Text type="secondary">Cleared</Text>;
 const EMPTY_LABEL = <Text type="secondary">—</Text>;
 
 export function OrganizationPlanActivityView() {
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
+  const organization = useActiveOrganization();
   const { data: planUpdates, isFetching } = useQuery({
     queryKey: ["organizationPricingPlanUpdates", organization.id],
     queryFn: async () => {

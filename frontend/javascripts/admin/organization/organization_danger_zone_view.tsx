@@ -3,15 +3,13 @@ import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteOrganization } from "admin/api/organization";
 import { App, Button, Typography, theme } from "antd";
-import { useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
 import { ModalWidth } from "theme";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { useActiveOrganization, useCanManageOrganization } from "./organization_hooks";
 
 export function OrganizationDangerZoneView() {
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
+  const organization = useActiveOrganization();
+  const canManageOrganization = useCanManageOrganization();
   const [isDeleting, setIsDeleting] = useState(false);
   const { modal } = App.useApp();
   const { token } = theme.useToken();
@@ -61,9 +59,11 @@ export function OrganizationDangerZoneView() {
         content={`Delete ${organization.name}`}
         hint="Removes all annotations, datasets and user accounts. This cannot be undone."
         footerAction={
-          <Button danger loading={isDeleting} onClick={handleDeleteButtonClicked}>
-            Delete Organization
-          </Button>
+          canManageOrganization ? (
+            <Button danger loading={isDeleting} onClick={handleDeleteButtonClicked}>
+              Delete Organization
+            </Button>
+          ) : null
         }
       />
     </>

@@ -19,6 +19,7 @@ export type APIAlignmentProject = {
   readonly ownerFirstName: string;
   readonly ownerLastName: string;
   readonly dataStoreName: string;
+  readonly dataStoreUrl: string;
   readonly voxelSize: VoxelSize;
   // Relative to the alignment project directory.
   readonly csvPath: string | null | undefined;
@@ -29,6 +30,8 @@ export type APIAlignmentProject = {
   readonly sectionRange: SectionRange | null | undefined;
   // The uploaded files were deleted to free storage. Metadata and past jobs are kept.
   readonly isInputDataDeleted: boolean;
+  // When the tile CSV was last replaced after the upload, if ever.
+  readonly csvReplaced: number | null | undefined;
   readonly jobCount: number;
 };
 
@@ -129,6 +132,21 @@ export function finishAlignmentProjectUpload(
     Request.receiveJSON(
       `/data/datasets/upload/alignmentProject/finishUpload?uploadId=${uploadId}&token=${token}`,
       { host: datastoreUrl, method: "POST" },
+    ),
+  );
+}
+
+// Previous CSV versions are kept on the datastore, so that running and past jobs are unaffected.
+export function replaceAlignmentProjectCsv(
+  project: APIAlignmentProject,
+  csvFile: File,
+): Promise<{ csvPath: string; sectionRange: SectionRange }> {
+  const formData = new FormData();
+  formData.append("file", csvFile, csvFile.name);
+  return doWithToken((token) =>
+    Request.sendMultipartFormReceiveJSON(
+      `/data/datasets/upload/alignmentProject/replaceCsv?alignmentProjectId=${project.id}&token=${token}`,
+      { data: formData, host: project.dataStoreUrl },
     ),
   );
 }

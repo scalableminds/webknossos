@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithRootPathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  AlignmentProjectCsvReplacementInfo,
   AlignmentProjectUploadAdditionalInfo,
   AlignmentProjectUploadInfo,
   AttachmentUploadAdditionalInfo,
@@ -26,6 +27,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   DatasetUploadInfo,
   MagUploadAdditionalInfo,
   MagUploadInfo,
+  ReportAlignmentProjectCsvReplacementParameters,
   ReportAlignmentProjectUploadParameters,
   ReportAttachmentUploadParameters,
   ReportDatasetUploadParameters,
@@ -252,6 +254,47 @@ class WKRemoteDataStoreController @Inject() (
             report.totalSizeInBytes,
             report.sectionRange.filter(_ => isValid)
           )
+        } yield Ok
+      }
+    }
+
+  // Checks whether the user may replace the tile CSV. The datastore then validates and stores the new CSV.
+  def reserveAlignmentProjectCsvReplacement(
+      name: String,
+      key: String,
+      token: String,
+      alignmentProjectId: ObjectId
+  ): Action[AnyContent] =
+    Action.fox { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        for {
+          user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
+          _ <- alignmentProjectService.assertMayAccessAlignmentProjects(user)
+          project <- alignmentProjectDAO.findOne(alignmentProjectId)(using
+            AuthorizedAccessContext(user)
+          ) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
+          _ <- Fox.fromBool(project._dataStore == dataStore.name) ?~> Msg.notAllowed ~> FORBIDDEN
+          _ <- Fox.fromBool(
+            project.status != AlignmentProjectStatus.UPLOADING
+          ) ?~> Msg.AlignmentProject.uploadUnfinished
+          _ <- Fox.fromBool(!project.isInputDataDeleted) ?~> Msg.AlignmentProject.inputDataDeleted
+        } yield Ok(Json.toJson(AlignmentProjectCsvReplacementInfo(project._organization, project.csvPath)))
+      }
+    }
+
+  def reportAlignmentProjectCsvReplacement(
+      name: String,
+      key: String
+  ): Action[ReportAlignmentProjectCsvReplacementParameters] =
+    Action.fox(validateJson[ReportAlignmentProjectCsvReplacementParameters]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        val report = request.body
+        for {
+          project <- alignmentProjectDAO.findOne(report.alignmentProjectId)(using
+            GlobalAccessContext
+          ) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
+          _ <- Fox.fromBool(project._dataStore == dataStore.name) ?~> Msg.notAllowed ~> FORBIDDEN
+          _ <- alignmentProjectDAO.replaceCsv(project._id, report.csvPath, report.sectionRange)
         } yield Ok
       }
     }

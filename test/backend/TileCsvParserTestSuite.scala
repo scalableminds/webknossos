@@ -38,6 +38,17 @@ class TileCsvParserTestSuite extends AnyWordSpec {
     "reject rows with too few columns, with the row number" in
       assert(failureMessage("1,0,0,./a.tif\n2,0,./b.tif\n").contains("Row 2: expected at least 4 columns"))
 
+    "name replaced CSVs with the next free version next to the current one" in {
+      val taken = Set("tiles.csv", "tiles.v2.csv")
+      assert(TileCsvParser.nextCsvFileName(Some("tiles.csv"), "new.csv", taken.contains) == "tiles.v3.csv")
+      assert(TileCsvParser.nextCsvFileName(Some("tiles.v2.csv"), "new.csv", taken.contains) == "tiles.v3.csv")
+    }
+
+    "name a CSV after the uploaded file if there is no current one" in {
+      assert(TileCsvParser.nextCsvFileName(None, "my tiles.csv", _ => false) == "my_tiles.csv")
+      assert(TileCsvParser.nextCsvFileName(None, ".csv", _ => false) == "tiles.csv")
+    }
+
     "reject non-integer sections and non-numeric positions" in {
       assert(failureMessage("two,0,0,./a.tif\n").contains("not an integer"))
       assert(failureMessage("1,left,0,./a.tif\n").contains("not numeric"))

@@ -53,6 +53,7 @@ object Msg {
       s"An alignment project with the name “$name” already exists. Please choose a different name."
     val emptyName: String = "The name of an alignment project must not be empty."
     val notUploading: String = "The upload of this alignment project has already been finished."
+    val uploadUnfinished: String = "The upload of this alignment project has not finished yet."
     val notReady: String = "Alignments can only be started for alignment projects with a valid, fully uploaded CSV."
     val inputDataDeleted: String = "The input data of this alignment project has been deleted."
     val invalidSectionRange: String = "The selected section range is not within the sections of the alignment project."

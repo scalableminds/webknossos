@@ -51,6 +51,7 @@ case class AlignmentProject(
     totalSizeInBytes: Option[Long],
     sectionRange: Option[SectionRange],
     isInputDataDeleted: Boolean = false,
+    csvReplaced: Option[Instant] = None,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
@@ -88,6 +89,7 @@ class AlignmentProjectDAO @Inject() (sqlClient: SqlClient)(implicit ec: Executio
       r.totalsizeinbytes,
       sectionRange,
       r.isinputdatadeleted,
+      r.csvreplaced.map(Instant.fromSql),
       Instant.fromSql(r.created),
       r.isdeleted
     )
@@ -158,6 +160,16 @@ class AlignmentProjectDAO @Inject() (sqlClient: SqlClient)(implicit ec: Executio
                    SET status = $status, invalidReason = $invalidReason, csvPath = $csvPath,
                        fileCount = $fileCount, totalSizeInBytes = $totalSizeInBytes,
                        firstSection = ${sectionRange.map(_.first)}, lastSection = ${sectionRange.map(_.last)}
+                   WHERE _id = $id""".asUpdate)
+    } yield ()
+
+  // A replaced CSV was validated beforehand, so the project becomes READY.
+  def replaceCsv(id: ObjectId, csvPath: String, sectionRange: SectionRange): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.alignmentProjects
+                   SET status = ${AlignmentProjectStatus.READY}, invalidReason = NULL, csvPath = $csvPath,
+                       firstSection = ${sectionRange.first}, lastSection = ${sectionRange.last},
+                       csvReplaced = ${Instant.now}
                    WHERE _id = $id""".asUpdate)
     } yield ()
 
@@ -261,6 +273,7 @@ class AlignmentProjectService @Inject() (
       owner <- userDAO.findOne(project._owner)(using GlobalAccessContext)
       ownerMultiUser <- multiUserDAO.findOne(owner._multiUser)(using GlobalAccessContext)
       jobCount <- jobDAO.countByAlignmentProject(project._id)
+      dataStore <- dataStoreDAO.findOneByName(project._dataStore)(using GlobalAccessContext)
     } yield Json.obj(
       "id" -> project._id,
       "name" -> project.name,
@@ -271,12 +284,14 @@ class AlignmentProjectService @Inject() (
       "ownerFirstName" -> ownerMultiUser.firstName,
       "ownerLastName" -> ownerMultiUser.lastName,
       "dataStoreName" -> project._dataStore,
+      "dataStoreUrl" -> dataStore.publicUrl,
       "voxelSize" -> project.voxelSize,
       "csvPath" -> project.csvPath,
       "fileCount" -> project.fileCount,
       "totalSizeInBytes" -> project.totalSizeInBytes,
       "sectionRange" -> project.sectionRange,
       "isInputDataDeleted" -> project.isInputDataDeleted,
+      "csvReplaced" -> project.csvReplaced,
       "jobCount" -> jobCount
     )
 }

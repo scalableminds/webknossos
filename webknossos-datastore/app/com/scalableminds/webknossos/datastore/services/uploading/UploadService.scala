@@ -124,6 +124,18 @@ case class ReportAttachmentUploadParameters(
     attachmentSizeBytes: Long
 ) derives JsonAutoFormat
 
+// Returned by WEBKNOSSOS when it allows replacing the tile CSV of an alignment project.
+case class AlignmentProjectCsvReplacementInfo(
+    organizationId: String,
+    currentCsvPath: Option[String] // relative to the alignment project directory
+) derives JsonAutoFormat
+
+case class ReportAlignmentProjectCsvReplacementParameters(
+    alignmentProjectId: ObjectId,
+    csvPath: String,
+    sectionRange: SectionRange
+) derives JsonAutoFormat
+
 case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
     derives JsonAutoFormat
 
@@ -665,6 +677,36 @@ class UploadService @Inject() (
           ).toFox ?~> Msg.Dataset.Upload.moveToTargetFailed
       }
     } yield ()
+
+  // Validates the new CSV before storing it next to the current one. Previous versions are kept, so that
+  // running and past jobs still find the CSV they were started with. Returns the new path relative to the project.
+  def replaceAlignmentProjectCsv(
+      alignmentProjectId: ObjectId,
+      replacementInfo: AlignmentProjectCsvReplacementInfo,
+      uploadedCsv: Path,
+      uploadedFileName: String
+  ): Fox[(String, SectionRange)] =
+    for {
+      sectionRange <- tryo(
+        Using.resource(scala.io.Source.fromFile(uploadedCsv.toFile, StandardCharsets.UTF_8.name))(source =>
+          TileCsvParser.parseSectionRange(source.getLines())
+        )
+      ).flatMap(identity).toFox
+      projectDir <- alignmentProjectDirFor(replacementInfo.organizationId, alignmentProjectId).toFox
+      _ <- Fox.fromBool(Files.isDirectory(projectDir)) ?~> s"Alignment project directory $projectDir does not exist."
+      currentCsvOpt = replacementInfo.currentCsvPath.map(projectDir.resolve(_).normalize())
+      targetDir = currentCsvOpt.map(_.getParent).getOrElse(projectDir)
+      _ <- Fox.fromBool(targetDir.startsWith(projectDir)) ?~> "Invalid path of the current CSV."
+      targetPath = targetDir.resolve(
+        TileCsvParser.nextCsvFileName(
+          currentCsvOpt.map(_.getFileName.toString),
+          uploadedFileName,
+          isTaken = fileName => Files.exists(targetDir.resolve(fileName))
+        )
+      )
+      _ <- tryo(Files.copy(uploadedCsv, targetPath)).toFox ?~> "Could not store the new CSV file."
+      _ = logger.info(s"Replaced tile CSV of alignment project $alignmentProjectId with $targetPath.")
+    } yield (projectDir.relativize(targetPath).toString, sectionRange)
 
   private def alignmentProjectDirFor(organizationId: String, alignmentProjectId: ObjectId): Box[Path] =
     for {

@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   AttachmentUploadInfo,
   DatasetUploadInfo,
   MagUploadInfo,
+  ReportAlignmentProjectCsvReplacementParameters,
   UploadDomain,
   UploadService
 }
@@ -126,6 +127,25 @@ class UploadController @Inject() (
               } yield additionalInfo.newAlignmentProjectId
         } yield Ok(Json.toJson(AlignmentProjectUploadAdditionalInfo(alignmentProjectId)))
       }
+    }
+
+  /* Replace the tile CSV of an alignment project.
+  Expects the CSV as file attachment "file". WEBKNOSSOS checks the permissions. */
+  def replaceAlignmentProjectCsv(alignmentProjectId: ObjectId): Action[MultipartFormData[Files.TemporaryFile]] =
+    Action.fox(parse.multipartFormData) { implicit request =>
+      for {
+        csvFile <- request.body.file("file").toFox ?~> "No CSV file was attached."
+        replacementInfo <- dsRemoteWebknossosClient.reserveAlignmentProjectCsvReplacement(alignmentProjectId)
+        (csvPath, sectionRange) <- uploadService.replaceAlignmentProjectCsv(
+          alignmentProjectId,
+          replacementInfo,
+          csvFile.ref.path,
+          csvFile.filename
+        ) ~> BAD_REQUEST
+        _ <- dsRemoteWebknossosClient.reportAlignmentProjectCsvReplacement(
+          ReportAlignmentProjectCsvReplacementParameters(alignmentProjectId, csvPath, sectionRange)
+        )
+      } yield Ok(Json.obj("csvPath" -> csvPath, "sectionRange" -> sectionRange))
     }
 
   /* Called by WEBKNOSSOS when an alignment project is deleted */

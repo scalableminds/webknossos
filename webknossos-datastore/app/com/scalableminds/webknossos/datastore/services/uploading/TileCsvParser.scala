@@ -76,6 +76,18 @@ object TileCsvParser {
       !normalized.isAbsolute && !normalized.startsWith("..")
     }.getOrElse(false)
 
+  // E.g. tiles.csv -> tiles.v2.csv -> tiles.v3.csv. Without a current CSV, the uploaded file name is the base.
+  def nextCsvFileName(currentFileName: Option[String], uploadedFileName: String, isTaken: String => Boolean): String = {
+    val baseName = currentFileName
+      .getOrElse(uploadedFileName.replaceAll("[^A-Za-z0-9_.-]", "_"))
+      .replaceAll("(?i)\\.csv$", "")
+      .replaceAll("\\.v\\d+$", "")
+    val safeBaseName = if (baseName.isEmpty || baseName.startsWith(".")) "tiles" else baseName
+    (Iterator(s"$safeBaseName.csv") ++ Iterator.from(2).map(version => s"$safeBaseName.v$version.csv"))
+      .find(!isTaken(_))
+      .getOrElse(s"$safeBaseName.csv")
+  }
+
   private def splitRow(line: String): Seq[String] =
     line.split(",", -1).toSeq.map(_.trim.stripPrefix("\"").stripSuffix("\"").trim)
 }

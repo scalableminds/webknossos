@@ -154,6 +154,8 @@ POST          /datastores/:name/reportDatasetUpload                             
 POST          /datastores/:name/reportMagUpload                                                 controllers.WKRemoteDataStoreController.reportMagUpload(name: String, key: String)
 POST          /datastores/:name/reportAttachmentUpload                                          controllers.WKRemoteDataStoreController.reportAttachmentUpload(name: String, key: String)
 POST          /datastores/:name/reportAlignmentProjectUpload                                    controllers.WKRemoteDataStoreController.reportAlignmentProjectUpload(name: String, key: String)
+POST          /datastores/:name/reserveAlignmentProjectCsvReplacement                           controllers.WKRemoteDataStoreController.reserveAlignmentProjectCsvReplacement(name: String, key: String, token: String, alignmentProjectId: ObjectId)
+POST          /datastores/:name/reportAlignmentProjectCsvReplacement                            controllers.WKRemoteDataStoreController.reportAlignmentProjectCsvReplacement(name: String, key: String)
 POST          /datastores/:name/deleteDataset                                                   controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/findDatasetId                                                   controllers.WKRemoteDataStoreController.findDatasetId(name: String, key: String, datasetDirectoryName: String, organizationId: String)
 GET           /datastores/:name/findDatasetLocalRootPath                                        controllers.WKRemoteDataStoreController.findDatasetLocalRootPath(name: String, key: String, datasetId: ObjectId)

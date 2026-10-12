@@ -21,6 +21,7 @@ CREATE TABLE webknossos.alignmentProjects(
   firstSection INT,
   lastSection INT,
   isInputDataDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  csvReplaced TIMESTAMPTZ, -- set when the tile CSV was replaced after the upload
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT sectionRangeIsValid CHECK (firstSection IS NULL OR lastSection IS NULL OR firstSection <= lastSection)

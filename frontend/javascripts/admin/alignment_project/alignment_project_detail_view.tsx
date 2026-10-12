@@ -24,6 +24,7 @@ import {
   Button,
   Card,
   Descriptions,
+  Empty,
   Result,
   Select,
   Space,
@@ -51,6 +52,7 @@ import {
   type AlignmentProjectDeletionMode,
   DeleteAlignmentProjectModal,
 } from "./delete_alignment_project_modal";
+import { ReplaceAlignmentProjectCsvModal } from "./replace_alignment_project_csv_modal";
 import { StartAlignmentProjectModal } from "./start_alignment_project_modal";
 
 const { Column } = Table;
@@ -68,6 +70,7 @@ function AlignmentProjectDetailView() {
     unit: UnitLong;
   } | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isReplaceCsvModalOpen, setIsReplaceCsvModalOpen] = useState(false);
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   const queryKey = ["alignmentProjects", alignmentProjectId];
@@ -114,6 +117,24 @@ function AlignmentProjectDetailView() {
     setVoxelSizeDraft(null);
   };
 
+  const replaceCsvDisabledReason =
+    project.status === "UPLOADING"
+      ? "The upload of this project has not finished yet."
+      : project.isInputDataDeleted
+        ? "The input data of this project was deleted."
+        : null;
+  const replaceCsvButton = (
+    <Tooltip title={replaceCsvDisabledReason}>
+      <Button
+        size="small"
+        disabled={replaceCsvDisabledReason != null}
+        onClick={() => setIsReplaceCsvModalOpen(true)}
+      >
+        Replace
+      </Button>
+    </Tooltip>
+  );
+
   const startDisabledReason =
     project.status === "UPLOADING"
       ? "The upload of this project has not finished yet."
@@ -122,6 +143,19 @@ function AlignmentProjectDetailView() {
         : project.isInputDataDeleted
           ? "The input data of this project was deleted. Please create a new alignment project to start another alignment."
           : null;
+
+  const startAlignmentButton = (
+    <Tooltip title={startDisabledReason}>
+      <Button
+        type="primary"
+        icon={<PlayCircleOutlined />}
+        disabled={startDisabledReason != null}
+        onClick={() => setIsStartModalOpen(true)}
+      >
+        Start Alignment
+      </Button>
+    </Tooltip>
+  );
 
   const handleDeleted = async (mode: AlignmentProjectDeletionMode) => {
     if (mode === "project") {
@@ -186,7 +220,7 @@ function AlignmentProjectDetailView() {
       return formatSectionRange({ first: sectionRange[0], last: sectionRange[1] });
     }
     // null means all sections of the project.
-    return project.sectionRange != null ? formatSectionRange(project.sectionRange) : "All";
+    return project.sectionRange != null ? formatSectionRange(project.sectionRange, true) : "All";
   };
 
   return (
@@ -217,16 +251,7 @@ function AlignmentProjectDetailView() {
           <Button danger icon={<DeleteOutlined />} onClick={() => setIsDeleteModalOpen(true)}>
             Delete
           </Button>
-          <Tooltip title={startDisabledReason}>
-            <Button
-              type="primary"
-              icon={<PlayCircleOutlined />}
-              disabled={startDisabledReason != null}
-              onClick={() => setIsStartModalOpen(true)}
-            >
-              Start Alignment
-            </Button>
-          </Tooltip>
+          {startAlignmentButton}
         </Space>
       }
     >
@@ -244,7 +269,7 @@ function AlignmentProjectDetailView() {
             type="error"
             showIcon
             style={{ marginBottom: 16 }}
-            title="The uploaded CSV is invalid. Please create a new alignment project with a corrected CSV."
+            title="The uploaded CSV is invalid. Please replace it with a corrected CSV."
             description={project.invalidReason}
           />
         )}
@@ -258,14 +283,17 @@ function AlignmentProjectDetailView() {
         )}
         <Descriptions column={{ xs: 1, md: 2, xl: 3 }}>
           <Descriptions.Item label="Tile CSV">
-            {project.csvPath != null ? (
-              <Space size={4}>
-                <FileTextOutlined />
-                <Typography.Text code>{project.csvPath}</Typography.Text>
-              </Space>
-            ) : (
-              "-"
-            )}
+            <Space size={4}>
+              {project.csvPath != null ? (
+                <Space size={4}>
+                  <FileTextOutlined />
+                  <Typography.Text code>{project.csvPath}</Typography.Text>
+                </Space>
+              ) : (
+                "-"
+              )}
+              {replaceCsvButton}
+            </Space>
           </Descriptions.Item>
           <Descriptions.Item label="Uploaded Files">
             {project.fileCount != null ? project.fileCount.toLocaleString() : "-"}
@@ -326,6 +354,13 @@ function AlignmentProjectDetailView() {
           </Descriptions.Item>
           <Descriptions.Item label="Created">
             <FormattedDate timestamp={project.created} />
+            {project.csvReplaced != null && (
+              <>
+                {" "}
+                &nbsp;(CSV replaced&nbsp;
+                <FormattedDate timestamp={project.csvReplaced} />)
+              </>
+            )}
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -336,7 +371,16 @@ function AlignmentProjectDetailView() {
           loading={areJobsLoading}
           rowKey="id"
           pagination={false}
-          locale={{ emptyText: "No alignments have been run for this project yet." }}
+          locale={{
+            emptyText: (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="No alignments have been run for this project yet."
+              >
+                {startAlignmentButton}
+              </Empty>
+            ),
+          }}
         >
           <Column
             title="Job Id"
@@ -347,7 +391,7 @@ function AlignmentProjectDetailView() {
           />
           <Column title="Sections" key="sectionRange" render={renderSectionRange} />
           <Column
-            title="Output Dataset"
+            title="Output Dataset Name"
             key="outputDataset"
             render={(job: APIJob) => (
               <Space size={4}>
@@ -408,6 +452,13 @@ function AlignmentProjectDetailView() {
         </Table>
       </Card>
 
+      {isReplaceCsvModalOpen && (
+        <ReplaceAlignmentProjectCsvModal
+          project={project}
+          onClose={() => setIsReplaceCsvModalOpen(false)}
+          onReplaced={() => queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] })}
+        />
+      )}
       {isDeleteModalOpen && (
         <DeleteAlignmentProjectModal
           project={project}
@@ -423,6 +474,7 @@ function AlignmentProjectDetailView() {
         <StartAlignmentProjectModal
           project={project}
           sectionRange={project.sectionRange}
+          jobs={jobs ?? []}
           isOpen={isStartModalOpen}
           onClose={() => setIsStartModalOpen(false)}
           onStarted={() => queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] })}

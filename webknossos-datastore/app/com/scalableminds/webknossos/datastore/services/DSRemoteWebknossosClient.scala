@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  AlignmentProjectCsvReplacementInfo,
   AlignmentProjectUploadAdditionalInfo,
   AlignmentProjectUploadInfo,
   AttachmentUploadAdditionalInfo,
@@ -22,6 +23,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   DatasetUploadInfo,
   MagUploadAdditionalInfo,
   MagUploadInfo,
+  ReportAlignmentProjectCsvReplacementParameters,
   ReportAlignmentProjectUploadParameters,
   ReportAttachmentUploadParameters,
   ReportDatasetUploadParameters,
@@ -158,6 +160,20 @@ class DSRemoteWebknossosClient @Inject() (
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
       .postJsonWithJsonResponse[AlignmentProjectUploadInfo, AlignmentProjectUploadAdditionalInfo](info)
+
+  def reserveAlignmentProjectCsvReplacement(
+      alignmentProjectId: ObjectId
+  )(using tc: TokenContext): Fox[AlignmentProjectCsvReplacementInfo] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveAlignmentProjectCsvReplacement")
+      .addQueryParam("key", dataStoreKey)
+      .addQueryParam("alignmentProjectId", alignmentProjectId)
+      .withTokenFromContext
+      .postEmptyWithJsonResponse[AlignmentProjectCsvReplacementInfo]()
+
+  def reportAlignmentProjectCsvReplacement(parameters: ReportAlignmentProjectCsvReplacementParameters): Fox[?] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportAlignmentProjectCsvReplacement")
+      .addQueryParam("key", dataStoreKey)
+      .postJson[ReportAlignmentProjectCsvReplacementParameters](parameters)
 
   def reportAlignmentProjectUpload(parameters: ReportAlignmentProjectUploadParameters): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportAlignmentProjectUpload")

@@ -27,7 +27,12 @@ import { formatBytes, formatMilliCreditsString } from "libs/format_utils";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
 import { ColorWKBlue, ColorWKGold, ModalWidth } from "theme";
-import { getAlignmentRunTypeName, getSectionCount } from "./alignment_project_utils";
+import type { APIJob } from "types/api_types";
+import {
+  formatSectionRange,
+  getAlignmentRunTypeName,
+  getSectionCount,
+} from "./alignment_project_utils";
 
 const { Text, Title } = Typography;
 
@@ -43,6 +48,7 @@ type FormValues = {
 export function StartAlignmentProjectModal({
   project,
   sectionRange,
+  jobs,
   isOpen,
   onClose,
   onStarted,
@@ -50,6 +56,8 @@ export function StartAlignmentProjectModal({
   project: APIAlignmentProject;
   // Passed separately because only projects with a known section range can be aligned.
   sectionRange: SectionRange;
+  // The jobs of the project, used to suggest a versioned name for the output dataset.
+  jobs: APIJob[];
   isOpen: boolean;
   onClose: () => void;
   onStarted: () => void;
@@ -65,19 +73,28 @@ export function StartAlignmentProjectModal({
   const { data: folderHierarchy } = useFolderHierarchyQuery();
   const rootFolderId = folderHierarchy?.tree[0]?.key ?? null;
 
+  // Only successful jobs of the same kind produced a dataset with this suffix.
+  const previousOutputCount = jobs.filter(
+    (job) => job.state === "SUCCESS" && Boolean(job.args.renderUnaligned) === renderUnaligned,
+  ).length;
+  const projectName = project.name;
+
+  // The form only exists while the modal is open (destroyOnHidden), so these effects rerun on opening.
+  // They depend on primitive values only, so that refetched jobs don’t overwrite an edited name.
   useEffect(() => {
+    if (!isOpen) return;
     const suffix = renderUnaligned ? "unaligned" : "aligned";
     form.setFieldValue(
       "newDatasetName",
-      `${project.name.replace(/[^\w-]+/g, "_").toLowerCase()}_${suffix}_v${project.jobCount + 1}`,
+      `${projectName.replace(/[^\w-]+/g, "_").toLowerCase()}_${suffix}_v${previousOutputCount + 1}`,
     );
-  }, [form, project, renderUnaligned]);
+  }, [form, projectName, previousOutputCount, renderUnaligned, isOpen]);
 
   useEffect(() => {
-    if (rootFolderId != null && form.getFieldValue("folderId") == null) {
+    if (isOpen && rootFolderId != null && form.getFieldValue("folderId") == null) {
       form.setFieldValue("folderId", rootFolderId);
     }
-  }, [form, rootFolderId]);
+  }, [form, rootFolderId, isOpen]);
 
   const selectedSectionRange: SectionRange | null =
     sectionRangeMode !== "subset"
@@ -148,6 +165,7 @@ export function StartAlignmentProjectModal({
           layout="vertical"
           initialValues={{
             mode: "align",
+            folderId: rootFolderId,
             sectionRangeMode: "all",
             firstSection: minSection,
             lastSection: maxSection,
@@ -174,7 +192,7 @@ export function StartAlignmentProjectModal({
                   options={[
                     {
                       value: "all",
-                      label: `All sections (${minSection}–${maxSection})`,
+                      label: formatSectionRange(sectionRange, true),
                     },
                     { value: "subset", label: "Subset of sections" },
                   ]}

@@ -11,14 +11,13 @@ import { AiModelSelector } from "./ai_model_selector";
 import { ProofreadingNextStep } from "./proofreading_next_step";
 
 function RunAiModelSidebar() {
-  const { startedJob, resetStartedJob } = useRunAiModelJobContext();
+  const { startedJob } = useRunAiModelJobContext();
   if (startedJob == null) {
     return <RunAiModelCreditInformation />;
   }
   return (
     <JobStartedCard
       {...startedJob}
-      onStartAnother={resetStartedJob}
       nextStep={features().isWkorgInstance ? <ProofreadingNextStep /> : null}
     />
   );

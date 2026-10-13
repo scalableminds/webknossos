@@ -2,6 +2,8 @@ import { CheckCircleFilled } from "@ant-design/icons";
 import { Button, Card, Divider, Flex, Typography, theme } from "antd";
 import type React from "react";
 import type { CSSProperties } from "react";
+import { useDispatch } from "react-redux";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 
 export const smallCapsStyle: CSSProperties = {
   fontSize: 11,
@@ -12,7 +14,6 @@ export const smallCapsStyle: CSSProperties = {
 type JobStartedCardProps = {
   title: string;
   description: string;
-  onStartAnother: () => void;
   // Shown below a divider, e.g. a hint at what to do with the job's results.
   nextStep?: React.ReactNode;
 };
@@ -30,13 +31,9 @@ function JobStartedEyebrow() {
 }
 
 /** Replaces the credit information in an AI job tab's sidebar once its job has started. */
-export function JobStartedCard({
-  title,
-  description,
-  onStartAnother,
-  nextStep,
-}: JobStartedCardProps) {
+export function JobStartedCard({ title, description, nextStep }: JobStartedCardProps) {
   const { cssVar } = theme.useToken();
+  const dispatch = useDispatch();
   return (
     <Card style={{ boxShadow: cssVar.boxShadowTertiary }}>
       <Flex vertical gap="small">
@@ -53,8 +50,8 @@ export function JobStartedCard({
         <Button type="primary" block href="/jobs" target="_blank" rel="noopener noreferrer">
           View processing jobs
         </Button>
-        <Button block onClick={onStartAnother}>
-          Start another job
+        <Button block onClick={() => dispatch(setAIJobDrawerStateAction("invisible"))}>
+          Close
         </Button>
       </Flex>
       {nextStep != null ? (

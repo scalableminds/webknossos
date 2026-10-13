@@ -42,7 +42,6 @@ interface AlignmentJobContextType {
   requirements: JobRequirement[];
   stepStatuses: { task: StepStatus; settings: StepStatus };
   startedJob: StartedJob | null;
-  resetStartedJob: () => void;
 }
 
 const AlignmentJobContext = createContext<AlignmentJobContextType | undefined>(undefined);
@@ -56,7 +55,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
   const [settingsFormState, setSettingsFormState] = useState(EMPTY_FORM_VALIDATION_STATE);
   const [fineAlignmentOnly, setFineAlignmentOnly] = useState(false);
-  const { startedJob, setStartedJob, resetStartedJob } = useStartedJob();
+  const { startedJob, setStartedJob } = useStartedJob();
 
   const dataset = useWkSelector((state) => state.dataset);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
@@ -149,7 +148,6 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     requirements,
     stepStatuses,
     startedJob,
-    resetStartedJob,
   };
 
   return <AlignmentJobContext.Provider value={value}>{children}</AlignmentJobContext.Provider>;

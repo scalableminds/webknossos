@@ -106,7 +106,6 @@ interface AiTrainingJobContextType {
   requirements: JobRequirement[];
   stepStatuses: { task: StepStatus; trainingData: StepStatus; settings: StepStatus };
   startedJob: StartedJob | null;
-  resetStartedJob: () => void;
 }
 
 const AiTrainingJobContext = createContext<AiTrainingJobContextType | undefined>(undefined);
@@ -124,7 +123,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   const [comments, setComments] = useState("");
   const [instanceDiameterNm, setInstanceDiameterNm] = useState(1000.0);
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
-  const { startedJob, setStartedJob, resetStartedJob } = useStartedJob();
+  const { startedJob, setStartedJob } = useStartedJob();
 
   const currentAnnotation = useWkSelector((state) => state.annotation);
   const userBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
@@ -287,7 +286,6 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     requirements,
     stepStatuses,
     startedJob,
-    resetStartedJob,
   };
 
   return <AiTrainingJobContext.Provider value={value}>{children}</AiTrainingJobContext.Provider>;

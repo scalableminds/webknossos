@@ -7,11 +7,11 @@ import { AiTrainingModelSelector } from "./ai_training_model_selector";
 import { AiTrainingSettings } from "./ai_training_settings";
 
 function TrainingSidebar() {
-  const { startedJob, resetStartedJob } = useAiTrainingJobContext();
+  const { startedJob } = useAiTrainingJobContext();
   if (startedJob == null) {
     return <TrainingCreditInformation />;
   }
-  return <JobStartedCard {...startedJob} onStartAnother={resetStartedJob} />;
+  return <JobStartedCard {...startedJob} />;
 }
 
 export const AiModelTrainingJob = () => {

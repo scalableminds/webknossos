@@ -6,11 +6,11 @@ import { AiAlignmentModelSelector } from "./ai_alignment_model_selector";
 import { AiAlignmentSettings } from "./ai_alignment_settings";
 
 function AlignmentSidebar() {
-  const { startedJob, resetStartedJob } = useAlignmentJobContext();
+  const { startedJob } = useAlignmentJobContext();
   if (startedJob == null) {
     return <AlignmentCreditInformation />;
   }
-  return <JobStartedCard {...startedJob} onStartAnother={resetStartedJob} />;
+  return <JobStartedCard {...startedJob} />;
 }
 
 export const AiImageAlignmentJob = () => {

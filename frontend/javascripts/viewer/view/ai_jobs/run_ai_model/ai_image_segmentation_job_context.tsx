@@ -66,7 +66,6 @@ interface RunAiModelJobContextType {
   requirements: JobRequirement[];
   stepStatuses: { model: StepStatus; settings: StepStatus };
   startedJob: StartedJob | null;
-  resetStartedJob: () => void;
 }
 
 const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>(undefined);
@@ -103,7 +102,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       minimumMergerPathLengthInNm: 800,
     });
   const [settingsFormState, setSettingsFormState] = useState(EMPTY_FORM_VALIDATION_STATE);
-  const { startedJob, setStartedJob, resetStartedJob } = useStartedJob();
+  const { startedJob, setStartedJob } = useStartedJob();
 
   const skeletonAnnotation = useWkSelector((state) => state.annotation.skeleton);
   const userBoundingBoxCount = useWkSelector(
@@ -319,7 +318,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     requirements,
     stepStatuses,
     startedJob,
-    resetStartedJob,
   };
 
   return <RunAiModelJobContext.Provider value={value}>{children}</RunAiModelJobContext.Provider>;

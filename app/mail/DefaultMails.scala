@@ -9,7 +9,6 @@ import utils.WkConf
 import views.*
 
 import java.net.URI
-import java.util.Locale
 import javax.inject.Inject
 import scala.util.Try
 
@@ -263,36 +262,6 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
       recipients = List(multiUser.email)
     )
 
-  def storageWarningMail(
-      multiUser: MultiUser,
-      organization: Organization,
-      usedStorageBytes: Long,
-      includedStorageBytes: Long
-  ): Mail = {
-    val isExceeded = usedStorageBytes >= includedStorageBytes
-    val usagePercent = if (includedStorageBytes > 0) usedStorageBytes * 100 / includedStorageBytes else 100L
-    Mail(
-      from = defaultSender,
-      subject =
-        if (isExceeded) s"WEBKNOSSOS | Your organization ${organization.name} has used up its storage"
-        else s"WEBKNOSSOS | Your organization ${organization.name} has used $usagePercent% of its storage",
-      bodyHtml = html.mail
-        .storageWarning(
-          multiUser.fullName,
-          organization.name,
-          formatBytes(usedStorageBytes),
-          formatBytes(includedStorageBytes),
-          usagePercent,
-          isExceeded,
-          s"$uri/organization/overview",
-          additionalFooter
-        )
-        .body,
-      recipients = List(multiUser.email),
-      replyTo = List(supportEmail)
-    )
-  }
-
   def annotationSharedMail(
       multiUser: MultiUser,
       sharerName: String,
@@ -404,15 +373,6 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
     )
 
   private def annotationUrl(annotationId: ObjectId): String = s"$uri/annotations/$annotationId"
-
-  // Decimal units, matching how storage is shown in the organization overview.
-  private def formatBytes(numBytes: Long): String = {
-    val units = List("B", "KB", "MB", "GB", "TB", "PB")
-    val exponent =
-      if (numBytes < 1000) 0 else math.min((math.log10(numBytes.toDouble) / 3).toInt, units.length - 1)
-    val value = numBytes / math.pow(1000, exponent)
-    if (exponent == 0) s"$numBytes B" else "%.1f %s".formatLocal(Locale.ROOT, value, units(exponent))
-  }
 
   def emailVerificationMail(multiUser: MultiUser, key: String): Mail = {
     val linkExpiry = conf.WebKnossos.User.EmailVerification.linkExpiry

@@ -84,11 +84,6 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.pricingPlanExpiryReminder.tickerInterval")
     }
 
-    object StorageWarning {
-      val enabled: Boolean = get[Boolean]("webKnossos.storageWarning.enabled")
-      val thresholdsPercent: List[Int] = getList[Int]("webKnossos.storageWarning.thresholdsPercent")
-    }
-
     object SampleOrganization {
       val enabled: Boolean = get[Boolean]("webKnossos.sampleOrganization.enabled")
 
@@ -139,7 +134,6 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
         Tasks,
         Cache,
         PricingPlanExpiryReminder,
-        StorageWarning,
         SampleOrganization,
         FetchUsedStorage,
         TermsOfService,

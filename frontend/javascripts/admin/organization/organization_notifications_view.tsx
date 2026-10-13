@@ -1,16 +1,14 @@
-import { MailOutlined, SaveOutlined } from "@ant-design/icons";
+import { MailOutlined, RobotOutlined, SaveOutlined, UserAddOutlined } from "@ant-design/icons";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { unwrapOrThrow } from "admin/api/api_result";
-import { updateOrganization } from "admin/api/organization";
-import { getUsers } from "admin/rest_api";
 import { Button, Col, Form, Input, Row } from "antd";
-import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
-import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import {
+  useActiveOrganization,
+  useCanManageOrganization,
+  useOrganizationUsers,
+  useUpdateActiveOrganization,
+} from "./organization_hooks";
 
 const FormItem = Form.Item;
 
@@ -20,33 +18,17 @@ type FormValues = {
 };
 
 export function OrganizationNotificationsView() {
-  const dispatch = useDispatch();
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
+  const organization = useActiveOrganization();
+  const updateActiveOrganization = useUpdateActiveOrganization();
+  const canManageOrganization = useCanManageOrganization();
   const [form] = Form.useForm<FormValues>();
-  const [ownerEmail, setOwnerEmail] = useState<string>("");
-
-  useEffect(() => {
-    async function fetchOwnerEmail() {
-      const users = unwrapOrThrow(await getUsers());
-      const owner = users.find(
-        (user) => user.isOrganizationOwner && user.organization === organization.id,
-      );
-      if (owner) {
-        setOwnerEmail(owner.email);
-      }
-    }
-    fetchOwnerEmail();
-  }, [organization.id]);
+  const { data: users = [] } = useOrganizationUsers();
+  const ownerEmail =
+    users.find((user) => user.isOrganizationOwner && user.organization === organization.id)
+      ?.email ?? "";
 
   async function onFinish(formValues: FormValues) {
-    const updatedOrganization = await updateOrganization(
-      organization.id,
-      organization.name,
-      formValues.newUserMailingList,
-    );
-    dispatch(setActiveOrganizationAction(updatedOrganization));
+    await updateActiveOrganization({ newUserMailingList: formValues.newUserMailingList });
     Toast.success("Notification settings were saved successfully.");
   }
 
@@ -55,8 +37,8 @@ export function OrganizationNotificationsView() {
       <Form
         form={form}
         onFinish={onFinish}
-        style={{ marginTop: 10 }}
         layout="inline"
+        disabled={!canManageOrganization}
         initialValues={{
           newUserMailingList: organization.newUserMailingList,
         }}
@@ -101,6 +83,7 @@ export function OrganizationNotificationsView() {
           <SettingsCard
             title="WEBKNOSSOS Plan & Subscription"
             tooltip="Get notified when your WK subscription is about to expire or reach user and storage limits."
+            icon={<MailOutlined />}
             content={ownerEmail}
           />
         </Col>
@@ -108,6 +91,7 @@ export function OrganizationNotificationsView() {
           <SettingsCard
             title="AI Job Completion"
             tooltip="Get notified when a background conversion or AI job is completed."
+            icon={<RobotOutlined />}
             content="Users are notified individually."
           />
         </Col>
@@ -115,8 +99,11 @@ export function OrganizationNotificationsView() {
           <SettingsCard
             title="New User Signup"
             tooltip="Get notified when a new user signs up to your organization."
-            content={getNewUserNotificationsSettings()}
-          />
+            icon={<UserAddOutlined />}
+            content="Mailing list"
+          >
+            {getNewUserNotificationsSettings()}
+          </SettingsCard>
         </Col>
       </Row>
     </>

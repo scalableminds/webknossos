@@ -272,12 +272,7 @@ PATCH         /organizations/:organizationId                                    
 DELETE        /organizations/:organizationId                                                    controllers.OrganizationController.delete(organizationId: String)
 POST          /organizations/:organizationId/addUser                                            controllers.OrganizationController.addUser(organizationId: String)
 GET           /operatorData                                                                     controllers.OrganizationController.getOperatorData()
-POST          /pricing/requestExtension                                                         controllers.OrganizationController.sendExtendPricingPlanEmail()
-POST          /pricing/requestUpgrade                                                           controllers.OrganizationController.sendUpgradePricingPlanEmail(requestedPlan: String)
-POST          /pricing/requestUsers                                                             controllers.OrganizationController.sendUpgradePricingPlanUsersEmail(requestedUsers: Int)
-POST          /pricing/requestStorage                                                           controllers.OrganizationController.sendUpgradePricingPlanStorageEmail(requestedStorage: Int)
-POST          /pricing/requestCredits                                                           controllers.OrganizationController.sendOrderCreditsEmail(requestedCredits: Int)
-POST          /pricing/requestAiAddon                                                           controllers.OrganizationController.sendUpgradeAiAddonEmail()
+POST          /pricing/upgradeRequest                                                           controllers.OrganizationController.sendUpgradeRequestEmail()
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus()
 POST          /pricing/updatePlan                                                               controllers.OrganizationController.updatePlan()
 GET           /pricing/planUpdates                                                              controllers.OrganizationController.listPlanUpdates

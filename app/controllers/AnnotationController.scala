@@ -470,13 +470,12 @@ class AnnotationController @Inject() (
         teamIdsValidated <- Fox.serialCombined(request.body)(ObjectId.fromString)
         _ <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_)) ?~> Msg.Annotation.Edit.accessingTeamFailed
         oldTeams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
-        _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated)
-        _ = notificationMailService.notifyAnnotationSharedWithTeams(
+        _ <- notificationMailService.updateAnnotationTeamsAndNotify(
           annotation,
           oldTeams.map(_._id),
           teamIdsValidated,
           request.identity
-        )
+        )(annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated))
       } yield Ok(Json.toJson(teamIdsValidated))
     }
 

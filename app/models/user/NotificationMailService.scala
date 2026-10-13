@@ -1,18 +1,18 @@
 package models.user
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.box.Failure
+import com.scalableminds.util.box.{Failure, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, Mail, Send}
-import models.annotation.Annotation
+import models.annotation.{Annotation, AnnotationDAO}
 import models.dataset.{Dataset, DatasetDAO}
 import models.organization.OrganizationDAO
 import models.project.Project
 import models.task.{Task, TaskTypeDAO}
-import models.team.{TeamDAO, TeamMembership}
+import models.team.{Team, TeamDAO, TeamMembership}
 import org.apache.pekko.actor.ActorSystem
 import utils.WkConf
 
@@ -28,6 +28,7 @@ class NotificationMailService @Inject() (
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     teamDAO: TeamDAO,
+    annotationDAO: AnnotationDAO,
     datasetDAO: DatasetDAO,
     organizationDAO: OrganizationDAO,
     taskTypeDAO: TaskTypeDAO,
@@ -51,33 +52,34 @@ class NotificationMailService @Inject() (
   private def accessChangesEnabled: Boolean = conf.Mail.Notifications.accessChanges
   private def taskAssignmentsEnabled: Boolean = conf.Mail.Notifications.manualTaskAssignments
 
-  def notifyAnnotationSharedWithTeams(
+  // Runs the update of the teams the annotation is shared with, then notifies users who now see it in their list.
+  def updateAnnotationTeamsAndNotify[T](
       annotation: Annotation,
       oldTeamIds: List[ObjectId],
       newTeamIds: List[ObjectId],
       sharer: User
-  ): Unit = {
-    val addedTeamIds = newTeamIds.filterNot(oldTeamIds.contains)
-    if (accessChangesEnabled && addedTeamIds.nonEmpty)
-      inBackground(s"annotation ${annotation._id} shared with teams $addedTeamIds") {
-        for {
-          addedTeams <- teamDAO.findAllByIds(addedTeamIds)
-          recipients <- newlyReachedUsers(addedTeamIds, oldTeamIds, exclude = Set(sharer._id, annotation._user))
-          dataset <- datasetDAO.findOne(annotation._dataset)
-          sharerMultiUser <- multiUserDAO.findOne(sharer._multiUser)
-          _ <- sendToEach(recipients) { case (recipient, recipientTeamIds) =>
-            defaultMails.annotationSharedMail(
-              recipient,
-              sharerMultiUser.fullName,
-              annotation._id,
-              annotationName(annotation),
-              dataset.name,
-              addedTeams.filter(team => recipientTeamIds.contains(team._id)).map(_.name)
-            )
-          }
-        } yield ()
-      }
-  }
+  )(update: => Fox[T]): Fox[T] =
+    updateAndNotifyNewlyAllowedTeamMembers(
+      s"annotation ${annotation._id} shared with teams",
+      newTeamIds.filterNot(oldTeamIds.contains),
+      exclude = Set(sharer._id, annotation._user),
+      annotationDAO.findUserIdsWithListAccess(annotation._id, _)
+    )(update) { (recipients, addedTeams) =>
+      for {
+        dataset <- datasetDAO.findOne(annotation._dataset)
+        sharerMultiUser <- multiUserDAO.findOne(sharer._multiUser)
+        _ <- sendToEach(recipients) { case (recipient, recipientTeamIds) =>
+          defaultMails.annotationSharedMail(
+            recipient,
+            sharerMultiUser.fullName,
+            annotation._id,
+            annotationName(annotation),
+            dataset.name,
+            addedTeams.filter(team => recipientTeamIds.contains(team._id)).map(_.name)
+          )
+        }
+      } yield ()
+    }
 
   // Expects the annotation as it is after the transfer, i.e. owned by the new owner.
   def notifyAnnotationTransferred(annotation: Annotation, issuer: User): Unit =
@@ -104,39 +106,34 @@ class NotificationMailService @Inject() (
         } yield ()
       }
 
-  /* Old and new team ids are those the dataset itself is shared with. Teams that have access through the dataset’s
-     folder, as well as admins and dataset managers, could already see the dataset before and are not notified. */
-  def notifyDatasetSharedWithTeams(
+  /* Runs the update of the teams the dataset itself is shared with, then notifies users who can now see it.
+     Users that could already see it before, e.g. admins, dataset managers, members of teams allowed for its folder, or
+     everyone if it is public, are not notified. */
+  def updateDatasetTeamsAndNotify[T](
       dataset: Dataset,
       oldTeamIds: List[ObjectId],
       newTeamIds: List[ObjectId],
       sharer: User
-  ): Unit = {
-    val addedTeamIds = newTeamIds.filterNot(oldTeamIds.contains)
-    if (accessChangesEnabled && addedTeamIds.nonEmpty)
-      inBackground(s"dataset ${dataset._id} shared with teams $addedTeamIds") {
-        for {
-          folderTeamIds <- teamDAO.findAllowedTeamIdsCumulativeForFolder(dataset._folder)
-          previousTeamIds = (oldTeamIds ++ folderTeamIds).distinct
-          newlyAllowedTeamIds = addedTeamIds.filterNot(previousTeamIds.contains)
-          newlyAllowedTeams <- teamDAO.findAllByIds(newlyAllowedTeamIds)
-          recipients <- newlyReachedUsers(newlyAllowedTeamIds, previousTeamIds, exclude = Set(sharer._id))
-          recipientsWithoutAccessBefore = recipients.filterNot { case (user, _) =>
-            user.isAdmin || user.isDatasetManager
-          }
-          sharerMultiUser <- multiUserDAO.findOne(sharer._multiUser)
-          _ <- sendToEach(recipientsWithoutAccessBefore) { case (recipient, recipientTeamIds) =>
-            defaultMails.datasetSharedMail(
-              recipient,
-              sharerMultiUser.fullName,
-              dataset._id,
-              dataset.name,
-              newlyAllowedTeams.filter(team => recipientTeamIds.contains(team._id)).map(_.name)
-            )
-          }
-        } yield ()
-      }
-  }
+  )(update: => Fox[T]): Fox[T] =
+    updateAndNotifyNewlyAllowedTeamMembers(
+      s"dataset ${dataset._id} shared with teams",
+      newTeamIds.filterNot(oldTeamIds.contains),
+      exclude = Set(sharer._id),
+      datasetDAO.findUserIdsWithReadAccess(dataset._id, _)
+    )(update) { (recipients, addedTeams) =>
+      for {
+        sharerMultiUser <- multiUserDAO.findOne(sharer._multiUser)
+        _ <- sendToEach(recipients) { case (recipient, recipientTeamIds) =>
+          defaultMails.datasetSharedMail(
+            recipient,
+            sharerMultiUser.fullName,
+            dataset._id,
+            dataset.name,
+            addedTeams.filter(team => recipientTeamIds.contains(team._id)).map(_.name)
+          )
+        }
+      } yield ()
+    }
 
   /* Only changes to users that stay active are announced. Users that were just activated already get the activation
      mail, so changes during their first hour after the activation are not announced separately. */
@@ -188,22 +185,49 @@ class NotificationMailService @Inject() (
         )
       }
 
-  /* The members of the given teams that were not already members of one of the previous teams, each with the given
-     teams they are a member of. Deactivated and unlisted users are left out. */
-  private def newlyReachedUsers(
-      teamIds: List[ObjectId],
-      previousTeamIds: List[ObjectId],
-      exclude: Set[ObjectId]
-  ): Fox[List[(User, List[ObjectId])]] =
+  /* Determines who has access before and after the update via the same access queries that decide what users see, so
+     that only members of the added teams who actually gain access are notified. Failing to determine the access before
+     the update only skips the notification, it never fails the update itself. */
+  private def updateAndNotifyNewlyAllowedTeamMembers[T](
+      description: String,
+      addedTeamIds: List[ObjectId],
+      exclude: Set[ObjectId],
+      findUserIdsWithAccess: List[ObjectId] => Fox[Seq[ObjectId]]
+  )(update: => Fox[T])(notify: (List[(User, List[ObjectId])], List[Team]) => Fox[Unit]): Fox[T] =
+    if (!accessChangesEnabled || addedTeamIds.isEmpty) update
+    else
+      for {
+        candidatesBeforeBox <- (for {
+          candidates <- membersOfTeams(addedTeamIds, exclude)
+          userIdsWithAccessBefore <- findUserIdsWithAccess(candidates.map(_._1._id))
+        } yield (candidates, userIdsWithAccessBefore.toSet)).shiftBox
+        result <- update
+        _ = candidatesBeforeBox match {
+          case Full((candidates, userIdsWithAccessBefore)) =>
+            inBackground(description) {
+              for {
+                userIdsWithAccessAfter <- findUserIdsWithAccess(candidates.map(_._1._id))
+                recipients = candidates.filter { case (user, _) =>
+                  userIdsWithAccessAfter.contains(user._id) && !userIdsWithAccessBefore.contains(user._id)
+                }
+                addedTeams <- teamDAO.findAllByIds(addedTeamIds)
+                _ <- Fox.runIf(recipients.nonEmpty)(notify(recipients, addedTeams))
+              } yield ()
+            }
+          case f => logger.warn(s"Could not send notification mail for $description: $f")
+        }
+      } yield result
+
+  /* The members of the given teams, each with the given teams they are a member of.
+     Deactivated and unlisted users are left out. */
+  private def membersOfTeams(teamIds: List[ObjectId], exclude: Set[ObjectId]): Fox[List[(User, List[ObjectId])]] =
     for {
-      previousMembers <- userDAO.findAllByTeams(previousTeamIds)
-      previousMemberIds = previousMembers.map(_._id).toSet
       membersPerTeam <- Fox.serialCombined(teamIds)(teamId => userDAO.findAllByTeams(List(teamId)).map(teamId -> _))
       memberships = membersPerTeam.flatMap { case (teamId, members) => members.map(_ -> teamId) }
       teamIdsPerUserId = memberships.groupMap(_._1._id)(_._2)
       users = memberships.map(_._1).distinctBy(_._id)
     } yield users
-      .filterNot(user => user.isUnlisted || previousMemberIds.contains(user._id) || exclude.contains(user._id))
+      .filterNot(user => user.isUnlisted || exclude.contains(user._id))
       .map(user => user -> teamIdsPerUserId.getOrElse(user._id, List.empty))
 
   private def sendToEach(recipients: List[(User, List[ObjectId])])(

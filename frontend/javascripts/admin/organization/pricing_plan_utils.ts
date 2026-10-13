@@ -58,7 +58,8 @@ export const aiAddonFeatures = [
 export const maxIncludedUsersInPersonalPlan = 1;
 
 // Paid plans are highlighted as expiring once they are this close to their end date.
-export const PLAN_EXPIRATION_REMINDER_DAYS = 30;
+// Matches the six weeks after which the backend reports the plan as almost exceeded.
+export const PLAN_EXPIRATION_REMINDER_DAYS = 6 * 7;
 
 // Below this many credits, the balance is shown as low.
 const LOW_CREDIT_BALANCE = 10;
@@ -146,9 +147,14 @@ export function formatIncludedUsers(includedUsers: number): string {
 }
 
 // Keeps round amounts in their natural unit ("100 GB", not "0.1 TB") without a trailing ".0".
+// Rounds down, so usage just below a limit doesn't read as the limit ("1.96 TB" → "1.9 TB").
 export function formatStorage(bytes: number): string {
   if (!Number.isFinite(bytes)) return "∞";
-  return formatCountToDataAmountUnit(bytes).replace(/\.0(?=\D)/, "");
+  const unitFactor = bytes >= 1000 ? 1000 ** Math.min(4, Math.floor(Math.log10(bytes) / 3)) : 1;
+  // One decimal in the target unit. Plain bytes are formatted without decimals anyway.
+  const step = unitFactor >= 1000 ? unitFactor / 10 : 1;
+  const roundedDownBytes = Math.floor(bytes / step) * step;
+  return formatCountToDataAmountUnit(roundedDownBytes).replace(/\.0(?=\D)/, "");
 }
 
 export function isTrialPlan(pricingPlan: PricingPlanEnum): boolean {

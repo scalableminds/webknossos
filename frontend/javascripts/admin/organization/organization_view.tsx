@@ -7,7 +7,7 @@ import {
 } from "@ant-design/icons";
 import { Breadcrumb, Flex, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
-import { Outlet, useLocation, useNavigate } from "react-router";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router";
 import constants from "viewer/constants";
 import { useCanManageOrganization } from "./organization_hooks";
 import { OrganizationSidebarPlanHint } from "./organization_sidebar_plan_hint";
@@ -82,6 +82,11 @@ const OrganizationView = () => {
       .split("/")
       .filter((p) => p.length > 0)
       .pop() || "overview";
+
+  // The menu hides these pages, but they can still be opened by URL.
+  if (!canManageOrganization && ADMIN_ONLY_MENU_KEYS.includes(selectedKey)) {
+    return <Navigate to="/organization/overview" replace />;
+  }
 
   const breadcrumbItems = [
     {

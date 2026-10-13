@@ -64,26 +64,30 @@ export function SettingsCard({
   };
 
   // Cards without an icon keep the plain value style, since their content is usually a form.
-  const valueRow =
-    icon != null ? (
+  // A div (not Typography.Text's span) wraps the value, since it may be a control like a button.
+  let valueRow: React.ReactNode = null;
+  if (content != null && icon != null) {
+    valueRow = (
       <Flex align="center" gap={8}>
         <span style={{ fontSize: 20, lineHeight: 1, color: token.colorPrimary, flex: "none" }}>
           {icon}
         </span>
-        <Typography.Text
-          strong
+        <div
           style={{
             fontSize: size === "stat" ? 20 : 16,
+            fontWeight: token.fontWeightStrong,
+            color: token.colorText,
             minWidth: 0,
             overflowWrap: "anywhere",
           }}
         >
           {content}
-        </Typography.Text>
+        </div>
       </Flex>
-    ) : (
-      <div style={{ fontSize: 16 }}>{content}</div>
     );
+  } else if (content != null) {
+    valueRow = <div style={{ fontSize: 16 }}>{content}</div>;
+  }
 
   return (
     <Card

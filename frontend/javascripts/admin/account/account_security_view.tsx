@@ -167,8 +167,9 @@ function AccountSecurityView() {
     {
       title: "Password",
       icon: <LockOutlined />,
-      content: "•••••••••••",
-      hint: "Changing it logs you out on all devices",
+      // While editing, the form replaces the value and already explains the logout.
+      content: isResetPasswordVisible ? null : "•••••••••••",
+      hint: isResetPasswordVisible ? null : "Changing it logs you out on all devices",
       children: getPasswordComponent(),
       action: (
         <Button

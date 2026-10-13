@@ -76,7 +76,8 @@ function AccountProfileView() {
     {
       title: "Name",
       icon: <UserOutlined />,
-      content: formatUserName(activeUser, activeUser),
+      // While editing, the form replaces the value.
+      content: isChangeNameVisible ? null : formatUserName(activeUser, activeUser),
       children: isChangeNameVisible ? (
         <ChangeUsernameView
           user={activeUser}
@@ -97,7 +98,7 @@ function AccountProfileView() {
     {
       title: "Email",
       icon: <MailOutlined />,
-      content: activeUser.email,
+      content: isChangeEmailVisible ? null : activeUser.email,
       hint: "Used for login and notification emails",
       children: isChangeEmailVisible ? (
         <ChangeEmailView onCancel={() => setChangeEmailVisible(false)} />

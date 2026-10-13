@@ -35,7 +35,8 @@ export function useCanManageOrganization(): boolean {
   );
 }
 
-// All organization pages share this query, so switching between them doesn't refetch the users.
+// All organization pages share this query, so switching between them shows the cached users
+// right away while they are refetched in the background.
 export function useOrganizationUsers() {
   const query = useApi({
     queryKey: ["users"],

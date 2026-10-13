@@ -2,11 +2,7 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanStatus } from "admin/api/organization";
 import { Col, Row, Space, Spin } from "antd";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
-import {
-  PlanAboutToExceedAlert,
-  PlanExceededAlert,
-  PlanExpirationCard,
-} from "./organization_cards";
+import { PlanExceededAlert, PlanExpirationCard } from "./organization_cards";
 import { useActiveOrganization, useOrganizationUsers } from "./organization_hooks";
 import {
   AiAddonCard,
@@ -18,12 +14,13 @@ import {
   UsersQuotaCard,
 } from "./organization_stat_cards";
 import { UpgradeOfferCards } from "./plan_upgrade_cards";
-import { getActiveUserCount } from "./pricing_plan_utils";
+import { getActiveUserCount, hasPricingPlanExpired } from "./pricing_plan_utils";
 
 export function OrganizationOverviewView() {
   const organization = useActiveOrganization();
-  const { data: users = [], isFetching: isFetchingUsers } = useOrganizationUsers();
-  const { data: pricingPlanStatus, isFetching: isFetchingPlanStatus } = useQueryWithErrorHandling(
+  // Cached data is shown right away, so only spin while there is none yet.
+  const { data: users = [], isLoading: isLoadingUsers } = useOrganizationUsers();
+  const { data: pricingPlanStatus, isLoading: isLoadingPlanStatus } = useQueryWithErrorHandling(
     { queryKey: ["pricingPlanStatus"], queryFn: getPricingPlanStatus },
     "Could not load pricing plan status.",
   );
@@ -31,12 +28,12 @@ export function OrganizationOverviewView() {
   return (
     <>
       <SettingsTitle title={organization.name} description="Manage your organization." />
-      {pricingPlanStatus?.isExceeded ? <PlanExceededAlert organization={organization} /> : null}
-      {pricingPlanStatus?.isAlmostExceeded && !pricingPlanStatus.isExceeded ? (
-        <PlanAboutToExceedAlert organization={organization} />
+      {/* PlanExpirationCard already covers expired and expiring plans, so only over-limit usage gets an alert. */}
+      {pricingPlanStatus?.isExceeded && !hasPricingPlanExpired(organization) ? (
+        <PlanExceededAlert organization={organization} />
       ) : null}
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <Spin spinning={isFetchingUsers || isFetchingPlanStatus}>
+        <Spin spinning={isLoadingUsers || isLoadingPlanStatus}>
           <Space orientation="vertical" size={24} style={{ width: "100%" }}>
             <Row gutter={[24, 24]}>
               <Col span={8}>

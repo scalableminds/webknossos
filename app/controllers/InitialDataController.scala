@@ -24,8 +24,11 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   DataFormat,
+  DataLayerAttachments,
   DataSourceId,
   ElementClass,
+  LayerAttachment,
+  LayerAttachmentDataformat,
   StaticColorLayer,
   StaticSegmentationLayer,
   UsableDataSource
@@ -374,6 +377,69 @@ Samplecountry
     l4SampleRemoteCopy("6ac000000000000000000005", "l4_sample_remote_5", singleDatasetPublication, "Cortex L4")
   )
 
+  // Full l4dense dataset of the Motta et al. 2019 paper, including predictions and segmentation attachments.
+  private val l4DenseBaseUrl = "https://static.webknossos.org/data/l4dense_motta_et_al_demo"
+  private val l4DenseBoundingBox = BoundingBox(Vec3Int(128, 128, 128), 5445, 8380, 3285)
+  private val l4DenseMagList =
+    Vec3Int(1, 1, 1) :: Vec3Int(2, 2, 1) :: (2 to 10).map(i => Vec3Int(1 << i, 1 << i, 1 << (i - 1))).toList
+  private def l4DenseMags(layerName: String) = l4DenseMagList.map { mag =>
+    val magPath = if (mag == Vec3Int(1, 1, 1)) "1" else s"${mag.x}-${mag.y}-${mag.z}"
+    MagLocator(
+      mag = mag,
+      path = Some(UPath.fromStringUnsafe(s"$l4DenseBaseUrl/$layerName/$magPath")),
+      axisOrder = Some(AxisOrder(1, 2, Some(3), Some(0)))
+    )
+  }
+  private def l4DenseAttachment(name: String, subPath: String) =
+    LayerAttachment(
+      name,
+      UPath.fromStringUnsafe(s"$l4DenseBaseUrl/segmentation/$subPath/$name"),
+      LayerAttachmentDataformat.zarr3
+    )
+  private val l4DenseDataSource = UsableDataSource(
+    id = DataSourceId("l4dense_motta_et_al_demo", defaultOrganization._id),
+    dataLayers = List(
+      StaticColorLayer(
+        name = "color",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = l4DenseBoundingBox,
+        elementClass = ElementClass.uint8,
+        mags = l4DenseMags("color")
+      ),
+      StaticColorLayer(
+        name = "predictions",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = BoundingBox(Vec3Int(0, 0, 0), 5632, 8704, 3584),
+        elementClass = ElementClass.uint24,
+        mags = l4DenseMags("predictions")
+      ),
+      StaticSegmentationLayer(
+        name = "segmentation",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = l4DenseBoundingBox,
+        elementClass = ElementClass.uint32,
+        mags = l4DenseMags("segmentation"),
+        attachments = Some(
+          DataLayerAttachments(
+            meshes = Seq(l4DenseAttachment("meshfile_4-4-2", "meshes")),
+            agglomerates = (5 to 100 by 5).map(i => l4DenseAttachment(s"agglomerate_view_$i", "agglomerates")),
+            segmentIndex = Some(l4DenseAttachment("segmentIndex", "segmentIndex")),
+            connectomes = Seq(l4DenseAttachment("paper_l4_full_connectome", "connectomes"))
+          )
+        ),
+        largestSegmentId = Some(2504697)
+      )
+    ),
+    scale = VoxelSize(Vec3Double(11.239999771118164, 11.239999771118164, 28), LengthUnit.nanometer)
+  )
+  private val l4DenseDataset = defaultDataset.copy(
+    _id = ObjectId("6ac000000000000000000006"),
+    inboxSourceHash = Some(l4DenseDataSource.hashCode()),
+    directoryName = l4DenseDataSource.id.directoryName,
+    name = l4DenseDataSource.id.directoryName,
+    voxelSize = Some(l4DenseDataSource.scale)
+  )
+
   private val remoteNDZarrDataSource = UsableDataSource(
     id = DataSourceId("tubhiswt-4D", defaultOrganization._id),
     dataLayers = List(
@@ -459,6 +525,7 @@ Samplecountry
       _ <- insertPublication()
       _ <- insertDataset()
       _ <- insertPublicationDatasets()
+      _ <- insertL4DenseDataset()
       _ <- insertRemoteNDDataset()
       _ <- insertCustomAiModel()
 
@@ -589,6 +656,8 @@ Samplecountry
     Fox.serialCombined(publicationDatasets) { case (dataset, dataSource) =>
       insertDatasetIfAbsent(dataset, dataSource)
     }
+
+  private def insertL4DenseDataset(): Fox[?] = insertDatasetIfAbsent(l4DenseDataset, l4DenseDataSource)
 
   private def insertRemoteNDDataset(): Fox[?] = insertDatasetIfAbsent(remoteNDZarrDataset, remoteNDZarrDataSource)
 

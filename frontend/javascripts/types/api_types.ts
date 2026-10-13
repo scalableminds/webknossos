@@ -521,11 +521,10 @@ export type EditableLayerProperties = {
 export type AnnotationCollaborationMode = "OwnerOnly" | "Exclusive" | "Concurrent";
 export const AnnotationCollaborationModes = ["OwnerOnly", "Exclusive", "Concurrent"] as const;
 
-// Set if the annotation is a layer alignment: its landmarks map the moving layer onto the
-// fixed layer of the dataset.
+// Set if the annotation is a layer alignment: its landmarks map the other layers of the
+// dataset onto the fixed layer.
 export type APILayerAlignment = {
   readonly fixedLayerName: string;
-  readonly movingLayerName: string;
 };
 
 export type APIAnnotationInfo = {

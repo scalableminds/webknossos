@@ -2,7 +2,7 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-10-13 (v20 — alignment always computed, `t` switches aligned/untransformed per view, optional green/magenta overlay, §0.29; v19 — stable pairs via pair ids in tree names, §0.28; v18 — pairing made visible: same color per pair, focus on hover, next-step hint, select and delete pairs in the table, §0.27; v17 — landmark download as BigWarp CSV / NML for the dataset composition, §0.25; v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
+Last updated: 2026-10-13 (v21 — one alignment annotation per fixed layer, the right view switches between the moving layers, §0.30; v20 — alignment always computed, `t` switches aligned/untransformed per view, optional green/magenta overlay, §0.29; v19 — stable pairs via pair ids in tree names, §0.28; v18 — pairing made visible: same color per pair, focus on hover, next-step hint, select and delete pairs in the table, §0.27; v17 — landmark download as BigWarp CSV / NML for the dataset composition, §0.25; v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
@@ -69,6 +69,8 @@ items say what was decided and why.
 ---
 
 ## Next iteration: alignment annotations stored in the backend (design decided 2026-10-09)
+
+> Partly replaced by §0.30 (one annotation per fixed layer instead of per layer pair). The backend storage, routes, list, editability rules and redirect stay.
 
 Decided in a question-and-answer round with Michael (2026-10-09). The numbers Q1-Q21 refer
 to that round and are listed in the decision log at the end of this section. Michael's
@@ -296,10 +298,14 @@ Michael wants a stack later, once the whole feature is done. Planned layers, bot
 | Q21 | Renamed/deleted layer | Error message, row marks the missing layer | Backend updates rows on rename (follow-up) |
 
 ### Follow-ups (not in this iteration)
-- Preselect the fixed layer used most often by the dataset's existing alignments, and warn
-  when the chosen fixed layer is the moving layer of another alignment (Q17: option b).
+- ~~Preselect the fixed layer used most often, warn about chains (Q17: option b)~~ and
+  ~~chains (Q6: option c)~~: obsolete with §0.30, where every alignment is a star
+  around its fixed layer.
 - Update the alignment rows in the backend when a dataset layer is renamed (Q21: option b).
-- Chains (2 → 1, then 3 → 2), e.g. by recomputing dependent layers (Q6: option c).
+- Copying both sides of another pair (not only the fixed-layer landmarks), if users ask for
+  it (§0.30).
+- Fast switching of the moving layer without reloading the workers (needs a way to clear the
+  undo history, see §0.30).
 - "Last opened" tracking for annotations, for a better sort order (Q10: option b).
 - Opening shared alignments for editing by team members (Q3: option b).
 - Read-only alignment view (instead of only offering a copy).
@@ -310,11 +316,7 @@ Michael wants a stack later, once the whole feature is done. Planned layers, bot
   view gets a suggested partner in the other view, computed with the transform; the user only
   corrects it. BigWarp has something related (Ctrl+Shift+click places a point in the other
   image's space).
-- **One alignment annotation per dataset** (Michael's idea, 2026-10-13, to be designed
-  together): the left view is locked to the reference layer, the right view can switch between
-  all other layers. Landmarks of all pairs live in one annotation, all layers are aligned
-  together, and the effect is visible directly. Would replace the per-pair annotations and the
-  star workflow above.
+- **One alignment annotation per dataset**: implemented on 2026-10-13, see §0.30.
 
 ---
 
@@ -1467,9 +1469,50 @@ From the UX review with Michael:
   `SaveState` (`reportBigWarpStoreSavedState`, "saving" while `isSaving`), and the page counts
   landmarks that are not copied into the annotation yet as unsaved. The `forceSave` worker
   command is gone.
-- **Pair table:** after comparing a layout with coordinates (scrolls sideways), Michael chose
-  the compact one: Name | Left/Right color dots (position on hover, "missing" in warning
-  color) | Error (length in the dataset unit, left-aligned) | Delete.
+- **Pair table:** after comparing it with a compact layout (color dots only), Michael chose
+  the one with coordinates: # (color dot + pair id) | Error (length in the dataset unit,
+  left-aligned) | Left/Right positions ("missing" in warning color) | Delete. It scrolls sideways.
+
+### 0.30 One alignment annotation per fixed layer (2026-10-13, decided with Michael)
+
+Before, each alignment annotation belonged to one layer pair, so a dataset with n layers needed
+n − 1 annotations. Now an alignment annotation belongs to one **fixed layer** and holds the
+landmarks of all other layers (**moving layers**). The left view always shows the fixed layer,
+the right view one moving layer, chosen with the URL param `?layer=` (default: the first
+non-fixed layer). The plan for this was written in `~/.claude/plans/glittery-splashing-stream.md`.
+**Not tried in a browser yet.**
+
+Decisions (with reasons):
+- **Landmarks per moving layer, also on the fixed side.** Tree groups:
+  `<moving>` → `<fixed> landmarks` / `<moving> landmarks` (`getLandmarkGroupPath`). Shared
+  fixed-side landmarks would save clicks, but a structure visible in one layer may be missing in
+  another, and moving a shared landmark would silently change every alignment.
+- **Switching remounts the workspace** (the moving layer is part of its `key`), after
+  `flushAndStopSync` (writes the last changes) and a save. **Fast switching inside the workers
+  is not possible yet:** WK can't clear the undo history (`undo_saga.ts`), so Ctrl+Z after a
+  switch would put the previous layer's landmarks into the new layer's view, and the sync would
+  store them there. A cheaper speed-up: keep the store iframe mounted across switches.
+- **Inactive pairs are read once** (`use_inactive_pairs.ts`, `findTreeGroupPath` creates no
+  groups) and their transforms are cached. Only the active pair is estimated on each change.
+  The left worker gets the transforms of all moving layers, so the user can show them in the
+  left sidebar and see all layers aligned.
+- **Workers ignore the transforms stored in the dataset** (`applyBigWarpWorkerSettings` sets all
+  layer transforms to null). Before, the preview was chained with the inverse of the natively
+  rendered layer's stored transforms: after "Apply to dataset", the right view showed the
+  correction twice, and "untransformed" looked aligned.
+- **"Layers" section in the panel** (`moving_layer_list.tsx`), only with more than one moving
+  layer: pair count, mean error, applied state; a click switches.
+- **"Apply to dataset…" applies all moving layers** with a valid alignment in one
+  `updateDatasetPartial` (`applyAlignmentsToDataset`); the dialog lists each layer.
+- **Copy offer** in the empty pair table: the fixed-side landmarks of another moving layer are
+  imported into the left worker with their pair ids (one undo step); the next-step hint in the
+  right view then walks through them. Copying both sides may come later.
+- Backend: `annotation_layerAlignments` only has `fixedLayerName` (evolution 186 edited in
+  place, the feature was never released). Default name `<dataset…> Alignment to <fixed>`, badge
+  `Alignment to <fixed>`. The selection page has one select (`fixed_layer_picker.tsx`), and the
+  multi-layer hint is gone.
+- No special handling of segmentation layers; several alignment annotations per fixed layer
+  stay allowed.
 
 ### 0.3 Not started / explicitly out of scope for this pass
 

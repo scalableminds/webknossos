@@ -4,9 +4,7 @@ do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 185 
 
 CREATE TABLE webknossos.annotation_layerAlignments(
   _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') PRIMARY KEY,
-  fixedLayerName TEXT NOT NULL,
-  movingLayerName TEXT NOT NULL,
-  CONSTRAINT differentLayers CHECK (fixedLayerName <> movingLayerName)
+  fixedLayerName TEXT NOT NULL
 );
 
 ALTER TABLE webknossos.annotation_layerAlignments

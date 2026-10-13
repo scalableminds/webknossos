@@ -5,7 +5,7 @@ import { AsyncButton } from "components/async_clickables";
 import { handleGenericError } from "libs/error_handling";
 import { useApi, useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import type { APIAnnotation } from "types/api_types";
 import {
   type AlignmentEditBlocker,
@@ -14,20 +14,26 @@ import {
   getEditBlockerDescription,
   resolveAlignmentEditBlocker,
 } from "./alignment_edit_blocker";
-import { getMissingLayerNames, type LayerNames } from "./alignment_helpers";
+import {
+  getActiveMovingLayerName,
+  getMovingLayerNames,
+  type LayerNames,
+} from "./alignment_helpers";
 import { AlignmentPageError, AlignmentPageSpinner } from "./alignment_page_status_views";
 import { AlignmentWorkspace } from "./alignment_workspace";
-import { getAlignmentViewUrl } from "./bigwarp_protocol";
+import { getAlignmentViewUrl, MOVING_LAYER_URL_PARAM } from "./bigwarp_protocol";
 
-/**  Aligns one layer of a dataset ("moving" layer) to another ("fixed" layer) by placing
- * matching landmarks in both, similar to the BigWarp plugin of Fiji. The landmarks are stored
- * in an alignment annotation, which belongs to one layer pair.
- * The page shows the two layers side by side, each in an iframe with a sandbox annotation
- * view ("worker", see bigwarp_worker.ts). The alignment annotation is loaded in a third,
- * hidden iframe.
+/**  Aligns the layers of a dataset ("moving" layers) to one of its layers ("fixed" layer) by
+ * placing matching landmarks in both, similar to the BigWarp plugin of Fiji. The landmarks are
+ * stored in an alignment annotation, which belongs to the fixed layer and holds the landmarks
+ * of all moving layers.
+ * The page shows the fixed layer and one moving layer side by side, each in an iframe with a
+ * sandbox annotation view ("worker", see bigwarp_worker.ts). The moving layer is chosen with
+ * a URL param. The alignment annotation is loaded in a third, hidden iframe.
  */
 function AlignmentView() {
   const { annotationId = "" } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const activeUserId = useWkSelector((state) => state.activeUser?.id);
   // Increased to mount the workspace anew, see AlignmentWorkspace's onRestart.
   const [workspaceRestartCount, setWorkspaceRestartCount] = useState(0);
@@ -80,23 +86,35 @@ function AlignmentView() {
       <AlignmentPageError text="This dataset is not active, so its layers cannot be aligned." />
     );
   }
-  const layerNames: LayerNames = {
-    A: layerAlignment.fixedLayerName,
-    B: layerAlignment.movingLayerName,
-  };
-  const missingLayerNames = getMissingLayerNames(dataset, layerNames);
-  if (missingLayerNames.length > 0) {
+  const { fixedLayerName } = layerAlignment;
+  if (!dataset.dataSource.dataLayers.some((layer) => layer.name === fixedLayerName)) {
     return (
       <AlignmentPageError
-        text={`The dataset has no layer named ${missingLayerNames.map((name) => `"${name}"`).join(" or ")} anymore, so this alignment can't be opened.`}
+        text={`The dataset has no layer named "${fixedLayerName}" anymore, so this alignment can't be opened.`}
       />
     );
   }
+  const movingLayerNames = getMovingLayerNames(dataset, fixedLayerName);
+  const movingLayerName = getActiveMovingLayerName(
+    movingLayerNames,
+    searchParams.get(MOVING_LAYER_URL_PARAM),
+  );
+  if (movingLayerName == null) {
+    return (
+      <AlignmentPageError text="The dataset has no other layer that could be aligned to the fixed layer." />
+    );
+  }
+  const layerNames: LayerNames = { A: fixedLayerName, B: movingLayerName };
   return (
     <AlignmentWorkspace
-      key={`${annotation.id}-${workspaceRestartCount}`}
+      // A new moving layer needs fresh workers, see onSwitchMovingLayer.
+      key={`${annotation.id}-${movingLayerName}-${workspaceRestartCount}`}
       dataset={dataset}
       layerNames={layerNames}
+      movingLayerNames={movingLayerNames}
+      onSwitchMovingLayer={(layerName) =>
+        setSearchParams({ [MOVING_LAYER_URL_PARAM]: layerName }, { replace: true })
+      }
       landmarkAnnotation={annotation}
       onRestart={async () => {
         // The workspace starts with the name and description of the loaded annotation, which

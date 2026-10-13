@@ -106,7 +106,7 @@ object Msg {
       val failedToCheck: String = "Could not check annotation access."
     }
     object LayerAlignment {
-      val sameLayers: String = "The fixed and the moving layer of a layer alignment must be different."
+      val tooFewLayers: String = "Aligning layers needs a dataset with at least two layers."
       def layerNotFound(layerName: String): String = s"The dataset has no layer “$layerName”."
       val createFailed: String = "Could not create the layer alignment annotation."
       val listFailed: String = "Could not list the layer alignment annotations."

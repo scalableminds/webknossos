@@ -7,15 +7,20 @@ import type { MutableTreeMap } from "viewer/model/types/tree_types";
 import { getAlignmentEditBlocker } from "viewer/view/align_datasets/alignment_edit_blocker";
 import {
   estimateTransformBtoA,
+  getActiveMovingLayerName,
+  getAppliedState,
   getCompleteLandmarkPairs,
+  getDataLayersWithAlignments,
   getLandmarkColor,
+  getLandmarkGroupPath,
   getLandmarkPairId,
   getLandmarkPairInfo,
   getLandmarkPairs,
   getLandmarks,
   getLandmarkTreeName,
+  getLayerPairAlignment,
   getMeanResidual,
-  getMissingLayerNames,
+  getMovingLayerNames,
   getNextLandmarkPairId,
   getOverlayLayerColors,
   isAlignmentAppliedToDataset,
@@ -350,11 +355,79 @@ describe("Alignment annotation helpers", () => {
     expect(isAlignmentAppliedToDataset(transform, fixedLayerTransforms, null)).toBe(false);
   });
 
-  it("finds the layers of an alignment that the dataset doesn't have", () => {
-    const dataset = {
-      dataSource: { dataLayers: [{ name: "color_1" }, { name: "color_2" }] },
-    } as APIDataset;
-    expect(getMissingLayerNames(dataset, { A: "color_1", B: "color_2" })).toEqual([]);
-    expect(getMissingLayerNames(dataset, { A: "color_1", B: "renamed" })).toEqual(["renamed"]);
+  const datasetWithLayers = (...names: string[]) =>
+    ({ dataSource: { dataLayers: names.map((name) => ({ name })) } }) as APIDataset;
+
+  it("offers all other layers of the dataset as moving layers", () => {
+    const dataset = datasetWithLayers("color_1", "color_2", "color_3");
+    expect(getMovingLayerNames(dataset, "color_2")).toEqual(["color_1", "color_3"]);
+  });
+
+  it("shows the requested moving layer or falls back to the first one", () => {
+    const movingLayerNames = ["color_2", "color_3"];
+    expect(getActiveMovingLayerName(movingLayerNames, "color_3")).toBe("color_3");
+    expect(getActiveMovingLayerName(movingLayerNames, null)).toBe("color_2");
+    expect(getActiveMovingLayerName(movingLayerNames, "renamed")).toBe("color_2");
+    expect(getActiveMovingLayerName([], null)).toBeNull();
+  });
+
+  it("stores the landmarks of each side in a group of the moving layer", () => {
+    const layerNames = { A: "color_1", B: "color_3" };
+    expect(getLandmarkGroupPath(layerNames, "A")).toEqual(["color_3", "color_1 landmarks"]);
+    expect(getLandmarkGroupPath(layerNames, "B")).toEqual(["color_3", "color_3 landmarks"]);
+  });
+
+  it("applies the alignments of the given moving layers on top of the fixed layer's transforms", () => {
+    const transform = createAffineTransform(POSITIONS_B, POSITIONS_A);
+    const fixedLayerTransforms: CoordinateTransformation[] = [
+      { type: "affine", matrix: flatToNestedMatrix(Identity4x4) },
+    ];
+    const oldTransforms: CoordinateTransformation[] = [
+      { type: "affine", matrix: flatToNestedMatrix(transform.affineMatrixInv) },
+    ];
+    const dataLayers = [
+      { name: "fixed", coordinateTransformations: fixedLayerTransforms },
+      { name: "aligned", coordinateTransformations: oldTransforms },
+      { name: "unchanged", coordinateTransformations: oldTransforms },
+    ] as APIDataset["dataSource"]["dataLayers"];
+    const [fixed, aligned, unchanged] = getDataLayersWithAlignments(
+      dataLayers,
+      "fixed",
+      new Map([["aligned", transform]]),
+    );
+    expect(fixed).toBe(dataLayers[0]);
+    expect(unchanged).toBe(dataLayers[2]);
+    expect(aligned.coordinateTransformations).toEqual([
+      { type: "affine", matrix: flatToNestedMatrix(transform.affineMatrix) },
+      ...fixedLayerTransforms,
+    ]);
+    expect(() =>
+      getDataLayersWithAlignments(dataLayers, "fixed", new Map([["renamed", transform]])),
+    ).toThrow('"renamed"');
+  });
+
+  it("summarizes the alignment of a moving layer and whether the dataset uses it", () => {
+    const tooFewPairs = getLayerPairAlignment(
+      { A: toLandmarks(POSITIONS_A.slice(0, 2)), B: toLandmarks(POSITIONS_B.slice(0, 2)) },
+      [1, 1, 1],
+    );
+    expect(tooFewPairs.completePairCount).toBe(2);
+    expect(tooFewPairs.meanResidual).toBeNull();
+    expect(getAppliedState(tooFewPairs.estimation, null, null)).toBe("notEnoughPairs");
+
+    const alignment = getLayerPairAlignment(
+      { A: toLandmarks(POSITIONS_A), B: toLandmarks(POSITIONS_B) },
+      [1, 1, 1],
+    );
+    expect(alignment.completePairCount).toBe(4);
+    expect(alignment.meanResidual).toBeCloseTo(0);
+    expect(getAppliedState(alignment.estimation, null, null)).toBe("notApplied");
+    if (!("transform" in alignment.estimation)) {
+      throw new Error("Expected a transform.");
+    }
+    const appliedTransforms: CoordinateTransformation[] = [
+      { type: "affine", matrix: flatToNestedMatrix(alignment.estimation.transform.affineMatrix) },
+    ];
+    expect(getAppliedState(alignment.estimation, null, appliedTransforms)).toBe("applied");
   });
 });

@@ -249,6 +249,21 @@ function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
 
   return annotation.skeleton;
 }
+// The tree groups along the given path of group names, starting at the root level. Stops at
+// the first group that doesn't exist, so the result can be shorter than the path.
+function findExistingTreeGroupPath(groupNames: string[]): TreeGroup[] {
+  const path: TreeGroup[] = [];
+  let siblings = assertSkeleton(Store.getState().annotation).treeGroups;
+  for (const name of groupNames) {
+    const group = siblings.find((treeGroup) => treeGroup.name === name);
+    if (group == null) {
+      break;
+    }
+    path.push(group);
+    siblings = group.children;
+  }
+  return path;
+}
 // The build info is only needed for the header of exported NMLs. The dataset alignment page
 // exports trees several times per second, so the build info is fetched only once.
 let buildInfoPromise: Promise<APIBuildInfoWk> | null = null;
@@ -760,21 +775,7 @@ class TracingApi {
    * const groupId = api.tracing.ensureTreeGroupPath(["Landmarks", "Layer A"]);
    */
   ensureTreeGroupPath(groupNames: string[]): number {
-    const findExistingPath = () => {
-      const path: TreeGroup[] = [];
-      let siblings = assertSkeleton(Store.getState().annotation).treeGroups;
-      for (const name of groupNames) {
-        const group = siblings.find((treeGroup) => treeGroup.name === name);
-        if (group == null) {
-          break;
-        }
-        path.push(group);
-        siblings = group.children;
-      }
-      return path;
-    };
-
-    const existingPath = findExistingPath();
+    const existingPath = findExistingTreeGroupPath(groupNames);
     if (existingPath.length < groupNames.length) {
       // The group ids are placeholders. addTreesAndGroupsAction assigns new ids.
       const missingGroups = groupNames
@@ -795,12 +796,25 @@ class TracingApi {
       );
     }
 
-    const path = findExistingPath();
+    const path = findExistingTreeGroupPath(groupNames);
     const targetGroup = path.at(-1);
     if (targetGroup == null || path.length < groupNames.length) {
       throw new Error(`Could not create the tree group path ${groupNames.join(" > ")}.`);
     }
     return targetGroup.groupId;
+  }
+
+  /**
+   * Returns the id of the tree group at the given path of group names, starting at the
+   * root level, or null if a group along the path doesn't exist. Unlike
+   * ensureTreeGroupPath, no groups are created.
+   *
+   * @example
+   * const groupId = api.tracing.findTreeGroupPath(["Landmarks", "Layer A"]);
+   */
+  findTreeGroupPath(groupNames: string[]): number | null {
+    const path = findExistingTreeGroupPath(groupNames);
+    return path.length === groupNames.length ? (path.at(-1)?.groupId ?? null) : null;
   }
 
   /**

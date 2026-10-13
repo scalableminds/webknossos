@@ -121,8 +121,8 @@ type Props = {
   onClearFilters: () => void;
   // Called with the annotations shown on the current page (after search, filters and sorting).
   onCurrentPageDataChange?: (annotations: Readonly<APIAnnotationInfo[]>) => void;
-  // Alignment annotations are marked with their layer pair, e.g. "Alignment: color_2 → color_1".
-  // Lists that only contain alignment annotations can leave out the "Alignment:" prefix.
+  // Alignment annotations are marked with their fixed layer, e.g. "Alignment to color_1".
+  // Lists that only contain alignment annotations can show "Fixed: color_1" instead.
   hideAlignmentPrefix?: boolean;
 };
 
@@ -237,8 +237,8 @@ export function AnnotationList({
         />
         {annotation.layerAlignment != null ? (
           <Tag icon={<NodeIndexOutlined />} variant="outlined">
-            {hideAlignmentPrefix ? null : "Alignment: "}
-            {annotation.layerAlignment.movingLayerName} → {annotation.layerAlignment.fixedLayerName}
+            {hideAlignmentPrefix ? "Fixed: " : "Alignment to "}
+            {annotation.layerAlignment.fixedLayerName}
           </Tag>
         ) : null}
         {/* Tags are edited in the details sidebar, so they are only clickable for filtering here. */}

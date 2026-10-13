@@ -69,4 +69,35 @@
     margin-right: 4px;
     border-radius: 50%;
   }
+
+  // Shown below the empty landmark table (CopyLandmarksOffer in moving_layer_list.tsx).
+  .copy-landmarks-offer {
+    margin-top: 8px;
+    padding: 12px;
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: var(--ant-border-radius-lg);
+    background: var(--ant-color-fill-quaternary);
+  }
+
+  // A row of the list of moving layers in the landmark panel (moving_layer_list.tsx).
+  .moving-layer-row {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: var(--ant-border-radius);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--ant-color-fill-tertiary);
+    }
+
+    &.is-active {
+      border-color: var(--ant-color-primary);
+      background: var(--ant-color-primary-bg);
+    }
+  }
 }

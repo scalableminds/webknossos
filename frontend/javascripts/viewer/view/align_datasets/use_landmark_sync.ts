@@ -40,7 +40,9 @@ export type LandmarkSyncStatus = "loading" | "ready" | "failed";
  *    landmark (see getLandmarkPairInfo).
  * Returns the current landmarks of both workers, the status of the sync, whether changed
  * landmarks still have to be written to the landmark annotation, a function that reads
- * the landmarks from the workers right away, and a function that stops the sync for good.
+ * the landmarks from the workers right away, a function that stops the sync for good (e.g.
+ * after a worker lost its landmarks), and functions to stop the sync after writing the last
+ * changes and to resume it (e.g. before and after a failed switch to another moving layer).
  */
 export function useLandmarkSync(
   sendMessage: SendMessage,
@@ -51,6 +53,8 @@ export function useLandmarkSync(
   hasUnsyncedLandmarks: boolean;
   fetchLandmarks: () => Promise<Record<Side, Landmark[]>>;
   stopSync: () => void;
+  flushAndStopSync: () => Promise<void>;
+  resumeSync: () => void;
 } {
   const [landmarks, setLandmarks] = useState<Record<Side, Landmark[]>>({ A: [], B: [] });
   const [status, setStatus] = useState<LandmarkSyncStatus>("loading");
@@ -66,8 +70,11 @@ export function useLandmarkSync(
   // The pair info that was last sent to each worker.
   const sentPairInfoRef = useRef<Partial<Record<Side, LandmarkPairInfo>>>({});
   // Set when a worker was reloaded. Its landmarks are then missing until the stored ones are
-  // imported again, so writing them to the landmark annotation would delete landmarks.
+  // imported again, so writing them to the landmark annotation would delete landmarks. Also
+  // set while switching to another moving layer.
   const isStoppedRef = useRef(false);
+  // The sync run that is in progress, if any.
+  const runningSyncRef = useRef<Promise<void> | null>(null);
   // The effect below depends on the names, not on the object, which is created anew on every
   // render.
   const { A: fixedLayerName, B: movingLayerName } = layerNames;
@@ -127,7 +134,7 @@ export function useLandmarkSync(
     groupId: number,
   ) => {
     const storedFields = getStoredFields(worker.landmarks);
-    if (isStoppedRef.current || isEqual(storedFields, storedFieldsRef.current[side])) {
+    if (isEqual(storedFields, storedFieldsRef.current[side])) {
       return;
     }
     await sendMessage("store", "replaceTreesInGroup", [worker.nmlString, groupId]);
@@ -143,6 +150,28 @@ export function useLandmarkSync(
     sentPairInfoRef.current[side] = pairInfo;
   };
 
+  const syncLandmarks = async (sideGroupIds: Record<Side, number>) => {
+    try {
+      const { workerA, workerB, newLandmarks } = await fetchWorkerLandmarks();
+      // Sent before the overlay goes away, so that the first click already uses it.
+      await Promise.all(SIDES.map((side) => sendChangedPairInfo(side, newLandmarks)));
+      setStatus("ready");
+      setHasUnsyncedLandmarks(
+        SIDES.some(
+          (side) => !isEqual(getStoredFields(newLandmarks[side]), storedFieldsRef.current[side]),
+        ),
+      );
+      if (isStoppedRef.current) {
+        return;
+      }
+      await storeChangedLandmarks("A", workerA, sideGroupIds.A);
+      await storeChangedLandmarks("B", workerB, sideGroupIds.B);
+      setHasUnsyncedLandmarks(false);
+    } catch (error) {
+      console.error("Could not sync the landmarks:", error);
+    }
+  };
+
   // usePolling waits for one run to finish before it schedules the next one, so runs
   // can't overlap.
   usePolling(
@@ -150,22 +179,8 @@ export function useLandmarkSync(
       if (groupIds == null || isStoppedRef.current) {
         return;
       }
-      try {
-        const { workerA, workerB, newLandmarks } = await fetchWorkerLandmarks();
-        // Sent before the overlay goes away, so that the first click already uses it.
-        await Promise.all(SIDES.map((side) => sendChangedPairInfo(side, newLandmarks)));
-        setStatus("ready");
-        setHasUnsyncedLandmarks(
-          SIDES.some(
-            (side) => !isEqual(getStoredFields(newLandmarks[side]), storedFieldsRef.current[side]),
-          ),
-        );
-        await storeChangedLandmarks("A", workerA, groupIds.A);
-        await storeChangedLandmarks("B", workerB, groupIds.B);
-        setHasUnsyncedLandmarks(false);
-      } catch (error) {
-        console.error("Could not sync the landmarks:", error);
-      }
+      runningSyncRef.current = syncLandmarks(groupIds);
+      await runningSyncRef.current;
     },
     groupIds != null ? SYNC_INTERVAL_MS : null,
     [groupIds],
@@ -177,5 +192,32 @@ export function useLandmarkSync(
     isStoppedRef.current = true;
   };
 
-  return { landmarks, status, hasUnsyncedLandmarks, fetchLandmarks, stopSync };
+  // Writes the current landmarks of both workers to the landmark annotation, so that a
+  // landmark placed right before is not lost, and stops the sync. Throws if writing fails.
+  const flushAndStopSync = async () => {
+    isStoppedRef.current = true;
+    await runningSyncRef.current;
+    if (groupIds == null) {
+      // The stored landmarks were not imported yet, so the workers have nothing new.
+      return;
+    }
+    const { workerA, workerB } = await fetchWorkerLandmarks();
+    await storeChangedLandmarks("A", workerA, groupIds.A);
+    await storeChangedLandmarks("B", workerB, groupIds.B);
+    setHasUnsyncedLandmarks(false);
+  };
+
+  const resumeSync = () => {
+    isStoppedRef.current = false;
+  };
+
+  return {
+    landmarks,
+    status,
+    hasUnsyncedLandmarks,
+    fetchLandmarks,
+    stopSync,
+    flushAndStopSync,
+    resumeSync,
+  };
 }

@@ -21,15 +21,15 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { SidebarSection } from "dashboard/sidebar_section";
-import { formatNumberToLength } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import type { VoxelSize } from "types/api_types";
-import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
+import type { Vector3 } from "viewer/constants";
 import { AnnotationIdentity } from "viewer/view/right_border_tabs/info_tab/identity_block";
 import {
   type Alignment,
+  formatResidual,
   getLandmarkPairs,
   getLandmarkTreeName,
   getMeanResidual,
@@ -43,15 +43,21 @@ import {
 } from "./alignment_helpers";
 import type { SaveState } from "./bigwarp_protocol";
 import type { LandmarkExportFormat } from "./landmark_export";
+import {
+  CopyLandmarksOffer,
+  type CopySource,
+  MovingLayerList,
+  type MovingLayerRow,
+} from "./moving_layer_list";
 
 // A pair whose error is this many times higher than the mean error is highlighted, because it
 // was probably placed imprecisely. Errors below the size of one voxel are never highlighted:
 // if the landmarks fit exactly, all errors are just floating point noise.
 const HIGH_RESIDUAL_FACTOR = 2;
 
-// The pair list is virtualized, which needs fixed column widths and a fixed body height. The
-// widths fit into the default panel width, so the list doesn't scroll sideways.
-const PAIR_COLUMN_WIDTHS = { name: 104, landmark: 56, residual: 84, delete: 40 };
+// The pair list is virtualized, which needs fixed column widths and a fixed body height. At
+// the default panel width, the list scrolls sideways to the delete buttons.
+const PAIR_COLUMN_WIDTHS = { name: 60, landmark: 136, residual: 84, delete: 40 };
 const PAIR_TABLE_WIDTH =
   PAIR_COLUMN_WIDTHS.name +
   2 * PAIR_COLUMN_WIDTHS.landmark +
@@ -100,6 +106,12 @@ type Props = {
   onApplyAlignmentToDataset: () => void;
   // Whether the moving layer has the current alignment as its transform in the dataset.
   isAppliedToDataset: boolean;
+  // One row per moving layer. The list is only shown if there is more than one.
+  movingLayerRows: MovingLayerRow[];
+  onSelectMovingLayer: (layerName: string) => void;
+  // Moving layers whose fixed layer landmarks can be copied while there are no landmarks yet.
+  copySources: CopySource[];
+  onCopyLandmarks: (sourceLayerName: string) => Promise<void>;
   onSelectPair: (pair: LandmarkPair) => void;
   onDeletePair: (pair: LandmarkPair) => void;
   onDownloadLandmarks: (format: LandmarkExportFormat) => void;
@@ -109,12 +121,6 @@ type Props = {
   saveState: SaveState;
   onSave: () => Promise<void>;
 };
-
-// The residuals are lengths in the unit of the dataset (see getLandmarkPairs). Large values
-// are shown in a larger unit, e.g. µm instead of nm.
-function formatResidual(residual: number, voxelSize: VoxelSize): string {
-  return formatNumberToLength(residual, LongUnitToShortUnitMap[voxelSize.unit]);
-}
 
 export function rgbColorString(color: Vector3): string {
   return `rgb(${color.map((component) => Math.round(component * 255)).join(",")})`;
@@ -283,7 +289,7 @@ function AnnotationHeader({
         // The panel is a vertical flex container, which would stretch the tag to its full width.
         style={{ marginBottom: 16, alignSelf: "flex-start" }}
       >
-        {layerNames.B} → {layerNames.A}
+        Alignment to {layerNames.A}
       </Tag>
     </>
   );
@@ -293,7 +299,7 @@ function LandmarkColorDot({ color }: { color: Vector3 }) {
   return <span className="landmark-color" style={{ background: rgbColorString(color) }} />;
 }
 
-// Shown instead of the color dot of a landmark that is not placed yet.
+// Shown instead of the position of a landmark that is not placed yet.
 function MissingLandmarkMarker({ side }: { side: Side }) {
   return (
     <Tooltip title={`No landmark in the ${side === "A" ? "left" : "right"} view yet.`}>
@@ -308,19 +314,16 @@ function getPairColumns(
   meanResidual: number | null,
   onDeletePair: Props["onDeletePair"],
 ): ColumnsType<LandmarkPair> {
-  // One column per view with the color of the landmark, to find it in the view. The position
-  // is shown on hover.
+  // One column per view with the position of the landmark.
   const landmarkColumns = SIDES.map((side) => ({
     title: <Tooltip title={layerNames[side]}>{side === "A" ? "Left" : "Right"}</Tooltip>,
     key: side,
     width: PAIR_COLUMN_WIDTHS.landmark,
-    align: "center" as const,
+    ellipsis: true,
     render: (_value: unknown, pair: LandmarkPair) => {
       const landmark = pair.landmarks[side];
       return landmark != null ? (
-        <Tooltip title={`Position: ${landmark.position.join(", ")}`}>
-          <LandmarkColorDot color={landmark.color} />
-        </Tooltip>
+        <Typography.Text style={{ fontSize: 12 }}>{landmark.position.join(", ")}</Typography.Text>
       ) : (
         <MissingLandmarkMarker side={side} />
       );
@@ -330,17 +333,20 @@ function getPairColumns(
   const minHighResidual = Math.min(...voxelSize.factor);
   return [
     {
-      title: "Name",
+      // The pair id with the color that both landmarks of the pair have.
+      title: <Tooltip title="Landmark pair number">#</Tooltip>,
       key: "name",
       width: PAIR_COLUMN_WIDTHS.name,
-      render: (_value, pair) =>
-        pair.pairId != null ? (
-          getLandmarkTreeName(pair.pairId)
-        ) : (
-          <Typography.Text type="secondary">Unnamed</Typography.Text>
-        ),
+      render: (_value, pair) => {
+        const color = (pair.landmarks.A ?? pair.landmarks.B)?.color;
+        return (
+          <span style={{ whiteSpace: "nowrap" }}>
+            {color != null ? <LandmarkColorDot color={color} /> : null}
+            {pair.pairId ?? <Typography.Text type="secondary">–</Typography.Text>}
+          </span>
+        );
+      },
     },
-    ...landmarkColumns,
     {
       title: <Tooltip title="How far apart the pair still is after the alignment">Error</Tooltip>,
       key: "residual",
@@ -359,6 +365,7 @@ function getPairColumns(
         );
       },
     },
+    ...landmarkColumns,
     {
       key: "delete",
       width: PAIR_COLUMN_WIDTHS.delete,
@@ -402,6 +409,10 @@ export function LandmarkPanel({
   canApplyAlignmentToDataset,
   onApplyAlignmentToDataset,
   isAppliedToDataset,
+  movingLayerRows,
+  onSelectMovingLayer,
+  copySources,
+  onCopyLandmarks,
   onSelectPair,
   onDeletePair,
   onDownloadLandmarks,
@@ -412,6 +423,7 @@ export function LandmarkPanel({
   const pairs = getLandmarkPairs(landmarks, alignment?.transformBtoA ?? null, voxelSize.factor);
   const meanResidual = getMeanResidual(pairs);
   const [pairListRef, pairListHeight] = useElementHeight();
+  const hasSeveralMovingLayers = movingLayerRows.length > 1;
 
   return (
     // The pair list fills the height that the other sections leave free.
@@ -426,7 +438,15 @@ export function LandmarkPanel({
         onChangeName={onChangeAnnotationName}
         onChangeDescription={onChangeAnnotationDescription}
       />
-      <SidebarSection label="Alignment">
+      {hasSeveralMovingLayers ? (
+        <MovingLayerList
+          rows={movingLayerRows}
+          activeLayerName={layerNames.B}
+          voxelSize={voxelSize}
+          onSelect={onSelectMovingLayer}
+        />
+      ) : null}
+      <SidebarSection label={hasSeveralMovingLayers ? `Alignment of ${layerNames.B}` : "Alignment"}>
         <AlignmentStatus
           pairs={pairs}
           alignment={alignment}
@@ -438,7 +458,9 @@ export function LandmarkPanel({
           <Tooltip
             title={
               canApplyAlignmentToDataset
-                ? `Apply the alignment to "${layerNames.B}" in the dataset, so that it is used everywhere`
+                ? hasSeveralMovingLayers
+                  ? "Apply the alignments of all layers to the dataset, so that they are used everywhere"
+                  : `Apply the alignment to "${layerNames.B}" in the dataset, so that it is used everywhere`
                 : "You don't have the permission to edit this dataset."
             }
           >
@@ -497,24 +519,39 @@ export function LandmarkPanel({
         ) : null}
       </SidebarSection>
       <Flex justify="space-between" align="center">
-        <div className="sidebar-label">Landmark pairs ({pairs.length})</div>
+        <div className="sidebar-label">
+          {`${hasSeveralMovingLayers ? `Landmark pairs of ${layerNames.B}` : "Landmark pairs"} (${pairs.length})`}
+        </div>
         <LandmarkDownloadButton pairs={pairs} onDownload={onDownloadLandmarks} />
       </Flex>
-      <Flex vertical ref={pairListRef} style={{ flex: 1, minHeight: MIN_PAIR_LIST_HEIGHT }}>
+      {/* Without pairs, the content decides the height, so that the empty state and the copy
+      offer can't overflow into the elements below. */}
+      <Flex
+        vertical
+        ref={pairListRef}
+        style={pairs.length > 0 ? { flex: 1, minHeight: MIN_PAIR_LIST_HEIGHT } : undefined}
+      >
         {pairs.length === 0 ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <ol style={{ textAlign: "left" }}>
-                <li>Click on a structure in the left view.</li>
-                <li>Click on the same structure in the right view.</li>
-                <li>
-                  Repeat this for at least {MIN_LANDMARK_PAIR_COUNT} structures. The layers are then
-                  aligned automatically.
-                </li>
-              </ol>
-            }
-          />
+          <>
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={
+                <ol style={{ textAlign: "left" }}>
+                  <li>Click on a structure in the left view.</li>
+                  <li>Click on the same structure in the right view.</li>
+                  <li>
+                    Repeat this for at least {MIN_LANDMARK_PAIR_COUNT} structures. The layers are
+                    then aligned automatically.
+                  </li>
+                </ol>
+              }
+            />
+            <CopyLandmarksOffer
+              fixedLayerName={layerNames.A}
+              sources={copySources}
+              onCopy={onCopyLandmarks}
+            />
+          </>
         ) : (
           <Table<LandmarkPair>
             virtual

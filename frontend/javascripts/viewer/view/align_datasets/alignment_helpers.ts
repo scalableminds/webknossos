@@ -1,13 +1,14 @@
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import ColorGenerator from "libs/color_generator";
+import { formatNumberToLength } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import isEqualWith from "lodash-es/isEqualWith";
 import max from "lodash-es/max";
 import mean from "lodash-es/mean";
 import uniq from "lodash-es/uniq";
 import { Matrix, SingularValueDecomposition } from "ml-matrix";
-import type { APIDataset, CoordinateTransformation } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import type { APIDataset, CoordinateTransformation, VoxelSize } from "types/api_types";
+import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   createAffineTransform,
@@ -216,6 +217,12 @@ export function getNextLandmarkPairId(ownPairIds: Set<number>, pairInfo: Landmar
   return Math.max(pairInfo.otherMaxPairId, max(Array.from(ownPairIds)) ?? 0) + 1;
 }
 
+// The residuals are lengths in the unit of the dataset (see getLandmarkPairs). Large values
+// are shown in a larger unit, e.g. µm instead of nm.
+export function formatResidual(residual: number, voxelSize: VoxelSize): string {
+  return formatNumberToLength(residual, LongUnitToShortUnitMap[voxelSize.unit]);
+}
+
 // Null if no pair has a residual.
 export function getMeanResidual(pairs: LandmarkPair[]): number | null {
   const residuals = pairs.flatMap((pair) => (pair.residual != null ? [pair.residual] : []));
@@ -286,8 +293,72 @@ export function estimateTransformBtoA(
   };
 }
 
+// The tree group that holds the landmarks of one side of a layer pair in the alignment
+// annotation. Each moving layer has a group with one subgroup per side:
+// "color_2" > "color_1 landmarks" (fixed layer) and "color_2" > "color_2 landmarks".
 export function getLandmarkGroupPath(layerNames: LayerNames, side: Side): string[] {
-  return [`Layer pair: ${layerNames.A} × ${layerNames.B}`, `${layerNames[side]} landmarks`];
+  return [layerNames.B, `${layerNames[side]} landmarks`];
+}
+
+// The layers that can be aligned to the fixed layer, in the order of the dataset.
+export function getMovingLayerNames(dataset: APIDataset, fixedLayerName: string): string[] {
+  return dataset.dataSource.dataLayers
+    .map((layer) => layer.name)
+    .filter((name) => name !== fixedLayerName);
+}
+
+// The requested moving layer if it exists, otherwise the first moving layer.
+export function getActiveMovingLayerName(
+  movingLayerNames: string[],
+  requestedLayerName: string | null,
+): string | null {
+  return requestedLayerName != null && movingLayerNames.includes(requestedLayerName)
+    ? requestedLayerName
+    : (movingLayerNames[0] ?? null);
+}
+
+// The alignment of one moving layer as estimated from its landmarks.
+export type LayerPairAlignment = {
+  landmarks: Record<Side, Landmark[]>;
+  estimation: ReturnType<typeof estimateTransformBtoA>;
+  completePairCount: number;
+  // See getMeanResidual. Null if no transform could be estimated.
+  meanResidual: number | null;
+};
+
+export function getLayerPairAlignment(
+  landmarks: Record<Side, Landmark[]>,
+  voxelSizeFactor: Vector3,
+): LayerPairAlignment {
+  const estimation = estimateTransformBtoA(landmarks);
+  const transformBtoA = "transform" in estimation ? estimation.transform : null;
+  return {
+    landmarks,
+    estimation,
+    completePairCount: getCompleteLandmarkPairs(landmarks).length,
+    meanResidual: getMeanResidual(getLandmarkPairs(landmarks, transformBtoA, voxelSizeFactor)),
+  };
+}
+
+// Whether the dataset uses the alignment of a moving layer: "notEnoughPairs" if no transform
+// could be estimated from the landmarks.
+export type AppliedState = "applied" | "notApplied" | "notEnoughPairs";
+
+export function getAppliedState(
+  estimation: LayerPairAlignment["estimation"],
+  fixedLayerTransforms: CoordinateTransformation[] | null | undefined,
+  movingLayerTransforms: CoordinateTransformation[] | null | undefined,
+): AppliedState {
+  if (!("transform" in estimation)) {
+    return "notEnoughPairs";
+  }
+  return isAlignmentAppliedToDataset(
+    estimation.transform,
+    fixedLayerTransforms,
+    movingLayerTransforms,
+  )
+    ? "applied"
+    : "notApplied";
 }
 
 const FIXED_LAYER_OVERLAY_COLOR: Vector3 = [0, 255, 0];
@@ -311,44 +382,72 @@ export function getOverlayLayerColors(
     : null;
 }
 
-// The layers of the alignment that don't exist in the dataset (anymore), e.g. because they
-// were renamed.
-export function getMissingLayerNames(dataset: APIDataset, layerNames: LayerNames): string[] {
-  const datasetLayerNames = new Set(dataset.dataSource.dataLayers.map((layer) => layer.name));
-  return SIDES.map((side) => layerNames[side]).filter((name) => !datasetLayerNames.has(name));
+type DataLayers = APIDataset["dataSource"]["dataLayers"];
+
+// The data layers after applying the alignments. Each transform maps the untransformed
+// coordinates of its moving layer to the untransformed coordinates of the fixed layer. So a
+// moving layer gets its transform, followed by the transforms of the fixed layer. Its previous
+// transforms are replaced. Layers that are not in the map stay unchanged.
+export function getDataLayersWithAlignments(
+  dataLayers: DataLayers,
+  fixedLayerName: string,
+  transformsByMovingLayer: Map<string, Transform>,
+): DataLayers {
+  const fixedLayer = dataLayers.find((layer) => layer.name === fixedLayerName);
+  const missingLayerNames = [fixedLayerName, ...transformsByMovingLayer.keys()].filter(
+    (name) => !dataLayers.some((layer) => layer.name === name),
+  );
+  if (fixedLayer == null || missingLayerNames.length > 0) {
+    throw new Error(
+      `The dataset has no layer named ${missingLayerNames.map((name) => `"${name}"`).join(" or ")} anymore.`,
+    );
+  }
+  return dataLayers.map((layer) => {
+    const transform = transformsByMovingLayer.get(layer.name);
+    return transform != null
+      ? {
+          ...layer,
+          coordinateTransformations: getAlignedMovingLayerTransforms(
+            transform,
+            fixedLayer.coordinateTransformations,
+          ),
+        }
+      : layer;
+  });
 }
 
-// Applies the alignment to the dataset. The transform maps the untransformed coordinates
-// of layer B to the untransformed coordinates of layer A. So layer B gets this transform,
-// followed by the transforms of layer A. Its previous transforms are replaced.
-export async function applyAlignmentToDataset(
+// Applies the alignments of the moving layers to the dataset (see getDataLayersWithAlignments).
+// Returns the transforms of all layers of the dataset afterwards.
+export async function applyAlignmentsToDataset(
   datasetId: string,
-  layerNames: LayerNames,
-  transformBtoA: Transform,
-): Promise<CoordinateTransformation[]> {
+  fixedLayerName: string,
+  transformsByMovingLayer: Map<string, Transform>,
+): Promise<LayerTransformsInDataset> {
   const dataset = await getDataset(datasetId);
   if (!dataset.isActive) {
     throw new Error("The dataset is not active anymore.");
   }
-  const { dataLayers } = dataset.dataSource;
-  const layerA = dataLayers.find((layer) => layer.name === layerNames.A);
-  const layerB = dataLayers.find((layer) => layer.name === layerNames.B);
-  if (layerA == null || layerB == null) {
-    throw new Error("The layers to align don't exist in the dataset anymore.");
-  }
-  const coordinateTransformations = getAlignedMovingLayerTransforms(
-    transformBtoA,
-    layerA.coordinateTransformations,
+  const dataLayers = getDataLayersWithAlignments(
+    dataset.dataSource.dataLayers,
+    fixedLayerName,
+    transformsByMovingLayer,
   );
   await updateDatasetPartial(datasetId, {
-    dataSource: {
-      ...dataset.dataSource,
-      dataLayers: dataLayers.map((layer) =>
-        layer === layerB ? { ...layer, coordinateTransformations } : layer,
-      ),
-    },
+    dataSource: { ...dataset.dataSource, dataLayers },
   });
-  return coordinateTransformations;
+  return getLayerTransformsInDataset(dataLayers);
+}
+
+// The transforms that the dataset stores for each of its layers, by layer name.
+export type LayerTransformsInDataset = Record<
+  string,
+  CoordinateTransformation[] | null | undefined
+>;
+
+export function getLayerTransformsInDataset(dataLayers: DataLayers): LayerTransformsInDataset {
+  return Object.fromEntries(
+    dataLayers.map((layer) => [layer.name, layer.coordinateTransformations]),
+  );
 }
 
 // The transforms that the moving layer gets when the alignment is applied to the dataset

@@ -314,19 +314,16 @@ class AnnotationService @Inject() (
     } yield annotation
   }
 
-  // Creates a skeleton annotation whose landmarks map the moving layer onto the fixed layer.
+  // Creates a skeleton annotation whose landmarks map the other layers of the dataset onto the fixed layer.
   def createLayerAlignmentFor(user: User, dataset: Dataset, layerAlignment: AnnotationLayerAlignment)(using
       ctx: DBAccessContext
   ): Fox[Annotation] =
     for {
-      _ <- Fox.fromBool(
-        layerAlignment.fixedLayerName != layerAlignment.movingLayerName
-      ) ?~> Msg.Annotation.LayerAlignment.sameLayers
       dataSource <- datasetService.usableDataSourceFor(dataset)
       layerNames = dataSource.dataLayers.map(_.name)
-      _ <- Fox.serialCombined(List(layerAlignment.fixedLayerName, layerAlignment.movingLayerName))(layerName =>
-        Fox.fromBool(layerNames.contains(layerName)) ?~> Msg.Annotation.LayerAlignment.layerNotFound(layerName)
-      )
+      _ <- Fox.fromBool(layerNames.length >= 2) ?~> Msg.Annotation.LayerAlignment.tooFewLayers
+      _ <- Fox.fromBool(layerNames.contains(layerAlignment.fixedLayerName)) ?~> Msg.Annotation.LayerAlignment
+        .layerNotFound(layerAlignment.fixedLayerName)
       skeletonLayerParameters = AnnotationLayerParameters(
         AnnotationLayerType.Skeleton,
         fallbackLayerName = None,

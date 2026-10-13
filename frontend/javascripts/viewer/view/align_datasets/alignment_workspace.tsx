@@ -14,14 +14,16 @@ import {
 } from "viewer/model/helpers/transformation_helpers";
 import {
   type Alignment,
-  applyAlignmentToDataset,
+  applyAlignmentsToDataset,
   estimateTransformBtoA,
+  getAppliedState,
   getCompleteLandmarkPairs,
   getLandmarkColor,
   getLandmarkPairInfo,
   getLandmarkTreeName,
+  getLayerPairAlignment,
+  getLayerTransformsInDataset,
   getOverlayLayerColors,
-  isAlignmentAppliedToDataset,
   type Landmark,
   type LandmarkPair,
   type LayerNames,
@@ -45,7 +47,9 @@ import {
   saveTextFile,
 } from "./landmark_export";
 import { LandmarkPanel, rgbColorString } from "./landmark_panel";
+import type { CopySource, MovingLayerRow } from "./moving_layer_list";
 import { type IframeRole, useIframeBridge } from "./use_iframe_bridge";
+import { useInactivePairs } from "./use_inactive_pairs";
 import { type LandmarkSyncStatus, useLandmarkSync } from "./use_landmark_sync";
 
 const DEFAULT_LANDMARK_PANEL_WIDTH = 380;
@@ -56,16 +60,30 @@ const APPLIED_TOAST_TIMEOUT_MS = 15_000;
 
 type Props = {
   dataset: APIDataset;
+  // The fixed layer and the moving layer shown in the right view ("active" moving layer).
   layerNames: LayerNames;
+  // All layers that can be aligned to the fixed layer.
+  movingLayerNames: string[];
+  // Called after the landmarks were saved, to show another moving layer. The parent must then
+  // mount the workspace anew, with fresh iframes: the workers' undo history can't be cleared,
+  // so undo would bring back the landmarks of the previous layer.
+  onSwitchMovingLayer: (movingLayerName: string) => void;
   landmarkAnnotation: APIAnnotation;
   // Called after one of the iframes loaded a new page, e.g. because it was reloaded (see
   // restartAfterReload). The parent must then mount the workspace anew, with fresh iframes.
   onRestart: () => void;
 };
 
-type OverlayStatus = Exclude<LandmarkSyncStatus, "ready"> | "restarting";
+type OverlayStatus = Exclude<LandmarkSyncStatus, "ready"> | "restarting" | "switching";
 
-export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, onRestart }: Props) {
+export function AlignmentWorkspace({
+  dataset,
+  layerNames,
+  movingLayerNames,
+  onSwitchMovingLayer,
+  landmarkAnnotation,
+  onRestart,
+}: Props) {
   const { modal } = App.useApp();
   const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(true);
   const [landmarkPanelWidth, setLandmarkPanelWidth] = useState(DEFAULT_LANDMARK_PANEL_WIDTH);
@@ -87,6 +105,10 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
   // See getOverlayLayerColors.
   const [isColorOverlayEnabled, setIsColorOverlayEnabled] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+  // Set while the landmarks are saved before switching to this moving layer.
+  const [switchTargetLayerName, setSwitchTargetLayerName] = useState<string | null>(null);
+  // Set right before this page navigates on purpose, so that the blocker below doesn't ask.
+  const isLeavingRef = useRef(false);
   // Whether the workers showed the other layer for an alignment yet, see the effect below.
   const hasShownAlignmentRef = useRef(false);
   // The effects below depend on the names, not on the object, which is created anew on every
@@ -109,19 +131,36 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     hasUnsyncedLandmarks,
     fetchLandmarks,
     stopSync,
+    flushAndStopSync,
+    resumeSync,
   } = useLandmarkSync(sendMessage, layerNames);
+  const inactiveMovingLayerNames = movingLayerNames.filter((name) => name !== movingLayerName);
+  const voxelSizeFactor = dataset.dataSource.scale.factor;
+  const inactivePairs = useInactivePairs(
+    sendMessage,
+    fixedLayerName,
+    inactiveMovingLayerNames,
+    voxelSizeFactor,
+  );
   const overlayStatus: OverlayStatus | null = isRestarting
     ? "restarting"
-    : syncStatus !== "ready"
-      ? syncStatus
-      : null;
+    : switchTargetLayerName != null
+      ? "switching"
+      : syncStatus !== "ready"
+        ? syncStatus
+        : null;
   // Landmarks that changed in a worker but are not in the alignment annotation yet are unsaved,
   // too.
   const saveState: SaveState =
     storeSaveState === "saved" && hasUnsyncedLandmarks ? "unsaved" : storeSaveState;
   const hasUnsavedChanges = saveState !== "saved";
   // Estimating the transform is cheap, so the alignment always matches the current landmarks.
-  const estimation = useMemo(() => estimateTransformBtoA(landmarks), [landmarks]);
+  // Only the active pair is estimated again, the inactive pairs can't change.
+  const activePairAlignment = useMemo(
+    () => getLayerPairAlignment(landmarks, voxelSizeFactor),
+    [landmarks, voxelSizeFactor],
+  );
+  const { estimation } = activePairAlignment;
   const alignment: Alignment | null =
     "transform" in estimation
       ? {
@@ -131,20 +170,41 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       : null;
   const transformBtoA = alignment?.transformBtoA ?? null;
   const isAlignmentAvailable = transformBtoA != null;
-  const getDatasetLayerTransforms = (layerName: string) =>
-    dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)
-      ?.coordinateTransformations;
-  // The transforms of the moving layer in the dataset, updated when the alignment is applied.
-  const [movingLayerTransformsInDataset, setMovingLayerTransformsInDataset] = useState(() =>
-    getDatasetLayerTransforms(movingLayerName),
+  // The transforms of the layers in the dataset, updated when the alignments are applied.
+  const [layerTransformsInDataset, setLayerTransformsInDataset] = useState(() =>
+    getLayerTransformsInDataset(dataset.dataSource.dataLayers),
   );
-  const isAppliedToDataset =
-    transformBtoA != null &&
-    isAlignmentAppliedToDataset(
-      transformBtoA,
-      getDatasetLayerTransforms(fixedLayerName),
-      movingLayerTransformsInDataset,
+  const getAppliedStateOfLayer = (movingLayer: string, layerEstimation: typeof estimation) =>
+    getAppliedState(
+      layerEstimation,
+      layerTransformsInDataset[fixedLayerName],
+      layerTransformsInDataset[movingLayer],
     );
+  const isAppliedToDataset = getAppliedStateOfLayer(movingLayerName, estimation) === "applied";
+  const movingLayerRows: MovingLayerRow[] = movingLayerNames.map((layerName) => {
+    const pairAlignment =
+      layerName === movingLayerName
+        ? activePairAlignment
+        : inactivePairs?.get(layerName)?.alignment;
+    return pairAlignment != null
+      ? {
+          layerName,
+          completePairCount: pairAlignment.completePairCount,
+          meanResidual: pairAlignment.meanResidual,
+          appliedState: getAppliedStateOfLayer(layerName, pairAlignment.estimation),
+        }
+      : // Still loading, or the landmarks could not be read.
+        { layerName, isLoading: inactivePairs == null };
+  });
+  // The inactive pairs whose fixed layer landmarks can be copied to the active pair, the ones
+  // with the most landmarks first.
+  const copySources: CopySource[] = Array.from(inactivePairs ?? [])
+    .flatMap(([layerName, pair]) =>
+      pair.fixedSideNmlString != null
+        ? [{ layerName, landmarkCount: pair.alignment.landmarks.A.length }]
+        : [],
+    )
+    .toSorted((a, b) => b.landmarkCount - a.landmarkCount);
   const getOpenPairIds = (side: Side) =>
     overlayStatus == null ? getLandmarkPairInfo(landmarks, side).openPairIds : [];
 
@@ -169,6 +229,7 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
   // "beforeunload".
   const blocker = useBlocker(
     () =>
+      !isLeavingRef.current &&
       hasUnsavedChanges &&
       !confirm("The landmark annotation has unsaved changes that may be lost. Leave anyway?"),
   );
@@ -189,6 +250,16 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       sendMessage(side, "setAffineLayerTransforms", [otherLayerNames[side], matrix ?? Identity4x4]);
     }
   }, [sendMessage, fixedLayerName, movingLayerName, transformBtoA, isTransformShown]);
+
+  // The left worker also gets the transforms of the inactive moving layers. They are hidden
+  // there, but the user can show them in the layer settings to see all layers aligned.
+  useEffect(() => {
+    for (const [layerName, pair] of inactivePairs ?? []) {
+      const { estimation: layerEstimation } = pair.alignment;
+      const matrix = "transform" in layerEstimation ? layerEstimation.transform.affineMatrix : null;
+      sendMessage("A", "setAffineLayerTransforms", [layerName, matrix ?? Identity4x4]);
+    }
+  }, [sendMessage, inactivePairs]);
 
   // The workers show this state in their navbars.
   useEffect(() => {
@@ -366,9 +437,14 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     });
   };
 
-  // The synced landmarks may miss a landmark that was placed right before, so the transform is
-  // estimated again from the current landmarks of the workers.
-  const applyCurrentAlignment = async () => {
+  // Applies the alignments of all moving layers that have enough landmark pairs to the
+  // dataset. The synced landmarks may miss a landmark that was placed right before, so the
+  // transform of the active pair is estimated again from the current landmarks of the workers.
+  const applyAlignments = async () => {
+    if (inactivePairs == null) {
+      Toast.info("The landmarks of the other layers are still loading. Please try again.");
+      return;
+    }
     let currentLandmarks: Record<Side, Landmark[]>;
     try {
       currentLandmarks = await fetchLandmarks();
@@ -377,40 +453,63 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       Toast.error("Could not read the landmarks of the views.");
       return;
     }
-    const result = estimateTransformBtoA(currentLandmarks);
-    if ("errorMessage" in result) {
-      Toast.warning(result.errorMessage);
+    const estimations = new Map(
+      movingLayerNames.map((layerName) => [
+        layerName,
+        layerName === movingLayerName
+          ? estimateTransformBtoA(currentLandmarks)
+          : inactivePairs.get(layerName)?.alignment.estimation,
+      ]),
+    );
+    const transformsByMovingLayer = new Map<string, Transform>();
+    for (const [layerName, layerEstimation] of estimations) {
+      if (layerEstimation != null && "transform" in layerEstimation) {
+        transformsByMovingLayer.set(layerName, layerEstimation.transform);
+      }
+    }
+    if (transformsByMovingLayer.size === 0) {
+      Toast.warning("No layer has enough landmark pairs to be aligned yet.");
       return;
     }
-    applyAlignment(result.transform);
-  };
-
-  const applyAlignment = (transform: Transform) => {
-    const { A: fixedLayerName, B: movingLayerName } = layerNames;
-    const fixedLayer = dataset.dataSource.dataLayers.find((layer) => layer.name === fixedLayerName);
-    const fixedLayerHasTransforms = (fixedLayer?.coordinateTransformations ?? []).length > 0;
+    const getChangeDescription = (layerName: string) => {
+      const layerEstimation = estimations.get(layerName);
+      if (layerEstimation == null || !("transform" in layerEstimation)) {
+        return "stays unchanged (not enough landmark pairs)";
+      }
+      return getAppliedStateOfLayer(layerName, layerEstimation) === "applied"
+        ? "already uses its alignment"
+        : "gets its new alignment";
+    };
+    const fixedLayerHasTransforms = (layerTransformsInDataset[fixedLayerName] ?? []).length > 0;
     modal.confirm({
-      title: `Apply the alignment to "${movingLayerName}" in the dataset?`,
+      title: "Apply the alignment to the dataset?",
       okText: "Apply",
       content: (
         <>
-          <p>This replaces the transforms that "{movingLayerName}" currently has in the dataset.</p>
+          <ul>
+            {movingLayerNames.map((layerName) => (
+              <li key={layerName}>
+                "{layerName}" {getChangeDescription(layerName)}
+              </li>
+            ))}
+          </ul>
+          <p>An applied alignment replaces the transforms that the layer has in the dataset.</p>
           {fixedLayerHasTransforms ? (
             <p>
-              "{fixedLayerName}" has transforms itself. The stored alignment builds on them, so
-              changing the transforms of "{fixedLayerName}" later makes this alignment outdated.
+              "{fixedLayerName}" has transforms itself. The applied alignments build on them, so
+              changing the transforms of "{fixedLayerName}" later makes them outdated.
             </p>
           ) : null}
         </>
       ),
       onOk: async () => {
         try {
-          setMovingLayerTransformsInDataset(
-            await applyAlignmentToDataset(dataset.id, layerNames, transform),
+          setLayerTransformsInDataset(
+            await applyAlignmentsToDataset(dataset.id, fixedLayerName, transformsByMovingLayer),
           );
           Toast.success(
             <>
-              Applied the alignment to "{movingLayerName}" in the dataset.{" "}
+              Applied the alignment to the dataset.{" "}
               <a href={getViewDatasetURL(dataset)} target="_blank" rel="noopener noreferrer">
                 Open the dataset
               </a>{" "}
@@ -424,6 +523,45 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
         }
       },
     });
+  };
+
+  // Saves the landmarks and shows another moving layer in the right view. If saving fails,
+  // the current layer stays.
+  const switchMovingLayer = async (layerName: string) => {
+    if (layerName === movingLayerName || overlayStatus != null) {
+      return;
+    }
+    setSwitchTargetLayerName(layerName);
+    try {
+      await flushAndStopSync();
+      await sendMessage("store", "save");
+    } catch (error) {
+      console.error(error);
+      Toast.error(
+        `Could not save the landmarks, so "${layerName}" is not shown. Please try again.`,
+      );
+      resumeSync();
+      setSwitchTargetLayerName(null);
+      return;
+    }
+    isLeavingRef.current = true;
+    onSwitchMovingLayer(layerName);
+  };
+
+  // Copies the fixed layer landmarks of another moving layer into the left view, as a start
+  // for the active moving layer. They keep their pair ids, so the right view asks for their
+  // partners one by one.
+  const copyLandmarksOf = async (sourceLayerName: string) => {
+    const nmlString = inactivePairs?.get(sourceLayerName)?.fixedSideNmlString;
+    if (nmlString == null) {
+      return;
+    }
+    try {
+      await sendMessage("A", "importLandmarks", [nmlString]);
+    } catch (error) {
+      console.error(error);
+      Toast.error("Could not copy the landmarks.");
+    }
   };
 
   // A reloaded iframe has lost its state: a worker its landmarks, the store iframe its
@@ -500,7 +638,12 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
             src={getBigWarpStoreUrl(landmarkAnnotation.id)}
             onLoad={() => handleIframeLoad("store")}
           />
-          {overlayStatus != null ? <WorkspaceOverlay status={overlayStatus} /> : null}
+          {overlayStatus != null ? (
+            <WorkspaceOverlay
+              status={overlayStatus}
+              switchTargetLayerName={switchTargetLayerName}
+            />
+          ) : null}
         </Flex>
       </Splitter.Panel>
       <Splitter.Panel
@@ -536,8 +679,12 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
             isColorOverlayEnabled={isColorOverlayEnabled}
             onColorOverlayChange={setIsColorOverlayEnabled}
             canApplyAlignmentToDataset={dataset.isEditable}
-            onApplyAlignmentToDataset={applyCurrentAlignment}
+            onApplyAlignmentToDataset={applyAlignments}
             isAppliedToDataset={isAppliedToDataset}
+            movingLayerRows={movingLayerRows}
+            onSelectMovingLayer={switchMovingLayer}
+            copySources={syncStatus === "ready" ? copySources : []}
+            onCopyLandmarks={copyLandmarksOf}
             onSelectPair={selectPair}
             onDeletePair={deletePair}
             onDownloadLandmarks={downloadLandmarks}
@@ -589,16 +736,31 @@ function NextLandmarkHint({ openPairIds }: { openPairIds: number[] }) {
   );
 }
 
-// Covers the workers until the stored landmarks were imported, and while restarting. A
-// landmark placed before the import could get the pair id of a stored landmark.
-function WorkspaceOverlay({ status }: { status: OverlayStatus }) {
+const OVERLAY_TEXTS: Record<Exclude<OverlayStatus, "failed">, string> = {
+  loading: "Loading the landmarks…",
+  restarting: "Restarting the alignment view…",
+  switching: "Saving the landmarks…",
+};
+
+// Covers the workers until the stored landmarks were imported, while restarting and while
+// switching to another moving layer. A landmark placed before the import could get the pair
+// id of a stored landmark.
+function WorkspaceOverlay({
+  status,
+  switchTargetLayerName,
+}: {
+  status: OverlayStatus;
+  switchTargetLayerName: string | null;
+}) {
   return (
     <Flex className="align-datasets-overlay" vertical justify="center" align="center" gap={8}>
       {status !== "failed" ? (
         <>
           <Spin size="large" />
           <Typography.Text>
-            {status === "loading" ? "Loading the landmarks…" : "Restarting the alignment view…"}
+            {status === "switching" && switchTargetLayerName != null
+              ? `Switching to ${switchTargetLayerName}…`
+              : OVERLAY_TEXTS[status]}
           </Typography.Text>
         </>
       ) : (

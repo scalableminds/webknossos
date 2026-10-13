@@ -8,7 +8,7 @@ import {
   getDataset,
   getLayerAlignments,
 } from "admin/rest_api";
-import { Alert, Divider, Flex, Input, Typography } from "antd";
+import { Divider, Flex, Input, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import { AnnotationDetailsSidebar } from "dashboard/annotation_details_sidebar";
 import {
@@ -34,10 +34,7 @@ import {
 } from "./alignment_edit_blocker";
 import { AlignmentPageError, AlignmentPageSpinner } from "./alignment_page_status_views";
 import { getAlignmentViewUrl } from "./bigwarp_protocol";
-import { LayerPairPicker } from "./layer_pair_picker";
-
-const ALIGNING_LAYERS_DOCS_URL =
-  "https://docs.webknossos.org/webknossos/datasets/aligning_layers.html";
+import { FixedLayerPicker } from "./fixed_layer_picker";
 
 // Lists the alignment annotations of a dataset and creates new ones.
 function AlignmentSelectionView() {
@@ -74,7 +71,6 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [fixedLayerName, setFixedLayerName] = useState<string | null>(null);
-  const [movingLayerName, setMovingLayerName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [showArchived, setShowArchived] = useState(false);
@@ -88,12 +84,11 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
   const alignments = alignmentsQuery.data ?? [];
   const refetchAlignments = () => alignmentsQuery.refetch();
 
-  const alignmentsOfSelectedPair = alignments.filter(
+  const alignmentsOfSelectedLayer = alignments.filter(
     ({ layerAlignment }) =>
-      (fixedLayerName == null || layerAlignment?.fixedLayerName === fixedLayerName) &&
-      (movingLayerName == null || layerAlignment?.movingLayerName === movingLayerName),
+      fixedLayerName == null || layerAlignment?.fixedLayerName === fixedLayerName,
   );
-  const shownAlignments = alignmentsOfSelectedPair.filter(
+  const shownAlignments = alignmentsOfSelectedLayer.filter(
     (annotation) => (annotation.state === "Finished") === showArchived,
   );
   const selectedAnnotation =
@@ -102,12 +97,9 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
   const openAlignment = (annotationId: string) =>
     navigate(getAlignmentViewUrl(dataset, annotationId));
 
-  const createAlignment = async (fixed: string, moving: string) => {
+  const createAlignment = async (fixed: string) => {
     try {
-      const annotation = await createLayerAlignment(dataset.id, {
-        fixedLayerName: fixed,
-        movingLayerName: moving,
-      });
+      const annotation = await createLayerAlignment(dataset.id, { fixedLayerName: fixed });
       openAlignment(annotation.id);
     } catch (error) {
       handleGenericError(error as Error, "Could not create the alignment annotation.");
@@ -182,34 +174,12 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
     <div className="container">
       <Flex vertical align="center">
         <Typography.Title level={3}>Align layers of “{dataset.name}”</Typography.Title>
-        {dataset.dataSource.dataLayers.length > 2 ? (
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 16, width: "100%", maxWidth: 800 }}
-            title="Aligning more than two layers"
-            description={
-              <>
-                Choose one layer as the fixed reference layer and align every other layer to it, one
-                pair at a time, for example layer 2 → layer 1 and then layer 3 → layer 1. Aligning a
-                layer to a layer that was moved itself is not supported yet.{" "}
-                <a href={ALIGNING_LAYERS_DOCS_URL} target="_blank" rel="noopener noreferrer">
-                  Learn more
-                </a>
-              </>
-            }
-          />
-        ) : null}
-        <LayerPairPicker
+        <FixedLayerPicker
           dataset={dataset}
           fixedLayerName={fixedLayerName}
-          movingLayerName={movingLayerName}
-          onChange={(fixed, moving) => {
-            setFixedLayerName(fixed);
-            setMovingLayerName(moving);
-          }}
+          onChange={setFixedLayerName}
           existingAlignmentCount={
-            alignmentsOfSelectedPair.filter((annotation) => annotation.state === "Active").length
+            alignmentsOfSelectedLayer.filter((annotation) => annotation.state === "Active").length
           }
           onCreate={createAlignment}
         />
@@ -252,8 +222,8 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
             renderActions={renderActions}
             emptyPlaceholder={
               <Typography.Text type="secondary">
-                {fixedLayerName != null || movingLayerName != null
-                  ? "There are no alignments for the selected layers yet."
+                {fixedLayerName != null
+                  ? "There are no alignments to the selected layer yet."
                   : "There are no alignments for this dataset yet."}
               </Typography.Text>
             }

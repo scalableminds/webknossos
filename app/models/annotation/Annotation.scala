@@ -361,7 +361,7 @@ class AnnotationDAO @Inject() (
       val annotationLayerTypes = parseArrayLiteral(<<[String])
       val annotationLayerStatistics =
         parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
-      val layerAlignment = AnnotationLayerAlignment.fromColumns(<<?[String], <<?[String])
+      val layerAlignment = <<?[String].map(AnnotationLayerAlignment(_))
 
       AnnotationCompactInfo(
         id,
@@ -457,8 +457,7 @@ class AnnotationDAO @Inject() (
               ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
               ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
               ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics,
-              la.fixedLayerName,
-              la.movingLayerName
+              la.fixedLayerName
             FROM webknossos.annotations_ AS a
             JOIN webknossos.users_ u ON u._id = a._user
             JOIN webknossos.datasets_ d ON d._id = a._dataset
@@ -472,7 +471,7 @@ class AnnotationDAO @Inject() (
               a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
               mu.firstname, mu.lastname,
               d.name, d._id, o._id,
-              la.fixedLayerName, la.movingLayerName
+              la.fixedLayerName
             ORDER BY a._id DESC
             LIMIT $limit
             OFFSET ${pageNumber * limit}
@@ -503,8 +502,7 @@ class AnnotationDAO @Inject() (
             an.tracing_names,
             an.tracing_typs,
             an.annotation_layer_statistics,
-            an.fixedLayerName,
-            an.movingLayerName
+            an.fixedLayerName
           FROM an
           LEFT JOIN webknossos.annotation_sharedteams ast ON ast._annotation = an._id
           LEFT JOIN webknossos.teams_ t ON ast._team = t._id
@@ -532,8 +530,7 @@ class AnnotationDAO @Inject() (
             an.tracing_names,
             an.tracing_typs,
             an.annotation_layer_statistics,
-            an.fixedLayerName,
-            an.movingLayerName
+            an.fixedLayerName
           ORDER BY an._id DESC
          """
       rows <- run(query.as[AnnotationCompactInfo])

@@ -9,6 +9,7 @@ import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
 import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { Toolkit } from "viewer/model/accessors/tool_accessor";
+import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
@@ -99,9 +100,13 @@ export function blockBigWarpWorkerNavigation(
 // new tree per node, don't move the camera to new nodes, restrict the tools to landmark
 // clicking and move to a position that contains data. These settings are not persisted
 // (see settings_saga.ts).
+// The transforms that the dataset stores for its layers are removed in the worker. The
+// alignment page sets the preview transforms of the other layers, and WEBKNOSSOS would chain
+// them with the inverse of the stored transforms of the natively rendered layer.
 export async function applyBigWarpWorkerSettings() {
   const layerName = getBigWarpWorkerLayerName();
   for (const layer of getDataLayers(Store.getState().dataset)) {
+    Store.dispatch(setLayerTransformsAction(layer.name, null));
     Store.dispatch(updateLayerSettingAction(layer.name, "isDisabled", layer.name !== layerName));
   }
   Store.dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layerName));

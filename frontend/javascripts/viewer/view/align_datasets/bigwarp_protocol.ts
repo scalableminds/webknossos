@@ -36,11 +36,19 @@ export function getAlignmentSelectionUrl(dataset: { name: string; id: string }):
   return `/datasets/${getReadableURLPart(dataset)}/align`;
 }
 
+// The URL param of the alignment view that holds the moving layer shown in the right view.
+export const MOVING_LAYER_URL_PARAM = "layer";
+
+// Without a moving layer, the alignment view shows the first moving layer of the dataset.
 export function getAlignmentViewUrl(
   dataset: { name: string; id: string },
   annotationId: string,
+  movingLayerName?: string,
 ): string {
-  return `${getAlignmentSelectionUrl(dataset)}/${annotationId}`;
+  const url = `${getAlignmentSelectionUrl(dataset)}/${annotationId}`;
+  return movingLayerName != null
+    ? `${url}?${new URLSearchParams({ [MOVING_LAYER_URL_PARAM]: movingLayerName })}`
+    : url;
 }
 
 // The store iframe must open the alignment annotation in the normal viewer instead of being

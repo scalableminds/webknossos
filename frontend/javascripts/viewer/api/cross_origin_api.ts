@@ -155,6 +155,11 @@ const handleMessage = async (event) => {
       break;
     }
 
+    case "findTreeGroupPath": {
+      returnValue = api.tracing.findTreeGroupPath(args[0]);
+      break;
+    }
+
     case "setAnnotationName": {
       if (!isString(args[0])) {
         throw new Error("The first argument needs to be the new name as a string.");

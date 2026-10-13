@@ -39,6 +39,7 @@ class UsedStorageService @Inject() (
     datasetMagDAO: DatasetMagDAO,
     datasetLayerAttachmentsDAO: DatasetLayerAttachmentDAO,
     rpc: RPC,
+    storageWarningService: StorageWarningService,
     config: WkConf
 )(implicit val ec: ExecutionContext)
     extends LazyLogging
@@ -83,6 +84,16 @@ class UsedStorageService @Inject() (
       }
     } yield ()
 
+  // A failed storage warning must not fail the storage scan itself.
+  private def tryAndLogWarning(organizationId: String, result: Fox[Unit]): Fox[Unit] =
+    for {
+      box <- result.shiftBox
+      _ = box match {
+        case f: Failure => logger.warn(f"Could not send storage warning for organization with id $organizationId: $f")
+        case _          => ()
+      }
+    } yield ()
+
   private def refreshStorageReports(organization: Organization, dataStores: List[DataStore]): Fox[Unit] =
     for {
       storageReportsByDataStore <- Fox.serialCombined(dataStores)(dataStore =>
@@ -98,6 +109,7 @@ class UsedStorageService @Inject() (
         organization._id,
         Instant.now
       ) ?~> "Failed to update last storage scan time in db"
+      _ <- tryAndLogWarning(organization._id, storageWarningService.warnIfThresholdCrossed(organization))
       _ = Thread.sleep(pauseAfterEachOrganization.toMillis)
     } yield ()
 
@@ -247,6 +259,7 @@ class UsedStorageService @Inject() (
             _ <- Fox.runIf(reports._1.nonEmpty || reports._2.nonEmpty)(
               organizationDAO.upsertUsedStorage(reports._1, reports._2)
             ) ?~> "Failed to upsert used storage reports into db"
+            _ <- tryAndLogWarning(organization._id, storageWarningService.warnIfThresholdCrossed(organization))
           } yield ()
         } else Fox.successful(())
     } yield ()

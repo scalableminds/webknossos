@@ -544,7 +544,12 @@ class DatasetController @Inject() (
         teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
         newTeams = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
-        _ <- notificationEmailService.updateDatasetTeamsAndSendEmails(dataset, oldAllowedTeams, newTeams, request.identity)(
+        _ <- notificationEmailService.updateDatasetTeamsAndSendEmails(
+          dataset,
+          oldAllowedTeams,
+          newTeams,
+          request.identity
+        )(
           teamDAO.updateAllowedTeamsForDataset(dataset._id, newTeams)
         )
       } yield Ok(Json.toJson(newTeams))

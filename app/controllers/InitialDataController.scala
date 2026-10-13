@@ -435,6 +435,14 @@ Samplecountry
   private val l4DenseDataset = defaultDataset.copy(
     _id = ObjectId("6ac000000000000000000006"),
     inboxSourceHash = Some(l4DenseDataSource.hashCode()),
+    description = Some(
+      """Dense connectomic reconstruction in layer 4 of mouse somatosensory cortex.
+        |
+        |A Motta, M Berning, KM Boergens, B Staffler, M Beining, S Loomba, P Hennig, H Wissler, M Helmstaedter\
+        |Science. 24 October 2019. [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)
+        |
+        |Segmentation by scalable minds.""".stripMargin
+    ),
     directoryName = l4DenseDataSource.id.directoryName,
     name = l4DenseDataSource.id.directoryName,
     voxelSize = Some(l4DenseDataSource.scale)

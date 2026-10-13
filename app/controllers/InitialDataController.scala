@@ -445,7 +445,7 @@ Samplecountry
         |Segmentation by [scalable minds](https://home.webknossos.org/services/automated-segmentation).""".stripMargin
     ),
     directoryName = l4DenseDataSource.id.directoryName,
-    name = l4DenseDataSource.id.directoryName,
+    name = "L4 Dense Connectome (Motta et al. 2019)",
     voxelSize = Some(l4DenseDataSource.scale)
   )
 

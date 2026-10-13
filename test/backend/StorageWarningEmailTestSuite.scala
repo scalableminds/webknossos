@@ -1,9 +1,9 @@
 package backend
 
-import models.storage.StorageWarningService.{crossedThresholdsPercent, rearmedThresholdsPercent, usagePercent}
+import models.storage.StorageWarningEmailService.{crossedThresholdsPercent, rearmedThresholdsPercent, usagePercent}
 import org.scalatest.wordspec.AsyncWordSpec
 
-class StorageWarningTestSuite extends AsyncWordSpec {
+class StorageWarningEmailTestSuite extends AsyncWordSpec {
 
   private val thresholdsPercent = List(90, 100)
 

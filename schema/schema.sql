@@ -409,7 +409,7 @@ CREATE TABLE webknossos.organization_planExpiryReminders(
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
-CREATE TABLE webknossos.organization_storageWarnings(
+CREATE TABLE webknossos.organization_sentStorageWarningEmails(
   _organization TEXT NOT NULL,
   thresholdPercent INT NOT NULL, -- the storage usage threshold the warning was sent for; removed again once usage drops clearly below it
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -1055,7 +1055,7 @@ ALTER TABLE webknossos.organization_plan_updates
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organization_planExpiryReminders
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.organization_storageWarnings
+ALTER TABLE webknossos.organization_sentStorageWarningEmails
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;

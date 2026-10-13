@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext
    The thresholds a warning was already sent for are recorded in the database, so that each one is only announced once.
    Once the usage drops clearly below a threshold again (e.g. after deleting data or upgrading the storage), it is
    re-armed. The margin prevents a new mail on every scan while the usage hovers around a threshold. */
-class StorageWarningService @Inject() (
+class StorageWarningEmailService @Inject() (
     organizationDAO: OrganizationDAO,
     multiUserDAO: MultiUserDAO,
     defaultMails: DefaultMails,
@@ -25,19 +25,19 @@ class StorageWarningService @Inject() (
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  import StorageWarningService.{crossedThresholdsPercent, rearmedThresholdsPercent, usagePercent}
+  import StorageWarningEmailService.{crossedThresholdsPercent, rearmedThresholdsPercent, usagePercent}
 
   private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
-  private def thresholdsPercent: List[Int] = conf.WebKnossos.StorageWarning.thresholdsPercent
+  private def thresholdsPercent: List[Int] = conf.WebKnossos.StorageWarningEmails.thresholdsPercent
 
-  def warnIfThresholdCrossed(organization: Organization): Fox[Unit] =
+  def sendWarningEmailIfThresholdCrossed(organization: Organization): Fox[Unit] =
     organization.includedStorageBytes match {
-      case Some(includedStorageBytes) if conf.WebKnossos.StorageWarning.enabled && thresholdsPercent.nonEmpty =>
+      case Some(includedStorageBytes) if conf.WebKnossos.StorageWarningEmails.enabled && thresholdsPercent.nonEmpty =>
         for {
           usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
           percent = usagePercent(usedStorageBytes, includedStorageBytes)
-          _ <- organizationDAO.deleteStorageWarnings(
+          _ <- organizationDAO.deleteSentStorageWarningEmails(
             organization._id,
             rearmedThresholdsPercent(percent, thresholdsPercent)
           )
@@ -59,7 +59,7 @@ class StorageWarningService @Inject() (
       _ <- Fox.fromBool(recipients.nonEmpty) ?~> "Organization has neither an owner nor an admin to notify"
       // Recorded before sending, so that mails that cannot be delivered are not retried on every scan.
       // The count tells us how many of the thresholds were not recorded before; if none, the mails were already sent.
-      newlyRecordedCount <- organizationDAO.insertStorageWarnings(organization._id, crossedThresholdsPercent)
+      newlyRecordedCount <- organizationDAO.insertSentStorageWarningEmails(organization._id, crossedThresholdsPercent)
       _ = if (newlyRecordedCount > 0) {
         logger.info(
           s"Warning the owner and admins (${recipients.length}) of organization ${organization._id} that it uses $usedStorageBytes of $includedStorageBytes included storage bytes..."
@@ -73,7 +73,7 @@ class StorageWarningService @Inject() (
     } yield ()
 }
 
-object StorageWarningService {
+object StorageWarningEmailService {
 
   // Usage must drop this many percentage points below a threshold before a warning for it is sent again.
   private val rearmMarginPercent = 5.0

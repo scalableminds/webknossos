@@ -1,5 +1,6 @@
 import {
   ArrowLeftOutlined,
+  CheckOutlined,
   DeleteOutlined,
   DownloadOutlined,
   NodeIndexOutlined,
@@ -21,10 +22,12 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { AsyncButton } from "components/async_clickables";
 import { SidebarSection } from "dashboard/sidebar_section";
+import { formatNumberToLength } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import type { Vector3 } from "viewer/constants";
+import type { VoxelSize } from "types/api_types";
+import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { AnnotationIdentity } from "viewer/view/right_border_tabs/info_tab/identity_block";
 import {
   type Alignment,
@@ -42,16 +45,16 @@ import {
 import type { LandmarkExportFormat } from "./landmark_export";
 
 // A pair whose error is this many times higher than the mean error is highlighted, because it
-// was probably placed imprecisely. Errors below MIN_HIGH_RESIDUAL (in voxels) are never
-// highlighted: if the landmarks fit exactly, all errors are just floating point noise.
+// was probably placed imprecisely. Errors below the size of one voxel are never highlighted:
+// if the landmarks fit exactly, all errors are just floating point noise.
 const HIGH_RESIDUAL_FACTOR = 2;
-const MIN_HIGH_RESIDUAL = 1;
 
-// The pair list is virtualized, which needs fixed column widths and a fixed body height.
-const PAIR_COLUMN_WIDTHS = { name: 104, position: 150, residual: 72, delete: 40 };
+// The pair list is virtualized, which needs fixed column widths and a fixed body height. The
+// widths fit into the default panel width, so the list doesn't scroll sideways.
+const PAIR_COLUMN_WIDTHS = { name: 104, landmark: 56, residual: 84, delete: 40 };
 const PAIR_TABLE_WIDTH =
   PAIR_COLUMN_WIDTHS.name +
-  2 * PAIR_COLUMN_WIDTHS.position +
+  2 * PAIR_COLUMN_WIDTHS.landmark +
   PAIR_COLUMN_WIDTHS.residual +
   PAIR_COLUMN_WIDTHS.delete;
 const PAIR_TABLE_HEADER_HEIGHT = 40;
@@ -79,6 +82,8 @@ type Props = {
   onChangeAnnotationName: (name: string) => void;
   onChangeAnnotationDescription: (description: string) => void;
   layerNames: LayerNames;
+  // The voxel size of the dataset, to show the errors of the pairs as lengths.
+  voxelSize: VoxelSize;
   landmarks: Record<Side, Landmark[]>;
   alignment: Alignment | null;
   // Why no alignment could be estimated, if so.
@@ -93,6 +98,8 @@ type Props = {
   onColorOverlayChange: (isEnabled: boolean) => void;
   canApplyAlignmentToDataset: boolean;
   onApplyAlignmentToDataset: () => void;
+  // Whether the moving layer has the current alignment as its transform in the dataset.
+  isAppliedToDataset: boolean;
   onSelectPair: (pair: LandmarkPair) => void;
   onDeletePair: (pair: LandmarkPair) => void;
   onDownloadLandmarks: (format: LandmarkExportFormat) => void;
@@ -102,6 +109,12 @@ type Props = {
   hasUnsavedChanges: boolean;
   onSave: () => Promise<void>;
 };
+
+// The residuals are lengths in the unit of the dataset (see getLandmarkPairs). Large values
+// are shown in a larger unit, e.g. µm instead of nm.
+function formatResidual(residual: number, voxelSize: VoxelSize): string {
+  return formatNumberToLength(residual, LongUnitToShortUnitMap[voxelSize.unit]);
+}
 
 export function rgbColorString(color: Vector3): string {
   return `rgb(${color.map((component) => Math.round(component * 255)).join(",")})`;
@@ -135,11 +148,13 @@ function AlignmentStatus({
   alignment,
   alignmentErrorMessage,
   meanResidual,
+  voxelSize,
 }: {
   pairs: LandmarkPair[];
   alignment: Alignment | null;
   alignmentErrorMessage: string | null;
   meanResidual: number | null;
+  voxelSize: VoxelSize;
 }) {
   const completePairCount = pairs.filter(isCompletePair).length;
   // Each incomplete row has one landmark.
@@ -149,7 +164,7 @@ function AlignmentStatus({
       {alignment != null ? (
         <Typography.Text>
           Aligned · {completePairCount} pairs
-          {meanResidual != null ? ` · mean error ${meanResidual.toFixed(1)}` : null}
+          {meanResidual != null ? ` · mean error ${formatResidual(meanResidual, voxelSize)}` : null}
         </Typography.Text>
       ) : (
         <Typography.Text type="secondary">
@@ -268,27 +283,30 @@ function AnnotationHeader({
 
 function getPairColumns(
   layerNames: LayerNames,
+  voxelSize: VoxelSize,
   meanResidual: number | null,
   onDeletePair: Props["onDeletePair"],
 ): ColumnsType<LandmarkPair> {
-  // The color of a landmark is shown next to its position, to find it in the view.
-  const positionColumns = SIDES.map((side) => ({
-    title: layerNames[side],
+  // One column per view with the color of the landmark, to find it in the view. The position
+  // is shown on hover.
+  const landmarkColumns = SIDES.map((side) => ({
+    title: <Tooltip title={layerNames[side]}>{side === "A" ? "Left" : "Right"}</Tooltip>,
     key: side,
-    width: PAIR_COLUMN_WIDTHS.position,
-    ellipsis: true,
+    width: PAIR_COLUMN_WIDTHS.landmark,
+    align: "center" as const,
     render: (_value: unknown, pair: LandmarkPair) => {
       const landmark = pair.landmarks[side];
       return landmark != null ? (
-        <>
+        <Tooltip title={`Position: ${landmark.position.join(", ")}`}>
           <span className="landmark-color" style={{ background: rgbColorString(landmark.color) }} />
-          {landmark.position.join(", ")}
-        </>
+        </Tooltip>
       ) : (
         <Typography.Text type="warning">missing</Typography.Text>
       );
     },
   }));
+  // Errors of the size of one voxel are not highlighted, see HIGH_RESIDUAL_FACTOR.
+  const minHighResidual = Math.min(...voxelSize.factor);
   return [
     {
       title: "Name",
@@ -301,7 +319,7 @@ function getPairColumns(
           <Typography.Text type="secondary">Unnamed</Typography.Text>
         ),
     },
-    ...positionColumns,
+    ...landmarkColumns,
     {
       title: <Tooltip title="How far apart the pair still is after the alignment">Error</Tooltip>,
       key: "residual",
@@ -313,8 +331,12 @@ function getPairColumns(
         }
         const isHigh =
           meanResidual != null &&
-          pair.residual > Math.max(HIGH_RESIDUAL_FACTOR * meanResidual, MIN_HIGH_RESIDUAL);
-        return <Tag color={isHigh ? "warning" : undefined}>{pair.residual.toFixed(1)}</Tag>;
+          pair.residual > Math.max(HIGH_RESIDUAL_FACTOR * meanResidual, minHighResidual);
+        return (
+          <Tag color={isHigh ? "warning" : undefined} style={{ marginInlineEnd: 0 }}>
+            {formatResidual(pair.residual, voxelSize)}
+          </Tag>
+        );
       },
     },
     {
@@ -346,6 +368,7 @@ export function LandmarkPanel({
   onChangeAnnotationName,
   onChangeAnnotationDescription,
   layerNames,
+  voxelSize,
   landmarks,
   alignment,
   alignmentErrorMessage,
@@ -358,6 +381,7 @@ export function LandmarkPanel({
   onColorOverlayChange,
   canApplyAlignmentToDataset,
   onApplyAlignmentToDataset,
+  isAppliedToDataset,
   onSelectPair,
   onDeletePair,
   onDownloadLandmarks,
@@ -365,7 +389,7 @@ export function LandmarkPanel({
   hasUnsavedChanges,
   onSave,
 }: Props) {
-  const pairs = getLandmarkPairs(landmarks, alignment?.transformBtoA ?? null);
+  const pairs = getLandmarkPairs(landmarks, alignment?.transformBtoA ?? null, voxelSize.factor);
   const meanResidual = getMeanResidual(pairs);
   const [pairListRef, pairListHeight] = useElementHeight();
 
@@ -388,6 +412,7 @@ export function LandmarkPanel({
           alignment={alignment}
           alignmentErrorMessage={alignmentErrorMessage}
           meanResidual={meanResidual}
+          voxelSize={voxelSize}
         />
         <Flex gap={8} wrap style={{ marginTop: 8 }}>
           <Tooltip
@@ -406,6 +431,17 @@ export function LandmarkPanel({
             </Button>
           </Tooltip>
         </Flex>
+        {alignment != null ? (
+          isAppliedToDataset ? (
+            <Typography.Text type="success" style={{ marginTop: 4 }}>
+              <CheckOutlined /> The dataset uses this alignment.
+            </Typography.Text>
+          ) : (
+            <Typography.Text type="secondary" style={{ marginTop: 4 }}>
+              The dataset doesn't use this alignment yet.
+            </Typography.Text>
+          )
+        ) : null}
       </SidebarSection>
       <SidebarSection label="View">
         {SIDES.map((side) => (
@@ -464,7 +500,7 @@ export function LandmarkPanel({
             virtual
             size="small"
             pagination={false}
-            columns={getPairColumns(layerNames, meanResidual, onDeletePair)}
+            columns={getPairColumns(layerNames, voxelSize, meanResidual, onDeletePair)}
             dataSource={pairs}
             onRow={(pair) => ({
               onClick: () => onSelectPair(pair),

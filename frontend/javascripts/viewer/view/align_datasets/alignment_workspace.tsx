@@ -6,6 +6,7 @@ import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useBlocker } from "react-router";
 import type { APIAnnotation, APIDataset } from "types/api_types";
 import { Identity4x4, type Vector3 } from "viewer/constants";
+import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import {
   getTransformPointUnscaledFn,
   invertTransform,
@@ -20,6 +21,7 @@ import {
   getLandmarkPairInfo,
   getLandmarkTreeName,
   getOverlayLayerColors,
+  isAlignmentAppliedToDataset,
   type Landmark,
   type LandmarkPair,
   type LayerNames,
@@ -48,6 +50,8 @@ import { type LandmarkSyncStatus, useLandmarkSync } from "./use_landmark_sync";
 const DEFAULT_LANDMARK_PANEL_WIDTH = 380;
 const MIN_LANDMARK_PANEL_WIDTH = 260;
 const MAX_LANDMARK_PANEL_WIDTH = "70%";
+// Longer than usual, so that there is time to click the link in the toast.
+const APPLIED_TOAST_TIMEOUT_MS = 15_000;
 
 type Props = {
   dataset: APIDataset;
@@ -122,6 +126,20 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       : null;
   const transformBtoA = alignment?.transformBtoA ?? null;
   const isAlignmentAvailable = transformBtoA != null;
+  const getDatasetLayerTransforms = (layerName: string) =>
+    dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)
+      ?.coordinateTransformations;
+  // The transforms of the moving layer in the dataset, updated when the alignment is applied.
+  const [movingLayerTransformsInDataset, setMovingLayerTransformsInDataset] = useState(() =>
+    getDatasetLayerTransforms(movingLayerName),
+  );
+  const isAppliedToDataset =
+    transformBtoA != null &&
+    isAlignmentAppliedToDataset(
+      transformBtoA,
+      getDatasetLayerTransforms(fixedLayerName),
+      movingLayerTransformsInDataset,
+    );
   const getOpenPairIds = (side: Side) =>
     overlayStatus == null ? getLandmarkPairInfo(landmarks, side).openPairIds : [];
 
@@ -382,8 +400,19 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       ),
       onOk: async () => {
         try {
-          await applyAlignmentToDataset(dataset.id, layerNames, transform);
-          Toast.success(`Applied the alignment to "${movingLayerName}" in the dataset.`);
+          setMovingLayerTransformsInDataset(
+            await applyAlignmentToDataset(dataset.id, layerNames, transform),
+          );
+          Toast.success(
+            <>
+              Applied the alignment to "{movingLayerName}" in the dataset.{" "}
+              <a href={getViewDatasetURL(dataset)} target="_blank" rel="noopener noreferrer">
+                Open the dataset
+              </a>{" "}
+              to see the result.
+            </>,
+            { timeout: APPLIED_TOAST_TIMEOUT_MS },
+          );
         } catch (error) {
           console.error(error);
           Toast.error("Could not apply the alignment to the dataset.");
@@ -479,6 +508,7 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
         {isLandmarkPanelOpen ? (
           <LandmarkPanel
             alignmentListUrl={getAlignmentSelectionUrl(dataset)}
+            voxelSize={dataset.dataSource.scale}
             layerNames={layerNames}
             landmarks={landmarks}
             annotationName={annotationName}
@@ -502,6 +532,7 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
             onColorOverlayChange={setIsColorOverlayEnabled}
             canApplyAlignmentToDataset={dataset.isEditable}
             onApplyAlignmentToDataset={applyCurrentAlignment}
+            isAppliedToDataset={isAppliedToDataset}
             onSelectPair={selectPair}
             onDeletePair={deletePair}
             onDownloadLandmarks={downloadLandmarks}

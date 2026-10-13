@@ -1,11 +1,12 @@
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import ColorGenerator from "libs/color_generator";
 import { V3 } from "libs/mjs";
+import isEqualWith from "lodash-es/isEqualWith";
 import max from "lodash-es/max";
 import mean from "lodash-es/mean";
 import uniq from "lodash-es/uniq";
 import { Matrix, SingularValueDecomposition } from "ml-matrix";
-import type { APIDataset } from "types/api_types";
+import type { APIDataset, CoordinateTransformation } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
@@ -37,9 +38,10 @@ export type LandmarkPair = {
   // Null for a landmark that can't be paired, see getLandmarkPairs.
   pairId: number | null;
   landmarks: Partial<Record<Side, Landmark>>;
-  // Distance between landmark A and the transformed landmark B. A value that is much
-  // higher than in the other pairs usually means that this pair was placed imprecisely.
-  // Null if no transform was estimated yet or if one of the landmarks is missing.
+  // Distance between landmark A and the transformed landmark B, see getLandmarkPairs for the
+  // unit. A value that is much higher than in the other pairs usually means that this pair
+  // was placed imprecisely. Null if no transform was estimated yet or if one of the landmarks
+  // is missing.
   residual: number | null;
 };
 
@@ -56,6 +58,8 @@ export const MIN_LANDMARK_PAIR_COUNT = 3;
 // If the smallest extent of a point cloud is below this fraction of its largest extent,
 // the points are treated as lying in one plane (or on one line).
 const MIN_EXTENT_RATIO = 1e-6;
+// See isAlignmentAppliedToDataset.
+const APPLIED_TRANSFORM_TOLERANCE = 1e-9;
 
 // The two landmarks of a pair are trees with the same name, "Landmark <pair id>", one in each
 // worker. A worker names a tree when a click creates it (see getNewLandmarkTreeProperties in
@@ -119,9 +123,12 @@ export function prepareLandmarkTreesForImport(trees: MutableTreeMap): MutableTre
 // landmark without a pair id, or a second landmark with the same pair id on the same side,
 // gets a row of its own with pair id null. Neither happens when the landmarks are placed in
 // the workers.
+// The landmark positions are in voxels. With the voxel size of the dataset, the residuals are
+// lengths in the unit of the dataset, which also works for anisotropic voxels.
 export function getLandmarkPairs(
   landmarks: Record<Side, Landmark[]>,
   transformBtoA: Transform | null,
+  voxelSizeFactor: Vector3 = [1, 1, 1],
 ): LandmarkPair[] {
   const transformPointBtoA =
     transformBtoA != null ? getTransformPointUnscaledFn(transformBtoA) : null;
@@ -152,7 +159,9 @@ export function getLandmarkPairs(
       landmarks: { A, B },
       residual:
         transformPointBtoA != null && A != null && B != null
-          ? V3.length(V3.sub(A.position, transformPointBtoA(B.position)))
+          ? V3.length(
+              V3.scale3(V3.sub(A.position, transformPointBtoA(B.position)), voxelSizeFactor),
+            )
           : null,
     }));
   return pairs.concat(rowsWithoutPair);
@@ -316,7 +325,7 @@ export async function applyAlignmentToDataset(
   datasetId: string,
   layerNames: LayerNames,
   transformBtoA: Transform,
-): Promise<void> {
+): Promise<CoordinateTransformation[]> {
   const dataset = await getDataset(datasetId);
   if (!dataset.isActive) {
     throw new Error("The dataset is not active anymore.");
@@ -327,10 +336,10 @@ export async function applyAlignmentToDataset(
   if (layerA == null || layerB == null) {
     throw new Error("The layers to align don't exist in the dataset anymore.");
   }
-  const coordinateTransformations = [
-    { type: "affine" as const, matrix: flatToNestedMatrix(transformBtoA.affineMatrix) },
-    ...(layerA.coordinateTransformations ?? []),
-  ];
+  const coordinateTransformations = getAlignedMovingLayerTransforms(
+    transformBtoA,
+    layerA.coordinateTransformations,
+  );
   await updateDatasetPartial(datasetId, {
     dataSource: {
       ...dataset.dataSource,
@@ -339,4 +348,35 @@ export async function applyAlignmentToDataset(
       ),
     },
   });
+  return coordinateTransformations;
+}
+
+// The transforms that the moving layer gets when the alignment is applied to the dataset
+// (see applyAlignmentToDataset).
+function getAlignedMovingLayerTransforms(
+  transformBtoA: Transform,
+  fixedLayerTransforms: CoordinateTransformation[] | null | undefined,
+): CoordinateTransformation[] {
+  return [
+    { type: "affine", matrix: flatToNestedMatrix(transformBtoA.affineMatrix) },
+    ...(fixedLayerTransforms ?? []),
+  ];
+}
+
+// Whether the moving layer has exactly the transforms that applying the alignment would give
+// it. The numbers are compared with a small tolerance, because the server may store them with
+// less precision.
+export function isAlignmentAppliedToDataset(
+  transformBtoA: Transform,
+  fixedLayerTransforms: CoordinateTransformation[] | null | undefined,
+  movingLayerTransforms: CoordinateTransformation[] | null | undefined,
+): boolean {
+  return isEqualWith(
+    getAlignedMovingLayerTransforms(transformBtoA, fixedLayerTransforms),
+    movingLayerTransforms ?? [],
+    (a, b) =>
+      typeof a === "number" && typeof b === "number"
+        ? Math.abs(a - b) <= APPLIED_TRANSFORM_TOLERANCE * Math.max(1, Math.abs(a))
+        : undefined,
+  );
 }

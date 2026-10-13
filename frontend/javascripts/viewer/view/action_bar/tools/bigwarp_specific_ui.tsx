@@ -4,7 +4,7 @@ import NoTransformationIcon from "@images/icons/icon-no-transformation.svg?react
 import { Space } from "antd";
 import { sendCommandToAlignmentPage } from "viewer/view/align_datasets/bigwarp_protocol";
 import { useAlignmentViewState } from "viewer/view/align_datasets/bigwarp_worker";
-import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
+import { ToggleButton } from "viewer/view/components/button_component";
 import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE } from "./tool_helpers";
 
 // Switches between showing the other layer aligned to this worker's layer and untransformed.

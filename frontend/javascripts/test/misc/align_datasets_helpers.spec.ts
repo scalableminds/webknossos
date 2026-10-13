@@ -1,6 +1,8 @@
 import DiffableMap from "libs/diffable_map";
-import type { APIAnnotationInfo, APIDataset } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import type { APIAnnotationInfo, APIDataset, CoordinateTransformation } from "types/api_types";
+import { Identity4x4, type Vector3 } from "viewer/constants";
+import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { createAffineTransform } from "viewer/model/helpers/transformation_helpers";
 import type { MutableTreeMap } from "viewer/model/types/tree_types";
 import { getAlignmentEditBlocker } from "viewer/view/align_datasets/alignment_edit_blocker";
 import {
@@ -16,6 +18,7 @@ import {
   getMissingLayerNames,
   getNextLandmarkPairId,
   getOverlayLayerColors,
+  isAlignmentAppliedToDataset,
   type Landmark,
   prepareLandmarkTreesForImport,
 } from "viewer/view/align_datasets/alignment_helpers";
@@ -246,6 +249,20 @@ describe("Dataset alignment helpers", () => {
     ).toEqual([4]);
   });
 
+  it("measures the residuals in the unit of the dataset", () => {
+    const voxelSizeFactor: Vector3 = [4, 4, 40];
+    // A transform that shifts by one voxel along x and z.
+    const shiftedPositionsB = POSITIONS_A.map(([x, y, z]): Vector3 => [x - 1, y, z - 1]);
+    const transform = createAffineTransform(shiftedPositionsB, POSITIONS_A);
+    const landmarks = {
+      A: toLandmarks([[0, 0, 0]]),
+      // Before the transform, this landmark is at the same position as the one of A.
+      B: toLandmarks([[0, 0, 0]]),
+    };
+    const [pair] = getLandmarkPairs(landmarks, transform, voxelSizeFactor);
+    expect(pair.residual).toBeCloseTo(Math.hypot(4, 40), 5);
+  });
+
   it("computes the mean residual of the pairs that have one", () => {
     const pairs = [
       { key: "1", pairId: 1, landmarks: {}, residual: 1 },
@@ -315,6 +332,22 @@ describe("Alignment annotation helpers", () => {
       moving: [255, 0, 255],
     });
     expect(getOverlayLayerColors(createDataset("segmentation"), layerNames)).toBeNull();
+  });
+
+  it("recognizes whether the moving layer has the applied alignment", () => {
+    const transform = createAffineTransform(POSITIONS_B, POSITIONS_A);
+    const fixedLayerTransforms: CoordinateTransformation[] = [
+      { type: "affine", matrix: flatToNestedMatrix(Identity4x4) },
+    ];
+    const appliedTransforms: CoordinateTransformation[] = [
+      { type: "affine", matrix: flatToNestedMatrix(transform.affineMatrix) },
+      ...fixedLayerTransforms,
+    ];
+    expect(isAlignmentAppliedToDataset(transform, fixedLayerTransforms, appliedTransforms)).toBe(
+      true,
+    );
+    expect(isAlignmentAppliedToDataset(transform, null, appliedTransforms)).toBe(false);
+    expect(isAlignmentAppliedToDataset(transform, fixedLayerTransforms, null)).toBe(false);
   });
 
   it("finds the layers of an alignment that the dataset doesn't have", () => {

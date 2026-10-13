@@ -441,7 +441,7 @@ Samplecountry
         |A Motta, M Berning, KM Boergens, B Staffler, M Beining, S Loomba, P Hennig, H Wissler, M Helmstaedter\
         |Science. 24 October 2019. [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)
         |
-        |Segmentation by scalable minds.""".stripMargin
+        |Segmentation by [scalable minds](https://home.webknossos.org/services/automated-segmentation).""".stripMargin
     ),
     directoryName = l4DenseDataSource.id.directoryName,
     name = l4DenseDataSource.id.directoryName,

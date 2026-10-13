@@ -1,6 +1,6 @@
-// Alignment view (alignment_view.tsx): the two worker iframes and the resizable landmark
-// panel on the right (open by default), side by side.
-.align-datasets-workspace {
+// Layer registration view (layer_registration_view.tsx): the two worker iframes and the
+// resizable landmark panel on the right (open by default), side by side.
+.layer-registration-workspace {
   height: 100%;
 
   &:not(.is-landmark-panel-closed) .landmark-panel {
@@ -19,13 +19,13 @@
     display: none;
   }
 
-  .align-datasets-worker {
+  .layer-registration-worker {
     position: relative;
     flex: 1 1 0;
     min-width: 0;
     height: 100%;
 
-    & + .align-datasets-worker {
+    & + .layer-registration-worker {
       border-left: 4px solid var(--ant-color-primary);
     }
 
@@ -38,7 +38,7 @@
   }
 
   // Above the status bar at the bottom of the viewer. Clicks go through to the view.
-  .align-datasets-next-landmark-hint {
+  .layer-registration-next-landmark-hint {
     position: absolute;
     bottom: 48px;
     left: 50%;
@@ -51,7 +51,7 @@
     pointer-events: none;
   }
 
-  .align-datasets-overlay {
+  .layer-registration-overlay {
     position: absolute;
     inset: 0;
     background: color-mix(in srgb, var(--ant-color-bg-base) 70%, transparent);
@@ -70,7 +70,8 @@
     border-radius: 50%;
   }
 
-  // Shown below the empty landmark table (CopyLandmarksOffer in moving_layer_list.tsx).
+  // Shown below the empty landmark table (CopyLandmarksOffer in
+  // layer_registration_moving_layer_list.tsx).
   .copy-landmarks-offer {
     margin-top: 8px;
     padding: 12px;
@@ -79,7 +80,8 @@
     background: var(--ant-color-fill-quaternary);
   }
 
-  // A row of the list of moving layers in the landmark panel (moving_layer_list.tsx).
+  // A row of the list of moving layers in the landmark panel
+  // (layer_registration_moving_layer_list.tsx).
   .moving-layer-row {
     width: 100%;
     padding: 4px 8px;

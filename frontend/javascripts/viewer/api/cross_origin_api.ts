@@ -3,21 +3,21 @@ import isObject from "lodash-es/isObject";
 import isString from "lodash-es/isString";
 import { useEffect } from "react";
 import { api } from "viewer/singletons";
-import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
+import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
 import {
   exportLandmarkPairsAsNml,
   importLandmarks,
-  setAlignmentViewState,
   setLandmarkPairInfo,
+  setLayerRegistrationViewState,
   setOverlayLayerColors,
-  useBigWarpShortcutRelay,
-} from "viewer/view/align_datasets/bigwarp_worker";
+  useLayerRegistrationShortcutRelay,
+} from "viewer/view/layer_registration/layer_registration_worker";
 
-// Some commands only exist for the iframes of the dataset alignment view. The error is
+// Some commands only exist for the iframes of the layer registration view. The error is
 // caught in onMessage, which logs it and replies with an error.
-function assertBigWarpWorker() {
-  if (!isBigWarpWorker()) {
-    throw new Error("This command is only available in the dataset alignment view.");
+function assertLayerRegistrationWorker() {
+  if (!isLayerRegistrationWorker()) {
+    throw new Error("This command is only available in the layer registration view.");
   }
 }
 
@@ -93,7 +93,7 @@ const handleMessage = async (event) => {
     }
 
     case "importLandmarks": {
-      assertBigWarpWorker();
+      assertLayerRegistrationWorker();
       if (!isString(args[0])) {
         throw new Error("The first argument needs to be the content of the nml as a string.");
       }
@@ -102,25 +102,25 @@ const handleMessage = async (event) => {
     }
 
     case "setLandmarkPairInfo": {
-      assertBigWarpWorker();
+      assertLayerRegistrationWorker();
       setLandmarkPairInfo(args[0]);
       break;
     }
 
-    case "setAlignmentViewState": {
-      assertBigWarpWorker();
-      setAlignmentViewState(args[0]);
+    case "setLayerRegistrationViewState": {
+      assertLayerRegistrationWorker();
+      setLayerRegistrationViewState(args[0]);
       break;
     }
 
     case "setOverlayLayerColors": {
-      assertBigWarpWorker();
+      assertLayerRegistrationWorker();
       setOverlayLayerColors(args[0]);
       break;
     }
 
     case "exportLandmarkPairsAsNml": {
-      assertBigWarpWorker();
+      assertLayerRegistrationWorker();
       returnValue = await exportLandmarkPairsAsNml(args[0]);
       break;
     }
@@ -311,7 +311,7 @@ function CrossOriginApi() {
     }
     return app.vent.on("webknossos:initialized", sendInit);
   }, []);
-  useBigWarpShortcutRelay();
+  useLayerRegistrationShortcutRelay();
   return null;
 }
 

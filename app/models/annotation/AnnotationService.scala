@@ -74,7 +74,7 @@ class AnnotationService @Inject() (
     savedTracingInformationHandler: SavedTracingInformationHandler,
     annotationDAO: AnnotationDAO,
     annotationLayerDAO: AnnotationLayerDAO,
-    annotationLayerAlignmentDAO: AnnotationLayerAlignmentDAO,
+    annotationLayerRegistrationDAO: AnnotationLayerRegistrationDAO,
     userDAO: UserDAO,
     taskTypeDAO: TaskTypeDAO,
     taskService: TaskService,
@@ -299,7 +299,7 @@ class AnnotationService @Inject() (
       dataset: Dataset,
       annotationLayerParameters: List[AnnotationLayerParameters],
       name: String = AnnotationDefaults.defaultName,
-      layerAlignment: Option[AnnotationLayerAlignment] = None
+      layerRegistration: Option[AnnotationLayerRegistration] = None
   )(using ctx: DBAccessContext): Fox[Annotation] = {
     val newAnnotationId = ObjectId.generate
     val datasetId = dataset._id
@@ -310,20 +310,20 @@ class AnnotationService @Inject() (
         annotationLayerParameters
       ) ?~> Msg.Annotation.createTracingsFailed
       annotation = Annotation(newAnnotationId, datasetId, None, user._id, annotationLayers, name = name)
-      _ <- annotationDAO.insertOne(annotation, layerAlignment)
+      _ <- annotationDAO.insertOne(annotation, layerRegistration)
     } yield annotation
   }
 
   // Creates a skeleton annotation whose landmarks map the other layers of the dataset onto the fixed layer.
-  def createLayerAlignmentFor(user: User, dataset: Dataset, layerAlignment: AnnotationLayerAlignment)(using
+  def createLayerRegistrationFor(user: User, dataset: Dataset, layerRegistration: AnnotationLayerRegistration)(using
       ctx: DBAccessContext
   ): Fox[Annotation] =
     for {
       dataSource <- datasetService.usableDataSourceFor(dataset)
       layerNames = dataSource.dataLayers.map(_.name)
-      _ <- Fox.fromBool(layerNames.length >= 2) ?~> Msg.Annotation.LayerAlignment.tooFewLayers
-      _ <- Fox.fromBool(layerNames.contains(layerAlignment.fixedLayerName)) ?~> Msg.Annotation.LayerAlignment
-        .layerNotFound(layerAlignment.fixedLayerName)
+      _ <- Fox.fromBool(layerNames.length >= 2) ?~> Msg.Annotation.LayerRegistration.tooFewLayers
+      _ <- Fox.fromBool(layerNames.contains(layerRegistration.fixedLayerName)) ?~> Msg.Annotation.LayerRegistration
+        .layerNotFound(layerRegistration.fixedLayerName)
       skeletonLayerParameters = AnnotationLayerParameters(
         AnnotationLayerType.Skeleton,
         fallbackLayerName = None,
@@ -335,8 +335,8 @@ class AnnotationService @Inject() (
         user,
         dataset,
         List(skeletonLayerParameters),
-        layerAlignment.defaultAnnotationName(dataset.name),
-        Some(layerAlignment)
+        layerRegistration.defaultAnnotationName(dataset.name),
+        Some(layerRegistration)
       )
     } yield annotation
 
@@ -814,7 +814,7 @@ class AnnotationService @Inject() (
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
       contributors <- userDAO.findContributorsForAnnotation(annotation._id)
       contributorsJs <- Fox.serialCombined(contributors)(c => userJsonForAnnotation(c._id, Some(c)))
-      layerAlignment <- annotationLayerAlignmentDAO.findOneForAnnotation(annotation._id)
+      layerRegistration <- annotationLayerRegistrationDAO.findOneForAnnotation(annotation._id)
     } yield Json.obj(
       "modified" -> annotation.modified,
       "created" -> annotation.created,
@@ -843,7 +843,7 @@ class AnnotationService @Inject() (
       "owner" -> userJson,
       "contributors" -> contributorsJs,
       "collaborationMode" -> annotation.collaborationMode,
-      "layerAlignment" -> layerAlignment
+      "layerRegistration" -> layerRegistration
     )
   }
 
@@ -942,7 +942,7 @@ class AnnotationService @Inject() (
         "lastName" -> annotationInfo.ownerLastName
       ),
       "collaborationMode" -> annotationInfo.collaborationMode,
-      "layerAlignment" -> annotationInfo.layerAlignment
+      "layerRegistration" -> annotationInfo.layerRegistration
     )
   }
 

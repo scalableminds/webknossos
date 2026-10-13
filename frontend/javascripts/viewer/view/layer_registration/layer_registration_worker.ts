@@ -29,32 +29,32 @@ import {
   getNextLandmarkPairId,
   type LandmarkPairInfo,
   prepareLandmarkTreesForImport,
-} from "./alignment_helpers";
+} from "./layer_registration_helpers";
 import {
-  type AlignmentViewState,
-  BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE,
-  type BigWarpCommand,
-  getBigWarpWorkerLayerName,
-  isBigWarpWorker,
+  getLayerRegistrationWorkerLayerName,
+  isLayerRegistrationWorker,
+  LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE,
+  type LayerRegistrationCommand,
+  type LayerRegistrationViewState,
   type SaveState,
-  sendCommandToAlignmentPage,
-} from "./bigwarp_protocol";
+  sendCommandToLayerRegistrationPage,
+} from "./layer_registration_protocol";
 
-// Code that runs inside the iframes of the alignment view.
+// Code that runs inside the iframes of the layer registration view.
 
 // These letters are not bound in WEBKNOSSOS' plane mode. The listener below does not stop
 // propagation, so a bound key would trigger both actions.
-const SHORTCUT_COMMANDS: Record<string, BigWarpCommand> = {
+const SHORTCUT_COMMANDS: Record<string, LayerRegistrationCommand> = {
   t: "toggleTransform",
   x: "toggleOtherLayer",
   y: "syncOtherView",
 };
 
-// Key events don't bubble out of an iframe, so the worker forwards the alignment
-// shortcuts to the alignment page.
-export function useBigWarpShortcutRelay() {
+// Key events don't bubble out of an iframe, so the worker forwards the layer registration
+// shortcuts to the layer registration page.
+export function useLayerRegistrationShortcutRelay() {
   useEffect(() => {
-    if (!isBigWarpWorker()) {
+    if (!isLayerRegistrationWorker()) {
       return;
     }
     const onKeyDown = (event: KeyboardEvent) => {
@@ -69,20 +69,20 @@ export function useBigWarpShortcutRelay() {
         return;
       }
       event.preventDefault();
-      sendCommandToAlignmentPage(command);
+      sendCommandToLayerRegistrationPage(command);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 }
 
-// Navigating within a worker iframe breaks the alignment view, so navigation within the app
-// is always blocked. The worker's own annotation is a sandbox and never counts as unsaved,
-// so the regular "unsaved changes" blocker would not fire here.
-// Full page loads (e.g. a reload) can't be blocked without the browser's own "leave page?"
-// dialog, which would also appear whenever the alignment view itself is left. Instead, the
-// alignment view restarts when a worker loads a new page (see useIframeBridge).
-export function blockBigWarpWorkerNavigation(
+// Navigating within a worker iframe breaks the layer registration view, so navigation within the
+// app is always blocked. The worker's own annotation is a sandbox and never counts as unsaved, so
+// the regular "unsaved changes" blocker would not fire here.
+// Full page loads (e.g. a reload) can't be blocked without the browser's own "leave page?" dialog,
+// which would also appear whenever the layer registration view itself is left. Instead, the layer
+// registration view restarts when a worker loads a new page (see useIframeBridge).
+export function blockLayerRegistrationWorkerNavigation(
   args: BeforeUnloadEvent | BlockerFunction,
 ): boolean | undefined {
   if ("preventDefault" in args) {
@@ -90,21 +90,20 @@ export function blockBigWarpWorkerNavigation(
     return;
   }
   Toast.warning(
-    "This view can't be left while aligning layers. To leave the alignment, click the WEBKNOSSOS logo in the left view.",
+    'This view can\'t be left while registering layers. To leave, use "Back to all layer registrations" in the side panel or the WEBKNOSSOS logo in the left view.',
   );
   return true;
 }
 
-// Configures the worker right after the annotation was loaded: show and natively render only
-// the worker's own layer (so landmark positions are in that layer's coordinates), create a
-// new tree per node, don't move the camera to new nodes, restrict the tools to landmark
-// clicking and move to a position that contains data. These settings are not persisted
-// (see settings_saga.ts).
-// The transforms that the dataset stores for its layers are removed in the worker. The
-// alignment page sets the preview transforms of the other layers, and WEBKNOSSOS would chain
+// Configures the worker right after the annotation was loaded: show and natively render only the
+// worker's own layer (so landmark positions are in that layer's coordinates), create a new tree per
+// node, don't move the camera to new nodes, restrict the tools to landmark clicking and move to a
+// position that contains data. These settings are not persisted (see settings_saga.ts).
+// The transforms that the dataset stores for its layers are removed in the worker. The layer
+// registration page sets the preview transforms of the other layers, and WEBKNOSSOS would chain
 // them with the inverse of the stored transforms of the natively rendered layer.
-export async function applyBigWarpWorkerSettings() {
-  const layerName = getBigWarpWorkerLayerName();
+export async function applyLayerRegistrationWorkerSettings() {
+  const layerName = getLayerRegistrationWorkerLayerName();
   for (const layer of getDataLayers(Store.getState().dataset)) {
     Store.dispatch(setLayerTransformsAction(layer.name, null));
     Store.dispatch(updateLayerSettingAction(layer.name, "isDisabled", layer.name !== layerName));
@@ -112,7 +111,7 @@ export async function applyBigWarpWorkerSettings() {
   Store.dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layerName));
   Store.dispatch(updateUserSettingAction("newNodeNewTree", true));
   Store.dispatch(updateUserSettingAction("centerNewNode", false));
-  Store.dispatch(updateUserSettingAction("activeToolkit", Toolkit.BIGWARP_LANDMARKS));
+  Store.dispatch(updateUserSettingAction("activeToolkit", Toolkit.LANDMARKS));
 
   try {
     const { dataset } = Store.getState();
@@ -136,17 +135,18 @@ export async function importLandmarks(nmlString: string) {
   Store.dispatch(addTreesAndGroupsAction(prepareLandmarkTreesForImport(trees), treeGroups));
 }
 
-// Set by the alignment page after each sync. Not put into store as nothing rendering wise depends on this.
-// Moreover, this is only needed in the bigwarp context. Therefore, we keep it locally by putting it into the module level.
+// Set by the layer registration page after each sync. Not put into store as nothing rendering wise
+// depends on this. Moreover, this is only needed in the layer registration workers. Therefore, we
+// keep it locally by putting it into the module level.
 let landmarkPairInfo: LandmarkPairInfo = { openPairIds: [], otherMaxPairId: 0 };
 
 export function setLandmarkPairInfo(pairInfo: LandmarkPairInfo) {
   landmarkPairInfo = pairInfo;
 }
 
-// The name and color of the tree that a click in a worker creates: the name holds the pair id
-// of the new landmark (see getNextLandmarkPairId). They are part of the action that creates the
-// tree. If the alignment page renamed the tree afterwards, undo would revert the renaming, the
+// The name and color of the tree that a click in a worker creates: the name holds the pair id of
+// the new landmark (see getNextLandmarkPairId). They are part of the action that creates the tree.
+// If the layer registration page renamed the tree afterwards, undo would revert the renaming, the
 // page would rename the tree again, and the user could never undo the click itself.
 export function getNewLandmarkTreeProperties(): { name: string; color: Vector3 } {
   const ownPairIds = new Set(
@@ -176,31 +176,34 @@ export async function exportLandmarkPairsAsNml(
   return serializeToNml(state, state.annotation, exportedTracing, await getBuildInfo(), false);
 }
 
-// Set by the alignment page whenever it changes. Unlike the pair info, the toolbar renders it,
-// so components subscribe to it with useAlignmentViewState.
-let alignmentViewState: AlignmentViewState = {
+// Set by the layer registration page whenever it changes. Unlike the pair info, the toolbar renders
+// it, so components subscribe to it with useLayerRegistrationViewState.
+let layerRegistrationViewState: LayerRegistrationViewState = {
   isTransformShown: true,
-  isAlignmentAvailable: false,
+  isTransformAvailable: false,
   isLandmarkPanelOpen: true,
 };
-const alignmentViewStateListeners = new Set<() => void>();
+const layerRegistrationViewStateListeners = new Set<() => void>();
 
-export function setAlignmentViewState(viewState: AlignmentViewState) {
-  alignmentViewState = viewState;
-  for (const listener of alignmentViewStateListeners) {
+export function setLayerRegistrationViewState(viewState: LayerRegistrationViewState) {
+  layerRegistrationViewState = viewState;
+  for (const listener of layerRegistrationViewStateListeners) {
     listener();
   }
 }
 
-function subscribeToAlignmentViewState(onChange: () => void) {
-  alignmentViewStateListeners.add(onChange);
+function subscribeToLayerRegistrationViewState(onChange: () => void) {
+  layerRegistrationViewStateListeners.add(onChange);
   return () => {
-    alignmentViewStateListeners.delete(onChange);
+    layerRegistrationViewStateListeners.delete(onChange);
   };
 }
 
-export function useAlignmentViewState(): AlignmentViewState {
-  return useSyncExternalStore(subscribeToAlignmentViewState, () => alignmentViewState);
+export function useLayerRegistrationViewState(): LayerRegistrationViewState {
+  return useSyncExternalStore(
+    subscribeToLayerRegistrationViewState,
+    () => layerRegistrationViewState,
+  );
 }
 
 // The layer colors from before setOverlayLayerColors changed them.
@@ -229,14 +232,14 @@ export function setOverlayLayerColors(colors: Record<string, Vector3> | null) {
   }
 }
 
-// Tells the alignment view whether the alignment annotation is saved, being saved or has
-// unsaved changes. Runs in the store iframe.
-export function reportBigWarpStoreSavedState() {
+// Tells the layer registration view whether the layer registration annotation is saved, being saved
+// or has unsaved changes. Runs in the store iframe.
+export function reportLayerRegistrationStoreSavedState() {
   listenToStoreProperty(
     (state): SaveState => (isSaving(state) ? "saving" : Model.stateSaved() ? "saved" : "unsaved"),
     (saveState) =>
       window.parent.postMessage(
-        { type: BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE, saveState },
+        { type: LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE, saveState },
         window.location.origin,
       ),
     true,

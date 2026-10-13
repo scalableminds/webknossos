@@ -1,6 +1,6 @@
 import saveAs from "file-saver";
 import { transformToCSVRow } from "viewer/model/helpers/csv_helpers";
-import type { CompleteLandmarkPair, LayerNames, Side } from "./alignment_helpers";
+import type { CompleteLandmarkPair, LayerNames, Side } from "./layer_registration_helpers";
 
 // The formats in which the landmarks can be downloaded. Both can be uploaded in the dataset
 // composition wizard (see admin/dataset/composition_wizard/02_upload_files.tsx).
@@ -11,8 +11,8 @@ export type LandmarkExportFormat = "csv" | "nml";
 // The composition wizard transforms the first position of each line onto the second.
 export function getLandmarksAsBigWarpCsv(pairs: CompleteLandmarkPair[]): string {
   return pairs
-    .map(({ pairId, A, B }) =>
-      transformToCSVRow([`Pt-${pairId}`, true, ...B.position, ...A.position]),
+    .map(({ pairId, fixed, moving }) =>
+      transformToCSVRow([`Pt-${pairId}`, true, ...moving.position, ...fixed.position]),
     )
     .join("\n");
 }
@@ -22,7 +22,7 @@ export function saveTextFile(text: string, fileName: string) {
 }
 
 function getFileNameBase(layerNames: LayerNames): string {
-  return `landmarks_${layerNames.B}_to_${layerNames.A}`;
+  return `landmarks_${layerNames.moving}_to_${layerNames.fixed}`;
 }
 
 export function getBigWarpCsvFileName(layerNames: LayerNames): string {
@@ -32,7 +32,7 @@ export function getBigWarpCsvFileName(layerNames: LayerNames): string {
 // The composition wizard expects two NML files and transforms the landmarks of the first one
 // onto those of the second, so the moving layer comes first.
 export function getNmlFileName(layerNames: LayerNames, side: Side): string {
-  return side === "B"
-    ? `${getFileNameBase(layerNames)}_1_moving_${layerNames.B}.nml`
-    : `${getFileNameBase(layerNames)}_2_fixed_${layerNames.A}.nml`;
+  return side === "moving"
+    ? `${getFileNameBase(layerNames)}_1_moving_${layerNames.moving}.nml`
+    : `${getFileNameBase(layerNames)}_2_fixed_${layerNames.fixed}.nml`;
 }

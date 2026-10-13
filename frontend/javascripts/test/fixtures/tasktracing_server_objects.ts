@@ -176,7 +176,7 @@ export const annotation: APIAnnotation = {
   },
   contributors: [],
   collaborationMode: "OwnerOnly",
-  layerAlignment: null,
+  layerRegistration: null,
   isLockedByOwner: false,
   teams: [
     {

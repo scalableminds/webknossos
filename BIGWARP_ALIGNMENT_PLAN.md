@@ -2,13 +2,75 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-10-13 (v21 — one alignment annotation per fixed layer, the right view switches between the moving layers, §0.30; v20 — alignment always computed, `t` switches aligned/untransformed per view, optional green/magenta overlay, §0.29; v19 — stable pairs via pair ids in tree names, §0.28; v18 — pairing made visible: same color per pair, focus on hover, next-step hint, select and delete pairs in the table, §0.27; v17 — landmark download as BigWarp CSV / NML for the dataset composition, §0.25; v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
+Last updated: 2026-10-13 (v22 — renamed to "layer registration", see "Naming and terminology"; v21 — one alignment annotation per fixed layer, the right view switches between the moving layers, §0.30; v20 — alignment always computed, `t` switches aligned/untransformed per view, optional green/magenta overlay, §0.29; v19 — stable pairs via pair ids in tree names, §0.28; v18 — pairing made visible: same color per pair, focus on hover, next-step hint, select and delete pairs in the table, §0.27; v17 — landmark download as BigWarp CSV / NML for the dataset composition, §0.25; v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
 > compacted, so this file is the durable memory: what the feature is, what already
 > exists, what's hacky/broken, what's decided, and what's still open. Edit it freely —
 > it's a living doc, not something regenerated from scratch each session.
+
+---
+
+## Naming and terminology (decided 2026-10-13)
+
+"Alignment" is already used in WEBKNOSSOS for aligning the slices or tiles **inside one layer**
+(the align-sections job, in-plane tile alignment, alignment projects). This feature works
+**between layers**, so it is called **layer registration**, the standard term for bringing two
+images into one coordinate system (BigWarp, elastix and ANTs use it, too). Alternatives that were
+considered and rejected: "correlate layers" (sounds like LM ↔ EM only, and "correlation" usually
+means automatic cross-correlation), "fit layer transform" (doesn't say why), "warp layers"
+(promises a deformation, but v1 is affine only), "match layers" (vague, overlaps with feature
+matching).
+
+Rules:
+- **Never use the bare word "registration"**, always "layer registration" / "register layers".
+  WEBKNOSSOS already uses "registration" for user sign-up (`RegistrationForm`,
+  `auth.registration_*`, the `/register` redirect route).
+- **UI:** action "Register Layers…", page title "Register layers of “<dataset>”". The stored
+  annotation is a **layer registration** ("Existing layer registrations", "Create new layer
+  registration to color_1", badge and default name "… Layer registration to color_1"). The result
+  per moving layer is a **transform** ("Transform of color_2", "Apply the transform to …",
+  "Show color_2 transformed (T)"). The word "align" is not used in the UI of this feature.
+- **Code:** everything gets the `layerRegistration` / `layer_registration` prefix: all file names,
+  React components, exported identifiers that would otherwise be ambiguous, and everything
+  outside the feature folder (database, API, routes, URL params, CSS classes, query keys). Names
+  that already only belong to this feature stay as they are (`Landmark`, `LandmarkPair`,
+  `getLandmarkPairs`, …), and so do local variables. "bigwarp" is not used in identifiers; the
+  only exception is the BigWarp CSV export (`getLandmarksAsBigWarpCsv`), which is a real file
+  format.
+- **Sides:** `Side` is `"fixed" | "moving"` (was `"A" | "B"`), `transformBtoA` is
+  `movingToFixedTransform`.
+
+The rename (one commit without behavior changes, 2026-10-13), old → new:
+
+| Old | New |
+|---|---|
+| folder `viewer/view/align_datasets/` | `viewer/view/layer_registration/` |
+| `alignment_view.tsx`, `alignment_selection_view.tsx`, `alignment_workspace.tsx` | `layer_registration_view.tsx`, `layer_registration_list_view.tsx`, `layer_registration_workspace.tsx` |
+| `alignment_helpers.ts`, `alignment_edit_blocker.ts`, `alignment_page_status_views.tsx` | `layer_registration_helpers.ts`, `layer_registration_edit_blocker.ts`, `layer_registration_page_status_views.tsx` |
+| `bigwarp_protocol.ts`, `bigwarp_worker.ts` | `layer_registration_protocol.ts`, `layer_registration_worker.ts` |
+| `fixed_layer_picker.tsx`, `moving_layer_list.tsx`, `landmark_panel.tsx`, `landmark_export.ts` | same with `layer_registration_` prefix |
+| `use_iframe_bridge.ts`, `use_inactive_pairs.ts`, `use_landmark_sync.ts` | `use_layer_registration_iframe_bridge.ts`, `use_layer_registration_inactive_pairs.ts`, `use_layer_registration_landmark_sync.ts` |
+| `action_bar/tools/bigwarp_specific_ui.tsx` (`BigWarpAlignmentButtons`) | `layer_registration_specific_ui.tsx` (`LayerRegistrationButtons`) |
+| `test/misc/align_datasets_helpers.spec.ts` | `test/misc/layer_registration_helpers.spec.ts` |
+| `_align_datasets.less`, CSS `align-datasets-*` | `_layer_registration.less`, `layer-registration-*` |
+| `docs/datasets/aligning_layers.md` | `docs/datasets/registering_layers.md` |
+| routes `/datasets/:id/align[/:annotationId]` | `/datasets/:id/register-layers[/:annotationId]` |
+| URL params `bigwarpWorker`, `bigwarpPrimary`, `bigwarpStore` | `layerRegistrationWorker`, `layerRegistrationPrimary`, `layerRegistrationStore` |
+| `isBigWarpWorker()`, `applyBigWarpWorkerSettings()`, … | `isLayerRegistrationWorker()`, `applyLayerRegistrationWorkerSettings()`, … |
+| `BigWarpCommand`, `AlignmentViewState`, `bigwarpCommand` message | `LayerRegistrationCommand`, `LayerRegistrationViewState`, `layerRegistrationCommand` message |
+| `Toolkit.BIGWARP_LANDMARKS` | `Toolkit.LANDMARKS` |
+| components `AlignmentView`, `AlignmentSelectionView`, `AlignmentWorkspace`, `LandmarkPanel`, `FixedLayerPicker`, `MovingLayerList` | `LayerRegistrationView`, `LayerRegistrationListView`, `LayerRegistrationWorkspace`, `LayerRegistrationLandmarkPanel`, `LayerRegistrationFixedLayerPicker`, `LayerRegistrationMovingLayerList` |
+| `AlignmentEditBlocker`, `getAlignmentEditBlocker` | `LayerRegistrationEditBlocker`, `getLayerRegistrationEditBlocker` |
+| type `Alignment`, `LayerPairAlignment` | `EstimatedTransform`, `LayerPairTransformEstimate` |
+| `estimateTransformBtoA`, `applyAlignmentsToDataset`, `isAlignmentAppliedToDataset` | `estimateMovingToFixedTransform`, `applyTransformsToDataset`, `isTransformAppliedToDataset` |
+| table `annotation_layerAlignments`, `AnnotationLayerAlignment(.scala)` | `annotation_layerRegistrations`, `AnnotationLayerRegistration(.scala)` |
+| JSON field `layerAlignment`, `APILayerAlignment` | `layerRegistration`, `APILayerRegistration` |
+| `POST/GET /api/datasets/:id/layerAlignments` | `…/layerRegistrations` |
+| evolution `186-annotation-layer-alignments.sql` | `186-annotation-layer-registrations.sql` (edited in place, never released) |
+
+The sections below were written before the rename and still use the old names.
 
 ---
 
@@ -59,8 +121,8 @@ items say what was decided and why.
 **Still open**
 - [ ] Manual browser QA, especially the refactored iframe bridge, the loading overlay, the
   navigation blocker, the restart after a reload (§0.24) and the single-slice fallback.
-- [ ] decide: naming is mixed ("bigwarp", "alignment", "align_datasets"), and `Side` is
-  "A"/"B" instead of "fixed"/"moving".
+- [x] Naming: decided and renamed to "layer registration", `Side` is "fixed"/"moving" (see
+  "Naming and terminology" above).
 - [ ] decide: revert the rename `transformPointUnscaled` → `getTransformPointUnscaledFn`
   (8 unrelated files) or move it into its own PR.
 - [ ] Remove or move this plan file out of the PR, and fill in the PR template

@@ -35,8 +35,8 @@ import loadable from "libs/lazy_loader";
 import Navbar from "navbar";
 import { createBrowserRouter, Navigate, Outlet, type RouteObject, redirect } from "react-router";
 import type { EmptyObject } from "types/type_utils";
-import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import { CommandPalette } from "viewer/view/components/command_palette";
+import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
 
 const { Content } = Layout;
 
@@ -54,8 +54,8 @@ import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metad
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
 import DatasetSettingsStorageTab from "dashboard/dataset/dataset_settings_storage_tab";
 import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
-import AlignmentSelectionView from "viewer/view/align_datasets/alignment_selection_view";
-import AlignmentView from "viewer/view/align_datasets/alignment_view";
+import LayerRegistrationListView from "viewer/view/layer_registration/layer_registration_list_view";
+import LayerRegistrationView from "viewer/view/layer_registration/layer_registration_view";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -83,8 +83,8 @@ function RootLayout({ showNavbar = true }: { showNavbar?: boolean }) {
   return (
     <Layout className={showNavbar ? undefined : "no-navbar"}>
       {/* The command palette can leave the view or undo the forced settings of the dataset
-      alignment workers. Thus, don't allow them in BigWarp iframes. */}
-      {isBigWarpWorker() ? null : <CommandPalette />}
+      layer registration workers. Thus, don't allow them there. */}
+      {isLayerRegistrationWorker() ? null : <CommandPalette />}
       {showNavbar && <Navbar />}
       <Content>
         <ErrorBoundary>
@@ -264,10 +264,10 @@ const routes: RouteObject[] = [
         ),
       },
       {
-        path: "/datasets/:datasetNameAndId/align",
+        path: "/datasets/:datasetNameAndId/register-layers",
         element: (
           <SecuredRoute>
-            <AlignmentSelectionView />
+            <LayerRegistrationListView />
           </SecuredRoute>
         ),
       },
@@ -502,15 +502,15 @@ const routes: RouteObject[] = [
     ],
   },
   {
-    // The alignment view has no navbar of its own, because each of its worker iframes shows
-    // one.
+    // The layer registration view has no navbar of its own, because each of its worker iframes
+    // shows one.
     element: <RootLayout showNavbar={false} />,
     children: [
       {
-        path: "/datasets/:datasetNameAndId/align/:annotationId",
+        path: "/datasets/:datasetNameAndId/register-layers/:annotationId",
         element: (
           <SecuredRoute>
-            <AlignmentView />
+            <LayerRegistrationView />
           </SecuredRoute>
         ),
       },

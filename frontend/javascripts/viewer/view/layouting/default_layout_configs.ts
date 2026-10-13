@@ -313,10 +313,10 @@ function markTabsetAsMaximized(node: RowOrTabsetNode, tabId: string): boolean {
   return node.children.some((child) => markTabsetAsMaximized(child, tabId));
 }
 
-// The dataset alignment workers use the normal layout, but start with the XY viewport
+// The layer registration workers use the normal layout, but start with the XY viewport
 // maximized and the right border closed. The user can restore the other viewports as usual.
 // The right border can't be opened in workers (see FlexLayoutWrapper.isBorderLocked).
-export const getBigWarpWorkerLayoutConfig = (baseLayout: ModelConfig): ModelConfig => {
+export const getLayerRegistrationWorkerLayoutConfig = (baseLayout: ModelConfig): ModelConfig => {
   const layout = cloneDeep(baseLayout);
   markTabsetAsMaximized(layout.layout, OrthoViews.PLANE_XY);
   for (const border of layout.borders) {

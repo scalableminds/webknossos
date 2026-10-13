@@ -70,12 +70,12 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_actions";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
-import { LandmarkPanelToggleButton } from "viewer/view/action_bar/tools/bigwarp_specific_ui";
-import {
-  isBigWarpPrimaryWorker,
-  isBigWarpWorker,
-} from "viewer/view/align_datasets/bigwarp_protocol";
+import { LandmarkPanelToggleButton } from "viewer/view/action_bar/tools/layer_registration_specific_ui";
 import { HelpModal } from "viewer/view/help/help_modal";
+import {
+  isLayerRegistrationPrimaryWorker,
+  isLayerRegistrationWorker,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
 const { Header } = Layout;
@@ -919,11 +919,11 @@ function Navbar() {
   const isAdminOrManager = isUserAdminOrManager(activeUser);
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
-  // The dataset alignment workers keep the navbar because it contains the toolbar, but
-  // must not offer navigation away from the alignment page. Only the primary worker shows
+  // The layer registration workers keep the navbar because it contains the toolbar, but
+  // must not offer navigation away from the layer registration page. Only the primary worker shows
   // the logo, which links to the dashboard in the top-level window.
-  const isAlignmentWorker = isBigWarpWorker();
-  const showLogo = !isAlignmentWorker || isBigWarpPrimaryWorker();
+  const isInLayerRegistrationWorker = isLayerRegistrationWorker();
+  const showLogo = !isInLayerRegistrationWorker || isLayerRegistrationPrimaryWorker();
   const menuItems: ItemType[] = showLogo
     ? [
         {
@@ -931,7 +931,7 @@ function Navbar() {
           label: (
             <Link
               to="/dashboard"
-              target={isAlignmentWorker ? "_top" : undefined}
+              target={isInLayerRegistrationWorker ? "_top" : undefined}
               style={{
                 verticalAlign: "middle",
               }}
@@ -948,7 +948,7 @@ function Navbar() {
     : [];
   const trailingNavItems = [];
 
-  if (isAuthenticated && !isAlignmentWorker) {
+  if (isAuthenticated && !isInLayerRegistrationWorker) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
     menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
@@ -975,16 +975,16 @@ function Navbar() {
     );
   }
 
-  if (!(isAuthenticated || hideNavbarLogin) && !isAlignmentWorker) {
+  if (!(isAuthenticated || hideNavbarLogin) && !isInLayerRegistrationWorker) {
     trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
 
   // The landmark panel is right of the secondary worker.
-  if (isAlignmentWorker && !isBigWarpPrimaryWorker()) {
+  if (isInLayerRegistrationWorker && !isLayerRegistrationPrimaryWorker()) {
     trailingNavItems.push(<LandmarkPanelToggleButton key="landmark-panel-toggle" />);
   }
 
-  if (!isAlignmentWorker) {
+  if (!isInLayerRegistrationWorker) {
     menuItems.push(
       getHelpSubMenu(
         version,

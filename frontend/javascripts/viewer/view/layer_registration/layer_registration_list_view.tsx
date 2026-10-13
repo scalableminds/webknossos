@@ -1,12 +1,12 @@
 import { PlayCircleOutlined, SearchOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import {
-  createLayerAlignment,
+  createLayerRegistration,
   editAnnotation,
   editLockedState,
   finishAnnotation,
   getDataset,
-  getLayerAlignments,
+  getLayerRegistrations,
 } from "admin/rest_api";
 import { Divider, Flex, Input, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
@@ -29,20 +29,23 @@ import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/da
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import {
   EDIT_BLOCKER_ACTION_LABELS,
-  getAlignmentEditBlocker,
-  resolveAlignmentEditBlocker,
-} from "./alignment_edit_blocker";
-import { AlignmentPageError, AlignmentPageSpinner } from "./alignment_page_status_views";
-import { getAlignmentViewUrl } from "./bigwarp_protocol";
-import { FixedLayerPicker } from "./fixed_layer_picker";
+  getLayerRegistrationEditBlocker,
+  resolveLayerRegistrationEditBlocker,
+} from "./layer_registration_edit_blocker";
+import { LayerRegistrationFixedLayerPicker } from "./layer_registration_fixed_layer_picker";
+import {
+  LayerRegistrationPageError,
+  LayerRegistrationPageSpinner,
+} from "./layer_registration_page_status_views";
+import { getLayerRegistrationViewUrl } from "./layer_registration_protocol";
 
-// Lists the alignment annotations of a dataset and creates new ones.
-function AlignmentSelectionView() {
+// Lists the layer registration annotations of a dataset and creates new ones.
+function LayerRegistrationListView() {
   const { datasetNameAndId = "" } = useParams();
   const { datasetId } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
 
   const datasetQuery = useQuery({
-    queryKey: ["alignDatasets", "dataset", datasetId],
+    queryKey: ["layerRegistration", "dataset", datasetId],
     queryFn: () => getDataset(datasetId!),
     enabled: datasetId != null,
   });
@@ -50,24 +53,24 @@ function AlignmentSelectionView() {
 
   if (datasetId == null) {
     return (
-      <AlignmentPageError text="This page needs a dataset id in the URL. Please open it via the dataset actions menu in the dataset list in the dashboard." />
+      <LayerRegistrationPageError text="This page needs a dataset id in the URL. Please open it via the dataset actions menu in the dataset list in the dashboard." />
     );
   }
   if (datasetQuery.isError) {
-    return <AlignmentPageError text="Could not load this dataset." />;
+    return <LayerRegistrationPageError text="Could not load this dataset." />;
   }
   if (dataset == null) {
-    return <AlignmentPageSpinner />;
+    return <LayerRegistrationPageSpinner />;
   }
   if (!dataset.isActive) {
     return (
-      <AlignmentPageError text="This dataset is not active, so its layers cannot be aligned." />
+      <LayerRegistrationPageError text="This dataset is not active, so its layers cannot be registered." />
     );
   }
-  return <AlignmentSelection dataset={dataset} />;
+  return <LayerRegistrationList dataset={dataset} />;
 }
 
-function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
+function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [fixedLayerName, setFixedLayerName] = useState<string | null>(null);
@@ -76,33 +79,33 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
   const [showArchived, setShowArchived] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
 
-  const alignmentsQuery = useQuery({
-    queryKey: ["alignDatasets", "layerAlignments", dataset.id],
-    queryFn: () => getLayerAlignments(dataset.id),
+  const layerRegistrationsQuery = useQuery({
+    queryKey: ["layerRegistration", "layerRegistrations", dataset.id],
+    queryFn: () => getLayerRegistrations(dataset.id),
     meta: { persist: false },
   });
-  const alignments = alignmentsQuery.data ?? [];
-  const refetchAlignments = () => alignmentsQuery.refetch();
+  const layerRegistrations = layerRegistrationsQuery.data ?? [];
+  const refetchLayerRegistrations = () => layerRegistrationsQuery.refetch();
 
-  const alignmentsOfSelectedLayer = alignments.filter(
-    ({ layerAlignment }) =>
-      fixedLayerName == null || layerAlignment?.fixedLayerName === fixedLayerName,
+  const layerRegistrationsOfSelectedLayer = layerRegistrations.filter(
+    ({ layerRegistration }) =>
+      fixedLayerName == null || layerRegistration?.fixedLayerName === fixedLayerName,
   );
-  const shownAlignments = alignmentsOfSelectedLayer.filter(
+  const shownLayerRegistrations = layerRegistrationsOfSelectedLayer.filter(
     (annotation) => (annotation.state === "Finished") === showArchived,
   );
   const selectedAnnotation =
-    alignments.find((annotation) => annotation.id === selectedAnnotationId) ?? null;
+    layerRegistrations.find((annotation) => annotation.id === selectedAnnotationId) ?? null;
 
-  const openAlignment = (annotationId: string) =>
-    navigate(getAlignmentViewUrl(dataset, annotationId));
+  const openLayerRegistration = (annotationId: string) =>
+    navigate(getLayerRegistrationViewUrl(dataset, annotationId));
 
-  const createAlignment = async (fixed: string) => {
+  const createAndOpenLayerRegistration = async (fixed: string) => {
     try {
-      const annotation = await createLayerAlignment(dataset.id, { fixedLayerName: fixed });
-      openAlignment(annotation.id);
+      const annotation = await createLayerRegistration(dataset.id, { fixedLayerName: fixed });
+      openLayerRegistration(annotation.id);
     } catch (error) {
-      handleGenericError(error as Error, "Could not create the alignment annotation.");
+      handleGenericError(error as Error, "Could not create the layer registration.");
     }
   };
 
@@ -114,15 +117,15 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
     } catch (error) {
       handleGenericError(error as Error);
     }
-    await refetchAlignments();
+    await refetchLayerRegistrations();
   };
 
   const renderActions = (annotation: APIAnnotationInfo) => {
-    const editBlocker = getAlignmentEditBlocker(annotation, activeUser.id);
+    const editBlocker = getLayerRegistrationEditBlocker(annotation, activeUser.id);
     if (editBlocker == null) {
       return (
         <div className="annotation-row-actions">
-          <Link to={getAlignmentViewUrl(dataset, annotation.id)}>
+          <Link to={getLayerRegistrationViewUrl(dataset, annotation.id)}>
             <PlayCircleOutlined className="icon-margin-right" />
             Open
           </Link>
@@ -134,7 +137,9 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
         <AsyncLink
           onClick={async () => {
             try {
-              openAlignment(await resolveAlignmentEditBlocker(annotation, editBlocker));
+              openLayerRegistration(
+                await resolveLayerRegistrationEditBlocker(annotation, editBlocker),
+              );
             } catch (error) {
               handleGenericError(error as Error);
             }
@@ -173,15 +178,16 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
   return (
     <div className="container">
       <Flex vertical align="center">
-        <Typography.Title level={3}>Align layers of “{dataset.name}”</Typography.Title>
-        <FixedLayerPicker
+        <Typography.Title level={3}>Register layers of “{dataset.name}”</Typography.Title>
+        <LayerRegistrationFixedLayerPicker
           dataset={dataset}
           fixedLayerName={fixedLayerName}
           onChange={setFixedLayerName}
-          existingAlignmentCount={
-            alignmentsOfSelectedLayer.filter((annotation) => annotation.state === "Active").length
+          existingLayerRegistrationCount={
+            layerRegistrationsOfSelectedLayer.filter((annotation) => annotation.state === "Active")
+              .length
           }
-          onCreate={createAlignment}
+          onCreate={createAndOpenLayerRegistration}
         />
       </Flex>
       <Divider
@@ -189,17 +195,17 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
         // The default divider color is barely visible in the light theme.
         style={{ marginBlock: 40, borderBlockStartColor: "var(--ant-color-border)" }}
       >
-        or continue an existing alignment
+        or continue an existing layer registration
       </Divider>
       <div className="dashboard-list-with-sidebar">
         <div>
           <Flex justify="space-between" align="center" gap={16} style={{ marginBottom: 8 }}>
             <Typography.Title level={4} style={{ margin: 0 }}>
-              Existing alignments
+              Existing layer registrations
             </Typography.Title>
             <Input
               prefix={<SearchOutlined />}
-              placeholder="Search alignments"
+              placeholder="Search layer registrations"
               allowClear
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
@@ -207,10 +213,10 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
             />
           </Flex>
           <AnnotationList
-            annotations={shownAlignments}
+            annotations={shownLayerRegistrations}
             activeUser={activeUser}
             isAdminView={false}
-            isLoading={alignmentsQuery.isLoading}
+            isLoading={layerRegistrationsQuery.isLoading}
             hasMoreAnnotations={false}
             searchQuery={searchQuery}
             tags={tags}
@@ -223,8 +229,8 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
             emptyPlaceholder={
               <Typography.Text type="secondary">
                 {fixedLayerName != null
-                  ? "There are no alignments to the selected layer yet."
-                  : "There are no alignments for this dataset yet."}
+                  ? "There are no layer registrations to the selected layer yet."
+                  : "There are no layer registrations for this dataset yet."}
               </Typography.Text>
             }
             onClearFilters={() => {
@@ -232,7 +238,7 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
               setTags([]);
               setShowArchived(false);
             }}
-            hideAlignmentPrefix
+            hideLayerRegistrationPrefix
           />
         </div>
         <AnnotationDetailsSidebar
@@ -282,4 +288,4 @@ function AlignmentSelection({ dataset }: { dataset: APIDataset }) {
   );
 }
 
-export default AlignmentSelectionView;
+export default LayerRegistrationListView;

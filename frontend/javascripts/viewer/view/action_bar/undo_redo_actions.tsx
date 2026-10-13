@@ -7,7 +7,7 @@ import { AsyncButton } from "components/async_clickables";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
-import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
+import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
 import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 type Props = {
@@ -17,9 +17,9 @@ type Props = {
 
 function UndoRedoActions({ hasTracing, isBusy }: Props) {
   const dispatch = useDispatch();
-  // The dataset alignment workers are always narrow (two of them share the window), but
+  // The layer registration workers are always narrow (two of them share the window), but
   // their toolbar is small enough to fit the redo button.
-  const hideRedoOnSmallScreen = !isBigWarpWorker();
+  const hideRedoOnSmallScreen = !isLayerRegistrationWorker();
 
   const handleUndo = useCallback(() => dispatchUndoAsync(dispatch), [dispatch]);
   const handleRedo = useCallback(() => dispatchRedoAsync(dispatch), [dispatch]);

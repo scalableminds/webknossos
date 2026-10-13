@@ -6,9 +6,9 @@ import { SidebarSection } from "dashboard/sidebar_section";
 import { pluralize } from "libs/utils";
 import { useState } from "react";
 import type { VoxelSize } from "types/api_types";
-import { type AppliedState, formatResidual } from "./alignment_helpers";
+import { type AppliedState, formatResidual } from "./layer_registration_helpers";
 
-// The state of the alignment of one moving layer. Without counts, its landmarks are still
+// The state of the estimated transform of one moving layer. Without counts, its landmarks are still
 // loading (isLoading) or could not be read.
 export type MovingLayerRow = { layerName: string } & (
   | { completePairCount: number; meanResidual: number | null; appliedState: AppliedState }
@@ -43,9 +43,9 @@ function AppliedStateTag({ appliedState }: { appliedState: AppliedState }) {
   }
 }
 
-// Lists the moving layers with the state of their alignments. Clicking a layer shows it in the
+// Lists the moving layers with the state of their transforms. Clicking a layer shows it in the
 // right view.
-export function MovingLayerList({
+export function LayerRegistrationMovingLayerList({
   rows,
   activeLayerName,
   voxelSize,
@@ -83,8 +83,8 @@ export function MovingLayerList({
         })}
       </Flex>
       <Typography.Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
-        Click a layer to place its landmarks in the right view. To see all layers aligned, show them
-        in the layer settings of the left view.
+        Click a layer to place its landmarks in the right view. To see all layers transformed, show
+        them in the layer settings of the left view.
       </Typography.Text>
     </SidebarSection>
   );
@@ -111,8 +111,8 @@ export function CopyLandmarksOffer({
     <Flex vertical gap={8} className="copy-landmarks-offer">
       <Typography.Text strong>Reuse landmarks of another layer</Typography.Text>
       <Typography.Text>
-        Copy the landmarks that "{fixedLayerName}" has in the alignment of another layer. The right
-        view then asks for the matching spot of each one.
+        Copy the landmarks that "{fixedLayerName}" has for another layer. The right view then asks
+        for the matching spot of each one.
       </Typography.Text>
       <Space.Compact block>
         <Select

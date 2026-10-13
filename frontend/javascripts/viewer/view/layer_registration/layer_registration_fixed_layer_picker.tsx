@@ -7,27 +7,29 @@ type Props = {
   dataset: APIDataset;
   fixedLayerName: string | null;
   onChange: (fixedLayerName: string | null) => void;
-  // The number of existing alignment annotations for the selected fixed layer.
-  existingAlignmentCount: number;
+  // The number of existing layer registration annotations for the selected fixed layer.
+  existingLayerRegistrationCount: number;
   onCreate: (fixedLayerName: string) => Promise<void>;
 };
 
-// Selects the fixed layer of a new alignment annotation. The selection also filters the list of
-// existing alignment annotations, so that the user sees them before creating a new one.
-export function FixedLayerPicker({
+// Selects the fixed layer of a new layer registration annotation. The selection also filters the
+// list of existing layer registration annotations, so that the user sees them before creating a new
+// one.
+export function LayerRegistrationFixedLayerPicker({
   dataset,
   fixedLayerName,
   onChange,
-  existingAlignmentCount,
+  existingLayerRegistrationCount,
   onCreate,
 }: Props) {
-  const hasExistingAlignments = fixedLayerName != null && existingAlignmentCount > 0;
+  const hasExistingLayerRegistrations =
+    fixedLayerName != null && existingLayerRegistrationCount > 0;
 
   return (
     <Space orientation="vertical" style={{ width: "100%", maxWidth: 480 }}>
       <Typography.Text>
-        Pick the fixed (reference) layer, which stays put. All other layers can then be aligned to
-        it, one after the other.
+        Pick the fixed (reference) layer, which stays put. All other layers can then be registered
+        to it, one after the other.
       </Typography.Text>
       <Select
         placeholder="Fixed layer (does not move)"
@@ -37,15 +39,17 @@ export function FixedLayerPicker({
         onChange={(value) => onChange(value ?? null)}
         options={dataset.dataSource.dataLayers.map(({ name }) => ({ value: name, label: name }))}
       />
-      {hasExistingAlignments ? (
+      {hasExistingLayerRegistrations ? (
         <Typography.Text type="secondary">
-          {existingAlignmentCount} {pluralize("alignment", existingAlignmentCount)} to this layer
-          already {existingAlignmentCount === 1 ? "exists" : "exist"} below. Consider continuing{" "}
-          {existingAlignmentCount === 1 ? "it" : "one of them"} instead of starting a new one.
+          {existingLayerRegistrationCount}{" "}
+          {pluralize("layer registration", existingLayerRegistrationCount)} to this layer already{" "}
+          {existingLayerRegistrationCount === 1 ? "exists" : "exist"} below. Consider continuing{" "}
+          {existingLayerRegistrationCount === 1 ? "it" : "one of them"} instead of starting a new
+          one.
         </Typography.Text>
       ) : null}
       <AsyncButton
-        type={hasExistingAlignments ? "default" : "primary"}
+        type={hasExistingLayerRegistrations ? "default" : "primary"}
         disabled={fixedLayerName == null}
         onClick={async () => {
           if (fixedLayerName != null) {
@@ -54,8 +58,8 @@ export function FixedLayerPicker({
         }}
       >
         {fixedLayerName != null
-          ? `Create new alignment to ${fixedLayerName}`
-          : "Create new alignment"}
+          ? `Create new layer registration to ${fixedLayerName}`
+          : "Create new layer registration"}
       </AsyncButton>
     </Space>
   );

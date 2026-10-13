@@ -1,15 +1,15 @@
 import { duplicateAnnotation, editLockedState, reOpenAnnotation } from "admin/rest_api";
 import type { APIAnnotationInfo } from "types/api_types";
 
-// Only the owner can work on an alignment annotation in the alignment view, and only while
-// it is neither archived nor locked. Everyone else can copy it to their own account.
-export type AlignmentEditBlocker = "notOwner" | "archived" | "locked";
+// Only the owner can work on a layer registration annotation in the layer registration view, and
+// only while it is neither archived nor locked. Everyone else can copy it to their own account.
+export type LayerRegistrationEditBlocker = "notOwner" | "archived" | "locked";
 
-// Returns null if the user can work on the alignment annotation.
-export function getAlignmentEditBlocker(
+// Returns null if the user can work on the layer registration annotation.
+export function getLayerRegistrationEditBlocker(
   annotation: APIAnnotationInfo,
   activeUserId: string | null | undefined,
-): AlignmentEditBlocker | null {
+): LayerRegistrationEditBlocker | null {
   if (annotation.owner?.id == null || annotation.owner.id !== activeUserId) {
     return "notOwner";
   }
@@ -22,7 +22,7 @@ export function getAlignmentEditBlocker(
   return null;
 }
 
-export const EDIT_BLOCKER_ACTION_LABELS: Record<AlignmentEditBlocker, string> = {
+export const EDIT_BLOCKER_ACTION_LABELS: Record<LayerRegistrationEditBlocker, string> = {
   notOwner: "Copy to my account",
   archived: "Unarchive",
   locked: "Unlock",
@@ -30,7 +30,7 @@ export const EDIT_BLOCKER_ACTION_LABELS: Record<AlignmentEditBlocker, string> = 
 
 export function getEditBlockerDescription(
   annotation: APIAnnotationInfo,
-  blocker: AlignmentEditBlocker,
+  blocker: LayerRegistrationEditBlocker,
 ): string {
   switch (blocker) {
     case "notOwner": {
@@ -38,21 +38,21 @@ export function getEditBlockerDescription(
         annotation.owner != null
           ? `${annotation.owner.firstName} ${annotation.owner.lastName}`
           : "another user";
-      return `This alignment belongs to ${ownerName}. Copy it to your account to work on it.`;
+      return `This layer registration belongs to ${ownerName}. Copy it to your account to work on it.`;
     }
     case "archived":
-      return "This alignment is archived. Unarchive it to work on it.";
+      return "This layer registration is archived. Unarchive it to work on it.";
     case "locked":
-      return "This alignment is locked. Unlock it to work on it.";
+      return "This layer registration is locked. Unlock it to work on it.";
   }
 }
 
-// Removes what keeps the user from working on the alignment annotation. Resolves with the id
-// of the annotation to open, which is a new copy if the user isn't the owner. A copy stays an
-// alignment annotation.
-export async function resolveAlignmentEditBlocker(
+// Removes what keeps the user from working on the layer registration annotation. Resolves with the
+// id of the annotation to open, which is a new copy if the user isn't the owner. A copy stays a
+// layer registration annotation.
+export async function resolveLayerRegistrationEditBlocker(
   annotation: APIAnnotationInfo,
-  blocker: AlignmentEditBlocker,
+  blocker: LayerRegistrationEditBlocker,
 ): Promise<string> {
   switch (blocker) {
     case "notOwner":

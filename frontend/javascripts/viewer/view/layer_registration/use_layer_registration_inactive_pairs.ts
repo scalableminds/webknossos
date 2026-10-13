@@ -4,17 +4,17 @@ import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   getLandmarkGroupPath,
   getLandmarks,
-  getLayerPairAlignment,
+  getLayerPairTransformEstimate,
   type Landmark,
-  type LayerPairAlignment,
+  type LayerPairTransformEstimate,
   SIDES,
   type Side,
-} from "./alignment_helpers";
-import type { SendMessage } from "./use_iframe_bridge";
+} from "./layer_registration_helpers";
+import type { SendMessage } from "./use_layer_registration_iframe_bridge";
 
 // A moving layer that is not shown in the right view.
 export type InactivePair = {
-  alignment: LayerPairAlignment;
+  estimate: LayerPairTransformEstimate;
   // The stored landmarks of the fixed layer side, to copy them to the active pair. Null if
   // there are none.
   fixedSideNmlString: string | null;
@@ -42,19 +42,22 @@ async function readInactivePair(
   movingLayerName: string,
   voxelSizeFactor: Vector3,
 ): Promise<InactivePair> {
-  const layerNames = { A: fixedLayerName, B: movingLayerName };
-  const [sideA, sideB] = await Promise.all(
+  const layerNames = { fixed: fixedLayerName, moving: movingLayerName };
+  const [fixedSide, movingSide] = await Promise.all(
     SIDES.map((side: Side) => readStoredSide(sendMessage, getLandmarkGroupPath(layerNames, side))),
   );
   return {
-    alignment: getLayerPairAlignment({ A: sideA.landmarks, B: sideB.landmarks }, voxelSizeFactor),
-    fixedSideNmlString: sideA.landmarks.length > 0 ? sideA.nmlString : null,
+    estimate: getLayerPairTransformEstimate(
+      { fixed: fixedSide.landmarks, moving: movingSide.landmarks },
+      voxelSizeFactor,
+    ),
+    fixedSideNmlString: fixedSide.landmarks.length > 0 ? fixedSide.nmlString : null,
   };
 }
 
 /** Reads the stored landmarks of the moving layers that are not shown in the right view and
- * estimates their alignments. This happens once: an inactive layer's landmarks can't change,
- * because switching to another moving layer mounts the alignment view anew.
+ * estimates their transforms. This happens once: an inactive layer's landmarks can't change,
+ * because switching to another moving layer mounts the layer registration view anew.
  */
 export function useInactivePairs(
   sendMessage: SendMessage,

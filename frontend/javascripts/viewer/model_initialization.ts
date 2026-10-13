@@ -99,8 +99,6 @@ import type {
   UserConfiguration,
 } from "viewer/store";
 import Store from "viewer/store";
-import { getAlignmentEditBlocker } from "viewer/view/align_datasets/alignment_edit_blocker";
-import { getAlignmentViewUrl, isBigWarpStore } from "viewer/view/align_datasets/bigwarp_protocol";
 import { initializeKeyboardLayoutMap } from "viewer/view/keyboard_shortcuts/keyboard_layout_utils";
 import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {
@@ -108,6 +106,11 @@ import {
   validateShortcutMapText,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import { getLayerRegistrationEditBlocker } from "viewer/view/layer_registration/layer_registration_edit_blocker";
+import {
+  getLayerRegistrationViewUrl,
+  isLayerRegistrationStore,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import {
   doAllLayersHaveTheSameRotation,
@@ -123,18 +126,18 @@ import {
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
 
-// Alignment annotations are worked on in the alignment view, so the user who may work on
-// one there is redirected. Everybody else sees it in the normal viewer, which offers to
-// copy it. The hidden store iframe of the alignment view is never redirected.
-function getAlignmentViewUrlToRedirectTo(annotation: APIAnnotation): string | null {
+// Layer registration annotations are worked on in the layer registration view, so the user who may
+// work on one there is redirected. Everybody else sees it in the normal viewer, which offers to
+// copy it. The hidden store iframe of the layer registration view is never redirected.
+function getLayerRegistrationViewUrlToRedirectTo(annotation: APIAnnotation): string | null {
   if (
-    annotation.layerAlignment == null ||
-    isBigWarpStore() ||
-    getAlignmentEditBlocker(annotation, Store.getState().activeUser?.id) != null
+    annotation.layerRegistration == null ||
+    isLayerRegistrationStore() ||
+    getLayerRegistrationEditBlocker(annotation, Store.getState().activeUser?.id) != null
   ) {
     return null;
   }
-  return getAlignmentViewUrl(
+  return getLayerRegistrationViewUrl(
     { name: annotation.dataSetName, id: annotation.datasetId },
     annotation.id,
   );
@@ -171,9 +174,10 @@ export async function initialize(
         throw unversionedAnnotationResult.error.cause;
       }
       let unversionedAnnotation = unversionedAnnotationResult.value;
-      const alignmentViewUrl = getAlignmentViewUrlToRedirectTo(unversionedAnnotation);
-      if (alignmentViewUrl != null) {
-        location.replace(alignmentViewUrl);
+      const layerRegistrationViewUrl =
+        getLayerRegistrationViewUrlToRedirectTo(unversionedAnnotation);
+      if (layerRegistrationViewUrl != null) {
+        location.replace(layerRegistrationViewUrl);
         // Keep showing the loading spinner until the browser has left this page.
         await new Promise(() => {});
       }

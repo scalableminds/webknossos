@@ -69,7 +69,7 @@ CREATE TABLE webknossos.annotation_sharedTeams(
   PRIMARY KEY (_annotation, _team)
 );
 
-CREATE TABLE webknossos.annotation_layerAlignments(
+CREATE TABLE webknossos.annotation_layerRegistrations(
   _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   fixedLayerName TEXT NOT NULL
 );
@@ -965,7 +965,7 @@ ALTER TABLE webknossos.annotations
 ALTER TABLE webknossos.annotation_sharedTeams
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.annotation_layerAlignments
+ALTER TABLE webknossos.annotation_layerRegistrations
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.annotation_contributors
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,

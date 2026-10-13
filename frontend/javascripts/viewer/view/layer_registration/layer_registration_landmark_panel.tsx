@@ -28,7 +28,7 @@ import type { VoxelSize } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { AnnotationIdentity } from "viewer/view/right_border_tabs/info_tab/identity_block";
 import {
-  type Alignment,
+  type EstimatedTransform,
   formatResidual,
   getLandmarkPairs,
   getLandmarkTreeName,
@@ -40,15 +40,15 @@ import {
   OTHER_SIDE,
   SIDES,
   type Side,
-} from "./alignment_helpers";
-import type { SaveState } from "./bigwarp_protocol";
-import type { LandmarkExportFormat } from "./landmark_export";
+} from "./layer_registration_helpers";
+import type { LandmarkExportFormat } from "./layer_registration_landmark_export";
 import {
   CopyLandmarksOffer,
   type CopySource,
-  MovingLayerList,
+  LayerRegistrationMovingLayerList,
   type MovingLayerRow,
-} from "./moving_layer_list";
+} from "./layer_registration_moving_layer_list";
+import type { SaveState } from "./layer_registration_protocol";
 
 // A pair whose error is this many times higher than the mean error is highlighted, because it
 // was probably placed imprecisely. Errors below the size of one voxel are never highlighted:
@@ -91,9 +91,9 @@ type Props = {
   // The voxel size of the dataset, to show the errors of the pairs as lengths.
   voxelSize: VoxelSize;
   landmarks: Record<Side, Landmark[]>;
-  alignment: Alignment | null;
-  // Why no alignment could be estimated, if so.
-  alignmentErrorMessage: string | null;
+  estimatedTransform: EstimatedTransform | null;
+  // Why no transform could be estimated, if so.
+  estimationErrorMessage: string | null;
   isOtherLayerVisible: Record<Side, boolean>;
   onToggleOtherLayer: (side: Side) => void;
   isTransformShown: Record<Side, boolean>;
@@ -102,9 +102,9 @@ type Props = {
   canColorOverlay: boolean;
   isColorOverlayEnabled: boolean;
   onColorOverlayChange: (isEnabled: boolean) => void;
-  canApplyAlignmentToDataset: boolean;
-  onApplyAlignmentToDataset: () => void;
-  // Whether the moving layer has the current alignment as its transform in the dataset.
+  canApplyTransformToDataset: boolean;
+  onApplyTransformToDataset: () => void;
+  // Whether the dataset uses the estimated transform for the moving layer.
   isAppliedToDataset: boolean;
   // One row per moving layer. The list is only shown if there is more than one.
   movingLayerRows: MovingLayerRow[];
@@ -115,9 +115,9 @@ type Props = {
   onSelectPair: (pair: LandmarkPair) => void;
   onDeletePair: (pair: LandmarkPair) => void;
   onDownloadLandmarks: (format: LandmarkExportFormat) => void;
-  // The page that lists the alignments of the dataset.
-  alignmentListUrl: string;
-  // Whether the alignment annotation is saved, being saved or has unsaved changes.
+  // The page that lists the layer registrations of the dataset.
+  layerRegistrationListUrl: string;
+  // Whether the layer registration annotation is saved, being saved or has unsaved changes.
   saveState: SaveState;
   onSave: () => Promise<void>;
 };
@@ -146,19 +146,19 @@ function SwitchRow({
 }
 
 function isCompletePair(pair: LandmarkPair): boolean {
-  return pair.pairId != null && pair.landmarks.A != null && pair.landmarks.B != null;
+  return pair.pairId != null && pair.landmarks.fixed != null && pair.landmarks.moving != null;
 }
 
-function AlignmentStatus({
+function TransformStatus({
   pairs,
-  alignment,
-  alignmentErrorMessage,
+  estimatedTransform,
+  estimationErrorMessage,
   meanResidual,
   voxelSize,
 }: {
   pairs: LandmarkPair[];
-  alignment: Alignment | null;
-  alignmentErrorMessage: string | null;
+  estimatedTransform: EstimatedTransform | null;
+  estimationErrorMessage: string | null;
   meanResidual: number | null;
   voxelSize: VoxelSize;
 }) {
@@ -167,33 +167,33 @@ function AlignmentStatus({
   const unpairedLandmarkCount = pairs.length - completePairCount;
   return (
     <Flex vertical gap={4}>
-      {alignment != null ? (
+      {estimatedTransform != null ? (
         <Typography.Text>
-          Aligned · {completePairCount} pairs
+          Transform estimated · {completePairCount} pairs
           {meanResidual != null ? ` · mean error ${formatResidual(meanResidual, voxelSize)}` : null}
         </Typography.Text>
       ) : (
         <Typography.Text type="secondary">
-          Not aligned yet · {completePairCount} of at least {MIN_LANDMARK_PAIR_COUNT} pairs
+          No transform yet · {completePairCount} of at least {MIN_LANDMARK_PAIR_COUNT} pairs
         </Typography.Text>
       )}
       {unpairedLandmarkCount > 0 ? (
         <Typography.Text type="warning">
           {unpairedLandmarkCount} {pluralize("landmark", unpairedLandmarkCount)} without a partner{" "}
-          {unpairedLandmarkCount === 1 ? "is" : "are"} not used for the alignment.
+          {unpairedLandmarkCount === 1 ? "is" : "are"} not used for the transform.
         </Typography.Text>
       ) : null}
-      {alignment?.usedCopiesInNextSlice ? (
+      {estimatedTransform?.usedCopiesInNextSlice ? (
         <Typography.Text type="warning">
-          The landmarks lie in one plane, so the alignment assumes that the layers are only shifted
+          The landmarks lie in one plane, so the transform assumes that the layers are only shifted
           against each other along z.
         </Typography.Text>
       ) : null}
       {/* With too few pairs, the line above already says why. */}
-      {alignment == null &&
-      alignmentErrorMessage != null &&
+      {estimatedTransform == null &&
+      estimationErrorMessage != null &&
       completePairCount >= MIN_LANDMARK_PAIR_COUNT ? (
-        <Typography.Text type="warning">{alignmentErrorMessage}</Typography.Text>
+        <Typography.Text type="warning">{estimationErrorMessage}</Typography.Text>
       ) : null}
     </Flex>
   );
@@ -242,7 +242,7 @@ function AnnotationHeader({
   name,
   description,
   layerNames,
-  alignmentListUrl,
+  layerRegistrationListUrl,
   saveState,
   onSave,
   onChangeName,
@@ -251,7 +251,7 @@ function AnnotationHeader({
   name: string;
   description: string;
   layerNames: LayerNames;
-  alignmentListUrl: string;
+  layerRegistrationListUrl: string;
   saveState: SaveState;
   onSave: () => Promise<void>;
   onChangeName: (name: string) => void;
@@ -260,9 +260,10 @@ function AnnotationHeader({
   return (
     <>
       <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
-        {/* Asks first if the landmarks aren't saved yet (see the blocker in alignment_workspace.tsx). */}
-        <Link to={alignmentListUrl}>
-          <ArrowLeftOutlined /> Back to all alignments
+        {/* Asks first if the landmarks aren't saved yet (see the blocker in
+        layer_registration_workspace.tsx). */}
+        <Link to={layerRegistrationListUrl}>
+          <ArrowLeftOutlined /> Back to all layer registrations
         </Link>
         {/* Shows the automatic saves as well as the ones started with this button. */}
         <Tooltip title="The landmarks are saved automatically. Click to save right away.">
@@ -289,7 +290,7 @@ function AnnotationHeader({
         // The panel is a vertical flex container, which would stretch the tag to its full width.
         style={{ marginBottom: 16, alignSelf: "flex-start" }}
       >
-        Alignment to {layerNames.A}
+        Layer registration to {layerNames.fixed}
       </Tag>
     </>
   );
@@ -302,7 +303,7 @@ function LandmarkColorDot({ color }: { color: Vector3 }) {
 // Shown instead of the position of a landmark that is not placed yet.
 function MissingLandmarkMarker({ side }: { side: Side }) {
   return (
-    <Tooltip title={`No landmark in the ${side === "A" ? "left" : "right"} view yet.`}>
+    <Tooltip title={`No landmark in the ${side === "fixed" ? "left" : "right"} view yet.`}>
       <Typography.Text type="warning">missing</Typography.Text>
     </Tooltip>
   );
@@ -316,7 +317,7 @@ function getPairColumns(
 ): ColumnsType<LandmarkPair> {
   // One column per view with the position of the landmark.
   const landmarkColumns = SIDES.map((side) => ({
-    title: <Tooltip title={layerNames[side]}>{side === "A" ? "Left" : "Right"}</Tooltip>,
+    title: <Tooltip title={layerNames[side]}>{side === "fixed" ? "Left" : "Right"}</Tooltip>,
     key: side,
     width: PAIR_COLUMN_WIDTHS.landmark,
     ellipsis: true,
@@ -338,7 +339,7 @@ function getPairColumns(
       key: "name",
       width: PAIR_COLUMN_WIDTHS.name,
       render: (_value, pair) => {
-        const color = (pair.landmarks.A ?? pair.landmarks.B)?.color;
+        const color = (pair.landmarks.fixed ?? pair.landmarks.moving)?.color;
         return (
           <span style={{ whiteSpace: "nowrap" }}>
             {color != null ? <LandmarkColorDot color={color} /> : null}
@@ -348,7 +349,11 @@ function getPairColumns(
       },
     },
     {
-      title: <Tooltip title="How far apart the pair still is after the alignment">Error</Tooltip>,
+      title: (
+        <Tooltip title="How far apart the two landmarks of the pair still are after the transform">
+          Error
+        </Tooltip>
+      ),
       key: "residual",
       width: PAIR_COLUMN_WIDTHS.residual,
       render: (_value, pair) => {
@@ -389,7 +394,7 @@ function getPairColumns(
   ];
 }
 
-export function LandmarkPanel({
+export function LayerRegistrationLandmarkPanel({
   annotationName,
   annotationDescription,
   onChangeAnnotationName,
@@ -397,8 +402,8 @@ export function LandmarkPanel({
   layerNames,
   voxelSize,
   landmarks,
-  alignment,
-  alignmentErrorMessage,
+  estimatedTransform,
+  estimationErrorMessage,
   isOtherLayerVisible,
   onToggleOtherLayer,
   isTransformShown,
@@ -406,8 +411,8 @@ export function LandmarkPanel({
   canColorOverlay,
   isColorOverlayEnabled,
   onColorOverlayChange,
-  canApplyAlignmentToDataset,
-  onApplyAlignmentToDataset,
+  canApplyTransformToDataset,
+  onApplyTransformToDataset,
   isAppliedToDataset,
   movingLayerRows,
   onSelectMovingLayer,
@@ -416,11 +421,15 @@ export function LandmarkPanel({
   onSelectPair,
   onDeletePair,
   onDownloadLandmarks,
-  alignmentListUrl,
+  layerRegistrationListUrl,
   saveState,
   onSave,
 }: Props) {
-  const pairs = getLandmarkPairs(landmarks, alignment?.transformBtoA ?? null, voxelSize.factor);
+  const pairs = getLandmarkPairs(
+    landmarks,
+    estimatedTransform?.movingToFixedTransform ?? null,
+    voxelSize.factor,
+  );
   const meanResidual = getMeanResidual(pairs);
   const [pairListRef, pairListHeight] = useElementHeight();
   const hasSeveralMovingLayers = movingLayerRows.length > 1;
@@ -432,55 +441,57 @@ export function LandmarkPanel({
         name={annotationName}
         description={annotationDescription}
         layerNames={layerNames}
-        alignmentListUrl={alignmentListUrl}
+        layerRegistrationListUrl={layerRegistrationListUrl}
         saveState={saveState}
         onSave={onSave}
         onChangeName={onChangeAnnotationName}
         onChangeDescription={onChangeAnnotationDescription}
       />
       {hasSeveralMovingLayers ? (
-        <MovingLayerList
+        <LayerRegistrationMovingLayerList
           rows={movingLayerRows}
-          activeLayerName={layerNames.B}
+          activeLayerName={layerNames.moving}
           voxelSize={voxelSize}
           onSelect={onSelectMovingLayer}
         />
       ) : null}
-      <SidebarSection label={hasSeveralMovingLayers ? `Alignment of ${layerNames.B}` : "Alignment"}>
-        <AlignmentStatus
+      <SidebarSection
+        label={hasSeveralMovingLayers ? `Transform of ${layerNames.moving}` : "Transform"}
+      >
+        <TransformStatus
           pairs={pairs}
-          alignment={alignment}
-          alignmentErrorMessage={alignmentErrorMessage}
+          estimatedTransform={estimatedTransform}
+          estimationErrorMessage={estimationErrorMessage}
           meanResidual={meanResidual}
           voxelSize={voxelSize}
         />
         <Flex gap={8} wrap style={{ marginTop: 8 }}>
           <Tooltip
             title={
-              canApplyAlignmentToDataset
+              canApplyTransformToDataset
                 ? hasSeveralMovingLayers
-                  ? "Apply the alignments of all layers to the dataset, so that they are used everywhere"
-                  : `Apply the alignment to "${layerNames.B}" in the dataset, so that it is used everywhere`
+                  ? "Apply the transforms of all layers to the dataset, so that they are used everywhere"
+                  : `Apply the transform to "${layerNames.moving}" in the dataset, so that it is used everywhere`
                 : "You don't have the permission to edit this dataset."
             }
           >
             <Button
               type="primary"
-              onClick={onApplyAlignmentToDataset}
-              disabled={alignment == null || !canApplyAlignmentToDataset}
+              onClick={onApplyTransformToDataset}
+              disabled={estimatedTransform == null || !canApplyTransformToDataset}
             >
               Apply to dataset…
             </Button>
           </Tooltip>
         </Flex>
-        {alignment != null ? (
+        {estimatedTransform != null ? (
           isAppliedToDataset ? (
             <Typography.Text type="success" style={{ marginTop: 4 }}>
-              <CheckOutlined /> The dataset uses this alignment.
+              <CheckOutlined /> The dataset uses this transform.
             </Typography.Text>
           ) : (
             <Typography.Text type="secondary" style={{ marginTop: 4 }}>
-              The dataset doesn't use this alignment yet.
+              The dataset doesn't use this transform yet.
             </Typography.Text>
           )
         ) : null}
@@ -489,7 +500,7 @@ export function LandmarkPanel({
         {SIDES.map((side) => (
           <Flex key={side} vertical style={{ alignSelf: "stretch", marginBottom: 8 }}>
             <Typography.Text strong>
-              {side === "A" ? "Left" : "Right"} view ({layerNames[side]})
+              {side === "fixed" ? "Left" : "Right"} view ({layerNames[side]})
             </Typography.Text>
             <SwitchRow
               label={`Show ${layerNames[OTHER_SIDE[side]]} (X)`}
@@ -497,9 +508,9 @@ export function LandmarkPanel({
               onChange={() => onToggleOtherLayer(side)}
             />
             <SwitchRow
-              label={`Show ${layerNames[OTHER_SIDE[side]]} aligned (T)`}
+              label={`Show ${layerNames[OTHER_SIDE[side]]} transformed (T)`}
               checked={isTransformShown[side]}
-              disabled={alignment == null}
+              disabled={estimatedTransform == null}
               onChange={() => onToggleTransform(side)}
             />
           </Flex>
@@ -513,14 +524,14 @@ export function LandmarkPanel({
             />
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
               Recommended for grayscale layers. In a view that shows both layers, matching
-              structures look gray, and misaligned ones show green or magenta edges.
+              structures look gray, and structures that don't match show green or magenta edges.
             </Typography.Text>
           </Flex>
         ) : null}
       </SidebarSection>
       <Flex justify="space-between" align="center">
         <div className="sidebar-label">
-          {`${hasSeveralMovingLayers ? `Landmark pairs of ${layerNames.B}` : "Landmark pairs"} (${pairs.length})`}
+          {`${hasSeveralMovingLayers ? `Landmark pairs of ${layerNames.moving}` : "Landmark pairs"} (${pairs.length})`}
         </div>
         <LandmarkDownloadButton pairs={pairs} onDownload={onDownloadLandmarks} />
       </Flex>
@@ -540,14 +551,14 @@ export function LandmarkPanel({
                   <li>Click on a structure in the left view.</li>
                   <li>Click on the same structure in the right view.</li>
                   <li>
-                    Repeat this for at least {MIN_LANDMARK_PAIR_COUNT} structures. The layers are
-                    then aligned automatically.
+                    Repeat this for at least {MIN_LANDMARK_PAIR_COUNT} structures. The transform is
+                    then estimated and shown automatically.
                   </li>
                 </ol>
               }
             />
             <CopyLandmarksOffer
-              fixedLayerName={layerNames.A}
+              fixedLayerName={layerNames.fixed}
               sources={copySources}
               onCopy={onCopyLandmarks}
             />
@@ -574,7 +585,7 @@ export function LandmarkPanel({
       </Flex>
       <Typography.Text type="secondary" style={{ fontSize: 12, marginTop: 8 }}>
         In the view under the mouse: <Typography.Text keyboard>T</Typography.Text> other layer
-        aligned or untransformed · <Typography.Text keyboard>X</Typography.Text> show the other
+        transformed or untransformed · <Typography.Text keyboard>X</Typography.Text> show the other
         layer · <Typography.Text keyboard>Y</Typography.Text> move the other view here
       </Typography.Text>
     </Flex>

@@ -121,9 +121,10 @@ type Props = {
   onClearFilters: () => void;
   // Called with the annotations shown on the current page (after search, filters and sorting).
   onCurrentPageDataChange?: (annotations: Readonly<APIAnnotationInfo[]>) => void;
-  // Alignment annotations are marked with their fixed layer, e.g. "Alignment to color_1".
-  // Lists that only contain alignment annotations can show "Fixed: color_1" instead.
-  hideAlignmentPrefix?: boolean;
+  // Layer registration annotations are marked with their fixed layer, e.g. "Layer registration
+  // to color_1".
+  // Lists that only contain layer registration annotations can show "Fixed: color_1" instead.
+  hideLayerRegistrationPrefix?: boolean;
 };
 
 // A list of annotations with a header to filter and sort them, as shown in the dashboard.
@@ -144,7 +145,7 @@ export function AnnotationList({
   emptyPlaceholder,
   onClearFilters,
   onCurrentPageDataChange,
-  hideAlignmentPrefix = false,
+  hideLayerRegistrationPrefix = false,
 }: Props) {
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -235,10 +236,10 @@ export function AnnotationList({
           isReadOnly={!isAnnotationEditable(annotation, activeUser)}
           isLocked={annotation.isLockedByOwner}
         />
-        {annotation.layerAlignment != null ? (
+        {annotation.layerRegistration != null ? (
           <Tag icon={<NodeIndexOutlined />} variant="outlined">
-            {hideAlignmentPrefix ? "Fixed: " : "Alignment to "}
-            {annotation.layerAlignment.fixedLayerName}
+            {hideLayerRegistrationPrefix ? "Fixed: " : "Layer registration to "}
+            {annotation.layerRegistration.fixedLayerName}
           </Tag>
         ) : null}
         {/* Tags are edited in the details sidebar, so they are only clickable for filtering here. */}

@@ -23,12 +23,12 @@ import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { BorderOpenStatus, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import InputCatcher from "viewer/view/input_catcher";
+import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
 import type { LayoutKeys } from "viewer/view/layouting/default_layout_configs";
 import {
   DEFAULT_LAYOUT_NAME,
-  getBigWarpWorkerLayoutConfig,
+  getLayerRegistrationWorkerLayoutConfig,
   getTabDescriptorForBorderTab,
   resetDefaultLayouts,
 } from "viewer/view/layouting/default_layout_configs";
@@ -171,7 +171,9 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   loadCurrentModel() {
     const { layoutName, layoutKey } = this.props;
     const baseLayout = getLayoutConfig(layoutKey, layoutName);
-    const layout = isBigWarpWorker() ? getBigWarpWorkerLayoutConfig(baseLayout) : baseLayout;
+    const layout = isLayerRegistrationWorker()
+      ? getLayerRegistrationWorkerLayoutConfig(baseLayout)
+      : baseLayout;
     const model = Model.fromJson(layout);
     return model;
   }
@@ -525,10 +527,10 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     return action;
   };
 
-  // The right border of the dataset alignment workers contains tabs (e.g. the dataset info
-  // with its links) that break the alignment view, so it stays closed.
+  // The right border of the layer registration workers contains tabs (e.g. the dataset info
+  // with its links) that break the layer registration view, so it stays closed.
   isBorderLocked(side: BorderOpenStatusKeys) {
-    return side === "right" && isBigWarpWorker();
+    return side === "right" && isLayerRegistrationWorker();
   }
 
   toggleBorder(side: BorderOpenStatusKeys, toggleInternalState: boolean = true) {

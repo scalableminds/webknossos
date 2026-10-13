@@ -264,7 +264,7 @@ function findExistingTreeGroupPath(groupNames: string[]): TreeGroup[] {
   }
   return path;
 }
-// The build info is only needed for the header of exported NMLs. The dataset alignment page
+// The build info is only needed for the header of exported NMLs. The layer registration page
 // exports trees several times per second, so the build info is fetched only once.
 let buildInfoPromise: Promise<APIBuildInfoWk> | null = null;
 function getBuildInfoForNmlExport(): Promise<APIBuildInfoWk> {

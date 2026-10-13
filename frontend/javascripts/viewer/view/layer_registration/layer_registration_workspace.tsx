@@ -13,15 +13,15 @@ import {
   type Transform,
 } from "viewer/model/helpers/transformation_helpers";
 import {
-  type Alignment,
-  applyAlignmentsToDataset,
-  estimateTransformBtoA,
+  applyTransformsToDataset,
+  type EstimatedTransform,
+  estimateMovingToFixedTransform,
   getAppliedState,
   getCompleteLandmarkPairs,
   getLandmarkColor,
   getLandmarkPairInfo,
   getLandmarkTreeName,
-  getLayerPairAlignment,
+  getLayerPairTransformEstimate,
   getLayerTransformsInDataset,
   getOverlayLayerColors,
   type Landmark,
@@ -30,27 +30,30 @@ import {
   OTHER_SIDE,
   SIDES,
   type Side,
-} from "./alignment_helpers";
-import {
-  type AlignmentViewState,
-  type BigWarpCommand,
-  getAlignmentSelectionUrl,
-  getBigWarpStoreUrl,
-  getBigWarpWorkerUrl,
-  type SaveState,
-} from "./bigwarp_protocol";
+} from "./layer_registration_helpers";
 import {
   getBigWarpCsvFileName,
   getLandmarksAsBigWarpCsv,
   getNmlFileName,
   type LandmarkExportFormat,
   saveTextFile,
-} from "./landmark_export";
-import { LandmarkPanel, rgbColorString } from "./landmark_panel";
-import type { CopySource, MovingLayerRow } from "./moving_layer_list";
-import { type IframeRole, useIframeBridge } from "./use_iframe_bridge";
-import { useInactivePairs } from "./use_inactive_pairs";
-import { type LandmarkSyncStatus, useLandmarkSync } from "./use_landmark_sync";
+} from "./layer_registration_landmark_export";
+import {
+  LayerRegistrationLandmarkPanel,
+  rgbColorString,
+} from "./layer_registration_landmark_panel";
+import type { CopySource, MovingLayerRow } from "./layer_registration_moving_layer_list";
+import {
+  getLayerRegistrationListUrl,
+  getLayerRegistrationStoreUrl,
+  getLayerRegistrationWorkerUrl,
+  type LayerRegistrationCommand,
+  type LayerRegistrationViewState,
+  type SaveState,
+} from "./layer_registration_protocol";
+import { type IframeRole, useIframeBridge } from "./use_layer_registration_iframe_bridge";
+import { useInactivePairs } from "./use_layer_registration_inactive_pairs";
+import { type LandmarkSyncStatus, useLandmarkSync } from "./use_layer_registration_landmark_sync";
 
 const DEFAULT_LANDMARK_PANEL_WIDTH = 380;
 const MIN_LANDMARK_PANEL_WIDTH = 260;
@@ -62,7 +65,7 @@ type Props = {
   dataset: APIDataset;
   // The fixed layer and the moving layer shown in the right view ("active" moving layer).
   layerNames: LayerNames;
-  // All layers that can be aligned to the fixed layer.
+  // All layers that can be registered to the fixed layer.
   movingLayerNames: string[];
   // Called after the landmarks were saved, to show another moving layer. The parent must then
   // mount the workspace anew, with fresh iframes: the workers' undo history can't be cleared,
@@ -76,7 +79,7 @@ type Props = {
 
 type OverlayStatus = Exclude<LandmarkSyncStatus, "ready"> | "restarting" | "switching";
 
-export function AlignmentWorkspace({
+export function LayerRegistrationWorkspace({
   dataset,
   layerNames,
   movingLayerNames,
@@ -92,15 +95,15 @@ export function AlignmentWorkspace({
     landmarkAnnotation.description,
   );
   // Whether a worker also shows the layer of the other worker. Each worker initially shows
-  // only its own layer (see applyBigWarpWorkerSettings).
+  // only its own layer (see applyLayerRegistrationWorkerSettings).
   const [isOtherLayerVisible, setIsOtherLayerVisible] = useState<Record<Side, boolean>>({
-    A: false,
-    B: false,
+    fixed: false,
+    moving: false,
   });
-  // Whether a worker shows the other layer aligned to its own layer or untransformed.
+  // Whether a worker shows the other layer transformed onto its own layer or untransformed.
   const [isTransformShown, setIsTransformShown] = useState<Record<Side, boolean>>({
-    A: true,
-    B: true,
+    fixed: true,
+    moving: true,
   });
   // See getOverlayLayerColors.
   const [isColorOverlayEnabled, setIsColorOverlayEnabled] = useState(false);
@@ -109,13 +112,13 @@ export function AlignmentWorkspace({
   const [switchTargetLayerName, setSwitchTargetLayerName] = useState<string | null>(null);
   // Set right before this page navigates on purpose, so that the blocker below doesn't ask.
   const isLeavingRef = useRef(false);
-  // Whether the workers showed the other layer for an alignment yet, see the effect below.
-  const hasShownAlignmentRef = useRef(false);
+  // Whether the workers showed the other layer for a transform yet, see the effect below.
+  const hasShownTransformRef = useRef(false);
   // The effects below depend on the names, not on the object, which is created anew on every
   // render.
-  const { A: fixedLayerName, B: movingLayerName } = layerNames;
+  const { fixed: fixedLayerName, moving: movingLayerName } = layerNames;
   const overlayColors = useMemo(
-    () => getOverlayLayerColors(dataset, { A: fixedLayerName, B: movingLayerName }),
+    () => getOverlayLayerColors(dataset, { fixed: fixedLayerName, moving: movingLayerName }),
     [dataset, fixedLayerName, movingLayerName],
   );
 
@@ -149,28 +152,29 @@ export function AlignmentWorkspace({
       : syncStatus !== "ready"
         ? syncStatus
         : null;
-  // Landmarks that changed in a worker but are not in the alignment annotation yet are unsaved,
-  // too.
+  // Landmarks that changed in a worker but are not in the layer registration annotation yet are
+  // unsaved, too.
   const saveState: SaveState =
     storeSaveState === "saved" && hasUnsyncedLandmarks ? "unsaved" : storeSaveState;
   const hasUnsavedChanges = saveState !== "saved";
-  // Estimating the transform is cheap, so the alignment always matches the current landmarks.
+  // Estimating the transform is cheap, so it always matches the current landmarks.
   // Only the active pair is estimated again, the inactive pairs can't change.
-  const activePairAlignment = useMemo(
-    () => getLayerPairAlignment(landmarks, voxelSizeFactor),
+  const activePairEstimate = useMemo(
+    () => getLayerPairTransformEstimate(landmarks, voxelSizeFactor),
     [landmarks, voxelSizeFactor],
   );
-  const { estimation } = activePairAlignment;
-  const alignment: Alignment | null =
+  const { estimation } = activePairEstimate;
+  const estimatedTransform: EstimatedTransform | null =
     "transform" in estimation
       ? {
-          transformBtoA: estimation.transform,
+          movingToFixedTransform: estimation.transform,
           usedCopiesInNextSlice: estimation.usedCopiesInNextSlice,
         }
       : null;
-  const transformBtoA = alignment?.transformBtoA ?? null;
-  const isAlignmentAvailable = transformBtoA != null;
-  // The transforms of the layers in the dataset, updated when the alignments are applied.
+  const movingToFixedTransform = estimatedTransform?.movingToFixedTransform ?? null;
+  const isTransformAvailable = movingToFixedTransform != null;
+  // The transforms of the layers in the dataset, updated when the estimated transforms are
+  // applied.
   const [layerTransformsInDataset, setLayerTransformsInDataset] = useState(() =>
     getLayerTransformsInDataset(dataset.dataSource.dataLayers),
   );
@@ -182,16 +186,14 @@ export function AlignmentWorkspace({
     );
   const isAppliedToDataset = getAppliedStateOfLayer(movingLayerName, estimation) === "applied";
   const movingLayerRows: MovingLayerRow[] = movingLayerNames.map((layerName) => {
-    const pairAlignment =
-      layerName === movingLayerName
-        ? activePairAlignment
-        : inactivePairs?.get(layerName)?.alignment;
-    return pairAlignment != null
+    const pairEstimate =
+      layerName === movingLayerName ? activePairEstimate : inactivePairs?.get(layerName)?.estimate;
+    return pairEstimate != null
       ? {
           layerName,
-          completePairCount: pairAlignment.completePairCount,
-          meanResidual: pairAlignment.meanResidual,
-          appliedState: getAppliedStateOfLayer(layerName, pairAlignment.estimation),
+          completePairCount: pairEstimate.completePairCount,
+          meanResidual: pairEstimate.meanResidual,
+          appliedState: getAppliedStateOfLayer(layerName, pairEstimate.estimation),
         }
       : // Still loading, or the landmarks could not be read.
         { layerName, isLoading: inactivePairs == null };
@@ -201,14 +203,14 @@ export function AlignmentWorkspace({
   const copySources: CopySource[] = Array.from(inactivePairs ?? [])
     .flatMap(([layerName, pair]) =>
       pair.fixedSideNmlString != null
-        ? [{ layerName, landmarkCount: pair.alignment.landmarks.A.length }]
+        ? [{ layerName, landmarkCount: pair.estimate.landmarks.fixed.length }]
         : [],
     )
     .toSorted((a, b) => b.landmarkCount - a.landmarkCount);
   const getOpenPairIds = (side: Side) =>
     overlayStatus == null ? getLandmarkPairInfo(landmarks, side).openPairIds : [];
 
-  // Asks before leaving the page while the alignment annotation has unsaved changes.
+  // Asks before leaving the page while the layer registration annotation has unsaved changes.
   // This can't be left to the store iframe, although it has the normal "unsaved changes"
   // check of the viewer: browsers only show this dialog for a frame that the user interacted
   // with, and nobody interacts with the hidden store iframe. The user's clicks in the
@@ -231,7 +233,7 @@ export function AlignmentWorkspace({
     () =>
       !isLeavingRef.current &&
       hasUnsavedChanges &&
-      !confirm("The landmark annotation has unsaved changes that may be lost. Leave anyway?"),
+      !confirm("The landmarks have unsaved changes that may be lost. Leave anyway?"),
   );
   useEffect(() => {
     // The user chose to stay, so the next navigation must be checked again.
@@ -243,38 +245,41 @@ export function AlignmentWorkspace({
   // Shows layer B transformed in worker A and layer A transformed (inversely) in worker B, in
   // each worker only if the transform is shown there.
   useEffect(() => {
-    const otherLayerNames = { A: movingLayerName, B: fixedLayerName };
-    const matrices = { A: transformBtoA?.affineMatrix, B: transformBtoA?.affineMatrixInv };
+    const otherLayerNames = { fixed: movingLayerName, moving: fixedLayerName };
+    const matrices = {
+      fixed: movingToFixedTransform?.affineMatrix,
+      moving: movingToFixedTransform?.affineMatrixInv,
+    };
     for (const side of SIDES) {
       const matrix = isTransformShown[side] ? matrices[side] : null;
       sendMessage(side, "setAffineLayerTransforms", [otherLayerNames[side], matrix ?? Identity4x4]);
     }
-  }, [sendMessage, fixedLayerName, movingLayerName, transformBtoA, isTransformShown]);
+  }, [sendMessage, fixedLayerName, movingLayerName, movingToFixedTransform, isTransformShown]);
 
   // The left worker also gets the transforms of the inactive moving layers. They are hidden
-  // there, but the user can show them in the layer settings to see all layers aligned.
+  // there, but the user can show them in the layer settings to see all layers transformed.
   useEffect(() => {
     for (const [layerName, pair] of inactivePairs ?? []) {
-      const { estimation: layerEstimation } = pair.alignment;
+      const { estimation: layerEstimation } = pair.estimate;
       const matrix = "transform" in layerEstimation ? layerEstimation.transform.affineMatrix : null;
-      sendMessage("A", "setAffineLayerTransforms", [layerName, matrix ?? Identity4x4]);
+      sendMessage("fixed", "setAffineLayerTransforms", [layerName, matrix ?? Identity4x4]);
     }
   }, [sendMessage, inactivePairs]);
 
   // The workers show this state in their navbars.
   useEffect(() => {
     for (const side of SIDES) {
-      const viewState: AlignmentViewState = {
+      const viewState: LayerRegistrationViewState = {
         isTransformShown: isTransformShown[side],
-        isAlignmentAvailable,
+        isTransformAvailable,
         isLandmarkPanelOpen,
       };
-      sendMessage(side, "setAlignmentViewState", [viewState]);
+      sendMessage(side, "setLayerRegistrationViewState", [viewState]);
     }
-  }, [sendMessage, isTransformShown, isAlignmentAvailable, isLandmarkPanelOpen]);
+  }, [sendMessage, isTransformShown, isTransformAvailable, isLandmarkPanelOpen]);
 
   // While a worker shows both layers and the color overlay is enabled, the layers are colored
-  // so that misalignments stand out. Otherwise, the workers keep the original colors.
+  // so that mismatches stand out. Otherwise, the workers keep the original colors.
   useEffect(() => {
     if (overlayColors == null) {
       return;
@@ -294,23 +299,23 @@ export function AlignmentWorkspace({
     setOtherLayerVisibility(side, !isOtherLayerVisible[side]);
   };
 
-  // The first alignment (e.g. right after loading) shows the other layer in both workers, so
+  // The first transform (e.g. right after loading) shows the other layer in both workers, so
   // that the user sees the result. Afterwards, the visibility is left to the user.
-  const showOtherLayersForFirstAlignment = useEffectEvent(() => {
-    if (!hasShownAlignmentRef.current) {
-      hasShownAlignmentRef.current = true;
+  const showOtherLayersForFirstTransform = useEffectEvent(() => {
+    if (!hasShownTransformRef.current) {
+      hasShownTransformRef.current = true;
       for (const side of SIDES) {
         setOtherLayerVisibility(side, true);
       }
     }
   });
   useEffect(() => {
-    if (isAlignmentAvailable) {
-      showOtherLayersForFirstAlignment();
+    if (isTransformAvailable) {
+      showOtherLayersForFirstTransform();
     }
-  }, [isAlignmentAvailable]);
+  }, [isTransformAvailable]);
 
-  // Switches a worker between showing the other layer aligned and untransformed. The transform
+  // Switches a worker between showing the other layer transformed and untransformed. The transform
   // only moves the other layer, so that layer is shown, too.
   const toggleTransform = (side: Side) => {
     if ("errorMessage" in estimation) {
@@ -373,12 +378,13 @@ export function AlignmentWorkspace({
 
   // Moves the other worker to the position that corresponds to the position of this one.
   const syncOtherViewTo = async (side: Side) => {
-    if (transformBtoA == null) {
-      Toast.info('Align the layers first (press "t") before syncing positions between views.');
+    if ("errorMessage" in estimation) {
+      Toast.info(estimation.errorMessage);
       return;
     }
     const position = await sendMessage<Vector3>(side, "getCameraPosition");
-    const transformToOtherSide = side === "A" ? invertTransform(transformBtoA) : transformBtoA;
+    const transformToOtherSide =
+      side === "fixed" ? invertTransform(estimation.transform) : estimation.transform;
     focusPosition(OTHER_SIDE[side], getTransformPointUnscaledFn(transformToOtherSide)(position));
   };
 
@@ -392,17 +398,18 @@ export function AlignmentWorkspace({
         saveTextFile(getLandmarksAsBigWarpCsv(pairs), getBigWarpCsvFileName(layerNames));
       } else {
         // Both files are read before saving any, so that a failure doesn't leave only one.
-        const [nmlStringA, nmlStringB] = await Promise.all(
+        const [fixedNmlString, movingNmlString] = await Promise.all(
           SIDES.map((side) =>
             sendMessage<string>(side, "exportLandmarkPairsAsNml", [
               pairs.map((pair) => [pair.pairId, pair[side].treeId]),
             ]),
           ),
         );
-        saveTextFile(nmlStringA, getNmlFileName(layerNames, "A"));
-        saveTextFile(nmlStringB, getNmlFileName(layerNames, "B"));
+        saveTextFile(fixedNmlString, getNmlFileName(layerNames, "fixed"));
+        saveTextFile(movingNmlString, getNmlFileName(layerNames, "moving"));
       }
-      const leftOutCount = currentLandmarks.A.length + currentLandmarks.B.length - 2 * pairs.length;
+      const leftOutCount =
+        currentLandmarks.fixed.length + currentLandmarks.moving.length - 2 * pairs.length;
       if (leftOutCount > 0) {
         Toast.info(
           `Only complete pairs were downloaded. ${leftOutCount} ${pluralize("landmark", leftOutCount)} without a partner ${leftOutCount === 1 ? "was" : "were"} left out.`,
@@ -422,25 +429,25 @@ export function AlignmentWorkspace({
       await sendMessage("store", "save");
     } catch (error) {
       console.error(error);
-      Toast.error("Could not save the landmark annotation.");
+      Toast.error("Could not save the landmarks.");
     }
   };
 
-  // Edited here, but saved by the store iframe, which has the alignment annotation open.
+  // Edited here, but saved by the store iframe, which has the layer registration annotation open.
   const updateAnnotation = (
     command: "setAnnotationName" | "setAnnotationDescription",
     value: string,
   ) => {
     sendMessage("store", command, [value]).catch((error) => {
       console.error(error);
-      Toast.error("Could not update the landmark annotation.");
+      Toast.error("Could not update the layer registration.");
     });
   };
 
-  // Applies the alignments of all moving layers that have enough landmark pairs to the
+  // Applies the estimated transforms of all moving layers that have enough landmark pairs to the
   // dataset. The synced landmarks may miss a landmark that was placed right before, so the
   // transform of the active pair is estimated again from the current landmarks of the workers.
-  const applyAlignments = async () => {
+  const applyTransforms = async () => {
     if (inactivePairs == null) {
       Toast.info("The landmarks of the other layers are still loading. Please try again.");
       return;
@@ -457,8 +464,8 @@ export function AlignmentWorkspace({
       movingLayerNames.map((layerName) => [
         layerName,
         layerName === movingLayerName
-          ? estimateTransformBtoA(currentLandmarks)
-          : inactivePairs.get(layerName)?.alignment.estimation,
+          ? estimateMovingToFixedTransform(currentLandmarks)
+          : inactivePairs.get(layerName)?.estimate.estimation,
       ]),
     );
     const transformsByMovingLayer = new Map<string, Transform>();
@@ -468,7 +475,7 @@ export function AlignmentWorkspace({
       }
     }
     if (transformsByMovingLayer.size === 0) {
-      Toast.warning("No layer has enough landmark pairs to be aligned yet.");
+      Toast.warning("No layer has enough landmark pairs for a transform yet.");
       return;
     }
     const getChangeDescription = (layerName: string) => {
@@ -477,12 +484,12 @@ export function AlignmentWorkspace({
         return "stays unchanged (not enough landmark pairs)";
       }
       return getAppliedStateOfLayer(layerName, layerEstimation) === "applied"
-        ? "already uses its alignment"
-        : "gets its new alignment";
+        ? "already uses its transform"
+        : "gets its new transform";
     };
     const fixedLayerHasTransforms = (layerTransformsInDataset[fixedLayerName] ?? []).length > 0;
     modal.confirm({
-      title: "Apply the alignment to the dataset?",
+      title: "Apply the estimated transforms to the dataset?",
       okText: "Apply",
       content: (
         <>
@@ -493,10 +500,10 @@ export function AlignmentWorkspace({
               </li>
             ))}
           </ul>
-          <p>An applied alignment replaces the transforms that the layer has in the dataset.</p>
+          <p>Applying replaces the transforms that a layer currently has in the dataset.</p>
           {fixedLayerHasTransforms ? (
             <p>
-              "{fixedLayerName}" has transforms itself. The applied alignments build on them, so
+              "{fixedLayerName}" has transforms itself. The applied transforms build on them, so
               changing the transforms of "{fixedLayerName}" later makes them outdated.
             </p>
           ) : null}
@@ -505,11 +512,11 @@ export function AlignmentWorkspace({
       onOk: async () => {
         try {
           setLayerTransformsInDataset(
-            await applyAlignmentsToDataset(dataset.id, fixedLayerName, transformsByMovingLayer),
+            await applyTransformsToDataset(dataset.id, fixedLayerName, transformsByMovingLayer),
           );
           Toast.success(
             <>
-              Applied the alignment to the dataset.{" "}
+              Applied the transforms to the dataset.{" "}
               <a href={getViewDatasetURL(dataset)} target="_blank" rel="noopener noreferrer">
                 Open the dataset
               </a>{" "}
@@ -519,7 +526,7 @@ export function AlignmentWorkspace({
           );
         } catch (error) {
           console.error(error);
-          Toast.error("Could not apply the alignment to the dataset.");
+          Toast.error("Could not apply the transforms to the dataset.");
         }
       },
     });
@@ -557,7 +564,7 @@ export function AlignmentWorkspace({
       return;
     }
     try {
-      await sendMessage("A", "importLandmarks", [nmlString]);
+      await sendMessage("fixed", "importLandmarks", [nmlString]);
     } catch (error) {
       console.error(error);
       Toast.error("Could not copy the landmarks.");
@@ -573,7 +580,7 @@ export function AlignmentWorkspace({
     setIsRestarting(true);
     stopSync();
     Toast.warning(
-      "A view was reloaded or left, so the alignment view is restarted. The stored landmarks are kept.",
+      "A view was reloaded or left, so the layer registration view is restarted. The stored landmarks are kept.",
     );
     if (reloadedRole !== "store") {
       // Saves the landmarks that were synced before the reload.
@@ -582,7 +589,7 @@ export function AlignmentWorkspace({
     onRestart();
   }
 
-  function handleWorkerCommand(side: Side, command: BigWarpCommand) {
+  function handleWorkerCommand(side: Side, command: LayerRegistrationCommand) {
     switch (command) {
       case "toggleTransform":
         toggleTransform(side);
@@ -601,7 +608,7 @@ export function AlignmentWorkspace({
 
   return (
     <Splitter
-      className={classnames("align-datasets-workspace", {
+      className={classnames("layer-registration-workspace", {
         "is-landmark-panel-closed": !isLandmarkPanelOpen,
       })}
       onResize={([, panelWidth]) => {
@@ -616,13 +623,13 @@ export function AlignmentWorkspace({
       <Splitter.Panel>
         <Flex style={{ height: "100%", position: "relative" }}>
           {SIDES.map((side) => (
-            <div key={side} className="align-datasets-worker">
+            <div key={side} className="layer-registration-worker">
               <iframe
                 ref={(element) => {
                   iframesRef.current[side] = element;
                 }}
-                title={`${side === "A" ? "Fixed" : "Moving"} layer (${layerNames[side]})`}
-                src={getBigWarpWorkerUrl(dataset, layerNames[side], side === "A")}
+                title={`${side === "fixed" ? "Fixed" : "Moving"} layer (${layerNames[side]})`}
+                src={getLayerRegistrationWorkerUrl(dataset, layerNames[side], side === "fixed")}
                 onLoad={() => handleIframeLoad(side)}
                 onMouseEnter={() => focusWorker(side)}
               />
@@ -633,9 +640,9 @@ export function AlignmentWorkspace({
             ref={(element) => {
               iframesRef.current.store = element;
             }}
-            title="Landmark annotation"
+            title="Layer registration annotation"
             style={{ display: "none" }}
-            src={getBigWarpStoreUrl(landmarkAnnotation.id)}
+            src={getLayerRegistrationStoreUrl(landmarkAnnotation.id)}
             onLoad={() => handleIframeLoad("store")}
           />
           {overlayStatus != null ? (
@@ -654,8 +661,8 @@ export function AlignmentWorkspace({
         resizable={isLandmarkPanelOpen}
       >
         {isLandmarkPanelOpen ? (
-          <LandmarkPanel
-            alignmentListUrl={getAlignmentSelectionUrl(dataset)}
+          <LayerRegistrationLandmarkPanel
+            layerRegistrationListUrl={getLayerRegistrationListUrl(dataset)}
             voxelSize={dataset.dataSource.scale}
             layerNames={layerNames}
             landmarks={landmarks}
@@ -669,8 +676,8 @@ export function AlignmentWorkspace({
               setAnnotationDescription(description);
               updateAnnotation("setAnnotationDescription", description);
             }}
-            alignment={alignment}
-            alignmentErrorMessage={"errorMessage" in estimation ? estimation.errorMessage : null}
+            estimatedTransform={estimatedTransform}
+            estimationErrorMessage={"errorMessage" in estimation ? estimation.errorMessage : null}
             isOtherLayerVisible={isOtherLayerVisible}
             onToggleOtherLayer={toggleOtherLayer}
             isTransformShown={isTransformShown}
@@ -678,8 +685,8 @@ export function AlignmentWorkspace({
             canColorOverlay={overlayColors != null}
             isColorOverlayEnabled={isColorOverlayEnabled}
             onColorOverlayChange={setIsColorOverlayEnabled}
-            canApplyAlignmentToDataset={dataset.isEditable}
-            onApplyAlignmentToDataset={applyAlignments}
+            canApplyTransformToDataset={dataset.isEditable}
+            onApplyTransformToDataset={applyTransforms}
             isAppliedToDataset={isAppliedToDataset}
             movingLayerRows={movingLayerRows}
             onSelectMovingLayer={switchMovingLayer}
@@ -723,7 +730,7 @@ function NextLandmarkHint({ openPairIds }: { openPairIds: number[] }) {
   }
   const [nextPairId] = openPairIds;
   return (
-    <div className="align-datasets-next-landmark-hint">
+    <div className="layer-registration-next-landmark-hint">
       <span
         className="landmark-color"
         style={{ background: rgbColorString(getLandmarkColor(nextPairId)) }}
@@ -738,7 +745,7 @@ function NextLandmarkHint({ openPairIds }: { openPairIds: number[] }) {
 
 const OVERLAY_TEXTS: Record<Exclude<OverlayStatus, "failed">, string> = {
   loading: "Loading the landmarks…",
-  restarting: "Restarting the alignment view…",
+  restarting: "Restarting the layer registration view…",
   switching: "Saving the landmarks…",
 };
 
@@ -753,7 +760,7 @@ function WorkspaceOverlay({
   switchTargetLayerName: string | null;
 }) {
   return (
-    <Flex className="align-datasets-overlay" vertical justify="center" align="center" gap={8}>
+    <Flex className="layer-registration-overlay" vertical justify="center" align="center" gap={8}>
       {status !== "failed" ? (
         <>
           <Spin size="large" />

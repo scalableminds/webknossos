@@ -41,7 +41,7 @@ import {
   type APIDatasetCompact,
   type APIFeatureToggles,
   type APIHistogramData,
-  type APILayerAlignment,
+  type APILayerRegistration,
   type APIMagRestrictions,
   type APIMapping,
   type APIMaybeUnimportedDataset,
@@ -832,17 +832,17 @@ export function createExplorational(
   return Request.sendJSONReceiveJSON(url, { ...options, data: layers });
 }
 
-export function createLayerAlignment(
+export function createLayerRegistration(
   datasetId: string,
-  layerAlignment: APILayerAlignment,
+  layerRegistration: APILayerRegistration,
 ): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/layerAlignments`, {
-    data: layerAlignment,
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/layerRegistrations`, {
+    data: layerRegistration,
   });
 }
 
-export function getLayerAlignments(datasetId: string): Promise<Array<APIAnnotationInfo>> {
-  return Request.receiveJSON(`/api/datasets/${datasetId}/layerAlignments`);
+export function getLayerRegistrations(datasetId: string): Promise<Array<APIAnnotationInfo>> {
+  return Request.receiveJSON(`/api/datasets/${datasetId}/layerRegistrations`);
 }
 
 export async function getTracingsForAnnotation(

@@ -21,8 +21,8 @@ import { setDuplicateAnnotationModalVisibilityAction } from "viewer/model/action
 import { api, Model } from "viewer/singletons";
 import Store from "viewer/store";
 import SaveButton from "viewer/view/action_bar/save_button";
-import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import ButtonComponent from "viewer/view/components/button_component";
+import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
 import UndoRedoActions from "./undo_redo_actions";
 
 const ButtonWithAuthentication = withAuthentication<ButtonProps, typeof Button>(Button);
@@ -139,12 +139,12 @@ function SaveActions() {
   }
 
   if (!restrictions.allowSave) {
-    // The landmarks of the dataset alignment workers are saved by the alignment page, so
+    // The landmarks of the layer registration workers are saved by the layer registration page, so
     // copying a worker's sandbox to the user's account makes no sense.
     return (
       <Space.Compact>
         <UndoRedoActions hasTracing={hasTracing} isBusy={isBusy} />
-        {isBigWarpWorker() ? null : (
+        {isLayerRegistrationWorker() ? null : (
           <SandboxActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />
         )}
       </Space.Compact>

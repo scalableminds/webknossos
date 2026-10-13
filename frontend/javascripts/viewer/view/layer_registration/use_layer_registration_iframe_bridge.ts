@@ -2,20 +2,20 @@ import Deferred from "libs/async/deferred";
 import isObject from "lodash-es/isObject";
 import type React from "react";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
-import type { Side } from "./alignment_helpers";
+import type { Side } from "./layer_registration_helpers";
 import {
-  BIG_WARP_COMMAND_MESSAGE_TYPE,
-  BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE,
-  type BigWarpCommand,
+  LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE,
+  LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE,
+  type LayerRegistrationCommand,
   type SaveState,
-} from "./bigwarp_protocol";
+} from "./layer_registration_protocol";
 
-// The alignment page embeds three annotation views of this app as iframes: the two
-// visible workers ("A" and "B") and a hidden one that holds the persisted landmark
+// The layer registration page embeds three annotation views of this app as iframes: the two
+// visible workers ("fixed" and "moving") and a hidden one that holds the persisted landmark
 // annotation ("store"). The page talks to them through their cross-origin API
 // (cross_origin_api.ts).
 export type IframeRole = Side | "store";
-const IFRAME_ROLES: IframeRole[] = ["A", "B", "store"];
+const IFRAME_ROLES: IframeRole[] = ["fixed", "moving", "store"];
 // A command that throws sends an "err" reply, but a reply can still get lost, e.g. if the
 // iframe reloads. Generous, because "save" waits for the server.
 const REPLY_TIMEOUT_MS = 30_000;
@@ -23,9 +23,9 @@ const REPLY_TIMEOUT_MS = 30_000;
 // The messages that the iframes send to this page.
 type IncomingMessage = {
   type?: string;
-  // Set for BIG_WARP_COMMAND_MESSAGE_TYPE.
-  command?: BigWarpCommand;
-  // Set for BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE.
+  // Set for LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE.
+  command?: LayerRegistrationCommand;
+  // Set for LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE.
   saveState?: SaveState;
   // Set for replies to sendMessage. The type of a reply is "ack" or "err".
   messageId?: string;
@@ -57,35 +57,36 @@ export type SendMessage = <T = unknown>(
   args?: unknown[],
 ) => Promise<T>;
 
-/** Connects the alignment page with its iframes. The returned iframesRef must be attached to
- * the three iframes, and handleIframeLoad to their onLoad events.
+/** Connects the layer registration page with its iframes. The returned iframesRef must be
+ * attached to the three iframes, and handleIframeLoad to their onLoad events.
  * - sendMessage calls a command of the cross-origin API of an iframe and resolves with its
  *   return value. It waits until the API of that iframe is ready, and rejects if the
  *   command fails or no reply arrives in time.
- * - onWorkerCommand is called for each command that a worker sends (see bigwarp_protocol.ts).
+ * - onWorkerCommand is called for each command that a worker sends (see
+ *   layer_registration_protocol.ts).
  * - onIframeReloaded is called when an iframe loads a second page, e.g. because it was
  *   reloaded or navigated away. The iframe then no longer shows the state the page expects.
- * - storeSaveState tells whether the alignment annotation in the store iframe is saved.
+ * - storeSaveState tells whether the layer registration annotation in the store iframe is saved.
  */
 export function useIframeBridge(
-  onWorkerCommand: (side: Side, command: BigWarpCommand) => void,
+  onWorkerCommand: (side: Side, command: LayerRegistrationCommand) => void,
   onIframeReloaded: (role: IframeRole) => void,
 ) {
   const iframesRef = useRef<Record<IframeRole, HTMLIFrameElement | null>>({
-    A: null,
-    B: null,
+    fixed: null,
+    moving: null,
     store: null,
   });
   // Resolved once the API of the respective iframe is ready.
   const [readyDeferreds] = useState(() => ({
-    A: new Deferred<void, unknown>(),
-    B: new Deferred<void, unknown>(),
+    fixed: new Deferred<void, unknown>(),
+    moving: new Deferred<void, unknown>(),
     store: new Deferred<void, unknown>(),
   }));
   const pendingRepliesRef = useRef(new Map<string, Deferred<unknown, Error>>());
   const messageCounterRef = useRef(0);
   const [storeSaveState, setStoreSaveState] = useState<SaveState>("saved");
-  const loadCountsRef = useRef<Record<IframeRole, number>>({ A: 0, B: 0, store: 0 });
+  const loadCountsRef = useRef<Record<IframeRole, number>>({ fixed: 0, moving: 0, store: 0 });
   const handleWorkerCommand = useEffectEvent(onWorkerCommand);
 
   useEffect(() => {
@@ -113,13 +114,13 @@ export function useIframeBridge(
       } else if (data.messageId != null) {
         handleReply(data.messageId, data);
       } else if (
-        data.type === BIG_WARP_COMMAND_MESSAGE_TYPE &&
+        data.type === LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE &&
         role !== "store" &&
         data.command != null
       ) {
         handleWorkerCommand(role, data.command);
       } else if (
-        data.type === BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE &&
+        data.type === LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE &&
         role === "store" &&
         data.saveState != null
       ) {

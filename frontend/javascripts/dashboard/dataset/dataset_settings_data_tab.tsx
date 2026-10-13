@@ -32,7 +32,7 @@ import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
-import { getAlignmentSelectionUrl } from "viewer/view/align_datasets/bigwarp_protocol";
+import { getLayerRegistrationListUrl } from "viewer/view/layer_registration/layer_registration_protocol";
 import {
   AxisRotationSettingForDataset,
   getDatasetBoundingBoxFromLayers,
@@ -51,9 +51,9 @@ export default function DatasetSettingsDataTab() {
         {dataset != null &&
           "dataLayers" in dataset.dataSource &&
           dataset.dataSource.dataLayers.length >= 2 && (
-            <Tooltip title="Interactively align two layers of this dataset by placing matching landmarks in each">
-              <Button onClick={() => navigate(getAlignmentSelectionUrl(dataset))}>
-                Align Layers…
+            <Tooltip title="Register the layers of this dataset to one of its layers by placing matching landmarks">
+              <Button onClick={() => navigate(getLayerRegistrationListUrl(dataset))}>
+                Register Layers…
               </Button>
             </Tooltip>
           )}

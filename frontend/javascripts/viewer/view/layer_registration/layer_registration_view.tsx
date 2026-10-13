@@ -8,38 +8,41 @@ import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import type { APIAnnotation } from "types/api_types";
 import {
-  type AlignmentEditBlocker,
   EDIT_BLOCKER_ACTION_LABELS,
-  getAlignmentEditBlocker,
   getEditBlockerDescription,
-  resolveAlignmentEditBlocker,
-} from "./alignment_edit_blocker";
+  getLayerRegistrationEditBlocker,
+  type LayerRegistrationEditBlocker,
+  resolveLayerRegistrationEditBlocker,
+} from "./layer_registration_edit_blocker";
 import {
   getActiveMovingLayerName,
   getMovingLayerNames,
   type LayerNames,
-} from "./alignment_helpers";
-import { AlignmentPageError, AlignmentPageSpinner } from "./alignment_page_status_views";
-import { AlignmentWorkspace } from "./alignment_workspace";
-import { getAlignmentViewUrl, MOVING_LAYER_URL_PARAM } from "./bigwarp_protocol";
+} from "./layer_registration_helpers";
+import {
+  LayerRegistrationPageError,
+  LayerRegistrationPageSpinner,
+} from "./layer_registration_page_status_views";
+import { getLayerRegistrationViewUrl, MOVING_LAYER_URL_PARAM } from "./layer_registration_protocol";
+import { LayerRegistrationWorkspace } from "./layer_registration_workspace";
 
-/**  Aligns the layers of a dataset ("moving" layers) to one of its layers ("fixed" layer) by
- * placing matching landmarks in both, similar to the BigWarp plugin of Fiji. The landmarks are
- * stored in an alignment annotation, which belongs to the fixed layer and holds the landmarks
- * of all moving layers.
- * The page shows the fixed layer and one moving layer side by side, each in an iframe with a
- * sandbox annotation view ("worker", see bigwarp_worker.ts). The moving layer is chosen with
- * a URL param. The alignment annotation is loaded in a third, hidden iframe.
+/**  Registers the layers of a dataset ("moving" layers) to one of its layers ("fixed" layer)
+ * by placing matching landmarks in both, similar to the BigWarp plugin of Fiji. The landmarks are
+ * stored in a layer registration annotation, which belongs to the fixed layer and holds the
+ * landmarks of all moving layers. The page shows the fixed layer and one moving layer side by side,
+ * each in an iframe with a sandbox annotation view ("worker", see layer_registration_worker.ts).
+ * The moving layer is chosen with a URL param. The layer registration annotation is loaded in a
+ * third, hidden iframe.
  */
-function AlignmentView() {
+function LayerRegistrationView() {
   const { annotationId = "" } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeUserId = useWkSelector((state) => state.activeUser?.id);
-  // Increased to mount the workspace anew, see AlignmentWorkspace's onRestart.
+  // Increased to mount the workspace anew, see LayerRegistrationWorkspace's onRestart.
   const [workspaceRestartCount, setWorkspaceRestartCount] = useState(0);
 
   const annotationQuery = useApi({
-    queryKey: ["alignDatasets", "annotation", annotationId],
+    queryKey: ["layerRegistration", "annotation", annotationId],
     queryFn: () => getUnversionedAnnotationInformation(annotationId),
     refetchOnWindowFocus: false,
     // The workspace edits the name and description of the annotation, so it must not start
@@ -49,23 +52,25 @@ function AlignmentView() {
   });
   const annotation = annotationQuery.data;
   const datasetQuery = useQuery({
-    queryKey: ["alignDatasets", "dataset", annotation?.datasetId],
+    queryKey: ["layerRegistration", "dataset", annotation?.datasetId],
     queryFn: () => getDataset(annotation!.datasetId),
     enabled: annotation != null,
   });
   const dataset = datasetQuery.data;
 
   if (annotationQuery.isError) {
-    return <AlignmentPageError text="Could not load this annotation." />;
+    return <LayerRegistrationPageError text="Could not load this annotation." />;
   }
   if (annotation == null) {
-    return <AlignmentPageSpinner />;
+    return <LayerRegistrationPageSpinner />;
   }
-  const { layerAlignment } = annotation;
-  if (layerAlignment == null) {
-    return <AlignmentPageError text="This annotation is not an alignment annotation." />;
+  const { layerRegistration } = annotation;
+  if (layerRegistration == null) {
+    return (
+      <LayerRegistrationPageError text="This annotation is not a layer registration annotation." />
+    );
   }
-  const editBlocker = getAlignmentEditBlocker(annotation, activeUserId);
+  const editBlocker = getLayerRegistrationEditBlocker(annotation, activeUserId);
   if (editBlocker != null) {
     return (
       <EditBlockerNotice
@@ -76,21 +81,21 @@ function AlignmentView() {
     );
   }
   if (datasetQuery.isError) {
-    return <AlignmentPageError text="Could not load the dataset of this annotation." />;
+    return <LayerRegistrationPageError text="Could not load the dataset of this annotation." />;
   }
   if (dataset == null) {
-    return <AlignmentPageSpinner />;
+    return <LayerRegistrationPageSpinner />;
   }
   if (!dataset.isActive) {
     return (
-      <AlignmentPageError text="This dataset is not active, so its layers cannot be aligned." />
+      <LayerRegistrationPageError text="This dataset is not active, so its layers cannot be registered." />
     );
   }
-  const { fixedLayerName } = layerAlignment;
+  const { fixedLayerName } = layerRegistration;
   if (!dataset.dataSource.dataLayers.some((layer) => layer.name === fixedLayerName)) {
     return (
-      <AlignmentPageError
-        text={`The dataset has no layer named "${fixedLayerName}" anymore, so this alignment can't be opened.`}
+      <LayerRegistrationPageError
+        text={`The dataset has no layer named "${fixedLayerName}" anymore, so this layer registration can't be opened.`}
       />
     );
   }
@@ -101,12 +106,12 @@ function AlignmentView() {
   );
   if (movingLayerName == null) {
     return (
-      <AlignmentPageError text="The dataset has no other layer that could be aligned to the fixed layer." />
+      <LayerRegistrationPageError text="The dataset has no other layer that could be registered to the fixed layer." />
     );
   }
-  const layerNames: LayerNames = { A: fixedLayerName, B: movingLayerName };
+  const layerNames: LayerNames = { fixed: fixedLayerName, moving: movingLayerName };
   return (
-    <AlignmentWorkspace
+    <LayerRegistrationWorkspace
       // A new moving layer needs fresh workers, see onSwitchMovingLayer.
       key={`${annotation.id}-${movingLayerName}-${workspaceRestartCount}`}
       dataset={dataset}
@@ -132,19 +137,19 @@ function EditBlockerNotice({
   onAnnotationChanged,
 }: {
   annotation: APIAnnotation;
-  editBlocker: AlignmentEditBlocker;
+  editBlocker: LayerRegistrationEditBlocker;
   onAnnotationChanged: () => void;
 }) {
   const navigate = useNavigate();
 
   const resolveEditBlocker = async () => {
     try {
-      const annotationIdToOpen = await resolveAlignmentEditBlocker(annotation, editBlocker);
+      const annotationIdToOpen = await resolveLayerRegistrationEditBlocker(annotation, editBlocker);
       if (annotationIdToOpen === annotation.id) {
         onAnnotationChanged();
       } else {
         navigate(
-          getAlignmentViewUrl(
+          getLayerRegistrationViewUrl(
             { name: annotation.dataSetName, id: annotation.datasetId },
             annotationIdToOpen,
           ),
@@ -165,4 +170,4 @@ function EditBlockerNotice({
   );
 }
 
-export default AlignmentView;
+export default LayerRegistrationView;

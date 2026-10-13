@@ -17,10 +17,11 @@ import {
 } from "viewer/model/helpers/transformation_helpers";
 import { MutableTreeMap } from "viewer/model/types/tree_types";
 
-// "A" is the fixed layer, "B" is the moving layer that gets transformed onto A.
-export type Side = "A" | "B";
-export const SIDES: Side[] = ["A", "B"];
-export const OTHER_SIDE: Record<Side, Side> = { A: "B", B: "A" };
+// The two layers of a layer registration: the moving layer gets transformed onto the fixed
+// layer. The fixed layer is shown in the left view, the moving layer in the right view.
+export type Side = "fixed" | "moving";
+export const SIDES: Side[] = ["fixed", "moving"];
+export const OTHER_SIDE: Record<Side, Side> = { fixed: "moving", moving: "fixed" };
 export type LayerNames = Record<Side, string>;
 
 // Each landmark is a tree with one node. The tree and node ids refer to the worker of the
@@ -39,32 +40,32 @@ export type LandmarkPair = {
   // Null for a landmark that can't be paired, see getLandmarkPairs.
   pairId: number | null;
   landmarks: Partial<Record<Side, Landmark>>;
-  // Distance between landmark A and the transformed landmark B, see getLandmarkPairs for the
-  // unit. A value that is much higher than in the other pairs usually means that this pair
-  // was placed imprecisely. Null if no transform was estimated yet or if one of the landmarks
-  // is missing.
+  // Distance between the fixed landmark and the transformed moving landmark, see getLandmarkPairs
+  // for the unit. A value that is much higher than in the other pairs usually means that this pair
+  // was placed imprecisely. Null if no transform was estimated yet or if one of the landmarks is
+  // missing.
   residual: number | null;
 };
 
 // The transform estimated from the current landmark pairs.
-export type Alignment = {
-  transformBtoA: Transform;
-  // See estimateTransformBtoA.
+export type EstimatedTransform = {
+  movingToFixedTransform: Transform;
+  // See estimateMovingToFixedTransform.
   usedCopiesInNextSlice: boolean;
 };
 
 // Three pairs always lie in one plane, so they only work with the fallback in
-// estimateTransformBtoA.
+// estimateMovingToFixedTransform.
 export const MIN_LANDMARK_PAIR_COUNT = 3;
 // If the smallest extent of a point cloud is below this fraction of its largest extent,
 // the points are treated as lying in one plane (or on one line).
 const MIN_EXTENT_RATIO = 1e-6;
-// See isAlignmentAppliedToDataset.
+// See isTransformAppliedToDataset.
 const APPLIED_TRANSFORM_TOLERANCE = 1e-9;
 
 // The two landmarks of a pair are trees with the same name, "Landmark <pair id>", one in each
 // worker. A worker names a tree when a click creates it (see getNewLandmarkTreeProperties in
-// bigwarp_worker.ts). Thus, a pair stays the same when other landmarks are deleted.
+// layer_registration_worker.ts). Thus, a pair stays the same when other landmarks are deleted.
 const LANDMARK_TREE_NAME_PATTERN = /^Landmark (\d+)$/;
 
 export function getLandmarkTreeName(pairId: number): string {
@@ -128,11 +129,11 @@ export function prepareLandmarkTreesForImport(trees: MutableTreeMap): MutableTre
 // lengths in the unit of the dataset, which also works for anisotropic voxels.
 export function getLandmarkPairs(
   landmarks: Record<Side, Landmark[]>,
-  transformBtoA: Transform | null,
+  movingToFixedTransform: Transform | null,
   voxelSizeFactor: Vector3 = [1, 1, 1],
 ): LandmarkPair[] {
-  const transformPointBtoA =
-    transformBtoA != null ? getTransformPointUnscaledFn(transformBtoA) : null;
+  const transformPointMovingToFixed =
+    movingToFixedTransform != null ? getTransformPointUnscaledFn(movingToFixedTransform) : null;
   const landmarksByPairId = new Map<number, Partial<Record<Side, Landmark>>>();
   const rowsWithoutPair: LandmarkPair[] = [];
   for (const side of SIDES) {
@@ -153,15 +154,18 @@ export function getLandmarkPairs(
     }
   }
   const pairs: LandmarkPair[] = Array.from(landmarksByPairId.entries())
-    .toSorted(([pairIdA], [pairIdB]) => pairIdA - pairIdB)
-    .map(([pairId, { A, B }]) => ({
+    .toSorted(([firstPairId], [secondPairId]) => firstPairId - secondPairId)
+    .map(([pairId, { fixed, moving }]) => ({
       key: String(pairId),
       pairId,
-      landmarks: { A, B },
+      landmarks: { fixed, moving },
       residual:
-        transformPointBtoA != null && A != null && B != null
+        transformPointMovingToFixed != null && fixed != null && moving != null
           ? V3.length(
-              V3.scale3(V3.sub(A.position, transformPointBtoA(B.position)), voxelSizeFactor),
+              V3.scale3(
+                V3.sub(fixed.position, transformPointMovingToFixed(moving.position)),
+                voxelSizeFactor,
+              ),
             )
           : null,
     }));
@@ -174,13 +178,14 @@ export type CompleteLandmarkPair = { pairId: number } & Record<Side, Landmark>;
 export function getCompleteLandmarkPairs(
   landmarks: Record<Side, Landmark[]>,
 ): CompleteLandmarkPair[] {
-  return getLandmarkPairs(landmarks, null).flatMap(({ pairId, landmarks: { A, B } }) =>
-    pairId != null && A != null && B != null ? [{ pairId, A, B }] : [],
+  return getLandmarkPairs(landmarks, null).flatMap(({ pairId, landmarks: { fixed, moving } }) =>
+    pairId != null && fixed != null && moving != null ? [{ pairId, fixed, moving }] : [],
   );
 }
 
 // What a worker needs to know about the landmarks of the other worker to choose the pair id of
-// its next landmark (see getNextLandmarkPairId). The alignment page sends it after each sync.
+// its next landmark (see getNextLandmarkPairId). The layer registration page sends it after
+// each sync.
 export type LandmarkPairInfo = {
   // The pair ids that the other side has and this side doesn't, ascending.
   openPairIds: number[];
@@ -257,33 +262,33 @@ function addCopiesInNextSlice(positions: Vector3[]): Vector3[] {
 // If all landmarks lie in one plane (usually because they were placed in a single z
 // slice), no 3D transform can be estimated from them. Then, each landmark is copied to
 // the next slice (z + 1) on both sides and the transform is estimated from the landmarks
-// and their copies. This assumes that one z slice of layer B corresponds to one z slice of
-// layer A. The dataset composition wizard uses the same fallback. The copies only exist
-// here and are never added to an annotation.
-export function estimateTransformBtoA(
+// and their copies. This assumes that one z slice of the moving layer corresponds to one z
+// slice of the fixed layer. The dataset composition wizard uses the same fallback. The copies
+// only exist here and are never added to an annotation.
+export function estimateMovingToFixedTransform(
   landmarks: Record<Side, Landmark[]>,
 ): { transform: Transform; usedCopiesInNextSlice: boolean } | { errorMessage: string } {
   // Landmarks without a partner are left out.
   const pairs = getCompleteLandmarkPairs(landmarks);
   if (pairs.length < MIN_LANDMARK_PAIR_COUNT) {
     return {
-      errorMessage: `Need at least ${MIN_LANDMARK_PAIR_COUNT} landmark pairs (a landmark in both views) before aligning.`,
+      errorMessage: `Need at least ${MIN_LANDMARK_PAIR_COUNT} landmark pairs (a landmark in both views) to estimate a transform.`,
     };
   }
-  const positionsA = pairs.map((pair) => pair.A.position);
-  const positionsB = pairs.map((pair) => pair.B.position);
-  if (canEstimateTransform(positionsB, positionsA)) {
+  const fixedPositions = pairs.map((pair) => pair.fixed.position);
+  const movingPositions = pairs.map((pair) => pair.moving.position);
+  if (canEstimateTransform(movingPositions, fixedPositions)) {
     return {
-      transform: createAffineTransform(positionsB, positionsA),
+      transform: createAffineTransform(movingPositions, fixedPositions),
       usedCopiesInNextSlice: false,
     };
   }
 
-  const extendedPositionsA = addCopiesInNextSlice(positionsA);
-  const extendedPositionsB = addCopiesInNextSlice(positionsB);
-  if (canEstimateTransform(extendedPositionsB, extendedPositionsA)) {
+  const extendedFixedPositions = addCopiesInNextSlice(fixedPositions);
+  const extendedMovingPositions = addCopiesInNextSlice(movingPositions);
+  if (canEstimateTransform(extendedMovingPositions, extendedFixedPositions)) {
     return {
-      transform: createAffineTransform(extendedPositionsB, extendedPositionsA),
+      transform: createAffineTransform(extendedMovingPositions, extendedFixedPositions),
       usedCopiesInNextSlice: true,
     };
   }
@@ -293,14 +298,14 @@ export function estimateTransformBtoA(
   };
 }
 
-// The tree group that holds the landmarks of one side of a layer pair in the alignment
-// annotation. Each moving layer has a group with one subgroup per side:
+// The tree group that holds the landmarks of one side of a layer pair in the layer
+// registration annotation. Each moving layer has a group with one subgroup per side:
 // "color_2" > "color_1 landmarks" (fixed layer) and "color_2" > "color_2 landmarks".
 export function getLandmarkGroupPath(layerNames: LayerNames, side: Side): string[] {
-  return [layerNames.B, `${layerNames[side]} landmarks`];
+  return [layerNames.moving, `${layerNames[side]} landmarks`];
 }
 
-// The layers that can be aligned to the fixed layer, in the order of the dataset.
+// The layers that can be registered to the fixed layer, in the order of the dataset.
 export function getMovingLayerNames(dataset: APIDataset, fixedLayerName: string): string[] {
   return dataset.dataSource.dataLayers
     .map((layer) => layer.name)
@@ -317,42 +322,44 @@ export function getActiveMovingLayerName(
     : (movingLayerNames[0] ?? null);
 }
 
-// The alignment of one moving layer as estimated from its landmarks.
-export type LayerPairAlignment = {
+// The transform of one moving layer as estimated from its landmarks.
+export type LayerPairTransformEstimate = {
   landmarks: Record<Side, Landmark[]>;
-  estimation: ReturnType<typeof estimateTransformBtoA>;
+  estimation: ReturnType<typeof estimateMovingToFixedTransform>;
   completePairCount: number;
   // See getMeanResidual. Null if no transform could be estimated.
   meanResidual: number | null;
 };
 
-export function getLayerPairAlignment(
+export function getLayerPairTransformEstimate(
   landmarks: Record<Side, Landmark[]>,
   voxelSizeFactor: Vector3,
-): LayerPairAlignment {
-  const estimation = estimateTransformBtoA(landmarks);
-  const transformBtoA = "transform" in estimation ? estimation.transform : null;
+): LayerPairTransformEstimate {
+  const estimation = estimateMovingToFixedTransform(landmarks);
+  const movingToFixedTransform = "transform" in estimation ? estimation.transform : null;
   return {
     landmarks,
     estimation,
     completePairCount: getCompleteLandmarkPairs(landmarks).length,
-    meanResidual: getMeanResidual(getLandmarkPairs(landmarks, transformBtoA, voxelSizeFactor)),
+    meanResidual: getMeanResidual(
+      getLandmarkPairs(landmarks, movingToFixedTransform, voxelSizeFactor),
+    ),
   };
 }
 
-// Whether the dataset uses the alignment of a moving layer: "notEnoughPairs" if no transform
-// could be estimated from the landmarks.
+// Whether the dataset uses the estimated transform of a moving layer: "notEnoughPairs" if no
+// transform could be estimated from the landmarks.
 export type AppliedState = "applied" | "notApplied" | "notEnoughPairs";
 
 export function getAppliedState(
-  estimation: LayerPairAlignment["estimation"],
+  estimation: LayerPairTransformEstimate["estimation"],
   fixedLayerTransforms: CoordinateTransformation[] | null | undefined,
   movingLayerTransforms: CoordinateTransformation[] | null | undefined,
 ): AppliedState {
   if (!("transform" in estimation)) {
     return "notEnoughPairs";
   }
-  return isAlignmentAppliedToDataset(
+  return isTransformAppliedToDataset(
     estimation.transform,
     fixedLayerTransforms,
     movingLayerTransforms,
@@ -366,7 +373,7 @@ const MOVING_LAYER_OVERLAY_COLOR: Vector3 = [255, 0, 255];
 
 // The colors of the two layers while a worker shows both: the fixed layer in green and the
 // moving layer in magenta, as in BigWarp. Where the layers match, they add up to gray, and
-// misaligned structures show colored edges. Null unless both are color layers, because
+// structures that don't match show colored edges. Null unless both are color layers, because
 // segmentation layers have no layer color.
 export function getOverlayLayerColors(
   dataset: APIDataset,
@@ -378,17 +385,20 @@ export function getOverlayLayerColors(
       "color",
   );
   return areColorLayers
-    ? { [layerNames.A]: FIXED_LAYER_OVERLAY_COLOR, [layerNames.B]: MOVING_LAYER_OVERLAY_COLOR }
+    ? {
+        [layerNames.fixed]: FIXED_LAYER_OVERLAY_COLOR,
+        [layerNames.moving]: MOVING_LAYER_OVERLAY_COLOR,
+      }
     : null;
 }
 
 type DataLayers = APIDataset["dataSource"]["dataLayers"];
 
-// The data layers after applying the alignments. Each transform maps the untransformed
+// The data layers after applying the estimated transforms. Each transform maps the untransformed
 // coordinates of its moving layer to the untransformed coordinates of the fixed layer. So a
 // moving layer gets its transform, followed by the transforms of the fixed layer. Its previous
 // transforms are replaced. Layers that are not in the map stay unchanged.
-export function getDataLayersWithAlignments(
+export function getDataLayersWithAppliedTransforms(
   dataLayers: DataLayers,
   fixedLayerName: string,
   transformsByMovingLayer: Map<string, Transform>,
@@ -407,7 +417,7 @@ export function getDataLayersWithAlignments(
     return transform != null
       ? {
           ...layer,
-          coordinateTransformations: getAlignedMovingLayerTransforms(
+          coordinateTransformations: getAppliedMovingLayerTransforms(
             transform,
             fixedLayer.coordinateTransformations,
           ),
@@ -416,9 +426,10 @@ export function getDataLayersWithAlignments(
   });
 }
 
-// Applies the alignments of the moving layers to the dataset (see getDataLayersWithAlignments).
+// Applies the estimated transforms of the moving layers to the dataset (see
+// getDataLayersWithAppliedTransforms).
 // Returns the transforms of all layers of the dataset afterwards.
-export async function applyAlignmentsToDataset(
+export async function applyTransformsToDataset(
   datasetId: string,
   fixedLayerName: string,
   transformsByMovingLayer: Map<string, Transform>,
@@ -427,7 +438,7 @@ export async function applyAlignmentsToDataset(
   if (!dataset.isActive) {
     throw new Error("The dataset is not active anymore.");
   }
-  const dataLayers = getDataLayersWithAlignments(
+  const dataLayers = getDataLayersWithAppliedTransforms(
     dataset.dataSource.dataLayers,
     fixedLayerName,
     transformsByMovingLayer,
@@ -450,28 +461,28 @@ export function getLayerTransformsInDataset(dataLayers: DataLayers): LayerTransf
   );
 }
 
-// The transforms that the moving layer gets when the alignment is applied to the dataset
-// (see applyAlignmentToDataset).
-function getAlignedMovingLayerTransforms(
-  transformBtoA: Transform,
+// The transforms that the moving layer gets when its estimated transform is applied to the
+// dataset (see applyTransformsToDataset).
+function getAppliedMovingLayerTransforms(
+  movingToFixedTransform: Transform,
   fixedLayerTransforms: CoordinateTransformation[] | null | undefined,
 ): CoordinateTransformation[] {
   return [
-    { type: "affine", matrix: flatToNestedMatrix(transformBtoA.affineMatrix) },
+    { type: "affine", matrix: flatToNestedMatrix(movingToFixedTransform.affineMatrix) },
     ...(fixedLayerTransforms ?? []),
   ];
 }
 
-// Whether the moving layer has exactly the transforms that applying the alignment would give
-// it. The numbers are compared with a small tolerance, because the server may store them with
-// less precision.
-export function isAlignmentAppliedToDataset(
-  transformBtoA: Transform,
+// Whether the moving layer has exactly the transforms that applying the estimated transform
+// would give it. The numbers are compared with a small tolerance, because the server may store
+// them with less precision.
+export function isTransformAppliedToDataset(
+  movingToFixedTransform: Transform,
   fixedLayerTransforms: CoordinateTransformation[] | null | undefined,
   movingLayerTransforms: CoordinateTransformation[] | null | undefined,
 ): boolean {
   return isEqualWith(
-    getAlignedMovingLayerTransforms(transformBtoA, fixedLayerTransforms),
+    getAppliedMovingLayerTransforms(movingToFixedTransform, fixedLayerTransforms),
     movingLayerTransforms ?? [],
     (a, b) =>
       typeof a === "number" && typeof b === "number"

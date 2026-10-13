@@ -56,7 +56,7 @@ case class TransferAnnotationParameters(userId: ObjectId) derives JsonAutoFormat
 
 class AnnotationController @Inject() (
     annotationDAO: AnnotationDAO,
-    annotationLayerAlignmentDAO: AnnotationLayerAlignmentDAO,
+    annotationLayerRegistrationDAO: AnnotationLayerRegistrationDAO,
     taskDAO: TaskDAO,
     userDAO: UserDAO,
     datasetDAO: DatasetDAO,
@@ -258,21 +258,21 @@ class AnnotationController @Inject() (
       } yield JsonOk(json)
     }
 
-  def createLayerAlignment(datasetId: ObjectId): Action[AnnotationLayerAlignment] =
-    sil.SecuredAction.fox(validateJson[AnnotationLayerAlignment]) { implicit request =>
+  def createLayerRegistration(datasetId: ObjectId): Action[AnnotationLayerRegistration] =
+    sil.SecuredAction.fox(validateJson[AnnotationLayerRegistration]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-        annotation <- annotationService.createLayerAlignmentFor(
+        annotation <- annotationService.createLayerRegistrationFor(
           request.identity,
           dataset,
           request.body
-        ) ?~> Msg.Annotation.LayerAlignment.createFailed
+        ) ?~> Msg.Annotation.LayerRegistration.createFailed
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
         json <- annotationService.publicWrites(annotation, Some(request.identity)) ?~> Msg.Annotation.publicWritesFailed
       } yield JsonOk(json)
     }
 
-  def listLayerAlignments(datasetId: ObjectId): Action[AnyContent] =
+  def listLayerRegistrations(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       for {
         _ <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
@@ -282,8 +282,8 @@ class AnnotationController @Inject() (
           filterOwnedOrShared = true,
           datasetId = Some(datasetId),
           limit = annotationService.DefaultAnnotationListLimit,
-          onlyLayerAlignments = true
-        ) ?~> Msg.Annotation.LayerAlignment.listFailed
+          onlyLayerRegistrations = true
+        ) ?~> Msg.Annotation.LayerRegistration.listFailed
       } yield Ok(Json.toJson(annotationInfos.map(annotationService.writeCompactInfo)))
     }
 
@@ -541,18 +541,18 @@ class AnnotationController @Inject() (
         datasetBoundingBox = dataSource.map(_.boundingBox)
       )
       newAnnotationLayers = newAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
-      // A copy of a layer alignment stays a layer alignment.
-      layerAlignment <- annotationLayerAlignmentDAO.findOneForAnnotation(annotation._id)
+      // A copy of a layer registration stays a layer registration.
+      layerRegistration <- annotationLayerRegistrationDAO.findOneForAnnotation(annotation._id)
       clonedAnnotation = annotationService.createFrom(
         user,
         dataset,
         newAnnotationLayers,
         AnnotationType.Explorational,
-        layerAlignment.map(_.defaultAnnotationName(dataset.name)),
+        layerRegistration.map(_.defaultAnnotationName(dataset.name)),
         annotation.description,
         newAnnotationId
       )
-      _ <- annotationDAO.insertOne(clonedAnnotation, layerAlignment)
+      _ <- annotationDAO.insertOne(clonedAnnotation, layerRegistration)
     } yield clonedAnnotation
 
   def tryAcquiringAnnotationMutex(id: ObjectId, sessionId: String): Action[AnyContent] =

@@ -20,8 +20,8 @@ import { useState } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import { getAlignmentSelectionUrl } from "viewer/view/align_datasets/bigwarp_protocol";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
+import { getLayerRegistrationListUrl } from "viewer/view/layer_registration/layer_registration_protocol";
 
 function NewAnnotationLink({
   dataset,
@@ -211,11 +211,11 @@ export function getDatasetActionContextMenu({
           dataset.isActive &&
           dataset.colorLayerNames.length + dataset.segmentationLayerNames.length >= 2
             ? {
-                key: "align-layers",
+                key: "register-layers",
                 icon: <NodeIndexOutlined className="icon-margin-right" />,
-                label: "Align Layers…",
+                label: "Register Layers…",
                 onClick: () => {
-                  window.location.href = getAlignmentSelectionUrl(dataset);
+                  window.location.href = getLayerRegistrationListUrl(dataset);
                 },
               }
             : null,

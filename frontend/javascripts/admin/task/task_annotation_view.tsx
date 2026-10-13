@@ -18,6 +18,7 @@ import {
   reOpenAnnotation as reOpenAnnotationAPI,
   resetAnnotation as resetAnnotationAPI,
 } from "admin/rest_api";
+import DeactivatedUserTag from "admin/user/deactivated_user_tag";
 import { App, Dropdown, type MenuProps, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -184,7 +185,10 @@ function TaskAnnotationView({ task }: Props) {
               : "<no user>";
             return (
               <tr key={`${annotation.id}-tr`}>
-                <td>{userString}</td>
+                <td>
+                  {userString}{" "}
+                  {annotation.owner?.isActive === false ? <DeactivatedUserTag /> : null}
+                </td>
                 <td>
                   <FormattedDate timestamp={annotation.modified} />
                 </td>
@@ -205,7 +209,8 @@ function TaskAnnotationView({ task }: Props) {
                   <div>{getViewOrOpenLabel(annotation)}</div>
                   <Dropdown menu={getDropdownMenu(annotation)} trigger={["click"]}>
                     <a className="ant-dropdown-link">
-                      Actions <DownOutlined />
+                      <DownOutlined className="icon-margin-right" />
+                      Actions
                     </a>
                   </Dropdown>
                 </td>

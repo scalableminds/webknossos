@@ -75,7 +75,7 @@ class InitialDataService @Inject() (
     conf: WkConf
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
-  implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
+  implicit private val ctx: GlobalAccessContext.type = GlobalAccessContext
 
   private val defaultUserEmail = conf.WebKnossos.SampleOrganization.User.email
   private val defaultUserEmail2 = conf.WebKnossos.SampleOrganization.User.email2

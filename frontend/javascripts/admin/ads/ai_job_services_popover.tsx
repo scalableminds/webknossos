@@ -1,8 +1,8 @@
 import { DownOutlined } from "@ant-design/icons";
-import { smallCapsStyle } from "admin/ads/ad_card";
-import { Badge, Button, Divider, Flex, Popover, Typography, theme } from "antd";
+import { Badge, Button, Flex, Popover, Typography, theme } from "antd";
 import features from "features";
-import { Fragment } from "react";
+import { useState } from "react";
+import { ColorWKBlueZircon } from "theme";
 
 type Service = {
   eyebrow: string;
@@ -28,34 +28,72 @@ const SERVICES: Service[] = [
   },
 ];
 
-function ServiceEntry({ eyebrow, description, linkLabel, href }: Service) {
+const POPOVER_WIDTH = 360;
+
+function Eyebrow({ children }: { children: string }) {
   const { token } = theme.useToken();
   return (
-    <Flex vertical gap={4}>
-      <Typography.Text type="secondary" style={smallCapsStyle}>
-        {eyebrow}
-      </Typography.Text>
-      {/* type="secondary" would resolve to the dimmer colorTextTertiary, see theme.ts. */}
-      <Typography.Text style={{ color: token.colorTextSecondary }}>{description}</Typography.Text>
-      <Typography.Link href={href} target="_blank" rel="noopener noreferrer">
-        {linkLabel}
-      </Typography.Link>
-    </Flex>
+    <Badge
+      color={ColorWKBlueZircon}
+      text={
+        <span
+          style={{
+            fontFamily: token.fontFamilyCode,
+            fontSize: token.fontSizeSM,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            // Mixing the cyan accent into the text color keeps it legible in light and dark mode.
+            color: `color-mix(in srgb, ${ColorWKBlueZircon} 40%, ${token.colorText})`,
+          }}
+        >
+          {children}
+        </span>
+      }
+    />
+  );
+}
+
+function ServiceEntry({ eyebrow, description, linkLabel, href }: Service) {
+  const { token } = theme.useToken();
+  const [isHovered, setIsHovered] = useState(false);
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: token.marginXXS,
+        padding: `${token.paddingSM}px ${token.paddingLG}px`,
+        borderTop: `1px solid ${token.colorBorderSecondary}`,
+        background: isHovered ? token.colorFillQuaternary : undefined,
+        transition: `background ${token.motionDurationFast}`,
+      }}
+    >
+      <Eyebrow>{eyebrow}</Eyebrow>
+      <span style={{ color: token.colorTextSecondary }}>{description}</span>
+      <span style={{ color: isHovered ? token.colorLinkHover : token.colorLink }}>{linkLabel}</span>
+    </a>
   );
 }
 
 function AiJobServicesContent() {
   const { token } = theme.useToken();
   return (
-    <Flex vertical style={{ width: 380 }}>
-      <Typography.Text style={{ color: token.colorTextSecondary }}>
-        For data the self-service jobs cannot handle.
-      </Typography.Text>
+    <Flex vertical style={{ width: POPOVER_WIDTH }}>
+      <Flex vertical gap={token.marginXXS} style={{ padding: token.paddingLG }}>
+        <Typography.Text strong style={{ fontSize: token.fontSizeLG }}>
+          Our team can take this on
+        </Typography.Text>
+        <Typography.Text style={{ color: token.colorTextSecondary }}>
+          For data the self-service jobs cannot handle.
+        </Typography.Text>
+      </Flex>
       {SERVICES.map((service) => (
-        <Fragment key={service.eyebrow}>
-          <Divider style={{ margin: `${token.marginSM}px 0` }} />
-          <ServiceEntry {...service} />
-        </Fragment>
+        <ServiceEntry key={service.eyebrow} {...service} />
       ))}
     </Flex>
   );
@@ -63,6 +101,8 @@ function AiJobServicesContent() {
 
 // Points to the WEBKNOSSOS team's services from the AI job drawer (webknossos.org only).
 export default function AiJobServicesPopover() {
+  const [isOpen, setIsOpen] = useState(false);
+
   if (!features().isWkorgInstance) {
     return null;
   }
@@ -70,11 +110,24 @@ export default function AiJobServicesPopover() {
     <Popover
       trigger="click"
       placement="bottomRight"
-      title="Our team can take this on"
+      open={isOpen}
+      onOpenChange={setIsOpen}
       content={<AiJobServicesContent />}
+      styles={{ container: { padding: 0, overflow: "hidden" } }}
     >
-      <Button size="small" icon={<DownOutlined />} iconPlacement="end">
-        <Badge status="success" text="Need help with your data?" />
+      <Button
+        iconPlacement="end"
+        icon={
+          <DownOutlined
+            style={{
+              fontSize: 10,
+              transform: isOpen ? "rotate(180deg)" : undefined,
+              transition: "transform 0.2s",
+            }}
+          />
+        }
+      >
+        Need help with your data?
       </Button>
     </Popover>
   );

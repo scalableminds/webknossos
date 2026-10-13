@@ -1,7 +1,13 @@
 import { CheckCircleFilled } from "@ant-design/icons";
-import { smallCapsStyle } from "admin/ads/ad_card";
 import { Button, Card, Divider, Flex, Typography, theme } from "antd";
 import type React from "react";
+import type { CSSProperties } from "react";
+
+export const smallCapsStyle: CSSProperties = {
+  fontSize: 11,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+};
 
 type JobStartedCardProps = {
   title: string;

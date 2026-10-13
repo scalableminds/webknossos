@@ -1,4 +1,3 @@
-import { ProofreadingAd } from "admin/ads/ai_job_ads";
 import features from "features";
 import { AiJobLayout } from "../components/job_layout";
 import { JobStartedCard } from "../components/job_started_card";
@@ -9,6 +8,7 @@ import {
   useRunAiModelJobContext,
 } from "./ai_image_segmentation_job_context";
 import { AiModelSelector } from "./ai_model_selector";
+import { ProofreadingNextStep } from "./proofreading_next_step";
 
 function RunAiModelSidebar() {
   const { startedJob, resetStartedJob } = useRunAiModelJobContext();
@@ -19,7 +19,7 @@ function RunAiModelSidebar() {
     <JobStartedCard
       {...startedJob}
       onStartAnother={resetStartedJob}
-      nextStep={features().isWkorgInstance ? <ProofreadingAd /> : null}
+      nextStep={features().isWkorgInstance ? <ProofreadingNextStep /> : null}
     />
   );
 }

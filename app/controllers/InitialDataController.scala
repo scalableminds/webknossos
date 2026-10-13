@@ -155,7 +155,7 @@ Samplecountry
     isDeactivated = false,
     lastTaskTypeId = None
   )
-  // Publication of the l4_sample data, as listed on webknossos.org.
+  // Publication of the l4dense data, as listed on webknossos.org.
   private val defaultPublication = Publication(
     ObjectId("5c766bec6c01006c018c7459"),
     Some(Instant(1571875200000L)), // 24 October 2019
@@ -335,7 +335,7 @@ Samplecountry
     _id = ObjectId("68b80290d4000090f8f4aa62"),
     _dataStore = defaultDataStore.name,
     _organization = defaultOrganization._id,
-    _publication = Some(defaultPublication._id),
+    _publication = None,
     _uploader = Some(defaultUser._id),
     _folder = defaultOrganization._rootFolder,
     inboxSourceHash = Some(defaultDataSource.hashCode()),
@@ -434,6 +434,7 @@ Samplecountry
   )
   private val l4DenseDataset = defaultDataset.copy(
     _id = ObjectId("6ac000000000000000000006"),
+    _publication = Some(defaultPublication._id),
     inboxSourceHash = Some(l4DenseDataSource.hashCode()),
     description = Some(
       """Dense connectomic reconstruction in layer 4 of mouse somatosensory cortex.

@@ -3,6 +3,7 @@ import showFpsMeter from "libs/fps_meter";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
 import mean from "lodash-es/mean";
+import { type OrthographicCamera, type PerspectiveCamera, WebGLRenderTarget } from "three";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
 import { Model, Store } from "viewer/singletons";
 import type { ApiInterface } from "./api_latest";
@@ -63,10 +64,16 @@ export default class WkDev {
    */
   apiLoader: ApiLoader;
   _api!: ApiInterface;
-  benchmarkHistory: { MOVE: number[]; ROTATE: number[]; SEGMENTS_SCROLL: number[] } = {
+  benchmarkHistory: {
+    MOVE: number[];
+    ROTATE: number[];
+    SEGMENTS_SCROLL: number[];
+    RENDER: number[];
+  } = {
     MOVE: [],
     ROTATE: [],
     SEGMENTS_SCROLL: [],
+    RENDER: [],
   };
 
   flags = WkDevFlags;
@@ -189,7 +196,7 @@ export default class WkDev {
   }
 
   resetBenchmarks() {
-    this.benchmarkHistory = { MOVE: [], ROTATE: [], SEGMENTS_SCROLL: [] };
+    this.benchmarkHistory = { MOVE: [], ROTATE: [], SEGMENTS_SCROLL: [], RENDER: [] };
   }
 
   async benchmarkMove(zRange: [number, number] = [1025, 1250], repeatAmount: number = 1) {
@@ -404,6 +411,128 @@ export default class WkDev {
       // Check immediately in case all queues are already empty at call time.
       checkAndSettle();
     });
+  }
+
+  async benchmarkRender(frameCount: number = 300, plane: OrthoView = OrthoViews.PLANE_XY) {
+    /*
+     * Measures how long one frame of the given plane takes to render. First waits
+     * until all data is loaded and uploaded, then renders the same frame
+     * frameCount times into an offscreen target, so loading and vsync don't
+     * affect the result. Uses GPU timer queries if available; otherwise
+     * gl.finish() + performance.now(), which also includes CPU time.
+     * For comparisons, keep dataset, position, zoom, layer settings and window
+     * size identical, and compare medians over several runs.
+     */
+    // Dynamic imports to avoid circular imports (see benchmarkRotate).
+    const { default: getSceneController } = await import(
+      "viewer/controller/scene_controller_provider"
+    );
+    const { getInputCatcherRect } = await import("viewer/model/accessors/view_mode_accessor");
+
+    await this.waitForCompletedDataLoading();
+    const areUploadsDone = () =>
+      Model.getAllLayers().every(
+        (layer) =>
+          (layer.layerRenderingManager.textureBucketManager?.writerQueue.length ?? 0) === 0,
+      );
+    while (!areUploadsDone()) {
+      await sleep(50);
+    }
+
+    const sceneController = getSceneController();
+    const { renderer, scene } = sceneController;
+    const camera = scene.getObjectByName(plane) as OrthographicCamera | PerspectiveCamera;
+    const rect = getInputCatcherRect(Store.getState(), plane);
+    const width = Math.round(rect.width);
+    const height = Math.round(rect.height);
+    const renderTarget = new WebGLRenderTarget(width, height);
+    const gl = renderer.getContext() as WebGL2RenderingContext;
+    const timerExtension = gl.getExtension("EXT_disjoint_timer_query_webgl2");
+    if (timerExtension == null) {
+      console.warn(
+        "EXT_disjoint_timer_query_webgl2 is not available. Using gl.finish() instead, which also measures CPU time.",
+      );
+    }
+
+    sceneController.updateSceneForCam(plane);
+    renderer.setRenderTarget(renderTarget);
+    const render = () => renderer.render(scene, camera);
+    // Warm up, so that shader compilation and pending uploads aren't measured.
+    for (let i = 0; i < 10; i++) {
+      render();
+    }
+    gl.finish();
+
+    const queries: WebGLQuery[] = [];
+    const cpuDurations: number[] = [];
+    if (timerExtension != null) {
+      // Reading the flag resets it, so that only disjoint events during the
+      // measurement are detected below.
+      gl.getParameter(timerExtension.GPU_DISJOINT_EXT);
+    }
+    for (let i = 0; i < frameCount; i++) {
+      const start = performance.now();
+      if (timerExtension != null) {
+        const query = gl.createQuery();
+        gl.beginQuery(timerExtension.TIME_ELAPSED_EXT, query);
+        render();
+        gl.endQuery(timerExtension.TIME_ELAPSED_EXT);
+        queries.push(query);
+      } else {
+        render();
+        gl.finish();
+      }
+      cpuDurations.push(performance.now() - start);
+    }
+    renderer.setRenderTarget(null);
+    renderTarget.dispose();
+    app.vent.emit("forceImmediateRerender");
+
+    let gpuDurations: number[] | null = null;
+    if (timerExtension != null) {
+      // Query results only become available after returning to the event loop.
+      while (!queries.every((query) => gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE))) {
+        await sleep(10);
+      }
+      const wasDisjoint = gl.getParameter(timerExtension.GPU_DISJOINT_EXT);
+      gpuDurations = queries.map((query) => gl.getQueryParameter(query, gl.QUERY_RESULT) / 1e6);
+      for (const query of queries) {
+        gl.deleteQuery(query);
+      }
+      if (wasDisjoint) {
+        console.warn("The GPU timings are invalid (GPU_DISJOINT_EXT). Please run again.");
+        gpuDurations = null;
+      }
+    }
+
+    const summarize = (durations: number[]) => {
+      const sorted = [...durations].sort((a, b) => a - b);
+      const atPercentile = (p: number) =>
+        sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))];
+      return {
+        median: roundTo(atPercentile(0.5), 3),
+        p90: roundTo(atPercentile(0.9), 3),
+        min: roundTo(sorted[0], 3),
+        mean: roundTo(mean(durations), 3),
+      };
+    };
+    console.log(
+      `Render Benchmark: ${plane}, ${width}x${height}, ${frameCount} frames, ms per frame`,
+    );
+    console.table({
+      ...(gpuDurations != null ? { GPU: summarize(gpuDurations) } : {}),
+      [timerExtension != null ? "CPU (submit only)" : "CPU + GPU (gl.finish)"]:
+        summarize(cpuDurations),
+    });
+
+    this.benchmarkHistory.RENDER.push(summarize(gpuDurations ?? cpuDurations).median);
+    if (this.benchmarkHistory.RENDER.length > 1) {
+      const sortedMedians = [...this.benchmarkHistory.RENDER].sort((a, b) => a - b);
+      console.log(
+        `Median of the medians of all ${sortedMedians.length} runs:`,
+        sortedMedians[Math.floor(sortedMedians.length / 2)],
+      );
+    }
   }
 
   async benchmarkSegmentListScroll(n: number = 100) {

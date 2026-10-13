@@ -1,17 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanUpdates } from "admin/api/organization";
-import { formatPricingPlanLabel } from "admin/organization/pricing_plan_utils";
+import { formatPricingPlanName } from "admin/organization/pricing_plan_utils";
 import { Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import FormattedDate from "components/formatted_date";
-import { useWkSelector } from "libs/react_hooks";
 import { scrollToTop } from "libs/utils";
 import { useMemo } from "react";
 import type { APIOrganizationPricingPlanUpdate } from "types/api_types";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { useActiveOrganization } from "./organization_hooks";
 import { PlanSummaryBar } from "./organization_summary_bars";
-import { formatIncludedStorage, formatIncludedUsers } from "./pricing_plan_utils";
+import { formatIncludedUsers, formatStorage } from "./pricing_plan_utils";
 
 const { Text } = Typography;
 const UNCHANGED_LABEL = <Text type="secondary">Unchanged</Text>;
@@ -19,9 +18,7 @@ const CLEARED_LABEL = <Text type="secondary">Cleared</Text>;
 const EMPTY_LABEL = <Text type="secondary">—</Text>;
 
 export function OrganizationPlanActivityView() {
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
+  const organization = useActiveOrganization();
   const { data: planUpdates, isFetching } = useQuery({
     queryKey: ["organizationPricingPlanUpdates", organization.id],
     queryFn: async () => {
@@ -60,7 +57,7 @@ export function OrganizationPlanActivityView() {
         key: "pricingPlan",
         width: 140,
         render: (value: APIOrganizationPricingPlanUpdate["pricingPlan"]) =>
-          value != null ? formatPricingPlanLabel(value) : UNCHANGED_LABEL,
+          value != null ? formatPricingPlanName(value) : UNCHANGED_LABEL,
       },
       {
         title: "Paid Until",
@@ -104,7 +101,7 @@ export function OrganizationPlanActivityView() {
           if (value === null) {
             return CLEARED_LABEL;
           }
-          return formatIncludedStorage(value);
+          return formatStorage(value);
         },
       },
       {

@@ -1,11 +1,12 @@
 import { Button, Flex, Progress, Typography } from "antd";
 import dayjs from "dayjs";
-import { useWkSelector } from "libs/react_hooks";
+import { formatNumber } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import type { APIOrganization } from "types/api_types";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { useActiveOrganization, useCanRequestUpgrades } from "./organization_hooks";
 import {
-  formatPricingPlanLabel,
+  canExtendPricingPlan,
+  formatPricingPlanName,
   getAiAddonIncludedCredits,
   getBasePricingPlan,
   getDaysUntilPlanExpires,
@@ -15,7 +16,6 @@ import {
   PricingPlanEnum,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
-import { useCanRequestUpgrades } from "./use_can_request_upgrades";
 
 type SidebarPlanHint =
   | { kind: "planExpiring"; daysLeft: number }
@@ -27,7 +27,7 @@ function getSidebarPlanHint(organization: APIOrganization): SidebarPlanHint | nu
   // Expired plans (0 days left) are included, so they get the extension hint rather than another offer.
   if (
     daysLeft != null &&
-    organization.pricingPlan !== PricingPlanEnum.Personal &&
+    canExtendPricingPlan(organization) &&
     (isTrialPlan(organization.pricingPlan) || daysLeft <= PLAN_EXPIRATION_REMINDER_DAYS)
   ) {
     return { kind: "planExpiring", daysLeft };
@@ -45,9 +45,7 @@ function getSidebarPlanHint(organization: APIOrganization): SidebarPlanHint | nu
 }
 
 function useSidebarPlanHint(): SidebarPlanHint | null {
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
+  const organization = useActiveOrganization();
   const canRequestUpgrades = useCanRequestUpgrades();
   return canRequestUpgrades ? getSidebarPlanHint(organization) : null;
 }
@@ -97,12 +95,10 @@ function PlanHintCard({
 }
 
 function PlanExpiringHintCard({ daysLeft }: { daysLeft: number }) {
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
+  const organization = useActiveOrganization();
   const planLabel = isTrialPlan(organization.pricingPlan) ? "Trial" : "Plan";
   const basePlan = getBasePricingPlan(organization.pricingPlan);
-  const featuresLabel = formatPricingPlanLabel(basePlan);
+  const featuresLabel = formatPricingPlanName(basePlan);
   const extendPlan = () => UpgradePricingPlanModal.extendPricingPlan();
 
   if (daysLeft === 0) {
@@ -145,7 +141,7 @@ function AiAddonHintCard({ includedCredits }: { includedCredits: number }) {
   return (
     <PlanHintCard
       title="Train your own AI models"
-      description={`The AI Add-on includes GPU compute and ${includedCredits.toLocaleString("en-US")} credits.`}
+      description={`The AI Add-on includes GPU compute and ${formatNumber(includedCredits)} credits.`}
       actionLabel="Get AI Add-on"
       onAction={() => UpgradePricingPlanModal.requestAiPlanUpgrade()}
     />

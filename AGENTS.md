@@ -12,12 +12,12 @@ Code Verification:
 
 
 ## Backend 
-- the backend uses Scala, sbt and the Play framework
+- the backend uses Scala, Mill (`./mill`, configured in `build.mill`) and the Play framework
 
 Code Verification: 
-- Scala type-checking: `sbt --client compile`. This will also compile the subprojects it depends on.
+- Scala type-checking: `./mill compile`. This will also compile the subprojects it depends on. `./mill __.compile` also compiles the tests.
 - Unit tests: `yarn test-backend`
-- Formatting: `yarn fix-backend`
+- Formatting and linting: `yarn fix-backend`
 
 
 ## Pull Requests

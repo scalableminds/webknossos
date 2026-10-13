@@ -7,8 +7,6 @@ velocity.log
 .DS_STORE
 .scala_dependencies
 dist/*
-lib_managed/
-src_managed/
 RUNNING_PID
 .cache
 .classpath
@@ -23,7 +21,6 @@ RUNNING_PID
 .env
 .bloop
 .metals
-metals.sbt
 __pycache__/
 .jvmopts
 build/
@@ -57,6 +54,8 @@ public/index.html
 frontend/stylesheets/fontawesome*
 src/main/scala/rebel.xml
 target/
+# Mill build output
+out/
 temp-webknossos-schema**
 tracingData/
 userBinaryData/
@@ -103,7 +102,6 @@ conf/application.conf-e
 .env
 .bloop
 .metals
-metals.sbt
 conf/application.local.conf
 
 **/screenshots/*.diff.png
@@ -129,4 +127,3 @@ tsconfig.tsbuildinfo
 .claude
 diffy-report.html
 
-local.sbt

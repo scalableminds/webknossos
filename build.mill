@@ -1,0 +1,466 @@
+//| mill-version: 1.3.0
+//| mill-jvm-version: temurin:21
+//| mill-jvm-opts: ["-Xss4m"]
+//| mvnDeps:
+//| - com.lihaoyi::mill-contrib-playlib:$MILL_VERSION
+//| - com.lihaoyi::mill-contrib-scalapblib:$MILL_VERSION
+//| - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
+//| - com.lihaoyi::mill-contrib-sbom:$MILL_VERSION
+//| - com.goyeau::mill-scalafix_mill1:0.6.2
+package build
+
+import com.goyeau.mill.scalafix.ScalafixModule
+import mill.*
+import mill.api.BuildCtx
+import mill.contrib.buildinfo.BuildInfo
+import mill.contrib.sbom.CycloneDXJavaModule
+import mill.contrib.scalapblib.ScalaPBModule
+import mill.playlib.{PlayApiModule, Twirl}
+import mill.scalalib.*
+import mill.scalalib.scalafmt.ScalafmtModule
+
+// Modules: util <- webknossos-datastore (+ webknossos-jni) <- webknossos-tracingstore <- webknossos (this root module).
+// Common commands (see also package.json):
+//   ./mill compile                      compile webknossos and everything it depends on
+//   ./mill -w dev.runBackground 9001    run in Play dev mode, restart on changes (yarn start-backend)
+//   ./mill test                         backend unit tests (test/backend)
+//   ./mill stage                        build the deployable app into out/stage.dest (likewise for the stores)
+//   ./mill __.reformat + __.fix         format and lint all modules (yarn fix-backend)
+
+object Versions {
+  val scala = "3.8.4"
+  val play = "3.0.11"
+  val twirl = "2.0.9"
+  val scalapb = "0.11.20"
+  val grpc = "1.62.2" // the grpc-java version scalapb was built against
+  val silhouette = "10.0.4"
+  val brotli = "1.23.0"
+  val slick = "3.6.1"
+  val aws = "2.53.2"
+  val postgres = "42.7.13"
+}
+
+/** Orders the run classpath like sbt: this module first, then its upstream modules (downstream ones first), then
+  * libraries. Mill's default is the reverse, but each Play module compiles its conf/routes into the same
+  * router.Routes class, so the app's own router (and conf) must come before the ones of its dependencies.
+  */
+trait OwnClassesFirst extends JavaModule {
+  protected def upstreamModulesDownstreamFirst = transitiveRunModuleDeps.filterNot(_ == this).reverse
+
+  def runClasspath = Task {
+    localClasspath() ++
+      Task.traverse(upstreamModulesDownstreamFirst)(_.localClasspath)().flatten ++
+      resolvedRunMvnDeps()
+  }
+}
+
+/** Formatting (scalafmt, .scalafmt.conf) and linting (scalafix, .scalafix.conf). */
+trait WkLintModule extends ScalaModule with ScalafmtModule {
+
+  /** Runs the scalafix rules from .scalafix.conf, e.g. `./mill __.fix --check`.
+    * All configured rules are syntactic, so unlike mill-scalafix's own `fix`, this needs no semanticdb compilation.
+    */
+  def fix(args: String*): Command[Unit] = Task.Command {
+    ScalafixModule.fixAction(
+      Task.log,
+      // Mill's internal repository cannot be handed to scalafix (and is not needed by it)
+      repositoriesTask().filterNot(_.getClass.getName.contains("InternalRepo")),
+      ScalafixModule.filesToFix(sources()).map(_.path),
+      classpath = Seq.empty,
+      scalaVersion(),
+      scalacOptions(),
+      Seq.empty,
+      Some(BuildCtx.workspaceRoot / ".scalafix.conf"),
+      args,
+      BuildCtx.workspaceRoot
+    )
+  }
+}
+
+/** Settings shared by all Scala modules. */
+trait WkScalaModule extends WkLintModule with OwnClassesFirst {
+  def scalaVersion = Versions.scala
+
+  // An env var (unlike -D flags) reliably reaches the Mill daemon's tasks. CI sets it for every Mill job,
+  // so all jobs share identical scalacOptions and thus the incremental compile cache.
+  def failOnWarning = Task.Input { Task.env.contains("WK_FAIL_ON_WARNING") }
+
+  def scalacOptions = Task {
+    Seq(
+      "-explain", // More detailed compiler output
+      "-explain-types", // Explain type errors in detail
+      "-release:17",
+      "-feature",
+      "-deprecation",
+      "-Wunused:imports,privates,locals,implicits,linted",
+      "-language:postfixOps",
+      // Silence warnings in generated code (routes, twirl, protobuf, slick, buildinfo), which Mill writes to
+      // out/<task>.dest. The pattern is matched against absolute source paths.
+      "-Wconf:src=/out/.+\\.dest/.*:s"
+    ) ++ (if (failOnWarning()) Seq("-Werror") else Nil)
+  }
+
+  def javacOptions = Seq("-Xlint:unchecked", "-Xlint:deprecation")
+
+  def repositories = Seq(
+    "https://repo.typesafe.com/typesafe/releases/",
+    "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/", // ucar deps
+    "https://static.webknossos.org/maven/" // backup to fetch cisd deps in case SciJava is down
+  )
+
+  def depManagement = Seq(
+    // Play framework relies on an older version of jackson-databind than webauthn4j. Because of that, we set the
+    // version to newest version supported by Play.
+    mvn"com.fasterxml.jackson.core:jackson-databind:2.14.3",
+    // Libraries built against older Scala 3 versions would otherwise put their older scala3-library on the runtime
+    // classpath (sbt pins it to scalaVersion, Mill only does so for compilation)
+    mvn"org.scala-lang:scala3-library_3:${Versions.scala}"
+  )
+}
+
+/** A Play app (or library with routes): app/ sources, conf/ resources and routes, twirl templates, build info. */
+trait WkPlayModule extends PlayApiModule with Twirl with BuildInfo with WkScalaModule {
+  def playVersion = Versions.play
+  def twirlVersion = Versions.twirl
+
+  // Like sbt's Play plugin, put the server on the compile classpath (the app uses pekko-http's model classes)
+  def mvnDeps = Task { super.mvnDeps() ++ Seq(pekkoHttpServer()) }
+
+  def generateReverseRouter = false
+  def routesAdditionalImport = Seq("controllers.Assets.Asset", "com.scalableminds.util.objectid.ObjectId")
+
+  /** The app name, used for BuildInfo and the launcher script in the staged app. */
+  def appName: String
+  def buildInfoPackageName: String
+  def buildInfoStaticCompiled = true // generates BuildInfo.toMap
+
+  def gitInfo = Task.Input {
+    def git(args: String*) = os.call(("git", args), cwd = BuildCtx.workspaceRoot, check = false).out.trim()
+    (commitHash = git("rev-parse", "HEAD"), commitDate = git("log", "-1", "--format=%cd"))
+  }
+  def ciInfo = Task.Input {
+    (
+      ciBuild = Task.env.getOrElse("CI_BUILD_NUM", ""),
+      ciTag = Task.env.getOrElse("CI_TAG", ""),
+      certificatePublicKey = Task.env.getOrElse("CERTIFICATE_PUBLIC_KEY", "")
+    )
+  }
+
+  def buildInfoMembers = Task {
+    val ci = ciInfo()
+    Seq(
+      BuildInfo.Value("name", appName),
+      BuildInfo.Value("scalaVersion", scalaVersion()),
+      BuildInfo.Value("millVersion", mill.util.BuildInfo.millVersion),
+      BuildInfo.Value("commitHash", gitInfo().commitHash),
+      BuildInfo.Value("commitDate", gitInfo().commitDate),
+      BuildInfo.Value("ciBuild", ci.ciBuild),
+      BuildInfo.Value("ciTag", ci.ciTag),
+      BuildInfo.Value("version", if (ci.ciTag != "") ci.ciTag else if (ci.ciBuild != "") ci.ciBuild else "dev")
+    )
+  }
+
+  /** Builds the deployable app: bin/<appName> launcher, conf/ and lib/, like sbt-native-packager's stage did.
+    * The launcher understands -J<jvm option> and -D<property>=<value> arguments, see Stage.launcherScript.
+    */
+  def stage: T[PathRef] = Task {
+    val dest = Task.dest
+    val confDirs = conf().map(_.path)
+    os.copy(conf().head.path, dest / "conf", createFolders = true)
+
+    // conf/ is put on the classpath as a directory (it may be replaced in deployments), so it is left out of the jar
+    val appJar = dest / "lib" / s"$appName.jar"
+    mill.util.Jvm.createJar(appJar, localClasspath().map(_.path).filter(p => os.exists(p) && !confDirs.contains(p)))
+    val upstreamJars = Task.traverse(upstreamModulesDownstreamFirst)(_.jar)().zip(upstreamModulesDownstreamFirst).map {
+      case (jar, module) =>
+        val target = dest / "lib" / s"${module.moduleSegments.render}.jar"
+        os.copy(jar.path, target)
+        target
+    }
+    val dependencyJars = Stage.copyDependencyJars(resolvedRunMvnDeps().map(_.path), dest / "lib")
+    val extraJars = stageExtraJars().map { jar =>
+      os.copy(jar.path, dest / "lib" / jar.path.last)
+      dest / "lib" / jar.path.last
+    }
+
+    for (dir <- stageExtraDirs().map(_.path))
+      os.copy(dir, dest / dir.relativeTo(moduleDir), createFolders = true, followLinks = false)
+
+    val jars = Seq(appJar) ++ upstreamJars ++ dependencyJars ++ extraJars
+    val classpath = Seq("conf") ++ jars.map(_.relativeTo(dest).toString)
+    os.write(dest / "bin" / appName, Stage.launcherScript(classpath), createFolders = true, perms = "rwxr-xr-x")
+    PathRef(dest)
+  }
+
+  /** Further jars for the staged app, appended to the classpath. */
+  def stageExtraJars: T[Seq[PathRef]] = Task { Seq.empty[PathRef] }
+
+  /** Further directories copied into the staged app, keeping their path relative to the module directory. */
+  def stageExtraDirs: T[Seq[PathRef]] = Task.Sources()
+}
+
+/** The webknossos app. Lives in the repository root: app/, conf/, test/ */
+object `package` extends WkPlayModule with CycloneDXJavaModule {
+  def appName = "webknossos"
+  def buildInfoPackageName = "webknossos"
+  def moduleDeps = Seq(util, `webknossos-tracingstore`)
+
+  def buildInfoMembers = Task {
+    super.buildInfoMembers() :+ BuildInfo.Value("certificatePublicKey", ciInfo().certificatePublicKey)
+  }
+
+  def mvnDeps = super.mvnDeps() ++ Seq(
+    // Base64, Hashing. import org.apache.commons.codec
+    mvn"commons-codec:commons-codec:1.22.1",
+    // Authenticated requests. import play.silhouette
+    mvn"org.playframework.silhouette::play-silhouette:${Versions.silhouette}",
+    // Signing Cookies. import play.silhouette.crypto
+    mvn"org.playframework.silhouette::play-silhouette-crypto-jca:${Versions.silhouette}",
+    // Writing XML. import com.sun.xml.txw2
+    mvn"org.glassfish.jaxb:txw2:4.0.9",
+    // Makes txw2 write self-closing tags in xml (which we want). Not imported.
+    mvn"com.fasterxml.woodstox:woodstox-core:7.2.2",
+    // Json Web Tokens (used for OIDC Auth). import pdi.jwt
+    mvn"com.github.jwt-scala::jwt-play-json:11.0.4",
+    // SQL Queries. import slick
+    mvn"com.typesafe.slick::slick:${Versions.slick}",
+    // SQL Queries connection pool. not imported.
+    mvn"com.typesafe.slick::slick-hikaricp:${Versions.slick}",
+    // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
+    mvn"com.typesafe.slick::slick-codegen:${Versions.slick}",
+    // SQL Queries postgres specifics. not imported.
+    mvn"org.postgresql:postgresql:${Versions.postgres}",
+    /// WebAuthn for passkey authentication. import com.webauthn4j
+    mvn"com.webauthn4j:webauthn4j-core:0.31.9.RELEASE".exclude("com.fasterxml.jackson.core" -> "jackson-databind")
+  )
+
+  // The stamp records the last schema update by dbtool.js. schema.sql is included as well, so that builds from a
+  // cached out/ (as in CI, where ensure-db creates the DB from schema.sql) regenerate when the schema changed.
+  def schemaInputs = Task.Sources("schema/refreshStamp/stamp", "schema/schema.sql")
+
+  /** Slick table classes, generated from the local database. The generator reads the live DB, so it only runs when
+    * the schema changed. It rewrites only the table files whose content actually changed.
+    */
+  def slickSchemaSources = Task(persistent = true) {
+    schemaInputs()
+    val outDir = Task.dest / "schema"
+    Task.log.info("Ensuring Postgres DB is running for Slick code generation...")
+    os.call(
+      (moduleDir / "tools" / "postgres" / "dbtool.js", "ensure-db"),
+      cwd = moduleDir,
+      stdout = os.Inherit,
+      check = false
+    )
+    Task.log.info("Updating Slick SQL schema from local database...")
+    `webknossos-slick-codegen`.runner().run(
+      args = Seq(s"file://${moduleDir / "conf" / "slick.conf"}#slick", outDir.toString),
+      mainClass = "com.scalableminds.codegen.SchemaCodeGenerator"
+    )
+    Seq(PathRef(outDir))
+  }
+
+  def generatedSources = Task { super.generatedSources() ++ slickSchemaSources() }
+
+  def assetsDir = Task.Source("public")
+
+  /** The frontend build (public/), packaged for the staged app. Not on the classpath of run and test, which do
+    * not serve the frontend. Entry timestamps are kept, as Play's Assets controller uses them for caching headers.
+    */
+  def assetsJar = Task {
+    val jar = Task.dest / "webknossos-assets.jar"
+    Stage.createAssetsJar(assetsDir().path, jar)
+    PathRef(jar)
+  }
+
+  def stageExtraJars = Task { Seq(assetsJar()) }
+
+  // Used by the docker image: dbtool.js (with its node_modules, so run `yarn install` first), schema, test db entries
+  def stageExtraDirs = Task.Sources("schema", "tools/postgres", "test/db")
+
+  /** Backend unit tests in test/backend (ScalaTest). */
+  object test extends PlayTests with WkLintModule with OwnClassesFirst {
+    def sources = Task.Sources("backend")
+    def mvnDeps = Seq(
+      // End-to-end tests, backend unit tests. import org.scalatestplus.play
+      mvn"org.scalatestplus.play::scalatestplus-play:7.0.2"
+    )
+    def testSandboxWorkingDir = false
+  }
+
+  /** End-to-end tests in test/e2e (specs2): run the frontend e2e tests against this app. */
+  object e2e extends ScalaTests with TestModule.Specs2 with WkLintModule with OwnClassesFirst {
+    def moduleDir = build.moduleDir / "test" / "e2e"
+    def sources = Task.Sources(moduleDir)
+    def mvnDeps = Seq(
+      mvn"org.scalatestplus.play::scalatestplus-play:7.0.2",
+      mvn"org.playframework::play-specs2:${Versions.play}"
+    )
+    // Mill's Specs2 trait adds this Scala 2 option, which Scala 3 warns about
+    def scalacOptions = Task { super.scalacOptions().filterNot(_ == "-Yrangepos") }
+    def testSandboxWorkingDir = false
+  }
+
+  /** Runs webknossos in Play dev mode. With `./mill -w dev.runBackground 9001`, it restarts on code changes. */
+  object dev extends WkScalaModule {
+    def moduleDir = build.moduleDir / "tools" / "play-dev-server"
+    def sources = Task.Sources(moduleDir)
+    def moduleDeps = Seq(build)
+    def mainClass = Some("PlayDevServer")
+    // Set WK_DEBUG_PORT to run several dev servers (e.g. from different worktrees) at once
+    def debugPort = Task.Input { Task.env.getOrElse("WK_DEBUG_PORT", "5005") }
+    def forkArgs = Task {
+      Seq(
+        "-Xmx8g",
+        "-XX:MaxMetaspaceSize=2048m",
+        // The debugger starts listening once PlayDevServer runs (onjcmd), see there
+        s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,onjcmd=y,address=${debugPort()}",
+        "-Dlogger.file=conf/logback-dev.xml",
+        "-Dplay.server.pekko.requestTimeout=10000s",
+        "-Dplay.server.http.idleTimeout=10000s"
+      )
+    }
+  }
+
+  object util extends SbtModule with WkScalaModule {
+    def mvnDeps = Seq(
+      // Play Web Framework. import play
+      mvn"org.playframework::play:${Versions.play}",
+      // Play’s JSON serialization. import play.api.libs.json
+      mvn"org.playframework::play-json:3.0.6",
+      // Sending emails. import org.apache.commons.mail
+      mvn"org.apache.commons:commons-email:1.6.0",
+      // File utils. import org.apache.commons.io
+      mvn"commons-io:commons-io:2.22.0",
+      // HashCodeBuilder. import org.apache.commons.lang3
+      mvn"org.apache.commons:commons-lang3:3.20.0",
+      // Protocol buffers. import scalapb
+      mvn"com.thesamet.scalapb::scalapb-runtime:${Versions.scalapb}",
+      // LazyLogging. import com.typesafe.scalalogging
+      mvn"com.typesafe.scala-logging::scala-logging:3.9.6",
+      // Asynchronous caching. import com.github.benmanes.caffeine
+      mvn"org.playframework::play-caffeine-cache:${Versions.play}",
+      // password hashing with bcrypt. import at.favre.lib.crypto.bcrypt
+      mvn"at.favre.lib:bcrypt:0.10.2",
+      // Play http filters. Not imported.
+      mvn"org.playframework::play-filters-helpers:${Versions.play}"
+    )
+  }
+
+  // Standalone slick code generator. Not part of the app; it is run by the slickSchemaSources task of the root module
+  // to produce one Tables source file per table.
+  object `webknossos-slick-codegen` extends SbtModule with WkScalaModule {
+    def mvnDeps = Seq(
+      // SQL Queries. import slick
+      mvn"com.typesafe.slick::slick:${Versions.slick}",
+      // SQL Type code generation. import slick.codegen
+      mvn"com.typesafe.slick::slick-codegen:${Versions.slick}",
+      // SQL Queries connection pool. not imported.
+      mvn"com.typesafe.slick::slick-hikaricp:${Versions.slick}",
+      // SQL Queries postgres specifics. not imported.
+      mvn"org.postgresql:postgresql:${Versions.postgres}",
+      // Logging. import org.slf4j
+      mvn"org.slf4j:slf4j-simple:2.0.18"
+    )
+  }
+
+  /** Native C++ functions, built with CMake and loaded via JNI by the datastore (see NativeLoaderUtils). */
+  object `webknossos-jni` extends JavaModule {
+    def nativeSources = Task.Sources("src")
+
+    /** Builds the shared library and returns a resources dir containing it at native/<arch>-<os>/. */
+    def nativeCompile = Task(persistent = true) {
+      val Array(kernel, arch) = os.call(("uname", "-sm")).out.trim().split(" ")
+      val platform = s"${arch.toLowerCase}-${kernel.toLowerCase}"
+      val buildDir = Task.dest / "build" / platform
+      val installDir = Task.dest / "install" / platform
+      os.makeDir.all(buildDir)
+      os.remove.all(installDir)
+      // CMake's FindJNI needs a JDK, use the one Mill runs on.
+      val javaHome = sys.props("java.home")
+      def cmake(args: os.Shellable*) =
+        os.call(("cmake", args), cwd = buildDir, env = Map("JAVA_HOME" -> javaHome), stdout = os.Inherit)
+      cmake("-DCMAKE_BUILD_TYPE=Release", s"-DCMAKE_INSTALL_PREFIX:PATH=$installDir", nativeSources().head.path)
+      cmake("--build", ".", "--config", "Release", "--parallel")
+      cmake("--install", ".")
+
+      val resources = Task.dest / "resources"
+      os.remove.all(resources)
+      for (lib <- os.list(installDir).filter(os.isFile))
+        os.copy(lib, resources / "native" / platform / lib.last, createFolders = true)
+      PathRef(resources)
+    }
+
+    def resources = Task { super.resources() ++ Seq(nativeCompile()) }
+  }
+
+  object `webknossos-datastore` extends WkPlayModule with ScalaPBModule {
+    def appName = "webknossos-datastore"
+    def buildInfoPackageName = "webknossosDatastore"
+    def moduleDeps = Seq(util, `webknossos-jni`)
+
+    def scalaPBVersion = Versions.scalapb
+    def scalaPBSources = Task.Sources("proto")
+    def scalaPBProtocPath = Task { Some(scalaPBResolveProtoc().path.toString) }
+
+    def mvnDeps = super.mvnDeps() ++ Seq(
+      // Protocol buffer GRPC calls. Communication to FossilDB. import io.grpc
+      mvn"io.grpc:grpc-netty-shaded:${Versions.grpc}",
+      // Protocol buffer GRPC health check for FossilDB. import io.grpc
+      mvn"io.grpc:grpc-services:${Versions.grpc}",
+      // Streaming JSON parsing. import com.google.gson
+      mvn"com.google.code.gson:gson:2.14.0",
+      // Play WS Http client, used for RPC calls. import play.api.libs.ws
+      ws(),
+      // Redis database client. import io.lettuce.core
+      mvn"io.lettuce:lettuce-core:7.6.0.RELEASE",
+      // Read hdf5 files. import ch.systemsx.cisd.hdf5
+      mvn"cisd:jhdf5:19.04.1",
+      // MultiArray (ndarray) handles. import ucar
+      mvn"edu.ucar:cdm-core:5.5.3",
+      // Amazon S3 cloud storage client. import software.amazon.awssdk
+      mvn"software.amazon.awssdk:s3:${Versions.aws}",
+      // AWS Transfer Manager for multipart uploads. import software.amazon.awssdk.transfer.s3
+      mvn"software.amazon.awssdk:s3-transfer-manager:${Versions.aws}",
+      // Async S3 http client. import software.amazon.awssdk.http.nio.netty (only a runtime dependency of s3)
+      mvn"software.amazon.awssdk:netty-nio-client:${Versions.aws}",
+      // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
+      mvn"com.google.cloud:google-cloud-storage:2.71.0",
+      // Blosc compression. import dev.zarr.bloscjava
+      mvn"com.scalableminds:blosc-java:0.3-1.21.6",
+      // Zstd compression. import org.apache.commons.compress
+      mvn"org.apache.commons:commons-compress:1.28.0",
+      // Zstd compression native bindings. not imported
+      mvn"com.github.luben:zstd-jni:1.5.7-15",
+      // Brotli compression. import com.aayushatharva.brotli4j
+      mvn"com.aayushatharva.brotli4j:brotli4j:${Versions.brotli}",
+      // Brotli compression native bindings. not imported
+      mvn"com.aayushatharva.brotli4j:native-linux-x86_64:${Versions.brotli}",
+      mvn"com.aayushatharva.brotli4j:native-osx-x86_64:${Versions.brotli}",
+      mvn"com.aayushatharva.brotli4j:native-osx-aarch64:${Versions.brotli}",
+      // lz4 compression. import net.jpountz.lz4
+      mvn"at.yawk.lz4:lz4-java:1.11.2"
+    )
+
+    /** Regenerates the JNI headers in webknossos-jni/src/include from the compiled @native declarations.
+      * Needed after adding or changing native functions, see webknossos-jni/readme.md.
+      */
+    def javah(): Command[Unit] = Task.Command {
+      JniHeaders.generate(
+        classesDir = compile().classes.path,
+        classpath = runClasspath().map(_.path),
+        outDir = BuildCtx.workspaceRoot / "webknossos-jni" / "src" / "include"
+      )
+    }
+  }
+
+  object `webknossos-tracingstore` extends WkPlayModule {
+    def appName = "webknossos-tracingstore"
+    def buildInfoPackageName = "webknossosTracingstore"
+    def moduleDeps = Seq(`webknossos-datastore`)
+
+    def mvnDeps = super.mvnDeps() ++ Seq(
+      // Graph algorithms. import org.jgrapht
+      mvn"org.jgrapht:jgrapht-core:1.5.3"
+    )
+  }
+}

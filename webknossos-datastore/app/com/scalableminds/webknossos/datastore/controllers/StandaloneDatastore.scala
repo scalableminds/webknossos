@@ -13,7 +13,7 @@ class StandaloneDatastore @Inject() () extends Controller with ApiVersioning {
       addRemoteOriginHeaders(
         Ok(
           Json.obj(
-            "webknossosDatastore" -> Json.toJson(webknossosDatastore.BuildInfo.toMap.view.mapValues(_.toString).toMap),
+            "webknossosDatastore" -> Json.toJson(webknossosDatastore.BuildInfo.toMap),
             "httpApiVersioning" -> apiVersioningInfo
           )
         )

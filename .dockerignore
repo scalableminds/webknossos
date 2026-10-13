@@ -1,3 +1,2 @@
 *
-!target/
-!webknossos-datastore/lib/
+!out/stage.dest/

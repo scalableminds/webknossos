@@ -748,7 +748,7 @@ export type APIBuildInfoWk = {
     commitHash: string;
     scalaVersion: string;
     version: string;
-    sbtVersion: string;
+    millVersion: string;
     commitDate: string;
     ciTag: string;
     ciBuild: string;

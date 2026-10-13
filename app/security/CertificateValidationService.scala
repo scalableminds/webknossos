@@ -19,8 +19,8 @@ class CertificateValidationService @Inject() (implicit ec: ExecutionContext) ext
 
   // The publicKeyBox is empty if no public key is provided, Failure if decoding the public key failed or Full if there is a valid public key.
   private lazy val publicKeyBox: Box[PublicKey] = webknossos.BuildInfo.certificatePublicKey match {
-    case Some(value) => deserializePublicKey(value)
-    case None        => Empty
+    case ""    => Empty
+    case value => deserializePublicKey(value)
   }
 
   private lazy val cache: AlfuCache[String, (Boolean, Long)] = AlfuCache(timeToLive = 1 hour)

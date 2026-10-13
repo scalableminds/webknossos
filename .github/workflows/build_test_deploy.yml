@@ -16,10 +16,11 @@ env:
   POSTGRES_PASSWORD: "secret_password"
   CERTIFICATE: ${{ secrets.CERTIFICATE_FOR_CI_ONLY }}
   CERTIFICATE_PUBLIC_KEY: ${{ secrets.CERTIFICATE_PUBLIC_KEY }}
-  # Compile with -Werror in all sbt jobs (see build.sbt). Identical scalacOptions are required so that
-  # the jobs can share zinc's incremental compile cache.
+  # Compile with -Werror in all Mill jobs (see build.mill). Identical scalacOptions are required so that
+  # the jobs can share the incremental compile cache.
   WK_FAIL_ON_WARNING: "true"
-  # Caching policy: feature branches restore the sbt dependency and incremental compile caches.
+  # Mill downloads the JDK it runs on and compiles with (mill-jvm-version in build.mill) into the coursier cache.
+  # Caching policy: feature branches restore the dependency and incremental compile caches.
   # master and tags never restore them and always build from scratch. master still saves its clean build,
   # which is the fallback for feature branches. Caches are scoped to the branch (and master) that saved them.
   # Note: a cache's path list is part of its version, changing it invalidates all entries.
@@ -86,16 +87,19 @@ jobs:
           fetch-depth: 5
           persist-credentials: false
 
-      # No sbt dependency cache here: this job only resolves the build's plugins. It would save its incomplete
-      # dependency cache first, under the same key the compiling jobs need to save the full one.
-      - uses: actions/setup-java@v5
+      # Only restores the dependency cache: this job resolves just the build and its linters. Saving would store
+      # an incomplete dependency cache first, under the same key the compiling jobs need to save the full one.
+      - name: Restore dependencies cache
+        if: github.ref_type == 'branch'
+        uses: actions/cache/restore@v6
         with:
-          distribution: "temurin"
-          java-version: "21"
-      - uses: sbt/setup-sbt@v1
+          path: &mill-deps-cache-paths |
+            ~/.cache/coursier
+            ~/.cache/mill
+          key: &mill-deps-cache-key mill-deps-${{ hashFiles('*.mill') }}
 
       - name: Check backend formatting and lint
-        run: sbt "scalafmtCheck; Test/scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck; scalafix --check; Test/scalafix --check; util/scalafix --check; webknossosTracingstore/scalafix --check; webknossosDatastore/scalafix --check"
+        run: ./mill __.checkFormat + __.fix --check
 
   backend-tests:
     runs-on: ubuntu-22.04
@@ -111,23 +115,13 @@ jobs:
           node-version: 22
       - run: corepack enable
 
-      - uses: actions/setup-java@v5
-        with:
-          distribution: "temurin"
-          java-version: "21"
-      - uses: sbt/setup-sbt@v1
-
       # This job does not run on master. On tags it skips the caches (see caching policy above).
-      - name: Cache sbt dependencies
+      - name: Cache dependencies
         if: github.ref_type == 'branch'
         uses: actions/cache@v6
         with:
-          # YAML anchors, reused by the other dependency cache steps below.
-          path: &sbt-deps-cache-paths |
-            ~/.cache/coursier
-            ~/.ivy2/cache
-            ~/.sbt
-          key: &sbt-deps-cache-key sbt-deps-${{ hashFiles('build.sbt', 'project/*.sbt', 'project/*.scala', 'project/build.properties') }}
+          path: *mill-deps-cache-paths
+          key: *mill-deps-cache-key
       # Falls back to the latest master build, so that a branch's first push
       # only recompiles what changed relative to master.
       - name: Cache incremental compilation
@@ -135,20 +129,24 @@ jobs:
         uses: actions/cache@v6
         with:
           # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
-          # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
+          # Hence the children of out/ (and of the store modules' out dirs) are listed, minus the staged apps
+          # and the Mill daemon's runtime files.
           # YAML anchor, reused by the other compile cache steps below.
-          path: &zinc-cache-paths |
-            target/*
-            */target/*
-            project/project/target/*
-            !**/target/universal
-            !**/target/web
-            !**/target/global-logging
-          key: zinc-test-${{ github.ref_name }}-${{ github.sha }}
+          path: &mill-out-cache-paths |
+            out/*
+            !out/mill-daemon
+            !out/stage.dest
+            !out/webknossos-datastore
+            !out/webknossos-tracingstore
+            out/webknossos-datastore/*
+            out/webknossos-tracingstore/*
+            !out/webknossos-datastore/stage.dest
+            !out/webknossos-tracingstore/stage.dest
+          key: mill-out-test-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
-            zinc-test-${{ github.ref_name }}-
-            zinc-build-${{ github.ref_name }}-
-            zinc-build-master-
+            mill-out-test-${{ github.ref_name }}-
+            mill-out-build-${{ github.ref_name }}-
+            mill-out-build-master-
 
       - name: Start Docker Services Postgres, Redis
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
@@ -171,7 +169,7 @@ jobs:
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
       - name: Run backend unit tests
-        run: sbt --client -v "testOnly backend.*"
+        run: ./mill test
 
       - name: Start Fossildb for e2e tests
         run: docker compose --file .github/docker-compose.yml up -d fossildb
@@ -181,7 +179,7 @@ jobs:
         uses: ./.github/actions/retry
         with:
           run: |
-            sbt --client "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
+            ./mill e2e.testOnly 'e2e.*' -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false
           retries: 3
       - name: Assert non-empty e2e files
         run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type_check | wc -l) -gt 0 ]'
@@ -204,22 +202,22 @@ jobs:
           driver: docker
 
       # Restore and save are separate steps so master can save its clean build without restoring (see caching policy above).
-      - name: Restore sbt dependencies cache
-        id: restore-sbt-deps
+      - name: Restore dependencies cache
+        id: restore-mill-deps
         if: env.RESTORE_CACHES == 'true'
         uses: actions/cache/restore@v6
         with:
-          path: *sbt-deps-cache-paths
-          key: *sbt-deps-cache-key
+          path: *mill-deps-cache-paths
+          key: *mill-deps-cache-key
       - name: Restore incremental compile cache
         if: env.RESTORE_CACHES == 'true'
         uses: actions/cache/restore@v6
         with:
-          path: *zinc-cache-paths
-          key: zinc-build-${{ github.ref_name }}-${{ github.sha }}
+          path: *mill-out-cache-paths
+          key: mill-out-build-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
-            zinc-build-${{ github.ref_name }}-
-            zinc-build-master-
+            mill-out-build-${{ github.ref_name }}-
+            mill-out-build-master-
 
       - name: Start Docker Services Postgres, Redis
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
@@ -228,12 +226,6 @@ jobs:
         with:
           node-version: 22
       - run: corepack enable
-
-      - uses: actions/setup-java@v5
-        with:
-          distribution: "temurin"
-          java-version: "21"
-      - uses: sbt/setup-sbt@v1
 
       - name: "Custom environment variables (Not Pull Request)"
         run: |
@@ -250,9 +242,6 @@ jobs:
           fi
           echo "CI_BUILD_NUM=$GITHUB_RUN_ID" | tee -a "$GITHUB_ENV"
 
-      - name: Prepare Dependency Folders
-        run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
-
       - name: Install frontend and system dependencies
         run: |
           (sudo apt-get update -qq && sudo apt-get install -y -qq libdraco-dev) > "$RUNNER_TEMP/apt.log" 2>&1 &
@@ -265,11 +254,11 @@ jobs:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 
       # The frontend build is only needed by `stage`, not by `compile`, so both run concurrently to save time.
-      - name: Build frontend (vite, docs) and compile webknossos, datastore and tracingstore (sbt)
+      - name: Build frontend (vite, docs) and compile webknossos, datastore and tracingstore (Mill)
         run: |
           (yarn build && yarn run docs --project-version "$WK_VERSION") > "$RUNNER_TEMP/frontend-build.log" 2>&1 &
           frontend_pid=$!
-          sbt --client compile
+          ./mill compile
           frontend_status=0
           wait $frontend_pid || frontend_status=$?
           echo "::group::Frontend build output"
@@ -279,23 +268,23 @@ jobs:
         env:
           WK_VERSION: ${{ github.run_id }}
 
-      - name: Stage webknossos, datastore and tracingstore (sbt)
+      - name: Stage webknossos, datastore and tracingstore (Mill)
         run: |
-          sbt --client "stage; webknossosDatastore/stage; webknossosTracingstore/stage"
-          sbt --client shutdown
+          ./mill stage + webknossos-datastore.stage + webknossos-tracingstore.stage
+          ./mill shutdown
 
       - name: Save incremental compile cache
         if: env.SAVE_CACHES == 'true'
         uses: actions/cache/save@v6
         with:
-          path: *zinc-cache-paths
-          key: zinc-build-${{ github.ref_name }}-${{ github.sha }}
-      - name: Save sbt dependencies cache
-        if: env.SAVE_CACHES == 'true' && steps.restore-sbt-deps.outputs.cache-hit != 'true'
+          path: *mill-out-cache-paths
+          key: mill-out-build-${{ github.ref_name }}-${{ github.sha }}
+      - name: Save dependencies cache
+        if: env.SAVE_CACHES == 'true' && steps.restore-mill-deps.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
-          path: *sbt-deps-cache-paths
-          key: *sbt-deps-cache-key
+          path: *mill-deps-cache-paths
+          key: *mill-deps-cache-key
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
@@ -314,7 +303,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           file: .github/Dockerfile.datastore
-          context: webknossos-datastore
+          context: .
           push: false
           tags: |
             scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}
@@ -325,7 +314,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           file: .github/Dockerfile.tracingstore
-          context: webknossos-tracingstore
+          context: .
           push: false
           tags: |
             scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}

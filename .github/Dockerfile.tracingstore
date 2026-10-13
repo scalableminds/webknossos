@@ -14,7 +14,8 @@ WORKDIR /webknossos-tracingstore
 
 VOLUME /webknossos-tracingstore/tracingData /tmp
 
-COPY --chown=webknossos:webknossos target/universal/stage .
+# Copy the app staged by a previous build step (./mill webknossos-tracingstore.stage)
+COPY --chown=webknossos:webknossos out/webknossos-tracingstore/stage.dest .
 
 RUN chmod +x bin/webknossos-tracingstore \
   && chmod go+w .

@@ -14,9 +14,7 @@ class StandaloneTracingstore @Inject() () extends Controller with ApiVersioning 
       addRemoteOriginHeaders(
         Ok(
           Json.obj(
-            "webknossosTracingstore" -> Json.toJson(
-              webknossosTracingstore.BuildInfo.toMap.view.mapValues(_.toString).toMap
-            ),
+            "webknossosTracingstore" -> Json.toJson(webknossosTracingstore.BuildInfo.toMap),
             "httpApiVersioning" -> apiVersioningInfo
           )
         )

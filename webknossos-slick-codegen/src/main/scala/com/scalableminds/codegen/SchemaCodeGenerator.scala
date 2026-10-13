@@ -87,7 +87,7 @@ class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCo
   }
 }
 
-/** Entry point invoked from the sbt slick code generation task (see project/AssetCompilation.scala).
+/** Entry point invoked from the slick code generation task (slickSchemaSources in build.mill).
   *
   * args(0): slick config URI, e.g. file:///.../conf/slick.conf#slick args(1): output base directory for the generated
   * sources

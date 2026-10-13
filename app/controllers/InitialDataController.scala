@@ -172,10 +172,10 @@ Samplecountry
   )
   private val singleDatasetPublication = Publication(
     ObjectId("6ac000000000000000000001"),
-    Some(Instant.now),
+    Some(Instant(1514764800000L)), // 1 January 2018, so it is listed below the L4 publication
     Some("https://static.webknossos.org/images/icon-only.svg"),
     Some("Dummy publication with a single dataset"),
-    Some("Doe, J., Roe, R. · *Nature Methods* 2025 · [DOI](https://github.com/scalableminds/webknossos)")
+    Some("Doe, J., Roe, R. · *Nature Methods* 2018 · [DOI](https://github.com/scalableminds/webknossos)")
   )
   private val defaultDataStore =
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)

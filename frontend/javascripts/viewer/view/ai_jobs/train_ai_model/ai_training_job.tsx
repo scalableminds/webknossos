@@ -1,30 +1,30 @@
 import { AiJobLayout } from "../components/job_layout";
-import { JobStartedCard } from "../components/job_started_card";
 import { TrainingCreditInformation } from "../credit_information";
 import { AiTrainingDataSection } from "./ai_training_data_selector";
 import { AiTrainingJobContextProvider, useAiTrainingJobContext } from "./ai_training_job_context";
 import { AiTrainingModelSelector } from "./ai_training_model_selector";
 import { AiTrainingSettings } from "./ai_training_settings";
 
-function TrainingSidebar() {
-  const { startedJob } = useAiTrainingJobContext();
-  if (startedJob == null) {
-    return <TrainingCreditInformation />;
-  }
-  return <JobStartedCard {...startedJob} />;
+function TrainingJobLayout() {
+  const { startedJob, setStartedJob } = useAiTrainingJobContext();
+  return (
+    <AiJobLayout
+      description="Train a custom AI model on your own data to automate segmentation tasks. Select a model type, provide training data, and configure settings to start training."
+      sidebar={<TrainingCreditInformation />}
+      startedJob={startedJob}
+      onStartAnotherJob={() => setStartedJob(null)}
+    >
+      <AiTrainingModelSelector />
+      <AiTrainingDataSection />
+      <AiTrainingSettings />
+    </AiJobLayout>
+  );
 }
 
 export const AiModelTrainingJob = () => {
   return (
     <AiTrainingJobContextProvider>
-      <AiJobLayout
-        description="Train a custom AI model on your own data to automate segmentation tasks. Select a model type, provide training data, and configure settings to start training."
-        sidebar={<TrainingSidebar />}
-      >
-        <AiTrainingModelSelector />
-        <AiTrainingDataSection />
-        <AiTrainingSettings />
-      </AiJobLayout>
+      <TrainingJobLayout />
     </AiTrainingJobContextProvider>
   );
 };

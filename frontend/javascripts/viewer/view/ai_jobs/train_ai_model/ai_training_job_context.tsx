@@ -22,8 +22,8 @@ import {
   pendingRequirement,
   type StepStatus,
 } from "../components/job_requirements";
+import type { StartedJob } from "../components/job_started_card";
 import { fetchAnnotationInfo } from "../hooks/fetch_annotation_infos";
-import { type StartedJob, useStartedJob } from "../hooks/use_started_job";
 import { getIntersectingMagList } from "../utils";
 import type { AiTrainingTask } from "./ai_training_model_selector";
 import { getTrainingDataRequirements, getTrainingDataStepStatus } from "./training_data_validation";
@@ -106,6 +106,7 @@ interface AiTrainingJobContextType {
   requirements: JobRequirement[];
   stepStatuses: { task: StepStatus; trainingData: StepStatus; settings: StepStatus };
   startedJob: StartedJob | null;
+  setStartedJob: (startedJob: StartedJob | null) => void;
 }
 
 const AiTrainingJobContext = createContext<AiTrainingJobContextType | undefined>(undefined);
@@ -123,7 +124,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   const [comments, setComments] = useState("");
   const [instanceDiameterNm, setInstanceDiameterNm] = useState(1000.0);
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
-  const { startedJob, setStartedJob } = useStartedJob();
+  const [startedJob, setStartedJob] = useState<StartedJob | null>(null);
 
   const currentAnnotation = useWkSelector((state) => state.annotation);
   const userBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
@@ -286,6 +287,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     requirements,
     stepStatuses,
     startedJob,
+    setStartedJob,
   };
 
   return <AiTrainingJobContext.Provider value={value}>{children}</AiTrainingJobContext.Provider>;

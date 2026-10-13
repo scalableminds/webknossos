@@ -30,7 +30,7 @@ import {
   type JobRequirement,
   type StepStatus,
 } from "viewer/view/ai_jobs/components/job_requirements";
-import { type StartedJob, useStartedJob } from "viewer/view/ai_jobs/hooks/use_started_job";
+import type { StartedJob } from "viewer/view/ai_jobs/components/job_started_card";
 
 interface RunAiModelJobContextType {
   selectedModel: AiModel | null;
@@ -61,11 +61,12 @@ interface RunAiModelJobContextType {
   setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
   setCustomConfiguration: (config: KeyValuePairs) => void;
   setSettingsFormState: (state: FormValidationState) => void;
-  handleStartAnalysis: () => void;
+  handleStartAnalysis: () => Promise<void>;
   areParametersValid: boolean;
   requirements: JobRequirement[];
   stepStatuses: { model: StepStatus; settings: StepStatus };
   startedJob: StartedJob | null;
+  setStartedJob: (startedJob: StartedJob | null) => void;
 }
 
 const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>(undefined);
@@ -102,7 +103,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       minimumMergerPathLengthInNm: 800,
     });
   const [settingsFormState, setSettingsFormState] = useState(EMPTY_FORM_VALIDATION_STATE);
-  const { startedJob, setStartedJob } = useStartedJob();
+  const [startedJob, setStartedJob] = useState<StartedJob | null>(null);
 
   const skeletonAnnotation = useWkSelector((state) => state.annotation.skeleton);
   const userBoundingBoxCount = useWkSelector(
@@ -266,7 +267,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
           throw new Error(`Unsupported job type: ${selectedJobType}`);
       }
       setStartedJob({
-        title: `${selectedModel.name} is running.`,
+        title: `Analysis with "${selectedModel.name}" is running.`,
         description: `Results go to the new dataset "${newDatasetName}". You will receive an email when the job finishes.`,
       });
     } catch (error) {
@@ -318,6 +319,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     requirements,
     stepStatuses,
     startedJob,
+    setStartedJob,
   };
 
   return <RunAiModelJobContext.Provider value={value}>{children}</RunAiModelJobContext.Provider>;

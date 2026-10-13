@@ -16,7 +16,7 @@ import {
   type JobRequirement,
   type StepStatus,
 } from "../components/job_requirements";
-import { type StartedJob, useStartedJob } from "../hooks/use_started_job";
+import type { StartedJob } from "../components/job_started_card";
 import type { AlignmentTask } from "./ai_alignment_model_selector";
 
 // Maximum jump size (in voxels) that fine alignment is assumed to have to bridge. This defines the
@@ -24,7 +24,7 @@ import type { AlignmentTask } from "./ai_alignment_model_selector";
 export const FINE_ALIGNMENT_MAX_JUMP_SIZE = 500;
 
 interface AlignmentJobContextType {
-  handleStartAnalysis: () => void;
+  handleStartAnalysis: () => Promise<void>;
   newDatasetName: string;
   selectedTask: AlignmentTask | null;
   setSelectedTask: (task: AlignmentTask) => void;
@@ -42,6 +42,7 @@ interface AlignmentJobContextType {
   requirements: JobRequirement[];
   stepStatuses: { task: StepStatus; settings: StepStatus };
   startedJob: StartedJob | null;
+  setStartedJob: (startedJob: StartedJob | null) => void;
 }
 
 const AlignmentJobContext = createContext<AlignmentJobContextType | undefined>(undefined);
@@ -55,7 +56,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
   const [settingsFormState, setSettingsFormState] = useState(EMPTY_FORM_VALIDATION_STATE);
   const [fineAlignmentOnly, setFineAlignmentOnly] = useState(false);
-  const { startedJob, setStartedJob } = useStartedJob();
+  const [startedJob, setStartedJob] = useState<StartedJob | null>(null);
 
   const dataset = useWkSelector((state) => state.dataset);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
@@ -148,6 +149,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     requirements,
     stepStatuses,
     startedJob,
+    setStartedJob,
   };
 
   return <AlignmentJobContext.Provider value={value}>{children}</AlignmentJobContext.Provider>;

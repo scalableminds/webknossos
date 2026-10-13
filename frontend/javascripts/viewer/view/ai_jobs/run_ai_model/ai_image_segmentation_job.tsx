@@ -1,6 +1,5 @@
 import features from "features";
 import { AiJobLayout } from "../components/job_layout";
-import { JobStartedCard } from "../components/job_started_card";
 import { RunAiModelCreditInformation } from "../credit_information";
 import { AiAnalysisSettings } from "./ai_analysis_settings";
 import {
@@ -10,29 +9,26 @@ import {
 import { AiModelSelector } from "./ai_model_selector";
 import { ProofreadingNextStep } from "./proofreading_next_step";
 
-function RunAiModelSidebar() {
-  const { startedJob } = useRunAiModelJobContext();
-  if (startedJob == null) {
-    return <RunAiModelCreditInformation />;
-  }
+function RunAiModelJobLayout() {
+  const { startedJob, setStartedJob } = useRunAiModelJobContext();
   return (
-    <JobStartedCard
-      {...startedJob}
+    <AiJobLayout
+      description="Run pre-trained or custom AI models on your data to automatically segment structures. Select a model and configure analysis settings to start the inference job."
+      sidebar={<RunAiModelCreditInformation />}
+      startedJob={startedJob}
+      onStartAnotherJob={() => setStartedJob(null)}
       nextStep={features().isWkorgInstance ? <ProofreadingNextStep /> : null}
-    />
+    >
+      <AiModelSelector />
+      <AiAnalysisSettings />
+    </AiJobLayout>
   );
 }
 
 export const AiImageSegmentationJob = () => {
   return (
     <RunAiModelJobContextProvider>
-      <AiJobLayout
-        description="Run pre-trained or custom AI models on your data to automatically segment structures. Select a model and configure analysis settings to start the inference job."
-        sidebar={<RunAiModelSidebar />}
-      >
-        <AiModelSelector />
-        <AiAnalysisSettings />
-      </AiJobLayout>
+      <RunAiModelJobLayout />
     </RunAiModelJobContextProvider>
   );
 };

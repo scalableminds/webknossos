@@ -1,11 +1,11 @@
 import proofreadingDendrites from "@images/vx/proofreading-dendrites.webp";
 import { Badge, Button, Flex, Typography, theme } from "antd";
 import { ColorWKBlueZircon } from "theme";
-import { smallCapsStyle } from "../components/job_started_card";
+import { SecondaryText, smallCapsStyle } from "../components/typography";
 
 /** Points to the proofreading tools once a segmentation job has started. Callers gate it to webknossos.org. */
 export function ProofreadingNextStep() {
-  const { token } = theme.useToken();
+  const { cssVar } = theme.useToken();
   return (
     <Flex vertical align="flex-start" gap="middle">
       <div
@@ -14,8 +14,8 @@ export function ProofreadingNextStep() {
         style={{
           alignSelf: "stretch",
           height: 120,
-          borderRadius: token.borderRadiusLG,
-          backgroundImage: `linear-gradient(to bottom, transparent 40%, ${token.colorBgContainer}), url(${proofreadingDendrites})`,
+          borderRadius: cssVar.borderRadiusLG,
+          backgroundImage: `linear-gradient(to bottom, transparent 40%, ${cssVar.colorBgContainer}), url(${proofreadingDendrites})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -32,11 +32,10 @@ export function ProofreadingNextStep() {
         <Typography.Title level={5} style={{ margin: 0, fontWeight: 500 }}>
           Proofread your segmentation.
         </Typography.Title>
-        {/* type="secondary" would resolve to the dimmer colorTextTertiary, see theme.ts. */}
-        <Typography.Text style={{ color: token.colorTextSecondary }}>
+        <SecondaryText>
           Fix split and merge errors on large segmentations with supervoxel-graph editing.
           Collaborative and near real time.
-        </Typography.Text>
+        </SecondaryText>
       </Flex>
       <Button
         href="https://docs.webknossos.org/webknossos/proofreading/proofreading_tool.html"

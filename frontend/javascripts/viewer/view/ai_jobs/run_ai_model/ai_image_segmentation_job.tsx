@@ -10,8 +10,12 @@ export const AiImageSegmentationJob = () => {
     <RunAiModelJobContextProvider>
       <AiJobLayout
         description="Run pre-trained or custom AI models on your data to automatically segment structures. Select a model and configure analysis settings to start the inference job."
-        sidebar={<RunAiModelCreditInformation />}
-        ad={<ProofreadingAd />}
+        sidebar={
+          <>
+            <RunAiModelCreditInformation />
+            <ProofreadingAd />
+          </>
+        }
       >
         <AiModelSelector />
         <AiAnalysisSettings />

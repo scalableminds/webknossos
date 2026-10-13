@@ -9,10 +9,10 @@ type Props = {
   ctaLabel: string;
   ctaHref: string;
   footnote?: string;
-  coverImage?: { src: string; alt: string };
+  coverImage: { src: string; alt: string };
 };
 
-const smallCapsStyle: CSSProperties = {
+export const smallCapsStyle: CSSProperties = {
   fontSize: 11,
   letterSpacing: "0.12em",
   textTransform: "uppercase",
@@ -47,7 +47,7 @@ export default function AdCard({
   const { token } = theme.useToken();
 
   return (
-    <Card variant="borderless" cover={coverImage != null ? <AdCover {...coverImage} /> : undefined}>
+    <Card variant="borderless" cover={<AdCover {...coverImage} />}>
       <Flex vertical align="flex-start" gap="large">
         <Flex vertical gap="small">
           <Badge

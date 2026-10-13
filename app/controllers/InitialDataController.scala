@@ -170,11 +170,11 @@ Samplecountry
         |Data available at [https://l4dense2019.brain.mpg.de/](https://l4dense2019.brain.mpg.de/)""".stripMargin
     )
   )
-  private val singleDatasetPublication = Publication(
+  private val dummyPublication = Publication(
     ObjectId("6ac000000000000000000001"),
     Some(Instant(1514764800000L)), // 1 January 2018, so it is listed below the L4 publication
     Some("https://static.webknossos.org/images/icon-only.svg"),
-    Some("Dummy publication with a single dataset"),
+    Some("Dummy publication with several datasets"),
     Some("Doe, J., Roe, R. · *Nature Methods* 2018 · [DOI](https://github.com/scalableminds/webknossos)")
   )
   private val defaultDataStore =
@@ -357,12 +357,12 @@ Samplecountry
     )
   )
 
-  // Further virtual copies of l4_sample_remote, so that the publications view has several datasets to show.
-  private def l4SampleRemoteCopy(id: String, directoryName: String, publication: Publication, brainRegion: String) = {
+  // Further virtual copies of l4_sample_remote, so that the dummy publication has several datasets to show.
+  private def l4SampleRemoteCopy(id: String, directoryName: String, brainRegion: String) = {
     val dataSource = defaultDataSource.copy(id = DataSourceId(directoryName, defaultOrganization._id))
     val dataset = defaultDataset.copy(
       _id = ObjectId(id),
-      _publication = Some(publication._id),
+      _publication = Some(dummyPublication._id),
       inboxSourceHash = Some(dataSource.hashCode()),
       directoryName = directoryName,
       name = directoryName,
@@ -371,10 +371,10 @@ Samplecountry
     (dataset, dataSource)
   }
   private val publicationDatasets = List(
-    l4SampleRemoteCopy("6ac000000000000000000002", "l4_sample_remote_2", defaultPublication, "Cortex L4"),
-    l4SampleRemoteCopy("6ac000000000000000000003", "l4_sample_remote_3", defaultPublication, "Cortex L2/3"),
-    l4SampleRemoteCopy("6ac000000000000000000004", "l4_sample_remote_4", defaultPublication, "Cortex L5"),
-    l4SampleRemoteCopy("6ac000000000000000000005", "l4_sample_remote_5", singleDatasetPublication, "Cortex L4")
+    l4SampleRemoteCopy("6ac000000000000000000002", "l4_sample_remote_2", "Cortex L4"),
+    l4SampleRemoteCopy("6ac000000000000000000003", "l4_sample_remote_3", "Cortex L2/3"),
+    l4SampleRemoteCopy("6ac000000000000000000004", "l4_sample_remote_4", "Cortex L5"),
+    l4SampleRemoteCopy("6ac000000000000000000005", "l4_sample_remote_5", "Cortex L4")
   )
 
   // Full l4dense dataset of the Motta et al. 2019 paper, including predictions and segmentation attachments.
@@ -641,7 +641,7 @@ Samplecountry
     if (publications.isEmpty) {
       for {
         _ <- publicationDAO.insertOne(defaultPublication)
-        _ <- publicationDAO.insertOne(singleDatasetPublication)
+        _ <- publicationDAO.insertOne(dummyPublication)
       } yield ()
     } else Fox.successful(())
   }

@@ -9,7 +9,7 @@ import { useMemo } from "react";
 import type { APIOrganizationPricingPlanUpdate } from "types/api_types";
 import { useActiveOrganization } from "./organization_hooks";
 import { PlanSummaryBar } from "./organization_summary_bars";
-import { formatIncludedStorage, formatIncludedUsers } from "./pricing_plan_utils";
+import { formatIncludedUsers, formatStorage } from "./pricing_plan_utils";
 
 const { Text } = Typography;
 const UNCHANGED_LABEL = <Text type="secondary">Unchanged</Text>;
@@ -100,7 +100,7 @@ export function OrganizationPlanActivityView() {
           if (value === null) {
             return CLEARED_LABEL;
           }
-          return formatIncludedStorage(value);
+          return formatStorage(value);
         },
       },
       {

@@ -4,8 +4,8 @@ import { formatNumber } from "libs/format_utils";
 import type { APIOrganization } from "types/api_types";
 import {
   canExtendPricingPlan,
-  formatIncludedStorage,
   formatIncludedUsers,
+  formatStorage,
   hasAiPlan,
   PLAN_TO_RANK,
   PricingPlanEnum,
@@ -155,13 +155,13 @@ export function getUpgradeItems(
     label: isPersonal ? "Extra storage" : "Storage",
     hint: isPersonal
       ? `Team includes ${teamPlanIncludedStorageTB} TB`
-      : formatIncludedStorage(baseStorageBytes),
+      : formatStorage(baseStorageBytes),
     amounts: [1, 5, 10].map((value) => ({ label: `+${value} TB`, value })),
     allowCustom: true,
     minPlan: PricingPlanEnum.Team,
     getDelta: (value = 0) => ({
-      from: formatIncludedStorage(baseStorageBytes),
-      to: formatIncludedStorage(baseStorageBytes + value * BYTES_PER_TB),
+      from: formatStorage(baseStorageBytes),
+      to: formatStorage(baseStorageBytes + value * BYTES_PER_TB),
     }),
   };
 

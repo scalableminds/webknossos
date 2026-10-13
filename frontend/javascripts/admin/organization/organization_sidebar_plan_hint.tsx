@@ -1,5 +1,6 @@
 import { Button, Flex, Progress, Typography } from "antd";
 import dayjs from "dayjs";
+import { formatNumber } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import type { APIOrganization } from "types/api_types";
 import { useActiveOrganization, useCanRequestUpgrades } from "./organization_hooks";
@@ -139,7 +140,7 @@ function AiAddonHintCard({ includedCredits }: { includedCredits: number }) {
   return (
     <PlanHintCard
       title="Train your own AI models"
-      description={`The AI Add-on includes GPU compute and ${includedCredits.toLocaleString("en-US")} credits.`}
+      description={`The AI Add-on includes GPU compute and ${formatNumber(includedCredits)} credits.`}
       actionLabel="Get AI Add-on"
       onAction={() => UpgradePricingPlanModal.requestAiPlanUpgrade()}
     />

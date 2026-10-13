@@ -18,7 +18,7 @@ import {
   Typography,
   theme,
 } from "antd";
-import { formatCountToDataAmountUnit, formatNumber } from "libs/format_utils";
+import { formatNumber } from "libs/format_utils";
 import Toast from "libs/toast";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -26,9 +26,9 @@ import { getAntdTheme, ModalWidth } from "theme";
 import type { APIOrganization } from "types/api_types";
 import { useActiveOrganization, useCanOrderCredits } from "../organization_hooks";
 import {
-  formatIncludedStorage,
   formatIncludedUsers,
   formatPricingPlanName,
+  formatStorage,
   getActiveUserCount,
   hasPlanEndDate,
   PRICING_PAGE_URL,
@@ -78,7 +78,7 @@ function SidePanelContent({
   const { token } = theme.useToken();
   const isPersonal = getPlanTier(organization.pricingPlan) === PricingPlanEnum.Personal;
   const includedUsers = formatIncludedUsers(organization.includedUsers);
-  const includedStorage = formatIncludedStorage(organization.includedStorageBytes);
+  const includedStorage = formatStorage(organization.includedStorageBytes);
 
   return (
     <Flex
@@ -122,7 +122,7 @@ function SidePanelContent({
         <StatusRow label="Users" value={`${activeUserCount ?? "–"} of ${includedUsers}`} />
         <StatusRow
           label="Storage"
-          value={`${formatCountToDataAmountUnit(organization.usedStorageBytes, true)} of ${includedStorage}`}
+          value={`${formatStorage(organization.usedStorageBytes)} of ${includedStorage}`}
         />
         {isPersonal ? (
           <StatusRow label="AI Add-on" value="Not available" />

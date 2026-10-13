@@ -27,13 +27,19 @@ export type SettingsCardProps = {
   children?: React.ReactNode;
 };
 
-function isMeterWarning(meter: number | undefined): boolean {
-  return meter != null && meter >= METER_WARNING_THRESHOLD;
+type MeterStatus = "normal" | "warning" | "exceeded";
+
+function getMeterStatus(meter: number | undefined): MeterStatus {
+  if (meter != null && meter > 1) return "exceeded";
+  if (meter != null && meter >= METER_WARNING_THRESHOLD) return "warning";
+  return "normal";
 }
 
-function isMeterExceeded(meter: number | undefined): boolean {
-  return meter != null && meter > 1;
-}
+const HINT_TYPE_BY_METER_STATUS: Record<MeterStatus, SettingsCardProps["hintType"]> = {
+  normal: "secondary",
+  warning: "warning",
+  exceeded: "danger",
+};
 
 export function SettingsCard({
   title,
@@ -50,12 +56,12 @@ export function SettingsCard({
   children,
 }: SettingsCardProps) {
   const { token } = theme.useToken();
-  const derivedHintType = isMeterExceeded(meter)
-    ? "danger"
-    : isMeterWarning(meter)
-      ? "warning"
-      : "secondary";
-  const effectiveHintType = hintType ?? derivedHintType;
+  const meterStatus = getMeterStatus(meter);
+  const meterColorByStatus: Record<MeterStatus, string | undefined> = {
+    normal: undefined,
+    warning: token.colorWarning,
+    exceeded: token.colorError,
+  };
 
   // Cards without an icon keep the plain value style, since their content is usually a form.
   const valueRow =
@@ -113,18 +119,15 @@ export function SettingsCard({
             percent={Math.min(meter, 1) * 100}
             showInfo={false}
             size={{ height: 6 }}
-            strokeColor={
-              isMeterExceeded(meter)
-                ? token.colorError
-                : isMeterWarning(meter)
-                  ? token.colorWarning
-                  : undefined
-            }
+            strokeColor={meterColorByStatus[meterStatus]}
             style={{ margin: 0, lineHeight: 1 }}
           />
         ) : null}
         {hint != null ? (
-          <Typography.Text type={effectiveHintType} style={{ fontSize: 13 }}>
+          <Typography.Text
+            type={hintType ?? HINT_TYPE_BY_METER_STATUS[meterStatus]}
+            style={{ fontSize: 13 }}
+          >
             {hint}
           </Typography.Text>
         ) : null}

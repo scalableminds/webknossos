@@ -98,7 +98,7 @@ function AccountProfileView() {
       title: "Email",
       icon: <MailOutlined />,
       content: activeUser.email,
-      hint: "Used for login and notifications emails",
+      hint: "Used for login and notification emails",
       children: isChangeEmailVisible ? (
         <ChangeEmailView onCancel={() => setChangeEmailVisible(false)} />
       ) : null,

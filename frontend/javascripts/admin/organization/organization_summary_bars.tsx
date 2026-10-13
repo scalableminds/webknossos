@@ -20,9 +20,9 @@ import {
 import {
   canExtendPricingPlan,
   canUpgradePricingPlan,
-  formatIncludedStorage,
   formatIncludedUsers,
   formatPricingPlanName,
+  formatStorage,
   getDaysUntilPlanExpires,
   hasPricingPlanExpired,
   isCreditBalanceLow,
@@ -150,7 +150,7 @@ export function PlanSummaryBar() {
         <Typography.Text strong>{formatPricingPlanName(organization.pricingPlan)}</Typography.Text>{" "}
         · {formatIncludedUsers(organization.includedUsers)}{" "}
         {pluralize("user", organization.includedUsers)} ·{" "}
-        {formatIncludedStorage(organization.includedStorageBytes)} storage
+        {formatStorage(organization.includedStorageBytes)} storage
         {daysLeft != null ? (
           <>
             {" "}

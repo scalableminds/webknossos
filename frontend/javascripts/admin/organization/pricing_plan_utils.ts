@@ -145,10 +145,10 @@ export function formatIncludedUsers(includedUsers: number): string {
   return Number.isFinite(includedUsers) ? formatNumber(includedUsers) : "∞";
 }
 
-export function formatIncludedStorage(includedStorageBytes: number): string {
-  return Number.isFinite(includedStorageBytes)
-    ? formatCountToDataAmountUnit(includedStorageBytes, true)
-    : "∞";
+// Keeps round amounts in their natural unit ("100 GB", not "0.1 TB") without a trailing ".0".
+export function formatStorage(bytes: number): string {
+  if (!Number.isFinite(bytes)) return "∞";
+  return formatCountToDataAmountUnit(bytes).replace(/\.0(?=\D)/, "");
 }
 
 export function isTrialPlan(pricingPlan: PricingPlanEnum): boolean {
@@ -160,6 +160,12 @@ export function getBasePricingPlan(pricingPlan: PricingPlanEnum): PricingPlanEnu
   if (pricingPlan === PricingPlanEnum.TeamTrial) return PricingPlanEnum.Team;
   if (pricingPlan === PricingPlanEnum.PowerTrial) return PricingPlanEnum.Power;
   return pricingPlan;
+}
+
+// Personal has to upgrade the plan instead, and Custom limits are negotiated individually.
+export function canBuyQuotaUpgrades(pricingPlan: PricingPlanEnum): boolean {
+  const basePlan = getBasePricingPlan(pricingPlan);
+  return basePlan === PricingPlanEnum.Team || basePlan === PricingPlanEnum.Power;
 }
 
 export function canUpgradePricingPlan(pricingPlan: PricingPlanEnum): boolean {

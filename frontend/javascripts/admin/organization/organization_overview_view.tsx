@@ -1,309 +1,69 @@
-import { PlusOutlined } from "@ant-design/icons";
-import { useQuery } from "@tanstack/react-query";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { getPricingPlanStatus, updateOrganization } from "admin/api/organization";
-import { getUsers } from "admin/rest_api";
-import { Button, Col, Row, Space, Spin, Typography } from "antd";
-import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/format_utils";
-import { useApi, useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
-import { type Key, useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
-import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import { SettingsCard, type SettingsCardProps } from "../account/helpers/settings_card";
+import { getPricingPlanStatus } from "admin/api/organization";
+import { Col, Row, Space, Spin } from "antd";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
+import { PlanExceededAlert, PlanExpirationCard } from "./organization_cards";
+import { useActiveOrganization, useOrganizationUsers } from "./organization_hooks";
 import {
-  AiAddonUpgradeCard,
-  PlanAboutToExceedAlert,
-  PlanExceededAlert,
-  PlanExpirationCard,
-  PlanUpgradeCard,
-} from "./organization_cards";
-import { PowerPlanUpgradeCard } from "./plan_upgrade_cards";
-import {
-  formatAiPlanLabel,
-  formatIncludedStorage,
-  formatIncludedUsers,
-  getActiveUserCount,
-  isAiAddonEligiblePlan,
-  PricingPlanEnum,
-} from "./pricing_plan_utils";
-import UpgradePricingPlanModal from "./upgrade_plan_modal";
-import { useCanRequestUpgrades } from "./use_can_request_upgrades";
-
-const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
+  AiAddonCard,
+  CreditBalanceCard,
+  OrganizationNameCard,
+  OrganizationOwnerCard,
+  PricingPlanCard,
+  StorageQuotaCard,
+  UsersQuotaCard,
+} from "./organization_stat_cards";
+import { UpgradeOfferCards } from "./plan_upgrade_cards";
+import { getActiveUserCount, hasPricingPlanExpired } from "./pricing_plan_utils";
 
 export function OrganizationOverviewView() {
-  const dispatch = useDispatch();
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
+  const organization = useActiveOrganization();
+  // Cached data is shown right away, so only spin while there is none yet.
+  const { data: users = [], isLoading: isLoadingUsers } = useOrganizationUsers();
+  const { data: pricingPlanStatus, isLoading: isLoadingPlanStatus } = useQueryWithErrorHandling(
+    { queryKey: ["pricingPlanStatus"], queryFn: getPricingPlanStatus },
+    "Could not load pricing plan status.",
   );
-
-  const {
-    data: users = [],
-    isFetching: isFetchingUsers,
-    error: usersError,
-  } = useApi({
-    queryKey: ["users"],
-    queryFn: () => getUsers(),
-  });
-
-  const {
-    data: pricingPlanStatus,
-    isFetching: isFetchingPlanStatus,
-    error: pricingPlanError,
-  } = useQuery({
-    queryKey: ["pricingPlanStatus"],
-    queryFn: getPricingPlanStatus,
-  });
-
-  useEffect(() => {
-    if (usersError) {
-      Toast.error("Could not load users.");
-      console.error(usersError);
-    }
-  }, [usersError]);
-
-  useEffect(() => {
-    if (pricingPlanError) {
-      Toast.error("Could not load pricing plan status.");
-      console.error(pricingPlanError);
-    }
-  }, [pricingPlanError]);
-
-  const isFetchingData = isFetchingUsers || isFetchingPlanStatus;
-  const activeUsersCount = getActiveUserCount(users);
-
-  async function setOrganizationName(newOrgaName: string) {
-    if (!ORGA_NAME_REGEX_PATTERN.test(newOrgaName)) {
-      Toast.error(
-        "Organization name can only contain letters, numbers, spaces, and the following special characters: - _ . ß",
-      );
-      return;
-    }
-
-    const updatedOrganization = await updateOrganization(
-      organization.id,
-      newOrgaName,
-      organization.newUserMailingList,
-    );
-    dispatch(setActiveOrganizationAction(updatedOrganization));
-  }
-
-  const maxUsersCountLabel = formatIncludedUsers(organization.includedUsers);
-  const includedStorageLabel = formatIncludedStorage(organization.includedStorageBytes);
-
-  const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes, true);
-  const aiPlanLabel = formatAiPlanLabel(organization);
-  const canRequestUpgrades = useCanRequestUpgrades();
-  const isEligibleForAiAddon = isAiAddonEligiblePlan(organization.pricingPlan);
-  const showAiAddonCard = organization.aiPlan == null && isEligibleForAiAddon;
-
-  let upgradeUsersAction: React.ReactNode = null;
-  let upgradeStorageAction: React.ReactNode = null;
-  let upgradeAiPlanAction: React.ReactNode = null;
-
-  if (
-    canRequestUpgrades &&
-    (organization.pricingPlan === PricingPlanEnum.Personal ||
-      organization.pricingPlan === PricingPlanEnum.Team ||
-      organization.pricingPlan === PricingPlanEnum.TeamTrial)
-  ) {
-    upgradeUsersAction = (
-      <Button
-        shape="circle"
-        type="primary"
-        size="small"
-        key="upgradeUsersAction"
-        icon={<PlusOutlined />}
-        onClick={() => UpgradePricingPlanModal.upgradeUserQuota()}
-      />
-    );
-
-    upgradeStorageAction = (
-      <Button
-        shape="circle"
-        type="primary"
-        size="small"
-        key="upgradeStorageAction"
-        icon={<PlusOutlined />}
-        onClick={() => UpgradePricingPlanModal.upgradeStorageQuota()}
-      />
-    );
-  }
-  const buyMoreCreditsAction = canRequestUpgrades ? (
-    <Button
-      type="primary"
-      shape="circle"
-      icon={<PlusOutlined />}
-      size="small"
-      key="buyMoreCreditsAction"
-      onClick={() => UpgradePricingPlanModal.orderWebknossosCredits()}
-    />
-  ) : null;
-
-  if (canRequestUpgrades && showAiAddonCard) {
-    upgradeAiPlanAction = (
-      <Button
-        shape="circle"
-        type="primary"
-        size="small"
-        key="upgradeAiPlanAction"
-        icon={<PlusOutlined />}
-        onClick={() => UpgradePricingPlanModal.requestAiPlanUpgrade()}
-      />
-    );
-  }
-
-  const rowOneStats: (SettingsCardProps & { key: Key })[] = [
-    {
-      key: "name",
-      title: "Name",
-      content: (
-        <Typography.Text
-          editable={{
-            onChange: setOrganizationName,
-          }}
-        >
-          {organization.name}
-        </Typography.Text>
-      ),
-    },
-    {
-      key: "owner",
-      title: "Owner",
-      content: organization.ownerName,
-    },
-  ];
-  const rowTwoStats: (SettingsCardProps & { key: Key })[] = [
-    {
-      key: "plan",
-      title: "Current Plan",
-      content: organization.pricingPlan,
-      tooltip: (
-        <a href="https://webknossos.org/pricing" target="_blank" rel="noopener noreferrer">
-          Compare all plans
-        </a>
-      ),
-    },
-    {
-      key: "users",
-      title: "Users",
-      content: `${activeUsersCount} / ${maxUsersCountLabel}`,
-      action: upgradeUsersAction,
-    },
-    {
-      key: "storage",
-      title: "Storage",
-      content: `${usedStorageLabel} / ${includedStorageLabel}`,
-      action: upgradeStorageAction,
-    },
-    {
-      key: "ai-plan",
-      title: "AI Add-on",
-      content: aiPlanLabel,
-      action: upgradeAiPlanAction,
-    },
-    {
-      key: "credits",
-      title: "AI Credits",
-      content:
-        organization.milliCreditBalance != null
-          ? formatMilliCreditsString(organization.milliCreditBalance)
-          : "N/A",
-      action: buyMoreCreditsAction,
-    },
-  ];
-
-  function renderUpgradeCards() {
-    const isPersonal = organization.pricingPlan === PricingPlanEnum.Personal;
-    const isTeamOrTeamTrial =
-      organization.pricingPlan === PricingPlanEnum.Team ||
-      organization.pricingPlan === PricingPlanEnum.TeamTrial;
-
-    if (!canRequestUpgrades || (!isPersonal && !isTeamOrTeamTrial && !showAiAddonCard)) {
-      return null;
-    }
-
-    let upgradeContent: React.ReactNode = null;
-
-    if (isPersonal) {
-      upgradeContent = <PlanUpgradeCard organization={organization} />;
-    } else if (isTeamOrTeamTrial) {
-      upgradeContent = (
-        <Row gutter={24} style={{ marginTop: 24 }}>
-          <Col span={showAiAddonCard ? 12 : 24}>
-            <PowerPlanUpgradeCard
-              description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
-              powerUpgradeCallback={() => UpgradePricingPlanModal.upgradePricingPlan()}
-            />
-          </Col>
-          {showAiAddonCard && (
-            <Col span={12}>
-              <AiAddonUpgradeCard />
-            </Col>
-          )}
-        </Row>
-      );
-    } else if (showAiAddonCard) {
-      upgradeContent = (
-        <Row gutter={24} style={{ marginTop: 24 }}>
-          <Col span={24}>
-            <AiAddonUpgradeCard />
-          </Col>
-        </Row>
-      );
-    }
-
-    return (
-      <div>
-        <SettingsTitle
-          title="Unlock more features"
-          description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
-        />
-        {upgradeContent}
-      </div>
-    );
-  }
 
   return (
     <>
       <SettingsTitle title={organization.name} description="Manage your organization." />
-      {pricingPlanStatus?.isExceeded ? <PlanExceededAlert organization={organization} /> : null}
-      {pricingPlanStatus?.isAlmostExceeded && !pricingPlanStatus.isExceeded ? (
-        <PlanAboutToExceedAlert organization={organization} />
+      {/* PlanExpirationCard already covers expired and expiring plans, so only over-limit usage gets an alert. */}
+      {pricingPlanStatus?.isExceeded && !hasPricingPlanExpired(organization) ? (
+        <PlanExceededAlert organization={organization} />
       ) : null}
-      <Space orientation="vertical" size="large">
-        <Spin spinning={isFetchingData}>
-          <Space orientation="vertical" size={24}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+        <Spin spinning={isLoadingUsers || isLoadingPlanStatus}>
+          <Space orientation="vertical" size={24} style={{ width: "100%" }}>
             <Row gutter={[24, 24]}>
-              {rowOneStats.map((stat) => (
-                <Col span={12} key={stat.key}>
-                  <SettingsCard
-                    title={stat.title}
-                    content={stat.content}
-                    action={stat.action}
-                    tooltip={stat.tooltip}
-                  />
-                </Col>
-              ))}
+              <Col span={8}>
+                <OrganizationNameCard />
+              </Col>
+              <Col span={8}>
+                <OrganizationOwnerCard />
+              </Col>
+              <Col span={8}>
+                <PricingPlanCard />
+              </Col>
             </Row>
             <Row gutter={[24, 24]}>
-              {rowTwoStats.map((stat) => (
-                <Col span={8} key={stat.key}>
-                  <SettingsCard
-                    title={stat.title}
-                    content={stat.content}
-                    action={stat.action}
-                    tooltip={stat.tooltip}
-                  />
-                </Col>
-              ))}
+              <Col span={6}>
+                <UsersQuotaCard activeUsersCount={getActiveUserCount(users)} />
+              </Col>
+              <Col span={6}>
+                <StorageQuotaCard />
+              </Col>
+              <Col span={6}>
+                <CreditBalanceCard />
+              </Col>
+              <Col span={6}>
+                <AiAddonCard />
+              </Col>
             </Row>
             <PlanExpirationCard organization={organization} />
           </Space>
         </Spin>
-        {renderUpgradeCards()}
+        <UpgradeOfferCards organization={organization} />
       </Space>
     </>
   );

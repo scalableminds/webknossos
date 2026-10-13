@@ -24,26 +24,29 @@ Alignment annotations also appear in your list of annotations. Opening one there
 
 The alignment view shows the fixed layer on the left and the moving layer on the right.
 Each side shows only its own layer at first.
+As soon as an alignment is computed (see below), both views also show the other layer. Press **x** to hide it again.
 
 1. Find a structure that you can recognize in both layers.
 2. Click on it in the left view, then click on the same spot in the right view. Every click creates a new landmark.
 3. Repeat this for several structures that are spread over the dataset.
 
-Landmarks are paired by their order: the first landmark on the left belongs to the first landmark on the right, and so on.
-Both landmarks of a pair have the same color.
-While one view has fewer landmarks than the other, a hint in that view shows which landmark you place next.
+Each landmark belongs to a pair, and both landmarks of a pair have the same name (e.g., "Landmark 3") and color.
+A new landmark completes the pair with the lowest number that has a landmark in the other view only.
+If there is no such pair, the landmark starts a new pair.
+While a view misses landmarks of the other view, a hint in that view shows which landmark your next click places.
 
-To remove a pair, use its delete button in the side panel (see below), which deletes the landmark in both views.
-If you delete a landmark in only one view, all following landmarks of that view move up by one pair.
-Their colors then no longer match those in the other view.
+If you delete a landmark in one view, its partner in the other view keeps its pair and waits for a new partner.
+The other pairs don't change.
+To remove a whole pair, use its delete button in the side panel (see below).
+Landmarks without a partner are not used for the alignment.
 The landmarks are saved automatically. Use the save button in the toolbar of the left view to save right away.
 
 ## Computing the Alignment
 
-Press **t** (or the align button in the toolbar of the left view) to compute the alignment.
+The alignment is computed automatically when you open an alignment and after every new, moved or deleted landmark.
 The moving layer is then shown transformed in the left view, and the fixed layer inversely transformed in the right view.
-When you open an alignment, it is computed automatically as soon as its landmarks are loaded.
-To compute it again after every new, moved or deleted landmark, switch on **Align automatically after every change** in the side panel (see below).
+To compute it only on request, switch off **Align automatically after every change** in the side panel (see below).
+Then press **t** or the **Align** button in the side panel.
 
 An alignment needs at least four landmark pairs that don't all lie in one plane.
 If all landmarks lie in a single z slice, three pairs are enough. WEBKNOSSOS then assumes that the two layers are only shifted against each other along z.
@@ -53,15 +56,16 @@ More shortcuts, which work in the view under the mouse pointer:
 - **x**: show or hide the other layer in this view.
 - **y**: move the other view to the position that corresponds to the position of this view (needs a computed alignment).
 
-The table button in the toolbar of the left view opens a side panel. It shows whether the layers are aligned and whether the landmarks changed since the last alignment, lets you show the other layer in each view, and lists all landmark pairs.
+The side panel on the right is open when the alignment view starts. The table button in the toolbar of the left view hides and shows it. A link at the top of the panel leads back to the list of alignments. The panel shows whether the layers are aligned and whether the landmarks changed since the last alignment, lets you show the other layer in each view, and lists all landmark pairs.
 For each pair, the list shows how far apart its two landmarks still are after the alignment. A pair whose error is much higher than that of the others is highlighted, because it was probably placed imprecisely.
-The list also shows the color and the coordinates of both landmarks of each pair.
+The list also shows the color and the coordinates of both landmarks of each pair. Landmarks without a partner are highlighted.
 Click a pair to select its landmarks in both views and move both views to them.
+The download button saves the complete pairs as a BigWarp CSV file or as two NML files, which you can use in the [dataset composition](./composing.md).
 The name and description of the alignment can be edited at the top of the side panel.
 
 ## Storing the Alignment
 
-Click **Store as default…** in the side panel to store the alignment as the default transform of the moving layer.
+Click **Apply to dataset…** in the side panel to store the alignment as the default transform of the moving layer.
 This replaces the transforms that the moving layer had before. It requires the right to edit the dataset.
 
 ## Aligning More Than Two Layers

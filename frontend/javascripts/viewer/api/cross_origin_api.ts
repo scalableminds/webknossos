@@ -5,9 +5,19 @@ import { useEffect } from "react";
 import { api } from "viewer/singletons";
 import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import {
+  exportLandmarkPairsAsNml,
   importLandmarks,
+  setLandmarkPairInfo,
   useBigWarpShortcutRelay,
 } from "viewer/view/align_datasets/bigwarp_worker";
+
+// Some commands only exist for the iframes of the dataset alignment view. The error is
+// caught in onMessage, which logs it and replies with an error.
+function assertBigWarpWorker() {
+  if (!isBigWarpWorker()) {
+    throw new Error("This command is only available in the dataset alignment view.");
+  }
+}
 
 // This component allows cross origin communication, for example, between a host page
 // and an embedded webKnossos iframe.
@@ -81,12 +91,23 @@ const handleMessage = async (event) => {
     }
 
     case "importLandmarks": {
-      if (!isBigWarpWorker() || !isString(args[0])) {
-        throw new Error(
-          "Only available in the dataset alignment view. The first argument needs to be the content of the nml as a string.",
-        );
+      assertBigWarpWorker();
+      if (!isString(args[0])) {
+        throw new Error("The first argument needs to be the content of the nml as a string.");
       }
       await importLandmarks(args[0]);
+      break;
+    }
+
+    case "setLandmarkPairInfo": {
+      assertBigWarpWorker();
+      setLandmarkPairInfo(args[0]);
+      break;
+    }
+
+    case "exportLandmarkPairsAsNml": {
+      assertBigWarpWorker();
+      returnValue = await exportLandmarkPairsAsNml(args[0]);
       break;
     }
 
@@ -227,18 +248,20 @@ const handleMessage = async (event) => {
   );
 };
 
-// Replies with an error if a command throws, so that the sender doesn't wait for a reply
-// forever.
+// If a command throws, this logs the error and replies with an error, so that the sender
+// doesn't wait for a reply forever.
 const onMessage = async (event: MessageEvent) => {
   try {
     await handleMessage(event);
   } catch (error) {
-    console.error(error);
+    const reason = error instanceof Error ? error.message : String(error);
+    const message = `The cross origin API command "${event.data.type}" failed: ${reason}`;
+    console.error(message, error);
     event.source?.postMessage(
       {
         type: "err",
         messageId: event.data.messageId,
-        message: error instanceof Error ? error.message : String(error),
+        message,
       },
       { targetOrigin: "*" },
     );

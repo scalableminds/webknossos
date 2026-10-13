@@ -1,4 +1,9 @@
-import { DeleteOutlined, DownloadOutlined, NodeIndexOutlined } from "@ant-design/icons";
+import {
+  ArrowLeftOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  NodeIndexOutlined,
+} from "@ant-design/icons";
 import {
   Button,
   Dropdown,
@@ -14,13 +19,16 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { SidebarSection } from "dashboard/sidebar_section";
+import { pluralize } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router";
 import type { Vector3 } from "viewer/constants";
 import { AnnotationIdentity } from "viewer/view/right_border_tabs/info_tab/identity_block";
 import {
   type Alignment,
   getLandmarkPairs,
+  getLandmarkTreeName,
   getMeanResidual,
   type Landmark,
   type LandmarkPair,
@@ -39,9 +47,9 @@ const HIGH_RESIDUAL_FACTOR = 2;
 const MIN_HIGH_RESIDUAL = 1;
 
 // The pair list is virtualized, which needs fixed column widths and a fixed body height.
-const PAIR_COLUMN_WIDTHS = { index: 40, position: 160, residual: 72, delete: 40 };
+const PAIR_COLUMN_WIDTHS = { name: 104, position: 150, residual: 72, delete: 40 };
 const PAIR_TABLE_WIDTH =
-  PAIR_COLUMN_WIDTHS.index +
+  PAIR_COLUMN_WIDTHS.name +
   2 * PAIR_COLUMN_WIDTHS.position +
   PAIR_COLUMN_WIDTHS.residual +
   PAIR_COLUMN_WIDTHS.delete;
@@ -83,26 +91,34 @@ type Props = {
   onSelectPair: (pair: LandmarkPair) => void;
   onDeletePair: (pair: LandmarkPair) => void;
   onDownloadLandmarks: (format: LandmarkExportFormat) => void;
+  // The page that lists the alignments of the dataset.
+  alignmentListUrl: string;
 };
 
 export function rgbColorString(color: Vector3): string {
   return `rgb(${color.map((component) => Math.round(component * 255)).join(",")})`;
 }
 
+function isCompletePair(pair: LandmarkPair): boolean {
+  return pair.pairId != null && pair.landmarks.A != null && pair.landmarks.B != null;
+}
+
 function AlignmentStatus({
-  layerNames,
   landmarks,
+  pairs,
   alignment,
   meanResidual,
   isAutoAlignEnabled,
 }: {
-  layerNames: LayerNames;
   landmarks: Record<Side, Landmark[]>;
+  pairs: LandmarkPair[];
   alignment: Alignment | null;
   meanResidual: number | null;
   isAutoAlignEnabled: boolean;
 }) {
-  const completePairCount = Math.min(landmarks.A.length, landmarks.B.length);
+  const completePairCount = pairs.filter(isCompletePair).length;
+  // Each incomplete row has one landmark.
+  const unpairedLandmarkCount = pairs.length - completePairCount;
   const isAlignmentOutdated = alignment != null && !isEqual(alignment.landmarks, landmarks);
   return (
     <Flex vertical gap={4}>
@@ -116,10 +132,10 @@ function AlignmentStatus({
           Not aligned yet · {completePairCount} of at least {MIN_LANDMARK_PAIR_COUNT} pairs
         </Typography.Text>
       )}
-      {landmarks.A.length !== landmarks.B.length ? (
+      {unpairedLandmarkCount > 0 ? (
         <Typography.Text type="warning">
-          The views have a different number of landmarks ({landmarks.A.length} in {layerNames.A},{" "}
-          {landmarks.B.length} in {layerNames.B}).
+          {unpairedLandmarkCount} {pluralize("landmark", unpairedLandmarkCount)} without a partner{" "}
+          {unpairedLandmarkCount === 1 ? "is" : "are"} not used for the alignment.
         </Typography.Text>
       ) : null}
       {alignment?.usedCopiesInNextSlice ? (
@@ -142,23 +158,18 @@ const DOWNLOAD_MENU_ITEMS: MenuProps["items"] = [
   { key: "nml" satisfies LandmarkExportFormat, label: "NML files (one per layer)" },
 ];
 
-// Both formats can be uploaded in the dataset composition wizard. They need the same number of
-// landmarks in both views.
+// Both formats can be uploaded in the dataset composition wizard. Only complete pairs are
+// downloaded.
 function LandmarkDownloadButton({
-  landmarks,
+  pairs,
   onDownload,
 }: {
-  landmarks: Record<Side, Landmark[]>;
+  pairs: LandmarkPair[];
   onDownload: (format: LandmarkExportFormat) => void;
 }) {
-  const disabledReason =
-    landmarks.A.length === 0
-      ? "Place landmarks first."
-      : landmarks.A.length !== landmarks.B.length
-        ? "Both views need the same number of landmarks."
-        : null;
+  const disabledReason = pairs.some(isCompletePair) ? null : "Place landmark pairs first.";
   return (
-    <Tooltip title={disabledReason ?? "Download the landmarks for the dataset composition"}>
+    <Tooltip title={disabledReason ?? "Download the landmark pairs for the dataset composition"}>
       <Dropdown
         disabled={disabledReason != null}
         trigger={["click"]}
@@ -179,17 +190,23 @@ function AnnotationHeader({
   name,
   description,
   layerNames,
+  alignmentListUrl,
   onChangeName,
   onChangeDescription,
 }: {
   name: string;
   description: string;
   layerNames: LayerNames;
+  alignmentListUrl: string;
   onChangeName: (name: string) => void;
   onChangeDescription: (description: string) => void;
 }) {
   return (
     <>
+      {/* Asks first if the landmarks aren't saved yet (see the blocker in alignment_workspace.tsx). */}
+      <Link to={alignmentListUrl} style={{ alignSelf: "flex-start", marginBottom: 8 }}>
+        <ArrowLeftOutlined /> Back to all alignments
+      </Link>
       <AnnotationIdentity
         name={name}
         description={description}
@@ -213,8 +230,7 @@ function getPairColumns(
   meanResidual: number | null,
   onDeletePair: Props["onDeletePair"],
 ): ColumnsType<LandmarkPair> {
-  // The color of a landmark is shown next to its position. Both landmarks of a pair normally
-  // have the same color, so different colors point to shifted pairs.
+  // The color of a landmark is shown next to its position, to find it in the view.
   const positionColumns = SIDES.map((side) => ({
     title: layerNames[side],
     key: side,
@@ -234,10 +250,15 @@ function getPairColumns(
   }));
   return [
     {
-      title: "#",
-      key: "index",
-      width: PAIR_COLUMN_WIDTHS.index,
-      render: (_value, _pair, index) => index + 1,
+      title: "Name",
+      key: "name",
+      width: PAIR_COLUMN_WIDTHS.name,
+      render: (_value, pair) =>
+        pair.pairId != null ? (
+          getLandmarkTreeName(pair.pairId)
+        ) : (
+          <Typography.Text type="secondary">Unnamed</Typography.Text>
+        ),
     },
     ...positionColumns,
     {
@@ -258,20 +279,19 @@ function getPairColumns(
     {
       key: "delete",
       width: PAIR_COLUMN_WIDTHS.delete,
-      render: (_value, pair, index) => (
+      render: (_value, pair) => (
         // A click on a row selects the pair, but not a click on this button.
         <span onClick={(event) => event.stopPropagation()}>
           <Popconfirm
-            title={`Delete landmark pair ${index + 1} in both views?`}
+            title={
+              isCompletePair(pair) && pair.pairId != null
+                ? `Delete ${getLandmarkTreeName(pair.pairId)} in both views?`
+                : "Delete this landmark?"
+            }
             okText="Delete"
             onConfirm={() => onDeletePair(pair)}
           >
-            <Button
-              type="text"
-              size="small"
-              icon={<DeleteOutlined />}
-              aria-label="Delete this pair in both views"
-            />
+            <Button type="text" size="small" icon={<DeleteOutlined />} aria-label="Delete" />
           </Popconfirm>
         </span>
       ),
@@ -298,6 +318,7 @@ export function LandmarkPanel({
   onSelectPair,
   onDeletePair,
   onDownloadLandmarks,
+  alignmentListUrl,
 }: Props) {
   const pairs = getLandmarkPairs(landmarks, alignment?.transformBtoA ?? null);
   const meanResidual = getMeanResidual(pairs);
@@ -310,13 +331,14 @@ export function LandmarkPanel({
         name={annotationName}
         description={annotationDescription}
         layerNames={layerNames}
+        alignmentListUrl={alignmentListUrl}
         onChangeName={onChangeAnnotationName}
         onChangeDescription={onChangeAnnotationDescription}
       />
       <SidebarSection label="Alignment">
         <AlignmentStatus
-          layerNames={layerNames}
           landmarks={landmarks}
+          pairs={pairs}
           alignment={alignment}
           meanResidual={meanResidual}
           isAutoAlignEnabled={isAutoAlignEnabled}
@@ -376,7 +398,7 @@ export function LandmarkPanel({
       </SidebarSection>
       <Flex justify="space-between" align="center">
         <div className="sidebar-label">Landmark pairs ({pairs.length})</div>
-        <LandmarkDownloadButton landmarks={landmarks} onDownload={onDownloadLandmarks} />
+        <LandmarkDownloadButton pairs={pairs} onDownload={onDownloadLandmarks} />
       </Flex>
       <Flex vertical ref={pairListRef} style={{ flex: 1, minHeight: MIN_PAIR_LIST_HEIGHT }}>
         {pairs.length === 0 ? (
@@ -387,8 +409,11 @@ export function LandmarkPanel({
                 <li>Click on a structure in the left view.</li>
                 <li>Click on the same structure in the right view.</li>
                 <li>
-                  Repeat this for at least {MIN_LANDMARK_PAIR_COUNT} structures, then press{" "}
-                  <Typography.Text keyboard>T</Typography.Text>.
+                  Repeat this for at least {MIN_LANDMARK_PAIR_COUNT} structures.{" "}
+                  {isAutoAlignEnabled
+                    ? "The layers are then aligned automatically."
+                    : "Then press "}
+                  {isAutoAlignEnabled ? null : <Typography.Text keyboard>T</Typography.Text>}
                 </li>
               </ol>
             }
@@ -405,6 +430,7 @@ export function LandmarkPanel({
               style: { cursor: "pointer" },
               title: "Select this pair in both views",
             })}
+            rowClassName={(pair) => (isCompletePair(pair) ? "" : "is-unpaired-landmark")}
             scroll={{
               x: PAIR_TABLE_WIDTH,
               y: Math.max(pairListHeight, MIN_PAIR_LIST_HEIGHT) - PAIR_TABLE_HEADER_HEIGHT,

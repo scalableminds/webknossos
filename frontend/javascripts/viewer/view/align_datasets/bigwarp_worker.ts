@@ -1,8 +1,9 @@
-import { findDataPositionForLayer } from "admin/rest_api";
+import { findDataPositionForLayer, getBuildInfo } from "admin/rest_api";
 import Toast from "libs/toast";
 import { isNoEditableElementFocused } from "libs/utils";
 import { useEffect } from "react";
 import type { BlockerFunction } from "react-router";
+import type { Vector3 } from "viewer/constants";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
 import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
@@ -15,11 +16,18 @@ import {
 } from "viewer/model/actions/settings_actions";
 import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { parseNml } from "viewer/model/helpers/nml_helpers";
-import { getMaximumTreeId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import { parseNml, serializeToNml } from "viewer/model/helpers/nml_helpers";
+import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
-import { renumberLandmarkTrees } from "./alignment_helpers";
+import {
+  getLandmarkColor,
+  getLandmarkPairId,
+  getLandmarkTreeName,
+  getNextLandmarkPairId,
+  type LandmarkPairInfo,
+  prepareLandmarkTreesForImport,
+} from "./alignment_helpers";
 import {
   BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE,
   type BigWarpCommand,
@@ -114,17 +122,50 @@ export async function applyBigWarpWorkerSettings() {
   }
 }
 
-// Imports the stored landmarks of this worker's side, renumbered so that the two landmarks of
-// a pair get the same color in both workers (see renumberLandmarkTrees).
+// Imports the stored landmarks of this worker's side (see prepareLandmarkTreesForImport).
 export async function importLandmarks(nmlString: string) {
   const { trees, treeGroups } = await parseNml(nmlString);
-  const existingTrees = enforceSkeletonTracing(Store.getState().annotation).trees;
-  Store.dispatch(
-    addTreesAndGroupsAction(
-      renumberLandmarkTrees(trees, getMaximumTreeId(existingTrees)),
-      treeGroups,
-    ),
+  Store.dispatch(addTreesAndGroupsAction(prepareLandmarkTreesForImport(trees), treeGroups));
+}
+
+// Set by the alignment page after each sync. Not put into store as nothing rendering wise depends on this.
+// Moreover, this is only needed in the bigwarp context. Therefore, we keep it locally by putting it into the module level.
+let landmarkPairInfo: LandmarkPairInfo = { openPairIds: [], otherMaxPairId: 0 };
+
+export function setLandmarkPairInfo(pairInfo: LandmarkPairInfo) {
+  landmarkPairInfo = pairInfo;
+}
+
+// The name and color of the tree that a click in a worker creates: the name holds the pair id
+// of the new landmark (see getNextLandmarkPairId). They are part of the action that creates the
+// tree. If the alignment page renamed the tree afterwards, undo would revert the renaming, the
+// page would rename the tree again, and the user could never undo the click itself.
+export function getNewLandmarkTreeProperties(): { name: string; color: Vector3 } {
+  const ownPairIds = new Set(
+    enforceSkeletonTracing(Store.getState().annotation)
+      .trees.values()
+      .filter((tree) => tree.nodes.size() > 0)
+      .map((tree) => getLandmarkPairId(tree.name))
+      .filter((pairId) => pairId != null),
   );
+  const pairId = getNextLandmarkPairId(ownPairIds, landmarkPairInfo);
+  return { name: getLandmarkTreeName(pairId), color: getLandmarkColor(pairId) };
+}
+
+// Serializes the given landmark trees for the dataset composition wizard. The wizard pairs
+// the trees of its two NML files by their sorted tree ids, so each tree gets its pair id as
+// tree id.
+export async function exportLandmarkPairsAsNml(
+  treeIdsByPairId: Array<[pairId: number, treeId: number]>,
+): Promise<string> {
+  const state = Store.getState();
+  const skeletonTracing = enforceSkeletonTracing(state.annotation);
+  const exportedTrees = treeIdsByPairId.map(([pairId, treeId]): [number, Tree] => [
+    pairId,
+    { ...skeletonTracing.trees.getOrThrow(treeId), treeId: pairId, isVisible: true, groupId: null },
+  ]);
+  const exportedTracing = { ...skeletonTracing, trees: new TreeMap(exportedTrees), treeGroups: [] };
+  return serializeToNml(state, state.annotation, exportedTracing, await getBuildInfo(), false);
 }
 
 // Tells the alignment view whether the alignment annotation has unsaved changes. Runs in the

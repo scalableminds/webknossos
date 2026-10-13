@@ -1,7 +1,6 @@
 import saveAs from "file-saver";
-import zip from "lodash-es/zip";
 import { transformToCSVRow } from "viewer/model/helpers/csv_helpers";
-import type { Landmark, LayerNames, Side } from "./alignment_helpers";
+import type { CompleteLandmarkPair, LayerNames, Side } from "./alignment_helpers";
 
 // The formats in which the landmarks can be downloaded. Both can be uploaded in the dataset
 // composition wizard (see admin/dataset/composition_wizard/02_upload_files.tsx).
@@ -10,13 +9,10 @@ export type LandmarkExportFormat = "csv" | "nml";
 // The landmark pairs in the CSV format of BigWarp: one line per pair with the name, whether
 // the pair is enabled, the position in the moving layer and the position in the fixed layer.
 // The composition wizard transforms the first position of each line onto the second.
-// Landmarks without a partner are left out.
-export function getLandmarksAsBigWarpCsv(landmarks: Record<Side, Landmark[]>): string {
-  return zip(landmarks.B, landmarks.A)
-    .flatMap(([landmarkB, landmarkA], index) =>
-      landmarkB != null && landmarkA != null
-        ? [transformToCSVRow([`Pt-${index}`, true, ...landmarkB.position, ...landmarkA.position])]
-        : [],
+export function getLandmarksAsBigWarpCsv(pairs: CompleteLandmarkPair[]): string {
+  return pairs
+    .map(({ pairId, A, B }) =>
+      transformToCSVRow([`Pt-${pairId}`, true, ...B.position, ...A.position]),
     )
     .join("\n");
 }

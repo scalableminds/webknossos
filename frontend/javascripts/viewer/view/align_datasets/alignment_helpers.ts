@@ -1,8 +1,9 @@
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import ColorGenerator from "libs/color_generator";
 import { V3 } from "libs/mjs";
+import max from "lodash-es/max";
 import mean from "lodash-es/mean";
-import zip from "lodash-es/zip";
+import uniq from "lodash-es/uniq";
 import { Matrix, SingularValueDecomposition } from "ml-matrix";
 import type { APIDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -20,11 +21,21 @@ export const SIDES: Side[] = ["A", "B"];
 export const OTHER_SIDE: Record<Side, Side> = { A: "B", B: "A" };
 export type LayerNames = Record<Side, string>;
 
-// The ids refer to the tree and node in the worker of the landmark's side.
-export type Landmark = { treeId: number; nodeId: number; position: Vector3; color: Vector3 };
+// Each landmark is a tree with one node. The tree and node ids refer to the worker of the
+// landmark's side. The pair id connects the two landmarks of a pair (see getLandmarkPairId).
+// It is null if the tree name doesn't contain one.
+export type Landmark = {
+  pairId: number | null;
+  treeId: number;
+  nodeId: number;
+  position: Vector3;
+  color: Vector3;
+};
 
 export type LandmarkPair = {
-  key: number;
+  key: string;
+  // Null for a landmark that can't be paired, see getLandmarkPairs.
+  pairId: number | null;
   landmarks: Partial<Record<Side, Landmark>>;
   // Distance between landmark A and the transformed landmark B. A value that is much
   // higher than in the other pairs usually means that this pair was placed imprecisely.
@@ -47,9 +58,26 @@ export const MIN_LANDMARK_PAIR_COUNT = 3;
 // the points are treated as lying in one plane (or on one line).
 const MIN_EXTENT_RATIO = 1e-6;
 
-// Each node is one landmark. Landmarks are paired by their order: the n-th landmark of
-// one side belongs to the n-th landmark of the other side. The order is given by the
-// tree ids and, within a tree, by the node ids.
+// The two landmarks of a pair are trees with the same name, "Landmark <pair id>", one in each
+// worker. A worker names a tree when a click creates it (see getNewLandmarkTreeProperties in
+// bigwarp_worker.ts). Thus, a pair stays the same when other landmarks are deleted.
+const LANDMARK_TREE_NAME_PATTERN = /^Landmark (\d+)$/;
+
+export function getLandmarkTreeName(pairId: number): string {
+  return `Landmark ${pairId}`;
+}
+
+export function getLandmarkPairId(treeName: string): number | null {
+  const match = LANDMARK_TREE_NAME_PATTERN.exec(treeName);
+  const pairId = match != null ? Number(match[1]) : 0;
+  return pairId > 0 ? pairId : null;
+}
+
+// Both landmarks of a pair have this color.
+export function getLandmarkColor(pairId: number): Vector3 {
+  return ColorGenerator.distinctColorForId(pairId);
+}
+
 export function getLandmarks(trees: MutableTreeMap): Landmark[] {
   return Array.from(trees.values())
     .toSorted((a, b) => a.treeId - b.treeId)
@@ -57,6 +85,7 @@ export function getLandmarks(trees: MutableTreeMap): Landmark[] {
       Array.from(tree.nodes.values())
         .toSorted((a, b) => a.id - b.id)
         .map((node) => ({
+          pairId: getLandmarkPairId(tree.name),
           treeId: tree.treeId,
           nodeId: node.id,
           position: node.untransformedPosition,
@@ -65,62 +94,118 @@ export function getLandmarks(trees: MutableTreeMap): Landmark[] {
     );
 }
 
-// Gives the trees the ids following maxExistingTreeId in the order of their landmarks, and
-// the color that a new tree with that id gets. Both workers renumber the stored landmarks
-// like this when they import them. Then the two landmarks of a pair have the same tree id
-// and color, and so have the landmarks that are placed afterwards, because a new tree gets
-// the next free id. This holds until a landmark in the middle is deleted on one side only,
-// which also shifts the pairs. The pairs then show different colors.
-export function renumberLandmarkTrees(
-  trees: MutableTreeMap,
-  maxExistingTreeId: number,
-): MutableTreeMap {
-  const renumberedTrees = new MutableTreeMap();
-  Array.from(trees.values())
-    .toSorted((a, b) => a.treeId - b.treeId)
-    .forEach((tree, index) => {
-      const treeId = maxExistingTreeId + index + 1;
-      renumberedTrees.mutableSet(treeId, {
-        ...tree,
-        treeId,
-        color: ColorGenerator.distinctColorForId(treeId),
-      });
+// Prepares the stored landmarks of one side for the import into its worker. Trees without
+// nodes are left out: deleting the only node of a tree keeps the tree. Each tree gets the
+// color of its pair. Trees without a pair id in their name (e.g. stored before pair ids
+// existed) get new pair ids after the highest existing one, in the order of their tree ids.
+export function prepareLandmarkTreesForImport(trees: MutableTreeMap): MutableTreeMap {
+  const nonEmptyTrees = Array.from(trees.values())
+    .filter((tree) => tree.nodes.size() > 0)
+    .toSorted((a, b) => a.treeId - b.treeId);
+  const existingPairIds = nonEmptyTrees.flatMap((tree) => getLandmarkPairId(tree.name) ?? []);
+  let nextPairId = (max(existingPairIds) ?? 0) + 1;
+  const preparedTrees = new MutableTreeMap();
+  for (const tree of nonEmptyTrees) {
+    const pairId = getLandmarkPairId(tree.name) ?? nextPairId++;
+    preparedTrees.mutableSet(tree.treeId, {
+      ...tree,
+      name: getLandmarkTreeName(pairId),
+      color: getLandmarkColor(pairId),
     });
-  return renumberedTrees;
-}
-
-// The landmark that the user has to place next to complete a pair, or null if all pairs are
-// complete. The color is that of the other landmark of the pair.
-export function getNextMissingLandmark(
-  landmarks: Record<Side, Landmark[]>,
-): { side: Side; pairNumber: number; missingCount: number; color: Vector3 } | null {
-  const side = SIDES.find((side) => landmarks[side].length < landmarks[OTHER_SIDE[side]].length);
-  if (side == null) {
-    return null;
   }
-  const placedCount = landmarks[side].length;
-  return {
-    side,
-    pairNumber: placedCount + 1,
-    missingCount: landmarks[OTHER_SIDE[side]].length - placedCount,
-    color: landmarks[OTHER_SIDE[side]][placedCount].color,
-  };
+  return preparedTrees;
 }
 
+// Groups the landmarks of both sides into pairs by their pair id, sorted by pair id. A
+// landmark without a pair id, or a second landmark with the same pair id on the same side,
+// gets a row of its own with pair id null. Neither happens when the landmarks are placed in
+// the workers.
 export function getLandmarkPairs(
   landmarks: Record<Side, Landmark[]>,
   transformBtoA: Transform | null,
 ): LandmarkPair[] {
   const transformPointBtoA =
     transformBtoA != null ? getTransformPointUnscaledFn(transformBtoA) : null;
-  return zip(landmarks.A, landmarks.B).map(([landmarkA, landmarkB], index) => ({
-    key: index,
-    landmarks: { A: landmarkA, B: landmarkB },
-    residual:
-      transformPointBtoA != null && landmarkA != null && landmarkB != null
-        ? V3.length(V3.sub(landmarkA.position, transformPointBtoA(landmarkB.position)))
-        : null,
-  }));
+  const landmarksByPairId = new Map<number, Partial<Record<Side, Landmark>>>();
+  const rowsWithoutPair: LandmarkPair[] = [];
+  for (const side of SIDES) {
+    for (const landmark of landmarks[side]) {
+      const { pairId } = landmark;
+      const pairLandmarks = pairId != null ? (landmarksByPairId.get(pairId) ?? {}) : null;
+      if (pairId == null || pairLandmarks == null || pairLandmarks[side] != null) {
+        rowsWithoutPair.push({
+          key: `${side}-${landmark.nodeId}`,
+          pairId: null,
+          landmarks: { [side]: landmark },
+          residual: null,
+        });
+        continue;
+      }
+      pairLandmarks[side] = landmark;
+      landmarksByPairId.set(pairId, pairLandmarks);
+    }
+  }
+  const pairs: LandmarkPair[] = Array.from(landmarksByPairId.entries())
+    .toSorted(([pairIdA], [pairIdB]) => pairIdA - pairIdB)
+    .map(([pairId, { A, B }]) => ({
+      key: String(pairId),
+      pairId,
+      landmarks: { A, B },
+      residual:
+        transformPointBtoA != null && A != null && B != null
+          ? V3.length(V3.sub(A.position, transformPointBtoA(B.position)))
+          : null,
+    }));
+  return pairs.concat(rowsWithoutPair);
+}
+
+export type CompleteLandmarkPair = { pairId: number } & Record<Side, Landmark>;
+
+// The pairs that have a landmark on both sides, sorted by pair id.
+export function getCompleteLandmarkPairs(
+  landmarks: Record<Side, Landmark[]>,
+): CompleteLandmarkPair[] {
+  return getLandmarkPairs(landmarks, null).flatMap(({ pairId, landmarks: { A, B } }) =>
+    pairId != null && A != null && B != null ? [{ pairId, A, B }] : [],
+  );
+}
+
+// What a worker needs to know about the landmarks of the other worker to choose the pair id of
+// its next landmark (see getNextLandmarkPairId). The alignment page sends it after each sync.
+export type LandmarkPairInfo = {
+  // The pair ids that the other side has and this side doesn't, ascending.
+  openPairIds: number[];
+  // The highest pair id of the other side, or 0.
+  otherMaxPairId: number;
+};
+
+function getPairIds(landmarks: Landmark[]): number[] {
+  return landmarks.flatMap((landmark) => landmark.pairId ?? []);
+}
+
+export function getLandmarkPairInfo(
+  landmarks: Record<Side, Landmark[]>,
+  side: Side,
+): LandmarkPairInfo {
+  const ownPairIds = new Set(getPairIds(landmarks[side]));
+  const otherPairIds = getPairIds(landmarks[OTHER_SIDE[side]]);
+  return {
+    openPairIds: uniq(otherPairIds.filter((pairId) => !ownPairIds.has(pairId))).toSorted(
+      (a, b) => a - b,
+    ),
+    otherMaxPairId: max(otherPairIds) ?? 0,
+  };
+}
+
+// A new landmark completes the pair with the lowest open pair id. If there is none, it starts
+// a new pair. ownPairIds must be up to date. The pair info may be one sync old, which can only
+// lead to a new pair instead of completing a pair that was opened during the last sync interval.
+export function getNextLandmarkPairId(ownPairIds: Set<number>, pairInfo: LandmarkPairInfo): number {
+  const openPairId = pairInfo.openPairIds.find((pairId) => !ownPairIds.has(pairId));
+  if (openPairId != null) {
+    return openPairId;
+  }
+  return Math.max(pairInfo.otherMaxPairId, max(Array.from(ownPairIds)) ?? 0) + 1;
 }
 
 // Null if no pair has a residual.
@@ -163,13 +248,15 @@ function addCopiesInNextSlice(positions: Vector3[]): Vector3[] {
 export function estimateTransformBtoA(
   landmarks: Record<Side, Landmark[]>,
 ): { transform: Transform; usedCopiesInNextSlice: boolean } | { errorMessage: string } {
-  if (landmarks.A.length < MIN_LANDMARK_PAIR_COUNT || landmarks.A.length !== landmarks.B.length) {
+  // Landmarks without a partner are left out.
+  const pairs = getCompleteLandmarkPairs(landmarks);
+  if (pairs.length < MIN_LANDMARK_PAIR_COUNT) {
     return {
-      errorMessage: `Need at least ${MIN_LANDMARK_PAIR_COUNT} matching landmark pairs (the same number on both sides) before aligning.`,
+      errorMessage: `Need at least ${MIN_LANDMARK_PAIR_COUNT} landmark pairs (a landmark in both views) before aligning.`,
     };
   }
-  const positionsA = landmarks.A.map((landmark) => landmark.position);
-  const positionsB = landmarks.B.map((landmark) => landmark.position);
+  const positionsA = pairs.map((pair) => pair.A.position);
+  const positionsB = pairs.map((pair) => pair.B.position);
   if (canEstimateTransform(positionsB, positionsA)) {
     return {
       transform: createAffineTransform(positionsB, positionsA),

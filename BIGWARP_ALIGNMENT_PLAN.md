@@ -2,7 +2,7 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-10-12 (v18 — pairing made visible: same color per pair, focus on hover, next-step hint, select and delete pairs in the table, §0.27; v17 — landmark download as BigWarp CSV / NML for the dataset composition, §0.25; v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
+Last updated: 2026-10-13 (v19 — stable pairs via pair ids in tree names, §0.28; v18 — pairing made visible: same color per pair, focus on hover, next-step hint, select and delete pairs in the table, §0.27; v17 — landmark download as BigWarp CSV / NML for the dataset composition, §0.25; v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
@@ -1379,6 +1379,46 @@ on one side silently shifts all later pairs. Implemented, all browser-untested:
   button. A delete button (with confirmation) deletes both landmarks of the pair (new commands
   `deleteTree` / `deleteNode`), so later pairs don't shift. The color is now shown per side.
 - Known limitation: undo is per worker. Undoing a pair deletion needs Ctrl+Z in both views.
+
+### 0.28 Stable pairs via pair ids in tree names (2026-10-13, decided with Michael)
+
+Supersedes the color and pairing parts of §0.27. Michael found that the id-based colors drift:
+deleting a node keeps its (now empty) tree, so the next tree id on that side is one higher than
+on the other side. Root cause: pairing and colors depended on order and tree ids. Options
+discussed: (A) color by landmark count at creation; (B) a sync job that recolors, which blocks
+Ctrl+Z (undo reverts the recolor, the job recolors again, so the click itself can never be
+undone; also an accidentally deleted landmark couldn't be restored); explicit pair ids, chosen.
+
+- **Pair id in the tree name**: `Landmark <n>` in both workers (`getLandmarkTreeName`,
+  strict parse `getLandmarkPairId`). Color `distinctColorForId(n)` (`getLandmarkColor`).
+  Pairs are grouped by pair id (`getLandmarkPairs`), not by order, so deleting a landmark
+  never shifts other pairs. Metadata was the alternative; the name was chosen because it is
+  readable in the NML downloads and in the store annotation.
+- **Named at creation**: the click handler (`handleCreateNodeFromGlobalPosition` in
+  `skeleton_handlers.ts`) passes `name`/`color` to `createTreeAction` (new optional third
+  parameter, applied in the `CREATE_TREE` reducer) when `isBigWarpWorker()`. Renaming
+  afterwards from the page would have the same undo loop as recoloring.
+- **Which pair id** (`getNextLandmarkPairId`): the lowest pair id that the other view has and
+  this view doesn't ("queue"); otherwise the highest pair id of both views + 1. The worker
+  combines its live trees with `LandmarkPairInfo` (`openPairIds`, `otherMaxPairId`), which the
+  page computes per side (`getLandmarkPairInfo`) and sends after each sync only when it changed
+  (cross-origin command `setLandmarkPairInfo`, module variable in `bigwarp_worker.ts`, no Redux
+  field: only the click handler reads it). The info can be one sync old; the worst case is a
+  new pair instead of filling a gap that opened in the last 0.5 s. Choosing the most recently
+  opened gap instead of the lowest is a possible follow-up if users ask for it.
+- **Import** (`prepareLandmarkTreesForImport`): leaves out empty trees, colors each tree by
+  its pair id, and gives trees without a pair id (stored before this change) new ids after the
+  highest one, in tree id order. The id renumbering of §0.27 is gone.
+- **Sync** compares pair ids and positions (`getStoredFields`) with the stored state.
+- **Transform, CSV, NML download** use complete pairs only (`getCompleteLandmarkPairs`);
+  unpaired landmarks no longer block "align". The download shows a toast with the number of
+  left-out landmarks. The composition wizard pairs the trees of its two NMLs by sorted tree
+  id, so the new worker command `exportLandmarkPairsAsNml` gives each tree its pair id as tree
+  id. CSV rows are named `Pt-<pair id>`.
+- **UI**: the hint is shown per view for the lowest open pair id. The table shows the name
+  (`Landmark n`) instead of a row number and highlights unpaired rows
+  (`.is-unpaired-landmark`). The status line counts landmarks without a partner instead of
+  comparing counts.
 
 ### 0.3 Not started / explicitly out of scope for this pass
 

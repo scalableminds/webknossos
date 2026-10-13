@@ -1,5 +1,5 @@
 // Alignment view (alignment_view.tsx): the two worker iframes and the resizable landmark
-// panel on the right (closed by default), side by side.
+// panel on the right (open by default), side by side.
 .align-datasets-workspace {
   height: 100%;
 
@@ -55,6 +55,11 @@
     position: absolute;
     inset: 0;
     background: color-mix(in srgb, var(--ant-color-bg-base) 70%, transparent);
+  }
+
+  // A landmark without a partner in the other view.
+  .landmark-panel .is-unpaired-landmark .ant-table-cell {
+    background: var(--ant-color-warning-bg);
   }
 
   .landmark-color {

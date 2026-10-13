@@ -72,6 +72,10 @@ export type BigWarpCommand =
 
 export const BIG_WARP_COMMAND_MESSAGE_TYPE = "bigwarpCommand";
 
+// The alignment page and the toggle button in the primary worker both track whether the
+// landmark panel is open, so both need the same initial value.
+export const IS_LANDMARK_PANEL_INITIALLY_OPEN = true;
+
 export function sendCommandToAlignmentPage(command: BigWarpCommand) {
   window.parent.postMessage(
     { type: BIG_WARP_COMMAND_MESSAGE_TYPE, command },

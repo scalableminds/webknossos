@@ -5,8 +5,10 @@ import type { Vector3 } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   getLandmarkGroupPath,
+  getLandmarkPairInfo,
   getLandmarks,
   type Landmark,
+  type LandmarkPairInfo,
   type LayerNames,
   SIDES,
   type Side,
@@ -15,8 +17,12 @@ import type { SendMessage } from "./use_iframe_bridge";
 
 const SYNC_INTERVAL_MS = 500;
 
-function getPositions(landmarks: Landmark[]): Vector3[] {
-  return landmarks.map((landmark) => landmark.position);
+// What is compared to decide whether a side must be written to the landmark annotation. Tree
+// ids change on every import and colors follow the pair ids, so both are left out.
+function getStoredFields(
+  landmarks: Landmark[],
+): Array<{ pairId: number | null; position: Vector3 }> {
+  return landmarks.map(({ pairId, position }) => ({ pairId, position }));
 }
 
 // "loading" until the stored landmarks were imported into the workers and the landmarks of
@@ -30,7 +36,8 @@ export type LandmarkSyncStatus = "loading" | "ready" | "failed";
  * 2. Afterwards, each worker is the source of truth for its side. The landmarks of both
  *    workers are polled. When the landmarks of a worker changed (added, deleted, moved,
  *    undo, ...), the group of that side in the landmark annotation is replaced with the
- *    trees of the worker.
+ *    trees of the worker. Each worker also gets the pair info that it needs to name its next
+ *    landmark (see getLandmarkPairInfo).
  * Returns the current landmarks of both workers, the status of the sync, whether changed
  * landmarks still have to be written to the landmark annotation, a function that reads
  * the landmarks from the workers right away, and a function that stops the sync for good.
@@ -51,9 +58,13 @@ export function useLandmarkSync(
   // The ids of the tree groups that hold the landmarks of each side in the landmark
   // annotation. Null until the stored landmarks were imported into the workers.
   const [groupIds, setGroupIds] = useState<Record<Side, number> | null>(null);
-  // The landmark positions of each side as they were last written to the landmark annotation.
-  // Tree ids and colors are left out: the workers renumber the trees when they import them.
-  const storedPositionsRef = useRef<Record<Side, Vector3[]>>({ A: [], B: [] });
+  // The landmarks of each side as they were last written to the landmark annotation.
+  const storedFieldsRef = useRef<Record<Side, ReturnType<typeof getStoredFields>>>({
+    A: [],
+    B: [],
+  });
+  // The pair info that was last sent to each worker.
+  const sentPairInfoRef = useRef<Partial<Record<Side, LandmarkPairInfo>>>({});
   // Set when a worker was reloaded. Its landmarks are then missing until the stored ones are
   // imported again, so writing them to the landmark annotation would delete landmarks.
   const isStoppedRef = useRef(false);
@@ -73,7 +84,7 @@ export function useLandmarkSync(
         return groupId;
       }
       await sendMessage(side, "importLandmarks", [nmlString]);
-      storedPositionsRef.current[side] = getPositions(
+      storedFieldsRef.current[side] = getStoredFields(
         getLandmarks((await parseNml(nmlString)).trees),
       );
       return groupId;
@@ -115,12 +126,21 @@ export function useLandmarkSync(
     worker: { nmlString: string; landmarks: Landmark[] },
     groupId: number,
   ) => {
-    const positions = getPositions(worker.landmarks);
-    if (isStoppedRef.current || isEqual(positions, storedPositionsRef.current[side])) {
+    const storedFields = getStoredFields(worker.landmarks);
+    if (isStoppedRef.current || isEqual(storedFields, storedFieldsRef.current[side])) {
       return;
     }
     await sendMessage("store", "replaceTreesInGroup", [worker.nmlString, groupId]);
-    storedPositionsRef.current[side] = positions;
+    storedFieldsRef.current[side] = storedFields;
+  };
+
+  const sendChangedPairInfo = async (side: Side, newLandmarks: Record<Side, Landmark[]>) => {
+    const pairInfo = getLandmarkPairInfo(newLandmarks, side);
+    if (isEqual(pairInfo, sentPairInfoRef.current[side])) {
+      return;
+    }
+    await sendMessage(side, "setLandmarkPairInfo", [pairInfo]);
+    sentPairInfoRef.current[side] = pairInfo;
   };
 
   // usePolling waits for one run to finish before it schedules the next one, so runs
@@ -132,10 +152,12 @@ export function useLandmarkSync(
       }
       try {
         const { workerA, workerB, newLandmarks } = await fetchWorkerLandmarks();
+        // Sent before the overlay goes away, so that the first click already uses it.
+        await Promise.all(SIDES.map((side) => sendChangedPairInfo(side, newLandmarks)));
         setStatus("ready");
         setHasUnsyncedLandmarks(
           SIDES.some(
-            (side) => !isEqual(getPositions(newLandmarks[side]), storedPositionsRef.current[side]),
+            (side) => !isEqual(getStoredFields(newLandmarks[side]), storedFieldsRef.current[side]),
           ),
         );
         await storeChangedLandmarks("A", workerA, groupIds.A);

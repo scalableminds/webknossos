@@ -1,7 +1,8 @@
 import { App, Button, Flex, Result, Spin, Splitter, Typography } from "antd";
 import classnames from "classnames";
 import Toast from "libs/toast";
-import { useEffect, useEffectEvent, useState } from "react";
+import { pluralize } from "libs/utils";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useBlocker } from "react-router";
 import type { APIAnnotation, APIDataset } from "types/api_types";
 import { Identity4x4, type Vector3 } from "viewer/constants";
@@ -14,14 +15,23 @@ import {
   type Alignment,
   applyAlignmentToDataset,
   estimateTransformBtoA,
-  getNextMissingLandmark,
+  getCompleteLandmarkPairs,
+  getLandmarkColor,
+  getLandmarkPairInfo,
+  getLandmarkTreeName,
   type LandmarkPair,
   type LayerNames,
   OTHER_SIDE,
   SIDES,
   type Side,
 } from "./alignment_helpers";
-import { type BigWarpCommand, getBigWarpStoreUrl, getBigWarpWorkerUrl } from "./bigwarp_protocol";
+import {
+  type BigWarpCommand,
+  getAlignmentSelectionUrl,
+  getBigWarpStoreUrl,
+  getBigWarpWorkerUrl,
+  IS_LANDMARK_PANEL_INITIALLY_OPEN,
+} from "./bigwarp_protocol";
 import {
   getBigWarpCsvFileName,
   getLandmarksAsBigWarpCsv,
@@ -50,7 +60,7 @@ type OverlayStatus = Exclude<LandmarkSyncStatus, "ready"> | "restarting";
 
 export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, onRestart }: Props) {
   const { modal } = App.useApp();
-  const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(false);
+  const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(IS_LANDMARK_PANEL_INITIALLY_OPEN);
   const [landmarkPanelWidth, setLandmarkPanelWidth] = useState(DEFAULT_LANDMARK_PANEL_WIDTH);
   const [alignment, setAlignment] = useState<Alignment | null>(null);
   const transformBtoA = alignment?.transformBtoA ?? null;
@@ -59,7 +69,7 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     landmarkAnnotation.description,
   );
   // If enabled, the transform is computed again whenever the landmarks change.
-  const [isAutoAlignEnabled, setIsAutoAlignEnabled] = useState(false);
+  const [isAutoAlignEnabled, setIsAutoAlignEnabled] = useState(true);
   // Whether a worker also shows the layer of the other worker. Each worker initially shows
   // only its own layer (see applyBigWarpWorkerSettings).
   const [isOtherLayerVisible, setIsOtherLayerVisible] = useState<Record<Side, boolean>>({
@@ -67,6 +77,8 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     B: false,
   });
   const [isRestarting, setIsRestarting] = useState(false);
+  // Whether the workers showed the other layer for an alignment yet, see align.
+  const hasShownAlignmentRef = useRef(false);
 
   // handleWorkerCommand and restartAfterReload are function declarations further below, so
   // they can be used here.
@@ -88,7 +100,8 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       : null;
   const isSyncReady = syncStatus === "ready";
   const hasUnsavedChanges = hasUnsyncedLandmarks || !isStoreSaved;
-  const nextMissingLandmark = overlayStatus == null ? getNextMissingLandmark(landmarks) : null;
+  const getOpenPairIds = (side: Side) =>
+    overlayStatus == null ? getLandmarkPairInfo(landmarks, side).openPairIds : [];
 
   // Asks before leaving the page while the alignment annotation has unsaved changes.
   // This can't be left to the store iframe, although it has the normal "unsaved changes"
@@ -142,8 +155,10 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     setOtherLayerVisibility(side, !isOtherLayerVisible[side]);
   };
 
-  // When aligning automatically, problems are not reported to the user. When aligning
-  // manually, both workers show the other layer, so that the user sees the result.
+  // When aligning automatically, problems are not reported to the user. After a manual
+  // alignment and after the first automatic one (e.g. right after loading), both workers show
+  // the other layer, so that the user sees the result. Later automatic alignments keep the
+  // visibility that the user chose.
   const align = async ({ isAutomatic }: { isAutomatic: boolean } = { isAutomatic: false }) => {
     // The synced landmarks may miss a landmark that was placed right before.
     const currentLandmarks = await fetchLandmarks().catch((error) => {
@@ -169,7 +184,8 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       usedCopiesInNextSlice: result.usedCopiesInNextSlice,
     });
     await showTransformInWorkers(result.transform);
-    if (!isAutomatic) {
+    if (!isAutomatic || !hasShownAlignmentRef.current) {
+      hasShownAlignmentRef.current = true;
       for (const side of SIDES) {
         setOtherLayerVisibility(side, true);
       }
@@ -254,21 +270,31 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     focusPosition(OTHER_SIDE[side], getTransformPointUnscaledFn(transformToOtherSide)(position));
   };
 
-  // Downloads the current landmarks of the workers in a format that the dataset composition
-  // wizard can import.
+  // Downloads the complete landmark pairs of the workers in a format that the dataset
+  // composition wizard can import. Landmarks without a partner are left out.
   const downloadLandmarks = async (format: LandmarkExportFormat) => {
     try {
+      const currentLandmarks = await fetchLandmarks();
+      const pairs = getCompleteLandmarkPairs(currentLandmarks);
       if (format === "csv") {
-        const currentLandmarks = await fetchLandmarks();
-        saveTextFile(getLandmarksAsBigWarpCsv(currentLandmarks), getBigWarpCsvFileName(layerNames));
+        saveTextFile(getLandmarksAsBigWarpCsv(pairs), getBigWarpCsvFileName(layerNames));
       } else {
         // Both files are read before saving any, so that a failure doesn't leave only one.
-        const [nmlStringA, nmlStringB] = await Promise.all([
-          sendMessage<string>("A", "exportTreesAsNmlString"),
-          sendMessage<string>("B", "exportTreesAsNmlString"),
-        ]);
+        const [nmlStringA, nmlStringB] = await Promise.all(
+          SIDES.map((side) =>
+            sendMessage<string>(side, "exportLandmarkPairsAsNml", [
+              pairs.map((pair) => [pair.pairId, pair[side].treeId]),
+            ]),
+          ),
+        );
         saveTextFile(nmlStringA, getNmlFileName(layerNames, "A"));
         saveTextFile(nmlStringB, getNmlFileName(layerNames, "B"));
+      }
+      const leftOutCount = currentLandmarks.A.length + currentLandmarks.B.length - 2 * pairs.length;
+      if (leftOutCount > 0) {
+        Toast.info(
+          `Only complete pairs were downloaded. ${leftOutCount} ${pluralize("landmark", leftOutCount)} without a partner ${leftOutCount === 1 ? "was" : "were"} left out.`,
+        );
       }
     } catch (error) {
       console.error(error);
@@ -394,13 +420,7 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
                 onLoad={() => handleIframeLoad(side)}
                 onMouseEnter={() => focusWorker(side)}
               />
-              {nextMissingLandmark?.side === side ? (
-                <NextLandmarkHint
-                  pairNumber={nextMissingLandmark.pairNumber}
-                  missingCount={nextMissingLandmark.missingCount}
-                  color={nextMissingLandmark.color}
-                />
-              ) : null}
+              <NextLandmarkHint openPairIds={getOpenPairIds(side)} />
             </div>
           ))}
           <iframe
@@ -424,6 +444,7 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
       >
         {isLandmarkPanelOpen ? (
           <LandmarkPanel
+            alignmentListUrl={getAlignmentSelectionUrl(dataset)}
             layerNames={layerNames}
             landmarks={landmarks}
             annotationName={annotationName}
@@ -473,28 +494,29 @@ function isTextInputFocused(): boolean {
   );
 }
 
-// Shown in the view that misses the next landmark, so that the user sees which pair the next
-// click belongs to. The color is that of the landmark in the other view.
-function NextLandmarkHint({
-  pairNumber,
-  missingCount,
-  color,
-}: {
-  pairNumber: number;
-  missingCount: number;
-  color: Vector3;
-}) {
+// Shown in a view that misses landmarks of the other view, so that the user sees which pair
+// the next click completes (see getNextLandmarkPairId).
+function NextLandmarkHint({ openPairIds }: { openPairIds: number[] }) {
+  if (openPairIds.length === 0) {
+    return null;
+  }
+  const [nextPairId] = openPairIds;
   return (
     <div className="align-datasets-next-landmark-hint">
-      <span className="landmark-color" style={{ background: rgbColorString(color) }} />
-      Landmark {pairNumber}: click the matching spot in this view.
-      {missingCount > 1 ? ` ${missingCount} landmarks still need a partner here.` : null}
+      <span
+        className="landmark-color"
+        style={{ background: rgbColorString(getLandmarkColor(nextPairId)) }}
+      />
+      {getLandmarkTreeName(nextPairId)}: click the matching spot in this view.
+      {openPairIds.length > 1
+        ? ` ${openPairIds.length} landmarks still need a partner here.`
+        : null}
     </div>
   );
 }
 
-// Covers the workers until the stored landmarks were imported, and while restarting. Pairs
-// are matched by tree id, so a landmark placed before the import would shift all pairs by one.
+// Covers the workers until the stored landmarks were imported, and while restarting. A
+// landmark placed before the import could get the pair id of a stored landmark.
 function WorkspaceOverlay({ status }: { status: OverlayStatus }) {
   return (
     <Flex className="align-datasets-overlay" vertical justify="center" align="center" gap={8}>

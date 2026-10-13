@@ -24,7 +24,7 @@ import models.project.ProjectDAO
 import models.task.{TaskDAO, TaskService}
 import models.team.{TeamDAO, TeamService}
 import models.user.time.*
-import models.user.{NotificationMailService, User, UserDAO, UserService}
+import models.user.{NotificationEmailService, User, UserDAO, UserService}
 import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
@@ -65,7 +65,7 @@ class AnnotationController @Inject() (
     annotationIdReservationService: AnnotationReservedIdsService,
     userService: UserService,
     teamService: TeamService,
-    notificationMailService: NotificationMailService,
+    notificationEmailService: NotificationEmailService,
     projectDAO: ProjectDAO,
     teamDAO: TeamDAO,
     timeSpanService: TimeSpanService,
@@ -399,7 +399,7 @@ class AnnotationController @Inject() (
         _ <- restrictions.allowFinish(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- userService.findOneCached(request.body.userId) ?~> Msg.User.notFound(request.body.userId)
         updated <- annotationService.transferAnnotationToUser(typ, id, request.body.userId, request.identity)
-        _ = notificationMailService.notifyAnnotationTransferred(updated, request.identity)
+        _ = notificationEmailService.sendAnnotationTransferredEmail(updated, request.identity)
         json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
       } yield JsonOk(json)
     }
@@ -470,7 +470,7 @@ class AnnotationController @Inject() (
         teamIdsValidated <- Fox.serialCombined(request.body)(ObjectId.fromString)
         _ <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_)) ?~> Msg.Annotation.Edit.accessingTeamFailed
         oldTeams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
-        _ <- notificationMailService.updateAnnotationTeamsAndNotify(
+        _ <- notificationEmailService.updateAnnotationTeamsAndSendEmails(
           annotation,
           oldTeams.map(_._id),
           teamIdsValidated,

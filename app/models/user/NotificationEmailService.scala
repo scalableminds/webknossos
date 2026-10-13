@@ -23,8 +23,8 @@ import scala.concurrent.duration.*
 /* Informs users by email when someone else changes what they have access to or what they should work on:
    annotations and datasets shared with their teams, annotations transferred to them, changes of their team
    memberships and roles, and tasks manually assigned to them. Changes a user makes themselves are never announced.
-   The mails are assembled and sent in the background, so that failing to send them never fails the actual change. */
-class NotificationMailService @Inject() (
+   The emails are assembled and sent in the background, so that failing to send them never fails the actual change. */
+class NotificationEmailService @Inject() (
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     teamDAO: TeamDAO,
@@ -38,7 +38,7 @@ class NotificationMailService @Inject() (
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  import NotificationMailService.accessChanges
+  import NotificationEmailService.accessChanges
 
   private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
@@ -46,20 +46,20 @@ class NotificationMailService @Inject() (
 
   /* Users that were activated recently. The user list activates users in one request and offers to configure their
      teams and roles in a follow-up request, so changes shortly after the activation are still part of the onboarding,
-     which the activation mail already covers. Kept in memory only, as losing it on a restart merely causes one extra mail. */
+     which the activation email already covers. Kept in memory only, as losing it on a restart merely causes one extra email. */
   private val recentlyActivatedUsers: AlfuCache[ObjectId, Unit] = AlfuCache(timeToLive = 1 hour)
 
-  private def accessChangesEnabled: Boolean = conf.Mail.Notifications.accessChanges
-  private def taskAssignmentsEnabled: Boolean = conf.Mail.Notifications.manualTaskAssignments
+  private def accessChangesEnabled: Boolean = conf.Mail.NotificationEmails.accessChanges
+  private def taskAssignmentsEnabled: Boolean = conf.Mail.NotificationEmails.manualTaskAssignments
 
   // Runs the update of the teams the annotation is shared with, then notifies users who now see it in their list.
-  def updateAnnotationTeamsAndNotify[T](
+  def updateAnnotationTeamsAndSendEmails[T](
       annotation: Annotation,
       oldTeamIds: List[ObjectId],
       newTeamIds: List[ObjectId],
       sharer: User
   )(update: => Fox[T]): Fox[T] =
-    updateAndNotifyNewlyAllowedTeamMembers(
+    updateAndEmailNewlyAllowedTeamMembers(
       s"annotation ${annotation._id} shared with teams",
       newTeamIds.filterNot(oldTeamIds.contains),
       exclude = Set(sharer._id, annotation._user),
@@ -82,7 +82,7 @@ class NotificationMailService @Inject() (
     }
 
   // Expects the annotation as it is after the transfer, i.e. owned by the new owner.
-  def notifyAnnotationTransferred(annotation: Annotation, issuer: User): Unit =
+  def sendAnnotationTransferredEmail(annotation: Annotation, issuer: User): Unit =
     if (accessChangesEnabled && annotation._user != issuer._id)
       inBackground(s"annotation ${annotation._id} transferred to user ${annotation._user}") {
         for {
@@ -109,13 +109,13 @@ class NotificationMailService @Inject() (
   /* Runs the update of the teams the dataset itself is shared with, then notifies users who can now see it.
      Users that could already see it before, e.g. admins, dataset managers, members of teams allowed for its folder, or
      everyone if it is public, are not notified. */
-  def updateDatasetTeamsAndNotify[T](
+  def updateDatasetTeamsAndSendEmails[T](
       dataset: Dataset,
       oldTeamIds: List[ObjectId],
       newTeamIds: List[ObjectId],
       sharer: User
   )(update: => Fox[T]): Fox[T] =
-    updateAndNotifyNewlyAllowedTeamMembers(
+    updateAndEmailNewlyAllowedTeamMembers(
       s"dataset ${dataset._id} shared with teams",
       newTeamIds.filterNot(oldTeamIds.contains),
       exclude = Set(sharer._id),
@@ -137,7 +137,7 @@ class NotificationMailService @Inject() (
 
   /* Only changes to users that stay active are announced. Users that were just activated already get the activation
      mail, so changes during their first hour after the activation are not announced separately. */
-  def notifyAccessChanged(
+  def sendAccessChangedEmail(
       userBefore: User,
       oldTeamMemberships: List[TeamMembership],
       userAfter: User,
@@ -172,7 +172,7 @@ class NotificationMailService @Inject() (
       }
   }
 
-  def notifyTaskAssigned(task: Task, project: Project, annotationId: ObjectId, assignee: User, issuer: User): Unit =
+  def sendTaskAssignedEmail(task: Task, project: Project, annotationId: ObjectId, assignee: User, issuer: User): Unit =
     if (taskAssignmentsEnabled && assignee._id != issuer._id && !assignee.isDeactivated)
       inBackground(s"task ${task._id} assigned to user ${assignee._id}") {
         for {
@@ -188,12 +188,12 @@ class NotificationMailService @Inject() (
   /* Determines who has access before and after the update via the same access queries that decide what users see, so
      that only members of the added teams who actually gain access are notified. Failing to determine the access before
      the update only skips the notification, it never fails the update itself. */
-  private def updateAndNotifyNewlyAllowedTeamMembers[T](
+  private def updateAndEmailNewlyAllowedTeamMembers[T](
       description: String,
       addedTeamIds: List[ObjectId],
       exclude: Set[ObjectId],
       findUserIdsWithAccess: List[ObjectId] => Fox[Seq[ObjectId]]
-  )(update: => Fox[T])(notify: (List[(User, List[ObjectId])], List[Team]) => Fox[Unit]): Fox[T] =
+  )(update: => Fox[T])(sendEmails: (List[(User, List[ObjectId])], List[Team]) => Fox[Unit]): Fox[T] =
     if (!accessChangesEnabled || addedTeamIds.isEmpty) update
     else
       for {
@@ -211,10 +211,10 @@ class NotificationMailService @Inject() (
                   userIdsWithAccessAfter.contains(user._id) && !userIdsWithAccessBefore.contains(user._id)
                 }
                 addedTeams <- teamDAO.findAllByIds(addedTeamIds)
-                _ <- Fox.runIf(recipients.nonEmpty)(notify(recipients, addedTeams))
+                _ <- Fox.runIf(recipients.nonEmpty)(sendEmails(recipients, addedTeams))
               } yield ()
             }
-          case f => logger.warn(s"Could not send notification mail for $description: $f")
+          case f => logger.warn(s"Could not send notification email for $description: $f")
         }
       } yield result
 
@@ -243,12 +243,12 @@ class NotificationMailService @Inject() (
 
   private def inBackground(description: String)(notification: => Fox[Unit]): Unit =
     notification.onComplete {
-      case f: Failure => logger.warn(s"Could not send notification mail for $description: $f")
+      case f: Failure => logger.warn(s"Could not send notification email for $description: $f")
       case _          => ()
     }
 }
 
-object NotificationMailService {
+object NotificationEmailService {
 
   // Human-readable descriptions of how the team memberships and roles of a user changed.
   def accessChanges(

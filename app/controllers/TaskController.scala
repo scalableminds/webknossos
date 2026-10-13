@@ -41,7 +41,7 @@ class TaskController @Inject() (
     projectDAO: ProjectDAO,
     taskTypeDAO: TaskTypeDAO,
     userService: UserService,
-    notificationMailService: NotificationMailService,
+    notificationEmailService: NotificationEmailService,
     taskDAO: TaskDAO,
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
@@ -235,7 +235,7 @@ class TaskController @Inject() (
         insertedAnnotationBox <- annotationService.createAnnotationFor(assignee, id, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         insertedAnnotation <- insertedAnnotationBox.toFox
-        _ = notificationMailService.notifyTaskAssigned(
+        _ = notificationEmailService.sendTaskAssignedEmail(
           task,
           project,
           insertedAnnotation._id,

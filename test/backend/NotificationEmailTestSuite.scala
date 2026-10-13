@@ -2,12 +2,12 @@ package backend
 
 import com.scalableminds.util.objectid.ObjectId
 import models.team.TeamMembership
-import models.user.NotificationMailService.accessChanges
+import models.user.NotificationEmailService.accessChanges
 import models.user.User
 import org.scalatest.wordspec.AsyncWordSpec
 import play.api.libs.json.Json
 
-class NotificationMailTestSuite extends AsyncWordSpec {
+class NotificationEmailTestSuite extends AsyncWordSpec {
 
   "accessChanges" should {
     val teamA = ObjectId.generate

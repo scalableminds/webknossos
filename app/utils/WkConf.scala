@@ -216,12 +216,12 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val password: String = get[String]("mail.mailchimp.password")
     }
 
-    object Notifications {
-      val accessChanges: Boolean = get[Boolean]("mail.notifications.accessChanges")
-      val manualTaskAssignments: Boolean = get[Boolean]("mail.notifications.manualTaskAssignments")
+    object NotificationEmails {
+      val accessChanges: Boolean = get[Boolean]("mail.notificationEmails.accessChanges")
+      val manualTaskAssignments: Boolean = get[Boolean]("mail.notificationEmails.manualTaskAssignments")
     }
 
-    val children: List[Object] = List(Smtp, Mailchimp, Notifications)
+    val children: List[Object] = List(Smtp, Mailchimp, NotificationEmails)
   }
 
   object Silhouette {

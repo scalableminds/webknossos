@@ -1,7 +1,7 @@
 import { findDataPositionForLayer, getBuildInfo } from "admin/rest_api";
 import Toast from "libs/toast";
 import { isNoEditableElementFocused } from "libs/utils";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import type { BlockerFunction } from "react-router";
 import type { Vector3 } from "viewer/constants";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
@@ -29,6 +29,7 @@ import {
   prepareLandmarkTreesForImport,
 } from "./alignment_helpers";
 import {
+  type AlignmentViewState,
   BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE,
   type BigWarpCommand,
   getBigWarpWorkerLayerName,
@@ -41,7 +42,7 @@ import {
 // These letters are not bound in WEBKNOSSOS' plane mode. The listener below does not stop
 // propagation, so a bound key would trigger both actions.
 const SHORTCUT_COMMANDS: Record<string, BigWarpCommand> = {
-  t: "align",
+  t: "toggleTransform",
   x: "toggleOtherLayer",
   y: "syncOtherView",
 };
@@ -166,6 +167,58 @@ export async function exportLandmarkPairsAsNml(
   ]);
   const exportedTracing = { ...skeletonTracing, trees: new TreeMap(exportedTrees), treeGroups: [] };
   return serializeToNml(state, state.annotation, exportedTracing, await getBuildInfo(), false);
+}
+
+// Set by the alignment page whenever it changes. Unlike the pair info, the toolbar renders it,
+// so components subscribe to it with useAlignmentViewState.
+let alignmentViewState: AlignmentViewState = {
+  isTransformShown: true,
+  isAlignmentAvailable: false,
+};
+const alignmentViewStateListeners = new Set<() => void>();
+
+export function setAlignmentViewState(viewState: AlignmentViewState) {
+  alignmentViewState = viewState;
+  for (const listener of alignmentViewStateListeners) {
+    listener();
+  }
+}
+
+function subscribeToAlignmentViewState(onChange: () => void) {
+  alignmentViewStateListeners.add(onChange);
+  return () => {
+    alignmentViewStateListeners.delete(onChange);
+  };
+}
+
+export function useAlignmentViewState(): AlignmentViewState {
+  return useSyncExternalStore(subscribeToAlignmentViewState, () => alignmentViewState);
+}
+
+// The layer colors from before setOverlayLayerColors changed them.
+const originalLayerColors = new Map<string, Vector3>();
+
+// Shows the given layers in the given colors, or restores their original colors if colors is
+// null. Like other worker settings, the colors are not persisted (see settings_saga.ts).
+export function setOverlayLayerColors(colors: Record<string, Vector3> | null) {
+  if (colors == null) {
+    for (const [layerName, color] of originalLayerColors) {
+      Store.dispatch(updateLayerSettingAction(layerName, "color", color));
+    }
+    originalLayerColors.clear();
+    return;
+  }
+  const { layers } = Store.getState().datasetConfiguration;
+  for (const [layerName, color] of Object.entries(colors)) {
+    const layerConfiguration = layers[layerName];
+    if (layerConfiguration == null) {
+      continue;
+    }
+    if (!originalLayerColors.has(layerName)) {
+      originalLayerColors.set(layerName, layerConfiguration.color);
+    }
+    Store.dispatch(updateLayerSettingAction(layerName, "color", color));
+  }
 }
 
 // Tells the alignment view whether the alignment annotation has unsaved changes. Runs in the

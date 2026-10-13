@@ -45,8 +45,15 @@ The landmarks are saved automatically. Use the save button in the toolbar of the
 
 The alignment is computed automatically when you open an alignment and after every new, moved or deleted landmark.
 The moving layer is then shown transformed in the left view, and the fixed layer inversely transformed in the right view.
-To compute it only on request, switch off **Align automatically after every change** in the side panel (see below).
-Then press **t** or the **Align** button in the side panel.
+Each view always shows its own layer untransformed. The alignment only moves the other layer.
+
+To check an alignment, switch a view between showing the other layer aligned and untransformed: press **t** in that view, or use the transform button in its toolbar.
+If the other layer is hidden, it is shown again when you switch to the aligned display.
+
+If both layers are color layers, you can switch on **Color the layers green and magenta** in the side panel.
+In a view that shows both layers, the fixed layer is then shown in green and the moving layer in magenta.
+Where the layers match, they add up to gray. Misaligned structures show green or magenta edges.
+This is especially helpful for grayscale layers.
 
 An alignment needs at least four landmark pairs that don't all lie in one plane.
 If all landmarks lie in a single z slice, three pairs are enough. WEBKNOSSOS then assumes that the two layers are only shifted against each other along z.
@@ -56,7 +63,7 @@ More shortcuts, which work in the view under the mouse pointer:
 - **x**: show or hide the other layer in this view.
 - **y**: move the other view to the position that corresponds to the position of this view (needs a computed alignment).
 
-The side panel on the right is open when the alignment view starts. The table button in the toolbar of the left view hides and shows it. A link at the top of the panel leads back to the list of alignments. The panel shows whether the layers are aligned and whether the landmarks changed since the last alignment, lets you show the other layer in each view, and lists all landmark pairs.
+The side panel on the right is open when the alignment view starts. The table button in the toolbar of the left view hides and shows it. A link at the top of the panel leads back to the list of alignments. The panel shows whether the layers are aligned, lets you choose for each view whether it shows the other layer and whether that layer is aligned, and lists all landmark pairs.
 For each pair, the list shows how far apart its two landmarks still are after the alignment. A pair whose error is much higher than that of the others is highlighted, because it was probably placed imprecisely.
 The list also shows the color and the coordinates of both landmarks of each pair. Landmarks without a partner are highlighted.
 Click a pair to select its landmarks in both views and move both views to them.

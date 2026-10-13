@@ -20,7 +20,6 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { SidebarSection } from "dashboard/sidebar_section";
 import { pluralize } from "libs/utils";
-import isEqual from "lodash-es/isEqual";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import type { Vector3 } from "viewer/constants";
@@ -80,13 +79,17 @@ type Props = {
   layerNames: LayerNames;
   landmarks: Record<Side, Landmark[]>;
   alignment: Alignment | null;
-  isAutoAlignEnabled: boolean;
-  onAutoAlignChange: (isEnabled: boolean) => void;
+  // Why no alignment could be estimated, if so.
+  alignmentErrorMessage: string | null;
   isOtherLayerVisible: Record<Side, boolean>;
-  canApplyAlignmentToDataset: boolean;
-  onAlign: () => void;
   onToggleOtherLayer: (side: Side) => void;
-  onResetAlignment: () => void;
+  isTransformShown: Record<Side, boolean>;
+  onToggleTransform: (side: Side) => void;
+  // False if the layers can't be colored, see getOverlayLayerColors.
+  canColorOverlay: boolean;
+  isColorOverlayEnabled: boolean;
+  onColorOverlayChange: (isEnabled: boolean) => void;
+  canApplyAlignmentToDataset: boolean;
   onApplyAlignmentToDataset: () => void;
   onSelectPair: (pair: LandmarkPair) => void;
   onDeletePair: (pair: LandmarkPair) => void;
@@ -99,27 +102,43 @@ export function rgbColorString(color: Vector3): string {
   return `rgb(${color.map((component) => Math.round(component * 255)).join(",")})`;
 }
 
+function SwitchRow({
+  label,
+  checked,
+  disabled = false,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <Flex justify="space-between" align="center" gap={8}>
+      <Typography.Text type={disabled ? "secondary" : undefined}>{label}</Typography.Text>
+      <Switch size="small" checked={checked} disabled={disabled} onChange={onChange} />
+    </Flex>
+  );
+}
+
 function isCompletePair(pair: LandmarkPair): boolean {
   return pair.pairId != null && pair.landmarks.A != null && pair.landmarks.B != null;
 }
 
 function AlignmentStatus({
-  landmarks,
   pairs,
   alignment,
+  alignmentErrorMessage,
   meanResidual,
-  isAutoAlignEnabled,
 }: {
-  landmarks: Record<Side, Landmark[]>;
   pairs: LandmarkPair[];
   alignment: Alignment | null;
+  alignmentErrorMessage: string | null;
   meanResidual: number | null;
-  isAutoAlignEnabled: boolean;
 }) {
   const completePairCount = pairs.filter(isCompletePair).length;
   // Each incomplete row has one landmark.
   const unpairedLandmarkCount = pairs.length - completePairCount;
-  const isAlignmentOutdated = alignment != null && !isEqual(alignment.landmarks, landmarks);
   return (
     <Flex vertical gap={4}>
       {alignment != null ? (
@@ -144,10 +163,11 @@ function AlignmentStatus({
           against each other along z.
         </Typography.Text>
       ) : null}
-      {isAlignmentOutdated && !isAutoAlignEnabled ? (
-        <Typography.Text type="warning">
-          The landmarks changed since the last alignment. Align again to update it.
-        </Typography.Text>
+      {/* With too few pairs, the line above already says why. */}
+      {alignment == null &&
+      alignmentErrorMessage != null &&
+      completePairCount >= MIN_LANDMARK_PAIR_COUNT ? (
+        <Typography.Text type="warning">{alignmentErrorMessage}</Typography.Text>
       ) : null}
     </Flex>
   );
@@ -307,13 +327,15 @@ export function LandmarkPanel({
   layerNames,
   landmarks,
   alignment,
-  isAutoAlignEnabled,
-  onAutoAlignChange,
+  alignmentErrorMessage,
   isOtherLayerVisible,
-  canApplyAlignmentToDataset,
-  onAlign,
   onToggleOtherLayer,
-  onResetAlignment,
+  isTransformShown,
+  onToggleTransform,
+  canColorOverlay,
+  isColorOverlayEnabled,
+  onColorOverlayChange,
+  canApplyAlignmentToDataset,
   onApplyAlignmentToDataset,
   onSelectPair,
   onDeletePair,
@@ -337,14 +359,12 @@ export function LandmarkPanel({
       />
       <SidebarSection label="Alignment">
         <AlignmentStatus
-          landmarks={landmarks}
           pairs={pairs}
           alignment={alignment}
+          alignmentErrorMessage={alignmentErrorMessage}
           meanResidual={meanResidual}
-          isAutoAlignEnabled={isAutoAlignEnabled}
         />
         <Flex gap={8} wrap style={{ marginTop: 8 }}>
-          <Button onClick={onAlign}>Align (T)</Button>
           <Tooltip
             title={
               canApplyAlignmentToDataset
@@ -360,41 +380,40 @@ export function LandmarkPanel({
               Apply to dataset…
             </Button>
           </Tooltip>
-          <Tooltip title="Show both layers untransformed again">
-            <Button type="link" onClick={onResetAlignment} disabled={alignment == null}>
-              Reset
-            </Button>
-          </Tooltip>
-        </Flex>
-        <Flex
-          justify="space-between"
-          align="center"
-          gap={8}
-          style={{ alignSelf: "stretch", marginTop: 8 }}
-        >
-          <Typography.Text>Align automatically after every change</Typography.Text>
-          <Switch size="small" checked={isAutoAlignEnabled} onChange={onAutoAlignChange} />
         </Flex>
       </SidebarSection>
       <SidebarSection label="View">
         {SIDES.map((side) => (
-          <Flex
-            key={side}
-            justify="space-between"
-            align="center"
-            gap={8}
-            style={{ alignSelf: "stretch" }}
-          >
-            <Typography.Text>
-              Show {layerNames[OTHER_SIDE[side]]} in the {side === "A" ? "left" : "right"} view
+          <Flex key={side} vertical style={{ alignSelf: "stretch", marginBottom: 8 }}>
+            <Typography.Text strong>
+              {side === "A" ? "Left" : "Right"} view ({layerNames[side]})
             </Typography.Text>
-            <Switch
-              size="small"
+            <SwitchRow
+              label={`Show ${layerNames[OTHER_SIDE[side]]} (X)`}
               checked={isOtherLayerVisible[side]}
               onChange={() => onToggleOtherLayer(side)}
             />
+            <SwitchRow
+              label={`Show ${layerNames[OTHER_SIDE[side]]} aligned (T)`}
+              checked={isTransformShown[side]}
+              disabled={alignment == null}
+              onChange={() => onToggleTransform(side)}
+            />
           </Flex>
         ))}
+        {canColorOverlay ? (
+          <Flex vertical style={{ alignSelf: "stretch" }}>
+            <SwitchRow
+              label="Color the layers green and magenta"
+              checked={isColorOverlayEnabled}
+              onChange={onColorOverlayChange}
+            />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Recommended for grayscale layers. In a view that shows both layers, matching
+              structures look gray, and misaligned ones show green or magenta edges.
+            </Typography.Text>
+          </Flex>
+        ) : null}
       </SidebarSection>
       <Flex justify="space-between" align="center">
         <div className="sidebar-label">Landmark pairs ({pairs.length})</div>
@@ -409,11 +428,8 @@ export function LandmarkPanel({
                 <li>Click on a structure in the left view.</li>
                 <li>Click on the same structure in the right view.</li>
                 <li>
-                  Repeat this for at least {MIN_LANDMARK_PAIR_COUNT} structures.{" "}
-                  {isAutoAlignEnabled
-                    ? "The layers are then aligned automatically."
-                    : "Then press "}
-                  {isAutoAlignEnabled ? null : <Typography.Text keyboard>T</Typography.Text>}
+                  Repeat this for at least {MIN_LANDMARK_PAIR_COUNT} structures. The layers are then
+                  aligned automatically.
                 </li>
               </ol>
             }
@@ -439,9 +455,9 @@ export function LandmarkPanel({
         )}
       </Flex>
       <Typography.Text type="secondary" style={{ fontSize: 12, marginTop: 8 }}>
-        In the view under the mouse: <Typography.Text keyboard>T</Typography.Text> align ·{" "}
-        <Typography.Text keyboard>X</Typography.Text> show the other layer ·{" "}
-        <Typography.Text keyboard>Y</Typography.Text> move the other view here
+        In the view under the mouse: <Typography.Text keyboard>T</Typography.Text> other layer
+        aligned or untransformed · <Typography.Text keyboard>X</Typography.Text> show the other
+        layer · <Typography.Text keyboard>Y</Typography.Text> move the other view here
       </Typography.Text>
     </Flex>
   );

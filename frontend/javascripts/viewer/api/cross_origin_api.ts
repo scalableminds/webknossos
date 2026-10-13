@@ -7,7 +7,9 @@ import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import {
   exportLandmarkPairsAsNml,
   importLandmarks,
+  setAlignmentViewState,
   setLandmarkPairInfo,
+  setOverlayLayerColors,
   useBigWarpShortcutRelay,
 } from "viewer/view/align_datasets/bigwarp_worker";
 
@@ -102,6 +104,18 @@ const handleMessage = async (event) => {
     case "setLandmarkPairInfo": {
       assertBigWarpWorker();
       setLandmarkPairInfo(args[0]);
+      break;
+    }
+
+    case "setAlignmentViewState": {
+      assertBigWarpWorker();
+      setAlignmentViewState(args[0]);
+      break;
+    }
+
+    case "setOverlayLayerColors": {
+      assertBigWarpWorker();
+      setOverlayLayerColors(args[0]);
       break;
     }
 

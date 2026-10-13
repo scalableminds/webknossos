@@ -43,10 +43,9 @@ export type LandmarkPair = {
   residual: number | null;
 };
 
-// The transform that is shown in the workers, and what it was computed from.
+// The transform estimated from the current landmark pairs.
 export type Alignment = {
   transformBtoA: Transform;
-  landmarks: Record<Side, Landmark[]>;
   // See estimateTransformBtoA.
   usedCopiesInNextSlice: boolean;
 };
@@ -280,6 +279,27 @@ export function estimateTransformBtoA(
 
 export function getLandmarkGroupPath(layerNames: LayerNames, side: Side): string[] {
   return [`Layer pair: ${layerNames.A} × ${layerNames.B}`, `${layerNames[side]} landmarks`];
+}
+
+const FIXED_LAYER_OVERLAY_COLOR: Vector3 = [0, 255, 0];
+const MOVING_LAYER_OVERLAY_COLOR: Vector3 = [255, 0, 255];
+
+// The colors of the two layers while a worker shows both: the fixed layer in green and the
+// moving layer in magenta, as in BigWarp. Where the layers match, they add up to gray, and
+// misaligned structures show colored edges. Null unless both are color layers, because
+// segmentation layers have no layer color.
+export function getOverlayLayerColors(
+  dataset: APIDataset,
+  layerNames: LayerNames,
+): Record<string, Vector3> | null {
+  const areColorLayers = SIDES.every(
+    (side) =>
+      dataset.dataSource.dataLayers.find((layer) => layer.name === layerNames[side])?.category ===
+      "color",
+  );
+  return areColorLayers
+    ? { [layerNames.A]: FIXED_LAYER_OVERLAY_COLOR, [layerNames.B]: MOVING_LAYER_OVERLAY_COLOR }
+    : null;
 }
 
 // The layers of the alignment that don't exist in the dataset (anymore), e.g. because they

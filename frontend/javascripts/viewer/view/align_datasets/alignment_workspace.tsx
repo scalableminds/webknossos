@@ -2,7 +2,7 @@ import { App, Button, Flex, Result, Spin, Splitter, Typography } from "antd";
 import classnames from "classnames";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useBlocker } from "react-router";
 import type { APIAnnotation, APIDataset } from "types/api_types";
 import { Identity4x4, type Vector3 } from "viewer/constants";
@@ -19,6 +19,8 @@ import {
   getLandmarkColor,
   getLandmarkPairInfo,
   getLandmarkTreeName,
+  getOverlayLayerColors,
+  type Landmark,
   type LandmarkPair,
   type LayerNames,
   OTHER_SIDE,
@@ -26,6 +28,7 @@ import {
   type Side,
 } from "./alignment_helpers";
 import {
+  type AlignmentViewState,
   type BigWarpCommand,
   getAlignmentSelectionUrl,
   getBigWarpStoreUrl,
@@ -62,23 +65,33 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
   const { modal } = App.useApp();
   const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(IS_LANDMARK_PANEL_INITIALLY_OPEN);
   const [landmarkPanelWidth, setLandmarkPanelWidth] = useState(DEFAULT_LANDMARK_PANEL_WIDTH);
-  const [alignment, setAlignment] = useState<Alignment | null>(null);
-  const transformBtoA = alignment?.transformBtoA ?? null;
   const [annotationName, setAnnotationName] = useState(landmarkAnnotation.name);
   const [annotationDescription, setAnnotationDescription] = useState(
     landmarkAnnotation.description,
   );
-  // If enabled, the transform is computed again whenever the landmarks change.
-  const [isAutoAlignEnabled, setIsAutoAlignEnabled] = useState(true);
   // Whether a worker also shows the layer of the other worker. Each worker initially shows
   // only its own layer (see applyBigWarpWorkerSettings).
   const [isOtherLayerVisible, setIsOtherLayerVisible] = useState<Record<Side, boolean>>({
     A: false,
     B: false,
   });
+  // Whether a worker shows the other layer aligned to its own layer or untransformed.
+  const [isTransformShown, setIsTransformShown] = useState<Record<Side, boolean>>({
+    A: true,
+    B: true,
+  });
+  // See getOverlayLayerColors.
+  const [isColorOverlayEnabled, setIsColorOverlayEnabled] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
-  // Whether the workers showed the other layer for an alignment yet, see align.
+  // Whether the workers showed the other layer for an alignment yet, see the effect below.
   const hasShownAlignmentRef = useRef(false);
+  // The effects below depend on the names, not on the object, which is created anew on every
+  // render.
+  const { A: fixedLayerName, B: movingLayerName } = layerNames;
+  const overlayColors = useMemo(
+    () => getOverlayLayerColors(dataset, { A: fixedLayerName, B: movingLayerName }),
+    [dataset, fixedLayerName, movingLayerName],
+  );
 
   // handleWorkerCommand and restartAfterReload are function declarations further below, so
   // they can be used here.
@@ -98,8 +111,18 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     : syncStatus !== "ready"
       ? syncStatus
       : null;
-  const isSyncReady = syncStatus === "ready";
   const hasUnsavedChanges = hasUnsyncedLandmarks || !isStoreSaved;
+  // Estimating the transform is cheap, so the alignment always matches the current landmarks.
+  const estimation = useMemo(() => estimateTransformBtoA(landmarks), [landmarks]);
+  const alignment: Alignment | null =
+    "transform" in estimation
+      ? {
+          transformBtoA: estimation.transform,
+          usedCopiesInNextSlice: estimation.usedCopiesInNextSlice,
+        }
+      : null;
+  const transformBtoA = alignment?.transformBtoA ?? null;
+  const isAlignmentAvailable = transformBtoA != null;
   const getOpenPairIds = (side: Side) =>
     overlayStatus == null ? getLandmarkPairInfo(landmarks, side).openPairIds : [];
 
@@ -134,17 +157,39 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     }
   }, [blocker]);
 
-  // Shows layer B transformed in worker A and layer A transformed (inversely) in worker B.
-  const showTransformInWorkers = async (transform: Transform | null) => {
-    await sendMessage("A", "setAffineLayerTransforms", [
-      layerNames.B,
-      transform?.affineMatrix ?? Identity4x4,
-    ]);
-    await sendMessage("B", "setAffineLayerTransforms", [
-      layerNames.A,
-      transform?.affineMatrixInv ?? Identity4x4,
-    ]);
-  };
+  // Shows layer B transformed in worker A and layer A transformed (inversely) in worker B, in
+  // each worker only if the transform is shown there.
+  useEffect(() => {
+    const otherLayerNames = { A: movingLayerName, B: fixedLayerName };
+    const matrices = { A: transformBtoA?.affineMatrix, B: transformBtoA?.affineMatrixInv };
+    for (const side of SIDES) {
+      const matrix = isTransformShown[side] ? matrices[side] : null;
+      sendMessage(side, "setAffineLayerTransforms", [otherLayerNames[side], matrix ?? Identity4x4]);
+    }
+  }, [sendMessage, fixedLayerName, movingLayerName, transformBtoA, isTransformShown]);
+
+  // The workers show this state in their toolbars.
+  useEffect(() => {
+    for (const side of SIDES) {
+      const viewState: AlignmentViewState = {
+        isTransformShown: isTransformShown[side],
+        isAlignmentAvailable,
+      };
+      sendMessage(side, "setAlignmentViewState", [viewState]);
+    }
+  }, [sendMessage, isTransformShown, isAlignmentAvailable]);
+
+  // While a worker shows both layers and the color overlay is enabled, the layers are colored
+  // so that misalignments stand out. Otherwise, the workers keep the original colors.
+  useEffect(() => {
+    if (overlayColors == null) {
+      return;
+    }
+    for (const side of SIDES) {
+      const colors = isColorOverlayEnabled && isOtherLayerVisible[side] ? overlayColors : null;
+      sendMessage(side, "setOverlayLayerColors", [colors]);
+    }
+  }, [sendMessage, overlayColors, isColorOverlayEnabled, isOtherLayerVisible]);
 
   const setOtherLayerVisibility = (side: Side, isVisible: boolean) => {
     setIsOtherLayerVisible((previous) => ({ ...previous, [side]: isVisible }));
@@ -155,61 +200,34 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     setOtherLayerVisibility(side, !isOtherLayerVisible[side]);
   };
 
-  // When aligning automatically, problems are not reported to the user. After a manual
-  // alignment and after the first automatic one (e.g. right after loading), both workers show
-  // the other layer, so that the user sees the result. Later automatic alignments keep the
-  // visibility that the user chose.
-  const align = async ({ isAutomatic }: { isAutomatic: boolean } = { isAutomatic: false }) => {
-    // The synced landmarks may miss a landmark that was placed right before.
-    const currentLandmarks = await fetchLandmarks().catch((error) => {
-      console.error(error);
-      return null;
-    });
-    if (currentLandmarks == null) {
-      if (!isAutomatic) {
-        Toast.error("Could not read the landmarks of the views.");
-      }
-      return;
-    }
-    const result = estimateTransformBtoA(currentLandmarks);
-    if ("errorMessage" in result) {
-      if (!isAutomatic) {
-        Toast.warning(result.errorMessage);
-      }
-      return;
-    }
-    setAlignment({
-      transformBtoA: result.transform,
-      landmarks: currentLandmarks,
-      usedCopiesInNextSlice: result.usedCopiesInNextSlice,
-    });
-    await showTransformInWorkers(result.transform);
-    if (!isAutomatic || !hasShownAlignmentRef.current) {
+  // The first alignment (e.g. right after loading) shows the other layer in both workers, so
+  // that the user sees the result. Afterwards, the visibility is left to the user.
+  const showOtherLayersForFirstAlignment = useEffectEvent(() => {
+    if (!hasShownAlignmentRef.current) {
       hasShownAlignmentRef.current = true;
       for (const side of SIDES) {
         setOtherLayerVisibility(side, true);
       }
     }
-  };
-
-  // Aligns right after the stored landmarks were loaded, and after every change of the
-  // landmarks if auto-align is enabled.
-  const alignAutomatically = useEffectEvent(() => align({ isAutomatic: true }));
+  });
   useEffect(() => {
-    if (isSyncReady) {
-      alignAutomatically();
+    if (isAlignmentAvailable) {
+      showOtherLayersForFirstAlignment();
     }
-  }, [isSyncReady]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Runs again whenever the landmarks change.
-  useEffect(() => {
-    if (isAutoAlignEnabled && isSyncReady) {
-      alignAutomatically();
-    }
-  }, [isAutoAlignEnabled, isSyncReady, landmarks]);
+  }, [isAlignmentAvailable]);
 
-  const resetAlignment = async () => {
-    setAlignment(null);
-    await showTransformInWorkers(null);
+  // Switches a worker between showing the other layer aligned and untransformed. The transform
+  // only moves the other layer, so that layer is shown, too.
+  const toggleTransform = (side: Side) => {
+    if ("errorMessage" in estimation) {
+      Toast.info(estimation.errorMessage);
+      return;
+    }
+    const isShown = !isTransformShown[side];
+    setIsTransformShown((previous) => ({ ...previous, [side]: isShown }));
+    if (isShown && !isOtherLayerVisible[side]) {
+      setOtherLayerVisibility(side, true);
+    }
   };
 
   const focusPosition = (side: Side, position: Vector3) => {
@@ -325,6 +343,25 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     });
   };
 
+  // The synced landmarks may miss a landmark that was placed right before, so the transform is
+  // estimated again from the current landmarks of the workers.
+  const applyCurrentAlignment = async () => {
+    let currentLandmarks: Record<Side, Landmark[]>;
+    try {
+      currentLandmarks = await fetchLandmarks();
+    } catch (error) {
+      console.error(error);
+      Toast.error("Could not read the landmarks of the views.");
+      return;
+    }
+    const result = estimateTransformBtoA(currentLandmarks);
+    if ("errorMessage" in result) {
+      Toast.warning(result.errorMessage);
+      return;
+    }
+    applyAlignment(result.transform);
+  };
+
   const applyAlignment = (transform: Transform) => {
     const { A: fixedLayerName, B: movingLayerName } = layerNames;
     const fixedLayer = dataset.dataSource.dataLayers.find((layer) => layer.name === fixedLayerName);
@@ -375,8 +412,8 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
 
   function handleWorkerCommand(side: Side, command: BigWarpCommand) {
     switch (command) {
-      case "align":
-        align();
+      case "toggleTransform":
+        toggleTransform(side);
         break;
       case "forceSave":
         forceSave();
@@ -458,14 +495,16 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
               updateAnnotation("setAnnotationDescription", description);
             }}
             alignment={alignment}
-            isAutoAlignEnabled={isAutoAlignEnabled}
-            onAutoAlignChange={setIsAutoAlignEnabled}
+            alignmentErrorMessage={"errorMessage" in estimation ? estimation.errorMessage : null}
             isOtherLayerVisible={isOtherLayerVisible}
-            canApplyAlignmentToDataset={dataset.isEditable}
-            onAlign={() => align()}
             onToggleOtherLayer={toggleOtherLayer}
-            onResetAlignment={resetAlignment}
-            onApplyAlignmentToDataset={() => transformBtoA != null && applyAlignment(transformBtoA)}
+            isTransformShown={isTransformShown}
+            onToggleTransform={toggleTransform}
+            canColorOverlay={overlayColors != null}
+            isColorOverlayEnabled={isColorOverlayEnabled}
+            onColorOverlayChange={setIsColorOverlayEnabled}
+            canApplyAlignmentToDataset={dataset.isEditable}
+            onApplyAlignmentToDataset={applyCurrentAlignment}
             onSelectPair={selectPair}
             onDeletePair={deletePair}
             onDownloadLandmarks={downloadLandmarks}

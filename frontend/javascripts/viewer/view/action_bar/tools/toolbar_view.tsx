@@ -20,10 +20,7 @@ import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import Store from "viewer/store";
-import {
-  isBigWarpPrimaryWorker,
-  isBigWarpWorker,
-} from "viewer/view/align_datasets/bigwarp_protocol";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import ButtonComponent from "viewer/view/components/button_component";
 import { ToolDropdown } from "../tool_dropdown";
 import { BigWarpAlignmentButtons } from "./bigwarp_specific_ui";
@@ -196,7 +193,7 @@ function ToolSpecificSettings({
 
   return (
     <>
-      {isBigWarpPrimaryWorker() ? <BigWarpAlignmentButtons /> : null}
+      {isBigWarpWorker() ? <BigWarpAlignmentButtons /> : null}
 
       {showSkeletonButtons ? <SkeletonSpecificButtons /> : null}
 

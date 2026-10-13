@@ -2,7 +2,7 @@
 
 Branch: `live-warp` (currently just a spike/demo, not production code)
 Owner: Michael Büßemeyer
-Last updated: 2026-10-13 (v19 — stable pairs via pair ids in tree names, §0.28; v18 — pairing made visible: same color per pair, focus on hover, next-step hint, select and delete pairs in the table, §0.27; v17 — landmark download as BigWarp CSV / NML for the dataset composition, §0.25; v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
+Last updated: 2026-10-13 (v20 — alignment always computed, `t` switches aligned/untransformed per view, optional green/magenta overlay, §0.29; v19 — stable pairs via pair ids in tree names, §0.28; v18 — pairing made visible: same color per pair, focus on hover, next-step hint, select and delete pairs in the table, §0.27; v17 — landmark download as BigWarp CSV / NML for the dataset composition, §0.25; v16 — worker settings and navigation lock-down incl. restart after an iframe reload, §0.24; v15 — alignment annotations get stored in the backend, with a selection page per dataset: full design in the section "Next iteration" below, decided in a Q&A round with Michael; v14 — sync now mirrors each side, so deletions and moves are saved, §0.23; v13 — code refactored into `viewer/view/align_datasets/` plus several sync bug fixes, see §0.21; transform estimation works for landmarks in a single z slice, §0.22; open items to resolve before human review collected in the section "Before human review" right below)
 
 > **Purpose of this file**: this feature spans multiple sessions and a lot of context
 > (old spike code, related PRs/issues, an external design doc). Context gets
@@ -303,6 +303,18 @@ Michael wants a stack later, once the whole feature is done. Planned layers, bot
 - "Last opened" tracking for annotations, for a better sort order (Q10: option b).
 - Opening shared alignments for editing by team members (Q3: option b).
 - Read-only alignment view (instead of only offering a copy).
+- **Ghost landmarks** (from the UX review, 2026-10-13): show the landmarks of the other view
+  in each view, transformed with the current alignment. The residuals would then be visible in
+  the image, not only as numbers in the table. Most useful next step for checking an alignment.
+- **Suggested partner** (from the UX review): once a transform exists, a new landmark in one
+  view gets a suggested partner in the other view, computed with the transform; the user only
+  corrects it. BigWarp has something related (Ctrl+Shift+click places a point in the other
+  image's space).
+- **One alignment annotation per dataset** (Michael's idea, 2026-10-13, to be designed
+  together): the left view is locked to the reference layer, the right view can switch between
+  all other layers. Landmarks of all pairs live in one annotation, all layers are aligned
+  together, and the effect is visible directly. Would replace the per-pair annotations and the
+  star workflow above.
 
 ---
 
@@ -1419,6 +1431,34 @@ undone; also an accidentally deleted landmark couldn't be restored); explicit pa
   (`Landmark n`) instead of a row number and highlights unpaired rows
   (`.is-unpaired-landmark`). The status line counts landmarks without a partner instead of
   comparing counts.
+
+### 0.29 Checking an alignment: always computed, `t` switches the display (2026-10-13)
+
+From the UX review with Michael:
+- The landmark panel starts open (`IS_LANDMARK_PANEL_INITIALLY_OPEN` in `bigwarp_protocol.ts`,
+  shared by the page and the panel toggle in the primary worker). It has a "Back to all
+  alignments" link at the top.
+- **The alignment is always computed** from the current landmarks (`useMemo` over
+  `estimateTransformBtoA` in the workspace). The auto-align switch, the "Align" buttons (panel
+  and toolbar) and "Reset" are gone. "Apply to dataset" estimates again from freshly fetched
+  landmarks, so a landmark placed in the last sync interval is included.
+- **`t` switches a view between showing the other layer aligned and untransformed**, like the
+  warped/raw switch in BigWarp (`isTransformShown` per side, command `toggleTransform`). Each
+  view draws its own layer natively, so the switch only moves the other layer; switching to
+  "aligned" also shows the other layer if it was hidden. Both workers have a toggle button in
+  their toolbar with the icons of `LayerTransformationIcon`. The page sends each worker its
+  `AlignmentViewState` (`setAlignmentViewState`); the toolbar reads it through
+  `useAlignmentViewState` (`useSyncExternalStore` over a module variable in
+  `bigwarp_worker.ts`, no Redux field). The panel has the same switch per view.
+- The first alignment of a session (also the one right after loading) shows the other layer
+  in both views; afterwards visibility is left to the user.
+- **Green/magenta overlay**, optional (BigWarp doesn't color grayscale images by default):
+  a switch in the panel, only offered if both layers are color layers
+  (`getOverlayLayerColors`). It colors the layers in each view that shows both; views showing
+  only their own layer keep the original colors (`setOverlayLayerColors`, which remembers
+  and restores them).
+- Future items (ghost landmarks, suggested partner, one annotation per dataset) are in the
+  follow-up list of the "Next iteration" section.
 
 ### 0.3 Not started / explicitly out of scope for this pass
 

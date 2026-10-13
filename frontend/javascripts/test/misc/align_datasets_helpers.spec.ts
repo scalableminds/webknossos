@@ -15,6 +15,7 @@ import {
   getMeanResidual,
   getMissingLayerNames,
   getNextLandmarkPairId,
+  getOverlayLayerColors,
   type Landmark,
   prepareLandmarkTreesForImport,
 } from "viewer/view/align_datasets/alignment_helpers";
@@ -296,6 +297,24 @@ describe("Alignment annotation helpers", () => {
     expect(getAlignmentEditBlocker(createAnnotation({ isLockedByOwner: true }), "owner")).toBe(
       "locked",
     );
+  });
+
+  it("colors the fixed layer green and the moving layer magenta if both are color layers", () => {
+    const createDataset = (categoryB: string) =>
+      ({
+        dataSource: {
+          dataLayers: [
+            { name: "fixed", category: "color" },
+            { name: "moving", category: categoryB },
+          ],
+        },
+      }) as APIDataset;
+    const layerNames = { A: "fixed", B: "moving" };
+    expect(getOverlayLayerColors(createDataset("color"), layerNames)).toEqual({
+      fixed: [0, 255, 0],
+      moving: [255, 0, 255],
+    });
+    expect(getOverlayLayerColors(createDataset("segmentation"), layerNames)).toBeNull();
   });
 
   it("finds the layers of an alignment that the dataset doesn't have", () => {

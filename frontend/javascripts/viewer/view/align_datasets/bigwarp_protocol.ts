@@ -61,14 +61,22 @@ export function getBigWarpWorkerUrl(
   return `/datasets/${getReadableURLPart(dataset)}/sandbox/skeleton?${params}`;
 }
 
-// Actions that a worker asks the alignment page to perform. "toggleOtherLayer" and
-// "syncOtherView" refer to the worker that sent the command.
+// Actions that a worker asks the alignment page to perform. "toggleTransform",
+// "toggleOtherLayer" and "syncOtherView" refer to the worker that sent the command.
 export type BigWarpCommand =
-  | "align"
+  | "toggleTransform"
   | "forceSave"
   | "toggleLandmarkPanel"
   | "toggleOtherLayer"
   | "syncOtherView";
+
+// What the alignment page tells a worker about its view, for the worker's toolbar.
+export type AlignmentViewState = {
+  // Whether the worker shows the other layer aligned to its own layer or untransformed.
+  isTransformShown: boolean;
+  // Whether there are enough landmark pairs to compute an alignment.
+  isAlignmentAvailable: boolean;
+};
 
 export const BIG_WARP_COMMAND_MESSAGE_TYPE = "bigwarpCommand";
 

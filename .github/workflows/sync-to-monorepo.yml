@@ -23,8 +23,24 @@ env:
   COPYBARA_CLIENT_ID: ${{ secrets.COPYBARA_CLIENT_ID }}
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      from_mono: ${{ steps.trailer.outputs.from_mono }}
+    steps:
+      - name: Look for a Mono-RevId trailer
+        id: trailer
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if printf '%s\n' "$MESSAGE" | git interpret-trailers --parse | grep -q '^Mono-RevId: '; then
+            echo "from_mono=true" >> "$GITHUB_OUTPUT"; echo "came from the monorepo, not syncing back"
+          fi
+
   dispatch:
-    if: ${{ !contains(github.event.head_commit.message, 'Mono-RevId:') }}
+    needs: check
+    # a separate job, so that skipped pushes never enter the concurrency group
+    if: needs.check.outputs.from_mono != 'true'
     runs-on: ubuntu-latest
     # on the job, not the workflow: skipped runs must not cancel a pending dispatch
     concurrency:

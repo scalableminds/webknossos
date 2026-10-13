@@ -5,11 +5,16 @@ import dayjs from "dayjs";
 import type { APIOrganization } from "types/api_types";
 import { useCanRequestUpgrades } from "./organization_hooks";
 import {
+  canBuyQuotaUpgrades,
   canExtendPricingPlan,
+  canUpgradePricingPlan,
   formatPricingPlanName,
+  getPlanEndLabel,
   hasPlanEndDate,
+  hasPricingPlanExceededStorage,
   hasPricingPlanExpired,
   isPlanAboutToExpire,
+  isTrialPlan,
   PRICING_PAGE_URL,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
@@ -24,12 +29,13 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
   const isUrgent = hasExpired || isPlanAboutToExpire(organization);
   const timeLeft = dayjs(organization.paidUntil).fromNow(true);
   const planName = formatPricingPlanName(organization.pricingPlan);
+  const planNoun = isTrialPlan(organization.pricingPlan) ? "trial" : "plan";
 
   let statusText: React.ReactNode;
   if (hasExpired) {
-    statusText = "Your plan has ended. Extend it to restore all users and features.";
+    statusText = `Your ${planNoun} has ended. Extend it to restore all users and features.`;
   } else if (isUrgent) {
-    statusText = `Your plan ends in ${timeLeft}. Extend it to keep all users and features.`;
+    statusText = `Your ${planNoun} ends in ${timeLeft}. Extend it to keep all users and features.`;
   } else {
     statusText = `Your next renewal is in ${timeLeft}.`;
   }
@@ -54,7 +60,7 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
         </Flex>
         <div style={{ flex: "1 1 240px", minWidth: 0 }}>
           <Typography.Text strong style={{ fontSize: 16, display: "block" }}>
-            {planName} · {hasExpired ? "expired on" : "paid until"}{" "}
+            {planName} · {getPlanEndLabel(organization)}{" "}
             <FormattedDate timestamp={organization.paidUntil} dateOnly />
           </Typography.Text>
           <Typography.Text type={isUrgent ? "warning" : "secondary"}>
@@ -82,22 +88,57 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
   const hasPlanExpired = hasPricingPlanExpired(organization);
   const canRequestUpgrades = useCanRequestUpgrades();
 
-  const message = hasPlanExpired
-    ? "Your WEBKNOSSOS plan has expired. Extend it to restore all users and features."
-    : "Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account from being blocked.";
-  const actionButton = hasPlanExpired ? (
-    <Button size="small" type="primary" onClick={() => UpgradePricingPlanModal.extendPricingPlan()}>
-      Extend Plan Now
-    </Button>
-  ) : (
-    <Button
-      size="small"
-      type="primary"
-      onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}
-    >
-      Upgrade Now
-    </Button>
-  );
+  const overLimitMessage =
+    "Your organization is using more users or storage space than included in your current plan.";
+
+  let message: React.ReactNode;
+  let actionButton: React.ReactNode = null;
+  if (hasPlanExpired) {
+    message = "Your WEBKNOSSOS plan has expired. Extend it to restore all users and features.";
+    actionButton = (
+      <Button
+        size="small"
+        type="primary"
+        onClick={() => UpgradePricingPlanModal.extendPricingPlan()}
+      >
+        Extend Plan Now
+      </Button>
+    );
+  } else if (canUpgradePricingPlan(organization.pricingPlan)) {
+    message = `${overLimitMessage} Upgrade now to avoid your account from being blocked.`;
+    actionButton = (
+      <Button
+        size="small"
+        type="primary"
+        onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}
+      >
+        Upgrade Now
+      </Button>
+    );
+  } else if (canBuyQuotaUpgrades(organization.pricingPlan)) {
+    // The backend only counts users towards the exceeded state, storage is checked here.
+    const exceededQuotas: Array<"users" | "storage"> = hasPricingPlanExceededStorage(organization)
+      ? ["users", "storage"]
+      : ["users"];
+    message = `${overLimitMessage} Add more to avoid your account from being blocked.`;
+    actionButton = (
+      <Button
+        size="small"
+        type="primary"
+        onClick={() => UpgradePricingPlanModal.upgradeQuotas(exceededQuotas)}
+      >
+        Add Users or Storage
+      </Button>
+    );
+  } else {
+    // Custom limits are negotiated individually.
+    message = (
+      <>
+        {overLimitMessage} <a href="mailto:support@webknossos.org">Get in touch</a> to adjust your
+        plan.
+      </>
+    );
+  }
 
   return (
     <Alert

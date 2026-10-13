@@ -24,6 +24,7 @@ import {
   formatPricingPlanName,
   formatStorage,
   getDaysUntilPlanExpires,
+  getPlanEndLabel,
   hasPricingPlanExpired,
   isCreditBalanceLow,
   isPlanAboutToExpire,
@@ -154,13 +155,21 @@ export function PlanSummaryBar() {
         {daysLeft != null ? (
           <>
             {" "}
-            · paid until <FormattedDate timestamp={organization.paidUntil} dateOnly />{" "}
+            ·{" "}
             {hasExpired ? (
-              <Typography.Text type="danger">(expired)</Typography.Text>
-            ) : (
-              <Typography.Text type={isPlanAboutToExpire(organization) ? "warning" : "secondary"}>
-                ({daysLeft} {pluralize("day", daysLeft)} left)
+              // The label already says "expired on" / "ended on", so it's colored instead of suffixed.
+              <Typography.Text type="danger">
+                {getPlanEndLabel(organization)}{" "}
+                <FormattedDate timestamp={organization.paidUntil} dateOnly />
               </Typography.Text>
+            ) : (
+              <>
+                {getPlanEndLabel(organization)}{" "}
+                <FormattedDate timestamp={organization.paidUntil} dateOnly />{" "}
+                <Typography.Text type={isPlanAboutToExpire(organization) ? "warning" : "secondary"}>
+                  ({daysLeft} {pluralize("day", daysLeft)} left)
+                </Typography.Text>
+              </>
             )}
           </>
         ) : null}

@@ -65,7 +65,8 @@ function getStorageHint(organization: APIOrganization): string | undefined {
   if (overLimitBytes > 0) return `${formatStorage(overLimitBytes)} over the limit`;
   if (organization.pricingPlan === PricingPlanEnum.Personal) return UPGRADE_TO_TEAM_HINT;
   const fillLevel = getFillLevel(usedStorageBytes, includedStorageBytes);
-  return fillLevel != null ? `${Math.round(fillLevel * 100)}% used` : undefined;
+  // Rounds down like formatStorage, so storage just below the limit doesn't read as "100% used".
+  return fillLevel != null ? `${Math.floor(fillLevel * 100)}% used` : undefined;
 }
 
 // Personal can only upgrade the plan. Unlimited quotas need no top-up.

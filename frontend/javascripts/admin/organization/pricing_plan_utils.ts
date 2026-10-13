@@ -161,6 +161,13 @@ export function isTrialPlan(pricingPlan: PricingPlanEnum): boolean {
   return pricingPlan === PricingPlanEnum.TeamTrial || pricingPlan === PricingPlanEnum.PowerTrial;
 }
 
+// Shown before the end date. Trials aren't paid for, so they "end" instead.
+export function getPlanEndLabel(organization: APIOrganization): string {
+  const hasExpired = hasPricingPlanExpired(organization);
+  if (isTrialPlan(organization.pricingPlan)) return hasExpired ? "ended on" : "ends on";
+  return hasExpired ? "expired on" : "paid until";
+}
+
 // Maps trial plans to the plan they are a trial of, e.g. "Power_Trial" -> "Power".
 export function getBasePricingPlan(pricingPlan: PricingPlanEnum): PricingPlanEnum {
   if (pricingPlan === PricingPlanEnum.TeamTrial) return PricingPlanEnum.Team;

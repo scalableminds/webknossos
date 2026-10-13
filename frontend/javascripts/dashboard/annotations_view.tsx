@@ -127,14 +127,14 @@ const persistence = new Persistence<PartialState>(
     searchQuery: PropTypes.string,
     shouldShowArchivedAnnotations: PropTypes.bool,
   },
-  "explorativeList",
+  "annotationList",
 );
 
 function formatUserName(user: APIUserCompact) {
   return `${user.firstName} ${user.lastName}`;
 }
 
-class ExplorativeAnnotationsView extends PureComponent<Props, State> {
+class AnnotationsView extends PureComponent<Props, State> {
   state: State = {
     shouldShowArchivedAnnotations: false,
     archivedModeState: {
@@ -442,7 +442,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
     this.props.modal.confirm({
       title: "Archive Annotations",
-      content: `Are you sure you want to archive ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that annotations that you don't own are ignored.`,
+      content: `Are you sure you want to archive ${selectedAnnotations.length} annotations matching the current search query / tags? Note that annotations that you don't own are ignored.`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);
         const data = await finishAllAnnotations(selectedAnnotationIds);
@@ -1000,4 +1000,4 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   }
 }
 
-export default withModal(ExplorativeAnnotationsView);
+export default withModal(AnnotationsView);

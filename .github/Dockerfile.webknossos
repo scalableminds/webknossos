@@ -12,8 +12,8 @@ RUN mkdir -p /webknossos \
   && chown webknossos:webknossos /webknossos /webknossos/disk
 WORKDIR /webknossos
 
-# Copy compiled Scala output from a previous build step, e.g. output of the Docker-dev image
-COPY --chown=webknossos:webknossos target/universal/stage .
+# Copy the app staged by a previous build step (./mill stage)
+COPY --chown=webknossos:webknossos out/stage.dest .
 
 RUN chmod +x bin/webknossos \
   && chmod +x tools/postgres/dbtool.js \

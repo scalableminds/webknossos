@@ -8,7 +8,7 @@ export const buildInfo: APIBuildInfoWk = {
     ciBuild: "23138",
     scalaVersion: "2.12.15",
     version: "23138",
-    sbtVersion: "1.6.2",
+    millVersion: "1.3.0",
     commitDate: "Tue May 23 10:24:41 2023 +0200",
   },
   "webknossos-wrap": {

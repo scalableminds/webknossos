@@ -130,7 +130,7 @@ const viteConfig = {
           "util",
           "webknossos-jni",
           "conf",
-          "project",
+          "out",
           "docs",
           "fossildb",
           "target",

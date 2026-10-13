@@ -1,0 +1,3 @@
+# Build context for Dockerfile.datastore (the repository root): only the staged app
+*
+!out/webknossos-datastore/stage.dest/

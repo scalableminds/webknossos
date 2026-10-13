@@ -13,7 +13,8 @@ WORKDIR /webknossos-datastore
 
 VOLUME /webknossos-datastore/binaryData /tmp
 
-COPY --chown=webknossos:webknossos target/universal/stage .
+# Copy the app staged by a previous build step (./mill webknossos-datastore.stage)
+COPY --chown=webknossos:webknossos out/webknossos-datastore/stage.dest .
 
 RUN chmod +x bin/webknossos-datastore \
   && chmod go+w .

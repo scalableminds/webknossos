@@ -1,0 +1,3 @@
+# Build context for Dockerfile.tracingstore (the repository root): only the staged app
+*
+!out/webknossos-tracingstore/stage.dest/

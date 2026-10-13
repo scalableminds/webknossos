@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
-option(SBT "Set if invoked from sbt-jni" OFF)
-
-# Define project and related variables. (required by sbt-jni) please use semantic versioning
+# Built by the webknossos-jni module in build.mill
+# Define project and related variables. please use semantic versioning
 project (webknossosJni)
 set(PROJECT_VERSION_MAJOR 0)
 set(PROJECT_VERSION_MINOR 0)
@@ -27,7 +26,7 @@ file(GLOB LIB_SRC
 
 
 # Setup installation targets
-# (required by sbt-jni) major version should always be appended to library name
+# major version should always be appended to library name (the datastore loads webknossosJni0)
 set (LIB_NAME ${PROJECT_NAME}${PROJECT_VERSION_MAJOR})
 add_library(${LIB_NAME} SHARED ${LIB_SRC})
 

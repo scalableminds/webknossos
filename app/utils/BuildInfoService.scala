@@ -14,9 +14,7 @@ class BuildInfoService @Inject() (releaseInformationDAO: ReleaseInformationDAO, 
     for {
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
     } yield Json.obj(
-      "webknossos" -> Json.toJson(
-        webknossos.BuildInfo.toMap.view.mapValues(_.toString).filterKeys(_ != "certificatePublicKey").toMap
-      ),
+      "webknossos" -> Json.toJson(webknossos.BuildInfo.toMap - "certificatePublicKey"),
       "schemaVersion" -> schemaVersion.toOption,
       "httpApiVersioning" -> apiVersioningInfo,
       "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,

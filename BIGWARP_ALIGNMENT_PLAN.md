@@ -1459,6 +1459,12 @@ From the UX review with Michael:
   and restores them).
 - Future items (ghost landmarks, suggested partner, one annotation per dataset) are in the
   follow-up list of the "Next iteration" section.
+- **Panel toggle** moved to the right end of the right worker's navbar (`trailingNavItems` in
+  `navbar.tsx`, `LandmarkPanelToggleButton`), next to the panel it opens. Its state comes from
+  `AlignmentViewState.isLandmarkPanelOpen`, so the shared initial-value constant is gone.
+- **Save button** moved from the left worker's toolbar into the panel header, because it saves
+  the annotation of both views. It shows "Save"/"Saved" from the page's `hasUnsavedChanges`.
+  The `forceSave` worker command is gone.
 
 ### 0.3 Not started / explicitly out of scope for this pass
 

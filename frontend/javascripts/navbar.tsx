@@ -70,6 +70,7 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_actions";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
+import { LandmarkPanelToggleButton } from "viewer/view/action_bar/tools/bigwarp_specific_ui";
 import {
   isBigWarpPrimaryWorker,
   isBigWarpWorker,
@@ -976,6 +977,11 @@ function Navbar() {
 
   if (!(isAuthenticated || hideNavbarLogin) && !isAlignmentWorker) {
     trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
+  }
+
+  // The landmark panel is right of the secondary worker.
+  if (isAlignmentWorker && !isBigWarpPrimaryWorker()) {
+    trailingNavItems.push(<LandmarkPanelToggleButton key="landmark-panel-toggle" />);
   }
 
   if (!isAlignmentWorker) {

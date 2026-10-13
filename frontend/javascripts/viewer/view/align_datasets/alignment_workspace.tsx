@@ -33,7 +33,6 @@ import {
   getAlignmentSelectionUrl,
   getBigWarpStoreUrl,
   getBigWarpWorkerUrl,
-  IS_LANDMARK_PANEL_INITIALLY_OPEN,
 } from "./bigwarp_protocol";
 import {
   getBigWarpCsvFileName,
@@ -63,7 +62,7 @@ type OverlayStatus = Exclude<LandmarkSyncStatus, "ready"> | "restarting";
 
 export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, onRestart }: Props) {
   const { modal } = App.useApp();
-  const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(IS_LANDMARK_PANEL_INITIALLY_OPEN);
+  const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(true);
   const [landmarkPanelWidth, setLandmarkPanelWidth] = useState(DEFAULT_LANDMARK_PANEL_WIDTH);
   const [annotationName, setAnnotationName] = useState(landmarkAnnotation.name);
   const [annotationDescription, setAnnotationDescription] = useState(
@@ -168,16 +167,17 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     }
   }, [sendMessage, fixedLayerName, movingLayerName, transformBtoA, isTransformShown]);
 
-  // The workers show this state in their toolbars.
+  // The workers show this state in their navbars.
   useEffect(() => {
     for (const side of SIDES) {
       const viewState: AlignmentViewState = {
         isTransformShown: isTransformShown[side],
         isAlignmentAvailable,
+        isLandmarkPanelOpen,
       };
       sendMessage(side, "setAlignmentViewState", [viewState]);
     }
-  }, [sendMessage, isTransformShown, isAlignmentAvailable]);
+  }, [sendMessage, isTransformShown, isAlignmentAvailable, isLandmarkPanelOpen]);
 
   // While a worker shows both layers and the color overlay is enabled, the layers are colored
   // so that misalignments stand out. Otherwise, the workers keep the original colors.
@@ -321,11 +321,11 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
   };
 
   // Saves the landmark annotation right away instead of waiting for its auto-save.
-  // Reloading this page closes all iframes at once, which may interrupt the auto-save.
+  // Reloading this page closes all iframes at once, which may interrupt the auto-save. The
+  // save button in the panel shows when the annotation is saved.
   const forceSave = async () => {
     try {
       await sendMessage("store", "save");
-      Toast.success("Saved the landmark annotation.");
     } catch (error) {
       console.error(error);
       Toast.error("Could not save the landmark annotation.");
@@ -414,9 +414,6 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     switch (command) {
       case "toggleTransform":
         toggleTransform(side);
-        break;
-      case "forceSave":
-        forceSave();
         break;
       case "toggleLandmarkPanel":
         setIsLandmarkPanelOpen((isOpen) => !isOpen);
@@ -508,6 +505,8 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
             onSelectPair={selectPair}
             onDeletePair={deletePair}
             onDownloadLandmarks={downloadLandmarks}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onSave={forceSave}
           />
         ) : null}
       </Splitter.Panel>

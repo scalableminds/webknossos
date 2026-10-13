@@ -174,6 +174,7 @@ export async function exportLandmarkPairsAsNml(
 let alignmentViewState: AlignmentViewState = {
   isTransformShown: true,
   isAlignmentAvailable: false,
+  isLandmarkPanelOpen: true,
 };
 const alignmentViewStateListeners = new Set<() => void>();
 

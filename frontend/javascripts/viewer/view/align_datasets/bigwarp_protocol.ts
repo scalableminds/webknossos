@@ -65,7 +65,6 @@ export function getBigWarpWorkerUrl(
 // "toggleOtherLayer" and "syncOtherView" refer to the worker that sent the command.
 export type BigWarpCommand =
   | "toggleTransform"
-  | "forceSave"
   | "toggleLandmarkPanel"
   | "toggleOtherLayer"
   | "syncOtherView";
@@ -76,13 +75,10 @@ export type AlignmentViewState = {
   isTransformShown: boolean;
   // Whether there are enough landmark pairs to compute an alignment.
   isAlignmentAvailable: boolean;
+  isLandmarkPanelOpen: boolean;
 };
 
 export const BIG_WARP_COMMAND_MESSAGE_TYPE = "bigwarpCommand";
-
-// The alignment page and the toggle button in the primary worker both track whether the
-// landmark panel is open, so both need the same initial value.
-export const IS_LANDMARK_PANEL_INITIALLY_OPEN = true;
 
 export function sendCommandToAlignmentPage(command: BigWarpCommand) {
   window.parent.postMessage(

@@ -39,7 +39,7 @@ If you delete a landmark in one view, its partner in the other view keeps its pa
 The other pairs don't change.
 To remove a whole pair, use its delete button in the side panel (see below).
 Landmarks without a partner are not used for the alignment.
-The landmarks are saved automatically. Use the save button in the toolbar of the left view to save right away.
+The landmarks are saved automatically. Use the save button at the top of the side panel to save right away.
 
 ## Computing the Alignment
 
@@ -63,7 +63,7 @@ More shortcuts, which work in the view under the mouse pointer:
 - **x**: show or hide the other layer in this view.
 - **y**: move the other view to the position that corresponds to the position of this view (needs a computed alignment).
 
-The side panel on the right is open when the alignment view starts. The table button in the toolbar of the left view hides and shows it. A link at the top of the panel leads back to the list of alignments. The panel shows whether the layers are aligned, lets you choose for each view whether it shows the other layer and whether that layer is aligned, and lists all landmark pairs.
+The side panel on the right is open when the alignment view starts. The table button at the right end of the right view's navbar hides and shows it. A link at the top of the panel leads back to the list of alignments. The panel shows whether the layers are aligned, lets you choose for each view whether it shows the other layer and whether that layer is aligned, and lists all landmark pairs.
 For each pair, the list shows how far apart its two landmarks still are after the alignment. A pair whose error is much higher than that of the others is highlighted, because it was probably placed imprecisely.
 The list also shows the color and the coordinates of both landmarks of each pair. Landmarks without a partner are highlighted.
 Click a pair to select its landmarks in both views and move both views to them.

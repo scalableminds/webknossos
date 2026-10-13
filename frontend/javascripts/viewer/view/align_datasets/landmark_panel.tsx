@@ -3,6 +3,7 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   NodeIndexOutlined,
+  SaveOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -18,6 +19,7 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { AsyncButton } from "components/async_clickables";
 import { SidebarSection } from "dashboard/sidebar_section";
 import { pluralize } from "libs/utils";
 import { useEffect, useRef, useState } from "react";
@@ -96,6 +98,9 @@ type Props = {
   onDownloadLandmarks: (format: LandmarkExportFormat) => void;
   // The page that lists the alignments of the dataset.
   alignmentListUrl: string;
+  // Whether the alignment annotation has changes that are not saved yet.
+  hasUnsavedChanges: boolean;
+  onSave: () => Promise<void>;
 };
 
 export function rgbColorString(color: Vector3): string {
@@ -211,6 +216,8 @@ function AnnotationHeader({
   description,
   layerNames,
   alignmentListUrl,
+  hasUnsavedChanges,
+  onSave,
   onChangeName,
   onChangeDescription,
 }: {
@@ -218,15 +225,29 @@ function AnnotationHeader({
   description: string;
   layerNames: LayerNames;
   alignmentListUrl: string;
+  hasUnsavedChanges: boolean;
+  onSave: () => Promise<void>;
   onChangeName: (name: string) => void;
   onChangeDescription: (description: string) => void;
 }) {
   return (
     <>
-      {/* Asks first if the landmarks aren't saved yet (see the blocker in alignment_workspace.tsx). */}
-      <Link to={alignmentListUrl} style={{ alignSelf: "flex-start", marginBottom: 8 }}>
-        <ArrowLeftOutlined /> Back to all alignments
-      </Link>
+      <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
+        {/* Asks first if the landmarks aren't saved yet (see the blocker in alignment_workspace.tsx). */}
+        <Link to={alignmentListUrl}>
+          <ArrowLeftOutlined /> Back to all alignments
+        </Link>
+        <Tooltip title="The landmarks are saved automatically. Click to save right away.">
+          <AsyncButton
+            size="small"
+            icon={<SaveOutlined />}
+            disabled={!hasUnsavedChanges}
+            onClick={onSave}
+          >
+            {hasUnsavedChanges ? "Save" : "Saved"}
+          </AsyncButton>
+        </Tooltip>
+      </Flex>
       <AnnotationIdentity
         name={name}
         description={description}
@@ -341,6 +362,8 @@ export function LandmarkPanel({
   onDeletePair,
   onDownloadLandmarks,
   alignmentListUrl,
+  hasUnsavedChanges,
+  onSave,
 }: Props) {
   const pairs = getLandmarkPairs(landmarks, alignment?.transformBtoA ?? null);
   const meanResidual = getMeanResidual(pairs);
@@ -354,6 +377,8 @@ export function LandmarkPanel({
         description={annotationDescription}
         layerNames={layerNames}
         alignmentListUrl={alignmentListUrl}
+        hasUnsavedChanges={hasUnsavedChanges}
+        onSave={onSave}
         onChangeName={onChangeAnnotationName}
         onChangeDescription={onChangeAnnotationDescription}
       />

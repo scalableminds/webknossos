@@ -105,6 +105,12 @@ object Msg {
       val notFound: String = "Could not determine annotation access restrictions."
       val failedToCheck: String = "Could not check annotation access."
     }
+    object LayerAlignment {
+      val sameLayers: String = "The fixed and the moving layer of a layer alignment must be different."
+      def layerNotFound(layerName: String): String = s"The dataset has no layer “$layerName”."
+      val createFailed: String = "Could not create the layer alignment annotation."
+      val listFailed: String = "Could not list the layer alignment annotations."
+    }
     object Merge {
       val failed: String = "Could not merge annotations."
       val success: String = "Merging annotations was successful."

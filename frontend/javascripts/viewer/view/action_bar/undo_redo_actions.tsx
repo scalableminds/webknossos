@@ -2,10 +2,12 @@ import Icon from "@ant-design/icons";
 import RedoIcon from "@images/icons/icon-redo.svg?react";
 import UndoIcon from "@images/icons/icon-undo.svg?react";
 import { Space } from "antd";
+import classnames from "classnames";
 import { AsyncButton } from "components/async_clickables";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 type Props = {
@@ -15,6 +17,9 @@ type Props = {
 
 function UndoRedoActions({ hasTracing, isBusy }: Props) {
   const dispatch = useDispatch();
+  // The dataset alignment workers are always narrow (two of them share the window), but
+  // their toolbar is small enough to fit the redo button.
+  const hideRedoOnSmallScreen = !isBigWarpWorker();
 
   const handleUndo = useCallback(() => dispatchUndoAsync(dispatch), [dispatch]);
   const handleRedo = useCallback(() => dispatchRedoAsync(dispatch), [dispatch]);
@@ -36,7 +41,9 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
         icon={<Icon component={UndoIcon} aria-label="undo" />}
       />
       <AsyncButton
-        className="undo-redo-button hide-on-small-screen"
+        className={classnames("undo-redo-button", {
+          "hide-on-small-screen": hideRedoOnSmallScreen,
+        })}
         key="redo-button"
         title="Redo (Ctrl+Y)"
         onClick={handleRedo}

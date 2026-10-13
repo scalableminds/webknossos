@@ -35,6 +35,7 @@ import loadable from "libs/lazy_loader";
 import Navbar from "navbar";
 import { createBrowserRouter, Navigate, Outlet, type RouteObject, redirect } from "react-router";
 import type { EmptyObject } from "types/type_utils";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
@@ -53,6 +54,8 @@ import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metad
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
 import DatasetSettingsStorageTab from "dashboard/dataset/dataset_settings_storage_tab";
 import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
+import AlignmentSelectionView from "viewer/view/align_datasets/alignment_selection_view";
+import AlignmentView from "viewer/view/align_datasets/alignment_view";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -76,11 +79,13 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
   () => import("admin/voxelytics/workflow_list_view"),
 );
 
-function RootLayout() {
+function RootLayout({ showNavbar = true }: { showNavbar?: boolean }) {
   return (
-    <Layout>
-      <CommandPalette />
-      <Navbar />
+    <Layout className={showNavbar ? undefined : "no-navbar"}>
+      {/* The command palette can leave the view or undo the forced settings of the dataset
+      alignment workers. Thus, don't allow them in BigWarp iframes. */}
+      {isBigWarpWorker() ? null : <CommandPalette />}
+      {showNavbar && <Navbar />}
       <Content>
         <ErrorBoundary>
           <Outlet />
@@ -255,6 +260,14 @@ const routes: RouteObject[] = [
         element: (
           <SecuredRoute requiresAdminOrManagerRole>
             <DatasetAddView />
+          </SecuredRoute>
+        ),
+      },
+      {
+        path: "/datasets/:datasetNameAndId/align",
+        element: (
+          <SecuredRoute>
+            <AlignmentSelectionView />
           </SecuredRoute>
         ),
       },
@@ -486,6 +499,21 @@ const routes: RouteObject[] = [
         ],
       },
       { path: "*", element: <PageNotFoundView /> },
+    ],
+  },
+  {
+    // The alignment view has no navbar of its own, because each of its worker iframes shows
+    // one.
+    element: <RootLayout showNavbar={false} />,
+    children: [
+      {
+        path: "/datasets/:datasetNameAndId/align/:annotationId",
+        element: (
+          <SecuredRoute>
+            <AlignmentView />
+          </SecuredRoute>
+        ),
+      },
     ],
   },
 ];

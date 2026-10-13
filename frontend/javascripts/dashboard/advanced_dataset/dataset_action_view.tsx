@@ -2,6 +2,7 @@ import {
   CopyOutlined,
   EllipsisOutlined,
   EyeOutlined,
+  NodeIndexOutlined,
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
@@ -19,6 +20,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
+import { getAlignmentSelectionUrl } from "viewer/view/align_datasets/bigwarp_protocol";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
 
 function NewAnnotationLink({
@@ -203,6 +205,17 @@ export function getDatasetActionContextMenu({
                 label: "Open Settings",
                 onClick: () => {
                   window.location.href = `/datasets/${getReadableURLPart(dataset)}/edit`;
+                },
+              }
+            : null,
+          dataset.isActive &&
+          dataset.colorLayerNames.length + dataset.segmentationLayerNames.length >= 2
+            ? {
+                key: "align-layers",
+                icon: <NodeIndexOutlined className="icon-margin-right" />,
+                label: "Align Layers…",
+                onClick: () => {
+                  window.location.href = getAlignmentSelectionUrl(dataset);
                 },
               }
             : null,

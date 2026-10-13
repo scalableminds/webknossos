@@ -220,6 +220,7 @@ export const annotation: APIAnnotation = {
   tracingTime: 0,
   contributors: [],
   collaborationMode: "OwnerOnly",
+  layerAlignment: null,
   isLockedByOwner: false,
 };
 

@@ -56,6 +56,7 @@ case class TransferAnnotationParameters(userId: ObjectId) derives JsonAutoFormat
 
 class AnnotationController @Inject() (
     annotationDAO: AnnotationDAO,
+    annotationLayerAlignmentDAO: AnnotationLayerAlignmentDAO,
     taskDAO: TaskDAO,
     userDAO: UserDAO,
     datasetDAO: DatasetDAO,
@@ -255,6 +256,35 @@ class AnnotationController @Inject() (
         _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasAnnotated)
         json <- annotationService.publicWrites(annotation, Some(request.identity)) ?~> Msg.Annotation.publicWritesFailed
       } yield JsonOk(json)
+    }
+
+  def createLayerAlignment(datasetId: ObjectId): Action[AnnotationLayerAlignment] =
+    sil.SecuredAction.fox(validateJson[AnnotationLayerAlignment]) { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
+        annotation <- annotationService.createLayerAlignmentFor(
+          request.identity,
+          dataset,
+          request.body
+        ) ?~> Msg.Annotation.LayerAlignment.createFailed
+        _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
+        json <- annotationService.publicWrites(annotation, Some(request.identity)) ?~> Msg.Annotation.publicWritesFailed
+      } yield JsonOk(json)
+    }
+
+  def listLayerAlignments(datasetId: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.fox { implicit request =>
+      for {
+        _ <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
+        annotationInfos <- annotationDAO.findAllListableExplorationals(
+          isFinished = None,
+          forUser = None,
+          filterOwnedOrShared = true,
+          datasetId = Some(datasetId),
+          limit = annotationService.DefaultAnnotationListLimit,
+          onlyLayerAlignments = true
+        ) ?~> Msg.Annotation.LayerAlignment.listFailed
+      } yield Ok(Json.toJson(annotationInfos.map(annotationService.writeCompactInfo)))
     }
 
   def getSandbox(datasetId: ObjectId, typ: String, sharingToken: Option[String]): Action[AnyContent] =
@@ -511,16 +541,18 @@ class AnnotationController @Inject() (
         datasetBoundingBox = dataSource.map(_.boundingBox)
       )
       newAnnotationLayers = newAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
+      // A copy of a layer alignment stays a layer alignment.
+      layerAlignment <- annotationLayerAlignmentDAO.findOneForAnnotation(annotation._id)
       clonedAnnotation = annotationService.createFrom(
         user,
         dataset,
         newAnnotationLayers,
         AnnotationType.Explorational,
-        None,
+        layerAlignment.map(_.defaultAnnotationName(dataset.name)),
         annotation.description,
         newAnnotationId
       )
-      _ <- annotationDAO.insertOne(clonedAnnotation)
+      _ <- annotationDAO.insertOne(clonedAnnotation, layerAlignment)
     } yield clonedAnnotation
 
   def tryAcquiringAnnotationMutex(id: ObjectId, sessionId: String): Action[AnyContent] =

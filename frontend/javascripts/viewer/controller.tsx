@@ -36,6 +36,12 @@ import { HANDLED_ERROR } from "viewer/model_initialization";
 import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import { isBigWarpStore, isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
+import {
+  applyBigWarpWorkerSettings,
+  blockBigWarpWorkerNavigation,
+  reportBigWarpStoreSavedState,
+} from "viewer/view/align_datasets/bigwarp_worker";
 import { AnnotationTool } from "./model/accessors/tool_accessor";
 import {
   toggleAllTreesAction,
@@ -213,19 +219,26 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       return;
     };
 
-    window.onbeforeunload = beforeUnload;
+    const blockNavigation = isBigWarpWorker() ? blockBigWarpWorkerNavigation : beforeUnload;
+    window.onbeforeunload = blockNavigation;
     this.props.setBlocking({
       // @ts-expect-error beforeUnload signature is overloaded
-      shouldBlock: beforeUnload,
+      shouldBlock: blockNavigation,
     });
 
     UrlManager.startUrlUpdater();
+    if (isBigWarpWorker()) {
+      applyBigWarpWorkerSettings();
+    }
     await initializeSceneController();
     this.initKeyboard();
     this.initTaskScript();
     window.webknossos = new ApiLoader(Model);
     app.vent.emit("webknossos:initialized");
     Store.dispatch(wkInitializedAction());
+    if (isBigWarpStore()) {
+      reportBigWarpStoreSavedState();
+    }
     this.props.setControllerStatus("loaded");
   }
 

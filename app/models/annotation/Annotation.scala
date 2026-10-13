@@ -114,7 +114,8 @@ case class AnnotationCompactInfo(
     tracingIds: Seq[String],
     annotationLayerNames: Seq[String],
     annotationLayerTypes: Seq[String],
-    annotationLayerStatistics: Seq[JsObject]
+    annotationLayerStatistics: Seq[JsObject],
+    layerAlignment: Option[AnnotationLayerAlignment]
 )
 
 class AnnotationLayerDAO @Inject() (SQLClient: SqlClient)(implicit ec: ExecutionContext)
@@ -203,9 +204,13 @@ class AnnotationLayerDAO @Inject() (SQLClient: SqlClient)(implicit ec: Execution
     } yield ()
 }
 
-class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: AnnotationLayerDAO, datasetDAO: DatasetDAO)(
-    implicit ec: ExecutionContext
-) extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
+class AnnotationDAO @Inject() (
+    sqlClient: SqlClient,
+    annotationLayerDAO: AnnotationLayerDAO,
+    annotationLayerAlignmentDAO: AnnotationLayerAlignmentDAO,
+    datasetDAO: DatasetDAO
+)(implicit ec: ExecutionContext)
+    extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   protected val collection = Annotations
   protected def resultConverter = GetResultAnnotationsRow
 
@@ -356,6 +361,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       val annotationLayerTypes = parseArrayLiteral(<<[String])
       val annotationLayerStatistics =
         parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
+      val layerAlignment = AnnotationLayerAlignment.fromColumns(<<?[String], <<?[String])
 
       AnnotationCompactInfo(
         id,
@@ -382,7 +388,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
         tracingIds,
         annotationLayerNames,
         annotationLayerTypes,
-        annotationLayerStatistics
+        annotationLayerStatistics,
+        layerAlignment
       )
     }
 
@@ -396,6 +403,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
     * @param filterOwnedOrShared
     *   If `true`, the function lists only annotations owned by the user or explicitly shared with them (used for the
     *   user's own dashboard). If `false`, it lists all annotations the viewer is allowed to see.
+    * @param onlyLayerAlignments
+    *   If `true`, only annotations that are layer alignments are returned.
     * @param limit
     *   The maximum number of annotations to return.
     * @param pageNumber
@@ -407,7 +416,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       filterOwnedOrShared: Boolean,
       datasetId: Option[ObjectId],
       limit: Int,
-      pageNumber: Int = 0
+      pageNumber: Int = 0,
+      onlyLayerAlignments: Boolean = false
   )(using ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
       accessQuery <-
@@ -417,6 +427,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
       datasetQuery = datasetId.map(d => q"a._dataset = $d").getOrElse(q"TRUE")
       typQuery = q"a.typ = ${AnnotationType.Explorational}"
+      layerAlignmentQuery = if (onlyLayerAlignments) q"la._annotation IS NOT NULL" else q"TRUE"
       query = q"""
           -- We need to separate the querying of the annotation with all its inner joins from the 1:n join to collect the shared teams
           -- This is to prevent left-join fanout.
@@ -445,19 +456,23 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
               ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
               ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
               ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
-              ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
+              ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics,
+              la.fixedLayerName,
+              la.movingLayerName
             FROM webknossos.annotations_ AS a
             JOIN webknossos.users_ u ON u._id = a._user
             JOIN webknossos.datasets_ d ON d._id = a._dataset
             JOIN webknossos.organizations_ AS o ON o._id = d._organization
             JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
             JOIN webknossos.multiusers_ mu ON u._multiUser = mu._id
-            WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery AND $datasetQuery
+            LEFT JOIN webknossos.annotation_layerAlignments la ON la._annotation = a._id
+            WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery AND $datasetQuery AND $layerAlignmentQuery
             GROUP BY
               a._id, a.name, a.description, a._user, a.collaborationMode, a.modified, a.created,
               a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
               mu.firstname, mu.lastname,
-              d.name, d._id, o._id
+              d.name, d._id, o._id,
+              la.fixedLayerName, la.movingLayerName
             ORDER BY a._id DESC
             LIMIT $limit
             OFFSET ${pageNumber * limit}
@@ -487,7 +502,9 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             an.tracing_ids,
             an.tracing_names,
             an.tracing_typs,
-            an.annotation_layer_statistics
+            an.annotation_layer_statistics,
+            an.fixedLayerName,
+            an.movingLayerName
           FROM an
           LEFT JOIN webknossos.annotation_sharedteams ast ON ast._annotation = an._id
           LEFT JOIN webknossos.teams_ t ON ast._team = t._id
@@ -514,7 +531,9 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             an.tracing_ids,
             an.tracing_names,
             an.tracing_typs,
-            an.annotation_layer_statistics
+            an.annotation_layer_statistics,
+            an.fixedLayerName,
+            an.movingLayerName
           ORDER BY an._id DESC
          """
       rows <- run(query.as[AnnotationCompactInfo])
@@ -694,7 +713,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
 
   // update operations
 
-  def insertOne(a: Annotation): Fox[Unit] = {
+  def insertOne(a: Annotation, layerAlignment: Option[AnnotationLayerAlignment] = None): Fox[Unit] = {
     val insertAnnotationQuery = q"""
         INSERT INTO webknossos.annotations(_id, _dataset, _task, _user, description, visibility,
                                            name, state, tags, tracingTime, typ, collaborationMode, created, modified, isDeleted)
@@ -706,8 +725,11 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
          ${a.created}, ${a.modified}, ${a.isDeleted})
          """.asUpdate
     val insertLayerQueries = annotationLayerDAO.insertLayerQueries(a._id, a.annotationLayers)
+    val insertLayerAlignmentQuery = layerAlignment.map(annotationLayerAlignmentDAO.insertOneQuery(a._id, _))
     for {
-      _ <- run(DBIO.sequence(insertAnnotationQuery +: insertLayerQueries).transactionally)
+      _ <- run(
+        DBIO.sequence((insertAnnotationQuery +: insertLayerQueries) ++ insertLayerAlignmentQuery).transactionally
+      )
     } yield ()
   }
 

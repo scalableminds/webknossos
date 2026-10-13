@@ -1,0 +1,72 @@
+// Alignment view (alignment_view.tsx): the two worker iframes and the resizable landmark
+// panel on the right (open by default), side by side.
+.align-datasets-workspace {
+  height: 100%;
+
+  &:not(.is-landmark-panel-closed) .landmark-panel {
+    padding: 16px 12px 8px;
+    background-color: var(--ant-color-bg-base);
+  }
+
+  // The name and description block of the info tab (AnnotationIdentity) brings its own
+  // padding, but the panel already has one.
+  .landmark-panel .info-tab-identity {
+    padding: 0 0 8px;
+  }
+
+  // A closed landmark panel has a width of 0 and must not leave a resize bar behind.
+  &.is-landmark-panel-closed > .ant-splitter-bar {
+    display: none;
+  }
+
+  .align-datasets-worker {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+
+    & + .align-datasets-worker {
+      border-left: 4px solid var(--ant-color-primary);
+    }
+
+    iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  }
+
+  // Above the status bar at the bottom of the viewer. Clicks go through to the view.
+  .align-datasets-next-landmark-hint {
+    position: absolute;
+    bottom: 48px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100% - 32px);
+    padding: 4px 12px;
+    border-radius: var(--ant-border-radius);
+    background: var(--ant-color-bg-elevated);
+    box-shadow: var(--ant-box-shadow);
+    pointer-events: none;
+  }
+
+  .align-datasets-overlay {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--ant-color-bg-base) 70%, transparent);
+  }
+
+  // A landmark without a partner in the other view.
+  .landmark-panel .is-unpaired-landmark .ant-table-cell {
+    background: var(--ant-color-warning-bg);
+  }
+
+  .landmark-color {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 4px;
+    border-radius: 50%;
+  }
+}

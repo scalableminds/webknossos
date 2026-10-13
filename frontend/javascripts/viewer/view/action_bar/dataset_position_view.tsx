@@ -17,6 +17,7 @@ import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 import { ShareButton } from "viewer/view/action_bar/share_modal_view";
+import { isBigWarpWorker } from "viewer/view/align_datasets/bigwarp_protocol";
 import ButtonComponent from "viewer/view/components/button_component";
 import DatasetRotationPopoverButtonView from "./dataset_rotation_popover_view";
 
@@ -149,7 +150,9 @@ function DatasetPositionView() {
           />
         </FastTooltip>
         <DatasetRotationPopoverButtonView style={iconColoringStyle} />
-        <ShareButton dataset={dataset} style={iconColoringStyle} />
+        {/* A link to a dataset alignment worker would open the worker without the
+        alignment page around it. */}
+        {isBigWarpWorker() ? null : <ShareButton dataset={dataset} style={iconColoringStyle} />}
       </Space.Compact>
     </FastTooltip>
   );

@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(185);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(186);
 COMMIT TRANSACTION;
 
 
@@ -67,6 +67,13 @@ CREATE TABLE webknossos.annotation_sharedTeams(
   _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
   _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   PRIMARY KEY (_annotation, _team)
+);
+
+CREATE TABLE webknossos.annotation_layerAlignments(
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  fixedLayerName TEXT NOT NULL,
+  movingLayerName TEXT NOT NULL,
+  CONSTRAINT differentLayers CHECK (fixedLayerName <> movingLayerName)
 );
 
 CREATE TABLE webknossos.annotation_contributors(
@@ -960,6 +967,8 @@ ALTER TABLE webknossos.annotations
 ALTER TABLE webknossos.annotation_sharedTeams
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.annotation_layerAlignments
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.annotation_contributors
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;

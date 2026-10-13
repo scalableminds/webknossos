@@ -10,6 +10,8 @@ type Props = {
   ctaHref: string;
   footnote?: string;
   coverImage: { src: string; alt: string };
+  // Drops the card chrome and shrinks the cover, to nest the ad inside another card.
+  embedded?: boolean;
 };
 
 export const smallCapsStyle: CSSProperties = {
@@ -18,14 +20,15 @@ export const smallCapsStyle: CSSProperties = {
   textTransform: "uppercase",
 };
 
-function AdCover({ src, alt }: { src: string; alt: string }) {
+function AdCover({ src, alt, embedded }: { src: string; alt: string; embedded: boolean }) {
   const { token } = theme.useToken();
   return (
     <div
       role="img"
       aria-label={alt}
       style={{
-        height: 180,
+        height: embedded ? 120 : 180,
+        borderRadius: embedded ? token.borderRadiusLG : undefined,
         backgroundImage: `linear-gradient(to bottom, transparent 40%, ${token.colorBgContainer}), url(${src})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
@@ -43,38 +46,55 @@ export default function AdCard({
   ctaHref,
   footnote,
   coverImage,
+  embedded = false,
 }: Props) {
   const { token } = theme.useToken();
+  const cover = <AdCover {...coverImage} embedded={embedded} />;
 
-  return (
-    <Card variant="borderless" cover={<AdCover {...coverImage} />}>
-      <Flex vertical align="flex-start" gap="large">
-        <Flex vertical gap="small">
-          <Badge
-            color={ColorWKBlueZircon}
-            text={
-              <Typography.Text type="secondary" style={smallCapsStyle}>
-                {eyebrow}
-              </Typography.Text>
-            }
-          />
-          <Typography.Title level={4} style={{ margin: 0, fontWeight: 500 }}>
-            {title}
-          </Typography.Title>
-          {/* type="secondary" would resolve to the dimmer colorTextTertiary, see theme.ts. */}
-          <Typography.Text style={{ color: token.colorTextSecondary }}>
-            {description}
-          </Typography.Text>
-        </Flex>
-        <Button type="primary" href={ctaHref} target="_blank" rel="noopener noreferrer">
-          {ctaLabel}
-        </Button>
-        {footnote != null ? (
-          <Typography.Text type="secondary" style={smallCapsStyle}>
-            {footnote}
-          </Typography.Text>
-        ) : null}
+  const content = (
+    <Flex vertical align="flex-start" gap={embedded ? "middle" : "large"}>
+      <Flex vertical gap="small">
+        <Badge
+          color={ColorWKBlueZircon}
+          text={
+            <Typography.Text type="secondary" style={smallCapsStyle}>
+              {eyebrow}
+            </Typography.Text>
+          }
+        />
+        <Typography.Title level={embedded ? 5 : 4} style={{ margin: 0, fontWeight: 500 }}>
+          {title}
+        </Typography.Title>
+        {/* type="secondary" would resolve to the dimmer colorTextTertiary, see theme.ts. */}
+        <Typography.Text style={{ color: token.colorTextSecondary }}>{description}</Typography.Text>
       </Flex>
+      <Button
+        type={embedded ? "default" : "primary"}
+        href={ctaHref}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {ctaLabel}
+      </Button>
+      {footnote != null ? (
+        <Typography.Text type="secondary" style={smallCapsStyle}>
+          {footnote}
+        </Typography.Text>
+      ) : null}
+    </Flex>
+  );
+
+  if (embedded) {
+    return (
+      <Flex vertical gap="middle">
+        {cover}
+        {content}
+      </Flex>
+    );
+  }
+  return (
+    <Card variant="borderless" cover={cover}>
+      {content}
     </Card>
   );
 }

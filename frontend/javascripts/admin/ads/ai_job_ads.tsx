@@ -1,17 +1,15 @@
 import proofreadingDendrites from "@images/vx/proofreading-dendrites.webp";
 import AdCard from "admin/ads/ad_card";
-import features from "features";
 
-// Ad shown below the credit information of the "Run Segmentation Model" tab (webknossos.org only).
+// Next step shown in the job-started card of the "Run Segmentation Model" tab. Callers gate it
+// to webknossos.org.
 
 export function ProofreadingAd() {
-  if (!features().isWkorgInstance) {
-    return null;
-  }
   return (
     <AdCard
+      embedded
       coverImage={{ src: proofreadingDendrites, alt: "Proofread dendrite segments" }}
-      eyebrow="Proofreading"
+      eyebrow="Next step · Proofreading"
       title="Proofread your segmentation."
       description="Fix split and merge errors on large segmentations with supervoxel-graph editing. Collaborative and near real time."
       ctaLabel="See proofreading tools"

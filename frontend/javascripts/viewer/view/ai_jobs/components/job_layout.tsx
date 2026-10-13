@@ -21,7 +21,7 @@ export function AiJobLayout({ description, sidebar, children }: AiJobLayoutProps
         <Flex flex="2" vertical gap="middle" style={{ minWidth: 0 }}>
           {children}
         </Flex>
-        <Flex flex="1" vertical gap="middle" style={{ position: "sticky", top: 0 }}>
+        <Flex flex="1" vertical style={{ position: "sticky", top: 0 }}>
           {sidebar}
         </Flex>
       </Flex>

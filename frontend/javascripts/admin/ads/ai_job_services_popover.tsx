@@ -1,8 +1,13 @@
 import { DownOutlined } from "@ant-design/icons";
-import { smallCapsStyle } from "admin/ads/ad_card";
 import { Badge, Button, Divider, Flex, Popover, Typography, theme } from "antd";
 import features from "features";
-import { Fragment } from "react";
+import { type CSSProperties, Fragment } from "react";
+
+const smallCapsStyle: CSSProperties = {
+  fontSize: 11,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+};
 
 type Service = {
   eyebrow: string;

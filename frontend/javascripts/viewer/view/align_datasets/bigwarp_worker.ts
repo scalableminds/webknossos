@@ -4,6 +4,7 @@ import { isNoEditableElementFocused } from "libs/utils";
 import { useEffect, useSyncExternalStore } from "react";
 import type { BlockerFunction } from "react-router";
 import type { Vector3 } from "viewer/constants";
+import { isSaving } from "viewer/model/accessors/annotation_accessor";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
 import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
@@ -34,6 +35,7 @@ import {
   type BigWarpCommand,
   getBigWarpWorkerLayerName,
   isBigWarpWorker,
+  type SaveState,
   sendCommandToAlignmentPage,
 } from "./bigwarp_protocol";
 
@@ -222,14 +224,14 @@ export function setOverlayLayerColors(colors: Record<string, Vector3> | null) {
   }
 }
 
-// Tells the alignment view whether the alignment annotation has unsaved changes. Runs in the
-// store iframe.
+// Tells the alignment view whether the alignment annotation is saved, being saved or has
+// unsaved changes. Runs in the store iframe.
 export function reportBigWarpStoreSavedState() {
   listenToStoreProperty(
-    () => Model.stateSaved(),
-    (isSaved) =>
+    (state): SaveState => (isSaving(state) ? "saving" : Model.stateSaved() ? "saved" : "unsaved"),
+    (saveState) =>
       window.parent.postMessage(
-        { type: BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE, isSaved },
+        { type: BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE, saveState },
         window.location.origin,
       ),
     true,

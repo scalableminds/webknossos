@@ -20,7 +20,6 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { AsyncButton } from "components/async_clickables";
 import { SidebarSection } from "dashboard/sidebar_section";
 import { formatNumberToLength } from "libs/format_utils";
 import { pluralize } from "libs/utils";
@@ -42,6 +41,7 @@ import {
   SIDES,
   type Side,
 } from "./alignment_helpers";
+import type { SaveState } from "./bigwarp_protocol";
 import type { LandmarkExportFormat } from "./landmark_export";
 
 // A pair whose error is this many times higher than the mean error is highlighted, because it
@@ -105,8 +105,8 @@ type Props = {
   onDownloadLandmarks: (format: LandmarkExportFormat) => void;
   // The page that lists the alignments of the dataset.
   alignmentListUrl: string;
-  // Whether the alignment annotation has changes that are not saved yet.
-  hasUnsavedChanges: boolean;
+  // Whether the alignment annotation is saved, being saved or has unsaved changes.
+  saveState: SaveState;
   onSave: () => Promise<void>;
 };
 
@@ -226,12 +226,18 @@ function LandmarkDownloadButton({
   );
 }
 
+const SAVE_BUTTON_LABELS: Record<SaveState, string> = {
+  saved: "Saved",
+  saving: "Saving…",
+  unsaved: "Save",
+};
+
 function AnnotationHeader({
   name,
   description,
   layerNames,
   alignmentListUrl,
-  hasUnsavedChanges,
+  saveState,
   onSave,
   onChangeName,
   onChangeDescription,
@@ -240,7 +246,7 @@ function AnnotationHeader({
   description: string;
   layerNames: LayerNames;
   alignmentListUrl: string;
-  hasUnsavedChanges: boolean;
+  saveState: SaveState;
   onSave: () => Promise<void>;
   onChangeName: (name: string) => void;
   onChangeDescription: (description: string) => void;
@@ -252,15 +258,17 @@ function AnnotationHeader({
         <Link to={alignmentListUrl}>
           <ArrowLeftOutlined /> Back to all alignments
         </Link>
+        {/* Shows the automatic saves as well as the ones started with this button. */}
         <Tooltip title="The landmarks are saved automatically. Click to save right away.">
-          <AsyncButton
+          <Button
             size="small"
             icon={<SaveOutlined />}
-            disabled={!hasUnsavedChanges}
+            loading={saveState === "saving"}
+            disabled={saveState === "saved"}
             onClick={onSave}
           >
-            {hasUnsavedChanges ? "Save" : "Saved"}
-          </AsyncButton>
+            {SAVE_BUTTON_LABELS[saveState]}
+          </Button>
         </Tooltip>
       </Flex>
       <AnnotationIdentity
@@ -281,6 +289,19 @@ function AnnotationHeader({
   );
 }
 
+function LandmarkColorDot({ color }: { color: Vector3 }) {
+  return <span className="landmark-color" style={{ background: rgbColorString(color) }} />;
+}
+
+// Shown instead of the color dot of a landmark that is not placed yet.
+function MissingLandmarkMarker({ side }: { side: Side }) {
+  return (
+    <Tooltip title={`No landmark in the ${side === "A" ? "left" : "right"} view yet.`}>
+      <Typography.Text type="warning">missing</Typography.Text>
+    </Tooltip>
+  );
+}
+
 function getPairColumns(
   layerNames: LayerNames,
   voxelSize: VoxelSize,
@@ -298,10 +319,10 @@ function getPairColumns(
       const landmark = pair.landmarks[side];
       return landmark != null ? (
         <Tooltip title={`Position: ${landmark.position.join(", ")}`}>
-          <span className="landmark-color" style={{ background: rgbColorString(landmark.color) }} />
+          <LandmarkColorDot color={landmark.color} />
         </Tooltip>
       ) : (
-        <Typography.Text type="warning">missing</Typography.Text>
+        <MissingLandmarkMarker side={side} />
       );
     },
   }));
@@ -324,7 +345,6 @@ function getPairColumns(
       title: <Tooltip title="How far apart the pair still is after the alignment">Error</Tooltip>,
       key: "residual",
       width: PAIR_COLUMN_WIDTHS.residual,
-      align: "right",
       render: (_value, pair) => {
         if (pair.residual == null) {
           return null;
@@ -386,7 +406,7 @@ export function LandmarkPanel({
   onDeletePair,
   onDownloadLandmarks,
   alignmentListUrl,
-  hasUnsavedChanges,
+  saveState,
   onSave,
 }: Props) {
   const pairs = getLandmarkPairs(landmarks, alignment?.transformBtoA ?? null, voxelSize.factor);
@@ -401,7 +421,7 @@ export function LandmarkPanel({
         description={annotationDescription}
         layerNames={layerNames}
         alignmentListUrl={alignmentListUrl}
-        hasUnsavedChanges={hasUnsavedChanges}
+        saveState={saveState}
         onSave={onSave}
         onChangeName={onChangeAnnotationName}
         onChangeDescription={onChangeAnnotationDescription}

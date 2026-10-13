@@ -7,6 +7,7 @@ import {
   BIG_WARP_COMMAND_MESSAGE_TYPE,
   BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE,
   type BigWarpCommand,
+  type SaveState,
 } from "./bigwarp_protocol";
 
 // The alignment page embeds three annotation views of this app as iframes: the two
@@ -25,7 +26,7 @@ type IncomingMessage = {
   // Set for BIG_WARP_COMMAND_MESSAGE_TYPE.
   command?: BigWarpCommand;
   // Set for BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE.
-  isSaved?: boolean;
+  saveState?: SaveState;
   // Set for replies to sendMessage. The type of a reply is "ack" or "err".
   messageId?: string;
   returnValue?: unknown;
@@ -64,7 +65,7 @@ export type SendMessage = <T = unknown>(
  * - onWorkerCommand is called for each command that a worker sends (see bigwarp_protocol.ts).
  * - onIframeReloaded is called when an iframe loads a second page, e.g. because it was
  *   reloaded or navigated away. The iframe then no longer shows the state the page expects.
- * - isStoreSaved tells whether the alignment annotation in the store iframe is saved.
+ * - storeSaveState tells whether the alignment annotation in the store iframe is saved.
  */
 export function useIframeBridge(
   onWorkerCommand: (side: Side, command: BigWarpCommand) => void,
@@ -83,7 +84,7 @@ export function useIframeBridge(
   }));
   const pendingRepliesRef = useRef(new Map<string, Deferred<unknown, Error>>());
   const messageCounterRef = useRef(0);
-  const [isStoreSaved, setIsStoreSaved] = useState(true);
+  const [storeSaveState, setStoreSaveState] = useState<SaveState>("saved");
   const loadCountsRef = useRef<Record<IframeRole, number>>({ A: 0, B: 0, store: 0 });
   const handleWorkerCommand = useEffectEvent(onWorkerCommand);
 
@@ -120,9 +121,9 @@ export function useIframeBridge(
       } else if (
         data.type === BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE &&
         role === "store" &&
-        data.isSaved != null
+        data.saveState != null
       ) {
-        setIsStoreSaved(data.isSaved);
+        setStoreSaveState(data.saveState);
       }
     };
 
@@ -167,5 +168,5 @@ export function useIframeBridge(
     }
   };
 
-  return { iframesRef, sendMessage, handleIframeLoad, isStoreSaved };
+  return { iframesRef, sendMessage, handleIframeLoad, storeSaveState };
 }

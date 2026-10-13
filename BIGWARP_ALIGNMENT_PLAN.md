@@ -1463,8 +1463,13 @@ From the UX review with Michael:
   `navbar.tsx`, `LandmarkPanelToggleButton`), next to the panel it opens. Its state comes from
   `AlignmentViewState.isLandmarkPanelOpen`, so the shared initial-value constant is gone.
 - **Save button** moved from the left worker's toolbar into the panel header, because it saves
-  the annotation of both views. It shows "Save"/"Saved" from the page's `hasUnsavedChanges`.
-  The `forceSave` worker command is gone.
+  the annotation of both views. It shows "Save"/"Saving…"/"Saved": the store iframe reports a
+  `SaveState` (`reportBigWarpStoreSavedState`, "saving" while `isSaving`), and the page counts
+  landmarks that are not copied into the annotation yet as unsaved. The `forceSave` worker
+  command is gone.
+- **Pair table:** after comparing a layout with coordinates (scrolls sideways), Michael chose
+  the compact one: Name | Left/Right color dots (position on hover, "missing" in warning
+  color) | Error (length in the dataset unit, left-aligned) | Delete.
 
 ### 0.3 Not started / explicitly out of scope for this pass
 

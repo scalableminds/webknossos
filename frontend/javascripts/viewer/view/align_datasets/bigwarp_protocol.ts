@@ -87,6 +87,6 @@ export function sendCommandToAlignmentPage(command: BigWarpCommand) {
   );
 }
 
-// Sent by the store iframe whenever the alignment annotation gets saved or gets unsaved
-// changes.
+// Sent by the store iframe whenever the save state of the alignment annotation changes.
 export const BIG_WARP_STORE_SAVED_STATE_MESSAGE_TYPE = "bigwarpStoreSavedState";
+export type SaveState = "saved" | "saving" | "unsaved";

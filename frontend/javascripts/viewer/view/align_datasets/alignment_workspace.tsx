@@ -35,6 +35,7 @@ import {
   getAlignmentSelectionUrl,
   getBigWarpStoreUrl,
   getBigWarpWorkerUrl,
+  type SaveState,
 } from "./bigwarp_protocol";
 import {
   getBigWarpCsvFileName,
@@ -98,7 +99,7 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
 
   // handleWorkerCommand and restartAfterReload are function declarations further below, so
   // they can be used here.
-  const { iframesRef, sendMessage, handleIframeLoad, isStoreSaved } = useIframeBridge(
+  const { iframesRef, sendMessage, handleIframeLoad, storeSaveState } = useIframeBridge(
     handleWorkerCommand,
     restartAfterReload,
   );
@@ -114,7 +115,11 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
     : syncStatus !== "ready"
       ? syncStatus
       : null;
-  const hasUnsavedChanges = hasUnsyncedLandmarks || !isStoreSaved;
+  // Landmarks that changed in a worker but are not in the alignment annotation yet are unsaved,
+  // too.
+  const saveState: SaveState =
+    storeSaveState === "saved" && hasUnsyncedLandmarks ? "unsaved" : storeSaveState;
+  const hasUnsavedChanges = saveState !== "saved";
   // Estimating the transform is cheap, so the alignment always matches the current landmarks.
   const estimation = useMemo(() => estimateTransformBtoA(landmarks), [landmarks]);
   const alignment: Alignment | null =
@@ -536,7 +541,7 @@ export function AlignmentWorkspace({ dataset, layerNames, landmarkAnnotation, on
             onSelectPair={selectPair}
             onDeletePair={deletePair}
             onDownloadLandmarks={downloadLandmarks}
-            hasUnsavedChanges={hasUnsavedChanges}
+            saveState={saveState}
             onSave={forceSave}
           />
         ) : null}

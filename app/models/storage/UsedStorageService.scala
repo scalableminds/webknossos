@@ -89,8 +89,9 @@ class UsedStorageService @Inject() (
     for {
       box <- result.shiftBox
       _ = box match {
-        case f: Failure => logger.warn(f"Could not send storage warning email for organization with id $organizationId: $f")
-        case _          => ()
+        case f: Failure =>
+          logger.warn(f"Could not send storage warning email for organization with id $organizationId: $f")
+        case _ => ()
       }
     } yield ()
 
@@ -109,7 +110,10 @@ class UsedStorageService @Inject() (
         organization._id,
         Instant.now
       ) ?~> "Failed to update last storage scan time in db"
-      _ <- tryAndLogWarning(organization._id, storageWarningEmailService.sendWarningEmailIfThresholdCrossed(organization))
+      _ <- tryAndLogWarning(
+        organization._id,
+        storageWarningEmailService.sendWarningEmailIfThresholdCrossed(organization)
+      )
       _ = Thread.sleep(pauseAfterEachOrganization.toMillis)
     } yield ()
 
@@ -259,7 +263,10 @@ class UsedStorageService @Inject() (
             _ <- Fox.runIf(reports._1.nonEmpty || reports._2.nonEmpty)(
               organizationDAO.upsertUsedStorage(reports._1, reports._2)
             ) ?~> "Failed to upsert used storage reports into db"
-            _ <- tryAndLogWarning(organization._id, storageWarningEmailService.sendWarningEmailIfThresholdCrossed(organization))
+            _ <- tryAndLogWarning(
+              organization._id,
+              storageWarningEmailService.sendWarningEmailIfThresholdCrossed(organization)
+            )
           } yield ()
         } else Fox.successful(())
     } yield ()

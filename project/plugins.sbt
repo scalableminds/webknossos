@@ -17,7 +17,7 @@ addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.7")
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.4.4")
 
 // protocol buffers
-libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.20"
+libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.21"
 
 // java native interface
 addSbtPlugin("com.github.sbt" % "sbt-jni" % "1.8.0")

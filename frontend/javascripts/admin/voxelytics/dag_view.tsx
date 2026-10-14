@@ -267,7 +267,7 @@ function DAGView({
       edges={edges}
       fitView
       // The DAG is read-only, so none of React Flow's keyboard interactions are needed.
-      // So disable them to the view crashing when having a key pressed and loosing window focus.
+      // So disable them to the view crashing when having a key pressed and losing window focus.
       deleteKeyCode={null}
       multiSelectionKeyCode={null}
       selectionKeyCode={null}

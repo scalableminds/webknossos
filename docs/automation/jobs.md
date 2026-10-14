@@ -56,10 +56,7 @@ We constantly monitor job executions. In rare cases, jobs can fail, and we aim t
 
 Some processing jobs run as [Voxelytics](https://voxelytics.com) workflows. On instances with Voxelytics integration, each workflow creates a detailed report. To browse all reports, select `Analysis > Voxelytics` in the navbar. This menu entry only appears if Voxelytics reporting is enabled on your WEBKNOSSOS instance. Admins and dataset managers see all workflow reports of their organization; other users only see their own.
 
-You can also open a report directly from a job:
-
-- On the [`AI Models` page](./ai_training.md#managing-ai-models), click `Voxelytics Report` next to a trained model.
-- Super users see an additional `Voxelytics` column on the `Processing Jobs` page with a `Workflow` link for each job.
+You can also open the report of a training job directly from the [`AI Models` page](./ai_training.md#managing-ai-models): click `Voxelytics Report` next to a trained model.
 
 The `Voxelytics Workflows` list shows each workflow with its user, host, progress, file size of its outputs, and begin and end times. Click a workflow to open its report:
 

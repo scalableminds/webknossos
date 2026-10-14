@@ -135,9 +135,8 @@ export async function importLandmarks(nmlString: string) {
   Store.dispatch(addTreesAndGroupsAction(prepareLandmarkTreesForImport(trees), treeGroups));
 }
 
-// Set by the layer registration page after each sync. Not put into store as nothing rendering wise
-// depends on this. Moreover, this is only needed in the layer registration workers. Therefore, we
-// keep it locally by putting it into the module level.
+// Set by the layer registration page after each sync. It is a module variable and not Redux
+// state, because only the click handler of the workers reads it and nothing is rendered from it.
 let landmarkPairInfo: LandmarkPairInfo = { openPairIds: [], otherMaxPairId: 0 };
 
 export function setLandmarkPairInfo(pairInfo: LandmarkPairInfo) {

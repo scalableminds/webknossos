@@ -1,17 +1,16 @@
 import DiffableMap from "libs/diffable_map";
-import type { APIAnnotationInfo, APIDataset, CoordinateTransformation } from "types/api_types";
-import { Identity4x4, type Vector3 } from "viewer/constants";
-import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  FIXED_POSITIONS,
+  MOVING_POSITIONS,
+  RED,
+  toLandmarks,
+} from "test/fixtures/layer_registration_fixtures";
+import type { APIDataset } from "types/api_types";
+import type { Vector3 } from "viewer/constants";
 import { createAffineTransform } from "viewer/model/helpers/transformation_helpers";
 import type { MutableTreeMap } from "viewer/model/types/tree_types";
-import { getLayerRegistrationEditBlocker } from "viewer/view/layer_registration/layer_registration_edit_blocker";
 import {
-  type AppliedState,
-  estimateMovingToFixedTransform,
-  getActiveMovingLayerName,
-  getAppliedState,
   getCompleteLandmarkPairs,
-  getDataLayersWithAppliedTransforms,
   getLandmarkColor,
   getLandmarkGroupPath,
   getLandmarkPairId,
@@ -19,47 +18,15 @@ import {
   getLandmarkPairs,
   getLandmarks,
   getLandmarkTreeName,
-  getLayerPairTransformEstimate,
   getMeanResidual,
-  getMovingLayerNames,
   getNextLandmarkPairId,
-  getNextStep,
   getOverlayLayerColors,
   isHighResidual,
-  isTransformAppliedToDataset,
-  type Landmark,
-  type LandmarkPair,
-  type MovingLayerRow,
   prepareLandmarkTreesForImport,
 } from "viewer/view/layer_registration/layer_registration_helpers";
 import { describe, expect, it } from "vitest";
 
-const RED: Vector3 = [1, 0, 0];
-
-// The landmarks get the pair ids 1, 2, … unless other pair ids are given.
-function toLandmarks(positions: Vector3[], pairIds?: Array<number | null>): Landmark[] {
-  return positions.map((position, index) => ({
-    pairId: pairIds != null ? pairIds[index] : index + 1,
-    treeId: index + 1,
-    nodeId: index + 1,
-    position,
-    color: RED,
-  }));
-}
-
-// The corners of a tetrahedron, so that the landmarks don't lie in one plane.
-const POSITIONS_A: Vector3[] = [
-  [0, 0, 0],
-  [10, 0, 0],
-  [0, 10, 0],
-  [0, 0, 10],
-];
-const OFFSET_B_TO_A: Vector3 = [5, -3, 2];
-const POSITIONS_B = POSITIONS_A.map(
-  ([x, y, z]): Vector3 => [x - OFFSET_B_TO_A[0], y - OFFSET_B_TO_A[1], z - OFFSET_B_TO_A[2]],
-);
-
-describe("Layer registration helpers", () => {
+describe("Layer registration landmark helpers", () => {
   it("reads the pair id from a landmark tree name", () => {
     expect(getLandmarkPairId(getLandmarkTreeName(12))).toBe(12);
     expect(getLandmarkPairId("Landmark 0")).toBeNull();
@@ -123,120 +90,12 @@ describe("Layer registration helpers", () => {
     ]);
   });
 
-  it("refuses to estimate a transform from too few complete pairs", () => {
-    expect(
-      estimateMovingToFixedTransform({
-        fixed: toLandmarks(POSITIONS_A),
-        moving: toLandmarks(POSITIONS_B.slice(0, 2)),
-      }),
-    ).toHaveProperty("errorMessage");
-  });
-
-  it("leaves landmarks without a partner out of the transform", () => {
-    const landmarks = {
-      fixed: toLandmarks([...POSITIONS_A, [100, 200, 300]], [1, 2, 3, 4, 9]),
-      moving: toLandmarks(POSITIONS_B),
-    };
-    const result = estimateMovingToFixedTransform(landmarks);
-    if (!("transform" in result)) {
-      throw new Error(result.errorMessage);
-    }
-
-    for (const pair of getLandmarkPairs(landmarks, result.transform)) {
-      if (pair.pairId !== 9) {
-        expect(pair.residual).toBeCloseTo(0, 5);
-      }
-    }
-  });
-
-  it("refuses to estimate a transform from landmarks on one line", () => {
-    const collinearPositions: Vector3[] = [
-      [0, 0, 0],
-      [10, 0, 0],
-      [20, 0, 0],
-    ];
-    expect(
-      estimateMovingToFixedTransform({
-        fixed: toLandmarks(collinearPositions),
-        moving: toLandmarks(collinearPositions),
-      }),
-    ).toHaveProperty("errorMessage");
-  });
-
-  it("estimates a transform from landmarks in a single z slice", () => {
-    const fixedPositions: Vector3[] = [
-      [0, 0, 7],
-      [10, 0, 7],
-      [0, 10, 7],
-      [10, 10, 7],
-    ];
-    // B is rotated by 90 degrees in the xy plane and lies in another z slice.
-    const movingPositions = fixedPositions.map(([x, y]): Vector3 => [-y, x, 3]);
-    const landmarks = { fixed: toLandmarks(fixedPositions), moving: toLandmarks(movingPositions) };
-    const result = estimateMovingToFixedTransform(landmarks);
-    if (!("transform" in result)) {
-      throw new Error(result.errorMessage);
-    }
-
-    expect(result.usedCopiesInNextSlice).toBe(true);
-    for (const pair of getLandmarkPairs(landmarks, result.transform)) {
-      expect(pair.residual).toBeCloseTo(0, 5);
-    }
-  });
-
-  it("estimates a transform from realistic landmarks in a single z slice", () => {
-    // With these coordinates, the affine solver returns huge values instead of throwing.
-    const fixedPositions: Vector3[] = [
-      [1203, 4511, 7],
-      [3810, 402, 7],
-      [2290, 3001, 7],
-      [517, 980, 7],
-      [4100, 4400, 7],
-    ];
-    const movingPositions = fixedPositions.map(([x, y]): Vector3 => [x + 12, y - 30, 3]);
-    const landmarks = { fixed: toLandmarks(fixedPositions), moving: toLandmarks(movingPositions) };
-    const result = estimateMovingToFixedTransform(landmarks);
-    if (!("transform" in result)) {
-      throw new Error(result.errorMessage);
-    }
-
-    expect(result.usedCopiesInNextSlice).toBe(true);
-    for (const pair of getLandmarkPairs(landmarks, result.transform)) {
-      expect(pair.residual).toBeCloseTo(0, 3);
-    }
-  });
-
-  it("accepts two landmarks at the same position", () => {
-    const landmarks = {
-      fixed: toLandmarks([...POSITIONS_A, POSITIONS_A[0]]),
-      moving: toLandmarks([...POSITIONS_B, POSITIONS_B[0]]),
-    };
-    expect(estimateMovingToFixedTransform(landmarks)).toHaveProperty("transform");
-  });
-
-  it("estimates a transform that maps the landmarks of B onto A", () => {
-    const landmarks = { fixed: toLandmarks(POSITIONS_A), moving: toLandmarks(POSITIONS_B) };
-    const result = estimateMovingToFixedTransform(landmarks);
-    if (!("transform" in result)) {
-      throw new Error(result.errorMessage);
-    }
-
-    expect(result.usedCopiesInNextSlice).toBe(false);
-    const pairs = getLandmarkPairs(landmarks, result.transform);
-    expect(pairs).toHaveLength(4);
-    for (const pair of pairs) {
-      expect(pair.residual).toBeCloseTo(0, 5);
-    }
-  });
-
   it("pairs landmarks by pair id and has no residual without a transform", () => {
-    const pairs = getLandmarkPairs(
-      {
-        fixed: toLandmarks(POSITIONS_A, [1, 2, 4, 2]),
-        moving: toLandmarks(POSITIONS_B.slice(0, 3), [4, 3, null]),
-      },
-      null,
-    );
+    const landmarks = {
+      fixed: toLandmarks(FIXED_POSITIONS, [1, 2, 4, 2]),
+      moving: toLandmarks(MOVING_POSITIONS.slice(0, 3), [4, 3, null]),
+    };
+    const pairs = getLandmarkPairs(landmarks, null);
 
     expect(
       pairs.map((pair) => [
@@ -245,32 +104,27 @@ describe("Layer registration helpers", () => {
         pair.landmarks.moving?.position,
       ]),
     ).toEqual([
-      [1, POSITIONS_A[0], undefined],
-      [2, POSITIONS_A[1], undefined],
-      [3, undefined, POSITIONS_B[1]],
-      [4, POSITIONS_A[2], POSITIONS_B[0]],
-      // The second landmark with pair id 2 in A and the landmark without pair id in B.
-      [null, POSITIONS_A[3], undefined],
-      [null, undefined, POSITIONS_B[2]],
+      [1, FIXED_POSITIONS[0], undefined],
+      [2, FIXED_POSITIONS[1], undefined],
+      [3, undefined, MOVING_POSITIONS[1]],
+      [4, FIXED_POSITIONS[2], MOVING_POSITIONS[0]],
+      // The second fixed landmark with pair id 2 and the moving landmark without pair id.
+      [null, FIXED_POSITIONS[3], undefined],
+      [null, undefined, MOVING_POSITIONS[2]],
     ]);
     expect(pairs.every((pair) => pair.residual == null)).toBe(true);
     expect(getMeanResidual(pairs)).toBeNull();
-    expect(
-      getCompleteLandmarkPairs({
-        fixed: toLandmarks(POSITIONS_A, [1, 2, 4, 2]),
-        moving: toLandmarks(POSITIONS_B.slice(0, 3), [4, 3, null]),
-      }).map((pair) => pair.pairId),
-    ).toEqual([4]);
+    expect(getCompleteLandmarkPairs(landmarks).map((pair) => pair.pairId)).toEqual([4]);
   });
 
   it("measures the residuals in the unit of the dataset", () => {
     const voxelSizeFactor: Vector3 = [4, 4, 40];
     // A transform that shifts by one voxel along x and z.
-    const shiftedMovingPositions = POSITIONS_A.map(([x, y, z]): Vector3 => [x - 1, y, z - 1]);
-    const transform = createAffineTransform(shiftedMovingPositions, POSITIONS_A);
+    const shiftedMovingPositions = FIXED_POSITIONS.map(([x, y, z]): Vector3 => [x - 1, y, z - 1]);
+    const transform = createAffineTransform(shiftedMovingPositions, FIXED_POSITIONS);
     const landmarks = {
       fixed: toLandmarks([[0, 0, 0]]),
-      // Before the transform, this landmark is at the same position as the one of A.
+      // Before the transform, this landmark is at the same position as the fixed one.
       moving: toLandmarks([[0, 0, 0]]),
     };
     const [pair] = getLandmarkPairs(landmarks, transform, voxelSizeFactor);
@@ -278,9 +132,9 @@ describe("Layer registration helpers", () => {
   });
 
   it("shows the floating point noise of an exact fit as an error of 0", () => {
-    const transform = createAffineTransform(POSITIONS_B, POSITIONS_A);
+    const transform = createAffineTransform(MOVING_POSITIONS, FIXED_POSITIONS);
     const pairs = getLandmarkPairs(
-      { fixed: toLandmarks(POSITIONS_A), moving: toLandmarks(POSITIONS_B) },
+      { fixed: toLandmarks(FIXED_POSITIONS), moving: toLandmarks(MOVING_POSITIONS) },
       transform,
       [1, 1, 1],
     );
@@ -296,10 +150,16 @@ describe("Layer registration helpers", () => {
     expect(getMeanResidual(pairs)).toBe(2);
   });
 
+  it("never treats errors below the voxel size as high", () => {
+    expect(isHighResidual(0.5, 0.01, [1, 1, 1])).toBe(false);
+    expect(isHighResidual(5, 2, [1, 1, 1])).toBe(true);
+    expect(isHighResidual(3, 2, [1, 1, 1])).toBe(false);
+  });
+
   it("tells a worker which pairs miss a landmark on its side", () => {
     const landmarks = {
-      fixed: toLandmarks(POSITIONS_A, [1, 2, 5, 7]),
-      moving: toLandmarks(POSITIONS_B.slice(0, 2), [5, 3]),
+      fixed: toLandmarks(FIXED_POSITIONS, [1, 2, 5, 7]),
+      moving: toLandmarks(MOVING_POSITIONS.slice(0, 2), [5, 3]),
     };
     expect(getLandmarkPairInfo(landmarks, "fixed")).toEqual({
       openPairIds: [3],
@@ -320,27 +180,11 @@ describe("Layer registration helpers", () => {
     expect(getNextLandmarkPairId(new Set([9]), { openPairIds: [], otherMaxPairId: 6 })).toBe(10);
     expect(getNextLandmarkPairId(new Set(), { openPairIds: [], otherMaxPairId: 0 })).toBe(1);
   });
-});
 
-describe("Layer registration annotation helpers", () => {
-  const createAnnotation = (overrides: Partial<APIAnnotationInfo>) =>
-    ({
-      owner: { id: "owner", firstName: "A", lastName: "B" },
-      state: "Active",
-      isLockedByOwner: false,
-      ...overrides,
-    }) as APIAnnotationInfo;
-
-  it("lets only the owner work on an active, unlocked layer registration", () => {
-    expect(getLayerRegistrationEditBlocker(createAnnotation({}), "owner")).toBeNull();
-    expect(getLayerRegistrationEditBlocker(createAnnotation({}), "someone else")).toBe("notOwner");
-    expect(getLayerRegistrationEditBlocker(createAnnotation({}), null)).toBe("notOwner");
-    expect(getLayerRegistrationEditBlocker(createAnnotation({ state: "Finished" }), "owner")).toBe(
-      "archived",
-    );
-    expect(
-      getLayerRegistrationEditBlocker(createAnnotation({ isLockedByOwner: true }), "owner"),
-    ).toBe("locked");
+  it("stores the landmarks of each side in a group of the moving layer", () => {
+    const layerNames = { fixed: "color_1", moving: "color_3" };
+    expect(getLandmarkGroupPath(layerNames, "fixed")).toEqual(["color_3", "color_1 landmarks"]);
+    expect(getLandmarkGroupPath(layerNames, "moving")).toEqual(["color_3", "color_3 landmarks"]);
   });
 
   it("colors the fixed layer green and the moving layer magenta if both are color layers", () => {
@@ -359,182 +203,5 @@ describe("Layer registration annotation helpers", () => {
       moving: [255, 0, 255],
     });
     expect(getOverlayLayerColors(createDataset("segmentation"), layerNames)).toBeNull();
-  });
-
-  it("recognizes whether the moving layer has the applied transform", () => {
-    const transform = createAffineTransform(POSITIONS_B, POSITIONS_A);
-    const fixedLayerTransforms: CoordinateTransformation[] = [
-      { type: "affine", matrix: flatToNestedMatrix(Identity4x4) },
-    ];
-    const appliedTransforms: CoordinateTransformation[] = [
-      { type: "affine", matrix: flatToNestedMatrix(transform.affineMatrix) },
-      ...fixedLayerTransforms,
-    ];
-    expect(isTransformAppliedToDataset(transform, fixedLayerTransforms, appliedTransforms)).toBe(
-      true,
-    );
-    expect(isTransformAppliedToDataset(transform, null, appliedTransforms)).toBe(false);
-    expect(isTransformAppliedToDataset(transform, fixedLayerTransforms, null)).toBe(false);
-  });
-
-  const datasetWithLayers = (...names: string[]) =>
-    ({ dataSource: { dataLayers: names.map((name) => ({ name })) } }) as APIDataset;
-
-  it("offers all other layers of the dataset as moving layers", () => {
-    const dataset = datasetWithLayers("color_1", "color_2", "color_3");
-    expect(getMovingLayerNames(dataset, "color_2")).toEqual(["color_1", "color_3"]);
-  });
-
-  it("shows the requested moving layer or falls back to the first one", () => {
-    const movingLayerNames = ["color_2", "color_3"];
-    expect(getActiveMovingLayerName(movingLayerNames, "color_3")).toBe("color_3");
-    expect(getActiveMovingLayerName(movingLayerNames, null)).toBe("color_2");
-    expect(getActiveMovingLayerName(movingLayerNames, "renamed")).toBe("color_2");
-    expect(getActiveMovingLayerName([], null)).toBeNull();
-  });
-
-  it("stores the landmarks of each side in a group of the moving layer", () => {
-    const layerNames = { fixed: "color_1", moving: "color_3" };
-    expect(getLandmarkGroupPath(layerNames, "fixed")).toEqual(["color_3", "color_1 landmarks"]);
-    expect(getLandmarkGroupPath(layerNames, "moving")).toEqual(["color_3", "color_3 landmarks"]);
-  });
-
-  it("applies the transforms of the given moving layers on top of the fixed layer's transforms", () => {
-    const transform = createAffineTransform(POSITIONS_B, POSITIONS_A);
-    const fixedLayerTransforms: CoordinateTransformation[] = [
-      { type: "affine", matrix: flatToNestedMatrix(Identity4x4) },
-    ];
-    const oldTransforms: CoordinateTransformation[] = [
-      { type: "affine", matrix: flatToNestedMatrix(transform.affineMatrixInv) },
-    ];
-    const dataLayers = [
-      { name: "fixed", coordinateTransformations: fixedLayerTransforms },
-      { name: "transformed", coordinateTransformations: oldTransforms },
-      { name: "unchanged", coordinateTransformations: oldTransforms },
-    ] as APIDataset["dataSource"]["dataLayers"];
-    const [fixed, transformed, unchanged] = getDataLayersWithAppliedTransforms(
-      dataLayers,
-      "fixed",
-      new Map([["transformed", transform]]),
-    );
-    expect(fixed).toBe(dataLayers[0]);
-    expect(unchanged).toBe(dataLayers[2]);
-    expect(transformed.coordinateTransformations).toEqual([
-      { type: "affine", matrix: flatToNestedMatrix(transform.affineMatrix) },
-      ...fixedLayerTransforms,
-    ]);
-    expect(() =>
-      getDataLayersWithAppliedTransforms(dataLayers, "fixed", new Map([["renamed", transform]])),
-    ).toThrow('"renamed"');
-  });
-
-  it("summarizes the estimated transform of a moving layer and whether the dataset uses it", () => {
-    const tooFewPairs = getLayerPairTransformEstimate(
-      { fixed: toLandmarks(POSITIONS_A.slice(0, 2)), moving: toLandmarks(POSITIONS_B.slice(0, 2)) },
-      [1, 1, 1],
-    );
-    expect(tooFewPairs.completePairCount).toBe(2);
-    expect(tooFewPairs.meanResidual).toBeNull();
-    expect(getAppliedState(tooFewPairs.estimation, null, null)).toBe("notEnoughPairs");
-
-    const estimate = getLayerPairTransformEstimate(
-      { fixed: toLandmarks(POSITIONS_A), moving: toLandmarks(POSITIONS_B) },
-      [1, 1, 1],
-    );
-    expect(estimate.completePairCount).toBe(4);
-    expect(estimate.meanResidual).toBeCloseTo(0);
-    expect(getAppliedState(estimate.estimation, null, null)).toBe("notApplied");
-    if (!("transform" in estimate.estimation)) {
-      throw new Error("Expected a transform.");
-    }
-    const appliedTransforms: CoordinateTransformation[] = [
-      { type: "affine", matrix: flatToNestedMatrix(estimate.estimation.transform.affineMatrix) },
-    ];
-    expect(getAppliedState(estimate.estimation, null, appliedTransforms)).toBe("applied");
-  });
-});
-
-describe("Layer registration panel hints", () => {
-  const [landmark] = toLandmarks([[0, 0, 0]]);
-  const createPair = (
-    pairId: number,
-    sides: { fixed?: boolean; moving?: boolean } = { fixed: true, moving: true },
-    residual: number | null = null,
-  ): LandmarkPair => ({
-    key: String(pairId),
-    pairId,
-    landmarks: {
-      fixed: sides.fixed ? { ...landmark, pairId } : undefined,
-      moving: sides.moving ? { ...landmark, pairId } : undefined,
-    },
-    residual,
-  });
-  const createRow = (
-    layerName: string,
-    appliedState: AppliedState,
-    completePairCount = 4,
-  ): MovingLayerRow => ({ layerName, completePairCount, meanResidual: null, appliedState });
-  const getStep = (
-    pairs: LandmarkPair[],
-    options: { hasTransform?: boolean; movingLayerRows?: MovingLayerRow[] } = {},
-  ) =>
-    getNextStep({
-      pairs,
-      hasTransform: options.hasTransform ?? true,
-      meanResidual: pairs.some((pair) => pair.residual != null)
-        ? pairs.reduce((sum, pair) => sum + (pair.residual ?? 0), 0) /
-          pairs.filter((pair) => pair.residual != null).length
-        : null,
-      voxelSizeFactor: [1, 1, 1],
-      movingLayerRows: options.movingLayerRows ?? [createRow("moving", "notApplied")],
-      activeLayerName: "moving",
-    });
-  const fourGoodPairs = [1, 2, 3, 4].map((pairId) => createPair(pairId, undefined, 2));
-
-  it("guides through placing the first landmarks and completing the pairs", () => {
-    expect(getStep([], { hasTransform: false })).toEqual({ type: "placeFirstLandmark" });
-    const incompletePair = createPair(2, { fixed: true });
-    expect(getStep([createPair(1), incompletePair], { hasTransform: false })).toEqual({
-      type: "completePair",
-      pair: incompletePair,
-      missingSide: "moving",
-    });
-    expect(getStep([createPair(1), createPair(2)], { hasTransform: false })).toEqual({
-      type: "placeMorePairs",
-      missingPairCount: 1,
-    });
-    // The status card explains why no transform could be estimated.
-    expect(getStep(fourGoodPairs, { hasTransform: false })).toBeNull();
-  });
-
-  it("points to a pair with a much higher error than the others", () => {
-    const outlier = createPair(4, undefined, 10);
-    const step = getStep([...fourGoodPairs.slice(0, 3), outlier]);
-    expect(step).toEqual({ type: "checkOutlier", pair: outlier, errorFactor: 10 / 4 });
-  });
-
-  it("asks to apply the transform, then points to the next layer", () => {
-    expect(getStep(fourGoodPairs)).toEqual({ type: "compareAndApply" });
-    expect(
-      getStep(fourGoodPairs, {
-        movingLayerRows: [createRow("moving", "applied"), createRow("other", "notEnoughPairs", 0)],
-      }),
-    ).toEqual({
-      type: "nextLayer",
-      layerName: "other",
-      completePairCount: 0,
-      appliedState: "notEnoughPairs",
-    });
-    expect(
-      getStep(fourGoodPairs, {
-        movingLayerRows: [createRow("moving", "applied"), createRow("other", "applied")],
-      }),
-    ).toEqual({ type: "allApplied", hasSeveralMovingLayers: true });
-  });
-
-  it("never treats errors below the voxel size as high", () => {
-    expect(isHighResidual(0.5, 0.01, [1, 1, 1])).toBe(false);
-    expect(isHighResidual(5, 2, [1, 1, 1])).toBe(true);
-    expect(isHighResidual(3, 2, [1, 1, 1])).toBe(false);
   });
 });

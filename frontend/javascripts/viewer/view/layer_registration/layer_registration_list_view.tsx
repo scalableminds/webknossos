@@ -24,7 +24,7 @@ import Toast from "libs/toast";
 import without from "lodash-es/without";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import type { APIAnnotationInfo, APIDataset } from "types/api_types";
+import type { APIAnnotationInfo, APIDataset, APIUser } from "types/api_types";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import {
@@ -38,6 +38,118 @@ import {
   LayerRegistrationPageSpinner,
 } from "./layer_registration_page_status_views";
 import { getLayerRegistrationViewUrl } from "./layer_registration_protocol";
+
+// Runs an action on an annotation of the list, with a toast for the result.
+type ChangeAnnotation = (change: () => Promise<unknown>, successMessage: string) => Promise<void>;
+
+// Opens the layer registration, or first removes what keeps the user from working on it.
+function RowActions({
+  annotation,
+  dataset,
+  activeUserId,
+  onOpen,
+}: {
+  annotation: APIAnnotationInfo;
+  dataset: APIDataset;
+  activeUserId: string;
+  onOpen: (annotationId: string) => void;
+}) {
+  const editBlocker = getLayerRegistrationEditBlocker(annotation, activeUserId);
+  if (editBlocker == null) {
+    return (
+      <div className="annotation-row-actions">
+        <Link to={getLayerRegistrationViewUrl(dataset, annotation.id)}>
+          <PlayCircleOutlined className="icon-margin-right" />
+          Open
+        </Link>
+      </div>
+    );
+  }
+  const resolveEditBlockerAndOpen = async () => {
+    try {
+      onOpen(await resolveLayerRegistrationEditBlocker(annotation, editBlocker));
+    } catch (error) {
+      handleGenericError(error as Error);
+    }
+  };
+  return (
+    <div className="annotation-row-actions">
+      <AsyncLink
+        onClick={resolveEditBlockerAndOpen}
+        icon={<PlayCircleOutlined className="icon-margin-right" />}
+      >
+        {EDIT_BLOCKER_ACTION_LABELS[editBlocker]}
+      </AsyncLink>
+    </div>
+  );
+}
+
+// The details of the selected layer registration, with the changes that the user may make.
+function LayerRegistrationDetailsSidebar({
+  annotation,
+  activeUser,
+  changeAnnotation,
+  onClickTag,
+}: {
+  annotation: APIAnnotationInfo | null;
+  activeUser: APIUser;
+  changeAnnotation: ChangeAnnotation;
+  onClickTag: (tag: string) => void;
+}) {
+  if (annotation == null) {
+    return (
+      <AnnotationDetailsSidebar
+        annotation={null}
+        activeUser={activeUser}
+        isReadOnly={false}
+        tags={null}
+      />
+    );
+  }
+  const { id, typ, tags, isLockedByOwner } = annotation;
+  const isEditable = isAnnotationEditable(annotation, activeUser);
+  const updateTags = (newTags: string[]) =>
+    changeAnnotation(() => editAnnotation(id, typ, { tags: newTags }), "The tags were updated.");
+  return (
+    <AnnotationDetailsSidebar
+      annotation={annotation}
+      activeUser={activeUser}
+      isReadOnly={!isEditable}
+      tags={
+        <AnnotationTags
+          annotation={annotation}
+          isEditable={isEditable && annotation.state === "Active"}
+          onClickTag={onClickTag}
+          onAddTag={(tag) => updateTags([...tags, tag])}
+          onRemoveTag={(tag) => updateTags(without(tags, tag))}
+        />
+      }
+      onRename={
+        isEditable
+          ? (name) =>
+              changeAnnotation(
+                () => editAnnotation(id, typ, { name }),
+                "The annotation was renamed.",
+              )
+          : undefined
+      }
+      onArchive={
+        mayArchiveAnnotation(annotation, activeUser)
+          ? () => changeAnnotation(() => finishAnnotation(id, typ), "The annotation was archived.")
+          : undefined
+      }
+      onToggleLock={
+        mayLockAnnotation(annotation, activeUser)
+          ? () =>
+              changeAnnotation(
+                () => editLockedState(id, typ, !isLockedByOwner),
+                isLockedByOwner ? "The annotation was unlocked." : "The annotation was locked.",
+              )
+          : undefined
+      }
+    />
+  );
+}
 
 // Lists the layer registration annotations of a dataset and creates new ones.
 function LayerRegistrationListView() {
@@ -113,8 +225,8 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
     }
   };
 
-  // Runs an action on an annotation of the list and loads the list again afterwards.
-  const changeAnnotation = async (change: () => Promise<unknown>, successMessage: string) => {
+  // Loads the list again after each change.
+  const changeAnnotation: ChangeAnnotation = async (change, successMessage) => {
     try {
       await change();
       Toast.success(successMessage);
@@ -123,61 +235,6 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
     }
     await refetchLayerRegistrations();
   };
-
-  const renderActions = (annotation: APIAnnotationInfo) => {
-    const editBlocker = getLayerRegistrationEditBlocker(annotation, activeUser.id);
-    if (editBlocker == null) {
-      return (
-        <div className="annotation-row-actions">
-          <Link to={getLayerRegistrationViewUrl(dataset, annotation.id)}>
-            <PlayCircleOutlined className="icon-margin-right" />
-            Open
-          </Link>
-        </div>
-      );
-    }
-    return (
-      <div className="annotation-row-actions">
-        <AsyncLink
-          onClick={async () => {
-            try {
-              openLayerRegistration(
-                await resolveLayerRegistrationEditBlocker(annotation, editBlocker),
-              );
-            } catch (error) {
-              handleGenericError(error as Error);
-            }
-          }}
-          icon={<PlayCircleOutlined className="icon-margin-right" />}
-        >
-          {EDIT_BLOCKER_ACTION_LABELS[editBlocker]}
-        </AsyncLink>
-      </div>
-    );
-  };
-
-  const renderEditableTags = (annotation: APIAnnotationInfo) => (
-    <AnnotationTags
-      annotation={annotation}
-      isEditable={isAnnotationEditable(annotation, activeUser) && annotation.state === "Active"}
-      onClickTag={(tag) =>
-        setTags((previous) => (previous.includes(tag) ? previous : [...previous, tag]))
-      }
-      onAddTag={(tag) =>
-        changeAnnotation(
-          () => editAnnotation(annotation.id, annotation.typ, { tags: [...annotation.tags, tag] }),
-          "The tags were updated.",
-        )
-      }
-      onRemoveTag={(tag) =>
-        changeAnnotation(
-          () =>
-            editAnnotation(annotation.id, annotation.typ, { tags: without(annotation.tags, tag) }),
-          "The tags were updated.",
-        )
-      }
-    />
-  );
 
   return (
     <div className="container">
@@ -229,7 +286,14 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
             onShowArchivedChange={setShowArchived}
             selectedAnnotationId={selectedAnnotationId}
             onSelectAnnotation={setSelectedAnnotationId}
-            renderActions={renderActions}
+            renderActions={(annotation) => (
+              <RowActions
+                annotation={annotation}
+                dataset={dataset}
+                activeUserId={activeUser.id}
+                onOpen={openLayerRegistration}
+              />
+            )}
             emptyPlaceholder={
               <Typography.Text type="secondary">
                 {fixedLayerName != null
@@ -245,46 +309,12 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
             hideLayerRegistrationPrefix
           />
         </div>
-        <AnnotationDetailsSidebar
+        <LayerRegistrationDetailsSidebar
           annotation={selectedAnnotation}
           activeUser={activeUser}
-          isReadOnly={
-            selectedAnnotation != null && !isAnnotationEditable(selectedAnnotation, activeUser)
-          }
-          tags={selectedAnnotation != null ? renderEditableTags(selectedAnnotation) : null}
-          onRename={
-            selectedAnnotation != null && isAnnotationEditable(selectedAnnotation, activeUser)
-              ? (name) =>
-                  changeAnnotation(
-                    () => editAnnotation(selectedAnnotation.id, selectedAnnotation.typ, { name }),
-                    "The annotation was renamed.",
-                  )
-              : undefined
-          }
-          onArchive={
-            selectedAnnotation != null && mayArchiveAnnotation(selectedAnnotation, activeUser)
-              ? () =>
-                  changeAnnotation(
-                    () => finishAnnotation(selectedAnnotation.id, selectedAnnotation.typ),
-                    "The annotation was archived.",
-                  )
-              : undefined
-          }
-          onToggleLock={
-            selectedAnnotation != null && mayLockAnnotation(selectedAnnotation, activeUser)
-              ? () =>
-                  changeAnnotation(
-                    () =>
-                      editLockedState(
-                        selectedAnnotation.id,
-                        selectedAnnotation.typ,
-                        !selectedAnnotation.isLockedByOwner,
-                      ),
-                    selectedAnnotation.isLockedByOwner
-                      ? "The annotation was unlocked."
-                      : "The annotation was locked.",
-                  )
-              : undefined
+          changeAnnotation={changeAnnotation}
+          onClickTag={(tag) =>
+            setTags((previous) => (previous.includes(tag) ? previous : [...previous, tag]))
           }
         />
       </div>

@@ -1614,6 +1614,28 @@ state and behaviour stay in `layer_registration_workspace.tsx`. The panel is spl
 The description is no longer shown in the panel, only edited from the ⋯ menu.
 **Not tried in a browser yet.**
 
+### 0.33 Refactor for the coding standards (2026-10-14)
+
+No behavior changes. Files above ~500 lines were split by topic (`~/ScalableMinds/CODING_STANDARDS.md`):
+- `layer_registration_helpers.ts` keeps sides, landmarks, pairs, residuals, group paths and
+  overlay colors. New: `…_transform_estimation.ts` (`estimateMovingToFixedTransform`, which now
+  returns `EstimatedTransform | { errorMessage }` with the field `movingToFixedTransform`),
+  `…_dataset_transforms.ts` (applied state, applying to the dataset), `…_moving_layers.ts`
+  (moving layer names, `getMovingLayerRows`, `getCopySources`, `InactivePair`), `…_next_step.ts`.
+- Hooks moved to `layer_registration/hooks/`. The workspace got `useViewSettings` (visibility,
+  transform and color switches plus the effects that send them to the workers),
+  `useLeavePrompt`, `useApplyTransforms` (with `…_apply_transforms_dialog.tsx`) and
+  `LayerRegistrationWorkerFrames` (`…_worker_frames.tsx`: iframes, next-landmark hint, overlay).
+  The panel gets `estimation` and `viewSettings` instead of single props.
+- Pair table: empty state in `…_empty_landmark_state.tsx`, color dot in `…_landmark_color.tsx`,
+  column widths in `getColumnLayout`, `useElementSize` moved to `libs/react_hooks.ts`.
+- `VIEW_NAMES` exists once (helpers), UI errors go through `handleGenericError`,
+  `MovingLayerLine` is `MovingLayerSelect`. The list view has `RowActions` and
+  `LayerRegistrationDetailsSidebar`.
+- Tests: one spec per module in `test/misc/layer_registration_*.spec.ts`, shared data in
+  `test/fixtures/layer_registration_fixtures.ts`.
+- `DatasetAddType` moved to `admin/dataset/dataset_add_type.ts` to remove an import cycle.
+
 ### 0.3 Not started / explicitly out of scope for this pass
 
 - **Manual browser QA in progress** (started 2026-08-31, see §0.4) - the single bug

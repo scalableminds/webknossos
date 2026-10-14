@@ -4,24 +4,13 @@ import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   getLandmarkGroupPath,
   getLandmarks,
-  getLayerPairTransformEstimate,
   type Landmark,
-  type LayerPairTransformEstimate,
   SIDES,
   type Side,
-} from "./layer_registration_helpers";
+} from "../layer_registration_helpers";
+import type { InactivePair, InactivePairs } from "../layer_registration_moving_layers";
+import { getLayerPairTransformEstimate } from "../layer_registration_transform_estimation";
 import type { SendMessage } from "./use_layer_registration_iframe_bridge";
-
-// A moving layer that is not shown in the right view.
-export type InactivePair = {
-  estimate: LayerPairTransformEstimate;
-  // The stored landmarks of the fixed layer side, to copy them to the active pair. Null if
-  // there are none.
-  fixedSideNmlString: string | null;
-};
-
-// Null while loading. The map has no entry for a layer whose landmarks could not be read.
-export type InactivePairs = Map<string, InactivePair> | null;
 
 async function readStoredSide(
   sendMessage: SendMessage,

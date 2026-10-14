@@ -5,16 +5,17 @@ import type React from "react";
 import type { VoxelSize } from "types/api_types";
 import { Keycap } from "viewer/view/components/keycap";
 import {
-  type EstimatedTransform,
   formatResidual,
   getLandmarkTreeName,
   isCompletePair,
   type LandmarkPair,
-  MIN_LANDMARK_PAIR_COUNT,
-  type NextStep,
+  VIEW_NAMES,
 } from "./layer_registration_helpers";
-
-const VIEW_NAMES = { fixed: "left", moving: "right" } as const;
+import type { NextStep } from "./layer_registration_next_step";
+import {
+  MIN_LANDMARK_PAIR_COUNT,
+  type TransformEstimation,
+} from "./layer_registration_transform_estimation";
 
 function getNextStepContent(
   nextStep: NextStep,
@@ -84,16 +85,13 @@ function Warning({ children }: { children: React.ReactNode }) {
 }
 
 // Why landmarks or pairs are not used for the transform, or why it may be wrong.
-function getWarnings(
-  pairs: LandmarkPair[],
-  estimatedTransform: EstimatedTransform | null,
-  estimationErrorMessage: string | null,
-): string[] {
+function getWarnings(pairs: LandmarkPair[], estimation: TransformEstimation): string[] {
   const warnings: string[] = [];
   const incompletePairs = pairs.filter((pair) => !isCompletePair(pair));
   const [firstIncompletePair] = incompletePairs;
   if (incompletePairs.length === 1 && firstIncompletePair.pairId != null) {
-    const missingView = firstIncompletePair.landmarks.fixed == null ? "left" : "right";
+    const missingView =
+      VIEW_NAMES[firstIncompletePair.landmarks.fixed == null ? "fixed" : "moving"];
     warnings.push(
       `${getLandmarkTreeName(firstIncompletePair.pairId)} has no partner in the ${missingView} view, so it is not used yet.`,
     );
@@ -102,19 +100,16 @@ function getWarnings(
       `${incompletePairs.length} landmarks without a partner are not used for the transform yet.`,
     );
   }
-  if (estimatedTransform?.usedCopiesInNextSlice) {
+  if ("errorMessage" in estimation) {
+    // With too few pairs, the status line already says why.
+    const completePairCount = pairs.length - incompletePairs.length;
+    if (completePairCount >= MIN_LANDMARK_PAIR_COUNT) {
+      warnings.push(estimation.errorMessage);
+    }
+  } else if (estimation.usedCopiesInNextSlice) {
     warnings.push(
       "The landmarks lie in one plane, so the transform assumes that the layers are only shifted against each other along z.",
     );
-  }
-  // With too few pairs, the status line already says why.
-  const completePairCount = pairs.length - incompletePairs.length;
-  if (
-    estimatedTransform == null &&
-    estimationErrorMessage != null &&
-    completePairCount >= MIN_LANDMARK_PAIR_COUNT
-  ) {
-    warnings.push(estimationErrorMessage);
   }
   return warnings;
 }
@@ -124,8 +119,7 @@ function getWarnings(
  */
 export function TransformStatusCard({
   pairs,
-  estimatedTransform,
-  estimationErrorMessage,
+  estimation,
   meanResidual,
   voxelSize,
   nextStep,
@@ -133,8 +127,8 @@ export function TransformStatusCard({
   onSelectMovingLayer,
 }: {
   pairs: LandmarkPair[];
-  estimatedTransform: EstimatedTransform | null;
-  estimationErrorMessage: string | null;
+  // The transform estimation of the active moving layer.
+  estimation: TransformEstimation;
   meanResidual: number | null;
   voxelSize: VoxelSize;
   nextStep: NextStep | null;
@@ -145,7 +139,8 @@ export function TransformStatusCard({
   const completePairCount = pairs.filter(isCompletePair).length;
   const nextStepContent =
     nextStep != null ? getNextStepContent(nextStep, onSelectPair, onSelectMovingLayer) : null;
-  const warnings = getWarnings(pairs, estimatedTransform, estimationErrorMessage);
+  const warnings = getWarnings(pairs, estimation);
+  const hasTransform = !("errorMessage" in estimation);
 
   return (
     <Flex
@@ -159,7 +154,7 @@ export function TransformStatusCard({
       }}
     >
       <Flex align="center" gap={8} wrap>
-        {estimatedTransform != null ? (
+        {hasTransform ? (
           <Badge
             status="success"
             text={<Typography.Text strong>Transform estimated</Typography.Text>}
@@ -171,7 +166,7 @@ export function TransformStatusCard({
           />
         )}
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          {estimatedTransform != null
+          {hasTransform
             ? `${completePairCount} ${pluralize("pair", completePairCount)} used${
                 meanResidual != null
                   ? ` · mean error ${formatResidual(meanResidual, voxelSize)}`

@@ -2,11 +2,9 @@ import { CheckOutlined } from "@ant-design/icons";
 import { Badge, Divider, Flex, Select, Tag, Typography, theme } from "antd";
 import { pluralize } from "libs/utils";
 import type { VoxelSize } from "types/api_types";
-import {
-  type AppliedState,
-  formatResidual,
-  type MovingLayerRow,
-} from "./layer_registration_helpers";
+import type { AppliedState } from "./layer_registration_dataset_transforms";
+import { formatResidual } from "./layer_registration_helpers";
+import type { MovingLayerRow } from "./layer_registration_moving_layers";
 
 function getRowDetails(row: MovingLayerRow, voxelSize: VoxelSize): string {
   if ("isLoading" in row) {
@@ -23,7 +21,7 @@ function getRowDetails(row: MovingLayerRow, voxelSize: VoxelSize): string {
 
 // Whether the dataset uses the transform of a moving layer. Nothing is shown without a
 // transform.
-export function AppliedStateTag({ appliedState }: { appliedState: AppliedState }) {
+function AppliedStateTag({ appliedState }: { appliedState: AppliedState }) {
   switch (appliedState) {
     case "applied":
       return (
@@ -65,7 +63,7 @@ function MovingLayerOption({ row, voxelSize }: { row: MovingLayerRow; voxelSize:
  * several moving layers, the moving layer is a select, and choosing another one switches the
  * right view to it. The tag says whether the dataset uses the transform of the active layer.
  */
-export function MovingLayerLine({
+export function MovingLayerSelect({
   rows,
   activeLayerName,
   fixedLayerName,

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { DatasetAddType } from "admin/dataset/dataset_add_type";
 import { getDataset } from "admin/rest_api";
 import { Alert, Button, Modal, Space, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
@@ -15,7 +16,6 @@ import {
   getViewDatasetUrlWithAIAlignment,
 } from "viewer/view/ai_jobs/ai_job_url_param";
 import { getLayerRegistrationListUrl } from "viewer/view/layer_registration/layer_registration_protocol";
-import { DatasetAddType } from "../dataset_add_view";
 
 const addTypeToVerb: Record<DatasetAddType, string> = {
   upload: "uploaded",

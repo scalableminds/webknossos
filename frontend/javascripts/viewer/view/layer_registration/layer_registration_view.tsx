@@ -14,11 +14,8 @@ import {
   type LayerRegistrationEditBlocker,
   resolveLayerRegistrationEditBlocker,
 } from "./layer_registration_edit_blocker";
-import {
-  getActiveMovingLayerName,
-  getMovingLayerNames,
-  type LayerNames,
-} from "./layer_registration_helpers";
+import type { LayerNames } from "./layer_registration_helpers";
+import { getActiveMovingLayerName, getMovingLayerNames } from "./layer_registration_moving_layers";
 import {
   LayerRegistrationPageError,
   LayerRegistrationPageSpinner,

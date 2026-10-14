@@ -1,6 +1,7 @@
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
+import { DatasetAddType } from "admin/dataset/dataset_add_type";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { getDatastores } from "admin/rest_api";
 import { Layout, Tabs, type TabsProps } from "antd";
@@ -14,15 +15,6 @@ import VoxelyticsBanner from "./components/voxelytics_banner";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content } = Layout;
-
-// Used for the tab keys as well as for
-// distinguishing between the add type after
-// successful import.
-export enum DatasetAddType {
-  UPLOAD = "upload",
-  REMOTE = "remote",
-  COMPOSE = "compose",
-}
 
 function DatasetAddView() {
   const navigate = useNavigate();

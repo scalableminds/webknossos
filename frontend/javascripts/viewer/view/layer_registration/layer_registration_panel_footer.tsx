@@ -1,10 +1,10 @@
 import { DownOutlined, EyeOutlined, LaptopOutlined } from "@ant-design/icons";
 import { Button, Divider, Flex, Popover, Switch, Tooltip, Typography, theme } from "antd";
+import capitalize from "lodash-es/capitalize";
 import type React from "react";
 import { Keycap } from "viewer/view/components/keycap";
-import { type LayerNames, OTHER_SIDE, SIDES, type Side } from "./layer_registration_helpers";
-
-const VIEW_NAMES: Record<Side, string> = { fixed: "Left", moving: "Right" };
+import type { ViewSettings } from "./hooks/use_layer_registration_view_settings";
+import { type LayerNames, OTHER_SIDE, SIDES, VIEW_NAMES } from "./layer_registration_helpers";
 
 // The shortcuts work in the view under the mouse pointer (see layer_registration_worker.ts).
 const SHORTCUTS = [
@@ -37,52 +37,47 @@ function SwitchRow({
   );
 }
 
-type ViewSettingsProps = {
+type ViewSettingsContentProps = {
   layerNames: LayerNames;
   isTransformAvailable: boolean;
-  // Per view: whether it also shows the other layer, and whether that layer is transformed.
-  // The same toggles are in the toolbar of each view.
-  isOtherLayerVisible: Record<Side, boolean>;
-  onToggleOtherLayer: (side: Side) => void;
-  isTransformShown: Record<Side, boolean>;
-  onToggleTransform: (side: Side) => void;
-  // False if the layers can't be colored, see getOverlayLayerColors.
-  canColorOverlay: boolean;
-  isColorOverlayEnabled: boolean;
-  onColorOverlayChange: (isEnabled: boolean) => void;
+  // The same switches are in the toolbar of each view.
+  viewSettings: ViewSettings;
 };
 
-function ViewSettings({
+function ViewSettingsContent({
   layerNames,
   isTransformAvailable,
-  isOtherLayerVisible,
-  onToggleOtherLayer,
-  isTransformShown,
-  onToggleTransform,
-  canColorOverlay,
-  isColorOverlayEnabled,
-  onColorOverlayChange,
-}: ViewSettingsProps) {
+  viewSettings,
+}: ViewSettingsContentProps) {
   const { token } = theme.useToken();
+  const {
+    isOtherLayerVisible,
+    isTransformShown,
+    canColorOverlay,
+    isColorOverlayEnabled,
+    toggleOtherLayer,
+    toggleTransform,
+    setIsColorOverlayEnabled,
+  } = viewSettings;
   return (
     <Flex vertical gap={8} style={{ width: 260 }}>
       {SIDES.map((side) => (
         <Flex key={side} vertical gap={6}>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {VIEW_NAMES[side]} view · {layerNames[side]}
+            {capitalize(VIEW_NAMES[side])} view · {layerNames[side]}
           </Typography.Text>
           <SwitchRow
             label={`Show ${layerNames[OTHER_SIDE[side]]}`}
             shortcut="X"
             checked={isOtherLayerVisible[side]}
-            onChange={() => onToggleOtherLayer(side)}
+            onChange={() => toggleOtherLayer(side)}
           />
           <SwitchRow
             label="Transformed"
             shortcut="T"
             checked={isTransformAvailable && isTransformShown[side]}
             disabled={!isTransformAvailable}
-            onChange={() => onToggleTransform(side)}
+            onChange={() => toggleTransform(side)}
           />
         </Flex>
       ))}
@@ -92,7 +87,7 @@ function ViewSettings({
           <SwitchRow
             label="Green / magenta"
             checked={isColorOverlayEnabled}
-            onChange={() => onColorOverlayChange(!isColorOverlayEnabled)}
+            onChange={() => setIsColorOverlayEnabled(!isColorOverlayEnabled)}
           />
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             Where a view shows both layers, matching structures look gray, and structures that don't
@@ -128,8 +123,8 @@ function ShortcutList() {
 export function LayerRegistrationPanelFooter({
   applyDisabledReason,
   onApplyTransformToDataset,
-  ...viewSettingsProps
-}: ViewSettingsProps & {
+  ...viewSettingsContentProps
+}: ViewSettingsContentProps & {
   // Null if the transforms can be applied.
   applyDisabledReason: string | null;
   onApplyTransformToDataset: () => void;
@@ -149,7 +144,7 @@ export function LayerRegistrationPanelFooter({
         <Popover
           trigger="click"
           placement="topLeft"
-          content={<ViewSettings {...viewSettingsProps} />}
+          content={<ViewSettingsContent {...viewSettingsContentProps} />}
         >
           <Button icon={<EyeOutlined />}>
             View <DownOutlined style={{ fontSize: 10 }} />

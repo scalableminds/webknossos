@@ -419,3 +419,22 @@ export function useWindowWidth() {
 
   return width;
 }
+
+// The current content size of the element that the returned ref is attached to. The size is
+// 0 x 0 until the element was measured.
+export function useElementSize<T extends HTMLElement = HTMLDivElement>() {
+  const ref = useRef<T>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const element = ref.current;
+    if (element == null) {
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) =>
+      setSize({ width: entry.contentRect.width, height: entry.contentRect.height }),
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, size] as const;
+}

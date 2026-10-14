@@ -17,6 +17,7 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
       - `Reload from server`: Reload the layer data from server. Useful if the raw data has been changed on disk and you want to refresh your current session.
       - `Jump to data`: Navigates the WEBKNOSSOS camera to the center position within the dataset where there is data available for the respective layer. This is especially useful for working with smaller layers - likely segmentations - that might not cover the whole dataset and are hard to find manually.
       - `Edit layer transforms`: Opens the live transform editor for the layer. See [Live Layer Transform Editor](#live-layer-transform-editor) below.
+      - `Register layers…`: Opens the [layer registration](../datasets/registering_layers.md) page in a new tab, where you register the layers of the dataset to one of them by placing matching landmarks. Only shown if the dataset has at least two layers.
 
 - `Opacity`: Increase / Decrease the opacity of a layer. 0% opacity makes a layer invisible. 100% opacity makes it totally opaque. Useful for overlaying several layers above one another.
 - `Gamma Correction`: Increase / Decrease the luminance, brightness and contrast of a layer through a non-linear gamma correction. Low values darken the image, high values increase the perceived brightness. (Color layers only.)
@@ -51,6 +52,7 @@ The skeleton annotation layer contains any trees that you add to your dataset. Y
 ### Live Layer Transform Editor
 
 The live transform editor lets you interactively adjust the spatial alignment of any color or segmentation layer without leaving the viewer. Open it via `··· menu -> Edit layer transforms` in the layer header.
+To compute the transform from matching landmarks in two layers instead of adjusting it by hand, use [layer registration](../datasets/registering_layers.md).
 
 The editor exposes three groups of controls, each with a slider, a numeric input, and a per-axis reset button:
 
@@ -67,7 +69,7 @@ Two actions at the bottom of the popover apply to all three transform groups at 
 
 Changes made in the editor are applied immediately in the viewer but are not automatically saved. Use **Store as Default** to make them permanent.
 
-The editor is only available for layers whose transform is in the compatible 7-matrix SRT format (translation, scale, rotX, rotY, rotZ, translation, translation). Layers with other transform formats (e.g. thin-plate spline or arbitrary affine JSON) will show an informational message instead, with instructions to clear the transforms in the [dataset settings](../datasets/settings.md#transformations) to unlock editing. The editor is also disabled while a layer is in native (untransformed) rendering mode — disable native rendering first by clicking the transform icon button to the left of the layer's `···` menu.
+The editor is only available for layers whose transform is in the compatible 7-matrix SRT format (translation, scale, rotX, rotY, rotZ, translation, translation). Layers with other transform formats (e.g. thin-plate spline, arbitrary affine JSON, or the affine transforms applied by a [layer registration](../datasets/registering_layers.md)) will show an informational message instead, with instructions to clear the transforms in the [dataset settings](../datasets/settings.md#transformations) to unlock editing. The editor is also disabled while a layer is in native (untransformed) rendering mode — disable native rendering first by clicking the transform icon button to the left of the layer's `···` menu.
 
 ## Settings Tab
 

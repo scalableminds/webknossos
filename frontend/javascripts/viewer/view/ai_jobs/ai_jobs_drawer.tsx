@@ -84,8 +84,6 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
         open={isOpen}
         onClose={handleClose}
         destroyOnHidden
-        // antd's focus trap would pull focus out of the command palette (rendered in its own portal)
-        focusable={{ trap: false }}
         styles={{
           body: {
             background: token.colorBgLayout,

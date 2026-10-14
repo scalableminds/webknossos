@@ -478,12 +478,12 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "PLANE_TOOL_SWITCHING",
   ),
   SWITCH_TO_LASSO_TOOL: new KeyboardShortcutMetaInfo(
-    "Lasso Tool",
+    "Trace Tool",
     [[["Control", "k"], ["l"]]],
     "PLANE_TOOL_SWITCHING",
   ),
   SWITCH_TO_LASSO_ERASE_TOOL: new KeyboardShortcutMetaInfo(
-    "Lasso Erase Tool",
+    "Trace Erase Tool",
     [[["Control", "k"], ["r"]]],
     "PLANE_TOOL_SWITCHING",
   ),
@@ -493,7 +493,7 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "PLANE_TOOL_SWITCHING",
   ),
   SWITCH_TO_SEGMENT_PICKER_TOOL: new KeyboardShortcutMetaInfo(
-    "Segment Picker Tool",
+    "Voxel Pipette Tool",
     [[["Control", "k"], ["p"]]],
     "PLANE_TOOL_SWITCHING",
   ),

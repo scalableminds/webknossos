@@ -21,19 +21,62 @@ These workflows are executed in background worker tasks as so-called *processing
     These workflows are exclusive to webknossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the WEBKNOSSOS worker or [Voxelytics](https://voxelytics.com) for the job processing.
 
 ## Listing Processing Jobs
-A list of all past and currently running jobs can be found in the analysis menu in the navbar (Analysis -> *Processing Jobs*).
-
-Depending on the job workflow you may:
-
-- view the resulting resource, e.g., a new segmentation 
-- download the data, e.g., [Tiff export](../data/export_ui.md)
+A list of all past and currently running jobs can be found in the analysis menu in the navbar (`Analysis > Processing Jobs`). The list shows your own jobs. Admins see all jobs of their organization.
 
 ![Overview of the Jobs page](../images/jobs.jpeg)
 /// caption
 Overview of the Jobs page
 ///
 
+The table has the following columns:
+
+| Column | Description |
+|--------|-------------|
+| `Job Id` | The ID of the job. |
+| `Description` | What the job does and on which dataset or annotation. Use the filter icon in the column header to show only certain job types. For AI training jobs, `Show Training Data` opens the annotations used for training. |
+| `Owner` | The user who started the job. |
+| `Cost in Credits` | The [credits](#credits) charged for the job. Jobs that don't cost credits show `-`. |
+| `Date` | When the job was started. |
+| `State` | `Pending`, `Started`, `Success`, `Failure`, or `Cancelled`. Hover over the state for an explanation. Use the filter icon to show only jobs in certain states. |
+| `Action` | Actions for the job (see below). |
+
+Use the search field above the table to filter jobs by dataset name. The list refreshes automatically.
+
+Depending on the job type and state, the `Action` column offers:
+
+- **View**: Open the resulting dataset or segmentation, e.g., after a conversion, AI segmentation, or materialization.
+- **Download**: Download the result, e.g., a [TIFF export](../data/export_ui.md) or an [animation](./animations.md).
+- **Cancel**: Stop a job that is pending or running. After you confirm, the job is cancelled and any credits reserved for it are refunded.
+- **Retry**: Restart a failed or cancelled job. The workflow continues from the failed step and reuses the results of steps that already succeeded. You can retry a job once. If the job costs credits, your organization needs enough credits for the retry, and they are charged again. If a retried job fails again, the failure is likely persistent; [contact support](mailto:support@webknossos.org) (or your administrator on self-hosted instances).
+- **Show Error**: Open the `Job Error Details` with the error message of a failed job.
+
 We constantly monitor job executions. In rare cases, jobs can fail, and we aim to re-run them as quickly as possible. In case you run into any trouble, please [contact us](mailto:support@webknossos.org).
+
+## Workflow Reports
+
+Some processing jobs run as [Voxelytics](https://voxelytics.com) workflows. On instances with Voxelytics integration, each workflow creates a detailed report. To browse all reports, select `Analysis > Voxelytics` in the navbar. This menu entry only appears if Voxelytics reporting is enabled on your WEBKNOSSOS instance. Admins and dataset managers see all workflow reports of their organization; other users only see their own.
+
+You can also open a report directly from a job:
+
+- On the [`AI Models` page](./ai_training.md#managing-ai-models), click `Voxelytics Report` next to a trained model.
+- Super users see an additional `Voxelytics` column on the `Processing Jobs` page with a `Workflow` link for each job.
+
+The `Voxelytics Workflows` list shows each workflow with its user, host, progress, file size of its outputs, and begin and end times. Click a workflow to open its report:
+
+- **Task graph**: On the left, the report shows the workflow steps (tasks) and their dependencies as a graph. Click a task to jump to its details. Grouped tasks can be expanded and collapsed with `Expand in DAG` / `Collapse in DAG`.
+- **Task list**: On the right, every task is listed with its state, progress, and runtime. Use `Filter tasks` to search for a task. If a workflow was run several times, select a specific run in the dropdown, or `Consolidated` to see the combined state of all runs.
+- **Task details**: Expand a task to see its tabs:
+
+| Tab | Description |
+|-----|-------------|
+| `Description` | A description of the task, if available. |
+| `Config` | The configuration the task was run with. |
+| `Output Artifacts` | The data the task produced, with version, file size, and storage path. `Download checksums` downloads the checksums of the artifact files as CSV. |
+| `Input Artifacts` | The artifacts of other tasks this task depends on. Click one to jump to the producing task. |
+| `Logs` | The log output of the task. You can filter by log level, show timestamps, and download the full log. Only available after selecting a specific run. |
+| `Statistics` | Memory, CPU, and duration statistics of the task's executions. |
+
+The dropdown next to `Collapse All` offers additional actions: `Copy All Artifact Paths`, `Download Report as JSON`, `Download Workflow YAML`, `Download Log` (for a specific run), and `Show Disk Usage of Artifacts`.
 
 ## Credits
 

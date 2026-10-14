@@ -20,6 +20,24 @@ You can customize the interface to your liking. Toggle the left and right sideba
 Customizing the layout by dragging and resizing the viewports.
 ///
 
+## Command Palette
+Press ++ctrl++ / ++cmd++ + ++p++ to open the command palette. Start typing to search for a command and press ++enter++ to run it. The command palette is available everywhere in WEBKNOSSOS, including the dashboard and admin pages. Its shortcut can't be changed in the keyboard shortcut settings.
+
+Available everywhere (when logged in):
+
+- `View Dataset`, `View Annotation`: Press ++enter++ to load a list of your datasets or annotations (most recently modified first), then search and select one to open it.
+- `Switch Organization`: Press ++enter++ to list your other [organizations](../users/organizations.md#switching-organizations) and switch to one.
+- `Go to …`: Navigate to pages such as the datasets, annotations, and tasks dashboards, time tracking, and, depending on your role and the enabled features, admin and analysis pages (e.g., users, teams, jobs, AI models, project progress).
+- `Switch to "System-default" / "Light" / "Dark" color theme`: Change the color theme.
+- `Copy Organization ID`, `Copy Auth Token`: Copy these values to the clipboard, e.g., for use with the [Python library](https://docs.webknossos.org/webknossos-py/).
+
+Additionally available while viewing a dataset or annotation:
+
+- `Switch to …` a tool, e.g., `Switch to Brush Tool`. In view-only mode or if you can't edit the annotation, only the read-only tools are listed.
+- `Switch to orthogonal mode`, `Switch to flight mode`, and `Reset layout`.
+- All entries of the toolbar `Menu`, e.g., `Download`, `Share`, `Duplicate`, or `Restore Older Version`.
+- `Toggle …` commands for on/off user settings, e.g., `Toggle Center New Node`.
+
 Read More About [Skeleton Annotation](../skeleton_annotation/index.md)
 
 Read More About [Volume Annotation](../volume_annotation/index.md)

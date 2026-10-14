@@ -49,7 +49,19 @@ This section provides an overview of your available credits in your organization
 
 After configuring everything, you can start the training by clicking the `Start Training` button. You can monitor the progress of your training job from the [`Processing Jobs` page](./jobs.md) or wait for the email notification. Training might take a few hours depending on the size of your dataset.
 
-Once the training is finished, you can find an overview of all your trained models on the `Admin` > `AI Models` page in the navbar. Please refer to the [AI Segmentation](./ai_segmentation.md) guide for more information on how to apply your trained models to your dataset.
+Once the training is finished, you can find an overview of all your trained models on the `Analysis > AI Models` page in the navbar. Please refer to the [AI Segmentation](./ai_segmentation.md) guide for more information on how to apply your trained models to your dataset.
+
+## Managing AI Models
+
+The `AI Models` page (`Analysis > AI Models`) lists all AI models available to your organization, including models that other organizations shared with you. For each model, it shows the name and ID, the creation date, the user who trained it, the status of the training job, and the comment you entered when starting the training. Use the search field to filter models by name, comment, user, or training status, and the filter icon in the `User` column to show only models of certain users.
+
+The `Actions` column offers:
+
+- **Manage Access**: Share a model with other organizations. This is available for models trained by your organization, once training succeeded. In the dialog, select all organizations that should have access to the model. You can only select organizations you are a member of; your own organization always keeps access.
+- **Voxelytics Report**: Open the [workflow report](./jobs.md#workflow-reports) of the training job, with logs and statistics of each training step. This is only shown if a report exists for the training job.
+- **Show Training Data**: Open the annotation(s) that were used as training data.
+
+You can't edit model names or comments on this page.
 
 
 <!-- Keep info in sync with docs/automation/ai_segmentation.md -->

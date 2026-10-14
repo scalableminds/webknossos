@@ -8,7 +8,7 @@ There are several ways for downloading your annotations:
 
 1. There is a `Download` button in the overflow menu next to the prominent `Save` button in the toolbar at the top of the screen.
     ![Download of skeleton annotations via the ´Download´ button in the toolbar.](../images/tracing_ui_download_toolbar.jpeg)
-2. If you need more fine-grained control over which trees to download, use the `Download Visible Trees` option. From the `Skeleton` Tab, open the `···` (More actions) menu and select `Download Visible Trees NML` or `Download Visible Trees CSV`. All visible trees (checkmark in front of the name) will be downloaded as an NML or CSV file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
+2. If you need more fine-grained control over which trees to download, use the `Download Visible Trees` option. From the `Skeleton` Tab, open the `More actions` menu (☰ icon at the end of the toolbar) and select `Download Visible Trees NML` or `Download Visible Trees CSV`. All visible trees (checkmark in front of the name) will be downloaded as an NML or CSV file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
     ![Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.](../images/tracing_ui_download.jpeg)
 
 NML and CSV export files contain:

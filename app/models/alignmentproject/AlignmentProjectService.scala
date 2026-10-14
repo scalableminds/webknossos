@@ -82,7 +82,8 @@ class AlignmentProjectService @Inject() (
     for {
       dataStore <- dataStoreDAO.findOneByName(project._dataStore)(using GlobalAccessContext)
       dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
-      organizationDir <- dataStoreClient.getOneBaseDirForOrgaAbsolute(project._organization)
+      // Must match the base dir the datastore chose for the upload.
+      organizationDir <- dataStoreClient.getOneBaseDirForOrgaAbsolute(project._organization, requireAllowsUpload = true)
     } yield organizationDir / alignmentProjectsDir / project._id.toString
 
   private def cancelUnfinishedJobs(project: AlignmentProject): Fox[Unit] =

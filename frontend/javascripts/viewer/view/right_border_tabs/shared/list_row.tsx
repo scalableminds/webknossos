@@ -41,12 +41,7 @@ export const HOVER_ONLY_CLASS = "list-row__on-hover";
 // The counterpart: hidden exactly while the row is hovered or keyboard-focused.
 const OFF_HOVER_CLASS = "list-row__off-hover";
 
-/*
- * The action buttons sit at the right edge of the panel, which is the right edge of the
- * viewport. A tooltip centered above them overflows that edge, and react-tooltip then flips
- * it to the left of the button, right over the row. Aligning it with the button's right
- * edge keeps it above the button.
- */
+// Show tooltips above the buttons, right-aligned, so that they don't cover the row.
 export const ACTION_TOOLTIP_PLACEMENT: FastTooltipPlacement = "top-end";
 
 export const ACTION_BUTTON_STYLE: React.CSSProperties = {

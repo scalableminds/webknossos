@@ -92,12 +92,11 @@ class AlignmentProjectDAO @Inject() (sqlClient: SqlClient)(implicit ec: Executio
           WHERE _id = $requestingUserId AND (isAdmin OR isDatasetManager)
         )"""
 
-  // Uploading projects are skipped, as are projects whose alignments are still pending or running.
+  // Includes abandoned uploads. Projects whose alignments are still pending or running are skipped.
   def findAllWithExpiredInputData(createdBefore: Instant): Fox[List[AlignmentProject]] =
     for {
       r <- run(q"""SELECT $columns FROM $existingCollectionName p
                    WHERE NOT p.isInputDataDeleted
-                   AND p.status != ${AlignmentProjectStatus.UPLOADING}
                    AND p.created < $createdBefore
                    AND NOT EXISTS (
                      SELECT 1 FROM webknossos.jobs_ j

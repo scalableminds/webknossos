@@ -1,8 +1,6 @@
 import { CreditCardOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
-import { useQuery } from "@tanstack/react-query";
 import {
   type APIAlignmentProject,
-  getAlignmentProjectJobCreditCost,
   type SectionRange,
   startAlignmentProjectJob,
 } from "admin/api/alignment_projects";
@@ -23,7 +21,7 @@ import {
 } from "antd";
 import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
 import FolderSelection from "dashboard/folders/folder_selection";
-import { formatBytes, formatMilliCreditsString } from "libs/format_utils";
+import { formatBytes } from "libs/format_utils";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
 import { ColorWKBlue, ColorWKGold, ModalWidth } from "theme";
@@ -102,25 +100,6 @@ export function StartAlignmentProjectModal({
       : firstSection != null && lastSection != null && firstSection <= lastSection
         ? { first: firstSection, last: lastSection }
         : null;
-  const { data: creditCostInfo, isFetching: isFetchingCost } = useQuery({
-    queryKey: [
-      "alignmentProjectJobCreditCost",
-      project.id,
-      renderUnaligned,
-      selectedSectionRange?.first,
-      selectedSectionRange?.last,
-    ],
-    queryFn: () =>
-      getAlignmentProjectJobCreditCost(project.id, renderUnaligned, selectedSectionRange),
-    enabled: isOpen && selectedSectionRange != null,
-  });
-  const costInMilliCredits =
-    selectedSectionRange != null ? creditCostInfo?.costInMilliCredits : null;
-  const hasEnoughCredits = costInMilliCredits != null && creditCostInfo?.hasEnoughCredits === true;
-  const costPerSectionInMilliCredits =
-    costInMilliCredits != null && selectedSectionRange != null
-      ? costInMilliCredits / getSectionCount(selectedSectionRange)
-      : null;
 
   const handleStart = async () => {
     const values = await form.validateFields();
@@ -285,24 +264,10 @@ export function StartAlignmentProjectModal({
             title={
               <Space align="center">
                 <CreditCardOutlined style={{ color: ColorWKGold }} />
-                Credit Information
+                Cost
               </Space>
             }
           >
-            <Row justify="space-between">
-              <Col>
-                <Text>Available Credits</Text>
-              </Col>
-              <Col>
-                <Text strong>
-                  {creditCostInfo != null
-                    ? formatMilliCreditsString(creditCostInfo.organizationMilliCredits)
-                    : "-"}
-                </Text>
-              </Col>
-            </Row>
-            <Divider />
-            <Title level={5}>Cost Breakdown:</Title>
             <Row justify="space-between">
               <Col>
                 <Text>Output:</Text>
@@ -323,18 +288,6 @@ export function StartAlignmentProjectModal({
                 </Text>
               </Col>
             </Row>
-            <Row justify="space-between">
-              <Col>
-                <Text>Credits per Section:</Text>
-              </Col>
-              <Col>
-                <Text strong>
-                  {costPerSectionInMilliCredits != null
-                    ? formatMilliCreditsString(costPerSectionInMilliCredits)
-                    : "-"}
-                </Text>
-              </Col>
-            </Row>
             <Divider />
             <Row justify="space-between" align="middle">
               <Col>
@@ -342,9 +295,7 @@ export function StartAlignmentProjectModal({
               </Col>
               <Col>
                 <Title level={3} style={{ margin: 0 }}>
-                  {costInMilliCredits != null
-                    ? `${formatMilliCreditsString(costInMilliCredits)} credits`
-                    : "-"}
+                  Free during beta
                 </Title>
               </Col>
             </Row>
@@ -353,12 +304,11 @@ export function StartAlignmentProjectModal({
               block
               size="large"
               style={{ marginTop: 24 }}
-              disabled={!hasEnoughCredits || isFetchingCost}
+              disabled={selectedSectionRange == null}
               loading={isStarting}
               onClick={handleStart}
             >
               {renderUnaligned ? "Start rendering" : "Start alignment"}
-              {costInMilliCredits != null && !hasEnoughCredits ? " (not enough credits)" : ""}
             </Button>
           </Card>
         </Flex>

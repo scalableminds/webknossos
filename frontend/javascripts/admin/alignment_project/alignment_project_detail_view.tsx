@@ -38,7 +38,7 @@ import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
-import { formatBytes, formatMilliCreditsString } from "libs/format_utils";
+import { formatBytes } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { compareBy } from "libs/utils";
@@ -413,14 +413,6 @@ function AlignmentProjectDetailView() {
                 <div>{`(${job.ownerEmail})`}</div>
               </>
             )}
-          />
-          <Column
-            title="Cost in Credits"
-            key="costInMilliCredits"
-            align="right"
-            render={(job: APIJob) =>
-              job.costInMilliCredits ? formatMilliCreditsString(job.costInMilliCredits) : "-"
-            }
           />
           <Column
             title="Date"

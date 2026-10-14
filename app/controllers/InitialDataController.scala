@@ -430,7 +430,7 @@ Samplecountry
         largestSegmentId = Some(2504697)
       )
     ),
-    scale = VoxelSize(Vec3Double(11.239999771118164, 11.239999771118164, 28), LengthUnit.nanometer)
+    scale = VoxelSize(Vec3Double(11.24, 11.24, 28), LengthUnit.nanometer)
   )
   private val l4DenseDataset = defaultDataset.copy(
     _id = ObjectId("6ac000000000000000000006"),

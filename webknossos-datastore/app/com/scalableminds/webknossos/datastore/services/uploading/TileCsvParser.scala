@@ -7,6 +7,7 @@ import java.nio.file.Paths
 import scala.collection.mutable
 import scala.util.Try
 
+// Inclusive on both ends, so it contains last - first + 1 sections.
 case class SectionRange(first: Int, last: Int) derives JsonAutoFormat
 
 /*

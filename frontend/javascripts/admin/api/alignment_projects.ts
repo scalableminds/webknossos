@@ -4,6 +4,7 @@ import type { Vector3 } from "viewer/constants";
 import { getJobs, type JobCreditCostInfo } from "./jobs";
 import { doWithToken } from "./token";
 
+// Inclusive on both ends, so it contains last - first + 1 sections.
 export type SectionRange = { readonly first: number; readonly last: number };
 
 // UPLOADING: upload not finished yet. INVALID: the tile CSV could not be parsed.

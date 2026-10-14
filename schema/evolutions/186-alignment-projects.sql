@@ -18,7 +18,7 @@ CREATE TABLE webknossos.alignmentProjects(
   csvPath TEXT, -- relative to the project directory
   fileCount BIGINT,
   totalSizeInBytes BIGINT,
-  firstSection INT,
+  firstSection INT, -- section range from the tile CSV, inclusive on both ends
   lastSection INT,
   isInputDataDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   csvReplaced TIMESTAMPTZ, -- set when the tile CSV was replaced after the upload

@@ -203,7 +203,6 @@ class WKRemoteDataStoreController @Inject() (
           organization <- organizationDAO.findOne(uploadInfo.organizationId)(using
             GlobalAccessContext
           ) ?~> Msg.Organization.notFound(uploadInfo.organizationId) ~> NOT_FOUND
-          // Not checked against the storage quota, the input data is deleted after a retention period instead.
           _ <- Fox.fromBool(
             dataStore.onlyAllowedOrganization.forall(_ == organization._id)
           ) ?~> Msg.Dataset.Upload.datastoreRestricted

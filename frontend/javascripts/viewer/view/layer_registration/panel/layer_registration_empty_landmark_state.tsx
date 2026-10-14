@@ -4,9 +4,9 @@ import { AsyncButton } from "components/async_clickables";
 import { pluralize } from "libs/utils";
 import type React from "react";
 import { useState } from "react";
-import type { LayerNames } from "./layer_registration_helpers";
-import type { CopySource } from "./layer_registration_moving_layers";
-import { MIN_LANDMARK_PAIR_COUNT } from "./layer_registration_transform_estimation";
+import type { LayerNames } from "../helpers/layer_registration_helpers";
+import type { CopySource } from "../helpers/layer_registration_moving_layers";
+import { MIN_LANDMARK_PAIR_COUNT } from "../helpers/layer_registration_transform_estimation";
 
 // Offers to start the active moving layer with the fixed layer landmarks of another moving
 // layer. The right view then asks for the partner of each of them.

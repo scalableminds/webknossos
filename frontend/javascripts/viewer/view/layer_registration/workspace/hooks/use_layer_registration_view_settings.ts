@@ -8,10 +8,10 @@ import {
   OTHER_SIDE,
   SIDES,
   type Side,
-} from "../layer_registration_helpers";
-import type { InactivePairs } from "../layer_registration_moving_layers";
-import type { LayerRegistrationViewState } from "../layer_registration_protocol";
-import type { TransformEstimation } from "../layer_registration_transform_estimation";
+} from "../../helpers/layer_registration_helpers";
+import type { InactivePairs } from "../../helpers/layer_registration_moving_layers";
+import type { TransformEstimation } from "../../helpers/layer_registration_transform_estimation";
+import type { LayerRegistrationViewState } from "../../layer_registration_protocol";
 import type { SendMessage } from "./use_layer_registration_iframe_bridge";
 
 // What the workers show besides their own layer. The panel footer and the toolbars of the

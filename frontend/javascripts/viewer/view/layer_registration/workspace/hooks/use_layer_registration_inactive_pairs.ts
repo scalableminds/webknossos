@@ -7,9 +7,9 @@ import {
   type Landmark,
   SIDES,
   type Side,
-} from "../layer_registration_helpers";
-import type { InactivePair, InactivePairs } from "../layer_registration_moving_layers";
-import { getLayerPairTransformEstimate } from "../layer_registration_transform_estimation";
+} from "../../helpers/layer_registration_helpers";
+import type { InactivePair, InactivePairs } from "../../helpers/layer_registration_moving_layers";
+import { getLayerPairTransformEstimate } from "../../helpers/layer_registration_transform_estimation";
 import type { SendMessage } from "./use_layer_registration_iframe_bridge";
 
 async function readStoredSide(

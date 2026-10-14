@@ -1635,6 +1635,12 @@ No behavior changes. Files above ~500 lines were split by topic (`~/ScalableMind
 - Tests: one spec per module in `test/misc/layer_registration_*.spec.ts`, shared data in
   `test/fixtures/layer_registration_fixtures.ts`.
 - `DatasetAddType` moved to `admin/dataset/dataset_add_type.ts` to remove an import cycle.
+- Folder layout (2026-10-14, during the review): the root keeps the two routes and the files that
+  the rest of the app imports (`…_protocol.ts`, `…_worker.ts`, `…_edit_blocker.ts`,
+  `…_page_status_views.tsx`). Pure logic is in `helpers/`, the workspace with its hooks in
+  `workspace/` and `workspace/hooks/`, the side panel in `panel/`. The color dot is part of
+  `panel/…_pair_table.tsx`, the apply dialog content part of `use_…_apply_transforms.tsx`, the
+  fixed layer picker part of `…_list_view.tsx`.
 
 ### 0.3 Not started / explicitly out of scope for this pass
 

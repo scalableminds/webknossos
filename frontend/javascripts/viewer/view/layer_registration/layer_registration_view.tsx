@@ -7,6 +7,11 @@ import { useApi, useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import type { APIAnnotation } from "types/api_types";
+import type { LayerNames } from "./helpers/layer_registration_helpers";
+import {
+  getActiveMovingLayerName,
+  getMovingLayerNames,
+} from "./helpers/layer_registration_moving_layers";
 import {
   EDIT_BLOCKER_ACTION_LABELS,
   getEditBlockerDescription,
@@ -14,14 +19,12 @@ import {
   type LayerRegistrationEditBlocker,
   resolveLayerRegistrationEditBlocker,
 } from "./layer_registration_edit_blocker";
-import type { LayerNames } from "./layer_registration_helpers";
-import { getActiveMovingLayerName, getMovingLayerNames } from "./layer_registration_moving_layers";
 import {
   LayerRegistrationPageError,
   LayerRegistrationPageSpinner,
 } from "./layer_registration_page_status_views";
 import { getLayerRegistrationViewUrl, MOVING_LAYER_URL_PARAM } from "./layer_registration_protocol";
-import { LayerRegistrationWorkspace } from "./layer_registration_workspace";
+import { LayerRegistrationWorkspace } from "./workspace/layer_registration_workspace";
 
 /**  Registers the layers of a dataset ("moving" layers) to one of its layers ("fixed" layer)
  * by placing matching landmarks in both, similar to the BigWarp plugin of Fiji. The landmarks are

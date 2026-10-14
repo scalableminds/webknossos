@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import constants from "viewer/constants";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
-import type { LandmarkExportFormat } from "./layer_registration_landmark_export";
-import type { SaveState } from "./layer_registration_protocol";
+import type { SaveState } from "../layer_registration_protocol";
+import type { LandmarkExportFormat } from "../workspace/layer_registration_landmark_export";
 
 // Saving is automatic, so the save state is only shown. "Save now" saves right away, e.g.
 // before the page is closed.

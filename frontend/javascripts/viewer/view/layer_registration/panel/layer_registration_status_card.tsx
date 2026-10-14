@@ -10,12 +10,12 @@ import {
   isCompletePair,
   type LandmarkPair,
   VIEW_NAMES,
-} from "./layer_registration_helpers";
-import type { NextStep } from "./layer_registration_next_step";
+} from "../helpers/layer_registration_helpers";
+import type { NextStep } from "../helpers/layer_registration_next_step";
 import {
   MIN_LANDMARK_PAIR_COUNT,
   type TransformEstimation,
-} from "./layer_registration_transform_estimation";
+} from "../helpers/layer_registration_transform_estimation";
 
 function getNextStepContent(
   nextStep: NextStep,

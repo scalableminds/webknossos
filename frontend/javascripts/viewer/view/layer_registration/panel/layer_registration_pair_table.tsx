@@ -15,7 +15,7 @@ import { useElementSize } from "libs/react_hooks";
 import capitalize from "lodash-es/capitalize";
 import { useState } from "react";
 import type { VoxelSize } from "types/api_types";
-import { EmptyLandmarkState } from "./layer_registration_empty_landmark_state";
+import type { Vector3 } from "viewer/constants";
 import {
   formatResidual,
   getLandmarkTreeName,
@@ -26,9 +26,9 @@ import {
   SIDES,
   type Side,
   VIEW_NAMES,
-} from "./layer_registration_helpers";
-import { LandmarkColorDot } from "./layer_registration_landmark_color";
-import type { CopySource } from "./layer_registration_moving_layers";
+} from "../helpers/layer_registration_helpers";
+import type { CopySource } from "../helpers/layer_registration_moving_layers";
+import { EmptyLandmarkState } from "./layer_registration_empty_landmark_state";
 
 type SortKey = "pair" | "error";
 
@@ -46,6 +46,21 @@ const SMALL_NUMBER_STYLE = { fontSize: 12, fontVariantNumeric: "tabular-nums" } 
 
 function getLabelWidth(label: string): number {
   return label.length * LABEL_CHAR_WIDTH + CELL_PADDING;
+}
+
+function getRgbColorString(color: Vector3): string {
+  return `rgb(${color.map((component) => Math.round(component * 255)).join(",")})`;
+}
+
+// The color that both landmarks of a pair have in the views (see getLandmarkColor). The
+// .landmark-color class adds a ring that keeps light and dark colors visible in both themes.
+export function LandmarkColorDot({ color, hasGap = true }: { color: Vector3; hasGap?: boolean }) {
+  return (
+    <span
+      className="landmark-color"
+      style={{ background: getRgbColorString(color), marginRight: hasGap ? undefined : 0 }}
+    />
+  );
 }
 
 type ColumnLayout = {

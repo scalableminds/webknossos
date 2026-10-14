@@ -1,5 +1,5 @@
 import type { Vector3 } from "viewer/constants";
-import type { Landmark } from "viewer/view/layer_registration/layer_registration_helpers";
+import type { Landmark } from "viewer/view/layer_registration/helpers/layer_registration_helpers";
 
 export const RED: Vector3 = [1, 0, 0];
 

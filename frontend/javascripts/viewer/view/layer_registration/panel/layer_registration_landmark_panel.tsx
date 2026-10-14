@@ -1,7 +1,6 @@
 import { Flex } from "antd";
 import { useState } from "react";
 import type { VoxelSize } from "types/api_types";
-import type { ViewSettings } from "./hooks/use_layer_registration_view_settings";
 import {
   getLandmarkPairs,
   getMeanResidual,
@@ -10,17 +9,18 @@ import {
   type LandmarkPair,
   type LayerNames,
   type Side,
-} from "./layer_registration_helpers";
-import type { LandmarkExportFormat } from "./layer_registration_landmark_export";
+} from "../helpers/layer_registration_helpers";
+import type { CopySource, MovingLayerRow } from "../helpers/layer_registration_moving_layers";
+import { getNextStep } from "../helpers/layer_registration_next_step";
+import type { TransformEstimation } from "../helpers/layer_registration_transform_estimation";
+import type { SaveState } from "../layer_registration_protocol";
+import type { ViewSettings } from "../workspace/hooks/use_layer_registration_view_settings";
+import type { LandmarkExportFormat } from "../workspace/layer_registration_landmark_export";
 import { MovingLayerSelect } from "./layer_registration_moving_layer_select";
-import type { CopySource, MovingLayerRow } from "./layer_registration_moving_layers";
-import { getNextStep } from "./layer_registration_next_step";
 import { LandmarkPairSection } from "./layer_registration_pair_table";
 import { LayerRegistrationPanelFooter } from "./layer_registration_panel_footer";
 import { LayerRegistrationPanelHeader } from "./layer_registration_panel_header";
-import type { SaveState } from "./layer_registration_protocol";
 import { TransformStatusCard } from "./layer_registration_status_card";
-import type { TransformEstimation } from "./layer_registration_transform_estimation";
 
 type Props = {
   annotationName: string;

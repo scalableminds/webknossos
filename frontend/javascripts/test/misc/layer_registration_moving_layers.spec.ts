@@ -10,8 +10,8 @@ import {
   getMovingLayerNames,
   getMovingLayerRows,
   type InactivePair,
-} from "viewer/view/layer_registration/layer_registration_moving_layers";
-import { getLayerPairTransformEstimate } from "viewer/view/layer_registration/layer_registration_transform_estimation";
+} from "viewer/view/layer_registration/helpers/layer_registration_moving_layers";
+import { getLayerPairTransformEstimate } from "viewer/view/layer_registration/helpers/layer_registration_transform_estimation";
 import { describe, expect, it } from "vitest";
 
 function createInactivePair(fixedLandmarkCount: number, movingLandmarkCount: number): InactivePair {

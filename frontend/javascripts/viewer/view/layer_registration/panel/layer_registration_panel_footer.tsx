@@ -3,8 +3,13 @@ import { Button, Divider, Flex, Popover, Switch, Tooltip, Typography, theme } fr
 import capitalize from "lodash-es/capitalize";
 import type React from "react";
 import { Keycap } from "viewer/view/components/keycap";
-import type { ViewSettings } from "./hooks/use_layer_registration_view_settings";
-import { type LayerNames, OTHER_SIDE, SIDES, VIEW_NAMES } from "./layer_registration_helpers";
+import {
+  type LayerNames,
+  OTHER_SIDE,
+  SIDES,
+  VIEW_NAMES,
+} from "../helpers/layer_registration_helpers";
+import type { ViewSettings } from "../workspace/hooks/use_layer_registration_view_settings";
 
 // The shortcuts work in the view under the mouse pointer (see layer_registration_worker.ts).
 const SHORTCUTS = [

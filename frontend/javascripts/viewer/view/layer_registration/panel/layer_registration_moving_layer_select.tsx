@@ -2,9 +2,9 @@ import { CheckOutlined } from "@ant-design/icons";
 import { Badge, Divider, Flex, Select, Tag, Typography, theme } from "antd";
 import { pluralize } from "libs/utils";
 import type { VoxelSize } from "types/api_types";
-import type { AppliedState } from "./layer_registration_dataset_transforms";
-import { formatResidual } from "./layer_registration_helpers";
-import type { MovingLayerRow } from "./layer_registration_moving_layers";
+import type { AppliedState } from "../helpers/layer_registration_dataset_transforms";
+import { formatResidual } from "../helpers/layer_registration_helpers";
+import type { MovingLayerRow } from "../helpers/layer_registration_moving_layers";
 
 function getRowDetails(row: MovingLayerRow, voxelSize: VoxelSize): string {
   if ("isLoading" in row) {

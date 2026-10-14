@@ -12,7 +12,7 @@ import {
   type LayerNames,
   SIDES,
   type Side,
-} from "../layer_registration_helpers";
+} from "../../helpers/layer_registration_helpers";
 import type { SendMessage } from "./use_layer_registration_iframe_bridge";
 
 const SYNC_INTERVAL_MS = 500;

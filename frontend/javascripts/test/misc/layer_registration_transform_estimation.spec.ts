@@ -8,12 +8,12 @@ import {
   getLandmarkPairs,
   type Landmark,
   type Side,
-} from "viewer/view/layer_registration/layer_registration_helpers";
+} from "viewer/view/layer_registration/helpers/layer_registration_helpers";
 import {
   type EstimatedTransform,
   estimateMovingToFixedTransform,
   getLayerPairTransformEstimate,
-} from "viewer/view/layer_registration/layer_registration_transform_estimation";
+} from "viewer/view/layer_registration/helpers/layer_registration_transform_estimation";
 import { describe, expect, it } from "vitest";
 
 function enforceEstimatedTransform(landmarks: Record<Side, Landmark[]>): EstimatedTransform {

@@ -9,12 +9,6 @@ import {
   getTransformPointUnscaledFn,
   invertTransform,
 } from "viewer/model/helpers/transformation_helpers";
-import { useApplyTransforms } from "./hooks/use_layer_registration_apply_transforms";
-import { type IframeRole, useIframeBridge } from "./hooks/use_layer_registration_iframe_bridge";
-import { useInactivePairs } from "./hooks/use_layer_registration_inactive_pairs";
-import { useLandmarkSync } from "./hooks/use_layer_registration_landmark_sync";
-import { useLeavePrompt } from "./hooks/use_layer_registration_leave_prompt";
-import { useViewSettings } from "./hooks/use_layer_registration_view_settings";
 import {
   getLandmarkPairInfo,
   type LandmarkPair,
@@ -22,19 +16,25 @@ import {
   OTHER_SIDE,
   SIDES,
   type Side,
-} from "./layer_registration_helpers";
-import {
-  downloadLandmarkPairs,
-  type LandmarkExportFormat,
-} from "./layer_registration_landmark_export";
-import { LayerRegistrationLandmarkPanel } from "./layer_registration_landmark_panel";
-import { getCopySources, getMovingLayerRows } from "./layer_registration_moving_layers";
+} from "../helpers/layer_registration_helpers";
+import { getCopySources, getMovingLayerRows } from "../helpers/layer_registration_moving_layers";
+import { getLayerPairTransformEstimate } from "../helpers/layer_registration_transform_estimation";
 import {
   getLayerRegistrationListUrl,
   type LayerRegistrationCommand,
   type SaveState,
-} from "./layer_registration_protocol";
-import { getLayerPairTransformEstimate } from "./layer_registration_transform_estimation";
+} from "../layer_registration_protocol";
+import { LayerRegistrationLandmarkPanel } from "../panel/layer_registration_landmark_panel";
+import { useApplyTransforms } from "./hooks/use_layer_registration_apply_transforms";
+import { type IframeRole, useIframeBridge } from "./hooks/use_layer_registration_iframe_bridge";
+import { useInactivePairs } from "./hooks/use_layer_registration_inactive_pairs";
+import { useLandmarkSync } from "./hooks/use_layer_registration_landmark_sync";
+import { useLeavePrompt } from "./hooks/use_layer_registration_leave_prompt";
+import { useViewSettings } from "./hooks/use_layer_registration_view_settings";
+import {
+  downloadLandmarkPairs,
+  type LandmarkExportFormat,
+} from "./layer_registration_landmark_export";
 import {
   getOverlayStatus,
   LayerRegistrationWorkerFrames,

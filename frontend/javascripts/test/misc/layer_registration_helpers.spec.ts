@@ -23,7 +23,7 @@ import {
   getOverlayLayerColors,
   isHighResidual,
   prepareLandmarkTreesForImport,
-} from "viewer/view/layer_registration/layer_registration_helpers";
+} from "viewer/view/layer_registration/helpers/layer_registration_helpers";
 import { describe, expect, it } from "vitest";
 
 describe("Layer registration landmark helpers", () => {

@@ -1,8 +1,8 @@
 import { toLandmarks } from "test/fixtures/layer_registration_fixtures";
-import type { AppliedState } from "viewer/view/layer_registration/layer_registration_dataset_transforms";
-import type { LandmarkPair } from "viewer/view/layer_registration/layer_registration_helpers";
-import type { MovingLayerRow } from "viewer/view/layer_registration/layer_registration_moving_layers";
-import { getNextStep } from "viewer/view/layer_registration/layer_registration_next_step";
+import type { AppliedState } from "viewer/view/layer_registration/helpers/layer_registration_dataset_transforms";
+import type { LandmarkPair } from "viewer/view/layer_registration/helpers/layer_registration_helpers";
+import type { MovingLayerRow } from "viewer/view/layer_registration/helpers/layer_registration_moving_layers";
+import { getNextStep } from "viewer/view/layer_registration/helpers/layer_registration_next_step";
 import { describe, expect, it } from "vitest";
 
 const [landmark] = toLandmarks([[0, 0, 0]]);

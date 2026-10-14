@@ -7,7 +7,7 @@ import {
   getAppliedState,
   getDataLayersWithAppliedTransforms,
   isTransformAppliedToDataset,
-} from "viewer/view/layer_registration/layer_registration_dataset_transforms";
+} from "viewer/view/layer_registration/helpers/layer_registration_dataset_transforms";
 import { describe, expect, it } from "vitest";
 
 const transform = createAffineTransform(MOVING_POSITIONS, FIXED_POSITIONS);

@@ -2,13 +2,13 @@ import Deferred from "libs/async/deferred";
 import isObject from "lodash-es/isObject";
 import type React from "react";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
-import type { Side } from "../layer_registration_helpers";
+import type { Side } from "../../helpers/layer_registration_helpers";
 import {
   LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE,
   LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE,
   type LayerRegistrationCommand,
   type SaveState,
-} from "../layer_registration_protocol";
+} from "../../layer_registration_protocol";
 
 // The layer registration page embeds three annotation views of this app as iframes: the two
 // visible workers ("fixed" and "moving") and a hidden one that holds the persisted landmark

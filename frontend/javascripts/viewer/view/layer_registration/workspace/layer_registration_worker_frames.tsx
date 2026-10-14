@@ -1,19 +1,19 @@
 import { Button, Flex, Result, Spin, Typography } from "antd";
 import type { APIDataset } from "types/api_types";
-import type { IframeRefs, IframeRole } from "./hooks/use_layer_registration_iframe_bridge";
-import type { LandmarkSyncStatus } from "./hooks/use_layer_registration_landmark_sync";
 import {
   getLandmarkColor,
   getLandmarkTreeName,
   type LayerNames,
   SIDES,
   type Side,
-} from "./layer_registration_helpers";
-import { LandmarkColorDot } from "./layer_registration_landmark_color";
+} from "../helpers/layer_registration_helpers";
 import {
   getLayerRegistrationStoreUrl,
   getLayerRegistrationWorkerUrl,
-} from "./layer_registration_protocol";
+} from "../layer_registration_protocol";
+import { LandmarkColorDot } from "../panel/layer_registration_pair_table";
+import type { IframeRefs, IframeRole } from "./hooks/use_layer_registration_iframe_bridge";
+import type { LandmarkSyncStatus } from "./hooks/use_layer_registration_landmark_sync";
 
 // Why the workers are covered, see WorkspaceOverlay.
 type OverlayStatus = Exclude<LandmarkSyncStatus, "ready"> | "restarting" | "switching";

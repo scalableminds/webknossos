@@ -6,17 +6,82 @@ import type { APIDataset } from "types/api_types";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
 import {
-  ApplyTransformsDialogContent,
-  type EstimationsByMovingLayer,
-  getTransformsToApply,
-} from "../layer_registration_apply_transforms_dialog";
-import {
   applyTransformsToDataset,
+  getAppliedState,
   getLayerTransformsInDataset,
-} from "../layer_registration_dataset_transforms";
-import type { Landmark, Side } from "../layer_registration_helpers";
-import type { InactivePairs } from "../layer_registration_moving_layers";
-import { estimateMovingToFixedTransform } from "../layer_registration_transform_estimation";
+  type LayerTransformsInDataset,
+} from "../../helpers/layer_registration_dataset_transforms";
+import type { Landmark, Side } from "../../helpers/layer_registration_helpers";
+import type { InactivePairs } from "../../helpers/layer_registration_moving_layers";
+import {
+  estimateMovingToFixedTransform,
+  type TransformEstimation,
+} from "../../helpers/layer_registration_transform_estimation";
+
+// The transform estimation of each moving layer. Undefined for a layer whose landmarks could
+// not be read.
+type EstimationsByMovingLayer = Map<string, TransformEstimation | undefined>;
+
+// The transforms of the moving layers that have enough landmark pairs.
+function getTransformsToApply(estimations: EstimationsByMovingLayer): Map<string, Transform> {
+  const transformsByMovingLayer = new Map<string, Transform>();
+  for (const [layerName, estimation] of estimations) {
+    if (estimation != null && !("errorMessage" in estimation)) {
+      transformsByMovingLayer.set(layerName, estimation.movingToFixedTransform);
+    }
+  }
+  return transformsByMovingLayer;
+}
+
+function getChangeDescription(
+  estimation: TransformEstimation | undefined,
+  fixedLayerTransforms: LayerTransformsInDataset[string],
+  movingLayerTransforms: LayerTransformsInDataset[string],
+): string {
+  if (estimation == null || "errorMessage" in estimation) {
+    return "stays unchanged (not enough landmark pairs)";
+  }
+  return getAppliedState(estimation, fixedLayerTransforms, movingLayerTransforms) === "applied"
+    ? "already uses its transform"
+    : "gets its new transform";
+}
+
+// The content of the dialog that confirms applying the transforms: what happens to each moving
+// layer, and what applying replaces.
+function ApplyTransformsDialogContent({
+  estimations,
+  fixedLayerName,
+  layerTransformsInDataset,
+}: {
+  estimations: EstimationsByMovingLayer;
+  fixedLayerName: string;
+  layerTransformsInDataset: LayerTransformsInDataset;
+}) {
+  const fixedLayerTransforms = layerTransformsInDataset[fixedLayerName];
+  return (
+    <>
+      <ul>
+        {Array.from(estimations, ([layerName, estimation]) => (
+          <li key={layerName}>
+            "{layerName}"{" "}
+            {getChangeDescription(
+              estimation,
+              fixedLayerTransforms,
+              layerTransformsInDataset[layerName],
+            )}
+          </li>
+        ))}
+      </ul>
+      <p>Applying replaces the transforms that a layer currently has in the dataset.</p>
+      {(fixedLayerTransforms ?? []).length > 0 ? (
+        <p>
+          "{fixedLayerName}" has transforms itself. The applied transforms build on them, so
+          changing the transforms of "{fixedLayerName}" later makes them outdated.
+        </p>
+      ) : null}
+    </>
+  );
+}
 
 // Longer than usual, so that there is time to click the link in the toast.
 const APPLIED_TOAST_TIMEOUT_MS = 15_000;

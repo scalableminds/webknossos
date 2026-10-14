@@ -29,7 +29,7 @@ import {
   getNextLandmarkPairId,
   type LandmarkPairInfo,
   prepareLandmarkTreesForImport,
-} from "./layer_registration_helpers";
+} from "./helpers/layer_registration_helpers";
 import {
   getLayerRegistrationWorkerLayerName,
   isLayerRegistrationWorker,

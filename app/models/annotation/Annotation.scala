@@ -400,6 +400,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
     *   The maximum number of annotations to return.
     * @param pageNumber
     *   The page number to return. The first page is 0.
+    * @param sortByModified
+    *   If `true`, the most recently modified annotations come first. Otherwise, the most recently created ones.
     */
   def findAllListableExplorationals(
       isFinished: Option[Boolean],
@@ -407,7 +409,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       filterOwnedOrShared: Boolean,
       datasetId: Option[ObjectId],
       limit: Int,
-      pageNumber: Int = 0
+      pageNumber: Int = 0,
+      sortByModified: Boolean = false
   )(using ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
       accessQuery <-
@@ -417,6 +420,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
       datasetQuery = datasetId.map(d => q"a._dataset = $d").getOrElse(q"TRUE")
       typQuery = q"a.typ = ${AnnotationType.Explorational}"
+      innerOrderQuery = if (sortByModified) q"a.modified DESC, a._id DESC" else q"a._id DESC"
+      outerOrderQuery = if (sortByModified) q"an.modified DESC, an._id DESC" else q"an._id DESC"
       query = q"""
           -- We need to separate the querying of the annotation with all its inner joins from the 1:n join to collect the shared teams
           -- This is to prevent left-join fanout.
@@ -458,7 +463,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
               a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
               mu.firstname, mu.lastname,
               d.name, d._id, o._id
-            ORDER BY a._id DESC
+            ORDER BY $innerOrderQuery
             LIMIT $limit
             OFFSET ${pageNumber * limit}
           )
@@ -515,7 +520,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             an.tracing_names,
             an.tracing_typs,
             an.annotation_layer_statistics
-          ORDER BY an._id DESC
+          ORDER BY $outerOrderQuery
          """
       rows <- run(query.as[AnnotationCompactInfo])
     } yield rows.toList

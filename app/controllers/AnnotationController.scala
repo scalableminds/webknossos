@@ -422,7 +422,8 @@ class AnnotationController @Inject() (
       limit: Option[Int],
       pageNumber: Option[Int] = None,
       includeTotalCount: Option[Boolean] = None,
-      datasetId: Option[ObjectId] = None
+      datasetId: Option[ObjectId] = None,
+      sortByModified: Option[Boolean] = None
   ): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       for {
@@ -432,7 +433,8 @@ class AnnotationController @Inject() (
           filterOwnedOrShared = true,
           datasetId,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-          pageNumber.getOrElse(0)
+          pageNumber.getOrElse(0),
+          sortByModified.getOrElse(false)
         )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllListableExplorationals(isFinished, datasetId)

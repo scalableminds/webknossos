@@ -36,6 +36,7 @@ import { HANDLED_ERROR } from "viewer/model_initialization";
 import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import { openAIJobDrawerFromUrl } from "viewer/view/ai_jobs/ai_job_url_param";
 import {
   isLayerRegistrationStore,
   isLayerRegistrationWorker,
@@ -232,6 +233,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     });
 
     UrlManager.startUrlUpdater();
+    openAIJobDrawerFromUrl();
     if (isLayerRegistrationWorker()) {
       applyLayerRegistrationWorkerSettings();
     }

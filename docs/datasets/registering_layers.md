@@ -7,9 +7,14 @@ The workflow is similar to the [BigWarp](https://imagej.net/plugins/bigwarp) plu
 
 ## Opening the Layer Registration Page
 
-In the **Datasets** tab of your dashboard, open the context menu of a dataset (right-click or "…") and choose **Register Layers…**.
-You can also use the **Register Layers…** button in the **Data Source** tab of the [dataset settings](./settings.md).
-The dataset needs at least two layers.
+There are several ways to open it. The dataset needs at least two layers.
+
+- In the **Datasets** tab of your dashboard, open the context menu of a dataset (right-click or "…") and choose **Register Layers…**.
+- While viewing the dataset, open the "…" menu of a layer in the **Layers** tab of the left sidebar and choose **Register layers…**. The layer registration page opens in a new tab.
+- Use the **Register Layers…** button in the **Data Source** tab of the [dataset settings](./settings.md).
+- After uploading, adding or composing a dataset with at least two color layers, the confirmation dialog links to the layer registration page.
+
+If the layers come from different datasets, [compose](./composing.md) them into one dataset without any transforms first and register the layers afterwards.
 
 The layer registration page lists the existing layer registrations of the dataset, so you can continue an earlier one instead of starting over.
 Each layer registration is stored in its own *layer registration annotation*, which belongs to one fixed layer (e.g., "Layer registration to color_1").

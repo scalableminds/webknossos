@@ -81,7 +81,7 @@ class ProjectController @Inject() (
     for {
       project <- projectDAO.findOne(id) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
       _ <- Fox.fromBool(project.isDeletableBy(request.identity)) ?~> Msg.Project.deleteNotAllowed ~> FORBIDDEN
-      _ <- projectService.deleteOne(project._id) ?~> Msg.Project.deleteFailed
+      _ <- Fox.assertTrue(projectService.deleteOne(project._id)) ?~> Msg.Project.deleteFailed
     } yield JsonOk(Msg.Project.deleteSuccess)
   }
 

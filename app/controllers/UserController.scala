@@ -336,8 +336,10 @@ class UserController @Inject() (
         _ <- Fox.runIf(user._id != request.identity._id)(
           Fox.assertTrue(userService.isEditableBy(user, request.identity))
         ) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- checkTeamManagerOnlyUpdates(user, experiences, oldExperience, teamMemberships, oldTeamMemberships)(
-          request.identity
+        _ <- Fox.assertTrue(
+          checkTeamManagerOnlyUpdates(user, experiences, oldExperience, teamMemberships, oldTeamMemberships)(
+            request.identity
+          )
         ) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- Fox.fromBool(
           checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(request.identity)

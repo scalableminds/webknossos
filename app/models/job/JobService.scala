@@ -375,10 +375,11 @@ class JobService @Inject() (
     }
 
   def calculateJobCostInMilliCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[Int] =
-    getJobCostInMilliCreditsPerGVx(jobCommand).map { costPerGVx =>
-      val volumeInGVx = boundingBoxInTargetMag.volume / ONE_GIGAVOXEL
-      val costInMilliCredits = math.ceil(volumeInGVx * costPerGVx).toInt
-      math.max(costInMilliCredits, 0)
-    }
+    for {
+      _ <- Fox.fromBool(!boundingBoxInTargetMag.isEmpty) ?~> Msg.Job.invalidBoundingBoxOrMag
+      costPerGVx <- getJobCostInMilliCreditsPerGVx(jobCommand)
+      // Computed as Double so that huge bounding boxes cannot overflow; Double.toInt saturates at Int.MaxValue
+      volumeInGVx = boundingBoxInTargetMag.width.toDouble * boundingBoxInTargetMag.height * boundingBoxInTargetMag.depth / ONE_GIGAVOXEL
+    } yield math.ceil(volumeInGVx * costPerGVx).toInt
 
 }

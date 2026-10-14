@@ -165,7 +165,7 @@ export function RestrictMagnificationSlider({
   ) : null;
 }
 
-function CreateExplorativeModal({ datasetId, onClose }: Props) {
+function CreateAnnotationModal({ datasetId, onClose }: Props) {
   const dataset = useFetch(() => getImportedDataset(datasetId), null, [datasetId]);
   const [annotationType, setAnnotationType] = useState("hybrid");
   const [userDefinedMagIndices, setUserDefinedMagIndices] = useState([0, 10000]);
@@ -267,4 +267,4 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
   );
 }
 
-export default CreateExplorativeModal;
+export default CreateAnnotationModal;

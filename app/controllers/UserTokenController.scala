@@ -4,7 +4,6 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.services.AccessMode.AccessMode
@@ -221,7 +220,7 @@ class UserTokenController @Inject() (
           .shiftBox
         // Private links only grant read access, and only until they expire
         allowedByToken = mode == AccessMode.read && annotationAccessByToken.exists(link =>
-          annotation._id == link._annotation && link.expirationDateTime.forall(_ > Instant.now)
+          annotation._id == link._annotation && !link.isExpired
         )
         restrictions <- annotationInformationProvider.restrictionsFor(
           AnnotationIdentifier(annotation.typ, annotation._id)

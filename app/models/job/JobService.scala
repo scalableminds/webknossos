@@ -321,7 +321,6 @@ class JobService @Inject() (
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
       _ <- assertStorageNotExceededFor(command, user)
-      _ <- Fox.fromBool(!jobBoundingBoxInTargetMag.isEmpty) ?~> Msg.Job.invalidBoundingBoxOrMag
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(
         creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)

@@ -360,5 +360,4 @@ GET           /alignmentProjects                                                
 GET           /alignmentProjects/:id                                                            controllers.AlignmentProjectController.get(id: ObjectId)
 PATCH         /alignmentProjects/:id                                                            controllers.AlignmentProjectController.update(id: ObjectId)
 DELETE        /alignmentProjects/:id                                                            controllers.AlignmentProjectController.delete(id: ObjectId)
-DELETE        /alignmentProjects/:id/inputData                                                  controllers.AlignmentProjectController.deleteInputData(id: ObjectId)
 GET           /alignmentProjects/:id/jobCreditCost                                              controllers.AlignmentProjectController.getJobCreditCost(id: ObjectId, renderUnaligned: Boolean, firstSection: Option[Int], lastSection: Option[Int])

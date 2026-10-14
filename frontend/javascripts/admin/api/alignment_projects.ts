@@ -29,7 +29,9 @@ export type APIAlignmentProject = {
   // Inclusive section numbers, extracted from the CSV. Only set if the project is READY.
   readonly sectionRange: SectionRange | null | undefined;
   // The uploaded files were deleted to free storage. Metadata and past jobs are kept.
+  // The uploaded files are deleted automatically after a retention period, once no alignments are running.
   readonly isInputDataDeleted: boolean;
+  readonly inputDataDeletionDate: number;
   // When the tile CSV was last replaced after the upload, if ever.
   readonly csvReplaced: number | null | undefined;
   readonly jobCount: number;
@@ -51,10 +53,6 @@ export function updateAlignmentProject(
     method: "PATCH",
     data: update,
   });
-}
-
-export function deleteAlignmentProjectInputData(id: string): Promise<APIAlignmentProject> {
-  return Request.receiveJSON(`/api/alignmentProjects/${id}/inputData`, { method: "DELETE" });
 }
 
 export function deleteAlignmentProject(id: string): Promise<void> {

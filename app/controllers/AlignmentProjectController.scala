@@ -85,16 +85,6 @@ class AlignmentProjectController @Inject() (
       } yield Ok(js)
     }
 
-  def deleteInputData(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
-    for {
-      _ <- alignmentProjectService.assertMayAccessAlignmentProjects(request.identity)
-      project <- alignmentProjectDAO.findOne(id) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
-      _ <- alignmentProjectService.deleteInputData(project) ?~> Msg.AlignmentProject.deleteInputDataFailed
-      updated <- alignmentProjectDAO.findOne(id)
-      js <- alignmentProjectService.publicWrites(updated)
-    } yield Ok(js)
-  }
-
   def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- alignmentProjectService.assertMayAccessAlignmentProjects(request.identity)

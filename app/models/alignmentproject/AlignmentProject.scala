@@ -20,7 +20,7 @@ import com.scalableminds.webknossos.schema.Tables.{
 import controllers.PathDeletionService
 import models.alignmentproject.AlignmentProjectStatus.AlignmentProjectStatus
 import models.dataset.{DataStoreDAO, WKRemoteDataStoreClient}
-import models.job.{JobDAO, JobService}
+import models.job.{JobDAO, JobService, JobState}
 import models.user.{MultiUserDAO, User, UserDAO}
 import play.api.http.Status.FORBIDDEN
 import play.api.libs.json.{JsObject, Json}
@@ -100,6 +100,24 @@ class AlignmentProjectDAO @Inject() (sqlClient: SqlClient)(implicit ec: Executio
           SELECT _organization FROM webknossos.users_
           WHERE _id = $requestingUserId AND (isAdmin OR isDatasetManager)
         )"""
+
+  // Uploading projects are skipped, as are projects whose alignments are still pending or running.
+  def findAllWithExpiredInputData(createdBefore: Instant): Fox[List[AlignmentProject]] =
+    for {
+      r <- run(q"""SELECT $columns FROM $existingCollectionName p
+                   WHERE NOT p.isInputDataDeleted
+                   AND p.status != ${AlignmentProjectStatus.UPLOADING}
+                   AND p.created < $createdBefore
+                   AND NOT EXISTS (
+                     SELECT 1 FROM webknossos.jobs_ j
+                     WHERE j._alignmentProject = p._id
+                     AND COALESCE(j.manualState, j.state) IN ${SqlToken.tupleFromValues(
+          JobState.PENDING,
+          JobState.STARTED
+        )}
+                   )""".as[AlignmentprojectsRow])
+      parsed <- parseAll(r)
+    } yield parsed
 
   def findAllByOrganization(organizationId: String)(using ctx: DBAccessContext): Fox[List[AlignmentProject]] =
     for {
@@ -292,6 +310,8 @@ class AlignmentProjectService @Inject() (
       "sectionRange" -> project.sectionRange,
       "isInputDataDeleted" -> project.isInputDataDeleted,
       "csvReplaced" -> project.csvReplaced,
+      // The actual deletion is postponed while alignments are pending or running.
+      "inputDataDeletionDate" -> (project.created + wkConf.WebKnossos.AlignmentProjects.inputDataRetention),
       "jobCount" -> jobCount
     )
 }

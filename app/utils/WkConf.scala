@@ -84,6 +84,12 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.pricingPlanExpiryReminder.tickerInterval")
     }
 
+    object AlignmentProjects {
+      val inputDataRetention: FiniteDuration = get[FiniteDuration]("webKnossos.alignmentProjects.inputDataRetention")
+      val inputDataCleanupInterval: FiniteDuration =
+        get[FiniteDuration]("webKnossos.alignmentProjects.inputDataCleanupInterval")
+    }
+
     object SampleOrganization {
       val enabled: Boolean = get[Boolean]("webKnossos.sampleOrganization.enabled")
 
@@ -134,6 +140,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
         Tasks,
         Cache,
         PricingPlanExpiryReminder,
+        AlignmentProjects,
         SampleOrganization,
         FetchUsedStorage,
         TermsOfService,

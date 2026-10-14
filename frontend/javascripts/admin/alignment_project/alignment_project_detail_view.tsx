@@ -6,6 +6,7 @@ import {
   EditOutlined,
   EyeOutlined,
   FileTextOutlined,
+  InfoCircleOutlined,
   PlayCircleOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
@@ -49,10 +50,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import type { APIJob } from "types/api_types";
 import { AllUnits, LongUnitToShortUnitMap, type UnitLong, type Vector3 } from "viewer/constants";
 import { formatSectionRange } from "./alignment_project_utils";
-import {
-  type AlignmentProjectDeletionMode,
-  DeleteAlignmentProjectModal,
-} from "./delete_alignment_project_modal";
+import { DeleteAlignmentProjectModal } from "./delete_alignment_project_modal";
 import { ReplaceAlignmentProjectCsvModal } from "./replace_alignment_project_csv_modal";
 import { StartAlignmentProjectModal } from "./start_alignment_project_modal";
 
@@ -118,11 +116,15 @@ function AlignmentProjectDetailView() {
     setVoxelSizeDraft(null);
   };
 
+  const inputDataRetentionDays = Math.round(
+    (project.inputDataDeletionDate - project.created) / (24 * 60 * 60 * 1000),
+  );
+
   const replaceCsvDisabledReason =
     project.status === "UPLOADING"
       ? "The upload of this project has not finished yet."
       : project.isInputDataDeleted
-        ? "The input data of this project was deleted."
+        ? `The uploaded files were deleted automatically ${inputDataRetentionDays} days after the project was created.`
         : null;
   const replaceCsvButton = (
     <Tooltip title={replaceCsvDisabledReason}>
@@ -142,7 +144,7 @@ function AlignmentProjectDetailView() {
       : project.status === "INVALID"
         ? "The uploaded CSV could not be parsed."
         : project.isInputDataDeleted
-          ? "The input data of this project was deleted. Please create a new alignment project to start another alignment."
+          ? `The uploaded files were deleted automatically ${inputDataRetentionDays} days after the project was created. Please create a new alignment project to start another alignment.`
           : null;
 
   const startAlignmentButton = (
@@ -158,11 +160,9 @@ function AlignmentProjectDetailView() {
     </Tooltip>
   );
 
-  const handleDeleted = async (mode: AlignmentProjectDeletionMode) => {
-    if (mode === "project") {
-      navigate("/alignmentProjects");
-      queryClient.removeQueries({ queryKey });
-    }
+  const handleDeleted = async () => {
+    navigate("/alignmentProjects");
+    queryClient.removeQueries({ queryKey });
     await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
   };
 
@@ -283,7 +283,7 @@ function AlignmentProjectDetailView() {
             type="info"
             showIcon
             style={{ marginBottom: 16 }}
-            title="The uploaded files were deleted to free storage. The information below describes the original upload."
+            title={`The uploaded files were deleted automatically ${inputDataRetentionDays} days after the project was created. The information below describes the original upload.`}
           />
         )}
         <Descriptions column={{ xs: 1, md: 2, xl: 3 }}>
@@ -353,20 +353,41 @@ function AlignmentProjectDetailView() {
               </Space>
             )}
           </Descriptions.Item>
-          <Descriptions.Item label="Datastore">{project.dataStoreName}</Descriptions.Item>
           <Descriptions.Item label="Owner">
             {project.ownerFirstName} {project.ownerLastName}
           </Descriptions.Item>
           <Descriptions.Item label="Created">
-            <FormattedDate timestamp={project.created} />
-            {project.csvReplaced != null && (
-              <>
-                {" "}
-                &nbsp;(CSV replaced&nbsp;
-                <FormattedDate timestamp={project.csvReplaced} />)
-              </>
+            <span>
+              <FormattedDate timestamp={project.created} />
+              {project.csvReplaced != null && (
+                <>
+                  {" "}
+                  (CSV replaced <FormattedDate timestamp={project.csvReplaced} />)
+                </>
+              )}
+            </span>
+          </Descriptions.Item>
+          <Descriptions.Item
+            label={
+              <Tooltip
+                title={`The uploaded files do not count towards the organization storage quota. Instead, they are deleted automatically after ${inputDataRetentionDays} days.`}
+              >
+                <span>
+                  Input Data Retention <InfoCircleOutlined />
+                </span>
+              </Tooltip>
+            }
+          >
+            {project.isInputDataDeleted ? (
+              "Deleted"
+            ) : (
+              // A single span, because the item content is a flex container, which drops spaces between text and elements.
+              <span>
+                until <FormattedDate timestamp={project.inputDataDeletionDate} />
+              </span>
             )}
           </Descriptions.Item>
+          <Descriptions.Item label="Datastore">{project.dataStoreName}</Descriptions.Item>
         </Descriptions>
       </Card>
 

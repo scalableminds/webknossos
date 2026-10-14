@@ -1,15 +1,8 @@
-import {
-  type APIAlignmentProject,
-  deleteAlignmentProject,
-  deleteAlignmentProjectInputData,
-} from "admin/api/alignment_projects";
-import { Alert, Flex, Modal, Radio, Typography } from "antd";
-import { formatBytes } from "libs/format_utils";
+import { type APIAlignmentProject, deleteAlignmentProject } from "admin/api/alignment_projects";
+import { Alert, Flex, Modal, Typography } from "antd";
 import Toast from "libs/toast";
 import { useState } from "react";
 import { ModalWidth } from "theme";
-
-export type AlignmentProjectDeletionMode = "inputData" | "project";
 
 const { Text } = Typography;
 
@@ -24,30 +17,16 @@ export function DeleteAlignmentProjectModal({
   hasActiveJobs: boolean;
   isOpen: boolean;
   onClose: () => void;
-  onDeleted: (mode: AlignmentProjectDeletionMode) => void;
+  onDeleted: () => void;
 }) {
-  const isUploading = project.status === "UPLOADING";
-  const canDeleteInputDataOnly = !project.isInputDataDeleted && !isUploading;
-  const [mode, setMode] = useState<AlignmentProjectDeletionMode>(
-    canDeleteInputDataOnly ? "inputData" : "project",
-  );
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      if (mode === "inputData") {
-        await deleteAlignmentProjectInputData(project.id);
-        Toast.success(
-          project.totalSizeInBytes != null
-            ? `Deleted input data and freed ${formatBytes(project.totalSizeInBytes, 1)}.`
-            : "Deleted input data.",
-        );
-      } else {
-        await deleteAlignmentProject(project.id);
-        Toast.success("Alignment project deleted.");
-      }
-      onDeleted(mode);
+      await deleteAlignmentProject(project.id);
+      Toast.success("Alignment project deleted.");
+      onDeleted();
       onClose();
     } finally {
       setIsDeleting(false);
@@ -60,42 +39,21 @@ export function DeleteAlignmentProjectModal({
       open={isOpen}
       onCancel={onClose}
       onOk={handleDelete}
-      okText={mode === "inputData" ? "Delete Input Data" : "Delete Project"}
+      okText="Delete Project"
       okButtonProps={{ danger: true }}
       confirmLoading={isDeleting}
       width={ModalWidth.Medium}
       destroyOnHidden
     >
       <Flex vertical gap="middle">
-        <Radio.Group
-          value={mode}
-          onChange={(event) => setMode(event.target.value)}
-          style={{ display: "flex", flexDirection: "column", gap: 12 }}
-        >
-          <Radio value="inputData" disabled={!canDeleteInputDataOnly}>
-            <Text strong>Delete input data only</Text>
-            <br />
-            <Text type="secondary">
-              {project.isInputDataDeleted
-                ? "The input data was already deleted."
-                : isUploading
-                  ? "Not available while the upload is unfinished. Deleting the whole project cancels the upload."
-                  : project.fileCount != null && project.totalSizeInBytes != null
-                    ? `Deletes the ${project.fileCount.toLocaleString()} uploaded files and frees ${formatBytes(project.totalSizeInBytes, 1)} of storage. The project and its list of alignments are kept, but no new alignments can be started.`
-                    : "Deletes the uploaded files. The project and its list of alignments are kept, but no new alignments can be started."}
-            </Text>
-          </Radio>
-          <Radio value="project">
-            <Text strong>Delete whole project</Text>
-            <br />
-            <Text type="secondary">
-              Deletes the uploaded files as well as the project itself, including its name,
-              description and list of alignments.
-            </Text>
-          </Radio>
-        </Radio.Group>
+        <Text>
+          {project.isInputDataDeleted
+            ? "Deletes the project, including its name, description and list of alignments. Its uploaded files were already deleted."
+            : "Deletes the uploaded files as well as the project itself, including its name, description and list of alignments."}
+          {project.status === "UPLOADING" ? " The unfinished upload is cancelled." : null}
+        </Text>
         <Text type="secondary">
-          Datasets that were created by alignments of this project are kept in both cases.
+          Datasets that were created by alignments of this project are kept.
         </Text>
         {hasActiveJobs && (
           <Alert

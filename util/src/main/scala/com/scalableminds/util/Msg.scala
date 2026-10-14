@@ -59,7 +59,6 @@ object Msg {
     val invalidSectionRange: String = "The selected section range is not within the sections of the alignment project."
     val invalidVoxelSize: String = "Each component of the voxel size must be larger than 0."
     val deleteFailed: String = "Could not delete the alignment project."
-    val deleteInputDataFailed: String = "Could not delete the input data of the alignment project."
   }
 
   object Annotation {

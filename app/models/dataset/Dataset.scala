@@ -199,6 +199,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
             FROM webknossos.annotation_privateLinks_ apl
             JOIN webknossos.annotations_ a ON apl._annotation = a._id
             WHERE apl.accessToken = $t
+            AND (apl.expirationDateTime IS NULL OR apl.expirationDateTime > ${Instant.now})
           )""")
       .getOrElse(q"FALSE")
     // token can either be a dataset sharingToken or a matching annotation’s private link token

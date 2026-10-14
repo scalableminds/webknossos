@@ -193,6 +193,9 @@ class ProjectController @Inject() (
       for {
         _ <- Fox.fromBool(delta.getOrElse(1L) >= 0) ?~> Msg.Project.increaseTaskInstancesNegative
         project <- projectDAO.findOne(id) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
+        _ <- Fox.assertTrue(
+          userService.isTeamManagerOrAdminOf(request.identity, project._team)
+        ) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- taskDAO.incrementTotalInstancesOfAllWithProject(project._id, delta.getOrElse(1L))
         pendingInstancesAndTime <- taskDAO.countPendingInstancesAndTimeForProject(project._id)
         js <- projectService.publicWritesWithStatus(project, pendingInstancesAndTime._1, pendingInstancesAndTime._2)

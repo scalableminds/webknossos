@@ -1,7 +1,7 @@
 import proofreadingDendrites from "@images/vx/proofreading-dendrites.webp";
 import { Badge, Button, Flex, Typography, theme } from "antd";
 import { ColorWKBlueZircon } from "theme";
-import { SecondaryText, smallCapsStyle } from "../components/typography";
+import { smallCapsStyle } from "../components/job_started_card";
 
 /** Points to the proofreading tools once a segmentation job has started. Callers gate it to webknossos.org. */
 export function ProofreadingNextStep() {
@@ -32,10 +32,11 @@ export function ProofreadingNextStep() {
         <Typography.Title level={5} style={{ margin: 0, fontWeight: 500 }}>
           Proofread your segmentation.
         </Typography.Title>
-        <SecondaryText>
+        {/* type="secondary" would resolve to the dimmer colorTextTertiary, see theme.ts. */}
+        <Typography.Text style={{ color: cssVar.colorTextSecondary }}>
           Fix split and merge errors on large segmentations with supervoxel-graph editing.
           Collaborative and near real time.
-        </SecondaryText>
+        </Typography.Text>
       </Flex>
       <Button
         href="https://docs.webknossos.org/webknossos/proofreading/proofreading_tool.html"

@@ -1,9 +1,15 @@
 import { CheckCircleFilled } from "@ant-design/icons";
 import { Button, Card, Divider, Flex, Typography, theme } from "antd";
 import type React from "react";
+import type { CSSProperties } from "react";
 import { useDispatch } from "react-redux";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
-import { SecondaryText, smallCapsStyle } from "./typography";
+
+export const smallCapsStyle: CSSProperties = {
+  fontSize: 11,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+};
 
 // Copy for the job-started card, captured when the job starts so that later edits to the form
 // don't change it.
@@ -46,7 +52,10 @@ export function JobStartedCard({
         <Typography.Title level={4} style={{ margin: 0, fontWeight: 500 }}>
           {title}
         </Typography.Title>
-        <SecondaryText>{description}</SecondaryText>
+        {/* type="secondary" would resolve to the dimmer colorTextTertiary, see theme.ts. */}
+        <Typography.Text style={{ color: cssVar.colorTextSecondary }}>
+          {description}
+        </Typography.Text>
       </Flex>
       <Flex vertical gap="small" style={{ marginTop: 20 }}>
         <Button type="primary" block href="/jobs" target="_blank" rel="noopener noreferrer">

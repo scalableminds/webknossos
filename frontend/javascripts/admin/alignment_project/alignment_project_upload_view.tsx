@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   deleteAlignmentProject,
   finishAlignmentProjectUpload,
+  getAlignmentProject,
   reserveAlignmentProjectUpload,
 } from "admin/api/alignment_projects";
 import { refreshToken } from "admin/api/token";
@@ -186,9 +187,17 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
       setUploadState((state) => ({ ...state, isFinishing: true }));
       try {
         const { alignmentProjectId } = await finishAlignmentProjectUpload(datastoreUrl, uploadId);
+        // An invalid CSV does not fail the upload, so that it can be replaced without uploading the tiles again.
+        const project = await getAlignmentProject(alignmentProjectId);
         setUploadState(initialUploadState);
         await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
-        Toast.success("Alignment project uploaded successfully.");
+        if (project.status === "INVALID") {
+          Toast.warning(
+            `The files were uploaded, but the CSV is invalid: ${project.invalidReason ?? "unknown reason"} Please replace the CSV on the project page.`,
+          );
+        } else {
+          Toast.success("Alignment project uploaded successfully.");
+        }
         navigate(`/alignmentProjects/${alignmentProjectId}`);
       } catch (_error) {
         handleUploadFailure("Could not finish the upload of the alignment project.");
@@ -213,7 +222,7 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
   };
 
   return (
-    <div style={{ padding: 5 }}>
+    <div>
       <CardContainer
         title="Upload Files for Alignment Project"
         subtitle="Upload unaligned (tiled) image data together with a CSV that lists the tile positions. You can then start one or more alignments from the project page."

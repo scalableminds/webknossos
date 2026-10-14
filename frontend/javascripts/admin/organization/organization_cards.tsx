@@ -1,158 +1,101 @@
-import { FieldTimeOutlined, PlusCircleOutlined, RobotOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Col, Row, Space } from "antd";
+import { CrownOutlined, FieldTimeOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Flex, Typography, theme } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
-import { useWkSelector } from "libs/react_hooks";
 import type { APIOrganization } from "types/api_types";
-import Constants from "viewer/constants";
-import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./plan_upgrade_cards";
+import { useCanRequestUpgrades } from "./organization_hooks";
 import {
-  aiAddonFeatures,
+  canBuyQuotaUpgrades,
+  canExtendPricingPlan,
+  canUpgradePricingPlan,
+  formatPricingPlanName,
+  getPlanEndLabel,
+  hasPlanEndDate,
+  hasPricingPlanExceededStorage,
   hasPricingPlanExpired,
-  isUserAllowedToRequestUpgrades,
-  PricingPlanEnum,
+  isPlanAboutToExpire,
+  isTrialPlan,
+  PRICING_PAGE_URL,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
-import { useCanRequestUpgrades } from "./use_can_request_upgrades";
 
-export function AiAddonUpgradeCard() {
-  return (
-    <Card
-      title={
-        <Space size="small">
-          <RobotOutlined style={{ color: "var(--ant-color-primary)" }} />
-          AI Add-on
-        </Space>
-      }
-      styles={{ body: { minHeight: 220 } }}
-      actions={[
-        <Button
-          type="primary"
-          onClick={() => UpgradePricingPlanModal.requestAiPlanUpgrade()}
-          key="buy-ai-addon-button"
-          icon={<PlusCircleOutlined />}
-        >
-          Buy AI Add-on
-        </Button>,
-      ]}
-    >
-      <div>
-        Unlock AI add-on for advanced capabilities like model training for your organization.
-        <ul>
-          {aiAddonFeatures.map((feature) => (
-            <li key={feature.slice(0, 10)}>{feature}</li>
-          ))}
-        </ul>
-      </div>
-    </Card>
-  );
-}
+export function PlanExpirationCard({ organization }: { organization: APIOrganization }) {
+  const { token } = theme.useToken();
+  const canRequestUpgrades = useCanRequestUpgrades();
 
-export function PlanUpgradeCard({ organization }: { organization: APIOrganization }) {
-  if (
-    organization.pricingPlan === PricingPlanEnum.Team ||
-    organization.pricingPlan === PricingPlanEnum.TeamTrial
-  ) {
-    return (
-      <Row gutter={24}>
-        <Col span={24}>
-          <PowerPlanUpgradeCard
-            description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
-            powerUpgradeCallback={() => UpgradePricingPlanModal.upgradePricingPlan()}
-          />
-        </Col>
-      </Row>
-    );
+  if (!hasPlanEndDate(organization)) return null;
+
+  const hasExpired = hasPricingPlanExpired(organization);
+  const isUrgent = hasExpired || isPlanAboutToExpire(organization);
+  const timeLeft = dayjs(organization.paidUntil).fromNow(true);
+  const planName = formatPricingPlanName(organization.pricingPlan);
+  const planNoun = isTrialPlan(organization.pricingPlan) ? "trial" : "plan";
+
+  let statusText: React.ReactNode;
+  if (hasExpired) {
+    statusText = `Your ${planNoun} has ended. Extend it to restore all users and features.`;
+  } else if (isUrgent) {
+    statusText = `Your ${planNoun} ends in ${timeLeft}. Extend it to keep all users and features.`;
+  } else {
+    statusText = `Your next renewal is in ${timeLeft}.`;
   }
 
   return (
-    <Row gutter={24}>
-      <Col span={12}>
-        <TeamPlanUpgradeCard
-          teamUpgradeCallback={() =>
-            UpgradePricingPlanModal.upgradePricingPlan(PricingPlanEnum.Team)
-          }
-        />
-      </Col>
-      <Col span={12}>
-        <PowerPlanUpgradeCard
-          powerUpgradeCallback={() =>
-            UpgradePricingPlanModal.upgradePricingPlan(PricingPlanEnum.Power)
-          }
-        />
-      </Col>
-    </Row>
-  );
-}
-
-export function PlanExpirationCard({ organization }: { organization: APIOrganization }) {
-  const canRequestUpgrades = useCanRequestUpgrades();
-
-  if (organization.paidUntil === Constants.MAXIMUM_DATE_TIMESTAMP) return null;
-
-  return (
-    <Card style={{ marginBottom: 36 }}>
-      <Row gutter={24}>
-        <Col flex="auto">
-          Your current plan is paid until{" "}
-          <FormattedDate timestamp={organization.paidUntil} dateOnly />
-        </Col>
-        {canRequestUpgrades ? (
-          <Col span={6}>
-            <Button
-              type="primary"
-              icon={<FieldTimeOutlined />}
-              onClick={() => UpgradePricingPlanModal.extendPricingPlan()}
-            >
-              Extend Now
-            </Button>
-          </Col>
+    <Card>
+      <Flex align="center" gap={24} wrap>
+        <Flex
+          align="center"
+          justify="center"
+          style={{
+            width: 48,
+            height: 48,
+            flex: "none",
+            borderRadius: token.borderRadiusLG,
+            background: isUrgent ? token.colorWarningBg : token.colorPrimaryBg,
+            color: isUrgent ? token.colorWarning : token.colorPrimary,
+            fontSize: 22,
+          }}
+        >
+          <CrownOutlined />
+        </Flex>
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+          <Typography.Text strong style={{ fontSize: 16, display: "block" }}>
+            {planName} · {getPlanEndLabel(organization)}{" "}
+            <FormattedDate timestamp={organization.paidUntil} dateOnly />
+          </Typography.Text>
+          <Typography.Text type={isUrgent ? "warning" : "secondary"}>
+            {statusText}{" "}
+            <a href={PRICING_PAGE_URL} target="_blank" rel="noopener noreferrer">
+              Compare all plans
+            </a>
+          </Typography.Text>
+        </div>
+        {canRequestUpgrades && canExtendPricingPlan(organization) ? (
+          <Button
+            type="primary"
+            icon={<FieldTimeOutlined />}
+            onClick={() => UpgradePricingPlanModal.extendPricingPlan()}
+          >
+            Extend Now
+          </Button>
         ) : null}
-      </Row>
+      </Flex>
     </Card>
   );
 }
 
 export function PlanExceededAlert({ organization }: { organization: APIOrganization }) {
   const hasPlanExpired = hasPricingPlanExpired(organization);
-  const activeUser = useWkSelector((state) => state.activeUser);
+  const canRequestUpgrades = useCanRequestUpgrades();
 
-  const message = hasPlanExpired
-    ? "Your WEBKNOSSOS plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
-    : "Your organization is using more users or storage space than included in your current plan. Upgrade now to avoid your account from being blocked.";
-  const actionButton = hasPlanExpired ? (
-    <Button size="small" type="primary" onClick={() => UpgradePricingPlanModal.extendPricingPlan()}>
-      Extend Plan Now
-    </Button>
-  ) : (
-    <Button
-      size="small"
-      type="primary"
-      onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}
-    >
-      Upgrade Now
-    </Button>
-  );
+  const overLimitMessage =
+    "Your organization is using more users or storage space than included in your current plan.";
 
-  return (
-    <Alert
-      showIcon
-      type="error"
-      title={message}
-      action={activeUser && isUserAllowedToRequestUpgrades(activeUser) ? actionButton : null}
-      style={{ marginBottom: 20 }}
-    />
-  );
-}
-
-export function PlanAboutToExceedAlert({ organization }: { organization: APIOrganization }) {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const isAboutToExpire =
-    dayjs.duration(dayjs(organization.paidUntil).diff(dayjs())).asWeeks() <= 6 &&
-    !hasPricingPlanExpired(organization);
-
-  if (isAboutToExpire) {
-    const actionButton = (
+  let message: React.ReactNode;
+  let actionButton: React.ReactNode = null;
+  if (hasPlanExpired) {
+    message = "Your WEBKNOSSOS plan has expired. Extend it to restore all users and features.";
+    actionButton = (
       <Button
         size="small"
         type="primary"
@@ -161,15 +104,70 @@ export function PlanAboutToExceedAlert({ organization }: { organization: APIOrga
         Extend Plan Now
       </Button>
     );
-
-    return (
-      <Alert
-        showIcon
-        type="warning"
-        title="Your WEBKNOSSOS plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
-        action={activeUser && isUserAllowedToRequestUpgrades(activeUser) ? actionButton : null}
-        style={{ marginBottom: 20 }}
-      />
+  } else if (canUpgradePricingPlan(organization.pricingPlan)) {
+    message = `${overLimitMessage} Upgrade now to avoid your account from being blocked.`;
+    actionButton = (
+      <Button
+        size="small"
+        type="primary"
+        onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}
+      >
+        Upgrade Now
+      </Button>
     );
-  } else return null;
+  } else if (canBuyQuotaUpgrades(organization.pricingPlan)) {
+    // The backend only counts users towards the exceeded state, storage is checked here.
+    const exceededQuotas: Array<"users" | "storage"> = hasPricingPlanExceededStorage(organization)
+      ? ["users", "storage"]
+      : ["users"];
+    message = `${overLimitMessage} Add more to avoid your account from being blocked.`;
+    actionButton = (
+      <Button
+        size="small"
+        type="primary"
+        onClick={() => UpgradePricingPlanModal.upgradeQuotas(exceededQuotas)}
+      >
+        Add Users or Storage
+      </Button>
+    );
+  } else {
+    // Custom limits are negotiated individually.
+    message = (
+      <>
+        {overLimitMessage} <a href="mailto:support@webknossos.org">Get in touch</a> to adjust your
+        plan.
+      </>
+    );
+  }
+
+  return (
+    <Alert
+      showIcon
+      type="error"
+      title={message}
+      action={canRequestUpgrades ? actionButton : null}
+      style={{ marginBottom: 20 }}
+    />
+  );
+}
+
+export function PlanAboutToExceedAlert({ organization }: { organization: APIOrganization }) {
+  const canRequestUpgrades = useCanRequestUpgrades();
+  if (!isPlanAboutToExpire(organization)) return null;
+
+  const actionButton = (
+    <Button size="small" type="primary" onClick={() => UpgradePricingPlanModal.extendPricingPlan()}>
+      Extend Plan Now
+    </Button>
+  );
+
+  return (
+    <Alert
+      showIcon
+      type="warning"
+      title={`Your WEBKNOSSOS plan ends ${dayjs(organization.paidUntil).fromNow()}. Extend it to keep all users and features.`}
+      action={canRequestUpgrades ? actionButton : null}
+      style={{ marginBottom: 20 }}
+    />
+  );
 }

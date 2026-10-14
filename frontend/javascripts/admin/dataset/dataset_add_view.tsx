@@ -9,7 +9,7 @@ import AlignmentProjectUploadView from "admin/alignment_project/alignment_projec
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { getDatastores } from "admin/rest_api";
-import { Layout, Tabs, type TabsProps } from "antd";
+import { Flex, Layout, Tabs, type TabsProps } from "antd";
 import features from "features";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -134,9 +134,21 @@ function DatasetAddView() {
     <React.Fragment>
       <Layout style={{ minHeight: "100vh", backgroundColor: "var(--ant-layout-body-bg)" }}>
         <Content>
-          <Tabs defaultActiveKey={defaultActiveKey} className="container" items={tabs} />
+          <Tabs
+            defaultActiveKey={defaultActiveKey}
+            className="container"
+            // Show the banner within each tab's content, so that it lines up with the tab's card.
+            items={tabs.map((tab) => ({
+              ...tab,
+              children: (
+                <Flex gap="large" align="flex-start">
+                  <div style={{ flex: 1, minWidth: 0 }}>{tab.children}</div>
+                  <VoxelyticsBanner />
+                </Flex>
+              ),
+            }))}
+          />
         </Content>
-        <VoxelyticsBanner />
       </Layout>
       {getAfterUploadModalContent()}
     </React.Fragment>

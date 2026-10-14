@@ -204,7 +204,7 @@ class AnnotationController @Inject() (
         _ <- Fox.fromBool(annotation.state == AnnotationState.Finished) ?~> Msg.Annotation.Reopen.notFinished
         _ <- Fox.fromBool(isAdminOrTeamManager || annotation._user == user._id) ?~> Msg.Annotation.Reopen.notAllowed
         _ <- Fox.fromBool(
-          isAdminOrTeamManager || (annotation.modified + taskReopenAllowed).isPast
+          isAdminOrTeamManager || !(annotation.modified + taskReopenAllowed).isPast
         ) ?~> Msg.Annotation.Reopen.tooLate(conf.Features.taskReopenAllowed)
       } yield ()
 

@@ -50,12 +50,9 @@ import org.apache.commons.io.FileUtils
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
 import java.io.{File, RandomAccessFile}
-import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters.*
 import scala.jdk.FutureConverters.*
-import scala.util.Using
 
 case class ResumableUploadInfo(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -609,31 +606,22 @@ class UploadService @Inject() (
         UploadDomain.alignmentProject
       ) ?~> Msg.Dataset.Upload.allChunksUploadedCheckFailed
       targetDir <- alignmentProjectDirFor(dataSourceId.organizationId, alignmentProjectId).toFox
-      _ <- Fox.fromBool(!Files.exists(targetDir)) ?~> s"Alignment project directory $targetDir already exists."
+      _ <- Fox.fromBool(!Files.exists(targetDir)) ?~> Msg.AlignmentProject.directoryExists(targetDir.toString)
       _ <- PathUtils.ensureDirectoryBox(targetDir.getParent).toFox
       _ <- unpackOrMoveAlignmentProjectUpload(uploadDir, targetDir, alignmentProjectId)
       _ <- cleanUpUploaded(uploadId, reason = "Upload complete, data unpacked.", UploadDomain.alignmentProject)
-      allFiles <- tryo(
-        Using.resource(Files.walk(targetDir))(_.iterator.asScala.filter(Files.isRegularFile(_)).toList)
-      ).toFox
+      allFiles <- PathUtils.listFilesRecursive(targetDir, silent = false, maxDepth = Int.MaxValue).toFox
       totalSizeInBytes <- measureDirectorySizeBytes(targetDir) ?~> Msg.Dataset.Upload.measureTotalSizeFailed
       csvFiles = allFiles.filter(_.getFileName.toString.toLowerCase.endsWith(".csv"))
       sectionRangeBox = csvFiles match {
-        case List(csvFile) =>
-          tryo(
-            Using.resource(scala.io.Source.fromFile(csvFile.toFile, StandardCharsets.UTF_8.name))(source =>
-              TileCsvParser.parseSectionRange(source.getLines())
-            )
-          ).flatMap(identity)
-        case Nil => Failure("No CSV file was found among the uploaded files.")
-        case _   =>
-          Failure(
-            s"Expected exactly one CSV file, found ${csvFiles.length}: ${csvFiles.map(targetDir.relativize).mkString(", ")}."
-          )
+        case List(csvFile) => TileCsvParser.parseSectionRange(csvFile)
+        case Nil           => Failure(Msg.AlignmentProject.Csv.notFound)
+        case _             =>
+          Failure(Msg.AlignmentProject.Csv.multipleFound(csvFiles.map(targetDir.relativize(_).toString)))
       }
       invalidReasonOpt = sectionRangeBox match {
         case f: Failure => Some(f.msg)
-        case Empty      => Some("The CSV file could not be read.")
+        case Empty      => Some(Msg.AlignmentProject.Csv.unreadable)
         case Full(_)    => None
       }
       _ <- remoteWebknossosClient.reportAlignmentProjectUpload(
@@ -645,7 +633,7 @@ class UploadService @Inject() (
           sectionRangeBox.toOption,
           invalidReasonOpt
         )
-      ) ?~> "Could not report the alignment project upload to WEBKNOSSOS."
+      ) ?~> Msg.AlignmentProject.reportUploadFailed
     } yield ()
 
   // A single uploaded zip is unpacked, otherwise the uploaded files are moved as they are.
@@ -655,7 +643,7 @@ class UploadService @Inject() (
       alignmentProjectId: ObjectId
   ): Fox[Unit] =
     for {
-      uploadedFiles <- PathUtils.listFilesRecursive(uploadDir, silent = false, maxDepth = 10).toFox
+      uploadedFiles <- PathUtils.listFilesRecursive(uploadDir, silent = false, maxDepth = Int.MaxValue).toFox
       _ <- Fox.fromBool(uploadedFiles.nonEmpty) ?~> Msg.Dataset.Upload.noFiles
       _ <- uploadedFiles match {
         case List(zipFile) if zipFile.getFileName.toString.toLowerCase.endsWith(".zip") =>
@@ -670,7 +658,7 @@ class UploadService @Inject() (
               boundaryDirNames = None
             )
             .toFox
-            .map(_ => ()) ?~> "Could not unzip the uploaded file."
+            .map(_ => ()) ?~> Msg.AlignmentProject.unzipFailed
         case _ =>
           tryo(
             FileUtils.moveDirectory(uploadDir.toFile, targetDir.toFile)
@@ -687,16 +675,12 @@ class UploadService @Inject() (
       uploadedFileName: String
   ): Fox[(String, SectionRange)] =
     for {
-      sectionRange <- tryo(
-        Using.resource(scala.io.Source.fromFile(uploadedCsv.toFile, StandardCharsets.UTF_8.name))(source =>
-          TileCsvParser.parseSectionRange(source.getLines())
-        )
-      ).flatMap(identity).toFox
+      sectionRange <- TileCsvParser.parseSectionRange(uploadedCsv).toFox
       projectDir <- alignmentProjectDirFor(replacementInfo.organizationId, alignmentProjectId).toFox
-      _ <- Fox.fromBool(Files.isDirectory(projectDir)) ?~> s"Alignment project directory $projectDir does not exist."
+      _ <- Fox.fromBool(Files.isDirectory(projectDir)) ?~> Msg.AlignmentProject.directoryMissing(projectDir.toString)
       currentCsvOpt = replacementInfo.currentCsvPath.map(projectDir.resolve(_).normalize())
       targetDir = currentCsvOpt.map(_.getParent).getOrElse(projectDir)
-      _ <- Fox.fromBool(targetDir.startsWith(projectDir)) ?~> "Invalid path of the current CSV."
+      _ <- Fox.fromBool(targetDir.startsWith(projectDir)) ?~> Msg.AlignmentProject.Csv.invalidCurrentPath
       targetPath = targetDir.resolve(
         TileCsvParser.nextCsvFileName(
           currentCsvOpt.map(_.getFileName.toString),
@@ -704,7 +688,7 @@ class UploadService @Inject() (
           isTaken = fileName => Files.exists(targetDir.resolve(fileName))
         )
       )
-      _ <- tryo(Files.copy(uploadedCsv, targetPath)).toFox ?~> "Could not store the new CSV file."
+      _ <- tryo(Files.copy(uploadedCsv, targetPath)).toFox ?~> Msg.AlignmentProject.Csv.storeFailed
       _ = logger.info(s"Replaced tile CSV of alignment project $alignmentProjectId with $targetPath.")
     } yield (projectDir.relativize(targetPath).toString, sectionRange)
 

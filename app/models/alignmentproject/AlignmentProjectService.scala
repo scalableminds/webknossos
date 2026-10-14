@@ -3,21 +3,26 @@ package models.alignmentproject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.helpers.{DirectoryConstants, IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.SectionRange
+import com.typesafe.scalalogging.LazyLogging
 import controllers.PathDeletionService
 import models.dataset.{DataStoreDAO, WKRemoteDataStoreClient}
 import models.job.{JobDAO, JobService}
 import models.user.{MultiUserDAO, User, UserDAO}
+import org.apache.pekko.actor.ActorSystem
 import play.api.http.Status.FORBIDDEN
+import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 class AlignmentProjectService @Inject() (
     alignmentProjectDAO: AlignmentProjectDAO,
@@ -28,10 +33,14 @@ class AlignmentProjectService @Inject() (
     jobService: JobService,
     pathDeletionService: PathDeletionService,
     wkConf: WkConf,
-    rpc: RPC
-)(implicit ec: ExecutionContext) {
+    rpc: RPC,
+    val lifecycle: ApplicationLifecycle,
+    val actorSystem: ActorSystem
+)(implicit val ec: ExecutionContext)
+    extends IntervalScheduler
+    with DirectoryConstants
+    with LazyLogging {
 
-  private val alignmentProjectsDirName = ".alignmentProjects"
   private val bytesPerGigabyte = math.pow(10, 9)
 
   def assertMayAccessAlignmentProjects(user: User): Fox[Unit] =
@@ -74,7 +83,7 @@ class AlignmentProjectService @Inject() (
       dataStore <- dataStoreDAO.findOneByName(project._dataStore)(using GlobalAccessContext)
       dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
       organizationDir <- dataStoreClient.getOneBaseDirForOrgaAbsolute(project._organization)
-    } yield organizationDir / alignmentProjectsDirName / project._id.toString
+    } yield organizationDir / alignmentProjectsDir / project._id.toString
 
   private def cancelUnfinishedJobs(project: AlignmentProject): Fox[Unit] =
     for {
@@ -136,4 +145,21 @@ class AlignmentProjectService @Inject() (
       "inputDataDeletionDate" -> (project.created + wkConf.WebKnossos.AlignmentProjects.inputDataRetention),
       "jobCount" -> jobCount
     )
+
+  // Uploaded input data is only kept for a limited time, instead of counting towards the storage quota.
+  override protected def tickerInterval: FiniteDuration = wkConf.WebKnossos.AlignmentProjects.inputDataCleanupInterval
+
+  override protected def tick(): Fox[Unit] =
+    for {
+      projects <- alignmentProjectDAO.findAllWithExpiredInputData(
+        Instant.now - wkConf.WebKnossos.AlignmentProjects.inputDataRetention
+      )
+      results <- Fox.fromFuture(Fox.serialSequence(projects) { project =>
+        logger.info(s"Deleting expired input data of alignment project ${project._id} (${project.name})...")
+        deleteInputData(project)
+      })
+      failedCount = results.count(_.isEmpty)
+      _ =
+        if (failedCount > 0) logger.warn(s"Could not delete the expired input data of $failedCount alignment projects.")
+    } yield ()
 }

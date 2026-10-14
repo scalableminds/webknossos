@@ -1,11 +1,15 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.box.{Box, Failure, Full}
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.JsonAutoFormat
 
-import java.nio.file.Paths
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Path, Paths}
 import scala.collection.mutable
-import scala.util.Try
+import scala.io.Source
+import scala.util.{Try, Using}
 
 // Inclusive on both ends, so it contains last - first + 1 sections.
 case class SectionRange(first: Int, last: Int) derives JsonAutoFormat
@@ -22,6 +26,14 @@ object TileCsvParser {
 
   private val minColumnCount = 4
   private val headerFirstCell = "section"
+
+  // Reads the file lazily, so that large CSVs are not loaded into memory at once.
+  def parseSectionRange(csvFile: Path): Box[SectionRange] =
+    tryo(
+      Using.resource(Source.fromFile(csvFile.toFile, StandardCharsets.UTF_8.name))(source =>
+        parseSectionRange(source.getLines())
+      )
+    ).flatMap(identity)
 
   def parseSectionRange(lines: Iterator[String]): Box[SectionRange] = {
     val rows = lines
@@ -40,17 +52,17 @@ object TileCsvParser {
       val (cells, rowNumber) = rows.next()
       parseRow(cells) match {
         case Right(section) => sections += section
-        case Left(message)  => error = Some(s"Row $rowNumber: $message")
+        case Left(message)  => error = Some(Msg.AlignmentProject.Csv.invalidRow(rowNumber, message))
       }
     }
     error match {
       case Some(message)            => Failure(message)
-      case None if sections.isEmpty => Failure("The CSV file contains no tiles.")
+      case None if sections.isEmpty => Failure(Msg.AlignmentProject.Csv.noTiles)
       case None                     =>
         val (first, last) = (sections.min, sections.max)
         (first to last).find(!sections.contains(_)) match {
           case Some(missing) =>
-            Failure(s"Section numbers are not continuous: section $missing is missing between $first and $last.")
+            Failure(Msg.AlignmentProject.Csv.sectionsNotContinuous(missing, first, last))
           case None => Full(SectionRange(first, last))
         }
     }
@@ -61,13 +73,13 @@ object TileCsvParser {
     cells match {
       case Seq(section, x, y, path, _*) =>
         for {
-          sectionNumber <- section.toIntOption.toRight(s"""section number "$section" is not an integer.""")
-          _ <- x.toDoubleOption.zip(y.toDoubleOption).toRight(s"""position "$x,$y" is not numeric.""")
-          _ <- Either.cond(path.nonEmpty, (), "the path is empty.")
-          _ <- Either.cond(isWithinCsvDirectory(path), (), s"""path "$path" must be relative to the CSV file.""")
+          sectionNumber <- section.toIntOption.toRight(Msg.AlignmentProject.Csv.sectionNotInteger(section))
+          _ <- x.toDoubleOption.zip(y.toDoubleOption).toRight(Msg.AlignmentProject.Csv.positionNotNumeric(x, y))
+          _ <- Either.cond(path.nonEmpty, (), Msg.AlignmentProject.Csv.emptyPath)
+          _ <- Either.cond(isWithinCsvDirectory(path), (), Msg.AlignmentProject.Csv.pathNotRelative(path))
         } yield sectionNumber
       case _ =>
-        Left(s"expected at least $minColumnCount columns (section,x,y,path), found ${cells.length}.")
+        Left(Msg.AlignmentProject.Csv.tooFewColumns(minColumnCount, cells.length))
     }
 
   // Rejects absolute paths and paths escaping the CSV’s directory, since the worker resolves them on the datastore.

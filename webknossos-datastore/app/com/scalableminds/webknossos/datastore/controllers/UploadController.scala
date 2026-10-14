@@ -103,7 +103,6 @@ class UploadController @Inject() (
 
   def reserveAlignmentProjectUpload(): Action[AlignmentProjectUploadInfo] =
     Action.fox(validateJson[AlignmentProjectUploadInfo]) { implicit request =>
-      // WEBKNOSSOS checks the more specific permissions when reserving.
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDatasets(request.body.organizationId)
       ) {
@@ -122,7 +121,7 @@ class UploadController @Inject() (
               for {
                 additionalInfo <- dsRemoteWebknossosClient.reserveAlignmentProjectUpload(
                   request.body
-                ) ?~> "alignmentProject.upload.validation.failed"
+                ) ?~> Msg.AlignmentProject.uploadValidationFailed
                 _ <- uploadService.reserveAlignmentProjectUpload(request.body, additionalInfo.newAlignmentProjectId)
               } yield additionalInfo.newAlignmentProjectId
         } yield Ok(Json.toJson(AlignmentProjectUploadAdditionalInfo(alignmentProjectId)))
@@ -134,7 +133,7 @@ class UploadController @Inject() (
   def replaceAlignmentProjectCsv(alignmentProjectId: ObjectId): Action[MultipartFormData[Files.TemporaryFile]] =
     Action.fox(parse.multipartFormData) { implicit request =>
       for {
-        csvFile <- request.body.file("file").toFox ?~> "No CSV file was attached."
+        csvFile <- request.body.file("file").toFox ?~> Msg.AlignmentProject.Csv.notAttached
         replacementInfo <- dsRemoteWebknossosClient.reserveAlignmentProjectCsvReplacement(alignmentProjectId)
         (csvPath, sectionRange) <- uploadService.replaceAlignmentProjectCsv(
           alignmentProjectId,
@@ -280,7 +279,7 @@ class UploadController @Inject() (
                   _ <- uploadService.finishAlignmentProjectUpload(
                     uploadId,
                     datasetId
-                  ) ?~> "Could not finish the alignment project upload."
+                  ) ?~> Msg.AlignmentProject.finishUploadFailed
                 } yield Ok(Json.obj("alignmentProjectId" -> datasetId))
               case _ =>
                 for {

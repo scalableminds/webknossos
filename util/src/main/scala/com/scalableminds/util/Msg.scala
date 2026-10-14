@@ -54,6 +54,32 @@ object Msg {
     val emptyName: String = "The name of an alignment project must not be empty."
     val notUploading: String = "The upload of this alignment project has already been finished."
     val uploadUnfinished: String = "The upload of this alignment project has not finished yet."
+    val uploadValidationFailed: String = "Could not validate alignment project information for upload."
+    val finishUploadFailed: String = "Could not finish the alignment project upload."
+    val reportUploadFailed: String = "Could not report the alignment project upload to WEBKNOSSOS."
+    val unzipFailed: String = "Could not unzip the uploaded file."
+    def directoryExists(directory: String): String = s"Alignment project directory $directory already exists."
+    def directoryMissing(directory: String): String = s"Alignment project directory $directory does not exist."
+    object Csv {
+      val notFound: String = "No CSV file was found among the uploaded files."
+      def multipleFound(paths: Seq[String]): String =
+        s"Expected exactly one CSV file, found ${paths.length}: ${paths.mkString(", ")}."
+      val unreadable: String = "The CSV file could not be read."
+      val notAttached: String = "No CSV file was attached."
+      val invalidCurrentPath: String = "Invalid path of the current CSV."
+      val storeFailed: String = "Could not store the new CSV file."
+      val noTiles: String = "The CSV file contains no tiles."
+      def sectionsNotContinuous(missing: Int, first: Int, last: Int): String =
+        s"Section numbers are not continuous: section $missing is missing between $first and $last."
+      def invalidRow(rowNumber: Int, problem: String): String = s"Row $rowNumber: $problem"
+      // The following describe the problem of a single row, see invalidRow.
+      def sectionNotInteger(section: String): String = s"""section number "$section" is not an integer."""
+      def positionNotNumeric(x: String, y: String): String = s"""position "$x,$y" is not numeric."""
+      val emptyPath: String = "the path is empty."
+      def pathNotRelative(path: String): String = s"""path "$path" must be relative to the CSV file."""
+      def tooFewColumns(minColumnCount: Int, found: Int): String =
+        s"expected at least $minColumnCount columns (section,x,y,path), found $found."
+    }
     val notReady: String = "Alignments can only be started for alignment projects with a valid, fully uploaded CSV."
     val inputDataDeleted: String = "The input data of this alignment project has been deleted."
     val invalidSectionRange: String = "The selected section range is not within the sections of the alignment project."

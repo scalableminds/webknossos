@@ -327,7 +327,7 @@ class AttachmentUploadMetadataStore @Inject() (protected val store: DataStoreRed
     } yield ()
 }
 
-// The datasetId slot holds the alignment project id.
+// by alignment project id, not dataset id
 class AlignmentProjectUploadMetadataStore @Inject() (protected val store: DataStoreRedisStore)
     extends UploadMetadataStore {
   protected val domain: UploadDomain = UploadDomain.alignmentProject

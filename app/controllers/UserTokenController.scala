@@ -152,9 +152,10 @@ class UserTokenController @Inject() (
     def tryAdministrate: Fox[UserAccessAnswer] =
       userBox match {
         case Full(user) =>
+          val organizationId = idOpt.getOrElse(user._organization)
           for {
-            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, idOpt.getOrElse(user._organization))
-          } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
+            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, organizationId)
+          } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManagerOf(organizationId))
         case _ => Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token")))
       }
 

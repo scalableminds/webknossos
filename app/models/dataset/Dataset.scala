@@ -325,7 +325,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               COALESCE(
                 (
                   (u.isAdmin AND u._organization = d._organization) OR
-                  u.isDatasetManager OR
+                  (u.isDatasetManager AND u._organization = d._organization) OR
                   d._id IN (              -- team manager of team that has access to the dataset
                     SELECT _dataset
                     FROM webknossos.dataset_allowedTeams dt
@@ -339,7 +339,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                       SELECT at._folder
                       FROM webknossos.folder_allowedTeams at
                       JOIN webknossos.user_team_roles utr ON at._team = utr._team
-                      WHERE utr._user = u._id
+                      WHERE utr._user = u._id AND utr.isTeamManager
                     )
                   )
                 ), FALSE

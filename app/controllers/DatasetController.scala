@@ -479,9 +479,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
         _ <- Fox.runOptional(request.body.dataSource)(dataSourceUpdates =>
@@ -508,9 +506,7 @@ class DatasetController @Inject() (
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         metadataWithFallback = request.body.metadata.getOrElse(dataset.metadata)
         _ <- assertNoDuplicateMetadataKeys(metadataWithFallback)
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- datasetDAO.updateFields(
           dataset._id,
           request.body.description,
@@ -531,9 +527,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[List[ObjectId]]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         includeMemberOnlyTeams = request.identity.isDatasetManager
         userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
         oldAllowedTeams <- teamService.allowedTeamIdsForDataset(
@@ -561,9 +555,7 @@ class DatasetController @Inject() (
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.fromBool(dataset._organization == request.identity._organization) ~> FORBIDDEN
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- datasetDAO.updateSharingTokenById(datasetId, None)
       } yield Ok
     }
@@ -714,9 +706,7 @@ class DatasetController @Inject() (
           for {
             dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
             _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> Msg.Dataset.Delete.notEnabled
-            _ <- Fox.assertTrue(
-              datasetService.isEditableBy(dataset, Some(request.identity))
-            ) ?~> Msg.notAllowed ~> FORBIDDEN
+            _ <- datasetService.assertEditableBy(dataset, request.identity)
             before = Instant.now
             _ = logger.info(
               s"Deleting dataset $datasetId as requested by user ${request.identity._id}. Details: orga=${dataset._organization}, isVirtual=${dataset.isVirtual}, name=${dataset.name}, directoryName=${dataset.directoryName} ..."
@@ -741,21 +731,21 @@ class DatasetController @Inject() (
   def composeAddLayer(datasetId: ObjectId): Action[ComposeRequestLayer] =
     sil.SecuredAction.fox(validateJson[ComposeRequestLayer]) { implicit request =>
       for {
-        _ <- composeService.addLayer(datasetId, request.body) ?~> Msg.Dataset.Compose.addLayerFailed
+        _ <- composeService.addLayer(datasetId, request.body, request.identity) ?~> Msg.Dataset.Compose.addLayerFailed
       } yield Ok
     }
 
   def composeAddMag(datasetId: ObjectId): Action[ComposeAddMagRequest] =
     sil.SecuredAction.fox(validateJson[ComposeAddMagRequest]) { implicit request =>
       for {
-        _ <- composeService.addMag(datasetId, request.body) ?~> Msg.Dataset.Compose.addMagFailed
+        _ <- composeService.addMag(datasetId, request.body, request.identity) ?~> Msg.Dataset.Compose.addMagFailed
       } yield Ok
     }
 
   def composeAddAttachment(datasetId: ObjectId): Action[ComposeAddAttachmentRequest] =
     sil.SecuredAction.fox(validateJson[ComposeAddAttachmentRequest]) { implicit request =>
       for {
-        _ <- composeService.addAttachment(datasetId, request.body) ?~> Msg.Dataset.Compose.addAttachmentFailed
+        _ <- composeService.addAttachment(datasetId, request.body, request.identity) ?~> Msg.Dataset.Compose.addAttachmentFailed
       } yield Ok
     }
 
@@ -764,9 +754,7 @@ class DatasetController @Inject() (
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Upload.magUploadOnlyVirtual
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         magPath <- datasetUploadToPathsService.reserveMagUploadToPath(dataset, request.body)
       } yield Ok(Json.toJson(magPath))
     }
@@ -775,9 +763,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- datasetMagsDAO.findOneWithPendingUploadToPath(
           datasetId,
           request.body.layerName,
@@ -804,9 +790,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         attachmentPath <- datasetUploadToPathsService.reserveAttachmentUploadToPath(dataset, request.body)
 
       } yield Ok(Json.toJson(attachmentPath))
@@ -816,7 +800,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- datasetLayerAttachmentsDAO.findOneWithPendingUploadToPath(
           datasetId,
           request.body.layerName,
@@ -875,9 +859,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- Fox.fromBool(
           dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded
         ) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
@@ -897,9 +879,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Mirror.onlyForVirtual
         _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.Mirror.onlyForUsable
         _ <- datasetService.writeMirrorForVirtual(dataset) ?~> Msg.Dataset.Mirror.writeFailed
@@ -946,9 +926,7 @@ class DatasetController @Inject() (
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         // While reading these details is not exactly editing, only those who can see the settings page should see this.
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(datasetId)
         magDetails <- organizationDAO.getUsedStorageMagDetailsForDataset(datasetId)
         attachmentDetails <- organizationDAO.getUsedStorageAttachmentDetailsForDataset(datasetId)

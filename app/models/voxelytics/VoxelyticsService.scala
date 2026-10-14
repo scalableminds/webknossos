@@ -118,12 +118,6 @@ case class ArtifactChecksumEntry(
 
 class VoxelyticsService @Inject() (voxelyticsDAO: VoxelyticsDAO)(implicit ec: ExecutionContext) {
 
-  def checkAuth(runId: ObjectId, user: User): Fox[Unit] =
-    for {
-      runUserId <- voxelyticsDAO.getUserIdForRun(runId)
-      _ <- Fox.fromBool(user.isAdmin || runUserId == user._id)
-    } yield ()
-
   def checkAuthForWorkflowCreation(runName: String, user: User): Fox[Unit] =
     for {
       runUserId <- voxelyticsDAO.getUserIdForRunOpt(runName, user._organization)

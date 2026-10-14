@@ -321,6 +321,7 @@ class JobService @Inject() (
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
       _ <- assertStorageNotExceededFor(command, user)
+      _ <- Fox.fromBool(!jobBoundingBoxInTargetMag.isEmpty) ?~> Msg.Job.invalidBoundingBoxOrMag
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(
         creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)
@@ -376,11 +377,12 @@ class JobService @Inject() (
 
   def calculateJobCostInMilliCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[Int] =
     for {
-      _ <- Fox.fromBool(!boundingBoxInTargetMag.isEmpty) ?~> Msg.Job.invalidBoundingBoxOrMag
       costPerGVx <- getJobCostInMilliCreditsPerGVx(jobCommand)
       // Computed as Double so that huge bounding boxes cannot overflow; Double.toInt saturates at Int.MaxValue
       volumeInGVx =
-        boundingBoxInTargetMag.width.toDouble * boundingBoxInTargetMag.height * boundingBoxInTargetMag.depth / ONE_GIGAVOXEL
+        if (boundingBoxInTargetMag.isEmpty) 0.0
+        else
+          boundingBoxInTargetMag.width.toDouble * boundingBoxInTargetMag.height * boundingBoxInTargetMag.depth / ONE_GIGAVOXEL
     } yield math.ceil(volumeInGVx * costPerGVx).toInt
 
 }

@@ -82,7 +82,7 @@ class WebknossosBearerTokenAuthenticatorService(
     } yield tokenId
 
   def userForToken(tokenValue: String): Fox[User] =
-    userForAuthenticator(repository.findOneByValue(tokenValue))
+    userForAuthenticator(repository.findOneUsableForAuthentication(tokenValue))
 
   def userForResetPasswordToken(tokenValue: String): Fox[User] =
     userForAuthenticator(repository.findOneByValueAndType(tokenValue, TokenType.ResetPassword))

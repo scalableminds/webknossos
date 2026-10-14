@@ -140,13 +140,16 @@ class DataProxyController @Inject() (
       )
     )
 
+  private val doublyEncodedPattern = "%[0-9a-fA-F]{2}".r
+
   // Wildcard route params are not url-decoded by Play, so validate the decoded form
   private def validatePath(path: String): Fox[Unit] =
     for {
       decoded <- tryo(
         URLDecoder.decode(path.replace("+", "%2B"), StandardCharsets.UTF_8)
       ).toFox ?~> "path is not validly encoded"
-      _ <- Fox.fromBool(!decoded.contains("%")) ?~> "path must not contain encoded “%”"
+      // A literal “%” is fine, but a remaining percent escape could be decoded a second time downstream
+      _ <- Fox.fromBool(doublyEncodedPattern.findFirstIn(decoded).isEmpty) ?~> "path must not be doubly encoded"
       _ <- Fox.fromBool(!decoded.contains("..")) ?~> "path must not contain “..”"
       _ <- Fox.fromBool(!decoded.contains("\\")) ?~> "path must not contain “\\”"
       _ <- Fox.fromBool(!decoded.startsWith("/")) ?~> "path must not start with “/”"

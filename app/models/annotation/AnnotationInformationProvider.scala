@@ -45,11 +45,12 @@ class AnnotationInformationProvider @Inject() (
       ctx: DBAccessContext
   ): Fox[Annotation] =
     for {
-      annotation <- annotationStore.requestAnnotation(annotationIdentifier, userOpt)
-      // Compound annotations are cached independently of the requesting user, so access must be checked on every request
+      // Compound annotations are cached independently of the requesting user, so access must be checked on every
+      // request, and before the potentially expensive merge
       _ <- Fox.runIf(handlerForTyp(annotationIdentifier.annotationType).useCache)(
         Fox.assertTrue(restrictionsFor(annotationIdentifier).flatMap(_.allowAccess(userOpt)))
       ) ?~> Msg.notAllowed ~> FORBIDDEN
+      annotation <- annotationStore.requestAnnotation(annotationIdentifier, userOpt)
     } yield annotation
 
   def nameFor(annotation: Annotation)(using ctx: DBAccessContext): Fox[String] =

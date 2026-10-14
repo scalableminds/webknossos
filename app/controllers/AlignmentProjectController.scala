@@ -154,7 +154,7 @@ class AlignmentProjectController @Inject() (
             "new_dataset_name" -> parameters.newDatasetName,
             "webknossos_folder_id" -> folderId,
             // wk section range is inclusive, while voxelytics expects the upper bound exclusive.
-            "section_range" -> parameters.sectionRange.map(range => List(range.first, range.last + 1 )),
+            "section_range" -> parameters.sectionRange.map(range => List(range.first, range.last + 1)),
             "render_unaligned" -> parameters.renderUnaligned
           )
           costInMilliCredits = alignmentProjectService.costInMilliCredits(

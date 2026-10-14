@@ -383,6 +383,6 @@ class JobService @Inject() (
         if (boundingBoxInTargetMag.isEmpty) 0.0
         else
           boundingBoxInTargetMag.width.toDouble * boundingBoxInTargetMag.height * boundingBoxInTargetMag.depth / ONE_GIGAVOXEL
-    } yield math.ceil(volumeInGVx * costPerGVx).toInt
+    } yield math.max(math.ceil(volumeInGVx * costPerGVx).toInt, 0)
 
 }

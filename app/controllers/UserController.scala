@@ -230,9 +230,15 @@ class UserController @Inject() (
       teams: List[TeamMembership],
       oldTeams: List[TeamMembership]
   )(issuingUser: User): Fox[Boolean] =
-    if (experiences == oldExperiences && teams == oldTeams)
+    if (experiences == oldExperiences && teams.toSet == oldTeams.toSet)
       Fox.successful(true)
-    else userService.isEditableBy(user, issuingUser)
+    else
+      for {
+        isTeamManagerOrAdminOfUser <- userService.isTeamManagerOrAdminOf(issuingUser, user)
+        // Users without teams may be edited by any team manager, e.g. to add them to a team
+        userHasNoTeams = oldTeams.isEmpty
+        isTeamManagerOrAdminOfOrg <- userService.isTeamManagerOrAdminOfOrg(issuingUser, user._organization)
+      } yield isTeamManagerOrAdminOfUser || (userHasNoTeams && isTeamManagerOrAdminOfOrg)
 
   private def checkPasswordIfEmailChanged(user: User, passwordOpt: Option[String], oldEmail: String, email: String)(
       issuingUser: User

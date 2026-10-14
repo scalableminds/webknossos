@@ -35,25 +35,21 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       _ <- tokenDAO.deleteOneByValue(value).futureBox
     } yield ()
 
-  def findOneByValue(value: String): Fox[BearerTokenAuthenticator] =
+  private def findOneByValue(
+      value: String,
+      tokenTypeAllowed: TokenType => Boolean = _ => true
+  ): Fox[BearerTokenAuthenticator] =
     for {
       tokenSQL <- tokenDAO.findOneByValue(value)
+      _ <- Fox.fromBool(tokenTypeAllowed(tokenSQL.tokenType))
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator
 
   def findOneUsableForAuthentication(value: String): Fox[BearerTokenAuthenticator] =
-    for {
-      tokenSQL <- tokenDAO.findOneByValue(value)
-      _ <- Fox.fromBool(tokenSQL.tokenType != TokenType.ResetPassword)
-      tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
-    } yield tokenAuthenticator
+    findOneByValue(value, _ != TokenType.ResetPassword)
 
   def findOneByValueAndType(value: String, tokenType: TokenType): Fox[BearerTokenAuthenticator] =
-    for {
-      tokenSQL <- tokenDAO.findOneByValue(value)
-      _ <- Fox.fromBool(tokenSQL.tokenType == tokenType)
-      tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
-    } yield tokenAuthenticator
+    findOneByValue(value, _ == tokenType)
 
   def findOneForUserAndType(userId: ObjectId, tokenType: TokenType): Future[Option[BearerTokenAuthenticator]] =
     (for {

@@ -6,6 +6,7 @@ import { createAffineTransform } from "viewer/model/helpers/transformation_helpe
 import type { MutableTreeMap } from "viewer/model/types/tree_types";
 import { getLayerRegistrationEditBlocker } from "viewer/view/layer_registration/layer_registration_edit_blocker";
 import {
+  type AppliedState,
   estimateMovingToFixedTransform,
   getActiveMovingLayerName,
   getAppliedState,
@@ -22,9 +23,13 @@ import {
   getMeanResidual,
   getMovingLayerNames,
   getNextLandmarkPairId,
+  getNextStep,
   getOverlayLayerColors,
+  isHighResidual,
   isTransformAppliedToDataset,
   type Landmark,
+  type LandmarkPair,
+  type MovingLayerRow,
   prepareLandmarkTreesForImport,
 } from "viewer/view/layer_registration/layer_registration_helpers";
 import { describe, expect, it } from "vitest";
@@ -272,6 +277,16 @@ describe("Layer registration helpers", () => {
     expect(pair.residual).toBeCloseTo(Math.hypot(4, 40), 5);
   });
 
+  it("shows the floating point noise of an exact fit as an error of 0", () => {
+    const transform = createAffineTransform(POSITIONS_B, POSITIONS_A);
+    const pairs = getLandmarkPairs(
+      { fixed: toLandmarks(POSITIONS_A), moving: toLandmarks(POSITIONS_B) },
+      transform,
+      [1, 1, 1],
+    );
+    expect(pairs.map((pair) => pair.residual)).toEqual([0, 0, 0, 0]);
+  });
+
   it("computes the mean residual of the pairs that have one", () => {
     const pairs = [
       { key: "1", pairId: 1, landmarks: {}, residual: 1 },
@@ -436,5 +451,90 @@ describe("Layer registration annotation helpers", () => {
       { type: "affine", matrix: flatToNestedMatrix(estimate.estimation.transform.affineMatrix) },
     ];
     expect(getAppliedState(estimate.estimation, null, appliedTransforms)).toBe("applied");
+  });
+});
+
+describe("Layer registration panel hints", () => {
+  const [landmark] = toLandmarks([[0, 0, 0]]);
+  const createPair = (
+    pairId: number,
+    sides: { fixed?: boolean; moving?: boolean } = { fixed: true, moving: true },
+    residual: number | null = null,
+  ): LandmarkPair => ({
+    key: String(pairId),
+    pairId,
+    landmarks: {
+      fixed: sides.fixed ? { ...landmark, pairId } : undefined,
+      moving: sides.moving ? { ...landmark, pairId } : undefined,
+    },
+    residual,
+  });
+  const createRow = (
+    layerName: string,
+    appliedState: AppliedState,
+    completePairCount = 4,
+  ): MovingLayerRow => ({ layerName, completePairCount, meanResidual: null, appliedState });
+  const getStep = (
+    pairs: LandmarkPair[],
+    options: { hasTransform?: boolean; movingLayerRows?: MovingLayerRow[] } = {},
+  ) =>
+    getNextStep({
+      pairs,
+      hasTransform: options.hasTransform ?? true,
+      meanResidual: pairs.some((pair) => pair.residual != null)
+        ? pairs.reduce((sum, pair) => sum + (pair.residual ?? 0), 0) /
+          pairs.filter((pair) => pair.residual != null).length
+        : null,
+      voxelSizeFactor: [1, 1, 1],
+      movingLayerRows: options.movingLayerRows ?? [createRow("moving", "notApplied")],
+      activeLayerName: "moving",
+    });
+  const fourGoodPairs = [1, 2, 3, 4].map((pairId) => createPair(pairId, undefined, 2));
+
+  it("guides through placing the first landmarks and completing the pairs", () => {
+    expect(getStep([], { hasTransform: false })).toEqual({ type: "placeFirstLandmark" });
+    const incompletePair = createPair(2, { fixed: true });
+    expect(getStep([createPair(1), incompletePair], { hasTransform: false })).toEqual({
+      type: "completePair",
+      pair: incompletePair,
+      missingSide: "moving",
+    });
+    expect(getStep([createPair(1), createPair(2)], { hasTransform: false })).toEqual({
+      type: "placeMorePairs",
+      missingPairCount: 1,
+    });
+    // The status card explains why no transform could be estimated.
+    expect(getStep(fourGoodPairs, { hasTransform: false })).toBeNull();
+  });
+
+  it("points to a pair with a much higher error than the others", () => {
+    const outlier = createPair(4, undefined, 10);
+    const step = getStep([...fourGoodPairs.slice(0, 3), outlier]);
+    expect(step).toEqual({ type: "checkOutlier", pair: outlier, errorFactor: 10 / 4 });
+  });
+
+  it("asks to apply the transform, then points to the next layer", () => {
+    expect(getStep(fourGoodPairs)).toEqual({ type: "compareAndApply" });
+    expect(
+      getStep(fourGoodPairs, {
+        movingLayerRows: [createRow("moving", "applied"), createRow("other", "notEnoughPairs", 0)],
+      }),
+    ).toEqual({
+      type: "nextLayer",
+      layerName: "other",
+      completePairCount: 0,
+      appliedState: "notEnoughPairs",
+    });
+    expect(
+      getStep(fourGoodPairs, {
+        movingLayerRows: [createRow("moving", "applied"), createRow("other", "applied")],
+      }),
+    ).toEqual({ type: "allApplied", hasSeveralMovingLayers: true });
+  });
+
+  it("never treats errors below the voxel size as high", () => {
+    expect(isHighResidual(0.5, 0.01, [1, 1, 1])).toBe(false);
+    expect(isHighResidual(5, 2, [1, 1, 1])).toBe(true);
+    expect(isHighResidual(3, 2, [1, 1, 1])).toBe(false);
   });
 });

@@ -79,6 +79,9 @@ export type LayerRegistrationCommand =
 
 // What the layer registration page tells a worker about its view, for the worker's toolbar.
 export type LayerRegistrationViewState = {
+  // The layer of the other worker, and whether this worker shows it, too.
+  otherLayerName: string;
+  isOtherLayerVisible: boolean;
   // Whether the worker shows the other layer transformed onto its own layer or untransformed.
   isTransformShown: boolean;
   // Whether there are enough landmark pairs to estimate a transform.

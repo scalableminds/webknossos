@@ -1576,6 +1576,44 @@ Decisions (with reasons):
 - No special handling of segmentation layers; several alignment annotations per fixed layer
   stay allowed.
 
+### 0.31 Panel space, error sorting, preselected fixed layer (2026-10-13, after the rename)
+
+New names, see "Naming and terminology". From the UX review with Michael:
+- **`x` toggle in each worker's toolbar** (eye icon, next to the `t` transform toggle). The four
+  per-view switches are gone from the panel, so the landmark table gets more height. The "View"
+  section now only holds the green/magenta switch and is hidden if the layers can't be colored.
+  `LayerRegistrationViewState` got `otherLayerName` and `isOtherLayerVisible`.
+- **Error column sortable** (antd `sorter`), largest errors first on the first click; pairs
+  without an error stay at the end in both directions.
+- **Selection page preselects the first layer** of the dataset as the fixed layer (this also
+  filters the list; clearing the select shows all).
+- Docs: correcting a landmark refers to the skeleton tool docs (users are expected to know
+  skeleton annotation); deleting a pair needs one undo per view.
+- Also fixed: the rename missed two uses of the SQL alias in `AnnotationDAO`'s list query
+  (`la.fixedLayerName` → `lr.fixedLayerName`), which broke the dashboard annotation list.
+
+### 0.32 Panel redesign "focused column" (2026-10-13, from Claude Design)
+
+Spec and board: `design/bigwarp/bigwarp-panel-v1-spec.md`, `bigwarp-panel-v1.png` (the design
+brief used "align"; the UI keeps the layer registration terms). Only the presentation changed;
+state and behaviour stay in `layer_registration_workspace.tsx`. The panel is split into:
+- `layer_registration_panel_header.tsx`: back button, name (renamed inline from the ⋯ menu),
+  save state text with "Save now" (replaces the Save button), ⋯ menu with rename, description,
+  landmark download and the list page.
+- `layer_registration_moving_layer_select.tsx` (was `…_moving_layer_list.tsx`): "Registering
+  [layer] to <fixed>" with an applied tag; a `Select` with status per layer replaces the list.
+- `layer_registration_status_card.tsx`: transform status, a "Next:" hint (`getNextStep` in the
+  helpers, unit-tested) with "Show it"/"Switch" actions, warnings.
+- `layer_registration_pair_table.tsx`: table that fills the free height; columns adapt to the
+  width (< 300 px: no z, no error bars; ≥ 456 px: coordinates); error bars; `Segmented` sort
+  (# / Error, replaces the column sorter); selected pair highlighted; empty state with numbered
+  steps and the copy offer as a `Card`.
+- `layer_registration_panel_footer.tsx`: "View" popover (per view X/T switches again, in sync
+  with the toolbar buttons, plus green/magenta), shortcuts popover (reuses `Keycap`), "Apply to
+  dataset…" with the reason in a tooltip when disabled.
+The description is no longer shown in the panel, only edited from the ⋯ menu.
+**Not tried in a browser yet.**
+
 ### 0.3 Not started / explicitly out of scope for this pass
 
 - **Manual browser QA in progress** (started 2026-08-31, see §0.4) - the single bug

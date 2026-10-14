@@ -161,11 +161,14 @@ export function getLandmarkPairs(
       landmarks: { fixed, moving },
       residual:
         transformPointMovingToFixed != null && fixed != null && moving != null
-          ? V3.length(
-              V3.scale3(
-                V3.sub(fixed.position, transformPointMovingToFixed(moving.position)),
-                voxelSizeFactor,
+          ? roundResidualNoise(
+              V3.length(
+                V3.scale3(
+                  V3.sub(fixed.position, transformPointMovingToFixed(moving.position)),
+                  voxelSizeFactor,
+                ),
               ),
+              voxelSizeFactor,
             )
           : null,
     }));
@@ -222,6 +225,16 @@ export function getNextLandmarkPairId(ownPairIds: Set<number>, pairInfo: Landmar
   return Math.max(pairInfo.otherMaxPairId, max(Array.from(ownPairIds)) ?? 0) + 1;
 }
 
+// Residuals below this fraction of the voxel size are floating point noise, e.g. when the
+// landmarks fit exactly.
+const RESIDUAL_NOISE_FACTOR = 1e-6;
+
+// Floating point noise is shown as 0. Otherwise, it would be formatted in tiny units (e.g.
+// "185 ym") and fill the error bars.
+function roundResidualNoise(residual: number, voxelSizeFactor: Vector3): number {
+  return residual < RESIDUAL_NOISE_FACTOR * Math.min(...voxelSizeFactor) ? 0 : residual;
+}
+
 // The residuals are lengths in the unit of the dataset (see getLandmarkPairs). Large values
 // are shown in a larger unit, e.g. µm instead of nm.
 export function formatResidual(residual: number, voxelSize: VoxelSize): string {
@@ -232,6 +245,27 @@ export function formatResidual(residual: number, voxelSize: VoxelSize): string {
 export function getMeanResidual(pairs: LandmarkPair[]): number | null {
   const residuals = pairs.flatMap((pair) => (pair.residual != null ? [pair.residual] : []));
   return residuals.length > 0 ? mean(residuals) : null;
+}
+
+// A pair whose error is this many times higher than the mean error is highlighted, because it
+// was probably placed imprecisely.
+const HIGH_RESIDUAL_FACTOR = 2;
+
+// Errors below the size of one voxel are never high: if the landmarks fit exactly, all errors
+// are just floating point noise.
+export function isHighResidual(
+  residual: number,
+  meanResidual: number | null,
+  voxelSizeFactor: Vector3,
+): boolean {
+  return (
+    meanResidual != null &&
+    residual > Math.max(HIGH_RESIDUAL_FACTOR * meanResidual, Math.min(...voxelSizeFactor))
+  );
+}
+
+export function isCompletePair(pair: LandmarkPair): boolean {
+  return pair.pairId != null && pair.landmarks.fixed != null && pair.landmarks.moving != null;
 }
 
 // The affine estimation needs points that span all three dimensions. It doesn't reliably
@@ -350,6 +384,99 @@ export function getLayerPairTransformEstimate(
 // Whether the dataset uses the estimated transform of a moving layer: "notEnoughPairs" if no
 // transform could be estimated from the landmarks.
 export type AppliedState = "applied" | "notApplied" | "notEnoughPairs";
+
+// The state of the estimated transform of one moving layer. Without counts, its landmarks are
+// still loading (isLoading) or could not be read.
+export type MovingLayerRow = { layerName: string } & (
+  | { completePairCount: number; meanResidual: number | null; appliedState: AppliedState }
+  | { isLoading: boolean }
+);
+
+// What the user should do next, shown as a hint in the landmark panel. The first matching
+// step wins, in the order of the type below.
+export type NextStep =
+  | { type: "placeFirstLandmark" }
+  | { type: "completePair"; pair: LandmarkPair; missingSide: Side }
+  | { type: "placeMorePairs"; missingPairCount: number }
+  | { type: "checkOutlier"; pair: LandmarkPair; errorFactor: number }
+  | { type: "compareAndApply" }
+  | { type: "nextLayer"; layerName: string; completePairCount: number; appliedState: AppliedState }
+  | { type: "allApplied"; hasSeveralMovingLayers: boolean };
+
+export function getNextStep({
+  pairs,
+  hasTransform,
+  meanResidual,
+  voxelSizeFactor,
+  movingLayerRows,
+  activeLayerName,
+}: {
+  // The pairs of the active moving layer, with their residuals.
+  pairs: LandmarkPair[];
+  hasTransform: boolean;
+  meanResidual: number | null;
+  voxelSizeFactor: Vector3;
+  movingLayerRows: MovingLayerRow[];
+  activeLayerName: string;
+}): NextStep | null {
+  if (pairs.length === 0) {
+    return { type: "placeFirstLandmark" };
+  }
+  const incompletePair = pairs.find((pair) => pair.pairId != null && !isCompletePair(pair));
+  if (incompletePair != null) {
+    return {
+      type: "completePair",
+      pair: incompletePair,
+      missingSide: incompletePair.landmarks.fixed == null ? "fixed" : "moving",
+    };
+  }
+  const completePairCount = pairs.filter(isCompletePair).length;
+  if (completePairCount < MIN_LANDMARK_PAIR_COUNT) {
+    return {
+      type: "placeMorePairs",
+      missingPairCount: MIN_LANDMARK_PAIR_COUNT - completePairCount,
+    };
+  }
+  if (!hasTransform) {
+    // The status card explains why no transform could be estimated.
+    return null;
+  }
+  const worstPair = pairs.reduce<LandmarkPair | null>(
+    (worst, pair) =>
+      pair.residual != null && (worst?.residual == null || pair.residual > worst.residual)
+        ? pair
+        : worst,
+    null,
+  );
+  if (
+    worstPair?.residual != null &&
+    meanResidual != null &&
+    isHighResidual(worstPair.residual, meanResidual, voxelSizeFactor)
+  ) {
+    return {
+      type: "checkOutlier",
+      pair: worstPair,
+      errorFactor: worstPair.residual / meanResidual,
+    };
+  }
+  const activeRow = movingLayerRows.find((row) => row.layerName === activeLayerName);
+  if (activeRow == null || !("appliedState" in activeRow) || activeRow.appliedState !== "applied") {
+    return { type: "compareAndApply" };
+  }
+  for (const row of movingLayerRows) {
+    if ("appliedState" in row && row.appliedState !== "applied") {
+      return {
+        type: "nextLayer",
+        layerName: row.layerName,
+        completePairCount: row.completePairCount,
+        appliedState: row.appliedState,
+      };
+    }
+  }
+  return movingLayerRows.some((row) => "isLoading" in row)
+    ? null
+    : { type: "allApplied", hasSeveralMovingLayers: movingLayerRows.length > 1 };
+}
 
 export function getAppliedState(
   estimation: LayerPairTransformEstimate["estimation"],

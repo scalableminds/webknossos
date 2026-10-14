@@ -73,7 +73,11 @@ function LayerRegistrationListView() {
 function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
-  const [fixedLayerName, setFixedLayerName] = useState<string | null>(null);
+  // The first layer is preselected, so that a new layer registration needs only one click. The
+  // selection also filters the list, and clearing it shows the layer registrations to all layers.
+  const [fixedLayerName, setFixedLayerName] = useState<string | null>(
+    dataset.dataSource.dataLayers[0]?.name ?? null,
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [showArchived, setShowArchived] = useState(false);

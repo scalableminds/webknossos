@@ -27,6 +27,7 @@ import {
   type Landmark,
   type LandmarkPair,
   type LayerNames,
+  type MovingLayerRow,
   OTHER_SIDE,
   SIDES,
   type Side,
@@ -38,11 +39,8 @@ import {
   type LandmarkExportFormat,
   saveTextFile,
 } from "./layer_registration_landmark_export";
-import {
-  LayerRegistrationLandmarkPanel,
-  rgbColorString,
-} from "./layer_registration_landmark_panel";
-import type { CopySource, MovingLayerRow } from "./layer_registration_moving_layer_list";
+import { LayerRegistrationLandmarkPanel } from "./layer_registration_landmark_panel";
+import { type CopySource, rgbColorString } from "./layer_registration_pair_table";
 import {
   getLayerRegistrationListUrl,
   getLayerRegistrationStoreUrl,
@@ -184,7 +182,6 @@ export function LayerRegistrationWorkspace({
       layerTransformsInDataset[fixedLayerName],
       layerTransformsInDataset[movingLayer],
     );
-  const isAppliedToDataset = getAppliedStateOfLayer(movingLayerName, estimation) === "applied";
   const movingLayerRows: MovingLayerRow[] = movingLayerNames.map((layerName) => {
     const pairEstimate =
       layerName === movingLayerName ? activePairEstimate : inactivePairs?.get(layerName)?.estimate;
@@ -270,13 +267,23 @@ export function LayerRegistrationWorkspace({
   useEffect(() => {
     for (const side of SIDES) {
       const viewState: LayerRegistrationViewState = {
+        otherLayerName: side === "fixed" ? movingLayerName : fixedLayerName,
+        isOtherLayerVisible: isOtherLayerVisible[side],
         isTransformShown: isTransformShown[side],
         isTransformAvailable,
         isLandmarkPanelOpen,
       };
       sendMessage(side, "setLayerRegistrationViewState", [viewState]);
     }
-  }, [sendMessage, isTransformShown, isTransformAvailable, isLandmarkPanelOpen]);
+  }, [
+    sendMessage,
+    fixedLayerName,
+    movingLayerName,
+    isOtherLayerVisible,
+    isTransformShown,
+    isTransformAvailable,
+    isLandmarkPanelOpen,
+  ]);
 
   // While a worker shows both layers and the color overlay is enabled, the layers are colored
   // so that mismatches stand out. Otherwise, the workers keep the original colors.
@@ -687,7 +694,6 @@ export function LayerRegistrationWorkspace({
             onColorOverlayChange={setIsColorOverlayEnabled}
             canApplyTransformToDataset={dataset.isEditable}
             onApplyTransformToDataset={applyTransforms}
-            isAppliedToDataset={isAppliedToDataset}
             movingLayerRows={movingLayerRows}
             onSelectMovingLayer={switchMovingLayer}
             copySources={syncStatus === "ready" ? copySources : []}

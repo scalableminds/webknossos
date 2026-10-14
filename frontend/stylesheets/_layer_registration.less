@@ -3,15 +3,9 @@
 .layer-registration-workspace {
   height: 100%;
 
+  // The parts of the panel bring their own padding (layer_registration_landmark_panel.tsx).
   &:not(.is-landmark-panel-closed) .landmark-panel {
-    padding: 16px 12px 8px;
     background-color: var(--ant-color-bg-base);
-  }
-
-  // The name and description block of the info tab (AnnotationIdentity) brings its own
-  // padding, but the panel already has one.
-  .landmark-panel .info-tab-identity {
-    padding: 0 0 8px;
   }
 
   // A closed landmark panel has a width of 0 and must not leave a resize bar behind.
@@ -62,44 +56,26 @@
     background: var(--ant-color-warning-bg);
   }
 
+  // The column widths of the landmark table are chosen so that the titles fit in one line.
+  .landmark-panel .ant-table-thead .ant-table-cell {
+    white-space: nowrap;
+  }
+
+  // The pair that was clicked last in the table or in the status card.
+  .landmark-panel .is-selected-landmark-pair .ant-table-cell {
+    background: var(--ant-control-item-bg-active);
+  }
+
+  // The data color of a landmark pair. The ring keeps light and dark colors visible in both
+  // themes.
   .landmark-color {
     display: inline-block;
+    flex: none;
     width: 10px;
     height: 10px;
-    margin-right: 4px;
+    margin-right: 6px;
     border-radius: 50%;
-  }
-
-  // Shown below the empty landmark table (CopyLandmarksOffer in
-  // layer_registration_moving_layer_list.tsx).
-  .copy-landmarks-offer {
-    margin-top: 8px;
-    padding: 12px;
-    border: 1px solid var(--ant-color-border-secondary);
-    border-radius: var(--ant-border-radius-lg);
-    background: var(--ant-color-fill-quaternary);
-  }
-
-  // A row of the list of moving layers in the landmark panel
-  // (layer_registration_moving_layer_list.tsx).
-  .moving-layer-row {
-    width: 100%;
-    padding: 4px 8px;
-    border: 1px solid transparent;
-    border-radius: var(--ant-border-radius);
-    background: none;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-
-    &:hover {
-      background: var(--ant-color-fill-tertiary);
-    }
-
-    &.is-active {
-      border-color: var(--ant-color-primary);
-      background: var(--ant-color-primary-bg);
-    }
+    box-shadow: 0 0 0 1px var(--ant-color-border);
+    vertical-align: middle;
   }
 }

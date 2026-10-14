@@ -457,7 +457,7 @@ class AnnotationDAO @Inject() (
               ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
               ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
               ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics,
-              la.fixedLayerName
+              lr.fixedLayerName
             FROM webknossos.annotations_ AS a
             JOIN webknossos.users_ u ON u._id = a._user
             JOIN webknossos.datasets_ d ON d._id = a._dataset
@@ -471,7 +471,7 @@ class AnnotationDAO @Inject() (
               a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
               mu.firstname, mu.lastname,
               d.name, d._id, o._id,
-              la.fixedLayerName
+              lr.fixedLayerName
             ORDER BY a._id DESC
             LIMIT $limit
             OFFSET ${pageNumber * limit}

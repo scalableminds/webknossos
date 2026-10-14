@@ -179,6 +179,8 @@ export async function exportLandmarkPairsAsNml(
 // Set by the layer registration page whenever it changes. Unlike the pair info, the toolbar renders
 // it, so components subscribe to it with useLayerRegistrationViewState.
 let layerRegistrationViewState: LayerRegistrationViewState = {
+  otherLayerName: "",
+  isOtherLayerVisible: false,
   isTransformShown: true,
   isTransformAvailable: false,
   isLandmarkPanelOpen: true,

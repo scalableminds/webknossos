@@ -1,4 +1,4 @@
-import Icon, { TableOutlined } from "@ant-design/icons";
+import Icon, { EyeInvisibleOutlined, EyeOutlined, TableOutlined } from "@ant-design/icons";
 import AffineTransformationIcon from "@images/icons/icon-affine-transformation.svg?react";
 import NoTransformationIcon from "@images/icons/icon-no-transformation.svg?react";
 import { Space } from "antd";
@@ -6,6 +6,20 @@ import { ToggleButton } from "viewer/view/components/button_component";
 import { sendCommandToLayerRegistrationPage } from "viewer/view/layer_registration/layer_registration_protocol";
 import { useLayerRegistrationViewState } from "viewer/view/layer_registration/layer_registration_worker";
 import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE } from "./tool_helpers";
+
+// Shows or hides the layer of the other worker in this worker.
+function OtherLayerToggleButton() {
+  const { otherLayerName, isOtherLayerVisible } = useLayerRegistrationViewState();
+  return (
+    <ToggleButton
+      active={isOtherLayerVisible}
+      onClick={() => sendCommandToLayerRegistrationPage("toggleOtherLayer")}
+      style={NARROW_BUTTON_STYLE}
+      title={`${isOtherLayerVisible ? "Hide" : "Show"} ${otherLayerName} in this view (X)`}
+      icon={isOtherLayerVisible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+    />
+  );
+}
 
 // Switches between showing the other layer transformed onto this worker's layer and
 // untransformed.
@@ -35,6 +49,7 @@ function TransformToggleButton() {
 export function LayerRegistrationButtons() {
   return (
     <Space.Compact style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}>
+      <OtherLayerToggleButton />
       <TransformToggleButton />
     </Space.Compact>
   );

@@ -102,7 +102,8 @@ class AlignmentProjectController @Inject() (
     for {
       _ <- alignmentProjectService.assertMayAccessAlignmentProjects(request.identity)
       project <- alignmentProjectDAO.findOne(id) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
-      projectSectionRange <- assertCanStartJob(project)
+      _ <- assertCanStartJob(project)
+      projectSectionRange <- project.sectionRange.toFox ?~> Msg.AlignmentProject.notReady
       selectedSectionRange <- selectedSectionRangeFor(
         projectSectionRange,
         firstSection.zip(lastSection).map(SectionRange.apply)
@@ -130,7 +131,8 @@ class AlignmentProjectController @Inject() (
         for {
           _ <- alignmentProjectService.assertMayAccessAlignmentProjects(request.identity)
           project <- alignmentProjectDAO.findOne(id) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
-          projectSectionRange <- assertCanStartJob(project)
+          _ <- assertCanStartJob(project)
+          projectSectionRange <- project.sectionRange.toFox ?~> Msg.AlignmentProject.notReady
           selectedSectionRange <- selectedSectionRangeFor(projectSectionRange, parameters.sectionRange)
           csvPath <- project.csvPath.toFox ?~> Msg.AlignmentProject.notReady
           _ <- datasetService.assertValidDatasetName(parameters.newDatasetName)
@@ -172,12 +174,11 @@ class AlignmentProjectController @Inject() (
       }
     }
 
-  private def assertCanStartJob(project: AlignmentProject): Fox[SectionRange] =
+  private def assertCanStartJob(project: AlignmentProject): Fox[Unit] =
     for {
       _ <- Fox.fromBool(!project.isInputDataDeleted) ?~> Msg.AlignmentProject.inputDataDeleted
       _ <- Fox.fromBool(project.status == AlignmentProjectStatus.READY) ?~> Msg.AlignmentProject.notReady
-      sectionRange <- project.sectionRange.toFox ?~> Msg.AlignmentProject.notReady
-    } yield sectionRange
+    } yield ()
 
   private def selectedSectionRangeFor(
       projectSectionRange: SectionRange,

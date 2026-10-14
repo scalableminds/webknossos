@@ -67,7 +67,7 @@ The first tool is the _Move_ tool which allows navigating the dataset by moving 
 With the _Skeleton_ tool, a left mouse click can be used to place markers in the data, called nodes.
 Additionally, the left mouse button can also be used to navigate around, select or drag nodes.
 The _Brush_ and _Trace_ tools allow to "paint" voxels to create volumetric annotations.
-For a full rundown on the other annotations tools, such as _Eraser_, _Segment Picker_, _Fill_ please refer to documentation on [skeleton](./skeleton_annotation/tools.md) and [volume](./volume_annotation/tools.md) annotations.
+For a full rundown on the other annotations tools, such as _Eraser_, _Voxel Pipette_, _Fill_ please refer to documentation on [skeleton](./skeleton_annotation/tools.md) and [volume](./volume_annotation/tools.md) annotations.
 
 To open a context-sensitive menu with various actions, such as merging two trees or flood-filling a segment, use a right mouse click.
 Use the mouse wheel or press ++space++ to move along the 3rd axis.

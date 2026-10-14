@@ -66,6 +66,9 @@ If you suspect unauthorized access or have lost a device, you can log out of all
 
 Passkeys are a new, more secure way to log in to websites and apps without using a password. Instead of typing a password, you use a fingerprint, face scan, or a device PIN to authenticate.
 
+!!! info
+    Passkeys are disabled by default on self-hosted WEBKNOSSOS instances. To enable them, set `features.passkeysEnabled = true` in your `application.conf`. Passkeys also require the instance to be served via HTTPS (`http.uri` must start with `https://`).
+
 #### Adding and Removing Passkeys
 
 Users can manage their passkeys from the `Security` tab in `Account Settings`.

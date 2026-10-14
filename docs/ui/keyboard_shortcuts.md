@@ -195,15 +195,15 @@ Tool switching is a multi-step shortcut. First press ++ctrl++ / ++cmd++ + ++k++,
 | Key Binding                            | Operation                                                                         |
 |----------------------------------------|-----------------------------------------------------------------------------------|
 | ++w++                                  | Cycle Through Tools (Move / Skeleton / Trace / Brush / ...)                       |
-| ++shift++ + ++w++                      | Cycle Backwards Through Tools (Move / Proofread / Bounding Box / Pick Cell / ...) |
+| ++shift++ + ++w++                      | Cycle Backwards Through Tools (Move / Proofread / Bounding Box / ...)             |
 | ++ctrl++ / ++cmd++ + ++k++ , **++m++** | Move Tool                                                                         |
 | ++ctrl++ / ++cmd++ + ++k++ , **++s++** | Skeleton Tool                                                                     |
 | ++ctrl++ / ++cmd++ + ++k++ , **++b++** | Brush Tool                                                                        |
 | ++ctrl++ / ++cmd++ + ++k++ , **++e++** | Brush Erase Tool                                                                  |
-| ++ctrl++ / ++cmd++ + ++k++ , **++l++** | Lasso Tool                                                                        |
-| ++ctrl++ / ++cmd++ + ++k++ , **++r++** | Lasso Erase Tool                                                                  |
+| ++ctrl++ / ++cmd++ + ++k++ , **++l++** | Trace Tool                                                                        |
+| ++ctrl++ / ++cmd++ + ++k++ , **++r++** | Trace Erase Tool                                                                  |
 | ++ctrl++ / ++cmd++ + ++k++ , **++f++** | Fill Tool                                                                         |
-| ++ctrl++ / ++cmd++ + ++k++ , **++p++** | Segment Picker Tool                                                               |
+| ++ctrl++ / ++cmd++ + ++k++ , **++p++** | Voxel Pipette Tool                                                                |
 | ++ctrl++ / ++cmd++ + ++k++ , **++q++** | Quick Select Tool                                                                 |
 | ++ctrl++ / ++cmd++ + ++k++ , **++x++** | Bounding Box Tool                                                                 |
 | ++ctrl++ / ++cmd++ + ++k++ , **++o++** | Proofreading Tool                                                                 |

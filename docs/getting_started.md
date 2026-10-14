@@ -104,6 +104,8 @@ Feel free to explore more features of WEBKNOSSOS in this documentation.
 - [Task and Project Management](./tasks_projects/index.md)
 - [FAQ](./faq.md)
 
+Stuck or have a question? Select `Help` > `Ask a Question` in the navigation bar to get an instant answer from our AI assistant or to message our support team directly from within WEBKNOSSOS. [Read more about asking a question](./index.md#ask-a-question).
+
 Please contact us at [support@webknossos.org](mailto:support@webknossos.org) or [write a post in the WEBKNOSSOS support forum](https://forum.image.sc/tag/webknossos) if you need help with WEBKNOSSOS.
 scalable minds also offers [commercial support, managed hosting, and feature development services](https://webknossos.org/pricing).
 

@@ -62,7 +62,7 @@
           "level": "error",
           "options": {
             "paths": {
-              "lodash": "Import <method> from 'lodash/<method>' instead."
+              "lodash": "Import <method> from 'lodash-es/<method>' instead."
             },
             "patterns": [
               {

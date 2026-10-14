@@ -21,7 +21,7 @@ import Toast from "libs/toast";
 import { Vector3Input } from "libs/vector_input";
 import uniqBy from "lodash-es/uniqBy";
 import without from "lodash-es/without";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FileWithPath } from "react-dropzone";
 import { useNavigate } from "react-router";
 import type { APIDataStore } from "types/api_types";
@@ -69,7 +69,10 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
   const alignmentProjectIdRef = useRef<string | null>(null);
   const isCancellingRef = useRef(false);
 
-  const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
+  const uploadableDatastores = useMemo(
+    () => datastores.filter((datastore) => datastore.allowsUpload),
+    [datastores],
+  );
   const csvFiles = files.filter((file) => file.name.toLowerCase().endsWith(".csv"));
   // A single zip is unpacked by the datastore, which then checks for the CSV.
   const isZipUpload = files.length === 1 && files[0].name.toLowerCase().endsWith(".zip");

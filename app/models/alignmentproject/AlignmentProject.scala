@@ -1,5 +1,6 @@
 package models.alignmentproject
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.Vec3Double
@@ -172,13 +173,15 @@ class AlignmentProjectDAO @Inject() (sqlClient: SqlClient)(implicit ec: Executio
     } yield ()
 
   // A replaced CSV was validated beforehand, so the project becomes READY.
+  // Fails if the input data was deleted in the meantime.
   def replaceCsv(id: ObjectId, csvPath: String, sectionRange: SectionRange): Fox[Unit] =
     for {
-      _ <- run(q"""UPDATE webknossos.alignmentProjects
+      updatedCount <- run(q"""UPDATE webknossos.alignmentProjects
                    SET status = ${AlignmentProjectStatus.READY}, invalidReason = NULL, csvPath = $csvPath,
                        firstSection = ${sectionRange.first}, lastSection = ${sectionRange.last},
                        csvReplaced = ${Instant.now}
-                   WHERE _id = $id""".asUpdate)
+                   WHERE _id = $id AND NOT isInputDataDeleted""".asUpdate)
+      _ <- Fox.fromBool(updatedCount == 1) ?~> Msg.AlignmentProject.inputDataDeleted
     } yield ()
 
   def markInputDataDeleted(id: ObjectId): Fox[Unit] =

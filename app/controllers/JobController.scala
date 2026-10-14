@@ -3,14 +3,14 @@ package controllers
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import models.alignmentproject.{AlignmentProjectDAO, AlignmentProjectService}
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job.*
 import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, PricingPlan}
-import models.user.{MultiUserDAO, UserService}
+import models.user.{MultiUserDAO, User, UserService}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WkEnv, WkSilhouetteEnvironment}
 import telemetry.SlackNotificationService
@@ -142,11 +142,20 @@ class JobController @Inject() (
   def cancel(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
-      job <- jobDAO.findOne(id)
+      job <- jobDAO.findOne(id).orElse(findAlignmentProjectJob(id, request.identity)) ?~> Msg.Job.notFound
       _ <- jobService.cancelJob(job)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
+
+  // Everyone who may access an alignment project may see and cancel all of its jobs, regardless of their owner.
+  private def findAlignmentProjectJob(id: ObjectId, user: User): Fox[Job] =
+    for {
+      job <- jobDAO.findOne(id)(using GlobalAccessContext)
+      alignmentProjectId <- job._alignmentProject.toFox
+      _ <- alignmentProjectService.assertMayAccessAlignmentProjects(user)
+      _ <- alignmentProjectDAO.findOne(alignmentProjectId)(using AuthorizedAccessContext(user))
+    } yield job
 
   /*
    * Users may retry their failed jobs once (a second failure is likely persistent,

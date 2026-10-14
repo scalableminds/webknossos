@@ -104,10 +104,12 @@ class AlignmentProjectController @Inject() (
       project <- alignmentProjectDAO.findOne(id) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
       _ <- assertCanStartJob(project)
       projectSectionRange <- project.sectionRange.toFox ?~> Msg.AlignmentProject.notReady
-      selectedSectionRange <- selectedSectionRangeFor(
-        projectSectionRange,
-        firstSection.zip(lastSection).map(SectionRange.apply)
-      )
+      requestedSectionRange <- (firstSection, lastSection) match {
+        case (Some(first), Some(last)) => Fox.successful(Some(SectionRange(first, last)))
+        case (None, None)              => Fox.successful(None)
+        case _                         => Fox.failure(Msg.AlignmentProject.invalidSectionRange)
+      }
+      selectedSectionRange <- selectedSectionRangeFor(projectSectionRange, requestedSectionRange)
       costInMilliCredits = alignmentProjectService.costInMilliCredits(
         project,
         projectSectionRange,

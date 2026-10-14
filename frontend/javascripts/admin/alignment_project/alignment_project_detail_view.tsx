@@ -25,6 +25,7 @@ import {
   Card,
   Descriptions,
   Empty,
+  Flex,
   Result,
   Select,
   Space,
@@ -226,14 +227,18 @@ function AlignmentProjectDetailView() {
   return (
     <AdminPage
       title={
-        <Typography.Text
-          editable={{
-            onChange: (name) => name.trim() !== "" && handleUpdate({ name: name.trim() }),
-          }}
-          style={{ font: "inherit", textTransform: "inherit" }}
-        >
-          {project.name}
-        </Typography.Text>
+        // The inline editor is a block element, so a flex row keeps it next to the label.
+        <Flex align="baseline" gap="0.3em">
+          <span style={{ whiteSpace: "nowrap" }}>Alignment Project:</span>
+          <Typography.Text
+            editable={{
+              onChange: (name) => name.trim() !== "" && handleUpdate({ name: name.trim() }),
+            }}
+            style={{ font: "inherit", textTransform: "inherit", flex: 1, minWidth: 0 }}
+          >
+            {project.name}
+          </Typography.Text>
+        </Flex>
       }
       description={
         <Typography.Text

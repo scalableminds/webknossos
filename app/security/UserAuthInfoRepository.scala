@@ -14,12 +14,14 @@ class UserAuthInfoRepository @Inject() (userService: UserService, multiUserDAO: 
     ec: ExecutionContext
 ) extends AuthInfoRepository {
 
+  // find passwordInfo by loginInfo, typed as T, wrapped in Future[Option] as expected by silhouette.
   // Includes deactivated users, so that login can report isDeactivated instead of invalidCredentials
   override def find[T <: AuthInfo](loginInfo: LoginInfo)(implicit tag: ClassTag[T]): Future[Option[T]] =
     (for {
       user <- userService.findOneCached(LoginInfoAdapter.userIdFromLoginInfo(loginInfo))(using GlobalAccessContext)
       multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
-    } yield multiUser.passwordInfo.asInstanceOf[T]).futureBox.map(_.toOption)
+      passwordInfoTyped = multiUser.passwordInfo.asInstanceOf[T]
+    } yield passwordInfoTyped).futureBox.map(_.toOption)
 
   override def update[T <: AuthInfo](loginInfo: LoginInfo, authInfo: T): Future[T] =
     userService

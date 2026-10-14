@@ -35,6 +35,7 @@ class AlignmentProjectInputDataCleanupService @Inject() (
         alignmentProjectService.deleteInputData(project)
       })
       failedCount = results.count(_.isEmpty)
-      _ = if (failedCount > 0) logger.warn(s"Could not delete the expired input data of $failedCount alignment projects.")
+      _ =
+        if (failedCount > 0) logger.warn(s"Could not delete the expired input data of $failedCount alignment projects.")
     } yield ()
 }

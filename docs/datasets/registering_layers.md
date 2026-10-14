@@ -31,7 +31,14 @@ Layer registration annotations also appear in your list of annotations. Opening 
 
 The layer registration view shows the fixed layer on the left and one moving layer on the right.
 Each side shows only its own layer at first.
-As soon as a transform is estimated (see below), both views also show the other layer. Press **x** to hide it again.
+As soon as a transform is estimated (see below), both views also show the other layer. Press ++x++ to hide it again.
+
+To place landmarks in a view, select the skeleton tool in the toolbar of that view.
+Each click with the skeleton tool then places a landmark: a skeleton node in a tree of its own, not connected to any other node.
+Apart from that, the skeleton tool works as in a normal annotation and has the same shortcuts, e.g., ++del++ deletes the active node.
+See [Skeleton Keyboard Shortcuts](../skeleton_annotation/tools.md#skeleton-keyboard-shortcuts) and [Keyboard & Mouse Shortcuts](../ui/keyboard_shortcuts.md#skeleton-annotation-mode).
+
+The usual workflow to place landmarks is:
 
 1. Find a structure that you can recognize in both layers.
 2. Click on it in the left view, then click on the same spot in the right view. Every click creates a new landmark.
@@ -56,11 +63,11 @@ The transform is estimated automatically when you open a layer registration and 
 The moving layer is then shown transformed in the left view, and the fixed layer inversely transformed in the right view.
 Each view always shows its own layer untransformed. The transform only moves the other layer.
 
-To check the transform, switch a view between showing the other layer transformed and untransformed: press **t** in that view, or use the transform button in its toolbar.
+To check the transform, switch a view between showing the other layer transformed and untransformed: press ++t++ in that view, or use the transform button in its toolbar.
 If the other layer is hidden, it is shown again when you switch to the transformed display.
-To show or hide the other layer, press **x** in that view, or use the eye button in its toolbar.
+To show or hide the other layer, press ++x++ in that view, or use the eye button in its toolbar.
 
-The **View** button at the bottom of the side panel has the same switches for both views.
+The **View** button at the bottom of the side panel on the right has the same switches for both views.
 If both layers are color layers, you can also switch on **Green / magenta** there.
 In a view that shows both layers, the fixed layer is then shown in green and the moving layer in magenta.
 Where the layers match, they add up to gray. Structures that don't match show green or magenta edges.
@@ -71,8 +78,8 @@ If all landmarks lie in a single z slice, three pairs are enough. WEBKNOSSOS the
 
 More shortcuts, which work in the view under the mouse pointer (the keyboard button at the bottom of the side panel lists them, too):
 
-- **x**: show or hide the other layer in this view.
-- **y**: move the other view to the position that corresponds to the position of this view (needs an estimated transform).
+- ++x++: show or hide the other layer in this view.
+- ++y++: move the other view to the position that corresponds to the position of this view (needs an estimated transform).
 
 The side panel on the right is open when the layer registration view starts. The table button at the right end of the right view's navbar hides and shows it.
 From top to bottom, the panel shows:

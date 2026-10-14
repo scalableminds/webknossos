@@ -6,13 +6,12 @@ import { AiTrainingModelSelector } from "./ai_training_model_selector";
 import { AiTrainingSettings } from "./ai_training_settings";
 
 function TrainingJobLayout() {
-  const { startedJob, setStartedJob } = useAiTrainingJobContext();
+  const { startedJob } = useAiTrainingJobContext();
   return (
     <AiJobLayout
       description="Train a custom AI model on your own data to automate segmentation tasks. Select a model type, provide training data, and configure settings to start training."
       sidebar={<TrainingCreditInformation />}
       startedJob={startedJob}
-      onStartAnotherJob={() => setStartedJob(null)}
     >
       <AiTrainingModelSelector />
       <AiTrainingDataSection />

@@ -19,7 +19,6 @@ export type StartedJob = {
 };
 
 type JobStartedCardProps = StartedJob & {
-  onStartAnotherJob: () => void;
   // Shown below a divider, e.g. a hint at what to do with the job's results.
   nextStep?: React.ReactNode;
 };
@@ -37,12 +36,7 @@ function JobStartedEyebrow() {
 }
 
 /** Replaces the credit information in an AI job tab's sidebar once its job has started. */
-export function JobStartedCard({
-  title,
-  description,
-  onStartAnotherJob,
-  nextStep,
-}: JobStartedCardProps) {
+export function JobStartedCard({ title, description, nextStep }: JobStartedCardProps) {
   const { cssVar } = theme.useToken();
   const dispatch = useDispatch();
   return (
@@ -60,9 +54,6 @@ export function JobStartedCard({
       <Flex vertical gap="small" style={{ marginTop: 20 }}>
         <Button type="primary" block href="/jobs" target="_blank" rel="noopener noreferrer">
           View processing jobs
-        </Button>
-        <Button block onClick={onStartAnotherJob}>
-          Start another job
         </Button>
         <Button block onClick={() => dispatch(setAIJobDrawerStateAction("invisible"))}>
           Close

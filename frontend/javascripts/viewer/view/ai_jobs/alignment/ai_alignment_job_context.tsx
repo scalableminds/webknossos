@@ -42,7 +42,6 @@ interface AlignmentJobContextType {
   requirements: JobRequirement[];
   stepStatuses: { task: StepStatus; settings: StepStatus };
   startedJob: StartedJob | null;
-  setStartedJob: (startedJob: StartedJob | null) => void;
 }
 
 const AlignmentJobContext = createContext<AlignmentJobContextType | undefined>(undefined);
@@ -149,7 +148,6 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     requirements,
     stepStatuses,
     startedJob,
-    setStartedJob,
   };
 
   return <AlignmentJobContext.Provider value={value}>{children}</AlignmentJobContext.Provider>;

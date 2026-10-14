@@ -10,13 +10,12 @@ import { AiModelSelector } from "./ai_model_selector";
 import { ProofreadingNextStep } from "./proofreading_next_step";
 
 function RunAiModelJobLayout() {
-  const { startedJob, setStartedJob } = useRunAiModelJobContext();
+  const { startedJob } = useRunAiModelJobContext();
   return (
     <AiJobLayout
       description="Run pre-trained or custom AI models on your data to automatically segment structures. Select a model and configure analysis settings to start the inference job."
       sidebar={<RunAiModelCreditInformation />}
       startedJob={startedJob}
-      onStartAnotherJob={() => setStartedJob(null)}
       nextStep={features().isWkorgInstance ? <ProofreadingNextStep /> : null}
     >
       <AiModelSelector />

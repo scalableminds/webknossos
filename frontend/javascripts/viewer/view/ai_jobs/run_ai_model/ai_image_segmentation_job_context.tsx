@@ -66,7 +66,6 @@ interface RunAiModelJobContextType {
   requirements: JobRequirement[];
   stepStatuses: { model: StepStatus; settings: StepStatus };
   startedJob: StartedJob | null;
-  setStartedJob: (startedJob: StartedJob | null) => void;
 }
 
 const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>(undefined);
@@ -319,7 +318,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     requirements,
     stepStatuses,
     startedJob,
-    setStartedJob,
   };
 
   return <RunAiModelJobContext.Provider value={value}>{children}</RunAiModelJobContext.Provider>;

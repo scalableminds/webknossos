@@ -7,7 +7,6 @@ type AiJobLayoutProps = {
   sidebar: React.ReactNode;
   // Once set, the sidebar is replaced by a card confirming the started job.
   startedJob: StartedJob | null;
-  onStartAnotherJob: () => void;
   // Shown on the job-started card, see JobStartedCard.
   nextStep?: React.ReactNode;
   children: React.ReactNode;
@@ -18,7 +17,6 @@ export function AiJobLayout({
   description,
   sidebar,
   startedJob,
-  onStartAnotherJob,
   nextStep,
   children,
 }: AiJobLayoutProps) {
@@ -35,15 +33,7 @@ export function AiJobLayout({
           {children}
         </Flex>
         <Flex flex="1" vertical style={{ position: "sticky", top: 0 }}>
-          {startedJob == null ? (
-            sidebar
-          ) : (
-            <JobStartedCard
-              {...startedJob}
-              onStartAnotherJob={onStartAnotherJob}
-              nextStep={nextStep}
-            />
-          )}
+          {startedJob == null ? sidebar : <JobStartedCard {...startedJob} nextStep={nextStep} />}
         </Flex>
       </Flex>
     </>

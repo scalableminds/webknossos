@@ -106,7 +106,6 @@ interface AiTrainingJobContextType {
   requirements: JobRequirement[];
   stepStatuses: { task: StepStatus; trainingData: StepStatus; settings: StepStatus };
   startedJob: StartedJob | null;
-  setStartedJob: (startedJob: StartedJob | null) => void;
 }
 
 const AiTrainingJobContext = createContext<AiTrainingJobContextType | undefined>(undefined);
@@ -287,7 +286,6 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     requirements,
     stepStatuses,
     startedJob,
-    setStartedJob,
   };
 
   return <AiTrainingJobContext.Provider value={value}>{children}</AiTrainingJobContext.Provider>;

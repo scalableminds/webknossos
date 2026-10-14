@@ -24,7 +24,7 @@ DONE (2026-10-11 15:05). S3, GCS and DataVaultService implemented, registered an
 
 - No AWS SDK/object_store: own SigV4 + XML parsing. Not replicated: SDK retries/backoff, checksum validation, IMDS/profile/web-identity credential providers (only static + env), S3 Express, path-style for non-DNS buckets beyond `.`.
 - GCS: only service-account keys (no metadata-server/user ADC); encoding comes from response headers instead of a second `storage.get` call (one request instead of two).
-- Zip paths: the cache key (zip root) is implemented, but `ZipDataVault` is not; zip paths fail with `Zip data vaults are not supported by the Rust datastore yet` (TODO DS1c).
+- ZIP paths: stored entries/ZIP64, range reads and central-directory cache now implemented and verified against Scala goldens, actual HTTP/token/denial tests and real reader/router/reload tests (2026-10-12). Compressed entries remain unsupported as in Scala; see datastore-ds1-zip.md.
 - `CredentialLookup` for `WkClient` relies on wk_client's own 5 s credential cache; parse failures produce `Could not parse credential <id>: <field reason>`.
 - Not wired into AppState/routes yet (parent: construct `DataVaultService::from_config(&config, wk_client)` when a route needs it).
 

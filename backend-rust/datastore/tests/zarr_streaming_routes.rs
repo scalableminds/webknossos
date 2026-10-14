@@ -143,7 +143,7 @@ async fn serves_directory_listings() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         header(&headers, "content-type"),
-        Some("text/html; charset=utf-8")
+        Some("text/html; charset=UTF-8")
     );
     assert_eq!(header(&headers, "access-control-allow-origin"), Some("*"));
     let html = text(&body);

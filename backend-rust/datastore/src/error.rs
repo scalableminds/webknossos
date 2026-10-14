@@ -24,6 +24,8 @@ pub const MSG_NOT_FOUND: &str = "Could not find or access the requested resource
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DsError {
     pub status: StatusCode,
+    /// Route/query binder failures are handled by Play's HTTP error handler, not Fox JSON.
+    pub binding_error: bool,
     pub message: String,
     /// Text of the exception attached to this failure (Scala `Failure.exception`), shown only
     /// once the failure becomes part of a chain.
@@ -33,10 +35,19 @@ pub struct DsError {
 }
 
 impl DsError {
+    /// Route/query binding failure, rendered by the outer Play HTTP error handler.
+    pub fn binding(message: impl Into<String>) -> Self {
+        Self {
+            binding_error: true,
+            ..Self::failure(message)
+        }
+    }
+
     /// Scala `Fox.failure(msg)`: defaults to `400 Bad Request` (controller `defaultErrorCode`).
     pub fn failure(message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::BAD_REQUEST,
+            binding_error: false,
             message: message.into(),
             exception: None,
             chain: Vec::new(),
@@ -122,6 +133,13 @@ impl std::error::Error for DsError {}
 
 impl IntoResponse for DsError {
     fn into_response(self) -> Response {
+        if self.binding_error {
+            return crate::binding_errors::ClientError {
+                status: self.status,
+                message: self.message,
+            }
+            .into_response();
+        }
         (self.status, Json(self.body_at(SystemTime::now()))).into_response()
     }
 }

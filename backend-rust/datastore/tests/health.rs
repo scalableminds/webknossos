@@ -12,7 +12,7 @@ async fn health_answers_ok_when_redis_answers_pong() {
     assert_eq!(body, b"Ok");
     assert_eq!(
         header(&headers, "content-type"),
-        Some("text/plain; charset=utf-8")
+        Some("text/plain; charset=UTF-8")
     );
     assert_eq!(header(&headers, "cache-control"), Some("no-cache"));
     assert_eq!(header(&headers, "access-control-allow-origin"), Some("*"));

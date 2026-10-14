@@ -1,0 +1,424 @@
+[
+  {
+    "name": "objectid",
+    "accept": "text/html",
+    "path": "/data/datasets/not-an-object-id/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1276"
+    },
+    "file": "objectid-text_html.body"
+  },
+  {
+    "name": "objectid",
+    "accept": "application/json",
+    "path": "/data/datasets/not-an-object-id/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1276"
+    },
+    "file": "objectid-application_json.body"
+  },
+  {
+    "name": "objectid",
+    "accept": "text/plain",
+    "path": "/data/datasets/not-an-object-id/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1276"
+    },
+    "file": "objectid-text_plain.body"
+  },
+  {
+    "name": "objectid",
+    "accept": "*/*",
+    "path": "/data/datasets/not-an-object-id/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1276"
+    },
+    "file": "objectid-any_any.body"
+  },
+  {
+    "name": "int",
+    "accept": "text/html",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data?x=bad&y=0&z=0&width=1&height=1&depth=1&mag=1",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1331"
+    },
+    "file": "int-text_html.body"
+  },
+  {
+    "name": "int",
+    "accept": "application/json",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data?x=bad&y=0&z=0&width=1&height=1&depth=1&mag=1",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1331"
+    },
+    "file": "int-application_json.body"
+  },
+  {
+    "name": "int",
+    "accept": "text/plain",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data?x=bad&y=0&z=0&width=1&height=1&depth=1&mag=1",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1331"
+    },
+    "file": "int-text_plain.body"
+  },
+  {
+    "name": "int",
+    "accept": "*/*",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data?x=bad&y=0&z=0&width=1&height=1&depth=1&mag=1",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1331"
+    },
+    "file": "int-any_any.body"
+  },
+  {
+    "name": "missing",
+    "accept": "text/html",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1216"
+    },
+    "file": "missing-text_html.body"
+  },
+  {
+    "name": "missing",
+    "accept": "application/json",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1216"
+    },
+    "file": "missing-application_json.body"
+  },
+  {
+    "name": "missing",
+    "accept": "text/plain",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1216"
+    },
+    "file": "missing-text_plain.body"
+  },
+  {
+    "name": "missing",
+    "accept": "*/*",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1216"
+    },
+    "file": "missing-any_any.body"
+  },
+  {
+    "name": "bool",
+    "accept": "text/html",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data?x=0&y=0&z=0&width=1&height=1&depth=1&mag=1&halfByte=bad",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1353"
+    },
+    "file": "bool-text_html.body"
+  },
+  {
+    "name": "bool",
+    "accept": "application/json",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data?x=0&y=0&z=0&width=1&height=1&depth=1&mag=1&halfByte=bad",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1353"
+    },
+    "file": "bool-application_json.body"
+  },
+  {
+    "name": "bool",
+    "accept": "text/plain",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data?x=0&y=0&z=0&width=1&height=1&depth=1&mag=1&halfByte=bad",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1353"
+    },
+    "file": "bool-text_plain.body"
+  },
+  {
+    "name": "bool",
+    "accept": "*/*",
+    "path": "/data/datasets/000000000000000000000004/layers/color/data?x=0&y=0&z=0&width=1&height=1&depth=1&mag=1&halfByte=bad",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1353"
+    },
+    "file": "bool-any_any.body"
+  },
+  {
+    "name": "escaping",
+    "accept": "text/html",
+    "path": "/data/datasets/not%3Cscript%3E%26%22%27/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1302"
+    },
+    "file": "escaping-text_html.body"
+  },
+  {
+    "name": "escaping",
+    "accept": "application/json",
+    "path": "/data/datasets/not%3Cscript%3E%26%22%27/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1302"
+    },
+    "file": "escaping-application_json.body"
+  },
+  {
+    "name": "escaping",
+    "accept": "text/plain",
+    "path": "/data/datasets/not%3Cscript%3E%26%22%27/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1302"
+    },
+    "file": "escaping-text_plain.body"
+  },
+  {
+    "name": "escaping",
+    "accept": "*/*",
+    "path": "/data/datasets/not%3Cscript%3E%26%22%27/layers/color/data",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1302"
+    },
+    "file": "escaping-any_any.body"
+  },
+  {
+    "name": "schema",
+    "accept": "application/json",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "application/json",
+      "Content-Length": "170"
+    },
+    "file": "schema.body",
+    "path": "/data/datasets/000000000000000000000004/layers/color/readData"
+  },
+  {
+    "name": "syntax",
+    "accept": "application/json",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1488"
+    },
+    "file": "syntax.body",
+    "path": "/data/datasets/000000000000000000000004/layers/color/readData"
+  },
+  {
+    "name": "content_type",
+    "accept": "application/json",
+    "status": 415,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Length": "1245"
+    },
+    "file": "content_type.body",
+    "path": "/data/datasets/000000000000000000000004/layers/color/readData"
+  },
+  {
+    "name": "text_json",
+    "accept": "application/json",
+    "content_type": "text/json",
+    "request_body": "{}",
+    "path": "/data/datasets/000000000000000000000004/layers/color/readData",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "application/json",
+      "Content-Length": "170"
+    },
+    "file": "text_json.body"
+  },
+  {
+    "name": "text_json_charset",
+    "accept": "application/json",
+    "content_type": "text/json; charset=UTF-8",
+    "request_body": "{}",
+    "path": "/data/datasets/000000000000000000000004/layers/color/readData",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "application/json",
+      "Content-Length": "170"
+    },
+    "file": "text_json_charset.body"
+  },
+  {
+    "name": "datatype",
+    "accept": "application/json",
+    "content_type": "application/json",
+    "request_body": "[]",
+    "path": "/data/datasets/000000000000000000000004/layers/color/readData",
+    "status": 400,
+    "headers": {
+      "Referrer-Policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Permitted-Cross-Domain-Policies": "master-only",
+      "Connection": "close",
+      "Content-Type": "application/json",
+      "Content-Length": "55"
+    },
+    "file": "datatype.body"
+  }
+]

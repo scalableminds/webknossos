@@ -123,7 +123,7 @@ async fn frontpage_links_to_webknossos_and_health() {
         assert_eq!(status, StatusCode::OK);
         assert_eq!(
             header(&headers, "content-type"),
-            Some("text/html; charset=utf-8")
+            Some("text/html; charset=UTF-8")
         );
         let body = String::from_utf8(body).unwrap();
         assert!(body.contains("This is the WEBKNOSSOS Datastore “test-ds”."));

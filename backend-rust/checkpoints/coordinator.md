@@ -1,5 +1,21 @@
 # Rust migration coordinator checkpoint
 
+## Active DS6 live replay — Codex, 2026-10-12
+
+Status: IN PROGRESS. Previous continuation was progress (436 tests and substantive runtime/tooling changes), not a no-progress turn. Revalidated external state: canonical checkout now has compiled Scala datastore and matching sources; root integrated Scala9001 health200. Prepared separate datastore-only237-entry classpath, source equality283files. Isolated owned processes launched on loopback Scala19491/Rust19494, fixture WK/range19493, disposable Redis19492; both actual `/data/health`200. Existing user servers unchanged. Temp immutable catalog27datasets29datacases covers all formats/native codecs/ZIP; optional attachment revision28datasets41cases generated. Three agents own Scala launch/catalog/WK fixture server with checkpoints. Parent runs paired corpus, investigates mismatches and owns source fixes/centralverification.
+
+Evidence/handles: exec Scala70336, Rust49744, fixture server69427, Redis85600; initial paired replay running. Logs /tmp/wk-ds6-scala-20261012/server.log, /tmp/wk-ds6-rust-server.log, /tmp/wk-ds6-fixture-server.log, /tmp/wk-ds6-initial-report.json. No production registration/data/Redis or schema touched.
+
+## Previous datastore continuation — Codex, 2026-10-12
+
+Status: DONE bounded continuation batch; overall datastore migration goal remains active. Worktree `.claude/worktrees/rust-branch`, branch `rust`; three small Sol6.1 agents completed ZIP verification, DS6 replay tooling and DS6 config/deployment audit with milestone checkpoints. Parent integrated and verified all changes; main-app/Scala source untouched.
+
+Done: stored/ZIP64 vault Scala oracle + real HTTP/token/cache/retry/denial tests, strict malformed ZIP64 extra bounds, checked-in tiny archive inputs and actual ZIP-backed data/missing-fill/cache replacement/reload route test. Scheduler intervals validate before bind; server exit and graceful drain cancel background jobs. All 33 supported env settings and deployment/rehearsal/rollback guide documented. Read-only differential runner compares statuses, JSON/bytes and bucket/content/CORS/cache/range/redirect headers, records timing, supports env credentials and excludes response contents/secrets from reports. Slack hooks now deliver configured internal health, slow binary data and failed/slow current/legacy uploads with Scala attachment titles/colors and first-send-based 30/minute limits. Alert payload privacy differences recorded.
+
+Evidence: current-source whole datastore **436 passed, 0 failed, 0 ignored** (including doc tests); fmt and all-target clippy `-D warnings` clean, both inventory `--check`s clean (datastore132/132, main287/287). Differential tool **10 focused actual HTTP tests pass**. Logs `/tmp/webknossos-rust-ds-continuation-final-tests.log`, `/tmp/webknossos-rust-ds-continuation-clippy-final.log`, `/tmp/webknossos-rust-ds-alert-legacy-tests.log`; shared existing target only. Checkpoints `datastore-ds1-zip.md`, `datastore-ds6-replay.md`, `datastore-ds6-config.md`, `datastore-ds6-observability.md`.
+
+Next: provision isolated equivalent Scala/Rust service pair and representative immutable datasets/access fixtures; run checked-in replay corpora across formats/codecs/storage/API versions, resolve/document JPEG numerical differences and deliberate Scala fixes, benchmark representative concurrency/cache states/resources, rehearse configuration and upload recovery, then staged cutover/rollback gates. No running Scala datastore pair was found; no live differential/performance/production cutover claim. Runtime unsupported deployment knobs and startup side effects are documented in datastore/DEPLOYMENT.md. Goal remains active; future continuation starts with DS6 evidence, not route-count work.
+
 ## Open work items — verified against code, inventories and checkpoints, 2026-10-12
 
 Route registration is complete for both services (main app 287/287, datastore 132/132; both inventory `--check`s clean). Registration is not behavioral parity. Test counts elsewhere in this file were not re-run for this review. Older entries below that list these items as "next", "queued" or "PARENT TODO" are superseded by this section.
@@ -17,7 +33,7 @@ Route registration is complete for both services (main app 287/287, datastore 13
 - DONE and wired in `main.rs`: G1 SMTP, G2 housekeeping, G3 credit ticker, G4 Slack, G5 worker liveness, G7 used-storage scan.
 
 ### Datastore
-- Zip vaults: `datastore/src/datavault/zip.rs` exists (434 lines, untracked) and is wired in `datavault/service.rs`, but it has no tests and no checkpoint, and datastore-ds1b.md still says "not supported (TODO DS1c)". Treat as started, unverified.
+- ZIP vault bounded verification complete: stored/ZIP64 metadata, ranges, Scala goldens, HTTP/cache/token/denial/retry and ZIP-backed data/reload covered; malformed ZIP64 tag bounds fixed. See datastore-ds1-zip.md.
 - DS6: differential tests against Scala, performance, config, cutover. Known divergences needing differential coverage: JPEG off by up to 1 (gray) / 2 (color) levels, deliberate fixes of Scala quirks (see datastore/README.md), and Scala oddities worth fixing on both sides (unfinishedUploads never enriches, upload clean-up leaves `voxelSize`, attachment upload dirs named `Some(<name>)__<id>`).
 - Uncommitted datastore changes remain in the working tree.
 - DONE: Compresso, managed-S3 uploads, legacy API versions, regional short-S3 rewrite.

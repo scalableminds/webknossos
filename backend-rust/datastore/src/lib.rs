@@ -3,6 +3,7 @@
 //! ../checkpoints/datastore-ds0a.md for the foundation decisions.
 
 pub mod access;
+pub mod binding_errors;
 pub mod compression;
 pub mod config;
 pub mod controllers;
@@ -15,6 +16,7 @@ pub mod proto;
 pub mod redis;
 pub mod redis_store;
 pub mod services;
+pub mod slack;
 pub mod tracingstore_client;
 pub mod versioning;
 pub mod wk_client;
@@ -48,6 +50,7 @@ use crate::{
 /// Shared state of the datastore service.
 #[derive(Clone)]
 pub struct AppState {
+    pub slack: crate::slack::SlackNotifications,
     pub config: Arc<DatastoreConfig>,
     pub health: HealthProblems,
     pub data_vaults: crate::datavault::DataVaultService,
@@ -82,7 +85,11 @@ impl AppState {
     pub fn new(config: DatastoreConfig) -> Self {
         // Building a rustls client only fails if the TLS backend cannot initialize.
         let wk_client = WkClient::new(&config).expect("cannot build the WEBKNOSSOS HTTP client");
-        let health = HealthProblems::default();
+        let slack = crate::slack::SlackNotifications::new(&config);
+        let health = HealthProblems {
+            slack: Some(slack.clone()),
+            ..HealthProblems::default()
+        };
         let data_vaults =
             crate::datavault::DataVaultService::from_config(&config, wk_client.clone());
         let chunk_contents_cache = Arc::new(crate::datareaders::ChunkContentsCache::new(
@@ -126,6 +133,7 @@ impl AppState {
             config.ad_hoc_mesh.actor_pool_size as usize,
         ));
         Self {
+            slack,
             connectomes: Arc::new(crate::services::connectome::ConnectomeService::new(
                 data_vaults.clone(),
                 Arc::clone(&chunk_contents_cache),
@@ -181,6 +189,7 @@ impl AppState {
 #[derive(Clone, Default)]
 pub struct HealthProblems {
     latest: Arc<Mutex<Option<(Instant, String)>>>,
+    slack: Option<crate::slack::SlackNotifications>,
 }
 
 impl HealthProblems {
@@ -190,6 +199,9 @@ impl HealthProblems {
     pub fn push(&self, message: impl Into<String>) {
         let mut latest = self.latest.lock().unwrap_or_else(|e| e.into_inner());
         *latest = Some((Instant::now(), message.into()));
+        if let Some(slack) = &self.slack {
+            slack.internal_error();
+        }
     }
 
     pub fn recent_problem(&self, window: Duration) -> Option<String> {
@@ -231,11 +243,11 @@ pub fn router(state: AppState) -> Router {
         .merge(controllers::meshes::router().layer(DefaultBodyLimit::max(json_body_limit)))
         .merge(controllers::ad_hoc_mesh::router().layer(DefaultBodyLimit::max(json_body_limit)))
         .merge(controllers::connectomes::router().layer(DefaultBodyLimit::max(json_body_limit)))
-        .merge(controllers::upload::router())
+        .merge(controllers::upload::router(state.clone()))
         .merge(controllers::thumbnails::router().layer(DefaultBodyLimit::max(json_body_limit)))
         .merge(controllers::zarr_streaming::router())
         .merge(controllers::exports::router().layer(DefaultBodyLimit::max(json_body_limit)))
-        .merge(controllers::legacy::router(json_body_limit))
+        .merge(controllers::legacy::router(state.clone(), json_body_limit))
         .fallback(|| async { DsError::route_not_found() })
         .method_not_allowed_fallback(|| async {
             DsError::failure("Method not allowed.").with_status(StatusCode::METHOD_NOT_ALLOWED)
@@ -267,6 +279,13 @@ pub fn controller<S: Clone + Send + Sync + 'static>(
     router.route_layer(middleware::from_fn(
         move |request: Request, next: Next| async move {
             let mut response = next.run(request).await;
+            if response
+                .extensions()
+                .get::<binding_errors::BypassControllerHeaders>()
+                .is_some()
+            {
+                return response;
+            }
             let headers = response.headers_mut();
             headers
                 .entry(header::CACHE_CONTROL)
@@ -288,6 +307,28 @@ pub fn controller<S: Clone + Send + Sync + 'static>(
 
 /// Scala `DsRequestHandler.routeRequest` + `ApiVersioning`.
 async fn request_handler(mut request: Request, next: Next) -> Response {
+    let original_method = request.method().as_str().to_owned();
+    let original_uri = request.uri().to_string();
+    // Play's JSON parser accepts text/json as well as application/json.
+    if let Some(content_type) = request
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+    {
+        let (mime, parameters) = content_type
+            .split_once(';')
+            .map_or((content_type, ""), |(mime, rest)| (mime, rest));
+        if mime.trim().eq_ignore_ascii_case("text/json") {
+            let translated = if parameters.is_empty() {
+                "application/json".to_owned()
+            } else {
+                format!("application/json;{parameters}")
+            };
+            if let Ok(value) = HeaderValue::from_str(&translated) {
+                request.headers_mut().insert(header::CONTENT_TYPE, value);
+            }
+        }
+    }
     if request.method() == Method::OPTIONS {
         return options_response(request.headers());
     }
@@ -317,7 +358,15 @@ async fn request_handler(mut request: Request, next: Next) -> Response {
     request
         .extensions_mut()
         .insert(RequestedApiVersion(version));
-    next.run(request).await
+    let mut response = next.run(request).await;
+    if let Some(error) = response
+        .extensions_mut()
+        .remove::<binding_errors::ClientError>()
+    {
+        binding_errors::render_client_error(error, &original_method, &original_uri)
+    } else {
+        response
+    }
 }
 
 /// Scala `AdditionalHeaders.options`: every OPTIONS request is a successful CORS preflight.
@@ -363,6 +412,16 @@ async fn timeout(State(duration): State<Duration>, request: Request, next: Next)
 async fn security_headers(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
     let headers = response.headers_mut();
+    // Play's string/HTML writeables use this exact charset spelling.
+    if let Some(content_type) = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        && content_type.contains("charset=utf-8")
+        && let Ok(value) =
+            HeaderValue::from_str(&content_type.replace("charset=utf-8", "charset=UTF-8"))
+    {
+        headers.insert(header::CONTENT_TYPE, value);
+    }
     for (name, value) in [
         ("x-frame-options", "DENY"),
         ("x-xss-protection", "1; mode=block"),

@@ -53,6 +53,10 @@ DS6 parity and cutover
 
 ## Status
 
+## Current continuation — 2026-10-12
+
+Status: ZIP vault bounded verification, DS6 replay tooling and configuration/deployment audit integrated by parent and three Sol6.1 agents. Current-source whole datastore **436 passed, 0 failed, 0 ignored**, fmt/all-target clippy and both inventories clean; differential runner10 tests pass. Real ZIP-backed data/reload and local webhook tests pass. Details: datastore-ds1-zip.md, datastore-ds6-replay.md, datastore-ds6-config.md and datastore-ds6-observability.md. Latest route registrations remain132/132. Live Scala/Rust differential replay, production performance/config rehearsal and cutover remain outstanding; no running Scala datastore pair was found.
+
 2026-10-10 22:45 UTC: package skeleton created by parent; DS0a dispatched.
 2026-10-11 ~09:00 local: DS0a, DS0b, DS1a, DS2-codecs DONE; DS1b finishing (S3/GCS/service); DS2-core (DatasetArray + Zarr v2) running. Next: WKW, Zarr3, N5, Precomputed readers in parallel once DS2-core publishes its API.
 

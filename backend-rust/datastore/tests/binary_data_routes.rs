@@ -241,7 +241,7 @@ async fn auth_is_required_even_when_datasource_and_chunks_are_cached() {
     assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(
         header(&headers, "content-type"),
-        Some("text/plain; charset=utf-8")
+        Some("text/plain; charset=UTF-8")
     );
     assert_eq!(
         String::from_utf8(body).unwrap(),

@@ -20,15 +20,17 @@ use axum::{
     body::to_bytes,
     extract::{DefaultBodyLimit, Multipart, Path, RawQuery, State, rejection::JsonRejection},
     http::{StatusCode, header},
+    middleware,
     response::{IntoResponse, Response},
     routing::{get, post},
 };
 use serde_json::{Value, json};
 
-pub fn router(json_limit: usize) -> Router<AppState> {
+pub fn router(state: AppState, json_limit: usize) -> Router<AppState> {
     let mut reads = Router::new();
     let mut json_uploads = Router::new();
     let mut chunks = Router::new().route("/data/datasets", get(test_chunk).post(upload_chunk));
+    let mut finishes = Router::new();
     for version in 10..=14 {
         reads = reads.route(
             &format!("/data/v{version}/datasets/{{datasetId}}/proxy/datasource-properties.json"),
@@ -62,7 +64,7 @@ pub fn router(json_limit: usize) -> Router<AppState> {
                 &format!("/data/v{version}/datasets/unfinishedUploads"),
                 get(unfinished),
             );
-            json_uploads = json_uploads.route(
+            finishes = finishes.route(
                 &format!("/data/v{version}/datasets/finishUpload"),
                 post(finish),
             );
@@ -85,7 +87,18 @@ pub fn router(json_limit: usize) -> Router<AppState> {
     );
     controller(
         reads
-            .merge(chunks)
+            .merge(chunks.route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                upload::observe_upload,
+            )))
+            .merge(
+                finishes
+                    .layer(DefaultBodyLimit::max(json_limit))
+                    .route_layer(middleware::from_fn_with_state(
+                        state,
+                        upload::observe_upload,
+                    )),
+            )
             .merge(json_uploads.layer(DefaultBodyLimit::max(json_limit))),
         true,
     )

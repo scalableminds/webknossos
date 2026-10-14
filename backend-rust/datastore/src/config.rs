@@ -266,7 +266,7 @@ impl DatastoreConfig {
             })?;
         }
 
-        Ok(Self {
+        let config = Self {
             http,
             key: Secret(key),
             name,
@@ -325,7 +325,17 @@ impl DatastoreConfig {
                 verbose_logging_enabled: env
                     .bool("WK_DS_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED", "false")?,
             },
-        })
+        };
+        let minimum = Duration::from_millis(100);
+        if config.webknossos.ping_interval < minimum {
+            return Err(ConfigError(
+                "WK_DS_WEBKNOSSOS_PING_INTERVAL must be at least 100ms".into(),
+            ));
+        }
+        if config.watch_file_system.enabled && config.watch_file_system.interval < minimum {
+            return Err(ConfigError("WK_DS_WATCH_FILE_SYSTEM_INTERVAL must be at least 100ms when the watcher is enabled".into()));
+        }
+        Ok(config)
     }
 
     pub fn uses_default_key(&self) -> bool {
@@ -763,6 +773,21 @@ mod tests {
                 ("s3://minio:9000/bucket/orga", true, Some("orga")),
                 ("/mnt/x", false, None),
             ]
+        );
+    }
+
+    #[test]
+    fn scheduler_intervals_are_validated_before_startup() {
+        assert!(load(&[("WK_DS_WEBKNOSSOS_PING_INTERVAL", "99ms")]).is_err());
+        assert!(load(&[("WK_DS_WEBKNOSSOS_PING_INTERVAL", "100ms")]).is_ok());
+        assert!(load(&[("WK_DS_WATCH_FILE_SYSTEM_INTERVAL", "99ms")]).is_err());
+        assert!(load(&[("WK_DS_WATCH_FILE_SYSTEM_INTERVAL", "100ms")]).is_ok());
+        assert!(
+            load(&[
+                ("WK_DS_WATCH_FILE_SYSTEM_ENABLED", "false"),
+                ("WK_DS_WATCH_FILE_SYSTEM_INTERVAL", "1ms"),
+            ])
+            .is_ok()
         );
     }
 

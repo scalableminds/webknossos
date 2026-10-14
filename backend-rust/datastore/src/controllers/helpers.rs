@@ -14,7 +14,7 @@ pub(crate) fn dataset_id(literal: &str) -> DsResult<String> {
     if candidate.len() == 24 && candidate.bytes().all(|b| b.is_ascii_hexdigit()) {
         Ok(candidate.to_ascii_lowercase())
     } else {
-        Err(DsError::failure(format!(
+        Err(DsError::binding(format!(
             "Cannot parse URI path parameter datasetId with value “{literal}” as ObjectId."
         )))
     }
@@ -24,9 +24,12 @@ pub(crate) fn validated_body<T>(
     body: Result<Json<Value>, JsonRejection>,
     parse: impl FnOnce(&Value) -> crate::models::JsResult<T>,
 ) -> Result<T, Box<Response>> {
-    let Json(value) = body.map_err(|e| Box::new(e.into_response()))?;
-    parse(&value)
-        .map_err(|e| Box::new((StatusCode::BAD_REQUEST, Json(e.to_play_json())).into_response()))
+    let Json(value) = body.map_err(|e| Box::new(crate::binding_errors::json_rejection(e)))?;
+    parse(&value).map_err(|e| {
+        Box::new(crate::binding_errors::mark_bypass(
+            (StatusCode::BAD_REQUEST, Json(e.to_play_json())).into_response(),
+        ))
+    })
 }
 
 pub(crate) struct QueryFields(pub(crate) HashMap<String, String>);
@@ -47,12 +50,15 @@ impl QueryFields {
         self.0
             .get(key)
             .map(String::as_str)
-            .ok_or_else(|| DsError::failure(format!("Missing parameter: {key}")))
+            .ok_or_else(|| DsError::binding(format!("Missing parameter: {key}")))
     }
     pub(crate) fn int(&self, key: &str) -> DsResult<i32> {
         let v = self.required(key)?;
-        v.parse()
-            .map_err(|_| DsError::failure(format!("Cannot parse parameter {key} as Int: '{v}'")))
+        v.parse().map_err(|_| {
+            DsError::binding(format!(
+                "Cannot parse parameter {key} as Int: For input string: \"{v}\""
+            ))
+        })
     }
     pub(crate) fn bool_or_false(&self, key: &str) -> DsResult<bool> {
         match self.0.get(key).map(String::as_str) {
@@ -63,7 +69,7 @@ impl QueryFields {
                     "true" => Ok(true),
                     "false" => Ok(false),
                     _ => trimmed.parse::<i32>().map(|v| v != 0).map_err(|_| {
-                        DsError::failure(format!(
+                        DsError::binding(format!(
                             "Cannot parse parameter {key} as Boolean: should be true, false, 0 or 1"
                         ))
                     }),

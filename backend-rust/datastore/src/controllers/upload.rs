@@ -2,8 +2,9 @@
 //! post-conversion clean-up. `finishUpload` lives in `upload_finish.rs`.
 use axum::{
     Json, Router,
-    extract::{Multipart, Path, RawQuery, State, rejection::JsonRejection},
+    extract::{Multipart, Path, RawQuery, Request, State, rejection::JsonRejection},
     http::StatusCode,
+    middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{delete, get, post},
 };
@@ -26,43 +27,68 @@ use super::helpers::{QueryFields, validated_body};
 
 const VALIDATION_FAILED: &str = "Could not validate dataset information for upload.";
 
-pub fn router() -> Router<AppState> {
+pub fn router(state: AppState) -> Router<AppState> {
+    let observed = Router::new()
+        .route("/data/datasets/upload/{uploadDomain}", post(upload_chunk))
+        .route(
+            "/data/datasets/upload/{uploadDomain}/finishUpload",
+            post(finish_upload),
+        )
+        .route_layer(middleware::from_fn_with_state(state, observe_upload));
     controller(
-        Router::new()
-            .route(
-                "/data/datasets/upload/{uploadDomain}",
-                get(test_chunk).post(upload_chunk),
-            )
-            .route(
-                "/data/datasets/upload/dataset/reserveUpload",
-                post(reserve_dataset_upload),
-            )
-            .route(
-                "/data/datasets/upload/mag/reserveUpload",
-                post(reserve_mag_upload),
-            )
-            .route(
-                "/data/datasets/upload/attachment/reserveUpload",
-                post(reserve_attachment_upload),
-            )
-            .route(
-                "/data/datasets/upload/{uploadDomain}/unfinishedUploads",
-                get(unfinished_uploads),
-            )
-            .route(
-                "/data/datasets/upload/{uploadDomain}/cancelUpload",
-                post(cancel_upload),
-            )
-            .route(
-                "/data/datasets/upload/{uploadDomain}/finishUpload",
-                post(finish_upload),
-            )
-            .route(
-                "/data/datasets/upload/dataset/cleanUpUploadFiles",
-                delete(clean_up_upload_files),
-            ),
+        observed.merge(
+            Router::new()
+                .route("/data/datasets/upload/{uploadDomain}", get(test_chunk))
+                .route(
+                    "/data/datasets/upload/dataset/reserveUpload",
+                    post(reserve_dataset_upload),
+                )
+                .route(
+                    "/data/datasets/upload/mag/reserveUpload",
+                    post(reserve_mag_upload),
+                )
+                .route(
+                    "/data/datasets/upload/attachment/reserveUpload",
+                    post(reserve_attachment_upload),
+                )
+                .route(
+                    "/data/datasets/upload/{uploadDomain}/unfinishedUploads",
+                    get(unfinished_uploads),
+                )
+                .route(
+                    "/data/datasets/upload/{uploadDomain}/cancelUpload",
+                    post(cancel_upload),
+                )
+                .route(
+                    "/data/datasets/upload/dataset/cleanUpUploadFiles",
+                    delete(clean_up_upload_files),
+                ),
+        ),
         true,
     )
+}
+
+pub(super) async fn observe_upload(
+    State(state): State<AppState>,
+    request: Request,
+    next: Next,
+) -> Response {
+    if request.method() != axum::http::Method::POST {
+        return next.run(request).await;
+    }
+    let uri = request.uri().to_string();
+    let finish = request.uri().path().ends_with("/finishUpload");
+    let started = std::time::Instant::now();
+    let response = next.run(request).await;
+    if !response.status().is_success() {
+        state.slack.failed_upload(&uri, response.status().as_u16());
+    }
+    if finish && started.elapsed() > std::time::Duration::from_secs(120) {
+        state
+            .slack
+            .slow_request("POST", &uri, started.elapsed(), response.status().as_u16());
+    }
+    response
 }
 
 fn no_such_upload(upload_id: &str, domain: &str) -> String {

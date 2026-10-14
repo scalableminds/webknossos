@@ -249,7 +249,7 @@ impl IntoResponse for AccessError {
         match self {
             Self::Forbidden(message) => (
                 StatusCode::FORBIDDEN,
-                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                [(header::CONTENT_TYPE, "text/plain; charset=UTF-8")],
                 message,
             )
                 .into_response(),

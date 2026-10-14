@@ -83,32 +83,46 @@ async fn webknossos(
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
     let started = Instant::now();
-    let (source, layer) = state
-        .datasets
-        .get_with_layer(&id, &layer)
-        .await
-        .map_err(|e| e.wrap(SOURCE_NOT_FOUND).with_status(StatusCode::NOT_FOUND))?;
-    let requests = requests
-        .iter()
-        .map(|r| {
-            Ok(DataServiceDataRequest {
-                dataset_id: Some(id.clone()),
-                data_source_id: Some(source.id.clone()),
-                data_layer: Arc::clone(&layer),
-                cuboid: r.cuboid()?,
-                settings: r.settings(),
+    let route = format!("/data/datasets/{id}/layers/{layer}/data");
+    let result: AccessResult<Response> = async {
+        let (source, layer) = state
+            .datasets
+            .get_with_layer(&id, &layer)
+            .await
+            .map_err(|e| e.wrap(SOURCE_NOT_FOUND).with_status(StatusCode::NOT_FOUND))?;
+        let requests = requests
+            .iter()
+            .map(|r| {
+                Ok(DataServiceDataRequest {
+                    dataset_id: Some(id.clone()),
+                    data_source_id: Some(source.id.clone()),
+                    data_layer: Arc::clone(&layer),
+                    cuboid: r.cuboid()?,
+                    settings: r.settings(),
+                })
             })
-        })
-        .collect::<DsResult<Vec<_>>>()?;
-    let result = state
-        .binary_data
-        .handle_data_requests(&requests, tc.user_token.as_deref())
-        .await;
-    if started.elapsed().as_secs() > 10 {
-        tracing::info!(dataset=%id, layer=%layer.name, elapsed=?started.elapsed(),
+            .collect::<DsResult<Vec<_>>>()?;
+        let result = state
+            .binary_data
+            .handle_data_requests(&requests, tc.user_token.as_deref())
+            .await;
+        if started.elapsed().as_secs() > 10 {
+            tracing::info!(dataset=%id, layer=%layer.name, elapsed=?started.elapsed(),
             request_count=requests.len(), "Complete data request was slow");
+        }
+        Ok(data_response(result))
     }
-    Ok(data_response(result))
+    .await;
+    if started.elapsed() > std::time::Duration::from_secs(600) {
+        let status = match &result {
+            Ok(response) => response.status(),
+            Err(error) => error.clone().into_response().status(),
+        };
+        state
+            .slack
+            .slow_request("POST", &route, started.elapsed(), status.as_u16());
+    }
+    result
 }
 
 async fn raw_post(

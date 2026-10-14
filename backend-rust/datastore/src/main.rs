@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let orphan_clean_up = state.uploads.spawn_orphan_clean_up();
 
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
-    let server = tokio::spawn(async move {
+    let mut server = tokio::spawn(async move {
         axum::serve(listener, router(state))
             .with_graceful_shutdown(async {
                 let _ = stop_rx.await;
@@ -48,20 +48,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await
     });
 
-    shutdown_signal().await;
-    tracing::info!("shutdown requested, draining in-flight requests");
-    status_ping.abort();
-    orphan_clean_up.abort();
+    let mut background = vec![status_ping, orphan_clean_up];
     if let Some(watcher) = source_watcher {
-        watcher.abort();
+        background.push(watcher);
     }
-    let _ = stop_tx.send(());
-    match tokio::time::timeout(shutdown_timeout, server).await {
-        Ok(joined) => joined??,
-        Err(_) => tracing::warn!(
-            ?shutdown_timeout,
-            "in-flight requests did not finish before the shutdown timeout"
-        ),
+    supervise_server(
+        &mut server,
+        background,
+        stop_tx,
+        shutdown_timeout,
+        shutdown_signal(),
+    )
+    .await
+}
+
+async fn supervise_server(
+    server: &mut tokio::task::JoinHandle<std::io::Result<()>>,
+    background: Vec<tokio::task::JoinHandle<()>>,
+    stop_tx: tokio::sync::oneshot::Sender<()>,
+    shutdown_timeout: std::time::Duration,
+    signal: impl std::future::Future<Output = ()>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let server_result = tokio::select! {
+        () = signal => {
+            tracing::info!("shutdown requested, draining in-flight requests");
+            None
+        },
+        result = &mut *server => Some(result),
+    };
+    for job in background {
+        job.abort();
+        let _ = job.await;
+    }
+    if let Some(joined) = server_result {
+        joined??;
+    } else {
+        let _ = stop_tx.send(());
+        match tokio::time::timeout(shutdown_timeout, &mut *server).await {
+            Ok(joined) => joined??,
+            Err(_) => {
+                tracing::warn!(
+                    ?shutdown_timeout,
+                    "in-flight requests did not finish before the shutdown timeout"
+                );
+                server.abort();
+                let _ = server.await;
+            }
+        }
     }
     Ok(())
 }
@@ -90,5 +123,94 @@ async fn shutdown_signal() {
     tokio::select! {
         () = ctrl_c => {},
         () = terminate => {},
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        },
+        time::Duration,
+    };
+
+    struct Dropped(Arc<AtomicBool>);
+    impl Drop for Dropped {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+
+    #[tokio::test]
+    async fn server_failure_stops_background_without_waiting_for_signal() {
+        let dropped = Arc::new(AtomicBool::new(false));
+        let guard = Dropped(dropped.clone());
+        let job = tokio::spawn(async move {
+            let _guard = guard;
+            std::future::pending::<()>().await;
+        });
+        tokio::task::yield_now().await;
+        let mut server = tokio::spawn(async { Err(std::io::Error::other("server failed")) });
+        let (stop_tx, _) = tokio::sync::oneshot::channel();
+        let result = tokio::time::timeout(
+            Duration::from_secs(1),
+            supervise_server(
+                &mut server,
+                vec![job],
+                stop_tx,
+                Duration::from_secs(1),
+                std::future::pending(),
+            ),
+        )
+        .await
+        .unwrap();
+        assert!(result.unwrap_err().to_string().contains("server failed"));
+        assert!(dropped.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn signal_requests_graceful_drain() {
+        let (stop_tx, stop_rx) = tokio::sync::oneshot::channel();
+        let mut server = tokio::spawn(async move {
+            stop_rx.await.unwrap();
+            Ok(())
+        });
+        supervise_server(
+            &mut server,
+            vec![],
+            stop_tx,
+            Duration::from_secs(1),
+            async {},
+        )
+        .await
+        .unwrap();
+        assert!(server.is_finished());
+    }
+
+    #[tokio::test]
+    async fn drain_timeout_aborts_server() {
+        let dropped = Arc::new(AtomicBool::new(false));
+        let guard = Dropped(dropped.clone());
+        let mut server = tokio::spawn(async move {
+            let _guard = guard;
+            std::future::pending::<()>().await;
+            Ok(())
+        });
+        tokio::task::yield_now().await;
+        let (stop_tx, _) = tokio::sync::oneshot::channel();
+        supervise_server(
+            &mut server,
+            vec![],
+            stop_tx,
+            Duration::from_millis(1),
+            async {},
+        )
+        .await
+        .unwrap();
+        assert!(server.is_finished());
+        assert!(dropped.load(Ordering::SeqCst));
     }
 }

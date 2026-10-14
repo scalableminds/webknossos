@@ -148,7 +148,7 @@ async fn denied_with_message_is_plain_text_403() {
     let (status, content_type, cache_control, body) =
         call(&app, "/data/test/ds1?token=bad-token", None).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
-    assert_eq!(content_type.as_deref(), Some("text/plain; charset=utf-8"));
+    assert_eq!(content_type.as_deref(), Some("text/plain; charset=UTF-8"));
     assert_eq!(cache_control.as_deref(), Some("no-cache"));
     assert_eq!(
         body,

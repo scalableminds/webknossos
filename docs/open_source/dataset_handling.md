@@ -33,7 +33,7 @@ services:
   webknossos:
     ...
     volumes:
-      - ./binaryData:/webknossos/binaryData
+      - ./data:/webknossos/binaryData
       - /cluster:/cluster
 ...
 ```

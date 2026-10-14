@@ -61,7 +61,6 @@ The `Actions` column offers:
 - **Voxelytics Report**: Open the [workflow report](./jobs.md#workflow-reports) of the training job, with logs and statistics of each training step. This is only shown if a report exists for the training job.
 - **Show Training Data**: Open the annotation(s) that were used as training data.
 
-You can't edit model names or comments on this page.
 
 
 <!-- Keep info in sync with docs/automation/ai_segmentation.md -->

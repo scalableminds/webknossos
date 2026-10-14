@@ -28,17 +28,7 @@ A list of all past and currently running jobs can be found in the analysis menu 
 Overview of the Jobs page
 ///
 
-The table has the following columns:
-
-| Column | Description |
-|--------|-------------|
-| `Job Id` | The ID of the job. |
-| `Description` | What the job does and on which dataset or annotation. Use the filter icon in the column header to show only certain job types. For AI training jobs, `Show Training Data` opens the annotations used for training. |
-| `Owner` | The user who started the job. |
-| `Cost in Credits` | The [credits](#credits) charged for the job. Jobs that don't cost credits show `-`. |
-| `Date` | When the job was started. |
-| `State` | `Pending`, `Started`, `Success`, `Failure`, or `Cancelled`. Hover over the state for an explanation. Use the filter icon to show only jobs in certain states. |
-| `Action` | Actions for the job (see below). |
+For each job, WEBKNOSSOS lists what it does and on which dataset or annotation, who started it and when, its [cost in credits](#credits), and its current state, e.g., `Pending`, `Started`, `Success`, or `Failure`. Use the filter icons in the column headers to show only certain job types or states.
 
 Use the search field above the table to filter jobs by dataset name. The list refreshes automatically.
 
@@ -54,7 +44,7 @@ We constantly monitor job executions. In rare cases, jobs can fail, and we aim t
 
 ## Workflow Reports
 
-Some processing jobs run as [Voxelytics](https://voxelytics.com) workflows. On instances with Voxelytics integration, each workflow creates a detailed report. To browse all reports, select `Analysis > Voxelytics` in the navbar. This menu entry only appears if Voxelytics reporting is enabled on your WEBKNOSSOS instance. Admins and dataset managers see all workflow reports of their organization; other users only see their own.
+Some processing jobs run as [Voxelytics](https://voxelytics.com) workflows. On instances with Voxelytics integration, each workflow creates a detailed report. To browse all reports, select `Analysis > Voxelytics` in the navbar. Admins and dataset managers see all workflow reports of their organization; other users only see their own.
 
 You can also open the report of a training job directly from the [`AI Models` page](./ai_training.md#managing-ai-models): click `Voxelytics Report` next to a trained model.
 

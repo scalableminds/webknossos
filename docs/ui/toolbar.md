@@ -14,7 +14,7 @@ The save and undo functions help you manage your annotation work:
 
 - The **Save** button preserves your current work. While WEBKNOSSOS automatically saves every 30 seconds, you can manually save at any time using the keyboard shortcut ++ctrl++ / ++cmd++ + ++s++.
 
-- The **Undo/Redo** buttons let you reverse or restore recent changes. The undo function (++ctrl++ / ++cmd++ + ++z++) can revert any changes made in your current session, while redo (++ctrl++ / ++cmd++ + ++y++) restores previously undone changes. For accessing older versions of your work, use the [version history](#version-history).
+- The **Undo/Redo** buttons let you reverse or restore recent changes. The undo function (++ctrl++ / ++cmd++ + ++z++) can revert most changes made in your current session, while redo (++ctrl++ / ++cmd++ + ++y++) restores previously undone changes. For accessing older versions of your work, use the [version history](#version-history).
 
 ### Position Control
 The position control allows precise navigation within your dataset. You can:

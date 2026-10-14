@@ -64,5 +64,3 @@ When you are logged in, you can ask questions directly from within WEBKNOSSOS: S
 
 - **AI Assistant**: Type your question and click `Send` to get an immediate answer from an AI assistant. Your conversation is kept until you close the browser tab. Click the `+` button (`New conversation`) to start over.
 - **Email**: Switch to the `Email` tab to send a message to the support team. You will receive a copy of your message, and the answer is sent to your email address. The link to the page you are currently on is included automatically.
-
-The `AI Assistant` tab is only shown if it is enabled for your WEBKNOSSOS instance. Otherwise, the email form is shown directly.

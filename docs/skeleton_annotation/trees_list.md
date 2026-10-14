@@ -11,7 +11,6 @@ Organize your skeleton annotation's trees to remember important structures for l
 ## Tree Rows
 
 Each tree is shown as a single row with a visibility checkbox, a dot in the tree's color, its name, and its number of nodes at the right end.
-New trees are named `Tree 1`, `Tree 2`, and so on.
 Additional icons mark agglomerate skeletons created while [proofreading](../proofreading/proofreading_tool.md) and trees that have metadata.
 
 - **Click** a tree to select it and make it the active tree.

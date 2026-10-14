@@ -100,7 +100,7 @@ To download a proofreading annotation, open **Menu > Download** and select `Incl
 The downloaded ZIP contains:
 
 - An [NML file](../data/concepts.md#nml-files) with the annotation metadata. For each proofread layer, it references the edits file (`editedMappingEdgesLocation`) and the name of the ID mapping the edits are based on (`editedMappingBaseMappingName`).
-- An `editedMappingEdges_<layer name>.zip` file for each proofread layer, containing a Zarr v3 group with two arrays:
+- An `editedMappingEdges_<layer name>.zip` file for each proofread layer (`editedMappingEdges_<index>_<layer name>.zip` if the annotation has multiple volume layers), containing a Zarr v3 group with two arrays:
     - `edges`: one row per edited edge, holding the two supervoxel IDs (`uint64`) the edge connects.
     - `edgeIsAddition`: one boolean per edge. `true` means the edge was added (a merge), `false` means it was removed (a split).
 

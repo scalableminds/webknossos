@@ -1,6 +1,6 @@
 # Context Menu
 
-Right-click in one of the data viewports (XY, YZ, XZ) or in the 3D viewport to open the context menu. It lists the actions available for the thing under the cursor, such as a skeleton node, a segment, a mesh or a bounding box. At the bottom, it shows information about the clicked position. Press ++escape++ or click anywhere outside the menu to close it.
+Right-click in one of the data viewports (XY, YZ, XZ) or in the 3D viewport to open the context menu. It lists the actions available for the thing under the cursor, such as a skeleton node, a segment, a mesh or a bounding box. At the bottom, it shows information about the clicked position.
 
 ![The context menu for a segment in the XY viewport](../images/context_menu.png)
 /// caption
@@ -12,7 +12,7 @@ The right-click opens the context menu with most tools. There are a few exceptio
 - The **Measurement** tools use right-click to finish or reset a measurement.
 - With *Classic Controls* enabled, right-click places a node when using the Skeleton tool. Use ++shift++ + Right Click to open the context menu. With the Brush and Trace tools, right-click erases. See [Keyboard & Mouse Shortcuts](./keyboard_shortcuts.md#classic-controls).
 
-Which items are shown depends on what you clicked, the active tool, and whether you can edit the annotation. For example, editing actions are hidden when you only view a dataset or a read-only annotation. If an item cannot be used in the current situation, it is grayed out. Hover over a grayed-out item to see the reason, where available. For some actions, the menu also shows the keyboard or mouse shortcut on the right.
+Which items are shown depends on what you clicked, the active tool, and whether you can edit the annotation. For example, editing actions are hidden when you only view a dataset or a read-only annotation. Hover over a grayed-out item to see why it is unavailable.
 
 ## Skeleton Nodes
 
@@ -47,7 +47,7 @@ For more on working with trees, see [Skeleton Operations](../skeleton_annotation
 
 ## Segments and Empty Space
 
-Right-click anywhere in a data viewport that is not a node to see this menu. The segment items require a visible segmentation layer. Some of them are only shown if there is a segment (ID other than 0) at the clicked position.
+Right-click anywhere in a data viewport that is not a node to see this menu. The segment items require a visible segmentation layer.
 
 ### Segment Items
 
@@ -99,13 +99,9 @@ Right-clicking close to the edge of a visible [bounding box](./object_info.md#bo
 
 If you cannot edit the annotation, only *Hide Bounding Box* is available.
 
-### Order of the Items
-
-The order of the item groups depends on the active tool. With the Skeleton tool, the skeleton items come first. With the Bounding Box tool, the bounding box items come first. Otherwise, the segment items come first.
-
 ## Meshes in the 3D Viewport
 
-Right-click a mesh in the 3D viewport to open the mesh menu. Right-clicking empty space in the 3D viewport shows no actions.
+Right-click a mesh in the 3D viewport to open the mesh menu.
 
 | Item | Description |
 |------|-------------|
@@ -130,7 +126,7 @@ These proofreading items only work for meshes that were loaded while the Proofre
 
 ## Information Section
 
-The bottom part of the menu shows information about the clicked position. Click the copy icon next to an entry to copy its value to the clipboard.
+The bottom part of the menu shows information about the clicked position.
 
 | Entry | Description |
 |-------|-------------|

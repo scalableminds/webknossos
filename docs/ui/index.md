@@ -21,7 +21,7 @@ Customizing the layout by dragging and resizing the viewports.
 ///
 
 ## Command Palette
-Press ++ctrl++ / ++cmd++ + ++p++ to open the command palette. Start typing to search for a command and press ++enter++ to run it. The command palette is available everywhere in WEBKNOSSOS, including the dashboard and admin pages. Its shortcut can't be changed in the keyboard shortcut settings.
+For power users and keyboard warriors: Press ++ctrl++ / ++cmd++ + ++p++ to open the command palette. Similar to the command palette in VS Code, Spotlight on macOS, or the search bar in Slack and Figma, it lets you find and run almost any action by typing a few letters of its name instead of clicking through menus. Start typing to search for a command and press ++enter++ to run it. The command palette is available everywhere in WEBKNOSSOS, including the dashboard and admin pages.
 
 Available everywhere (when logged in):
 

@@ -745,7 +745,11 @@ class DatasetController @Inject() (
   def composeAddAttachment(datasetId: ObjectId): Action[ComposeAddAttachmentRequest] =
     sil.SecuredAction.fox(validateJson[ComposeAddAttachmentRequest]) { implicit request =>
       for {
-        _ <- composeService.addAttachment(datasetId, request.body, request.identity) ?~> Msg.Dataset.Compose.addAttachmentFailed
+        _ <- composeService.addAttachment(
+          datasetId,
+          request.body,
+          request.identity
+        ) ?~> Msg.Dataset.Compose.addAttachmentFailed
       } yield Ok
     }
 

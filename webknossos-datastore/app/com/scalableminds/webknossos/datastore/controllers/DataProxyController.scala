@@ -143,7 +143,9 @@ class DataProxyController @Inject() (
   // Wildcard route params are not url-decoded by Play, so validate the decoded form
   private def validatePath(path: String): Fox[Unit] =
     for {
-      decoded <- tryo(URLDecoder.decode(path.replace("+", "%2B"), StandardCharsets.UTF_8)).toFox ?~> "path is not validly encoded"
+      decoded <- tryo(
+        URLDecoder.decode(path.replace("+", "%2B"), StandardCharsets.UTF_8)
+      ).toFox ?~> "path is not validly encoded"
       _ <- Fox.fromBool(!decoded.contains("%")) ?~> "path must not contain encoded “%”"
       _ <- Fox.fromBool(!decoded.contains("..")) ?~> "path must not contain “..”"
       _ <- Fox.fromBool(!decoded.contains("\\")) ?~> "path must not contain “\\”"

@@ -162,7 +162,9 @@ class AnnotationController @Inject() (
           remapSegmentIds.getOrElse(true)
         ) ?~> Msg.Annotation.Merge.failed
         restrictions = annotationRestrictionDefaults.defaultsFor(mergedAnnotation)
-        _ <- Fox.assertTrue(restrictions.allowAccess(request.identity)) ?~> Msg.Annotation.Merge.noAccessOnMerged ~> FORBIDDEN
+        _ <- Fox.assertTrue(
+          restrictions.allowAccess(request.identity)
+        ) ?~> Msg.Annotation.Merge.noAccessOnMerged ~> FORBIDDEN
         _ <- annotationDAO.insertOne(mergedAnnotation)
         js <- annotationService.publicWrites(
           mergedAnnotation,

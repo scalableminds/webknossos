@@ -379,7 +379,8 @@ class JobService @Inject() (
       _ <- Fox.fromBool(!boundingBoxInTargetMag.isEmpty) ?~> Msg.Job.invalidBoundingBoxOrMag
       costPerGVx <- getJobCostInMilliCreditsPerGVx(jobCommand)
       // Computed as Double so that huge bounding boxes cannot overflow; Double.toInt saturates at Int.MaxValue
-      volumeInGVx = boundingBoxInTargetMag.width.toDouble * boundingBoxInTargetMag.height * boundingBoxInTargetMag.depth / ONE_GIGAVOXEL
+      volumeInGVx =
+        boundingBoxInTargetMag.width.toDouble * boundingBoxInTargetMag.height * boundingBoxInTargetMag.depth / ONE_GIGAVOXEL
     } yield math.ceil(volumeInGVx * costPerGVx).toInt
 
 }

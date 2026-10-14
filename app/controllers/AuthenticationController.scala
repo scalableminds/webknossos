@@ -412,7 +412,8 @@ class AuthenticationController @Inject() (
         bogusForm => Fox.failure(bogusForm.toString),
         formValues =>
           for {
-            user <- bearerTokenAuthenticatorService.userForResetPasswordToken(formValues.token.trim) ?~> Msg.User.Token.invalid
+            user <- bearerTokenAuthenticatorService
+              .userForResetPasswordToken(formValues.token.trim) ?~> Msg.User.Token.invalid
             _ <- multiUserDAO.updatePasswordInfo(
               user._multiUser,
               passwordHasher.hash(formValues.password1)

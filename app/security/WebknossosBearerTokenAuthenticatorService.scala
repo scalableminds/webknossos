@@ -93,6 +93,7 @@ class WebknossosBearerTokenAuthenticatorService(
       _ <- Fox.fromBool(tokenAuthenticator.isValid) ?~> Msg.User.Token.invalid
       idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> Msg.User.Token.invalid
       user <- userService.findOneCached(idValidated)(using GlobalAccessContext)
+      _ <- Fox.fromBool(!user.isDeactivated) ?~> Msg.User.isDeactivated
     } yield user
 
   def userForTokenOpt(tokenOpt: Option[String]): Fox[User] = tokenOpt match {

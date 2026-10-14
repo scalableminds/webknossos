@@ -591,7 +591,7 @@ function JobListView() {
         <Table
           dataSource={filterWithSearchQueryAND(
             jobs || [],
-            [(job) => job.args.datasetName || ""],
+            [(job) => job.args.datasetName || "", (job) => job.args.newDatasetName || ""],
             searchQuery,
           )}
           rowKey="id"

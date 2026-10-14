@@ -38,8 +38,8 @@ object TileCsvParser {
   def parseSectionRange(lines: Iterator[String]): Box[SectionRange] = {
     val rows = lines
       .map(_.stripPrefix("\uFEFF"))
-      .filter(_.trim.nonEmpty)
       .zipWithIndex
+      .filter { case (line, _) => line.trim.nonEmpty }
       .map { case (line, index) =>
         (splitRow(line), index + 1)
       }

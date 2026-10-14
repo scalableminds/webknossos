@@ -38,6 +38,9 @@ class TileCsvParserTestSuite extends AnyWordSpec {
     "reject rows with too few columns, with the row number" in
       assert(failureMessage("1,0,0,./a.tif\n2,0,./b.tif\n").contains("Row 2: expected at least 4 columns"))
 
+    "count blank lines in the row number" in
+      assert(failureMessage("1,0,0,./a.tif\n\n2,0,./b.tif\n").contains("Row 3: expected at least 4 columns"))
+
     "name replaced CSVs with the next free version next to the current one" in {
       val taken = Set("tiles.csv", "tiles.v2.csv")
       assert(TileCsvParser.nextCsvFileName(Some("tiles.csv"), "new.csv", taken.contains) == "tiles.v3.csv")

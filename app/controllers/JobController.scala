@@ -1,6 +1,7 @@
 package controllers
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.Full
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
@@ -142,19 +143,23 @@ class JobController @Inject() (
   def cancel(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
-      job <- jobDAO.findOne(id).orElse(findAlignmentProjectJob(id, request.identity)) ?~> Msg.Job.notFound
-      _ <- jobService.cancelJob(job)
-      js <- jobService.publicWrites(job)
+      job <- jobDAO.findOne(id).shiftBox.flatMap {
+        case Full(job) => jobService.cancelJob(job).map(_ => job)
+        case _         => cancelAlignmentProjectJob(id, request.identity)
+      }
+      // The job was authorized above, either directly or via its alignment project.
+      js <- jobService.publicWrites(job)(using GlobalAccessContext)
     } yield Ok(js)
   }
 
   // Everyone who may access an alignment project may see and cancel all of its jobs, regardless of their owner.
-  private def findAlignmentProjectJob(id: ObjectId, user: User): Fox[Job] =
+  private def cancelAlignmentProjectJob(id: ObjectId, user: User): Fox[Job] =
     for {
-      job <- jobDAO.findOne(id)(using GlobalAccessContext)
-      alignmentProjectId <- job._alignmentProject.toFox
+      job <- jobDAO.findOne(id)(using GlobalAccessContext) ?~> Msg.Job.notFound
+      alignmentProjectId <- job._alignmentProject.toFox ?~> Msg.Job.notFound
       _ <- alignmentProjectService.assertMayAccessAlignmentProjects(user)
-      _ <- alignmentProjectDAO.findOne(alignmentProjectId)(using AuthorizedAccessContext(user))
+      _ <- alignmentProjectDAO.findOne(alignmentProjectId)(using AuthorizedAccessContext(user)) ?~> Msg.Job.notFound
+      _ <- jobService.cancelJob(job)(using GlobalAccessContext)
     } yield job
 
   /*

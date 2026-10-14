@@ -108,9 +108,16 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
   };
   const fileAlert = getFileAlert();
 
-  const handleUploadFailure = (message: string) => {
-    Toast.error(message);
+  // The reserved project stays in UPLOADING, so that the user can see and delete it in the project list.
+  const handleUploadFailure = async (message: string) => {
+    Toast.error(
+      `${message} The unfinished alignment project was kept and can be deleted from the list of alignment projects.`,
+    );
+    // Stops the remaining files from uploading after a terminal error.
+    resumableUploadRef.current?.cancel();
+    resumableUploadRef.current = null;
     setUploadState(initialUploadState);
+    await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
   };
 
   // Deleting the project makes WEBKNOSSOS cancel the upload on the datastore, removing the uploaded files.
@@ -131,10 +138,13 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
       return;
     }
     resumableUpload.cancel();
-    if (alignmentProjectIdRef.current != null) {
-      await deleteAlignmentProject(alignmentProjectIdRef.current);
+    try {
+      if (alignmentProjectIdRef.current != null) {
+        await deleteAlignmentProject(alignmentProjectIdRef.current);
+      }
+    } finally {
+      setUploadState(initialUploadState);
     }
-    setUploadState(initialUploadState);
     await queryClient.invalidateQueries({ queryKey: ["alignmentProjects"] });
     Toast.success("The upload was cancelled.");
   };
@@ -173,7 +183,13 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
       return;
     }
 
-    const resumableUpload = await createResumableUpload(datastoreUrl, uploadId, "alignmentProject");
+    let resumableUpload: ResumableUpload;
+    try {
+      resumableUpload = await createResumableUpload(datastoreUrl, uploadId, "alignmentProject");
+    } catch (_error) {
+      await handleUploadFailure("Could not start the upload of the alignment project.");
+      return;
+    }
     resumableUploadRef.current = resumableUpload;
     let finishUploadCalled = false;
     resumableUpload.addEventListener("complete", async (event: ResumableUploadEvent) => {
@@ -203,7 +219,7 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
         }
         navigate(`/alignmentProjects/${alignmentProjectId}`);
       } catch (_error) {
-        handleUploadFailure("Could not finish the upload of the alignment project.");
+        await handleUploadFailure("Could not finish the upload of the alignment project.");
       }
     });
     resumableUpload.addEventListener("filesAdded", () => resumableUpload.upload());

@@ -40,6 +40,13 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator
 
+  def findOneByValueAndType(value: String, tokenType: TokenType): Fox[BearerTokenAuthenticator] =
+    for {
+      tokenSQL <- tokenDAO.findOneByValue(value)
+      _ <- Fox.fromBool(tokenSQL.tokenType == tokenType)
+      tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
+    } yield tokenAuthenticator
+
   def findOneForUserAndType(userId: ObjectId, tokenType: TokenType): Future[Option[BearerTokenAuthenticator]] =
     (for {
       tokenSQL <- tokenDAO.findOneByUserIdAndType(userId, tokenType)

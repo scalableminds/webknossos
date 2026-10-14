@@ -100,7 +100,7 @@ class AnnotationController @Inject() (
         annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> notFoundMessage ~> NOT_FOUND
         _ <- Fox.fromBool(annotation.state != Cancelled) ?~> Msg.Annotation.cancelled
         restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
-        _ <- restrictions.allowAccess(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.assertTrue(restrictions.allowAccess(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
         typedTyp <- AnnotationType.fromString(typ).toFox ?~> Msg.Annotation.invalidType(typ) ~> NOT_FOUND
         js <- annotationService.publicWrites(
           annotation,
@@ -162,7 +162,7 @@ class AnnotationController @Inject() (
           remapSegmentIds.getOrElse(true)
         ) ?~> Msg.Annotation.Merge.failed
         restrictions = annotationRestrictionDefaults.defaultsFor(mergedAnnotation)
-        _ <- restrictions.allowAccess(request.identity) ?~> Msg.Annotation.Merge.noAccessOnMerged ~> FORBIDDEN
+        _ <- Fox.assertTrue(restrictions.allowAccess(request.identity)) ?~> Msg.Annotation.Merge.noAccessOnMerged ~> FORBIDDEN
         _ <- annotationDAO.insertOne(mergedAnnotation)
         js <- annotationService.publicWrites(
           mergedAnnotation,
@@ -331,7 +331,7 @@ class AnnotationController @Inject() (
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
         restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
-        _ <- restrictions.allowUpdate(request.identity) ?~> Msg.Annotation.Edit.notAllowed ~> FORBIDDEN
+        _ <- Fox.assertTrue(restrictions.allowUpdate(request.identity)) ?~> Msg.Annotation.Edit.notAllowed ~> FORBIDDEN
         _ <- Fox.runIf(request.body.visibility.contains(AnnotationVisibility.Private)) {
           annotationService.updateTeamsForSharedAnnotation(annotation._id, List.empty)
         }
@@ -395,7 +395,7 @@ class AnnotationController @Inject() (
     sil.SecuredAction.fox(validateJson[TransferAnnotationParameters]) { implicit request =>
       for {
         restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
-        _ <- restrictions.allowFinish(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.assertTrue(restrictions.allowFinish(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- userService.findOneCached(request.body.userId) ?~> Msg.User.notFound(request.body.userId)
         updated <- annotationService.transferAnnotationToUser(typ, id, request.body.userId, request.identity)
         json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
@@ -405,8 +405,9 @@ class AnnotationController @Inject() (
   def duplicate(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
-      newAnnotation <- duplicateAnnotation(annotation, request.identity) ?~> Msg.Annotation.duplicateFailed
       restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
+      _ <- Fox.assertTrue(restrictions.allowAccess(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
+      newAnnotation <- duplicateAnnotation(annotation, request.identity) ?~> Msg.Annotation.duplicateFailed
       json <- annotationService.publicWrites(
         newAnnotation,
         Some(request.identity),
@@ -534,7 +535,7 @@ class AnnotationController @Inject() (
           restrictions <- provider.restrictionsFor(
             AnnotationIdentifier(annotation.typ, id)
           ) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
-          _ <- restrictions.allowUpdate(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+          _ <- Fox.assertTrue(restrictions.allowUpdate(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
           mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(
             annotation._id,
             request.identity._id,
@@ -573,7 +574,7 @@ class AnnotationController @Inject() (
           restrictions <- provider.restrictionsFor(
             AnnotationIdentifier(annotation.typ, id)
           ) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
-          _ <- restrictions.allowAccess(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+          _ <- Fox.assertTrue(restrictions.allowAccess(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
           domainValidated <- AnnotationIdDomain.fromString(domain).toFox
           ids: Seq[Long] <- annotationIdReservationService.reservedIds(
             id,
@@ -593,7 +594,7 @@ class AnnotationController @Inject() (
           restrictions <- provider.restrictionsFor(
             AnnotationIdentifier(annotation.typ, id)
           ) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
-          _ <- restrictions.allowUpdate(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+          _ <- Fox.assertTrue(restrictions.allowUpdate(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
           // Note: this limit should match what the frontend requests, see IDEAL_ID_BUFFER_SIZE in id_reservation_saga.
           _ <- Fox.fromBool(request.body.numberOfIdsToReserve <= numberOfIdsToReservePerRequest) ?~> Msg.Annotation
             .reserveTooManyIds(numberOfIdsToReservePerRequest) ~> FORBIDDEN

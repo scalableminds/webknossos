@@ -5,7 +5,7 @@ The easiest way to get started with working on your datasets is through the WEBK
 2. Provide some metadata information:  
     - a *name* 
     - give access permissions for one or more teams (use the `default` team if all members of your organization should be able to see it)
-    - *scale* of each voxel (in nanometers)
+    - the *voxel size* and its *unit* (e.g., nanometers)
 3. Drag and drop your data into the upload section
 4. Click the *Upload* button
 

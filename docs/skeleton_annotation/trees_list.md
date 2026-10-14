@@ -13,7 +13,7 @@ There are two ways to create a group:
 - To create a subgroup, right-click an existing tree group and select `Create new group` from the context menu. The new group is created inside the group you clicked.
 
 The same right-click context menu also lets you delete a group.
-Renaming of a group can be done by selecting a group and then entering a new name into the input above the tree hierarchy structure view.
+To rename a tree or a group, double-click its name or right-click it and select `Rename Tree` / `Rename group`.
 
 ![Organize your skeleton annotation's trees to remember important structures for later reference](../images/skeleton_tree_list.png)
 /// caption
@@ -24,8 +24,8 @@ Organize your skeleton annotation's trees to remember important structures for l
 
 A random color is assigned to each tree upon creation.
 Colors can be shuffled for a single tree or for all trees in a skeleton.
-Right-click on a tree to bring up several actions, e.g. `Shuffle Color`.
-When editing several trees, use the overflow menu under `More` in the `Skeleton` tab and select `Change Color` or `Shuffle All Colors` to assign new randomly chosen colors.
+Right-click on a tree to bring up several actions, e.g. `Shuffle Tree Color`.
+To recolor several trees at once, right-click a tree group and select `Change Tree Group Color` or `Shuffle Tree Group Colors`, or select `Shuffle All Tree Colors` from the `···` (More actions) menu at the end of the `Skeleton` tab's toolbar.
 All nodes have the same color as their parent tree and can not be changed individually.
 The active node, branch points, and nodes that have comments assigned to them are highlighted with a slight variation of the tree's color.
 

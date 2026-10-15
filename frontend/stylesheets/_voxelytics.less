@@ -130,6 +130,14 @@
             background-color: var(--ant-color-bg-container);
         }
 
+        .react-flow__node.dag-node-running {
+            animation: dag-node-running-pulse 1.5s ease-in-out infinite;
+
+            @media (prefers-reduced-motion: reduce) {
+                animation: none;
+            }
+        }
+
         .controls {
             flex-direction: column;
             display: flex;
@@ -149,5 +157,17 @@
                 border-bottom-right-radius: 0;
             }
         }
+    }
+}
+
+// Same blue as the running state's border color in dag_view.tsx
+@keyframes dag-node-running-pulse {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(22, 119, 255, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 0 4px rgba(22, 119, 255, 0.15);
     }
 }

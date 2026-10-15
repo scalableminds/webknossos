@@ -651,7 +651,6 @@ export default function TaskListView({
           </Typography.Title>
           <div style={{ flex: 1, position: "relative" }}>
             <DAGView
-              key={filteredTasks.map((t) => t.taskName).join("_")}
               dag={report.dag}
               filteredTasks={filteredTasks}
               onClickHandler={handleSelectTask}

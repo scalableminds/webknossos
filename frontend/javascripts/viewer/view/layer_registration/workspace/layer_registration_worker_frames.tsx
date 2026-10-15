@@ -13,7 +13,7 @@ import {
   getLayerRegistrationWorkerUrl,
 } from "../layer_registration_protocol";
 import { LandmarkColorDot } from "../panel/layer_registration_pair_table";
-import type { IframeRefs } from "./hooks/use_layer_registration_iframe_bridge";
+import type { IframeElements } from "./hooks/use_layer_registration_iframe_bridge";
 import type { LandmarkSyncStatus } from "./layer_registration_landmark_sync";
 
 // Why the workers are covered, see WorkspaceOverlay.
@@ -122,7 +122,7 @@ export function LayerRegistrationWorkerFrames({
   dataset,
   layerNames,
   landmarkAnnotationId,
-  iframesRef,
+  iframes,
   onIframeLoad,
   openPairIds,
   overlayStatus,
@@ -131,7 +131,7 @@ export function LayerRegistrationWorkerFrames({
   dataset: APIDataset;
   layerNames: LayerNames;
   landmarkAnnotationId: string;
-  iframesRef: IframeRefs;
+  iframes: IframeElements;
   onIframeLoad: (role: IframeRole) => void;
   // Per view, the pair ids whose landmark is missing in that view, see getLandmarkPairInfo.
   openPairIds: Record<Side, number[]>;
@@ -143,7 +143,7 @@ export function LayerRegistrationWorkerFrames({
   // it would place a landmark, so a view gets the focus when the mouse enters it instead.
   const focusWorker = (side: Side) => {
     if (!isTextInputFocused()) {
-      iframesRef.current[side]?.contentWindow?.focus();
+      iframes.get(side)?.contentWindow?.focus();
     }
   };
 
@@ -152,9 +152,7 @@ export function LayerRegistrationWorkerFrames({
       {SIDES.map((side) => (
         <div key={side} className="layer-registration-worker">
           <iframe
-            ref={(element) => {
-              iframesRef.current[side] = element;
-            }}
+            ref={(element) => iframes.set(side, element)}
             title={`${side === "fixed" ? "Fixed" : "Moving"} layer (${layerNames[side]})`}
             src={getLayerRegistrationWorkerUrl(dataset, layerNames[side], side === "fixed")}
             onLoad={() => onIframeLoad(side)}
@@ -164,9 +162,7 @@ export function LayerRegistrationWorkerFrames({
         </div>
       ))}
       <iframe
-        ref={(element) => {
-          iframesRef.current.store = element;
-        }}
+        ref={(element) => iframes.set("store", element)}
         title="Layer registration annotation"
         style={{ display: "none" }}
         src={getLayerRegistrationStoreUrl(landmarkAnnotationId)}

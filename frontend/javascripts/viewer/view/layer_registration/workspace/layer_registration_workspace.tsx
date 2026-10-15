@@ -82,7 +82,7 @@ export function LayerRegistrationWorkspace({
 
   // handleWorkerCommand and restartAfterReload are function declarations further below, so
   // they can be used here.
-  const { iframesRef, sendMessage, handleIframeLoad, storeSaveState } = useIframeBridge(
+  const { iframes, sendMessage, handleIframeLoad, storeSaveState } = useIframeBridge(
     handleWorkerCommand,
     restartAfterReload,
   );
@@ -314,7 +314,7 @@ export function LayerRegistrationWorkspace({
           dataset={dataset}
           layerNames={layerNames}
           landmarkAnnotationId={landmarkAnnotation.id}
-          iframesRef={iframesRef}
+          iframes={iframes}
           onIframeLoad={handleIframeLoad}
           openPairIds={openPairIds}
           overlayStatus={overlayStatus}

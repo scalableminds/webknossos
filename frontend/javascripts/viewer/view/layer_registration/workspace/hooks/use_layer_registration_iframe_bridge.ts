@@ -1,4 +1,3 @@
-import type React from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Side } from "../../helpers/layer_registration_helpers";
 import type {
@@ -8,7 +7,30 @@ import type {
 } from "../../layer_registration_protocol";
 import { IframeBridge } from "../layer_registration_iframe_bridge";
 
-export type IframeRefs = React.RefObject<Record<IframeRole, HTMLIFrameElement | null>>;
+// The iframe elements of the page. The ref callbacks of the iframes set them.
+export type IframeElements = {
+  get: (role: IframeRole) => HTMLIFrameElement | null;
+  set: (role: IframeRole, iframe: HTMLIFrameElement | null) => void;
+};
+
+// The iframe elements are kept in a plain object and not in a ref, because the bridge reads
+// them and React doesn't allow passing a ref to a function during render.
+function createBridgeWithIframes(): { bridge: IframeBridge; iframes: IframeElements } {
+  const elements: Record<IframeRole, HTMLIFrameElement | null> = {
+    fixed: null,
+    moving: null,
+    store: null,
+  };
+  return {
+    bridge: new IframeBridge((role) => elements[role]?.contentWindow, window.location.origin),
+    iframes: {
+      get: (role) => elements[role],
+      set: (role, iframe) => {
+        elements[role] = iframe;
+      },
+    },
+  };
+}
 
 // Some browsers fire a load event for the initial empty document of an iframe, too. The
 // location of a document from another origin can't be read, so that counts as a new page.
@@ -20,8 +42,8 @@ function isEmptyDocument(iframe: HTMLIFrameElement): boolean {
   }
 }
 
-/** Connects the layer registration page with its iframes (see IframeBridge). The returned
- * iframesRef must be attached to the three iframes, and handleIframeLoad to their onLoad events.
+/** Connects the layer registration page with its iframes (see IframeBridge). The ref callbacks
+ * of the three iframes must call iframes.set, and their onLoad events handleIframeLoad.
  * - onWorkerCommand is called for each command that a worker sends (see
  *   layer_registration_protocol.ts).
  * - onIframeReloaded is called when an iframe loads a second page, e.g. because it was
@@ -32,15 +54,7 @@ export function useIframeBridge(
   onWorkerCommand: (side: Side, command: LayerRegistrationCommand) => void,
   onIframeReloaded: (role: IframeRole) => void,
 ) {
-  const iframesRef = useRef<Record<IframeRole, HTMLIFrameElement | null>>({
-    fixed: null,
-    moving: null,
-    store: null,
-  });
-  const [bridge] = useState(
-    () =>
-      new IframeBridge((role) => iframesRef.current[role]?.contentWindow, window.location.origin),
-  );
+  const [{ bridge, iframes }] = useState(createBridgeWithIframes);
   const [storeSaveState, setStoreSaveState] = useState<SaveState>("saved");
   const loadCountsRef = useRef<Record<IframeRole, number>>({ fixed: 0, moving: 0, store: 0 });
   const handleWorkerCommand = useEffectEvent(onWorkerCommand);
@@ -56,7 +70,7 @@ export function useIframeBridge(
   }, [bridge]);
 
   const handleIframeLoad = (role: IframeRole) => {
-    const iframe = iframesRef.current[role];
+    const iframe = iframes.get(role);
     if (iframe == null || isEmptyDocument(iframe)) {
       return;
     }
@@ -66,5 +80,5 @@ export function useIframeBridge(
     }
   };
 
-  return { iframesRef, sendMessage: bridge.sendMessage, handleIframeLoad, storeSaveState };
+  return { iframes, sendMessage: bridge.sendMessage, handleIframeLoad, storeSaveState };
 }

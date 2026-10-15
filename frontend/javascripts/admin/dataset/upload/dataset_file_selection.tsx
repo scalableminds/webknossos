@@ -13,6 +13,7 @@ import uniqBy from "lodash-es/uniqBy";
 import without from "lodash-es/without";
 import { type ChangeEvent, type RefObject, useMemo, useRef, useState } from "react";
 import { type FileWithPath, useDropzone } from "react-dropzone";
+import { ModalWidth } from "theme";
 import { type SelectionSummary, summarizeSelection } from "./detect_dataset_format";
 import { FolderStructureHelp } from "./folder_structure_help";
 import { InspectionBanner } from "./inspection_banner";
@@ -132,7 +133,13 @@ function FileListModal({
   onRemoveFile: (file: FileWithPath) => void;
 }) {
   return (
-    <Modal title="Selected files" open={open} onCancel={onClose} footer={null} width={720}>
+    <Modal
+      title="Selected files"
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      width={ModalWidth.Large}
+    >
       <List
         size="small"
         dataSource={files}

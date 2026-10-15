@@ -197,7 +197,7 @@ function getCommonPrefix(strings: string[]): string {
   });
 }
 
-export function sanitizeDatasetName(name: string): string {
+function sanitizeDatasetName(name: string): string {
   return name
     .replace(/[^0-9a-zA-Z_.-]/g, "_")
     .replace(/^\.+/, "")

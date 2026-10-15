@@ -31,7 +31,7 @@ export type UploadStatus =
   | { kind: "uploading"; datasetName: string; progress: number; isRetrying: boolean }
   | { kind: "finishing"; datasetName: string };
 
-export type DatasetUploadRequest = {
+type DatasetUploadRequest = {
   name: string;
   files: FileWithPath[];
   organizationId: string;

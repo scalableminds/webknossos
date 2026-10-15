@@ -59,7 +59,7 @@ function getNextStepContent(
       const state =
         completePairCount === 0
           ? "has no landmarks yet"
-          : appliedState === "notEnoughPairs"
+          : appliedState === "transformEstimationFailed"
             ? "needs more landmark pairs"
             : "is not applied yet";
       return {

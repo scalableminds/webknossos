@@ -7,8 +7,11 @@ import { formatResidual } from "../helpers/layer_registration_helpers";
 import type { MovingLayerRow } from "../helpers/layer_registration_moving_layers";
 
 function getRowDetails(row: MovingLayerRow, voxelSize: VoxelSize): string {
-  if ("isLoading" in row) {
-    return row.isLoading ? "Loading…" : "Could not read the landmarks";
+  if (row.status === "loading") {
+    return "Loading…";
+  }
+  if (row.status === "failed") {
+    return "Could not read the landmarks";
   }
   if (row.completePairCount === 0) {
     return "No landmarks yet";
@@ -31,14 +34,14 @@ function AppliedStateTag({ appliedState }: { appliedState: AppliedState }) {
       );
     case "notApplied":
       return <Tag style={{ marginInlineEnd: 0 }}>Not applied</Tag>;
-    case "notEnoughPairs":
+    case "transformEstimationFailed":
       return null;
   }
 }
 
 // Green for a moving layer that has a transform, gray otherwise.
 function TransformBadge({ row }: { row: MovingLayerRow }) {
-  const hasTransform = "appliedState" in row && row.appliedState !== "notEnoughPairs";
+  const hasTransform = row.status === "loaded" && row.appliedState !== "transformEstimationFailed";
   return <Badge status={hasTransform ? "success" : "default"} />;
 }
 
@@ -54,7 +57,7 @@ function MovingLayerOption({ row, voxelSize }: { row: MovingLayerRow; voxelSize:
           </Typography.Text>
         </Flex>
       </Flex>
-      {"appliedState" in row ? <AppliedStateTag appliedState={row.appliedState} /> : null}
+      {row.status === "loaded" ? <AppliedStateTag appliedState={row.appliedState} /> : null}
     </Flex>
   );
 }
@@ -135,7 +138,7 @@ export function MovingLayerSelect({
         <Typography.Text type="secondary">to</Typography.Text>
         <Typography.Text strong>{fixedLayerName}</Typography.Text>
       </Flex>
-      {activeRow != null && "appliedState" in activeRow ? (
+      {activeRow?.status === "loaded" ? (
         <AppliedStateTag appliedState={activeRow.appliedState} />
       ) : null}
     </Flex>

@@ -65,7 +65,7 @@ export function getLandmarkColor(pairId: number): Vector3 {
   return ColorGenerator.distinctColorForId(pairId);
 }
 
-export function getLandmarks(trees: MutableTreeMap): Landmark[] {
+export function getLandmarksFromTrees(trees: MutableTreeMap): Landmark[] {
   return Array.from(trees.values())
     .toSorted((a, b) => a.treeId - b.treeId)
     .flatMap((tree) =>
@@ -88,12 +88,13 @@ export function getLandmarks(trees: MutableTreeMap): Landmark[] {
 export function prepareLandmarkTreesForImport(trees: MutableTreeMap): MutableTreeMap {
   const nonEmptyTrees = Array.from(trees.values())
     .filter((tree) => tree.nodes.size() > 0)
-    .toSorted((a, b) => a.treeId - b.treeId);
-  const existingPairIds = nonEmptyTrees.flatMap((tree) => getLandmarkPairId(tree.name) ?? []);
+    .toSorted((a, b) => a.treeId - b.treeId)
+    .map((tree) => ({ tree, storedPairId: getLandmarkPairId(tree.name) }));
+  const existingPairIds = nonEmptyTrees.flatMap(({ storedPairId }) => storedPairId ?? []);
   let nextPairId = (max(existingPairIds) ?? 0) + 1;
   const preparedTrees = new MutableTreeMap();
-  for (const tree of nonEmptyTrees) {
-    const pairId = getLandmarkPairId(tree.name) ?? nextPairId++;
+  for (const { tree, storedPairId } of nonEmptyTrees) {
+    const pairId = storedPairId ?? nextPairId++;
     preparedTrees.mutableSet(tree.treeId, {
       ...tree,
       name: getLandmarkTreeName(pairId),

@@ -107,9 +107,9 @@ export function isTransformAppliedToDataset(
   );
 }
 
-// Whether the dataset uses the estimated transform of a moving layer: "notEnoughPairs" if no
-// transform could be estimated from the landmarks.
-export type AppliedState = "applied" | "notApplied" | "notEnoughPairs";
+// Whether the dataset uses the estimated transform of a moving layer. "transformEstimationFailed"
+// if no transform could be estimated from the landmarks, e.g. because there are too few pairs.
+export type AppliedState = "applied" | "notApplied" | "transformEstimationFailed";
 
 export function getAppliedState(
   estimation: TransformEstimation,
@@ -117,7 +117,7 @@ export function getAppliedState(
   movingLayerTransforms: CoordinateTransformation[] | null | undefined,
 ): AppliedState {
   if ("errorMessage" in estimation) {
-    return "notEnoughPairs";
+    return "transformEstimationFailed";
   }
   return isTransformAppliedToDataset(
     estimation.movingToFixedTransform,

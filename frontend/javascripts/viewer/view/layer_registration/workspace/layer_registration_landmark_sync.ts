@@ -4,7 +4,7 @@ import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   getLandmarkGroupPath,
   getLandmarkPairInfo,
-  getLandmarks,
+  getLandmarksFromTrees,
   type Landmark,
   type LandmarkPairInfo,
   type LayerNames,
@@ -95,7 +95,9 @@ export class LandmarkSync {
       return groupId;
     }
     await this.sendMessage(side, "importLandmarks", nmlString);
-    this.storedFields[side] = getStoredFields(getLandmarks((await parseNml(nmlString)).trees));
+    this.storedFields[side] = getStoredFields(
+      getLandmarksFromTrees((await parseNml(nmlString)).trees),
+    );
     return groupId;
   }
 
@@ -121,7 +123,7 @@ export class LandmarkSync {
 
   private async fetchLandmarksOfWorker(side: Side): Promise<WorkerLandmarks> {
     const nmlString = await this.sendMessage(side, "exportTreesAsNmlString");
-    return { nmlString, landmarks: getLandmarks((await parseNml(nmlString)).trees) };
+    return { nmlString, landmarks: getLandmarksFromTrees((await parseNml(nmlString)).trees) };
   }
 
   // Reads the landmarks of both workers and reports them if they changed.

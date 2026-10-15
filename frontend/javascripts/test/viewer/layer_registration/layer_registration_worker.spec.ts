@@ -16,7 +16,7 @@ import Store from "viewer/store";
 import {
   getLandmarkColor,
   getLandmarkPairId,
-  getLandmarks,
+  getLandmarksFromTrees,
 } from "viewer/view/layer_registration/helpers/layer_registration_helpers";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -78,7 +78,9 @@ describe("Layer registration worker", () => {
 
     // The page reads the landmarks of the worker like this.
     const nmlString = await sendMessage("fixed", "exportTreesAsNmlString");
-    const pairIds = getLandmarks((await parseNml(nmlString)).trees).map(({ pairId }) => pairId);
+    const pairIds = getLandmarksFromTrees((await parseNml(nmlString)).trees).map(
+      ({ pairId }) => pairId,
+    );
     expect(pairIds.filter((pairId) => pairId != null)).toEqual([1, 3, 2, 4]);
   });
 

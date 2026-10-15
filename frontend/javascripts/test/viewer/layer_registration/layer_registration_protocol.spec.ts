@@ -10,7 +10,7 @@ import { handleCrossOriginApiMessage } from "viewer/api/cross_origin_api";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import Store from "viewer/store";
-import { getLandmarks } from "viewer/view/layer_registration/helpers/layer_registration_helpers";
+import { getLandmarksFromTrees } from "viewer/view/layer_registration/helpers/layer_registration_helpers";
 import type { IframeWindow } from "viewer/view/layer_registration/workspace/layer_registration_iframe_bridge";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -102,7 +102,7 @@ describe("Layer registration protocol", () => {
     const nmlString = await sendMessage("store", "exportTreesAsNmlString", {
       groupId: movingGroupId,
     });
-    const exportedLandmarks = getLandmarks((await parseNml(nmlString)).trees);
+    const exportedLandmarks = getLandmarksFromTrees((await parseNml(nmlString)).trees);
     expect(exportedLandmarks.map(({ pairId, position }) => ({ pairId, position }))).toEqual(
       movingLandmarks,
     );

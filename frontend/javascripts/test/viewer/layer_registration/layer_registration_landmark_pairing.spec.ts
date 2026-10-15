@@ -40,9 +40,11 @@ describe("Layer registration landmark pairing", () => {
       ),
     });
     const trees = new Map([
-      [5, createTree(5, "Landmark 3")],
-      [2, createTree(2, "Tree002")],
+      // Trees 4 and 2 are swapped on purpose: the new pair ids follow the tree ids, not the
+      // order of the map.
       [4, createTree(4, "Tree004")],
+      [2, createTree(2, "Tree002")],
+      [5, createTree(5, "Landmark 3")],
       [7, createTree(7, "Landmark 1")],
       // Deleting the only node of a tree keeps the empty tree.
       [9, createTree(9, "Landmark 6", 0)],
@@ -50,21 +52,18 @@ describe("Layer registration landmark pairing", () => {
 
     const preparedTrees = Array.from(prepareLandmarkTreesForImport(trees).values());
 
-    expect(preparedTrees.map((tree) => [tree.treeId, tree.name])).toEqual([
-      [2, "Landmark 4"],
-      [4, "Landmark 5"],
-      [5, "Landmark 3"],
-      [7, "Landmark 1"],
+    expect(preparedTrees.map((tree) => [tree.treeId, tree.name, tree.color])).toEqual([
+      [2, "Landmark 4", getLandmarkColor(4)],
+      [4, "Landmark 5", getLandmarkColor(5)],
+      [5, "Landmark 3", getLandmarkColor(3)],
+      [7, "Landmark 1", getLandmarkColor(1)],
     ]);
-    expect(preparedTrees.map((tree) => tree.color)).toEqual(
-      [4, 5, 3, 1].map((pairId) => getLandmarkColor(pairId)),
-    );
   });
 
-  it("pairs the landmarks by pair id and lists the ones that can't be paired", () => {
+  it("pairs the landmarks by pair id", () => {
     const landmarks = {
-      fixed: toLandmarks(FIXED_POSITIONS, [1, 2, 4, 2]),
-      moving: toLandmarks(MOVING_POSITIONS.slice(0, 3), [4, 3, null]),
+      fixed: toLandmarks(FIXED_POSITIONS.slice(0, 3), [1, 2, 4]),
+      moving: toLandmarks(MOVING_POSITIONS.slice(0, 2), [4, 3]),
     };
     const pairs = getLandmarkPairs(landmarks, null);
 
@@ -79,14 +78,33 @@ describe("Layer registration landmark pairing", () => {
       [2, FIXED_POSITIONS[1], undefined],
       [3, undefined, MOVING_POSITIONS[1]],
       [4, FIXED_POSITIONS[2], MOVING_POSITIONS[0]],
-      // The second fixed landmark with pair id 2 and the moving landmark without pair id.
-      [null, FIXED_POSITIONS[3], undefined],
-      [null, undefined, MOVING_POSITIONS[2]],
+    ]);
+    // Only complete pairs are used for the transform.
+    expect(getCompleteLandmarkPairs(landmarks).map((pair) => pair.pairId)).toEqual([4]);
+  });
+
+  // The workers never create such landmarks, but the table must still list them, so that they
+  // can be deleted.
+  it("lists a duplicate pair id and a missing pair id as landmarks without a pair", () => {
+    const landmarks = {
+      fixed: toLandmarks(FIXED_POSITIONS.slice(0, 2), [1, 1]),
+      moving: toLandmarks(MOVING_POSITIONS.slice(0, 1), [null]),
+    };
+    const pairs = getLandmarkPairs(landmarks, null);
+
+    expect(
+      pairs.map((pair) => [
+        pair.pairId,
+        pair.landmarks.fixed?.position,
+        pair.landmarks.moving?.position,
+      ]),
+    ).toEqual([
+      [1, FIXED_POSITIONS[0], undefined],
+      [null, FIXED_POSITIONS[1], undefined],
+      [null, undefined, MOVING_POSITIONS[0]],
     ]);
     // The table uses the keys, so they must differ.
     expect(new Set(pairs.map((pair) => pair.key)).size).toBe(pairs.length);
-    // Only complete pairs are used for the transform.
-    expect(getCompleteLandmarkPairs(landmarks).map((pair) => pair.pairId)).toEqual([4]);
   });
 
   it("measures the error of a pair in the unit of the dataset, also for anisotropic voxels", () => {

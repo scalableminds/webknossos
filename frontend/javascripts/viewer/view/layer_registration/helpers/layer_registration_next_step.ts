@@ -69,11 +69,11 @@ function getOutlierStep(
 // with the other moving layers.
 function getApplyStep(movingLayerRows: MovingLayerRow[], activeLayerName: string): NextStep | null {
   const activeRow = movingLayerRows.find((row) => row.layerName === activeLayerName);
-  if (activeRow == null || !("appliedState" in activeRow) || activeRow.appliedState !== "applied") {
+  if (activeRow?.status !== "loaded" || activeRow.appliedState !== "applied") {
     return { type: "compareAndApply" };
   }
   for (const row of movingLayerRows) {
-    if ("appliedState" in row && row.appliedState !== "applied") {
+    if (row.status === "loaded" && row.appliedState !== "applied") {
       return {
         type: "nextLayer",
         layerName: row.layerName,
@@ -82,7 +82,7 @@ function getApplyStep(movingLayerRows: MovingLayerRow[], activeLayerName: string
       };
     }
   }
-  return movingLayerRows.some((row) => "isLoading" in row)
+  return movingLayerRows.some((row) => row.status !== "loaded")
     ? null
     : { type: "allApplied", hasSeveralMovingLayers: movingLayerRows.length > 1 };
 }

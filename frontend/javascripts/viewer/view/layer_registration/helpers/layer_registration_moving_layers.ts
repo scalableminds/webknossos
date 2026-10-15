@@ -34,11 +34,17 @@ export type InactivePair = {
 // Null while loading. The map has no entry for a layer whose landmarks could not be read.
 export type InactivePairs = Map<string, InactivePair> | null;
 
-// The state of the estimated transform of one moving layer. Without counts, its landmarks are
-// still loading (isLoading) or could not be read.
+// The state of the estimated transform of one moving layer. The counts only exist once its
+// landmarks are loaded.
 export type MovingLayerRow = { layerName: string } & (
-  | { completePairCount: number; meanResidual: number | null; appliedState: AppliedState }
-  | { isLoading: boolean }
+  | {
+      status: "loaded";
+      completePairCount: number;
+      meanResidual: number | null;
+      appliedState: AppliedState;
+    }
+  | { status: "loading" }
+  | { status: "failed" }
 );
 
 export function getMovingLayerRows({
@@ -60,10 +66,13 @@ export function getMovingLayerRows({
     const pairEstimate =
       layerName === activeLayerName ? activePairEstimate : inactivePairs?.get(layerName)?.estimate;
     if (pairEstimate == null) {
-      return { layerName, isLoading: inactivePairs == null };
+      return inactivePairs == null
+        ? { layerName, status: "loading" }
+        : { layerName, status: "failed" };
     }
     return {
       layerName,
+      status: "loaded",
       completePairCount: pairEstimate.completePairCount,
       meanResidual: pairEstimate.meanResidual,
       appliedState: getAppliedState(

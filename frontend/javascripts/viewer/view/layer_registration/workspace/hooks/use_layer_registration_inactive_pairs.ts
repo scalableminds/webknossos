@@ -3,7 +3,7 @@ import type { Vector3 } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   getLandmarkGroupPath,
-  getLandmarks,
+  getLandmarksFromTrees,
   type Landmark,
   SIDES,
   type Side,
@@ -22,7 +22,7 @@ async function readStoredSide(
     return { nmlString: null, landmarks: [] };
   }
   const nmlString = await sendMessage("store", "exportTreesAsNmlString", { groupId });
-  return { nmlString, landmarks: getLandmarks((await parseNml(nmlString)).trees) };
+  return { nmlString, landmarks: getLandmarksFromTrees((await parseNml(nmlString)).trees) };
 }
 
 async function readInactivePair(

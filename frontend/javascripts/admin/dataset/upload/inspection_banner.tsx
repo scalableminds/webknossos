@@ -17,7 +17,7 @@ function describeFormat(format: DetectedDatasetFormat): React.ReactNode {
       return (
         <>
           <strong>
-            Recognized as {format.formatName === "image" ? "an" : "a"} {format.formatName} image
+            Recognized as {format.formatName === "image" ? "an" : `a ${format.formatName}`} image
             stack
           </strong>{" "}
           ({format.sliceCount.toLocaleString()} {pluralize("slice", format.sliceCount)},{" "}

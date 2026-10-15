@@ -1,5 +1,6 @@
 package backend
 
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -41,7 +42,7 @@ class DatasetUploadMetadataStoreTestSuite extends AsyncWordSpec {
       for {
         _ <- metadataStore.insertUploadIdByDataSourceId(dataSourceId, uploadId).futureBox
         foundUploadIdBox <- metadataStore.findUploadIdByDataSourceId(dataSourceId).futureBox
-      } yield assert(foundUploadIdBox.toOption.contains(uploadId))
+      } yield assert(foundUploadIdBox == Full(uploadId))
     }
   }
 }

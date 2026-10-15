@@ -19,7 +19,7 @@ import {
 } from "dashboard/annotation_list";
 import { AnnotationTags } from "dashboard/annotation_tags";
 import { handleGenericError } from "libs/error_handling";
-import { useWkSelector } from "libs/react_hooks";
+import { useApi, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import without from "lodash-es/without";
@@ -257,7 +257,7 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
   const [showArchived, setShowArchived] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
 
-  const layerRegistrationsQuery = useQuery({
+  const layerRegistrationsQuery = useApi({
     queryKey: ["layerRegistration", "layerRegistrations", dataset.id],
     queryFn: () => getLayerRegistrations(dataset.id),
     meta: { persist: false },
@@ -279,11 +279,10 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
     navigate(getLayerRegistrationViewUrl(dataset, annotationId));
 
   const createAndOpenLayerRegistration = async (fixed: string) => {
-    try {
-      const annotation = await createLayerRegistration(dataset.id, { fixedLayerName: fixed });
-      openLayerRegistration(annotation.id);
-    } catch (error) {
-      handleGenericError(error as Error, "Could not create the layer registration.");
+    // On failure, createLayerRegistration already showed an error toast.
+    const result = await createLayerRegistration(dataset.id, { fixedLayerName: fixed });
+    if (result.ok) {
+      openLayerRegistration(result.value.id);
     }
   };
 

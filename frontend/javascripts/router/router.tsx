@@ -82,7 +82,7 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 function RootLayout({ showNavbar = true }: { showNavbar?: boolean }) {
   return (
     <Layout className={showNavbar ? undefined : "no-navbar"}>
-      {/* The command palette can leave the view or undo the forced settings of the dataset
+      {/* The command palette can leave the view or undo the forced settings of the
       layer registration workers. Thus, don't allow them there. */}
       {isLayerRegistrationWorker() ? null : <CommandPalette />}
       {showNavbar && <Navbar />}

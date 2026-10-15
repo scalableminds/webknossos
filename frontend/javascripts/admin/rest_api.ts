@@ -832,17 +832,35 @@ export function createExplorational(
   return Request.sendJSONReceiveJSON(url, { ...options, data: layers });
 }
 
-export function createLayerRegistration(
+export async function createLayerRegistration(
   datasetId: string,
   layerRegistration: APILayerRegistration,
-): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/layerRegistrations`, {
-    data: layerRegistration,
-  });
+  options: RequestOptions = {},
+  // Creating an annotation isn't idempotent, so a retry could create a second one.
+  retryOptions: RetryOptions = { retries: 0 },
+): Promise<ApiResult<APIAnnotation>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/layerRegistrations`, {
+        ...adaptedOptions,
+        data: layerRegistration,
+      }),
+    options,
+    retryOptions,
+  );
 }
 
-export function getLayerRegistrations(datasetId: string): Promise<Array<APIAnnotationInfo>> {
-  return Request.receiveJSON(`/api/datasets/${datasetId}/layerRegistrations`);
+export async function getLayerRegistrations(
+  datasetId: string,
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIAnnotationInfo>>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.receiveJSON(`/api/datasets/${datasetId}/layerRegistrations`, adaptedOptions),
+    options,
+    retryOptions,
+  );
 }
 
 export async function getTracingsForAnnotation(

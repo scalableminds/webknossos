@@ -546,9 +546,9 @@ Samplecountry
       _ <- insertLocalDataStoreIfEnabled()
       _ <- insertLocalTracingStoreIfEnabled()
       _ <- insertPretrainedAiModels()
-      _ <- insertDefaultWorkerIfJobsEnabled()
       // All insert calls below this assertion are only executed in the dev setup (where initialDataEnabled is true)!
       _ <- assertInitialDataEnabled
+      _ <- upsertDefaultWorkerIfJobsEnabled()
       _ <- organizationService.assertNoOrganizationsPresent
       _ <- insertRootFolder()
       _ <- insertOrganization()
@@ -708,10 +708,8 @@ Samplecountry
       }
     }
 
-  private def insertDefaultWorkerIfJobsEnabled(): Fox[?] =
-    Fox.runIf(
-      conf.Features.jobsEnabled && conf.WebKnossos.SampleOrganization.enabled && storeModules.localDataStoreEnabled
-    )(
+  private def upsertDefaultWorkerIfJobsEnabled(): Fox[?] =
+    Fox.runIf(conf.Features.jobsEnabled && storeModules.localDataStoreEnabled)(
       workerDAO.insertOrUpdateSupportedJobCommands(defaultWorker)
     )
 

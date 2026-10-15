@@ -15,7 +15,7 @@ import { type ChangeEvent, type RefObject, useMemo, useRef, useState } from "rea
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { ModalWidth } from "theme";
 import { type SelectionSummary, summarizeSelection } from "./detect_dataset_format";
-import { FolderStructureHelp } from "./folder_structure_help";
+import { FolderStructureHelpModal } from "./folder_structure_help";
 import { InspectionBanner } from "./inspection_banner";
 import type { FileInspection } from "./use_file_inspection";
 
@@ -26,7 +26,7 @@ const FORMAT_TAGS = [
   { label: "WKW", needsConversion: false },
   { label: "N5", needsConversion: false },
   { label: "Neuroglancer Precomputed", needsConversion: false },
-  { label: "CZI · IMS · NIfTI · DM3/4", needsConversion: true },
+  { label: "CZI · IMS · DM3/4", needsConversion: true },
 ];
 
 const SELECTION_ICONS: Record<SelectionSummary["kind"], React.ReactNode> = {
@@ -73,10 +73,12 @@ function FolderInput({
 function EmptyDropzoneContent({
   onChooseFolder,
   onChooseFiles,
+  onShowFolderHelp,
   isDatasetConversionEnabled,
 }: {
   onChooseFolder: () => void;
   onChooseFiles: () => void;
+  onShowFolderHelp: () => void;
   isDatasetConversionEnabled: boolean;
 }) {
   const formatTags = FORMAT_TAGS.filter(
@@ -108,7 +110,9 @@ function EmptyDropzoneContent({
             </Tag>
           ))}
         </Flex>
-        <FolderStructureHelp isDatasetConversionEnabled={isDatasetConversionEnabled} />
+        <Button type="link" onClick={onShowFolderHelp}>
+          How should my folder look?
+        </Button>
         {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (
           <Typography.Text type="secondary">
             Need to upload other formats? <a href="https://webknossos.org">webknossos.org</a>{" "}
@@ -227,6 +231,7 @@ export function DatasetFileSelection({
   isDatasetConversionEnabled: boolean;
 }) {
   const [isFileListOpen, setIsFileListOpen] = useState(false);
+  const [isFolderHelpOpen, setIsFolderHelpOpen] = useState(false);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
 
   const addFiles = (addedFiles: FileWithPath[]) => {
@@ -270,6 +275,7 @@ export function DatasetFileSelection({
           <EmptyDropzoneContent
             onChooseFolder={() => folderInputRef.current?.click()}
             onChooseFiles={open}
+            onShowFolderHelp={() => setIsFolderHelpOpen(true)}
             isDatasetConversionEnabled={isDatasetConversionEnabled}
           />
         )}
@@ -279,6 +285,11 @@ export function DatasetFileSelection({
         open={isFileListOpen}
         onClose={() => setIsFileListOpen(false)}
         onRemoveFile={removeFile}
+      />
+      <FolderStructureHelpModal
+        open={isFolderHelpOpen}
+        onClose={() => setIsFolderHelpOpen(false)}
+        isDatasetConversionEnabled={isDatasetConversionEnabled}
       />
     </>
   );

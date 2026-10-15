@@ -7,11 +7,14 @@ import messages from "messages";
 import type { FileWithPath } from "react-dropzone";
 import type { APIOrganization } from "types/api_types";
 import { syncValidator } from "types/validation";
-
-const IMAGE_EXTENSIONS = ["tif", "tiff", "jpg", "jpeg", "png", "czi", "dm3", "dm4", "nifti", "raw"];
+import { getTotalFileSize, isArchive, isImageFile } from "./detect_dataset_format";
 
 function countFilesWithExtension(files: FileWithPath[], extensions: string | string[]) {
   return files.filter((file) => isFileExtensionEqualTo(file.path, extensions)).length;
+}
+
+function countFiles(files: FileWithPath[], predicate: (path: string) => boolean) {
+  return files.filter((file) => predicate(file.path || file.name)).length;
 }
 
 export function getUploadFileRules({
@@ -30,7 +33,7 @@ export function getUploadFileRules({
     },
     {
       validator: syncValidator(
-        (files: FileWithPath[]) => countFilesWithExtension(files, "zip") <= 1,
+        (files: FileWithPath[]) => countFiles(files, isArchive) <= 1,
         "You cannot upload more than one archive.",
       ),
     },
@@ -60,15 +63,14 @@ export function getUploadFileRules({
     },
     {
       validator: syncValidator((files: FileWithPath[]) => {
-        const archiveCount = countFilesWithExtension(files, "zip");
+        const archiveCount = countFiles(files, isArchive);
         // Either there are no archives, or all files are archives
         return archiveCount === 0 || archiveCount === files.length;
       }, "Archives cannot be mixed with other files."),
     },
     {
       validator: syncValidator(
-        (files: FileWithPath[]) =>
-          getLeftOverStorageBytes(organization) >= files.reduce((sum, file) => sum + file.size, 0),
+        (files: FileWithPath[]) => getLeftOverStorageBytes(organization) >= getTotalFileSize(files),
         `The selected files exceed the available storage of your organization. Please ${
           isActiveUserAdmin
             ? "use the organization management page to request more storage"
@@ -79,8 +81,7 @@ export function getUploadFileRules({
     {
       validator: syncValidator(
         (files: FileWithPath[]) =>
-          countFilesWithExtension(files, "wkw") === 0 ||
-          countFilesWithExtension(files, IMAGE_EXTENSIONS) === 0,
+          countFilesWithExtension(files, "wkw") === 0 || countFiles(files, isImageFile) === 0,
         "WKW files should not be mixed with image files.",
       ),
     },

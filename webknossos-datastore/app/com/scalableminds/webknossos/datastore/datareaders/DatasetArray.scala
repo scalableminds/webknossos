@@ -295,10 +295,10 @@ class DatasetArray(
 
   private val chunkContentsCacheKeyPrefix: String = s"${dataSourceId}__${layerName}__${vaultPath}__chunk_"
 
-  // Shortcut-typed chunks are flat byte arrays, so they must not be served to reads that expect typed chunks (and vice versa)
   private def chunkContentsCacheKey(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean): String = {
     val builder = new java.lang.StringBuilder(chunkContentsCacheKeyPrefix.length + chunkIndex.length * 4 + 1)
     builder.append(chunkContentsCacheKeyPrefix)
+    // Shortcut-typed chunks are flat byte arrays, so they must not be served to reads that expect typed chunks (and vice versa)
     if (useSkipTypingShortcut) builder.append('s')
     // Builder + while loop is faster than mkString, and this is a very hot code path.
     var i = 0

@@ -104,7 +104,8 @@ class PrecomputedArrayTestSuite extends AsyncWordSpec {
   private def writeDataset(encoding: String): Path = {
     val root = Files.createTempDirectory("precomputed-unaligned")
     val scaleKey = "1_1_1"
-    val blockSizeJson = if (encoding == "compressed_segmentation") """"compressed_segmentation_block_size": [8, 8, 8],""" else ""
+    val blockSizeJson =
+      if (encoding == "compressed_segmentation") """"compressed_segmentation_block_size": [8, 8, 8],""" else ""
     val info =
       s"""{"type": "segmentation", "data_type": "uint64", "num_channels": 1, "scales": [{
          |  "key": "$scaleKey", "size": [${volumeSize.x}, ${volumeSize.y}, ${volumeSize.z}], "resolution": [1, 1, 1],
@@ -163,7 +164,7 @@ class PrecomputedArrayTestSuite extends AsyncWordSpec {
 
   private val full = Vec3Int(chunkSize, chunkSize, chunkSize)
 
-  for (encoding <- Seq("raw", "compressed_segmentation")) {
+  for (encoding <- Seq("raw", "compressed_segmentation"))
     s"Precomputed array with $encoding encoding and unaligned volume size" should {
       "read an interior chunk" in assertReadsIsolated(encoding, Vec3Int(0, 0, 0), full)
       "read a full bucket on a chunk clipped in x" in assertReadsIsolated(encoding, Vec3Int(32, 0, 0), full)
@@ -196,5 +197,4 @@ class PrecomputedArrayTestSuite extends AsyncWordSpec {
         } yield assertion
       }
     }
-  }
 }

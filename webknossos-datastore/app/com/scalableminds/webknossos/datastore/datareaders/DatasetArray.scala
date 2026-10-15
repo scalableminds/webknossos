@@ -295,9 +295,11 @@ class DatasetArray(
 
   private val chunkContentsCacheKeyPrefix: String = s"${dataSourceId}__${layerName}__${vaultPath}__chunk_"
 
-  private def chunkContentsCacheKey(chunkIndex: Array[Long]): String = {
-    val builder = new java.lang.StringBuilder(chunkContentsCacheKeyPrefix.length + chunkIndex.length * 4)
+  // Shortcut-typed chunks are flat byte arrays, so they must not be served to reads that expect typed chunks (and vice versa)
+  private def chunkContentsCacheKey(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean): String = {
+    val builder = new java.lang.StringBuilder(chunkContentsCacheKeyPrefix.length + chunkIndex.length * 4 + 1)
     builder.append(chunkContentsCacheKeyPrefix)
+    if (useSkipTypingShortcut) builder.append('s')
     // Builder + while loop is faster than mkString, and this is a very hot code path.
     var i = 0
     while (i < chunkIndex.length) {
@@ -314,7 +316,7 @@ class DatasetArray(
   ): Fox[MultiArray] =
     // Note: we omit the tokenContext from the cacheKey because (a) Failures aren’t cached anyway and (b) the dataset access is checked again in the controllers. Omitting it here prevents wasteful data duplicates in the cache.
     sharedChunkContentsCache.getOrLoad(
-      chunkContentsCacheKey(chunkIndex),
+      chunkContentsCacheKey(chunkIndex, useSkipTypingShortcut),
       _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut)
     )
 
@@ -355,7 +357,7 @@ class DatasetArray(
       case chunkIndex :: Nil =>
         val offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, globalOffset)
         isZeroOffset(offsetInChunk) &&
-        isBufferShapeEqualChunkShape(bufferShape)
+        util.Arrays.equals(bufferShape, chunkShapeAtIndex(chunkIndex))
       case _ => false
     }
 
@@ -369,13 +371,11 @@ class DatasetArray(
         val offsetInChunk = computeOffsetInChunk(chunkIndex, globalOffset)
         header.order == ArrayOrder.F &&
         isZeroOffset(offsetInChunk) &&
-        isBufferShapeEqualChunkShape(bufferShape) &&
-        axisOrder == AxisOrder.asCxyzFromRank(rank)
+        axisOrder == AxisOrder.asCxyzFromRank(rank) &&
+        // axis order is cxyz here, so wk and physical order coincide
+        util.Arrays.equals(bufferShape, chunkShapeAtIndex(chunkIndex))
       case _ => false
     }
-
-  private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =
-    util.Arrays.equals(bufferShape, chunkShape)
 
   private def isZeroOffset(offset: Array[Int]): Boolean =
     offset.forall(_ == 0)

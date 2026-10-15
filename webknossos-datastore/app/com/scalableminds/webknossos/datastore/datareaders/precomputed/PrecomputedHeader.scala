@@ -75,7 +75,19 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(this)
 
   override def chunkShapeAtIndex(chunkIndex: Array[Long]): Array[Int] =
-    chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
+    if (isInteriorChunk(chunkIndex)) chunkShape
+    else chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
+
+  // Allocation-free check, since this is called on the hot read path.
+  private def isInteriorChunk(chunkIndex: Array[Long]): Boolean = {
+    var isInterior = true
+    var dim = 0
+    while (isInterior && dim < chunkIndex.length) {
+      isInterior = (chunkIndex(dim) + 1) * chunkShape(dim) <= precomputedScale.size(dim)
+      dim += 1
+    }
+    isInterior
+  }
 
   override def voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 

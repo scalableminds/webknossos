@@ -4,12 +4,13 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedArray
 import com.scalableminds.webknossos.datastore.datavault.{FileSystemDataVault, VaultPath}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import org.scalatest.Assertion
+import org.scalatest.{Assertion, BeforeAndAfterAll}
 import org.scalatest.wordspec.AsyncWordSpec
 import ucar.ma2.Array as MultiArray
 
@@ -17,7 +18,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.file.{Files, Path}
 import scala.concurrent.Future
 
-class PrecomputedArrayTestSuite extends AsyncWordSpec {
+class PrecomputedArrayTestSuite extends AsyncWordSpec with BeforeAndAfterAll {
 
   private given TokenContext = TokenContext(None)
 
@@ -131,6 +132,9 @@ class PrecomputedArrayTestSuite extends AsyncWordSpec {
 
   private lazy val datasetsByEncoding: Map[String, Path] =
     Seq("raw", "compressed_segmentation").map(encoding => encoding -> writeDataset(encoding)).toMap
+
+  override def afterAll(): Unit =
+    datasetsByEncoding.values.foreach(scaleDir => PathUtils.deleteDirectoryRecursively(scaleDir.getParent))
 
   private def openArray(encoding: String, cache: AlfuCache[String, MultiArray]): Future[PrecomputedArray] = {
     val magPath = new VaultPath(UPath.fromLocalPath(datasetsByEncoding(encoding)), FileSystemDataVault.create)

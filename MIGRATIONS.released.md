@@ -9,8 +9,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## [26.10.1](https://github.com/scalableminds/webknossos/releases/tag/26.10.1) - 2026-10-15
 [Commits](https://github.com/scalableminds/webknossos/compare/26.10.0...26.10.1)
 
-- The `export_tiff` job now passes an `export_format` argument to the worker. Deploy a webknossos-worker that accepts it (voxelytics#4795) before or together with this release; older workers fail on the unknown argument.
-
 ### Postgres Evolutions
 - [184-thumbnail-cache-version.sql](schema/evolutions/184-thumbnail-cache-version.sql)
 - [185-dataset-last-used-times-primary-key.sql](schema/evolutions/185-dataset-last-used-times-primary-key.sql)

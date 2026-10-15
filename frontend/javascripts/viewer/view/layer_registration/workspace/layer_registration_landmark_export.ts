@@ -10,7 +10,7 @@ import {
   SIDES,
   type Side,
 } from "../helpers/layer_registration_helpers";
-import type { SendMessage } from "./hooks/use_layer_registration_iframe_bridge";
+import type { SendMessage } from "./layer_registration_iframe_bridge";
 
 // The formats in which the landmarks can be downloaded. Both can be uploaded in the dataset
 // composition wizard (see admin/dataset/composition_wizard/02_upload_files.tsx).

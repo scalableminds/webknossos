@@ -26,11 +26,12 @@ import {
 } from "../layer_registration_protocol";
 import { LayerRegistrationLandmarkPanel } from "../panel/layer_registration_landmark_panel";
 import { useApplyTransforms } from "./hooks/use_layer_registration_apply_transforms";
-import { type IframeRole, useIframeBridge } from "./hooks/use_layer_registration_iframe_bridge";
+import { useIframeBridge } from "./hooks/use_layer_registration_iframe_bridge";
 import { useInactivePairs } from "./hooks/use_layer_registration_inactive_pairs";
 import { useLandmarkSync } from "./hooks/use_layer_registration_landmark_sync";
 import { useLeavePrompt } from "./hooks/use_layer_registration_leave_prompt";
 import { useViewSettings } from "./hooks/use_layer_registration_view_settings";
+import type { IframeRole } from "./layer_registration_iframe_bridge";
 import {
   downloadLandmarkPairs,
   type LandmarkExportFormat,

@@ -12,7 +12,7 @@ import {
 import type { InactivePairs } from "../../helpers/layer_registration_moving_layers";
 import type { TransformEstimation } from "../../helpers/layer_registration_transform_estimation";
 import type { LayerRegistrationViewState } from "../../layer_registration_protocol";
-import type { SendMessage } from "./use_layer_registration_iframe_bridge";
+import type { SendMessage } from "../layer_registration_iframe_bridge";
 
 // What the workers show besides their own layer. The panel footer and the toolbars of the
 // workers offer the same switches.

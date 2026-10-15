@@ -267,9 +267,16 @@ const handleMessage = async (event) => {
   );
 };
 
+// The window that sent a message, which gets the reply.
+type MessageSender = { postMessage: (message: unknown, targetOrigin: string) => void };
+
+// Runs the command of a message and replies with "ack" and the return value, or with "err".
 // If a command throws, this logs the error and replies with an error, so that the sender
 // doesn't wait for a reply forever.
-const onMessage = async (event: MessageEvent) => {
+export async function handleCrossOriginApiMessage(event: {
+  data: any;
+  source: MessageSender | null;
+}) {
   try {
     await handleMessage(event);
   } catch (error) {
@@ -282,10 +289,15 @@ const onMessage = async (event: MessageEvent) => {
         messageId: event.data.messageId,
         message,
       },
-      { targetOrigin: "*" },
+      "*",
     );
   }
-};
+}
+
+// The messages of this API come from the windows that embed this page, so their source is a
+// window.
+const onMessage = (event: MessageEvent) =>
+  handleCrossOriginApiMessage({ data: event.data, source: event.source as Window | null });
 
 function CrossOriginApi() {
   useEffect(() => {

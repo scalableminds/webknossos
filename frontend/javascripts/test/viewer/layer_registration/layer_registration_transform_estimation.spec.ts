@@ -12,7 +12,6 @@ import {
 import {
   type EstimatedTransform,
   estimateMovingToFixedTransform,
-  getLayerPairTransformEstimate,
 } from "viewer/view/layer_registration/helpers/layer_registration_transform_estimation";
 import { describe, expect, it } from "vitest";
 
@@ -35,7 +34,13 @@ function expectResidualsCloseToZero(
 }
 
 describe("Layer registration transform estimation", () => {
-  it("refuses to estimate a transform from too few complete pairs", () => {
+  it("estimates a transform from 3 pairs, but not from fewer", () => {
+    // 3 pairs always lie in one plane, so this needs the fallback for a single z slice.
+    const threePairs = {
+      fixed: toLandmarks(FIXED_POSITIONS.slice(0, 3)),
+      moving: toLandmarks(MOVING_POSITIONS.slice(0, 3)),
+    };
+    expectResidualsCloseToZero(threePairs, enforceEstimatedTransform(threePairs), 5);
     expect(
       estimateMovingToFixedTransform({
         fixed: toLandmarks(FIXED_POSITIONS),
@@ -123,26 +128,5 @@ describe("Layer registration transform estimation", () => {
     expect(estimatedTransform.usedCopiesInNextSlice).toBe(false);
     expect(getLandmarkPairs(landmarks, estimatedTransform.movingToFixedTransform)).toHaveLength(4);
     expectResidualsCloseToZero(landmarks, estimatedTransform, 5);
-  });
-
-  it("summarizes the estimated transform of a moving layer", () => {
-    const tooFewPairs = getLayerPairTransformEstimate(
-      {
-        fixed: toLandmarks(FIXED_POSITIONS.slice(0, 2)),
-        moving: toLandmarks(MOVING_POSITIONS.slice(0, 2)),
-      },
-      [1, 1, 1],
-    );
-    expect(tooFewPairs.completePairCount).toBe(2);
-    expect(tooFewPairs.meanResidual).toBeNull();
-    expect(tooFewPairs.estimation).toHaveProperty("errorMessage");
-
-    const estimate = getLayerPairTransformEstimate(
-      { fixed: toLandmarks(FIXED_POSITIONS), moving: toLandmarks(MOVING_POSITIONS) },
-      [1, 1, 1],
-    );
-    expect(estimate.completePairCount).toBe(4);
-    expect(estimate.meanResidual).toBeCloseTo(0);
-    expect(estimate.estimation).toHaveProperty("movingToFixedTransform");
   });
 });

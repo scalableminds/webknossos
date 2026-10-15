@@ -8,6 +8,10 @@ import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 // are recognized by the URL params below. This module holds everything that the layer registration
 // view, the iframes and the rest of the app need to know about each other.
 
+// The URL params of each iframe:
+// - left worker (fixed layer): layerRegistrationWorker=<fixed layer name>&layerRegistrationPrimary=true
+// - right worker (moving layer): layerRegistrationWorker=<moving layer name>
+// - store: layerRegistrationStore (without a value)
 const WORKER_LAYER_URL_PARAM = "layerRegistrationWorker";
 const PRIMARY_WORKER_URL_PARAM = "layerRegistrationPrimary";
 const STORE_URL_PARAM = "layerRegistrationStore";
@@ -86,7 +90,7 @@ export type LayerRegistrationViewState = {
   isTransformShown: boolean;
   // Whether there are enough landmark pairs to estimate a transform.
   isTransformAvailable: boolean;
-  isLandmarkPanelOpen: boolean;
+  isLandmarkPanelOpen: boolean; // Only needed for the right worker.
 };
 
 export const LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE = "layerRegistrationCommand";

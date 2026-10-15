@@ -4,7 +4,7 @@ import ColorHash from "color-hash";
 import dagre from "dagre";
 import { useWkSelector } from "libs/react_hooks";
 import memoize from "lodash-es/memoize";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   BaseEdge,
@@ -200,7 +200,17 @@ const addEdgeToMap = (map: Map<string, DagEdgeMapItem>, edge: VoxelyticsWorkflow
   }
 };
 
-const getNodeBorderWidth = (node: VoxelyticsWorkflowDagNode) => (node.isMetaTask ? 2 : 1);
+const addToAdjacency = (map: Map<string, Array<string>>, from: string, to: string) => {
+  const neighbors = map.get(from);
+  if (neighbors) {
+    neighbors.push(to);
+  } else {
+    map.set(from, [to]);
+  }
+};
+
+const getNodeBorderWidth = (node: Pick<VoxelyticsWorkflowDagNode, "isMetaTask">) =>
+  node.isMetaTask ? 2 : 1;
 
 const getNodeType = (e: DagNodeMapItem | null) => {
   if (e == null || (e.hasInput && e.hasOutput)) {
@@ -212,35 +222,63 @@ const getNodeType = (e: DagNodeMapItem | null) => {
   }
 };
 
-function getEdgesAndNodes(
-  dag: VoxelyticsWorkflowDag,
-  filteredTasks: Array<VoxelyticsTaskConfigWithName>,
-  selectedNodeId: string | null,
-  theme: Theme,
-  // React Flow renders parts of the graph via SVG presentation attributes (e.g. the
-  // <rect stroke> behind an edge label), where a `var(--ant-…)` reference is not resolved.
-  // So the border color has to be passed in as an already-resolved value.
-  borderColor: string,
-) {
+// Only the parts of the DAG that affect the layout.
+type DagLayoutInput = {
+  nodes: Array<Pick<VoxelyticsWorkflowDagNode, "id" | "label" | "isMetaTask">>;
+  edges: Array<VoxelyticsWorkflowDagEdge>;
+};
+
+type DagLayout = {
+  // Identifies the graph structure that this layout was computed for.
+  key: string;
+  nodes: Map<
+    string,
+    { position: Point; width: number; borderWidth: number; type: ReturnType<typeof getNodeType> }
+  >;
+  edges: Array<{
+    id: string;
+    source: string;
+    target: string;
+    label: string;
+    points: Array<Point>;
+    labelPosition: Point | null;
+  }>;
+  successors: Map<string, Array<string>>;
+  predecessors: Map<string, Array<string>>;
+};
+
+function getLayoutInput(dag: VoxelyticsWorkflowDag): DagLayoutInput {
+  return {
+    nodes: dag.nodes.map(({ id, label, isMetaTask }) => ({ id, label, isMetaTask })),
+    edges: dag.edges.map(({ source, target, label }) => ({ source, target, label })),
+  };
+}
+
+function computeLayout(key: string): DagLayout {
+  const { nodes, edges }: DagLayoutInput = JSON.parse(key);
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-  const filteredTaskNames = filteredTasks.map((task) => task.taskName);
-
   const nodeMap = new Map<string, DagNodeMapItem>();
   const edgeMap = new Map<string, DagEdgeMapItem>();
+  const successors = new Map<string, Array<string>>();
+  const predecessors = new Map<string, Array<string>>();
 
-  dag.edges.forEach((edge) => {
+  edges.forEach((edge) => {
     const { source, target } = edge;
     addAsHasOutput(nodeMap, source);
     addAsHasInput(nodeMap, target);
     addEdgeToMap(edgeMap, edge);
   });
+  for (const { source, target } of edgeMap.values()) {
+    addToAdjacency(successors, source, target);
+    addToAdjacency(predecessors, target, source);
+  }
 
   // Calculate layout with "dagre". Edge labels are passed in with their size, so that
   // dagre reserves space for them and they don't overlap with nodes or other labels.
   dagreGraph.setGraph({ rankdir: "TB", nodesep: 30, edgesep: 15, ranksep: 40 });
-  dag.nodes.forEach((node) => {
+  nodes.forEach((node) => {
     dagreGraph.setNode(node.id, {
       width: getNodeWidth(node.label) + getNodeBorderWidth(node) * 2,
       height: NODE_HEIGHT,
@@ -256,56 +294,130 @@ function getEdgesAndNodes(
   }
   dagre.layout(dagreGraph);
 
-  const nodes: Array<FlowNode> = dag.nodes.map((node) => {
-    const nodeType = getNodeType(nodeMap.get(node.id) ?? null);
-
-    let color = borderColor;
-    let opacity = 100;
-
-    const fontColor = colorHasher.hex(
-      filteredTasks.find((t) => t.taskName === node.id)?.task ?? "",
-    );
-
+  const layoutNodes: DagLayout["nodes"] = new Map();
+  for (const node of nodes) {
     const borderWidth = getNodeBorderWidth(node);
-    const nodeWidth = getNodeWidth(node.label) + borderWidth * 2;
-    const position = dagreGraph.node(node.id);
+    const width = getNodeWidth(node.label) + borderWidth * 2;
+    const center = dagreGraph.node(node.id);
+    layoutNodes.set(node.id, {
+      position: { x: center.x - width / 2, y: center.y - NODE_HEIGHT / 2 },
+      width,
+      borderWidth,
+      type: getNodeType(nodeMap.get(node.id) ?? null),
+    });
+  }
 
-    switch (node.state) {
-      // The two run-state colors are a fixed data-visualization palette that must stay
-      // recognizable (and identical) in both themes, so they are deliberately not theme tokens.
-      case VoxelyticsRunState.COMPLETE: {
-        color = "rgb(9, 210, 150)";
-        break;
-      }
-      case VoxelyticsRunState.FAILED:
-      case VoxelyticsRunState.CANCELLED: {
-        color = "rgb(254, 34, 45)";
-        break;
-      }
-      default:
-      // pass
-    }
+  const layoutEdges = Array.from(edgeMap.entries(), ([id, edge]) => {
+    const layoutEdge = dagreGraph.edge(edge.source, edge.target);
+    return {
+      id,
+      source: edge.source,
+      target: edge.target,
+      label: edge.labels.join(", "),
+      points: layoutEdge.points,
+      labelPosition:
+        layoutEdge.x != null && layoutEdge.y != null ? { x: layoutEdge.x, y: layoutEdge.y } : null,
+    };
+  });
 
-    if (!filteredTaskNames.includes(node.id) && !node.isMetaTask) {
-      opacity = 0.4;
+  return { key, nodes: layoutNodes, edges: layoutEdges, successors, predecessors };
+}
+
+// Laying out the DAG is expensive, so it is only recomputed when the graph structure changes,
+// not when only run states (e.g., while polling a running workflow) or the selection change.
+function useDagLayout(dag: VoxelyticsWorkflowDag): DagLayout {
+  const layoutInputKey = JSON.stringify(getLayoutInput(dag));
+  return useMemo(() => computeLayout(layoutInputKey), [layoutInputKey]);
+}
+
+function collectReachable(startId: string, adjacency: Map<string, Array<string>>): Set<string> {
+  const reached = new Set<string>();
+  const stack = [startId];
+  while (stack.length > 0) {
+    const id = stack.pop() as string;
+    for (const next of adjacency.get(id) ?? []) {
+      if (!reached.has(next)) {
+        reached.add(next);
+        stack.push(next);
+      }
     }
+  }
+  return reached;
+}
+
+type TaskChain = { selected: string; upstream: Set<string>; downstream: Set<string> };
+
+// All tasks the selected task (transitively) depends on and all tasks that depend on it.
+function getTaskChain(layout: DagLayout, selectedNodeId: string | null): TaskChain | null {
+  if (selectedNodeId == null || !layout.nodes.has(selectedNodeId)) {
+    return null;
+  }
+  return {
+    selected: selectedNodeId,
+    upstream: collectReachable(selectedNodeId, layout.predecessors),
+    downstream: collectReachable(selectedNodeId, layout.successors),
+  };
+}
+
+const isNodeInChain = (chain: TaskChain, id: string) =>
+  id === chain.selected || chain.upstream.has(id) || chain.downstream.has(id);
+
+const isEdgeInChain = (chain: TaskChain, source: string, target: string) =>
+  (chain.upstream.has(source) && (target === chain.selected || chain.upstream.has(target))) ||
+  (chain.downstream.has(target) && (source === chain.selected || chain.downstream.has(source)));
+
+// The run-state colors are a fixed data-visualization palette that must stay recognizable
+// (and identical) in both themes, so they are deliberately not theme tokens.
+const RUN_STATE_COLORS: Partial<Record<VoxelyticsRunState, string>> = {
+  [VoxelyticsRunState.COMPLETE]: "rgb(9, 210, 150)",
+  [VoxelyticsRunState.RUNNING]: "rgb(22, 119, 255)",
+  [VoxelyticsRunState.FAILED]: "rgb(254, 34, 45)",
+  [VoxelyticsRunState.CANCELLED]: "rgb(254, 34, 45)",
+  [VoxelyticsRunState.STALE]: "rgb(250, 140, 22)",
+  [VoxelyticsRunState.SKIPPED]: "rgb(160, 160, 160)",
+};
+
+const FADED_OPACITY = 0.4;
+
+function getEdgesAndNodes(
+  dag: VoxelyticsWorkflowDag,
+  layout: DagLayout,
+  filteredTasks: Array<VoxelyticsTaskConfigWithName>,
+  selectedNodeId: string | null,
+  theme: Theme,
+  // React Flow renders parts of the graph via SVG presentation attributes, where a
+  // `var(--ant-…)` reference is not resolved. So colors have to be passed in as resolved values.
+  colors: { border: string; highlight: string },
+) {
+  const filteredTaskTypes = new Map(filteredTasks.map((task) => [task.taskName, task.task]));
+  const chain = getTaskChain(layout, selectedNodeId);
+
+  const nodes: Array<FlowNode> = dag.nodes.map((node) => {
+    const { position, width, borderWidth, type } = layout.nodes.get(node.id)!;
+    const isFaded =
+      (!filteredTaskTypes.has(node.id) && !node.isMetaTask) ||
+      (chain != null && !isNodeInChain(chain, node.id));
 
     return {
       ...node,
-      position: {
-        x: position.x - nodeWidth / 2,
-        y: position.y - NODE_HEIGHT / 2,
+      position,
+      data: {
+        label: <span title={`${node.label} (${node.state.toLowerCase()})`}>{node.label}</span>,
       },
-      data: { label: node.label },
       connectable: false,
-      type: nodeType,
+      type,
+      className: node.state === VoxelyticsRunState.RUNNING ? "dag-node-running" : undefined,
       style: {
-        borderColor: color,
-        borderStyle: node.isMetaTask ? "dashed" : "default",
+        borderColor: RUN_STATE_COLORS[node.state] ?? colors.border,
+        borderStyle: node.isMetaTask
+          ? "dashed"
+          : node.state === VoxelyticsRunState.SKIPPED
+            ? "dotted"
+            : "solid",
         borderWidth,
-        opacity,
-        color: fontColor,
-        width: nodeWidth,
+        opacity: isFaded ? FADED_OPACITY : 1,
+        color: colorHasher.hex(filteredTaskTypes.get(node.id) ?? ""),
+        width,
         height: NODE_HEIGHT,
         padding: `0 ${NODE_PADDING}px`,
         display: "flex",
@@ -318,39 +430,38 @@ function getEdgesAndNodes(
     };
   });
 
-  const edges: Array<FlowEdge<DagEdgeData>> = [];
+  const edges: Array<FlowEdge<DagEdgeData>> = layout.edges.map((edge) => {
+    const { id, source, target } = edge;
+    const isHighlighted = chain != null && isEdgeInChain(chain, source, target);
+    const isFaded = !filteredTaskTypes.has(source) || (chain != null && !isHighlighted);
+    const opacity = isFaded ? FADED_OPACITY : 1;
 
-  for (const [id, edge] of edgeMap.entries()) {
-    const { source, target } = edge;
-    const opacity = filteredTaskNames.includes(source) ? 1 : 0.4;
-    const isSourceSelected = selectedNodeId === source;
-    const strokeWidth = isSourceSelected ? 3 : 1;
-    const labelFontColor = isSourceSelected ? "red" : null;
-    const layoutEdge = dagreGraph.edge(source, target);
-
-    edges.push({
+    return {
       id,
       source,
       target,
       data: {
-        points: layoutEdge.points,
-        label: edge.labels.join(", "),
-        labelPosition:
-          layoutEdge.x != null && layoutEdge.y != null
-            ? { x: layoutEdge.x, y: layoutEdge.y }
-            : null,
-        labelColor: labelFontColor ?? (theme === "light" ? "black" : "white"),
+        points: edge.points,
+        label: edge.label,
+        labelPosition: edge.labelPosition,
+        labelColor: isHighlighted ? colors.highlight : theme === "light" ? "black" : "white",
         labelBackgroundColor: theme === "light" ? "white" : "black",
-        labelBorderColor: borderColor,
+        labelBorderColor: isHighlighted ? colors.highlight : colors.border,
         opacity,
       },
-      style: { opacity, strokeWidth },
+      style: {
+        opacity,
+        strokeWidth: isHighlighted ? 2 : 1,
+        stroke: isHighlighted ? colors.highlight : undefined,
+      },
       type: "dag",
-      animated: isSourceSelected,
-    });
-  }
+      animated: chain?.selected === source,
+    };
+  });
   return { nodes, edges };
 }
+
+const FIT_VIEW_OPTIONS = { maxZoom: 1.5 };
 
 function DAGView({
   dag,
@@ -362,12 +473,12 @@ function DAGView({
   onClickHandler: (id: string) => void;
 }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const allTaskIds = dag.nodes.map((node) => node.id);
   const theme = useWkSelector((state) => state.uiInformation.theme);
   // Resolved token values, because React Flow passes these into SVG presentation
   // attributes where `var(--ant-…)` references are not resolved.
   const { token } = antdTheme.useToken();
   const reactFlowRef = useRef<ReactFlowInstance | null>(null);
+  const layout = useDagLayout(dag);
 
   const handleNodeClick = (_event: any, element: FlowNode) => {
     if (selectedNodeId !== element.id) {
@@ -376,28 +487,21 @@ function DAGView({
       setSelectedNodeId(null);
     }
 
-    if (allTaskIds.some((taskId) => taskId === element.id)) {
+    if (layout.nodes.has(element.id)) {
       onClickHandler(element.id);
     }
   };
 
-  const handleSelectionChange = ({ nodes }: { nodes: Array<FlowNode>; edges: Array<FlowEdge> }) => {
-    if (nodes.length === 0) {
-      // user clicked on background
-      setSelectedNodeId(null);
-    }
-  };
-
-  const { nodes, edges } = getEdgesAndNodes(
-    dag,
-    filteredTasks,
-    selectedNodeId,
-    theme,
-    token.colorBorder,
-  );
+  const { nodes, edges } = getEdgesAndNodes(dag, layout, filteredTasks, selectedNodeId, theme, {
+    border: token.colorBorder,
+    highlight: token.colorPrimary,
+  });
 
   return (
     <ReactFlow
+      // Remount when the graph structure changes (e.g., when expanding or collapsing a meta
+      // task), so that the new graph is fitted into view.
+      key={layout.key}
       snapToGrid
       nodes={nodes}
       edges={edges}
@@ -409,12 +513,12 @@ function DAGView({
       multiSelectionKeyCode={null}
       selectionKeyCode={null}
       zoomActivationKeyCode={null}
-      fitViewOptions={{ maxZoom: 1.5 }}
+      fitViewOptions={FIT_VIEW_OPTIONS}
       minZoom={0.3}
       maxZoom={2}
       attributionPosition="bottom-left"
       onNodeClick={handleNodeClick}
-      onSelectionChange={handleSelectionChange}
+      onPaneClick={() => setSelectedNodeId(null)}
       onInit={(reactFlowInstance) => {
         reactFlowRef.current = reactFlowInstance;
       }}

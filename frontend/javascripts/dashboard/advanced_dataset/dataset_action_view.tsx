@@ -2,14 +2,12 @@ import {
   CopyOutlined,
   EllipsisOutlined,
   EyeOutlined,
-  LoadingOutlined,
   PlayCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { getLatestModifiedAnnotationForDataset } from "admin/rest_api";
 import { App, type MenuProps } from "antd";
 import type { useAppProps } from "antd/es/app/context";
 import { applyViewConfigurationToDatasetsInFolder } from "dashboard/advanced_dataset/apply_view_configuration";
@@ -19,45 +17,20 @@ import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
 
-// The latest annotation is not part of the dataset list response, so it is fetched on demand.
-async function getLatestAnnotationURL(datasetId: string): Promise<string | null> {
-  const annotation = await getLatestModifiedAnnotationForDataset(datasetId);
-  if (annotation == null) {
-    Toast.info("There is no active annotation for this dataset to resume.");
-    return null;
-  }
-  return `/annotations/${annotation.id}`;
-}
-
-function ResumeAnnotationLink({ dataset }: { dataset: APIDatasetCompact }) {
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-
-  const onClick = async () => {
-    if (isLoading) return;
-    setIsLoading(true);
-    try {
-      const url = await getLatestAnnotationURL(dataset.id);
-      if (url != null) navigate(url);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+function ResumeAnnotationLink({ latestAnnotationId }: { latestAnnotationId: string }) {
   return (
-    <a onClick={onClick} title="Resume the Most Recently Modified Annotation of this Dataset">
-      {isLoading ? (
-        <LoadingOutlined className="icon-margin-right" />
-      ) : (
-        <PlayCircleOutlined className="icon-margin-right" />
-      )}
+    <Link
+      to={`/annotations/${latestAnnotationId}`}
+      title="Resume Your Most Recently Modified Annotation of this Dataset"
+    >
+      <PlayCircleOutlined className="icon-margin-right" />
       Resume Annotating
-    </a>
+    </Link>
   );
 }
 
@@ -168,7 +141,9 @@ function DatasetActionView(props: Props) {
   const activeDatasetActions = (
     <>
       {" "}
-      {dataset.annotationCount ? <ResumeAnnotationLink dataset={dataset} /> : null}
+      {dataset.latestAnnotationId != null ? (
+        <ResumeAnnotationLink latestAnnotationId={dataset.latestAnnotationId} />
+      ) : null}
       <NewAnnotationLink
         dataset={dataset}
         isCreateAnnotationModalVisible={isCreateAnnotationModalVisible}
@@ -227,14 +202,13 @@ export function getDatasetActionContextMenu({
         type: "group",
         label: "This Dataset",
         children: [
-          dataset.isActive && dataset.annotationCount
+          dataset.isActive && dataset.latestAnnotationId != null
             ? {
                 key: "resume-annotation",
                 icon: <PlayCircleOutlined className="icon-margin-right" />,
                 label: "Resume Annotating",
-                onClick: async () => {
-                  const url = await getLatestAnnotationURL(dataset.id);
-                  if (url != null) window.location.href = url;
+                onClick: () => {
+                  window.location.href = `/annotations/${dataset.latestAnnotationId}`;
                 },
               }
             : null,

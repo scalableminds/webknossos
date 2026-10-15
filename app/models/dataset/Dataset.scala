@@ -113,7 +113,9 @@ case class DatasetCompactInfo(
     usedStorageBytes: Long,
     thumbnailCacheVersion: Int,
     // Active explorationals listable by the requesting user. Only set if requested.
-    annotationCount: Option[Long] = None
+    annotationCount: Option[Long] = None,
+    // Most recently modified of those annotations that are owned by the requesting user. Only set if requested.
+    latestAnnotationId: Option[ObjectId] = None
 ) derives JsonAutoFormat {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
 }
@@ -295,14 +297,14 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         createdSinceOpt
       )
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
-      (annotationCountColumn, annotationCountJoin) = requestingUserIdOpt match {
+      (annotationCountColumns, annotationCountJoin) = requestingUserIdOpt match {
         case Some(requestingUserId) if includeAnnotationCount =>
           // annotationCount join is designed for best index use.
           // The dataset access check is skipped, since only already-checked datasets are joined.
           (
-            q"COALESCE(annotationCounts.count, 0)",
+            q"COALESCE(annotationCounts.count, 0), annotationCounts.latestAnnotationId",
             q"""LEFT JOIN (
-                  SELECT a._dataset, COUNT(*) AS count
+                  SELECT a._dataset, COUNT(*) AS count, (ARRAY_AGG(a._id ORDER BY a.modified DESC, a._id DESC) FILTER (WHERE a._user = $requestingUserId))[1] AS latestAnnotationId
                   FROM webknossos.annotations_ a
                   WHERE a.typ = ${AnnotationType.Explorational}
                   AND a.state = ${AnnotationState.Active}
@@ -311,7 +313,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                 ) annotationCounts
                   ON annotationCounts._dataset = d._id"""
           )
-        case _ => (q"NULL::BIGINT", q"")
+        case _ => (q"NULL::BIGINT, NULL::TEXT", q"")
       }
       query = q"""
             SELECT
@@ -351,7 +353,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               sl.names AS segmentationLayerNames,
               COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes,
               d.thumbnailCacheVersion,
-              $annotationCountColumn AS annotationCount
+              $annotationCountColumns
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
             JOIN webknossos.organizations o
@@ -388,7 +390,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               String,
               Long,
               Int,
-              Option[Long]
+              Option[Long],
+              Option[ObjectId]
           )
         ]
       )
@@ -411,7 +414,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         // Only include usedStorage for datasets of your own organization.
         usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L,
         thumbnailCacheVersion = row._15,
-        annotationCount = row._16
+        annotationCount = row._16,
+        latestAnnotationId = row._17
       )
     )
 

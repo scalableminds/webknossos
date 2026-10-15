@@ -595,15 +595,6 @@ export async function getAnnotationCountForDataset(datasetId: string): Promise<n
   return totalCount != null ? Number.parseInt(totalCount, 10) : 0;
 }
 
-export async function getLatestModifiedAnnotationForDataset(
-  datasetId: string,
-): Promise<APIAnnotationInfo | null> {
-  const annotations: Array<APIAnnotationInfo> = await Request.receiveJSON(
-    `/api/annotations/readable?isFinished=false&limit=1&sortByModified=true&datasetId=${datasetId}`,
-  );
-  return annotations.length > 0 ? annotations[0] : null;
-}
-
 export function getTeamsForSharedAnnotation(
   typ: string,
   id: string,

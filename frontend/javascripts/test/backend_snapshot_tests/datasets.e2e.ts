@@ -12,6 +12,7 @@ import {
   getOrganizationForDataset,
 } from "admin/api/disambiguate_legacy_routes";
 import {
+  deleteDatasetOnDisk,
   getActiveDatasetsOfMyOrganization,
   getDataset,
   getImportedDataset,
@@ -41,15 +42,7 @@ describe("Dataset API (E2E)", () => {
   });
 
   it("getDatasets", async () => {
-    let datasets = await getDatasets();
-    let retry = 0;
-
-    while (JSON.stringify(datasets).indexOf("Not imported yet") === -1 && retry < 10) {
-      datasets = await getDatasets();
-      retry++;
-    }
-
-    datasets = sortBy(datasets, (d) => d.name);
+    const datasets = sortBy(await getDatasets(), (d) => d.name);
     writeTypeCheckingFile(datasets, "dataset", "APIDatasetCompact", {
       isArray: true,
     });
@@ -182,10 +175,8 @@ describe("Dataset API (E2E)", () => {
     expect(base64).toMatchSnapshot();
   });
 
-  /**
-   * WARNING: This test creates a side effect by uploading and saving a dataset in your binaryData folder.
-   * There is no clean up after the test, and the dataset will remain after each test run.
-   */
+  // Deletes the uploaded dataset afterwards. Otherwise, it would stay in binaryData and show up
+  // in the dataset snapshots of later test runs.
   it("Dataset upload", async () => {
     const uploadId = "test-dataset-upload-" + Date.now();
 
@@ -278,12 +269,16 @@ describe("Dataset API (E2E)", () => {
     }
 
     const { datasetId } = await finishResult.json();
-    const result = await fetch(`/api/datasets/${datasetId}/health`, {
-      headers: new Headers(),
-    });
+    try {
+      const result = await fetch(`/api/datasets/${datasetId}/health`, {
+        headers: new Headers(),
+      });
 
-    if (result.status !== 200) {
-      expect.fail("Dataset health check after upload failed");
+      if (result.status !== 200) {
+        expect.fail("Dataset health check after upload failed");
+      }
+    } finally {
+      await deleteDatasetOnDisk(datasetId);
     }
   });
 });

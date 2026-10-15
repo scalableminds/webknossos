@@ -372,12 +372,8 @@ class DatasetArray(
         header.order == ArrayOrder.F &&
         isZeroOffset(offsetInChunk) &&
         axisOrder == AxisOrder.asCxyzFromRank(rank) &&
-        util.Arrays.equals(
-          bufferShape,
-          fullAxisOrder.permuteIndicesPhysicalToWk(
-            chunkShapeAtIndex(fullAxisOrder.permuteIndicesWkToPhysicalLong(chunkIndex))
-          )
-        )
+        // Must come after the axis order check: wk and physical order coincide only for cxyz
+        util.Arrays.equals(bufferShape, chunkShapeAtIndex(chunkIndex))
       case _ => false
     }
 

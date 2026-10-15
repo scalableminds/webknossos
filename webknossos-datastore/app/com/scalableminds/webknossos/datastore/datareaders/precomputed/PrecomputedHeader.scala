@@ -76,7 +76,7 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
 
   override def chunkShapeAtIndex(chunkIndex: Array[Long]): Array[Int] =
     if (isInteriorChunk(chunkIndex)) chunkShape
-    else chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
+    else chunkIndexToNDimensionalBoundingBoxInArray(chunkIndex).map(dim => dim._2 - dim._1)
 
   // Allocation-free check, since this is called on the hot read path.
   private def isInteriorChunk(chunkIndex: Array[Long]): Boolean = {
@@ -92,7 +92,7 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   override def voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
   // Neuroglancer precomputed chunk grids are bounded spatial voxel coordinates, so narrowing back to Int here is safe.
-  def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Long]): Array[(Int, Int)] =
+  def chunkIndexToNDimensionalBoundingBoxInArray(chunkIndex: Array[Long]): Array[(Int, Int)] =
     chunkIndex.zipWithIndex.map { chunkIndexWithDim =>
       val (chunkIndexAtDim, dim) = chunkIndexWithDim
       val beginOffset = voxelOffset(dim) + chunkIndexAtDim * precomputedScale.primaryChunkShape(dim)

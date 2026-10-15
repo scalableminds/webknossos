@@ -16,8 +16,10 @@ class DatasetUploadMetadataStoreTestSuite extends AsyncWordSpec {
 
   // Replaces the Redis-backed get/set with an in-memory map, so no Redis connection is needed.
   private class InMemoryRedisStore
-      extends DataStoreRedisStore(new DataStoreConfig(Configuration.load(play.api.Environment.simple())),
-                                  new DefaultApplicationLifecycle())(using executionContext) {
+      extends DataStoreRedisStore(
+        new DataStoreConfig(Configuration.load(play.api.Environment.simple())),
+        new DefaultApplicationLifecycle()
+      )(using executionContext) {
     private val values = TrieMap.empty[String, String]
 
     override def find(id: String): Fox[String] = values.get(id) match {

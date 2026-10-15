@@ -5,7 +5,15 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
+import com.scalableminds.util.box.Full
+import com.scalableminds.webknossos.datastore.datareaders.ChunkReadCoalescing.ChunkByteRange
+import com.scalableminds.webknossos.datastore.datareaders.{
+  AxisOrder,
+  ChunkReadCoalescing,
+  ChunkReader,
+  ChunkUtils,
+  DatasetArray
+}
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import com.typesafe.scalalogging.LazyLogging
@@ -187,6 +195,46 @@ class Zarr3Array(
       header.chunkShape,
       chunkIndex.zip(header.chunkShape).map { case (i, s) => i * s }
     )
+
+  // Reads the stored chunks of a shard that lie close together with a single request.
+  override def readChunks(chunkIndices: Seq[Array[Long]], coalescing: ChunkReadCoalescing)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[MultiArray]] =
+    if (shardingCodec.isEmpty || !coalescing.isEnabled) super.readChunks(chunkIndices, coalescing)
+    else {
+      val cacheKeys = chunkIndices.map(typedChunkCacheKey)
+      val uncachedPositions =
+        chunkIndices.indices.filter(i => sharedChunkContentsCache.getIfPresent(cacheKeys(i)).isEmpty)
+      for {
+        locations <- Fox.combined(uncachedPositions.map { i =>
+          getShardedChunkPathAndRange(chunkIndices(i)).shiftBox.map(location => (i, location))
+        })
+        // Missing chunks are created from the fill value by readTypedChunkWithCache.
+        storedChunks = locations.collect { case (i, Full((shardPath, range))) => (shardPath, i, range) }
+        requests = storedChunks.groupBy(_._1).toSeq.flatMap { case (shardPath, chunksOfShard) =>
+          ChunkReadCoalescing
+            .coalesce(chunksOfShard.map { case (_, i, range) => ChunkByteRange(i, range.start, range.end) }, coalescing)
+            .map(request => (shardPath, request))
+        }
+        _ <- Fox.batchCombined(requests, coalescing.maxParallelRequests) { case (shardPath, request) =>
+          for {
+            requestBytes <- shardPath.readBytes(ByteRange.startEndExclusive(request.start, request.endExclusive))
+            _ <- Fox.serialCombined(request.chunks) { chunk =>
+              val chunkBytes = requestBytes.slice(
+                Math.toIntExact(chunk.start - request.start),
+                Math.toIntExact(chunk.endExclusive - request.start)
+              )
+              sharedChunkContentsCache.getOrLoad(
+                cacheKeys(chunk.key),
+                _ => chunkReader.decodeAndType(chunkBytes, chunkShapeAtIndex(chunkIndices(chunk.key)))
+              )
+            }
+          } yield ()
+        }
+        chunks <- Fox.serialCombined(chunkIndices)(readTypedChunkWithCache)
+      } yield chunks
+    }
 
   override protected def getShardedChunkPathAndRange(
       chunkIndex: Array[Long]

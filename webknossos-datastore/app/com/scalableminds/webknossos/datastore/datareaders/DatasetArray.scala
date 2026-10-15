@@ -62,7 +62,7 @@ class DatasetArray(
     header.chunkShape :+ 1
   }
 
-  private def chunkShapeAtIndex(index: Array[Long]) =
+  protected def chunkShapeAtIndex(index: Array[Long]): Array[Int] =
     if (axisOrder.hasZAxis) { header.chunkShapeAtIndex(index) }
     else {
       chunkShape // irregular shaped chunk indexes are currently not supported for 2d datasets
@@ -307,6 +307,25 @@ class DatasetArray(
     }
     builder.toString
   }
+
+  // Reads whole chunks, typed and in the order of chunkIndices.
+  def readChunks(chunkIndices: Seq[Array[Long]], coalescing: ChunkReadCoalescing)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[MultiArray]] =
+    Fox.batchCombined(chunkIndices, coalescing.maxParallelRequests)(readTypedChunkWithCache)
+
+  // Kept apart from the keys of getSourceChunkDataWithCache, which may hold untyped chunks.
+  protected def typedChunkCacheKey(chunkIndex: Array[Long]): String = s"${chunkContentsCacheKey(chunkIndex)}__typed"
+
+  protected def readTypedChunkWithCache(chunkIndex: Array[Long])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[MultiArray] =
+    sharedChunkContentsCache.getOrLoad(
+      typedChunkCacheKey(chunkIndex),
+      _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut = false)
+    )
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean = false)(using
       ec: ExecutionContext,

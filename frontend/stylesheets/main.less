@@ -124,6 +124,16 @@
     U+A720-A7FF;
 }
 
+// Navbar wordmark: Nunito Light, subset to "WEBKNOS" and autohinted. Rendered as text instead of
+// SVG paths, which look blurry on low-DPI screens at this size.
+@font-face {
+  font-family: "Nunito Wordmark";
+  src: url("fonts/nunito-wordmark.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: block;
+}
+
 // ----------------------- MAIN STYLES
 /** Global body styles: sets typography, smoothing and enforces full-height layout with navbar padding. */
 body {
@@ -165,25 +175,20 @@ body {
     }
   }
 
-  // logo.svg: the mark followed by the "WEBKNOSSOS" wordmark (viewBox 1920 x 395).
-  .logo-with-wordmark {
-    @logo-height: 30px;
-    height: @logo-height;
-    margin-top: -2px;
+  // Size and spacing match the wordmark in logo.svg next to the 30px mark.
+  .logo-wordmark {
+    margin-left: 10px;
+    font-family: "Nunito Wordmark", @font-family;
+    font-size: 15.5px;
+    font-weight: 300;
+    letter-spacing: -0.35px;
+    color: white;
     vertical-align: middle;
-    overflow: hidden;
+    position: relative;
+    top: 1px;
 
-    svg {
-      color: white;
-      height: @logo-height;
-      width: (@logo-height * 1920 / 395);
-      // antd renders the icon wrapper as inline-flex; don't shrink when clipped on smartphones.
-      flex-shrink: 0;
-    }
-
-    // Only show the mark, which is the square on the left of the SVG.
     @media @smartphones {
-      width: @logo-height;
+      display: none;
     }
   }
 

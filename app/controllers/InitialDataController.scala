@@ -184,7 +184,7 @@ Samplecountry
 
   // Same as the dbtool.js command enable-jobs
   private val defaultWorker = Worker(
-    _id = ObjectId.generate,
+    _id = ObjectId("6194dc03040200b0027f28a1"),
     _dataStore = defaultDataStore.name,
     name = "Dev Worker",
     key = "secretWorkerKey",
@@ -546,6 +546,7 @@ Samplecountry
       _ <- insertLocalDataStoreIfEnabled()
       _ <- insertLocalTracingStoreIfEnabled()
       _ <- insertPretrainedAiModels()
+      _ <- insertDefaultWorkerIfJobsEnabled()
       // All insert calls below this assertion are only executed in the dev setup (where initialDataEnabled is true)!
       _ <- assertInitialDataEnabled
       _ <- organizationService.assertNoOrganizationsPresent
@@ -564,7 +565,6 @@ Samplecountry
       _ <- insertL4DenseDataset()
       _ <- insertRemoteNDDataset()
       _ <- insertCustomAiModel()
-      _ <- insertDefaultWorkerIfJobsEnabled()
 
     } yield ()
 
@@ -709,7 +709,9 @@ Samplecountry
     }
 
   private def insertDefaultWorkerIfJobsEnabled(): Fox[?] =
-    Fox.runIf(conf.Features.jobsEnabled && storeModules.localDataStoreEnabled)(
+    Fox.runIf(
+      conf.Features.jobsEnabled && conf.WebKnossos.SampleOrganization.enabled && storeModules.localDataStoreEnabled
+    )(
       workerDAO.insertOrUpdateSupportedJobCommands(defaultWorker)
     )
 

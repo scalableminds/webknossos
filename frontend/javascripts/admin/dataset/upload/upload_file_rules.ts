@@ -98,7 +98,7 @@ export function getUploadFileRules({
         },
         "The selected files do not match the files of the unfinished upload. Please select the same files as before." +
           (unfinishedUploadToContinue?.filePaths != null
-            ? `The file names are: ${unfinishedUploadToContinue.filePaths.join(", ")}.`
+            ? ` The file names are: ${unfinishedUploadToContinue.filePaths.join(", ")}.`
             : ""),
       ),
     },

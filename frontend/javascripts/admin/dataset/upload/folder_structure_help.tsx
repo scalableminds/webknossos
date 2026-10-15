@@ -1,5 +1,6 @@
 import { Button, Modal, Tabs, Typography } from "antd";
 import { useState } from "react";
+import { ModalWidth } from "theme";
 
 const DOCS_URL = "https://docs.webknossos.org/webknossos/data";
 
@@ -176,7 +177,7 @@ export function FolderStructureHelp({
         open={isOpen}
         onCancel={() => setIsOpen(false)}
         footer={null}
-        width={1000}
+        width={ModalWidth.ExtraLarge}
       >
         <Tabs
           tabPlacement="start"

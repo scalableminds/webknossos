@@ -17,11 +17,11 @@ import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.file.{Files, Path}
 import scala.concurrent.Future
 
-// Volume size is deliberately not a multiple of the chunk size, so the edge chunks are clipped in every axis.
 class PrecomputedArrayTestSuite extends AsyncWordSpec {
 
   private given TokenContext = TokenContext(None)
 
+  // Volume size is deliberately not a multiple of the chunk size, so the edge chunks are clipped in every axis.
   private val volumeSize = Vec3Int(40, 40, 40)
   private val chunkSize = 32
   private val segmentationBlockSize = 8

@@ -538,7 +538,7 @@ function CreateAnimationModal(props: Props) {
                     type="secondary"
                     style={{ display: "block", fontSize: 12, marginTop: 7 }}
                   >
-                    ≈ 18s · 25s · 33s
+                    ≈ 17s · 24s · 32s
                   </Typography.Text>
                 </Col>
               </Row>

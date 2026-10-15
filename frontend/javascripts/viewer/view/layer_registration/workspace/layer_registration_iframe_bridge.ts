@@ -2,30 +2,30 @@ import Deferred from "libs/async/deferred";
 import isObject from "lodash-es/isObject";
 import type { Side } from "../helpers/layer_registration_helpers";
 import {
+  type IframeCommand,
+  type IframeCommandMessage,
+  type IframeCommands,
+  type IframeRole,
   LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE,
   LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE,
   type LayerRegistrationCommand,
   type SaveState,
+  type StoreSaveStateMessage,
+  type WorkerCommandMessage,
 } from "../layer_registration_protocol";
 
-// The layer registration page embeds three annotation views of this app as iframes: the two
-// visible workers ("fixed" and "moving") and a hidden one that holds the persisted landmark
-// annotation ("store"). The page talks to them through their cross-origin API
-// (cross_origin_api.ts).
-export type IframeRole = Side | "store";
 const IFRAME_ROLES: IframeRole[] = ["fixed", "moving", "store"];
 // A command that throws sends an "err" reply, but a reply can still get lost, e.g. if the
 // iframe reloads. Generous, because "save" waits for the server.
 const REPLY_TIMEOUT_MS = 30_000;
 
-// The messages that the iframes send to this page.
+// The messages that the iframes send to this page (see layer_registration_protocol.ts). They come
+// from other windows without a type check, so every field may be missing.
 type IncomingMessage = {
   type?: string;
-  // Set for LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE.
-  command?: LayerRegistrationCommand;
-  // Set for LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE.
-  saveState?: SaveState;
-  // Set for replies to sendMessage. The type of a reply is "ack" or "err".
+  command?: WorkerCommandMessage["command"];
+  saveState?: StoreSaveStateMessage["saveState"];
+  // Set for replies to sendMessage.
   messageId?: string;
   returnValue?: unknown;
   message?: string;
@@ -34,11 +34,12 @@ type IncomingMessage = {
 // The part of an iframe's window that the bridge needs.
 export type IframeWindow = { postMessage: (message: unknown, targetOrigin: string) => void };
 
-export type SendMessage = <T = unknown>(
+// Sends a command of IframeCommands to an iframe and resolves with its return value.
+export type SendMessage = <C extends IframeCommand>(
   role: IframeRole,
-  type: string,
-  args?: unknown[],
-) => Promise<T>;
+  command: C,
+  ...args: IframeCommands[C]["args"]
+) => Promise<IframeCommands[C]["returns"]>;
 
 // What the page does with the messages that are not replies.
 export type IncomingMessageHandlers = {
@@ -46,7 +47,8 @@ export type IncomingMessageHandlers = {
   onStoreSaveState: (saveState: SaveState) => void;
 };
 
-/** The protocol between the layer registration page and its iframes.
+/** The page side of the protocol between the layer registration page and its iframes (see
+ * layer_registration_protocol.ts).
  * - sendMessage calls a command of the cross-origin API of an iframe and resolves with its
  *   return value. It waits until the API of that iframe sent "init", and rejects if the
  *   command fails or no reply arrives in time.
@@ -117,11 +119,7 @@ export class IframeBridge {
     }
   }
 
-  sendMessage: SendMessage = async <T = unknown>(
-    role: IframeRole,
-    type: string,
-    args: unknown[] = [],
-  ): Promise<T> => {
+  sendMessage: SendMessage = async (role, command, ...args) => {
     // An iframe drops messages that arrive before its API is ready.
     await this.readyDeferreds[role].promise();
     const iframeWindow = this.getIframeWindow(role);
@@ -133,12 +131,15 @@ export class IframeBridge {
     this.pendingReplies.set(messageId, deferred);
     const timeoutId = setTimeout(() => {
       if (this.pendingReplies.delete(messageId)) {
-        deferred.reject(new Error(`The "${role}" iframe did not reply to "${type}" in time.`));
+        deferred.reject(new Error(`The "${role}" iframe did not reply to "${command}" in time.`));
       }
     }, this.replyTimeoutMs);
-    iframeWindow.postMessage({ type, args, messageId }, this.targetOrigin);
+    const message: IframeCommandMessage<typeof command> = { type: command, args, messageId };
+    iframeWindow.postMessage(message, this.targetOrigin);
     try {
-      return (await deferred.promise()) as T;
+      // The reply comes from another window, so its type can't be checked. The iframe runs
+      // the same code as this page, so it returns what IframeCommands declares.
+      return (await deferred.promise()) as IframeCommands[typeof command]["returns"];
     } finally {
       clearTimeout(timeoutId);
     }

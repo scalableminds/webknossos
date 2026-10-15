@@ -92,6 +92,9 @@ const handleMessage = async (event) => {
       break;
     }
 
+    // The commands from here to "setAffineLayerTransforms" are used by the layer registration
+    // page. Their arguments and return values are declared in IframeCommands
+    // (layer_registration_protocol.ts); keep both in line.
     case "importLandmarks": {
       assertLayerRegistrationWorker();
       if (!isString(args[0])) {

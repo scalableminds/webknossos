@@ -7,12 +7,12 @@ import type { TreeGroup } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import { getLandmarkPairId } from "viewer/view/layer_registration/helpers/layer_registration_helpers";
 import type {
+  IframeRole,
   LayerRegistrationCommand,
   SaveState,
 } from "viewer/view/layer_registration/layer_registration_protocol";
 import {
   IframeBridge,
-  type IframeRole,
   type IframeWindow,
 } from "viewer/view/layer_registration/workspace/layer_registration_iframe_bridge";
 import { vi } from "vitest";

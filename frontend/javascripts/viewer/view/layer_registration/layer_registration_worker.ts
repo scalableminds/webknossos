@@ -33,14 +33,23 @@ import {
 import {
   getLayerRegistrationWorkerLayerName,
   isLayerRegistrationWorker,
+  LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE,
   LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE,
   type LayerRegistrationCommand,
   type LayerRegistrationViewState,
   type SaveState,
-  sendCommandToLayerRegistrationPage,
+  type StoreSaveStateMessage,
+  type WorkerCommandMessage,
 } from "./layer_registration_protocol";
 
-// Code that runs inside the iframes of the layer registration view.
+// Code that runs inside the iframes of the layer registration view. The iframe side of the
+// commands of the page is in cross_origin_api.ts.
+
+// Sends a command of this worker to the layer registration page (see IframeBridge).
+export function sendCommandToLayerRegistrationPage(command: LayerRegistrationCommand) {
+  const message: WorkerCommandMessage = { type: LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE, command };
+  window.parent.postMessage(message, window.location.origin);
+}
 
 // These letters are not bound in WEBKNOSSOS' plane mode. The listener below does not stop
 // propagation, so a bound key would trigger both actions.
@@ -238,11 +247,13 @@ export function setOverlayLayerColors(colors: Record<string, Vector3> | null) {
 export function reportLayerRegistrationStoreSavedState() {
   listenToStoreProperty(
     (state): SaveState => (isSaving(state) ? "saving" : Model.stateSaved() ? "saved" : "unsaved"),
-    (saveState) =>
-      window.parent.postMessage(
-        { type: LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE, saveState },
-        window.location.origin,
-      ),
+    (saveState) => {
+      const message: StoreSaveStateMessage = {
+        type: LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE,
+        saveState,
+      };
+      window.parent.postMessage(message, window.location.origin);
+    },
     true,
   );
 }

@@ -83,7 +83,7 @@ export function useViewSettings({
     };
     for (const side of SIDES) {
       const matrix = isTransformShown[side] ? matrices[side] : null;
-      sendMessage(side, "setAffineLayerTransforms", [otherLayerNames[side], matrix ?? Identity4x4]);
+      sendMessage(side, "setAffineLayerTransforms", otherLayerNames[side], matrix ?? Identity4x4);
     }
   }, [sendMessage, fixedLayerName, movingLayerName, movingToFixedTransform, isTransformShown]);
 
@@ -96,7 +96,7 @@ export function useViewSettings({
         "errorMessage" in layerEstimation
           ? null
           : layerEstimation.movingToFixedTransform.affineMatrix;
-      sendMessage("fixed", "setAffineLayerTransforms", [layerName, matrix ?? Identity4x4]);
+      sendMessage("fixed", "setAffineLayerTransforms", layerName, matrix ?? Identity4x4);
     }
   }, [sendMessage, inactivePairs]);
 
@@ -110,7 +110,7 @@ export function useViewSettings({
         isTransformAvailable,
         isLandmarkPanelOpen,
       };
-      sendMessage(side, "setLayerRegistrationViewState", [viewState]);
+      sendMessage(side, "setLayerRegistrationViewState", viewState);
     }
   }, [
     sendMessage,
@@ -130,13 +130,13 @@ export function useViewSettings({
     }
     for (const side of SIDES) {
       const colors = isColorOverlayEnabled && isOtherLayerVisible[side] ? overlayColors : null;
-      sendMessage(side, "setOverlayLayerColors", [colors]);
+      sendMessage(side, "setOverlayLayerColors", colors);
     }
   }, [sendMessage, overlayColors, isColorOverlayEnabled, isOtherLayerVisible]);
 
   const setOtherLayerVisibility = (side: Side, isVisible: boolean) => {
     setIsOtherLayerVisible((previous) => ({ ...previous, [side]: isVisible }));
-    sendMessage(side, "setLayerVisibility", [layerNames[OTHER_SIDE[side]], isVisible]);
+    sendMessage(side, "setLayerVisibility", layerNames[OTHER_SIDE[side]], isVisible);
   };
 
   // The first transform (e.g. right after loading) shows the other layer in both workers, so

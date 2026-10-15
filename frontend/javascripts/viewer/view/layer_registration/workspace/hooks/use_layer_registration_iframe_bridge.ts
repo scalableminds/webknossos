@@ -1,8 +1,12 @@
 import type React from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Side } from "../../helpers/layer_registration_helpers";
-import type { LayerRegistrationCommand, SaveState } from "../../layer_registration_protocol";
-import { IframeBridge, type IframeRole } from "../layer_registration_iframe_bridge";
+import type {
+  IframeRole,
+  LayerRegistrationCommand,
+  SaveState,
+} from "../../layer_registration_protocol";
+import { IframeBridge } from "../layer_registration_iframe_bridge";
 
 export type IframeRefs = React.RefObject<Record<IframeRole, HTMLIFrameElement | null>>;
 

@@ -85,16 +85,16 @@ export class LandmarkSync {
     side: Side,
     isCancelled: () => boolean,
   ): Promise<number> {
-    const groupId = await this.sendMessage<number>("store", "ensureTreeGroupPath", [
+    const groupId = await this.sendMessage(
+      "store",
+      "ensureTreeGroupPath",
       getLandmarkGroupPath(this.layerNames, side),
-    ]);
-    const nmlString = await this.sendMessage<string>("store", "exportTreesAsNmlString", [
-      { groupId },
-    ]);
+    );
+    const nmlString = await this.sendMessage("store", "exportTreesAsNmlString", { groupId });
     if (isCancelled()) {
       return groupId;
     }
-    await this.sendMessage(side, "importLandmarks", [nmlString]);
+    await this.sendMessage(side, "importLandmarks", nmlString);
     this.storedFields[side] = getStoredFields(getLandmarks((await parseNml(nmlString)).trees));
     return groupId;
   }
@@ -120,7 +120,7 @@ export class LandmarkSync {
   }
 
   private async fetchLandmarksOfWorker(side: Side): Promise<WorkerLandmarks> {
-    const nmlString = await this.sendMessage<string>(side, "exportTreesAsNmlString");
+    const nmlString = await this.sendMessage(side, "exportTreesAsNmlString");
     return { nmlString, landmarks: getLandmarks((await parseNml(nmlString)).trees) };
   }
 
@@ -150,7 +150,7 @@ export class LandmarkSync {
     for (const side of SIDES) {
       const { nmlString, landmarks: landmarksOfSide } = workerLandmarks[side];
       if (this.hasUnstoredChanges(side, landmarksOfSide)) {
-        await this.sendMessage("store", "replaceTreesInGroup", [nmlString, groupIds[side]]);
+        await this.sendMessage("store", "replaceTreesInGroup", nmlString, groupIds[side]);
         this.storedFields[side] = getStoredFields(landmarksOfSide);
       }
     }
@@ -162,7 +162,7 @@ export class LandmarkSync {
     if (isEqual(pairInfo, this.sentPairInfo[side])) {
       return;
     }
-    await this.sendMessage(side, "setLandmarkPairInfo", [pairInfo]);
+    await this.sendMessage(side, "setLandmarkPairInfo", pairInfo);
     this.sentPairInfo[side] = pairInfo;
   }
 

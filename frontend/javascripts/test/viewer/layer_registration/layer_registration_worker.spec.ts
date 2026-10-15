@@ -57,13 +57,15 @@ describe("Layer registration worker", () => {
     const { sendMessage } = iframes.bridge;
     // The stored landmarks of this side, and what the page knows about the other side, which
     // has the pairs 1, 2 and 3.
-    await sendMessage("fixed", "importLandmarks", [
+    await sendMessage(
+      "fixed",
+      "importLandmarks",
       getLandmarkNml([
         { pairId: 1, position: [1, 1, 1] },
         { pairId: 3, position: [3, 3, 3] },
       ]),
-    ]);
-    await sendMessage("fixed", "setLandmarkPairInfo", [{ openPairIds: [2], otherMaxPairId: 3 }]);
+    );
+    await sendMessage("fixed", "setLandmarkPairInfo", { openPairIds: [2], otherMaxPairId: 3 });
 
     clickAt([2, 2, 2]);
     clickAt([4, 4, 4]);
@@ -75,15 +77,16 @@ describe("Layer registration worker", () => {
     ]);
 
     // The page reads the landmarks of the worker like this.
-    const nmlString = await sendMessage<string>("fixed", "exportTreesAsNmlString");
+    const nmlString = await sendMessage("fixed", "exportTreesAsNmlString");
     const pairIds = getLandmarks((await parseNml(nmlString)).trees).map(({ pairId }) => pairId);
     expect(pairIds.filter((pairId) => pairId != null)).toEqual([1, 3, 2, 4]);
   });
 
   it("gives the pair id of a deleted landmark to the next click", async () => {
-    await iframes.bridge.sendMessage("fixed", "setLandmarkPairInfo", [
-      { openPairIds: [], otherMaxPairId: 0 },
-    ]);
+    await iframes.bridge.sendMessage("fixed", "setLandmarkPairInfo", {
+      openPairIds: [],
+      otherMaxPairId: 0,
+    });
     clickAt([1, 1, 1]);
     // Undoing the click (or deleting the node) removes the node, but keeps the empty tree. The
     // name is part of the action that creates the tree, so no undo step leaves a tree with
@@ -103,23 +106,23 @@ describe("Layer registration worker", () => {
 
   it("exports the landmark pairs with the pair ids as tree ids for the composition wizard", async () => {
     const { sendMessage } = iframes.bridge;
-    await sendMessage("fixed", "importLandmarks", [
+    await sendMessage(
+      "fixed",
+      "importLandmarks",
       getLandmarkNml([
         { pairId: 5, position: [5, 5, 5] },
         { pairId: 2, position: [2, 2, 2] },
       ]),
-    ]);
+    );
     const treeIdsByPairId = enforceSkeletonTracing(Store.getState().annotation)
       .trees.values()
       .flatMap((tree) => {
         const pairId = getLandmarkPairId(tree.name);
-        return pairId != null ? [[pairId, tree.treeId]] : [];
+        return pairId != null ? [[pairId, tree.treeId] as [number, number]] : [];
       })
       .toArray();
 
-    const nmlString = await sendMessage<string>("fixed", "exportLandmarkPairsAsNml", [
-      treeIdsByPairId,
-    ]);
+    const nmlString = await sendMessage("fixed", "exportLandmarkPairsAsNml", treeIdsByPairId);
     // The wizard pairs the trees of its two NML files by their sorted tree ids.
     const exportedTrees = (await parseNml(nmlString)).trees.values().toArray();
     expect(

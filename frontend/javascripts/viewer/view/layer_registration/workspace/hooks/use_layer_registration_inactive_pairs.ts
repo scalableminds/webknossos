@@ -17,11 +17,11 @@ async function readStoredSide(
   groupPath: string[],
 ): Promise<{ nmlString: string | null; landmarks: Landmark[] }> {
   // Reading must not create groups, otherwise every layer would get empty groups.
-  const groupId = await sendMessage<number | null>("store", "findTreeGroupPath", [groupPath]);
+  const groupId = await sendMessage("store", "findTreeGroupPath", groupPath);
   if (groupId == null) {
     return { nmlString: null, landmarks: [] };
   }
-  const nmlString = await sendMessage<string>("store", "exportTreesAsNmlString", [{ groupId }]);
+  const nmlString = await sendMessage("store", "exportTreesAsNmlString", { groupId });
   return { nmlString, landmarks: getLandmarks((await parseNml(nmlString)).trees) };
 }
 

@@ -37,15 +37,17 @@ describe("Layer registration protocol", () => {
 
   it("holds back commands until the iframe sent init, because it would drop them", async () => {
     const pageWindow = iframes.mount("store", handleCrossOriginApiMessage);
-    const groupIdPromise = iframes.bridge.sendMessage<number>("store", "ensureTreeGroupPath", [
+    const groupIdPromise = iframes.bridge.sendMessage(
+      "store",
+      "ensureTreeGroupPath",
       FIXED_SIDE_PATH,
-    ]);
+    );
     await sleep(10);
     expect(iframes.sentMessages.store).toEqual([]);
 
     pageWindow.postMessage({ type: "init" }, "*");
     const groupId = await groupIdPromise;
-    expect(await iframes.bridge.sendMessage("store", "findTreeGroupPath", [FIXED_SIDE_PATH])).toBe(
+    expect(await iframes.bridge.sendMessage("store", "findTreeGroupPath", FIXED_SIDE_PATH)).toBe(
       groupId,
     );
   });
@@ -55,19 +57,15 @@ describe("Layer registration protocol", () => {
     const { sendMessage } = iframes.bridge;
     const treeCountBefore = getTreeCount();
     // Reading must not create groups for layers without landmarks.
-    expect(
-      await sendMessage("store", "findTreeGroupPath", [["color_3", "color_1 landmarks"]]),
-    ).toBe(null);
-    const fixedGroupId = await sendMessage<number>("store", "ensureTreeGroupPath", [
-      FIXED_SIDE_PATH,
-    ]);
+    expect(await sendMessage("store", "findTreeGroupPath", ["color_3", "color_1 landmarks"])).toBe(
+      null,
+    );
+    const fixedGroupId = await sendMessage("store", "ensureTreeGroupPath", FIXED_SIDE_PATH);
     // Asking again must not create a second group with the same name.
-    expect(await sendMessage("store", "ensureTreeGroupPath", [FIXED_SIDE_PATH])).toBe(fixedGroupId);
+    expect(await sendMessage("store", "ensureTreeGroupPath", FIXED_SIDE_PATH)).toBe(fixedGroupId);
     // Only the parent group of the moving side exists so far.
-    expect(await sendMessage("store", "findTreeGroupPath", [MOVING_SIDE_PATH])).toBe(null);
-    const movingGroupId = await sendMessage<number>("store", "ensureTreeGroupPath", [
-      MOVING_SIDE_PATH,
-    ]);
+    expect(await sendMessage("store", "findTreeGroupPath", MOVING_SIDE_PATH)).toBe(null);
+    const movingGroupId = await sendMessage("store", "ensureTreeGroupPath", MOVING_SIDE_PATH);
     expect(fixedGroupId).not.toBe(movingGroupId);
 
     const fixedLandmarks = [
@@ -75,19 +73,25 @@ describe("Layer registration protocol", () => {
       { pairId: 2, position: [4, 5, 6] },
     ] as const;
     const movingLandmarks = [{ pairId: 1, position: [7, 8, 9] }] as const;
-    await sendMessage("store", "replaceTreesInGroup", [
+    await sendMessage(
+      "store",
+      "replaceTreesInGroup",
       getLandmarkNml([...fixedLandmarks]),
       fixedGroupId,
-    ]);
-    await sendMessage("store", "replaceTreesInGroup", [
+    );
+    await sendMessage(
+      "store",
+      "replaceTreesInGroup",
       getLandmarkNml([...movingLandmarks]),
       movingGroupId,
-    ]);
+    );
     // The next sync replaces the landmarks of one side only.
-    await sendMessage("store", "replaceTreesInGroup", [
+    await sendMessage(
+      "store",
+      "replaceTreesInGroup",
       getLandmarkNml([fixedLandmarks[1]]),
       fixedGroupId,
-    ]);
+    );
 
     expect(readStoredLandmarks(FIXED_SIDE_PATH)).toEqual([fixedLandmarks[1]]);
     expect(readStoredLandmarks(MOVING_SIDE_PATH)).toEqual(movingLandmarks);
@@ -95,9 +99,9 @@ describe("Layer registration protocol", () => {
     expect(getTreeCount()).toBe(treeCountBefore + 2);
 
     // The page reads the landmarks of one side in the same format.
-    const nmlString = await sendMessage<string>("store", "exportTreesAsNmlString", [
-      { groupId: movingGroupId },
-    ]);
+    const nmlString = await sendMessage("store", "exportTreesAsNmlString", {
+      groupId: movingGroupId,
+    });
     const exportedLandmarks = getLandmarks((await parseNml(nmlString)).trees);
     expect(exportedLandmarks.map(({ pairId, position }) => ({ pairId, position }))).toEqual(
       movingLandmarks,
@@ -107,19 +111,22 @@ describe("Layer registration protocol", () => {
   it("rejects a command that fails in the iframe instead of waiting for a reply", async () => {
     iframes.mountReady("store", handleCrossOriginApiMessage);
     const { sendMessage } = iframes.bridge;
-    const groupId = await sendMessage<number>("store", "ensureTreeGroupPath", [FIXED_SIDE_PATH]);
-    await sendMessage("store", "replaceTreesInGroup", [
+    const groupId = await sendMessage("store", "ensureTreeGroupPath", FIXED_SIDE_PATH);
+    await sendMessage(
+      "store",
+      "replaceTreesInGroup",
       getLandmarkNml([{ pairId: 1, position: [1, 2, 3] }]),
       groupId,
-    ]);
+    );
 
+    // @ts-expect-error The command doesn't exist, which is what this checks.
     await expect(sendMessage("store", "unknownCommand")).rejects.toThrow("Unsupported");
     // Only the worker iframes can import landmarks.
-    await expect(sendMessage("store", "importLandmarks", ["<things />"])).rejects.toThrow(
+    await expect(sendMessage("store", "importLandmarks", "<things />")).rejects.toThrow(
       "only available in the layer registration view",
     );
     await expect(
-      sendMessage("store", "replaceTreesInGroup", ["<things><thing", groupId]),
+      sendMessage("store", "replaceTreesInGroup", "<things><thing", groupId),
     ).rejects.toThrow('"replaceTreesInGroup" failed');
     // A broken NML must not delete the stored landmarks.
     expect(readStoredLandmarks(FIXED_SIDE_PATH)).toEqual([{ pairId: 1, position: [1, 2, 3] }]);
@@ -140,9 +147,13 @@ describe("Layer registration protocol", () => {
       }
     });
 
+    // The fake iframe answers any command, so a made-up command is enough to check how the
+    // replies are matched.
     const results = await Promise.all([
-      iframes.bridge.sendMessage("fixed", "echo", ["first"]),
-      iframes.bridge.sendMessage("fixed", "echo", ["second"]),
+      // @ts-expect-error "echo" is no real command, see above.
+      iframes.bridge.sendMessage("fixed", "echo", "first"),
+      // @ts-expect-error "echo" is no real command, see above.
+      iframes.bridge.sendMessage("fixed", "echo", "second"),
     ]);
     expect(results).toEqual(["first", "second"]);
   });

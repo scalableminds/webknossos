@@ -56,9 +56,11 @@ async function saveNmlFiles(
   // Both files are read before saving any, so that a failure doesn't leave only one.
   const [fixedNmlString, movingNmlString] = await Promise.all(
     SIDES.map((side) =>
-      sendMessage<string>(side, "exportLandmarkPairsAsNml", [
+      sendMessage(
+        side,
+        "exportLandmarkPairsAsNml",
         pairs.map((pair) => [pair.pairId, pair[side].treeId]),
-      ]),
+      ),
     ),
   );
   saveTextFile(fixedNmlString, getNmlFileName(layerNames, "fixed"));

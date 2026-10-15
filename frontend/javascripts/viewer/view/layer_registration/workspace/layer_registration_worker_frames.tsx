@@ -7,13 +7,13 @@ import {
   SIDES,
   type Side,
 } from "../helpers/layer_registration_helpers";
+import type { IframeRole } from "../layer_registration_protocol";
 import {
   getLayerRegistrationStoreUrl,
   getLayerRegistrationWorkerUrl,
 } from "../layer_registration_protocol";
 import { LandmarkColorDot } from "../panel/layer_registration_pair_table";
 import type { IframeRefs } from "./hooks/use_layer_registration_iframe_bridge";
-import type { IframeRole } from "./layer_registration_iframe_bridge";
 import type { LandmarkSyncStatus } from "./layer_registration_landmark_sync";
 
 // Why the workers are covered, see WorkspaceOverlay.

@@ -4,7 +4,6 @@ import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { useMemo, useState } from "react";
 import type { APIAnnotation, APIDataset } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
 import {
   getTransformPointUnscaledFn,
   invertTransform,
@@ -19,6 +18,7 @@ import {
 } from "../helpers/layer_registration_helpers";
 import { getCopySources, getMovingLayerRows } from "../helpers/layer_registration_moving_layers";
 import { getLayerPairTransformEstimate } from "../helpers/layer_registration_transform_estimation";
+import type { IframeRole } from "../layer_registration_protocol";
 import {
   getLayerRegistrationListUrl,
   type LayerRegistrationCommand,
@@ -31,7 +31,6 @@ import { useInactivePairs } from "./hooks/use_layer_registration_inactive_pairs"
 import { useLandmarkSync } from "./hooks/use_layer_registration_landmark_sync";
 import { useLeavePrompt } from "./hooks/use_layer_registration_leave_prompt";
 import { useViewSettings } from "./hooks/use_layer_registration_view_settings";
-import type { IframeRole } from "./layer_registration_iframe_bridge";
 import {
   downloadLandmarkPairs,
   type LandmarkExportFormat,
@@ -150,8 +149,8 @@ export function LayerRegistrationWorkspace({
     for (const side of SIDES) {
       const landmark = pair.landmarks[side];
       if (landmark != null) {
-        sendMessage(side, "setActiveNode", [landmark.nodeId, false, true]);
-        sendMessage(side, "centerPositionAnimated", [landmark.position]);
+        sendMessage(side, "setActiveNode", landmark.nodeId, false, true);
+        sendMessage(side, "centerPositionAnimated", landmark.position);
       }
     }
   };
@@ -168,8 +167,8 @@ export function LayerRegistrationWorkspace({
         const isOnlyLandmarkOfTree =
           landmarks[side].filter(({ treeId }) => treeId === landmark.treeId).length === 1;
         await (isOnlyLandmarkOfTree
-          ? sendMessage(side, "deleteTree", [landmark.treeId])
-          : sendMessage(side, "deleteNode", [landmark.nodeId, landmark.treeId]));
+          ? sendMessage(side, "deleteTree", landmark.treeId)
+          : sendMessage(side, "deleteNode", landmark.nodeId, landmark.treeId));
       }
     } catch (error) {
       handleGenericError(error as Error, "Could not delete the landmark pair.");
@@ -183,12 +182,14 @@ export function LayerRegistrationWorkspace({
       return;
     }
     const { movingToFixedTransform } = estimation;
-    const position = await sendMessage<Vector3>(side, "getCameraPosition");
+    const position = await sendMessage(side, "getCameraPosition");
     const transformToOtherSide =
       side === "fixed" ? invertTransform(movingToFixedTransform) : movingToFixedTransform;
-    sendMessage(OTHER_SIDE[side], "centerPositionAnimated", [
+    sendMessage(
+      OTHER_SIDE[side],
+      "centerPositionAnimated",
       getTransformPointUnscaledFn(transformToOtherSide)(position),
-    ]);
+    );
   };
 
   const downloadLandmarks = async (format: LandmarkExportFormat) => {
@@ -214,7 +215,7 @@ export function LayerRegistrationWorkspace({
     command: "setAnnotationName" | "setAnnotationDescription",
     value: string,
   ) => {
-    sendMessage("store", command, [value]).catch((error) =>
+    sendMessage("store", command, value).catch((error) =>
       handleGenericError(error as Error, "Could not update the layer registration."),
     );
   };
@@ -251,7 +252,7 @@ export function LayerRegistrationWorkspace({
       return;
     }
     try {
-      await sendMessage("fixed", "importLandmarks", [nmlString]);
+      await sendMessage("fixed", "importLandmarks", nmlString);
     } catch (error) {
       handleGenericError(error as Error, "Could not copy the landmarks.");
     }

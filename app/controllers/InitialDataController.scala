@@ -24,8 +24,11 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   DataFormat,
+  DataLayerAttachments,
   DataSourceId,
   ElementClass,
+  LayerAttachment,
+  LayerAttachmentDataformat,
   StaticColorLayer,
   StaticSegmentationLayer,
   UsableDataSource
@@ -152,7 +155,7 @@ Samplecountry
     isDeactivated = false,
     lastTaskTypeId = None
   )
-  // Publication of the l4_sample data, as listed on webknossos.org.
+  // Publication of the l4dense data, as listed on webknossos.org.
   private val defaultPublication = Publication(
     ObjectId("5c766bec6c01006c018c7459"),
     Some(Instant(1571875200000L)), // 24 October 2019
@@ -167,12 +170,12 @@ Samplecountry
         |Data available at [https://l4dense2019.brain.mpg.de/](https://l4dense2019.brain.mpg.de/)""".stripMargin
     )
   )
-  private val singleDatasetPublication = Publication(
+  private val dummyPublication = Publication(
     ObjectId("6ac000000000000000000001"),
-    Some(Instant.now),
+    Some(Instant(1514764800000L)), // 1 January 2018, so it is listed below the L4 publication
     Some("https://static.webknossos.org/images/icon-only.svg"),
-    Some("Dummy publication with a single dataset"),
-    Some("Doe, J., Roe, R. · *Nature Methods* 2025 · [DOI](https://github.com/scalableminds/webknossos)")
+    Some("Dummy publication with several datasets"),
+    Some("Doe, J., Roe, R. · *Nature Methods* 2018 · [DOI](https://github.com/scalableminds/webknossos)")
   )
   private val defaultDataStore =
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
@@ -332,7 +335,7 @@ Samplecountry
     _id = ObjectId("68b80290d4000090f8f4aa62"),
     _dataStore = defaultDataStore.name,
     _organization = defaultOrganization._id,
-    _publication = Some(defaultPublication._id),
+    _publication = None,
     _uploader = Some(defaultUser._id),
     _folder = defaultOrganization._rootFolder,
     inboxSourceHash = Some(defaultDataSource.hashCode()),
@@ -354,12 +357,12 @@ Samplecountry
     )
   )
 
-  // Further virtual copies of l4_sample_remote, so that the publications view has several datasets to show.
-  private def l4SampleRemoteCopy(id: String, directoryName: String, publication: Publication, brainRegion: String) = {
+  // Further virtual copies of l4_sample_remote, so that the dummy publication has several datasets to show.
+  private def l4SampleRemoteCopy(id: String, directoryName: String, brainRegion: String) = {
     val dataSource = defaultDataSource.copy(id = DataSourceId(directoryName, defaultOrganization._id))
     val dataset = defaultDataset.copy(
       _id = ObjectId(id),
-      _publication = Some(publication._id),
+      _publication = Some(dummyPublication._id),
       inboxSourceHash = Some(dataSource.hashCode()),
       directoryName = directoryName,
       name = directoryName,
@@ -368,10 +371,82 @@ Samplecountry
     (dataset, dataSource)
   }
   private val publicationDatasets = List(
-    l4SampleRemoteCopy("6ac000000000000000000002", "l4_sample_remote_2", defaultPublication, "Cortex L4"),
-    l4SampleRemoteCopy("6ac000000000000000000003", "l4_sample_remote_3", defaultPublication, "Cortex L2/3"),
-    l4SampleRemoteCopy("6ac000000000000000000004", "l4_sample_remote_4", defaultPublication, "Cortex L5"),
-    l4SampleRemoteCopy("6ac000000000000000000005", "l4_sample_remote_5", singleDatasetPublication, "Cortex L4")
+    l4SampleRemoteCopy("6ac000000000000000000002", "l4_sample_remote_2", "Cortex L4"),
+    l4SampleRemoteCopy("6ac000000000000000000003", "l4_sample_remote_3", "Cortex L2/3"),
+    l4SampleRemoteCopy("6ac000000000000000000004", "l4_sample_remote_4", "Cortex L5"),
+    l4SampleRemoteCopy("6ac000000000000000000005", "l4_sample_remote_5", "Cortex L4")
+  )
+
+  // Full l4dense dataset of the Motta et al. 2019 paper, including predictions and segmentation attachments.
+  private val l4DenseBaseUrl = "https://static.webknossos.org/data/l4dense_motta_et_al_demo"
+  private val l4DenseBoundingBox = BoundingBox(Vec3Int(128, 128, 128), 5445, 8380, 3285)
+  private val l4DenseMagList =
+    Vec3Int(1, 1, 1) :: Vec3Int(2, 2, 1) :: (2 to 10).map(i => Vec3Int(1 << i, 1 << i, 1 << (i - 1))).toList
+  private def l4DenseMags(layerName: String) = l4DenseMagList.map { mag =>
+    val magPath = if (mag == Vec3Int(1, 1, 1)) "1" else s"${mag.x}-${mag.y}-${mag.z}"
+    MagLocator(
+      mag = mag,
+      path = Some(UPath.fromStringUnsafe(s"$l4DenseBaseUrl/$layerName/$magPath")),
+      axisOrder = Some(AxisOrder(1, 2, Some(3), Some(0)))
+    )
+  }
+  private def l4DenseAttachment(name: String, subPath: String) =
+    LayerAttachment(
+      name,
+      UPath.fromStringUnsafe(s"$l4DenseBaseUrl/segmentation/$subPath/$name"),
+      LayerAttachmentDataformat.zarr3
+    )
+  private val l4DenseDataSource = UsableDataSource(
+    id = DataSourceId("l4dense_motta_et_al_demo", defaultOrganization._id),
+    dataLayers = List(
+      StaticColorLayer(
+        name = "color",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = l4DenseBoundingBox,
+        elementClass = ElementClass.uint8,
+        mags = l4DenseMags("color")
+      ),
+      StaticColorLayer(
+        name = "predictions",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = BoundingBox(Vec3Int(0, 0, 0), 5632, 8704, 3584),
+        elementClass = ElementClass.uint24,
+        mags = l4DenseMags("predictions")
+      ),
+      StaticSegmentationLayer(
+        name = "segmentation",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = l4DenseBoundingBox,
+        elementClass = ElementClass.uint32,
+        mags = l4DenseMags("segmentation"),
+        attachments = Some(
+          DataLayerAttachments(
+            meshes = Seq(l4DenseAttachment("meshfile_4-4-2", "meshes")),
+            agglomerates = (5 to 100 by 5).map(i => l4DenseAttachment(s"agglomerate_view_$i", "agglomerates")),
+            segmentIndex = Some(l4DenseAttachment("segmentIndex", "segmentIndex")),
+            connectomes = Seq(l4DenseAttachment("paper_l4_full_connectome", "connectomes"))
+          )
+        ),
+        largestSegmentId = Some(2504697)
+      )
+    ),
+    scale = VoxelSize(Vec3Double(11.24, 11.24, 28), LengthUnit.nanometer)
+  )
+  private val l4DenseDataset = defaultDataset.copy(
+    _id = ObjectId("6ac000000000000000000006"),
+    _publication = Some(defaultPublication._id),
+    inboxSourceHash = Some(l4DenseDataSource.hashCode()),
+    description = Some(
+      """Dense connectomic reconstruction in layer 4 of mouse somatosensory cortex.
+        |
+        |A Motta, M Berning, KM Boergens, B Staffler, M Beining, S Loomba, P Hennig, H Wissler, M Helmstaedter\
+        |Science. 24 October 2019. [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)
+        |
+        |Segmentation by [scalable minds](https://home.webknossos.org/services/automated-segmentation).""".stripMargin
+    ),
+    directoryName = l4DenseDataSource.id.directoryName,
+    name = "L4 Dense Connectome (Motta et al. 2019)",
+    voxelSize = Some(l4DenseDataSource.scale)
   )
 
   private val remoteNDZarrDataSource = UsableDataSource(
@@ -459,6 +534,7 @@ Samplecountry
       _ <- insertPublication()
       _ <- insertDataset()
       _ <- insertPublicationDatasets()
+      _ <- insertL4DenseDataset()
       _ <- insertRemoteNDDataset()
       _ <- insertCustomAiModel()
 
@@ -566,7 +642,7 @@ Samplecountry
     if (publications.isEmpty) {
       for {
         _ <- publicationDAO.insertOne(defaultPublication)
-        _ <- publicationDAO.insertOne(singleDatasetPublication)
+        _ <- publicationDAO.insertOne(dummyPublication)
       } yield ()
     } else Fox.successful(())
   }
@@ -589,6 +665,8 @@ Samplecountry
     Fox.serialCombined(publicationDatasets) { case (dataset, dataSource) =>
       insertDatasetIfAbsent(dataset, dataSource)
     }
+
+  private def insertL4DenseDataset(): Fox[?] = insertDatasetIfAbsent(l4DenseDataset, l4DenseDataSource)
 
   private def insertRemoteNDDataset(): Fox[?] = insertDatasetIfAbsent(remoteNDZarrDataset, remoteNDZarrDataSource)
 

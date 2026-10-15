@@ -216,7 +216,7 @@ class WKRemoteDataStoreController @Inject() (
             user._id,
             dataStore.name,
             projectName,
-            uploadInfo.description.getOrElse(""),
+            description = "",
             AlignmentProjectStatus.UPLOADING,
             invalidReason = None,
             voxelSize,

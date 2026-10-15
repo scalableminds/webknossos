@@ -105,7 +105,6 @@ export type AlignmentProjectUploadInfo = {
     totalFileSizeInBytes: number;
   };
   name: string;
-  description: string;
   organizationId: string;
   voxelSizeFactor: Vector3;
   voxelSizeUnit: string;

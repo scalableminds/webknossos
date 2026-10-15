@@ -139,7 +139,6 @@ case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLaye
 case class AlignmentProjectUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
     name: String,
-    description: Option[String],
     organizationId: String,
     voxelSizeFactor: Vec3Double,
     voxelSizeUnit: LengthUnit

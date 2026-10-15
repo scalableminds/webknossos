@@ -29,7 +29,6 @@ import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer
 
 type FormValues = {
   name: string;
-  description: string;
   datastoreUrl: string;
   voxelSize: Vector3;
   voxelSizeUnit: UnitLong;
@@ -171,7 +170,6 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
           totalFileSizeInBytes: totalSizeInBytes,
         },
         name: values.name,
-        description: values.description ?? "",
         organizationId: activeUser.organization,
         voxelSizeFactor: values.voxelSize,
         voxelSizeUnit: values.voxelSizeUnit,
@@ -290,10 +288,6 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="description" label="Description">
-            <Input.TextArea rows={3} />
-          </Form.Item>
-
           <Form.Item label="Files" required>
             <FileDropzone
               onDropAccepted={(acceptedFiles) =>

@@ -187,8 +187,8 @@ class DatasetUploadMetadataStore @Inject() (protected val store: DataStoreRedisS
   private def redisKeyForVoxelSize(uploadId: String): String =
     s"$keyPrefix${uploadId}___voxelSize"
 
-  def findUploadIdByDataSourceId(dataSourceId: DataSourceId): Fox[String] =
-    store.find(redisKeyForUploadIdByDataSourceId(dataSourceId))
+  def findUploadIdByDataSourceId(dataSourceId: DataSourceId)(implicit ec: ExecutionContext): Fox[String] =
+    store.findParsed[String](redisKeyForUploadIdByDataSourceId(dataSourceId))
 
   def findLinkedLayerIdentifiers(uploadId: String)(implicit ec: ExecutionContext): Fox[Seq[LinkedLayerIdentifier]] =
     store.findParsed[Seq[LinkedLayerIdentifier]](redisKeyForLinkedLayerIdentifier(uploadId))

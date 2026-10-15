@@ -1,5 +1,4 @@
-import { Button, Modal, Tabs, Typography } from "antd";
-import { useState } from "react";
+import { Modal, Tabs, Typography } from "antd";
 import { ModalWidth } from "theme";
 
 const DOCS_URL = "https://docs.webknossos.org/webknossos/data";
@@ -137,7 +136,7 @@ great_dataset.precomputed  # Root folder
     key: "single-files",
     label: "Single image files",
     description:
-      "A single volumetric image file such as a multi-page TIFF, CZI, Imaris (IMS) or NIfTI file.",
+      "A single volumetric image file such as a multi-page TIFF, CZI or Imaris (IMS) file.",
     tree: `
 great_dataset.czi      # The file itself, or a zip archive containing it`,
     docsPath: "image_stacks.html",
@@ -157,37 +156,37 @@ function FolderStructureTab({ example }: { example: FolderStructureExample }) {
   );
 }
 
-export function FolderStructureHelp({
+// Rendered outside of the dropzone, because React events bubble through portals.
+// Otherwise, files dragged onto the modal would be added to the selection.
+export function FolderStructureHelpModal({
+  open,
+  onClose,
   isDatasetConversionEnabled,
 }: {
+  open: boolean;
+  onClose: () => void;
   isDatasetConversionEnabled: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
   const examples = FOLDER_STRUCTURE_EXAMPLES.filter(
     (example) => isDatasetConversionEnabled || !example.needsConversion,
   );
 
   return (
-    <>
-      <Button type="link" onClick={() => setIsOpen(true)}>
-        How should my folder look?
-      </Button>
-      <Modal
-        title="How should my folder look?"
-        open={isOpen}
-        onCancel={() => setIsOpen(false)}
-        footer={null}
-        width={ModalWidth.ExtraLarge}
-      >
-        <Tabs
-          tabPlacement="start"
-          items={examples.map((example) => ({
-            key: example.key,
-            label: example.label,
-            children: <FolderStructureTab example={example} />,
-          }))}
-        />
-      </Modal>
-    </>
+    <Modal
+      title="How should my folder look?"
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      width={ModalWidth.ExtraLarge}
+    >
+      <Tabs
+        tabPlacement="start"
+        items={examples.map((example) => ({
+          key: example.key,
+          label: example.label,
+          children: <FolderStructureTab example={example} />,
+        }))}
+      />
+    </Modal>
   );
 }

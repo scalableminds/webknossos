@@ -205,10 +205,13 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
     useUploadableDatastores(datastores, form);
   const inspection = useFileInspection(files);
   const unfinishedUploads = useUnfinishedUploads(selectedDatastoreUrl, activeUser?.organization);
-  const upload = useResumableDatasetUpload((datasetId, datasetName, needsConversion) => {
-    form.setFieldsValue({ name: "", zipFile: [] });
-    setUnfinishedUploadToContinue(null);
-    onUploaded(datasetId, datasetName, needsConversion);
+  const upload = useResumableDatasetUpload({
+    onUploaded: (datasetId, datasetName, needsConversion) => {
+      form.setFieldsValue({ name: "", zipFile: [] });
+      setUnfinishedUploadToContinue(null);
+      onUploaded(datasetId, datasetName, needsConversion);
+    },
+    onUploadAborted: () => setUnfinishedUploadToContinue(null),
   });
 
   useEffect(() => {
@@ -225,10 +228,10 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
     if (isContinuingUpload || selectedFiles.length === 0) return;
     // Don't overwrite a name the user typed.
     if (form.isFieldTouched("name") && form.getFieldValue("name")) return;
-    form.setFieldsValue({
-      name: inferDatasetName(selectedFiles.map((file) => file.path || file.name)),
-    });
-    form.validateFields(["name"]);
+    const name = inferDatasetName(selectedFiles.map((file) => file.path || file.name));
+    form.setFieldsValue({ name });
+    // Leave it to the user to fill in a name that couldn't be inferred.
+    if (name !== "") form.validateFields(["name"]);
   };
 
   const continueUnfinishedUpload = (unfinishedUpload: UnfinishedUpload) => {

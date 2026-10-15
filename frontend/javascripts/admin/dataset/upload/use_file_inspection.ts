@@ -1,6 +1,6 @@
 import { sendAnalyticsEvent } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
-import importDynamic from "libs/import_dynamic";
+import importDynamic, { DynamicImportError } from "libs/import_dynamic";
 import { getFileExtension } from "libs/utils";
 import countBy from "lodash-es/countBy";
 import { useEffect, useState } from "react";
@@ -16,16 +16,15 @@ export type FileInspection =
   | { status: "empty" }
   | { status: "inspecting" }
   | { status: "invalidArchive" }
+  // An unexpected error occurred, e.g., the zip library could not be loaded.
+  | { status: "failed" }
   | { status: "done"; format: DetectedDatasetFormat; containsAnnotation: boolean };
 
 async function listArchiveEntries(file: File): Promise<string[] | null> {
   // @zip.js is a fairly large module
   // Dynamically import it to avoid loading it on Dashboard/admin pages.
-  const zipJs = await importDynamic(() => import("@zip.js/zip.js")).catch(() => null);
-  if (zipJs == null) {
-    // The user was already notified about the failed import by importDynamic.
-    return null;
-  }
+  // A failed import is rethrown, because it doesn't mean that the archive is invalid.
+  const zipJs = await importDynamic(() => import("@zip.js/zip.js"));
   try {
     const reader = new zipJs.ZipReader(new zipJs.BlobReader(file));
     const entries = await reader.getEntries();
@@ -73,9 +72,19 @@ export function useFileInspection(files: FileWithPath[]): FileInspection {
     }
     let isCancelled = false;
     setInspection({ status: "inspecting" });
-    inspectFiles(files).then((result) => {
-      if (!isCancelled) setInspection(result);
-    });
+    inspectFiles(files).then(
+      (result) => {
+        if (!isCancelled) setInspection(result);
+      },
+      (error) => {
+        // A failed dynamic import was already reported to the user by importDynamic.
+        if (!(error instanceof DynamicImportError)) {
+          console.error(error);
+          ErrorHandling.notify(error as Error);
+        }
+        if (!isCancelled) setInspection({ status: "failed" });
+      },
+    );
     return () => {
       isCancelled = true;
     };

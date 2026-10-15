@@ -19,6 +19,7 @@ import type { FileWithPath } from "react-dropzone";
 import { useBlocker } from "react-router";
 import type { APITeam } from "types/api_types";
 import type { UnitLong, Vector3 } from "viewer/constants";
+import { getTotalFileSize } from "./detect_dataset_format";
 
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
 
@@ -68,15 +69,24 @@ function useBlockNavigationWhile(isBlocking: boolean) {
 
   useEffect(() => {
     if (!isBlocking) return;
-    const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Older browsers only show the prompt if returnValue is set.
+      event.returnValue = "";
+    };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [isBlocking]);
 }
 
-export function useResumableDatasetUpload(
-  onUploaded: (datasetId: string, datasetName: string, needsConversion: boolean) => void,
-) {
+export function useResumableDatasetUpload({
+  onUploaded,
+  onUploadAborted,
+}: {
+  onUploaded: (datasetId: string, datasetName: string, needsConversion: boolean) => void;
+  // Called when the upload failed to finish or was cancelled, i.e., it can't be continued.
+  onUploadAborted: () => void;
+}) {
   const { modal } = App.useApp();
   const [status, setStatus] = useState<UploadStatus>({ kind: "idle" });
   const activeUploadRef = useRef<ActiveUpload | null>(null);
@@ -99,7 +109,7 @@ export function useResumableDatasetUpload(
         uploadId,
         totalFileCount: files.length,
         filePaths: files.map((file) => file.path || ""),
-        totalFileSizeInBytes: files.reduce((sum, file) => sum + file.size, 0),
+        totalFileSizeInBytes: getTotalFileSize(files),
       },
       datasetName,
       organizationId: request.organizationId,
@@ -154,6 +164,7 @@ export function useResumableDatasetUpload(
           Toast.error(messages["dataset.upload_failed"]);
           activeUploadRef.current = null;
           setStatus({ kind: "idle" });
+          onUploadAborted();
         },
       );
     });
@@ -208,6 +219,7 @@ export function useResumableDatasetUpload(
     await cancelDatasetUpload(activeUpload.datastoreUrl, activeUpload.uploadId);
     activeUploadRef.current = null;
     setStatus({ kind: "idle" });
+    onUploadAborted();
     Toast.success(messages["dataset.upload_cancel"]);
   };
 

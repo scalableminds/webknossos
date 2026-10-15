@@ -69,6 +69,11 @@ function getBannerProps(
       return { type: "info", icon: <LoadingOutlined />, title: "Inspecting the selected files …" };
     case "invalidArchive":
       return { type: "error", title: messages["dataset.upload_invalid_zip"] };
+    case "failed":
+      return {
+        type: "error",
+        title: "The selected files could not be inspected. Please reload the page and try again.",
+      };
   }
 
   const { format } = inspection;

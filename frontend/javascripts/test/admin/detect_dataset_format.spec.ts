@@ -53,6 +53,16 @@ describe("detectDatasetFormat", () => {
     expect(detectDatasetFormat(["ds/color/1/header.wkw"])).toMatchObject({ formatName: "WKW" });
   });
 
+  it("does not report WKW bucket folders of a single magnification as layers", () => {
+    expect(
+      detectDatasetFormat([
+        "ds/color/1/header.wkw",
+        "ds/color/1/z0/y0/x0.wkw",
+        "ds/color/1/z1/y0/x0.wkw",
+      ]),
+    ).toEqual({ kind: "native", formatName: "WKW", layerNames: [] });
+  });
+
   it("recognizes single- and multi-layer image stacks", () => {
     expect(
       detectDatasetFormat(["slice_0001.tif", "slice_0002.tif", "slice_0003.TIFF", ".DS_Store"]),
@@ -68,9 +78,9 @@ describe("detectDatasetFormat", () => {
   });
 
   it("recognizes single-file volumes", () => {
-    expect(detectDatasetFormat(["brain.nii.gz"])).toEqual({
+    expect(detectDatasetFormat(["brain.ims"])).toEqual({
       kind: "imageFiles",
-      formatName: "NIfTI",
+      formatName: "IMS",
       fileCount: 1,
     });
     expect(detectDatasetFormat(["volume.tif"])).toEqual({
@@ -98,9 +108,15 @@ describe("inferDatasetName", () => {
     expect(inferDatasetName(["slice_0001.tif", "slice_0002.tif", "slice_0142.tif"])).toBe("slice");
   });
 
-  it("falls back to the first file name", () => {
-    expect(inferDatasetName(["b.tif", "a.tif"])).toBe("a");
+  it("uses the full name of a single file", () => {
     expect(inferDatasetName(["my_dataset.zip"])).toBe("my_dataset");
+    expect(inferDatasetName(["dataset_v2.zip"])).toBe("dataset_v2");
+    expect(inferDatasetName(["brain_2024.czi"])).toBe("brain_2024");
+  });
+
+  it("returns an empty name if no name of the minimum length can be inferred", () => {
+    expect(inferDatasetName(["b.tif", "a.tif"])).toBe("");
+    expect(inferDatasetName(["/color/1.png", "/color/2.png", "/segmentation/1.png"])).toBe("");
   });
 });
 

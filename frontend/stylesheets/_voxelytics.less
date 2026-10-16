@@ -9,6 +9,21 @@
         flex-direction: column;
     }
 
+    // Matches antd's md breakpoint, below which task_list_view.tsx stacks the DAG and task list.
+    @media (max-width: 767px) {
+        min-width: 0;
+
+        .task-panel {
+            // Let the page scroll instead of nesting a scroll container in the task list.
+            height: auto;
+        }
+
+        // The fixed-size minimap would cover a large part of the narrow graph.
+        .react-flow__minimap {
+            display: none;
+        }
+    }
+
     .task-panel-name {
         color: #777;
         font-size: 0.9em;

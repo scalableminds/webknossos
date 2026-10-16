@@ -290,7 +290,9 @@ function CreateAnimationModal(props: Props) {
     const layerNames = Object.keys(state.localSegmentationStateByLayer);
     const { preferredQualityForMeshAdHocComputation } = state.temporaryConfiguration;
 
-    const meshes: RenderAnimationOptions["meshes"] = layerNames.flatMap((layerName) => {
+    const meshLayerNames = areMeshesEnabled ? layerNames : [];
+
+    const meshes: RenderAnimationOptions["meshes"] = meshLayerNames.flatMap((layerName) => {
       const meshInfos = state.localSegmentationStateByLayer[layerName]?.meshes?.[axis] || {};
 
       const layer = getLayerByName(state.dataset, layerName) as APISegmentationLayer;

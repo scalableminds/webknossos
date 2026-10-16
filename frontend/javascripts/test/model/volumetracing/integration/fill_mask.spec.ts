@@ -7,7 +7,7 @@ describe("maskShapeFromVoxelBuffer2D", () => {
   it.each([OrthoViews.PLANE_XY, OrthoViews.PLANE_YZ, OrthoViews.PLANE_XZ] as const)(
     "selects exactly the buffer's voxels in %s",
     (plane) => {
-      // Third dimension 7, in a mag where it is 14 in mag 1.
+      // The labeler converts the third-dimension value 14 (mag 1) to 7 in its mag 2.
       const labeler = new SectionLabeler("tracingId", plane, 14, [2, 2, 2]);
       const buffer = labeler.createVoxelBuffer2D([5, 9], 4, 3);
       const set: Array<[number, number]> = [

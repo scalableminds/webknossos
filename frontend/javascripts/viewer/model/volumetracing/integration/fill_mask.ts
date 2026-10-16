@@ -10,7 +10,13 @@ import type { VoxelBuffer2D } from "viewer/model/volumetracing/legacy/section_la
 import type { Vector3 } from "../core/volume_annotation_types";
 import type { MaskShape } from "../core/volume_edit_intents";
 
+/**
+ * Returns a MaskShape (a dense box of selected voxels, see volume_edit_intents.ts)
+ * that selects exactly the non-zero voxels of `buffer`. The box is one voxel
+ * thick along the third dimension of `plane`.
+ */
 export function maskShapeFromVoxelBuffer2D(buffer: VoxelBuffer2D, plane: OrthoView): MaskShape {
+  // The 3D axes that the buffer's in-plane x and y map to.
   const [u, v] = Dimensions.getIndices(plane);
   const origin: Vector3 = [0, 0, 0];
   buffer.getFast3DCoordinate(buffer.minCoord2d[0], buffer.minCoord2d[1], origin);
@@ -18,12 +24,14 @@ export function maskShapeFromVoxelBuffer2D(buffer: VoxelBuffer2D, plane: OrthoVi
   size[u] = buffer.width;
   size[v] = buffer.height;
 
-  // MaskShape.selected is x-fastest over `size`; the buffer is indexed a * height + b.
+  // Index offset in `selected` for a step of one voxel along each 3D axis.
   const strides: Vector3 = [1, size[0], size[0] * size[1]];
   const selected = new Uint8Array(buffer.width * buffer.height);
-  for (let a = 0; a < buffer.width; a++) {
-    for (let b = 0; b < buffer.height; b++) {
-      if (buffer.getValue(a, b) !== 0) selected[a * strides[u] + b * strides[v]] = 1;
+  // X and Y refer to the current plane. They correspond to U and V
+  // in the global coordinate system.
+  for (let x = 0; x < buffer.width; x++) {
+    for (let y = 0; y < buffer.height; y++) {
+      if (buffer.getValue(x, y) !== 0) selected[x * strides[u] + y * strides[v]] = 1;
     }
   }
   return { kind: "mask", origin, size, selected };

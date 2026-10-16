@@ -19,6 +19,7 @@ import {
   setShareModalVisibilityAction,
 } from "viewer/model/actions/ui_actions";
 import Store from "viewer/store";
+import { openInMenu } from "viewer/view/action_bar/open_in/open_in_menu";
 import ShareViewDatasetModalView from "viewer/view/action_bar/share_view_dataset_modal_view";
 import ButtonComponent from "viewer/view/components/button_component";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
@@ -73,6 +74,7 @@ export const viewDatasetMenu = [
   renderAnimationMenuItem,
   keyboardShortcutsConfigMenuItem,
   pythonClientMenuItem,
+  openInMenu,
 ];
 
 export default function ViewDatasetActionsView(props: Props) {

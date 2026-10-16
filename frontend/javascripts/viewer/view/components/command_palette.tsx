@@ -30,6 +30,7 @@ import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions
 import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import type { UserConfiguration } from "viewer/store";
+import { openInMenu } from "../action_bar/open_in/open_in_menu";
 import {
   type TracingViewMenuProps,
   useTracingViewMenuItems,
@@ -66,9 +67,17 @@ const getLabelForAction = (action: NonNullable<ItemType>) => {
 
 const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutId[] => {
   return compact(
-    menuActions.map((action) => {
+    menuActions.flatMap((action) => {
       if (action == null) {
         return null;
+      }
+      if (action.key === openInMenu.key && "children" in action && action.children != null) {
+        // Expose the entries of the "Open in" submenu as individual commands.
+        const parentLabel = getLabelForAction(action);
+        return mapMenuActionsToCommands(action.children).map((command) => ({
+          ...command,
+          name: `${parentLabel} ${command.name}`,
+        }));
       }
       const onClickAction = "onClick" in action && action.onClick != null ? action.onClick : noop;
       return {

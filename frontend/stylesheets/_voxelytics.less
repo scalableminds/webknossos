@@ -9,6 +9,21 @@
         flex-direction: column;
     }
 
+    // Matches antd's md breakpoint, below which task_list_view.tsx stacks the DAG and task list.
+    @media (max-width: 767px) {
+        min-width: 0;
+
+        .task-panel {
+            // Let the page scroll instead of nesting a scroll container in the task list.
+            height: auto;
+        }
+
+        // The fixed-size minimap would cover a large part of the narrow graph.
+        .react-flow__minimap {
+            display: none;
+        }
+    }
+
     .task-panel-name {
         color: var(--ant-color-text-description);
         font-size: 0.9em;
@@ -130,6 +145,14 @@
             background-color: var(--ant-color-bg-container);
         }
 
+        .react-flow__node.dag-node-running {
+            animation: dag-node-running-pulse 1.5s ease-in-out infinite;
+
+            @media (prefers-reduced-motion: reduce) {
+                animation: none;
+            }
+        }
+
         .controls {
             flex-direction: column;
             display: flex;
@@ -149,5 +172,17 @@
                 border-bottom-right-radius: 0;
             }
         }
+    }
+}
+
+// Same blue as the running state's border color in dag_view.tsx
+@keyframes dag-node-running-pulse {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(22, 119, 255, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 0 4px rgba(22, 119, 255, 0.15);
     }
 }

@@ -175,6 +175,7 @@ describe("Volume Interpolation", () => {
       brushActiveCellAt(at(0, 0, interpolationDepth), plane);
       const labeledSlice = await slice(0);
       expect(labeledSlice.filter((value) => value === activeCellId).length).toBeGreaterThan(0);
+      expect(await slice(interpolationDepth)).toEqual(labeledSlice);
 
       Store.dispatch(interpolateSegmentationLayerAction());
       await waitUntilNotBusy();

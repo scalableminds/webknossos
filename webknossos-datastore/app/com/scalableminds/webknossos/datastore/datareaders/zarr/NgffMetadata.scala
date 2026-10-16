@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.models.VoxelSize
+import play.api.libs.json.{Reads, __}
 
 case class NgffGroupHeader(zarr_format: Int) derives JsonAutoFormat
 object NgffGroupHeader {
@@ -60,4 +61,8 @@ case class NgffLabelsGroup(labels: List[String]) derives JsonAutoFormat
 
 object NgffLabelsGroup {
   val LABEL_PATH = "labels/.zattrs"
+
+  // In OME-Zarr 0.5, the labels group has a zarr.json, which lists the label images under attributes.ome.labels.
+  val LABEL_PATH_ZARR3 = "labels/zarr.json"
+  val zarr3Reads: Reads[NgffLabelsGroup] = (__ \ "attributes" \ "ome").read[NgffLabelsGroup]
 }

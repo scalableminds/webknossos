@@ -42,7 +42,6 @@ function Eyebrow({ children }: { children: string }) {
             fontSize: token.fontSizeSM,
             letterSpacing: "0.14em",
             textTransform: "uppercase",
-            // Only the dot carries the cyan accent; cyan text is illegible on light backgrounds.
             color: token.colorText,
           }}
         >

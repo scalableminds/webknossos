@@ -1,4 +1,5 @@
 import {
+  ApartmentOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
@@ -19,6 +20,7 @@ import {
   type CollapseProps,
   Dropdown,
   Flex,
+  Grid,
   Input,
   type MenuProps,
   Row,
@@ -275,6 +277,13 @@ export default function TaskListView({
   const location = useLocation();
 
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
+
+  // On small screens (e.g., phones), the DAG takes up too much space. Hide it by default
+  // and stack it above the task list once the user chooses to show it.
+  const screens = Grid.useBreakpoint();
+  const isCompact = !screens.md;
+  const [isDagVisibleOnCompact, setIsDagVisibleOnCompact] = useState(false);
+  const isDagVisible = !isCompact || isDagVisibleOnCompact;
 
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 
@@ -624,7 +633,7 @@ export default function TaskListView({
         minHeight: "calc(100vh - 100px)",
       }}
     >
-      <Col xs={10}>
+      <Col xs={24} md={10}>
         <Flex vertical style={{ height: "100%" }}>
           <Typography.Title
             level={3}
@@ -649,16 +658,33 @@ export default function TaskListView({
               {totalRuntime.humanize()}
             </Tooltip>
           </Typography.Title>
-          <div style={{ flex: 1, position: "relative" }}>
-            <DAGView
-              dag={report.dag}
-              filteredTasks={filteredTasks}
-              onClickHandler={handleSelectTask}
-            />
-          </div>
+          {isCompact && (
+            <Button
+              icon={<ApartmentOutlined />}
+              onClick={() => setIsDagVisibleOnCompact(!isDagVisibleOnCompact)}
+              style={{ alignSelf: "flex-start", marginBottom: 10 }}
+            >
+              {isDagVisibleOnCompact ? "Hide Workflow Graph" : "Show Workflow Graph"}
+            </Button>
+          )}
+          {isDagVisible && (
+            <div
+              style={
+                isCompact
+                  ? { height: "60vh", position: "relative", marginBottom: 10 }
+                  : { flex: 1, position: "relative" }
+              }
+            >
+              <DAGView
+                dag={report.dag}
+                filteredTasks={filteredTasks}
+                onClickHandler={handleSelectTask}
+              />
+            </div>
+          )}
         </Flex>
       </Col>
-      <Col xs={14} className="task-panel">
+      <Col xs={24} md={14} className="task-panel">
         {openMetatask != null && (
           <div style={{ marginBottom: 8 }}>
             <Link to={removeUrlParam(location, "metatask")}>
@@ -673,14 +699,14 @@ export default function TaskListView({
             zIndex: 1,
           }}
         >
-          <Flex gap={"small"}>
+          <Flex gap={"small"} wrap>
             <Search
               placeholder="Filter tasks"
               onSearch={handleOnSearch}
               style={{ minWidth: 150 }}
               allowClear
             />
-            <Space>
+            <Space wrap>
               <Button onClick={() => onReload()} icon={<SyncOutlined spin={isLoading} />}>
                 Refresh
               </Button>

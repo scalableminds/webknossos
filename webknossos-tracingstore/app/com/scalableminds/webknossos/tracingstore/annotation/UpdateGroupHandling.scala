@@ -5,11 +5,24 @@ import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.collections.SequenceUtils
 import com.typesafe.scalalogging.LazyLogging
 
+object UpdateGroupHandling {
+
+  // Actions that need to be the only update in their respective update group. Reused both by the
+  // replay-time regrouping below (which assumes this already holds) and by AnnotationTransactionService,
+  // which asserts it at commit time.
+  def isIsolationSensitiveAction(a: UpdateAction): Boolean = a match {
+    case _: RevertToVersionAnnotationAction => true
+    case _: AddLayerAnnotationAction        => true
+    case _: ResetToBaseAnnotationAction     => true
+    case _                                  => false
+  }
+}
+
 trait UpdateGroupHandling extends LazyLogging {
 
   /*
    * Regroup update action groups, isolating the update actions that need it.
-   * (Currently RevertToVersionAnnotationAction and AddLayerAnnotationAction)
+   * (See UpdateGroupHandling.isIsolationSensitiveAction)
    * Assumes they are already the only update in their respective group.
    * Expects groups sorted by version in descending order
    * Outputs (potentially fewer!) groups in ascending order
@@ -26,7 +39,9 @@ trait UpdateGroupHandling extends LazyLogging {
       ) ?~> Msg.Annotation.ApplyUpdate.updateGroupVersionsNotSortedDesc
       splitGroupLists: List[List[(Long, List[UpdateAction])]] = SequenceUtils.splitAndIsolate(
         updateActionGroupsWithVersions.reverse
-      )(actionGroup => actionGroup._2.exists(updateAction => isIsolationSensitiveAction(updateAction)))
+      )(actionGroup =>
+        actionGroup._2.exists(updateAction => UpdateGroupHandling.isIsolationSensitiveAction(updateAction))
+      )
       result = splitGroupLists.flatMap { (groupsToConcatenate: List[(Long, List[UpdateAction])]) =>
         concatenateUpdateActionGroups(groupsToConcatenate)
       }
@@ -38,12 +53,6 @@ trait UpdateGroupHandling extends LazyLogging {
     val updates = groups.flatMap(_._2)
     val targetVersionOpt: Option[Long] = groups.map(_._1).lastOption
     targetVersionOpt.map(targetVersion => (targetVersion, updates))
-  }
-
-  private def isIsolationSensitiveAction(a: UpdateAction): Boolean = a match {
-    case _: RevertToVersionAnnotationAction => true
-    case _: AddLayerAnnotationAction        => true
-    case _                                  => false
   }
 
   /*

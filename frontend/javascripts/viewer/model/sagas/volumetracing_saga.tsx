@@ -57,7 +57,9 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { createSendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import Dimensions from "viewer/model/dimensions";
+import type { MagInfo } from "viewer/model/helpers/mag_info";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
@@ -68,8 +70,16 @@ import {
 } from "viewer/model/sagas/saga_helpers";
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
-import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
+import {
+  deleteSegmentDataVolumeAction,
+  updateBucketPartial,
+} from "viewer/model/sagas/volume/update_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import {
+  encodeBucketDiffBase64,
+  runAxisForPlane,
+} from "viewer/model/volumetracing/core/bucket_diff";
+import type { RunAxis } from "viewer/model/volumetracing/core/bucket_voxel_mask";
 import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/legacy/section_labeling";
@@ -258,7 +268,12 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     // Only the brush is driven from viewer/model/volumetracing; the trace
     // tool below still builds up a section labeler.
-    let brushDriver: BrushDriver | null = null;
+    let brushStroke: {
+      driver: BrushDriver;
+      magInfo: MagInfo;
+      // Run order of the wire encoding, in which this viewport's strokes are contiguous.
+      runAxis: RunAxis;
+    } | null = null;
 
     if (isBrushTool(activeTool)) {
       const segmentationLayer = yield* call(
@@ -278,7 +293,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       const radius: Vector3 = [0, 1, 2].map(
         (axis) => (unzoomedRadius * baseVoxelFactors[axis]) / labeledMag[axis],
       ) as Vector3;
-      brushDriver = new BrushDriver(
+      const driver = new BrushDriver(
         {
           cube: segmentationLayer.cube,
           denseMags: segmentationLayer.cube.magInfo.getDenseMags(),
@@ -297,6 +312,11 @@ export function* editVolumeLayerAsync(): Saga<never> {
         },
         toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
       );
+      brushStroke = {
+        driver,
+        magInfo: segmentationLayer.cube.magInfo,
+        runAxis: runAxisForPlane(planeAxis),
+      };
     }
 
     let lastPosition = startEditingAction.positionInLayerSpace;
@@ -342,20 +362,39 @@ export function* editVolumeLayerAsync(): Saga<never> {
         currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
       }
 
-      if (brushDriver != null) {
+      if (brushStroke != null) {
         // One incremental capsule per pointer-move; the transaction's write set
         // coalesces overlap, and mag propagation is deferred to pointer-up.
-        brushDriver.extend(toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag));
+        brushStroke.driver.extend(
+          toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag),
+        );
       }
 
       lastPosition = addToContourListAction.positionInLayerSpace;
     }
 
-    if (brushDriver != null) {
+    if (brushStroke != null) {
       // Pointer-up: mag propagation runs once over the coalesced write set.
+      const { voxels, bucketDiffs } = brushStroke.driver.finish();
       // Only a stroke that wrote something counts, so that the "no voxels
       // were changed" hint below still fires when overwrite-empty skipped all.
-      if (brushDriver.finish().voxels > 0) wroteVoxelsBox.value = true;
+      if (voxels > 0) wroteVoxelsBox.value = true;
+      if (bucketDiffs.length > 0) {
+        const { magInfo, runAxis } = brushStroke;
+        // The core's BucketAddress is structurally the viewer's, additional
+        // coordinates included, so it goes into createSendBucketInfo as-is.
+        yield* put(
+          pushSaveQueueTransaction(
+            bucketDiffs.map((diff) =>
+              updateBucketPartial(
+                createSendBucketInfo(diff.address, magInfo),
+                encodeBucketDiffBase64(diff, runAxis),
+                volumeTracing.tracingId,
+              ),
+            ),
+          ),
+        );
+      }
     }
     // For every tool, including the brush: fills the area enclosed by the
     // stroke if there is one (for the brush, only when it is released near its

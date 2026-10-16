@@ -53,6 +53,7 @@ import { LOG_LEVELS } from "viewer/constants";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import DAGView, { colorHasher } from "./dag_view";
 import { formatLog } from "./log_tab";
+import { getTaskExecutions, type TaskListLocationState } from "./task_runs_tab";
 import TaskView from "./task_view";
 import { addAfterPadding, addBeforePadding } from "./utils";
 
@@ -271,14 +272,18 @@ export default function TaskListView({
   // expandedTask = state of the collapsible list
   const [expandedTasks, setExpandedTasks] = useState<Array<string>>([]);
   const params = useParams<{ highlightedTask?: string }>();
-  const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
+  const highlightedTask =
+    (location.state as TaskListLocationState | null)?.highlightedTask ||
+    params.highlightedTask ||
+    "";
 
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 
   useEffect(() => {
+    if (highlightedTask === "") return;
     setExpandedTasks([highlightedTask]);
     handleFocusTask(highlightedTask);
   }, [highlightedTask]);
@@ -545,6 +550,10 @@ export default function TaskListView({
     }
 
     const taskArtifacts = report.artifacts[task.taskName] || {};
+    const taskExecutions = getTaskExecutions(
+      report.tasks.find((t) => t.taskName === task.taskName)?.runs ?? [],
+      report.runs,
+    );
     let foreignWorkflow: null | [string, string] = null;
     if (taskInfo.state === VoxelyticsRunState.SKIPPED) {
       foreignWorkflow = Object.values(taskArtifacts)[0]?.foreignWorkflow ?? null;
@@ -593,6 +602,7 @@ export default function TaskListView({
           artifacts={taskArtifacts}
           dag={report.dag}
           taskInfo={taskInfo}
+          taskExecutions={taskExecutions}
           onSelectTask={handleSelectTask}
         />
       ),

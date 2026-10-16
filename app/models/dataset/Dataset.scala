@@ -477,8 +477,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
 
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
     isUnreportedOpt match {
-      case Some(true)  => q"status = ${DataSourceStatus.unreported} OR status = ${DataSourceStatus.deletedByUser}"
-      case Some(false) => q"status != ${DataSourceStatus.unreported} AND status != ${DataSourceStatus.deletedByUser}"
+      case Some(true)  => q"status IN ${SqlToken.tupleFromList(DataSourceStatus.unreportedStatusList)}"
+      case Some(false) => q"status NOT IN ${SqlToken.tupleFromList(DataSourceStatus.unreportedStatusList)}"
       case None        => q"TRUE"
     }
 

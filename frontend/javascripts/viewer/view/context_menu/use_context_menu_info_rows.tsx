@@ -10,6 +10,7 @@ import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { truncateStringToLength } from "libs/utils";
 import { useState } from "react";
+import { shallowEqual } from "react-redux";
 import { LongUnitToShortUnitMap } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -21,7 +22,6 @@ import { getSegmentsForLayer } from "viewer/model/accessors/volumetracing_access
 import type { MutableNode, Tree } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import type { ContextMenuInfo } from "viewer/store";
-import Store from "viewer/store";
 import { CopyIconWithTooltip } from "./copy_icon_with_tooltip";
 import { getInfoMenuItem, positionToString } from "./helpers";
 import { useSegmentStatisticsLabels } from "./use_segment_statistics_labels";
@@ -88,28 +88,28 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
     }
   }
 
-  const clickedNodesPosition =
-    nodeContextMenuNode != null ? getNodePosition(nodeContextMenuNode, Store.getState()) : null;
+  // Node positions depend on the skeleton transforms, which are read from the state.
+  const clickedNodesPosition = useWkSelector(
+    (state) => (nodeContextMenuNode != null ? getNodePosition(nodeContextMenuNode, state) : null),
+    shallowEqual,
+  );
 
   const positionToMeasureDistanceTo =
     nodeContextMenuNode != null ? clickedNodesPosition : globalPosition;
   const activeNode = skeletonTracing != null ? getActiveNode(skeletonTracing, activeTreeId) : null;
-
-  const getActiveNodePosition = () => {
-    if (activeNode == null) {
-      throw new Error("getActiveNodePosition was called even though activeNode is null.");
-    }
-    return getNodePosition(activeNode, Store.getState());
-  };
+  const activeNodePosition = useWkSelector(
+    (state) => (activeNode != null ? getNodePosition(activeNode, state) : null),
+    shallowEqual,
+  );
 
   const distanceToSelection =
-    activeNode != null && positionToMeasureDistanceTo != null
+    activeNodePosition != null && positionToMeasureDistanceTo != null
       ? [
           formatNumberToLength(
-            V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, voxelSize.factor),
+            V3.scaledDist(activeNodePosition, positionToMeasureDistanceTo, voxelSize.factor),
             LongUnitToShortUnitMap[voxelSize.unit],
           ),
-          formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
+          formatLengthAsVx(V3.length(V3.sub(activeNodePosition, positionToMeasureDistanceTo))),
         ]
       : null;
 

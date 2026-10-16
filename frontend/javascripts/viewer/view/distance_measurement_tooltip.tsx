@@ -9,7 +9,8 @@ import {
 } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useRef } from "react";
-import { useDispatch } from "react-redux";
+import { shallowEqual, useDispatch } from "react-redux";
+import type { VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
@@ -37,6 +38,32 @@ function DistanceEntry({ distance }: { distance: string }) {
   );
 }
 
+const NOT_SCALING_FACTOR: Vector3 = [1, 1, 1];
+
+function getFormattedMeasurement(activeTool: AnnotationTool, voxelSize: VoxelSize) {
+  const { lineMeasurementGeometry, areaMeasurementGeometry } = getSceneController();
+  const unit = LongUnitToShortUnitMap[voxelSize.unit];
+  if (activeTool === AnnotationTool.LINE_MEASUREMENT) {
+    return {
+      valueInVx: formatLengthAsVx(lineMeasurementGeometry.getDistance(NOT_SCALING_FACTOR), 1),
+      valueInMetricUnit: formatNumberToLength(
+        lineMeasurementGeometry.getDistance(voxelSize.factor),
+        unit,
+      ),
+    };
+  }
+  if (activeTool === AnnotationTool.AREA_MEASUREMENT) {
+    return {
+      valueInVx: formatAreaAsVx(areaMeasurementGeometry.getArea(NOT_SCALING_FACTOR), 1),
+      valueInMetricUnit: formatNumberToArea(
+        areaMeasurementGeometry.getArea(voxelSize.factor),
+        unit,
+      ),
+    };
+  }
+  return { valueInVx: "", valueInMetricUnit: "" };
+}
+
 export default function DistanceMeasurementTooltip() {
   const lastMeasuredGlobalPosition = useWkSelector(
     (state) => state.uiInformation.measurementToolInfo.lastMeasuredPosition,
@@ -46,7 +73,6 @@ export default function DistanceMeasurementTooltip() {
   const flycamRotation = useWkSelector((state) => getRotationInRadian(state.flycam));
   const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
-  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const planeRatio = useWkSelector((state) =>
     getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
   );
@@ -92,28 +118,16 @@ export default function DistanceMeasurementTooltip() {
     activeGeometry.resetAndHide,
   ]);
 
+  // The measurement geometries are not part of the store, but every change to them
+  // is followed by a dispatch of setLastMeasuredPositionAction. Reading them in a
+  // selector re-renders this component whenever the formatted values change.
+  const { valueInVx, valueInMetricUnit } = useWkSelector(
+    (state) => getFormattedMeasurement(activeTool, state.dataset.dataSource.scale),
+    shallowEqual,
+  );
+
   if (lastMeasuredGlobalPosition == null || tooltipPosition == null) {
     return null;
-  }
-
-  let valueInVx = "";
-  let valueInMetricUnit = "";
-  const notScalingFactor = [1, 1, 1] as Vector3;
-
-  if (activeTool === AnnotationTool.LINE_MEASUREMENT) {
-    const { lineMeasurementGeometry } = getSceneController();
-    valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(notScalingFactor), 1);
-    valueInMetricUnit = formatNumberToLength(
-      lineMeasurementGeometry.getDistance(voxelSize.factor),
-      LongUnitToShortUnitMap[voxelSize.unit],
-    );
-  } else if (activeTool === AnnotationTool.AREA_MEASUREMENT) {
-    const { areaMeasurementGeometry } = getSceneController();
-    valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(notScalingFactor), 1);
-    valueInMetricUnit = formatNumberToArea(
-      areaMeasurementGeometry.getArea(voxelSize.factor),
-      LongUnitToShortUnitMap[voxelSize.unit],
-    );
   }
 
   const { left, top } = getTooltipPosition(isMeasuring, tooltipRef, viewportRect, tooltipPosition);

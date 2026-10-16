@@ -67,7 +67,7 @@ function ProjectCreateView() {
   };
 
   const isEditMode = projectId != null;
-  const projectName = form.getFieldValue("name");
+  const projectName = Form.useWatch("name", form);
   const title =
     isEditMode && projectId ? `Update Project ${projectName || projectId}` : "Create Project";
   const fullWidth = {

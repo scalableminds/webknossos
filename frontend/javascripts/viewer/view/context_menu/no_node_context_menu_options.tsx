@@ -109,8 +109,11 @@ export function useNoNodeContextMenuOptions(
   // proofreading (agglomerate) operations remain available.
   const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
 
-  const maybeUnmappedSegmentId =
-    globalPosition != null ? getUnmappedSegmentIdForPosition(globalPosition) : null;
+  // The segment id depends on live state that is not passed to the function (e.g., loaded
+  // buckets, visible layer). Reading it in a selector keeps it up to date.
+  const maybeUnmappedSegmentId = useWkSelector(() =>
+    globalPosition != null ? getUnmappedSegmentIdForPosition(globalPosition) : null,
+  );
 
   const boundingBoxActions = useBoundingBoxMenuOptions(contextInfo);
   const meshRelatedItems = useMeshItems(contextInfo);

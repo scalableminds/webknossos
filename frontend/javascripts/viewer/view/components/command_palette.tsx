@@ -349,7 +349,7 @@ export const CommandPalette = () => {
             return { name: getLabelForPath(entry.key), path: entry.key };
           });
 
-    const analysisSubMenu = getAnalysisSubMenu(true);
+    const analysisSubMenu = getAnalysisSubMenu(true, activeUser);
     const analysisCommands =
       analysisSubMenu != null
         ? analysisSubMenu.children.map((entry) => {

@@ -784,6 +784,8 @@ export type APIFeatureToggles = {
   readonly mitochondriaInferralCostInMilliCreditsPerGVx: number;
   readonly instancesInferralCostInMilliCreditsPerGVx: number;
   readonly alignmentCostInMilliCreditsPerGVx: number;
+  readonly alignmentProjectAlignCostInMilliCreditsPerGB: number;
+  readonly alignmentProjectRenderUnalignedCostInMilliCreditsPerGB: number;
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;
@@ -820,6 +822,7 @@ export enum APIJobCommand {
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
   TRAIN_NEURON_MODEL = "train_neuron_model",
   TRAIN_INSTANCE_MODEL = "train_instance_model",
+  ALIGN = "align",
   // Only used for backwards compatibility, e.g. to display results.
   DEPRECATED_INFER_NUCLEI = "infer_nuclei",
   DEPRECATED_INFER_WITH_MODEL = "infer_with_model",
@@ -846,6 +849,10 @@ export type ApiJobArgs = {
   readonly modelId: string | null | undefined;
   readonly boundingBox: string | null | undefined;
   readonly ndBoundingBox: WkLibsNdBoundingBox | null | undefined;
+  readonly newDatasetName: string | null | undefined;
+  // Inclusive section numbers of align jobs. null means all sections of the alignment project.
+  readonly sectionRange: [number, number] | null | undefined;
+  readonly renderUnaligned: boolean | null | undefined;
 };
 
 export type APIJob = {
@@ -864,6 +871,7 @@ export type APIJob = {
   readonly created: number;
   readonly lastRetry: number | null | undefined;
   readonly costInMilliCredits: number | null | undefined;
+  readonly alignmentProjectId: string | null | undefined;
 };
 
 export type AiModel = {

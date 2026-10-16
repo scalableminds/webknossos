@@ -748,15 +748,5 @@ async fn create_organization_directory(pool: &sqlx::PgPool, clients: &ServiceCli
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sample_data_sources_parse() {
-        for dataset in sample_datasets() {
-            let source = dataset_source::parse_data_source(&dataset.source).unwrap();
-            assert_eq!(source.organization, SAMPLE_ORGANIZATION_ID);
-            assert_eq!(source.layers.len(), 2);
-        }
-    }
-}
+#[path = "initial_data_tests.rs"]
+mod tests;

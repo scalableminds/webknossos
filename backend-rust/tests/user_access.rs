@@ -11,12 +11,11 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    service_clients::{ServiceClientConfig, ServiceClients},
-    user_access,
+    stores::client::{ServiceClientConfig, ServiceClients},
 };
 
 fn app(db: &TestDb, allow_delete: bool) -> Router {
-    user_access::router(allow_delete)
+    webknossos_backend::remote::user_access::router(allow_delete)
         .layer(Extension(
             ServiceClients::new(ServiceClientConfig {
                 rpc_token: "process-secret".into(),
@@ -194,7 +193,7 @@ async fn callbacks_validate_service_keys_before_rpc_bypass_and_dataset_permissio
         .1,
         json!({"granted":false})
     );
-    let disabled = user_access::router(false)
+    let disabled = webknossos_backend::remote::user_access::router(false)
         .layer(Extension(
             ServiceClients::new(ServiceClientConfig {
                 rpc_token: "process-secret".into(),

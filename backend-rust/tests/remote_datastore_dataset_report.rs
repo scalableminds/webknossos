@@ -17,9 +17,8 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    application_info::{MiscConfig, MiscState},
-    remote_datastore_dataset_report,
-    service_clients::{ServiceClientConfig, ServiceClients},
+    stores::client::{ServiceClientConfig, ServiceClients},
+    system::application_info::{MiscConfig, MiscState},
 };
 
 /// One recorded datastore call: method, URI (incl. query), JSON body.
@@ -84,7 +83,7 @@ fn app(db: &TestDb, jobs_enabled: bool) -> Router {
     };
     misc.analytics.uri = String::new();
     misc.analytics.save_to_database_enabled = true;
-    remote_datastore_dataset_report::router()
+    webknossos_backend::remote::datastore::dataset_report::router()
         .layer(Extension(clients))
         .layer(Extension(MiscState::new(misc)))
         .with_state(AppState {

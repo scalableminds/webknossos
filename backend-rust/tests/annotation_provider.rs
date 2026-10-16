@@ -18,8 +18,7 @@ use prost::Message;
 use serde_json::{Value, json};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use webknossos_backend::{
-    annotation_access,
-    annotation_provider::{
+    annotation::provider::{
         ANNOTATION_NOT_FOUND, AccessContext, AnnotationDataSourceStore, AnnotationIdentifier,
         AnnotationLayer, AnnotationLayerType, AnnotationProvider, AnnotationType,
         CompoundAnnotation, FoxFailure, MERGE_FAILED_COMPOUND, MERGE_FAILED_IN_TRACINGSTORE,
@@ -30,10 +29,10 @@ use webknossos_backend::{
     },
     auth::AuthUser,
     error::ApiError,
-    id::ObjectId,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
-    service_clients::ServiceClientConfig,
-    tracingstore_client::{TRACING_STORE_NOT_FOUND, TracingStoreClient},
+    stores::client::ServiceClientConfig,
+    stores::tracing_client::{TRACING_STORE_NOT_FOUND, TracingStoreClient},
+    util::id::ObjectId,
 };
 
 const TOKEN: &str = "rpc-secret-for-provider-tests";
@@ -499,12 +498,13 @@ async fn saved_restrictions_require_read_access_and_use_runtime_defaults() {
             .restrictions_for(owner_context, &identifier)
             .await
             .unwrap();
-        let metadata = annotation_access::find(&db.pool, Some(&owner), annotation, false)
-            .await
-            .unwrap();
+        let metadata =
+            webknossos_backend::annotation::access::find(&db.pool, Some(&owner), annotation, false)
+                .await
+                .unwrap();
         assert_eq!(
             restrictions,
-            annotation_access::restrictions(&metadata, Some(&owner))
+            webknossos_backend::annotation::access::restrictions(&metadata, Some(&owner))
         );
         assert!(restrictions.allow_access);
         assert_eq!(restrictions.allow_update, update);

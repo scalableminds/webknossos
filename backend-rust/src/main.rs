@@ -28,18 +28,19 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let slack = webknossos_backend::slack::install_global(&config.slack);
     let pool = db::connect(&config.database).await?;
     slack.notice_startup(&config.misc.build_info.version());
-    let housekeeping = webknossos_backend::housekeeping::spawn(pool.clone(), &config.housekeeping);
-    let credit_ticker = webknossos_backend::credit_ticker::spawn(
+    let housekeeping =
+        webknossos_backend::background::housekeeping::spawn(pool.clone(), &config.housekeeping);
+    let credit_ticker = webknossos_backend::background::credit_ticker::spawn(
         pool.clone(),
         &config.credit_ticker,
         config.misc.monthly_free_milli_credits,
     );
-    let used_storage_scan = webknossos_backend::dataset_storage::spawn(
+    let used_storage_scan = webknossos_backend::organization::storage::spawn(
         pool.clone(),
-        webknossos_backend::service_clients::ServiceClients::new(config.service_client.clone())?,
+        webknossos_backend::stores::client::ServiceClients::new(config.service_client.clone())?,
         &config.used_storage,
     );
-    let worker_liveness = webknossos_backend::worker_liveness::spawn(
+    let worker_liveness = webknossos_backend::background::worker_liveness::spawn(
         pool.clone(),
         &config.worker_liveness,
         config.jobs.worker_liveness_timeout,

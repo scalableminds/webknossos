@@ -13,11 +13,11 @@ use std::time::Duration;
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation_metadata::NOT_ALLOWED,
-    annotation_mutex::{self, ACQUIRE_FAILED, RELEASE_FAILED},
-    annotation_provider::{ANNOTATION_NOT_FOUND, AnnotationProvider, RESOURCE_NOT_FOUND},
-    service_clients::ServiceClientConfig,
-    tracingstore_client::TracingStoreClient,
+    annotation::metadata::NOT_ALLOWED,
+    annotation::mutex::{ACQUIRE_FAILED, RELEASE_FAILED},
+    annotation::provider::{ANNOTATION_NOT_FOUND, AnnotationProvider, RESOURCE_NOT_FOUND},
+    stores::client::ServiceClientConfig,
+    stores::tracing_client::TracingStoreClient,
 };
 
 struct World {
@@ -97,7 +97,10 @@ fn app(db: &TestDb, expiry: Duration) -> Router {
         TracingStoreClient::new(ServiceClientConfig::default()).unwrap(),
     );
     Router::new()
-        .nest("/api", annotation_mutex::router(expiry))
+        .nest(
+            "/api",
+            webknossos_backend::annotation::mutex::router(expiry),
+        )
         .layer(Extension(provider))
         .with_state(AppState {
             pool: db.pool.clone(),

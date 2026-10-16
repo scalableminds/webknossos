@@ -23,10 +23,10 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation_download::{
+    annotation::io::download::{
         DOWNLOAD_FAILED, DOWNLOAD_NOT_ALLOWED, NOT_ALLOWED, play_header_parameter,
     },
-    annotation_provider::{ANNOTATION_NOT_FOUND, project_not_found},
+    annotation::provider::{ANNOTATION_NOT_FOUND, project_not_found},
     proto::{
         AnnotationProto, SkeletonTracing, VolumeTracing,
         datastore::{

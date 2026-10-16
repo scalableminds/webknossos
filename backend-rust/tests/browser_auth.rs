@@ -13,7 +13,7 @@ use common::TestDb;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    browser_auth::{self, BrowserAuthConfig, CookieAuthenticator},
+    auth::browser::{BrowserAuthConfig, CookieAuthenticator},
     mail::RecordingMailer,
 };
 
@@ -52,8 +52,14 @@ fn decodes_and_reproduces_the_scala_generated_cookie() {
     headers.insert(header::USER_AGENT, "Golden Browser/1.0".parse().unwrap());
     headers.insert(header::ACCEPT_LANGUAGE, "en-US,en;q=0.9".parse().unwrap());
     headers.insert(header::ACCEPT_CHARSET, "utf-8".parse().unwrap());
-    assert_eq!(browser_auth::fingerprint(&headers), lines[2]);
-    assert_eq!(browser_auth::fingerprint(&HeaderMap::new()), lines[3]);
+    assert_eq!(
+        webknossos_backend::auth::browser::fingerprint(&headers),
+        lines[2]
+    );
+    assert_eq!(
+        webknossos_backend::auth::browser::fingerprint(&HeaderMap::new()),
+        lines[3]
+    );
 
     // Wrong secret, modified payload or signature are rejected.
     assert!(CookieAuthenticator::unserialize(&lines[0], "another-secret").is_none());
@@ -61,7 +67,10 @@ fn decodes_and_reproduces_the_scala_generated_cookie() {
     tampered.pop();
     tampered.push('A');
     assert!(CookieAuthenticator::unserialize(&tampered, GOLDEN_SECRET).is_none());
-    let forged = browser_auth::sign("attacker", lines[0].splitn(3, '-').nth(2).unwrap());
+    let forged = webknossos_backend::auth::browser::sign(
+        "attacker",
+        lines[0].splitn(3, '-').nth(2).unwrap(),
+    );
     assert!(CookieAuthenticator::unserialize(&forged, GOLDEN_SECRET).is_none());
 }
 
@@ -70,19 +79,48 @@ async fn verifies_and_produces_java_compatible_bcrypt_hashes() {
     for line in include_str!("fixtures/bcrypt_golden.tsv").lines() {
         let fields: Vec<&str> = line.split('\t').collect();
         let (password, hash) = (fields[0], fields[1]);
-        assert!(browser_auth::verify_password(password.into(), "SCrypt", hash.into()).await);
         assert!(
-            !browser_auth::verify_password(format!("{password}x"), "SCrypt", hash.into()).await
+            webknossos_backend::auth::browser::verify_password(
+                password.into(),
+                "SCrypt",
+                hash.into()
+            )
+            .await
         );
-        assert!(!browser_auth::verify_password(password.into(), "Empty", hash.into()).await);
+        assert!(
+            !webknossos_backend::auth::browser::verify_password(
+                format!("{password}x"),
+                "SCrypt",
+                hash.into()
+            )
+            .await
+        );
+        assert!(
+            !webknossos_backend::auth::browser::verify_password(
+                password.into(),
+                "Empty",
+                hash.into()
+            )
+            .await
+        );
     }
-    let hash = browser_auth::hash_password("Pässwörd".into())
+    let hash = webknossos_backend::auth::browser::hash_password("Pässwörd".into())
         .await
         .unwrap();
     assert!(hash.starts_with("$2a$10$"));
-    assert!(browser_auth::verify_password("Pässwörd".into(), "SCrypt", hash).await);
-    assert!(browser_auth::hash_password("x".repeat(72)).await.is_ok());
-    assert!(browser_auth::hash_password("x".repeat(73)).await.is_err());
+    assert!(
+        webknossos_backend::auth::browser::verify_password("Pässwörd".into(), "SCrypt", hash).await
+    );
+    assert!(
+        webknossos_backend::auth::browser::hash_password("x".repeat(72))
+            .await
+            .is_ok()
+    );
+    assert!(
+        webknossos_backend::auth::browser::hash_password("x".repeat(73))
+            .await
+            .is_err()
+    );
 }
 
 const INVALID_CREDENTIALS: &str = "Incorrect email or password. Please try again.";
@@ -156,7 +194,7 @@ async fn password_login_issues_a_silhouette_cookie_used_before_bearer_tokens() {
     headers.insert(header::USER_AGENT, USER_AGENT.parse().unwrap());
     assert_eq!(
         cookie.fingerprint,
-        Some(browser_auth::fingerprint(&headers))
+        Some(webknossos_backend::auth::browser::fingerprint(&headers))
     );
     let last_identity: Option<String> = sqlx::query_scalar(
         "SELECT _lastLoggedInIdentity FROM webknossos.multiUsers WHERE _id = $1",

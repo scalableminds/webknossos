@@ -18,12 +18,11 @@ use std::{
 };
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState, annotation_lifecycle,
-    annotation_metadata::NOT_ALLOWED,
-    annotation_provider::{AnnotationProvider, RESOURCE_NOT_FOUND},
-    annotation_reservations,
-    service_clients::{ServiceClientConfig, ServiceClients},
-    tracingstore_client::{TRACING_STORE_NOT_FOUND, TracingStoreClient},
+    AppState,
+    annotation::metadata::NOT_ALLOWED,
+    annotation::provider::{AnnotationProvider, RESOURCE_NOT_FOUND},
+    stores::client::{ServiceClientConfig, ServiceClients},
+    stores::tracing_client::{TRACING_STORE_NOT_FOUND, TracingStoreClient},
 };
 
 struct World {
@@ -121,8 +120,11 @@ fn app(db: &TestDb) -> Router {
         TracingStoreClient::new(ServiceClientConfig::default()).unwrap(),
     );
     Router::new()
-        .nest("/api", annotation_reservations::router(false))
-        .nest("/api", annotation_lifecycle::router())
+        .nest(
+            "/api",
+            webknossos_backend::annotation::reservations::router(false),
+        )
+        .nest("/api", webknossos_backend::annotation::lifecycle::router())
         .layer(Extension(provider))
         .layer(Extension(
             ServiceClients::new(ServiceClientConfig::default()).unwrap(),

@@ -4,8 +4,8 @@ use std::time::{Duration, Instant};
 
 use common::{TestDb, object_id};
 use webknossos_backend::{
-    credit_ticker::{self, CreditTickerConfig, JOB_NAME},
-    scheduler::{JobOutcome, JobSchedule, advisory_lock_key, try_advisory_xact_lock},
+    background::credit_ticker::{CreditTickerConfig, JOB_NAME},
+    background::scheduler::{JobOutcome, JobSchedule, advisory_lock_key, try_advisory_xact_lock},
 };
 
 const MONTHLY: i32 = 2000;
@@ -112,7 +112,11 @@ async fn run_revokes_exactly_the_expired_credits() {
     seed(&db, &b, -1000, "Spent", 49, "NULL").await;
     let unused = seed(&db, &b, 3000, "Pending", 10, expired).await;
 
-    let message = completed(credit_ticker::run(&db.pool, MONTHLY).await.unwrap());
+    let message = completed(
+        webknossos_backend::background::credit_ticker::run(&db.pool, MONTHLY)
+            .await
+            .unwrap(),
+    );
     assert_eq!(
         message,
         "Finished revoking and handing out free monthly credits."
@@ -127,7 +131,11 @@ async fn run_revokes_exactly_the_expired_credits() {
 
     // Second run: nothing expired is pending any more, and the monthly grants exist already.
     let rows = row_count(&db).await;
-    completed(credit_ticker::run(&db.pool, MONTHLY).await.unwrap());
+    completed(
+        webknossos_backend::background::credit_ticker::run(&db.pool, MONTHLY)
+            .await
+            .unwrap(),
+    );
     assert_eq!(row_count(&db).await, rows);
     assert_eq!(revocations(&db, &a).await.len(), 1);
     assert_eq!(revocations(&db, &b).await.len(), 1);
@@ -152,7 +160,11 @@ async fn monthly_credits_are_handed_out_once_per_due_organization() {
     .await;
     let month = current_month(&db).await;
 
-    completed(credit_ticker::run(&db.pool, MONTHLY).await.unwrap());
+    completed(
+        webknossos_backend::background::credit_ticker::run(&db.pool, MONTHLY)
+            .await
+            .unwrap(),
+    );
     assert_eq!(
         monthly_grants(&db, &due).await,
         vec![(MONTHLY, format!("Complimentary credits ({month})"), true)]
@@ -179,14 +191,26 @@ async fn monthly_credits_are_handed_out_once_per_due_organization() {
 
     // Second (and third) run in the same month: no-op.
     let rows = row_count(&db).await;
-    completed(credit_ticker::run(&db.pool, MONTHLY).await.unwrap());
-    completed(credit_ticker::run(&db.pool, 5000).await.unwrap());
+    completed(
+        webknossos_backend::background::credit_ticker::run(&db.pool, MONTHLY)
+            .await
+            .unwrap(),
+    );
+    completed(
+        webknossos_backend::background::credit_ticker::run(&db.pool, 5000)
+            .await
+            .unwrap(),
+    );
     assert_eq!(row_count(&db).await, rows);
     assert_eq!(monthly_grants(&db, &due).await.len(), 1);
 
     // A new organization becomes due and is granted on the next run only.
     let late = db.fixture().await.organization_id;
-    completed(credit_ticker::run(&db.pool, MONTHLY).await.unwrap());
+    completed(
+        webknossos_backend::background::credit_ticker::run(&db.pool, MONTHLY)
+            .await
+            .unwrap(),
+    );
     assert_eq!(row_count(&db).await, rows + 1);
     assert_eq!(monthly_grants(&db, &late).await.len(), 1);
     db.cleanup().await;
@@ -215,7 +239,9 @@ async fn lock_contention_skips_the_run() {
             .unwrap()
     );
     assert_eq!(
-        credit_ticker::run(&db.pool, MONTHLY).await.unwrap(),
+        webknossos_backend::background::credit_ticker::run(&db.pool, MONTHLY)
+            .await
+            .unwrap(),
         JobOutcome::SkippedLocked
     );
     assert_eq!(credit_state(&db, &expired).await, "Pending");
@@ -225,7 +251,11 @@ async fn lock_contention_skips_the_run() {
     let contenders: Vec<_> = (0..3)
         .map(|_| {
             let pool = db.pool.clone();
-            tokio::spawn(async move { credit_ticker::run(&pool, MONTHLY).await.unwrap() })
+            tokio::spawn(async move {
+                webknossos_backend::background::credit_ticker::run(&pool, MONTHLY)
+                    .await
+                    .unwrap()
+            })
         })
         .collect();
     for contender in contenders {
@@ -235,7 +265,11 @@ async fn lock_contention_skips_the_run() {
 
     // The transaction-scoped lock ends with the holder's transaction.
     holder.rollback().await.unwrap();
-    completed(credit_ticker::run(&db.pool, MONTHLY).await.unwrap());
+    completed(
+        webknossos_backend::background::credit_ticker::run(&db.pool, MONTHLY)
+            .await
+            .unwrap(),
+    );
     assert_eq!(credit_state(&db, &expired).await, "Revoked");
     assert_eq!(monthly_grants(&db, &organization).await.len(), 1);
     db.cleanup().await;
@@ -253,7 +287,8 @@ async fn spawned_ticker_runs_on_schedule() {
             initial_delay: Duration::ZERO,
         },
     };
-    let handle = credit_ticker::spawn(db.pool.clone(), &config, 1234);
+    let handle =
+        webknossos_backend::background::credit_ticker::spawn(db.pool.clone(), &config, 1234);
     assert_eq!(handle.job_names(), vec![JOB_NAME]);
     let deadline = Instant::now() + Duration::from_secs(10);
     while monthly_grants(&db, &organization).await.is_empty() {

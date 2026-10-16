@@ -48,14 +48,17 @@ def normalized(path):
 
 
 def render():
-    lib = (ROOT / "src/lib.rs").read_text()
-    modules = {"lib"} | set(re.findall(r"\b(\w+)::(?:\w+_)?router\(", lib))
-    # Legacy dataset adapters implement older wire contracts for the same paths.
-    # Count each latest API registration once, including split list/read routers.
-    modules.discard("legacy_datasets")
+    # Every non-test source file that registers routes. Legacy dataset adapters
+    # implement older wire contracts for the same paths, so count each latest API
+    # registration once, including split list/read routers.
+    modules = sorted(
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "src").rglob("*.rs")
+        if path.name != "tests.rs" and path.relative_to(ROOT / "src").as_posix() != "dataset/legacy.rs"
+    )
     rust = {}
-    for module in sorted(modules):
-        for call in route_calls((ROOT / f"src/{module}.rs").read_text()):
+    for module in modules:
+        for call in route_calls((ROOT / module).read_text()):
             path = re.match(r'\s*"([^"\\]+)"\s*,', call)
             if not path:
                 raise ValueError(f"Nonliteral route in {module}")
@@ -64,7 +67,7 @@ def render():
                 key = (method.upper(), normalized(path[1]))
                 if key in rust:
                     raise ValueError(f"Duplicate Rust route: {key}")
-                rust[key] = f"src/{module}.rs"
+                rust[key] = module
     legacy = []
     for line in (ROOT.parent / "conf/webknossos.latest.routes").read_text().splitlines():
         match = re.match(r"^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(\S+)\s+controllers\.(\w+)\.", line)

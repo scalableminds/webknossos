@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    browser_auth::BrowserAuthConfig,
+    auth::browser::BrowserAuthConfig,
     mail::{MailSender, RecordingMailer},
     users,
 };

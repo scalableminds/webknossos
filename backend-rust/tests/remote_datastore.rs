@@ -16,8 +16,8 @@ use common::{TestDb, object_id};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState, remote_datastore,
-    service_clients::{ServiceClientConfig, ServiceClients},
+    AppState,
+    stores::client::{ServiceClientConfig, ServiceClients},
 };
 
 const UNREPORTED: &str = "No longer available on datastore.";
@@ -72,7 +72,7 @@ async fn setup() -> Setup {
         rpc_token: "rpc-secret".to_owned(),
     })
     .unwrap();
-    let app = remote_datastore::router()
+    let app = webknossos_backend::remote::datastore::router()
         .layer(Extension(clients))
         .with_state(AppState {
             pool: db.pool.clone(),

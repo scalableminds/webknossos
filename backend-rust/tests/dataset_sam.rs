@@ -16,8 +16,8 @@ use common::{Fixture, TestDb, object_id};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState, dataset_options::DatasetRouteConfig, dataset_options::SegmentAnythingConfig,
-    dataset_sam, service_clients::ServiceClientConfig, service_clients::ServiceClients,
+    AppState, dataset::options::DatasetRouteConfig, dataset::options::SegmentAnythingConfig,
+    stores::client::ServiceClientConfig, stores::client::ServiceClients,
 };
 
 const IMAGE: &[u8] = b"\x01\x02\x03\x04";
@@ -76,7 +76,7 @@ fn clients() -> ServiceClients {
 }
 
 fn app(db: &TestDb, config: DatasetRouteConfig) -> Router {
-    dataset_sam::router(config)
+    webknossos_backend::dataset::sam::router(config)
         .layer(Extension(clients()))
         .with_state(AppState {
             pool: db.pool.clone(),

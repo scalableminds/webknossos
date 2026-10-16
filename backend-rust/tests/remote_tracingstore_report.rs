@@ -12,10 +12,10 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    application_info::MiscConfig,
     config::{Config, DatabaseConfig, TimeTrackingConfig},
-    remote_tracingstore_report::should_track_time,
+    remote::tracingstore::report::should_track_time,
     router_with_config,
+    system::application_info::MiscConfig,
 };
 
 const KEY: &str = "report-callback-service-key";

@@ -4,7 +4,7 @@ use serde::Deserialize;
 use tower::ServiceExt;
 use webknossos_backend::{
     extract::{Json, Path, Query},
-    id::{ObjectId, PathObjectId},
+    util::id::{ObjectId, PathObjectId},
 };
 
 #[derive(Deserialize)]

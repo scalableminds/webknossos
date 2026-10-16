@@ -16,16 +16,16 @@ use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation_lifecycle::{self, ARCHIVED, CANCEL_SUCCESS, COLLABORATION_TYPES_ONLY},
-    annotation_metadata::NOT_ALLOWED,
-    annotation_provider::{
+    annotation::lifecycle::{ARCHIVED, CANCEL_SUCCESS, COLLABORATION_TYPES_ONLY},
+    annotation::metadata::NOT_ALLOWED,
+    annotation::provider::{
         ANNOTATION_NOT_FOUND, AccessContext, AnnotationIdentifier, AnnotationProvider,
         RESOURCE_NOT_FOUND,
     },
-    id::ObjectId,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
-    service_clients::ServiceClientConfig,
-    tracingstore_client::TracingStoreClient,
+    stores::client::ServiceClientConfig,
+    stores::tracing_client::TracingStoreClient,
+    util::id::ObjectId,
 };
 
 struct World {
@@ -109,7 +109,7 @@ fn app(db: &TestDb) -> (Router, AnnotationProvider) {
         TracingStoreClient::new(ServiceClientConfig::default()).unwrap(),
     );
     let app = Router::new()
-        .nest("/api", annotation_lifecycle::router())
+        .nest("/api", webknossos_backend::annotation::lifecycle::router())
         .layer(Extension(provider.clone()))
         .with_state(AppState {
             pool: db.pool.clone(),

@@ -14,9 +14,8 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    application_info::{MiscConfig, MiscState},
-    job_submission,
-    service_clients::{ServiceClientConfig, ServiceClients},
+    stores::client::{ServiceClientConfig, ServiceClients},
+    system::application_info::{MiscConfig, MiscState},
 };
 
 const COMMANDS: [&str; 8] = [
@@ -67,7 +66,7 @@ fn app(db: &TestDb, enabled: bool) -> Router {
         ..ServiceClientConfig::default()
     })
     .unwrap();
-    job_submission::router(enabled)
+    webknossos_backend::job::submission::router(enabled)
         .layer(Extension(MiscState::new(MiscConfig {
             jobs_enabled: enabled,
             ..MiscConfig::default()

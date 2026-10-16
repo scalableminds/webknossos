@@ -9,7 +9,7 @@ use browser_auth_support::{
 };
 use common::{TestDb, object_id};
 use serde_json::{Value, json};
-use webknossos_backend::{browser_auth::BrowserAuthConfig, mail::RecordingMailer};
+use webknossos_backend::{auth::browser::BrowserAuthConfig, mail::RecordingMailer};
 
 const EMAIL_TAKEN: &str = "An account with this email address already exists. Please log in instead or use a different email.";
 const INVALID_FIRST: &str = "Please check your first name for any special characters.";
@@ -149,7 +149,7 @@ async fn registration_validates_and_creates_accounts_atomically() {
     assert!(created.is_deactivated && !created.is_admin && !created.is_email_verified);
     assert_eq!(created.hasher, "SCrypt");
     assert!(
-        webknossos_backend::browser_auth::verify_password(
+        webknossos_backend::auth::browser::verify_password(
             "secret-password".into(),
             "SCrypt",
             created.password.clone()

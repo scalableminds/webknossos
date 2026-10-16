@@ -16,16 +16,16 @@ use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation_provider::{
+    annotation::provider::{
         ANNOTATION_NOT_FOUND, AccessContext, AnnotationIdentifier, AnnotationProvider,
     },
-    annotation_reopen::{self, REOPEN_FAILED, REOPEN_SUCCESS, owner_wait_elapsed},
-    application_info::{MiscConfig, MiscState, default_features},
+    annotation::reopen::{REOPEN_FAILED, REOPEN_SUCCESS, owner_wait_elapsed},
     auth::AuthUser,
-    id::ObjectId,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
-    service_clients::ServiceClientConfig,
-    tracingstore_client::TracingStoreClient,
+    stores::client::ServiceClientConfig,
+    stores::tracing_client::TracingStoreClient,
+    system::application_info::{MiscConfig, MiscState, default_features},
+    util::id::ObjectId,
 };
 
 struct World {
@@ -118,7 +118,10 @@ fn app_with(db: &TestDb, reopen_seconds: Option<i64>) -> (Router, AnnotationProv
         features.insert("taskReopenAllowedInSeconds".into(), json!(seconds));
     }
     let app = Router::new()
-        .nest("/api", annotation_reopen::router(false))
+        .nest(
+            "/api",
+            webknossos_backend::annotation::reopen::router(false),
+        )
         .layer(Extension(provider.clone()))
         .layer(Extension(MiscState::new(MiscConfig {
             features,

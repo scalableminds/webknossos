@@ -18,13 +18,13 @@ use prost::Message;
 use serde_json::{Value, json};
 use webknossos_backend::{
     error::ApiError,
-    id::ObjectId,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
-    service_clients::{ServiceClientConfig, ServiceError},
-    tracingstore_client::{
+    stores::client::{ServiceClientConfig, ServiceError},
+    stores::tracing_client::{
         BoundingBox, MergeRequest, NamedBoundingBox, TracingStoreClient, TracingStoreError,
         decode_annotation_proto, first_tracing_store_url,
     },
+    util::id::ObjectId,
 };
 
 const TOKEN: &str = "rpc-secret-for-tracingstore-tests";
@@ -447,7 +447,7 @@ async fn first_tracing_store_url_uses_internal_url_of_live_store() {
 // ---- TI2a: tracing save/get RPCs ------------------------------------------
 
 use webknossos_backend::{
-    annotation_provider::AnnotationDataSourceStore,
+    annotation::provider::AnnotationDataSourceStore,
     proto::{
         ColorProto, NamedBoundingBoxProto, Vec3DoubleProto, Vec3IntProto,
         datastore::{
@@ -457,7 +457,9 @@ use webknossos_backend::{
             VolumeUserStateProto,
         },
     },
-    tracingstore_client::{VolumeSaveDataSource, decode_skeleton_tracing, decode_volume_tracing},
+    stores::tracing_client::{
+        VolumeSaveDataSource, decode_skeleton_tracing, decode_volume_tracing,
+    },
 };
 
 fn skeleton_tracing() -> SkeletonTracing {
@@ -1053,9 +1055,9 @@ async fn skeleton_rpcs_use_the_long_timeout_and_volume_and_annotation_rpcs_the_d
 use std::collections::HashMap;
 
 use webknossos_backend::{
-    nml_writer::{NmlVoxelSize, VolumeDataZipFormat},
+    annotation::nml::writer::{NmlVoxelSize, VolumeDataZipFormat},
     proto::datastore::{SkeletonTracingOpt, SkeletonTracings, VolumeTracingOpt, VolumeTracings},
-    tracingstore_client::{
+    stores::tracing_client::{
         FetchedVolumeLayer, GET_MULTIPLE_BATCH_SIZE, VolumeLayerFetch, decode_skeleton_tracings,
         decode_volume_tracings,
     },
@@ -1767,7 +1769,7 @@ async fn download_rpcs_use_the_long_timeout_except_the_volume_tracing_get() {
 
 use webknossos_backend::{
     proto::datastore::{SkeletonTracingsWithIds, StringOpt},
-    tracingstore_client::{DuplicateAnnotationRequest, SaveMultipleResult},
+    stores::tracing_client::{DuplicateAnnotationRequest, SaveMultipleResult},
 };
 
 fn duplicate_request() -> DuplicateAnnotationRequest {

@@ -7,7 +7,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::Path,
-    id::{ObjectId, PathObjectId},
+    util::id::{ObjectId, PathObjectId},
 };
 
 pub fn router() -> Router<AppState> {

@@ -16,20 +16,20 @@ use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation_finish::{
-        self, ALL_FINISHED, ANNOTATION_FINISHED, FINISH_FAILED, TASK_FINISHED, parse_timestamp,
+    annotation::finish::{
+        ALL_FINISHED, ANNOTATION_FINISHED, FINISH_FAILED, TASK_FINISHED, parse_timestamp,
     },
-    annotation_provider::{
+    annotation::provider::{
         ANNOTATION_NOT_FOUND, AccessContext, AnnotationIdentifier, AnnotationProvider,
     },
     auth::AuthUser,
-    id::ObjectId,
     mail::MailSender,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
-    service_clients::ServiceClientConfig,
-    time_interaction::{TimeInteractionConfig, TimeInteractionState},
-    time_interaction_writer::{OverLimitNotifier, TimeInteractionWriter},
-    tracingstore_client::TracingStoreClient,
+    stores::client::ServiceClientConfig,
+    stores::tracing_client::TracingStoreClient,
+    time::interaction::{TimeInteractionConfig, TimeInteractionState},
+    time::interaction_writer::{OverLimitNotifier, TimeInteractionWriter},
+    util::id::ObjectId,
 };
 
 const T: i64 = 1_700_000_000_000;
@@ -142,7 +142,10 @@ fn app(db: &TestDb) -> (Router, AnnotationProvider) {
         OverLimitNotifier::new(MailSender::default(), "https://wk.example.test"),
     );
     let app = Router::new()
-        .nest("/api", annotation_finish::router(false))
+        .nest(
+            "/api",
+            webknossos_backend::annotation::finish::router(false),
+        )
         .layer(Extension(provider.clone()))
         .layer(Extension(writer))
         .with_state(AppState {

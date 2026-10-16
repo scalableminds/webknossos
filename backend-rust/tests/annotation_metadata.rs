@@ -20,12 +20,12 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation_metadata::{
+    annotation::metadata::{
         ACCESSING_TEAM_FAILED, EDIT_FAILED, EDIT_NOT_ALLOWED, EDIT_SUCCESS,
         LOCK_EXPLORATIONALS_ONLY, LOCK_NOT_ALLOWED, LOCK_SUCCESS, NO_UPDATE_ACCESS, NOT_ALLOWED,
         SHARED_TEAMS_UPDATE_FAILED, invalid_object_id,
     },
-    annotation_provider::{ANNOTATION_NOT_FOUND, RESTRICTIONS_NOT_FOUND},
+    annotation::provider::{ANNOTATION_NOT_FOUND, RESTRICTIONS_NOT_FOUND},
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     router,
 };

@@ -12,14 +12,14 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation_metadata::{NOT_ALLOWED, PUBLIC_WRITES_FAILED},
-    annotation_provider::{
+    annotation::metadata::{NOT_ALLOWED, PUBLIC_WRITES_FAILED},
+    annotation::provider::{
         ANNOTATION_NOT_FOUND, AnnotationProvider, RESOURCE_NOT_FOUND, RESTRICTIONS_NOT_FOUND,
     },
-    annotation_sandbox::{self, DUMMY_ID, DUMMY_TRACING_ID, SANDBOX_SKELETON_ONLY},
-    annotation_transfer::{self, TRANSFEREE_NO_DATASET_ACCESS, user_not_found},
-    service_clients::ServiceClientConfig,
-    tracingstore_client::TracingStoreClient,
+    annotation::sandbox::{DUMMY_ID, DUMMY_TRACING_ID, SANDBOX_SKELETON_ONLY},
+    annotation::transfer::{TRANSFEREE_NO_DATASET_ACCESS, user_not_found},
+    stores::client::ServiceClientConfig,
+    stores::tracing_client::TracingStoreClient,
 };
 
 struct World {
@@ -88,7 +88,8 @@ fn app(db: &TestDb) -> Router {
     Router::new()
         .nest(
             "/api",
-            annotation_sandbox::router(false).merge(annotation_transfer::router(false)),
+            webknossos_backend::annotation::sandbox::router(false)
+                .merge(webknossos_backend::annotation::transfer::router(false)),
         )
         .layer(Extension(provider))
         .with_state(AppState {
@@ -141,7 +142,9 @@ async fn sandbox_serializes_a_never_persisted_skeleton_annotation() {
 
     // Private dataset: anonymous without token and unknown datasets are 404,
     // before the tracing type is even looked at.
-    let not_found = error(&annotation_sandbox::dataset_not_found(&w.dataset));
+    let not_found = error(&webknossos_backend::annotation::sandbox::dataset_not_found(
+        &w.dataset,
+    ));
     for path in [
         format!("{base}/skeleton"),
         format!("{base}/invalid"),
@@ -164,7 +167,9 @@ async fn sandbox_serializes_a_never_persisted_skeleton_annotation() {
         .await,
         (
             StatusCode::NOT_FOUND,
-            error(&annotation_sandbox::dataset_not_found(&missing))
+            error(&webknossos_backend::annotation::sandbox::dataset_not_found(
+                &missing
+            ))
         )
     );
 

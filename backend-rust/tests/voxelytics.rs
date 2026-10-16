@@ -15,9 +15,8 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState,
-    application_info::MiscConfig,
-    router_with_voxelytics,
+    AppState, router_with_voxelytics,
+    system::application_info::MiscConfig,
     voxelytics::{LokiConfig, VoxelyticsConfig},
 };
 

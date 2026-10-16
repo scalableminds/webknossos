@@ -8,21 +8,21 @@ use axum::{
 use common::{Fixture, TestDb, object_id};
 use serde_json::{Value, json};
 use tower::ServiceExt;
-use webknossos_backend::{AppState, application_info, auth, dataset_access, datasets};
+use webknossos_backend::{AppState, auth};
 
 /// Analytics side effects of the routes stay local (no forwarding URI).
-fn offline_misc() -> application_info::MiscState {
-    let mut config = application_info::MiscConfig::default();
+fn offline_misc() -> webknossos_backend::system::application_info::MiscState {
+    let mut config = webknossos_backend::system::application_info::MiscConfig::default();
     config.analytics.uri.clear();
-    application_info::MiscState::new(config)
+    webknossos_backend::system::application_info::MiscState::new(config)
 }
 
 fn app(db: &TestDb) -> Router {
-    datasets::router()
-        .merge(datasets::list_router())
-        .merge(datasets::read_router(true))
-        .merge(datasets::metadata_router(true))
-        .merge(datasets::lookup_router(true))
+    webknossos_backend::dataset::routes::router()
+        .merge(webknossos_backend::dataset::routes::list_router())
+        .merge(webknossos_backend::dataset::routes::read_router(true))
+        .merge(webknossos_backend::dataset::routes::metadata_router(true))
+        .merge(webknossos_backend::dataset::routes::lookup_router(true))
         .layer(axum::Extension(offline_misc()))
         .with_state(AppState {
             pool: db.pool.clone(),
@@ -84,12 +84,12 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
         .await;
     let user = auth::authenticate(&db.pool, &member.token).await.unwrap();
     assert!(
-        !dataset_access::can_read(&db.pool, Some(&user), &id, None)
+        !webknossos_backend::dataset::access::can_read(&db.pool, Some(&user), &id, None)
             .await
             .unwrap()
     );
     assert!(
-        !dataset_access::can_edit(&db.pool, &user, &id)
+        !webknossos_backend::dataset::access::can_edit(&db.pool, &user, &id)
             .await
             .unwrap()
     );
@@ -118,12 +118,12 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
         .await
         .unwrap();
     assert!(
-        dataset_access::can_read(&db.pool, Some(&user), &id, None)
+        webknossos_backend::dataset::access::can_read(&db.pool, Some(&user), &id, None)
             .await
             .unwrap()
     );
     assert!(
-        !dataset_access::can_edit(&db.pool, &user, &id)
+        !webknossos_backend::dataset::access::can_edit(&db.pool, &user, &id)
             .await
             .unwrap()
     );
@@ -133,7 +133,7 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
         .await
         .unwrap();
     assert!(
-        dataset_access::can_edit(&db.pool, &user, &id)
+        webknossos_backend::dataset::access::can_edit(&db.pool, &user, &id)
             .await
             .unwrap()
     );
@@ -143,12 +143,12 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
         .await
         .unwrap();
     assert!(
-        !dataset_access::can_read(&db.pool, Some(&user), &id, None)
+        !webknossos_backend::dataset::access::can_read(&db.pool, Some(&user), &id, None)
             .await
             .unwrap()
     );
     assert!(
-        !dataset_access::can_edit(&db.pool, &user, &id)
+        !webknossos_backend::dataset::access::can_edit(&db.pool, &user, &id)
             .await
             .unwrap()
     );
@@ -168,12 +168,12 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
     .await
     .unwrap();
     assert!(
-        !dataset_access::can_read(&db.pool, Some(&user), &id, None)
+        !webknossos_backend::dataset::access::can_read(&db.pool, Some(&user), &id, None)
             .await
             .unwrap()
     );
     assert!(
-        !dataset_access::can_edit(&db.pool, &user, &id)
+        !webknossos_backend::dataset::access::can_edit(&db.pool, &user, &id)
             .await
             .unwrap()
     );
@@ -183,17 +183,17 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
         .await
         .unwrap();
     assert!(
-        dataset_access::can_read(&db.pool, None, &id, Some("shared"))
+        webknossos_backend::dataset::access::can_read(&db.pool, None, &id, Some("shared"))
             .await
             .unwrap()
     );
     assert!(
-        dataset_access::can_read(&db.pool, Some(&user), &id, Some("shared"))
+        webknossos_backend::dataset::access::can_read(&db.pool, Some(&user), &id, Some("shared"))
             .await
             .unwrap()
     );
     assert!(
-        !dataset_access::can_read(&db.pool, None, &id, Some("invalid"))
+        !webknossos_backend::dataset::access::can_read(&db.pool, None, &id, Some("invalid"))
             .await
             .unwrap()
     );
@@ -203,7 +203,7 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
     // DatasetDAO intentionally treats a private-link token as a dataset grant
     // without expiration filtering; annotation-link routes own that check.
     assert!(
-        dataset_access::can_read(&db.pool, None, &id, Some("private-link"))
+        webknossos_backend::dataset::access::can_read(&db.pool, None, &id, Some("private-link"))
             .await
             .unwrap()
     );
@@ -213,7 +213,7 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
         .await
         .unwrap();
     assert!(
-        !dataset_access::can_read(&db.pool, None, &id, Some("private-link"))
+        !webknossos_backend::dataset::access::can_read(&db.pool, None, &id, Some("private-link"))
             .await
             .unwrap()
     );
@@ -223,7 +223,7 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
         .await
         .unwrap();
     assert!(
-        dataset_access::can_read(&db.pool, None, &id, None)
+        webknossos_backend::dataset::access::can_read(&db.pool, None, &id, None)
             .await
             .unwrap()
     );
@@ -233,7 +233,7 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
         .await
         .unwrap();
     assert!(
-        !dataset_access::can_read(&db.pool, None, &id, Some("shared"))
+        !webknossos_backend::dataset::access::can_read(&db.pool, None, &id, Some("shared"))
             .await
             .unwrap()
     );
@@ -349,7 +349,7 @@ async fn compact_and_full_dataset_responses_preserve_composites_paths_unsigned_i
     assert_eq!(filtered.as_array().unwrap().len(), 1);
     sqlx::query("UPDATE webknossos.workers SET supportedJobCommands=ARRAY['unknown_command'] WHERE _dataStore='test-store'")
         .execute(&db.pool).await.unwrap();
-    let jobs_disabled = datasets::read_router(false)
+    let jobs_disabled = webknossos_backend::dataset::routes::read_router(false)
         .layer(axum::Extension(offline_misc()))
         .with_state(AppState {
             pool: db.pool.clone(),
@@ -958,7 +958,7 @@ async fn metadata_updates_render_before_commit_and_work_with_one_database_connec
         .connect(&db.connection_url())
         .await
         .unwrap();
-    let application = datasets::metadata_router(false)
+    let application = webknossos_backend::dataset::routes::metadata_router(false)
         .layer(axum::Extension(offline_misc()))
         .with_state(AppState {
             pool: single.clone(),

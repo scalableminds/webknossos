@@ -21,9 +21,9 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation_merge::{MERGE_FAILED, MERGE_SUCCESS},
-    annotation_provider::{ANNOTATION_NOT_FOUND, RESOURCE_NOT_FOUND},
-    annotation_reset::{RESET_FAILED, RESET_SUCCESS},
+    annotation::merge::{MERGE_FAILED, MERGE_SUCCESS},
+    annotation::provider::{ANNOTATION_NOT_FOUND, RESOURCE_NOT_FOUND},
+    annotation::reset::{RESET_FAILED, RESET_SUCCESS},
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     router,
 };

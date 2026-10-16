@@ -7,9 +7,9 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    application_info::{LocalStoreConfig, MiscConfig},
     mail::MailSender,
     router_with_misc,
+    system::application_info::{LocalStoreConfig, MiscConfig},
 };
 
 async fn send(app: &axum::Router, method: &str, uri: &str, token: Option<&str>) -> (u16, Value) {

@@ -12,15 +12,11 @@ use common::{TestDb, object_id};
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
-use webknossos_backend::{
-    AppState,
-    auth::authenticate,
-    auth_routes::{self, AuthRouteConfig},
-};
+use webknossos_backend::{AppState, auth::authenticate, auth::routes::AuthRouteConfig};
 
 fn configured_router(database: &TestDb, config: AuthRouteConfig) -> Router {
     Router::new()
-        .nest("/api", auth_routes::router(config))
+        .nest("/api", webknossos_backend::auth::routes::router(config))
         .with_state(AppState {
             pool: database.pool.clone(),
         })

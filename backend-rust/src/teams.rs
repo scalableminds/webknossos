@@ -13,7 +13,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path, Query},
-    id::ObjectId,
+    util::id::ObjectId,
 };
 
 #[derive(Deserialize, Default)]

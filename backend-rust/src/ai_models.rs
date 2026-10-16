@@ -17,22 +17,21 @@ use serde_json::{Map, Value, json};
 use sqlx::PgConnection;
 
 use crate::{
-    AppState, annotation_access,
-    application_info::MiscState,
+    AppState,
     auth::AuthUser,
-    dataset_access,
-    dataset_options::UploadToPathsConfig,
-    dataset_source::{
+    dataset::options::UploadToPathsConfig,
+    dataset::routes::{full_json_on_connection, public_datastore_json_on_connection},
+    dataset::source::{
         nanometers_per_unit, normalize_upath, upath_join, voxel_size as parse_voxel_size,
     },
-    datasets::{full_json_on_connection, public_datastore_json_on_connection},
     error::{ApiError, ApiResult},
     extract::{Json, Path},
-    id::{ObjectId, PathObjectId},
-    job_submission::{self, Failure, RunResult, Submission},
-    jobs::{self, Job},
-    service_clients::{ServiceClients, ServiceError},
+    job::routes::Job,
+    job::submission::{Failure, RunResult, Submission},
+    stores::client::{ServiceClients, ServiceError},
+    system::application_info::MiscState,
     users,
+    util::id::{ObjectId, PathObjectId},
 };
 
 /// Msg.notFound: Play's response for an empty Fox.
@@ -376,7 +375,7 @@ pub(crate) async fn model_public_writes(
         public_datastore_json_on_connection(connection, &model.data_store, jobs_enabled).await?;
     // A training job that cannot be read (or parsed) is rendered as null.
     let training_job: Option<Job> = match &model.training_job {
-        Some(job_id) => match jobs::find_job(connection, &user.id, job_id).await {
+        Some(job_id) => match crate::job::routes::find_job(connection, &user.id, job_id).await {
             Ok(job) => job,
             Err(error) if error.status == StatusCode::BAD_REQUEST => None,
             Err(error) => return Err(error),
@@ -384,7 +383,7 @@ pub(crate) async fn model_public_writes(
         None => None,
     };
     let training_job_json = match &training_job {
-        Some(job) => Some(jobs::public_writes(connection, &user.id, job).await?),
+        Some(job) => Some(crate::job::routes::public_writes(connection, &user.id, job).await?),
         None => None,
     };
     let is_owned = model.organization.as_deref() == Some(user.organization_id.as_str());
@@ -684,7 +683,7 @@ fn generate_model_path(
     organization: &str,
     requested_prefix: Option<&str>,
 ) -> ApiResult<String> {
-    let prefix = crate::dataset_upload_paths::select_path_prefix(config, requested_prefix)?;
+    let prefix = crate::dataset::upload_paths::select_path_prefix(config, requested_prefix)?;
     let invalid = |_| ApiError::bad_request("Invalid path.");
     let organization_dir = upath_join(&prefix, organization).map_err(invalid)?;
     let models_dir = upath_join(&organization_dir, ".aiModels").map_err(invalid)?;
@@ -709,7 +708,7 @@ async fn reserve_upload_to_path(
     {
         return Err(ApiError::bad_request("Invalid JSON request body."));
     }
-    let path_prefix = crate::dataset_upload_paths::parse_prefix(body.path_prefix.as_deref())?;
+    let path_prefix = crate::dataset::upload_paths::parse_prefix(body.path_prefix.as_deref())?;
     let mut tx = state.pool.begin().await?;
     find_data_store_url(&mut tx, &user.id, &body.data_store_name)
         .await?
@@ -965,7 +964,7 @@ async fn run_model_training(
     }
     // headOption.toFox: a workflow without annotations is the empty Fox.
     let first = annotations.first().ok_or_else(generic_not_found)?;
-    let annotation = annotation_access::find_optional(
+    let annotation = crate::annotation::access::find_optional(
         &state.pool,
         Some(user),
         first.annotation_id.as_str(),
@@ -973,13 +972,14 @@ async fn run_model_training(
     )
     .await?
     .ok_or_else(generic_not_found)?;
-    let dataset = job_submission::find_readable_dataset(state, user, &annotation.dataset_id)
-        .await?
-        .ok_or_else(generic_not_found)?;
+    let dataset =
+        crate::job::submission::find_readable_dataset(state, user, &annotation.dataset_id)
+            .await?
+            .ok_or_else(generic_not_found)?;
     if dataset.organization != user.organization_id {
         return Err(Failure::with_status(TRAIN_WRONG_ORGA, StatusCode::FORBIDDEN).into());
     }
-    let (bounding_box, _) = job_submission::usable_data_source(state, &dataset)
+    let (bounding_box, _) = crate::job::submission::usable_data_source(state, &dataset)
         .await
         .map_err(|error| error.wrap(NO_BOUNDING_BOX))?;
     let data_store = dataset.data_store.trim().to_owned();
@@ -990,7 +990,7 @@ async fn run_model_training(
             .ok_or_else(|| Failure::new(DATA_STORE_NOT_FOUND))?;
     }
     for specification in annotations {
-        annotation_access::find_optional(
+        crate::annotation::access::find_optional(
             &state.pool,
             Some(user),
             specification.annotation_id.as_str(),
@@ -1043,7 +1043,7 @@ async fn run_model_training(
         data_store: &data_store,
     };
     let comment = format!("AI training for {} model {model_id}", kind.label());
-    let mut pending = job_submission::begin_paid_job(
+    let mut pending = crate::job::submission::begin_paid_job(
         state,
         misc,
         jobs_enabled,
@@ -1216,12 +1216,13 @@ async fn run_model_inference(
     kind: InferenceKind,
 ) -> RunResult<ResponseJson<Value>> {
     let generic_not_found = || Failure::with_status(NOT_FOUND, StatusCode::NOT_FOUND);
-    let dataset = job_submission::find_readable_dataset(state, user, body.dataset_id.as_str())
-        .await?
-        .ok_or_else(generic_not_found)?;
+    let dataset =
+        crate::job::submission::find_readable_dataset(state, user, body.dataset_id.as_str())
+            .await?
+            .ok_or_else(generic_not_found)?;
     if dataset.organization != user.organization_id {
         return Err(Failure::with_status(
-            job_submission::INFERENCE_WRONG_ORGA,
+            crate::job::submission::INFERENCE_WRONG_ORGA,
             StatusCode::FORBIDDEN,
         )
         .into());
@@ -1236,7 +1237,7 @@ async fn run_model_inference(
                 Ok(Some(model)) => Some(model),
                 Ok(None) => return Err(Failure::new(MODEL_NOT_FOUND).into()),
                 Err(error) => {
-                    return Err(job_submission::RunError::from(error).wrap(MODEL_NOT_FOUND));
+                    return Err(crate::job::submission::RunError::from(error).wrap(MODEL_NOT_FOUND));
                 }
             }
         }
@@ -1247,14 +1248,15 @@ async fn run_model_inference(
         return Err(Failure::new(DATA_STORE_MISMATCH).into());
     }
     let (_, layer) =
-        job_submission::data_source_and_layer(state, &dataset, &body.color_layer_name).await?;
+        crate::job::submission::data_source_and_layer(state, &dataset, &body.color_layer_name)
+            .await?;
     let mut connection = state.pool.acquire().await?;
     let store_url = find_data_store_url(&mut connection, &user.id, &data_store)
         .await?
         .ok_or_else(|| Failure::new(DATA_STORE_NOT_FOUND))?;
-    crate::dataset_create::validate_dataset_name(&body.new_dataset_name)?;
+    crate::dataset::create::validate_dataset_name(&body.new_dataset_name)?;
     // BoundingBox.fromLiteral(..).toFox: the empty Fox.
-    let mag1_bounding_box = job_submission::BoundingBox::from_literal(&body.bounding_box)
+    let mag1_bounding_box = crate::job::submission::BoundingBox::from_literal(&body.bounding_box)
         .ok_or_else(generic_not_found)?;
 
     // AiModelService.inferenceBBoxToTargetMag (model voxel size via the dataset's datastore).
@@ -1264,13 +1266,13 @@ async fn run_model_inference(
         model_factor.map(|component| component * nanometers_per_unit(&model_unit));
     let dataset_voxel_size_nm = dataset
         .voxel_size_in_nanometers()
-        .ok_or_else(|| job_submission::RunError::Api(ApiError::internal()))?;
-    let mags = job_submission::layer_mags(state, &dataset, &layer.name).await?;
+        .ok_or_else(|| crate::job::submission::RunError::Api(ApiError::internal()))?;
+    let mags = crate::job::submission::layer_mags(state, &dataset, &layer.name).await?;
     let target_mag = find_best_matching_mag(model_voxel_size_nm, dataset_voxel_size_nm, &mags)
-        .ok_or_else(|| Failure::new(job_submission::NO_MAGS))?;
+        .ok_or_else(|| Failure::new(crate::job::submission::NO_MAGS))?;
     let target_mag_bounding_box = mag1_bounding_box
         .divide(target_mag)
-        .ok_or_else(|| job_submission::RunError::Api(ApiError::internal()))?;
+        .ok_or_else(|| crate::job::submission::RunError::Api(ApiError::internal()))?;
 
     let model_id = body.ai_model_id.as_ref().map(ObjectId::as_str);
     let model_organization_id = if model.is_pretrained {
@@ -1346,7 +1348,7 @@ async fn run_model_inference(
         args: Value::Object(args),
         data_store: &data_store,
     };
-    let mut pending = job_submission::begin_paid_job(
+    let mut pending = crate::job::submission::begin_paid_job(
         state,
         misc,
         jobs_enabled,
@@ -1354,7 +1356,7 @@ async fn run_model_inference(
         &submission,
         target_mag_bounding_box,
         &comment,
-        job_submission::INFERENCE_SUBMIT_FAILED,
+        crate::job::submission::INFERENCE_SUBMIT_FAILED,
     )
     .await?;
     let inference_id = ObjectId::new().as_str().to_owned();
@@ -1419,10 +1421,10 @@ pub(crate) async fn inference_public_writes(
     inference: &AiInference,
 ) -> ApiResult<Value> {
     let empty = || ApiError::not_found(NOT_FOUND);
-    let job = jobs::find_job(connection, &user.id, &inference.inference_job)
+    let job = crate::job::routes::find_job(connection, &user.id, &inference.inference_job)
         .await?
         .ok_or_else(empty)?;
-    let job_json = jobs::public_writes(connection, &user.id, &job).await?;
+    let job_json = crate::job::routes::public_writes(connection, &user.id, &job).await?;
     find_data_store_url(connection, &user.id, &job.data_store)
         .await?
         .ok_or_else(empty)?;
@@ -1441,7 +1443,7 @@ pub(crate) async fn inference_public_writes(
         Some(dataset_id) => {
             let readable: bool = sqlx::query_scalar(&format!(
                 "SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = $3 AND {})",
-                dataset_access::READ_PREDICATE
+                crate::dataset::access::READ_PREDICATE
             ))
             .bind(&user.id)
             .bind(None::<String>)

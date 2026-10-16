@@ -17,8 +17,8 @@ use common::{Fixture, TestDb, object_id};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState, dataset_remote,
-    service_clients::{ServiceClientConfig, ServiceClients},
+    AppState,
+    stores::client::{ServiceClientConfig, ServiceClients},
 };
 
 #[derive(Clone)]
@@ -74,7 +74,7 @@ fn app(db: &TestDb) -> Router {
         rpc_token: "process-rpc-secret".to_owned(),
     })
     .unwrap();
-    dataset_remote::router()
+    webknossos_backend::dataset::remote::router()
         .layer(Extension(clients))
         .with_state(AppState {
             pool: db.pool.clone(),

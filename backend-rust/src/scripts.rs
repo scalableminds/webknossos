@@ -9,14 +9,14 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
-    id::ObjectId,
+    util::id::ObjectId,
 };
 
 #[derive(Deserialize)]
 struct ScriptParameters {
     name: String,
     gist: String,
-    #[serde(deserialize_with = "crate::id::deserialize_string")]
+    #[serde(deserialize_with = "crate::util::id::deserialize_string")]
     owner: String,
 }
 

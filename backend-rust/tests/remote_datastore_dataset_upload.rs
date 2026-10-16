@@ -8,7 +8,7 @@ use axum::{
 use common::{TestDb, object_id};
 use serde_json::{Value, json};
 use tower::ServiceExt;
-use webknossos_backend::{AppState, remote_datastore_dataset_upload};
+use webknossos_backend::AppState;
 
 const NOT_YET_UPLOADED: &str = "Not yet fully uploaded.";
 const TOKEN_INVALID: &str = "The supplied token is invalid or expired.";
@@ -21,9 +21,10 @@ const CREATE_FAILED: &str = "Could not create dataset.";
 
 async fn setup() -> (TestDb, Router) {
     let db = TestDb::new().await;
-    let app = remote_datastore_dataset_upload::router().with_state(AppState {
-        pool: db.pool.clone(),
-    });
+    let app =
+        webknossos_backend::remote::datastore::dataset_upload::router().with_state(AppState {
+            pool: db.pool.clone(),
+        });
     (db, app)
 }
 

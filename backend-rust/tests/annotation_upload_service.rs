@@ -3,11 +3,11 @@ mod common;
 use axum::{body::Bytes, http::StatusCode};
 use common::{TestDb, object_id};
 use webknossos_backend::{
-    annotation_upload_service::{
+    annotation::io::upload_service::{
         ExtractionLimits, MSG_DIFFERENT_DATASETS, PgDatasetLookup, extract_from_files,
         find_dataset_for_uploaded_annotations, find_one_by_id_or_name_and_organization,
     },
-    nml_parser::{NmlParseResult, SharedParsingParameters},
+    annotation::nml::parser::{NmlParseResult, SharedParsingParameters},
     proto::datastore::SkeletonTracing,
 };
 

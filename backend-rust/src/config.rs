@@ -27,32 +27,32 @@ pub struct Config {
     pub public_url: url::Url,
     pub email_verification_enabled: bool,
     pub jobs_enabled: bool,
-    pub jobs: crate::jobs::JobsConfig,
+    pub jobs: crate::job::routes::JobsConfig,
     pub annotation_mutex_expiry: Duration,
     pub time_tracking: TimeTrackingConfig,
-    pub auth_routes: crate::auth_routes::AuthRouteConfig,
-    pub browser_auth: crate::browser_auth::BrowserAuthConfig,
-    pub service_client: crate::service_clients::ServiceClientConfig,
+    pub auth_routes: crate::auth::routes::AuthRouteConfig,
+    pub browser_auth: crate::auth::browser::BrowserAuthConfig,
+    pub service_client: crate::stores::client::ServiceClientConfig,
     pub allow_delete_datasets: bool,
-    pub datasets: crate::dataset_options::DatasetRouteConfig,
+    pub datasets: crate::dataset::options::DatasetRouteConfig,
     pub request_timeout: Duration,
     pub shutdown_timeout: Duration,
     pub body_limit: usize,
-    pub misc: crate::application_info::MiscConfig,
+    pub misc: crate::system::application_info::MiscConfig,
     pub voxelytics: crate::voxelytics::VoxelyticsConfig,
-    pub oidc: crate::auth_oidc::OidcConfig,
+    pub oidc: crate::auth::oidc::OidcConfig,
     pub mail: crate::mail::MailConfig,
-    pub housekeeping: crate::housekeeping::HousekeepingConfig,
+    pub housekeeping: crate::background::housekeeping::HousekeepingConfig,
     pub slack: crate::slack::SlackConfig,
-    pub credit_ticker: crate::credit_ticker::CreditTickerConfig,
-    pub used_storage: crate::dataset_storage::UsedStorageConfig,
-    pub worker_liveness: crate::worker_liveness::WorkerLivenessConfig,
+    pub credit_ticker: crate::background::credit_ticker::CreditTickerConfig,
+    pub used_storage: crate::organization::storage::UsedStorageConfig,
+    pub worker_liveness: crate::background::worker_liveness::WorkerLivenessConfig,
 }
 
 /// `webKnossos.user.timeTrackingPause` and `timeTrackingOnlyWithSignificantChanges`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TimeTrackingConfig {
-    pub interaction: crate::time_interaction::TimeInteractionConfig,
+    pub interaction: crate::time::interaction::TimeInteractionConfig,
     pub only_with_significant_changes: bool,
 }
 
@@ -132,7 +132,7 @@ impl Config {
         {
             return Err(ConfigError("WK_PUBLIC_URL must be an absolute HTTP(S) URL without credentials, query or fragment".into()));
         }
-        let mut service_client = crate::service_clients::ServiceClientConfig {
+        let mut service_client = crate::stores::client::ServiceClientConfig {
             request_timeout: Duration::from_secs(positive("WK_RPC_TIMEOUT_SECONDS", "30")?),
             connect_timeout: Duration::from_secs(positive("WK_RPC_CONNECT_TIMEOUT_SECONDS", "5")?),
             max_response_bytes: usize::try_from(positive("WK_RPC_MAX_RESPONSE_BYTES", "67108864")?)
@@ -160,7 +160,7 @@ impl Config {
                     "5",
                 )?),
             },
-            auth_routes: crate::auth_routes::AuthRouteConfig {
+            auth_routes: crate::auth::routes::AuthRouteConfig {
                 auth_expiry: token_duration("WK_AUTH_TOKEN_EXPIRY_SECONDS", "1987200000")?,
                 auth_idle_timeout: token_duration(
                     "WK_AUTH_TOKEN_IDLE_TIMEOUT_SECONDS",
@@ -171,7 +171,7 @@ impl Config {
                 uses_https: public_url.scheme() == "https",
                 logout_redirect_url: get("WK_LOGOUT_REDIRECT_URL", "/"),
             },
-            browser_auth: crate::browser_auth::config_from_values(
+            browser_auth: crate::auth::browser::config_from_values(
                 &values,
                 &public_url,
                 boolean("WK_EMAIL_VERIFICATION_ENABLED", "true")?,
@@ -186,7 +186,7 @@ impl Config {
             allow_delete_datasets: boolean("WK_ALLOW_DELETE_DATASETS", "true")?,
             email_verification_enabled: boolean("WK_EMAIL_VERIFICATION_ENABLED", "true")?,
             jobs_enabled: boolean("WK_JOBS_ENABLED", "false")?,
-            jobs: crate::jobs::JobsConfig {
+            jobs: crate::job::routes::JobsConfig {
                 worker_liveness_timeout: Duration::from_secs(positive(
                     "WK_WORKER_LIVENESS_TIMEOUT_SECONDS",
                     "60",
@@ -198,7 +198,7 @@ impl Config {
                 interaction: i64::try_from(positive("WK_TIME_TRACKING_PAUSE_MILLIS", "60000")?)
                     .ok()
                     .and_then(|millis| {
-                        crate::time_interaction::TimeInteractionConfig::new(millis).ok()
+                        crate::time::interaction::TimeInteractionConfig::new(millis).ok()
                     })
                     .ok_or_else(|| {
                         ConfigError("WK_TIME_TRACKING_PAUSE_MILLIS is out of range".into())
@@ -214,18 +214,19 @@ impl Config {
                 .map_err(|_| ConfigError("WK_BODY_LIMIT_BYTES exceeds usize".into()))?,
             misc: Default::default(),
             voxelytics: voxelytics_config(&values)?,
-            oidc: crate::auth_oidc::config_from_values(&values).map_err(ConfigError)?,
+            oidc: crate::auth::oidc::config_from_values(&values).map_err(ConfigError)?,
             mail: crate::mail::config_from_values(&values).map_err(ConfigError)?,
-            housekeeping: crate::housekeeping::config_from_values(&values).map_err(ConfigError)?,
+            housekeeping: crate::background::housekeeping::config_from_values(&values)
+                .map_err(ConfigError)?,
             slack: crate::slack::config_from_values(&values).map_err(ConfigError)?,
-            credit_ticker: crate::credit_ticker::config_from_values(&values)
+            credit_ticker: crate::background::credit_ticker::config_from_values(&values)
                 .map_err(ConfigError)?,
-            used_storage: crate::dataset_storage::config_from_values(&values)
+            used_storage: crate::organization::storage::config_from_values(&values)
                 .map_err(ConfigError)?,
-            worker_liveness: crate::worker_liveness::config_from_values(&values)
+            worker_liveness: crate::background::worker_liveness::config_from_values(&values)
                 .map_err(ConfigError)?,
         };
-        config.misc = crate::application_info::config_from_values(&values, &config)?;
+        config.misc = crate::system::application_info::config_from_values(&values, &config)?;
         Ok(config)
     }
 }
@@ -278,7 +279,7 @@ fn voxelytics_config(
 fn dataset_route_config(
     values: &HashMap<String, String>,
     segment_anything_enabled: bool,
-) -> Result<crate::dataset_options::DatasetRouteConfig, ConfigError> {
+) -> Result<crate::dataset::options::DatasetRouteConfig, ConfigError> {
     let external_path_deletion_key = match values.get("WK_EXTERNAL_PATH_DELETION_KEY") {
         Some(key) if key.is_empty() || key.chars().any(char::is_whitespace) => {
             return Err(ConfigError(
@@ -288,11 +289,11 @@ fn dataset_route_config(
         key => key.cloned(),
     };
     let text = |name: &str| values.get(name).cloned().unwrap_or_default();
-    let mut upload_to_paths = crate::dataset_options::UploadToPathsConfig::default();
+    let mut upload_to_paths = crate::dataset::options::UploadToPathsConfig::default();
     if let Some(prefixes) = values.get("WK_UPLOAD_TO_PATHS_PREFIXES") {
         for prefix in prefixes.split(',').map(str::trim).filter(|p| !p.is_empty()) {
-            let parsed = crate::dataset_source::normalize_upath(prefix)
-                .and_then(|p| crate::dataset_source::upath_to_absolute(&p))
+            let parsed = crate::dataset::source::normalize_upath(prefix)
+                .and_then(|p| crate::dataset::source::upath_to_absolute(&p))
                 .map_err(|_| {
                     ConfigError("WK_UPLOAD_TO_PATHS_PREFIXES must contain valid paths".into())
                 })?;
@@ -309,11 +310,11 @@ fn dataset_route_config(
     if let Some(infix) = values.get("WK_UPLOAD_TO_PATHS_INFIX") {
         upload_to_paths.infix = (!infix.is_empty()).then(|| infix.clone());
     }
-    Ok(crate::dataset_options::DatasetRouteConfig {
+    Ok(crate::dataset::options::DatasetRouteConfig {
         upload_to_paths,
         external_path_deletion_key,
         segment_anything_enabled,
-        segment_anything: crate::dataset_options::SegmentAnythingConfig {
+        segment_anything: crate::dataset::options::SegmentAnythingConfig {
             uri: text("WK_SEGMENT_ANYTHING_URI"),
             user: text("WK_SEGMENT_ANYTHING_USER"),
             password: text("WK_SEGMENT_ANYTHING_PASSWORD"),

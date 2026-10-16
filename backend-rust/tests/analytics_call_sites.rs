@@ -12,11 +12,11 @@ use common::{Fixture, TestDb, object_id};
 use serde_json::{Value, json};
 use webknossos_backend::{
     AppState,
-    analytics::{HEARTBEAT_JOB_NAME, run_heartbeat},
-    application_info::{MiscConfig, MiscState},
+    background::scheduler::{JobOutcome, advisory_lock_key},
     mail::MailSender,
     router_with_misc,
-    scheduler::{JobOutcome, advisory_lock_key},
+    system::analytics::{HEARTBEAT_JOB_NAME, run_heartbeat},
+    system::application_info::{MiscConfig, MiscState},
 };
 
 const PUBLIC_URI: &str = "https://wk.example";

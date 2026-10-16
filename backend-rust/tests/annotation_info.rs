@@ -19,9 +19,9 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation_info::{ANNOTATION_CANCELLED, NOT_FOUND_CONSIDER_LOGIN},
-    annotation_metadata::NOT_ALLOWED,
-    annotation_provider::ANNOTATION_NOT_FOUND,
+    annotation::info::{ANNOTATION_CANCELLED, NOT_FOUND_CONSIDER_LOGIN},
+    annotation::metadata::NOT_ALLOWED,
+    annotation::provider::ANNOTATION_NOT_FOUND,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     router,
 };

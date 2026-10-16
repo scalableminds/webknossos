@@ -9,7 +9,7 @@ use common::{Fixture, TestDb, object_id};
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
-use webknossos_backend::{AppState, annotation_access, router};
+use webknossos_backend::{AppState, router};
 
 async fn request(
     app: &Router,
@@ -509,14 +509,15 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
         .await
         .unwrap();
     assert!(
-        annotation_access::find(&db.pool, Some(&peer), &a.annotation, false)
+        webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &a.annotation, false)
             .await
             .is_err()
     );
-    let metadata = annotation_access::find(&db.pool, Some(&owner), &a.annotation, false)
-        .await
-        .unwrap();
-    let restricted = annotation_access::restrictions(&metadata, Some(&owner));
+    let metadata =
+        webknossos_backend::annotation::access::find(&db.pool, Some(&owner), &a.annotation, false)
+            .await
+            .unwrap();
+    let restricted = webknossos_backend::annotation::access::restrictions(&metadata, Some(&owner));
     assert!(
         restricted.allow_access
             && restricted.allow_update
@@ -525,27 +526,33 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
             && restricted.allow_download
     );
     sqlx::query("UPDATE webknossos.annotations SET collaborationMode='Exclusive',visibility='Internal' WHERE _id=$1").bind(&a.annotation).execute(&db.pool).await.unwrap();
-    let metadata = annotation_access::find(&db.pool, Some(&peer), &a.annotation, false)
-        .await
-        .unwrap();
-    let restricted = annotation_access::restrictions(&metadata, Some(&peer));
+    let metadata =
+        webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &a.annotation, false)
+            .await
+            .unwrap();
+    let restricted = webknossos_backend::annotation::access::restrictions(&metadata, Some(&peer));
     assert!(restricted.allow_access && restricted.allow_update);
     assert!(!restricted.allow_update_with_mutex);
     assert!(!restricted.allow_finish);
     sqlx::query("INSERT INTO webknossos.annotation_mutexes(_annotation,_user,sessionId,expiry) VALUES($1,$2,'session',now()+interval '1 hour')").bind(&a.annotation).bind(&peer.id).execute(&db.pool).await.unwrap();
-    let metadata = annotation_access::find(&db.pool, Some(&peer), &a.annotation, false)
-        .await
-        .unwrap();
-    assert!(annotation_access::restrictions(&metadata, Some(&peer)).allow_update_with_mutex);
+    let metadata =
+        webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &a.annotation, false)
+            .await
+            .unwrap();
+    assert!(
+        webknossos_backend::annotation::access::restrictions(&metadata, Some(&peer))
+            .allow_update_with_mutex
+    );
     sqlx::query("UPDATE webknossos.annotations SET state='Finished' WHERE _id=$1")
         .bind(&a.annotation)
         .execute(&db.pool)
         .await
         .unwrap();
-    let metadata = annotation_access::find(&db.pool, Some(&owner), &a.annotation, false)
-        .await
-        .unwrap();
-    let restricted = annotation_access::restrictions(&metadata, Some(&owner));
+    let metadata =
+        webknossos_backend::annotation::access::find(&db.pool, Some(&owner), &a.annotation, false)
+            .await
+            .unwrap();
+    let restricted = webknossos_backend::annotation::access::restrictions(&metadata, Some(&owner));
     assert!(!restricted.allow_update && !restricted.allow_finish);
     assert!(restricted.allow_finish_soft);
     sqlx::query("UPDATE webknossos.annotations SET isLockedByOwner=true WHERE _id=$1")
@@ -553,19 +560,24 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
         .execute(&db.pool)
         .await
         .unwrap();
-    let metadata = annotation_access::find(&db.pool, Some(&owner), &a.annotation, false)
-        .await
-        .unwrap();
-    assert!(!annotation_access::restrictions(&metadata, Some(&owner)).allow_finish_soft);
+    let metadata =
+        webknossos_backend::annotation::access::find(&db.pool, Some(&owner), &a.annotation, false)
+            .await
+            .unwrap();
+    assert!(
+        !webknossos_backend::annotation::access::restrictions(&metadata, Some(&owner))
+            .allow_finish_soft
+    );
     sqlx::query("UPDATE webknossos.annotations SET visibility='Public' WHERE _id=$1")
         .bind(&a.annotation)
         .execute(&db.pool)
         .await
         .unwrap();
-    let metadata = annotation_access::find(&db.pool, None, &a.annotation, false)
-        .await
-        .unwrap();
-    let restricted = annotation_access::restrictions(&metadata, None);
+    let metadata =
+        webknossos_backend::annotation::access::find(&db.pool, None, &a.annotation, false)
+            .await
+            .unwrap();
+    let restricted = webknossos_backend::annotation::access::restrictions(&metadata, None);
     assert!(restricted.allow_access && restricted.allow_download);
     assert!(!restricted.allow_update && !restricted.allow_finish);
     // Private task managers are a runtime restriction grant, separate from DAO read.
@@ -586,17 +598,23 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
     sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation) VALUES($1,$2,$3,'test',0,1,1,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3)").bind(&task).bind(&project).bind(&task_type).execute(&db.pool).await.unwrap();
     sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,visibility) VALUES($1,$2,$3,$4,'Task','Private')").bind(&task_annotation).bind(&a.dataset).bind(&task).bind(&f.user_id).execute(&db.pool).await.unwrap();
     assert!(
-        annotation_access::find(&db.pool, Some(&peer), &task_annotation, false)
-            .await
-            .is_err()
-    );
-    let metadata = annotation_access::find(&db.pool, Some(&peer), &task_annotation, true)
+        webknossos_backend::annotation::access::find(
+            &db.pool,
+            Some(&peer),
+            &task_annotation,
+            false
+        )
         .await
-        .unwrap();
-    let restriction = annotation_access::restrictions(&metadata, Some(&peer));
+        .is_err()
+    );
+    let metadata =
+        webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &task_annotation, true)
+            .await
+            .unwrap();
+    let restriction = webknossos_backend::annotation::access::restrictions(&metadata, Some(&peer));
     assert!(restriction.allow_access && restriction.allow_finish && !restriction.allow_update);
     let mut tx = db.pool.begin().await.unwrap();
-    annotation_access::lock_for_mutation(&mut tx, &peer, &task_annotation)
+    webknossos_backend::annotation::access::lock_for_mutation(&mut tx, &peer, &task_annotation)
         .await
         .unwrap();
     tx.rollback().await.unwrap();
@@ -605,10 +623,11 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
         .execute(&db.pool)
         .await
         .unwrap();
-    let metadata = annotation_access::find(&db.pool, Some(&peer), &task_annotation, true)
-        .await
-        .unwrap();
-    let restriction = annotation_access::restrictions(&metadata, Some(&peer));
+    let metadata =
+        webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &task_annotation, true)
+            .await
+            .unwrap();
+    let restriction = webknossos_backend::annotation::access::restrictions(&metadata, Some(&peer));
     assert!(!restriction.allow_access && !restriction.allow_finish);
     db.cleanup().await;
 }

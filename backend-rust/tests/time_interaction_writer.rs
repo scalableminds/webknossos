@@ -3,12 +3,12 @@ mod common;
 use axum::http::StatusCode;
 use common::{Fixture, TestDb, UserFixture, object_id};
 use webknossos_backend::{
-    annotation_provider::AccessContext,
+    annotation::provider::AccessContext,
     auth::AuthUser,
-    id::ObjectId,
     mail::{MailSender, RecordingMailer},
-    time_interaction::{MAX_DURATION_MILLIS, TimeInteractionConfig, TimeInteractionState},
-    time_interaction_writer::{OverLimitNotifier, RESOURCE_NOT_FOUND, TimeInteractionWriter},
+    time::interaction::{MAX_DURATION_MILLIS, TimeInteractionConfig, TimeInteractionState},
+    time::interaction_writer::{OverLimitNotifier, RESOURCE_NOT_FOUND, TimeInteractionWriter},
+    util::id::ObjectId,
 };
 
 const BASE: i64 = 1_700_000_000_000;

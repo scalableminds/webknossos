@@ -8,7 +8,7 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState, application_info::MiscConfig, mail::MailSender, router, router_with_misc,
+    AppState, mail::MailSender, router, router_with_misc, system::application_info::MiscConfig,
 };
 
 const NOT_FOUND: &str = "Could not find or access the requested resource.";

@@ -17,9 +17,8 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    dataset_options::DatasetRouteConfig,
-    dataset_upload_paths,
-    service_clients::{ServiceClientConfig, ServiceClients},
+    dataset::options::DatasetRouteConfig,
+    stores::client::{ServiceClientConfig, ServiceClients},
 };
 
 type Calls = Arc<Mutex<Vec<(String, Value)>>>;
@@ -59,7 +58,7 @@ async fn setup() -> Setup {
         rpc_token: "rpc-secret".to_owned(),
     })
     .unwrap();
-    let app = dataset_upload_paths::router(config)
+    let app = webknossos_backend::dataset::upload_paths::router(config)
         .layer(Extension(clients))
         .with_state(AppState {
             pool: db.pool.clone(),

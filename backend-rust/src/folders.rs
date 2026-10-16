@@ -17,27 +17,27 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path, Query},
-    id::ObjectId,
+    util::id::ObjectId,
 };
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CreateQuery {
-    #[serde(deserialize_with = "crate::id::deserialize_string")]
+    #[serde(deserialize_with = "crate::util::id::deserialize_string")]
     parent_id: String,
     name: String,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct MoveQuery {
-    #[serde(deserialize_with = "crate::id::deserialize_string")]
+    #[serde(deserialize_with = "crate::util::id::deserialize_string")]
     new_parent_id: String,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FolderParameters {
     name: String,
-    #[serde(deserialize_with = "crate::id::deserialize_strings")]
+    #[serde(deserialize_with = "crate::util::id::deserialize_strings")]
     allowed_teams: Vec<String>,
     metadata: Vec<Value>,
 }

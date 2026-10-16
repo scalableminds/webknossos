@@ -21,13 +21,12 @@ use std::{
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation_provider::{AccessContext, AnnotationIdentifier, AnnotationProvider},
+    annotation::provider::{AccessContext, AnnotationIdentifier, AnnotationProvider},
     auth::AuthUser,
-    id::ObjectId,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
-    remote_tracingstore_reads,
-    service_clients::ServiceClientConfig,
-    tracingstore_client::TracingStoreClient,
+    stores::client::ServiceClientConfig,
+    stores::tracing_client::TracingStoreClient,
+    util::id::ObjectId,
 };
 
 fn provider(db: &TestDb) -> AnnotationProvider {
@@ -43,7 +42,7 @@ fn provider(db: &TestDb) -> AnnotationProvider {
     )
 }
 fn app(db: &TestDb, provider: &AnnotationProvider) -> Router {
-    remote_tracingstore_reads::router()
+    webknossos_backend::remote::tracingstore::reads::router()
         .layer(Extension(provider.clone()))
         .with_state(AppState {
             pool: db.pool.clone(),

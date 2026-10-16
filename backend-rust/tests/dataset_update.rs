@@ -17,9 +17,8 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    application_info::{MiscConfig, MiscState},
-    dataset_update,
-    service_clients::{ServiceClientConfig, ServiceClients},
+    stores::client::{ServiceClientConfig, ServiceClients},
+    system::application_info::{MiscConfig, MiscState},
 };
 
 #[derive(Clone, Default)]
@@ -77,7 +76,7 @@ async fn setup() -> (TestDb, Fixture, Store, Router, tokio::task::JoinHandle<()>
     // Analytics side effects stay local (no forwarding URI).
     let mut misc = MiscConfig::default();
     misc.analytics.uri.clear();
-    let app = dataset_update::router(false)
+    let app = webknossos_backend::dataset::update::router(false)
         .layer(Extension(clients))
         .layer(Extension(MiscState::new(misc)))
         .with_state(AppState {

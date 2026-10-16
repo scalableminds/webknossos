@@ -19,9 +19,9 @@ use chrono::{DateTime, Utc};
 use common::{TestDb, object_id};
 use serde_json::{Value, json};
 use webknossos_backend::{
-    dataset_storage::{self, JOB_NAME, UsedStorageConfig},
-    scheduler::{JobOutcome, JobSchedule, advisory_lock_key, try_advisory_xact_lock},
-    service_clients::{ServiceClientConfig, ServiceClients},
+    background::scheduler::{JobOutcome, JobSchedule, advisory_lock_key, try_advisory_xact_lock},
+    organization::storage::{JOB_NAME, UsedStorageConfig},
+    stores::client::{ServiceClientConfig, ServiceClients},
 };
 
 /// One recorded datastore call: URI path and requested paths.
@@ -383,9 +383,13 @@ async fn scans_due_organizations_oldest_first_and_replaces_rows() {
         .unwrap()
         .insert("/real/a/color/2".into(), 0);
 
-    let outcome = dataset_storage::run_scan(&setup.db.pool, &setup.clients, &config(2))
-        .await
-        .unwrap();
+    let outcome = webknossos_backend::organization::storage::run_scan(
+        &setup.db.pool,
+        &setup.clients,
+        &config(2),
+    )
+    .await
+    .unwrap();
     assert_eq!(
         outcome,
         JobOutcome::Completed(
@@ -480,9 +484,13 @@ async fn scans_due_organizations_oldest_first_and_replaces_rows() {
     assert!(!recent(setup.scan_time("orgE").await));
 
     // Next tick: only orgC is still due; its datasets are gone, so its stale rows are cleared.
-    let outcome = dataset_storage::run_scan(&setup.db.pool, &setup.clients, &config(2))
-        .await
-        .unwrap();
+    let outcome = webknossos_backend::organization::storage::run_scan(
+        &setup.db.pool,
+        &setup.clients,
+        &config(2),
+    )
+    .await
+    .unwrap();
     assert_eq!(
         outcome,
         JobOutcome::Completed(
@@ -496,9 +504,13 @@ async fn scans_due_organizations_oldest_first_and_replaces_rows() {
     assert_eq!(setup.mag_rows("orgA").await.len(), 3);
 
     // Nothing due anymore.
-    let outcome = dataset_storage::run_scan(&setup.db.pool, &setup.clients, &config(2))
-        .await
-        .unwrap();
+    let outcome = webknossos_backend::organization::storage::run_scan(
+        &setup.db.pool,
+        &setup.clients,
+        &config(2),
+    )
+    .await
+    .unwrap();
     assert_eq!(
         outcome,
         JobOutcome::Completed(
@@ -547,9 +559,13 @@ async fn datastore_failure_keeps_organization_untouched_and_continues() {
         .unwrap()
         .insert("orgN/s2/color/1".into(), -1);
 
-    let outcome = dataset_storage::run_scan(&setup.db.pool, &setup.clients, &config(10))
-        .await
-        .unwrap();
+    let outcome = webknossos_backend::organization::storage::run_scan(
+        &setup.db.pool,
+        &setup.clients,
+        &config(10),
+    )
+    .await
+    .unwrap();
     assert_eq!(
         outcome,
         JobOutcome::Completed(
@@ -597,9 +613,13 @@ async fn paths_are_measured_in_batches_of_200() {
             )
             .await;
     }
-    dataset_storage::run_scan(&setup.db.pool, &setup.clients, &config(10))
-        .await
-        .unwrap();
+    webknossos_backend::organization::storage::run_scan(
+        &setup.db.pool,
+        &setup.clients,
+        &config(10),
+    )
+    .await
+    .unwrap();
     let calls = setup.mock.take();
     assert_eq!(
         calls
@@ -623,9 +643,13 @@ async fn without_reporting_datastores_rows_are_cleared_like_scala() {
         .mag(&dataset, "color", 1, Some("dsQ/color/1"), None)
         .await;
     setup.stale_rows("orgQ").await;
-    let outcome = dataset_storage::run_scan(&setup.db.pool, &setup.clients, &config(10))
-        .await
-        .unwrap();
+    let outcome = webknossos_backend::organization::storage::run_scan(
+        &setup.db.pool,
+        &setup.clients,
+        &config(10),
+    )
+    .await
+    .unwrap();
     assert_eq!(
         outcome,
         JobOutcome::Completed(
@@ -661,7 +685,7 @@ async fn lock_contention_skips_the_run() {
         let pool = setup.db.pool.clone();
         let clients = setup.clients.clone();
         async move {
-            dataset_storage::run_scan(&pool, &clients, &config(10))
+            webknossos_backend::organization::storage::run_scan(&pool, &clients, &config(10))
                 .await
                 .unwrap()
         }
@@ -678,7 +702,7 @@ async fn lock_contention_skips_the_run() {
         let pool = setup.db.pool.clone();
         let clients = setup.clients.clone();
         async move {
-            dataset_storage::run_scan(&pool, &clients, &config(10))
+            webknossos_backend::organization::storage::run_scan(&pool, &clients, &config(10))
                 .await
                 .unwrap()
         }
@@ -708,7 +732,11 @@ async fn spawned_scheduler_scans_and_shuts_down() {
         },
         ..config(10)
     };
-    let handle = dataset_storage::spawn(setup.db.pool.clone(), setup.clients.clone(), &config);
+    let handle = webknossos_backend::organization::storage::spawn(
+        setup.db.pool.clone(),
+        setup.clients.clone(),
+        &config,
+    );
     assert_eq!(handle.job_names(), [JOB_NAME]);
     let deadline = Instant::now() + Duration::from_secs(10);
     while setup.mag_rows("orgS").await.is_empty() {

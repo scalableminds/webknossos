@@ -16,8 +16,8 @@ use common::{Fixture, TestDb, object_id};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState, dataset_compose,
-    service_clients::{ServiceClientConfig, ServiceClients},
+    AppState,
+    stores::client::{ServiceClientConfig, ServiceClients},
 };
 
 type Calls = Arc<Mutex<Vec<(String, String)>>>;
@@ -88,7 +88,7 @@ async fn compose_and_in_place_additions_build_virtual_datasets() {
     let server = tokio::spawn(async move { axum::serve(listener, mock).await.unwrap() });
     sqlx::query("INSERT INTO webknossos.dataStores (name,url,publicUrl,key) VALUES ('store',$1,'http://public.invalid','k')")
         .bind(&base).execute(&db.pool).await.unwrap();
-    let app = dataset_compose::router()
+    let app = webknossos_backend::dataset::compose::router()
         .layer(Extension(
             ServiceClients::new(ServiceClientConfig {
                 request_timeout: Duration::from_secs(5),

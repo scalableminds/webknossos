@@ -11,11 +11,11 @@ use sqlx::{Postgres, Transaction};
 
 use crate::AppState;
 use crate::auth::AuthUser;
-use crate::browser_auth::{BrowserAuthConfig, verify_password};
+use crate::auth::browser::{BrowserAuthConfig, verify_password};
 use crate::error::{ApiError, ApiResult};
 use crate::extract::{Json as RequestJson, Path, Query};
-use crate::id::{ObjectId, PathObjectId};
 use crate::mail::{MailSender, templates};
+use crate::util::id::{ObjectId, PathObjectId};
 
 pub fn router(email_verification_enabled: bool) -> Router<AppState> {
     Router::new()

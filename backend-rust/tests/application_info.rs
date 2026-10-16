@@ -8,9 +8,9 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    application_info::MiscConfig,
     mail::{MailSender, RecordingMailer},
     router_with_misc,
+    system::application_info::MiscConfig,
 };
 
 struct Reply {

@@ -11,9 +11,9 @@ use chrono::{DateTime, Utc};
 use common::{TestDb, object_id};
 use serde_json::{Value, json};
 use webknossos_backend::{
-    scheduler::{JobOutcome, JobSchedule, advisory_lock_key, try_advisory_xact_lock},
+    background::scheduler::{JobOutcome, JobSchedule, advisory_lock_key, try_advisory_xact_lock},
+    background::worker_liveness::{JOB_NAME, WorkerLivenessConfig, WorkerLivenessMonitor},
     slack::{COLOR_SUCCESS, COLOR_WARN, SlackConfig, SlackNotificationService, format_heartbeat},
-    worker_liveness::{self, JOB_NAME, WorkerLivenessConfig, WorkerLivenessMonitor},
 };
 
 const PUBLIC_URI: &str = "http://wk.example";
@@ -266,7 +266,12 @@ async fn scheduled_monitor_reports_and_stops() {
         re_report_interval: RE_REPORT,
     };
     let monitor = WorkerLivenessMonitor::new(TIMEOUT, config.re_report_interval, slack);
-    let handle = worker_liveness::scheduler(db.pool.clone(), &config, monitor.clone()).spawn();
+    let handle = webknossos_backend::background::worker_liveness::scheduler(
+        db.pool.clone(),
+        &config,
+        monitor.clone(),
+    )
+    .spawn();
     assert_eq!(handle.job_names(), vec![JOB_NAME]);
     // Many ticks run, but the missing worker is reported only once.
     tokio::time::sleep(Duration::from_millis(400)).await;

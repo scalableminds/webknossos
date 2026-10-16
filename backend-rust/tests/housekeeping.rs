@@ -5,8 +5,8 @@ use std::time::Duration;
 use chrono::{DateTime, TimeDelta, Utc};
 use common::{Fixture, TestDb, object_id};
 use webknossos_backend::{
-    housekeeping::{self, HousekeepingConfig, HousekeepingJob},
-    scheduler::{JobOutcome, JobSchedule, try_advisory_xact_lock},
+    background::housekeeping::{HousekeepingConfig, HousekeepingJob},
+    background::scheduler::{JobOutcome, JobSchedule, try_advisory_xact_lock},
 };
 
 /// Truncated to microseconds so values round-trip through TIMESTAMPTZ exactly.
@@ -355,7 +355,7 @@ async fn spawned_scheduler_runs_enabled_jobs_and_shuts_down() {
         },
         ..HousekeepingConfig::default()
     };
-    let handle = housekeeping::spawn(db.pool.clone(), &config);
+    let handle = webknossos_backend::background::housekeeping::spawn(db.pool.clone(), &config);
     assert!(handle.job_names().contains(&"expired-tokens"));
     assert!(!handle.job_names().contains(&"old-tokens"));
     let deadline = std::time::Instant::now() + Duration::from_secs(10);

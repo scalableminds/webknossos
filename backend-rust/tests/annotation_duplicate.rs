@@ -19,7 +19,7 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation_provider::ANNOTATION_NOT_FOUND,
+    annotation::provider::ANNOTATION_NOT_FOUND,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     router,
 };

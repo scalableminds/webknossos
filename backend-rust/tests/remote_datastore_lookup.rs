@@ -8,7 +8,7 @@ use axum::{
 use common::{TestDb, object_id};
 use serde_json::{Value, json};
 use tower::ServiceExt;
-use webknossos_backend::{AppState, remote_datastore_lookup};
+use webknossos_backend::AppState;
 
 async fn setup() -> (TestDb, Router) {
     let db = TestDb::new().await;
@@ -24,7 +24,7 @@ async fn setup() -> (TestDb, Router) {
         .await
         .unwrap();
     }
-    let app = remote_datastore_lookup::router().with_state(AppState {
+    let app = webknossos_backend::remote::datastore::lookup::router().with_state(AppState {
         pool: db.pool.clone(),
     });
     (db, app)

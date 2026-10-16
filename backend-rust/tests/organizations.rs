@@ -7,7 +7,7 @@ use axum::{
 use common::{Fixture, TestDb, object_id};
 use serde_json::{Value, json};
 use tower::ServiceExt;
-use webknossos_backend::{AppState, organizations};
+use webknossos_backend::AppState;
 
 async fn request(
     app: &Router,
@@ -37,7 +37,7 @@ async fn request(
     (status, serde_json::from_slice(&bytes).unwrap())
 }
 fn app(db: &TestDb) -> Router {
-    organizations::router().with_state(AppState {
+    webknossos_backend::organization::routes::router().with_state(AppState {
         pool: db.pool.clone(),
     })
 }

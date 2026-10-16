@@ -16,9 +16,9 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    application_info::{MiscConfig, default_features},
     mail::{MailSender, RecordingMailer},
     router_with_misc,
+    system::application_info::{MiscConfig, default_features},
 };
 
 const NOT_FOUND: &str = "Could not find or access the requested resource.";

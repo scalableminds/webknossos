@@ -8,7 +8,7 @@ use crate::{
     AppState,
     error::{ApiError, ApiResult},
     extract::Path,
-    id::PathObjectId,
+    util::id::PathObjectId,
 };
 use axum::{
     Extension, Json, Router,
@@ -106,7 +106,8 @@ async fn publication_json(
     let mut datasets = Vec::with_capacity(dataset_ids.len());
     for id in dataset_ids {
         datasets.push(
-            crate::datasets::full_json_on_connection(connection, None, &id, jobs_enabled).await?,
+            crate::dataset::routes::full_json_on_connection(connection, None, &id, jobs_enabled)
+                .await?,
         );
     }
     let annotations: Vec<(String, String, String, String, String)> = sqlx::query_as(
@@ -172,7 +173,8 @@ async fn annotation_json(
                 ApiError::not_found("Could not find or access the requested resource.")
             })?;
     let dataset_json =
-        crate::datasets::full_json_on_connection(connection, None, dataset, jobs_enabled).await?;
+        crate::dataset::routes::full_json_on_connection(connection, None, dataset, jobs_enabled)
+            .await?;
     Ok(json!({
         "id": id,
         "name": name,

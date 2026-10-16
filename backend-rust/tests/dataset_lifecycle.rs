@@ -16,10 +16,9 @@ use common::{Fixture, TestDb, object_id};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState, dataset_lifecycle,
-    dataset_options::DatasetRouteConfig,
-    dataset_paths,
-    service_clients::{ServiceClientConfig, ServiceClients},
+    AppState,
+    dataset::options::DatasetRouteConfig,
+    stores::client::{ServiceClientConfig, ServiceClients},
 };
 
 /// One recorded datastore call: method, URI (incl. query), JSON body.
@@ -93,7 +92,7 @@ fn clients() -> ServiceClients {
 }
 
 fn app(db: &TestDb, allow_delete: bool, jobs_enabled: bool) -> Router {
-    dataset_lifecycle::router(allow_delete, jobs_enabled)
+    webknossos_backend::dataset::lifecycle::router(allow_delete, jobs_enabled)
         .layer(Extension(clients()))
         .with_state(AppState {
             pool: db.pool.clone(),
@@ -203,9 +202,9 @@ async fn path_deletion_service_routes_require_the_configured_key() {
     let state = AppState {
         pool: db.pool.clone(),
     };
-    let unconfigured =
-        dataset_paths::router(DatasetRouteConfig::default()).with_state(state.clone());
-    let configured = dataset_paths::router(DatasetRouteConfig {
+    let unconfigured = webknossos_backend::dataset::paths::router(DatasetRouteConfig::default())
+        .with_state(state.clone());
+    let configured = webknossos_backend::dataset::paths::router(DatasetRouteConfig {
         external_path_deletion_key: Some("deletion-key".into()),
         ..Default::default()
     })

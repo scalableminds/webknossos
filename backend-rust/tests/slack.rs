@@ -20,11 +20,11 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    application_info::MiscConfig,
-    browser_auth::BrowserAuthConfig,
+    auth::browser::BrowserAuthConfig,
     config::{Config, DatabaseConfig},
     router_with_config,
     slack::{SlackConfig, SlackNotificationService},
+    system::application_info::MiscConfig,
 };
 
 const PUBLIC_URI: &str = "http://wk.example";

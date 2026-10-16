@@ -12,12 +12,15 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     auth::authenticate,
-    credentials::{self, CredentialInput, insert_credential, store_credential},
+    remote::datastore::credentials::{CredentialInput, insert_credential, store_credential},
 };
 
 fn app(database: &TestDb) -> Router {
     Router::new()
-        .nest("/api", credentials::router())
+        .nest(
+            "/api",
+            webknossos_backend::remote::datastore::credentials::router(),
+        )
         .with_state(AppState {
             pool: database.pool.clone(),
         })

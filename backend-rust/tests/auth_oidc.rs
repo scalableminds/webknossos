@@ -29,8 +29,8 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    auth_oidc::OidcConfig,
-    browser_auth::BrowserAuthConfig,
+    auth::browser::BrowserAuthConfig,
+    auth::oidc::OidcConfig,
     config::{Config, DatabaseConfig},
     router_with_config,
 };

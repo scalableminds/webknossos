@@ -8,7 +8,7 @@ use browser_auth_support::{
 };
 use common::{TestDb, object_id};
 use serde_json::{Value, json};
-use webknossos_backend::{browser_auth::CookieAuthenticator, mail::RecordingMailer};
+use webknossos_backend::{auth::browser::CookieAuthenticator, mail::RecordingMailer};
 
 const TOKEN_INVALID: &str = "The supplied token is invalid or expired.";
 const INVALID_CREDENTIALS: &str = "Incorrect email or password. Please try again.";

@@ -17,10 +17,10 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState, ai_models,
-    application_info::{MiscConfig, MiscState},
-    dataset_options::UploadToPathsConfig,
+    dataset::options::UploadToPathsConfig,
     router,
-    service_clients::{ServiceClientConfig, ServiceClients},
+    stores::client::{ServiceClientConfig, ServiceClients},
+    system::application_info::{MiscConfig, MiscState},
 };
 
 type Calls = Arc<Mutex<Vec<(String, String, Value)>>>;

@@ -18,9 +18,8 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    application_info::{MiscConfig, MiscState},
-    auth_webauthn,
     mail::{MailSender, RecordingMailer},
+    system::application_info::{MiscConfig, MiscState},
 };
 
 /// _id, credentialId, name, UV, BE, BS, statement, attested, extensions, count, deleted.
@@ -49,7 +48,7 @@ fn app(database: &TestDb, public_uri: &str, enabled: bool) -> Router {
     misc.features
         .insert("passkeysEnabled".into(), Value::Bool(enabled));
     Router::new()
-        .nest("/api", auth_webauthn::router())
+        .nest("/api", webknossos_backend::auth::webauthn::router())
         .layer(Extension(MiscState::new(misc)))
         .with_state(AppState {
             pool: database.pool.clone(),

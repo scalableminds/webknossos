@@ -19,8 +19,8 @@ use common::{TestDb, object_id};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState, remote_datastore_attachment_upload,
-    service_clients::{ServiceClientConfig, ServiceClients},
+    AppState,
+    stores::client::{ServiceClientConfig, ServiceClients},
 };
 
 /// One recorded datastore call: method, URI (incl. query), JSON body.
@@ -90,7 +90,7 @@ async fn setup() -> Setup {
         rpc_token: "rpc-secret".to_owned(),
     })
     .unwrap();
-    let app = remote_datastore_attachment_upload::router()
+    let app = webknossos_backend::remote::datastore::attachment_upload::router()
         .layer(Extension(clients))
         .with_state(AppState {
             pool: db.pool.clone(),

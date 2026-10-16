@@ -9,13 +9,12 @@ use serde_json::{Value, json};
 use sqlx::{PgPool, Postgres, Transaction};
 
 use crate::{
-    AppState, annotation_access,
+    AppState,
     auth::AuthUser,
-    dataset_access,
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
-    id::ObjectId,
     users,
+    util::id::ObjectId,
 };
 
 pub fn router() -> Router<AppState> {
@@ -42,12 +41,12 @@ pub fn router() -> Router<AppState> {
 #[serde(rename_all = "camelCase")]
 struct ProjectParameters {
     name: String,
-    #[serde(deserialize_with = "crate::id::deserialize_string")]
+    #[serde(deserialize_with = "crate::util::id::deserialize_string")]
     team: String,
     priority: i32,
     paused: Option<bool>,
     expected_time: Option<i64>,
-    #[serde(deserialize_with = "crate::id::deserialize_string")]
+    #[serde(deserialize_with = "crate::util::id::deserialize_string")]
     owner: String,
     is_blacklisted_from_report: bool,
 }
@@ -510,8 +509,8 @@ async fn transfer_active_tasks(
         // AnnotationService.transferAnnotationToUser, under the requester's context.
         let (dataset, mutable): (String, bool) = sqlx::query_as(&format!(
             "SELECT a._dataset, {} FROM webknossos.annotations a WHERE a._id=$4 AND NOT a.isDeleted AND {} FOR UPDATE OF a",
-            annotation_access::MUTATE_PREDICATE,
-            annotation_access::READ_PREDICATE
+            crate::annotation::access::MUTATE_PREDICATE,
+            crate::annotation::access::READ_PREDICATE
         ))
         .bind(&user.id)
         .bind(&user.organization_id)
@@ -522,7 +521,7 @@ async fn transfer_active_tasks(
         .ok_or_else(|| ApiError::bad_request(ANNOTATION_NOT_FOUND))?;
         let dataset_readable: bool = sqlx::query_scalar(&format!(
             "SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = $3 AND {})",
-            dataset_access::READ_PREDICATE
+            crate::dataset::access::READ_PREDICATE
         ))
         .bind(new_user)
         .bind(None::<&str>)
@@ -543,7 +542,7 @@ async fn transfer_active_tasks(
         // Play re-reads the transferred annotation with the requester's access.
         let readable: bool = sqlx::query_scalar(&format!(
             "SELECT EXISTS (SELECT 1 FROM webknossos.annotations_ a WHERE a._id=$4 AND {})",
-            annotation_access::READ_PREDICATE
+            crate::annotation::access::READ_PREDICATE
         ))
         .bind(&user.id)
         .bind(&user.organization_id)

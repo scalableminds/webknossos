@@ -12,7 +12,7 @@ use axum::{
     routing::any,
 };
 use serde_json::{Value, json};
-use webknossos_backend::service_clients::{ServiceClientConfig, ServiceClients, ServiceError};
+use webknossos_backend::stores::client::{ServiceClientConfig, ServiceClients, ServiceError};
 
 #[derive(Clone, Default)]
 struct Observations {
@@ -263,7 +263,7 @@ async fn request_bytes_attaches_token_content_type_and_exact_body() {
             &base,
             &["tracings", "skeleton", "save"],
             &[("newTracingId", "a b&c".to_owned())],
-            webknossos_backend::service_clients::PROTOBUF_CONTENT_TYPE,
+            webknossos_backend::stores::client::PROTOBUF_CONTENT_TYPE,
             body.clone(),
         )
         .await
@@ -331,7 +331,8 @@ async fn request_bytes_maps_upstream_status_without_exposing_body() {
 
 #[tokio::test]
 async fn has_segment_index_gets_json_boolean_from_layer_path() {
-    let dataset_id = webknossos_backend::id::ObjectId::parse("0123456789abcdef01234567").unwrap();
+    let dataset_id =
+        webknossos_backend::util::id::ObjectId::parse("0123456789abcdef01234567").unwrap();
     let client = client(Duration::from_secs(2), 1024);
     for (response, expected) in [("true", true), ("false", false)] {
         let (base, observed) = raw_server(StatusCode::OK, response).await;

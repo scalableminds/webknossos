@@ -1737,9 +1737,9 @@ Nothing below revises the design. This section records where the code currently 
 | `WorkingDataCube` | 5.5 | `not_yet_integrated/working_data_cube.ts` | production goes through `WkDataCubeAdapter` over the real `DataCube` instead |
 | `BucketJournal` | 5.7 | `not_yet_integrated/bucket_journal.ts` | nothing in `viewer/` appends to it yet |
 | `VolumeEditingSession` | 5 | `not_yet_integrated/volume_editing_session.ts` | the app opens transactions from the sagas instead |
-| Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill` |
+| Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill`, `runMaskEdit` |
 
-The running app reaches the new code at exactly two call sites: brushing in `volumetracing_saga.tsx` and flood fill in `floodfill_saga.tsx`. Both are now the only path for those tools — the old `VoxelBuffer2D` brush branch and `DataCube.floodFill` are gone, along with the toggle that used to select between them. The trace tool still uses the section labeler. Writes land in real buckets; nothing else about the existing pipeline changes.
+The running app reaches the new code at three call sites: brushing in `volumetracing_saga.tsx`, flood fill in `floodfill_saga.tsx` and volume interpolation in `volume_interpolation_saga.ts`, which labels all interpolated slices as one `MaskShape` in a single transaction. They are now the only path for those tools — the old `VoxelBuffer2D` brush branch and `DataCube.floodFill` are gone, along with the toggle that used to select between them. The trace tool still uses the section labeler. Writes land in real buckets; nothing else about the existing pipeline changes.
 
 ### 12.2 Skipped, and why
 

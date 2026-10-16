@@ -216,11 +216,17 @@ export function useResumableDatasetUpload({
     }
 
     activeUpload.resumableUpload.cancel();
-    await cancelDatasetUpload(activeUpload.datastoreUrl, activeUpload.uploadId);
-    activeUploadRef.current = null;
-    setStatus({ kind: "idle" });
-    onUploadAborted();
-    Toast.success(messages["dataset.upload_cancel"]);
+    try {
+      await cancelDatasetUpload(activeUpload.datastoreUrl, activeUpload.uploadId);
+      Toast.success(messages["dataset.upload_cancel"]);
+    } catch (error) {
+      // The request library already notified the user.
+      console.error(error);
+    } finally {
+      activeUploadRef.current = null;
+      setStatus({ kind: "idle" });
+      onUploadAborted();
+    }
   };
 
   return { status, startUpload, cancelUpload };

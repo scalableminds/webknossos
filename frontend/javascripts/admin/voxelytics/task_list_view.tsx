@@ -1,14 +1,9 @@
 import {
   ApartmentOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
   DownOutlined,
-  ExclamationCircleOutlined,
   ExportOutlined,
   FieldTimeOutlined,
   LeftOutlined,
-  MinusCircleOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
 import { deleteWorkflow, getVoxelyticsLogs } from "admin/rest_api";
@@ -26,7 +21,6 @@ import {
   Row,
   Select,
   Space,
-  Tag,
   Tooltip,
   Typography,
 } from "antd";
@@ -40,7 +34,7 @@ import { useUpdateEvery, useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
 import MiniSearch from "minisearch";
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { ModalWidth } from "theme";
 import {
   VoxelyticsRunState,
@@ -55,6 +49,8 @@ import { LOG_LEVELS } from "viewer/constants";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import DAGView, { colorHasher } from "./dag_view";
 import { formatLog } from "./log_tab";
+import RunStateTag from "./run_state_tag";
+import { getTaskExecutions, type TaskListLocationState } from "./task_runs_tab";
 import TaskView from "./task_view";
 import { addAfterPadding, addBeforePadding } from "./utils";
 
@@ -107,17 +103,9 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
   useUpdateEvery(10000);
   switch (taskInfo.state) {
     case VoxelyticsRunState.PENDING:
-      return (
-        <Tag icon={<ClockCircleOutlined />} color="default">
-          pending
-        </Tag>
-      );
+      return <RunStateTag state={VoxelyticsRunState.PENDING} />;
     case VoxelyticsRunState.SKIPPED:
-      return (
-        <Tag icon={<MinusCircleOutlined />} color="default">
-          skipped
-        </Tag>
-      );
+      return <RunStateTag state={VoxelyticsRunState.SKIPPED} />;
     case VoxelyticsRunState.RUNNING: {
       const currentDuration = Date.now() - taskInfo.beginTime.getTime();
       if (taskInfo.chunkCounts.complete > 0) {
@@ -144,9 +132,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
               </>
             }
           >
-            <Tag icon={<SyncOutlined spin />} color="processing">
-              running
-            </Tag>
+            <RunStateTag state={VoxelyticsRunState.RUNNING} />
             started {dayjs(taskInfo.beginTime).fromNow()}, probably finishes{" "}
             {dayjs(estimatedEndTime).fromNow()}
           </Tooltip>
@@ -162,9 +148,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
               </>
             }
           >
-            <Tag icon={<SyncOutlined spin />} color="processing">
-              running
-            </Tag>
+            <RunStateTag state={VoxelyticsRunState.RUNNING} />
             started {dayjs(taskInfo.beginTime).fromNow()}
           </Tooltip>
         );
@@ -181,11 +165,8 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             </>
           }
         >
-          <Tag icon={<CloseCircleOutlined />} color="error">
-            timed out
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          <RunStateTag state={VoxelyticsRunState.STALE} /> {dayjs(taskInfo.endTime).fromNow()},
+          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.CANCELLED:
@@ -199,11 +180,8 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             </>
           }
         >
-          <Tag icon={<ExclamationCircleOutlined />} color="error">
-            cancelled
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          <RunStateTag state={VoxelyticsRunState.CANCELLED} /> {dayjs(taskInfo.endTime).fromNow()},
+          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.FAILED:
@@ -217,11 +195,8 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             </>
           }
         >
-          <Tag icon={<CloseCircleOutlined />} color="error">
-            failed
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          <RunStateTag state={VoxelyticsRunState.FAILED} /> {dayjs(taskInfo.endTime).fromNow()},
+          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.COMPLETE:
@@ -235,11 +210,8 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             </>
           }
         >
-          <Tag icon={<CheckCircleOutlined />} color="success">
-            completed
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          <RunStateTag state={VoxelyticsRunState.COMPLETE} /> {dayjs(taskInfo.endTime).fromNow()},
+          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     default:
@@ -272,9 +244,16 @@ export default function TaskListView({
 
   // expandedTask = state of the collapsible list
   const [expandedTasks, setExpandedTasks] = useState<Array<string>>([]);
-  const params = useParams<{ highlightedTask?: string }>();
-  const highlightedTask = params.highlightedTask || "";
+  // Wrapped in an object so that focusing the same task again triggers a new scroll.
+  const [taskToFocus, setTaskToFocus] = useState<{ taskName: string } | null>(null);
   const location = useLocation();
+
+  // Derived from the report's tasks and runs, which are replaced (not mutated) whenever the
+  // report is refetched, so this is recomputed for every new report.
+  const taskExecutionsByTask = useMemo(() => {
+    const runsById = new Map(report.runs.map((run) => [run.id, run]));
+    return new Map(report.tasks.map((t) => [t.taskName, getTaskExecutions(t.runs, runsById)]));
+  }, [report.tasks, report.runs]);
 
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
@@ -287,19 +266,22 @@ export default function TaskListView({
 
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 
+  // Links to a task in another run pass the task via the location state. Depending on the
+  // location key (instead of the task name) re-focuses the task on every navigation, because
+  // this view stays mounted when switching between runs.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only run when navigating.
   useEffect(() => {
-    setExpandedTasks([highlightedTask]);
-    handleFocusTask(highlightedTask);
-  }, [highlightedTask]);
+    const highlightedTask = (location.state as TaskListLocationState | null)?.highlightedTask;
+    if (highlightedTask != null) handleSelectTask(highlightedTask);
+  }, [location.key]);
 
-  function handleFocusTask(focusedTask: string | null) {
-    if (focusedTask == null) return;
-    const elementId = `task-panel-${focusedTask}`;
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
-  }
+  // Scroll only after the task panel was expanded (and the search was cleared) and rendered.
+  // Other panels stay as they are, so the layout above the task doesn't shift during the scroll.
+  useEffect(() => {
+    if (taskToFocus == null) return;
+    const element = document.getElementById(`task-panel-${taskToFocus.taskName}`);
+    element?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [taskToFocus]);
 
   const miniSearch = useMemo(() => {
     const miniSearch: MiniSearch<VoxelyticsTaskConfig> = new MiniSearch({
@@ -330,8 +312,17 @@ export default function TaskListView({
     [miniSearch, report, searchQuery],
   );
 
-  function handleOnCollapseChange(newExpandedTasks: string | Array<string>) {
-    setExpandedTasks(Array.isArray(newExpandedTasks) ? newExpandedTasks : [newExpandedTasks]);
+  // expandedTasks holds the active keys of the outer and all nested (meta task) collapses.
+  // Each collapse only reports its own keys, so only those are replaced.
+  function handleOnCollapseChange(
+    collapseKeys: Array<string>,
+    newExpandedTasks: string | Array<string>,
+  ) {
+    const newKeys = Array.isArray(newExpandedTasks) ? newExpandedTasks : [newExpandedTasks];
+    setExpandedTasks((expanded) => [
+      ...expanded.filter((key) => !collapseKeys.includes(key)),
+      ...newKeys,
+    ]);
   }
 
   function handleOnSearch(textValue: string) {
@@ -339,13 +330,15 @@ export default function TaskListView({
   }
 
   function handleSelectTask(taskName: string) {
-    handleFocusTask(taskName);
     setSearchQuery("");
-
-    if (!expandedTasks.includes(taskName)) {
-      const expandedTasksCopy = [...expandedTasks, taskName];
-      setExpandedTasks(expandedTasksCopy);
-    }
+    // Also expand the meta tasks containing the task (e.g., "a" and "a@b" for "a@b@c").
+    const parts = taskName.split("@");
+    const keysToExpand = parts.map((_, i) => parts.slice(0, i + 1).join("@"));
+    setExpandedTasks((expanded) => [
+      ...expanded,
+      ...keysToExpand.filter((key) => !expanded.includes(key)),
+    ]);
+    setTaskToFocus({ taskName });
   }
 
   function copyAllArtifactPaths() {
@@ -541,7 +534,16 @@ export default function TaskListView({
                 </Link>
               </div>
             )}
-            <Collapse items={collapseItems} />
+            <Collapse
+              onChange={(keys) =>
+                handleOnCollapseChange(
+                  collapseItems.map((item) => String(item.key)),
+                  keys,
+                )
+              }
+              activeKey={expandedTasks}
+              items={collapseItems}
+            />
           </React.Fragment>
         ),
       };
@@ -602,11 +604,14 @@ export default function TaskListView({
           artifacts={taskArtifacts}
           dag={report.dag}
           taskInfo={taskInfo}
+          taskExecutions={taskExecutionsByTask.get(task.taskName) ?? []}
           onSelectTask={handleSelectTask}
         />
       ),
     };
   };
+
+  const topLevelCollapseItems = tasksWithHierarchy.map(getTaskGroupOrTaskItem).filter(notEmpty);
 
   const totalRuntime = report.tasks.reduce((sum, t) => {
     if (t.state === VoxelyticsRunState.RUNNING) {
@@ -746,9 +751,14 @@ export default function TaskListView({
 
         <div style={{ overflowY: "auto", flex: 1 }}>
           <Collapse
-            onChange={handleOnCollapseChange}
+            onChange={(keys) =>
+              handleOnCollapseChange(
+                topLevelCollapseItems.map((item) => String(item.key)),
+                keys,
+              )
+            }
             activeKey={expandedTasks}
-            items={tasksWithHierarchy.map(getTaskGroupOrTaskItem).filter(notEmpty)}
+            items={topLevelCollapseItems}
           />
         </div>
       </Col>

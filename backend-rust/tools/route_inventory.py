@@ -54,7 +54,7 @@ def render():
     modules = sorted(
         path.relative_to(ROOT).as_posix()
         for path in (ROOT / "src").rglob("*.rs")
-        if path.name != "tests.rs" and path.relative_to(ROOT / "src").as_posix() != "dataset/legacy.rs"
+        if path.name != "tests.rs" and not path.relative_to(ROOT / "src").as_posix().startswith("dataset/legacy")
     )
     rust = {}
     for module in modules:

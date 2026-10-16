@@ -25,10 +25,10 @@ Evidence: README.md and ../checkpoints/datastore-ds2-*.md, datastore-ds3-data-ac
 | POST | `/datasets/:datasetId/datasetThumbnail` | [src/controllers/thumbnails.rs](src/controllers/thumbnails.rs) |
 | GET | `/datasets/:datasetId/layers/:dataLayerName/findData` | [src/controllers/binary_data.rs](src/controllers/binary_data.rs) |
 | GET | `/datasets/:datasetId/layers/:dataLayerName/histogram` | [src/controllers/binary_data.rs](src/controllers/binary_data.rs) |
-| GET | `/datasets/:datasetId/proxy/layers/:dataLayerName/mags/:mag/*path` | [src/controllers/data_proxy.rs](src/controllers/data_proxy.rs) |
-| GET | `/datasets/:datasetId/proxy/layers/:dataLayerName/mags/info` | [src/controllers/data_proxy.rs](src/controllers/data_proxy.rs) |
-| GET | `/datasets/:datasetId/proxy/layers/:dataLayerName/attachments/:attachmentType/:attachmentName/*path` | [src/controllers/data_proxy.rs](src/controllers/data_proxy.rs) |
-| GET | `/datasets/:datasetId/proxy/datasource-properties.json` | [src/controllers/data_proxy.rs](src/controllers/data_proxy.rs) |
+| GET | `/datasets/:datasetId/proxy/layers/:dataLayerName/mags/:mag/*path` | [src/controllers/data_proxy/mod.rs](src/controllers/data_proxy/mod.rs) |
+| GET | `/datasets/:datasetId/proxy/layers/:dataLayerName/mags/info` | [src/controllers/data_proxy/mod.rs](src/controllers/data_proxy/mod.rs) |
+| GET | `/datasets/:datasetId/proxy/layers/:dataLayerName/attachments/:attachmentType/:attachmentName/*path` | [src/controllers/data_proxy/mod.rs](src/controllers/data_proxy/mod.rs) |
+| GET | `/datasets/:datasetId/proxy/datasource-properties.json` | [src/controllers/data_proxy/mod.rs](src/controllers/data_proxy/mod.rs) |
 | GET | `/datasets/:datasetId/layers/:dataLayerName/mag:mag/x:x/y:y/z:z/bucket.raw` | [src/controllers/binary_data.rs](src/controllers/binary_data.rs) |
 | GET | `/zarr/:datasetId` | [src/controllers/zarr_streaming.rs](src/controllers/zarr_streaming.rs) |
 | GET | `/zarr/:datasetId/` | [src/controllers/zarr_streaming.rs](src/controllers/zarr_streaming.rs) |
@@ -147,5 +147,5 @@ Evidence: README.md and ../checkpoints/datastore-ds2-*.md, datastore-ds3-data-ac
 | POST | `/triggers/createOrganizationDirectory` | [src/controllers/data_source.rs](src/controllers/data_source.rs) |
 | POST | `/triggers/reload/:organizationId/:datasetId` | [src/controllers/data_source.rs](src/controllers/data_source.rs) |
 | POST | `/triggers/scanRealPathsForVirtual` | [src/controllers/data_source.rs](src/controllers/data_source.rs) |
-| GET | `/exports/:jobId/download` | [src/controllers/exports.rs](src/controllers/exports.rs) |
-| POST | `/aiModels/effectiveVoxelSize` | [src/controllers/exports.rs](src/controllers/exports.rs) |
+| GET | `/exports/:jobId/download` | [src/controllers/exports/mod.rs](src/controllers/exports/mod.rs) |
+| POST | `/aiModels/effectiveVoxelSize` | [src/controllers/exports/mod.rs](src/controllers/exports/mod.rs) |

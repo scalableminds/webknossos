@@ -39,6 +39,8 @@ def render():
             # covered separately by actual HTTP routes and compiled Scala DTO fixtures.
             continue
         file = f"src/{module.replace('::', '/')}.rs"
+        if not (PACKAGE / file).exists():
+            file = f"src/{module.replace('::', '/')}/mod.rs"
         for call in route_calls((PACKAGE / file).read_text()):
             path = re.match(r'\s*"([^"\\]+)"\s*,', call)
             if not path:

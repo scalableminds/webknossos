@@ -312,8 +312,17 @@ export default function TaskListView({
     [miniSearch, report, searchQuery],
   );
 
-  function handleOnCollapseChange(newExpandedTasks: string | Array<string>) {
-    setExpandedTasks(Array.isArray(newExpandedTasks) ? newExpandedTasks : [newExpandedTasks]);
+  // expandedTasks holds the active keys of the outer and all nested (meta task) collapses.
+  // Each collapse only reports its own keys, so only those are replaced.
+  function handleOnCollapseChange(
+    collapseKeys: Array<string>,
+    newExpandedTasks: string | Array<string>,
+  ) {
+    const newKeys = Array.isArray(newExpandedTasks) ? newExpandedTasks : [newExpandedTasks];
+    setExpandedTasks((expanded) => [
+      ...expanded.filter((key) => !collapseKeys.includes(key)),
+      ...newKeys,
+    ]);
   }
 
   function handleOnSearch(textValue: string) {
@@ -322,9 +331,13 @@ export default function TaskListView({
 
   function handleSelectTask(taskName: string) {
     setSearchQuery("");
-    setExpandedTasks((expanded) =>
-      expanded.includes(taskName) ? expanded : [...expanded, taskName],
-    );
+    // Also expand the meta tasks containing the task (e.g., "a" and "a@b" for "a@b@c").
+    const parts = taskName.split("@");
+    const keysToExpand = parts.map((_, i) => parts.slice(0, i + 1).join("@"));
+    setExpandedTasks((expanded) => [
+      ...expanded,
+      ...keysToExpand.filter((key) => !expanded.includes(key)),
+    ]);
     setTaskToFocus({ taskName });
   }
 
@@ -521,7 +534,16 @@ export default function TaskListView({
                 </Link>
               </div>
             )}
-            <Collapse items={collapseItems} />
+            <Collapse
+              onChange={(keys) =>
+                handleOnCollapseChange(
+                  collapseItems.map((item) => String(item.key)),
+                  keys,
+                )
+              }
+              activeKey={expandedTasks}
+              items={collapseItems}
+            />
           </React.Fragment>
         ),
       };
@@ -588,6 +610,8 @@ export default function TaskListView({
       ),
     };
   };
+
+  const topLevelCollapseItems = tasksWithHierarchy.map(getTaskGroupOrTaskItem).filter(notEmpty);
 
   const totalRuntime = report.tasks.reduce((sum, t) => {
     if (t.state === VoxelyticsRunState.RUNNING) {
@@ -727,9 +751,14 @@ export default function TaskListView({
 
         <div style={{ overflowY: "auto", flex: 1 }}>
           <Collapse
-            onChange={handleOnCollapseChange}
+            onChange={(keys) =>
+              handleOnCollapseChange(
+                topLevelCollapseItems.map((item) => String(item.key)),
+                keys,
+              )
+            }
             activeKey={expandedTasks}
-            items={tasksWithHierarchy.map(getTaskGroupOrTaskItem).filter(notEmpty)}
+            items={topLevelCollapseItems}
           />
         </div>
       </Col>

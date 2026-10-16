@@ -4,10 +4,8 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
 import type { APIDataLayer } from "types/api_types";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
-import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import { getBoundingBoxesForLayers } from "viewer/view/ai_jobs/utils";
 import {
@@ -18,6 +16,7 @@ import {
   type JobRequirement,
   type StepStatus,
 } from "../components/job_requirements";
+import type { StartedJob } from "../components/job_started_card";
 import type { AlignmentTask } from "./ai_alignment_model_selector";
 
 // Maximum jump size (in voxels) that fine alignment is assumed to have to bridge. This defines the
@@ -25,7 +24,7 @@ import type { AlignmentTask } from "./ai_alignment_model_selector";
 export const FINE_ALIGNMENT_MAX_JUMP_SIZE = 500;
 
 interface AlignmentJobContextType {
-  handleStartAnalysis: () => void;
+  handleStartAnalysis: () => Promise<void>;
   newDatasetName: string;
   selectedTask: AlignmentTask | null;
   setSelectedTask: (task: AlignmentTask) => void;
@@ -42,6 +41,7 @@ interface AlignmentJobContextType {
   areParametersValid: boolean;
   requirements: JobRequirement[];
   stepStatuses: { task: StepStatus; settings: StepStatus };
+  startedJob: StartedJob | null;
 }
 
 const AlignmentJobContext = createContext<AlignmentJobContextType | undefined>(undefined);
@@ -55,7 +55,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
   const [settingsFormState, setSettingsFormState] = useState(EMPTY_FORM_VALIDATION_STATE);
   const [fineAlignmentOnly, setFineAlignmentOnly] = useState(false);
-  const dispatch = useDispatch();
+  const [startedJob, setStartedJob] = useState<StartedJob | null>(null);
 
   const dataset = useWkSelector((state) => state.dataset);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
@@ -110,21 +110,23 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
         customConfiguration,
         fineAlignmentOnly ? FINE_ALIGNMENT_MAX_JUMP_SIZE : undefined,
       );
-      Toast.success("Alignment started successfully!");
-      dispatch(setAIJobDrawerStateAction("invisible"));
+      setStartedJob({
+        title: "Section alignment is running.",
+        description: `The aligned images go to the new dataset "${newDatasetName}". You will receive an email when the job finishes.`,
+      });
     } catch (error) {
       console.error(error);
       Toast.error("Failed to start alignment.");
     }
   }, [
     dataset.id,
-    dispatch,
     colorLayer.name,
     newDatasetName,
     annotationId,
     shouldUseManualMatches,
     customConfiguration,
     fineAlignmentOnly,
+    setStartedJob,
   ]);
 
   const value = {
@@ -145,6 +147,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     areParametersValid,
     requirements,
     stepStatuses,
+    startedJob,
   };
 
   return <AlignmentJobContext.Provider value={value}>{children}</AlignmentJobContext.Provider>;

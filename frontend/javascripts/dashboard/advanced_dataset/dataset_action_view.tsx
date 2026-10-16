@@ -2,6 +2,7 @@ import {
   CopyOutlined,
   EllipsisOutlined,
   EyeOutlined,
+  PlayCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
@@ -21,6 +22,18 @@ import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
 
+function ResumeAnnotationLink({ latestAnnotationId }: { latestAnnotationId: string }) {
+  return (
+    <Link
+      to={`/annotations/${latestAnnotationId}`}
+      title="Resume Your Most Recently Modified Annotation of this Dataset"
+    >
+      <PlayCircleOutlined className="icon-margin-right" />
+      Resume Annotating
+    </Link>
+  );
+}
+
 function NewAnnotationLink({
   dataset,
   isCreateAnnotationModalVisible,
@@ -39,10 +52,10 @@ function NewAnnotationLink({
         style={{
           display: "inline-block",
         }}
-        title="New Annotation (Skeleton + Volume)"
+        title="Start a New Annotation (Skeleton + Volume)"
       >
         <PlusOutlined className="icon-margin-right" />
-        New Annotation
+        Start New Annotation
       </Link>
       <span
         style={{
@@ -54,7 +67,7 @@ function NewAnnotationLink({
         |
       </span>
       <a
-        title="New Annotation With Custom Properties"
+        title="Start a New Annotation With Custom Properties"
         className="ant-dropdown-link"
         onClick={onShowCreateAnnotationModal}
       >
@@ -128,15 +141,18 @@ function DatasetActionView(props: Props) {
   const activeDatasetActions = (
     <>
       {" "}
+      {dataset.latestAnnotationId != null ? (
+        <ResumeAnnotationLink latestAnnotationId={dataset.latestAnnotationId} />
+      ) : null}
       <NewAnnotationLink
         dataset={dataset}
         isCreateAnnotationModalVisible={isCreateAnnotationModalVisible}
         onShowCreateAnnotationModal={() => setIsCreateAnnotationModalVisible(true)}
         onCloseCreateAnnotationModal={() => setIsCreateAnnotationModalVisible(false)}
       />
-      <Link to={getViewDatasetURL(dataset)} title="View Dataset">
+      <Link to={getViewDatasetURL(dataset)} title="Open Dataset in Viewer (Read-only)">
         <EyeOutlined className="icon-margin-right" />
-        View
+        Open in Viewer
       </Link>
       {dataset.isEditable ? datasetSettingsLink : null}
     </>
@@ -186,11 +202,21 @@ export function getDatasetActionContextMenu({
         type: "group",
         label: "This Dataset",
         children: [
+          dataset.isActive && dataset.latestAnnotationId != null
+            ? {
+                key: "resume-annotation",
+                icon: <PlayCircleOutlined className="icon-margin-right" />,
+                label: "Resume Annotating",
+                onClick: () => {
+                  window.location.href = `/annotations/${dataset.latestAnnotationId}`;
+                },
+              }
+            : null,
           dataset.isActive
             ? {
                 key: "view",
                 icon: <EyeOutlined className="icon-margin-right" />,
-                label: "View",
+                label: "Open in Viewer",
                 onClick: () => {
                   window.location.href = getViewDatasetURL(dataset);
                 },

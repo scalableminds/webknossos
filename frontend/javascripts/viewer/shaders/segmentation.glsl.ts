@@ -299,14 +299,20 @@ export const getBrushOverlay: ShaderModule = {
       if (!isMouseInCanvas || !isMouseInActiveViewport || !showBrush) {
         return brushOverlayColor;
       }
-      vec3 flooredMousePos = floor(globalMousePosition);
+      // Snap to the voxel grid of the mag in which the brush is applied.
+      vec3 brushMagUVW = transDim(brushMag);
+      vec2 flooredMousePosInMag = floor(transDim(globalMousePosition).xy / brushMagUVW.xy);
+      vec2 flooredWorldCoordInMag = floor(worldCoordUVW.xy / brushMagUVW.xy);
 
       // Compute the anisotropy of the dataset so that the brush looks the same in
       // each viewport
       float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
       vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
 
-      float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * anisotropyFactorUVW.xy);
+      // The distance is measured in mag-1 voxels, since the brush size refers to those.
+      float dist = length(
+        (flooredWorldCoordInMag - flooredMousePosInMag) * brushMagUVW.xy * anisotropyFactorUVW.xy
+      );
 
       float radius = ceil(brushSizeInPixel / 2.0);
       if (radius > dist) {

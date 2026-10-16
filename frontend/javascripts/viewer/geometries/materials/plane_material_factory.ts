@@ -62,6 +62,7 @@ import {
   getBucketRetrievalSourceFn,
   getHideUnregisteredSegmentsForLayer,
   getProofreadingMarkerPosition,
+  getRenderableMagForActiveSegmentationTracing,
   isZoomThresholdExceededForAgglomerateMapping,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
@@ -227,6 +228,9 @@ class PlaneMaterialFactory {
       },
       brushSizeInPixel: {
         value: 0,
+      },
+      brushMag: {
+        value: new ThreeVector3(1, 1, 1),
       },
       segmentationPatternOpacity: {
         value: 40,
@@ -772,6 +776,16 @@ class PlaneMaterialFactory {
           (storeState) => storeState.userConfiguration.brushSize,
           (brushSize) => {
             this.uniforms.brushSizeInPixel.value = brushSize;
+          },
+          true,
+        ),
+        listenToStoreProperty(
+          (storeState) => getRenderableMagForActiveSegmentationTracing(storeState)?.mag,
+          (mag) => {
+            // The brush preview should snap to the voxel grid of the mag in which
+            // the brush is actually applied.
+            const [x, y, z] = mag ?? [1, 1, 1];
+            this.uniforms.brushMag.value.set(x, y, z);
           },
           true,
         ),

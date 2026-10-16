@@ -34,7 +34,7 @@ import { useUpdateEvery, useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
 import MiniSearch from "minisearch";
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { ModalWidth } from "theme";
 import {
   VoxelyticsRunState,
@@ -244,12 +244,9 @@ export default function TaskListView({
 
   // expandedTask = state of the collapsible list
   const [expandedTasks, setExpandedTasks] = useState<Array<string>>([]);
-  const params = useParams<{ highlightedTask?: string }>();
+  // Wrapped in an object so that focusing the same task again triggers a new scroll.
+  const [taskToFocus, setTaskToFocus] = useState<{ taskName: string } | null>(null);
   const location = useLocation();
-  const highlightedTask =
-    (location.state as TaskListLocationState | null)?.highlightedTask ||
-    params.highlightedTask ||
-    "";
 
   // Derived from the report's tasks and runs, which are replaced (not mutated) whenever the
   // report is refetched, so this is recomputed for every new report.
@@ -269,20 +266,22 @@ export default function TaskListView({
 
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 
+  // Links to a task in another run pass the task via the location state. Depending on the
+  // location key (instead of the task name) re-focuses the task on every navigation, because
+  // this view stays mounted when switching between runs.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only run when navigating.
   useEffect(() => {
-    if (highlightedTask === "") return;
-    setExpandedTasks([highlightedTask]);
-    handleFocusTask(highlightedTask);
-  }, [highlightedTask]);
+    const highlightedTask = (location.state as TaskListLocationState | null)?.highlightedTask;
+    if (highlightedTask != null) handleSelectTask(highlightedTask);
+  }, [location.key]);
 
-  function handleFocusTask(focusedTask: string | null) {
-    if (focusedTask == null) return;
-    const elementId = `task-panel-${focusedTask}`;
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
-  }
+  // Scroll only after the task panel was expanded (and the search was cleared) and rendered.
+  // Other panels stay as they are, so the layout above the task doesn't shift during the scroll.
+  useEffect(() => {
+    if (taskToFocus == null) return;
+    const element = document.getElementById(`task-panel-${taskToFocus.taskName}`);
+    element?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [taskToFocus]);
 
   const miniSearch = useMemo(() => {
     const miniSearch: MiniSearch<VoxelyticsTaskConfig> = new MiniSearch({
@@ -322,13 +321,11 @@ export default function TaskListView({
   }
 
   function handleSelectTask(taskName: string) {
-    handleFocusTask(taskName);
     setSearchQuery("");
-
-    if (!expandedTasks.includes(taskName)) {
-      const expandedTasksCopy = [...expandedTasks, taskName];
-      setExpandedTasks(expandedTasksCopy);
-    }
+    setExpandedTasks((expanded) =>
+      expanded.includes(taskName) ? expanded : [...expanded, taskName],
+    );
+    setTaskToFocus({ taskName });
   }
 
   function copyAllArtifactPaths() {

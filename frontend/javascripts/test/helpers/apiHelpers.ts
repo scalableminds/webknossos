@@ -58,6 +58,7 @@ import UrlManager from "viewer/controller/url_manager";
 import type { ModelType } from "viewer/model";
 import Model from "viewer/model";
 import {
+  cancelSagaAction,
   resetStoreAction,
   restartSagaAction,
   sceneControllerInitializedAction,
@@ -73,7 +74,7 @@ import rootSaga from "viewer/model/sagas/root_saga";
 import { setModel, setStore } from "viewer/singletons";
 import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
 import { setSlowCompression } from "viewer/workers/slow_byte_array_lz4_compression.worker";
-import { type TestContext as BaseTestContext, type Mock, vi } from "vitest";
+import { afterAll, type TestContext as BaseTestContext, type Mock, vi } from "vitest";
 import DATASET, {
   sampleHdf5AgglomerateName,
   sampleMappingFileName,
@@ -564,6 +565,14 @@ setModel(Model);
 setStore(Store);
 setupApi();
 startSaga(rootSaga);
+
+// Stop all sagas once the test file is done. Otherwise, work started by the last
+// test (e.g., mesh loading) keeps running and can log while vitest tears down the
+// worker, which fails the run with "Closing rpc while "onUserConsoleLog" was pending".
+afterAll(() => {
+  Store.dispatch(cancelSagaAction());
+});
+
 type ModelDataForTests = {
   tracings: (ServerSkeletonTracing | ServerVolumeTracing)[];
   annotationProto: APITracingStoreAnnotation;

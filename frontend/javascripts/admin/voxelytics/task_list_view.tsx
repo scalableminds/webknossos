@@ -1,13 +1,8 @@
 import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
   DownOutlined,
-  ExclamationCircleOutlined,
   ExportOutlined,
   FieldTimeOutlined,
   LeftOutlined,
-  MinusCircleOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
 import { deleteWorkflow, getVoxelyticsLogs } from "admin/rest_api";
@@ -24,7 +19,6 @@ import {
   Row,
   Select,
   Space,
-  Tag,
   Tooltip,
   Typography,
 } from "antd";
@@ -53,6 +47,7 @@ import { LOG_LEVELS } from "viewer/constants";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import DAGView, { colorHasher } from "./dag_view";
 import { formatLog } from "./log_tab";
+import RunStateTag from "./run_state_tag";
 import { getTaskExecutions, type TaskListLocationState } from "./task_runs_tab";
 import TaskView from "./task_view";
 import { addAfterPadding, addBeforePadding } from "./utils";
@@ -106,17 +101,9 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
   useUpdateEvery(10000);
   switch (taskInfo.state) {
     case VoxelyticsRunState.PENDING:
-      return (
-        <Tag icon={<ClockCircleOutlined />} color="default">
-          pending
-        </Tag>
-      );
+      return <RunStateTag state={VoxelyticsRunState.PENDING} />;
     case VoxelyticsRunState.SKIPPED:
-      return (
-        <Tag icon={<MinusCircleOutlined />} color="default">
-          skipped
-        </Tag>
-      );
+      return <RunStateTag state={VoxelyticsRunState.SKIPPED} />;
     case VoxelyticsRunState.RUNNING: {
       const currentDuration = Date.now() - taskInfo.beginTime.getTime();
       if (taskInfo.chunkCounts.complete > 0) {
@@ -143,9 +130,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
               </>
             }
           >
-            <Tag icon={<SyncOutlined spin />} color="processing">
-              running
-            </Tag>
+            <RunStateTag state={VoxelyticsRunState.RUNNING} />
             started {dayjs(taskInfo.beginTime).fromNow()}, probably finishes{" "}
             {dayjs(estimatedEndTime).fromNow()}
           </Tooltip>
@@ -161,9 +146,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
               </>
             }
           >
-            <Tag icon={<SyncOutlined spin />} color="processing">
-              running
-            </Tag>
+            <RunStateTag state={VoxelyticsRunState.RUNNING} />
             started {dayjs(taskInfo.beginTime).fromNow()}
           </Tooltip>
         );
@@ -180,11 +163,8 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             </>
           }
         >
-          <Tag icon={<CloseCircleOutlined />} color="error">
-            timed out
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          <RunStateTag state={VoxelyticsRunState.STALE} /> {dayjs(taskInfo.endTime).fromNow()},
+          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.CANCELLED:
@@ -198,11 +178,8 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             </>
           }
         >
-          <Tag icon={<ExclamationCircleOutlined />} color="error">
-            cancelled
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          <RunStateTag state={VoxelyticsRunState.CANCELLED} /> {dayjs(taskInfo.endTime).fromNow()},
+          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.FAILED:
@@ -216,11 +193,8 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             </>
           }
         >
-          <Tag icon={<CloseCircleOutlined />} color="error">
-            failed
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          <RunStateTag state={VoxelyticsRunState.FAILED} /> {dayjs(taskInfo.endTime).fromNow()},
+          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.COMPLETE:
@@ -234,11 +208,8 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             </>
           }
         >
-          <Tag icon={<CheckCircleOutlined />} color="success">
-            completed
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          <RunStateTag state={VoxelyticsRunState.COMPLETE} /> {dayjs(taskInfo.endTime).fromNow()},
+          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     default:
@@ -277,6 +248,13 @@ export default function TaskListView({
     (location.state as TaskListLocationState | null)?.highlightedTask ||
     params.highlightedTask ||
     "";
+
+  // Derived from the report's tasks and runs, which are replaced (not mutated) whenever the
+  // report is refetched, so this is recomputed for every new report.
+  const taskExecutionsByTask = useMemo(() => {
+    const runsById = new Map(report.runs.map((run) => [run.id, run]));
+    return new Map(report.tasks.map((t) => [t.taskName, getTaskExecutions(t.runs, runsById)]));
+  }, [report.tasks, report.runs]);
 
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
@@ -550,10 +528,6 @@ export default function TaskListView({
     }
 
     const taskArtifacts = report.artifacts[task.taskName] || {};
-    const taskExecutions = getTaskExecutions(
-      report.tasks.find((t) => t.taskName === task.taskName)?.runs ?? [],
-      report.runs,
-    );
     let foreignWorkflow: null | [string, string] = null;
     if (taskInfo.state === VoxelyticsRunState.SKIPPED) {
       foreignWorkflow = Object.values(taskArtifacts)[0]?.foreignWorkflow ?? null;
@@ -602,7 +576,7 @@ export default function TaskListView({
           artifacts={taskArtifacts}
           dag={report.dag}
           taskInfo={taskInfo}
-          taskExecutions={taskExecutions}
+          taskExecutions={taskExecutionsByTask.get(task.taskName) ?? []}
           onSelectTask={handleSelectTask}
         />
       ),

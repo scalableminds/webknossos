@@ -1,11 +1,18 @@
-import { Table, type TableProps, Tag } from "antd";
-import { formatDateMedium, formatTimeIntervalStrict } from "libs/format_utils";
-import { Link } from "react-router";
+import { Table, type TableProps } from "antd";
+import dayjs from "dayjs";
+import {
+  formatDateMedium,
+  formatDurationStrict,
+  formatTimeIntervalStrict,
+} from "libs/format_utils";
+import { useUpdateEvery } from "libs/react_hooks";
+import { Link, useLocation } from "react-router";
 import {
   type VoxelyticsRunInfo,
   VoxelyticsRunState,
   type VoxelyticsTaskInfo,
 } from "types/api_types";
+import RunStateTag from "./run_state_tag";
 
 type TaskRun = VoxelyticsTaskInfo["runs"][number];
 type ExecutedTaskRun = Exclude<
@@ -17,14 +24,6 @@ export type TaskExecution = { run: VoxelyticsRunInfo; taskRun: ExecutedTaskRun }
 // Navigating with this state expands the task in the task list of the target run.
 export type TaskListLocationState = { highlightedTask?: string };
 
-const TASK_STATE_TAG_COLORS: Record<ExecutedTaskRun["state"], string> = {
-  [VoxelyticsRunState.RUNNING]: "processing",
-  [VoxelyticsRunState.COMPLETE]: "success",
-  [VoxelyticsRunState.FAILED]: "error",
-  [VoxelyticsRunState.CANCELLED]: "error",
-  [VoxelyticsRunState.STALE]: "error",
-};
-
 function isExecutedTaskRun(taskRun: TaskRun): taskRun is ExecutedTaskRun {
   return (
     taskRun.state !== VoxelyticsRunState.PENDING && taskRun.state !== VoxelyticsRunState.SKIPPED
@@ -34,12 +33,12 @@ function isExecutedTaskRun(taskRun: TaskRun): taskRun is ExecutedTaskRun {
 // Returns the runs in which the task was actually executed (not skipped), most recent first.
 export function getTaskExecutions(
   taskRuns: Array<TaskRun>,
-  runs: Array<VoxelyticsRunInfo>,
+  runsById: Map<string, VoxelyticsRunInfo>,
 ): Array<TaskExecution> {
   return taskRuns
     .filter(isExecutedTaskRun)
     .flatMap((taskRun) => {
-      const run = runs.find((r) => r.id === taskRun.runId);
+      const run = runsById.get(taskRun.runId);
       return run != null ? [{ run, taskRun }] : [];
     })
     .sort((a, b) => b.taskRun.beginTime.getTime() - a.taskRun.beginTime.getTime());
@@ -56,9 +55,11 @@ export function TaskRunLink({
   taskName: string;
   children: React.ReactNode;
 }) {
+  // Keep the search params (e.g., the selected metatask) when switching runs.
+  const { search } = useLocation();
   const state: TaskListLocationState = { highlightedTask: taskName };
   return (
-    <Link to={`/workflows/${workflowHash}/run/${encodeURIComponent(runId)}`} state={state}>
+    <Link to={`/workflows/${workflowHash}/run/${encodeURIComponent(runId)}${search}`} state={state}>
       {children}
     </Link>
   );
@@ -75,6 +76,9 @@ export default function TaskRunsTab({
   selectedRunId: string | null;
   taskExecutions: Array<TaskExecution>;
 }) {
+  // Re-render regularly so that the duration of running tasks is updated.
+  useUpdateEvery(10000);
+
   const columns: TableProps<TaskExecution>["columns"] = [
     {
       title: "Run",
@@ -91,9 +95,7 @@ export default function TaskRunsTab({
     {
       title: "State",
       key: "state",
-      render: (_, { taskRun }) => (
-        <Tag color={TASK_STATE_TAG_COLORS[taskRun.state]}>{taskRun.state.toLowerCase()}</Tag>
-      ),
+      render: (_, { taskRun }) => <RunStateTag state={taskRun.state} />,
     },
     {
       title: "Begin Time",
@@ -106,7 +108,7 @@ export default function TaskRunsTab({
       render: (_, { taskRun }) =>
         taskRun.endTime != null
           ? formatTimeIntervalStrict(taskRun.endTime, taskRun.beginTime)
-          : "-",
+          : formatDurationStrict(dayjs.duration(Date.now() - taskRun.beginTime.getTime())),
     },
     { title: "User", key: "user", render: (_, { run }) => run.userName },
     { title: "Host", key: "host", render: (_, { run }) => run.hostName },

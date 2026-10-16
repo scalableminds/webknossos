@@ -59,7 +59,7 @@ describe("getTaskExecutions", () => {
       },
     ];
 
-    const executions = getTaskExecutions(taskRuns, runs);
+    const executions = getTaskExecutions(taskRuns, new Map(runs.map((run) => [run.id, run])));
 
     expect(executions.map(({ run }) => run.id)).toEqual(["c", "a"]);
   });

@@ -120,16 +120,21 @@ function TaskView({
       children: <ul>{renderInputs(task.inputs, ingoingEdges, onSelectTask)}</ul>,
     });
 
-  if (
-    [
-      VoxelyticsRunState.COMPLETE,
-      VoxelyticsRunState.RUNNING,
-      VoxelyticsRunState.STALE,
-      VoxelyticsRunState.FAILED,
-      VoxelyticsRunState.CANCELLED,
-    ].includes(taskInfo.state)
-  ) {
+  const wasExecuted = [
+    VoxelyticsRunState.COMPLETE,
+    VoxelyticsRunState.RUNNING,
+    VoxelyticsRunState.STALE,
+    VoxelyticsRunState.FAILED,
+    VoxelyticsRunState.CANCELLED,
+  ].includes(taskInfo.state);
+
+  // Without a selected run, the Logs tab links to the latest run that executed the task,
+  // even if the combined state is, e.g., skipped.
+  if (wasExecuted || (runId == null && taskExecutions.length > 0)) {
     tabs.push({ label: "Logs", key: "4", children: logTab });
+  }
+
+  if (wasExecuted) {
     tabs.push({
       label: "Statistics",
       key: "5",

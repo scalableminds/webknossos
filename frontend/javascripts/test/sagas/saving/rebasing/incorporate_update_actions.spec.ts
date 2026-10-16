@@ -38,6 +38,7 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import type { ApplyingUpdateResults } from "viewer/model/sagas/saving/rebasing/applying_update_artifacts";
 import { tryToIncorporateActions } from "viewer/model/sagas/saving/rebasing/incorporate_update_actions_sagas";
 import {
+  addBookmark,
   addUserBoundingBoxInSkeletonTracing,
   addUserBoundingBoxInVolumeTracing,
   createEdge,
@@ -127,6 +128,7 @@ const actionNamesHelper: Record<ServerUpdateAction["name"], true> = {
   updateMappingName: true,
   updateLayerMetadata: true,
   updateMetadataOfAnnotation: true,
+  addBookmark: true,
   addSegmentIndex: true,
   revertToVersion: true,
   addLayerToAnnotation: true,
@@ -783,6 +785,22 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           layerName: "Second Local Rename",
         });
       });
+    });
+
+    it("applies a replayed bookmark creation to local state and does not echo it back", async () => {
+      Store.dispatch(discardSaveQueueAction());
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions(
+        [addBookmark({ id: 1, created: 123, name: "Replayed Bookmark", stateHash: "{}" })],
+        1,
+      );
+      Store.dispatch(finishForwardingUpdateActionsAction());
+
+      expect(Store.getState().annotation.bookmarks).toEqual([
+        { id: 1, created: 123, name: "Replayed Bookmark", stateHash: "{}" },
+      ]);
+      expect(Store.getState().save.queue).toEqual([]);
     });
 
     it("applies addSegmentIndex", async () => {

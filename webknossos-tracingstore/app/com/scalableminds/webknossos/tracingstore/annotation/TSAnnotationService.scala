@@ -207,6 +207,8 @@ class TSAnnotationService @Inject() (
         Fox.failure("Received updateVolumeBucketDataHasChanged action with value=false, which is not allowed.")
       case a: ApplyableVolumeUpdateAction =>
         annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.volumeActionFailed
+      case a: ApplyableAnnotationUpdateAction =>
+        Fox.successful(annotationWithTracings.copy(annotation = a.applyOn(annotationWithTracings.annotation)))
       case a: EditableMappingUpdateAction =>
         annotationWithTracings.applyEditableMappingAction(a) ?~> Msg.Annotation.ApplyUpdate.editableMappingActionFailed
       case a: RevertToVersionAnnotationAction =>

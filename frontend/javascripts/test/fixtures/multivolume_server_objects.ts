@@ -82,6 +82,7 @@ export const annotation: APIAnnotation = {
   contributors: [],
   collaborationMode: "OwnerOnly",
   isLockedByOwner: false,
+  bookmarks: [],
 };
 
 export const annotationProto: APITracingStoreAnnotation = {
@@ -106,4 +107,5 @@ export const annotationProto: APITracingStoreAnnotation = {
     },
   ],
   userStates: [],
+  bookmarks: [],
 };

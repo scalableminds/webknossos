@@ -356,7 +356,7 @@ export function FloodFillSettings() {
 function FillModeSwitch() {
   const fillMode = useWkSelector((state) => state.userConfiguration.fillMode);
   return (
-    <Radio.Group value={fillMode} onChange={handleSetFillMode}>
+    <Radio.Group value={fillMode} onChange={handleSetFillMode} buttonStyle="solid">
       <RadioButtonWithTooltip
         title="Only perform the Fill operation in the current plane."
         style={NARROW_BUTTON_STYLE}

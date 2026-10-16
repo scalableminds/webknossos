@@ -16,6 +16,7 @@ import ReactFlow, {
   type ReactFlowInstance,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import { WK_FONT } from "theme";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfigWithName,
@@ -27,8 +28,6 @@ import type { Theme } from "viewer/store";
 
 export const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
 
-const FONT_FAMILY =
-  '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif';
 const NODE_FONT_SIZE = 12;
 const NODE_PADDING = 10;
 const NODE_HEIGHT = 36;
@@ -49,7 +48,7 @@ const getMeasuringCanvas = memoize((): CanvasRenderingContext2D => {
 const measureTextWidth = memoize(
   (text: string, fontSize: number): number => {
     const ctx = getMeasuringCanvas();
-    ctx.font = `${fontSize}px ${FONT_FAMILY}`;
+    ctx.font = `${fontSize}px ${WK_FONT}`;
     return Math.ceil(ctx.measureText(text).width);
   },
   (text, fontSize) => `${fontSize}#${text}`,

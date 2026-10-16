@@ -96,6 +96,8 @@ case class WKWHeader(
 
   override def order: ArrayOrder = ArrayOrder.F
 
+  override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
+
   override def resolvedDataType: ArrayDataType = dataType
 
   override def compressorImpl: Compressor = blockType match {

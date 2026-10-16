@@ -7,7 +7,7 @@ import { PureComponent } from "react";
 import { connect } from "react-redux";
 import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
-import {
+import Constants, {
   type OrthoView,
   type OrthoViewMap,
   OrthoViews,
@@ -22,6 +22,7 @@ import {
   ProofreadToolController,
   SkeletonToolController,
 } from "viewer/controller/combinations/tool_controls";
+import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -29,7 +30,9 @@ import { getInputCatcherRect, getViewportScale } from "viewer/model/accessors/vi
 import {
   getActiveSegmentationTracing,
   getActiveUnmappedSegmentId,
+  getMeshInfoForSegment,
 } from "viewer/model/accessors/volumetracing_accessor";
+import { updateMeshOpacityAction } from "viewer/model/actions/annotation_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { toggleSegmentInPartitionAction } from "viewer/model/actions/proofread_actions";
 import {
@@ -329,6 +332,35 @@ class TDController extends PureComponent<Props> {
             );
           }
         }
+      },
+      leftDoubleClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
+        if (this.props.planeView == null) return;
+
+        const intersection = this.getMeshIntersection(pos);
+        if (intersection?.meshId == null) return;
+
+        const state = Store.getState();
+        // Same source the "Change Segment Color" menu item uses - unlike
+        // getActiveSegmentationTracing, this also resolves outside of an active
+        // annotation/tracing session (e.g. plain dataset viewing with precomputed
+        // meshes), which is why that one silently did nothing here before.
+        const layerName = getVisibleSegmentationLayer(state)?.name;
+        if (layerName == null) return;
+
+        const currentOpacity =
+          getMeshInfoForSegment(
+            state,
+            state.flycam.additionalCoordinates,
+            layerName,
+            intersection.meshId,
+          )?.opacity ?? Constants.DEFAULT_MESH_OPACITY;
+
+        // Toggle between fully opaque and half-transparent. Dispatched as the same
+        // action the "Change Segment Color" menu uses (rather than calling
+        // segmentMeshController.setMeshOpacity directly), so the new opacity is
+        // persisted the same way and survives a mesh reload.
+        const newOpacity = currentOpacity >= 1 ? 0.5 : 1;
+        Store.dispatch(updateMeshOpacityAction(layerName, intersection.meshId, newOpacity));
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (this.props.planeView == null) return null;

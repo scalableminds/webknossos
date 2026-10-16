@@ -209,7 +209,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
   override def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, q"")
 
-  def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
+  // The user id may also be a column (e.g. q"u._id"), to check the access of many users at once.
+  def readAccessQWithPrefix(requestingUserId: SqlToken, prefix: SqlToken): SqlToken =
     q"""${prefix}isPublic
         OR ( -- user is matching orga admin or dataset manager
           ${prefix}_organization IN (
@@ -240,6 +241,16 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
           )
         )
         """
+
+  // Those of the given users that can see the dataset.
+  def findUserIdsWithReadAccess(datasetId: ObjectId, userIds: List[ObjectId]): Fox[Seq[ObjectId]] =
+    if (userIds.isEmpty) Fox.successful(Seq.empty)
+    else
+      run(q"""SELECT u._id
+              FROM webknossos.users_ u
+              JOIN webknossos.datasets_ d ON d._id = $datasetId
+              WHERE u._id IN ${SqlToken.tupleFromList(userIds)}
+              AND (${readAccessQWithPrefix(q"u._id", q"d.")})""".as[ObjectId])
 
   def findAllWithSearch(
       isActiveOpt: Option[Boolean],

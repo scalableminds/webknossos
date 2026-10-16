@@ -618,16 +618,6 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       name <- nameList.headOption.toFox
     } yield name
 
-  def getUserIdForRun(runId: ObjectId): Fox[ObjectId] =
-    for {
-      userIdList <- run(q"""
-        SELECT _user
-        FROM webknossos.voxelytics_runs
-        WHERE _id = $runId
-        """.as[String])
-      userId <- userIdList.headOption.toFox
-    } yield ObjectId(userId)
-
   def getUserIdForRunOpt(runName: String, organizationId: String): Fox[Option[ObjectId]] =
     for {
       userId <- run(q"""

@@ -4,8 +4,8 @@ import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/or
 import { getUser, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
 import { Spin, Tabs, Typography } from "antd";
+import AnnotationsView from "dashboard/annotations_view";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
-import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import { PublicationViewWithHeader } from "dashboard/publication_view";
 import features from "features";
 import Request from "libs/request";
@@ -54,7 +54,7 @@ export const urlTokenToTabKeyMap = {
   publications: "publications",
   datasets: "datasets",
   tasks: "tasks",
-  annotations: "explorativeAnnotations",
+  annotations: "annotations",
 };
 
 function TabBarExtraContent() {
@@ -84,7 +84,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     let defaultTabKey = "datasets";
 
     if (this.props.isAdminView) {
-      defaultTabKey = "explorativeAnnotations";
+      defaultTabKey = "annotations";
     } else if (features().isWkorgInstance) {
       defaultTabKey = "publications";
     }
@@ -146,7 +146,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
   clearDatasetNameFilterFromUrl = () => {
     const tabKeyToURLMap = invert(urlTokenToTabKeyMap);
-    const url = tabKeyToURLMap.explorativeAnnotations;
+    const url = tabKeyToURLMap.annotations;
     this.props.navigate(`/dashboard/${url}`, { replace: false });
   };
 
@@ -156,7 +156,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       publications: features().isWkorgInstance,
       datasets: !isAdminView,
       tasks: true,
-      explorativeAnnotations: true,
+      annotations: true,
     } as { [key: string]: boolean };
   }
 
@@ -177,10 +177,10 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
           : null,
         {
           label: "Annotations",
-          key: "explorativeAnnotations",
+          key: "annotations",
           children: (
-            <RenderingTabContext.Provider value="explorativeAnnotations">
-              <ExplorativeAnnotationsView
+            <RenderingTabContext.Provider value="annotations">
+              <AnnotationsView
                 isAdminView={this.props.isAdminView}
                 userId={this.props.userId}
                 activeUser={this.props.activeUser}

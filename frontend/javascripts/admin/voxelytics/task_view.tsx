@@ -12,6 +12,7 @@ import {
 import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";
 import StatisticsTab from "./statistics_tab";
+import TaskRunsTab, { type TaskExecution, TaskRunLink } from "./task_runs_tab";
 import { runStateToStatus, useTheme } from "./utils";
 
 const labelRenderer: LabelRenderer = function (_keyPath) {
@@ -27,6 +28,7 @@ function TaskView({
   artifacts,
   dag,
   taskInfo,
+  taskExecutions,
   onSelectTask,
 }: {
   workflowHash: string;
@@ -36,6 +38,7 @@ function TaskView({
   artifacts: Record<string, VoxelyticsArtifactConfig>;
   dag: { edges: Array<VoxelyticsWorkflowDagEdge> };
   taskInfo: VoxelyticsTaskInfo;
+  taskExecutions: Array<TaskExecution>;
   onSelectTask: (id: string) => void;
 }) {
   const shouldExpandNode: ShouldExpandNodeInitially = function (_keyPath, data) {
@@ -72,6 +75,18 @@ function TaskView({
         beginTime={taskInfo.beginTime}
         endTime={taskInfo.endTime}
       />
+    ) : taskExecutions.length > 0 ? (
+      <p>
+        Please select a specific run, e.g., the{" "}
+        <TaskRunLink
+          workflowHash={workflowHash}
+          runId={taskExecutions[0].run.id}
+          taskName={taskName}
+        >
+          latest run that executed this task
+        </TaskRunLink>
+        .
+      </p>
     ) : (
       <p>Please select a specific run.</p>
     );
@@ -105,16 +120,21 @@ function TaskView({
       children: <ul>{renderInputs(task.inputs, ingoingEdges, onSelectTask)}</ul>,
     });
 
-  if (
-    [
-      VoxelyticsRunState.COMPLETE,
-      VoxelyticsRunState.RUNNING,
-      VoxelyticsRunState.STALE,
-      VoxelyticsRunState.FAILED,
-      VoxelyticsRunState.CANCELLED,
-    ].includes(taskInfo.state)
-  ) {
+  const wasExecuted = [
+    VoxelyticsRunState.COMPLETE,
+    VoxelyticsRunState.RUNNING,
+    VoxelyticsRunState.STALE,
+    VoxelyticsRunState.FAILED,
+    VoxelyticsRunState.CANCELLED,
+  ].includes(taskInfo.state);
+
+  // Without a selected run, the Logs tab links to the latest run that executed the task,
+  // even if the combined state is, e.g., skipped.
+  if (wasExecuted || (runId == null && taskExecutions.length > 0)) {
     tabs.push({ label: "Logs", key: "4", children: logTab });
+  }
+
+  if (wasExecuted) {
     tabs.push({
       label: "Statistics",
       key: "5",
@@ -128,6 +148,20 @@ function TaskView({
       ),
     });
   }
+
+  if (taskExecutions.length > 0)
+    tabs.push({
+      label: "Runs",
+      key: "6",
+      children: (
+        <TaskRunsTab
+          workflowHash={workflowHash}
+          taskName={taskName}
+          selectedRunId={runId}
+          taskExecutions={taskExecutions}
+        />
+      ),
+    });
 
   return (
     <div>

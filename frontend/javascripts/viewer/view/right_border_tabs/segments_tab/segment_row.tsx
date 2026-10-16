@@ -24,6 +24,7 @@ import { InlineEditableName } from "../shared/inline_editable_name";
 import {
   ACTION_BUTTON_SIZE,
   ACTION_BUTTON_STYLE,
+  ACTION_TOOLTIP_PLACEMENT,
   ColorDot,
   EXPANDED_LINE_HEIGHT,
   EXPANDED_ROW_PADDING,
@@ -144,7 +145,7 @@ function MeshControl({
       );
     }
     return (
-      <FastTooltip title="Compute mesh (ad-hoc)" asChild>
+      <FastTooltip title="Compute mesh (ad-hoc)" placement={ACTION_TOOLTIP_PLACEMENT} asChild>
         <ButtonComponent
           className={HOVER_ONLY_CLASS}
           {...IDLE_APPEARANCE}
@@ -162,7 +163,7 @@ function MeshControl({
   const state = getMeshChipState(mesh);
 
   return (
-    <FastTooltip title={getMeshChipTooltip(mesh)} asChild>
+    <FastTooltip title={getMeshChipTooltip(mesh)} placement={ACTION_TOOLTIP_PLACEMENT} asChild>
       <ButtonComponent
         {...MESH_CHIP_APPEARANCE[state]}
         size="small"
@@ -227,6 +228,7 @@ function SegmentRowActionBar({
         title={
           isCentered ? "This segment is centered in the data viewports" : "Center in viewports"
         }
+        placement={ACTION_TOOLTIP_PLACEMENT}
         asChild
       >
         <ButtonComponent
@@ -241,7 +243,11 @@ function SegmentRowActionBar({
           }}
         />
       </FastTooltip>
-      <FastTooltip title="More actions (also available via right-click)" asChild>
+      <FastTooltip
+        title="More actions (also available via right-click)"
+        placement={ACTION_TOOLTIP_PLACEMENT}
+        asChild
+      >
         <ButtonComponent
           className={HOVER_ONLY_CLASS}
           {...IDLE_APPEARANCE}

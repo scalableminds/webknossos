@@ -1,3 +1,4 @@
+import AiJobServicesPopover from "admin/ads/ai_job_services_popover";
 import { hasAiPlan } from "admin/organization/pricing_plan_utils";
 import { Drawer, Tabs, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
@@ -90,7 +91,12 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
           },
         }}
       >
-        <Tabs activeKey={activeKey} items={items} onChange={handleChange} />
+        <Tabs
+          activeKey={activeKey}
+          items={items}
+          onChange={handleChange}
+          tabBarExtraContent={<AiJobServicesPopover />}
+        />
       </Drawer>
       {generateBBModalState.isOpen && (
         <GenerateBoundingBoxesModal

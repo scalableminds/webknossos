@@ -14,16 +14,39 @@ The save and undo functions help you manage your annotation work:
 
 - The **Save** button preserves your current work. While WEBKNOSSOS automatically saves every 30 seconds, you can manually save at any time using the keyboard shortcut ++ctrl++ / ++cmd++ + ++s++.
 
-- The **Undo/Redo** buttons let you reverse or restore recent changes. The undo function (++ctrl++ / ++cmd++ + ++z++) can revert any changes made in your current session, while redo (++ctrl++ / ++cmd++ + ++y++) restores previously undone changes. For accessing older versions of your work, use the "Restore Older Version" feature in the menu.
+- The **Undo/Redo** buttons let you reverse or restore recent changes. The undo function (++ctrl++ / ++cmd++ + ++z++) can revert most changes made in your current session, while redo (++ctrl++ / ++cmd++ + ++y++) restores previously undone changes. For accessing older versions of your work, use the [version history](#version-history).
 
 ### Position Control
 The position control allows precise navigation within your dataset. You can:
 
 - Enter specific coordinates to jump directly to any location
 - Copy position values by clicking on the pushpin icon.
-- Adjust camera rotation in flight mode
+- Rotate the viewports and toggle flight mode with the rotation button next to the position input (see [Rotating the Viewports](#rotating-the-viewports))
 - The position information is automatically included when sharing your view with colleagues
 - Quick Share: Generate an immediate sharing link that includes your current view settings. This is ideal for rapid collaboration or when you need to quickly show something to a colleague.
+
+### Rotating the Viewports
+Rotation isn't limited to [flight mode](../skeleton_annotation/modes.md). In orthogonal (plane) mode, you can rotate the three viewport planes to follow structures that don't run parallel to the dataset axes.
+
+Hover over the rotation button (circular arrows icon) next to the position input to open the rotation popover:
+
+- **Flight Mode**: Switch between orthogonal and flight mode. The switch is disabled if flight mode isn't allowed for the current annotation (e.g., in some tasks).
+- **Rotation**: Use the `X`, `Y`, and `Z` sliders (0–360°) to rotate the planes around each axis. The arrow button next to each slider resets that axis to 0.
+- **Reset all**: Resets the rotation of all axes to 0.
+
+While the view is rotated, the rotation button is highlighted in orange as a reminder.
+
+You can also rotate with the keyboard. The rotation axis depends on the active viewport:
+
+- ++shift++ + ++left++ / ++right++ / ++up++ / ++down++ rotates the planes left/right/up/down.
+- ++alt++ + ++left++ / ++right++ rolls the planes within the active viewport.
+
+The keyboard rotation speed can be adjusted with the `Keyboard Rotation` setting in the [Controls settings](./layers.md). All bindings can be [customized](./keyboard_shortcuts.md#customizing-shortcuts). The current rotation is also stored in [sharing links](../sharing/annotation_sharing.md#link-sharing).
+
+!!! info "Limitations while rotated"
+    Some tools only work on an unrotated view. While the viewports are rotated, the volume annotation tools (Brush, Trace, their erase variants, Fill Tool, and Quick Select), the Proofreading tool, the Bounding Box tool, and the area measurement tool are disabled. Hovering over a disabled tool shows the reason. Reset the rotation to 0, 0, 0 to use them again.
+
+    The `Only Show Nodes of Current Section` setting is also unavailable while the view is rotated.
 
 ## Menu Functions
 
@@ -38,13 +61,32 @@ The menu provides several ways to manage your annotations:
 
 - **Archive**: When you need to declutter your dashboard, you can archive annotations you're not actively working on. Archived items remain accessible through the "Show Archived Annotations" filter on your dashboard. Note that this option isn't available for tasks.
 
-- **Restore Older Version**: WEBKNOSSOS maintains a complete history of your annotations with version control. You can access previous versions of your work and preview changes before restoring them.
+- **Restore Older Version**: Browse the complete version history of your annotation, preview older versions, and restore them. See [Version History](#version-history) below.
 
 - **Merge Annotations**: Combine multiple annotations into one either by project or by annotation ID.
 
 - **Disable Saving**: Temporarily disable automatic saving in WEBKNOSSOS. Any changes you make will not be saved. This can reduce bandwidth and resource usage when working with large annotations that don't need to be persisted.
 
 - **Lock Annotation**: Lock your current annotation in a read-only mode to protect it from any accidental changes. The annotation remains read-only until you unlock it (from the [Annotation dashboard](../dashboard/annotations.md)). This can be useful when publishing your work or sharing with larger communities.
+
+### Version History
+WEBKNOSSOS keeps a version history of every annotation. Each saved change creates a new version. Unlike undo/redo, which only covers your current session, the version history lets you go back to any earlier state of the annotation. It is also the way to revert changes where undo isn't available, e.g., proofreading actions or edits during [simultaneous editing](../sharing/annotation_sharing.md#simultaneous-editing-experimental).
+
+To open it, select `Menu` > `Restore Older Version` in the toolbar (not available in sandbox mode). Any pending changes are saved first. The `Version History` panel then opens on the right side of the screen. As long as it is open, the annotation is read-only.
+
+The history is a single, linear list for the whole annotation and covers all of its layers: skeleton, volume, and proofreading changes, as well as changes to bounding boxes, segment lists, and annotation layers.
+
+- **Grouping**: Versions are grouped by day (`Today`, `Yesterday`, or the date). Versions that were created within a few minutes of each other are combined into a collapsible group labeled with the version range and time, e.g., `120 to 134 (14:05)`. Click a group to expand it.
+- **Entries**: Each entry shows the version number, the time, a short description of the most important change in that version (e.g., "Created the node with id 12." or "Merged agglomerates …"), and its author. The latest version is marked as `Newest version`.
+- **Preview**: Click an entry to load that version into the viewports. You can navigate and inspect it, but not edit it.
+- **Restore**: While previewing an older version, click `Restore` next to it. This doesn't delete the newer versions. Instead, WEBKNOSSOS adds a new version ("Reverted to version …") with the restored state, so you can always go back again.
+- **Download**: If you are not allowed to edit the annotation, the button reads `Download` instead and downloads the previewed version.
+- **Load More**: Long histories are loaded in pages. Use `Load More` at the bottom of the list to load older versions (or at the top for newer ones).
+
+Close the panel with the `X` button to return to the newest version and continue annotating.
+
+!!! info "Live collaboration"
+    If the annotation is edited by several users at the same time, restoring an older version requires confirmation and reloads WEBKNOSSOS for all collaborators. See [Simultaneous Editing](../sharing/annotation_sharing.md#simultaneous-editing-experimental) for details.
 
 ### Collaboration Tools
 WEBKNOSSOS offers multiple ways to share your work:

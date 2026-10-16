@@ -51,7 +51,7 @@ export function BoundingBoxSelectionFormItem({
         }
         return Promise.reject(
           new Error(
-            `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${
+            `The volume of the selected bounding box is too large. This job is only supported for bounding boxes of up to ${
               features().exportTiffMaxVolumeMVx
             } Megavoxels. Additionally, no bounding box edge should be longer than ${
               features().exportTiffMaxEdgeLengthVx

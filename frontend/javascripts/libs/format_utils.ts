@@ -565,13 +565,10 @@ export function formatWkLibsNdBBox(ndBBox: WkLibsNdBoundingBox): string {
     : bboxString;
 }
 
-export function formatMilliCreditsString(credits: number): string {
-  const millis = Math.round(credits % 1000).toString();
-  const fullCredits = Math.floor(credits / 1000);
-  if (millis === "0") {
-    return fullCredits.toString();
-  }
-  const paddedMillis = millis.padStart(3, "0");
-  const paddedMillisWithoutTrailingZeros = paddedMillis.replace(/0+$/, "");
-  return `${fullCredits}.${paddedMillisWithoutTrailingZeros}`;
+// Formats milli credits as credits with up to three decimals and thousands separators,
+// e.g. 1234500 -> "1,234.5".
+export function formatMilliCreditsString(milliCredits: number): string {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(
+    Math.round(milliCredits) / 1000,
+  );
 }

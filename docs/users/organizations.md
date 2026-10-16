@@ -74,3 +74,5 @@ A WEBKNOSSOS user account can be part of more than one organization, e.g., when 
 If you are part of multiple organizations, you can switch between them from the "User avatar" menu. 
 Click on your user avatar in the top-right corner of the screen and select an entry from the "Switch Organization" menu.
 WEBKNOSSOS will quickly reload and switch your account to that organization, i.e. refresh your dashboard, access permissions, annotations, etc. to match your account in the selected organization.
+
+Alternatively, open the [command palette](../ui/index.md#command-palette) with ++ctrl++ / ++cmd++ + ++p++, select `Switch Organization`, and pick the organization from the list.

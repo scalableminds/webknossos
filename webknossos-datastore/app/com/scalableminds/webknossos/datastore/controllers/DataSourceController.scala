@@ -283,6 +283,7 @@ class DataSourceController @Inject() (
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDatasets(organizationId)) {
         for {
           dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
+          _ <- Fox.fromBool(dataSource.id.organizationId == organizationId) ?~> Msg.notAllowed ~> FORBIDDEN
           _ = clearCachesOfDataSource(datasetId, dataSource, layerName)
           reloadedDataSource <- refreshDataSource(datasetId)
         } yield Ok(Json.toJson(reloadedDataSource))

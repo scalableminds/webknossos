@@ -201,7 +201,7 @@ class DatasetUploadMetadataStore @Inject() (protected val store: DataStoreRedisS
 
   // Only here the uploadId is not key but value. This is used to re-connect to unfinished uploads.
   def insertUploadIdByDataSourceId(dataSourceId: DataSourceId, uploadId: String): Fox[Unit] =
-    store.insertSerialized(redisKeyForUploadIdByDataSourceId(dataSourceId), uploadId, Some(uploadIdleExpiry))
+    store.insert(redisKeyForUploadIdByDataSourceId(dataSourceId), uploadId, Some(uploadIdleExpiry))
 
   def insertLinkedLayerIdentifiers(
       uploadId: String,

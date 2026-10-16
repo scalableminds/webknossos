@@ -90,8 +90,8 @@ class ConfigurationController @Inject() (
   def updateDatasetAdminViewConfiguration(datasetId: ObjectId): Action[JsObject] =
     sil.SecuredAction.fox(validateJson[JsObject]) { implicit request =>
       for {
-        dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext)
-        _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
+        dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, request.body.fields.toMap)
       } yield JsonOk(Msg.User.Configuration.updateSuccessForDataset)
     }

@@ -302,8 +302,11 @@ class VoxelyticsController @Inject() (
     sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
-        runName <- voxelyticsDAO.getRunNameById(runId, request.identity._organization)
-        _ <- voxelyticsService.checkAuth(runId, request.identity) ~> UNAUTHORIZED
+        // Same visibility as the other workflow read endpoints (allowUnlisted): all runs of the user's organization
+        runName <- voxelyticsDAO.getRunNameById(
+          runId,
+          request.identity._organization
+        ) ?~> Msg.Voxelytics.runNotFound ~> NOT_FOUND
         organization <- organizationDAO.findOne(request.identity._organization)
         logEntries <- lokiClient.queryLogsBatched(
           runName,

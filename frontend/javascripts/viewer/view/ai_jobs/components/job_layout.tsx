@@ -1,14 +1,25 @@
 import { Collapse, ConfigProvider, Flex, Space, Typography, theme } from "antd";
 import type React from "react";
+import { JobStartedCard, type StartedJob } from "./job_started_card";
 
 type AiJobLayoutProps = {
   description: string;
   sidebar: React.ReactNode;
+  // Once set, the sidebar is replaced by a card confirming the started job.
+  startedJob: StartedJob | null;
+  // Shown on the job-started card, see JobStartedCard.
+  nextStep?: React.ReactNode;
   children: React.ReactNode;
 };
 
 /** Shared layout of an AI job tab: lead text, the job's sections and the sticky credit sidebar. */
-export function AiJobLayout({ description, sidebar, children }: AiJobLayoutProps) {
+export function AiJobLayout({
+  description,
+  sidebar,
+  startedJob,
+  nextStep,
+  children,
+}: AiJobLayoutProps) {
   const { cssVar } = theme.useToken();
   return (
     <>
@@ -22,7 +33,7 @@ export function AiJobLayout({ description, sidebar, children }: AiJobLayoutProps
           {children}
         </Flex>
         <Flex flex="1" vertical style={{ position: "sticky", top: 0 }}>
-          {sidebar}
+          {startedJob == null ? sidebar : <JobStartedCard {...startedJob} nextStep={nextStep} />}
         </Flex>
       </Flex>
     </>

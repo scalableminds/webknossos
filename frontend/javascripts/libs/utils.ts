@@ -1277,10 +1277,6 @@ export function isBigInt(x: NumberLike): x is bigint {
   return typeof x === "bigint";
 }
 
-function _assertNever(value: never): never {
-  throw new Error(`Unexpected value that is not 'never': ${JSON.stringify(value)}`);
-}
-
 /**
  * Returns a URL safe, base 62 encoded hash code from a string
  * @param  {String} str The string to hash.

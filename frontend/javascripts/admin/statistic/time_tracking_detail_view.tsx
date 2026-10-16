@@ -34,7 +34,7 @@ const renderRow = (
 
   for (const [project, loggedTimes] of Object.entries(groupedByProject)) {
     if (project === "null") {
-      // explorative annotations
+      // annotations (as opposed to tasks)
       const tableRows = loggedTimes.map((timeEntry, i) => (
         <Row key={`time_row_${i}`}>
           <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>

@@ -1,6 +1,6 @@
 import { EllipsisOutlined } from "@ant-design/icons";
 import { Flex, Typography } from "antd";
-import FastTooltip from "components/fast_tooltip";
+import FastTooltip, { type FastTooltipPlacement } from "components/fast_tooltip";
 import type { Vector4 } from "viewer/constants";
 import { rgbaToCSS } from "viewer/shaders/utils.glsl";
 import ButtonComponent from "viewer/view/components/button_component";
@@ -40,6 +40,9 @@ export const centerOnFirstLine = (size: number) => (EXPANDED_LINE_HEIGHT - size)
 export const HOVER_ONLY_CLASS = "list-row__on-hover";
 // The counterpart: hidden exactly while the row is hovered or keyboard-focused.
 const OFF_HOVER_CLASS = "list-row__off-hover";
+
+// Show tooltips above the buttons, right-aligned, so that they don't cover the row.
+export const ACTION_TOOLTIP_PLACEMENT: FastTooltipPlacement = "top-end";
 
 export const ACTION_BUTTON_STYLE: React.CSSProperties = {
   width: ACTION_BUTTON_SIZE,
@@ -96,7 +99,7 @@ export function RowActionButton({
   onClick: (event: React.MouseEvent<HTMLElement>) => void;
 }) {
   return (
-    <FastTooltip title={title} asChild>
+    <FastTooltip title={title} placement={ACTION_TOOLTIP_PLACEMENT} asChild>
       <ButtonComponent
         color="default"
         type="text"

@@ -25,6 +25,10 @@ function upgradeStorageQuota() {
   openUpgradeRequestModal(["storage"]);
 }
 
+function upgradeQuotas(quotas: Array<"users" | "storage">) {
+  openUpgradeRequestModal(quotas);
+}
+
 export function requestAiPlanUpgrade() {
   openUpgradeRequestModal(["aiAddon"]);
 }
@@ -43,6 +47,7 @@ export default {
   extendPricingPlan,
   upgradeUserQuota,
   upgradeStorageQuota,
+  upgradeQuotas,
   requestAiPlanUpgrade,
   orderWebknossosCredits,
 };

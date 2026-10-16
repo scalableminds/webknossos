@@ -9,11 +9,11 @@ import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import dayjs from "dayjs";
 import { formatMilliCreditsString } from "libs/format_utils";
-import { useWkSelector } from "libs/react_hooks";
 import { scrollToTop } from "libs/utils";
 import { useMemo } from "react";
 import type { APICreditTransaction, APIJob } from "types/api_types";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { useActiveOrganization } from "./organization_hooks";
+import { CreditActivitySummaryBar } from "./organization_summary_bars";
 
 const { Column } = Table;
 
@@ -100,9 +100,7 @@ function renderJob(job: APIJob | null | undefined) {
 }
 
 export function OrganizationCreditActivityView() {
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
+  const organization = useActiveOrganization();
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["credit-transactions"],
     queryFn: getCreditTransactions,
@@ -141,12 +139,12 @@ export function OrganizationCreditActivityView() {
         description="Review credit purchases, spending, and refunds for your organization."
       />
       <Spin spinning={isLoading}>
+        <CreditActivitySummaryBar transactions={organizationTransactions} />
         <Table
           dataSource={organizationTransactions}
           rowKey="id"
           pagination={{ defaultPageSize: 50, onChange: scrollToTop }}
           locale={{ emptyText: "No credit activity recorded yet." }}
-          style={{ marginTop: 16 }}
           summary={(pageData) => {
             const totalCredits = pageData.reduce(
               (sum, transaction) => sum + transaction.creditChange,

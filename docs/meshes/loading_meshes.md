@@ -2,7 +2,7 @@
 
 Meshes can be loaded by right-clicking on any segment and selecting `Load Mesh (precomputed)` or `Compute Mesh (ad-hoc)` from the context menu.
 
-Alternatively, the `Segments` tab in the right-hand side panel allows you to load the mesh for any segment or whole group of segments listed there. Select the corresponding option from the overflow menu next to each list entry.
+Alternatively, the `Segments` tab in the right-hand side panel allows you to load the mesh for any segment or whole group of segments listed there. Hover over a segment and click its mesh button: if a precomputed mesh file is available, you can choose between the precomputed and the ad-hoc mesh, otherwise an ad-hoc mesh is computed. The same options are available by right-clicking a segment or group. Once loaded, the mesh is shown as a chip in the segment's row. Click the chip to show or hide the mesh.
 
 Note that the segmentation layer must be visible to load or compute meshes; otherwise the corresponding actions are disabled.
 

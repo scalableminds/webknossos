@@ -125,7 +125,9 @@ class InviteDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findOneByTokenValue(tokenValue: String): Fox[Invite] =
     for {
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE tokenValue = $tokenValue".as[InvitesRow])
+      r <- run(q"""SELECT $columns FROM $existingCollectionName
+                   WHERE tokenValue = $tokenValue
+                   AND expirationDateTime > ${Instant.now}""".as[InvitesRow])
       parsed <- parseFirst(r, "tokenValue")
     } yield parsed
 

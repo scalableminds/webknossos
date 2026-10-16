@@ -177,6 +177,7 @@ export function AllowedTeamsFormItem({
         mode="multiple"
         value={selectedTeams}
         allowNonEditableTeams={isDatasetManagerOrAdmin}
+        allowManagingTeams
         disabled={disabled}
         onChange={(selectedTeams) => {
           if (formRef.current == null) return;

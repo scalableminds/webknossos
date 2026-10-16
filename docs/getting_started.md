@@ -67,7 +67,7 @@ The first tool is the _Move_ tool which allows navigating the dataset by moving 
 With the _Skeleton_ tool, a left mouse click can be used to place markers in the data, called nodes.
 Additionally, the left mouse button can also be used to navigate around, select or drag nodes.
 The _Brush_ and _Trace_ tools allow to "paint" voxels to create volumetric annotations.
-For a full rundown on the other annotations tools, such as _Eraser_, _Segment Picker_, _Fill_ please refer to documentation on [skeleton](./skeleton_annotation/tools.md) and [volume](./volume_annotation/tools.md) annotations.
+For a full rundown on the other annotations tools, such as _Eraser_, _Voxel Pipette_, _Fill_ please refer to documentation on [skeleton](./skeleton_annotation/tools.md) and [volume](./volume_annotation/tools.md) annotations.
 
 To open a context-sensitive menu with various actions, such as merging two trees or flood-filling a segment, use a right mouse click.
 Use the mouse wheel or press ++space++ to move along the 3rd axis.
@@ -103,6 +103,8 @@ Feel free to explore more features of WEBKNOSSOS in this documentation.
 - [User and Permission Management](./users/index.md)
 - [Task and Project Management](./tasks_projects/index.md)
 - [FAQ](./faq.md)
+
+Stuck or have a question? Select `Help` > `Ask a Question` in the navigation bar to get an instant answer from our AI assistant or to message our support team directly from within WEBKNOSSOS. [Read more about asking a question](./index.md#ask-a-question).
 
 Please contact us at [support@webknossos.org](mailto:support@webknossos.org) or [write a post in the WEBKNOSSOS support forum](https://forum.image.sc/tag/webknossos) if you need help with WEBKNOSSOS.
 scalable minds also offers [commercial support, managed hosting, and feature development services](https://webknossos.org/pricing).

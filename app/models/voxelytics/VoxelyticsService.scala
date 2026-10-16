@@ -118,15 +118,11 @@ case class ArtifactChecksumEntry(
 
 class VoxelyticsService @Inject() (voxelyticsDAO: VoxelyticsDAO)(implicit ec: ExecutionContext) {
 
-  def checkAuth(runId: ObjectId, user: User): Fox[Unit] =
-    for {
-      runUserId <- voxelyticsDAO.getUserIdForRun(runId)
-    } yield Fox.fromBool(user.isAdmin || runUserId == user._id)
-
   def checkAuthForWorkflowCreation(runName: String, user: User): Fox[Unit] =
     for {
       runUserId <- voxelyticsDAO.getUserIdForRunOpt(runName, user._organization)
-    } yield Fox.fromBool(user.isAdmin || runUserId.forall(_ == user._id))
+      _ <- Fox.fromBool(user.isAdmin || runUserId.forall(_ == user._id))
+    } yield ()
 
   def taskRunsPublicWrites(combinedTaskRuns: List[CombinedTaskRunEntry], taskRuns: List[TaskRunEntry]): JsArray = {
     val groupedTaskRuns = taskRuns.groupBy(_.taskName)

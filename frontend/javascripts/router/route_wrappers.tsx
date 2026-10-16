@@ -113,7 +113,7 @@ export function DatasetSettingsRouteWrapper() {
   );
 }
 
-export function CreateExplorativeRouteWrapper() {
+export function CreateAnnotationRouteWrapper() {
   const { datasetId, type } = useParams();
   const location = useLocation();
 

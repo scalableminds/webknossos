@@ -17,7 +17,7 @@ type TeamSelectionComponentProps = {
   afterFetchedTeams?: (arg0: Array<APITeam>) => void;
   mode?: "tags" | "multiple" | undefined;
   allowNonEditableTeams?: boolean;
-  // Allow admins/managers to create a new team without leaving this component.
+  // Show "Create new team" / "Add users to teams" actions to admins/managers. Off by default.
   allowManagingTeams?: boolean;
   disabled?: boolean;
   prefix?: ReactNode;
@@ -29,7 +29,7 @@ function TeamSelectionComponent({
   afterFetchedTeams,
   mode,
   allowNonEditableTeams,
-  allowManagingTeams = true,
+  allowManagingTeams = false,
   disabled,
   prefix,
 }: TeamSelectionComponentProps) {

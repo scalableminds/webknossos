@@ -71,6 +71,10 @@ const viteConfig = {
   server: {
     port: 9000,
     cors: true,
+    // Start compiling the entry's module graph on server start instead of on the first page request.
+    warmup: {
+      clientFiles: ["./frontend/javascripts/main.tsx"],
+    },
     // https: {
     //   // Enable HTTPS with self-signed certificates for testing passkeys etc
     //   // Make sure you've generated SSL certificates using the ./tools/gen-ssl-dev-certs.sh script

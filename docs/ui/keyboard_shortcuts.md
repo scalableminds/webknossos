@@ -51,7 +51,7 @@ Shortcut changes are saved to your user account and persist across devices and b
 | ++shift++ + ++1++                                  | Switch to Plane (Orthogonal) View Mode |
 | ++shift++ + ++2++                                  | Switch to Flight View Mode            |
 | ++k++ , ++l++                                      | Toggle left/right Sidebars            |
-| ++ctrl++ / ++cmd++ + ++p++                         | Open command palette                  |
+| ++ctrl++ / ++cmd++ + ++p++                         | Open the [command palette](./index.md#command-palette) |
 
 !!! info "n-dimensional datasets"
     Datasets with additional axes (e.g. a time axis `t`) can be navigated along their **first additional axis** with the actions *"Move Forward/Backward Along the First Additional Axis"*. They work in both plane and flight mode and ship **without a default binding**, so you have to assign your own keys via [Customizing Shortcuts](#customizing-shortcuts) first. Because most single keys are already taken, a combination such as ++shift++ + ++t++ is a good choice. Alternatively, use the coordinate input and its sliders in the action bar.
@@ -77,8 +77,7 @@ Note that skeleton-specific mouse actions and some keyboard shortcuts are only a
 | Left Mouse Drag or Arrow Keys                                                                                                    | Move In-Plane                                                            |
 | ++alt++ + Mouse Move                                                                                                             | Move In-Plane                                                            |
 | ++space++                                                                                                                        | Move Forward                                                             |
-| ++shift++ + ++up++ / ++down++ / ++left++ / ++right++<br>++alt++ + ++left++ / ++right++                                           | Rotate Planes                                                            |
-| ++ctrl++ / ++cmd++ + ++shift++ + ++up++ / ++down++ / ++left++ / ++right++<br>++ctrl++ / ++cmd++ + ++alt++ + ++left++ / ++right++ | Rotate Planes by 90°                                                     |
+| ++shift++ + ++up++ / ++down++ / ++left++ / ++right++<br>++alt++ + ++left++ / ++right++                                           | Rotate Planes (see [Rotating the Viewports](./toolbar.md#rotating-the-viewports)) |
 | Right-Click Drag (3D View)                                                                                                       | Rotate 3D View                                                           |
 | Left Click                                                                                                                       | Create New Node (Skeleton tool)                                          |
 | Left Click                                                                                                                       | Select Node (Mark as Active Node) under cursor (Skeleton tool)           |
@@ -195,15 +194,15 @@ Tool switching is a multi-step shortcut. First press ++ctrl++ / ++cmd++ + ++k++,
 | Key Binding                            | Operation                                                                         |
 |----------------------------------------|-----------------------------------------------------------------------------------|
 | ++w++                                  | Cycle Through Tools (Move / Skeleton / Trace / Brush / ...)                       |
-| ++shift++ + ++w++                      | Cycle Backwards Through Tools (Move / Proofread / Bounding Box / Pick Cell / ...) |
+| ++shift++ + ++w++                      | Cycle Backwards Through Tools (Move / Proofread / Bounding Box / ...)             |
 | ++ctrl++ / ++cmd++ + ++k++ , **++m++** | Move Tool                                                                         |
 | ++ctrl++ / ++cmd++ + ++k++ , **++s++** | Skeleton Tool                                                                     |
 | ++ctrl++ / ++cmd++ + ++k++ , **++b++** | Brush Tool                                                                        |
 | ++ctrl++ / ++cmd++ + ++k++ , **++e++** | Brush Erase Tool                                                                  |
-| ++ctrl++ / ++cmd++ + ++k++ , **++l++** | Lasso Tool                                                                        |
-| ++ctrl++ / ++cmd++ + ++k++ , **++r++** | Lasso Erase Tool                                                                  |
+| ++ctrl++ / ++cmd++ + ++k++ , **++l++** | Trace Tool                                                                        |
+| ++ctrl++ / ++cmd++ + ++k++ , **++r++** | Trace Erase Tool                                                                  |
 | ++ctrl++ / ++cmd++ + ++k++ , **++f++** | Fill Tool                                                                         |
-| ++ctrl++ / ++cmd++ + ++k++ , **++p++** | Segment Picker Tool                                                               |
+| ++ctrl++ / ++cmd++ + ++k++ , **++p++** | Voxel Pipette Tool                                                                |
 | ++ctrl++ / ++cmd++ + ++k++ , **++q++** | Quick Select Tool                                                                 |
 | ++ctrl++ / ++cmd++ + ++k++ , **++x++** | Bounding Box Tool                                                                 |
 | ++ctrl++ / ++cmd++ + ++k++ , **++o++** | Proofreading Tool                                                                 |

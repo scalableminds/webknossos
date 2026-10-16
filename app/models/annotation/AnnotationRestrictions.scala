@@ -31,7 +31,7 @@ class AnnotationRestrictions(implicit ec: ExecutionContext) {
 
   def allowFinish(user: User): Fox[Boolean] = allowFinish(Some(user))
 
-  def allowFinishSoft(user: User): Fox[Boolean] = allowFinish(Some(user))
+  def allowFinishSoft(user: User): Fox[Boolean] = allowFinishSoft(Some(user))
 
   def allowDownload(user: User): Fox[Boolean] = allowDownload(Some(user))
 }

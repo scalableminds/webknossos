@@ -297,7 +297,8 @@ class UserService @Inject() (
     }
 
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
-    findOneCached(LoginInfoAdapter.userIdFromLoginInfo(loginInfo))(using GlobalAccessContext).futureBox.map(_.toOption)
+    findOneCached(LoginInfoAdapter.userIdFromLoginInfo(loginInfo))(using GlobalAccessContext).futureBox
+      .map(_.toOption.filterNot(_.isDeactivated))
 
   def createPasswordInfo(pw: String): PasswordInfo =
     PasswordInfo("SCrypt", SCrypt.hashPassword(pw))

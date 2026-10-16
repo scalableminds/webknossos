@@ -24,6 +24,12 @@ case class OrganizationPlanUpdate(
   lazy val paidUntilFlat: Option[Instant] = paidUntil.flatten
   lazy val includedUsersFlat: Option[Int] = includedUsers.flatten
   lazy val includedStorageFlat: Option[Long] = includedStorageBytes.flatten.map(_.numBytes)
+
+  // Plans with unlimited quotas override requested limits; limits this update leaves unchanged stay unchanged.
+  def withQuotasOfPlan(effectivePricingPlan: PricingPlan): OrganizationPlanUpdate =
+    if (!PricingPlan.hasUnlimitedQuotas(effectivePricingPlan)) this
+    else if (pricingPlan.isDefined) copy(includedUsers = Some(None), includedStorageBytes = Some(None))
+    else copy(includedUsers = includedUsers.map(_ => None), includedStorageBytes = includedStorageBytes.map(_ => None))
 }
 
 object OrganizationPlanUpdate extends TristateOptionJsonHelper {

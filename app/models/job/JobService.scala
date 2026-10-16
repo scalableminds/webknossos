@@ -14,7 +14,7 @@ import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.job.JobCommand.JobCommand
-import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
+import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService, PricingPlan}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -261,6 +261,7 @@ class JobService @Inject() (
   def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
     for {
       _ <- Fox.fromBool(wkConf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
+      _ <- assertJobsAllowedByPricingPlan(owner)
       _ <- Fox.assertTrue(
         jobIsSupportedByAvailableWorkers(command, dataStoreName)
       ) ?~> Msg.Job.noWorkerForDatastoreAndJob
@@ -269,6 +270,20 @@ class JobService @Inject() (
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
+
+  private def assertJobsAllowedByPricingPlan(owner: User): Fox[Unit] =
+    for {
+      organization <- organizationDAO.findOne(owner._organization)(using GlobalAccessContext) ?~> Msg.Organization
+        .notFound(owner._organization)
+      _ <- Fox.fromBool(PricingPlan.allowsJobs(organization.pricingPlan)) ?~> Msg.Job.notAvailableInPlan ~> FORBIDDEN
+    } yield ()
+
+  // Retries bypass submitJob
+  def assertJobCanBeRetriedByPricingPlan(job: Job): Fox[Unit] =
+    for {
+      owner <- userDAO.findOne(job._owner)(using GlobalAccessContext) ?~> Msg.User.notFound(job._owner)
+      _ <- assertJobsAllowedByPricingPlan(owner)
+    } yield ()
 
   private def assertStorageNotExceededFor(command: JobCommand, owner: User): Fox[Unit] =
     for {
@@ -320,6 +335,8 @@ class JobService @Inject() (
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
+      // Also checked here, since a failure in submitJob is only reported as a generic error
+      _ <- assertJobsAllowedByPricingPlan(user)
       _ <- assertStorageNotExceededFor(command, user)
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(

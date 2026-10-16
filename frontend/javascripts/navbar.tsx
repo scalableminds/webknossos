@@ -13,7 +13,10 @@ import WkLogoIcon from "@images/wk-logo.svg?react";
 import { unwrapOrThrow } from "admin/api/api_result";
 import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import {
+  areJobsAllowedByPricingPlan,
+  PricingPlanEnum,
+} from "admin/organization/pricing_plan_utils";
 import {
   getBuildInfo,
   logoutUser,
@@ -58,7 +61,12 @@ import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Link, useLocation } from "react-router";
 import { getAntdTheme } from "theme";
-import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
+import type {
+  APIOrganization,
+  APIOrganizationCompact,
+  APIUser,
+  APIUserCompact,
+} from "types/api_types";
 import constants from "viewer/constants";
 import {
   isAnnotationEditableByNonOwners,
@@ -255,10 +263,10 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
   };
 }
 
-export function getAnalysisSubMenu(collapse: boolean) {
+export function getAnalysisSubMenu(collapse: boolean, activeOrganization: APIOrganization | null) {
   const analysisSubMenuItems = [];
 
-  if (features().jobsEnabled) {
+  if (features().jobsEnabled && areJobsAllowedByPricingPlan(activeOrganization)) {
     analysisSubMenuItems.push({
       key: "/jobs",
       label: <Link to="/jobs">Processing Jobs</Link>,
@@ -881,6 +889,7 @@ function AnnotationLockedTag(): React.ReactElement | null {
 function Navbar() {
   const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
@@ -938,7 +947,7 @@ function Navbar() {
   if (isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
-    menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
+    menuItems.push(getAnalysisSubMenu(collapseAllNavItems, activeOrganization));
 
     if (isUserAdminOrTeamManager(activeUser)) {
       menuItems.push(getTaskManagementSubMenu(collapseAllNavItems));

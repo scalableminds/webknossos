@@ -8,6 +8,7 @@ import type { APIOrganization } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import {
+  areJobsAllowedByPricingPlan,
   isUserAllowedToManageOrganization,
   isUserAllowedToOrderCredits,
   isUserAllowedToRequestUpgrades,
@@ -23,9 +24,13 @@ export function useCanRequestUpgrades(): boolean {
   );
 }
 
+// Credits are only spent on jobs, which Open-Source organizations can't run.
 export function useCanOrderCredits(): boolean {
   return useWkSelector((state) =>
-    state.activeUser ? isUserAllowedToOrderCredits(state.activeUser) : false,
+    state.activeUser
+      ? isUserAllowedToOrderCredits(state.activeUser) &&
+        areJobsAllowedByPricingPlan(state.activeOrganization)
+      : false,
   );
 }
 

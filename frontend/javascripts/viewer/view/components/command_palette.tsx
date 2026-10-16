@@ -123,6 +123,7 @@ export const CommandPalette = () => {
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const activeUser = useWkSelector((state) => state.activeUser);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
 
@@ -349,7 +350,7 @@ export const CommandPalette = () => {
             return { name: getLabelForPath(entry.key), path: entry.key };
           });
 
-    const analysisSubMenu = getAnalysisSubMenu(true);
+    const analysisSubMenu = getAnalysisSubMenu(true, activeOrganization);
     const analysisCommands =
       analysisSubMenu != null
         ? analysisSubMenu.children.map((entry) => {

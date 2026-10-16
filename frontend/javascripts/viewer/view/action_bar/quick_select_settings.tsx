@@ -1,4 +1,5 @@
 import { QuestionCircleOutlined } from "@ant-design/icons";
+import { isAiQuickSelectAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
 import { Radio, type RadioChangeEvent } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
@@ -26,9 +27,21 @@ const OPTIONS_WITH_DISABLED = [
   { label: "Light Segment", value: "light" },
 ];
 
+// Returns why the AI-based quick select is not available, or null if it is available.
+function useAISelectUnavailableReason(): string | null {
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  if (!features().segmentAnythingEnabled) {
+    return "The quick select tool with AI is only available on webknossos.org";
+  }
+  if (!isAiQuickSelectAllowedByPricingPlan(activeOrganization)) {
+    return "The quick select tool with AI is not available in the Open-Source plan.";
+  }
+  return null;
+}
+
 export function QuickSelectControls() {
   const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
-  const isAISelectAvailable = features().segmentAnythingEnabled;
+  const isAISelectAvailable = useAISelectUnavailableReason() == null;
   const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
 
   return isQuickSelectHeuristic ? <HeuristicQuickSelectControls /> : <AiQuickSelectControls />;
@@ -90,13 +103,14 @@ function HeuristicQuickSelectControls() {
   );
 
   const dispatch = useDispatch();
-  const isAISelectAvailable = features().segmentAnythingEnabled;
+  const aiSelectUnavailableReason = useAISelectUnavailableReason();
+  const isAISelectAvailable = aiSelectUnavailableReason == null;
   const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
-  const quickSelectTooltipText = isAISelectAvailable
-    ? isQuickSelectHeuristic
+  const quickSelectTooltipText =
+    aiSelectUnavailableReason ??
+    (isQuickSelectHeuristic
       ? "The quick select tool is now working without AI. Activate AI for better results."
-      : "The quick select tool is now working with AI."
-    : "The quick select tool with AI is only available on webknossos.org";
+      : "The quick select tool is now working with AI.");
   const toggleQuickSelectStrategy = () => {
     dispatch(
       updateUserSettingAction("quickSelect", {

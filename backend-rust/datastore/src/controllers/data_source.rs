@@ -356,7 +356,7 @@ async fn measure_used_storage(
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
     let started = std::time::Instant::now();
-    let reports = crate::services::dataset_files::measure_storage_for_paths(
+    let reports = crate::services::dataset::files::measure_storage_for_paths(
         &state.data_vaults,
         &paths,
         tc.user_token.as_deref(),
@@ -391,7 +391,7 @@ async fn delete_on_disk(
         .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?;
     let directory_name = source.id().directory_name.clone();
     blocking(move || {
-        crate::services::dataset_files::move_to_trash(
+        crate::services::dataset::files::move_to_trash(
             &id,
             std::path::Path::new(&root),
             &directory_name,
@@ -421,7 +421,7 @@ async fn delete_paths(
     let bases = state.base_dirs.clone();
     let to_delete = paths.clone();
     blocking(move || {
-        crate::services::dataset_files::delete_local_paths_from_disk(&bases, &to_delete)
+        crate::services::dataset::files::delete_local_paths_from_disk(&bases, &to_delete)
     })
     .await?;
     let managed: Vec<_> = paths
@@ -467,7 +467,7 @@ async fn write_mirror_for_dataset(
     let bases = state.base_dirs.clone();
     let owned_id = id.to_owned();
     let mirror =
-        blocking(move || crate::services::dataset_files::write_mirror(&bases, &source, &owned_id))
+        blocking(move || crate::services::dataset::files::write_mirror(&bases, &source, &owned_id))
             .await
             .map_err(|e| e.wrap(format!("Error writing datasource mirror for {id}")))?;
     Ok(mirror.map(|path| (id.to_owned(), path)))
@@ -537,7 +537,7 @@ async fn list_mappings(
     let mappings = match state.wk_client.get_local_root_path_or_empty(&id).await? {
         Some(root) => {
             blocking(move || {
-                Ok(crate::services::mapping::explore_mappings(
+                Ok(crate::services::agglomerate::mapping::explore_mappings(
                     &root.join(&layer_name),
                 ))
             })
@@ -551,14 +551,14 @@ async fn list_mappings(
 /// Scala `ExploreRemoteLayerParameters` reads.
 fn read_explore_parameters(
     json: &Value,
-) -> crate::models::JsResult<crate::explore::ExploreRemoteLayerParameters> {
+) -> crate::models::JsResult<crate::services::explore::ExploreRemoteLayerParameters> {
     use crate::models::json::{Fields, read_string};
     let mut f = Fields::new(json);
     let remote_uri = f.req("remoteUri", read_string);
     let credential_id = f.opt("credentialId", read_string);
     let preferred = f.opt("preferredVoxelSize", crate::models::VoxelSize::from_json);
     f.finish()?;
-    Ok(crate::explore::ExploreRemoteLayerParameters {
+    Ok(crate::services::explore::ExploreRemoteLayerParameters {
         remote_uri: remote_uri?,
         credential_id: credential_id?,
         preferred_voxel_size: preferred?,
@@ -601,8 +601,8 @@ async fn explore_remote(
     let local_request = parameters
         .iter()
         .any(|p| uri_scheme(&p.remote_uri) == Some("file"));
-    let service = crate::explore::ExploreRemoteLayerService {
-        ctx: crate::explore::ExploreContext {
+    let service = crate::services::explore::ExploreRemoteLayerService {
+        ctx: crate::services::explore::ExploreContext {
             vaults: state.data_vaults.clone(),
             token: tc.user_token.clone(),
         },
@@ -632,7 +632,7 @@ async fn explore_remote(
         Err(e) => {
             report.push(format!(
                 "Error when exploring as layer set: {}",
-                crate::explore::format_failure(&e)
+                crate::services::explore::format_failure(&e)
             ));
             None
         }

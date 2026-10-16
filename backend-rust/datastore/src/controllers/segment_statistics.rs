@@ -19,13 +19,13 @@ use crate::{
         datasource::{read_unsigned_long, unsigned_long_envelope},
         json::{Fields, JsError, JsResult, read_i64, read_list, read_string},
     },
-    services::segment_index::{
+    services::segment::index::{
         SegmentIndexService, segment_ids_for_agglomerate_id_if_needed,
         top_lefts_to_target_mag_buckets,
     },
     services::{
         agglomerate::AgglomerateService,
-        segment_statistics_file::{
+        segment::statistics_file::{
             StatisticsFileService, combined_covariance, rescale_volume, weighted_center,
         },
     },
@@ -523,7 +523,7 @@ async fn segment_surface_area(
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
     use crate::services::{
-        ad_hoc_mesh::MappingType, full_mesh::FullMeshRequest, mesh_file::MeshFileService,
+        mesh::ad_hoc::MappingType, mesh::file::MeshFileService, mesh::full::FullMeshRequest,
     };
     let p = match validated_body(body, surface_parameters) {
         Ok(p) => p,

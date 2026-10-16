@@ -5,7 +5,7 @@ use webknossos_datastore::{
     config::DatastoreConfig,
     datareaders::hdf5::Hdf5Reader,
     models::{DataSourceId, LayerAttachment, UPath, Vec3Int, enums::LayerAttachmentDataformat},
-    services::segment_index::{SegmentIndexFileKey, SegmentIndexService},
+    services::segment::index::{SegmentIndexFileKey, SegmentIndexService},
 };
 
 fn fixture(name: &str) -> PathBuf {

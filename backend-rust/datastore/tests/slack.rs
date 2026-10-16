@@ -4,7 +4,7 @@ use axum::http::{Request, StatusCode};
 use mock_wk::{MockWk, Reply};
 use serde_json::json;
 use tower::ServiceExt;
-use webknossos_datastore::{AppState, config::Secret, router, slack::SlackNotifications};
+use webknossos_datastore::{AppState, clients::slack::SlackNotifications, config::Secret, router};
 
 async fn wait_for_calls(server: &MockWk, count: usize) {
     tokio::time::timeout(std::time::Duration::from_secs(2), async {

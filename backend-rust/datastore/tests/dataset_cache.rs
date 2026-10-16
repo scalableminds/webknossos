@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use mock_wk::{KEY, MockWk, Reply};
 use serde_json::json;
 use std::sync::{Arc, Mutex};
-use webknossos_datastore::{services::DatasetCache, wk_client::WkClient};
+use webknossos_datastore::{clients::wk::WkClient, services::DatasetCache};
 
 fn source() -> serde_json::Value {
     json!({"id":{"name":"ds","team":"org"},"scale":[1,1,1],"dataLayers":[

@@ -351,7 +351,12 @@ async fn mapping_json(
     let bases = state.base_dirs.clone();
     let source_id = source.id.clone();
     let bytes = tokio::task::spawn_blocking(move || {
-        crate::services::mapping::load_mapping_bytes(&bases, &source_id, &layer_name, &mapping)
+        crate::services::agglomerate::mapping::load_mapping_bytes(
+            &bases,
+            &source_id,
+            &layer_name,
+            &mapping,
+        )
     })
     .await
     .map_err(DsError::from_exception)??;

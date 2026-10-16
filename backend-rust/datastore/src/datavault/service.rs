@@ -21,10 +21,10 @@ use super::{
     sigv4::AwsCredentials,
 };
 use crate::{
+    clients::wk::{AlfuCache, WkClient},
     config::DatastoreConfig,
     error::{DsError, DsResult},
     models::datasource::{LayerAttachment, MagLocator},
-    wk_client::{AlfuCache, WkClient},
 };
 
 /// Scala `Msg.DataVault.setupFailed`.

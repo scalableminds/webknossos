@@ -2,7 +2,7 @@
 use super::{
     BoxFuture, ByteRange, DataVault, Encoding, RawRead, UPath, VaultError, VaultPath, VaultResult,
 };
-use crate::{error::DsError, wk_client::AlfuCache};
+use crate::{clients::wk::AlfuCache, error::DsError};
 use std::{collections::HashMap, fmt, sync::Arc, time::Duration};
 
 const EOCD: u32 = 0x06054b50;

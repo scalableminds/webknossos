@@ -26,8 +26,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    clients::wk::{AlfuCache, WkClient},
     error::{DsError, DsResult},
-    wk_client::{AlfuCache, WkClient},
 };
 
 /// Scala `AccessMode`.

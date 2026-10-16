@@ -505,7 +505,7 @@ fn scanner_matches_actual_repository_jni_oracle() {
     use base64::Engine;
     use webknossos_datastore::{
         models::Vec3Int,
-        services::index_statistics::{count_voxels, extend_bounds},
+        services::segment::index_statistics::{count_voxels, extend_bounds},
     };
     let oracle: Value = serde_json::from_str(include_str!(
         "fixtures/segment_index/bucket_scanner_oracle.json"
@@ -552,7 +552,9 @@ fn scanner_matches_actual_repository_jni_oracle() {
 fn remapping_math_matches_actual_compiled_scala_oracle() {
     use webknossos_datastore::{
         models::Vec3Int,
-        services::segment_statistics_file::{combined_covariance, rescale_volume, weighted_center},
+        services::segment::statistics_file::{
+            combined_covariance, rescale_volume, weighted_center,
+        },
     };
     let oracle: Value = serde_json::from_str(include_str!(
         "fixtures/segment_index/statistics_math_oracle.json"

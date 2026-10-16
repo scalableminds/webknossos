@@ -4,22 +4,18 @@
 
 pub mod access;
 pub mod binding_errors;
+pub mod clients;
 pub mod compression;
 pub mod config;
 pub mod controllers;
 pub mod datareaders;
 pub mod datavault;
 pub mod error;
-pub mod explore;
 pub mod models;
 pub mod proto;
 pub mod redis;
-pub mod redis_store;
 pub mod services;
-pub mod slack;
-pub mod tracingstore_client;
 pub mod versioning;
-pub mod wk_client;
 
 use std::{
     sync::{Arc, Mutex},
@@ -41,16 +37,16 @@ use tower_http::{
 
 use crate::{
     access::AccessTokenService,
+    clients::wk::WkClient,
     config::DatastoreConfig,
     error::{DsError, DsResult},
     versioning::RequestedApiVersion,
-    wk_client::WkClient,
 };
 
 /// Shared state of the datastore service.
 #[derive(Clone)]
 pub struct AppState {
-    pub slack: crate::slack::SlackNotifications,
+    pub slack: crate::clients::slack::SlackNotifications,
     pub config: Arc<DatastoreConfig>,
     pub health: HealthProblems,
     pub data_vaults: crate::datavault::DataVaultService,
@@ -65,19 +61,19 @@ pub struct AppState {
     /// User access checks (Scala `DataStoreAccessTokenService`).
     pub access: AccessTokenService,
     /// RPC client to tracingstores (Scala `DSRemoteTracingstoreClient`).
-    pub tracingstore: crate::tracingstore_client::TracingstoreClient,
+    pub tracingstore: crate::clients::tracingstore::TracingstoreClient,
     /// Resumable uploads (Scala `UploadService`, Redis metadata).
     pub uploads: crate::services::upload::UploadService,
     /// Agglomerate files (Scala `AgglomerateService`), also the data mapper of `binary_data`.
     pub agglomerates: Arc<crate::services::agglomerate::AgglomerateService>,
     /// Segment index files (Scala `SegmentIndexFileService`).
-    pub segment_index: Arc<crate::services::segment_index::SegmentIndexService>,
-    pub statistics_file: Arc<crate::services::segment_statistics_file::StatisticsFileService>,
-    pub index_statistics: Arc<crate::services::index_statistics::IndexStatisticsService>,
-    pub mesh_files: Arc<crate::services::mesh_file::MeshFileService>,
-    pub mappings: Arc<crate::services::mapping::MappingService>,
-    pub ad_hoc_mesh: Arc<crate::services::ad_hoc_mesh::AdHocMeshService>,
-    pub full_mesh: Arc<crate::services::full_mesh::FullMeshService>,
+    pub segment_index: Arc<crate::services::segment::index::SegmentIndexService>,
+    pub statistics_file: Arc<crate::services::segment::statistics_file::StatisticsFileService>,
+    pub index_statistics: Arc<crate::services::segment::index_statistics::IndexStatisticsService>,
+    pub mesh_files: Arc<crate::services::mesh::file::MeshFileService>,
+    pub mappings: Arc<crate::services::agglomerate::mapping::MappingService>,
+    pub ad_hoc_mesh: Arc<crate::services::mesh::ad_hoc::AdHocMeshService>,
+    pub full_mesh: Arc<crate::services::mesh::full::FullMeshService>,
     pub connectomes: Arc<crate::services::connectome::ConnectomeService>,
 }
 
@@ -85,7 +81,7 @@ impl AppState {
     pub fn new(config: DatastoreConfig) -> Self {
         // Building a rustls client only fails if the TLS backend cannot initialize.
         let wk_client = WkClient::new(&config).expect("cannot build the WEBKNOSSOS HTTP client");
-        let slack = crate::slack::SlackNotifications::new(&config);
+        let slack = crate::clients::slack::SlackNotifications::new(&config);
         let health = HealthProblems {
             slack: Some(slack.clone()),
             ..HealthProblems::default()
@@ -114,18 +110,18 @@ impl AppState {
         let data_sources = crate::services::DataSourceService::new(data_vaults.clone());
         let uploads = crate::services::upload::UploadService::new(
             base_dirs.clone(),
-            crate::redis_store::RedisStore::new(&config.redis),
+            crate::redis::store::RedisStore::new(&config.redis),
             config.upload_delete_temporary_files_after_upload,
         );
-        let segment_index = Arc::new(crate::services::segment_index::SegmentIndexService::new(
+        let segment_index = Arc::new(crate::services::segment::index::SegmentIndexService::new(
             data_vaults.clone(),
             Arc::clone(&chunk_contents_cache),
         ));
-        let mappings = Arc::new(crate::services::mapping::MappingService::new(
+        let mappings = Arc::new(crate::services::agglomerate::mapping::MappingService::new(
             base_dirs.clone(),
             config.cache.mapping_max_entries as usize,
         ));
-        let ad_hoc_mesh = Arc::new(crate::services::ad_hoc_mesh::AdHocMeshService::new(
+        let ad_hoc_mesh = Arc::new(crate::services::mesh::ad_hoc::AdHocMeshService::new(
             Arc::clone(&binary_data),
             Arc::clone(&agglomerates),
             Arc::clone(&mappings),
@@ -138,22 +134,22 @@ impl AppState {
                 data_vaults.clone(),
                 Arc::clone(&chunk_contents_cache),
             )),
-            full_mesh: Arc::new(crate::services::full_mesh::FullMeshService::default()),
+            full_mesh: Arc::new(crate::services::mesh::full::FullMeshService::default()),
             mappings,
             ad_hoc_mesh,
-            mesh_files: Arc::new(crate::services::mesh_file::MeshFileService::new(
+            mesh_files: Arc::new(crate::services::mesh::file::MeshFileService::new(
                 data_vaults.clone(),
                 Arc::clone(&chunk_contents_cache),
             )),
             index_statistics: Arc::new(
-                crate::services::index_statistics::IndexStatisticsService::new(
+                crate::services::segment::index_statistics::IndexStatisticsService::new(
                     Arc::clone(&segment_index),
                     Arc::clone(&agglomerates),
                     Arc::clone(&binary_data),
                 ),
             ),
             statistics_file: Arc::new(
-                crate::services::segment_statistics_file::StatisticsFileService::new(
+                crate::services::segment::statistics_file::StatisticsFileService::new(
                     data_vaults.clone(),
                     Arc::clone(&chunk_contents_cache),
                 ),
@@ -170,7 +166,7 @@ impl AppState {
             data_sources,
             datasets: crate::services::DatasetCache::new(wk_client.clone()),
             access: AccessTokenService::new(wk_client.clone()),
-            tracingstore: crate::tracingstore_client::TracingstoreClient::new(
+            tracingstore: crate::clients::tracingstore::TracingstoreClient::new(
                 wk_client.rpc().clone(),
             ),
             wk_client,
@@ -189,7 +185,7 @@ impl AppState {
 #[derive(Clone, Default)]
 pub struct HealthProblems {
     latest: Arc<Mutex<Option<(Instant, String)>>>,
-    slack: Option<crate::slack::SlackNotifications>,
+    slack: Option<crate::clients::slack::SlackNotifications>,
 }
 
 impl HealthProblems {

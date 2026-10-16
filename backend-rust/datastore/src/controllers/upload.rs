@@ -659,7 +659,7 @@ pub(super) async fn finish_upload(
         .validate_access(UserAccessRequest::write_dataset(&dataset_id), &tc)
         .await?;
     let started = std::time::Instant::now();
-    let context = crate::services::upload_finish::FinishContext {
+    let context = crate::services::upload::finish::FinishContext {
         uploads: &state.uploads,
         data_sources: &state.data_sources,
         wk_client: &state.wk_client,

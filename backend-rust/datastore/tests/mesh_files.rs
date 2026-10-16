@@ -8,8 +8,8 @@ use webknossos_datastore::{
     config::DatastoreConfig,
     models::{DataSourceId, LayerAttachment},
     services::{
-        mesh_file::{ChunkRequest, MeshFileKey, MeshFileService},
-        mesh_manifest::{Manifest, merge},
+        mesh::file::{ChunkRequest, MeshFileKey, MeshFileService},
+        mesh::manifest::{Manifest, merge},
     },
 };
 fn root() -> PathBuf {

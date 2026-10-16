@@ -15,7 +15,7 @@ use webknossos_datastore::{
     config::DatastoreConfig,
     models::{DataSourceId, LayerAttachment},
     router,
-    services::segment_index::SegmentIndexFileKey,
+    services::segment::index::SegmentIndexFileKey,
 };
 
 const ID: &str = "0123456789abcdef01234567";

@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use webknossos_datastore::services::mesh_geometry::{combine_stl, draco_to_stl, surface_area};
+use webknossos_datastore::services::mesh::geometry::{combine_stl, draco_to_stl, surface_area};
 fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/draco")
 }
@@ -49,7 +49,7 @@ fn malformed_draco_is_rejected_and_stl_headers_count_actual_faces() {
 }
 #[test]
 fn stl_normals_and_areas_match_actual_compiled_scala() {
-    use webknossos_datastore::services::mesh_geometry::ad_hoc_to_stl;
+    use webknossos_datastore::services::mesh::geometry::ad_hoc_to_stl;
     let vertices = [
         0., 0., 0., 1., 0., 0., 0., 1., 0., 2., 3., 4., 7., 3., 4., 2., 9., 4.,
     ];
@@ -76,7 +76,7 @@ fn vertex_bytes(vertices: &[f32]) -> Vec<u8> {
 }
 #[test]
 fn every_marching_cube_configuration_and_tile_order_match_actual_scala() {
-    use webknossos_datastore::services::marching_cubes::marching_cubes;
+    use webknossos_datastore::services::mesh::marching_cubes::marching_cubes;
     let bytes = std::fs::read(root().join("cubes.bin")).unwrap();
     let mut cursor = 0;
     for cube in 0..256 {
@@ -117,7 +117,7 @@ fn every_marching_cube_configuration_and_tile_order_match_actual_scala() {
 }
 #[test]
 fn marching_cube_neighbors_preserve_excluded_edges_and_degenerate_dimensions() {
-    use webknossos_datastore::services::marching_cubes::marching_cubes;
+    use webknossos_datastore::services::mesh::marching_cubes::marching_cubes;
     let generate = |data: &[bool], dims, neighbors| {
         marching_cubes(data, dims, [0.; 3], [1.; 3], neighbors).unwrap()
     };
@@ -138,7 +138,7 @@ fn marching_cube_neighbors_preserve_excluded_edges_and_degenerate_dimensions() {
 }
 #[test]
 fn typed_json_mapping_matches_actual_scala_parser_including_narrowed_duplicates() {
-    use webknossos_datastore::services::mapping::parse_mapping;
+    use webknossos_datastore::services::agglomerate::mapping::parse_mapping;
     let input = std::fs::read(root().join("mapping.json")).unwrap();
     let oracle: serde_json::Value =
         serde_json::from_slice(&std::fs::read(root().join("mapping_oracle.json")).unwrap())

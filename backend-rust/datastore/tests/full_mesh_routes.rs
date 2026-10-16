@@ -282,9 +282,9 @@ async fn full_mesh_and_surface_from_all_file_formats_match_jni_goldens() {
         );
         let values: Vec<f32> = serde_json::from_slice(&bytes).unwrap();
         let expected = if file == "real" {
-            webknossos_datastore::services::mesh_geometry::surface_area(&raw).unwrap()
+            webknossos_datastore::services::mesh::geometry::surface_area(&raw).unwrap()
         } else if file == "pc" {
-            webknossos_datastore::services::mesh_geometry::surface_area(&raw[..100]).unwrap() * 2.
+            webknossos_datastore::services::mesh::geometry::surface_area(&raw[..100]).unwrap() * 2.
         } else {
             509.66205 * 2.
         };

@@ -1,5 +1,6 @@
 //! Scala connectome readers: CSR/CSC agglomerate pairs and ordered synapse attributes.
 use crate::{
+    clients::wk::AlfuCache,
     datareaders::{
         ChunkContentsCache, DatasetArray,
         hdf5::Hdf5Reader,
@@ -12,7 +13,6 @@ use crate::{
         DataSourceId, LayerAttachment, LayerAttachmentDataformat, StaticLayer, UPath,
         json::{Fields, read_i64, read_list, read_string},
     },
-    wk_client::AlfuCache,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -555,7 +555,7 @@ fn get_longs(array: &NdArray) -> DsResult<Vec<i64>> {
             .iter()
             .map(|v| f64::from_le_bytes(*v) as i64)
             .collect()),
-        _ => super::agglomerate::nd_longs(array),
+        _ => crate::services::agglomerate::nd_longs(array),
     }
 }
 fn range_count(start: i64, end: i64) -> DsResult<i32> {

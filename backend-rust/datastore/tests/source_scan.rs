@@ -14,7 +14,7 @@ use webknossos_datastore::{
     models::{
         DataSourcePathInfo, DataSourceWithRootPathInfo, FILENAME_DATASOURCE_PROPERTIES_JSON, UPath,
     },
-    services::{BaseDirService, source_scan::scan_real_paths},
+    services::{BaseDirService, dataset::source_scan::scan_real_paths},
 };
 fn temp() -> PathBuf {
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);

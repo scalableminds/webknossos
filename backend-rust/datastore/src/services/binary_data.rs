@@ -12,7 +12,7 @@ use crate::{
         BUCKET_LENGTH, BoundingBox, DataFormat, DataSourceId, Vec3Int,
         data_requests::{BucketPosition, DataReadInstruction, DataServiceDataRequest},
     },
-    services::dataset_errors::DatasetErrorLoggingService,
+    services::dataset::errors::DatasetErrorLoggingService,
 };
 use futures::{StreamExt, stream};
 use std::sync::Arc;

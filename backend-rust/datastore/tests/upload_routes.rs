@@ -506,7 +506,7 @@ async fn redis_store_against_real_redis_server() {
         .stdout(std::process::Stdio::null())
         .spawn()
         .unwrap();
-    let store = webknossos_datastore::redis_store::RedisStore::new(
+    let store = webknossos_datastore::redis::store::RedisStore::new(
         &webknossos_datastore::config::RedisConfig {
             address: "127.0.0.1".into(),
             port,

@@ -10,7 +10,7 @@ use crate::{
         datasource::read_unsigned_long,
         json::{Fields, read_bool, read_i64, read_list, read_string},
     },
-    services::ad_hoc_mesh::{AdHocMeshRequest, MappingType},
+    services::mesh::ad_hoc::{AdHocMeshRequest, MappingType},
 };
 use axum::{
     Json, Router,

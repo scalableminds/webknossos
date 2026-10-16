@@ -11,8 +11,8 @@ use crate::{
         json::{Fields, JsResult, read_i32, read_i64, read_list, read_string},
     },
     services::{
-        mesh_file::{ChunkRequest, MeshFileService},
-        segment_index::segment_ids_for_agglomerate_id_if_needed,
+        mesh::file::{ChunkRequest, MeshFileService},
+        segment::index::segment_ids_for_agglomerate_id_if_needed,
     },
 };
 use axum::{
@@ -51,7 +51,7 @@ async fn full_mesh(
     Path((id, name)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
-    use crate::services::full_mesh::{FullMeshRequest, FullMeshService};
+    use crate::services::mesh::full::{FullMeshRequest, FullMeshService};
     let request = match validated_body(body, FullMeshRequest::from_json) {
         Ok(p) => p,
         Err(r) => return Ok(*r),

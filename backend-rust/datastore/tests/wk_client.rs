@@ -9,7 +9,7 @@ use mock_wk::{MockWk, Reply};
 use serde_json::{Value, json};
 use webknossos_datastore::{
     access::{TokenContext, UserAccessRequest},
-    wk_client::{JobExportProperties, WkClient},
+    clients::wk::{JobExportProperties, WkClient},
 };
 
 use mock_wk::KEY;

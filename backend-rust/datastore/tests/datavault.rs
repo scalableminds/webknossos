@@ -25,6 +25,7 @@ use base64::{
 use mock_wk::{MockWk, Reply};
 use serde_json::{Value, json};
 use webknossos_datastore::{
+    clients::wk::WkClient,
     datavault::{
         AwsCredentials, ByteRange, CredentialLookup, CredentializedUPath, DataVault,
         DataVaultCredential, DataVaultService, DataVaultServiceOptions, Encoding, GcsOptions,
@@ -34,7 +35,6 @@ use webknossos_datastore::{
     },
     error::{DsError, DsResult},
     models::{datasource::MagLocator, geometry::Vec3Int},
-    wk_client::WkClient,
 };
 
 // ---------------------------------------------------------------------------------------------

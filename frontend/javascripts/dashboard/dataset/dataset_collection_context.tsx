@@ -5,11 +5,19 @@ import {
   getDatastores,
   triggerDatasetCheck,
 } from "admin/rest_api";
-import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
+import { usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import last from "lodash-es/last";
 import type React from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   APIDatasetCompact,
   APIDatasetCompactWithoutStatusAndLayerNames,
@@ -97,7 +105,8 @@ export default function DatasetCollectionContextProvider({
   children: React.ReactNode;
 }) {
   const [activeFolderId, setActiveFolderId] = useState<string | null>(
-    UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
+    () =>
+      readUrlParams().folderId || UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
   );
   const [mostRecentlyUsedActiveFolderId, clearMostRecentlyUsedActiveFolderId] = usePrevious(
     activeFolderId,
@@ -338,30 +347,29 @@ function useManagedUrlParams(
 ) {
   const { data: folder } = useFolderQuery(activeFolderId);
 
-  // Read params upon component mount.
-  useEffectOnlyOnce(() => {
-    const params = new URLSearchParams(location.search);
-    const query = params.get("query");
-    if (query) {
+  // The folder id that is currently encoded in the URL path (null in search mode).
+  // Used to decide whether a folder change should create a new history entry.
+  const folderIdInUrlPathRef = useRef<string | null>(
+    globalSearchQuery ? null : readUrlParams().folderId,
+  );
+
+  // Read params upon component mount and when navigating through the browser history.
+  useEffect(() => {
+    const applyUrlParams = () => {
+      // Ignore history navigation to other pages (this component will unmount then).
+      if (!location.pathname.startsWith("/dashboard/datasets")) return;
+      const { query, folderId, recursive } = readUrlParams();
+      folderIdInUrlPathRef.current = query ? null : folderId;
       setGlobalSearchQuery(query);
-    }
-    const folderId = params.get("folderId");
-    if (folderId) {
-      setActiveFolderId(folderId);
-    }
-    const recursive = params.get("recursive");
-    if (recursive != null) setSearchRecursively(recursive === "true");
-
-    const folderSpecifier = last(location.pathname.split("/"));
-
-    if (folderSpecifier?.includes("-")) {
-      const nameChunksAndFolderId = folderSpecifier.split("-");
-      const folderId = last(nameChunksAndFolderId);
       if (folderId) {
         setActiveFolderId(folderId);
       }
-    }
-  });
+      if (recursive != null) setSearchRecursively(recursive === "true");
+    };
+    applyUrlParams();
+    window.addEventListener("popstate", applyUrlParams);
+    return () => window.removeEventListener("popstate", applyUrlParams);
+  }, [setGlobalSearchQuery, setActiveFolderId, setSearchRecursively]);
 
   // Update query and searchRecursively
 
@@ -379,12 +387,18 @@ function useManagedUrlParams(
       // not loaded yet).
       // Don't use useNavigate because this would lose the input search
       // focus. Keep the existing history state, since react-router stores its own data there.
-      window.history.replaceState(
-        window.history.state,
-        "",
-        `/dashboard/datasets/${folderName}${folderName ? "-" : ""}${activeFolderId}`,
-      );
+      // Switching to another folder creates a new history entry so that the browser's
+      // back button navigates to the previous folder.
+      const url = `/dashboard/datasets/${folderName}${folderName ? "-" : ""}${activeFolderId}`;
+      const previousFolderId = folderIdInUrlPathRef.current;
+      folderIdInUrlPathRef.current = activeFolderId;
+      if (previousFolderId != null && previousFolderId !== activeFolderId) {
+        window.history.pushState(window.history.state, "", url);
+      } else {
+        window.history.replaceState(window.history.state, "", url);
+      }
     } else {
+      folderIdInUrlPathRef.current = null;
       const params = new URLSearchParams(location.search);
       if (globalSearchQuery) {
         params.set("query", globalSearchQuery);
@@ -414,4 +428,15 @@ function useManagedUrlParams(
       );
     }
   }, [globalSearchQuery, activeFolderId, folder, searchRecursively]);
+}
+
+function readUrlParams() {
+  const params = new URLSearchParams(location.search);
+  const query = params.get("query");
+  let folderId = params.get("folderId");
+  const folderSpecifier = last(location.pathname.split("/"));
+  if (!query && folderSpecifier?.includes("-")) {
+    folderId = last(folderSpecifier.split("-")) || null;
+  }
+  return { query, folderId, recursive: params.get("recursive") };
 }

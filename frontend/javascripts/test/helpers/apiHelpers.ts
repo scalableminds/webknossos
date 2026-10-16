@@ -67,6 +67,7 @@ import {
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import PushQueue from "viewer/model/bucket_data_handling/pushqueue";
 import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
@@ -566,11 +567,16 @@ setStore(Store);
 setupApi();
 startSaga(rootSaga);
 
-// Stop all sagas once the test file is done. Otherwise, work started by the last
-// test (e.g., mesh loading) keeps running and can log while vitest tears down the
-// worker, which fails the run with "Closing rpc while "onUserConsoleLog" was pending".
+// Stop all background work once the test file is done. Otherwise, work started by the
+// last test (e.g., mesh loading or a debounced push queue flush) keeps running and can
+// log while vitest tears down the worker, which fails the run with
+// "Closing rpc while "onUserConsoleLog" was pending".
 afterAll(() => {
   Store.dispatch(cancelSagaAction());
+  // Push queues debounce their flushes in their own saga, which isn't affected by
+  // cancelling the root saga. Turn pending flushes into no-ops instead. This is done on
+  // the prototype to also cover push queues of layers from previous tests.
+  vi.spyOn(PushQueue.prototype as any, "flushAndSnapshot").mockImplementation(() => {});
 });
 
 type ModelDataForTests = {

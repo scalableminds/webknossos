@@ -8,9 +8,8 @@ use serde_json::{Value, json};
 
 use crate::{
     AppState,
-    annotation::metadata::NOT_ALLOWED,
     annotation::provider::{
-        AccessContext, AnnotationIdentifier, AnnotationProvider, ProviderError, RESOURCE_NOT_FOUND,
+        AccessContext, AnnotationIdentifier, AnnotationProvider, ProviderError,
         RESTRICTIONS_NOT_FOUND,
     },
     auth::AuthUser,
@@ -53,7 +52,7 @@ fn acquisition_gate(
         "Concurrent" | "Exclusive"
     ) || !crate::annotation::access::restrictions(annotation, Some(user)).allow_update
     {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok(())
 }
@@ -83,7 +82,7 @@ async fn acquire(
         annotation.collaboration_mode.as_str(),
         "Concurrent" | "Exclusive"
     ) {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let identifier =
         AnnotationIdentifier::parse(&annotation.annotation_type, &id).map_err(|e| {
@@ -98,7 +97,7 @@ async fn acquire(
                 .into_api_error(StatusCode::NOT_FOUND)
         })?;
     if !restrictions.allow_update {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let micros = i64::try_from(expiry.as_micros())
         .ok()
@@ -158,7 +157,7 @@ async fn acquire(
             .await
             .map_err(|error| {
                 if error.status == StatusCode::NOT_FOUND {
-                    ApiError::not_found(RESOURCE_NOT_FOUND)
+                    ApiError::not_found(crate::msg::NOT_FOUND)
                 } else {
                     error
                 }

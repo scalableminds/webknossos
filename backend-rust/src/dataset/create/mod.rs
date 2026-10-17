@@ -9,65 +9,8 @@ use crate::{
     error::{ApiError, ApiResult},
     stores::client::ServiceClients,
     util::id::ObjectId,
+    util::text::normalize_strong,
 };
-
-const REPLACEMENTS: &[(char, &str)] = &[
-    ('ü', "ue"),
-    ('Ü', "Ue"),
-    ('ö', "oe"),
-    ('Ö', "Oe"),
-    ('ä', "ae"),
-    ('Ä', "Ae"),
-    ('ß', "ss"),
-    ('é', "e"),
-    ('è', "e"),
-    ('ê', "e"),
-    ('È', "E"),
-    ('É', "E"),
-    ('Ê', "E"),
-    ('Ç', "C"),
-    ('ç', "c"),
-    ('ñ', "n"),
-    ('Ñ', "N"),
-    ('ë', "e"),
-    ('Ë', "E"),
-    ('ï', "i"),
-    ('Ï', "I"),
-    ('å', "a"),
-    ('Å', "A"),
-    ('œ', "oe"),
-    ('Œ', "Oe"),
-    ('æ', "ae"),
-    ('Æ', "Ae"),
-    ('þ', "th"),
-    ('Þ', "Th"),
-    ('ø', "oe"),
-    ('Ø', "Oe"),
-    ('í', "i"),
-    ('ì', "i"),
-];
-
-/// TextUtils.normalizeStrong: transliterate, then keep [A-Za-z0-9_-] and Java `\s`.
-pub(crate) fn normalize_strong(text: &str) -> Option<String> {
-    let mut result = String::new();
-    for c in text.chars() {
-        match REPLACEMENTS.iter().find(|(from, _)| *from == c) {
-            Some((_, to)) => result.push_str(to),
-            None => result.push(c),
-        }
-    }
-    let kept: String = result
-        .chars()
-        .filter(|c| {
-            c.is_ascii_alphanumeric()
-                || matches!(
-                    c,
-                    '_' | '-' | ' ' | '\t' | '\n' | '\u{0B}' | '\u{0C}' | '\r'
-                )
-        })
-        .collect();
-    (!kept.is_empty()).then_some(kept)
-}
 
 pub(crate) fn generate_directory_name(name: &str, id: &str) -> String {
     match normalize_strong(name) {
@@ -90,17 +33,17 @@ pub(crate) fn validate_dataset_name(name: &str) -> ApiResult<()> {
         .all(|c| c.is_ascii_alphanumeric() || b"_-.".contains(&c))
     {
         return Err(ApiError::bad_request(
-            "Dataset name is invalid. Please use only letters, digits, dots, underscores, hyphens.",
+            crate::msg::dataset::name::INVALID_CHARACTERS,
         ));
     }
     if name.starts_with('.') {
         return Err(ApiError::bad_request(
-            "Dataset name is invalid. Please use a name that does not start with a dot.",
+            crate::msg::dataset::name::INVALID_STARTS_WITH_DOT,
         ));
     }
     if name.chars().count() < 3 {
         return Err(ApiError::bad_request(
-            "Dataset name is invalid. Please use at least three characters.",
+            crate::msg::dataset::name::INVALID_LESS_THAN_THREE_CHARACTERS,
         ));
     }
     Ok(())
@@ -284,9 +227,8 @@ pub(crate) async fn insert_dataset(
     .fetch_optional(&mut *connection)
     .await?;
     let root = root.ok_or_else(|| {
-        ApiError::bad_request(format!(
-            "Organization “{}” could not be found or accessed.",
-            new.source.organization
+        ApiError::bad_request(crate::msg::organization::not_found(
+            &new.source.organization,
         ))
     })?;
     let status: String = new.status.chars().take(1024).collect();
@@ -347,14 +289,11 @@ pub(crate) async fn set_up_dataset(
     .fetch_optional(&mut *connection)
     .await?
     .ok_or_else(|| {
-        ApiError::bad_request(format!(
-            "Organization “{}” could not be found or accessed.",
-            user.organization_id
-        ))
+        ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
     })?;
     let folder = setup.folder.map(str::to_owned).unwrap_or(root);
     if !folder_writable(connection, user, &folder).await? {
-        return Err(ApiError::bad_request("No write access in this folder."));
+        return Err(ApiError::bad_request(crate::msg::folder::NO_WRITE_ACCESS));
     }
     let id = ObjectId::new().to_string();
     let mut source = setup.source.clone();

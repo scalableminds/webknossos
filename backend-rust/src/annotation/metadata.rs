@@ -24,8 +24,6 @@ use crate::{
     util::id::ObjectId,
 };
 
-/// Msg.notAllowed.
-pub const NOT_ALLOWED: &str = "You are not authorized to view or edit this resource.";
 /// Msg.Annotation.Edit.notAllowed.
 pub const EDIT_NOT_ALLOWED: &str = "You do not have permission to edit this annotation.";
 /// Msg.Annotation.Edit.failed.
@@ -35,8 +33,6 @@ pub const EDIT_SUCCESS: &str = "Successfully updated the annotation.";
 /// Msg.Annotation.Edit.accessingTeamFailed.
 pub const ACCESSING_TEAM_FAILED: &str =
     "Could not access a team during annotation shared team update.";
-/// SecuredSQLDAO.assertUpdateAccess (unwrapped by updateTeamsForSharedAnnotation).
-pub const NO_UPDATE_ACCESS: &str = "No update access.";
 /// Rust stand-in for Scala's `SQL Failure: <driver message>` when the
 /// shared-teams transaction fails (e.g. duplicate team IDs hit the primary key).
 pub const SHARED_TEAMS_UPDATE_FAILED: &str = "Could not update the shared teams of the annotation.";
@@ -51,11 +47,6 @@ pub const LOCK_FAILED: &str = "Could not change the isLockedByOwner state of the
 pub const LOCK_SUCCESS: &str = "The locking state of the annotation was successfully updated.";
 /// Msg.Annotation.publicWritesFailed.
 pub const PUBLIC_WRITES_FAILED: &str = "Could not convert annotation to json.";
-
-/// Msg.ObjectId.invalid(literal).
-pub fn invalid_object_id(literal: &str) -> String {
-    format!("The supplied resource id “{literal}” is not a valid ObjectId.")
-}
 
 #[derive(Clone, Copy)]
 struct JobsEnabled(bool);
@@ -151,7 +142,7 @@ async fn edit(
             .await?
     {
         return Err(ApiError::bad_request(if clears_teams {
-            NO_UPDATE_ACCESS
+            crate::msg::annotation::NO_UPDATE_ACCESS
         } else {
             EDIT_FAILED
         }));
@@ -211,20 +202,19 @@ fn restrictions_error(error: ProviderError) -> ApiError {
 fn is_locked_by_owner(query: Option<&str>) -> ApiResult<bool> {
     const KEY: &str = "isLockedByOwner";
     let pairs: Vec<(String, String)> = serde_urlencoded::from_str(query.unwrap_or(""))
-        .map_err(|_| ApiError::bad_request("Invalid query parameters."))?;
+        .map_err(|_| ApiError::bad_request(crate::msg::request::INVALID_QUERY))?;
     let value = pairs
         .into_iter()
         .find(|(key, _)| key == KEY)
         .map(|(_, value)| value)
-        .ok_or_else(|| ApiError::bad_request(format!("Missing parameter: {KEY}")))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter(KEY)))?;
     match value.trim() {
         "true" => Ok(true),
         "false" => Ok(false),
-        other => other.parse::<i32>().map(|number| number != 0).map_err(|_| {
-            ApiError::bad_request(format!(
-                "Cannot parse parameter {KEY} as Boolean: should be true, false, 0 or 1"
-            ))
-        }),
+        other => other
+            .parse::<i32>()
+            .map(|number| number != 0)
+            .map_err(|_| ApiError::bad_request(crate::msg::request::invalid_boolean(KEY))),
     }
 }
 
@@ -308,7 +298,7 @@ async fn shared_teams(
         .provide(AccessContext::requester(Some(&user)), &typ, &id)
         .await?;
     if provided.owner_id() != user.id {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let teams: Vec<Value> = sqlx::query_scalar(&format!(
         "SELECT jsonb_build_object('id',team._id,'name',team.name,'organization',team._organization,'isOrganizationTeam',team.isOrganizationTeam)
@@ -339,7 +329,7 @@ async fn update_shared_teams(
         .provide(AccessContext::requester(Some(&user)), &typ, &id)
         .await?;
     if provided.owner_id() != user.id || provided.visibility() == "Private" {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     // ObjectId.fromString: exactly 24 hex characters, no path prefixes.
     let team_ids = body
@@ -347,7 +337,7 @@ async fn update_shared_teams(
         .map(|literal| {
             ObjectId::parse(literal)
                 .map(String::from)
-                .map_err(|_| ApiError::bad_request(invalid_object_id(literal)))
+                .map_err(|_| ApiError::bad_request(crate::msg::object_id::invalid(literal)))
         })
         .collect::<ApiResult<Vec<String>>>()?;
 
@@ -375,7 +365,9 @@ async fn update_shared_teams(
     if !crate::annotation::access::lock_update_access(&mut transaction, &user, provided.id())
         .await?
     {
-        return Err(ApiError::bad_request(NO_UPDATE_ACCESS));
+        return Err(ApiError::bad_request(
+            crate::msg::annotation::NO_UPDATE_ACCESS,
+        ));
     }
     sqlx::query("DELETE FROM webknossos.annotation_sharedTeams WHERE _annotation=$1")
         .bind(provided.id())

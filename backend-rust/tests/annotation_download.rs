@@ -23,10 +23,7 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation::io::download::{
-        DOWNLOAD_FAILED, DOWNLOAD_NOT_ALLOWED, NOT_ALLOWED, play_header_parameter,
-    },
-    annotation::provider::{ANNOTATION_NOT_FOUND, project_not_found},
+    annotation::io::download::{DOWNLOAD_FAILED, DOWNLOAD_NOT_ALLOWED, play_header_parameter},
     proto::{
         AnnotationProto, SkeletonTracing, VolumeTracing,
         datastore::{
@@ -821,7 +818,10 @@ async fn permissions_fail_closed_and_untyped_route_resolves_the_stored_type() {
     ] {
         let reply = get(&app, token, &format!("/api/annotations/{id}/download")).await;
         assert_eq!(reply.status, StatusCode::NOT_FOUND, "{}", reply.text());
-        assert_eq!(reply.error(), ANNOTATION_NOT_FOUND);
+        assert_eq!(
+            reply.error(),
+            webknossos_backend::msg::annotation::NOT_FOUND
+        );
     }
 
     // View annotations cannot be downloaded.
@@ -1038,7 +1038,7 @@ async fn compound_downloads_zip_finished_task_annotations_for_managers() {
             "{typ}: {}",
             reply.text()
         );
-        assert_eq!(reply.error(), NOT_ALLOWED);
+        assert_eq!(reply.error(), webknossos_backend::msg::NOT_ALLOWED);
     }
     assert!(mock.calls().is_empty());
 
@@ -1051,7 +1051,10 @@ async fn compound_downloads_zip_finished_task_annotations_for_managers() {
     )
     .await;
     assert_eq!(reply.status, StatusCode::NOT_FOUND);
-    assert_eq!(reply.error(), project_not_found(&missing));
+    assert_eq!(
+        reply.error(),
+        webknossos_backend::msg::project::not_found(&missing)
+    );
     db.cleanup().await;
 }
 

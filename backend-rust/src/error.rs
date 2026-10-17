@@ -7,6 +7,9 @@ use serde_json::json;
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
+/// Play's `Msg.User.notAuthenticated`, rendered by Silhouette's secured error handler.
+const NOT_AUTHENTICATED: &str = "Authentication required";
+
 #[derive(Debug)]
 pub struct ApiError {
     pub status: StatusCode,
@@ -24,10 +27,7 @@ impl ApiError {
         Self::new(StatusCode::BAD_REQUEST, message)
     }
     pub fn unauthorized() -> Self {
-        Self::new(
-            StatusCode::UNAUTHORIZED,
-            "Authentication required or token invalid.",
-        )
+        Self::new(StatusCode::UNAUTHORIZED, NOT_AUTHENTICATED)
     }
     pub fn forbidden(message: impl Into<String>) -> Self {
         Self::new(StatusCode::FORBIDDEN, message)
@@ -55,6 +55,14 @@ impl std::error::Error for ApiError {}
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
+        if self.status == StatusCode::UNAUTHORIZED && self.message == NOT_AUTHENTICATED {
+            // Silhouette's JSON body for unauthenticated secured actions (Accept: application/json).
+            return (
+                self.status,
+                Json(json!({"success": false, "message": self.message})),
+            )
+                .into_response();
+        }
         (
             self.status,
             Json(json!({"messages": [{"error": self.message}]})),
@@ -66,9 +74,9 @@ impl IntoResponse for ApiError {
 impl From<sqlx::Error> for ApiError {
     fn from(error: sqlx::Error) -> Self {
         match error {
-            sqlx::Error::RowNotFound => Self::not_found("Resource not found."),
+            sqlx::Error::RowNotFound => Self::not_found(crate::msg::request::RESOURCE_NOT_FOUND),
             sqlx::Error::PoolTimedOut | sqlx::Error::PoolClosed => {
-                Self::service_unavailable("Database unavailable.")
+                Self::service_unavailable(crate::msg::request::DATABASE_UNAVAILABLE)
             }
             sqlx::Error::Database(ref db) => {
                 // PostgreSQL details can contain tokens, personal data and submitted values.
@@ -79,7 +87,7 @@ impl From<sqlx::Error> for ApiError {
                         Self::conflict("A related resource is missing or still in use.")
                     }
                     Some("23514" | "23502" | "22P02" | "22003" | "22008") => {
-                        Self::bad_request("Invalid resource values.")
+                        Self::bad_request(crate::msg::request::INVALID_RESOURCE_VALUES)
                     }
                     Some("40001" | "40P01") => {
                         Self::conflict("Concurrent modification; retry the request.")

@@ -25,7 +25,7 @@ async fn first(
     _user: OptionalAuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
     let value = sqlx::query_scalar("SELECT jsonb_build_object('name', name, 'url', publicUrl) FROM webknossos.tracingStores_ LIMIT 1")
-        .fetch_optional(&state.pool).await?.ok_or_else(|| ApiError::not_found("Tracing store not found."))?;
+        .fetch_optional(&state.pool).await?.ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
     Ok(ResponseJson(value))
 }
 
@@ -55,6 +55,6 @@ async fn update(
     // registry. Preserve the private URL/key and soft-delete boundaries.
     let value = sqlx::query_scalar("UPDATE webknossos.tracingStores SET url=$2, publicUrl=$3 WHERE name=$1 AND NOT isDeleted RETURNING jsonb_build_object('name',name,'url',publicUrl)")
         .bind(name).bind(body.url).bind(body.public_url).fetch_optional(&state.pool).await?
-        .ok_or_else(|| ApiError::not_found("Tracing store not found."))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
     Ok(ResponseJson(value))
 }

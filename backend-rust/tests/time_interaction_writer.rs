@@ -7,7 +7,7 @@ use webknossos_backend::{
     auth::AuthUser,
     mail::{MailSender, RecordingMailer},
     time::interaction::{MAX_DURATION_MILLIS, TimeInteractionConfig, TimeInteractionState},
-    time::interaction_writer::{OverLimitNotifier, RESOURCE_NOT_FOUND, TimeInteractionWriter},
+    time::interaction_writer::{OverLimitNotifier, TimeInteractionWriter},
     util::id::ObjectId,
 };
 
@@ -337,7 +337,7 @@ async fn failures_roll_back_all_accounting_and_keep_cache() {
         .await
         .unwrap_err();
     assert_eq!(err.status, StatusCode::NOT_FOUND);
-    assert_eq!(err.message, RESOURCE_NOT_FOUND);
+    assert_eq!(err.message, webknossos_backend::msg::NOT_FOUND);
     assert_eq!(spans(&db, &w.owner.user_id).await, before);
     assert_eq!(total(&db, "annotations", &a).await, Some(0));
     assert_eq!(total(&db, "tasks", &t).await, Some(0));

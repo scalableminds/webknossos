@@ -29,14 +29,6 @@ use crate::{
 /// Msg.Dataset.Upload.reserveAttachmentUploadNotVirtual.
 const ATTACHMENT_NOT_VIRTUAL: &str =
     "Attachment upload to existing dataset is only supported for virtual datasets.";
-/// Msg.Dataset.Layer.attachmentSingletonAlreadyFilled.
-const SINGLETON_ALREADY_FILLED: &str = "There is already an attachment of this type in this layer. Only one attachment of this type can be registered per layer.";
-/// Msg.Dataset.Layer.attachmentNameTaken.
-const NAME_TAKEN: &str =
-    "An attachment with this name already exists in this layer. Please choose a different name.";
-/// UploadToPathsService.handleExistingPendingAttachment (literal failure).
-const ATTACHMENT_ALREADY_PENDING: &str =
-    "Conflict with existing pending attachment. Pass overwritePending to overwrite.";
 /// Msg.Dataset.Upload.attachmentNotPending.
 const ATTACHMENT_NOT_PENDING: &str = "This attachment is not marked as pending.";
 const DIFFERENT_DATASTORE: &str =
@@ -79,14 +71,6 @@ impl LayerAttachment {
     }
 }
 
-/// LayerAttachmentType.isSingletonAttachment.
-fn is_singleton(typ: AttachmentType) -> bool {
-    matches!(
-        typ,
-        AttachmentType::SegmentIndex | AttachmentType::Cumsum | AttachmentType::SegmentStatistics
-    )
-}
-
 /// `dataLayer.attachments.getByTypeAndNameAlwaysReturnSingletons(type, name)`
 /// on the non-pending attachments (DatasetLayerAttachmentDAO
 /// .findAllForDatasetAndDataLayerName); singletons match regardless of name.
@@ -97,7 +81,7 @@ async fn existing_attachment<'e>(
     typ: AttachmentType,
     name: &str,
 ) -> ApiResult<bool> {
-    let name = (!is_singleton(typ)).then_some(name);
+    let name = (!typ.is_singleton()).then_some(name);
     Ok(sqlx::query_scalar(
         r#"SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments
              WHERE _dataset = $1 AND layerName = $2 AND type = $3::webknossos.LAYER_ATTACHMENT_TYPE
@@ -112,10 +96,10 @@ async fn existing_attachment<'e>(
 }
 
 fn exists_error(typ: AttachmentType) -> ApiError {
-    ApiError::bad_request(if is_singleton(typ) {
-        SINGLETON_ALREADY_FILLED
+    ApiError::bad_request(if typ.is_singleton() {
+        crate::msg::dataset::layer::ATTACHMENT_SINGLETON_ALREADY_FILLED
     } else {
-        NAME_TAKEN
+        crate::msg::dataset::layer::ATTACHMENT_NAME_TAKEN
     })
 }
 
@@ -185,7 +169,9 @@ async fn reserve_attachment_upload(
         .fetch_one(&mut *transaction)
         .await?;
         if pending {
-            return Err(ApiError::bad_request(ATTACHMENT_ALREADY_PENDING));
+            return Err(ApiError::bad_request(
+                crate::msg::dataset::layer::ATTACHMENT_ALREADY_PENDING,
+            ));
         }
     }
     // DatasetLayerAttachmentDAO.insertWithUploadPending (credentialId unset).

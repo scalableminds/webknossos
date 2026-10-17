@@ -19,7 +19,6 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation::provider::ANNOTATION_NOT_FOUND,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     router,
 };
@@ -633,7 +632,10 @@ async fn inaccessible_annotations_are_not_found() {
         .await;
         assert_eq!(
             (status, body),
-            (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+            (
+                StatusCode::NOT_FOUND,
+                error(webknossos_backend::msg::annotation::NOT_FOUND)
+            )
         );
     }
     // Invalid (case-sensitive) type: 404 with the parse failure.
@@ -835,7 +837,10 @@ async fn compound_task_duplicates_merged_annotation() {
     .await;
     assert_eq!(
         (status, body),
-        (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     assert_eq!(mock.duplicate_calls().len(), 2);
     db.cleanup().await;

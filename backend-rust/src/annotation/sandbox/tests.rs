@@ -11,7 +11,7 @@ fn tracing_type_is_case_sensitive_and_skeleton_only() {
     for typ in ["Skeleton", "Explorational", ""] {
         let error = require_skeleton(typ).unwrap_err();
         assert_eq!(error.status, axum::http::StatusCode::NOT_FOUND);
-        assert_eq!(error.message, RESOURCE_NOT_FOUND);
+        assert_eq!(error.message, crate::msg::NOT_FOUND);
     }
 }
 

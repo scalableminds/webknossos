@@ -165,8 +165,7 @@ async fn explore(
     .bind(names[0])
     .fetch_optional(&state.pool)
     .await?;
-    let url =
-        url.ok_or_else(|| ApiError::bad_request("Data store could not be found or accessed."))?;
+    let url = url.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     let token = datastore_token(&state.pool, user, tokens).await?;
     let response = clients
         .request_with_token(
@@ -330,7 +329,7 @@ async fn upload_store(
     .bind(&user.organization_id)
     .fetch_optional(&mut *connection)
     .await?
-    .ok_or_else(|| ApiError::bad_request("Data store could not be found or accessed."))
+    .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))
 }
 
 async fn explore_and_add_remote(
@@ -423,7 +422,7 @@ async fn add_virtual_dataset(
     .fetch_optional(&state.pool)
     .await?;
     let (store_name, store_url) =
-        store.ok_or_else(|| ApiError::not_found("Data store could not be found or accessed."))?;
+        store.ok_or_else(|| ApiError::not_found(crate::msg::data_store::NOT_FOUND))?;
     let team_manager: bool = sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.user_team_roles r JOIN webknossos.teams_ t ON t._id = r._team WHERE r._user = $1 AND r.isTeamManager AND t._organization = $2)",
     )
@@ -490,9 +489,7 @@ async fn duplicate_to_orga(
     Extension(clients): Extension<ServiceClients>,
 ) -> ApiResult<Json<String>> {
     if !user.is_superuser {
-        return Err(ApiError::forbidden(
-            "This route is only allowed for super users.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::user::SUPER_USER_ROUTE_ONLY));
     }
     let record = crate::dataset::lifecycle::load_record(&state.pool, id.as_str())
         .await?
@@ -529,7 +526,7 @@ async fn duplicate_to_orga(
     let store_name = record
         .store_name
         .clone()
-        .ok_or_else(|| ApiError::bad_request("Data store could not be found or accessed."))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     if !record.is_virtual {
         return Err(ApiError::bad_request(
             "duplicateToOrga is only possible for virtual datasets",
@@ -542,9 +539,8 @@ async fn duplicate_to_orga(
     .fetch_one(&state.pool)
     .await?;
     if !organization_exists {
-        return Err(ApiError::bad_request(format!(
-            "Organization “{}” could not be found or accessed.",
-            query.target_organization_id
+        return Err(ApiError::bad_request(crate::msg::organization::not_found(
+            &query.target_organization_id,
         )));
     }
     let new_id = ObjectId::new().to_string();

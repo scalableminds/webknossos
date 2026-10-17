@@ -419,7 +419,10 @@ async fn task_updates_are_atomic_and_delete_cascades_through_counter_triggers() 
     assert_eq!(value["projectName"], "Project");
     assert_eq!(value["editPosition"], json!([7, 8, 9]));
     assert_eq!(value["creationInfo"], "import");
-    assert_eq!(value["messages"], json!([{"success":"task.editSuccess"}]));
+    assert_eq!(
+        value["messages"],
+        json!([{"success": "Task was successfully updated."}])
+    );
     assert_eq!(
         request(
             &app,

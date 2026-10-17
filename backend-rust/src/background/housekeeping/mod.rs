@@ -14,6 +14,7 @@
 //! uses `NOW()`. Every run is one transaction that first takes the job's advisory lock
 //! (`crate::background::scheduler::try_advisory_xact_lock`), so concurrent instances never run the same job at once.
 
+use crate::config::{ConfigError, Env};
 use std::{collections::HashMap, time::Duration};
 
 use chrono::{DateTime, TimeDelta, Utc};
@@ -29,8 +30,6 @@ const DAY: Duration = Duration::from_secs(24 * 60 * 60);
 const TOKEN_HARD_DELETE_GRACE_PERIOD: TimeDelta = TimeDelta::days(7);
 /// Scala `ThumbnailCachingService.ThumbnailCacheDuration`.
 const THUMBNAIL_CACHE_DURATION: TimeDelta = TimeDelta::days(10);
-/// Largest accepted interval / initial delay (same bound as the token durations in config.rs).
-const MAX_SECONDS: u64 = i32::MAX as u64;
 
 /// The six housekeeping jobs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -243,51 +242,25 @@ impl HousekeepingConfig {
 ///
 /// The expired-token interval defaults to `WK_DATASTORE_TOKEN_EXPIRY_SECONDS` (86400) as Scala
 /// registers that job with `dataStoreExpiry`.
-pub fn config_from_values(values: &HashMap<String, String>) -> Result<HousekeepingConfig, String> {
-    let boolean = |name: &str| -> Result<Option<bool>, String> {
-        values
-            .get(name)
-            .map(|value| {
-                value
-                    .parse()
-                    .map_err(|_| format!("{name} must be true or false"))
-            })
-            .transpose()
-    };
-    let seconds = |name: &str, allow_zero: bool| -> Result<Option<Duration>, String> {
-        let Some(value) = values.get(name) else {
-            return Ok(None);
-        };
-        let seconds: u64 = value
-            .parse()
-            .map_err(|_| format!("{name} must be an unsigned integer"))?;
-        if seconds == 0 && !allow_zero {
-            return Err(format!("{name} must be greater than zero"));
-        }
-        if seconds > MAX_SECONDS {
-            return Err(format!("{name} exceeds the supported duration"));
-        }
-        Ok(Some(Duration::from_secs(seconds)))
-    };
-    let datastore_token_expiry =
-        seconds("WK_DATASTORE_TOKEN_EXPIRY_SECONDS", false)?.unwrap_or(DAY);
+pub fn config_from_values(
+    values: &HashMap<String, String>,
+) -> Result<HousekeepingConfig, ConfigError> {
+    let env = Env::new(values);
+    let datastore_token_expiry = env
+        .seconds("WK_DATASTORE_TOKEN_EXPIRY_SECONDS", false)?
+        .unwrap_or(DAY);
     let mut config = HousekeepingConfig::with_datastore_token_expiry(datastore_token_expiry);
-    config.enabled = boolean("WK_HOUSEKEEPING_ENABLED")?.unwrap_or(true);
+    config.enabled = env.bool_or("WK_HOUSEKEEPING_ENABLED", true)?;
     for job in HousekeepingJob::ALL {
         let prefix = format!("WK_HOUSEKEEPING_{}", job.env_name());
-        let default = job.default_schedule(datastore_token_expiry);
-        let interval = seconds(&format!("{prefix}_INTERVAL_SECONDS"), false)?;
-        let initial_delay = seconds(&format!("{prefix}_INITIAL_DELAY_SECONDS"), true)?;
-        let default_delay = if job == HousekeepingJob::ExpiredAnnotationMutexes {
-            default.initial_delay
-        } else {
-            interval.unwrap_or(default.initial_delay)
-        };
-        *config.schedule_mut(job) = JobSchedule {
-            enabled: boolean(&format!("{prefix}_ENABLED"))?.unwrap_or(true),
-            interval: interval.unwrap_or(default.interval),
-            initial_delay: initial_delay.unwrap_or(default_delay),
-        };
+        let mut default = job.default_schedule(datastore_token_expiry);
+        if job != HousekeepingJob::ExpiredAnnotationMutexes {
+            // The first run waits one (configured) interval.
+            if let Some(interval) = env.seconds(&format!("{prefix}_INTERVAL_SECONDS"), false)? {
+                default.initial_delay = interval;
+            }
+        }
+        *config.schedule_mut(job) = JobSchedule::from_env(env, &prefix, default)?;
     }
     Ok(config)
 }

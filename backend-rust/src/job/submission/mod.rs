@@ -17,7 +17,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-use chrono::{DateTime, Datelike, Duration, Utc};
+use chrono::{DateTime, Datelike, Duration, Local, TimeZone, Utc};
 use serde_json::{Map, Value, json};
 use sqlx::PgConnection;
 
@@ -27,14 +27,14 @@ use crate::{
     dataset::access::READ_PREDICATE,
     dataset::create::{validate_dataset_name, validate_layer_name_lax},
     error::ApiError,
+    extract::extension,
     job::routes::NOT_ENOUGH_CREDITS,
     stores::client::ServiceClients,
     system::application_info::MiscState,
     util::id::ObjectId,
+    util::math::ceil_div,
 };
 
-const GENERIC_NOT_FOUND: &str = "Could not find or access the requested resource.";
-const NOT_ENABLED: &str = "Long-running jobs are not enabled for this WEBKNOSSOS instance.";
 const NO_WORKER: &str =
     "No worker supporting the requested job is available for the selected data store.";
 const PAID_NO_ADMIN_OR_MANAGER: &str =
@@ -42,7 +42,6 @@ const PAID_NO_ADMIN_OR_MANAGER: &str =
 const SUBMIT_FAILED: &str = "Could not submit job.";
 const STORAGE_EXCEEDED: &str = "Cannot start this job because the storage quota of the organization is exceeded, so its results could not be stored. Please free up storage or upgrade your plan.";
 const ORGANIZATION_STORAGE_EXCEEDED: &str = "The storage quota of the organization is exceeded.";
-const DATA_STORE_NOT_FOUND: &str = "Data store could not be found or accessed.";
 const INVALID_BOUNDING_BOX_OR_MAG: &str = "Either the selected bounding box could not be parsed (must be x,y,z,width,height,depth) or the mag is wrong or does not exist.";
 const INVALID_BOUNDING_BOX: &str =
     "The selected bounding box could not be parsed, must be x,y,z,width,height,depth.";
@@ -51,16 +50,10 @@ const EDGE_LENGTH_EXCEEDED: &str = "An edge length of the selected bounding box 
 const INVALID_EXPORT_FORMAT: &str =
     "Invalid export format. Must be one of ome_tiff, tiff_stack, ozx.";
 const INVALID_ADDITIONAL_COORDINATES: &str = "Invalid additional coordinates for this data layer.";
-const DATA_SOURCE_NOT_FOUND: &str =
-    "Data source not found on data store server. It may still be initializing.";
-const USABLE_BUT_NO_VOXEL_SIZE: &str = "Dataset is marked as usable but has no voxel size.";
-pub(crate) const NO_MAGS: &str = "Data layer does not contain any mags.";
-const NOT_ALLOWED: &str = "You are not authorized to view or edit this resource.";
 const SUPER_USER_ONLY: &str = "Only super users can perform this action.";
 const MUST_INCLUDE_WATERMARK: &str =
     "Render animation jobs for free plans must include the WEBKNOSSOS watermark.";
 const RESOLUTION_MUST_BE_SD: &str = "Render animation jobs for free plans must use SD resolution.";
-const INVALID_BODY: &str = "Invalid JSON request body.";
 
 /// Per-route messages: Msg.Job.<Route>.wrongOrga and submitFailed.
 const MESH_WRONG_ORGA: &str =
@@ -265,7 +258,7 @@ fn parse_object_id(literal: &str) -> Option<String> {
 async fn dataset_id(parts: &mut Parts, state: &AppState) -> RunResult<String> {
     let raw: axum::extract::Path<String> = axum::extract::Path::from_request_parts(parts, state)
         .await
-        .map_err(|_: PathRejection| Failure::new("Invalid path parameters."))?;
+        .map_err(|_: PathRejection| Failure::new(crate::msg::request::INVALID_PATH))?;
     let candidate = raw.rsplit_once('-').map_or(raw.as_str(), |(_, id)| id);
     parse_object_id(candidate).ok_or_else(|| {
         Failure::new(format!(
@@ -283,7 +276,7 @@ impl Params {
     fn from_parts(parts: &Parts) -> RunResult<Self> {
         let query = parts.uri.query().unwrap_or_default();
         let pairs: Vec<(String, String)> = serde_urlencoded::from_str(query)
-            .map_err(|_| Failure::new("Invalid query parameters."))?;
+            .map_err(|_| Failure::new(crate::msg::request::INVALID_QUERY))?;
         Ok(Self(pairs))
     }
 
@@ -296,18 +289,14 @@ impl Params {
 
     fn required(&self, key: &str) -> RunResult<String> {
         self.optional(key)
-            .ok_or_else(|| Failure::new(format!("Missing parameter: {key}")).into())
+            .ok_or_else(|| Failure::new(crate::msg::request::missing_parameter(key)).into())
     }
 
     /// QueryStringBindable.bindableBoolean: true/false, or any integer (non-zero is true).
     fn boolean(&self, key: &str) -> RunResult<bool> {
         let value = self.required(key)?;
-        parse_play_boolean(&value).ok_or_else(|| {
-            Failure::new(format!(
-                "Cannot parse parameter {key} as Boolean: should be true, false, 0 or 1"
-            ))
-            .into()
-        })
+        parse_play_boolean(&value)
+            .ok_or_else(|| Failure::new(crate::msg::request::invalid_boolean(key)).into())
     }
 
     fn object_id(&self, key: &str) -> RunResult<String> {
@@ -356,11 +345,15 @@ fn json_body(parts: &Parts, body: Result<Bytes, BytesRejection>) -> RunResult<Ma
             "Expecting text/json or application/json body",
         )));
     }
-    let bytes =
-        body.map_err(|rejection| RunError::Api(ApiError::new(rejection.status(), INVALID_BODY)))?;
+    let bytes = body.map_err(|rejection| {
+        RunError::Api(ApiError::new(
+            rejection.status(),
+            crate::msg::request::INVALID_JSON_BODY,
+        ))
+    })?;
     match serde_json::from_slice(&bytes) {
         Ok(Value::Object(object)) => Ok(object),
-        _ => Err(Failure::new(INVALID_BODY).into()),
+        _ => Err(Failure::new(crate::msg::request::INVALID_JSON_BODY).into()),
     }
 }
 
@@ -372,20 +365,12 @@ async fn authenticate(parts: &Parts, state: &AppState) -> RunResult<AuthUser> {
         .ok_or_else(|| RunError::Api(ApiError::unauthorized()))
 }
 
-fn extension<T: Clone + Send + Sync + 'static>(parts: &Parts) -> RunResult<T> {
-    parts
-        .extensions
-        .get::<T>()
-        .cloned()
-        .ok_or_else(|| RunError::Api(ApiError::internal()))
-}
-
 // ---------------------------------------------------------------------------
 // JSON Reads with Play semantics
 // ---------------------------------------------------------------------------
 
 fn invalid_body() -> RunError {
-    Failure::new(INVALID_BODY).into()
+    Failure::new(crate::msg::request::INVALID_JSON_BODY).into()
 }
 
 /// Reads[Int]: a JSON number that is a valid Int (BigDecimal.isValidInt).
@@ -560,18 +545,6 @@ impl BoundingBox {
     }
 }
 
-/// MathUtils.ceilDiv(Int, Int).
-fn ceil_div(number: i32, divisor: i32) -> i32 {
-    let sign = number.signum() * divisor.signum();
-    sign.wrapping_mul(
-        number
-            .wrapping_abs()
-            .wrapping_add(divisor.wrapping_abs())
-            .wrapping_sub(1),
-    )
-    .wrapping_div(divisor.wrapping_abs())
-}
-
 /// Vec3Int.fromMagLiteral(allowScalar = true): an Int scalar or `x-y-z`.
 fn parse_mag(literal: &str) -> Option<[i32; 3]> {
     if let Some(scalar) = parse_java_int(literal) {
@@ -624,7 +597,12 @@ fn assert_bounding_box_limits(
 /// Formatter.formatDateForFilename: SimpleDateFormat("YYYY-MM-dd_HH-mm"). `YYYY`
 /// is the week year (weeks start on Sunday; the week containing January 1st is
 /// week 1, as for the en_US locale). Rendered in UTC.
-fn format_date_for_filename(now: DateTime<Utc>) -> String {
+/// Formatter.formatDateForFilename: SimpleDateFormat("YYYY-MM-dd_HH-mm") in the JVM default zone;
+/// callers pass `Local::now()` (TZ, else /etc/localtime, like the JVM).
+fn format_date_for_filename<Tz: TimeZone>(now: DateTime<Tz>) -> String
+where
+    Tz::Offset: std::fmt::Display,
+{
     let end_of_week =
         now.date_naive() + Duration::days(6 - i64::from(now.weekday().num_days_from_sunday()));
     let week_year = if end_of_week.year() > now.year() {
@@ -692,11 +670,7 @@ async fn find_dataset(state: &AppState, user: &AuthUser, id: &str) -> RunResult<
     find_readable_dataset(state, user, id)
         .await?
         .ok_or_else(|| {
-            Failure::with_status(
-                format!("Dataset “{id}” could not be found or accessed."),
-                StatusCode::NOT_FOUND,
-            )
-            .into()
+            Failure::with_status(crate::msg::dataset::not_found(id), StatusCode::NOT_FOUND).into()
         })
 }
 
@@ -706,12 +680,7 @@ async fn find_organization(state: &AppState, organization: &str) -> RunResult<St
         .bind(organization)
         .fetch_optional(&state.pool)
         .await?
-        .ok_or_else(|| {
-            Failure::new(format!(
-                "Organization “{organization}” could not be found or accessed."
-            ))
-            .into()
-        })
+        .ok_or_else(|| Failure::new(crate::msg::organization::not_found(organization)).into())
 }
 
 /// Dataset of the user's own organization, else 403 with the route's wrongOrga message.
@@ -745,7 +714,7 @@ async fn organization_base_directory(
     .bind(&user.id)
     .fetch_optional(&state.pool)
     .await?
-    .ok_or_else(|| Failure::new(DATA_STORE_NOT_FOUND))?;
+    .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
     let directory: Value = clients
         .get_json(
             &url,
@@ -762,7 +731,7 @@ async fn organization_base_directory(
         Value::String(directory) => Ok(directory),
         _ => Err(RunError::Api(ApiError::new(
             StatusCode::BAD_GATEWAY,
-            "Service returned an invalid JSON response.",
+            crate::msg::request::SERVICE_INVALID_JSON,
         ))),
     }
 }
@@ -791,7 +760,7 @@ pub(crate) async fn data_source_and_layer(
     let layer = layers
         .into_iter()
         .find(|layer| layer.name == layer_name)
-        .ok_or_else(|| Failure::new(format!("Could not find layer “{layer_name}” in dataset.")))?;
+        .ok_or_else(|| Failure::new(crate::msg::dataset::layer::not_found(layer_name)))?;
     Ok((data_source_box, layer))
 }
 
@@ -802,17 +771,15 @@ pub(crate) async fn usable_data_source(
     dataset: &Dataset,
 ) -> RunResult<(BoundingBox, Vec<DataLayer>)> {
     if !dataset.is_usable {
-        return Err(Failure::new(format!(
-            "Dataset “{}” is not imported or incomplete.",
-            dataset.id
-        ))
-        .into());
+        return Err(Failure::new(crate::msg::dataset::not_usable(&dataset.id)).into());
     }
     if !dataset.has_voxel_size {
-        return Err(Failure::new(USABLE_BUT_NO_VOXEL_SIZE)
-            .wrap(DATA_SOURCE_NOT_FOUND)
-            .with_param(StatusCode::NOT_FOUND)
-            .into());
+        return Err(
+            Failure::new(crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE)
+                .wrap(crate::msg::dataset::data_source::NOT_FOUND)
+                .with_param(StatusCode::NOT_FOUND)
+                .into(),
+        );
     }
     let rows: Vec<LayerRow> = sqlx::query_as(
         r#"SELECT l.name,
@@ -917,11 +884,7 @@ async fn assert_storage_not_exceeded(
             .bind(organization)
             .fetch_optional(&mut *connection)
             .await?
-            .ok_or_else(|| {
-                Failure::new(format!(
-                    "Organization “{organization}” could not be found or accessed."
-                ))
-            })?;
+            .ok_or_else(|| Failure::new(crate::msg::organization::not_found(organization)))?;
     let Some(included) = included else {
         return Ok(());
     };
@@ -953,7 +916,7 @@ pub(crate) async fn submit_job(
     submission: &Submission<'_>,
 ) -> RunResult<String> {
     if !enabled {
-        return Err(Failure::new(NOT_ENABLED).into());
+        return Err(Failure::new(crate::msg::job::NOT_ENABLED).into());
     }
     // WorkerDAO.findAllByDataStore: union of all workers' supported commands;
     // an unparsable worker row fails the lookup.
@@ -1203,7 +1166,7 @@ async fn run_submission(
     let mut connection = state.pool.acquire().await?;
     let job = crate::job::routes::find_job(&mut connection, &user.id, &job_id)
         .await?
-        .ok_or_else(|| Failure::with_status(GENERIC_NOT_FOUND, StatusCode::NOT_FOUND))?;
+        .ok_or_else(|| Failure::with_status(crate::msg::NOT_FOUND, StatusCode::NOT_FOUND))?;
     Ok(Json(
         crate::job::routes::public_writes(&mut connection, &user.id, &job).await?,
     ))
@@ -1309,7 +1272,7 @@ async fn infer_mitochondria(
     validate_layer_name_lax(&layer_name)?;
     let (_, layer) = data_source_and_layer(&state, &dataset, &layer_name).await?;
     // `.toFox` on an empty Option: Play's generic 404.
-    let not_found = || RunError::Api(ApiError::not_found(GENERIC_NOT_FOUND));
+    let not_found = || RunError::Api(ApiError::not_found(crate::msg::NOT_FOUND));
     let mag1_bounding_box = BoundingBox::from_literal(&bbox).ok_or_else(not_found)?;
     let target_mag = layer.finest_mag.ok_or_else(not_found)?;
     let target_bounding_box = mag1_bounding_box
@@ -1367,11 +1330,13 @@ async fn align_sections(
     let organization = own_organization(&state, &user, &dataset, ALIGN_WRONG_ORGA).await?;
     validate_dataset_name(&new_dataset_name)?;
     validate_layer_name_lax(&layer_name)?;
-    let not_usable = format!("Dataset “{}” is not imported or incomplete.", dataset.id);
+    let not_usable = crate::msg::dataset::not_usable(&dataset.id);
     let (data_source_box, layer) = data_source_and_layer(&state, &dataset, &layer_name)
         .await
         .map_err(|error| error.wrap(&not_usable))?;
-    let layer_mag = layer.finest_mag.ok_or_else(|| Failure::new(NO_MAGS))?;
+    let layer_mag = layer
+        .finest_mag
+        .ok_or_else(|| Failure::new(crate::msg::dataset::NO_MAGS))?;
     let finest_mag_box = data_source_box
         .divide(layer_mag)
         .ok_or_else(|| RunError::Api(ApiError::internal()))?;
@@ -1509,7 +1474,7 @@ async fn export_tiff(
     };
     let export_file_name = format!(
         "{}__{}__{layer_label}.{file_extension}",
-        format_date_for_filename(Utc::now()),
+        format_date_for_filename(Local::now()),
         dataset.name
     );
     let args = json!({
@@ -1718,7 +1683,7 @@ async fn render_animation(
     .bind(&user.organization_id)
     .fetch_optional(&state.pool)
     .await?
-    .ok_or_else(|| RunError::Api(ApiError::not_found(GENERIC_NOT_FOUND)))?;
+    .ok_or_else(|| RunError::Api(ApiError::not_found(crate::msg::NOT_FOUND)))?;
     // PricingPlan.isPaidPlan: everything but Personal.
     if pricing_plan == "Personal" {
         if !options.include_watermark {
@@ -1730,7 +1695,7 @@ async fn render_animation(
     }
     if options.save_blender_file && !user.is_superuser {
         return Err(Failure::new(SUPER_USER_ONLY)
-            .wrap(NOT_ALLOWED)
+            .wrap(crate::msg::NOT_ALLOWED)
             .with_param(StatusCode::FORBIDDEN)
             .into());
     }
@@ -1741,7 +1706,7 @@ async fn render_animation(
     let base_directory = organization_base_directory(&state, &clients, &user, &dataset).await?;
     let export_file_name = format!(
         "webknossos_animation_{}__{}__{}.mp4",
-        format_date_for_filename(Utc::now()),
+        format_date_for_filename(Local::now()),
         dataset.name,
         options.layer_name
     );

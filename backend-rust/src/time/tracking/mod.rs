@@ -25,12 +25,6 @@ pub fn router() -> Router<AppState> {
         .route("/time/overview", get(overview))
 }
 
-const NOT_ALLOWED: &str = "You are not authorized to view or edit this resource.";
-
-fn user_not_found(id: &str) -> String {
-    format!("User “{id}” could not be found or accessed.")
-}
-
 /// UserService.isTeamManagerOrAdminOf(requester, target) as SQL over
 /// `users_ u`, with `$1` requester id, `$2` requester organization and `$3`
 /// requester isAdmin. Team deletion removes memberships, so joining `teams_`
@@ -69,7 +63,7 @@ async fn require_user(pool: &PgPool, requester: &AuthUser, id: &ObjectId) -> Api
     .bind(id.as_str())
     .fetch_optional(pool)
     .await?
-    .ok_or_else(|| ApiError::not_found(user_not_found(id.as_str())))
+    .ok_or_else(|| ApiError::not_found(crate::msg::user::not_found(id.as_str())))
 }
 
 async fn logged_time(
@@ -79,7 +73,7 @@ async fn logged_time(
 ) -> ApiResult<ResponseJson<Value>> {
     let user = require_user(&state.pool, &requester, &id).await?;
     if !user.is_editable() {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let spans: Vec<(DateTime<Utc>, i64)> =
         sqlx::query_as("SELECT created, time FROM webknossos.timespans_ WHERE _user = $1")
@@ -149,7 +143,7 @@ fn parse_object_ids(value: Option<&str>, message: Option<&str>) -> ApiResult<Vec
                 Ok(entry.to_ascii_lowercase())
             } else {
                 Err(ApiError::bad_request(message.map_or_else(
-                    || format!("The supplied resource id “{entry}” is not a valid ObjectId."),
+                    || crate::msg::object_id::invalid(entry),
                     str::to_owned,
                 )))
             }
@@ -159,7 +153,7 @@ fn parse_object_ids(value: Option<&str>, message: Option<&str>) -> ApiResult<Vec
 
 fn instant(millis: i64) -> ApiResult<DateTime<Utc>> {
     DateTime::from_timestamp_millis(millis)
-        .ok_or_else(|| ApiError::bad_request("Invalid query parameters."))
+        .ok_or_else(|| ApiError::bad_request(crate::msg::request::INVALID_QUERY))
 }
 
 #[derive(Deserialize)]
@@ -199,7 +193,7 @@ async fn user_time_filters(
     )?;
     let user = require_user(pool, requester, id).await?;
     if !(user.manageable || user.id == requester.id) {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok((
         user,

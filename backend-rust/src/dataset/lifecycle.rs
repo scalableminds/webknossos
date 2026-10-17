@@ -69,7 +69,7 @@ impl DatasetRecord {
     pub(crate) fn store_url(&self) -> ApiResult<&str> {
         self.store_url
             .as_deref()
-            .ok_or_else(|| ApiError::bad_request("Data store could not be found or accessed."))
+            .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))
     }
 }
 
@@ -90,11 +90,11 @@ pub(crate) async fn load_record(
 }
 
 pub(crate) fn not_found(id: &str) -> ApiError {
-    ApiError::not_found(format!("Dataset “{id}” could not be found or accessed."))
+    ApiError::not_found(crate::msg::dataset::not_found(id))
 }
 
 pub(crate) fn not_allowed() -> ApiError {
-    ApiError::forbidden("You are not authorized to view or edit this resource.")
+    ApiError::forbidden(crate::msg::NOT_ALLOWED)
 }
 
 /// DatasetDAO.findOne (read access) followed by DatasetService.isEditableBy.
@@ -447,9 +447,7 @@ async fn write_all_mirrors(
     Extension(clients): Extension<ServiceClients>,
 ) -> ApiResult<()> {
     if !user.is_superuser {
-        return Err(ApiError::bad_request(
-            "This feature is currently only available for superusers.",
-        ));
+        return Err(ApiError::bad_request(crate::msg::user::SUPER_USER_ONLY));
     }
     tracing::info!(user = %user.id, "Writing mirrors for all datasets");
     let groups: Vec<(String, Vec<String>)> = sqlx::query_as(
@@ -463,7 +461,7 @@ async fn write_all_mirrors(
                 .bind(&store_name)
                 .fetch_optional(&state.pool)
                 .await?;
-        let url = url.ok_or_else(|| ApiError::bad_request("datastore.notFound"))?;
+        let url = url.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
         let response = clients
             .request(
                 Method::POST,
@@ -576,6 +574,14 @@ impl AttachmentType {
             Self::SegmentStatistics => "segmentStatistics",
         }
     }
+
+    /// LayerAttachmentType.isSingletonAttachment.
+    pub(crate) fn is_singleton(self) -> bool {
+        matches!(
+            self,
+            Self::SegmentIndex | Self::Cumsum | Self::SegmentStatistics
+        )
+    }
 }
 
 #[derive(Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
@@ -607,9 +613,8 @@ async fn after_artifact_finished(
     record.store_url()?;
     if !record.is_virtual {
         if !record.is_usable {
-            return Err(ApiError::bad_request(format!(
-                "Dataset “{}” is not imported or incomplete.",
-                record.id
+            return Err(ApiError::bad_request(crate::msg::dataset::not_usable(
+                &record.id,
             )));
         }
         if let Some(root) = &record.root_path {

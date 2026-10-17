@@ -69,17 +69,10 @@ async fn create(
     Json(body): Json<DataStoreParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
     if !user.is_superuser {
-        return Err(ApiError::forbidden(
-            "This feature is currently only available for superusers.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::user::SUPER_USER_ONLY));
     }
     let mut tx = state.pool.begin().await?;
-    lock_superuser(
-        &mut tx,
-        &user,
-        "This feature is currently only available for superusers.",
-    )
-    .await?;
+    lock_superuser(&mut tx, &user, crate::msg::user::SUPER_USER_ONLY).await?;
     let taken: bool = sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.dataStores WHERE name = $1 AND NOT isDeleted AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $2))",
     ).bind(&body.name).bind(&user.organization_id).fetch_one(&mut *tx).await?;
@@ -107,19 +100,12 @@ async fn remove(
     Path(name): Path<String>,
 ) -> ApiResult<StatusCode> {
     if !user.is_superuser {
-        return Err(ApiError::forbidden(
-            "You are not authorized to view or edit this resource.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     // Preserve the existing idempotent soft-delete. Referencing datasets,
     // workers and credentials keep their records; nothing cascades here.
     let mut tx = state.pool.begin().await?;
-    lock_superuser(
-        &mut tx,
-        &user,
-        "You are not authorized to view or edit this resource.",
-    )
-    .await?;
+    lock_superuser(&mut tx, &user, crate::msg::NOT_ALLOWED).await?;
     sqlx::query("UPDATE webknossos.dataStores SET isDeleted = TRUE WHERE name = $1")
         .bind(name)
         .execute(&mut *tx)

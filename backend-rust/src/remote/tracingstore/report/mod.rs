@@ -44,7 +44,7 @@ use crate::{
     extract::{Json, Query},
     remote::tracingstore::reads::{CallbackError, validate_key},
     system::application_info::MiscState,
-    time::interaction_writer::{RESOURCE_NOT_FOUND, TimeInteractionWriter},
+    time::interaction_writer::TimeInteractionWriter,
     util::id::ObjectId,
 };
 
@@ -92,7 +92,7 @@ fn instants<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<i64>, D::E
                 }),
                 _ => None,
             }
-            .ok_or_else(|| serde::de::Error::custom("Invalid timestamp."))
+            .ok_or_else(|| serde::de::Error::custom(crate::msg::request::INVALID_TIMESTAMP))
         })
         .collect()
 }
@@ -160,7 +160,8 @@ async fn touch_annotation(pool: &PgPool, report: &AnnotationUpdatesReport) -> Ap
     .bind(id)
     .fetch_optional(&mut *transaction)
     .await?;
-    let (owner, annotation_state) = row.ok_or_else(|| ApiError::not_found(RESOURCE_NOT_FOUND))?;
+    let (owner, annotation_state) =
+        row.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if annotation_state == "Finished" {
         return Err(ApiError::bad_request(ANNOTATION_FINISHED));
     }

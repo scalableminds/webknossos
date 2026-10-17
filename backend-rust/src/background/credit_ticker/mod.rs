@@ -24,6 +24,7 @@ use crate::{
         Job, JobOutcome, JobSchedule, Scheduler, SchedulerHandle, advisory_lock_key,
         try_advisory_xact_lock,
     },
+    config::{ConfigError, Env},
     organization::credit_transactions::revoke_expired_credits,
     organization::routes::hand_out_monthly_free_credits,
 };
@@ -34,8 +35,6 @@ pub const JOB_NAME: &str = "free-credit-ticker";
 pub const DEFAULT_INTERVAL: Duration = Duration::from_secs(20 * 60);
 /// Scala `IntervalScheduler.tickerInitialDelay` default.
 pub const DEFAULT_INITIAL_DELAY: Duration = Duration::from_secs(10);
-/// Largest accepted interval / initial delay (same bound as housekeeping).
-const MAX_SECONDS: u64 = i32::MAX as u64;
 
 /// `WK_CREDIT_TICKER_*` settings.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -63,39 +62,15 @@ impl Default for CreditTickerConfig {
 /// - `WK_CREDIT_TICKER_INITIAL_DELAY_SECONDS` (>= 0, default 10).
 ///
 /// The granted amount is `WK_JOBS_MONTHLY_FREE_MILLI_CREDITS` (`MiscConfig`), passed to [`spawn`].
-pub fn config_from_values(values: &HashMap<String, String>) -> Result<CreditTickerConfig, String> {
-    let seconds = |name: &str, allow_zero: bool| -> Result<Option<Duration>, String> {
-        let Some(value) = values.get(name) else {
-            return Ok(None);
-        };
-        let seconds: u64 = value
-            .parse()
-            .map_err(|_| format!("{name} must be an unsigned integer"))?;
-        if seconds == 0 && !allow_zero {
-            return Err(format!("{name} must be greater than zero"));
-        }
-        if seconds > MAX_SECONDS {
-            return Err(format!("{name} exceeds the supported duration"));
-        }
-        Ok(Some(Duration::from_secs(seconds)))
-    };
-    let enabled = values
-        .get("WK_CREDIT_TICKER_ENABLED")
-        .map(|value| {
-            value
-                .parse()
-                .map_err(|_| "WK_CREDIT_TICKER_ENABLED must be true or false".to_owned())
-        })
-        .transpose()?
-        .unwrap_or(true);
+pub fn config_from_values(
+    values: &HashMap<String, String>,
+) -> Result<CreditTickerConfig, ConfigError> {
     Ok(CreditTickerConfig {
-        schedule: JobSchedule {
-            enabled,
-            interval: seconds("WK_CREDIT_TICKER_INTERVAL_SECONDS", false)?
-                .unwrap_or(DEFAULT_INTERVAL),
-            initial_delay: seconds("WK_CREDIT_TICKER_INITIAL_DELAY_SECONDS", true)?
-                .unwrap_or(DEFAULT_INITIAL_DELAY),
-        },
+        schedule: JobSchedule::from_env(
+            Env::new(values),
+            "WK_CREDIT_TICKER",
+            CreditTickerConfig::default().schedule,
+        )?,
     })
 }
 

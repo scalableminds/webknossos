@@ -9,14 +9,12 @@ use serde_json::{Value, json};
 use crate::{
     AppState,
     annotation::provider::{
-        ANNOTATION_NOT_FOUND, AccessContext, AnnotationProvider, AnnotationType, FoxFailure,
-        ProvidedAnnotation, ProviderError, RESOURCE_NOT_FOUND,
+        AccessContext, AnnotationProvider, AnnotationType, ProvidedAnnotation, ProviderError,
     },
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::Path,
-    stores::client::ServiceError,
-    stores::tracing_client::{TRACING_STORE_NOT_FOUND, TracingStoreClient},
+    stores::tracing_client::TracingStoreClient,
     util::id::ObjectId,
 };
 
@@ -37,24 +35,6 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
         .layer(Extension(JobsEnabled(jobs_enabled)))
 }
 
-fn failure(message: &str, status: Option<StatusCode>) -> ProviderError {
-    ProviderError::Failure(FoxFailure {
-        message: message.to_owned(),
-        chain: Vec::new(),
-        status,
-    })
-}
-
-/// RPC failures are Fox failures; only an unsuccessful upstream HTTP status
-/// is kept as ParamFailure status (RPCRequest `~> result.status`).
-fn rpc_failure(error: ServiceError) -> ProviderError {
-    let status = match &error {
-        ServiceError::UpstreamStatus(code) => StatusCode::from_u16(*code).ok(),
-        _ => None,
-    };
-    failure(&error.to_string(), status)
-}
-
 /// AnnotationService.resetToBase: only Task annotations (actual type);
 /// datasetDAO.findOne under the requester's access context; first tracing
 /// store; then WKRemoteTracingStoreClient.resetToBase.
@@ -68,7 +48,7 @@ async fn reset_to_base(
     annotation: &ProvidedAnnotation,
 ) -> Result<(), ProviderError> {
     if annotation.annotation_type() != Some(AnnotationType::Task) {
-        return Err(failure(RESET_TASKS_ONLY, None));
+        return Err(ProviderError::failure(RESET_TASKS_ONLY));
     }
     if !crate::dataset::access::can_read(&state.pool, Some(user), annotation.dataset_id(), None)
         .await?
@@ -77,11 +57,11 @@ async fn reset_to_base(
     }
     let url = crate::stores::tracing_client::find_first_tracing_store_url(&state.pool)
         .await?
-        .ok_or_else(|| failure(TRACING_STORE_NOT_FOUND, None))?;
+        .ok_or_else(|| ProviderError::failure(crate::msg::tracing_store::NOT_FOUND))?;
     client
         .reset_to_base(&url, annotation.id())
         .await
-        .map_err(rpc_failure)
+        .map_err(ProviderError::from)
         .map_err(|error| error.wrap(RESET_FAILED))?;
     Ok(())
 }
@@ -100,7 +80,7 @@ async fn reset(
     // provideAnnotation ?~> Msg.Annotation.notFound ~> NOT_FOUND.
     let annotation = provider.provide(access, &typ, &id).await.map_err(|error| {
         error
-            .wrap(ANNOTATION_NOT_FOUND)
+            .wrap(crate::msg::annotation::NOT_FOUND)
             .into_api_error(StatusCode::NOT_FOUND)
     })?;
     // Owner (global) + Fox.assertTrue(isTeamManagerOrAdminOf(..)): false is
@@ -119,7 +99,7 @@ async fn reset(
     .await?;
     drop(connection);
     if !allowed {
-        return Err(ApiError::not_found(RESOURCE_NOT_FOUND));
+        return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
     // resetToBase(..) ?~> Msg.Annotation.Reset.failed (default 400, or the
     // upstream status of an unsuccessful RPC).

@@ -26,6 +26,8 @@ use futures_util::FutureExt;
 use sqlx::PgConnection;
 use tokio::{sync::watch, task::JoinHandle};
 
+use crate::config::{ConfigError, Env};
+
 pub type JobError = Box<dyn std::error::Error + Send + Sync>;
 
 /// Result of one job execution, used for the completion log line.
@@ -47,6 +49,22 @@ pub struct JobSchedule {
     pub enabled: bool,
     pub interval: Duration,
     pub initial_delay: Duration,
+}
+
+impl JobSchedule {
+    /// Reads `{prefix}_ENABLED`, `{prefix}_INTERVAL_SECONDS` (> 0) and
+    /// `{prefix}_INITIAL_DELAY_SECONDS` (>= 0), each falling back to `default`.
+    pub(crate) fn from_env(env: Env<'_>, prefix: &str, default: Self) -> Result<Self, ConfigError> {
+        Ok(Self {
+            enabled: env.bool_or(&format!("{prefix}_ENABLED"), default.enabled)?,
+            interval: env
+                .seconds(&format!("{prefix}_INTERVAL_SECONDS"), false)?
+                .unwrap_or(default.interval),
+            initial_delay: env
+                .seconds(&format!("{prefix}_INITIAL_DELAY_SECONDS"), true)?
+                .unwrap_or(default.initial_delay),
+        })
+    }
 }
 
 /// A named job: a factory producing one run's future, plus its schedule.

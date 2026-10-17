@@ -94,7 +94,7 @@ async fn folder_hierarchy_moves_roots_nonempty_delete_and_atomic_mutations() {
         )
         .await
         .0,
-        StatusCode::NOT_FOUND
+        StatusCode::BAD_REQUEST
     );
     let a = create(&router, &root, "A", &user.token).await;
     let a = a["id"].as_str().unwrap().to_owned();
@@ -172,7 +172,7 @@ async fn folder_hierarchy_moves_roots_nonempty_delete_and_atomic_mutations() {
         )
         .await
         .0,
-        StatusCode::NOT_FOUND
+        StatusCode::BAD_REQUEST
     );
 
     // A failed closure insertion must roll back both create and the old paths of move.
@@ -360,7 +360,7 @@ async fn folder_hierarchy_moves_roots_nonempty_delete_and_atomic_mutations() {
         )
         .await
         .0,
-        StatusCode::NOT_FOUND
+        StatusCode::BAD_REQUEST
     );
     database.cleanup().await;
 }
@@ -407,7 +407,7 @@ async fn inherited_folder_access_and_grant_updates_preserve_unmanaged_teams() {
         request(&router, "GET", &format!("/folders/{hidden}"), &token, None)
             .await
             .0,
-        StatusCode::NOT_FOUND
+        StatusCode::BAD_REQUEST
     );
     let params =
         json!({"name":"Edited", "metadata":[{"key":"hello", "value":"world"}], "allowedTeams":[]});
@@ -468,7 +468,7 @@ async fn inherited_folder_access_and_grant_updates_preserve_unmanaged_teams() {
         request(&router, "GET", &format!("/folders/{hidden}"), &token, None)
             .await
             .0,
-        StatusCode::NOT_FOUND
+        StatusCode::BAD_REQUEST
     );
     sqlx::query("INSERT INTO webknossos.dataset_allowedTeams (_dataset, _team) VALUES ($1, $2)")
         .bind(dataset)

@@ -76,7 +76,7 @@ pub async fn find<'e, E: Executor<'e, Database = Postgres>>(
 ) -> ApiResult<AnnotationMetadata> {
     find_optional(executor, user, id, global)
         .await?
-        .ok_or_else(|| ApiError::not_found("Annotation not found."))
+        .ok_or_else(|| ApiError::not_found(crate::msg::annotation::MISSING))
 }
 
 /// AnnotationDAO.findOne under the requester's (or the global) access
@@ -170,6 +170,18 @@ pub struct Restrictions {
     pub allow_finish: bool,
     pub allow_finish_soft: bool,
     pub allow_download: bool,
+}
+
+impl Restrictions {
+    /// The subset Annotation.publicWrites renders as `restrictions`.
+    pub fn public_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "allowAccess": self.allow_access,
+            "allowUpdate": self.allow_update,
+            "allowFinish": self.allow_finish,
+            "allowDownload": self.allow_download,
+        })
+    }
 }
 
 /// AnnotationRestrictionDefaults, independent of AnnotationDAO read access.

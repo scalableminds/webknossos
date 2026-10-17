@@ -39,18 +39,13 @@ use crate::{
     proto::{AnnotationLayerTypeProto, AnnotationProto},
     stores::client::ServiceError,
     stores::tracing_client::{
-        BoundingBox, MergeRequest, NamedBoundingBox, TRACING_STORE_NOT_FOUND, TracingStoreClient,
-        TracingStoreError,
+        BoundingBox, MergeRequest, NamedBoundingBox, TracingStoreClient, TracingStoreError,
     },
     util::id::ObjectId,
 };
 
-/// Msg.Annotation.notFound, attached by provideAnnotation via `?~>`.
-pub const ANNOTATION_NOT_FOUND: &str = "Annotation could not be found or accessed.";
 /// Msg.Annotation.Restrictions.notFound, used by routes for restriction failures.
 pub const RESTRICTIONS_NOT_FOUND: &str = "Could not determine annotation access restrictions.";
-/// Msg.notFound: how Play renders an unwrapped `Fox.empty` (404).
-pub const RESOURCE_NOT_FOUND: &str = "Could not find or access the requested resource.";
 /// Msg.Annotation.Merge.failedCompound.
 pub const MERGE_FAILED_COMPOUND: &str = "Could not merge annotations for compound view.";
 /// AnnotationMerger.mergeN failure.
@@ -66,16 +61,6 @@ pub const PROJECT_NO_ANNOTATIONS: &str = "Could not find annotations for this pr
 /// Msg.TaskType.noFinishedAnnotations.
 pub const TASK_TYPE_NO_FINISHED_ANNOTATIONS: &str =
     "Could not find any finished annotations for this task type.";
-/// Msg.User.notAuthenticated.
-pub const USER_NOT_AUTHENTICATED: &str =
-    "You are not authorized to view this resource. Please log in.";
-/// Msg.Team.adminNotAllowed (UserService.isTeamManagerOrAdminOf failure).
-pub const TEAM_ADMIN_NOT_ALLOWED: &str = "You do not have permission to administrate this team.";
-/// Msg.Dataset.DataSource.notFound (`~> NOT_FOUND`).
-pub const DATA_SOURCE_NOT_FOUND: &str =
-    "Data source not found on data store server. It may still be initializing.";
-/// Msg.Dataset.DataSource.usableButNoVoxelSize.
-pub const USABLE_BUT_NO_VOXEL_SIZE: &str = "Dataset is marked as usable but has no voxel size.";
 
 /// AnnotationStore.cacheTimeout.
 pub const COMPOUND_CACHE_TTL: Duration = Duration::from_secs(60 * 60);
@@ -83,29 +68,6 @@ pub const COMPOUND_CACHE_TTL: Duration = Duration::from_secs(60 * 60);
 pub const DATA_SOURCE_STORE_TTL: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 /// TaskDAO.findAllByProjectAndTaskTypeAndIdsAndUser page size (first page only).
 const TASK_TYPE_TASK_LIMIT: i64 = 1000;
-
-/// Msg.Task.notFound(id).
-pub fn task_not_found(id: &str) -> String {
-    format!("Task “{id}” could not be found or accessed.")
-}
-/// Msg.Project.notFound(id).
-pub fn project_not_found(id: &str) -> String {
-    format!("Project “{id}” could not be found or accessed.")
-}
-/// Msg.TaskType.notFound(id).
-pub fn task_type_not_found(id: &str) -> String {
-    format!("Task type “{id}” could not be found or accessed.")
-}
-/// Msg.Dataset.notFoundForAnnotation(datasetId, annotationId).
-pub fn dataset_not_found_for_annotation(dataset_id: &str, annotation_id: &str) -> String {
-    format!(
-        "Dataset “{dataset_id}” for annotation “{annotation_id}” does not exist or could not be accessed."
-    )
-}
-/// Msg.Dataset.notUsable(id).
-pub fn dataset_not_usable(id: &str) -> String {
-    format!("Dataset “{id}” is not imported or incomplete.")
-}
 
 /// `models.annotation.AnnotationType`; parsing is exact and case-sensitive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -223,8 +185,8 @@ impl fmt::Display for ProviderError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidType(typ) => write!(f, "Invalid AnnotationType: {typ}"),
-            Self::NotFound => f.write_str(ANNOTATION_NOT_FOUND),
-            Self::Empty => f.write_str(RESOURCE_NOT_FOUND),
+            Self::NotFound => f.write_str(crate::msg::annotation::NOT_FOUND),
+            Self::Empty => f.write_str(crate::msg::NOT_FOUND),
             Self::Failure(failure) => f.write_str(&failure.message),
             Self::Api(error) => error.fmt(f),
         }
@@ -243,13 +205,49 @@ impl From<sqlx::Error> for ProviderError {
     }
 }
 
+/// RPC failures are Fox failures; only an unsuccessful upstream HTTP status
+/// is kept as ParamFailure status (RPCRequest `~> result.status`).
+impl From<ServiceError> for ProviderError {
+    fn from(error: ServiceError) -> Self {
+        let status = match &error {
+            ServiceError::UpstreamStatus(code) => StatusCode::from_u16(*code).ok(),
+            _ => None,
+        };
+        Self::Failure(FoxFailure {
+            message: error.to_string(),
+            chain: Vec::new(),
+            status,
+        })
+    }
+}
+impl From<TracingStoreError> for ProviderError {
+    fn from(error: TracingStoreError) -> Self {
+        match error {
+            TracingStoreError::Service(error) => error.into(),
+            other @ TracingStoreError::InvalidProtobuf => Self::failure(other.to_string()),
+        }
+    }
+}
+
 impl ProviderError {
-    fn failure(message: impl Into<String>) -> Self {
+    /// A plain Fox failure (`Fox.failure(message)`).
+    pub(crate) fn failure(message: impl Into<String>) -> Self {
         Self::Failure(FoxFailure {
             message: message.into(),
             chain: Vec::new(),
             status: None,
         })
+    }
+
+    /// Fox `~> status` on a failure (ParamFailure).
+    pub(crate) fn with_status(self, status: StatusCode) -> Self {
+        match self {
+            Self::Failure(failure) => Self::Failure(FoxFailure {
+                status: Some(status),
+                ..failure
+            }),
+            other => other,
+        }
     }
 
     /// Fox `?~> message`: Empty becomes a plain failure, failures are chained
@@ -302,7 +300,7 @@ impl From<ProviderError> for ApiError {
     fn from(error: ProviderError) -> Self {
         match error {
             ProviderError::Api(error) => error,
-            ProviderError::Empty => ApiError::new(StatusCode::NOT_FOUND, RESOURCE_NOT_FOUND),
+            ProviderError::Empty => ApiError::new(StatusCode::NOT_FOUND, crate::msg::NOT_FOUND),
             ProviderError::Failure(FoxFailure {
                 message, status, ..
             }) => ApiError::new(status.unwrap_or(StatusCode::BAD_REQUEST), message),
@@ -341,12 +339,51 @@ pub enum AnnotationLayerType {
     Volume,
 }
 
+impl AnnotationLayerType {
+    /// The `webknossos.ANNOTATION_LAYER_TYPE` value, also the JSON `typ`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Skeleton => "Skeleton",
+            Self::Volume => "Volume",
+        }
+    }
+}
+impl From<AnnotationLayerTypeProto> for AnnotationLayerType {
+    fn from(typ: AnnotationLayerTypeProto) -> Self {
+        match typ {
+            AnnotationLayerTypeProto::Skeleton => Self::Skeleton,
+            AnnotationLayerTypeProto::Volume => Self::Volume,
+        }
+    }
+}
+impl From<AnnotationLayerType> for AnnotationLayerTypeProto {
+    fn from(typ: AnnotationLayerType) -> Self {
+        match typ {
+            AnnotationLayerType::Skeleton => Self::Skeleton,
+            AnnotationLayerType::Volume => Self::Volume,
+        }
+    }
+}
+
 /// AnnotationLayer.fromProto (statistics are `unknown` for merged layers).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AnnotationLayer {
     pub tracing_id: String,
     pub typ: AnnotationLayerType,
     pub name: String,
+}
+
+/// AnnotationLayer.fromProto for every layer (statistics `unknown` = `{}`).
+pub(crate) fn layers_from_proto(proto: &AnnotationProto) -> Vec<AnnotationLayer> {
+    proto
+        .annotation_layers
+        .iter()
+        .map(|layer| AnnotationLayer {
+            tracing_id: layer.tracing_id.clone(),
+            typ: layer.typ().into(),
+            name: layer.name.clone(),
+        })
+        .collect()
 }
 
 /// Synthetic annotation produced by a compound handler (AnnotationMerger.mergeN):
@@ -374,18 +411,7 @@ impl CompoundAnnotation {
         owner_id: ObjectId,
         merged: &AnnotationProto,
     ) -> Self {
-        let layers = merged
-            .annotation_layers
-            .iter()
-            .map(|layer| AnnotationLayer {
-                tracing_id: layer.tracing_id.clone(),
-                typ: match layer.typ() {
-                    AnnotationLayerTypeProto::Skeleton => AnnotationLayerType::Skeleton,
-                    AnnotationLayerTypeProto::Volume => AnnotationLayerType::Volume,
-                },
-                name: layer.name.clone(),
-            })
-            .collect();
+        let layers = layers_from_proto(merged);
         Self {
             id: identifier.identifier.clone(),
             dataset_id,
@@ -652,7 +678,7 @@ impl AnnotationProvider {
             .await
             .map_err(|error| match error {
                 ProviderError::Empty | ProviderError::Failure(_) => {
-                    error.wrap(ANNOTATION_NOT_FOUND)
+                    error.wrap(crate::msg::annotation::NOT_FOUND)
                 }
                 other => other,
             })
@@ -745,7 +771,7 @@ impl AnnotationProvider {
         let project_id = self
             .find_task_project(context, task_id)
             .await?
-            .ok_or_else(|| ProviderError::failure(task_not_found(task_id)))?;
+            .ok_or_else(|| ProviderError::failure(crate::msg::task::not_found(task_id)))?;
         let annotations = self
             .task_annotations(context, &[task_id.to_owned()])
             .await?;
@@ -754,10 +780,10 @@ impl AnnotationProvider {
         assert_non_empty(&finished).map_err(|e| e.wrap(TASK_NO_ANNOTATIONS))?;
         let user = context
             .requester
-            .ok_or_else(|| ProviderError::failure(USER_NOT_AUTHENTICATED))?;
+            .ok_or_else(|| ProviderError::failure(crate::msg::user::NOT_AUTHENTICATED))?;
         self.find_project_team(context, &project_id)
             .await?
-            .ok_or_else(|| ProviderError::failure(project_not_found(&project_id)))?;
+            .ok_or_else(|| ProviderError::failure(crate::msg::project::not_found(&project_id)))?;
         let dataset_id = finished[0].dataset_id.clone();
         self.register_data_source(&identifier.identifier, &dataset_id)
             .await?;
@@ -778,10 +804,10 @@ impl AnnotationProvider {
         let team = self
             .find_project_team(context, project_id)
             .await?
-            .ok_or_else(|| ProviderError::failure(project_not_found(project_id)))?;
+            .ok_or_else(|| ProviderError::failure(crate::msg::project::not_found(project_id)))?;
         let user = context
             .requester
-            .ok_or_else(|| ProviderError::failure(USER_NOT_AUTHENTICATED))?;
+            .ok_or_else(|| ProviderError::failure(crate::msg::user::NOT_AUTHENTICATED))?;
         // Fox.assertTrue: false is Empty, a lookup failure stays a failure.
         if !self.is_team_manager_or_admin_of(user, &team).await? {
             return Err(ProviderError::Empty);
@@ -821,7 +847,9 @@ impl AnnotationProvider {
         let task_type_id = identifier.identifier.as_str();
         self.find_task_type_team(context, task_type_id)
             .await?
-            .ok_or_else(|| ProviderError::failure(task_type_not_found(task_type_id)))?;
+            .ok_or_else(|| {
+                ProviderError::failure(crate::msg::task_type::not_found(task_type_id))
+            })?;
         let (user_id, organization, is_admin) = requester_binds(context);
         let tasks: Vec<String> = sqlx::query_scalar(&format!(
             "SELECT t._id FROM webknossos.tasks_ t WHERE t._taskType=$4 AND ($5 OR {TASK_LIST})
@@ -841,7 +869,7 @@ impl AnnotationProvider {
         assert_non_empty(&finished).map_err(|e| e.wrap(TASK_TYPE_NO_FINISHED_ANNOTATIONS))?;
         let user = context
             .requester
-            .ok_or_else(|| ProviderError::failure(USER_NOT_AUTHENTICATED))?;
+            .ok_or_else(|| ProviderError::failure(crate::msg::user::NOT_AUTHENTICATED))?;
         let dataset_id = finished[0].dataset_id.clone();
         self.register_data_source(&identifier.identifier, &dataset_id)
             .await?;
@@ -866,10 +894,12 @@ impl AnnotationProvider {
                 let project = self
                     .find_task_project(context, id)
                     .await?
-                    .ok_or_else(|| ProviderError::failure(task_not_found(id)))?;
+                    .ok_or_else(|| ProviderError::failure(crate::msg::task::not_found(id)))?;
                 self.find_project_team(context, &project)
                     .await?
-                    .ok_or_else(|| ProviderError::failure(project_not_found(&project)))?
+                    .ok_or_else(|| {
+                        ProviderError::failure(crate::msg::project::not_found(&project))
+                    })?
             }
             // projectDAO.findOne without a message: plain Fox.empty.
             AnnotationType::CompoundProject => self
@@ -879,7 +909,7 @@ impl AnnotationProvider {
             AnnotationType::CompoundTaskType => self
                 .find_task_type_team(context, id)
                 .await?
-                .ok_or_else(|| ProviderError::failure(task_type_not_found(id)))?,
+                .ok_or_else(|| ProviderError::failure(crate::msg::task_type::not_found(id)))?,
             saved => return Err(ProviderError::InvalidType(saved.to_string())),
         };
         // `.orElse(Fox.successful(false))`: missing user or team → false.
@@ -1002,7 +1032,7 @@ impl AnnotationProvider {
         .fetch_optional(&self.pool)
         .await?;
         let (organization, manages) =
-            team.ok_or_else(|| ProviderError::failure(TEAM_ADMIN_NOT_ALLOWED))?;
+            team.ok_or_else(|| ProviderError::failure(crate::msg::team::ADMIN_NOT_ALLOWED))?;
         Ok(organization == user.organization_id && (manages || user.is_admin))
     }
 
@@ -1021,18 +1051,20 @@ impl AnnotationProvider {
         .fetch_optional(&self.pool)
         .await?;
         let (usable, has_voxel_size) = dataset.ok_or_else(|| {
-            ProviderError::failure(dataset_not_found_for_annotation(
+            ProviderError::failure(crate::msg::dataset::not_found_for_annotation(
                 dataset_id,
                 temporary_annotation_id.as_str(),
             ))
         })?;
         if !usable {
-            return Err(ProviderError::failure(dataset_not_usable(dataset_id)));
+            return Err(ProviderError::failure(crate::msg::dataset::not_usable(
+                dataset_id,
+            )));
         }
         if !has_voxel_size {
             return Err(ProviderError::Failure(FoxFailure {
-                message: DATA_SOURCE_NOT_FOUND.to_owned(),
-                chain: vec![USABLE_BUT_NO_VOXEL_SIZE.to_owned()],
+                message: crate::msg::dataset::data_source::NOT_FOUND.to_owned(),
+                chain: vec![crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE.to_owned()],
                 status: Some(StatusCode::NOT_FOUND),
             }));
         }
@@ -1167,7 +1199,7 @@ impl AnnotationProvider {
         }
         let url = crate::stores::tracing_client::find_first_tracing_store_url(&self.pool)
             .await?
-            .ok_or_else(|| ProviderError::failure(TRACING_STORE_NOT_FOUND))?;
+            .ok_or_else(|| ProviderError::failure(crate::msg::tracing_store::NOT_FOUND))?;
         let mut annotation_ids = Vec::with_capacity(annotations.len());
         let mut owner_ids = Vec::with_capacity(annotations.len());
         for annotation in annotations {
@@ -1186,24 +1218,8 @@ impl AnnotationProvider {
         self.tracing_store
             .merge_annotations_by_ids(&url, &request)
             .await
-            .map_err(tracing_store_failure)
+            .map_err(ProviderError::from)
     }
-}
-
-/// RPC failures are Fox failures; only an unsuccessful upstream HTTP status
-/// is kept as a ParamFailure status (RPCRequest `~> result.status`).
-fn tracing_store_failure(error: TracingStoreError) -> ProviderError {
-    let status = match &error {
-        TracingStoreError::Service(ServiceError::UpstreamStatus(code)) => {
-            StatusCode::from_u16(*code).ok()
-        }
-        _ => None,
-    };
-    ProviderError::Failure(FoxFailure {
-        message: error.to_string(),
-        chain: Vec::new(),
-        status,
-    })
 }
 
 /// Bind values $1 requester id, $2 requester organization, $3 requester is

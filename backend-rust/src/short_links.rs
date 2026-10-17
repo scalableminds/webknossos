@@ -40,7 +40,7 @@ fn validate_link(base: &Url, value: &str) -> ApiResult<()> {
         || !(link.path() == base_path || link.path().starts_with(&format!("{base_path}/")))
     {
         return Err(ApiError::bad_request(
-            "Could not generate short link: URI does not match.",
+            "Could not generate short link: URI does not match",
         ));
     }
     Ok(())
@@ -69,7 +69,7 @@ async fn read(
     .bind(key)
     .fetch_optional(&state.pool)
     .await?
-    .ok_or_else(|| ApiError::not_found("Short link not found."))?;
+    .ok_or_else(|| ApiError::bad_request(crate::msg::SHORT_LINK_NOT_FOUND))?;
     Ok(ResponseJson(result))
 }
 

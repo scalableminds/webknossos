@@ -12,10 +12,7 @@ use serde_json::Value;
 
 use crate::{
     AppState,
-    annotation::provider::{
-        AccessContext, AnnotationProvider, AnnotationType, USABLE_BUT_NO_VOXEL_SIZE,
-        dataset_not_found_for_annotation,
-    },
+    annotation::provider::{AccessContext, AnnotationProvider, AnnotationType},
     error::{ApiError, ApiResult},
     extract::{Path, Query},
     util::id::{ObjectId, PathObjectId},
@@ -101,7 +98,7 @@ pub(crate) async fn validate_key(pool: &sqlx::PgPool, key: &str) -> Result<(), C
     } else {
         Err(CallbackError::Plain(
             StatusCode::FORBIDDEN,
-            "Tracing store could not be found or accessed.",
+            crate::msg::tracing_store::NOT_FOUND,
         ))
     }
 }
@@ -127,10 +124,12 @@ async fn annotation_dataset(
             .fetch_one(&state.pool)
             .await?;
     if !exists {
-        return Err(ApiError::bad_request(dataset_not_found_for_annotation(
-            &annotation.dataset_id,
-            annotation_id.as_str(),
-        )));
+        return Err(ApiError::bad_request(
+            crate::msg::dataset::not_found_for_annotation(
+                &annotation.dataset_id,
+                annotation_id.as_str(),
+            ),
+        ));
     }
     Ok(annotation.dataset_id)
 }
@@ -225,8 +224,8 @@ async fn require_dataset(state: &AppState, dataset_id: &str) -> ApiResult<()> {
             .fetch_one(&state.pool)
             .await?;
     if !exists {
-        return Err(ApiError::not_found(format!(
-            "Dataset “{dataset_id}” could not be found or accessed."
+        return Err(ApiError::not_found(crate::msg::dataset::not_found(
+            dataset_id,
         )));
     }
     Ok(())
@@ -240,7 +239,9 @@ async fn data_source(state: &AppState, dataset_id: &str) -> ApiResult<Value> {
     .fetch_one(&state.pool)
     .await?;
     if missing_voxel {
-        return Err(ApiError::bad_request(USABLE_BUT_NO_VOXEL_SIZE));
+        return Err(ApiError::bad_request(
+            crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE,
+        ));
     }
     crate::dataset::routes::data_source_for_rpc(&state.pool, dataset_id, true).await
 }
@@ -258,7 +259,7 @@ async fn data_store_uri_for_dataset(
     .fetch_optional(&state.pool)
     .await?;
     Ok(Json(url.ok_or_else(|| {
-        ApiError::bad_request("Data store could not be found or accessed.")
+        ApiError::bad_request(crate::msg::data_store::NOT_FOUND)
     })?))
 }
 

@@ -31,20 +31,19 @@ use crate::{
         edited_mapping_edges_zip_name, volume_data_zip_name, write_nml,
     },
     annotation::provider::{
-        ANNOTATION_NOT_FOUND, AccessContext, AnnotationIdentifier, AnnotationProvider,
-        AnnotationType, ProviderError, RESOURCE_NOT_FOUND, RESTRICTIONS_NOT_FOUND,
-        TEAM_ADMIN_NOT_ALLOWED, dataset_not_found_for_annotation, project_not_found,
-        task_not_found, task_type_not_found,
+        AccessContext, AnnotationIdentifier, AnnotationProvider, AnnotationType, ProviderError,
+        RESTRICTIONS_NOT_FOUND,
     },
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
     extract::Path,
+    extract::extension,
     job::submission::{Failure, RunError, RunResult},
     proto::{AnnotationUserStateProto, SkeletonTracing, VolumeTracing},
     stores::client::ServiceError,
     stores::tracing_client::{
-        FetchedVolumeLayer, TRACING_STORE_NOT_FOUND, TracingStoreClient, TracingStoreError,
-        VolumeLayerFetch, find_first_tracing_store_url,
+        FetchedVolumeLayer, TracingStoreClient, TracingStoreError, VolumeLayerFetch,
+        find_first_tracing_store_url,
     },
     system::application_info::MiscState,
     users,
@@ -65,17 +64,7 @@ pub const WRITE_TO_FILE_FAILED: &str = "Could not write annotation to temporary 
 pub const NAME_NOT_AVAILABLE: &str = "Could not determine name for annotation.";
 /// Msg.Task.notFound (without id).
 pub const TASK_NOT_FOUND: &str = "Task could not be found or accessed.";
-/// Msg.User.notFound (without id).
-pub const USER_NOT_FOUND: &str = "User could not be found or accessed.";
-/// Msg.notAllowed.
-pub const NOT_ALLOWED: &str = "You are not authorized to view or edit this resource.";
 pub const VIEW_NOT_DOWNLOADABLE: &str = "Cannot download View annotation";
-/// Msg.Annotation.* texts of `skeletonTracingId` / `volumeTracingId` /
-/// `FetchedAnnotationLayer.layersFromTracings` (compound downloads).
-pub const MULTI_LAYERS_SKELETON: &str =
-    "This feature is not implemented for annotations with more than one skeleton layer.";
-pub const MULTI_LAYERS_VOLUME: &str =
-    "This feature is not implemented for annotations with more than one volume layer.";
 pub const MISMATCHING_SKELETON: &str = "Annotation has mismatching skeleton ids and tracings.";
 pub const MISMATCHING_VOLUME: &str = "Annotation has mismatching volume ids and tracings.";
 pub const NEEDS_SKELETON_OR_VOLUME: &str =
@@ -83,11 +72,6 @@ pub const NEEDS_SKELETON_OR_VOLUME: &str =
 
 const XML_MIME_TYPE: &str = "application/xml";
 const ZIP_MIME_TYPE: &str = "application/zip";
-
-/// Msg.Organization.notFound(id).
-pub fn organization_not_found(id: &str) -> String {
-    format!("Organization “{id}” could not be found or accessed.")
-}
 
 pub fn router(_jobs_enabled: bool) -> Router<AppState> {
     Router::new()
@@ -112,7 +96,7 @@ pub struct DownloadParams {
 
 pub fn parse_download_params(query: Option<&str>) -> ApiResult<DownloadParams> {
     let pairs: Vec<(String, String)> = serde_urlencoded::from_str(query.unwrap_or(""))
-        .map_err(|_| ApiError::bad_request("Invalid query parameters."))?;
+        .map_err(|_| ApiError::bad_request(crate::msg::request::INVALID_QUERY))?;
     let first = |key: &str| {
         pairs
             .iter()
@@ -154,11 +138,10 @@ fn parse_boolean_param(key: &str, value: &str) -> ApiResult<bool> {
     match value.trim() {
         "true" => Ok(true),
         "false" => Ok(false),
-        other => other.parse::<i32>().map(|number| number != 0).map_err(|_| {
-            ApiError::bad_request(format!(
-                "Cannot parse parameter {key} as Boolean: should be true, false, 0 or 1"
-            ))
-        }),
+        other => other
+            .parse::<i32>()
+            .map(|number| number != 0)
+            .map_err(|_| ApiError::bad_request(crate::msg::request::invalid_boolean(key))),
     }
 }
 
@@ -174,14 +157,6 @@ struct Services {
     provider: AnnotationProvider,
     tracing_store: TracingStoreClient,
     misc: MiscState,
-}
-
-fn extension<T: Clone + Send + Sync + 'static>(parts: &Parts) -> ApiResult<T> {
-    parts
-        .extensions
-        .get::<T>()
-        .cloned()
-        .ok_or_else(ApiError::internal)
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for Services {
@@ -259,7 +234,7 @@ async fn download_without_type(
         Ok(saved) => saved,
         Err(error) => {
             return provider_failure(error)
-                .wrap_status(ANNOTATION_NOT_FOUND, StatusCode::NOT_FOUND)
+                .wrap_status(crate::msg::annotation::NOT_FOUND, StatusCode::NOT_FOUND)
                 .into_response();
         }
     };
@@ -668,13 +643,15 @@ async fn download_saved(
         .provide(access, typ, id)
         .await
         .map_err(|error| match provider_failure(error) {
-            RunError::Failure(_) => {
-                Failure::with_status(ANNOTATION_NOT_FOUND.to_owned(), StatusCode::NOT_FOUND).into()
-            }
+            RunError::Failure(_) => Failure::with_status(
+                crate::msg::annotation::NOT_FOUND.to_owned(),
+                StatusCode::NOT_FOUND,
+            )
+            .into(),
             api => api,
         })?;
     let Some(annotation) = provided.saved() else {
-        return Err(fail(ANNOTATION_NOT_FOUND));
+        return Err(fail(crate::msg::annotation::NOT_FOUND));
     };
     let restrictions = context
         .services
@@ -696,13 +673,16 @@ async fn download_saved(
         .await?
         .ok_or_else(|| {
             RunError::from(Failure::with_status(
-                dataset_not_found_for_annotation(&annotation.dataset_id, &annotation.id),
+                crate::msg::dataset::not_found_for_annotation(
+                    &annotation.dataset_id,
+                    &annotation.id,
+                ),
                 StatusCode::NOT_FOUND,
             ))
         })?;
     if !organization_exists(context.pool(), &dataset.organization).await? {
         return Err(Failure::with_status(
-            organization_not_found(&dataset.organization),
+            crate::msg::organization::not_found(&dataset.organization),
             StatusCode::NOT_FOUND,
         )
         .into());
@@ -747,7 +727,7 @@ async fn annotation_to_file(
                 download.tracing_store_url = url;
                 skeleton_to_file(context, &download).await
             }
-            None => Err(fail(TRACING_STORE_NOT_FOUND)),
+            None => Err(fail(crate::msg::tracing_store::NOT_FOUND)),
         };
         result.map_err(|error| error.wrap(SKELETON_TO_FILE_FAILED))
     } else {
@@ -756,7 +736,7 @@ async fn annotation_to_file(
                 download.tracing_store_url = url;
                 volume_or_hybrid_to_file(context, &download).await
             }
-            None => Err(fail(TRACING_STORE_NOT_FOUND)),
+            None => Err(fail(crate::msg::tracing_store::NOT_FOUND)),
         };
         result.map_err(|error| error.wrap(HYBRID_TO_FILE_FAILED))
     }
@@ -855,7 +835,7 @@ async fn skeleton_to_file(
         .map_err(rpc_failure)?;
     let owner_name = owner_full_name(context.pool(), &download.annotation.owner_id)
         .await?
-        .ok_or_else(|| fail(USER_NOT_FOUND))?;
+        .ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
     // Fox.runOptional(annotation._task)(taskDAO.findOne) under the requester's
     // access context; an unreadable task is Fox.empty.
     let task_id = match download.annotation.task_id.as_deref() {
@@ -927,7 +907,7 @@ async fn volume_or_hybrid_to_file(
     let owner_name = find_multi_user(context.pool(), &multi_user, true)
         .await?
         .map(|(first, last)| format!("{first} {last}"))
-        .ok_or_else(|| fail(USER_NOT_FOUND))?;
+        .ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
     let task_id = match download.annotation.task_id.as_deref() {
         Some(task_id) => {
             if !task_exists(context.pool(), task_id, None).await? {
@@ -1049,11 +1029,11 @@ fn add_entry(
 
 /// `Fox.empty` reaching the controller: 404 Msg.notFound.
 fn empty() -> RunError {
-    Failure::with_status(RESOURCE_NOT_FOUND, StatusCode::NOT_FOUND).into()
+    Failure::with_status(crate::msg::NOT_FOUND, StatusCode::NOT_FOUND).into()
 }
 
 fn not_allowed() -> RunError {
-    Failure::with_status(NOT_ALLOWED, StatusCode::FORBIDDEN).into()
+    Failure::with_status(crate::msg::NOT_ALLOWED, StatusCode::FORBIDDEN).into()
 }
 
 /// `play.core.utils.HttpHeaderParameterEncoding.encode` (Play 3.0.11, checked
@@ -1114,7 +1094,7 @@ async fn download_compound(
         AnnotationType::CompoundProject => {
             let (team, name) = find_project(pool, user, id).await?.ok_or_else(|| {
                 RunError::from(Failure::with_status(
-                    project_not_found(id),
+                    crate::msg::project::not_found(id),
                     StatusCode::NOT_FOUND,
                 ))
             })?;
@@ -1124,13 +1104,13 @@ async fn download_compound(
         AnnotationType::CompoundTask => {
             let project = find_task_project(pool, user, id).await?.ok_or_else(|| {
                 RunError::from(Failure::with_status(
-                    task_not_found(id),
+                    crate::msg::task::not_found(id),
                     StatusCode::NOT_FOUND,
                 ))
             })?;
             let (team, _) = find_project(pool, user, &project).await?.ok_or_else(|| {
                 RunError::from(Failure::with_status(
-                    project_not_found(&project),
+                    crate::msg::project::not_found(&project),
                     StatusCode::NOT_FOUND,
                 ))
             })?;
@@ -1143,7 +1123,7 @@ async fn download_compound(
         AnnotationType::CompoundTaskType => {
             let (team, summary) = find_task_type(pool, user, id).await?.ok_or_else(|| {
                 RunError::from(Failure::with_status(
-                    task_type_not_found(id),
+                    crate::msg::task_type::not_found(id),
                     StatusCode::NOT_FOUND,
                 ))
             })?;
@@ -1241,8 +1221,8 @@ async fn assert_team_manager_or_admin(
     .fetch_optional(pool)
     .await?;
     match team {
-        None => Err(Failure::new(TEAM_ADMIN_NOT_ALLOWED)
-            .wrap(NOT_ALLOWED)
+        None => Err(Failure::new(crate::msg::team::ADMIN_NOT_ALLOWED)
+            .wrap(crate::msg::NOT_ALLOWED)
             .with_param(StatusCode::FORBIDDEN)
             .into()),
         Some((organization, manages))
@@ -1385,15 +1365,27 @@ async fn download_annotations_for_dataset<'a>(
     }
     let skeleton_ids = layers
         .iter()
-        .map(|layers| single_tracing_id(layers, "Skeleton", MULTI_LAYERS_SKELETON))
+        .map(|layers| {
+            single_tracing_id(
+                layers,
+                "Skeleton",
+                crate::msg::annotation::MULTI_LAYERS_SKELETON_NOT_IMPLEMENTED,
+            )
+        })
         .collect::<RunResult<Vec<_>>>()?;
     let volume_ids = layers
         .iter()
-        .map(|layers| single_tracing_id(layers, "Volume", MULTI_LAYERS_VOLUME))
+        .map(|layers| {
+            single_tracing_id(
+                layers,
+                "Volume",
+                crate::msg::annotation::MULTI_LAYERS_VOLUME_NOT_IMPLEMENTED,
+            )
+        })
         .collect::<RunResult<Vec<_>>>()?;
     let url = find_first_tracing_store_url(pool)
         .await?
-        .ok_or_else(|| fail(TRACING_STORE_NOT_FOUND))?;
+        .ok_or_else(|| fail(crate::msg::tracing_store::NOT_FOUND))?;
     let skeletons = tracing_store
         .get_skeleton_tracings(&url, &skeleton_ids)
         .await
@@ -1468,7 +1460,7 @@ async fn single_download_annotation<'a>(
     .bind(&row.owner_id)
     .fetch_optional(pool)
     .await?;
-    let multi_user = multi_user.ok_or_else(|| fail(USER_NOT_FOUND))?;
+    let multi_user = multi_user.ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
     let owner_name = find_multi_user(pool, &multi_user, true)
         .await?
         .map(|(first, last)| format!("{first} {last}"))

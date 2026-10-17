@@ -53,13 +53,15 @@ struct ProjectParameters {
 
 fn validate_name(name: &str) -> ApiResult<()> {
     if name.chars().count() < 3 {
-        return Err(ApiError::bad_request("project.nameTooShort"));
+        return Err(ApiError::bad_request(crate::msg::project::NAME_TOO_SHORT));
     }
     if !name
         .bytes()
         .all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'-')
     {
-        return Err(ApiError::bad_request("project.nameInvalidChars"));
+        return Err(ApiError::bad_request(
+            crate::msg::project::name_invalid_chars(name),
+        ));
     }
     Ok(())
 }
@@ -100,7 +102,7 @@ async fn project_json<'e, E: sqlx::Executor<'e, Database = Postgres>>(
         .bind(id)
         .fetch_optional(executor)
         .await?
-        .ok_or_else(|| ApiError::not_found("project.notFound"))
+        .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(id)))
 }
 
 async fn projects(pool: &PgPool, user: &AuthUser, with_status: bool) -> ApiResult<Value> {
@@ -177,10 +179,10 @@ async fn by_name(
         .bind(&user.id)
         .bind(&user.organization_id)
         .bind(user.is_admin)
-        .bind(name)
+        .bind(&name)
         .fetch_optional(&state.pool)
         .await?
-        .ok_or_else(|| ApiError::not_found("project.notFound"))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found_by_name(&name)))?;
     Ok(ResponseJson(value))
 }
 
@@ -192,7 +194,7 @@ async fn check_references(
     ObjectId::parse(&parameters.team)?;
     ObjectId::parse(&parameters.owner)?;
     if !can_manage_team_in_tx(tx, user, &parameters.team).await? {
-        return Err(ApiError::forbidden("notAllowed"));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let owner: Option<String> = sqlx::query_scalar(
         "SELECT _id FROM webknossos.users WHERE _id=$1 AND _organization=$2 AND NOT isDeleted FOR SHARE",
@@ -202,7 +204,9 @@ async fn check_references(
     .fetch_optional(&mut **tx)
     .await?;
     if owner.is_none() {
-        return Err(ApiError::bad_request("user.notFound"));
+        return Err(ApiError::bad_request(crate::msg::user::not_found(
+            &parameters.owner,
+        )));
     }
     Ok(())
 }
@@ -233,7 +237,9 @@ async fn create(
     .fetch_one(&mut *tx)
     .await?;
     if exists {
-        return Err(ApiError::conflict("project.nameTaken"));
+        return Err(ApiError::bad_request(crate::msg::project::name_taken(
+            &parameters.name,
+        )));
     }
     sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name,priority,paused,expectedtime,isblacklistedfromreport) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)")
         .bind(&id).bind(&user.organization_id).bind(&parameters.team).bind(&parameters.owner).bind(&parameters.name)
@@ -257,7 +263,7 @@ async fn managed_project(
     )
     .await?
     {
-        return Err(ApiError::forbidden("notAllowed"));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok(project)
 }
@@ -331,7 +337,7 @@ async fn increment_instances(
     let delta = parameters.delta.unwrap_or(1);
     if delta < 0 {
         return Err(ApiError::bad_request(
-            "project.increaseTaskInstancesNegative",
+            crate::msg::project::INCREASE_TASK_INSTANCES_NEGATIVE,
         ));
     }
     let mut tx = state.pool.begin().await?;
@@ -382,14 +388,14 @@ async fn delete(
         .fetch_one(&mut *tx)
         .await?;
     if !user.is_admin && owner != user.id {
-        return Err(ApiError::forbidden("project.deleteNotAllowed"));
+        return Err(ApiError::forbidden(crate::msg::project::DELETE_NOT_ALLOWED));
     }
     sqlx::query("UPDATE webknossos.projects SET isdeleted=true,name=name || '.deleted.at.' || floor(extract(epoch FROM clock_timestamp())*1000)::bigint::text WHERE _id=$1 AND NOT isdeleted")
         .bind(&id).execute(&mut *tx).await?;
     delete_tasks(&mut tx, "_project", &id).await?;
     tx.commit().await?;
     Ok(ResponseJson(
-        json!({"messages":[{"success":"project.deleteSuccess"}]}),
+        json!({"messages":[{"success":crate::msg::project::DELETE_SUCCESS}]}),
     ))
 }
 
@@ -400,7 +406,7 @@ async fn lock_project(
 ) -> ApiResult<()> {
     sqlx::query_scalar::<_,String>("SELECT _id FROM webknossos.projects WHERE _id=$1 AND _organization=$2 AND NOT isdeleted FOR UPDATE")
         .bind(id).bind(organization).fetch_optional(&mut **tx).await?
-        .ok_or_else(||ApiError::not_found("project.notFound"))?;
+        .ok_or_else(||ApiError::not_found(crate::msg::project::not_found(id)))?;
     Ok(())
 }
 
@@ -425,7 +431,7 @@ async fn for_task_type(
     let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.tasktypes_ t WHERE t._id=$1 AND t._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE _user=$4 AND _team=t._team)))")
         .bind(&id).bind(&user.organization_id).bind(user.is_admin).bind(&user.id).fetch_one(&state.pool).await?;
     if !exists {
-        return Err(ApiError::not_found("taskType.notFound"));
+        return Err(ApiError::not_found(crate::msg::task_type::not_found(&id)));
     }
     let query = format!(
         "{PUBLIC_PROJECT} WHERE {ACCESS} AND EXISTS(SELECT 1 FROM webknossos.tasks_ WHERE _project=p._id AND _tasktype=$4) ORDER BY p.created"
@@ -459,10 +465,6 @@ struct TransferParameters {
     user_id: ObjectId,
 }
 
-const ANNOTATION_NOT_FOUND: &str = "Annotation could not be found or accessed.";
-const TRANSFEREE_NO_DATASET_ACCESS: &str =
-    "Cannot transfer annotation to a user who has no access to the dataset.";
-
 /// ProjectController.transferActiveTasks: hand every active task annotation of
 /// the project to another user. Play transfers one annotation after another
 /// without a transaction; here the transfer is all-or-nothing.
@@ -485,11 +487,9 @@ async fn transfer_active_tasks(
     .bind(&id)
     .fetch_optional(&mut *tx)
     .await?
-    .ok_or_else(|| {
-        ApiError::not_found(format!("Project “{id}” could not be found or accessed."))
-    })?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(&id)))?;
     if !can_manage_team_in_tx(&mut tx, &user, &team).await? {
-        return Err(ApiError::forbidden(users::msg::NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     // UserDAO.findOne with the requester's read access; Play answers 400 here.
     let transferee: Option<String> = sqlx::query_scalar(&format!(
@@ -501,7 +501,7 @@ async fn transfer_active_tasks(
     .fetch_optional(&mut *tx)
     .await?;
     if transferee.is_none() {
-        return Err(ApiError::bad_request(users::msg::user_not_found(new_user)));
+        return Err(ApiError::bad_request(crate::msg::user::not_found(new_user)));
     }
     let annotations: Vec<String> = sqlx::query_scalar("SELECT a._id FROM webknossos.annotations_ a JOIN webknossos.tasks_ t ON a._task=t._id JOIN webknossos.projects_ p ON t._project=p._id JOIN webknossos.users_ u ON a._user=u._id WHERE p._id=$1 AND a.state='Active' AND a.typ='Task' ORDER BY a._id")
         .bind(&id).fetch_all(&mut *tx).await?;
@@ -518,7 +518,7 @@ async fn transfer_active_tasks(
         .bind(&annotation)
         .fetch_optional(&mut *tx)
         .await?
-        .ok_or_else(|| ApiError::bad_request(ANNOTATION_NOT_FOUND))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?;
         let dataset_readable: bool = sqlx::query_scalar(&format!(
             "SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = $3 AND {})",
             crate::dataset::access::READ_PREDICATE
@@ -529,10 +529,14 @@ async fn transfer_active_tasks(
         .fetch_one(&mut *tx)
         .await?;
         if !dataset_readable {
-            return Err(ApiError::bad_request(TRANSFEREE_NO_DATASET_ACCESS));
+            return Err(ApiError::bad_request(
+                crate::msg::annotation::TRANSFEREE_NO_DATASET_ACCESS,
+            ));
         }
         if !mutable {
-            return Err(ApiError::bad_request("No update access."));
+            return Err(ApiError::bad_request(
+                crate::msg::annotation::NO_UPDATE_ACCESS,
+            ));
         }
         sqlx::query("UPDATE webknossos.annotations SET _user=$2 WHERE _id=$1")
             .bind(&annotation)
@@ -551,7 +555,7 @@ async fn transfer_active_tasks(
         .fetch_one(&mut *tx)
         .await?;
         if !readable {
-            return Err(ApiError::bad_request(ANNOTATION_NOT_FOUND));
+            return Err(ApiError::bad_request(crate::msg::annotation::NOT_FOUND));
         }
     }
     tx.commit().await?;

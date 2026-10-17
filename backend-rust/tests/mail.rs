@@ -572,7 +572,7 @@ fn mail_config_parses_values_validates_and_redacts_secrets() {
         ("WK_MAIL_SMTP_HOST", "smtp example"),
     ] {
         let error = config_from_values(&values(&[(key, value)])).unwrap_err();
-        assert!(error.contains(key), "{key}={value}: {error}");
+        assert!(error.0.contains(key), "{key}={value}: {error}");
     }
     // The sender must be a valid mailbox once SMTP delivery is enabled.
     let error = config_from_values(&values(&[
@@ -580,7 +580,7 @@ fn mail_config_parses_values_validates_and_redacts_secrets() {
         ("WK_MAIL_DEFAULT_SENDER", "not a mailbox"),
     ]))
     .unwrap_err();
-    assert!(error.contains("WK_MAIL_DEFAULT_SENDER"));
+    assert!(error.0.contains("WK_MAIL_DEFAULT_SENDER"));
     assert!(config_from_values(&values(&[("WK_MAIL_DEFAULT_SENDER", "not a mailbox")])).is_ok());
 }
 

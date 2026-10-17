@@ -131,9 +131,7 @@ async fn remove(
     .fetch_optional(&mut *transaction)
     .await?;
     let Some(is_organization_team) = is_organization_team else {
-        return Err(ApiError::not_found(format!(
-            "Team “{id}” could not be found or accessed."
-        )));
+        return Err(ApiError::not_found(crate::msg::team::not_found(&id)));
     };
     if is_organization_team {
         return Err(ApiError::forbidden(

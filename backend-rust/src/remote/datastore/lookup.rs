@@ -19,8 +19,6 @@ use crate::{
     util::id::ObjectId,
 };
 
-const NOT_FOUND: &str = "Could not find or access the requested resource.";
-
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/datastores/{name}/deleteDataset", post(delete_dataset))
@@ -62,18 +60,16 @@ async fn find_dataset_id(
             .fetch_one(&state.pool)
             .await?;
     if !organization_exists {
-        return Err(ApiError::not_found(format!(
-            "Organization “{}” could not be found or accessed.",
-            query.organization_id
+        return Err(ApiError::not_found(crate::msg::organization::not_found(
+            &query.organization_id,
         )));
     }
     let id: Option<String> = sqlx::query_scalar(
         "SELECT _id FROM webknossos.datasets_ WHERE directoryName=$1 AND _organization=$2 ORDER BY created ASC, _id ASC LIMIT 1",
     ).bind(&query.dataset_directory_name).bind(&query.organization_id).fetch_optional(&state.pool).await?;
     Ok(ResponseJson(id.ok_or_else(|| {
-        ApiError::bad_request(format!(
-            "Dataset with name “{}” could not be found or accessed.",
-            query.dataset_directory_name
+        ApiError::bad_request(crate::msg::dataset::not_found_by_name(
+            &query.dataset_directory_name,
         ))
     })?))
 }
@@ -91,12 +87,7 @@ async fn find_dataset_local_root_path(
 ) -> ApiResult<ResponseJson<String>> {
     let record = crate::dataset::lifecycle::load_record(&state.pool, query.dataset_id.as_str())
         .await?
-        .ok_or_else(|| {
-            ApiError::bad_request(format!(
-                "Dataset “{}” could not be found or accessed.",
-                query.dataset_id
-            ))
-        })?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::not_found(&query.dataset_id)))?;
     if record.store_name.as_deref() != Some(store.name.as_str()) {
         return Err(crate::dataset::lifecycle::not_allowed());
     }
@@ -126,7 +117,7 @@ async fn job_export_properties(
         .bind(query.job_id.as_str())
         .fetch_optional(&state.pool)
         .await?
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if !job.is_valid() {
         return Err(ApiError::bad_request(format!(
             "Parsing failed for row in webknossos.jobs queried by {}",
@@ -135,7 +126,7 @@ async fn job_export_properties(
     }
     let organization: String = sqlx::query_scalar(
         "SELECT o._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON o._id=u._organization WHERE u._id=$1",
-    ).bind(&job.owner).fetch_optional(&state.pool).await?.ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+    ).bind(&job.owner).fetch_optional(&state.pool).await?.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let run_id = job
         .latest_run_id
         .ok_or_else(|| ApiError::bad_request("Job has not run yet."))?;

@@ -22,6 +22,10 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
     Router::new()
         .route("/datasets", get(list))
         .layer(Extension(DatasetFeatures { jobs_enabled }))
+        // LegacyApiController.listDatasets wraps its success result in addRemoteOriginHeaders.
+        .layer(axum::middleware::map_response(
+            crate::util::cors::remote_origin_headers_on_success,
+        ))
 }
 
 async fn list(

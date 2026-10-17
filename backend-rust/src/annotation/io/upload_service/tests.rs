@@ -71,7 +71,7 @@ impl DatasetLookup for TestLookup {
                 organization_id: organization_id.to_owned(),
             })
         } else {
-            Err(msg_dataset_name_not_found(dataset_name))
+            Err(crate::msg::dataset::not_found_by_name(dataset_name))
         };
         std::future::ready(Ok(result))
     }

@@ -165,7 +165,8 @@ async fn short_link_roundtrip_and_origin_validation() {
         request(&app, "GET", "/api/shortLinks/byKey/missing", None, None)
             .await
             .0,
-        404
+        // Play: ?~> Msg.shortLinkNotFound without a status.
+        400
     );
     for invalid in [
         "http://localhost:9000.attacker.example/a",

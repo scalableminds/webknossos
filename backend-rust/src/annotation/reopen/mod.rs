@@ -155,7 +155,7 @@ async fn reopen(
     // so a missing serializer dependency rolls back the state and caches.
     crate::annotation::access::find_optional(&mut *transaction, Some(&user), &annotation.id, false)
         .await?
-        .ok_or_else(|| ApiError::not_found(crate::annotation::provider::ANNOTATION_NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::annotation::NOT_FOUND))?;
     let mut json =
         crate::annotation::lists::full_json(&mut transaction, &user, &annotation.id, jobs)
             .await

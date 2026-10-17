@@ -24,6 +24,7 @@ use crate::{
         Job, JobError, JobOutcome, JobSchedule, Scheduler, SchedulerHandle, advisory_lock_key,
         try_advisory_xact_lock,
     },
+    config::{ConfigError, Env},
     error::{ApiError, ApiResult},
     stores::client::{ServiceClients, ServiceError},
 };
@@ -320,7 +321,7 @@ pub(crate) async fn refresh_for_dataset(
     .fetch_optional(pool)
     .await?;
     let (name, url, enabled) =
-        store.ok_or_else(|| ApiError::bad_request("Data store could not be found or accessed."))?;
+        store.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     if !enabled {
         return Ok(());
     }
@@ -468,8 +469,6 @@ pub const DEFAULT_RESCAN_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 pub const DEFAULT_SCANS_PER_TICK: u32 = 10;
 /// Scala `UsedStorageService.pauseAfterEachOrganization` (hard-coded there).
 pub const DEFAULT_PAUSE_AFTER_EACH_ORGANIZATION: Duration = Duration::from_secs(5);
-/// Largest accepted duration / count (same bound as housekeeping and the credit ticker).
-const MAX_VALUE: u64 = i32::MAX as u64;
 
 /// `WK_USED_STORAGE_*` settings of the periodic organization scan (Scala
 /// `webKnossos.fetchUsedStorage.*`).
@@ -509,37 +508,26 @@ impl Default for UsedStorageConfig {
 /// - `WK_USED_STORAGE_RESCAN_INTERVAL_SECONDS` (>= 0, default 86400).
 /// - `WK_USED_STORAGE_SCANS_PER_TICK` (>= 0, default 10).
 /// - `WK_USED_STORAGE_PAUSE_AFTER_ORGANIZATION_SECONDS` (>= 0, default 5).
-pub fn config_from_values(values: &HashMap<String, String>) -> Result<UsedStorageConfig, String> {
-    let number = |name: &str, allow_zero: bool| -> Result<Option<u64>, String> {
-        let Some(value) = values.get(name) else {
-            return Ok(None);
-        };
-        let number: u64 = value
-            .parse()
-            .map_err(|_| format!("{name} must be an unsigned integer"))?;
-        if number == 0 && !allow_zero {
-            return Err(format!("{name} must be greater than zero"));
-        }
-        if number > MAX_VALUE {
-            return Err(format!("{name} exceeds the supported range"));
-        }
-        Ok(Some(number))
-    };
+pub fn config_from_values(
+    values: &HashMap<String, String>,
+) -> Result<UsedStorageConfig, ConfigError> {
+    let env = Env::new(values);
     let seconds = |name: &str, allow_zero: bool, default: Duration| {
-        number(name, allow_zero).map(|value| value.map_or(default, Duration::from_secs))
+        env.seconds(name, allow_zero)
+            .map(|value| value.unwrap_or(default))
     };
-    let enabled = values
-        .get("WK_USED_STORAGE_ENABLED")
-        .map(|value| {
-            value
-                .parse()
-                .map_err(|_| "WK_USED_STORAGE_ENABLED must be true or false".to_owned())
-        })
-        .transpose()?
-        .unwrap_or(true);
+    let scans_per_tick = match env.unsigned("WK_USED_STORAGE_SCANS_PER_TICK")? {
+        None => DEFAULT_SCANS_PER_TICK,
+        Some(scans) if scans <= i32::MAX as u64 => scans as u32,
+        Some(_) => {
+            return Err(ConfigError(
+                "WK_USED_STORAGE_SCANS_PER_TICK exceeds the supported range".into(),
+            ));
+        }
+    };
     Ok(UsedStorageConfig {
         schedule: JobSchedule {
-            enabled,
+            enabled: env.bool_or("WK_USED_STORAGE_ENABLED", true)?,
             interval: seconds(
                 "WK_USED_STORAGE_TICKER_INTERVAL_SECONDS",
                 false,
@@ -556,8 +544,7 @@ pub fn config_from_values(values: &HashMap<String, String>) -> Result<UsedStorag
             true,
             DEFAULT_RESCAN_INTERVAL,
         )?,
-        scans_per_tick: number("WK_USED_STORAGE_SCANS_PER_TICK", true)?
-            .map_or(DEFAULT_SCANS_PER_TICK, |value| value as u32),
+        scans_per_tick,
         pause_after_each_organization: seconds(
             "WK_USED_STORAGE_PAUSE_AFTER_ORGANIZATION_SECONDS",
             true,

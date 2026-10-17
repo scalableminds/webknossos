@@ -63,24 +63,10 @@ pub fn msg_parse_failed(file_name: &str, error: &str) -> String {
     format!("Could not parse file “{file_name}”: {error}")
 }
 
-/// `Msg.Dataset.notFound(id: ObjectId)`.
-pub fn msg_dataset_not_found(dataset_id: &str) -> String {
-    format!("Dataset “{dataset_id}” could not be found or accessed.")
-}
-
-/// `Msg.Dataset.notFound(name: String)`.
-pub fn msg_dataset_name_not_found(name: &str) -> String {
-    format!("Dataset with name “{name}” could not be found or accessed.")
-}
-
 fn msg_dataset_not_found_wrong_host(dataset_id: &str, got_host: &str, this_host: &str) -> String {
     format!(
         "Dataset “{dataset_id}” could not be found or accessed. Please check whether you are on the correct WEBKNOSSOS instance. The uploaded file indicates “{got_host}” while this instance is “{this_host}”."
     )
-}
-
-fn msg_organization_not_found(organization_id: &str) -> String {
-    format!("Organization “{organization_id}” could not be found or accessed.")
 }
 
 fn msg_organization_not_found_wrong_host(
@@ -686,7 +672,7 @@ pub async fn find_one_by_id_or_name_and_organization(
     if let Some(dataset_id) = dataset_id {
         return Ok(find_readable_dataset(pool, user_id, dataset_id)
             .await?
-            .ok_or_else(|| msg_dataset_not_found(dataset_id)));
+            .ok_or_else(|| crate::msg::dataset::not_found(dataset_id)));
     }
     let by_directory_name: Option<DatasetRow> = sqlx::query_as(&format!(
         "SELECT d._id, d.name, d._organization FROM webknossos.datasets_ d
@@ -714,11 +700,11 @@ pub async fn find_one_by_id_or_name_and_organization(
     .fetch_all(pool)
     .await?;
     Ok(match by_name.len() {
-        0 => Err(msg_dataset_name_not_found(dataset_name)),
+        0 => Err(crate::msg::dataset::not_found_by_name(dataset_name)),
         1 => Ok(dataset_ref(by_name.remove(0))),
         _ => Err(format!(
             "{} <~ {MSG_NAME_NOT_UNIQUE}",
-            msg_dataset_name_not_found(dataset_name)
+            crate::msg::dataset::not_found_by_name(dataset_name)
         )),
     })
 }
@@ -1016,7 +1002,7 @@ pub async fn find_dataset_for_uploaded_annotations(
                 return Err(ApiError::not_found(if wrong_host {
                     msg_organization_not_found_wrong_host(&organization_id, wk_url, this_host)
                 } else {
-                    msg_organization_not_found(&organization_id)
+                    crate::msg::organization::not_found(&organization_id)
                 }));
             }
             organization_id
@@ -1028,7 +1014,7 @@ pub async fn find_dataset_for_uploaded_annotations(
         .bind(&dataset_id)
         .fetch_optional(pool)
         .await?
-        .ok_or_else(|| ApiError::forbidden(msg_dataset_not_found(&dataset_id)))?,
+        .ok_or_else(|| ApiError::forbidden(crate::msg::dataset::not_found(&dataset_id)))?,
     };
     let dataset = find_readable_dataset(pool, user_id, &dataset_id)
         .await?
@@ -1036,11 +1022,13 @@ pub async fn find_dataset_for_uploaded_annotations(
             ApiError::forbidden(if wrong_host {
                 msg_dataset_not_found_wrong_host(&dataset_id, wk_url, this_host)
             } else {
-                msg_dataset_not_found(&dataset_id)
+                crate::msg::dataset::not_found(&dataset_id)
             })
         })?;
     if dataset.organization_id != organization_id {
-        return Err(ApiError::forbidden(msg_dataset_not_found(&dataset_id)));
+        return Err(ApiError::forbidden(crate::msg::dataset::not_found(
+            &dataset_id,
+        )));
     }
     Ok(dataset)
 }

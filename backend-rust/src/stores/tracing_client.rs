@@ -29,9 +29,6 @@ use crate::{
 /// RPCRequest.withLongTimeout.
 pub const LONG_REQUEST_TIMEOUT: Duration = Duration::from_secs(2 * 60 * 60);
 
-/// Msg.TracingStore.notFound.
-pub const TRACING_STORE_NOT_FOUND: &str = "Tracing store could not be found or accessed.";
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TracingStoreError {
     Service(ServiceError),
@@ -958,7 +955,7 @@ pub async fn first_tracing_store_url<'e, E: Executor<'e, Database = Postgres>>(
 ) -> ApiResult<String> {
     find_first_tracing_store_url(executor)
         .await?
-        .ok_or_else(|| ApiError::bad_request(TRACING_STORE_NOT_FOUND))
+        .ok_or_else(|| ApiError::bad_request(crate::msg::tracing_store::NOT_FOUND))
 }
 
 /// TracingStoreDAO.findFirst without the error adaptation: `None` when no

@@ -300,7 +300,7 @@ async fn projects_crud_pause_status_and_transactional_cascade() {
         )
         .await
         .0,
-        StatusCode::CONFLICT
+        StatusCode::BAD_REQUEST
     );
     assert_eq!(
         request(
@@ -524,7 +524,7 @@ async fn task_types_crud_immutability_uniqueness_and_cascade() {
         )
         .await
         .0,
-        StatusCode::CONFLICT
+        StatusCode::BAD_REQUEST
     );
     let mut changed = task_type(&f, "Type 2");
     changed["tracingType"] = json!("volume");
@@ -567,7 +567,10 @@ async fn task_types_crud_immutability_uniqueness_and_cascade() {
     assert_eq!(status, StatusCode::OK, "{value}");
     assert_eq!(value["summary"], "Type 2");
     assert_eq!(value["settings"]["mergerMode"], true);
-    assert_eq!(value["messages"][0]["success"], "taskType.editSuccess");
+    assert_eq!(
+        value["messages"][0]["success"],
+        "Task type was successfully updated."
+    );
     let (_, p) = request(
         &app,
         &f.token,
@@ -762,9 +765,11 @@ async fn simultaneous_duplicate_creations_are_serialized() {
             Some(project(&f, "Project-1"))
         )
     );
+    // The loser fails at the existence check (Play's 400) or at the unique constraint (409).
+    let duplicate =
+        |status: StatusCode| status == StatusCode::BAD_REQUEST || status == StatusCode::CONFLICT;
     assert!(
-        (a.0 == StatusCode::OK && b.0 == StatusCode::CONFLICT)
-            || (b.0 == StatusCode::OK && a.0 == StatusCode::CONFLICT),
+        (a.0 == StatusCode::OK && duplicate(b.0)) || (b.0 == StatusCode::OK && duplicate(a.0)),
         "{a:?} {b:?}"
     );
     let (a, b) = tokio::join!(
@@ -784,8 +789,7 @@ async fn simultaneous_duplicate_creations_are_serialized() {
         )
     );
     assert!(
-        (a.0 == StatusCode::OK && b.0 == StatusCode::CONFLICT)
-            || (b.0 == StatusCode::OK && a.0 == StatusCode::CONFLICT),
+        (a.0 == StatusCode::OK && duplicate(b.0)) || (b.0 == StatusCode::OK && duplicate(a.0)),
         "{a:?} {b:?}"
     );
     db.cleanup().await;

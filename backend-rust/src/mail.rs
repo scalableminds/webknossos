@@ -13,6 +13,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::config::{ConfigError, Env};
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     message::{
@@ -187,45 +188,36 @@ impl MailConfig {
 /// | `WK_MAIL_SMTP_PASS` | `mail.smtp.pass` | empty |
 /// | `WK_MAIL_DEFAULT_SENDER` | `mail.defaultSender` | `WEBKNOSSOS <no-reply@webknossos.org>` |
 /// | `WK_MAIL_ADDITIONAL_FOOTER` | `mail.additionalFooter` | empty |
-pub fn config_from_values(values: &HashMap<String, String>) -> Result<MailConfig, String> {
-    let text = |name: &str, default: &str| {
-        values
-            .get(name)
-            .cloned()
-            .unwrap_or_else(|| default.to_owned())
-    };
-    let boolean = |name: &str, default: bool| -> Result<bool, String> {
-        match values.get(name).map(|value| value.trim()) {
-            None => Ok(default),
-            Some(value) => value
-                .parse()
-                .map_err(|_| format!("{name} must be true or false")),
+pub fn config_from_values(values: &HashMap<String, String>) -> Result<MailConfig, ConfigError> {
+    let env = Env::new(values);
+    let port = match env.unsigned("WK_MAIL_SMTP_PORT") {
+        Ok(None) => 465,
+        Ok(Some(port @ 1..=65535)) => port as u16,
+        _ => {
+            return Err(ConfigError(
+                "WK_MAIL_SMTP_PORT must be a port number between 1 and 65535".into(),
+            ));
         }
     };
-    let port = match values.get("WK_MAIL_SMTP_PORT").map(|value| value.trim()) {
-        None => 465,
-        Some(value) => match value.parse::<u16>() {
-            Ok(port) if port > 0 => port,
-            _ => return Err("WK_MAIL_SMTP_PORT must be a port number between 1 and 65535".into()),
-        },
-    };
-    let host = text("WK_MAIL_SMTP_HOST", "").trim().to_owned();
+    let host = env.text("WK_MAIL_SMTP_HOST", "").trim().to_owned();
     if host.chars().any(|c| c.is_whitespace() || c.is_control()) {
-        return Err("WK_MAIL_SMTP_HOST must not contain whitespace".into());
+        return Err(ConfigError(
+            "WK_MAIL_SMTP_HOST must not contain whitespace".into(),
+        ));
     }
     let config = MailConfig {
-        log_to_stdout: boolean("WK_MAIL_LOG_TO_STDOUT", false)?,
+        log_to_stdout: env.bool_or("WK_MAIL_LOG_TO_STDOUT", false)?,
         smtp: SmtpConfig {
             host,
             port,
-            tls: boolean("WK_MAIL_SMTP_TLS", true)?,
-            auth: boolean("WK_MAIL_SMTP_AUTH", true)?,
-            user: text("WK_MAIL_SMTP_USER", ""),
-            pass: text("WK_MAIL_SMTP_PASS", ""),
+            tls: env.bool_or("WK_MAIL_SMTP_TLS", true)?,
+            auth: env.bool_or("WK_MAIL_SMTP_AUTH", true)?,
+            user: env.text("WK_MAIL_SMTP_USER", ""),
+            pass: env.text("WK_MAIL_SMTP_PASS", ""),
         },
         settings: MailSettings {
-            default_sender: text("WK_MAIL_DEFAULT_SENDER", DEFAULT_SENDER),
-            additional_footer: text("WK_MAIL_ADDITIONAL_FOOTER", ""),
+            default_sender: env.text("WK_MAIL_DEFAULT_SENDER", DEFAULT_SENDER),
+            additional_footer: env.text("WK_MAIL_ADDITIONAL_FOOTER", ""),
         },
     };
     if config.smtp_enabled() {
@@ -234,7 +226,9 @@ pub fn config_from_values(values: &HashMap<String, String>) -> Result<MailConfig
             .settings
             .default_sender
             .parse::<Mailbox>()
-            .map_err(|_| "WK_MAIL_DEFAULT_SENDER must be a mailbox like `Name <address>`")?;
+            .map_err(|_| {
+                ConfigError("WK_MAIL_DEFAULT_SENDER must be a mailbox like `Name <address>`".into())
+            })?;
     }
     Ok(config)
 }

@@ -19,10 +19,9 @@ use std::{
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation::metadata::NOT_ALLOWED,
-    annotation::provider::{AnnotationProvider, RESOURCE_NOT_FOUND},
+    annotation::provider::AnnotationProvider,
     stores::client::{ServiceClientConfig, ServiceClients},
-    stores::tracing_client::{TRACING_STORE_NOT_FOUND, TracingStoreClient},
+    stores::tracing_client::TracingStoreClient,
 };
 
 struct World {
@@ -238,16 +237,25 @@ async fn permissions_validation_and_limit_are_checked_before_any_reservation() {
     );
     assert_eq!(
         reserve(&app, collaborator, &owner_only, "t", "Segment", 1, &[]).await,
-        (StatusCode::FORBIDDEN, error(NOT_ALLOWED))
+        (
+            StatusCode::FORBIDDEN,
+            error(webknossos_backend::msg::NOT_ALLOWED)
+        )
     );
     assert_eq!(
         reserve(&app, owner, &finished, "t", "Segment", 1, &[]).await,
-        (StatusCode::FORBIDDEN, error(NOT_ALLOWED))
+        (
+            StatusCode::FORBIDDEN,
+            error(webknossos_backend::msg::NOT_ALLOWED)
+        )
     );
     // Domain validation: query is case-sensitive Empty -> 404; body is JSON 400.
     assert_eq!(
         reserved(&app, owner, &owner_only, "t", "segment").await,
-        (StatusCode::NOT_FOUND, error(RESOURCE_NOT_FOUND))
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::NOT_FOUND)
+        )
     );
     let (status, _) = reserve(&app, owner, &owner_only, "t", "segment", 1, &[]).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
@@ -279,7 +287,10 @@ async fn permissions_validation_and_limit_are_checked_before_any_reservation() {
     );
     assert_eq!(
         reserve(&app, collaborator, &owner_only, "t", "Segment", 11, &[]).await,
-        (StatusCode::FORBIDDEN, error(NOT_ALLOWED))
+        (
+            StatusCode::FORBIDDEN,
+            error(webknossos_backend::msg::NOT_ALLOWED)
+        )
     );
     assert!(mock.calls().is_empty());
     assert!(rows(&db, &owner_only).await.is_empty());
@@ -393,7 +404,10 @@ async fn first_reservation_uses_tracingstore_maximum_then_continues_and_releases
         .unwrap();
     assert_eq!(
         reserve(&app, owner, &id, "fresh", "Tree", 2, &[]).await,
-        (StatusCode::BAD_REQUEST, error(TRACING_STORE_NOT_FOUND))
+        (
+            StatusCode::BAD_REQUEST,
+            error(webknossos_backend::msg::tracing_store::NOT_FOUND)
+        )
     );
     // Existing reservations never need the tracing store.
     assert_eq!(
@@ -487,7 +501,10 @@ async fn concurrent_reservations_do_not_overlap_and_serialize_with_mode_changes(
             &[]
         )
         .await,
-        (StatusCode::FORBIDDEN, error(NOT_ALLOWED))
+        (
+            StatusCode::FORBIDDEN,
+            error(webknossos_backend::msg::NOT_ALLOWED)
+        )
     );
     // The owner may still reserve in OwnerOnly mode.
     assert_eq!(

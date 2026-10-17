@@ -26,21 +26,9 @@ use crate::{
     util::id::ObjectId,
 };
 
-/// Msg.User.Token.invalid.
-const TOKEN_INVALID: &str = "The supplied token is invalid or expired.";
-/// Msg.notFound (Fox.Empty in a Play action).
-const EMPTY_NOT_FOUND: &str = "Could not find or access the requested resource.";
-/// Msg.Dataset.DataSource.notFound.
-const DATA_SOURCE_NOT_FOUND: &str =
-    "Data source not found on data store server. It may still be initializing.";
-/// Msg.DataStore.notFound.
-const DATA_STORE_NOT_FOUND: &str = "Data store could not be found or accessed.";
 /// Msg.Dataset.Upload.reserveMagUploadNotVirtual.
 const MAG_NOT_VIRTUAL: &str =
     "Mag upload to existing dataset is only supported for virtual datasets.";
-/// Msg.Dataset.Upload.ToPaths.magAlreadyPending.
-const MAG_ALREADY_PENDING: &str =
-    "Conflict with existing pending mag. Pass overwritePending to overwrite.";
 /// Msg.Dataset.Upload.magNotPending.
 const MAG_NOT_PENDING: &str = "This mag is not marked as pending.";
 /// Msg.Dataset.Upload.magPathNotSet.
@@ -78,7 +66,23 @@ pub(crate) async fn user_for_callback_token(
 ) -> ApiResult<AuthUser> {
     auth::user_for_service_token(pool, token)
         .await?
-        .ok_or_else(|| ApiError::bad_request(TOKEN_INVALID))
+        .ok_or_else(|| ApiError::bad_request(crate::msg::user::token::INVALID))
+}
+
+/// `bearerTokenService.userForToken(token) ~> FORBIDDEN`: the token failure
+/// keeps its message (Msg.User.Token.invalid) with status 403.
+pub(crate) async fn user_for_token_forbidden(
+    pool: &sqlx::PgPool,
+    token: &str,
+) -> ApiResult<AuthUser> {
+    user_for_callback_token(pool, token)
+        .await
+        .map_err(|mut error| {
+            if error.status == StatusCode::BAD_REQUEST {
+                error.status = StatusCode::FORBIDDEN;
+            }
+            error
+        })
 }
 
 /// ResumableUploadInfo; validated like Play's Reads, otherwise unused here.
@@ -122,7 +126,7 @@ pub(crate) async fn load_virtual_upload_target(
     dataset_id: &ObjectId,
     not_virtual_message: &str,
 ) -> ApiResult<UploadTarget> {
-    let not_found = || ApiError::not_found(EMPTY_NOT_FOUND);
+    let not_found = || ApiError::not_found(crate::msg::NOT_FOUND);
     if !crate::dataset::access::can_read(pool, Some(user), dataset_id.as_str(), None).await? {
         return Err(not_found());
     }
@@ -151,12 +155,13 @@ pub(crate) async fn require_usable_layer(
     layer_name: &str,
 ) -> ApiResult<()> {
     if target.is_usable && !target.has_voxel_size {
-        return Err(ApiError::not_found(DATA_SOURCE_NOT_FOUND));
+        return Err(ApiError::not_found(
+            crate::msg::dataset::data_source::NOT_FOUND,
+        ));
     }
     if !target.is_usable {
-        return Err(ApiError::bad_request(format!(
-            "Dataset “{}” is not imported or incomplete.",
-            target.id
+        return Err(ApiError::bad_request(crate::msg::dataset::not_usable(
+            &target.id,
         )));
     }
     let exists: bool = sqlx::query_scalar(
@@ -167,9 +172,9 @@ pub(crate) async fn require_usable_layer(
     .fetch_one(pool)
     .await?;
     if !exists {
-        return Err(ApiError::bad_request(format!(
-            "Could not find layer “{layer_name}” in dataset."
-        )));
+        return Err(ApiError::bad_request(
+            crate::msg::dataset::layer::not_found(layer_name),
+        ));
     }
     Ok(())
 }
@@ -201,7 +206,7 @@ pub(crate) async fn after_upload_reported(
         .await?
         .ok_or_else(|| crate::dataset::lifecycle::not_found(dataset_id))?;
     if record.store_url.is_none() {
-        return Err(ApiError::bad_request(DATA_STORE_NOT_FOUND));
+        return Err(ApiError::bad_request(crate::msg::data_store::NOT_FOUND));
     }
     crate::dataset::lifecycle::invalidate_cache(clients, &record).await?;
     crate::organization::storage::refresh_for_dataset(pool, clients, dataset_id).await
@@ -332,7 +337,9 @@ async fn reserve_mag_upload(
     .fetch_all(pool)
     .await?;
     if !pending.is_empty() && !body.overwrite_pending {
-        return Err(ApiError::bad_request(MAG_ALREADY_PENDING));
+        return Err(ApiError::bad_request(
+            crate::msg::dataset::upload::to_paths::MAG_ALREADY_PENDING,
+        ));
     }
     if body.overwrite_pending {
         let old_paths: Vec<String> = pending
@@ -343,11 +350,11 @@ async fn reserve_mag_upload(
         if !old_paths.is_empty() {
             let record = crate::dataset::lifecycle::load_record(pool, &target.id)
                 .await?
-                .ok_or_else(|| ApiError::not_found(EMPTY_NOT_FOUND))?;
+                .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
             let store_url = record
                 .store_url
                 .as_deref()
-                .ok_or_else(|| ApiError::bad_request(DATA_STORE_NOT_FOUND))?;
+                .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
             crate::dataset::paths::delete_paths(pool, &clients, store_url, &old_paths).await?;
         }
     }
@@ -381,7 +388,9 @@ async fn reserve_mag_upload(
         .fetch_one(&mut *transaction)
         .await?;
         if raced {
-            return Err(ApiError::bad_request(MAG_ALREADY_PENDING));
+            return Err(ApiError::bad_request(
+                crate::msg::dataset::upload::to_paths::MAG_ALREADY_PENDING,
+            ));
         }
     }
     // DatasetMagDAO.insertWithUploadPending.

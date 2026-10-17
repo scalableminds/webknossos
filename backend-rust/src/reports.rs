@@ -30,9 +30,7 @@ async fn require_readable_team(state: &AppState, user: &AuthUser, id: &ObjectId)
     .fetch_one(&state.pool)
     .await?;
     if !readable {
-        return Err(ApiError::not_found(format!(
-            "Team “{id}” could not be found or accessed."
-        )));
+        return Err(ApiError::not_found(crate::msg::team::not_found(id)));
     }
     Ok(())
 }

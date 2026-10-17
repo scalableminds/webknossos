@@ -291,7 +291,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         };
         app = app.nest(&format!("/api/v{version}"), api.clone().merge(dataset_api));
     }
-    app.fallback(|| async { ApiError::not_found("Route not implemented by the Rust backend.") })
+    app.fallback(fallback)
         .method_not_allowed_fallback(|| async {
             ApiError::new(StatusCode::METHOD_NOT_ALLOWED, "Method not allowed.")
         })
@@ -315,17 +315,32 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .layer(CatchPanicLayer::custom(|_| {
             ApiError::internal().into_response()
         }))
+        // Outside the panic catcher so a panic is counted as the 500 it becomes.
+        .layer(middleware::from_fn(crate::system::metrics::record))
         .layer(middleware::from_fn(response_headers))
         .layer(
-            TraceLayer::new_for_http().make_span_with(|request: &Request| {
-                // Never log raw URI/query strings: legacy clients put auth tokens in them.
-                let route = request
-                    .extensions()
-                    .get::<MatchedPath>()
-                    .map(MatchedPath::as_str)
-                    .unwrap_or("unmatched");
-                tracing::info_span!("http_request", method = %request.method(), route)
-            }),
+            TraceLayer::new_for_http()
+                .make_span_with(|request: &Request| {
+                    // Never log raw URI/query strings: legacy clients put auth tokens in them.
+                    let route = request
+                        .extensions()
+                        .get::<MatchedPath>()
+                        .map(MatchedPath::as_str)
+                        .unwrap_or("unmatched");
+                    let request_id = request
+                        .headers()
+                        .get("x-request-id")
+                        .and_then(|value| value.to_str().ok())
+                        .unwrap_or("");
+                    tracing::info_span!("http_request", method = %request.method(), route, request_id)
+                })
+                // Access log: one INFO line per response with status and latency
+                // (`RUST_LOG=tower_http=info`, the default); 5xx additionally logs at ERROR.
+                .on_response(
+                    tower_http::trace::DefaultOnResponse::new()
+                        .level(tracing::Level::INFO)
+                        .latency_unit(tower_http::LatencyUnit::Millis),
+                ),
         )
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
@@ -395,3 +410,27 @@ async fn response_headers(request: Request, next: Next) -> Response {
 
 #[cfg(test)]
 mod tests;
+
+/// Unknown routes. Requests for an unsupported API version get Play's
+/// `ApiVersioning.invalidApiVersionMessage` (RequestHandler checks the version before routing).
+async fn fallback(uri: axum::http::Uri) -> ApiError {
+    const OLDEST: u64 = 10;
+    const CURRENT: u64 = 16;
+    let version = ["/api/v", "/data/v", "/tracings/v"]
+        .iter()
+        .find_map(|prefix| {
+            let digits: String = uri
+                .path()
+                .strip_prefix(prefix)?
+                .chars()
+                .take_while(char::is_ascii_digit)
+                .collect();
+            (!digits.is_empty()).then(|| digits.parse::<u64>().unwrap_or(u64::MAX))
+        });
+    match version {
+        Some(version) if !(OLDEST..=CURRENT).contains(&version) => ApiError::not_found(format!(
+            "This WEBKNOSSOS instance does not support the requested HTTP API version. Client requested {version} but must be at least {OLDEST} and at most {CURRENT}."
+        )),
+        _ => ApiError::not_found("Route not implemented by the Rust backend."),
+    }
+}

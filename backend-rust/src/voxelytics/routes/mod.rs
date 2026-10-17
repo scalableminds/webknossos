@@ -23,6 +23,7 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::{Path, Query},
     system::application_info::MiscState,
+    system::application_info::ok_empty,
     util::id::ObjectId,
     voxelytics::dao::{self as dao, ArtifactValues, NewRun, Timestamp},
     voxelytics::loki::{LOG_LEVELS, LokiClient},
@@ -30,16 +31,11 @@ use crate::{
 
 pub use crate::voxelytics::loki::LokiConfig;
 
-const NOT_ENABLED: &str =
-    "Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.";
 const NO_TASK_FOUND: &str = "No voxelytics tasks found.";
 const NO_WORKFLOW_FOUND: &str = "No voxelytics workflows found.";
 const RUN_NOT_FOUND: &str = "Voxelytics workflow runs not found.";
 const WORKFLOW_NOT_FOUND: &str = "Voxelytics workflow not found.";
 const WORKFLOW_USER_MISMATCH: &str = "Voxelytics workflow run already exists by another user.";
-const SUPER_USER_ONLY: &str = "This feature is currently only available for superusers.";
-/// Msg.notFound: Play's response for an empty Fox.
-const NOT_FOUND: &str = "Could not find or access the requested resource.";
 
 const WORKFLOW_EVENT_INSERT_BATCH_SIZE: usize = 500;
 
@@ -110,12 +106,8 @@ fn ensure_enabled(misc: &MiscState) -> ApiResult<()> {
     if misc.config().features.get("voxelyticsEnabled") == Some(&Value::Bool(true)) {
         Ok(())
     } else {
-        Err(ApiError::bad_request(NOT_ENABLED))
+        Err(ApiError::bad_request(crate::msg::voxelytics::NOT_ENABLED))
     }
-}
-
-fn ok_empty() -> Response {
-    StatusCode::OK.into_response()
 }
 
 fn millis(time: &Timestamp) -> Value {
@@ -132,7 +124,8 @@ fn insert_opt(object: &mut Map<String, Value>, key: &str, value: Value) {
 /// Parse the JSON body ourselves so that malformed bodies answer like Play's
 /// validateJson (400) and the 2 MiB default limit still applies.
 fn parse_body<T: serde::de::DeserializeOwned>(body: &[u8]) -> ApiResult<T> {
-    serde_json::from_slice(body).map_err(|_| ApiError::bad_request("Invalid JSON request body."))
+    serde_json::from_slice(body)
+        .map_err(|_| ApiError::bad_request(crate::msg::request::INVALID_JSON_BODY))
 }
 
 // ---------------------------------------------------------------------------
@@ -159,7 +152,8 @@ fn parse_instant(value: &Value) -> Option<DateTime<Utc>> {
 
 fn instant<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<DateTime<Utc>, D::Error> {
     let value = Value::deserialize(deserializer)?;
-    parse_instant(&value).ok_or_else(|| serde::de::Error::custom("Invalid timestamp."))
+    parse_instant(&value)
+        .ok_or_else(|| serde::de::Error::custom(crate::msg::request::INVALID_TIMESTAMP))
 }
 
 fn run_state<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
@@ -743,7 +737,7 @@ async fn delete_workflow(
 ) -> ApiResult<Response> {
     ensure_enabled(&misc)?;
     if !user.is_superuser {
-        return Err(ApiError::bad_request(SUPER_USER_ONLY));
+        return Err(ApiError::bad_request(crate::msg::user::SUPER_USER_ONLY));
     }
     if !dao::workflow_hash_exists(&state.pool, &workflow_hash).await? {
         return Err(ApiError::not_found(WORKFLOW_NOT_FOUND));
@@ -1058,7 +1052,7 @@ struct LogsQuery {
 fn required_param<'a>(value: &'a Option<String>, name: &str) -> ApiResult<&'a str> {
     value
         .as_deref()
-        .ok_or_else(|| ApiError::bad_request(format!("Missing parameter: {name}")))
+        .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter(name)))
 }
 
 /// GET /voxelytics/logs?runId=&taskName=&minLevel=&startTimestamp=&endTimestamp=&limit=
@@ -1098,7 +1092,7 @@ async fn get_logs(
     // organization is readable, matching the report's allowUnlisted access.
     let run_name = dao::run_name_by_id(&state.pool, run_id.as_str(), &user.organization_id)
         .await?
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let min_level = query
         .min_level
         .as_deref()

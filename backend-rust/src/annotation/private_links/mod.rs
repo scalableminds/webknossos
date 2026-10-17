@@ -228,7 +228,7 @@ async fn source(
         JOIN webknossos.dataStores_ store ON store.name=trim(d._dataStore)
         WHERE a._id=$1"#).bind(&annotation.id).bind(via_private_link).fetch_optional(&state.pool).await?.ok_or_else(||ApiError::not_found("Annotation source not found."))?;
     if value["tracingStoreUrl"].is_null() {
-        return Err(ApiError::not_found("Tracing store not found."));
+        return Err(ApiError::not_found(crate::msg::tracing_store::MISSING));
     }
     Ok(ResponseJson(value))
 }

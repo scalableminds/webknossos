@@ -31,7 +31,9 @@ use crate::{
     stores::client::ServiceClients,
     system::analytics::{properties, track, track_for_user},
     system::application_info::MiscState,
+    system::application_info::ok_empty,
     util::id::ObjectId,
+    util::text::normalize_strong,
 };
 
 pub(crate) mod organization_messages {
@@ -40,8 +42,6 @@ pub(crate) mod organization_messages {
         "Your account is already associated with the selected organization.";
     pub const AMBIGUOUS: &str =
         "Registration without invite is not allowed for instances with multiple organizations.";
-    pub const NOT_FOUND_BY_INVITE: &str =
-        "Organization specified in the invite could not be found.";
     pub const ID_TAKEN: &str = "This id is already in use by a different organization and not available anymore. Please choose a different id.";
     pub const ID_INVALID: &str =
         "This organization id contains illegal characters. Please only use letters and numbers.";
@@ -51,14 +51,6 @@ pub(crate) mod organization_messages {
         "Registration without invite is not enabled for this WEBKNOSSOS instance.";
     pub const INVALID_INVITE_TOKEN: &str = "This invite token is invalid.";
     pub const TOS_NOT_ACCEPTED: &str = "Terms of service must be accepted.";
-    pub fn not_found(id: &str) -> String {
-        format!("Organization “{id}” could not be found or accessed.")
-    }
-    pub fn tos_version_mismatch(required: i32, version: i32) -> String {
-        format!(
-            "Terms of service version mismatch. Current version is {required}, received acceptance for {version}."
-        )
-    }
 }
 use organization_messages as org_msg;
 
@@ -88,10 +80,6 @@ pub fn router() -> Router<AppState> {
 // ---------------------------------------------------------------------------
 // Shared helpers
 
-fn ok_empty() -> Response {
-    StatusCode::OK.into_response()
-}
-
 fn ok_text(text: String) -> Response {
     (
         StatusCode::OK,
@@ -111,49 +99,6 @@ fn messages_response(errors: &[String]) -> Response {
         axum::Json(json!({ "messages": messages })),
     )
         .into_response()
-}
-
-/// TextUtils.normalizeStrong: transliterate, then keep `[A-Za-z0-9_\-\s]`.
-pub(crate) fn normalize_strong(value: &str) -> Option<String> {
-    let mut normalized = String::new();
-    for c in value.chars() {
-        let replacement = match c {
-            'ü' => "ue",
-            'Ü' => "Ue",
-            'ö' => "oe",
-            'Ö' => "Oe",
-            'ä' => "ae",
-            'Ä' => "Ae",
-            'ß' => "ss",
-            'é' | 'è' | 'ê' | 'ë' => "e",
-            'È' | 'É' | 'Ê' | 'Ë' => "E",
-            'Ç' => "C",
-            'ç' => "c",
-            'ñ' => "n",
-            'Ñ' => "N",
-            'ï' | 'í' | 'ì' => "i",
-            'Ï' => "I",
-            'å' => "a",
-            'Å' => "A",
-            'œ' | 'ø' => "oe",
-            'Œ' | 'Ø' => "Oe",
-            'æ' => "ae",
-            'Æ' => "Ae",
-            'þ' => "th",
-            'Þ' => "Th",
-            _ => {
-                // Java's \s: space, \t, \n, \x0B, \f, \r.
-                if c.is_ascii_alphanumeric()
-                    || matches!(c, '_' | '-' | ' ' | '\t' | '\n' | '\x0B' | '\x0C' | '\r')
-                {
-                    normalized.push(c);
-                }
-                continue;
-            }
-        };
-        normalized.push_str(replacement);
-    }
-    (!normalized.is_empty()).then_some(normalized)
 }
 
 /// validateNameAndEmail: Ok(normalized names, lowercased email) or the
@@ -181,7 +126,7 @@ async fn validate_name_and_email(
             .fetch_one(&mut **tx)
             .await?;
     if taken {
-        errors.insert(0, messages::EMAIL_TAKEN.to_owned());
+        errors.insert(0, crate::msg::user::email::TAKEN.to_owned());
     }
     Ok(match (first, last) {
         (Some(first), Some(last)) if errors.is_empty() => Ok((first, last, email)),
@@ -243,7 +188,7 @@ async fn find_organization(
 
 /// organizationService.assertUsersCanBeAdded. Locks the organization row so
 /// concurrent additions cannot exceed the limit.
-async fn assert_users_can_be_added(
+pub(crate) async fn assert_users_can_be_added(
     tx: &mut Transaction<'_, Postgres>,
     organization_id: &str,
 ) -> ApiResult<()> {
@@ -355,7 +300,7 @@ pub(crate) async fn insert_account(
             .fetch_one(&mut **tx)
             .await?;
     if taken {
-        return Err(ApiError::bad_request(messages::EMAIL_TAKEN));
+        return Err(ApiError::bad_request(crate::msg::user::email::TAKEN));
     }
     let (hasher, hash) = match account.password {
         Some(password) => ("SCrypt", hash_password(password).await?),
@@ -437,7 +382,7 @@ pub(crate) async fn join_organization_as(
     .await?
     .rows_affected();
     if inserted == 0 {
-        return Err(ApiError::bad_request(messages::USER_NOT_FOUND));
+        return Err(ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID));
     }
     insert_team_memberships(tx, new_user_id.as_str(), team_memberships).await?;
     tracing::info!(
@@ -584,13 +529,14 @@ async fn create_user(
     Ok(created)
 }
 
-/// organizationService.createOrganization
-async fn create_organization(
+/// organizationService.createOrganization: organization, root folder and
+/// organization team. Returns the organization and organization team IDs.
+pub(crate) async fn insert_organization(
     tx: &mut Transaction<'_, Postgres>,
-    config: &BrowserAuthConfig,
+    is_wkorg_instance: bool,
     requested_id: Option<&str>,
     name: &str,
-) -> ApiResult<OrganizationRow> {
+) -> ApiResult<(String, String)> {
     let normalized_name =
         normalize_strong(name).ok_or_else(|| ApiError::bad_request(org_msg::ID_INVALID))?;
     let id = requested_id
@@ -607,7 +553,7 @@ async fn create_organization(
         return Err(ApiError::bad_request(org_msg::ID_TAKEN));
     }
     let (plan, included_users, included_storage): (&str, Option<i32>, Option<i64>) =
-        if config.is_wkorg_instance {
+        if is_wkorg_instance {
             ("Personal", Some(1), Some(50_000_000_000))
         } else {
             ("Custom", None, None)
@@ -641,13 +587,25 @@ async fn create_organization(
     .bind(included_storage)
     .execute(&mut **tx)
     .await?;
+    let team = ObjectId::new();
     sqlx::query(
         "INSERT INTO webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted) VALUES($1, $2, 'Default', statement_timestamp(), TRUE, FALSE)",
     )
-    .bind(ObjectId::new().as_str())
+    .bind(team.as_str())
     .bind(&id)
     .execute(&mut **tx)
     .await?;
+    Ok((id, team.into()))
+}
+
+/// organizationService.createOrganization
+async fn create_organization(
+    tx: &mut Transaction<'_, Postgres>,
+    config: &BrowserAuthConfig,
+    requested_id: Option<&str>,
+    name: &str,
+) -> ApiResult<OrganizationRow> {
+    let (id, _) = insert_organization(tx, config.is_wkorg_instance, requested_id, name).await?;
     Ok(OrganizationRow {
         id,
         name: name.to_owned(),
@@ -658,7 +616,7 @@ async fn create_organization(
 
 /// organizationService.createOrganizationDirectory: notify every datastore.
 /// Like Play, individual RPC failures are ignored.
-async fn create_organization_directory(
+pub(crate) async fn create_organization_directory(
     pool: &sqlx::PgPool,
     clients: Option<&ServiceClients>,
     organization_id: &str,
@@ -761,7 +719,7 @@ async fn register(
     let organization = match &invite {
         Some(invite) => find_organization(&mut tx, &invite.organization_id)
             .await?
-            .ok_or_else(|| ApiError::bad_request(org_msg::NOT_FOUND_BY_INVITE))?,
+            .ok_or_else(|| ApiError::bad_request(crate::msg::organization::NOT_FOUND_BY_INVITE))?,
         None => {
             let organizations: Vec<OrganizationRow> = sqlx::query_as(&format!(
                 "SELECT {ORGANIZATION_COLUMNS} FROM webknossos.organizations_ ORDER BY _id LIMIT 2"
@@ -885,10 +843,12 @@ async fn create_organization_with_admin(
             .accepted_terms_of_service
             .ok_or_else(|| ApiError::bad_request(org_msg::TOS_NOT_ACCEPTED))?;
         if version != config.terms_of_service_version {
-            return Err(ApiError::bad_request(org_msg::tos_version_mismatch(
-                config.terms_of_service_version,
-                version,
-            )));
+            return Err(ApiError::bad_request(
+                crate::msg::organization::terms_of_service::version_mismatch(
+                    config.terms_of_service_version,
+                    version,
+                ),
+            ));
         }
         sqlx::query(
             "UPDATE webknossos.organizations SET lastTermsOfServiceAcceptanceTime = statement_timestamp(), lastTermsOfServiceAcceptanceVersion = $2 WHERE _id = $1",
@@ -939,7 +899,7 @@ async fn create_organization_with_existing_user(
     Json(body): Json<ExistingUserOrganization>,
 ) -> ApiResult<axum::Json<String>> {
     if !requester.is_superuser {
-        return Err(ApiError::bad_request(messages::SUPER_USER_ONLY));
+        return Err(ApiError::bad_request(crate::msg::user::SUPER_USER_ONLY));
     }
     let mut tx = state.pool.begin().await?;
     let exists: bool =
@@ -948,7 +908,7 @@ async fn create_organization_with_existing_user(
             .fetch_one(&mut *tx)
             .await?;
     if !exists {
-        return Err(ApiError::bad_request(messages::USER_NOT_FOUND));
+        return Err(ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID));
     }
     let organization = create_organization(
         &mut tx,
@@ -1003,12 +963,14 @@ async fn create_user_in_organization(
     Json(body): Json<CreateUserInOrganization>,
 ) -> ApiResult<Response> {
     if !requester.is_superuser {
-        return Err(ApiError::forbidden(messages::NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let mut tx = state.pool.begin().await?;
     let organization = find_organization(&mut tx, &organization_id)
         .await?
-        .ok_or_else(|| ApiError::bad_request(org_msg::not_found(&organization_id)))?;
+        .ok_or_else(|| {
+            ApiError::bad_request(crate::msg::organization::not_found(&organization_id))
+        })?;
     let (first_name, last_name, email) =
         match validate_name_and_email(&mut tx, &body.first_name, &body.last_name, &body.email)
             .await?
@@ -1247,7 +1209,7 @@ async fn add_user(
     Json(email): Json<String>,
 ) -> ApiResult<Response> {
     if !requester.is_superuser {
-        return Err(ApiError::forbidden(messages::NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let mut tx = state.pool.begin().await?;
     let multi_user_id: String =
@@ -1255,17 +1217,19 @@ async fn add_user(
             .bind(&email)
             .fetch_optional(&mut *tx)
             .await?
-            .ok_or_else(|| ApiError::bad_request(messages::USER_NOT_FOUND))?;
+            .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     let organization = find_organization(&mut tx, &organization_id)
         .await?
-        .ok_or_else(|| ApiError::not_found(org_msg::not_found(&organization_id)))?;
+        .ok_or_else(|| {
+            ApiError::not_found(crate::msg::organization::not_found(&organization_id))
+        })?;
     let original: String = sqlx::query_scalar(
         "SELECT _id FROM webknossos.users_ WHERE _multiUser = $1 AND NOT isDeactivated ORDER BY created, _id LIMIT 1",
     )
     .bind(&multi_user_id)
     .fetch_optional(&mut *tx)
     .await?
-    .ok_or_else(|| ApiError::bad_request(messages::USER_NOT_FOUND))?;
+    .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     let team_memberships = initial_team_memberships(&mut tx, &organization.id, None).await?;
     let user_id = join_organization_as(
         &mut tx,
@@ -1282,6 +1246,3 @@ async fn add_user(
     tx.commit().await?;
     Ok(ok_text(user_id))
 }
-
-#[cfg(test)]
-mod tests;

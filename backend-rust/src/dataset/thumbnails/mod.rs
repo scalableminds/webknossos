@@ -80,11 +80,9 @@ async fn require_read(
 ) -> ApiResult<()> {
     if !crate::dataset::access::can_read(&state.pool, user, id.as_str(), sharing_token).await? {
         return Err(ApiError::not_found(if user.is_some() {
-            format!("Dataset “{id}” could not be found or accessed.")
+            crate::msg::dataset::not_found(id)
         } else {
-            format!(
-                "Dataset “{id}” could not be found or accessed. You may need to log in to see it."
-            )
+            crate::msg::dataset::not_found_consider_login(id)
         }));
     }
     Ok(())
@@ -352,7 +350,7 @@ async fn load_dataset(state: &AppState, id: &ObjectId) -> ApiResult<DatasetRow> 
     .bind(id.as_str())
     .fetch_optional(&state.pool)
     .await?
-    .ok_or_else(|| ApiError::not_found(format!("Dataset “{id}” could not be found or accessed.")))
+    .ok_or_else(|| ApiError::not_found(crate::msg::dataset::not_found(id)))
 }
 
 /// DatasetService.usableDataSourceFor: unusable datasets fail before layers load.
@@ -362,13 +360,11 @@ async fn usable_layers(
     dataset: &DatasetRow,
 ) -> ApiResult<Vec<Value>> {
     if !dataset.is_usable {
-        return Err(ApiError::bad_request(format!(
-            "Dataset “{id}” is not imported or incomplete."
-        )));
+        return Err(ApiError::bad_request(crate::msg::dataset::not_usable(id)));
     }
     if !dataset.has_voxel_size {
         return Err(ApiError::bad_request(
-            "Dataset is marked as usable but has no voxel size.",
+            crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE,
         ));
     }
     crate::dataset::routes::full_layers(&state.pool, id.as_str()).await
@@ -378,7 +374,7 @@ fn store_url(dataset: &DatasetRow) -> ApiResult<&str> {
     dataset
         .store_url
         .as_deref()
-        .ok_or_else(|| ApiError::bad_request("Data store could not be found or accessed."))
+        .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))
 }
 
 struct ThumbnailRecord<'a> {
@@ -465,11 +461,9 @@ async fn layer_thumbnail(
     let layer = layers
         .iter()
         .find(|layer| layer.name == layer_name)
-        .ok_or_else(|| {
-            ApiError::bad_request(format!("Could not find layer “{layer_name}” in dataset."))
-        })?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::layer::not_found(&layer_name)))?;
     if layer.mags.is_empty() {
-        return Err(ApiError::not_found("Data layer does not contain any mags."));
+        return Err(ApiError::not_found(crate::msg::dataset::NO_MAGS));
     }
     let configuration = view_configuration(&dataset, &raw_layers);
     let config = Config(&configuration);
@@ -622,7 +616,7 @@ async fn dataset_thumbnail(
     let dataset = load_dataset(&state, &id).await?;
     let raw_layers = usable_layers(&state, &id, &dataset).await?;
     if raw_layers.is_empty() {
-        return Err(ApiError::not_found("Dataset has no data layers."));
+        return Err(ApiError::not_found(crate::msg::dataset::NO_LAYERS));
     }
     let layers = raw_layers
         .iter()
@@ -633,7 +627,7 @@ async fn dataset_thumbnail(
     let to_render = layers_to_render(&config, &layers);
     let first = *to_render
         .first()
-        .ok_or_else(|| ApiError::not_found("Data layer does not contain any mags."))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::dataset::NO_MAGS))?;
     let has_color_layers = to_render.iter().any(|l| l.category == "color");
     let (center, zoom) = center_and_zoom(&config, &layers, first);
     let mag1_width = java_round_to_int(f64::from(width) * zoom);

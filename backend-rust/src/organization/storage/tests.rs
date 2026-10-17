@@ -77,7 +77,7 @@ fn config_rejects_invalid_values() {
         ("WK_USED_STORAGE_PAUSE_AFTER_ORGANIZATION_SECONDS", "x"),
     ] {
         let error = config_from_values(&values(&[(key, value)])).unwrap_err();
-        assert!(error.starts_with(key), "{error}");
+        assert!(error.0.starts_with(key), "{error}");
     }
 }
 

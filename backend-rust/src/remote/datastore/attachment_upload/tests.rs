@@ -14,6 +14,6 @@ fn pending_placeholder_is_a_valid_upath_and_singletons_match_scala() {
         (AttachmentType::Cumsum, true),
         (AttachmentType::SegmentStatistics, true),
     ] {
-        assert_eq!(is_singleton(typ), singleton, "{typ:?}");
+        assert_eq!(typ.is_singleton(), singleton, "{typ:?}");
     }
 }

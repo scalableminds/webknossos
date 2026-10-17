@@ -22,7 +22,6 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     annotation::merge::{MERGE_FAILED, MERGE_SUCCESS},
-    annotation::provider::{ANNOTATION_NOT_FOUND, RESOURCE_NOT_FOUND},
     annotation::reset::{RESET_FAILED, RESET_SUCCESS},
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     router,
@@ -440,7 +439,7 @@ async fn untyped_merge_resolves_stored_type() {
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body, error(ANNOTATION_NOT_FOUND));
+    assert_eq!(body, error(webknossos_backend::msg::annotation::NOT_FOUND));
     assert_eq!(mock.calls().len(), 1);
     db.cleanup().await;
 }
@@ -468,7 +467,11 @@ async fn merge_permission_and_not_found_failures() {
     ] {
         let (status, body) = send(&app, Method::POST, &w.member.token, &uri).await;
         assert_eq!(status, StatusCode::NOT_FOUND, "{uri}: {body}");
-        assert_eq!(body, error(ANNOTATION_NOT_FOUND), "{uri}");
+        assert_eq!(
+            body,
+            error(webknossos_backend::msg::annotation::NOT_FOUND),
+            "{uri}"
+        );
     }
     // Foreign organization administrator cannot read either annotation.
     let (status, body) = send(
@@ -479,7 +482,7 @@ async fn merge_permission_and_not_found_failures() {
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body, error(ANNOTATION_NOT_FOUND));
+    assert_eq!(body, error(webknossos_backend::msg::annotation::NOT_FOUND));
     // Malformed ObjectId and missing authentication.
     let (status, _) = send(
         &app,
@@ -616,7 +619,7 @@ async fn reset_denials_and_failures() {
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body, error(RESOURCE_NOT_FOUND));
+    assert_eq!(body, error(webknossos_backend::msg::NOT_FOUND));
 
     // Unreadable / unknown annotation: provider 404.
     for (token, id) in [
@@ -631,7 +634,7 @@ async fn reset_denials_and_failures() {
         )
         .await;
         assert_eq!(status, StatusCode::NOT_FOUND);
-        assert_eq!(body, error(ANNOTATION_NOT_FOUND));
+        assert_eq!(body, error(webknossos_backend::msg::annotation::NOT_FOUND));
     }
 
     // Non-task annotation (admin passes the grant): tasksOnly → 400 Reset.failed.

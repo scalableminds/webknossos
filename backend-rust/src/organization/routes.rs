@@ -7,19 +7,15 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::Value;
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::{PgPool, Postgres};
 
 use crate::{
     AppState,
-    auth::browser::messages as user_msg,
-    auth::browser::onboarding::{
-        join_organization_as, normalize_strong, organization_messages as org_msg,
-    },
+    auth::browser::onboarding::{insert_organization, join_organization_as},
     auth::{AuthCredential, AuthUser, OptionalAuthUser, authenticate_request},
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
     system::application_info::MiscState,
-    util::id::ObjectId,
 };
 
 pub fn router() -> Router<AppState> {
@@ -77,7 +73,8 @@ pub(crate) async fn public_json<'e, E: sqlx::Executor<'e, Database = Postgres>>(
         .bind(id)
         .fetch_optional(executor)
         .await?
-        .ok_or_else(|| ApiError::not_found("organization.notFound"))
+        // OrganizationController.get has no explicit message: Fox falls back to Msg.notFound.
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))
 }
 
 async fn read(
@@ -144,7 +141,7 @@ async fn default_organization(
         .fetch_all(&state.pool)
         .await?;
     match ids.as_slice() {
-        [] => Err(ApiError::bad_request("organization.listFailed")),
+        [] => Err(ApiError::bad_request(crate::msg::organization::LIST_FAILED)),
         [id] => {
             let credit_access = if let Some(user) = &user {
                 credit_read_access(&state.pool, user).await?
@@ -171,7 +168,7 @@ async fn by_invite(
 ) -> ApiResult<ResponseJson<Value>> {
     // This route intentionally stays anonymous, matching the plain Action.
     let organization: String=sqlx::query_scalar("SELECT _organization FROM webknossos.invites_ WHERE tokenvalue=$1 AND expirationdatetime>statement_timestamp() LIMIT 1")
-        .bind(token).fetch_optional(&state.pool).await?.ok_or_else(||ApiError::not_found("organization.notFoundByInvite"))?;
+        .bind(token).fetch_optional(&state.pool).await?.ok_or_else(||ApiError::not_found(crate::msg::organization::NOT_FOUND_BY_INVITE))?;
     Ok(ResponseJson(
         public_json(&state.pool, &organization, None, false, false).await?,
     ))
@@ -200,15 +197,19 @@ async fn update(
     let accessible:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.organizations_ o WHERE o._id=$1 AND ($3 OR o._id IN(SELECT _organization FROM webknossos.users_ WHERE _multiuser=(SELECT _multiuser FROM webknossos.users_ WHERE _id=$2))))")
         .bind(&id).bind(&user.id).bind(user.is_superuser).fetch_one(&mut *tx).await?;
     if !accessible {
-        return Err(ApiError::not_found("organization.notFound"));
+        return Err(ApiError::not_found(crate::msg::organization::not_found(
+            &id,
+        )));
     }
     if !user.is_admin || user.organization_id != id {
-        return Err(ApiError::forbidden("notAllowed"));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let updated=sqlx::query("UPDATE webknossos.organizations SET name=$2,newusermailinglist=$3 WHERE _id=$1 AND NOT isdeleted")
         .bind(&id).bind(parameters.name).bind(parameters.new_user_mailing_list).execute(&mut *tx).await?;
     if updated.rows_affected() == 0 {
-        return Err(ApiError::not_found("organization.notFound"));
+        return Err(ApiError::not_found(crate::msg::organization::not_found(
+            &id,
+        )));
     }
     let value = public_json(&mut *tx, &id, Some(&user.organization_id), true, true).await?;
     tx.commit().await?;
@@ -218,84 +219,12 @@ async fn update(
 // ---------------------------------------------------------------------------
 // POST /organizations (superuser-only creation for an existing account)
 
-/// Msg.notFound: the reply Play gives for an empty Fox.
-const RESOURCE_NOT_FOUND: &str = "Could not find or access the requested resource.";
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct OrganizationCreationParameters {
     organization: Option<String>,
     organization_name: String,
     owner_email: String,
-}
-
-/// organizationService.createOrganization: organization, root folder and
-/// organization team. Mirrors the private helper used by the onboarding routes.
-async fn insert_organization(
-    tx: &mut Transaction<'_, Postgres>,
-    is_wkorg_instance: bool,
-    requested_id: Option<&str>,
-    name: &str,
-) -> ApiResult<(String, String)> {
-    let normalized_name =
-        normalize_strong(name).ok_or_else(|| ApiError::bad_request(org_msg::ID_INVALID))?;
-    let id = requested_id
-        .and_then(normalize_strong)
-        .unwrap_or(normalized_name)
-        .replace(' ', "_");
-    // Ids of deleted organizations stay reserved (primary key).
-    let exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.organizations WHERE _id = $1)")
-            .bind(&id)
-            .fetch_one(&mut **tx)
-            .await?;
-    if exists {
-        return Err(ApiError::bad_request(org_msg::ID_TAKEN));
-    }
-    let (plan, included_users, included_storage): (&str, Option<i32>, Option<i64>) =
-        if is_wkorg_instance {
-            ("Personal", Some(1), Some(50_000_000_000))
-        } else {
-            ("Custom", None, None)
-        };
-    let root_folder = ObjectId::new();
-    sqlx::query(
-        "INSERT INTO webknossos.folders(_id, name, metadata) VALUES($1, 'Datasets', '[]'::jsonb)",
-    )
-    .bind(root_folder.as_str())
-    .execute(&mut **tx)
-    .await?;
-    sqlx::query(
-        "INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth) VALUES($1, $1, 0)",
-    )
-    .bind(root_folder.as_str())
-    .execute(&mut **tx)
-    .await?;
-    sqlx::query(
-        r#"INSERT INTO webknossos.organizations(_id, additionalInformation, logoUrl, name, _rootFolder,
-             newUserMailingList, enableAutoVerify, pricingPlan, aiPlan, paidUntil, includedUsers,
-             includedStorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion,
-             created, isDeleted)
-           VALUES($1, '', '', $2, $3, '', FALSE, $4::webknossos.PRICING_PLANS, NULL, NULL, $5, $6,
-             NULL, 0, statement_timestamp(), FALSE)"#,
-    )
-    .bind(&id)
-    .bind(name)
-    .bind(root_folder.as_str())
-    .bind(plan)
-    .bind(included_users)
-    .bind(included_storage)
-    .execute(&mut **tx)
-    .await?;
-    let team = ObjectId::new();
-    sqlx::query(
-        "INSERT INTO webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted) VALUES($1, $2, 'Default', statement_timestamp(), TRUE, FALSE)",
-    )
-    .bind(team.as_str())
-    .bind(&id)
-    .execute(&mut **tx)
-    .await?;
-    Ok((id, team.into()))
 }
 
 async fn create(
@@ -305,7 +234,7 @@ async fn create(
     Json(parameters): Json<OrganizationCreationParameters>,
 ) -> ApiResult<Response> {
     if !user.is_superuser {
-        return Err(ApiError::forbidden(user_msg::NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     // Play runs these steps without a transaction; a late failure here
     // leaves no half-created organization behind.
@@ -315,7 +244,7 @@ async fn create(
             .bind(&parameters.owner_email)
             .fetch_optional(&mut *tx)
             .await?
-            .ok_or_else(|| ApiError::bad_request(user_msg::USER_NOT_FOUND))?;
+            .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     let (organization_id, team) = insert_organization(
         &mut tx,
         misc.config().is_wkorg_instance,
@@ -330,7 +259,7 @@ async fn create(
     .bind(&owner)
     .fetch_optional(&mut *tx)
     .await?
-    .ok_or_else(|| ApiError::not_found(RESOURCE_NOT_FOUND))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     join_organization_as(
         &mut tx,
         &original,
@@ -404,10 +333,12 @@ async fn delete(
     .fetch_one(&mut *tx)
     .await?;
     if !accessible {
-        return Err(ApiError::not_found(org_msg::not_found(&id)));
+        return Err(ApiError::not_found(crate::msg::organization::not_found(
+            &id,
+        )));
     }
     if !user.is_admin || user.organization_id != id {
-        return Err(ApiError::forbidden(user_msg::NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     tracing::info!(organization = %id, "Deleting organization");
     let deleted = sqlx::query(
@@ -417,7 +348,9 @@ async fn delete(
     .execute(&mut *tx)
     .await?;
     if deleted.rows_affected() == 0 {
-        return Err(ApiError::not_found(org_msg::not_found(&id)));
+        return Err(ApiError::not_found(crate::msg::organization::not_found(
+            &id,
+        )));
     }
     sqlx::query("UPDATE webknossos.users SET isDeleted = TRUE WHERE _organization = $1")
         .bind(&id)

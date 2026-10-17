@@ -57,13 +57,10 @@ pub(crate) const PUB_KEY_ALGORITHMS: [i64; 3] = [
     crate::util::cbor::ALG_RS256,
 ];
 
-pub(crate) const MSG_NOT_ENABLED: &str = "Passkeys are not enabled for this WEBKNOSSOS instance.";
-pub(crate) const MSG_REQUIRES_HTTPS: &str = "Passkeys are only supported with HTTPS.";
 pub(crate) const MSG_UNAUTHORIZED: &str = "Passkey authentication failed.";
 const MSG_REGISTRATION_TIMEOUT: &str = "Timeout during registration. Please try again.";
 const MSG_AUTHENTICATION_TIMEOUT: &str = "Timeout during authentication. Please try again.";
 const MSG_INVALID_REGISTRATION: &str = "Passkey registration could not be verified.";
-const MSG_NOT_FOUND: &str = "Could not find or access the requested resource.";
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -143,10 +140,10 @@ pub(crate) fn relying_party(misc: &MiscState) -> ApiResult<RelyingParty> {
         .get("passkeysEnabled")
         .and_then(JsonValue::as_bool);
     if enabled != Some(true) {
-        return Err(ApiError::bad_request(MSG_NOT_ENABLED));
+        return Err(ApiError::bad_request(crate::msg::passkeys::NOT_ENABLED));
     }
     if !config.public_uri.starts_with("https://") {
-        return Err(ApiError::bad_request(MSG_REQUIRES_HTTPS));
+        return Err(ApiError::bad_request(crate::msg::passkeys::REQUIRES_HTTPS));
     }
     let origin = url::Url::parse(&config.public_uri).map_err(|_| ApiError::internal())?;
     let rp_id = origin.host_str().ok_or_else(ApiError::internal)?.to_owned();
@@ -473,7 +470,7 @@ async fn multi_user_of(state: &AppState, user: &AuthUser) -> ApiResult<(String, 
     .bind(&user.id)
     .fetch_optional(&state.pool)
     .await?
-    .ok_or_else(|| ApiError::not_found(MSG_NOT_FOUND))
+    .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))
 }
 
 // ---------------------------------------------------------------------------
@@ -554,7 +551,7 @@ async fn register_finalize(
     let registration = parse_registration(&body.key)
         .map_err(|_| ApiError::bad_request(MSG_INVALID_REGISTRATION))?;
     let session_id = request_cookie(&headers, REGISTRATION_COOKIE)
-        .ok_or_else(|| ApiError::not_found(MSG_NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let challenge = stores
         .registration
         .pop(&session_id)
@@ -728,7 +725,7 @@ async fn auth_finalize(
 ) -> ApiResult<Response> {
     let rp = relying_party(&misc)?;
     let session_id = request_cookie(&headers, ASSERTION_COOKIE)
-        .ok_or_else(|| ApiError::not_found(MSG_NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let challenge = stores
         .assertion
         .pop(&session_id)
@@ -772,7 +769,7 @@ async fn auth_finalize(
         .execute(&state.pool)
         .await
         .map_err(|_| unauthorized())?;
-    let user_id = last_identity.ok_or_else(|| ApiError::not_found(MSG_NOT_FOUND))?;
+    let user_id = last_identity.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let cookie = login_user(&state.pool, &browser, &mailer, &headers, &user_id, false).await?;
     tracing::info!(user = %user_id, "User logged in via passkey/webauthn.");
     let mut response = StatusCode::OK.into_response();

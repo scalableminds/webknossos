@@ -16,12 +16,8 @@ use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation::finish::{
-        ALL_FINISHED, ANNOTATION_FINISHED, FINISH_FAILED, TASK_FINISHED, parse_timestamp,
-    },
-    annotation::provider::{
-        ANNOTATION_NOT_FOUND, AccessContext, AnnotationIdentifier, AnnotationProvider,
-    },
+    annotation::finish::{ALL_FINISHED, FINISH_FAILED, TASK_FINISHED, parse_timestamp},
+    annotation::provider::{AccessContext, AnnotationIdentifier, AnnotationProvider},
     auth::AuthUser,
     mail::MailSender,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
@@ -282,7 +278,7 @@ async fn owner_finish_logs_time_and_repeat_is_silent() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(
         body["messages"],
-        json!([{ "success": ANNOTATION_FINISHED }])
+        json!([{ "success": webknossos_backend::msg::annotation::FINISHED }])
     );
     assert_eq!(body["state"], "Finished");
     assert_eq!(body["id"], id);
@@ -316,7 +312,7 @@ async fn owner_finish_logs_time_and_repeat_is_silent() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(
         body["messages"],
-        json!([{ "success": ANNOTATION_FINISHED }])
+        json!([{ "success": webknossos_backend::msg::annotation::FINISHED }])
     );
     assert_eq!(body["tracingTime"], 2234);
     assert_eq!(
@@ -461,7 +457,7 @@ async fn finish_permissions_states_and_contributor_time_logging() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(
         body["messages"],
-        json!([{ "success": ANNOTATION_FINISHED }])
+        json!([{ "success": webknossos_backend::msg::annotation::FINISHED }])
     );
     assert_eq!(spans(&db, owner, &task_annotation).await.len(), 1);
 
@@ -565,7 +561,10 @@ async fn finish_all_is_serial_and_stops_at_first_failure() {
     let missing = object_id();
     assert_eq!(
         finish_all(&app, &w.owner.token, &[&missing, &f], T + 6000).await,
-        (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     assert_eq!(row(&db, &f).await.0, "Active");
     db.cleanup().await;
@@ -672,7 +671,7 @@ async fn task_finish_invalidates_compound_caches_and_compounds_fail() {
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(
             body["messages"],
-            json!([{ "success": ANNOTATION_FINISHED }])
+            json!([{ "success": webknossos_backend::msg::annotation::FINISHED }])
         );
     }
     assert_eq!(cached(), [true; 3]);

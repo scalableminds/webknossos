@@ -1597,7 +1597,7 @@ async fn training_submits_paid_job_and_pending_model_atomically() {
 
     // Instance training: diameter (Double) and absent custom configuration.
     for (name, diameter, expected_diameter) in [
-        ("instance model", json!(50), json!(50.0)),
+        ("instance model", json!(50), json!(50)),
         ("instance model 2", Value::Null, Value::Null),
     ] {
         let (status, model) = send(
@@ -2102,7 +2102,7 @@ async fn inference_submits_paid_job_with_target_mag_cost_and_inference_atomicall
             "new_dataset_name": "new_dataset-1.0",
             "do_split_merger_evaluation": false,
             "eval_use_sparse_tracing": true,
-            "eval_max_edge_length": 12.0,
+            "eval_max_edge_length": 12,
             "eval_sparse_tube_threshold_nm": null,
             "eval_min_merger_path_length_nm": null,
             "custom_configuration": {"a": {"b": [1]}},

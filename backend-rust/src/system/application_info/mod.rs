@@ -23,7 +23,7 @@ use serde_json::{Map, Value, json};
 use crate::{
     AppState,
     auth::AuthUser,
-    config::ConfigError,
+    config::{ConfigError, Env},
     error::{ApiError, ApiResult},
     extract::Json,
     mail::{MailSender, templates},
@@ -240,19 +240,11 @@ pub(crate) fn config_from_values(
     base: &crate::config::Config,
 ) -> Result<MiscConfig, ConfigError> {
     let defaults = MiscConfig::default();
-    let get = |name: &str| values.get(name).map(String::as_str);
-    let text = |name: &str, default: &str| get(name).unwrap_or(default).to_owned();
-    let boolean = |name: &str, default: bool| -> Result<bool, ConfigError> {
-        get(name).map_or(Ok(default), |value| {
-            value
-                .parse()
-                .map_err(|_| ConfigError(format!("{name} must be true or false")))
-        })
-    };
+    let env = Env::new(values);
     let public_uri = base.public_url.as_str().trim_end_matches('/').to_owned();
 
     let mut features = default_features();
-    if let Some(raw) = get("WK_FEATURES_JSON") {
+    if let Some(raw) = env.get("WK_FEATURES_JSON") {
         let Ok(Value::Object(overrides)) = serde_json::from_str::<Value>(raw) else {
             return Err(ConfigError("WK_FEATURES_JSON must be a JSON object".into()));
         };
@@ -278,17 +270,18 @@ pub(crate) fn config_from_values(
     }
 
     // Play bakes CERTIFICATE_PUBLIC_KEY in at build time; here it is read at startup.
-    let certificate_public_key = get("WK_CERTIFICATE_PUBLIC_KEY")
-        .or_else(|| get("CERTIFICATE_PUBLIC_KEY"))
+    let certificate_public_key = env
+        .get("WK_CERTIFICATE_PUBLIC_KEY")
+        .or_else(|| env.get("CERTIFICATE_PUBLIC_KEY"))
         .filter(|key| !key.trim().is_empty())
         .map(str::to_owned);
-    let certificate = get("CERTIFICATE").map(str::to_owned);
+    let certificate = env.get("CERTIFICATE").map(str::to_owned);
     apply_feature_overrides(
         &mut features,
         &feature_overrides(certificate_public_key.as_deref(), certificate.as_deref()),
     );
 
-    let acceptance_deadline = match get("WK_TERMS_OF_SERVICE_ACCEPTANCE_DEADLINE") {
+    let acceptance_deadline = match env.get("WK_TERMS_OF_SERVICE_ACCEPTANCE_DEADLINE") {
         Some(value) => DateTime::parse_from_rfc3339(value)
             .map(|d| d.with_timezone(&Utc))
             .map_err(|_| {
@@ -298,23 +291,22 @@ pub(crate) fn config_from_values(
             })?,
         None => defaults.terms_of_service.acceptance_deadline,
     };
-    let monthly_free_milli_credits = get("WK_JOBS_MONTHLY_FREE_MILLI_CREDITS")
+    let monthly_free_milli_credits = env
+        .get("WK_JOBS_MONTHLY_FREE_MILLI_CREDITS")
         .map_or(Ok(defaults.monthly_free_milli_credits), str::parse)
         .map_err(|_| ConfigError("WK_JOBS_MONTHLY_FREE_MILLI_CREDITS must be an integer".into()))?;
     // Scala reads an Int; values outside it fail config loading.
-    let max_open_tasks_per_user = get("WK_TASKS_MAX_OPEN_PER_USER")
+    let max_open_tasks_per_user = env
+        .get("WK_TASKS_MAX_OPEN_PER_USER")
         .map_or(Ok(defaults.max_open_tasks_per_user), |v| {
             v.parse::<i32>().map(i64::from)
         })
         .map_err(|_| ConfigError("WK_TASKS_MAX_OPEN_PER_USER must be an integer".into()))?;
-    let session_pause = get("WK_ANALYTICS_SESSION_PAUSE_SECONDS")
-        .map_or(Ok(defaults.analytics.session_pause.as_secs()), str::parse)
-        .map(Duration::from_secs)
-        .map_err(|_| {
-            ConfigError("WK_ANALYTICS_SESSION_PAUSE_SECONDS must be an unsigned integer".into())
-        })?;
+    let session_pause = env
+        .seconds("WK_ANALYTICS_SESSION_PAUSE_SECONDS", true)?
+        .unwrap_or(defaults.analytics.session_pause);
     // An empty value disables forwarding, like Play's `uri = ""`.
-    let analytics_uri = text("WK_ANALYTICS_URI", DEFAULT_ANALYTICS_URI);
+    let analytics_uri = env.text("WK_ANALYTICS_URI", DEFAULT_ANALYTICS_URI);
     if !analytics_uri.is_empty() {
         let parsed = url::Url::parse(&analytics_uri)
             .map_err(|_| ConfigError("WK_ANALYTICS_URI must be an absolute URL".into()))?;
@@ -325,36 +317,38 @@ pub(crate) fn config_from_values(
         }
     }
     let local_store = |prefix: &str| -> Result<Option<LocalStoreConfig>, ConfigError> {
-        if !boolean(&format!("WK_LOCAL_{prefix}_ENABLED"), false)? {
+        if !env.bool_or(&format!("WK_LOCAL_{prefix}_ENABLED"), false)? {
             return Ok(None);
         }
         Ok(Some(LocalStoreConfig {
-            name: text(&format!("WK_{prefix}_NAME"), "localhost"),
-            key: text(&format!("WK_{prefix}_KEY"), "something-secure"),
-            public_uri: text(&format!("WK_{prefix}_PUBLIC_URI"), &public_uri),
+            name: env.text(&format!("WK_{prefix}_NAME"), "localhost"),
+            key: env.text(&format!("WK_{prefix}_KEY"), "something-secure"),
+            public_uri: env.text(&format!("WK_{prefix}_PUBLIC_URI"), &public_uri),
         }))
     };
     Ok(MiscConfig {
         jobs_enabled: base.jobs_enabled,
         is_wkorg_instance: base.browser_auth.is_wkorg_instance,
         features,
-        operator_data: text("WK_OPERATOR_DATA", &defaults.operator_data),
+        operator_data: env.text("WK_OPERATOR_DATA", &defaults.operator_data),
         terms_of_service: TermsOfServiceConfig {
             enabled: base.browser_auth.terms_of_service_enabled,
-            url: text("WK_TERMS_OF_SERVICE_URL", &defaults.terms_of_service.url),
+            url: env.text("WK_TERMS_OF_SERVICE_URL", &defaults.terms_of_service.url),
             acceptance_deadline,
             version: base.browser_auth.terms_of_service_version,
         },
-        support_email: text("WK_SUPPORT_EMAIL", &defaults.support_email),
+        support_email: env.text("WK_SUPPORT_EMAIL", &defaults.support_email),
         monthly_free_milli_credits,
         max_open_tasks_per_user,
         analytics: AnalyticsConfig {
             uri: analytics_uri,
-            key: text("WK_ANALYTICS_KEY", ""),
+            key: env.text("WK_ANALYTICS_KEY", ""),
             session_pause,
-            save_to_database_enabled: boolean("WK_ANALYTICS_SAVE_TO_DATABASE_ENABLED", false)?,
-            verbose_logging_enabled: boolean("WK_ANALYTICS_VERBOSE_LOGGING_ENABLED", false)?,
-            well_known_uris: get("WK_ANALYTICS_WELL_KNOWN_URIS")
+            save_to_database_enabled: env
+                .bool_or("WK_ANALYTICS_SAVE_TO_DATABASE_ENABLED", false)?,
+            verbose_logging_enabled: env.bool_or("WK_ANALYTICS_VERBOSE_LOGGING_ENABLED", false)?,
+            well_known_uris: env
+                .get("WK_ANALYTICS_WELL_KNOWN_URIS")
                 .map(|list| {
                     list.split(',')
                         .map(str::trim)
@@ -365,18 +359,18 @@ pub(crate) fn config_from_values(
                 .unwrap_or_default(),
         },
         sample_organization: SampleOrganizationConfig {
-            enabled: boolean("WK_SAMPLE_ORGANIZATION_ENABLED", false)?,
-            email: text("WK_SAMPLE_USER_EMAIL", &defaults.sample_organization.email),
-            email2: text(
+            enabled: env.bool_or("WK_SAMPLE_ORGANIZATION_ENABLED", false)?,
+            email: env.text("WK_SAMPLE_USER_EMAIL", &defaults.sample_organization.email),
+            email2: env.text(
                 "WK_SAMPLE_USER_EMAIL2",
                 &defaults.sample_organization.email2,
             ),
-            password: text(
+            password: env.text(
                 "WK_SAMPLE_USER_PASSWORD",
                 &defaults.sample_organization.password,
             ),
-            token: text("WK_SAMPLE_USER_TOKEN", &defaults.sample_organization.token),
-            is_super_user: boolean("WK_SAMPLE_USER_IS_SUPER_USER", true)?,
+            token: env.text("WK_SAMPLE_USER_TOKEN", &defaults.sample_organization.token),
+            is_super_user: env.bool_or("WK_SAMPLE_USER_IS_SUPER_USER", true)?,
         },
         local_datastore: local_store("DATASTORE")?,
         local_tracingstore: local_store("TRACINGSTORE")?,
@@ -384,10 +378,10 @@ pub(crate) fn config_from_values(
         certificate_public_key,
         certificate,
         build_info: BuildInfo {
-            commit_hash: text("WK_BUILD_COMMIT_HASH", &defaults.build_info.commit_hash),
-            commit_date: text("WK_BUILD_COMMIT_DATE", &defaults.build_info.commit_date),
-            ci_build: text("CI_BUILD_NUM", ""),
-            ci_tag: text("CI_TAG", ""),
+            commit_hash: env.text("WK_BUILD_COMMIT_HASH", &defaults.build_info.commit_hash),
+            commit_date: env.text("WK_BUILD_COMMIT_DATE", &defaults.build_info.commit_date),
+            ci_build: env.text("CI_BUILD_NUM", ""),
+            ci_tag: env.text("CI_TAG", ""),
         },
         public_uri,
     })
@@ -542,7 +536,7 @@ async fn help_email(
         .bind(&user.id)
         .fetch_optional(&state.pool)
         .await?
-        .ok_or_else(|| ApiError::not_found("User could not be found or accessed."))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::user::NOT_FOUND_NO_ID))?;
     let name = format!("{first_name} {last_name}");
     mailer.send(templates::help(
         &name,

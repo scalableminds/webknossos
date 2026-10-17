@@ -16,12 +16,8 @@ use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation::lifecycle::{ARCHIVED, CANCEL_SUCCESS, COLLABORATION_TYPES_ONLY},
-    annotation::metadata::NOT_ALLOWED,
-    annotation::provider::{
-        ANNOTATION_NOT_FOUND, AccessContext, AnnotationIdentifier, AnnotationProvider,
-        RESOURCE_NOT_FOUND,
-    },
+    annotation::lifecycle::{CANCEL_SUCCESS, COLLABORATION_TYPES_ONLY},
+    annotation::provider::{AccessContext, AnnotationIdentifier, AnnotationProvider},
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     stores::client::ServiceClientConfig,
     stores::tracing_client::TracingStoreClient,
@@ -190,7 +186,10 @@ async fn cancel_requires_manager_access_and_preserves_non_task_rows_and_dependen
         } else {
             assert_eq!(
                 (status, body),
-                (StatusCode::NOT_FOUND, error(RESOURCE_NOT_FOUND))
+                (
+                    StatusCode::NOT_FOUND,
+                    error(webknossos_backend::msg::NOT_FOUND)
+                )
             );
         }
     }
@@ -280,7 +279,10 @@ async fn cancel_requires_manager_access_and_preserves_non_task_rows_and_dependen
         .await;
         assert_eq!(
             (status, body),
-            (StatusCode::OK, json!({"messages":[{"success":ARCHIVED}]}))
+            (
+                StatusCode::OK,
+                json!({"messages":[{"success":webknossos_backend::msg::annotation::FINISHED}]})
+            )
         );
         assert_eq!(state(&db, &id).await, before);
         let (status, body, _) = send(
@@ -292,7 +294,10 @@ async fn cancel_requires_manager_access_and_preserves_non_task_rows_and_dependen
         .await;
         assert_eq!(
             (status, body),
-            (StatusCode::NOT_FOUND, error(RESOURCE_NOT_FOUND))
+            (
+                StatusCode::NOT_FOUND,
+                error(webknossos_backend::msg::NOT_FOUND)
+            )
         );
     }
     let deleted = annotation(&db, &w, "Task", "Public", "Active", "OwnerOnly").await;
@@ -309,7 +314,10 @@ async fn cancel_requires_manager_access_and_preserves_non_task_rows_and_dependen
             let (status, body, _) = send(&app, Method::DELETE, &w.f.token, &path).await;
             assert_eq!(
                 (status, body),
-                (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+                (
+                    StatusCode::NOT_FOUND,
+                    error(webknossos_backend::msg::annotation::NOT_FOUND)
+                )
             );
         }
     }
@@ -323,7 +331,10 @@ async fn cancel_requires_manager_access_and_preserves_non_task_rows_and_dependen
     .await;
     assert_eq!(
         (status, body),
-        (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     let (status, _, _) = send(
         &app,
@@ -375,13 +386,22 @@ async fn collaboration_modes_require_actual_owner_and_release_only_when_leaving_
         };
         for token in [&w.f.token, &w.manager.token, &w.outsider.token] {
             let (status, body, _) = send(&app, Method::PATCH, token, &path("OwnerOnly")).await;
-            assert_eq!((status, body), (StatusCode::FORBIDDEN, error(NOT_ALLOWED)));
+            assert_eq!(
+                (status, body),
+                (
+                    StatusCode::FORBIDDEN,
+                    error(webknossos_backend::msg::NOT_ALLOWED)
+                )
+            );
         }
         let (status, body, _) =
             send(&app, Method::PATCH, &w.owner.token, &path("concurrent")).await;
         assert_eq!(
             (status, body),
-            (StatusCode::NOT_FOUND, error(RESOURCE_NOT_FOUND))
+            (
+                StatusCode::NOT_FOUND,
+                error(webknossos_backend::msg::NOT_FOUND)
+            )
         );
         for (mode, count) in [("Concurrent", 2), ("Exclusive", 0)] {
             let (status, _, bytes) = send(&app, Method::PATCH, &w.owner.token, &path(mode)).await;
@@ -426,7 +446,10 @@ async fn collaboration_modes_require_actual_owner_and_release_only_when_leaving_
     .await;
     assert_eq!(
         (status, body),
-        (StatusCode::BAD_REQUEST, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::BAD_REQUEST,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     db.cleanup().await;
 }
@@ -561,7 +584,10 @@ async fn finished_cancellation_invalidates_three_compounds_and_compound_routes_k
     .await;
     assert_eq!(
         (status, body),
-        (StatusCode::OK, json!({"messages":[{"success":ARCHIVED}]}))
+        (
+            StatusCode::OK,
+            json!({"messages":[{"success":webknossos_backend::msg::annotation::FINISHED}]})
+        )
     );
     assert_eq!(state(&db, &finished).await.0, "Finished");
     let (status, body, _) = send(

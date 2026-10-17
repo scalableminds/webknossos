@@ -36,6 +36,7 @@ use crate::{
         initial_team_memberships, insert_account, organization_messages,
     },
     auth::browser::{BrowserAuthConfig, login_user},
+    config::{ConfigError, Env},
     error::{ApiError, ApiResult},
     mail::{MailSender, templates},
     system::application_info::MiscState,
@@ -113,28 +114,21 @@ impl fmt::Debug for OidcConfig {
 /// WK_OIDC_ENABLED=false, WK_OIDC_PROVIDER_URL, WK_OIDC_CLIENT_ID,
 /// WK_OIDC_CLIENT_SECRET (empty disables basic auth), WK_OIDC_SCOPE,
 /// WK_OIDC_VERBOSE_LOGGING=false, WK_OIDC_HTTP_TIMEOUT_SECONDS=30, WK_SSO_KEY="".
-pub fn config_from_values(values: &HashMap<String, String>) -> Result<OidcConfig, String> {
+pub fn config_from_values(values: &HashMap<String, String>) -> Result<OidcConfig, ConfigError> {
+    let env = Env::new(values);
     let defaults = OidcConfig::default();
-    let text = |name: &str| values.get(name).map(|value| value.trim().to_owned());
-    let boolean = |name: &str| -> Result<bool, String> {
-        match text(name) {
-            None => Ok(false),
-            Some(value) => value
-                .parse()
-                .map_err(|_| format!("{name} must be true or false")),
+    let text = |name: &str| env.get(name).map(|value| value.trim().to_owned());
+    let http_timeout = match env.seconds("WK_OIDC_HTTP_TIMEOUT_SECONDS", false) {
+        Ok(None) => defaults.http_timeout,
+        Ok(Some(timeout)) if timeout.as_secs() <= 3600 => timeout,
+        _ => {
+            return Err(ConfigError(
+                "WK_OIDC_HTTP_TIMEOUT_SECONDS must be between 1 and 3600".into(),
+            ));
         }
     };
-    let http_timeout = match text("WK_OIDC_HTTP_TIMEOUT_SECONDS") {
-        None => defaults.http_timeout,
-        Some(value) => match value.parse::<u64>() {
-            Ok(seconds) if (1..=3600).contains(&seconds) => Duration::from_secs(seconds),
-            _ => {
-                return Err("WK_OIDC_HTTP_TIMEOUT_SECONDS must be between 1 and 3600".to_owned());
-            }
-        },
-    };
     Ok(OidcConfig {
-        enabled: boolean("WK_OIDC_ENABLED")?,
+        enabled: env.bool_or("WK_OIDC_ENABLED", false)?,
         provider_url: text("WK_OIDC_PROVIDER_URL").unwrap_or(defaults.provider_url),
         client_id: text("WK_OIDC_CLIENT_ID").unwrap_or(defaults.client_id),
         client_secret: match values.get("WK_OIDC_CLIENT_SECRET") {
@@ -143,7 +137,7 @@ pub fn config_from_values(values: &HashMap<String, String>) -> Result<OidcConfig
             Some(secret) => Some(secret.clone()),
         },
         scope: text("WK_OIDC_SCOPE").unwrap_or(defaults.scope),
-        verbose_logging: boolean("WK_OIDC_VERBOSE_LOGGING")?,
+        verbose_logging: env.bool_or("WK_OIDC_VERBOSE_LOGGING", false)?,
         sso_key: values.get("WK_SSO_KEY").cloned().unwrap_or_default(),
         http_timeout,
     })
@@ -263,7 +257,7 @@ async fn single_sign_on(
     .bind(&user.id)
     .fetch_optional(&state.pool)
     .await?
-    .ok_or_else(|| ApiError::not_found("Resource not found."))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::request::RESOURCE_NOT_FOUND))?;
     tracing::info!(user = %user.id, "User logged in to discuss.webknossos.org via WK SSO.");
     let abbreviated_name = format!(
         "{}{}",

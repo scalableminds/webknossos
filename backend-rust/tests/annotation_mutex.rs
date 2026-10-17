@@ -13,9 +13,8 @@ use std::time::Duration;
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation::metadata::NOT_ALLOWED,
     annotation::mutex::{ACQUIRE_FAILED, RELEASE_FAILED},
-    annotation::provider::{ANNOTATION_NOT_FOUND, AnnotationProvider, RESOURCE_NOT_FOUND},
+    annotation::provider::AnnotationProvider,
     stores::client::ServiceClientConfig,
     stores::tracing_client::TracingStoreClient,
 };
@@ -280,7 +279,10 @@ async fn acquire_requires_live_auth_readability_collaboration_and_runtime_update
     .await;
     assert_eq!(
         (status, body),
-        (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     let (status, body, _) = send(&app, &w.f.token, &path(&private, "acquireMutex", "admin")).await;
     assert_eq!((status, body), (StatusCode::OK, acquired()));
@@ -356,9 +358,9 @@ async fn acquire_requires_live_auth_readability_collaboration_and_runtime_update
             (
                 expected,
                 error(if expected == StatusCode::NOT_FOUND {
-                    ANNOTATION_NOT_FOUND
+                    webknossos_backend::msg::annotation::NOT_FOUND
                 } else {
-                    NOT_ALLOWED
+                    webknossos_backend::msg::NOT_ALLOWED
                 })
             )
         );
@@ -533,7 +535,10 @@ async fn blocked_serializer_and_database_failures_preserve_existing_mutexes() {
     let (status, body, _) = send(&app, &w.owner.token, &path(&id, "acquireMutex", "owner")).await;
     assert_eq!(
         (status, body),
-        (StatusCode::NOT_FOUND, error(RESOURCE_NOT_FOUND))
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::NOT_FOUND)
+        )
     );
     assert_eq!(holder(&db, &id).await, before);
     sqlx::raw_sql("CREATE FUNCTION webknossos.reject_mutex_change() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'hidden test secret'; END $$; CREATE TRIGGER reject_mutex_change BEFORE INSERT OR UPDATE OR DELETE ON webknossos.annotation_mutexes FOR EACH ROW EXECUTE FUNCTION webknossos.reject_mutex_change();")

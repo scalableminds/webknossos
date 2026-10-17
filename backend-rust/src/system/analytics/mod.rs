@@ -541,8 +541,8 @@ async fn ingest(
     Extension(misc): Extension<MiscState>,
     Json(body): Json<Value>,
 ) -> ApiResult<Response> {
-    let (events, api_key) =
-        read_ingest(&body).map_err(|_| ApiError::bad_request("Invalid JSON request body."))?;
+    let (events, api_key) = read_ingest(&body)
+        .map_err(|_| ApiError::bad_request(crate::msg::request::INVALID_JSON_BODY))?;
     let analytics = &misc.config().analytics;
     if !analytics.save_to_database_enabled {
         return Err(ApiError::bad_request(
@@ -578,7 +578,9 @@ async fn track_frontend_event(
     Json(body): Json<Value>,
 ) -> ApiResult<Response> {
     let Value::Object(mut properties) = body else {
-        return Err(ApiError::bad_request("Invalid JSON request body."));
+        return Err(ApiError::bad_request(
+            crate::msg::request::INVALID_JSON_BODY,
+        ));
     };
     if let Some(user) = user {
         // FrontendAnalyticsEvent: eventProperties ++ {"is_frontend_event": true}

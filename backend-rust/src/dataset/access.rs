@@ -10,44 +10,77 @@ use crate::{
 /// optional sharing token. Both grants are additive, as in URLSharing's fallback
 /// context. A private-link expiration is deliberately not tested here: Scala's
 /// dataset predicate uses annotation_privateLinks_ without an expiration filter.
+///
+/// Team grants only count for live teams of the requesting (live) user's own organization,
+/// which must also own the dataset. Every subquery is uncorrelated (`IN (…)` over sets that
+/// depend only on $1/$2), so PostgreSQL evaluates each once per statement as a hashed
+/// subplan instead of once per dataset row; list queries over thousands of datasets depend
+/// on this (DatasetDAO.readAccessQ uses the same shape).
 pub const READ_PREDICATE: &str = r#"(
   d.isPublic
-  OR EXISTS (SELECT 1 FROM webknossos.users_ u WHERE u._id = $1
-    AND u._organization = d._organization AND (u.isAdmin OR u.isDatasetManager))
-  OR EXISTS (SELECT 1 FROM webknossos.dataset_allowedTeams dt
-    JOIN webknossos.user_team_roles r ON r._team = dt._team
-    JOIN webknossos.teams_ t ON t._id = r._team AND t._organization = d._organization
-    JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
-    WHERE dt._dataset = d._id AND r._user = $1)
-  OR EXISTS (SELECT 1 FROM webknossos.folder_paths fp
-    JOIN webknossos.folder_allowedTeams ft ON ft._folder = fp._ancestor
-    JOIN webknossos.user_team_roles r ON r._team = ft._team
-    JOIN webknossos.teams_ t ON t._id = r._team AND t._organization = d._organization
-    JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
-    WHERE fp._descendant = d._folder AND r._user = $1)
-  OR ($2::text IS NOT NULL AND (d.sharingToken = $2 OR EXISTS (
-    SELECT 1 FROM webknossos.annotation_privateLinks_ link
+  OR d._organization IN (SELECT u._organization FROM webknossos.users_ u
+    WHERE u._id = $1 AND (u.isAdmin OR u.isDatasetManager))
+  OR (d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = $1)
+    AND (
+      d._id IN (SELECT dt._dataset FROM webknossos.dataset_allowedTeams dt
+        JOIN webknossos.user_team_roles r ON r._team = dt._team
+        JOIN webknossos.teams_ t ON t._id = r._team
+        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
+        WHERE r._user = $1)
+      OR d._folder IN (SELECT fp._descendant FROM webknossos.folder_paths fp
+        JOIN webknossos.folder_allowedTeams ft ON ft._folder = fp._ancestor
+        JOIN webknossos.user_team_roles r ON r._team = ft._team
+        JOIN webknossos.teams_ t ON t._id = r._team
+        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
+        WHERE r._user = $1)))
+  OR ($2::text IS NOT NULL AND (d.sharingToken = $2 OR d._id IN (
+    SELECT a._dataset FROM webknossos.annotation_privateLinks_ link
     JOIN webknossos.annotations_ a ON a._id = link._annotation
-    WHERE a._dataset = d._id AND link.accessToken = $2)))
+    WHERE link.accessToken = $2)))
 )"#;
 
 /// SQL predicate for DatasetService.isEditableBy. Bind $1 user id. Being an
 /// uploader or superuser alone does not grant editing. Dataset managers are
 /// allowed by the service independently of organization; callers needing read
 /// access must check it separately, just like the Scala controllers.
-pub const EDIT_PREDICATE: &str = r#"EXISTS (
-  SELECT 1 FROM webknossos.users_ u WHERE u._id = $1 AND (
-    (u.isAdmin AND u._organization = d._organization) OR u.isDatasetManager
-    OR EXISTS (SELECT 1 FROM webknossos.dataset_allowedTeams dt
-      JOIN webknossos.user_team_roles r ON r._team = dt._team
-      JOIN webknossos.teams_ t ON t._id = r._team AND t._organization = d._organization AND t._organization = u._organization
-      WHERE dt._dataset = d._id AND r._user = u._id AND r.isTeamManager)
-    OR EXISTS (SELECT 1 FROM webknossos.folder_paths fp
-      JOIN webknossos.folder_allowedTeams ft ON ft._folder = fp._ancestor
-      JOIN webknossos.user_team_roles r ON r._team = ft._team
-      JOIN webknossos.teams_ t ON t._id = r._team AND t._organization = d._organization AND t._organization = u._organization
-      WHERE fp._descendant = d._folder AND r._user = u._id AND r.isTeamManager)
-  )
+/// Uncorrelated like [`READ_PREDICATE`].
+pub const EDIT_PREDICATE: &str = r#"(
+  EXISTS (SELECT 1 FROM webknossos.users_ u WHERE u._id = $1 AND u.isDatasetManager)
+  OR d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = $1 AND u.isAdmin)
+  OR (d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = $1)
+    AND (
+      d._id IN (SELECT dt._dataset FROM webknossos.dataset_allowedTeams dt
+        JOIN webknossos.user_team_roles r ON r._team = dt._team
+        JOIN webknossos.teams_ t ON t._id = r._team
+        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
+        WHERE r._user = $1 AND r.isTeamManager)
+      OR d._folder IN (SELECT fp._descendant FROM webknossos.folder_paths fp
+        JOIN webknossos.folder_allowedTeams ft ON ft._folder = fp._ancestor
+        JOIN webknossos.user_team_roles r ON r._team = ft._team
+        JOIN webknossos.teams_ t ON t._id = r._team
+        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
+        WHERE r._user = $1 AND r.isTeamManager)))
+)"#;
+
+/// `isEditable` of the compact dataset list (DatasetDAO.findAllCompactWithSearch): like
+/// [`EDIT_PREDICATE`], but any member (not only managers) of a team with access to the
+/// dataset's folder or an ancestor counts. Informational only; mutations use can_edit.
+pub const COMPACT_EDIT_PREDICATE: &str = r#"(
+  EXISTS (SELECT 1 FROM webknossos.users_ u WHERE u._id = $1 AND u.isDatasetManager)
+  OR d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = $1 AND u.isAdmin)
+  OR (d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = $1)
+    AND (
+      d._id IN (SELECT dt._dataset FROM webknossos.dataset_allowedTeams dt
+        JOIN webknossos.user_team_roles r ON r._team = dt._team
+        JOIN webknossos.teams_ t ON t._id = r._team
+        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
+        WHERE r._user = $1 AND r.isTeamManager)
+      OR d._folder IN (SELECT fp._descendant FROM webknossos.folder_paths fp
+        JOIN webknossos.folder_allowedTeams ft ON ft._folder = fp._ancestor
+        JOIN webknossos.user_team_roles r ON r._team = ft._team
+        JOIN webknossos.teams_ t ON t._id = r._team
+        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
+        WHERE r._user = $1)))
 )"#;
 
 pub async fn can_read(
@@ -113,7 +146,7 @@ pub async fn lock_edit(
     .fetch_one(&mut **transaction)
     .await?;
     if require_read && !read {
-        return Err(ApiError::not_found("Dataset not found."));
+        return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
     if !edit {
         return Err(ApiError::forbidden("Not allowed."));

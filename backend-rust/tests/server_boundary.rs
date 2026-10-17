@@ -56,11 +56,13 @@ async fn request_timeout_bounds_database_waits_and_preserves_error_headers() {
         .unwrap();
     let config = Config {
         bind: "127.0.0.1:0".parse().unwrap(),
+        metrics_bind: None,
         database: DatabaseConfig {
             url: "postgres://database_secret@127.0.0.1:1/unavailable".into(),
             min_connections: 0,
             max_connections: 1,
             acquire_timeout: Duration::from_secs(5),
+            session_time_zone: None,
         },
         public_url: "http://localhost:9000".parse().unwrap(),
         email_verification_enabled: true,

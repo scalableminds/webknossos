@@ -594,7 +594,7 @@ async fn expected(db: &TestDb, org: &str, id: &str, name: &str, teams: Value) ->
 
 fn unfinished_uri(key: &str, token: &str, organization: &str) -> String {
     format!(
-        "/datastores/store/getUnfinishedDatasetUploadsForUser?key={key}&token={token}&organizationId={organization}"
+        "/datastores/store/getUnfinishedDatasetUploadsForUser?key={key}&token={token}&organizationName={organization}"
     )
 }
 

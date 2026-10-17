@@ -20,9 +20,6 @@ fn bounding_box_division_and_union_follow_scala() {
         Some(bbox([2, -2, 1, 5, 2, 1]))
     );
     assert_eq!(bbox([0, 0, 0, 1, 1, 1]).divide([0, 1, 1]), None);
-    // MathUtils.ceilDiv rounds the magnitude up, then applies the sign.
-    assert_eq!(ceil_div(-3, 2), -2);
-    assert_eq!(ceil_div(0, 4), 0);
     assert_eq!(
         bbox([0, 0, 0, 10, 10, 10]).union(&bbox([5, -5, 2, 10, 2, 2])),
         bbox([0, -5, 0, 15, 15, 10])

@@ -58,8 +58,6 @@ const INACTIVE_STATUSES: [&str; 4] = [
     "Not yet marked as fully uploaded to paths.",
     "Deleted by user.",
 ];
-/// Msg.notFound (Fox.Empty in a Play action).
-const EMPTY_NOT_FOUND: &str = "Could not find or access the requested resource.";
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -141,14 +139,14 @@ pub(crate) fn forbidden_response() -> Response {
         StatusCode::FORBIDDEN,
         ResponseJson(json!({
             "granted": false,
-            "msg": "Data store could not be found or accessed."
+            "msg": crate::msg::data_store::NOT_FOUND
         })),
     )
         .into_response()
 }
 
 fn invalid_body() -> ApiError {
-    ApiError::bad_request("Invalid JSON request body.")
+    ApiError::bad_request(crate::msg::request::INVALID_JSON_BODY)
 }
 
 // ---------------------------------------------------------------- status
@@ -401,8 +399,8 @@ async fn apply_report(
                     .bind(&found.data_store)
                     .fetch_optional(&mut *tx)
                     .await?;
-                    let original_is_scratch =
-                        original_is_scratch.ok_or_else(|| ApiError::not_found(EMPTY_NOT_FOUND))?;
+                    let original_is_scratch = original_is_scratch
+                        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
                     if (original_is_scratch && !store.is_scratch) || found.status == UNREPORTED {
                         tracing::info!(
                             dataset = %found.id,
@@ -495,7 +493,7 @@ pub(crate) async fn write_data_source(
             .bind(source.organization())
             .fetch_optional(&mut *connection)
             .await?;
-    let organization = organization.ok_or_else(|| ApiError::not_found(EMPTY_NOT_FOUND))?;
+    let organization = organization.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let voxel_size = source.voxel_size();
     let status: String = source.status().chars().take(1024).collect();
     sqlx::query(
@@ -709,7 +707,7 @@ async fn get_data_source(
         row.ok_or_else(|| crate::dataset::lifecycle::not_found(id.as_str()))?;
     if is_usable && !has_voxel_size {
         return Err(ApiError::bad_request(
-            "Dataset is marked as usable but has no voxel size.",
+            crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE,
         ));
     }
     Ok(ResponseJson(

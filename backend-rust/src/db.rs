@@ -12,7 +12,21 @@ pub async fn connect(config: &DatabaseConfig) -> ApiResult<PgPool> {
         .url
         .parse::<PgConnectOptions>()?
         .disable_statement_logging();
+    let time_zone = config.session_time_zone.clone();
     let pool = PgPoolOptions::new()
+        .after_connect(move |connection, _| {
+            let time_zone = time_zone.clone();
+            Box::pin(async move {
+                if let Some(zone) = time_zone {
+                    // sqlx pins TimeZone=UTC in the startup packet; Play's sessions use the JVM zone.
+                    sqlx::query("SELECT set_config('TimeZone', $1, false)")
+                        .bind(zone)
+                        .execute(connection)
+                        .await?;
+                }
+                Ok(())
+            })
+        })
         .max_connections(config.max_connections)
         .min_connections(config.min_connections)
         .acquire_timeout(config.acquire_timeout)
@@ -47,7 +61,7 @@ pub async fn ready(pool: &PgPool) -> ApiResult<()> {
     sqlx::query("SELECT 1")
         .execute(pool)
         .await
-        .map_err(|_| ApiError::service_unavailable("Database unavailable."))?;
+        .map_err(|_| ApiError::service_unavailable(crate::msg::request::DATABASE_UNAVAILABLE))?;
     check_schema(pool)
         .await
         .map_err(|_| ApiError::service_unavailable("Database schema unavailable or incompatible."))

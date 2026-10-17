@@ -105,7 +105,7 @@ async fn read(
             .bind(id.as_str())
             .fetch_optional(&state.pool)
             .await?
-            .ok_or_else(|| ApiError::not_found("Maintenance not found."))?,
+            .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?,
     ))
 }
 async fn insert(pool: &sqlx::PgPool, user: &AuthUser, body: Parameters) -> ApiResult<Maintenance> {
@@ -159,7 +159,7 @@ async fn update(
             .bind(body.message)
             .fetch_optional(&state.pool)
             .await?
-            .ok_or_else(|| ApiError::not_found("Maintenance not found."))?,
+            .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?,
     ))
 }
 async fn delete(
@@ -177,7 +177,7 @@ async fn delete(
     .rows_affected()
         == 0
     {
-        return Err(ApiError::not_found("Maintenance not found."));
+        return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
     Ok(StatusCode::OK)
 }

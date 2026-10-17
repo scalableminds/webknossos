@@ -1,4 +1,5 @@
 use super::*;
+use crate::{annotation::tracing_initialization::TracingInitError, stores::client::ServiceError};
 
 #[test]
 fn zeroed_statistics_match_scala() {
@@ -14,7 +15,7 @@ fn zeroed_statistics_match_scala() {
 
 #[test]
 fn empty_fallback_failure_wraps_to_create_failed() {
-    let error = init_failure(TracingInitError::FallbackLayerNotFound("x".into()))
+    let error = ProviderError::from(TracingInitError::FallbackLayerNotFound("x".into()))
         .wrap(CREATE_TRACINGS_FAILED)
         .wrap(CREATE_FAILED);
     assert_eq!(error.chain(), [CREATE_TRACINGS_FAILED]);
@@ -25,7 +26,7 @@ fn empty_fallback_failure_wraps_to_create_failed() {
 
 #[test]
 fn upstream_status_is_kept_through_wrapping() {
-    let error = service_failure(ServiceError::UpstreamStatus(503))
+    let error = ProviderError::from(ServiceError::UpstreamStatus(503))
         .wrap(CREATE_TRACINGS_FAILED)
         .wrap(CREATE_FAILED);
     let api = ApiError::from(error);

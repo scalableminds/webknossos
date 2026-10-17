@@ -23,11 +23,6 @@ pub(crate) mod messages {
         "Cannot accept terms of service, as it is not configured for this WEBKNOSSOS instance.";
     pub const ONLY_ORGANIZATION_OWNER: &str =
         "Only the organization owner can accept terms of service.";
-    pub fn version_mismatch(required: i32, version: i32) -> String {
-        format!(
-            "Terms of service version mismatch. Current version is {required}, received acceptance for {version}."
-        )
-    }
 }
 
 pub fn router() -> Router<AppState> {
@@ -73,11 +68,7 @@ async fn acceptance_needed(
     .fetch_optional(&state.pool)
     .await?
     .ok_or_else(|| {
-        ApiError::bad_request(
-            crate::auth::browser::onboarding::organization_messages::not_found(
-                &user.organization_id,
-            ),
-        )
+        ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
     })?;
     let deadline = config.acceptance_deadline;
     Ok(axum::Json(json!({
@@ -112,10 +103,12 @@ async fn accept(
         return Err(ApiError::bad_request(messages::NOT_ENABLED));
     }
     if parameters.version != config.version {
-        return Err(ApiError::bad_request(messages::version_mismatch(
-            config.version,
-            parameters.version,
-        )));
+        return Err(ApiError::bad_request(
+            crate::msg::organization::terms_of_service::version_mismatch(
+                config.version,
+                parameters.version,
+            ),
+        ));
     }
     sqlx::query(
         r#"UPDATE webknossos.organizations

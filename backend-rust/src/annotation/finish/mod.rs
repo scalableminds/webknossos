@@ -23,7 +23,6 @@ use axum::{
     http::{StatusCode, request::Parts},
     routing::patch,
 };
-use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -38,12 +37,11 @@ use crate::{
     extract::{self, Path},
     time::interaction_writer::TimeInteractionWriter,
     util::id::ObjectId,
+    util::instant::now_millis,
 };
 
 /// Msg.Annotation.finishFailed.
 pub const FINISH_FAILED: &str = "Could not finish/archive the annotation.";
-/// Msg.Annotation.finished (also the silent repeat-finish success).
-pub const ANNOTATION_FINISHED: &str = "Annotation is archived.";
 /// Msg.Task.finished (Active task annotation finished now).
 pub const TASK_FINISHED: &str = "Task is finished.";
 /// Msg.Annotation.allFinished.
@@ -71,12 +69,12 @@ pub struct Timestamp(pub i64);
 pub fn parse_timestamp(query: Option<&str>) -> ApiResult<i64> {
     const KEY: &str = "timestamp";
     let pairs: Vec<(String, String)> = serde_urlencoded::from_str(query.unwrap_or(""))
-        .map_err(|_| ApiError::bad_request("Invalid query parameters."))?;
+        .map_err(|_| ApiError::bad_request(crate::msg::request::INVALID_QUERY))?;
     let value = pairs
         .into_iter()
         .find(|(key, _)| key == KEY)
         .map(|(_, value)| value)
-        .ok_or_else(|| ApiError::bad_request(format!("Missing parameter: {KEY}")))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter(KEY)))?;
     // java.lang.Long.parseLong: optional sign, ASCII digits, no whitespace.
     let digits = value.strip_prefix(['+', '-']).unwrap_or(&value);
     if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
@@ -173,11 +171,6 @@ fn infrastructure(error: ProviderError) -> Result<ProviderError, ApiError> {
     }
 }
 
-/// Instant.now at millisecond precision.
-fn now_millis() -> DateTime<Utc> {
-    DateTime::from_timestamp_millis(Utc::now().timestamp_millis()).unwrap_or_else(Utc::now)
-}
-
 /// AnnotationService.finish on the live saved annotation. Returns the success
 /// message and the cache keys to clear after commit.
 async fn finish_saved(
@@ -226,7 +219,7 @@ async fn finish_saved(
         "Active" => {}
         "Finished" => {
             tracing::info!(annotation = %annotation.id, "Silently not finishing already finished annotation");
-            return Ok(ANNOTATION_FINISHED);
+            return Ok(crate::msg::annotation::FINISHED);
         }
         other => {
             tracing::info!(annotation = %annotation.id, state = other, "Not finishing annotation that is not active");
@@ -268,7 +261,7 @@ async fn finish_saved(
     Ok(if annotation.task_id.is_some() {
         TASK_FINISHED
     } else {
-        ANNOTATION_FINISHED
+        crate::msg::annotation::FINISHED
     })
 }
 

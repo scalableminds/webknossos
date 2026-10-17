@@ -19,6 +19,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::config::{ConfigError, Env};
 use axum::{extract::FromRequestParts, http::request::Parts};
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
@@ -74,30 +75,25 @@ impl fmt::Debug for SlackConfig {
 /// `WK_SLACK_NOTIFICATIONS_URI` (default empty = disabled),
 /// `WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED` (default false) and
 /// `WK_PUBLIC_URL` (default `http://localhost:9000`, validated by config.rs).
-pub fn config_from_values(values: &HashMap<String, String>) -> Result<SlackConfig, String> {
-    let uri = match values
-        .get("WK_SLACK_NOTIFICATIONS_URI")
-        .map(|value| value.trim())
-    {
+pub fn config_from_values(values: &HashMap<String, String>) -> Result<SlackConfig, ConfigError> {
+    let env = Env::new(values);
+    let uri = match env.get("WK_SLACK_NOTIFICATIONS_URI").map(str::trim) {
         None | Some("") => None,
         Some(raw) => {
             let valid = url::Url::parse(raw)
                 .ok()
                 .is_some_and(|url| matches!(url.scheme(), "http" | "https") && url.has_host());
             if !valid {
-                return Err("WK_SLACK_NOTIFICATIONS_URI must be an absolute HTTP(S) URL".into());
+                return Err(ConfigError(
+                    "WK_SLACK_NOTIFICATIONS_URI must be an absolute HTTP(S) URL".into(),
+                ));
             }
             Some(raw.to_owned())
         }
     };
-    let verbose_logging_enabled = match values.get("WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED")
-    {
-        None => false,
-        Some(value) => value.parse().map_err(|_| {
-            "WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED must be true or false".to_owned()
-        })?,
-    };
-    let public_uri = values
+    let verbose_logging_enabled =
+        env.bool_or("WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED", false)?;
+    let public_uri = env
         .get("WK_PUBLIC_URL")
         .map(|raw| match url::Url::parse(raw) {
             Ok(url) => url.as_str().trim_end_matches('/').to_owned(),

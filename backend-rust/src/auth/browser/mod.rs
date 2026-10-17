@@ -52,20 +52,12 @@ use crate::{
 };
 
 pub(crate) mod messages {
-    pub const INVALID_CREDENTIALS: &str = "Incorrect email or password. Please try again.";
     pub const IS_DEACTIVATED: &str = "Your account has not been activated by an admin yet. Please contact your organization’s admin for help.";
     pub const NOT_VERIFIED: &str =
         "Your email address is not verified yet. A new verification email has been sent.";
     pub const PASSWORDS_DONT_MATCH: &str = "The two passwords do not match.";
-    pub const EMAIL_TAKEN: &str = "An account with this email address already exists. Please log in instead or use a different email.";
     pub const INVALID_FIRST_NAME: &str = "Please check your first name for any special characters.";
     pub const INVALID_LAST_NAME: &str = "Please check your last name for any special characters.";
-    pub const NOT_ALLOWED: &str = "You are not authorized to view or edit this resource.";
-    pub const SUPER_USER_ONLY: &str = "This feature is currently only available for superusers.";
-    pub const USER_NOT_FOUND: &str = "User could not be found or accessed.";
-    pub const NOT_AUTHENTICATED: &str =
-        "You are not authorized to view this resource. Please log in.";
-    pub const TOKEN_INVALID: &str = "The supplied token is invalid or expired.";
     pub const CREATE_FAILED: &str = "Could not create user.";
 }
 
@@ -182,27 +174,13 @@ pub(crate) fn config_from_values(
     email_verification_activated: bool,
     token_idle_timeout: Duration,
 ) -> Result<BrowserAuthConfig, crate::config::ConfigError> {
-    use crate::config::ConfigError;
+    use crate::config::{ConfigError, Env};
     let defaults = BrowserAuthConfig::default();
-    let get = |name: &str| values.get(name).map(String::as_str);
-    let boolean = |name: &str, default: bool| -> Result<bool, ConfigError> {
-        get(name).map_or(Ok(default), |value| {
-            value
-                .parse()
-                .map_err(|_| ConfigError(format!("{name} must be true or false")))
-        })
-    };
+    let env = Env::new(values);
     let seconds = |name: &str, default: Duration| -> Result<Duration, ConfigError> {
-        get(name).map_or(Ok(default), |value| {
-            value
-                .parse::<u64>()
-                .ok()
-                .filter(|seconds| *seconds > 0 && *seconds <= i32::MAX as u64)
-                .map(Duration::from_secs)
-                .ok_or_else(|| ConfigError(format!("{name} must be a positive number of seconds")))
-        })
+        Ok(env.seconds(name, false)?.unwrap_or(default))
     };
-    let signer_secret = match get("WK_COOKIE_SIGNER_SECRET") {
+    let signer_secret = match env.get("WK_COOKIE_SIGNER_SECRET") {
         Some(secret) if secret.len() < 16 => {
             return Err(ConfigError(
                 "WK_COOKIE_SIGNER_SECRET must contain at least 16 characters".into(),
@@ -210,8 +188,8 @@ pub(crate) fn config_from_values(
         }
         secret => secret.map(str::to_owned),
     };
-    let cookie_name = get("WK_COOKIE_NAME").unwrap_or("id").to_owned();
-    let cookie_path = get("WK_COOKIE_PATH").unwrap_or("/").to_owned();
+    let cookie_name = env.get("WK_COOKIE_NAME").unwrap_or("id").to_owned();
+    let cookie_path = env.get("WK_COOKIE_PATH").unwrap_or("/").to_owned();
     let header_safe = |value: &str| {
         !value.is_empty()
             && value
@@ -223,7 +201,7 @@ pub(crate) fn config_from_values(
             "WK_COOKIE_NAME and WK_COOKIE_PATH must be nonempty cookie-safe tokens".into(),
         ));
     }
-    let same_site = match get("WK_COOKIE_SAME_SITE").unwrap_or("Lax") {
+    let same_site = match env.get("WK_COOKIE_SAME_SITE").unwrap_or("Lax") {
         "Strict" => CookieSameSite::Strict,
         "Lax" => CookieSameSite::Lax,
         "None" => CookieSameSite::None,
@@ -233,24 +211,26 @@ pub(crate) fn config_from_values(
             ));
         }
     };
-    let link_expiry = match get("WK_EMAIL_VERIFICATION_LINK_EXPIRY_SECONDS") {
+    let link_expiry = match env.get("WK_EMAIL_VERIFICATION_LINK_EXPIRY_SECONDS") {
         Some("none") => None,
         _ => Some(seconds(
             "WK_EMAIL_VERIFICATION_LINK_EXPIRY_SECONDS",
             Duration::from_secs(30 * 86_400),
         )?),
     };
-    let terms_of_service_version = get("WK_TERMS_OF_SERVICE_VERSION")
+    let terms_of_service_version = env
+        .get("WK_TERMS_OF_SERVICE_VERSION")
         .map_or(Ok(1), str::parse)
         .map_err(|_| ConfigError("WK_TERMS_OF_SERVICE_VERSION must be an integer".into()))?;
     Ok(BrowserAuthConfig {
         signer_secret,
         cookie_name,
         cookie_path,
-        secure_cookie: boolean("WK_COOKIE_SECURE", defaults.secure_cookie)?,
-        http_only_cookie: boolean("WK_COOKIE_HTTP_ONLY", defaults.http_only_cookie)?,
+        secure_cookie: env.bool_or("WK_COOKIE_SECURE", defaults.secure_cookie)?,
+        http_only_cookie: env.bool_or("WK_COOKIE_HTTP_ONLY", defaults.http_only_cookie)?,
         same_site,
-        use_fingerprinting: boolean("WK_COOKIE_USE_FINGERPRINTING", defaults.use_fingerprinting)?,
+        use_fingerprinting: env
+            .bool_or("WK_COOKIE_USE_FINGERPRINTING", defaults.use_fingerprinting)?,
         authenticator_expiry: seconds(
             "WK_COOKIE_AUTHENTICATOR_EXPIRY_SECONDS",
             defaults.authenticator_expiry,
@@ -258,7 +238,7 @@ pub(crate) fn config_from_values(
         cookie_max_age: seconds("WK_COOKIE_MAX_AGE_SECONDS", defaults.cookie_max_age)?,
         public_uri: public_url.as_str().trim_end_matches('/').to_owned(),
         email_verification_activated,
-        email_verification_required: boolean("WK_EMAIL_VERIFICATION_REQUIRED", false)?,
+        email_verification_required: env.bool_or("WK_EMAIL_VERIFICATION_REQUIRED", false)?,
         email_verification_grace_period: seconds(
             "WK_EMAIL_VERIFICATION_GRACE_PERIOD_SECONDS",
             defaults.email_verification_grace_period,
@@ -270,14 +250,15 @@ pub(crate) fn config_from_values(
             defaults.reset_password_expiry,
         )?,
         token_idle_timeout,
-        register_to_default_orga_enabled: boolean(
+        register_to_default_orga_enabled: env.bool_or(
             "WK_REGISTER_TO_DEFAULT_ORGA_ENABLED",
             defaults.register_to_default_orga_enabled,
         )?,
-        is_wkorg_instance: boolean("WK_IS_WKORG_INSTANCE", false)?,
-        terms_of_service_enabled: boolean("WK_TERMS_OF_SERVICE_ENABLED", false)?,
+        is_wkorg_instance: env.bool_or("WK_IS_WKORG_INSTANCE", false)?,
+        terms_of_service_enabled: env.bool_or("WK_TERMS_OF_SERVICE_ENABLED", false)?,
         terms_of_service_version,
-        new_organization_mailing_list: get("WK_NEW_ORGANIZATION_MAILING_LIST")
+        new_organization_mailing_list: env
+            .get("WK_NEW_ORGANIZATION_MAILING_LIST")
             .unwrap_or("")
             .to_owned(),
     })
@@ -743,7 +724,7 @@ impl<S: Send + Sync> FromRequest<S> for FormBody {
         let mut data = HashMap::new();
         if content_type == "application/json" || content_type == "text/json" {
             let value: Value = serde_json::from_slice(&bytes)
-                .map_err(|_| ApiError::bad_request("Invalid JSON request body."))?;
+                .map_err(|_| ApiError::bad_request(crate::msg::request::INVALID_JSON_BODY))?;
             flatten_json("", &value, &mut data);
         } else if content_type == "application/x-www-form-urlencoded" {
             let pairs: Vec<(String, String)> = serde_urlencoded::from_bytes(&bytes)
@@ -987,7 +968,7 @@ pub(crate) async fn create_email_verification(
     .bind(multi_user_id)
     .fetch_optional(&mut **tx)
     .await?
-    .ok_or_else(|| ApiError::bad_request(messages::USER_NOT_FOUND))?;
+    .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     let key = random_base64url(32)?;
     let expiry_ms = config
         .email_verification_link_expiry
@@ -1060,7 +1041,7 @@ async fn login(
     .bind(&email)
     .fetch_optional(&state.pool)
     .await?;
-    let invalid = || ApiError::bad_request(messages::INVALID_CREDENTIALS);
+    let invalid = || ApiError::bad_request(crate::msg::user::INVALID_CREDENTIALS);
     let Some(LoginCandidate {
         user_id: Some(user_id),
         hasher,
@@ -1100,7 +1081,7 @@ pub(crate) async fn login_user(
     .fetch_optional(&mut *tx)
     .await?;
     let (multi_user_id, deactivated, verified, within_grace) =
-        row.ok_or_else(|| ApiError::bad_request(messages::INVALID_CREDENTIALS))?;
+        row.ok_or_else(|| ApiError::bad_request(crate::msg::user::INVALID_CREDENTIALS))?;
     if deactivated {
         return Err(ApiError::bad_request(messages::IS_DEACTIVATED));
     }

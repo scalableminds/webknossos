@@ -44,7 +44,7 @@ fn invalid_values_are_rejected() {
         ("WK_CREDIT_TICKER_INITIAL_DELAY_SECONDS", "x"),
     ] {
         let error = config_from_values(&values(&[(key, value)])).unwrap_err();
-        assert!(error.starts_with(key), "{key}={value}: {error}");
+        assert!(error.0.starts_with(key), "{key}={value}: {error}");
     }
 }
 

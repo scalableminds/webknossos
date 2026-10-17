@@ -17,6 +17,7 @@ use serde_json::{Value, json};
 
 use crate::{
     AppState,
+    auth::browser::onboarding::create_organization_directory,
     error::{ApiError, ApiResult},
     stores::client::ServiceClients,
     system::application_info::{LocalStoreConfig, MiscConfig, MiscState, ok_empty},
@@ -75,7 +76,7 @@ async fn trigger_insert(
     }
     insert_sample_organization(&state, config).await?;
     if let Some(Extension(clients)) = clients {
-        create_organization_directory(pool, &clients).await;
+        create_organization_directory(pool, Some(&clients), SAMPLE_ORGANIZATION_ID).await;
     }
     Ok(ok_empty())
 }
@@ -713,37 +714,6 @@ async fn insert_dataset_if_absent(
     .execute(&mut **tx)
     .await?;
     crate::dataset::source::write_layers(tx, dataset.id, &source.layers).await
-}
-
-/// organizationService.createOrganizationDirectory: notify every datastore;
-/// individual RPC failures are ignored, as in Play.
-async fn create_organization_directory(pool: &sqlx::PgPool, clients: &ServiceClients) {
-    let urls: Vec<String> =
-        match sqlx::query_scalar("SELECT url FROM webknossos.dataStores_ ORDER BY name")
-            .fetch_all(pool)
-            .await
-        {
-            Ok(urls) => urls,
-            Err(_) => {
-                tracing::warn!("Could not list datastores for organization directory creation");
-                return;
-            }
-        };
-    let query = [("organizationId", SAMPLE_ORGANIZATION_ID.to_owned())];
-    let requests = urls.iter().map(|url| {
-        clients.request(
-            axum::http::Method::POST,
-            url,
-            &["data", "triggers", "createOrganizationDirectory"],
-            &query,
-            None,
-        )
-    });
-    for result in futures_util::future::join_all(requests).await {
-        if let Err(error) = result {
-            tracing::warn!(%error, "Datastore organization directory creation failed");
-        }
-    }
 }
 
 #[cfg(test)]

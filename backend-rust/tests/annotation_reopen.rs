@@ -16,9 +16,7 @@ use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation::provider::{
-        ANNOTATION_NOT_FOUND, AccessContext, AnnotationIdentifier, AnnotationProvider,
-    },
+    annotation::provider::{AccessContext, AnnotationIdentifier, AnnotationProvider},
     annotation::reopen::{REOPEN_FAILED, REOPEN_SUCCESS, owner_wait_elapsed},
     auth::AuthUser,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
@@ -304,7 +302,10 @@ async fn owner_time_gate_and_success_response_shape() {
     let (status, body) = reopen(&app, &w.owner.token, "Explorational", &object_id()).await;
     assert_eq!(
         (status, body),
-        (StatusCode::BAD_REQUEST, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::BAD_REQUEST,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     db.cleanup().await;
 }

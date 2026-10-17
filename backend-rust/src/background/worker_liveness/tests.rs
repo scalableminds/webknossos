@@ -61,7 +61,7 @@ fn invalid_values_are_rejected() {
         ),
     ] {
         let error = config_from_values(&values(&[(key, value)])).unwrap_err();
-        assert!(error.starts_with(key), "{key}={value}: {error}");
+        assert!(error.0.starts_with(key), "{key}={value}: {error}");
     }
 }
 

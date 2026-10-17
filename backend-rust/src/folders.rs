@@ -71,7 +71,7 @@ async fn organization_root(
     .bind(&user.organization_id)
     .fetch_optional(connection)
     .await?
-    .ok_or_else(|| ApiError::not_found("Could not find the requested folder."))
+    .ok_or_else(|| ApiError::bad_request(FOLDER_NOT_FOUND))
 }
 
 async fn access(
@@ -119,6 +119,9 @@ async fn access(
     .await?)
 }
 
+/// Msg.Folder.notFound; FolderController maps it without a status, i.e. 400.
+const FOLDER_NOT_FOUND: &str = "Could not find the requested folder.";
+
 async fn load(connection: &mut PgConnection, id: &str) -> ApiResult<Folder> {
     sqlx::query_as(
         "SELECT _id AS id, name, metadata, created FROM webknossos.folders_ WHERE _id = $1",
@@ -126,12 +129,12 @@ async fn load(connection: &mut PgConnection, id: &str) -> ApiResult<Folder> {
     .bind(id)
     .fetch_optional(connection)
     .await?
-    .ok_or_else(|| ApiError::not_found("Could not find the requested folder."))
+    .ok_or_else(|| ApiError::bad_request(FOLDER_NOT_FOUND))
 }
 
 async fn readable(connection: &mut PgConnection, user: &AuthUser, id: &str) -> ApiResult<Folder> {
     if !access(connection, user, id, false).await? {
-        return Err(ApiError::not_found("Could not find the requested folder."));
+        return Err(ApiError::bad_request(FOLDER_NOT_FOUND));
     }
     load(connection, id).await
 }
@@ -431,15 +434,17 @@ fn validate_name(name: &str) -> ApiResult<()> {
 fn validate_metadata(metadata: &[Value]) -> ApiResult<()> {
     let mut seen = HashSet::new();
     for entry in metadata {
-        let object = entry
-            .as_object()
-            .ok_or_else(|| ApiError::bad_request("Metadata entries must be objects."))?;
+        let object = entry.as_object().ok_or_else(|| {
+            ApiError::bad_request(crate::msg::dataset::metadata::ENTRIES_MUST_BE_OBJECTS)
+        })?;
         if let Some(key) = object.get("key") {
-            let key = key
-                .as_str()
-                .ok_or_else(|| ApiError::bad_request("Metadata keys must be strings."))?;
+            let key = key.as_str().ok_or_else(|| {
+                ApiError::bad_request(crate::msg::dataset::metadata::KEYS_MUST_BE_STRINGS)
+            })?;
             if !seen.insert(key) {
-                return Err(ApiError::bad_request("Metadata keys must be unique."));
+                return Err(ApiError::bad_request(
+                    crate::msg::dataset::metadata::DUPLICATE_KEYS,
+                ));
             }
         }
     }

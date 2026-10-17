@@ -19,19 +19,17 @@ use serde_json::{Value, json};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use webknossos_backend::{
     annotation::provider::{
-        ANNOTATION_NOT_FOUND, AccessContext, AnnotationDataSourceStore, AnnotationIdentifier,
-        AnnotationLayer, AnnotationLayerType, AnnotationProvider, AnnotationType,
-        CompoundAnnotation, FoxFailure, MERGE_FAILED_COMPOUND, MERGE_FAILED_IN_TRACINGSTORE,
-        MULTIPLE_DATASETS, NO_ANNOTATIONS, PROJECT_NO_ANNOTATIONS, ProvidedAnnotation,
-        ProviderError, RESOURCE_NOT_FOUND, TASK_NO_ANNOTATIONS, TASK_TYPE_NO_FINISHED_ANNOTATIONS,
-        USER_NOT_AUTHENTICATED, dataset_not_usable, project_not_found, task_not_found,
-        task_type_not_found,
+        AccessContext, AnnotationDataSourceStore, AnnotationIdentifier, AnnotationLayer,
+        AnnotationLayerType, AnnotationProvider, AnnotationType, CompoundAnnotation, FoxFailure,
+        MERGE_FAILED_COMPOUND, MERGE_FAILED_IN_TRACINGSTORE, MULTIPLE_DATASETS, NO_ANNOTATIONS,
+        PROJECT_NO_ANNOTATIONS, ProvidedAnnotation, ProviderError, TASK_NO_ANNOTATIONS,
+        TASK_TYPE_NO_FINISHED_ANNOTATIONS,
     },
     auth::AuthUser,
     error::ApiError,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     stores::client::ServiceClientConfig,
-    stores::tracing_client::{TRACING_STORE_NOT_FOUND, TracingStoreClient},
+    stores::tracing_client::TracingStoreClient,
     util::id::ObjectId,
 };
 
@@ -106,7 +104,10 @@ fn annotation_types_parse_exactly_and_case_sensitively() {
     let api = ProviderError::NotFound.into_api_error(StatusCode::NOT_FOUND);
     assert_eq!(
         (api.status, api.message.as_str()),
-        (StatusCode::NOT_FOUND, ANNOTATION_NOT_FOUND)
+        (
+            StatusCode::NOT_FOUND,
+            webknossos_backend::msg::annotation::NOT_FOUND
+        )
     );
 }
 
@@ -205,16 +206,16 @@ async fn invalid_types_fail_without_database_lookups_and_compound_types_reach_th
 #[test]
 fn fox_chaining_and_status_rendering() {
     // Empty wrapped: plain failure without chain.
-    let error = ProviderError::Empty.wrap(ANNOTATION_NOT_FOUND);
+    let error = ProviderError::Empty.wrap(webknossos_backend::msg::annotation::NOT_FOUND);
     assert!(
         matches!(&error, ProviderError::Failure(FoxFailure { message, chain, status: None })
-        if message == ANNOTATION_NOT_FOUND && chain.is_empty())
+        if message == webknossos_backend::msg::annotation::NOT_FOUND && chain.is_empty())
     );
     // Unwrapped Empty renders like Play: 404 Msg.notFound.
     let api: ApiError = ProviderError::Empty.into();
     assert_eq!(
         (api.status, api.message.as_str()),
-        (StatusCode::NOT_FOUND, RESOURCE_NOT_FOUND)
+        (StatusCode::NOT_FOUND, webknossos_backend::msg::NOT_FOUND)
     );
     // A ParamFailure keeps its status through `?~>`; an explicit `~>` replaces it.
     let failure = ProviderError::Failure(FoxFailure {
@@ -223,12 +224,15 @@ fn fox_chaining_and_status_rendering() {
         status: Some(StatusCode::BAD_GATEWAY),
     })
     .wrap(MERGE_FAILED_COMPOUND)
-    .wrap(ANNOTATION_NOT_FOUND);
+    .wrap(webknossos_backend::msg::annotation::NOT_FOUND);
     assert_eq!(
         failure.chain(),
         [MERGE_FAILED_COMPOUND, "inner", "innermost"]
     );
-    assert_eq!(failure.to_string(), ANNOTATION_NOT_FOUND);
+    assert_eq!(
+        failure.to_string(),
+        webknossos_backend::msg::annotation::NOT_FOUND
+    );
     let api = ProviderError::Failure(FoxFailure {
         message: "x".into(),
         chain: Vec::new(),
@@ -239,7 +243,10 @@ fn fox_chaining_and_status_rendering() {
     let api: ApiError = failure.into();
     assert_eq!(
         (api.status, api.message.as_str()),
-        (StatusCode::BAD_GATEWAY, ANNOTATION_NOT_FOUND)
+        (
+            StatusCode::BAD_GATEWAY,
+            webknossos_backend::msg::annotation::NOT_FOUND
+        )
     );
     // Plain failures default to 400; infrastructure errors pass through.
     let api: ApiError = ProviderError::Empty.wrap("m").into();
@@ -385,8 +392,14 @@ async fn saved_types_resolve_the_live_annotation_regardless_of_requested_type() 
             .provide(context, "CompoundTask", &oid(id))
             .await
             .unwrap_err();
-        assert_eq!(error.to_string(), ANNOTATION_NOT_FOUND);
-        assert_eq!(error.chain(), [task_not_found(id)]);
+        assert_eq!(
+            error.to_string(),
+            webknossos_backend::msg::annotation::NOT_FOUND
+        );
+        assert_eq!(
+            error.chain(),
+            [webknossos_backend::msg::task::not_found(id)]
+        );
     }
     db.cleanup().await;
 }
@@ -476,7 +489,10 @@ async fn saved_provider_applies_annotation_dao_read_access() {
     let api: ApiError = missing.into();
     assert_eq!(
         (api.status, api.message.as_str()),
-        (StatusCode::BAD_REQUEST, ANNOTATION_NOT_FOUND)
+        (
+            StatusCode::BAD_REQUEST,
+            webknossos_backend::msg::annotation::NOT_FOUND
+        )
     );
     db.cleanup().await;
 }
@@ -911,14 +927,18 @@ fn assert_merge_request(
 }
 
 fn assert_failure(error: &ProviderError, chain: &[&str], status: StatusCode) {
-    assert_eq!(error.to_string(), ANNOTATION_NOT_FOUND, "{error:?}");
+    assert_eq!(
+        error.to_string(),
+        webknossos_backend::msg::annotation::NOT_FOUND,
+        "{error:?}"
+    );
     assert_eq!(error.chain(), chain, "{error:?}");
     let api: ApiError = match error {
         ProviderError::Failure(failure) => ProviderError::Failure(failure.clone()).into(),
         other => panic!("unexpected {other:?}"),
     };
     assert_eq!(api.status, status);
-    assert_eq!(api.message, ANNOTATION_NOT_FOUND);
+    assert_eq!(api.message, webknossos_backend::msg::annotation::NOT_FOUND);
 }
 
 fn expected_layers() -> Vec<AnnotationLayer> {
@@ -1024,7 +1044,7 @@ async fn compound_task_merges_readable_finished_annotations_and_caches_the_resul
         .unwrap_err();
     assert_failure(
         &error,
-        &[project_not_found(&w.task_a).as_str()],
+        &[webknossos_backend::msg::project::not_found(&w.task_a).as_str()],
         StatusCode::BAD_REQUEST,
     );
 
@@ -1091,7 +1111,7 @@ async fn compound_task_failures_carry_exact_scala_messages_and_are_not_cached() 
         let error = provide(context, id).await;
         assert_failure(
             &error,
-            &[task_not_found(id).as_str()],
+            &[webknossos_backend::msg::task::not_found(id).as_str()],
             StatusCode::BAD_REQUEST,
         );
     }
@@ -1107,12 +1127,16 @@ async fn compound_task_failures_carry_exact_scala_messages_and_are_not_cached() 
     assert_failure(&error, &[MULTIPLE_DATASETS], StatusCode::BAD_REQUEST);
     // Requester required (after the annotation checks), even with global access.
     let error = provide(AccessContext::global(None), &w.task_a).await;
-    assert_failure(&error, &[USER_NOT_AUTHENTICATED], StatusCode::BAD_REQUEST);
+    assert_failure(
+        &error,
+        &[webknossos_backend::msg::user::NOT_AUTHENTICATED],
+        StatusCode::BAD_REQUEST,
+    );
     // Dataset must be usable.
     let error = provide(as_manager, &w.task_unusable).await;
     assert_failure(
         &error,
-        &[dataset_not_usable(&w.unusable_dataset).as_str()],
+        &[webknossos_backend::msg::dataset::not_usable(&w.unusable_dataset).as_str()],
         StatusCode::BAD_REQUEST,
     );
     assert!(
@@ -1186,7 +1210,7 @@ async fn compound_task_failures_carry_exact_scala_messages_and_are_not_cached() 
         &[
             MERGE_FAILED_COMPOUND,
             MERGE_FAILED_IN_TRACINGSTORE,
-            TRACING_STORE_NOT_FOUND,
+            webknossos_backend::msg::tracing_store::NOT_FOUND,
         ],
         StatusCode::BAD_REQUEST,
     );
@@ -1238,7 +1262,7 @@ async fn compound_project_requires_team_management_and_merges_all_finished_annot
             .unwrap_err();
         assert_failure(
             &error,
-            &[project_not_found(&w.project).as_str()],
+            &[webknossos_backend::msg::project::not_found(&w.project).as_str()],
             StatusCode::BAD_REQUEST,
         );
     }
@@ -1250,7 +1274,11 @@ async fn compound_project_requires_team_management_and_merges_all_finished_annot
         )
         .await
         .unwrap_err();
-    assert_failure(&error, &[USER_NOT_AUTHENTICATED], StatusCode::BAD_REQUEST);
+    assert_failure(
+        &error,
+        &[webknossos_backend::msg::user::NOT_AUTHENTICATED],
+        StatusCode::BAD_REQUEST,
+    );
     let error = provider
         .provide(
             AccessContext::requester(Some(&manager)),
@@ -1347,7 +1375,7 @@ async fn compound_task_type_merges_tasks_listed_under_the_manager_grant() {
         .unwrap_err();
     assert_failure(
         &error,
-        &[task_type_not_found(&w.task_type).as_str()],
+        &[webknossos_backend::msg::task_type::not_found(&w.task_type).as_str()],
         StatusCode::BAD_REQUEST,
     );
     // A member reads the task type, but listing tasks needs team management.
@@ -1504,7 +1532,10 @@ async fn compound_restrictions_allow_only_parent_team_managers_and_admins_to_acc
         .restrictions_for(outsider_context, &check("CompoundTask", &w.task_a))
         .await
         .unwrap_err();
-    assert_eq!(error.to_string(), task_not_found(&w.task_a));
+    assert_eq!(
+        error.to_string(),
+        webknossos_backend::msg::task::not_found(&w.task_a)
+    );
     let error = provider
         .restrictions_for(outsider_context, &check("CompoundProject", &w.project))
         .await
@@ -1514,7 +1545,10 @@ async fn compound_restrictions_allow_only_parent_team_managers_and_admins_to_acc
         .restrictions_for(outsider_context, &check("CompoundTaskType", &w.task_type))
         .await
         .unwrap_err();
-    assert_eq!(error.to_string(), task_type_not_found(&w.task_type));
+    assert_eq!(
+        error.to_string(),
+        webknossos_backend::msg::task_type::not_found(&w.task_type)
+    );
     // A task whose project was deleted: Msg.Project.notFound.
     sqlx::query("UPDATE webknossos.projects SET isDeleted=true WHERE _id=$1")
         .bind(&w.edge_project)
@@ -1528,7 +1562,10 @@ async fn compound_restrictions_allow_only_parent_team_managers_and_admins_to_acc
         )
         .await
         .unwrap_err();
-    assert_eq!(error.to_string(), project_not_found(&w.edge_project));
+    assert_eq!(
+        error.to_string(),
+        webknossos_backend::msg::project::not_found(&w.edge_project)
+    );
     // Restrictions never merge or populate the cache.
     assert!(mock.requests().is_empty());
     assert!(provider.find_in_cache(&oid(&w.task_a)).is_none());

@@ -129,7 +129,8 @@ async fn compact_annotations_preserve_privacy_order_state_count_and_shared_datas
     assert_eq!(value["tracingTime"], 0);
     assert_eq!(value["created"], 1577836800000_i64);
     assert_eq!(value["modified"], 1577923200000_i64);
-    assert_eq!(value["tags"], json!(["Dataset name", "tag"]));
+    // annotation.tags ++ Set(dataset.name): stored tags first, dataset name appended.
+    assert_eq!(value["tags"], json!(["tag", "Dataset name"]));
     assert_eq!(
         value["annotationLayers"][0]["stats"],
         json!({"treeCount":2})

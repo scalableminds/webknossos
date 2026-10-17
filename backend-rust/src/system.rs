@@ -2,6 +2,7 @@ pub mod analytics;
 pub mod application_info;
 pub mod initial_data;
 pub mod maintenance;
+pub mod metrics;
 
 use crate::AppState;
 use axum::Router;

@@ -14,9 +14,8 @@ use sqlx::{Postgres, Transaction};
 
 use crate::{
     AppState,
-    annotation::metadata::NOT_ALLOWED,
     annotation::provider::{
-        AccessContext, AnnotationIdentifier, AnnotationProvider, ProviderError, RESOURCE_NOT_FOUND,
+        AccessContext, AnnotationIdentifier, AnnotationProvider, ProviderError,
         RESTRICTIONS_NOT_FOUND,
     },
     auth::AuthUser,
@@ -134,7 +133,7 @@ async fn authorize(
         Permission::Update => restrictions.allow_update,
     };
     if !allowed {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok(())
 }
@@ -169,7 +168,7 @@ async fn reserved_ids(
     authorize(&provider, &user, &id, Permission::Access).await?;
     // AnnotationIdDomain.fromString(domain).toFox: Empty -> 404 Msg.notFound.
     let domain = AnnotationIdDomain::from_name(&domain)
-        .ok_or_else(|| ApiError::not_found(RESOURCE_NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let mut transaction = state.pool.begin().await?;
     lock_reservations(&mut transaction, &id).await?;
     let ids: Vec<i64> = sqlx::query_scalar(
@@ -218,7 +217,7 @@ async fn reserve_ids(
     .await?
     .ok_or_else(|| ProviderError::NotFound.into_api_error(StatusCode::NOT_FOUND))?;
     if !crate::annotation::access::restrictions(&live, Some(&user)).allow_update {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let largest_reserved: Option<i64> = sqlx::query_scalar(
         "SELECT MAX(id) FROM webknossos.annotation_reserved_ids

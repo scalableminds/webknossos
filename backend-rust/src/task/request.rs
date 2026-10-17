@@ -44,9 +44,7 @@ use crate::{
     error::{ApiError, ApiResult},
     stores::tracing_client::TracingStoreClient,
     system::application_info::MiscState,
-    task::assignment::{
-        TASK_UNAVAILABLE, initialize_task_annotation, insert_initializing_annotation,
-    },
+    task::assignment::{initialize_task_annotation, insert_initializing_annotation},
     util::id::ObjectId,
 };
 
@@ -271,7 +269,7 @@ async fn request(
     let is_manager = is_team_manager_or_admin(pool, &user).await?;
     let (task_id, annotation_id) = assign_next(pool, &user.id, &teams, is_manager)
         .await?
-        .ok_or_else(|| ApiError::bad_request(TASK_UNAVAILABLE))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::task::UNAVAILABLE))?;
     tracing::info!(task = %task_id, annotation = %annotation_id, user = %user.id, "task request: assigned");
     initialize_task_annotation(
         pool,

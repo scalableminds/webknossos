@@ -41,13 +41,13 @@ async fn require_read(
     sharing_token: Option<&str>,
 ) -> ApiResult<()> {
     if !crate::dataset::access::can_read(&state.pool, user, id.as_str(), sharing_token).await? {
-        return Err(ApiError::not_found("Dataset not found."));
+        return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
     Ok(())
 }
 
 fn unusable(id: &ObjectId) -> ApiError {
-    ApiError::bad_request(format!("Dataset “{id}” is not imported or incomplete."))
+    ApiError::bad_request(crate::msg::dataset::not_usable(id))
 }
 
 async fn health(
@@ -72,7 +72,7 @@ async fn health(
     let name = layers
         .first()
         .and_then(|layer| layer["name"].as_str())
-        .ok_or_else(|| ApiError::bad_request("Dataset has no data layers."))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::NO_LAYERS))?;
     let result: Map<String, Value> = clients
         .get_json(
             &base,
@@ -109,7 +109,7 @@ async fn clear_thumbnail_cache(
     .fetch_one(&mut *transaction)
     .await?;
     if !readable {
-        return Err(ApiError::not_found("Dataset not found."));
+        return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
     // Unlike Scala's secured-only handler, require a live readable dataset.
     // Reading is sufficient; this operation changes no dataset settings.

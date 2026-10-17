@@ -66,11 +66,6 @@ fn msg_invalid_edge(src: &str, dst: &str) -> String {
 fn msg_invalid_node_attribute(name: &str, id: i32) -> String {
     format!("Invalid node {name} for node id {id}.")
 }
-/// `Msg.ObjectId.invalid`, produced when the NML's `datasetId` (or the
-/// overwriting dataset id) is not a 24-hex-character ObjectId.
-pub fn msg_invalid_object_id(literal: &str) -> String {
-    format!("The supplied resource id “{literal}” is not a valid ObjectId.")
-}
 
 /// Default zoom level (`SkeletonTracingDefaults.zoomLevel`).
 pub const DEFAULT_ZOOM_LEVEL: f64 = 2.0;
@@ -308,7 +303,7 @@ impl NmlParsedParameters {
                 if literal.len() == 24 && literal.bytes().all(|b| b.is_ascii_hexdigit()) {
                     Ok(Some(literal.to_ascii_lowercase()))
                 } else {
-                    Err(msg_invalid_object_id(literal))
+                    Err(crate::msg::object_id::invalid(literal))
                 }
             }
         }

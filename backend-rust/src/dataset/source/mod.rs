@@ -49,7 +49,7 @@ const LENGTH_UNITS: &[&str] = &[
 pub(crate) type ParseResult<T> = Result<T, String>;
 
 pub(crate) fn invalid_body(_: String) -> ApiError {
-    ApiError::bad_request("Invalid JSON request body.")
+    ApiError::bad_request(crate::msg::request::INVALID_JSON_BODY)
 }
 
 // ---------------------------------------------------------------- UPath

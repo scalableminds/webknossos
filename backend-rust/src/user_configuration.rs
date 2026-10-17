@@ -45,7 +45,7 @@ async fn update(
     .execute(&state.pool)
     .await?;
     if result.rows_affected() != 1 {
-        return Err(ApiError::not_found("User not found."));
+        return Err(ApiError::not_found(crate::msg::user::MISSING));
     }
     Ok(Json(
         json!({"messages": [{"success": "Your configuration was successfully updated."}]}),
@@ -74,7 +74,7 @@ async fn update_shortcuts(
         "INSERT INTO webknossos.multiUser_keyboardShortcutsConfigs (_multiUser, shortcutsConfig) SELECT _multiUser, $2 FROM webknossos.users_ WHERE _id = $1 ON CONFLICT (_multiUser) DO UPDATE SET shortcutsConfig = EXCLUDED.shortcutsConfig"
     ).bind(user.id).bind(Value::Object(configuration)).execute(&state.pool).await?;
     if result.rows_affected() != 1 {
-        return Err(ApiError::not_found("User not found."));
+        return Err(ApiError::not_found(crate::msg::user::MISSING));
     }
     Ok(Json(
         json!({"messages": [{"success": "Keyboard shortcuts configuration was successfully updated."}]}),

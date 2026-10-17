@@ -88,10 +88,14 @@ struct TaskTypeParameters {
 fn validate(parameters: &TaskTypeParameters) -> ApiResult<()> {
     let length = parameters.summary.encode_utf16().count();
     if length < 2 {
-        return Err(ApiError::bad_request("taskType.summaryTooShort"));
+        return Err(ApiError::bad_request(
+            crate::msg::task_type::SUMMARY_TOO_SHORT,
+        ));
     }
     if length > 50 {
-        return Err(ApiError::bad_request("taskType.summaryTooLong"));
+        return Err(ApiError::bad_request(
+            crate::msg::task_type::SUMMARY_TOO_LONG,
+        ));
     }
     ObjectId::parse(&parameters.team_id)?;
     // The database requires JSON objects even though the controller accepts JsValue.
@@ -132,11 +136,11 @@ async fn public_json<'e, E: sqlx::Executor<'e, Database = sqlx::Postgres>>(
         .bind(id)
         .fetch_optional(executor)
         .await?
-        .ok_or_else(|| ApiError::not_found("taskType.notFound"))
+        .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))
 }
 async fn check_manage(pool: &PgPool, user: &AuthUser, team: &str) -> ApiResult<()> {
     if !user.can_manage_team(pool, team).await? {
-        return Err(ApiError::forbidden("notAllowed"));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok(())
 }
@@ -176,7 +180,7 @@ async fn create(
     let id = ObjectId::new().to_string();
     let mut tx = state.pool.begin().await?;
     if !crate::projects::can_manage_team_in_tx(&mut tx, &user, &parameters.team_id).await? {
-        return Err(ApiError::forbidden("notAllowed"));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
         .bind(format!(
@@ -193,7 +197,9 @@ async fn create(
     .fetch_one(&mut *tx)
     .await?;
     if exists {
-        return Err(ApiError::conflict("taskType.summaryTaken"));
+        return Err(ApiError::bad_request(crate::msg::task_type::summary_taken(
+            &parameters.summary,
+        )));
     }
     let modes: Vec<&str> = parameters
         .settings
@@ -232,13 +238,17 @@ async fn update(
     .await?
         || !crate::projects::can_manage_team_in_tx(&mut tx, &user, &parameters.team_id).await?
     {
-        return Err(ApiError::forbidden("notAllowed"));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     if existing["tracingType"] != json!(parameters.tracing_type) {
-        return Err(ApiError::bad_request("taskType.tracingTypeImmutable"));
+        return Err(ApiError::bad_request(
+            crate::msg::task_type::TRACING_TYPE_IMMUTABLE,
+        ));
     }
     if existing["settings"]["magRestrictions"] != json!(parameters.settings.mag_restrictions) {
-        return Err(ApiError::bad_request("taskType.magRestrictionsImmutable"));
+        return Err(ApiError::bad_request(
+            crate::msg::task_type::MAG_RESTRICTIONS_IMMUTABLE,
+        ));
     }
     sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
         .bind(format!(
@@ -250,7 +260,9 @@ async fn update(
     let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.tasktypes_ WHERE _organization=$1 AND summary=$2 AND _id<>$3)")
         .bind(&user.organization_id).bind(&parameters.summary).bind(&id).fetch_one(&mut *tx).await?;
     if exists {
-        return Err(ApiError::conflict("taskType.summaryTaken"));
+        return Err(ApiError::bad_request(crate::msg::task_type::summary_taken(
+            &parameters.summary,
+        )));
     }
     let modes: Vec<&str> = parameters
         .settings
@@ -266,7 +278,7 @@ async fn update(
         .bind(&parameters.recommended_configuration).execute(&mut *tx).await?;
     let mut value = public_json(&mut *tx, &user, &id).await?;
     tx.commit().await?;
-    value["messages"] = json!([{"success":"taskType.editSuccess"}]);
+    value["messages"] = json!([{"success":crate::msg::task_type::EDIT_SUCCESS}]);
     Ok(ResponseJson(value))
 }
 
@@ -286,14 +298,14 @@ async fn delete(
     )
     .await?
     {
-        return Err(ApiError::forbidden("notAllowed"));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     sqlx::query("UPDATE webknossos.tasktypes SET isdeleted=true,summary=summary || '.deleted.at.' || floor(extract(epoch FROM clock_timestamp())*1000)::bigint::text WHERE _id=$1 AND NOT isdeleted")
         .bind(&id).execute(&mut *tx).await?;
     crate::projects::delete_tasks(&mut tx, "_tasktype", &id).await?;
     tx.commit().await?;
     Ok(ResponseJson(
-        json!({"messages":[{"success":"taskType.deleteSuccess"}]}),
+        json!({"messages":[{"success":crate::msg::task_type::delete_success(existing["summary"].as_str().unwrap_or_default())}]}),
     ))
 }
 
@@ -304,7 +316,7 @@ async fn lock_task_type(
 ) -> ApiResult<()> {
     sqlx::query_scalar::<_,String>("SELECT _id FROM webknossos.tasktypes WHERE _id=$1 AND _organization=$2 AND NOT isdeleted FOR UPDATE")
         .bind(id).bind(organization).fetch_optional(&mut **tx).await?
-        .ok_or_else(||ApiError::not_found("taskType.notFound"))?;
+        .ok_or_else(||ApiError::not_found(crate::msg::task_type::not_found(id)))?;
     Ok(())
 }
 

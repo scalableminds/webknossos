@@ -8,8 +8,8 @@ use crate::{
     auth::AuthUser,
     dataset::create::NewDataset,
     dataset::lifecycle::{
-        AttachmentDataformat, AttachmentType, AttachmentUploadRequest, MagUploadRequest,
-        NOT_YET_UPLOADED, NOT_YET_UPLOADED_TO_PATHS,
+        AttachmentDataformat, AttachmentUploadRequest, MagUploadRequest, NOT_YET_UPLOADED,
+        NOT_YET_UPLOADED_TO_PATHS,
     },
     dataset::options::{DatasetRouteConfig, UploadToPathsConfig},
     dataset::source::{Attachment, DataSource, Layer},
@@ -132,7 +132,7 @@ fn attachment_path(
     typ: &str,
     layer_path: &str,
 ) -> ApiResult<String> {
-    let safe = match crate::dataset::create::normalize_strong(name) {
+    let safe = match crate::util::text::normalize_strong(name) {
         Some(safe) => safe,
         None => format!("{typ}__{}", crate::dataset::create::random_id(12)?),
     };
@@ -265,7 +265,7 @@ async fn referenced_data_store(
     .fetch_optional(&mut *connection)
     .await?;
     let (name, allows) =
-        store.ok_or_else(|| ApiError::bad_request("Data store could not be found or accessed."))?;
+        store.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     if !allows {
         return Err(ApiError::bad_request(
             "The data store that holds the layers requested to be linked does not support dataset upload to paths.",
@@ -347,7 +347,7 @@ async fn reserve_upload_to_paths(
         .await?;
         if used > included {
             return Err(ApiError::forbidden(
-                "Cannot upload dataset because the storage quota of the organization is exceeded.",
+                crate::msg::dataset::upload::STORAGE_EXCEEDED,
             ));
         }
     }
@@ -362,9 +362,8 @@ async fn reserve_upload_to_paths(
         .fetch_one(&state.pool)
         .await?;
         if taken {
-            return Err(ApiError::bad_request(format!(
-                "Dataset name “{}” is already taken.",
-                body.dataset_name
+            return Err(ApiError::bad_request(crate::msg::dataset::name::taken(
+                &body.dataset_name,
             )));
         }
     }
@@ -401,7 +400,7 @@ async fn reserve_upload_to_paths(
         .all(|l| names.insert(l.name.clone()))
     {
         return Err(ApiError::bad_request(
-            "Dataset layers must have unique names.",
+            crate::msg::dataset::layer::DUPLICATE_NAMES,
         ));
     }
     crate::dataset::create::assert_valid_data_source(&with_linked)?;
@@ -412,7 +411,7 @@ async fn reserve_upload_to_paths(
         .unwrap_or(root_folder);
     let mut transaction = state.pool.begin().await?;
     if !crate::dataset::create::folder_writable(&mut transaction, &user, &folder).await? {
-        return Err(ApiError::bad_request("No write access in this folder."));
+        return Err(ApiError::bad_request(crate::msg::folder::NO_WRITE_ACCESS));
     }
     let store = referenced_data_store(&mut transaction, &user, &body.layers_to_link).await?;
     crate::dataset::create::insert_dataset(
@@ -512,7 +511,7 @@ async fn reserve_for_preliminary(
 }
 
 fn not_usable(id: &ObjectId) -> ApiError {
-    ApiError::bad_request(format!("Dataset “{id}” is not imported or incomplete."))
+    ApiError::bad_request(crate::msg::dataset::not_usable(id))
 }
 
 async fn reserve_mag_upload_to_path(
@@ -532,7 +531,9 @@ async fn reserve_mag_upload_to_path(
             let y = order.get("y").map(crate::dataset::source::int);
             match (x, y) {
                 (Some(Ok(_)), Some(Ok(_))) => Ok(order.clone()),
-                _ => Err(ApiError::bad_request("Invalid JSON request body.")),
+                _ => Err(ApiError::bad_request(
+                    crate::msg::request::INVALID_JSON_BODY,
+                )),
             }
         })
         .transpose()?;
@@ -564,7 +565,7 @@ async fn reserve_mag_upload_to_path(
     if !pending.is_empty() {
         if !body.overwrite_pending {
             return Err(ApiError::bad_request(
-                "Conflict with existing pending mag. Pass overwritePending to overwrite.",
+                crate::msg::dataset::upload::to_paths::MAG_ALREADY_PENDING,
             ));
         }
         let old_paths: Vec<String> = pending
@@ -619,13 +620,6 @@ async fn reserve_mag_upload_to_path(
     Ok(Json(path))
 }
 
-fn is_singleton(typ: AttachmentType) -> bool {
-    matches!(
-        typ,
-        AttachmentType::SegmentIndex | AttachmentType::Cumsum | AttachmentType::SegmentStatistics
-    )
-}
-
 async fn reserve_attachment_upload_to_path(
     State(state): State<AppState>,
     user: AuthUser,
@@ -667,11 +661,11 @@ async fn reserve_attachment_upload_to_path(
         .await?;
         if pending {
             return Err(ApiError::bad_request(
-                "Conflict with existing pending attachment. Pass overwritePending to overwrite.",
+                crate::msg::dataset::layer::ATTACHMENT_ALREADY_PENDING,
             ));
         }
     }
-    let singleton = is_singleton(body.attachment_type);
+    let singleton = body.attachment_type.is_singleton();
     let existing: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM webknossos.dataset_layer_attachments WHERE _dataset = $1 AND layerName = $2 AND ($3::text IS NULL OR name = $3) AND type = $4::webknossos.LAYER_ATTACHMENT_TYPE",
     )
@@ -683,9 +677,9 @@ async fn reserve_attachment_upload_to_path(
     .await?;
     if existing != 0 {
         return Err(ApiError::bad_request(if singleton {
-            "There is already an attachment of this type in this layer. Only one attachment of this type can be registered per layer."
+            crate::msg::dataset::layer::ATTACHMENT_SINGLETON_ALREADY_FILLED
         } else {
-            "An attachment with this name already exists in this layer. Please choose a different name."
+            crate::msg::dataset::layer::ATTACHMENT_NAME_TAKEN
         }));
     }
     let directory: String =

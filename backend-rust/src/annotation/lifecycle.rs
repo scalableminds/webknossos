@@ -12,10 +12,9 @@ use sqlx::{PgConnection, Postgres, Transaction};
 
 use crate::{
     AppState,
-    annotation::metadata::{NO_UPDATE_ACCESS, NOT_ALLOWED},
     annotation::provider::{
         AccessContext, AnnotationIdentifier, AnnotationProvider, AnnotationType,
-        ProvidedAnnotation, ProviderError, RESOURCE_NOT_FOUND, TEAM_ADMIN_NOT_ALLOWED,
+        ProvidedAnnotation, ProviderError,
     },
     auth::AuthUser,
     error::{ApiError, ApiResult},
@@ -24,7 +23,6 @@ use crate::{
 };
 
 pub const CANCEL_SUCCESS: &str = "Task annotation was successfully cancelled.";
-pub const ARCHIVED: &str = "Annotation is archived.";
 pub const COLLABORATION_TYPES_ONLY: &str =
     "Changing the collaboration mode is only allowed for explorational and task annotations.";
 
@@ -48,7 +46,7 @@ async fn assert_manager(
     if is_manager_or_admin(connection, user, owner, task).await? {
         Ok(())
     } else {
-        Err(ApiError::not_found(RESOURCE_NOT_FOUND))
+        Err(ApiError::not_found(crate::msg::NOT_FOUND))
     }
 }
 
@@ -65,7 +63,7 @@ pub(crate) async fn is_manager_or_admin(
             .bind(owner)
             .fetch_optional(&mut *connection)
             .await?;
-    let organization = organization.ok_or_else(|| ApiError::not_found(RESOURCE_NOT_FOUND))?;
+    let organization = organization.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let admin = user.is_admin && user.organization_id == organization;
     let manager = if let Some(task) = task {
         // Scala globally resolves a live task and project even for admins.
@@ -77,7 +75,7 @@ pub(crate) async fn is_manager_or_admin(
         .fetch_optional(&mut *connection)
         .await?;
         let (team, project_organization) =
-            context.ok_or_else(|| ApiError::bad_request(TEAM_ADMIN_NOT_ALLOWED))?;
+            context.ok_or_else(|| ApiError::bad_request(crate::msg::team::ADMIN_NOT_ALLOWED))?;
         project_organization == user.organization_id
             && sqlx::query_scalar::<_, bool>(
                 "SELECT EXISTS(SELECT 1 FROM webknossos.user_team_roles role
@@ -180,7 +178,7 @@ async fn cancel_typed(
             .await?;
         CANCEL_SUCCESS
     } else {
-        ARCHIVED
+        crate::msg::annotation::FINISHED
     };
     transaction.commit().await?;
     if let Some(keys) = invalidate {
@@ -200,7 +198,7 @@ pub(crate) async fn task_cache_keys(
             .bind(task)
             .fetch_optional(&mut **transaction)
             .await?;
-    let (project, task_type) = context.ok_or_else(|| ApiError::not_found(RESOURCE_NOT_FOUND))?;
+    let (project, task_type) = context.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     Ok([
         AnnotationIdentifier::parse("CompoundTask", &ObjectId::parse(task)?)
             .map_err(ApiError::from)?,
@@ -239,10 +237,10 @@ async fn collaboration_mode(
         return Err(ApiError::bad_request(COLLABORATION_TYPES_ONLY));
     }
     if provided.owner_id() != user.id {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     if !matches!(mode.as_str(), "OwnerOnly" | "Exclusive" | "Concurrent") {
-        return Err(ApiError::not_found(RESOURCE_NOT_FOUND));
+        return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
     let mut transaction = state.pool.begin().await?;
     // Shared key for future reserve/release endpoints, replacing Scala's
@@ -254,7 +252,7 @@ async fn collaboration_mode(
     let annotation =
         crate::annotation::access::lock_readable(&mut transaction, &user, provided.id())
             .await?
-            .ok_or_else(|| ApiError::bad_request(NO_UPDATE_ACCESS))?;
+            .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NO_UPDATE_ACCESS))?;
     if !matches!(
         annotation.annotation_type.as_str(),
         "Task" | "Explorational"
@@ -262,12 +260,14 @@ async fn collaboration_mode(
         return Err(ApiError::bad_request(COLLABORATION_TYPES_ONLY));
     }
     if annotation.owner_id != user.id {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     if !crate::annotation::access::lock_update_access(&mut transaction, &user, &annotation.id)
         .await?
     {
-        return Err(ApiError::bad_request(NO_UPDATE_ACCESS));
+        return Err(ApiError::bad_request(
+            crate::msg::annotation::NO_UPDATE_ACCESS,
+        ));
     }
     sqlx::query("UPDATE webknossos.annotations SET collaborationMode=$2::webknossos.ANNOTATION_COLLABORATION_MODE WHERE _id=$1")
         .bind(&annotation.id).bind(&mode).execute(&mut *transaction).await?;

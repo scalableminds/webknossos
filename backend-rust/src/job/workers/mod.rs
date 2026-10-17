@@ -32,17 +32,10 @@ use crate::{
     util::id::{ObjectId, PathObjectId},
 };
 
-/// Msg.notFound: Play's response for an empty Fox.
-const NOT_FOUND: &str = "Could not find or access the requested resource.";
 const WORKER_NOT_FOUND: &str = "Could not find this worker in the database.";
-const JOB_NOT_FOUND: &str = "Job could not be found or accessed.";
 const UPDATE_STATUS_FAILED: &str = "Could not update job status.";
 const CLEANUP_FAILED: &str = "Could not clean up failed job.";
 const CREDITS_FAILED: &str = "Could not perform credit transaction.";
-const REFUND_FAILED: &str = "Could not perform credit transaction refund.";
-const VOXELYTICS_NOT_ENABLED: &str =
-    "Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.";
-const AI_INFERENCE_NOT_FOUND: &str = "Could not find requested AI inference.";
 const JOBS_PARSING_FAILED: &str = "Parsing failed for a row in webknossos.jobs during list query";
 
 /// JobCommand.highPriorityJobs; every other command is low priority.
@@ -314,7 +307,7 @@ async fn parameter_writes(pool: &PgPool, routes: &WorkerRoutes, job: &Job) -> Ap
             .bind(&job.owner)
             .fetch_optional(pool)
             .await?;
-    let owner = owner.ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+    let owner = owner.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let token = insert_job_token(pool, &owner, routes).await?;
     let mut kwargs = job.args.as_object().cloned().unwrap_or_default();
     kwargs.insert("user_auth_token".into(), Value::String(token));
@@ -408,7 +401,7 @@ async fn update_status(
     // JobDAO.findOne with global access.
     let before = find_job_global(&mut transaction, id.as_str(), true)
         .await?
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // JobDAO.updateStatus: absent optional fields are written as NULL.
     sqlx::query(
         r#"UPDATE webknossos.jobs SET latestRunId = $2, latestRunErrorDetails = $3,
@@ -427,8 +420,8 @@ async fn update_status(
     .map_err(|error| failure_as(error, UPDATE_STATUS_FAILED))?;
     let after = find_job_global(&mut transaction, &before.id, false)
         .await
-        .map_err(|error| replace_failure(error, JOB_NOT_FOUND))?
-        .ok_or_else(|| ApiError::bad_request(JOB_NOT_FOUND))?;
+        .map_err(|error| replace_failure(error, crate::msg::job::NOT_FOUND))?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))?;
     clean_up_if_failed(&mut transaction, &after).await?;
     if status.state == JobState::SUCCESS {
         complete_transaction_of_job(&mut transaction, &after.id)
@@ -444,7 +437,7 @@ async fn update_status(
             status.state == JobState::CANCELLED,
         )
         .await
-        .map_err(|error| replace_failure(error, REFUND_FAILED))?;
+        .map_err(|error| replace_failure(error, crate::msg::job::credits::REFUND_FAILED))?;
     }
     transaction.commit().await?;
     track_status_change(&state, &misc, &mailer, &slack, &before, &after);
@@ -825,7 +818,7 @@ async fn organization_for_job(connection: &mut PgConnection, job_id: &str) -> Ap
     .bind(job_id)
     .fetch_optional(&mut *connection)
     .await?;
-    organization.ok_or_else(|| ApiError::bad_request(JOB_NOT_FOUND))
+    organization.ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))
 }
 
 async fn attach_voxelytics_workflow(
@@ -844,7 +837,7 @@ async fn attach_voxelytics_workflow(
         .and_then(Value::as_bool)
         .unwrap_or(false);
     if !voxelytics_enabled {
-        return Err(ApiError::bad_request(VOXELYTICS_NOT_ENABLED));
+        return Err(ApiError::bad_request(crate::msg::voxelytics::NOT_ENABLED));
     }
     let organization = organization_for_job(&mut transaction, id.as_str()).await?;
     // findWorkflowByHashAndOrganization, else upsertWorkflow with a placeholder name.
@@ -885,7 +878,7 @@ async fn attach_dataset_to_inference(
     .bind(&organization)
     .fetch_optional(&mut *transaction)
     .await?;
-    let dataset = dataset.ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+    let dataset = dataset.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // AiInferenceDAO.findOneByJobId (`?~> Msg.AiInference.notFound`).
     let inference: Option<String> = sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.aiInferences_ WHERE _inferenceJob = $1
@@ -894,7 +887,8 @@ async fn attach_dataset_to_inference(
     .bind(id.as_str())
     .fetch_optional(&mut *transaction)
     .await?;
-    let inference = inference.ok_or_else(|| ApiError::bad_request(AI_INFERENCE_NOT_FOUND))?;
+    let inference =
+        inference.ok_or_else(|| ApiError::bad_request(crate::msg::ai_inference::NOT_FOUND))?;
     sqlx::query("UPDATE webknossos.aiInferences SET _newDataset = $2 WHERE _id = $1")
         .bind(&inference)
         .bind(&dataset)

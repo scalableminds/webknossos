@@ -42,6 +42,7 @@ use crate::{
         Job, JobOutcome, JobSchedule, Scheduler, SchedulerHandle, advisory_lock_key,
         try_advisory_xact_lock,
     },
+    config::{ConfigError, Env},
     slack::{self, SlackNotificationService},
 };
 
@@ -53,8 +54,6 @@ pub const DEFAULT_INTERVAL: Duration = Duration::from_secs(60);
 pub const DEFAULT_INITIAL_DELAY: Duration = Duration::from_secs(60);
 /// Scala `jobs.workerLivenessReReportInterval` default (application.conf).
 pub const DEFAULT_RE_REPORT_INTERVAL: Duration = Duration::from_secs(60 * 60);
-/// Largest accepted duration in seconds (same bound as housekeeping).
-const MAX_SECONDS: u64 = i32::MAX as u64;
 
 /// `WK_WORKER_LIVENESS_*` settings.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -90,41 +89,14 @@ impl Default for WorkerLivenessConfig {
 /// The liveness timeout itself is `WK_WORKER_LIVENESS_TIMEOUT_SECONDS` (`JobsConfig`).
 pub fn config_from_values(
     values: &HashMap<String, String>,
-) -> Result<WorkerLivenessConfig, String> {
-    let seconds = |name: &str, allow_zero: bool| -> Result<Option<Duration>, String> {
-        let Some(value) = values.get(name) else {
-            return Ok(None);
-        };
-        let seconds: u64 = value
-            .parse()
-            .map_err(|_| format!("{name} must be an unsigned integer"))?;
-        if seconds == 0 && !allow_zero {
-            return Err(format!("{name} must be greater than zero"));
-        }
-        if seconds > MAX_SECONDS {
-            return Err(format!("{name} exceeds the supported duration"));
-        }
-        Ok(Some(Duration::from_secs(seconds)))
-    };
-    let enabled = values
-        .get("WK_WORKER_LIVENESS_ENABLED")
-        .map(|value| {
-            value
-                .parse()
-                .map_err(|_| "WK_WORKER_LIVENESS_ENABLED must be true or false".to_owned())
-        })
-        .transpose()?
-        .unwrap_or(true);
+) -> Result<WorkerLivenessConfig, ConfigError> {
+    let env = Env::new(values);
+    let defaults = WorkerLivenessConfig::default();
     Ok(WorkerLivenessConfig {
-        schedule: JobSchedule {
-            enabled,
-            interval: seconds("WK_WORKER_LIVENESS_INTERVAL_SECONDS", false)?
-                .unwrap_or(DEFAULT_INTERVAL),
-            initial_delay: seconds("WK_WORKER_LIVENESS_INITIAL_DELAY_SECONDS", true)?
-                .unwrap_or(DEFAULT_INITIAL_DELAY),
-        },
-        re_report_interval: seconds("WK_WORKER_LIVENESS_RE_REPORT_INTERVAL_SECONDS", false)?
-            .unwrap_or(DEFAULT_RE_REPORT_INTERVAL),
+        schedule: JobSchedule::from_env(env, "WK_WORKER_LIVENESS", defaults.schedule)?,
+        re_report_interval: env
+            .seconds("WK_WORKER_LIVENESS_RE_REPORT_INTERVAL_SECONDS", false)?
+            .unwrap_or(defaults.re_report_interval),
     })
 }
 

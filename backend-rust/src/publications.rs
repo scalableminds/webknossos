@@ -10,14 +10,7 @@ use crate::{
     extract::Path,
     util::id::PathObjectId,
 };
-use axum::{
-    Extension, Json, Router,
-    extract::State,
-    http::{HeaderValue, header},
-    middleware,
-    response::Response,
-    routing::get,
-};
+use axum::{Extension, Json, Router, extract::State, middleware, routing::get};
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 use sqlx::PgConnection;
@@ -30,21 +23,9 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
         .route("/publications", get(list))
         .route("/publications/{id}", get(read))
         .layer(Extension(JobsEnabled(jobs_enabled)))
-        .layer(middleware::map_response(remote_origin_headers))
-}
-
-/// ExtendedController.addRemoteOriginHeaders.
-async fn remote_origin_headers(mut response: Response) -> Response {
-    let headers = response.headers_mut();
-    headers.insert(
-        header::ACCESS_CONTROL_ALLOW_ORIGIN,
-        HeaderValue::from_static("*"),
-    );
-    headers.insert(
-        header::ACCESS_CONTROL_MAX_AGE,
-        HeaderValue::from_static("600"),
-    );
-    response
+        .layer(middleware::map_response(
+            crate::util::cors::remote_origin_headers,
+        ))
 }
 
 #[derive(sqlx::FromRow)]
@@ -160,18 +141,16 @@ async fn annotation_json(
             .fetch_one(&mut *connection)
             .await?;
     if !dataset_exists {
-        return Err(ApiError::bad_request(format!(
-            "Dataset “{dataset}” for annotation “{id}” does not exist or could not be accessed."
-        )));
+        return Err(ApiError::bad_request(
+            crate::msg::dataset::not_found_for_annotation(dataset, id),
+        ));
     }
     // TracingStoreDAO.findFirst: an empty Fox without message (Play's generic 404).
     let (store_name, store_url): (String, String) =
         sqlx::query_as("SELECT name, publicUrl FROM webknossos.tracingStores_ LIMIT 1")
             .fetch_optional(&mut *connection)
             .await?
-            .ok_or_else(|| {
-                ApiError::not_found("Could not find or access the requested resource.")
-            })?;
+            .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let dataset_json =
         crate::dataset::routes::full_json_on_connection(connection, None, dataset, jobs_enabled)
             .await?;

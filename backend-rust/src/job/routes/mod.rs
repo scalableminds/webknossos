@@ -29,15 +29,9 @@ use crate::{
     util::id::{ObjectId, PathObjectId},
 };
 
-/// Msg.notFound: Play's response for an empty Fox.
-const NOT_FOUND: &str = "Could not find or access the requested resource.";
-const NOT_ENABLED: &str = "Long-running jobs are not enabled for this WEBKNOSSOS instance.";
-const JOB_NOT_FOUND: &str = "Job could not be found or accessed.";
 const ALREADY_RETRIED: &str = "This job has already been retried once and failed again. This is likely a persistent failure. Please contact an administrator for help.";
-const REFUND_FAILED: &str = "Could not perform credit transaction refund.";
 pub(crate) const NOT_ENOUGH_CREDITS: &str =
     "Your organization does not have enough WEBKNOSSOS credits to run this job.";
-const DATA_STORE_NOT_FOUND: &str = "Data store could not be found or accessed.";
 
 /// JobCommand values in declaration order (the last four are legacy, display only).
 pub(crate) const JOB_COMMANDS: [&str; 17] = [
@@ -143,7 +137,7 @@ fn require_enabled(routes: &JobRoutes) -> ApiResult<()> {
     if routes.enabled {
         Ok(())
     } else {
-        Err(ApiError::bad_request(NOT_ENABLED))
+        Err(ApiError::bad_request(crate::msg::job::NOT_ENABLED))
     }
 }
 
@@ -303,7 +297,7 @@ pub(crate) async fn public_writes(
     .bind(&job.owner)
     .fetch_optional(&mut *connection)
     .await?
-    .ok_or_else(|| ApiError::bad_request("User could not be found or accessed."))?;
+    .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     let (owner_organization, owner_multi_user) = owner;
     // MultiUserDAO.findOne (no access restriction, empty Fox when missing).
     let (first_name, last_name, email): (String, String, String) = sqlx::query_as(
@@ -312,7 +306,7 @@ pub(crate) async fn public_writes(
     .bind(&owner_multi_user)
     .fetch_optional(&mut *connection)
     .await?
-    .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // OrganizationDAO.findOne (read access: an organization of the user's account, or superuser).
     let organization: String = sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.organizations_ WHERE _id = $2 AND (
@@ -326,9 +320,7 @@ pub(crate) async fn public_writes(
     .fetch_optional(&mut *connection)
     .await?
     .ok_or_else(|| {
-        ApiError::bad_request(format!(
-            "Organization “{owner_organization}” could not be found or accessed."
-        ))
+        ApiError::bad_request(crate::msg::organization::not_found(&owner_organization))
     })?;
     // CreditTransactionService.findTransactionOfJob; any failure means "no cost".
     let cost_query = format!(
@@ -447,7 +439,7 @@ async fn list(
     if let Some(command) = &query.command
         && !is_job_command(command)
     {
-        return Err(ApiError::not_found(NOT_FOUND));
+        return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
     // JobDAO.findAllCompact. The credit lateral join has no access check (as in Scala);
     // retries can attach several transactions with the same delta, so one suffices.
@@ -483,7 +475,7 @@ async fn list(
             || !row.args.is_object()
             || row.error_details.as_ref().is_some_and(|v| !v.is_object())
         {
-            return Err(ApiError::not_found(NOT_FOUND));
+            return Err(ApiError::not_found(crate::msg::NOT_FOUND));
         }
         result.push(
             JobCompactInfo {
@@ -591,14 +583,14 @@ async fn read(
     let job = find_job(&mut connection, &user.id, id.as_str())
         .await
         .map_err(job_not_found)?
-        .ok_or_else(|| ApiError::bad_request(JOB_NOT_FOUND))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))?;
     Ok(Json(public_writes(&mut connection, &user.id, &job).await?))
 }
 
 /// `?~> Msg.Job.notFound` replaces failure messages, but database errors stay errors.
 fn job_not_found(error: ApiError) -> ApiError {
     if error.status == StatusCode::BAD_REQUEST {
-        ApiError::bad_request(JOB_NOT_FOUND)
+        ApiError::bad_request(crate::msg::job::NOT_FOUND)
     } else {
         error
     }
@@ -624,7 +616,7 @@ async fn cancel(
     let mut transaction = serializable(&state.pool).await?;
     let job = find_job(&mut transaction, &user.id, id.as_str())
         .await?
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // JobDAO.updateManualState: update access equals read access, checked by find_job.
     sqlx::query("UPDATE webknossos.jobs SET manualState = 'CANCELLED' WHERE _id = $1")
         .bind(&job.id)
@@ -637,7 +629,7 @@ async fn cancel(
                 if error.status.is_server_error() {
                     error
                 } else {
-                    ApiError::bad_request(REFUND_FAILED)
+                    ApiError::bad_request(crate::msg::job::credits::REFUND_FAILED)
                 }
             })?;
     }
@@ -715,7 +707,7 @@ fn refund_error(error: sqlx::Error) -> ApiError {
             .code()
             .is_some_and(|code| code.starts_with("23") || code == "P0004")
     {
-        return ApiError::bad_request(REFUND_FAILED);
+        return ApiError::bad_request(crate::msg::job::credits::REFUND_FAILED);
     }
     error.into()
 }
@@ -732,7 +724,7 @@ async fn retry(
     let job = find_job(&mut connection, &user.id, id.as_str())
         .await
         .map_err(job_not_found)?
-        .ok_or_else(|| ApiError::bad_request(JOB_NOT_FOUND))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))?;
     if !(user.is_superuser || job.last_retry.is_none()) {
         return Err(ApiError::forbidden(ALREADY_RETRIED));
     }
@@ -823,7 +815,7 @@ async fn redirect_to_export(
     let mut connection = state.pool.acquire().await?;
     let job = find_job(&mut connection, &user.id, id.as_str())
         .await?
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // DataStoreDAO.findOneByName (read access: unrestricted or the user's organization).
     let public_url: String = sqlx::query_scalar(
         r#"SELECT publicUrl FROM webknossos.dataStores_ WHERE name = $1 AND
@@ -834,7 +826,7 @@ async fn redirect_to_export(
     .bind(&user.id)
     .fetch_optional(&mut *connection)
     .await?
-    .ok_or_else(|| ApiError::bad_request(DATA_STORE_NOT_FOUND))?;
+    .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     drop(connection);
     let token = find_or_create_token(&state.pool, &user.id, &routes.auth).await?;
     let token: String = url::form_urlencoded::byte_serialize(token.as_bytes()).collect();
@@ -1011,9 +1003,9 @@ async fn credit_cost(
     user: AuthUser,
 ) -> ApiResult<Json<Value>> {
     let bounding_box = parse_bounding_box(&query.bounding_box_in_mag)
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if !is_job_command(&query.command) {
-        return Err(ApiError::not_found(NOT_FOUND));
+        return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
     let volume =
         i64::from(bounding_box[3]) * i64::from(bounding_box[4]) * i64::from(bounding_box[5]);

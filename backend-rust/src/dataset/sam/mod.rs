@@ -18,6 +18,7 @@ use crate::{
     extract::{Json as RequestJson, Path, Query},
     stores::client::ServiceClients,
     util::id::PathObjectId,
+    util::math::ceil_div,
 };
 
 pub fn router(config: DatasetRouteConfig) -> Router<AppState> {
@@ -75,17 +76,6 @@ fn element_class_byte(element_class: &str) -> u8 {
     }
 }
 
-/// MathUtils.ceilDiv with JVM Int overflow semantics (never panics).
-fn ceil_div(num: i32, divisor: i32) -> i32 {
-    let sign = num.signum() * divisor.signum();
-    sign.wrapping_mul(
-        num.wrapping_abs()
-            .wrapping_add(divisor.wrapping_abs())
-            .wrapping_sub(1),
-    )
-    .wrapping_div(divisor.wrapping_abs())
-}
-
 /// The SAM request payload: little-endian metadata header followed by the image.
 fn mask_request(
     image: &[u8],
@@ -140,7 +130,9 @@ async fn segment_anything_mask(
                     .is_some_and(|v| crate::dataset::source::int(v).is_ok())
         })
     {
-        return Err(ApiError::bad_request("Invalid JSON request body."));
+        return Err(ApiError::bad_request(
+            crate::msg::request::INVALID_JSON_BODY,
+        ));
     }
     if !config.segment_anything_enabled {
         return Err(ApiError::bad_request(
@@ -152,20 +144,20 @@ async fn segment_anything_mask(
     }
     let record = crate::dataset::lifecycle::require_readable(&state, &user, &id).await?;
     if !record.is_usable {
-        return Err(ApiError::bad_request(format!(
-            "Dataset “{id}” is not imported or incomplete."
-        )));
+        return Err(ApiError::bad_request(crate::msg::dataset::not_usable(&id)));
     }
     let source = crate::dataset::source::load(&state.pool, id.as_str()).await?;
     let layer = source
         .layers
         .iter()
         .find(|l| l.name == layer_name)
-        .ok_or_else(|| ApiError::bad_request("Dataset has no data layers."))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::NO_LAYERS))?;
     let store_url = record.store_url()?;
     let mag = parameters.mag;
     if mag.iter().any(|m| *m <= 0) {
-        return Err(ApiError::bad_request("Invalid JSON request body."));
+        return Err(ApiError::bad_request(
+            crate::msg::request::INVALID_JSON_BODY,
+        ));
     }
     // BoundingBox./ : floor-less Int division for topLeft, ceilDiv for the size.
     let size: [i32; 3] = std::array::from_fn(|i| ceil_div(bbox[i + 3], mag[i]));

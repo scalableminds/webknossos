@@ -15,28 +15,23 @@ use axum::{
     routing::post,
 };
 use chrono::{DateTime, Utc};
-use serde_json::{Value, json};
+use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
 
 use crate::{
     AppState,
-    annotation::access::Restrictions,
     annotation::metadata::PUBLIC_WRITES_FAILED,
     annotation::provider::{
-        AccessContext, AnnotationIdentifier, AnnotationLayer, AnnotationLayerType,
-        AnnotationProvider, DATA_SOURCE_NOT_FOUND, FoxFailure, ProvidedAnnotation, ProviderError,
-        RESTRICTIONS_NOT_FOUND, USABLE_BUT_NO_VOXEL_SIZE, dataset_not_found_for_annotation,
-        dataset_not_usable,
+        AccessContext, AnnotationIdentifier, AnnotationLayer, AnnotationProvider,
+        ProvidedAnnotation, ProviderError, RESTRICTIONS_NOT_FOUND,
     },
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::Path,
-    proto::{AnnotationLayerTypeProto, AnnotationProto},
-    stores::client::ServiceError,
-    stores::tracing_client::{
-        DuplicateAnnotationRequest, TRACING_STORE_NOT_FOUND, TracingStoreClient, TracingStoreError,
-    },
+    extract::extension,
+    stores::tracing_client::{DuplicateAnnotationRequest, TracingStoreClient},
     util::id::ObjectId,
+    util::instant::now_millis,
 };
 
 /// Msg.Annotation.duplicateFailed.
@@ -57,14 +52,6 @@ struct Services {
     jobs_enabled: bool,
 }
 
-fn extension<T: Clone + Send + Sync + 'static>(parts: &Parts) -> ApiResult<T> {
-    parts
-        .extensions
-        .get::<T>()
-        .cloned()
-        .ok_or_else(ApiError::internal)
-}
-
 impl<S: Send + Sync> FromRequestParts<S> for Services {
     type Rejection = ApiError;
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
@@ -74,42 +61,6 @@ impl<S: Send + Sync> FromRequestParts<S> for Services {
             jobs_enabled: extension::<JobsEnabled>(parts)?.0,
         })
     }
-}
-
-/// AnnotationLayer.fromProto for every layer (statistics `unknown` = `{}`).
-pub(crate) fn layers_from_proto(proto: &AnnotationProto) -> Vec<AnnotationLayer> {
-    proto
-        .annotation_layers
-        .iter()
-        .map(|layer| AnnotationLayer {
-            tracing_id: layer.tracing_id.clone(),
-            typ: match layer.typ() {
-                AnnotationLayerTypeProto::Skeleton => AnnotationLayerType::Skeleton,
-                AnnotationLayerTypeProto::Volume => AnnotationLayerType::Volume,
-            },
-            name: layer.name.clone(),
-        })
-        .collect()
-}
-
-fn failure(message: impl Into<String>, status: Option<StatusCode>) -> ProviderError {
-    ProviderError::Failure(FoxFailure {
-        message: message.into(),
-        chain: Vec::new(),
-        status,
-    })
-}
-
-/// RPC failures are Fox failures; only an unsuccessful upstream HTTP status
-/// is kept as ParamFailure status (RPCRequest `~> result.status`).
-fn tracing_store_failure(error: TracingStoreError) -> ProviderError {
-    let status = match &error {
-        TracingStoreError::Service(ServiceError::UpstreamStatus(code)) => {
-            StatusCode::from_u16(*code).ok()
-        }
-        _ => None,
-    };
-    failure(error.to_string(), status)
 }
 
 /// Shared core: `tracingStoreService.clientFor(dataset)` (first live tracing
@@ -133,12 +84,12 @@ pub(crate) async fn duplicate_in_tracing_store(
 ) -> Result<Vec<AnnotationLayer>, ProviderError> {
     let url = crate::stores::tracing_client::find_first_tracing_store_url(pool)
         .await?
-        .ok_or_else(|| failure(TRACING_STORE_NOT_FOUND, None))?;
+        .ok_or_else(|| ProviderError::failure(crate::msg::tracing_store::NOT_FOUND))?;
     let proto = tracing_store
         .duplicate_annotation(&url, request)
         .await
-        .map_err(tracing_store_failure)?;
-    Ok(layers_from_proto(&proto))
+        .map_err(ProviderError::from)?;
+    Ok(crate::annotation::provider::layers_from_proto(&proto))
 }
 
 // ---------------------------------------------------------------------------
@@ -161,13 +112,6 @@ pub(crate) struct NewAnnotation<'a> {
     pub collaboration_mode: &'a str,
     /// created = modified (Instant.now, millisecond precision).
     pub created: DateTime<Utc>,
-}
-
-fn layer_type(typ: AnnotationLayerType) -> &'static str {
-    match typ {
-        AnnotationLayerType::Skeleton => "Skeleton",
-        AnnotationLayerType::Volume => "Volume",
-    }
 }
 
 /// AnnotationDAO.insertOne: annotation row + layers (statistics `{}`). Run
@@ -200,17 +144,12 @@ pub(crate) async fn insert_annotation(
         )
         .bind(annotation.id.as_str())
         .bind(&layer.tracing_id)
-        .bind(layer_type(layer.typ))
+        .bind(layer.typ.as_str())
         .bind(&layer.name)
         .execute(&mut *connection)
         .await?;
     }
     Ok(())
-}
-
-/// Instant.now (millisecond precision).
-fn now_millis() -> DateTime<Utc> {
-    DateTime::from_timestamp_millis(Utc::now().timestamp_millis()).unwrap_or_else(Utc::now)
 }
 
 // ---------------------------------------------------------------------------
@@ -258,9 +197,11 @@ async fn usable_data_source_bounding_box(
     has_voxel_size: bool,
 ) -> Result<[i32; 6], ProviderError> {
     if !has_voxel_size {
-        return Err(failure(USABLE_BUT_NO_VOXEL_SIZE, None)
-            .wrap(DATA_SOURCE_NOT_FOUND)
-            .with_status(StatusCode::NOT_FOUND));
+        return Err(ProviderError::failure(
+            crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE,
+        )
+        .wrap(crate::msg::dataset::data_source::NOT_FOUND)
+        .with_status(StatusCode::NOT_FOUND));
     }
     let boxes: Vec<Vec<i32>> = sqlx::query_scalar(
         "SELECT ARRAY[(boundingBox).x::int,(boundingBox).y::int,(boundingBox).z::int,
@@ -302,23 +243,6 @@ fn bbox_union(a: &[i32; 6], b: &[i32; 6]) -> [i32; 6] {
     ]
 }
 
-trait WithStatus {
-    fn with_status(self, status: StatusCode) -> Self;
-}
-
-impl WithStatus for ProviderError {
-    /// Fox `~> status` on a failure (ParamFailure).
-    fn with_status(self, status: StatusCode) -> Self {
-        match self {
-            Self::Failure(failure) => Self::Failure(FoxFailure {
-                status: Some(status),
-                ..failure
-            }),
-            other => other,
-        }
-    }
-}
-
 /// AnnotationController.duplicateAnnotation up to (not including) the insert:
 /// dataset read globally (`?~> notFoundForAnnotation ~> 404`), `isUsable`
 /// (`?~> notUsable`), data source box only for task annotations, then the
@@ -338,13 +262,16 @@ pub(crate) async fn duplicate_source_in_tracing_store(
     .fetch_optional(pool)
     .await?;
     let (is_usable, has_voxel_size) = dataset.ok_or_else(|| {
-        failure(
-            dataset_not_found_for_annotation(source.dataset_id, source.id),
-            Some(StatusCode::NOT_FOUND),
-        )
+        ProviderError::failure(crate::msg::dataset::not_found_for_annotation(
+            source.dataset_id,
+            source.id,
+        ))
+        .with_status(StatusCode::NOT_FOUND)
     })?;
     if !is_usable {
-        return Err(failure(dataset_not_usable(source.dataset_id), None));
+        return Err(ProviderError::failure(crate::msg::dataset::not_usable(
+            source.dataset_id,
+        )));
     }
     let is_from_task = source.task_id.is_some();
     let dataset_bounding_box = if is_from_task {
@@ -367,15 +294,6 @@ pub(crate) async fn duplicate_source_in_tracing_store(
 // ---------------------------------------------------------------------------
 // Route
 // ---------------------------------------------------------------------------
-
-fn restrictions_json(restrictions: &Restrictions) -> Value {
-    json!({
-        "allowAccess": restrictions.allow_access,
-        "allowUpdate": restrictions.allow_update,
-        "allowFinish": restrictions.allow_finish,
-        "allowDownload": restrictions.allow_download,
-    })
-}
 
 /// POST /annotations/:typ/:id/duplicate
 async fn duplicate(
@@ -456,7 +374,7 @@ async fn duplicate(
             ApiError::bad_request(PUBLIC_WRITES_FAILED)
         }
     })?;
-    json["restrictions"] = restrictions_json(&restrictions);
+    json["restrictions"] = restrictions.public_json();
     transaction.commit().await?;
     Ok(Json(json))
 }

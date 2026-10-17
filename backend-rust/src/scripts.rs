@@ -79,9 +79,7 @@ async fn find(
         .bind(id)
         .fetch_optional(connection)
         .await?
-        .ok_or_else(|| {
-            ApiError::not_found(format!("Script “{id}” could not be found or accessed."))
-        })
+        .ok_or_else(|| ApiError::not_found(crate::msg::script::not_found(id)))
 }
 
 async fn fetch(
@@ -105,9 +103,7 @@ async fn create(
 ) -> ApiResult<Json<Value>> {
     ObjectId::parse(&body.owner)?;
     if !user.is_team_manager_or_admin(&state.pool).await? || body.owner != user.id {
-        return Err(ApiError::forbidden(
-            "You are not authorized to view or edit this resource.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     validate(&body)?;
     let id = ObjectId::new().to_string();
@@ -148,9 +144,8 @@ async fn update(
     .fetch_one(&mut *transaction)
     .await?;
     if !target_exists {
-        return Err(ApiError::bad_request(format!(
-            "User “{}” could not be found or accessed.",
-            body.owner
+        return Err(ApiError::bad_request(crate::msg::user::not_found(
+            &body.owner,
         )));
     }
     sqlx::query("UPDATE webknossos.scripts SET _owner = $2, name = $3, gist = $4 WHERE _id = $1")

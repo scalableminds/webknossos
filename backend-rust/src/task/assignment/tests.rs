@@ -1,7 +1,7 @@
-use super::*;
+use crate::annotation::provider::AnnotationLayerType;
 
 #[test]
 fn layer_types_match_schema_enum() {
-    assert_eq!(layer_type(AnnotationLayerType::Skeleton), "Skeleton");
-    assert_eq!(layer_type(AnnotationLayerType::Volume), "Volume");
+    assert_eq!(AnnotationLayerType::Skeleton.as_str(), "Skeleton");
+    assert_eq!(AnnotationLayerType::Volume.as_str(), "Volume");
 }

@@ -22,10 +22,9 @@ use webknossos_backend::{
     AppState,
     annotation::metadata::{
         ACCESSING_TEAM_FAILED, EDIT_FAILED, EDIT_NOT_ALLOWED, EDIT_SUCCESS,
-        LOCK_EXPLORATIONALS_ONLY, LOCK_NOT_ALLOWED, LOCK_SUCCESS, NO_UPDATE_ACCESS, NOT_ALLOWED,
-        SHARED_TEAMS_UPDATE_FAILED, invalid_object_id,
+        LOCK_EXPLORATIONALS_ONLY, LOCK_NOT_ALLOWED, LOCK_SUCCESS, SHARED_TEAMS_UPDATE_FAILED,
     },
-    annotation::provider::{ANNOTATION_NOT_FOUND, RESTRICTIONS_NOT_FOUND},
+    annotation::provider::RESTRICTIONS_NOT_FOUND,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     router,
 };
@@ -426,7 +425,10 @@ async fn edit_checks_provider_restrictions_and_runtime_gate_in_order() {
         .await;
         assert_eq!(
             (status, body),
-            (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+            (
+                StatusCode::NOT_FOUND,
+                error(webknossos_backend::msg::annotation::NOT_FOUND)
+            )
         );
     }
 
@@ -588,7 +590,7 @@ async fn edit_separates_runtime_update_from_dao_update_access_and_clears_teams_a
         // Private first clears shared teams, whose DAO failure is unwrapped.
         (
             json!({"visibility":"Private","viewConfiguration":{"mine":false}}),
-            NO_UPDATE_ACCESS,
+            webknossos_backend::msg::annotation::NO_UPDATE_ACCESS,
         ),
     ] {
         let (status, response) = patch(&app, &w.collaborator_token, &path, body).await;
@@ -677,7 +679,10 @@ async fn lock_requires_owner_and_actual_explorational_type_and_returns_public_js
         let (status, body) = patch_empty(&app, token, &lock("Explorational", &id, "true")).await;
         assert_eq!(
             (status, body),
-            (StatusCode::BAD_REQUEST, error(ANNOTATION_NOT_FOUND))
+            (
+                StatusCode::BAD_REQUEST,
+                error(webknossos_backend::msg::annotation::NOT_FOUND)
+            )
         );
     }
     let (status, body) = patch_empty(
@@ -791,7 +796,13 @@ async fn shared_teams_get_requires_owner_and_filters_readable_teams() {
     // Readers who are not the owner: 403; unreadable: provider 400.
     for token in [&w.collaborator_token, &w.admin_token] {
         let (status, body) = get(&app, token, &path("Explorational", &w.internal)).await;
-        assert_eq!((status, body), (StatusCode::FORBIDDEN, error(NOT_ALLOWED)));
+        assert_eq!(
+            (status, body),
+            (
+                StatusCode::FORBIDDEN,
+                error(webknossos_backend::msg::NOT_ALLOWED)
+            )
+        );
     }
     let (status, body) = get(
         &app,
@@ -801,7 +812,10 @@ async fn shared_teams_get_requires_owner_and_filters_readable_teams() {
     .await;
     assert_eq!(
         (status, body),
-        (StatusCode::BAD_REQUEST, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::BAD_REQUEST,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     let (status, body) = get(&app, &w.owner_token, &path("Bogus", &w.internal)).await;
     assert_eq!(
@@ -837,7 +851,13 @@ async fn shared_teams_patch_validates_every_team_then_replaces_atomically() {
             json!([w.team.clone()]),
         )
         .await;
-        assert_eq!((status, body), (StatusCode::FORBIDDEN, error(NOT_ALLOWED)));
+        assert_eq!(
+            (status, body),
+            (
+                StatusCode::FORBIDDEN,
+                error(webknossos_backend::msg::NOT_ALLOWED)
+            )
+        );
     }
     // Body must be a bare array of strings.
     for body in [json!({"teams":[w.team.clone()]}), json!([1])] {
@@ -861,7 +881,10 @@ async fn shared_teams_patch_validates_every_team_then_replaces_atomically() {
         .await;
         assert_eq!(
             (status, body),
-            (StatusCode::BAD_REQUEST, error(&invalid_object_id(&literal)))
+            (
+                StatusCode::BAD_REQUEST,
+                error(&webknossos_backend::msg::object_id::invalid(&literal))
+            )
         );
     }
     // Unreadable (non-member), foreign, deleted and missing teams fail before any mutation.
@@ -1044,7 +1067,10 @@ async fn compound_types_resolve_through_the_merge_cache_and_never_write() {
     .await;
     assert_eq!(
         (status, body),
-        (StatusCode::BAD_REQUEST, error(NO_UPDATE_ACCESS))
+        (
+            StatusCode::BAD_REQUEST,
+            error(webknossos_backend::msg::annotation::NO_UPDATE_ACCESS)
+        )
     );
     let (status, body) = patch(
         &app,
@@ -1056,7 +1082,10 @@ async fn compound_types_resolve_through_the_merge_cache_and_never_write() {
     // Admins read every team of their organization.
     assert_eq!(
         (status, body),
-        (StatusCode::BAD_REQUEST, error(NO_UPDATE_ACCESS))
+        (
+            StatusCode::BAD_REQUEST,
+            error(webknossos_backend::msg::annotation::NO_UPDATE_ACCESS)
+        )
     );
     assert!(shared_rows(&db, &w.task).await.is_empty());
     assert_eq!(merges(), 1);
@@ -1073,7 +1102,13 @@ async fn compound_types_resolve_through_the_merge_cache_and_never_write() {
         (StatusCode::BAD_REQUEST, error(LOCK_NOT_ALLOWED))
     );
     let (status, body) = get(&app, &w.manager_token, &path("sharedTeams")).await;
-    assert_eq!((status, body), (StatusCode::FORBIDDEN, error(NOT_ALLOWED)));
+    assert_eq!(
+        (status, body),
+        (
+            StatusCode::FORBIDDEN,
+            error(webknossos_backend::msg::NOT_ALLOWED)
+        )
+    );
     // Edit for a team manager still runs provide (cache hit) then 403.
     let (status, body) = patch(&app, &w.manager_token, &path("edit"), json!({})).await;
     assert_eq!(
@@ -1106,14 +1141,17 @@ async fn compound_types_resolve_through_the_merge_cache_and_never_write() {
     let (status, body) = patch(&app, &w.admin_token, &type_path("edit"), json!({})).await;
     assert_eq!(
         (status, body),
-        (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     let (status, body) = get(&app, &w.admin_token, &type_path("sharedTeams")).await;
     assert_eq!(
         (status, body),
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            error(ANNOTATION_NOT_FOUND)
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
         )
     );
     assert_eq!(merges(), 3);

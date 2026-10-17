@@ -26,15 +26,13 @@ use crate::{
     extract::{Json, Query},
     job::submission::{Failure, RunError, RunResult, Submission},
     remote::datastore::ValidatedDataStore,
-    remote::datastore::mag_upload::user_for_callback_token,
+    remote::datastore::mag_upload::user_for_token_forbidden,
     slack::SlackNotificationService,
     stores::client::ServiceClients,
     system::application_info::MiscState,
     util::id::ObjectId,
 };
 
-/// Msg.Dataset.Layer.duplicateNames.
-const DUPLICATE_LAYER_NAMES: &str = "Dataset layers must have unique names.";
 /// Msg.Dataset.Upload.needsConversionMissingVoxelSize.
 const MISSING_VOXEL_SIZE: &str = "Dataset needs conversion but no voxel size was supplied.";
 /// Msg.Job.ConvertToWkw.submitFailed.
@@ -89,18 +87,6 @@ async fn find_dataset(pool: &sqlx::PgPool, id: &str) -> ApiResult<ReportedDatase
     .fetch_optional(pool)
     .await?
     .ok_or_else(|| crate::dataset::lifecycle::not_found(id))
-}
-
-/// `bearerTokenService.userForToken(token) ~> FORBIDDEN`.
-async fn user_for_token_forbidden(pool: &sqlx::PgPool, token: &str) -> ApiResult<AuthUser> {
-    user_for_callback_token(pool, token)
-        .await
-        .map_err(|mut error| {
-            if error.status == StatusCode::BAD_REQUEST {
-                error.status = StatusCode::FORBIDDEN;
-            }
-            error
-        })
 }
 
 async fn report_dataset_upload(
@@ -228,7 +214,9 @@ async fn add_layers_to_link(
     let mut names: Vec<&str> = layers.iter().map(|layer| layer.name.as_str()).collect();
     names.sort_unstable();
     if names.windows(2).any(|pair| pair[0] == pair[1]) {
-        return Err(ApiError::bad_request(DUPLICATE_LAYER_NAMES));
+        return Err(ApiError::bad_request(
+            crate::msg::dataset::layer::DUPLICATE_NAMES,
+        ));
     }
     data_source.layers = layers;
     Ok(data_source)
@@ -318,7 +306,7 @@ async fn organization_base_directory(
     if !directory.is_string() {
         return Err(ApiError::new(
             StatusCode::BAD_GATEWAY,
-            "Service returned an invalid JSON response.",
+            crate::msg::request::SERVICE_INVALID_JSON,
         ));
     }
     Ok(directory)
@@ -341,12 +329,8 @@ async fn submit_convert_to_wkw_job(
             .bind(&dataset.organization)
             .fetch_optional(&state.pool)
             .await?;
-    let (organization_id, organization_name) = organization.ok_or_else(|| {
-        Failure::new(format!(
-            "Organization “{}” could not be found or accessed.",
-            dataset.organization
-        ))
-    })?;
+    let (organization_id, organization_name) = organization
+        .ok_or_else(|| Failure::new(crate::msg::organization::not_found(&dataset.organization)))?;
     let args = json!({
         "organization_id": organization_id,
         "organization_base_directory": base_directory,

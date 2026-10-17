@@ -25,7 +25,6 @@
 //! Body limit: Play buffers multipart files on disk up to `maxDiskBuffer = 1G`
 //! (application.conf); this router raises the crate-wide default to 1 GiB for
 //! this route only. Unlike Play, the parts are held in memory.
-use std::collections::HashMap;
 use std::io::{Cursor, Write};
 
 use axum::{
@@ -38,7 +37,6 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-use chrono::{DateTime, Utc};
 use serde_json::{Map, json};
 use sqlx::PgPool;
 
@@ -53,7 +51,7 @@ use crate::{
     },
     annotation::nml::parser::{NmlParseResult, SharedParsingParameters, UploadedVolumeLayer},
     annotation::provider::{
-        AnnotationLayer, AnnotationLayerType, AnnotationProvider, FoxFailure, ProviderError,
+        AnnotationLayer, AnnotationLayerType, AnnotationProvider, ProviderError,
     },
     annotation::tracing_initialization::{
         DEFAULT_SKELETON_LAYER_NAME, DEFAULT_VOLUME_LAYER_NAME,
@@ -63,14 +61,17 @@ use crate::{
     auth::AuthUser,
     dataset::source::{Category, DataSource, Layer},
     error::{ApiError, ApiResult},
+    extract::extension,
+    extract::read_multipart,
     proto::{
         AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto, BoundingBoxProto,
         SkeletonTracing, Vec3DoubleProto, Vec3IntProto, VolumeTracing,
     },
-    stores::client::{ServiceClients, ServiceError},
+    stores::client::ServiceClients,
     stores::tracing_client::{TracingStoreClient, VolumeSaveDataSource},
     system::application_info::MiscState,
     util::id::ObjectId,
+    util::instant::now_millis,
 };
 
 /// Play `parser.maxDiskBuffer` (multipart files).
@@ -78,8 +79,6 @@ const PLAY_MAX_DISK_BUFFER: usize = 1024 * 1024 * 1024;
 
 /// Rust-only: Play rejects malformed multipart bodies before the action runs.
 const MULTIPART_INVALID: &str = "Could not parse multipart request.";
-/// Msg.notFound (Fox.empty of an unparsable fallback value).
-const RESOURCE_NOT_FOUND: &str = "Could not find or access the requested resource.";
 const DUPLICATE_FALLBACK_LAYER: &str = "Cannot save annotation with multiple volume layers that have the same fallback segmentation layer.";
 const MULTIPLE_MULTI_LAYER: &str =
     "Cannot merge multiple annotations that each have multiple volume layers.";
@@ -108,14 +107,6 @@ struct Services {
     misc: MiscState,
 }
 
-fn extension<T: Clone + Send + Sync + 'static>(parts: &Parts) -> ApiResult<T> {
-    parts
-        .extensions
-        .get::<T>()
-        .cloned()
-        .ok_or_else(ApiError::internal)
-}
-
 impl<S: Send + Sync> FromRequestParts<S> for Services {
     type Rejection = ApiError;
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
@@ -126,55 +117,6 @@ impl<S: Send + Sync> FromRequestParts<S> for Services {
             misc: extension(parts)?,
         })
     }
-}
-
-/// Play's `MultipartFormData`: file parts (with a file name) in request order
-/// and data parts by name.
-struct MultipartBody {
-    files: Vec<(String, Bytes)>,
-    data_parts: HashMap<String, Vec<String>>,
-}
-
-impl MultipartBody {
-    /// `dataParts.get(name).flatMap(_.headOption)`.
-    fn first(&self, name: &str) -> Option<&str> {
-        self.data_parts
-            .get(name)
-            .and_then(|values| values.first())
-            .map(String::as_str)
-    }
-}
-
-async fn read_multipart(
-    multipart: Result<Multipart, MultipartRejection>,
-) -> ApiResult<MultipartBody> {
-    let invalid = || ApiError::bad_request(MULTIPART_INVALID);
-    let mut multipart = multipart.map_err(|_| invalid())?;
-    let mut body = MultipartBody {
-        files: Vec::new(),
-        data_parts: HashMap::new(),
-    };
-    let field_error = |error: axum::extract::multipart::MultipartError| {
-        if error.status() == StatusCode::PAYLOAD_TOO_LARGE {
-            ApiError::new(StatusCode::PAYLOAD_TOO_LARGE, "Request Entity Too Large")
-        } else {
-            invalid()
-        }
-    };
-    while let Some(field) = multipart.next_field().await.map_err(field_error)? {
-        let name = field.name().unwrap_or_default().to_owned();
-        match field.file_name().map(str::to_owned) {
-            Some(file_name) => {
-                let bytes = field.bytes().await.map_err(field_error)?;
-                body.files.push((file_name, bytes));
-            }
-            None => {
-                let text = field.text().await.map_err(field_error)?;
-                body.data_parts.entry(name).or_default().push(text);
-            }
-        }
-    }
-    Ok(body)
 }
 
 // ---------------------------------------------------------------------------
@@ -246,7 +188,7 @@ fn parse_vec3_double(raw: &str) -> Option<Vec3DoubleProto> {
 /// `Fox.runOptional(raw)(parse(_).toFox)`: an unparsable value is Fox.empty.
 fn parse_optional<T>(raw: Option<&str>, parse: impl Fn(&str) -> Option<T>) -> ApiResult<Option<T>> {
     raw.map(|value| {
-        parse(value).ok_or_else(|| ApiError::new(StatusCode::NOT_FOUND, RESOURCE_NOT_FOUND))
+        parse(value).ok_or_else(|| ApiError::new(StatusCode::NOT_FOUND, crate::msg::NOT_FOUND))
     })
     .transpose()
 }
@@ -254,24 +196,6 @@ fn parse_optional<T>(raw: Option<&str>, parse: impl Fn(&str) -> Option<T>) -> Ap
 // ---------------------------------------------------------------------------
 // Fox failures
 // ---------------------------------------------------------------------------
-
-fn failure(message: impl Into<String>, status: Option<StatusCode>) -> ProviderError {
-    ProviderError::Failure(FoxFailure {
-        message: message.into(),
-        chain: Vec::new(),
-        status,
-    })
-}
-
-/// RPC failures keep an unsuccessful upstream status (RPCRequest
-/// `~> result.status`); transport failures default to 400.
-fn service_failure(error: ServiceError) -> ProviderError {
-    let status = match error {
-        ServiceError::UpstreamStatus(code) => StatusCode::from_u16(code).ok(),
-        _ => None,
-    };
-    failure(error.to_string(), status)
-}
 
 // ---------------------------------------------------------------------------
 // adaptVolumeTracingsToFallbackLayer
@@ -326,7 +250,7 @@ fn adapt_properties(
             .map(|layer| layer.element_class.as_str())
             .unwrap_or(VOLUME_DEFAULT_ELEMENT_CLASS),
     )
-    .map_err(|error| failure(error.to_string(), None))?;
+    .map_err(|error| ProviderError::failure(error.to_string()))?;
     let largest_segment_id = combine_largest_segment_ids_by_precedence(
         // ScalaPB uint64 carries the Long bit pattern.
         tracing.largest_segment_id.map(|id| id as i64),
@@ -368,7 +292,7 @@ async fn adapt_volume_layers(
                     .clients
                     .has_segment_index(&data_store_url, &dataset.id, &fallback.name)
                     .await
-                    .map_err(service_failure)?,
+                    .map_err(ProviderError::from)?,
                 None => true,
             };
             layer.tracing =
@@ -408,9 +332,9 @@ async fn save_editable_mapping_if_present(
                 zip.to_vec(),
             )
             .await
-            .map_err(service_failure),
+            .map_err(ProviderError::from),
         (None, None) => Ok(0),
-        _ => Err(failure(EDITABLE_MAPPING_INCOMPLETE, None)),
+        _ => Err(ProviderError::failure(EDITABLE_MAPPING_INCOMPLETE)),
     }
 }
 
@@ -454,10 +378,10 @@ fn check_volume_merge_rules(groups: &[Vec<UploadedVolumeLayer>]) -> Result<(), P
         .iter()
         .any(|group| has_duplicate_fallback_layer(group))
     {
-        return Err(failure(DUPLICATE_FALLBACK_LAYER, None));
+        return Err(ProviderError::failure(DUPLICATE_FALLBACK_LAYER));
     }
     if groups.len() > 1 && groups.iter().any(|group| group.len() > 1) {
-        return Err(failure(MULTIPLE_MULTI_LAYER, None));
+        return Err(ProviderError::failure(MULTIPLE_MULTI_LAYER));
     }
     if groups.len() > 1
         && groups
@@ -465,7 +389,7 @@ fn check_volume_merge_rules(groups: &[Vec<UploadedVolumeLayer>]) -> Result<(), P
             .flatten()
             .any(|layer| layer.edited_mapping_edges_location.is_some())
     {
-        return Err(failure(MULTIPLE_EDITABLE_MAPPINGS, None));
+        return Err(ProviderError::failure(MULTIPLE_EDITABLE_MAPPINGS));
     }
     Ok(())
 }
@@ -530,7 +454,7 @@ async fn merge_and_save_volume_layers(
                     },
                 )
                 .await
-                .map_err(service_failure)?;
+                .map_err(ProviderError::from)?;
             if let Some(data) = parsed.data_zip_for(uploaded) {
                 // saveVolumeTracing's initial data with empty mag restrictions.
                 services
@@ -544,7 +468,7 @@ async fn merge_and_save_volume_layers(
                         data.to_vec(),
                     )
                     .await
-                    .map_err(service_failure)?;
+                    .map_err(ProviderError::from)?;
             }
             layers.push(AnnotationLayer {
                 tracing_id,
@@ -596,7 +520,7 @@ async fn merge_and_save_volume_layers(
             },
         )
         .await
-        .map_err(service_failure)?;
+        .map_err(ProviderError::from)?;
     Ok((
         vec![AnnotationLayer {
             tracing_id,
@@ -621,24 +545,12 @@ async fn merge_and_save_skeleton_layers(
         .tracing_store
         .merge_skeleton_tracings_by_contents(url, &tracing_id, skeletons)
         .await
-        .map_err(service_failure)?;
+        .map_err(ProviderError::from)?;
     Ok(vec![AnnotationLayer {
         tracing_id,
         typ: AnnotationLayerType::Skeleton,
         name: DEFAULT_SKELETON_LAYER_NAME.to_owned(),
     }])
-}
-
-fn layer_type_proto(typ: AnnotationLayerType) -> AnnotationLayerTypeProto {
-    match typ {
-        AnnotationLayerType::Skeleton => AnnotationLayerTypeProto::Skeleton,
-        AnnotationLayerType::Volume => AnnotationLayerTypeProto::Volume,
-    }
-}
-
-/// Instant.now (millisecond precision).
-fn now_millis() -> DateTime<Utc> {
-    DateTime::from_timestamp_millis(Utc::now().timestamp_millis()).unwrap_or_else(Utc::now)
 }
 
 // ---------------------------------------------------------------------------
@@ -653,7 +565,7 @@ async fn upload(
     multipart: Result<Multipart, MultipartRejection>,
 ) -> ApiResult<Response> {
     let pool = &state.pool;
-    let body = read_multipart(multipart).await?;
+    let body = read_multipart(multipart, MULTIPART_INVALID).await?;
     // Scala reads `dataParts("createGroupForEachFile")` with Map.apply, which
     // throws (500) when the part is missing; treated as false here.
     let create_group_for_each_file = body.first("createGroupForEachFile") == Some("true");
@@ -751,7 +663,7 @@ async fn upload(
                 .map(|layer| AnnotationLayerProto {
                     tracing_id: layer.tracing_id.clone(),
                     name: layer.name.clone(),
-                    typ: layer_type_proto(layer.typ) as i32,
+                    typ: AnnotationLayerTypeProto::from(layer.typ) as i32,
                 })
                 .collect(),
             earliest_accessible_version,
@@ -761,7 +673,7 @@ async fn upload(
             .tracing_store
             .save_annotation_proto(&url, &annotation_id, &proto)
             .await
-            .map_err(service_failure)?;
+            .map_err(ProviderError::from)?;
         Ok::<_, ProviderError>(layers)
     }
     .await;

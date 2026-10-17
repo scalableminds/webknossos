@@ -9,6 +9,7 @@ use sqlx::PgPool;
 
 use crate::{
     AppState,
+    annotation::provider::AnnotationLayerType,
     error::ApiResult,
     extract::Query,
     proto::{AnnotationLayerTypeProto, AnnotationProto},
@@ -87,12 +88,11 @@ async fn persist_update(pool: &PgPool, id: &ObjectId, update: AnnotationProto) -
                 .bind(id.as_str()).bind(&layer.tracing_id).bind(&layer.name)
                 .execute(&mut *transaction).await?;
         } else {
-            let typ = match AnnotationLayerTypeProto::try_from(layer.typ)
-                .expect("validated protobuf layer type")
-            {
-                AnnotationLayerTypeProto::Skeleton => "Skeleton",
-                AnnotationLayerTypeProto::Volume => "Volume",
-            };
+            let typ = AnnotationLayerType::from(
+                AnnotationLayerTypeProto::try_from(layer.typ)
+                    .expect("validated protobuf layer type"),
+            )
+            .as_str();
             // Do not use UPSERT: duplicate new tracing IDs must fail rather
             // than silently becoming repeated updates to the inserted row.
             sqlx::query("INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}'::jsonb)")

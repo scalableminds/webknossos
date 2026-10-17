@@ -10,6 +10,7 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::{Path, Query},
     util::id::{ObjectId, PathObjectId},
+    util::java_format::java_double,
 };
 use axum::{
     Json, Router,
@@ -21,9 +22,6 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{Acquire, PgConnection, PgPool, Postgres, Transaction};
-
-/// Msg.notFound: Play's response for an empty Fox (DAO lookup without message).
-const NOT_FOUND: &str = "Could not find or access the requested resource.";
 
 /// CreditTransactionDAO.listAccessQ ($1 = requesting user).
 const LIST_ACCESS: &str = r#"(_organization IN (SELECT _organization FROM webknossos.users_ WHERE (isAdmin OR isDatasetManager) AND _id = $1)
@@ -84,9 +82,8 @@ async fn add_credits(
             .fetch_one(&state.pool)
             .await?;
     if !exists {
-        return Err(ApiError::bad_request(format!(
-            "Organization “{}” could not be found or accessed.",
-            query.organization_id
+        return Err(ApiError::bad_request(crate::msg::organization::not_found(
+            &query.organization_id,
         )));
     }
     let money_spent = JavaDecimal::parse(&query.money_spent).ok_or_else(|| {
@@ -115,7 +112,9 @@ async fn add_credits(
     });
     // Instant.fromString(...).toFox without message: an unparsable date is an empty Fox (404).
     let expiration = match query.expires_at.as_deref() {
-        Some(text) => Some(parse_instant(text).ok_or_else(|| ApiError::not_found(NOT_FOUND))?),
+        Some(text) => {
+            Some(parse_instant(text).ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?)
+        }
         None => None,
     };
     if expiration.is_some_and(|date| date < Utc::now()) {
@@ -282,7 +281,7 @@ async fn refund(
     .fetch_optional(&mut *transaction)
     .await?;
     let (organization, paid_job, transaction_state, credit_state, delta) =
-        row.ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        row.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if organization != query.organization_id {
         return Err(ApiError::bad_request(
             "Transaction is not for this organization",
@@ -581,11 +580,6 @@ fn compact_free_credits_for_display(
         .collect()
 }
 
-/// Java `Double.toString` (shared, JDK-verified).
-fn java_double(value: f64) -> String {
-    crate::util::java_format::java_double(value)
-}
-
 /// JobDAO.findOne (user read access) + JobService.publicWrites.
 async fn paid_job_json(
     connection: &mut PgConnection,
@@ -594,7 +588,7 @@ async fn paid_job_json(
 ) -> ApiResult<Value> {
     let job = crate::job::routes::find_job(connection, &user.id, job_id)
         .await?
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     crate::job::routes::public_writes(connection, &user.id, &job).await
 }
 

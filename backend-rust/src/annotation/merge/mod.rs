@@ -10,25 +10,24 @@ use axum::{
     http::{StatusCode, request::Parts},
     routing::post,
 };
-use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 
 use crate::{
     AppState,
     annotation::metadata::PUBLIC_WRITES_FAILED,
+    annotation::provider::AnnotationLayerType,
     annotation::provider::{
-        ANNOTATION_NOT_FOUND, AccessContext, AnnotationProvider, FoxFailure,
-        MERGE_FAILED_IN_TRACINGSTORE, ProvidedAnnotation, ProviderError,
+        AccessContext, AnnotationProvider, MERGE_FAILED_IN_TRACINGSTORE, ProvidedAnnotation,
+        ProviderError,
     },
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::Path,
-    proto::{AnnotationLayerTypeProto, AnnotationProto},
-    stores::client::ServiceError,
-    stores::tracing_client::{
-        MergeRequest, TRACING_STORE_NOT_FOUND, TracingStoreClient, TracingStoreError,
-    },
+    extract::extension,
+    proto::AnnotationProto,
+    stores::tracing_client::{MergeRequest, TracingStoreClient},
     util::id::ObjectId,
+    util::instant::now_millis,
 };
 
 /// Msg.Annotation.Merge.failed.
@@ -60,18 +59,17 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
 pub fn parse_remap_segment_ids(query: Option<&str>) -> ApiResult<bool> {
     const KEY: &str = "remapSegmentIds";
     let pairs: Vec<(String, String)> = serde_urlencoded::from_str(query.unwrap_or(""))
-        .map_err(|_| ApiError::bad_request("Invalid query parameters."))?;
+        .map_err(|_| ApiError::bad_request(crate::msg::request::INVALID_QUERY))?;
     let Some((_, value)) = pairs.into_iter().find(|(key, _)| key == KEY) else {
         return Ok(true);
     };
     match value.trim() {
         "true" => Ok(true),
         "false" => Ok(false),
-        other => other.parse::<i32>().map(|number| number != 0).map_err(|_| {
-            ApiError::bad_request(format!(
-                "Cannot parse parameter {KEY} as Boolean: should be true, false, 0 or 1"
-            ))
-        }),
+        other => other
+            .parse::<i32>()
+            .map(|number| number != 0)
+            .map_err(|_| ApiError::bad_request(crate::msg::request::invalid_boolean(KEY))),
     }
 }
 
@@ -89,14 +87,6 @@ struct Services {
     provider: AnnotationProvider,
     tracing_store: TracingStoreClient,
     jobs_enabled: bool,
-}
-
-fn extension<T: Clone + Send + Sync + 'static>(parts: &Parts) -> ApiResult<T> {
-    parts
-        .extensions
-        .get::<T>()
-        .cloned()
-        .ok_or_else(ApiError::internal)
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for Services {
@@ -165,28 +155,8 @@ async fn merge_without_type(
 /// `provideAnnotation(..) ?~> Msg.Annotation.notFound ~> NOT_FOUND`.
 fn not_found(error: ProviderError) -> ApiError {
     error
-        .wrap(ANNOTATION_NOT_FOUND)
+        .wrap(crate::msg::annotation::NOT_FOUND)
         .into_api_error(StatusCode::NOT_FOUND)
-}
-
-fn failure(message: &str, status: Option<StatusCode>) -> ProviderError {
-    ProviderError::Failure(FoxFailure {
-        message: message.to_owned(),
-        chain: Vec::new(),
-        status,
-    })
-}
-
-/// RPC failures are Fox failures; only an unsuccessful upstream HTTP status
-/// is kept as ParamFailure status (RPCRequest `~> result.status`).
-fn tracing_store_failure(error: TracingStoreError) -> ProviderError {
-    let status = match &error {
-        TracingStoreError::Service(ServiceError::UpstreamStatus(code)) => {
-            StatusCode::from_u16(*code).ok()
-        }
-        _ => None,
-    };
-    failure(&error.to_string(), status)
 }
 
 /// AnnotationMerger.mergeTwo → mergeN(newId, toTemporaryStore = false,
@@ -209,7 +179,7 @@ async fn merge_two(
         }
         let url = crate::stores::tracing_client::find_first_tracing_store_url(&state.pool)
             .await?
-            .ok_or_else(|| failure(TRACING_STORE_NOT_FOUND, None))?;
+            .ok_or_else(|| ProviderError::failure(crate::msg::tracing_store::NOT_FOUND))?;
         let request = MergeRequest {
             annotation_ids: vec![ObjectId::parse(a.id())?, ObjectId::parse(b.id())?],
             owner_ids: vec![
@@ -225,23 +195,11 @@ async fn merge_two(
         tracing_store
             .merge_annotations_by_ids(&url, &request)
             .await
-            .map_err(tracing_store_failure)
+            .map_err(ProviderError::from)
     };
     in_tracing_store
         .await
         .map_err(|error| error.wrap(MERGE_FAILED_IN_TRACINGSTORE))
-}
-
-fn layer_type(typ: AnnotationLayerTypeProto) -> &'static str {
-    match typ {
-        AnnotationLayerTypeProto::Skeleton => "Skeleton",
-        AnnotationLayerTypeProto::Volume => "Volume",
-    }
-}
-
-/// Instant.now (millisecond precision).
-fn now_millis() -> DateTime<Utc> {
-    DateTime::from_timestamp_millis(Utc::now().timestamp_millis()).unwrap_or_else(Utc::now)
 }
 
 /// AnnotationController.merge, in Scala order.
@@ -301,7 +259,7 @@ async fn merge_typed(
         )
         .bind(new_id.as_str())
         .bind(&layer.tracing_id)
-        .bind(layer_type(layer.typ()))
+        .bind(AnnotationLayerType::from(layer.typ()).as_str())
         .bind(&layer.name)
         .execute(&mut *transaction)
         .await?;

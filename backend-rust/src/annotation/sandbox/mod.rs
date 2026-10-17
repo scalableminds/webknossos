@@ -10,7 +10,6 @@ use sqlx::PgConnection;
 use crate::{
     AppState,
     annotation::metadata::PUBLIC_WRITES_FAILED,
-    annotation::provider::RESOURCE_NOT_FOUND,
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
     extract::{Path, Query},
@@ -24,11 +23,6 @@ pub const SANDBOX_SKELETON_ONLY: &str =
 pub const DUMMY_ID: &str = "000000000000000000000000";
 /// TracingId.dummy.
 pub const DUMMY_TRACING_ID: &str = "dummyTracingId";
-
-/// Msg.Dataset.notFound(id).
-pub fn dataset_not_found(id: &str) -> String {
-    format!("Dataset “{id}” could not be found or accessed.")
-}
 
 #[derive(Clone, Copy)]
 struct JobsEnabled(bool);
@@ -51,7 +45,7 @@ fn require_skeleton(typ: &str) -> ApiResult<()> {
     match typ {
         "skeleton" => Ok(()),
         "volume" | "hybrid" => Err(ApiError::bad_request(SANDBOX_SKELETON_ONLY)),
-        _ => Err(ApiError::not_found(RESOURCE_NOT_FOUND)),
+        _ => Err(ApiError::not_found(crate::msg::NOT_FOUND)),
     }
 }
 
@@ -107,7 +101,7 @@ async fn public_json(
     .fetch_optional(&mut *connection)
     .await?;
     let (dataset_name, organization, datastore) =
-        dataset.ok_or_else(|| ApiError::not_found("Annotation dataset not found."))?;
+        dataset.ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
     let data_store = crate::dataset::routes::public_datastore_json_on_connection(
         connection,
         &datastore,
@@ -119,7 +113,7 @@ async fn public_json(
     )
     .fetch_optional(&mut *connection)
     .await?
-    .ok_or_else(|| ApiError::not_found("Tracing store not found."))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
     let restrictions = crate::annotation::access::restrictions(&annotation, user);
     let timestamp = annotation.created.timestamp_millis();
     Ok(json!({
@@ -134,12 +128,7 @@ async fn public_json(
         "typ": annotation.annotation_type,
         "task": Value::Null,
         "stats": {},
-        "restrictions": {
-            "allowAccess": restrictions.allow_access,
-            "allowUpdate": restrictions.allow_update,
-            "allowFinish": restrictions.allow_finish,
-            "allowDownload": restrictions.allow_download,
-        },
+        "restrictions": restrictions.public_json(),
         "annotationLayers": [{
             "tracingId": DUMMY_TRACING_ID,
             "typ": "Skeleton",
@@ -181,7 +170,9 @@ async fn sandbox(
     )
     .await?
     {
-        return Err(ApiError::not_found(dataset_not_found(dataset_id.as_str())));
+        return Err(ApiError::not_found(crate::msg::dataset::not_found(
+            dataset_id.as_str(),
+        )));
     }
     require_skeleton(&typ)?;
     let mut connection = state.pool.acquire().await?;

@@ -122,9 +122,7 @@ async fn datastore(
     if !valid {
         return Ok((
             StatusCode::FORBIDDEN,
-            ResponseJson(
-                json!({"granted":false,"msg":"Data store could not be found or accessed."}),
-            ),
+            ResponseJson(json!({"granted":false,"msg":crate::msg::data_store::NOT_FOUND})),
         )
             .into_response());
     }
@@ -148,11 +146,7 @@ async fn tracingstore(
             .fetch_one(&state.pool)
             .await?;
     if !valid {
-        return Ok((
-            StatusCode::FORBIDDEN,
-            "Tracing store could not be found or accessed.",
-        )
-            .into_response());
+        return Ok((StatusCode::FORBIDDEN, crate::msg::tracing_store::NOT_FOUND).into_response());
     }
     Ok(
         ResponseJson(validate(&state, &clients, features, body, query.token.as_deref()).await?)
@@ -188,7 +182,7 @@ async fn validate(
             }
             let id = id.ok_or_else(|| ApiError::bad_request("Tracing identifier is required."))?;
             let annotation_id:String=sqlx::query_scalar("SELECT a._id FROM webknossos.annotations_ a JOIN webknossos.annotation_layers layer ON layer._annotation=a._id WHERE layer.tracingId=$1 LIMIT 1")
-                .bind(id).fetch_optional(&state.pool).await?.ok_or_else(||ApiError::not_found("Annotation not found."))?;
+                .bind(id).fetch_optional(&state.pool).await?.ok_or_else(||ApiError::not_found(crate::msg::annotation::MISSING))?;
             annotation(state, user.as_ref(), Some(&annotation_id), body.mode, token).await
         }
         Resource::JobExport => job_export(state, user.as_ref(), id, body.mode).await,
@@ -220,7 +214,7 @@ async fn dataset(
                     .bind(id)
                     .fetch_optional(&state.pool)
                     .await?
-                    .ok_or_else(|| ApiError::not_found("Dataset not found."))?;
+                    .ok_or_else(|| ApiError::not_found(crate::msg::dataset::MISSING))?;
             let allowed = match user {
                 Some(user) if mode == Mode::Write => {
                     crate::dataset::access::can_edit(&state.pool, user, id).await?

@@ -11,7 +11,6 @@
 use axum::{
     Json as ResponseJson, Router,
     extract::State,
-    http::StatusCode,
     routing::{get, post},
 };
 use serde::Deserialize;
@@ -27,15 +26,10 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::{Json, Query},
     remote::datastore::ValidatedDataStore,
-    remote::datastore::mag_upload::{ResumableUploadInfo, TokenQuery, user_for_callback_token},
+    remote::datastore::mag_upload::{ResumableUploadInfo, TokenQuery, user_for_token_forbidden},
     util::id::ObjectId,
 };
 
-/// Msg.notAllowed.
-const NOT_ALLOWED: &str = "You are not authorized to view or edit this resource.";
-/// Msg.Dataset.Upload.storageExceeded (wraps Msg.Organization.storageExceeded).
-const STORAGE_EXCEEDED: &str =
-    "Cannot upload dataset because the storage quota of the organization is exceeded.";
 /// Msg.Dataset.Upload.datastoreRestricted.
 const DATASTORE_RESTRICTED: &str = "Your organization does not have permission to upload datasets to this data store. Please choose another data store.";
 /// Msg.Dataset.Upload.invalidLinkedLayers (wraps notFound / linkRestricted).
@@ -59,23 +53,8 @@ pub fn router() -> Router<AppState> {
         )
 }
 
-/// `bearerTokenService.userForToken(token) ~> FORBIDDEN`: the token failure
-/// keeps its message (Msg.User.Token.invalid) with status 403.
-async fn user_for_token_forbidden(pool: &sqlx::PgPool, token: &str) -> ApiResult<AuthUser> {
-    user_for_callback_token(pool, token)
-        .await
-        .map_err(|mut error| {
-            if error.status == StatusCode::BAD_REQUEST {
-                error.status = StatusCode::FORBIDDEN;
-            }
-            error
-        })
-}
-
 fn organization_not_found(id: &str) -> ApiError {
-    ApiError::not_found(format!(
-        "Organization “{id}” could not be found or accessed."
-    ))
+    ApiError::not_found(crate::msg::organization::not_found(id))
 }
 
 /// `organizationDAO.findOne(id)(GlobalAccessContext) ~> NOT_FOUND`, then
@@ -95,7 +74,7 @@ fn require_own_organization(user: &AuthUser, organization: &str) -> ApiResult<()
     if user.organization_id == organization {
         Ok(())
     } else {
-        Err(ApiError::forbidden(NOT_ALLOWED))
+        Err(ApiError::forbidden(crate::msg::NOT_ALLOWED))
     }
 }
 
@@ -123,7 +102,9 @@ async fn assert_used_storage_not_exceeded(
     if i128::from(used) + i128::from(requested.unwrap_or(0)) <= i128::from(included) {
         Ok(())
     } else {
-        Err(ApiError::forbidden(STORAGE_EXCEEDED))
+        Err(ApiError::forbidden(
+            crate::msg::dataset::upload::STORAGE_EXCEEDED,
+        ))
     }
 }
 
@@ -221,9 +202,8 @@ async fn reserve_dataset_upload(
         .fetch_one(pool)
         .await?;
         if taken {
-            return Err(ApiError::bad_request(format!(
-                "Dataset name “{}” is already taken.",
-                body.dataset_name
+            return Err(ApiError::bad_request(crate::msg::dataset::name::taken(
+                &body.dataset_name,
             )));
         }
     }
@@ -323,6 +303,9 @@ async fn create_and_set_up_dataset(
 #[serde(rename_all = "camelCase")]
 struct UnfinishedQuery {
     token: String,
+    // The route (and DSRemoteWebknossosClient) name it organizationName; the controller
+    // argument it binds positionally is organizationId.
+    #[serde(rename = "organizationName")]
     organization_id: String,
 }
 

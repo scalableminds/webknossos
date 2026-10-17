@@ -20,8 +20,6 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     annotation::info::{ANNOTATION_CANCELLED, NOT_FOUND_CONSIDER_LOGIN},
-    annotation::metadata::NOT_ALLOWED,
-    annotation::provider::ANNOTATION_NOT_FOUND,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     router,
 };
@@ -256,7 +254,8 @@ async fn owner_reads_full_json_and_type_aliases_resolve() {
     assert_eq!(body["datasetId"], w.dataset.as_str());
     assert_eq!(body["dataSetName"], "Dataset");
     assert_eq!(body["organization"], w.f.organization_id.as_str());
-    assert_eq!(body["tags"], json!(["Dataset", "tag"]));
+    // annotation.tags ++ Set(dataset.name): stored tags first, dataset name appended.
+    assert_eq!(body["tags"], json!(["tag", "Dataset"]));
     assert_eq!(body["viewConfiguration"], json!({"zoom":2}));
     assert_eq!(body["restrictions"], restrictions(true, true, true));
     assert_eq!(body["owner"]["id"], w.owner.user_id.as_str());
@@ -388,7 +387,10 @@ async fn anonymous_access_is_public_only_and_ignores_sharing_tokens() {
     let (status, body) = get(&app, None, &format!("/api/annotations/{internal}/info")).await;
     assert_eq!(
         (status, body),
-        (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     let (status, body) = get(&app, None, &format!("/api/annotations/{public}/info")).await;
     assert_eq!(status, StatusCode::OK);
@@ -444,12 +446,18 @@ async fn access_denied_cancelled_invalid_type_and_bad_timestamp() {
         .await;
         assert_eq!(
             (status, body),
-            (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+            (
+                StatusCode::NOT_FOUND,
+                error(webknossos_backend::msg::annotation::NOT_FOUND)
+            )
         );
         let (status, body) = get(&app, Some(token), &format!("/api/annotations/{id}/info")).await;
         assert_eq!(
             (status, body),
-            (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+            (
+                StatusCode::NOT_FOUND,
+                error(webknossos_backend::msg::annotation::NOT_FOUND)
+            )
         );
     }
     // Organization admins read Private annotations of their organization.
@@ -481,7 +489,10 @@ async fn access_denied_cancelled_invalid_type_and_bad_timestamp() {
     .await;
     assert_eq!(
         (status, body),
-        (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     let (status, body) = get(
         &app,
@@ -574,7 +585,10 @@ async fn untyped_info_resolves_the_stored_type() {
     .await;
     assert_eq!(
         (status, body),
-        (StatusCode::NOT_FOUND, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     let (status, _) = get(
         &app,
@@ -787,7 +801,13 @@ async fn compound_task_info_merges_once_and_applies_compound_restrictions() {
     // A non-manager team member reads the cached compound but the compound
     // restrictions deny access (fail-closed 403).
     let (status, body) = get(&app, Some(&w.member.token), &path).await;
-    assert_eq!((status, body), (StatusCode::FORBIDDEN, error(NOT_ALLOWED)));
+    assert_eq!(
+        (status, body),
+        (
+            StatusCode::FORBIDDEN,
+            error(webknossos_backend::msg::NOT_ALLOWED)
+        )
+    );
     // Cache hit: no re-merge, owner stays the first requester.
     let (status, body) = get(&app, Some(&w.f.token), &path).await;
     assert_eq!(status, StatusCode::OK);

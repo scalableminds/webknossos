@@ -17,7 +17,7 @@ use axum::{
     http::{StatusCode, request::Parts},
     routing::post,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use serde_json::{Map, Value, json};
 use sqlx::PgPool;
 
@@ -26,27 +26,25 @@ use crate::{
     annotation::duplicate::{NewAnnotation, insert_annotation},
     annotation::metadata::PUBLIC_WRITES_FAILED,
     annotation::provider::{
-        AnnotationLayer, AnnotationLayerType, AnnotationProvider, DATA_SOURCE_NOT_FOUND,
-        FoxFailure, ProviderError, USABLE_BUT_NO_VOXEL_SIZE, dataset_not_usable,
+        AnnotationLayer, AnnotationLayerType, AnnotationProvider, ProviderError,
     },
-    annotation::sandbox::dataset_not_found,
     annotation::tracing_initialization::{
         AnnotationLayerParameters, CREATE_TRACINGS_FAILED, DATA_STORE_NOT_FOUND_FOR_DATASET,
         ExplorationalDataset, FetchedPrecedenceTracing, InitialTracing, PrecedenceFetchRequest,
-        RedundantTracingProperties, TracingInitError, adapt_skeleton_tracing, adapt_volume_tracing,
+        RedundantTracingProperties, adapt_skeleton_tracing, adapt_volume_tracing,
         build_skeleton_tracing, layer_name, plan_volume_tracing,
     },
     auth::AuthUser,
     dataset::source::DataSource,
     error::{ApiError, ApiResult},
+    extract::extension,
     extract::{self, Path},
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
-    stores::client::{ServiceClients, ServiceError},
-    stores::tracing_client::{
-        TRACING_STORE_NOT_FOUND, TracingStoreClient, TracingStoreError, VolumeSaveDataSource,
-    },
+    stores::client::ServiceClients,
+    stores::tracing_client::{TracingStoreClient, VolumeSaveDataSource},
     system::application_info::MiscState,
     util::id::ObjectId,
+    util::instant::now_millis,
 };
 
 /// Msg.Annotation.createFailed.
@@ -67,40 +65,6 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
 // ---------------------------------------------------------------------------
 // Fox failures
 // ---------------------------------------------------------------------------
-
-fn failure(message: impl Into<String>, status: Option<StatusCode>) -> ProviderError {
-    ProviderError::Failure(FoxFailure {
-        message: message.into(),
-        chain: Vec::new(),
-        status,
-    })
-}
-
-/// RPC failures are Fox failures; an unsuccessful upstream HTTP status is
-/// kept as ParamFailure status (RPCRequest `~> result.status`).
-fn service_failure(error: ServiceError) -> ProviderError {
-    let status = match error {
-        ServiceError::UpstreamStatus(code) => StatusCode::from_u16(code).ok(),
-        _ => None,
-    };
-    failure(error.to_string(), status)
-}
-
-fn tracing_store_failure(error: TracingStoreError) -> ProviderError {
-    match error {
-        TracingStoreError::Service(error) => service_failure(error),
-        other @ TracingStoreError::InvalidProtobuf => failure(other.to_string(), None),
-    }
-}
-
-/// TI1 errors: a message is a plain Fox failure; a missing fallback layer is
-/// Scala's message-less `Fox.empty`.
-fn init_failure(error: TracingInitError) -> ProviderError {
-    match error.message() {
-        Some(message) => failure(message, None),
-        None => ProviderError::Empty,
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Shared createTracingForExplorational I/O
@@ -156,12 +120,16 @@ pub(crate) async fn usable_data_source(
     dataset: &DatasetFacts,
 ) -> Result<UsableSource, ProviderError> {
     if !dataset.is_usable {
-        return Err(failure(dataset_not_usable(dataset.id.as_str()), None));
+        return Err(ProviderError::failure(crate::msg::dataset::not_usable(
+            dataset.id.as_str(),
+        )));
     }
     if !dataset.has_voxel_size {
-        return Err(failure(USABLE_BUT_NO_VOXEL_SIZE, None)
-            .wrap(DATA_SOURCE_NOT_FOUND)
-            .with_status(StatusCode::NOT_FOUND));
+        return Err(ProviderError::failure(
+            crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE,
+        )
+        .wrap(crate::msg::dataset::data_source::NOT_FOUND)
+        .with_status(StatusCode::NOT_FOUND));
     }
     let rendered =
         crate::dataset::routes::data_source_for_rpc(pool, dataset.id.as_str(), true).await?;
@@ -175,7 +143,7 @@ pub(crate) async fn usable_data_source(
 pub(crate) async fn tracing_store_url(pool: &PgPool) -> Result<String, ProviderError> {
     crate::stores::tracing_client::find_first_tracing_store_url(pool)
         .await?
-        .ok_or_else(|| failure(TRACING_STORE_NOT_FOUND, None))
+        .ok_or_else(|| ProviderError::failure(crate::msg::tracing_store::NOT_FOUND))
 }
 
 /// `dataStoreDAO.findOneByName(dataset._dataStore.trim)` (internal URL),
@@ -189,24 +157,7 @@ pub(crate) async fn data_store_url(
             .bind(&dataset.data_store)
             .fetch_optional(pool)
             .await?;
-    url.ok_or_else(|| failure(DATA_STORE_NOT_FOUND_FOR_DATASET, None))
-}
-
-trait WithStatus {
-    fn with_status(self, status: StatusCode) -> Self;
-}
-
-impl WithStatus for ProviderError {
-    /// Fox `~> status` on a failure (ParamFailure).
-    fn with_status(self, status: StatusCode) -> Self {
-        match self {
-            Self::Failure(failure) => Self::Failure(FoxFailure {
-                status: Some(status),
-                ..failure
-            }),
-            other => other,
-        }
-    }
+    url.ok_or_else(|| ProviderError::failure(DATA_STORE_NOT_FOUND_FOR_DATASET))
 }
 
 /// Everything createTracingForExplorational resolved before its
@@ -233,7 +184,7 @@ pub(crate) async fn fetch_precedence_properties(
                     request.version,
                 )
                 .await
-                .map_err(tracing_store_failure)?,
+                .map_err(ProviderError::from)?,
         ),
         AnnotationLayerType::Volume => FetchedPrecedenceTracing::Volume(
             tracing_store
@@ -244,7 +195,7 @@ pub(crate) async fn fetch_precedence_properties(
                     request.version,
                 )
                 .await
-                .map_err(tracing_store_failure)?,
+                .map_err(ProviderError::from)?,
         ),
     };
     Ok(RedundantTracingProperties::extract(&fetched))
@@ -272,17 +223,17 @@ pub(crate) async fn create_tracing(
             old_precedence,
         ))),
         AnnotationLayerType::Volume => {
-            let plan = plan_volume_tracing(&dataset, params).map_err(init_failure)?;
+            let plan = plan_volume_tracing(&dataset, params).map_err(ProviderError::from)?;
             let has_segment_index = match plan.segment_index_lookup() {
                 Some(layer) => clients
                     .has_segment_index(context.data_store_url, &context.dataset.id, layer)
                     .await
-                    .map_err(service_failure)?,
+                    .map_err(ProviderError::from)?,
                 None => false,
             };
             let tracing = plan
                 .build(has_segment_index, created)
-                .map_err(init_failure)?;
+                .map_err(ProviderError::from)?;
             Ok(InitialTracing::Volume(adapt_volume_tracing(
                 tracing,
                 old_precedence,
@@ -301,14 +252,6 @@ struct Services {
     tracing_store: TracingStoreClient,
     misc: MiscState,
     jobs_enabled: bool,
-}
-
-fn extension<T: Clone + Send + Sync + 'static>(parts: &Parts) -> ApiResult<T> {
-    parts
-        .extensions
-        .get::<T>()
-        .cloned()
-        .ok_or_else(ApiError::internal)
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for Services {
@@ -335,13 +278,6 @@ fn zeroed_statistics(typ: AnnotationLayerType) -> Value {
             "boundingBoxCount": 0,
         }),
         AnnotationLayerType::Volume => json!({"segmentCount": 0, "boundingBoxCount": 0}),
-    }
-}
-
-fn layer_type_proto(typ: AnnotationLayerType) -> AnnotationLayerTypeProto {
-    match typ {
-        AnnotationLayerType::Skeleton => AnnotationLayerTypeProto::Skeleton,
-        AnnotationLayerType::Volume => AnnotationLayerTypeProto::Volume,
     }
 }
 
@@ -376,7 +312,7 @@ async fn create_layers(
                 .tracing_store
                 .save_skeleton_tracing(&tracing_store_url, skeleton, &tracing_id)
                 .await
-                .map_err(service_failure)?,
+                .map_err(ProviderError::from)?,
             InitialTracing::Volume(volume) => services
                 .tracing_store
                 .save_volume_tracing(
@@ -391,7 +327,7 @@ async fn create_layers(
                     },
                 )
                 .await
-                .map_err(service_failure)?,
+                .map_err(ProviderError::from)?,
         }
         layers.push(AnnotationLayer {
             tracing_id,
@@ -407,7 +343,7 @@ async fn create_layers(
             .map(|layer| AnnotationLayerProto {
                 tracing_id: layer.tracing_id.clone(),
                 name: layer.name.clone(),
-                typ: layer_type_proto(layer.typ) as i32,
+                typ: AnnotationLayerTypeProto::from(layer.typ) as i32,
             })
             .collect(),
         earliest_accessible_version: 0,
@@ -417,13 +353,8 @@ async fn create_layers(
         .tracing_store
         .save_annotation_proto(&tracing_store_url, annotation_id, &proto)
         .await
-        .map_err(service_failure)?;
+        .map_err(ProviderError::from)?;
     Ok(layers)
-}
-
-/// Instant.now (millisecond precision).
-fn now_millis() -> DateTime<Utc> {
-    DateTime::from_timestamp_millis(Utc::now().timestamp_millis()).unwrap_or_else(Utc::now)
 }
 
 /// POST /datasets/:datasetId/createExplorational
@@ -444,7 +375,7 @@ async fn create_explorational(
     } else {
         None
     }
-    .ok_or_else(|| ApiError::not_found(dataset_not_found(dataset_id.as_str())))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::dataset::not_found(dataset_id.as_str())))?;
 
     // createExplorationalFor ?~> createFailed; createLayersForExplorational
     // ?~> createTracingsFailed. Database faults stay 5xx.

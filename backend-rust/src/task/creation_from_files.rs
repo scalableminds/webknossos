@@ -31,7 +31,6 @@ use axum::{
     Router,
     body::Bytes,
     extract::{DefaultBodyLimit, Multipart, State, multipart::MultipartRejection},
-    http::StatusCode,
     routing::post,
 };
 use serde::Deserialize;
@@ -47,16 +46,16 @@ use crate::{
     },
     annotation::nml::parser::SharedParsingParameters,
     annotation::provider::ProviderError,
-    annotation::sandbox::dataset_not_found,
     annotation::tracing_initialization::data_source_bounding_box,
     auth::AuthUser,
     error::{ApiError, ApiResult},
+    extract::read_multipart,
     proto::BoundingBoxProto,
     task::creation::{
         BoundingBox, CreationServices, Experience, RequestedTask, RequestedTaskResult, TaskFailure,
         TaskParameters, TaskTypeFacts, TracingType, VolumeBase, add_new_ids, assert_batch_limit,
-        create_tasks, find_project, find_readable_dataset, find_task_type, project_not_found,
-        skeleton_tracing_base, task_type_not_found, volume_tracing_base,
+        create_tasks, find_project, find_readable_dataset, find_task_type, skeleton_tracing_base,
+        volume_tracing_base,
     },
     util::id::ObjectId,
 };
@@ -67,7 +66,6 @@ const PLAY_MAX_DISK_BUFFER: usize = 1024 * 1024 * 1024;
 const MULTIPART_PAYLOAD_INVALID: &str = "Could not parse task creation multipart request.";
 const FORM_JSON_MISSING: &str = "Could not parse task creation multipart request: no form data.";
 const CREATE_FAILED: &str = "Could not create task.";
-const TEAM_ADMIN_NOT_ALLOWED: &str = "You do not have permission to administrate this team.";
 const NO_DATASET: &str = "Could not find dataset for task creation.";
 
 /// `NmlTaskParameters` (Play Json format: Option fields missing/null → None).
@@ -88,45 +86,6 @@ pub fn router(_jobs_enabled: bool) -> Router<AppState> {
         .layer(DefaultBodyLimit::max(PLAY_MAX_DISK_BUFFER))
 }
 
-/// Play's `MultipartFormData`: file parts (with a file name) in request
-/// order and data parts by name.
-struct MultipartBody {
-    files: Vec<(String, Bytes)>,
-    data_parts: HashMap<String, Vec<String>>,
-}
-
-async fn read_multipart(
-    multipart: Result<Multipart, MultipartRejection>,
-) -> ApiResult<MultipartBody> {
-    let invalid = || ApiError::bad_request(MULTIPART_PAYLOAD_INVALID);
-    let mut multipart = multipart.map_err(|_| invalid())?;
-    let mut body = MultipartBody {
-        files: Vec::new(),
-        data_parts: HashMap::new(),
-    };
-    let field_error = |error: axum::extract::multipart::MultipartError| {
-        if error.status() == StatusCode::PAYLOAD_TOO_LARGE {
-            ApiError::new(StatusCode::PAYLOAD_TOO_LARGE, "Request Entity Too Large")
-        } else {
-            invalid()
-        }
-    };
-    while let Some(field) = multipart.next_field().await.map_err(field_error)? {
-        let name = field.name().unwrap_or_default().to_owned();
-        match field.file_name().map(str::to_owned) {
-            Some(file_name) => {
-                let bytes = field.bytes().await.map_err(field_error)?;
-                body.files.push((file_name, bytes));
-            }
-            None => {
-                let text = field.text().await.map_err(field_error)?;
-                body.data_parts.entry(name).or_default().push(text);
-            }
-        }
-    }
-    Ok(body)
-}
-
 async fn create_from_files(
     State(state): State<AppState>,
     user: AuthUser,
@@ -134,7 +93,7 @@ async fn create_from_files(
     multipart: Result<Multipart, MultipartRejection>,
 ) -> ApiResult<axum::Json<Value>> {
     let pool = &state.pool;
-    let body = read_multipart(multipart).await?;
+    let body = read_multipart(multipart, MULTIPART_PAYLOAD_INVALID).await?;
     let input_files: Vec<(String, Bytes)> = body
         .files
         .into_iter()
@@ -155,11 +114,17 @@ async fn create_from_files(
         serde_json::from_str(json).map_err(|_| ApiError::bad_request(CREATE_FAILED))?;
     let task_type = find_task_type(pool, &user, &params.task_type_id)
         .await?
-        .ok_or_else(|| ApiError::not_found(task_type_not_found(params.task_type_id.as_str())))?;
+        .ok_or_else(|| {
+            ApiError::not_found(crate::msg::task_type::not_found(
+                params.task_type_id.as_str(),
+            ))
+        })?;
     assert_batch_limit(input_files.len(), &task_type)?;
     let project = find_project(pool, &user, &params.project_name)
         .await?
-        .ok_or_else(|| ApiError::not_found(project_not_found(&params.project_name)))?;
+        .ok_or_else(|| {
+            ApiError::not_found(crate::msg::project::not_found_by_name(&params.project_name))
+        })?;
     assert_team_manager_or_admin_of(pool, &user, &project.team).await?;
 
     let extracted = extract_from_files(
@@ -214,7 +179,7 @@ async fn assert_team_manager_or_admin_of(
     .fetch_optional(pool)
     .await?;
     let (organization, manages) =
-        team.ok_or_else(|| ApiError::bad_request(TEAM_ADMIN_NOT_ALLOWED))?;
+        team.ok_or_else(|| ApiError::bad_request(crate::msg::team::ADMIN_NOT_ALLOWED))?;
     if manages || (user.is_admin && organization == user.organization_id) {
         Ok(())
     } else {
@@ -349,7 +314,7 @@ async fn fill_in_missing_tracings(
                             let dataset = find_readable_dataset(pool, user, &params.dataset_id)
                                 .await?
                                 .ok_or_else(|| {
-                                    ApiError::bad_request(dataset_not_found(
+                                    ApiError::bad_request(crate::msg::dataset::not_found(
                                         params.dataset_id.as_str(),
                                     ))
                                 })?;

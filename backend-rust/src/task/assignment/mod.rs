@@ -37,7 +37,6 @@
 use axum::{
     Extension, Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post,
 };
-use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::{FromRow, PgConnection, PgPool};
@@ -45,21 +44,15 @@ use sqlx::{FromRow, PgConnection, PgPool};
 use crate::{
     AppState,
     annotation::duplicate::duplicate_in_tracing_store,
-    annotation::provider::{
-        AnnotationLayer, AnnotationLayerType, FoxFailure, ProviderError, RESOURCE_NOT_FOUND,
-        dataset_not_found_for_annotation, dataset_not_usable,
-    },
+    annotation::provider::{AnnotationLayer, ProviderError},
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Path, Query},
     stores::tracing_client::{DuplicateAnnotationRequest, TracingStoreClient},
     util::id::ObjectId,
+    util::instant::now_millis,
 };
 
-/// Msg.Task.unavailable.
-pub(crate) const TASK_UNAVAILABLE: &str = "There is currently no task available.";
-/// Msg.notAllowed.
-pub(crate) const NOT_ALLOWED: &str = "You are not authorized to view or edit this resource.";
 /// AnnotationService.createAnnotationFor `?~>` messages.
 pub(crate) const BASE_ID_FAILED: &str = "Failed to retrieve annotation base id.";
 
@@ -157,14 +150,6 @@ struct AnnotationBase {
     collaboration_mode: String,
 }
 
-fn failure(message: impl Into<String>) -> ProviderError {
-    ProviderError::Failure(FoxFailure {
-        message: message.into(),
-        chain: Vec::new(),
-        status: None,
-    })
-}
-
 /// AnnotationService.createAnnotationFor(assignee, taskId, initializingId)
 /// with DB reads in `context_user`'s access context (the requester for
 /// assignOne, the assignee itself for request):
@@ -203,7 +188,7 @@ pub(crate) async fn create_annotation_for(
     .bind(task_id)
     .fetch_optional(pool)
     .await?;
-    let base = base.ok_or_else(|| failure(BASE_ID_FAILED))?;
+    let base = base.ok_or_else(|| ProviderError::failure(BASE_ID_FAILED))?;
 
     let is_usable: Option<bool> = sqlx::query_scalar(&format!(
         "SELECT d.isUsable FROM webknossos.datasets_ d WHERE d._id=$3 AND {}",
@@ -216,12 +201,15 @@ pub(crate) async fn create_annotation_for(
     .await?;
     match is_usable {
         None => {
-            return Err(failure(dataset_not_found_for_annotation(
+            return Err(ProviderError::failure(
+                crate::msg::dataset::not_found_for_annotation(&base.dataset_id, &base.id),
+            ));
+        }
+        Some(false) => {
+            return Err(ProviderError::failure(crate::msg::dataset::not_usable(
                 &base.dataset_id,
-                &base.id,
             )));
         }
-        Some(false) => return Err(failure(dataset_not_usable(&base.dataset_id))),
         Some(true) => {}
     }
 
@@ -251,13 +239,6 @@ pub(crate) async fn create_annotation_for(
     )
     .await?;
     Ok(())
-}
-
-fn layer_type(typ: AnnotationLayerType) -> &'static str {
-    match typ {
-        AnnotationLayerType::Skeleton => "Skeleton",
-        AnnotationLayerType::Volume => "Volume",
-    }
 }
 
 /// AnnotationDAO.updateInitialized for `annotationBase.copy(_id, _user =
@@ -296,7 +277,7 @@ async fn update_initialized(
     .rows_affected();
     if updated != 1 {
         tracing::warn!(annotation = %annotation_id, "initializing task annotation vanished");
-        return Err(failure(RESOURCE_NOT_FOUND));
+        return Err(ProviderError::failure(crate::msg::NOT_FOUND));
     }
     sqlx::query("DELETE FROM webknossos.annotation_layers WHERE _annotation=$1")
         .bind(annotation_id.as_str())
@@ -309,7 +290,7 @@ async fn update_initialized(
         )
         .bind(annotation_id.as_str())
         .bind(&layer.tracing_id)
-        .bind(layer_type(layer.typ))
+        .bind(layer.typ.as_str())
         .bind(&layer.name)
         .execute(&mut *tx)
         .await?;
@@ -377,11 +358,6 @@ pub(crate) async fn initialize_task_annotation(
     }
 }
 
-/// Instant.now (millisecond precision).
-fn now_millis() -> DateTime<Utc> {
-    DateTime::from_timestamp_millis(Utc::now().timestamp_millis()).unwrap_or_else(Utc::now)
-}
-
 // ---------------------------------------------------------------------------
 // Route: TaskController.assignOne
 // ---------------------------------------------------------------------------
@@ -393,7 +369,7 @@ struct AssignQuery {
 }
 
 fn not_found() -> ApiError {
-    ApiError::not_found(RESOURCE_NOT_FOUND)
+    ApiError::not_found(crate::msg::NOT_FOUND)
 }
 
 /// `userService.isTeamManagerOrAdminOf(requester, project._team)`: the team
@@ -491,15 +467,21 @@ async fn assign_one(
 
     // Fox.assertTrue(..) ?~> Msg.notAllowed (no status: 400).
     if !manages_team(pool, &user, &team_id).await? {
-        return Err(ApiError::new(StatusCode::BAD_REQUEST, NOT_ALLOWED));
+        return Err(ApiError::new(
+            StatusCode::BAD_REQUEST,
+            crate::msg::NOT_ALLOWED,
+        ));
     }
     if !manages_user(pool, &user, &assignee_id, &assignee_organization).await? {
-        return Err(ApiError::new(StatusCode::BAD_REQUEST, NOT_ALLOWED));
+        return Err(ApiError::new(
+            StatusCode::BAD_REQUEST,
+            crate::msg::NOT_ALLOWED,
+        ));
     }
 
     let annotation_id = assign_one_to(pool, &task_id, &assignee_id)
         .await?
-        .ok_or_else(|| ApiError::bad_request(TASK_UNAVAILABLE))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::task::UNAVAILABLE))?;
     initialize_task_annotation(
         pool,
         &tracing_store,

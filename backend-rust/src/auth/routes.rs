@@ -326,14 +326,10 @@ async fn logout_everywhere(
 
 fn check_passkeys(config: &AuthRouteConfig) -> ApiResult<()> {
     if !config.passkeys_enabled {
-        return Err(ApiError::bad_request(
-            "Passkeys are not enabled for this WEBKNOSSOS instance.",
-        ));
+        return Err(ApiError::bad_request(crate::msg::passkeys::NOT_ENABLED));
     }
     if !config.uses_https {
-        return Err(ApiError::bad_request(
-            "Passkeys are only supported with HTTPS.",
-        ));
+        return Err(ApiError::bad_request(crate::msg::passkeys::REQUIRES_HTTPS));
     }
     Ok(())
 }

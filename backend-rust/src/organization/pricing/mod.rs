@@ -14,7 +14,6 @@ use serde_json::{Map, Value, json};
 use crate::{
     AppState,
     auth::AuthUser,
-    auth::browser::onboarding::organization_messages as org_msg,
     error::{ApiError, ApiResult},
     extract::Json,
     mail::{Mail, MailSender, templates},
@@ -35,8 +34,6 @@ pub(crate) mod messages {
     pub fn upgrade_request_note_too_long(max_length: usize) -> String {
         format!("The note of the upgrade request must not be longer than {max_length} characters.")
     }
-    pub const SUPER_USER_ONLY: &str = "This feature is currently only available for superusers.";
-    pub const INVALID_JSON: &str = "Invalid JSON request body.";
 }
 
 pub fn router() -> Router<AppState> {
@@ -176,7 +173,7 @@ fn format_count(count: i32, singular: &str) -> String {
 }
 
 fn invalid_json() -> ApiError {
-    ApiError::bad_request(messages::INVALID_JSON)
+    ApiError::bad_request(crate::msg::request::INVALID_JSON_BODY)
 }
 
 // ---------------------------------------------------------------------------
@@ -294,7 +291,7 @@ async fn upgrade_request(
         .bind(&user.organization_id)
         .fetch_optional(&state.pool)
         .await?
-        .ok_or_else(|| ApiError::not_found(org_msg::not_found(&user.organization_id)))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::organization::not_found(&user.organization_id)))?;
     let current_plan = PricingPlan::parse(&pricing_plan).ok_or_else(ApiError::internal)?;
     if let Some(plan) = request.plan
         && !(matches!(plan, PricingPlan::Team | PricingPlan::Power)
@@ -362,7 +359,7 @@ async fn status(State(state): State<AppState>, user: AuthUser) -> ApiResult<axum
         .bind(&user.organization_id)
         .fetch_optional(&state.pool)
         .await?
-        .ok_or_else(|| ApiError::bad_request(org_msg::not_found(&user.organization_id)))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id)))?;
     let active_users: i64 = sqlx::query_scalar(COUNT_USERS_FOR_ORGANIZATION)
         .bind(&user.organization_id)
         .fetch_one(&state.pool)
@@ -541,7 +538,7 @@ async fn update_plan(
 ) -> ApiResult<Response> {
     let update = parse_plan_update(&body)?;
     if !user.is_superuser {
-        return Err(ApiError::bad_request(messages::SUPER_USER_ONLY));
+        return Err(ApiError::bad_request(crate::msg::user::SUPER_USER_ONLY));
     }
     let mut tx = state.pool.begin().await?;
     let (organization_name, previous_plan): (String, String) = sqlx::query_as(
@@ -550,7 +547,7 @@ async fn update_plan(
     .bind(&update.organization_id)
     .fetch_optional(&mut *tx)
     .await?
-    .ok_or_else(|| ApiError::not_found(org_msg::not_found(&update.organization_id)))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::organization::not_found(&update.organization_id)))?;
     let previous_plan = PricingPlan::parse(&previous_plan).ok_or_else(ApiError::internal)?;
     sqlx::query(
         r#"INSERT INTO webknossos.organization_plan_updates(
@@ -724,7 +721,7 @@ async fn plan_updates(
         .bind(&user.organization_id)
         .fetch_optional(&state.pool)
         .await?
-        .ok_or_else(|| ApiError::bad_request(org_msg::not_found(&user.organization_id)))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id)))?;
         let mut update = Map::new();
         update.insert("organizationId".into(), json!(user.organization_id));
         update.insert("description".into(), json!("Organization created"));

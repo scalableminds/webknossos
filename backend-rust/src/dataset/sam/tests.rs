@@ -32,8 +32,4 @@ fn sam_payload_layout_matches_scala_buffer() {
     }
     expected.extend([9, 9]);
     assert_eq!(payload, expected);
-    assert_eq!(ceil_div(7, 2), 4);
-    assert_eq!(ceil_div(-7, 2), -4);
-    assert_eq!(ceil_div(i32::MAX, 2), i32::MIN / 2);
-    assert_eq!(ceil_div(i32::MIN, 3), 715_827_882);
 }

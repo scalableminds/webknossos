@@ -18,16 +18,15 @@ use sqlx::PgConnection;
 
 use crate::{
     AppState,
-    annotation::access::Restrictions,
-    annotation::metadata::{NOT_ALLOWED, PUBLIC_WRITES_FAILED},
+    annotation::metadata::PUBLIC_WRITES_FAILED,
     annotation::provider::{
-        ANNOTATION_NOT_FOUND, AccessContext, AnnotationIdentifier, AnnotationLayerType,
-        AnnotationProvider, AnnotationType, CompoundAnnotation, ProvidedAnnotation,
-        RESTRICTIONS_NOT_FOUND,
+        AccessContext, AnnotationIdentifier, AnnotationLayerType, AnnotationProvider,
+        AnnotationType, CompoundAnnotation, ProvidedAnnotation, RESTRICTIONS_NOT_FOUND,
     },
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
     extract::Path,
+    extract::extension,
     system::application_info::MiscState,
     time::interaction_writer::TimeInteractionWriter,
     util::id::ObjectId,
@@ -62,7 +61,7 @@ pub struct OptionalTimestamp(pub Option<i64>);
 
 pub fn parse_optional_timestamp(query: Option<&str>) -> ApiResult<Option<i64>> {
     let pairs: Vec<(String, String)> = serde_urlencoded::from_str(query.unwrap_or(""))
-        .map_err(|_| ApiError::bad_request("Invalid query parameters."))?;
+        .map_err(|_| ApiError::bad_request(crate::msg::request::INVALID_QUERY))?;
     if !pairs.iter().any(|(key, _)| key == "timestamp") {
         return Ok(None);
     }
@@ -82,14 +81,6 @@ struct Services {
     writer: TimeInteractionWriter,
     misc: MiscState,
     jobs_enabled: bool,
-}
-
-fn extension<T: Clone + Send + Sync + 'static>(parts: &Parts) -> ApiResult<T> {
-    parts
-        .extensions
-        .get::<T>()
-        .cloned()
-        .ok_or_else(ApiError::internal)
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for Services {
@@ -154,15 +145,6 @@ async fn info_without_type(
         .map(Json)
 }
 
-fn restrictions_json(restrictions: &Restrictions) -> Value {
-    json!({
-        "allowAccess": restrictions.allow_access,
-        "allowUpdate": restrictions.allow_update,
-        "allowFinish": restrictions.allow_finish,
-        "allowDownload": restrictions.allow_download,
-    })
-}
-
 /// AnnotationController.info, in Scala order.
 async fn info_for(
     context: &InfoContext<'_>,
@@ -175,7 +157,7 @@ async fn info_for(
     let not_found = if user.is_none() {
         NOT_FOUND_CONSIDER_LOGIN
     } else {
-        ANNOTATION_NOT_FOUND
+        crate::msg::annotation::NOT_FOUND
     };
     // provideAnnotation ?~> notFoundMessage ~> NOT_FOUND (invalid types too).
     let annotation = context
@@ -207,7 +189,7 @@ async fn info_for(
     // and status show the intended gate; it only matters for compounds (saved
     // DAO read access is already at least as strict).
     if !restrictions.allow_access {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let mut connection = context.state.pool.acquire().await?;
     let json = match &annotation {
@@ -225,7 +207,7 @@ async fn info_for(
         }
     }
     .map(|mut json| {
-        json["restrictions"] = restrictions_json(&restrictions);
+        json["restrictions"] = restrictions.public_json();
         json
     })
     .map_err(|error| {
@@ -304,7 +286,7 @@ async fn compound_json(
     .bind(dataset_id)
     .fetch_optional(&mut *connection)
     .await?
-    .ok_or_else(|| ApiError::not_found("Annotation dataset not found."))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
     let owner =
         crate::annotation::lists::compact_user(connection, compound.owner_id.as_str()).await?;
     let data_store = crate::dataset::routes::public_datastore_json_on_connection(
@@ -318,17 +300,14 @@ async fn compound_json(
     )
     .fetch_optional(&mut *connection)
     .await?
-    .ok_or_else(|| ApiError::not_found("Tracing store not found."))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
     let layers: Vec<Value> = compound
         .layers
         .iter()
         .map(|layer| {
             json!({
                 "tracingId": layer.tracing_id,
-                "typ": match layer.typ {
-                    AnnotationLayerType::Skeleton => "Skeleton",
-                    AnnotationLayerType::Volume => "Volume",
-                },
+                "typ": layer.typ.as_str(),
                 "name": layer.name,
                 "stats": {},
             })

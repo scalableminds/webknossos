@@ -78,11 +78,13 @@ fn attachment(title: &str, text: &str, color: &str) -> Value {
 fn app(db: &TestDb, hook: &str) -> Router {
     let config = Config {
         bind: "127.0.0.1:0".parse().unwrap(),
+        metrics_bind: None,
         database: DatabaseConfig {
             url: db.connection_url(),
             min_connections: 0,
             max_connections: 5,
             acquire_timeout: Duration::from_secs(5),
+            session_time_zone: None,
         },
         public_url: PUBLIC_URI.parse().unwrap(),
         email_verification_enabled: true,

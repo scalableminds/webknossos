@@ -177,7 +177,7 @@ async fn find_credential(
             StatusCode::FORBIDDEN,
             Json(json!({
                 "granted": false,
-                "msg": "Data store could not be found or accessed."
+                "msg": crate::msg::data_store::NOT_FOUND
             })),
         )
             .into_response());

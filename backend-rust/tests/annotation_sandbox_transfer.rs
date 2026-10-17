@@ -12,12 +12,9 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    annotation::metadata::{NOT_ALLOWED, PUBLIC_WRITES_FAILED},
-    annotation::provider::{
-        ANNOTATION_NOT_FOUND, AnnotationProvider, RESOURCE_NOT_FOUND, RESTRICTIONS_NOT_FOUND,
-    },
+    annotation::metadata::PUBLIC_WRITES_FAILED,
+    annotation::provider::{AnnotationProvider, RESTRICTIONS_NOT_FOUND},
     annotation::sandbox::{DUMMY_ID, DUMMY_TRACING_ID, SANDBOX_SKELETON_ONLY},
-    annotation::transfer::{TRANSFEREE_NO_DATASET_ACCESS, user_not_found},
     stores::client::ServiceClientConfig,
     stores::tracing_client::TracingStoreClient,
 };
@@ -142,9 +139,7 @@ async fn sandbox_serializes_a_never_persisted_skeleton_annotation() {
 
     // Private dataset: anonymous without token and unknown datasets are 404,
     // before the tracing type is even looked at.
-    let not_found = error(&webknossos_backend::annotation::sandbox::dataset_not_found(
-        &w.dataset,
-    ));
+    let not_found = error(&webknossos_backend::msg::dataset::not_found(&w.dataset));
     for path in [
         format!("{base}/skeleton"),
         format!("{base}/invalid"),
@@ -167,9 +162,7 @@ async fn sandbox_serializes_a_never_persisted_skeleton_annotation() {
         .await,
         (
             StatusCode::NOT_FOUND,
-            error(&webknossos_backend::annotation::sandbox::dataset_not_found(
-                &missing
-            ))
+            error(&webknossos_backend::msg::dataset::not_found(&missing))
         )
     );
 
@@ -177,7 +170,10 @@ async fn sandbox_serializes_a_never_persisted_skeleton_annotation() {
     for (typ, expected) in [
         ("volume", (StatusCode::BAD_REQUEST, SANDBOX_SKELETON_ONLY)),
         ("hybrid", (StatusCode::BAD_REQUEST, SANDBOX_SKELETON_ONLY)),
-        ("Skeleton", (StatusCode::NOT_FOUND, RESOURCE_NOT_FOUND)),
+        (
+            "Skeleton",
+            (StatusCode::NOT_FOUND, webknossos_backend::msg::NOT_FOUND),
+        ),
     ] {
         assert_eq!(
             send(
@@ -354,7 +350,10 @@ async fn transfer_checks_finish_rights_user_access_and_transferee_dataset_access
             Some(to_target.clone())
         )
         .await,
-        (StatusCode::FORBIDDEN, error(NOT_ALLOWED))
+        (
+            StatusCode::FORBIDDEN,
+            error(webknossos_backend::msg::NOT_ALLOWED)
+        )
     );
     // The owner may finish, but cannot read the other user.
     assert_eq!(
@@ -368,7 +367,7 @@ async fn transfer_checks_finish_rights_user_access_and_transferee_dataset_access
         .await,
         (
             StatusCode::BAD_REQUEST,
-            error(&user_not_found(&w.target.user_id))
+            error(&webknossos_backend::msg::user::not_found(&w.target.user_id))
         )
     );
     let missing = object_id();
@@ -381,7 +380,10 @@ async fn transfer_checks_finish_rights_user_access_and_transferee_dataset_access
             Some(json!({"userId": missing}))
         )
         .await,
-        (StatusCode::BAD_REQUEST, error(&user_not_found(&missing)))
+        (
+            StatusCode::BAD_REQUEST,
+            error(&webknossos_backend::msg::user::not_found(&missing))
+        )
     );
     // The organization admin can read the target, but the target cannot read
     // the (non-public, unshared) dataset; a sharing token does not count.
@@ -394,7 +396,10 @@ async fn transfer_checks_finish_rights_user_access_and_transferee_dataset_access
             Some(to_target.clone())
         )
         .await,
-        (StatusCode::BAD_REQUEST, error(TRANSFEREE_NO_DATASET_ACCESS))
+        (
+            StatusCode::BAD_REQUEST,
+            error(webknossos_backend::msg::annotation::TRANSFEREE_NO_DATASET_ACCESS)
+        )
     );
     assert_eq!(owner_of(&db, &id).await, w.owner.user_id);
 
@@ -438,7 +443,10 @@ async fn transfer_checks_finish_rights_user_access_and_transferee_dataset_access
             Some(json!({"userId": w.owner.user_id}))
         )
         .await,
-        (StatusCode::FORBIDDEN, error(NOT_ALLOWED))
+        (
+            StatusCode::FORBIDDEN,
+            error(webknossos_backend::msg::NOT_ALLOWED)
+        )
     );
     assert_eq!(owner_of(&db, &finished).await, w.owner.user_id);
     db.cleanup().await;
@@ -489,7 +497,10 @@ async fn transfer_persists_even_when_the_reload_is_no_longer_readable() {
             Some(json!({"userId": w.target.user_id}))
         )
         .await,
-        (StatusCode::BAD_REQUEST, error(ANNOTATION_NOT_FOUND))
+        (
+            StatusCode::BAD_REQUEST,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
     assert_eq!(owner_of(&db, &private).await, w.target.user_id);
     db.cleanup().await;

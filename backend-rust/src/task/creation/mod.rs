@@ -37,7 +37,7 @@ use axum::{
     http::{StatusCode, request::Parts},
     routing::post,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use reqwest::Method;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -50,14 +50,13 @@ use crate::{
     annotation::provider::{
         AnnotationLayer, AnnotationLayerType, AnnotationProvider, FoxFailure, ProviderError,
     },
-    annotation::sandbox::dataset_not_found,
     annotation::tracing_initialization::{
-        AnnotationLayerParameters, ExplorationalDataset, MagRestrictions, TracingInitError,
-        plan_volume_tracing,
+        AnnotationLayerParameters, ExplorationalDataset, MagRestrictions, plan_volume_tracing,
     },
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::Json,
+    extract::extension,
     proto::{
         AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto, BoundingBoxProto,
         ColorProto, Vec3DoubleProto, Vec3IntProto,
@@ -66,9 +65,10 @@ use crate::{
             StringOpt, Tree, VolumeTracing,
         },
     },
-    stores::client::ServiceError,
     stores::tracing_client::{SaveMultipleResult, TracingStoreClient, VolumeSaveDataSource},
     util::id::ObjectId,
+    util::instant::now_millis,
+    util::java_format::java_double,
 };
 
 // ---------------------------------------------------------------------------
@@ -87,28 +87,9 @@ pub(crate) const SAVE_SKELETON_FAILED: &str = "Could not save skeleton tracing f
 pub(crate) const SAVE_VOLUME_FAILED: &str = "Could not save volume tracing for new task.";
 pub(crate) const NOT_ONE_ANNOTATION: &str =
     "The specified base task does not have exactly one (finished) instance.";
-/// Msg.Team.adminNotAllowed.
-const TEAM_ADMIN_NOT_ALLOWED: &str = "You do not have permission to administrate this team.";
-/// Msg.Annotation.multiLayersSkeletonNotImplemented / multiLayersVolumeNotImplemented.
-const MULTI_SKELETON: &str =
-    "This feature is not implemented for annotations with more than one skeleton layer.";
-const MULTI_VOLUME: &str =
-    "This feature is not implemented for annotations with more than one volume layer.";
 
 pub(crate) fn batch_limit_exceeded(limit: usize) -> String {
     format!("Cannot create more than {limit} tasks in one request.")
-}
-pub(crate) fn task_type_not_found(id: &str) -> String {
-    format!("Task type “{id}” could not be found or accessed.")
-}
-pub(crate) fn project_not_found(name: &str) -> String {
-    format!("Project with name “{name}” could not be found or accessed.")
-}
-fn script_not_found(id: &str) -> String {
-    format!("Script “{id}” could not be found or accessed.")
-}
-fn object_id_invalid(literal: &str) -> String {
-    format!("The supplied resource id “{literal}” is not a valid ObjectId.")
 }
 
 // ---------------------------------------------------------------------------
@@ -264,30 +245,6 @@ pub(crate) fn add_new_ids(params: &mut TaskParameters, task_type: &TaskTypeFacts
 // Fox failures and per-task results
 // ---------------------------------------------------------------------------
 
-fn failure(message: impl Into<String>, status: Option<StatusCode>) -> ProviderError {
-    ProviderError::Failure(FoxFailure {
-        message: message.into(),
-        chain: Vec::new(),
-        status,
-    })
-}
-
-/// RPC failure: a Fox failure keeping an upstream status (ParamFailure).
-fn service_failure(error: ServiceError) -> ProviderError {
-    let status = match error {
-        ServiceError::UpstreamStatus(code) => StatusCode::from_u16(code).ok(),
-        _ => None,
-    };
-    failure(error.to_string(), status)
-}
-
-fn init_failure(error: TracingInitError) -> ProviderError {
-    match error.message() {
-        Some(message) => failure(message, None),
-        None => ProviderError::Empty,
-    }
-}
-
 /// A failed `Box` of one requested task, rendered by
 /// TaskCreationResult.fromBoxResults as `{status, error}`.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -326,7 +283,7 @@ impl TaskFailure {
     }
 
     fn into_provider(self) -> ProviderError {
-        failure(self.message, Some(self.status))
+        ProviderError::failure(self.message).with_status(self.status)
     }
 }
 
@@ -354,14 +311,6 @@ pub(crate) struct CreationServices {
     pub tracing_store: TracingStoreClient,
     pub provider: AnnotationProvider,
     pub slack: crate::slack::SlackNotificationService,
-}
-
-fn extension<T: Clone + Send + Sync + 'static>(parts: &Parts) -> ApiResult<T> {
-    parts
-        .extensions
-        .get::<T>()
-        .cloned()
-        .ok_or_else(ApiError::internal)
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for CreationServices {
@@ -481,10 +430,10 @@ pub(crate) async fn volume_tracing_base(
         name: None,
         additional_axes: None,
     };
-    let plan = plan_volume_tracing(&explorational, &params).map_err(init_failure)?;
+    let plan = plan_volume_tracing(&explorational, &params).map_err(ProviderError::from)?;
     let mut tracing = plan
         .build(false, Utc::now().timestamp_millis())
-        .map_err(init_failure)?;
+        .map_err(ProviderError::from)?;
     if let Some(bounding_box) = BoundingBox::non_empty(bounding_box) {
         tracing.bounding_box = bounding_box.to_proto();
     }
@@ -497,11 +446,6 @@ pub(crate) async fn volume_tracing_base(
 // Tracing store RPCs specific to task creation (all `withLongTimeout` except
 // the plain volume save inside TracingStoreClient)
 // ---------------------------------------------------------------------------
-
-/// Java `Double.toString` (shared, JDK-verified).
-fn java_double(value: f64) -> String {
-    crate::util::java_format::java_double(value)
-}
 
 fn vec3_int_literal([x, y, z]: [i32; 3]) -> String {
     format!("{x},{y},{z}")
@@ -559,7 +503,7 @@ async fn duplicate_skeleton_tracing(
             None,
         )
         .await
-        .map_err(service_failure)?;
+        .map_err(ProviderError::from)?;
     Ok(())
 }
 
@@ -592,7 +536,7 @@ async fn duplicate_volume_tracing(
             None,
         )
         .await
-        .map_err(service_failure)?;
+        .map_err(ProviderError::from)?;
     Ok(())
 }
 
@@ -624,7 +568,7 @@ async fn save_volume_tracing(
             },
         )
         .await
-        .map_err(service_failure)?;
+        .map_err(ProviderError::from)?;
     if let Some(data) = &volume.initial_data {
         services
             .tracing_store
@@ -637,7 +581,7 @@ async fn save_volume_tracing(
                 data.clone(),
             )
             .await
-            .map_err(service_failure)?;
+            .map_err(ProviderError::from)?;
     }
     Ok(())
 }
@@ -685,7 +629,7 @@ async fn save_skeleton_tracings(
     Ok(tracing_store
         .save_skeleton_tracings(url, &body)
         .await
-        .map_err(service_failure)?
+        .map_err(ProviderError::from)?
         .into_iter()
         .map(|result| match result {
             SaveMultipleResult::Full => SaveBox::Full,
@@ -711,7 +655,7 @@ fn single_layer(ids: &[String], message: &str) -> Result<Option<String>, Provide
     match ids {
         [] => Ok(None),
         [id] => Ok(Some(id.clone())),
-        _ => Err(failure(message, None)),
+        _ => Err(ProviderError::failure(message)),
     }
 }
 
@@ -794,7 +738,7 @@ async fn resolve_base(
         {
             base_from_annotation_row(pool, annotation_id, owner.clone()).await
         }
-        _ => Err(failure(NOT_ONE_ANNOTATION, None)),
+        _ => Err(ProviderError::failure(NOT_ONE_ANNOTATION)),
     }
 }
 
@@ -815,7 +759,7 @@ async fn create_tracings_from_base_annotation(
         return Ok(());
     };
     let base_id = ObjectId::parse(&base.base_id)
-        .map_err(|_| failure(object_id_invalid(&base.base_id), None))?;
+        .map_err(|_| ProviderError::failure(crate::msg::object_id::invalid(&base.base_id)))?;
     let resolved = resolve_base(pool, user, &base_id).await?;
     let url = crate::annotation::create::tracing_store_url(pool).await?;
     let new_annotation_id = params
@@ -823,7 +767,10 @@ async fn create_tracings_from_base_annotation(
         .clone()
         .ok_or(ProviderError::Empty)?;
     if let Some(new_skeleton_id) = &params.new_skeleton_tracing_id {
-        match single_layer(&resolved.skeleton_ids, MULTI_SKELETON)? {
+        match single_layer(
+            &resolved.skeleton_ids,
+            crate::msg::annotation::MULTI_LAYERS_SKELETON_NOT_IMPLEMENTED,
+        )? {
             Some(source_id) => {
                 let request = DuplicateTracing {
                     source_tracing_id: &source_id,
@@ -852,12 +799,15 @@ async fn create_tracings_from_base_annotation(
                     .tracing_store
                     .save_skeleton_tracing(&url, &skeleton, new_skeleton_id)
                     .await
-                    .map_err(service_failure)?;
+                    .map_err(ProviderError::from)?;
             }
         }
     }
     if let Some(new_volume_id) = &params.new_volume_tracing_id {
-        match single_layer(&resolved.volume_ids, MULTI_VOLUME)? {
+        match single_layer(
+            &resolved.volume_ids,
+            crate::msg::annotation::MULTI_LAYERS_VOLUME_NOT_IMPLEMENTED,
+        )? {
             Some(source_id) => {
                 let request = DuplicateTracing {
                     source_tracing_id: &source_id,
@@ -940,11 +890,6 @@ fn unique<T: PartialEq + Clone>(mut items: impl Iterator<Item = T>) -> Option<T>
     items.all(|item| item == first).then_some(first)
 }
 
-/// Instant.now (millisecond precision).
-fn now_millis() -> DateTime<Utc> {
-    DateTime::from_timestamp_millis(Utc::now().timestamp_millis()).unwrap_or_else(Utc::now)
-}
-
 pub(crate) struct ProjectFacts {
     pub id: String,
     pub team: String,
@@ -992,12 +937,12 @@ async fn create_one(
         let requested = requested.as_ref().map_err(|f| f.clone().into_provider())?;
         let params = &requested.params;
         if params.new_skeleton_tracing_id.is_none() && params.new_volume_tracing_id.is_none() {
-            return Err(failure(NEEDS_EITHER_SKELETON_OR_VOLUME, None));
+            return Err(ProviderError::failure(NEEDS_EITHER_SKELETON_OR_VOLUME));
         }
         let base = params.base_annotation.as_ref();
         let check = |save: &SaveBox, message: &str| match save {
             SaveBox::Full => Ok(()),
-            SaveBox::Empty => Err(failure(message, None)),
+            SaveBox::Empty => Err(ProviderError::failure(message)),
             SaveBox::Failure(f) => Err(f.clone().into_provider().wrap(message)),
         };
         if params.new_skeleton_tracing_id.is_some()
@@ -1010,7 +955,9 @@ async fn create_one(
         }
         let project = find_project(pool, user, &params.project_name)
             .await?
-            .ok_or_else(|| failure(project_not_found(&params.project_name), None))?;
+            .ok_or_else(|| {
+                ProviderError::failure(crate::msg::project::not_found_by_name(&params.project_name))
+            })?;
         if let Some(script) = &params.script_id {
             let readable: bool = sqlx::query_scalar(
                 "SELECT EXISTS (SELECT 1 FROM webknossos.scripts_ s
@@ -1022,7 +969,9 @@ async fn create_one(
             .fetch_one(pool)
             .await?;
             if !readable {
-                return Err(failure(script_not_found(script.as_str()), None));
+                return Err(ProviderError::failure(crate::msg::script::not_found(
+                    script.as_str(),
+                )));
             }
         }
         // Fox.assertTrue(isTeamManagerOrAdminOf(user, project._team)):
@@ -1037,7 +986,7 @@ async fn create_one(
         .fetch_optional(pool)
         .await?;
         let (team_organization, is_manager) =
-            team.ok_or_else(|| failure(TEAM_ADMIN_NOT_ALLOWED, None))?;
+            team.ok_or_else(|| ProviderError::failure(crate::msg::team::ADMIN_NOT_ALLOWED))?;
         if !(is_manager || (user.is_admin && team_organization == user.organization_id)) {
             return Err(ProviderError::Empty);
         }
@@ -1067,10 +1016,7 @@ async fn create_one(
                 .map(|layer| AnnotationLayerProto {
                     tracing_id: layer.tracing_id.clone(),
                     name: layer.name.clone(),
-                    typ: match layer.typ {
-                        AnnotationLayerType::Skeleton => AnnotationLayerTypeProto::Skeleton,
-                        AnnotationLayerType::Volume => AnnotationLayerTypeProto::Volume,
-                    } as i32,
+                    typ: AnnotationLayerTypeProto::from(layer.typ) as i32,
                 })
                 .collect(),
             earliest_accessible_version: 0,
@@ -1080,7 +1026,7 @@ async fn create_one(
             .tracing_store
             .save_annotation_proto(tracing_store_url, &base_annotation_id, &proto)
             .await
-            .map_err(service_failure)?;
+            .map_err(ProviderError::from)?;
 
         // taskDAO.insertOne + insertExperienceToListing + annotationDAO.insertOne,
         // in one transaction (Scala: separate statements).
@@ -1177,7 +1123,7 @@ async fn warnings(
     for name in names {
         let project = find_project(pool, user, name)
             .await?
-            .ok_or_else(|| failure(project_not_found(name), None))?;
+            .ok_or_else(|| ProviderError::failure(crate::msg::project::not_found_by_name(name)))?;
         project_teams.push(project.team);
     }
     let dataset_teams: Vec<String> = sqlx::query_scalar(
@@ -1268,7 +1214,9 @@ pub(crate) async fn create_tasks(
         .ok_or_else(|| ApiError::bad_request(NOT_ON_SAME_DATASET))?;
     let dataset = find_readable_dataset(pool, user, &dataset_id)
         .await?
-        .ok_or_else(|| ApiError::bad_request(dataset_not_found(dataset_id.as_str())))?;
+        .ok_or_else(|| {
+            ApiError::bad_request(crate::msg::dataset::not_found(dataset_id.as_str()))
+        })?;
     let source = crate::annotation::create::usable_data_source(pool, &dataset).await?;
     if !successful
         .iter()
@@ -1370,12 +1318,16 @@ async fn create(
         .ok_or_else(|| ApiError::bad_request(NOT_ON_SAME_TASK_TYPE))?;
     let task_type = find_task_type(pool, &user, &task_type_id)
         .await?
-        .ok_or_else(|| ApiError::bad_request(task_type_not_found(task_type_id.as_str())))?;
+        .ok_or_else(|| {
+            ApiError::bad_request(crate::msg::task_type::not_found(task_type_id.as_str()))
+        })?;
     let dataset_id = unique(body.iter().map(|p| p.dataset_id.clone()))
         .ok_or_else(|| ApiError::bad_request(NOT_ON_SAME_DATASET))?;
     let dataset = find_readable_dataset(pool, &user, &dataset_id)
         .await?
-        .ok_or_else(|| ApiError::bad_request(dataset_not_found(dataset_id.as_str())))?;
+        .ok_or_else(|| {
+            ApiError::bad_request(crate::msg::dataset::not_found(dataset_id.as_str()))
+        })?;
     let source = crate::annotation::create::usable_data_source(pool, &dataset).await?;
     if dataset.organization_id != user.organization_id {
         return Err(ApiError::bad_request(DATASET_OF_OTHER_ORGA));

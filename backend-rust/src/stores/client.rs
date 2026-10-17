@@ -85,7 +85,7 @@ impl fmt::Display for ServiceError {
             Self::Redirect => "Service redirect was rejected.",
             Self::UpstreamStatus(_) => "Service returned an unsuccessful status.",
             Self::ResponseTooLarge => "Service response exceeds the configured limit.",
-            Self::InvalidJson => "Service returned an invalid JSON response.",
+            Self::InvalidJson => crate::msg::request::SERVICE_INVALID_JSON,
         };
         f.write_str(message)
     }

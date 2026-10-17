@@ -123,6 +123,17 @@ impl fmt::Display for TracingInitError {
 
 impl std::error::Error for TracingInitError {}
 
+/// A message is a plain Fox failure; a missing fallback layer is Scala's
+/// message-less `Fox.empty`.
+impl From<TracingInitError> for crate::annotation::provider::ProviderError {
+    fn from(error: TracingInitError) -> Self {
+        match error.message() {
+            Some(message) => Self::failure(message),
+            None => Self::Empty,
+        }
+    }
+}
+
 // ---------------------------------------------------------------- parameters
 
 /// AnnotationLayer.defaultNameForType.

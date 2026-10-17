@@ -2,14 +2,12 @@
 //! hand a saved annotation over to another user who can read its dataset.
 use axum::{Extension, Json, Router, extract::State, http::StatusCode, routing::patch};
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use crate::{
     AppState,
-    annotation::metadata::{NO_UPDATE_ACCESS, NOT_ALLOWED},
     annotation::provider::{
-        ANNOTATION_NOT_FOUND, AccessContext, AnnotationIdentifier, AnnotationProvider,
-        RESTRICTIONS_NOT_FOUND,
+        AccessContext, AnnotationIdentifier, AnnotationProvider, RESTRICTIONS_NOT_FOUND,
     },
     auth::AuthUser,
     error::{ApiError, ApiResult},
@@ -17,15 +15,6 @@ use crate::{
     users,
     util::id::ObjectId,
 };
-
-/// Msg.Annotation.transfereeNoDatasetAccess.
-pub const TRANSFEREE_NO_DATASET_ACCESS: &str =
-    "Cannot transfer annotation to a user who has no access to the dataset.";
-
-/// Msg.User.notFound(id).
-pub fn user_not_found(id: &str) -> String {
-    format!("User “{id}” could not be found or accessed.")
-}
 
 #[derive(Clone, Copy)]
 struct JobsEnabled(bool);
@@ -86,16 +75,16 @@ async fn transfer(
     // Compound restrictions never allow finishing, so only saved
     // annotations get past this point.
     if !restrictions.allow_finish {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     if !readable_user(&state.pool, &user, target).await? {
-        return Err(ApiError::bad_request(user_not_found(target)));
+        return Err(ApiError::bad_request(crate::msg::user::not_found(target)));
     }
     // transferAnnotationToUser: provideAnnotation ?~> Annotation.notFound.
     let provided = provider
         .provide(context, &typ, &id)
         .await
-        .map_err(|error| ApiError::from(error.wrap(ANNOTATION_NOT_FOUND)))?;
+        .map_err(|error| ApiError::from(error.wrap(crate::msg::annotation::NOT_FOUND)))?;
 
     let mut transaction = state.pool.begin().await?;
     // Re-read and lock the live row, re-checking the finish restriction that
@@ -104,13 +93,13 @@ async fn transfer(
     let annotation =
         crate::annotation::access::lock_readable(&mut transaction, &user, provided.id())
             .await?
-            .ok_or_else(|| ApiError::bad_request(ANNOTATION_NOT_FOUND))?;
+            .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?;
     let restrictions = crate::annotation::access::restrictions(&annotation, Some(&user));
     if !restrictions.allow_finish {
-        return Err(ApiError::forbidden(NOT_ALLOWED));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     if !readable_user(&mut *transaction, &user, target).await? {
-        return Err(ApiError::bad_request(user_not_found(target)));
+        return Err(ApiError::bad_request(crate::msg::user::not_found(target)));
     }
     // datasetDAO.findOne under AuthorizedAccessContext(newUser): no sharing token.
     let transferee_can_read: bool = sqlx::query_scalar(&format!(
@@ -123,13 +112,17 @@ async fn transfer(
     .fetch_one(&mut *transaction)
     .await?;
     if !transferee_can_read {
-        return Err(ApiError::bad_request(TRANSFEREE_NO_DATASET_ACCESS));
+        return Err(ApiError::bad_request(
+            crate::msg::annotation::TRANSFEREE_NO_DATASET_ACCESS,
+        ));
     }
     // AnnotationDAO.updateUser: assertUpdateAccess, then only `_user` changes.
     if !crate::annotation::access::lock_update_access(&mut transaction, &user, &annotation.id)
         .await?
     {
-        return Err(ApiError::bad_request(NO_UPDATE_ACCESS));
+        return Err(ApiError::bad_request(
+            crate::msg::annotation::NO_UPDATE_ACCESS,
+        ));
     }
     sqlx::query("UPDATE webknossos.annotations SET _user=$2 WHERE _id=$1")
         .bind(&annotation.id)
@@ -150,11 +143,6 @@ async fn transfer(
         crate::annotation::lists::full_json(&mut connection, &user, reloaded.id(), jobs).await?;
     // publicWrites(updated, user, Some(restrictions)): the restrictions were
     // resolved for the pre-transfer annotation, not recomputed for the new owner.
-    json["restrictions"] = json!({
-        "allowAccess": restrictions.allow_access,
-        "allowUpdate": restrictions.allow_update,
-        "allowFinish": restrictions.allow_finish,
-        "allowDownload": restrictions.allow_download,
-    });
+    json["restrictions"] = restrictions.public_json();
     Ok(Json(json))
 }

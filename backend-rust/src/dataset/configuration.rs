@@ -74,6 +74,11 @@ async fn complete(
             .as_str()
             .ok_or_else(ApiError::internal)?
             .to_owned();
+        // The admin view lists only layers that have an admin configuration
+        // (Scala getAllLayerAdminViewConfigForDataset flatMaps over the Option).
+        if admin_only && !data_layer["adminViewConfiguration"].is_object() {
+            continue;
+        }
         let mut layer = Map::new();
         if !admin_only {
             merge(
@@ -167,11 +172,11 @@ async fn read_admin(
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<Json<Value>> {
     if !crate::dataset::access::can_read(&state.pool, Some(&user), id.as_str(), None).await? {
-        return Err(ApiError::not_found("Dataset not found."));
+        return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
     let dataset = dataset(&state.pool, id.as_str())
         .await?
-        .ok_or_else(|| ApiError::not_found("Dataset not found."))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::dataset::MISSING))?;
     Ok(Json(
         complete(&state.pool, id.as_str(), dataset, None, None, &[], true).await?,
     ))

@@ -180,7 +180,7 @@ async fn reset_password(
     .fetch_optional(&mut *tx)
     .await?;
     let (_, multi_user_id) =
-        target.ok_or_else(|| ApiError::bad_request(messages::TOKEN_INVALID))?;
+        target.ok_or_else(|| ApiError::bad_request(crate::msg::user::token::INVALID))?;
     let hash = hash_password(password).await?;
     sqlx::query(
         "UPDATE webknossos.multiUsers SET passwordInfo_hasher = 'SCrypt', passwordInfo_password = $2 WHERE _id = $1",
@@ -227,7 +227,7 @@ async fn change_password(
     .await?
     .ok_or_else(ApiError::unauthorized)?;
     if !verify_password(old_password, &hasher, current_hash).await {
-        return Err(ApiError::bad_request(messages::INVALID_CREDENTIALS));
+        return Err(ApiError::bad_request(crate::msg::user::INVALID_CREDENTIALS));
     }
     let hash = hash_password(password).await?;
     sqlx::query(
@@ -268,13 +268,13 @@ async fn switch_multi_user(
     Query(query): Query<SwitchQuery>,
 ) -> ApiResult<Response> {
     if !secured.user.is_superuser {
-        return Err(ApiError::forbidden(messages::NOT_AUTHENTICATED));
+        return Err(ApiError::forbidden(crate::msg::user::NOT_AUTHENTICATED));
     }
     signer_secret(&config)?;
     let mut tx = state.pool.begin().await?;
     let (target, _, _) = identity_for_email(&mut tx, &query.to)
         .await?
-        .ok_or_else(|| ApiError::not_found(messages::USER_NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::user::NOT_FOUND_NO_ID))?;
     discard_bearer_token(&mut tx, &secured).await?;
     let cookie = issue_cookie(&config, &headers, &target)?;
     tx.commit().await?;
@@ -309,8 +309,8 @@ async fn switch_organization(
     .fetch_one(&mut *tx)
     .await?;
     if !accessible {
-        return Err(ApiError::not_found(format!(
-            "Organization “{organization_id}” could not be found or accessed."
+        return Err(ApiError::not_found(crate::msg::organization::not_found(
+            &organization_id,
         )));
     }
     let existing: Option<(String, bool)> = sqlx::query_as(
@@ -345,7 +345,7 @@ async fn switch_organization(
             .await?;
             (id, false)
         }
-        None => return Err(ApiError::not_found(messages::USER_NOT_FOUND)),
+        None => return Err(ApiError::not_found(crate::msg::user::NOT_FOUND_NO_ID)),
     };
     if deactivated {
         return Err(ApiError::bad_request(messages::IS_DEACTIVATED));
@@ -418,7 +418,7 @@ async fn accessible_by_switching(
         (None, None, Some(hash)) => Target::Workflow(hash),
         _ => return Err(ApiError::bad_request(COMBINATION_ERROR)),
     };
-    let not_found = || ApiError::bad_request("Could not find or access the requested resource.");
+    let not_found = || ApiError::bad_request(crate::msg::NOT_FOUND);
     let organization: String = if user.is_superuser {
         let found: Option<String> = match &target {
             Target::Dataset(id) => sqlx::query_scalar(
@@ -496,7 +496,7 @@ async fn verify_email(
     .bind(&multi_user_id)
     .fetch_optional(&mut *tx)
     .await?
-    .ok_or_else(|| ApiError::bad_request(messages::USER_NOT_FOUND))?;
+    .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     if verified {
         return Ok(StatusCode::OK);
     }

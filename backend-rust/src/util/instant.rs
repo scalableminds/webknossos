@@ -3,6 +3,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
+/// Instant.now (millisecond precision).
+pub(crate) fn now_millis() -> DateTime<Utc> {
+    DateTime::from_timestamp_millis(Utc::now().timestamp_millis()).unwrap_or_else(Utc::now)
+}
+
 pub(crate) fn optional<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Option<DateTime<Utc>>, D::Error> {
@@ -19,8 +24,8 @@ pub(crate) fn optional<'de, D: Deserializer<'de>>(
         }),
         _ => None,
     }
-    .ok_or_else(|| serde::de::Error::custom("Invalid timestamp."))?;
+    .ok_or_else(|| serde::de::Error::custom(crate::msg::request::INVALID_TIMESTAMP))?;
     DateTime::from_timestamp_millis(millis)
         .map(Some)
-        .ok_or_else(|| serde::de::Error::custom("Invalid timestamp."))
+        .ok_or_else(|| serde::de::Error::custom(crate::msg::request::INVALID_TIMESTAMP))
 }

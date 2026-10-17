@@ -16,6 +16,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use sqlx::PgConnection;
 
+use crate::util::java_format::play_json_double;
 use crate::{
     AppState,
     auth::AuthUser,
@@ -34,17 +35,13 @@ use crate::{
     util::id::{ObjectId, PathObjectId},
 };
 
-/// Msg.notFound: Play's response for an empty Fox.
-const NOT_FOUND: &str = "Could not find or access the requested resource.";
 const MODEL_NOT_FOUND: &str = "Could not find requested AI model.";
-const INFERENCE_NOT_FOUND: &str = "Could not find requested AI inference.";
 const UPDATING_FAILED: &str = "Could not update AI model’s name and comment.";
 const UPDATING_SHARED_FAILED: &str =
     "Could not update the organizations that may access the AI model.";
 const NOT_OWNED: &str = "Only the owner of the AI model can perform this change.";
 const REFERENCED_BY_INFERENCES: &str =
     "Cannot delete AI models that are referenced by existing inferences.";
-const DATA_STORE_NOT_FOUND: &str = "Data store could not be found or accessed.";
 const RESERVE_NOT_PENDING: &str =
     "Cannot reserve upload to path for AI model that is not currently marked as pending.";
 const RESERVE_WRONG_ORGA: &str =
@@ -60,8 +57,6 @@ const TRAIN_WRONG_ORGA: &str =
 const TRAIN_SUBMIT_FAILED: &str = "Could not start the AI model training job.";
 const NO_BOUNDING_BOX: &str =
     "Dataset has no bounding box. Please make sure this dataset is imported correctly.";
-const ANNOTATION_NOT_FOUND: &str = "Annotation could not be found or accessed.";
-const INVALID_BODY: &str = "Invalid JSON request body.";
 const DATA_STORE_MISMATCH: &str = "Cannot use AI model on a dataset on a different data store.";
 /// Not a message key in Play's messages: rendered verbatim.
 const MODEL_REQUIRED: &str = "aiModel.required";
@@ -341,7 +336,7 @@ async fn path_with_fallback(
         .bind(&model.data_store)
         .fetch_optional(&mut *connection)
         .await?
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let base: String = clients
         .get_json(
             &url,
@@ -365,7 +360,7 @@ pub(crate) async fn model_public_writes(
 ) -> ApiResult<Value> {
     find_data_store_url(connection, &user.id, &model.data_store)
         .await?
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // A user that cannot be read is rendered as null.
     let user_json = match &model.user_id {
         Some(user_id) => readable_compact_user(connection, &user.id, user_id).await?,
@@ -427,7 +422,7 @@ pub(crate) async fn model_public_writes(
     }))
 }
 
-/// `?~> Msg.AiModel.notFound ~> NOT_FOUND`: empty and parse failures become 404;
+/// `?~> Msg.AiModel.notFound ~> crate::msg::NOT_FOUND`: empty and parse failures become 404;
 /// database errors stay errors.
 async fn find_model_or_404(
     connection: &mut PgConnection,
@@ -487,7 +482,7 @@ async fn model_voxel_size(
     let model = find_model_or_404(&mut connection, &user.id, id.as_str()).await?;
     let store_url = find_data_store_url(&mut connection, &user.id, &model.data_store)
         .await?
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let (factor, unit) = find_model_voxel_size(connection, &clients, &store_url, &model).await?;
     Ok(ResponseJson(json!({"factor": factor, "unit": unit})))
 }
@@ -706,13 +701,15 @@ async fn reserve_upload_to_path(
         .as_deref()
         .is_some_and(|category| !CATEGORIES.contains(&category))
     {
-        return Err(ApiError::bad_request("Invalid JSON request body."));
+        return Err(ApiError::bad_request(
+            crate::msg::request::INVALID_JSON_BODY,
+        ));
     }
     let path_prefix = crate::dataset::upload_paths::parse_prefix(body.path_prefix.as_deref())?;
     let mut tx = state.pool.begin().await?;
     find_data_store_url(&mut tx, &user.id, &body.data_store_name)
         .await?
-        .ok_or_else(|| ApiError::bad_request(DATA_STORE_NOT_FOUND))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     let model_id = match &body.existing_ai_model_id {
         Some(existing_id) => {
             sqlx::query("SELECT _id FROM webknossos.aiModels WHERE _id = $1 FOR UPDATE")
@@ -721,7 +718,7 @@ async fn reserve_upload_to_path(
                 .await?;
             let existing = find_model(&mut tx, &user.id, existing_id.as_str())
                 .await?
-                .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+                .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
             if existing.organization.as_deref() != Some(user.organization_id.as_str()) {
                 return Err(ApiError::forbidden(RESERVE_WRONG_ORGA));
             }
@@ -790,7 +787,7 @@ async fn reserve_upload_to_path(
     let mut connection = state.pool.acquire().await?;
     let model = find_model(&mut connection, &user.id, &model_id)
         .await?
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     Ok(ResponseJson(
         model_public_writes(&mut connection, &clients, &user, jobs_enabled, &model).await?,
     ))
@@ -810,7 +807,7 @@ async fn finish_upload_to_path(
         .await?;
     let model = find_model(&mut tx, &user.id, id.as_str())
         .await?
-        .ok_or_else(|| ApiError::not_found(NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if !model.upload_to_path_is_pending {
         return Err(ApiError::bad_request(FINISH_NOT_PENDING));
     }
@@ -931,16 +928,16 @@ async fn run_model_training(
         .as_deref()
         .is_some_and(|category| !CATEGORIES.contains(&category))
     {
-        return Err(ApiError::bad_request(INVALID_BODY).into());
+        return Err(ApiError::bad_request(crate::msg::request::INVALID_JSON_BODY).into());
     }
     let instance_diameter_nm = match (kind, &body.instance_diameter_nm) {
         (TrainingKind::Neuron, _) | (_, None | Some(Value::Null)) => None,
         (TrainingKind::Instance, Some(Value::Number(number))) => number.as_f64(),
         (TrainingKind::Instance, Some(_)) => {
-            return Err(ApiError::bad_request(INVALID_BODY).into());
+            return Err(ApiError::bad_request(crate::msg::request::INVALID_JSON_BODY).into());
         }
     };
-    let generic_not_found = || Failure::with_status(NOT_FOUND, StatusCode::NOT_FOUND);
+    let generic_not_found = || Failure::with_status(crate::msg::NOT_FOUND, StatusCode::NOT_FOUND);
 
     // OrganizationDAO.findOne (global) ?~> Msg.Organization.notFound, then
     // OrganizationService.assertIsSuperUserOrOrganizationHasAiPlan.
@@ -950,10 +947,7 @@ async fn run_model_training(
             .fetch_optional(&state.pool)
             .await?
             .ok_or_else(|| {
-                Failure::new(format!(
-                    "Organization “{}” could not be found or accessed.",
-                    user.organization_id
-                ))
+                Failure::new(crate::msg::organization::not_found(&user.organization_id))
             })?;
     if !user.is_superuser && ai_plan.is_none() {
         return Err(Failure::new(NO_AI_PLAN).into());
@@ -987,7 +981,7 @@ async fn run_model_training(
         let mut connection = state.pool.acquire().await?;
         find_data_store_url(&mut connection, &user.id, &data_store)
             .await?
-            .ok_or_else(|| Failure::new(DATA_STORE_NOT_FOUND))?;
+            .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
     }
     for specification in annotations {
         crate::annotation::access::find_optional(
@@ -997,7 +991,7 @@ async fn run_model_training(
             false,
         )
         .await?
-        .ok_or_else(|| Failure::new(ANNOTATION_NOT_FOUND))?;
+        .ok_or_else(|| Failure::new(crate::msg::annotation::NOT_FOUND))?;
     }
     // AiModelDAO.countByNameAndOrganization counts soft-deleted models, too.
     let existing: i64 = sqlx::query_scalar(
@@ -1029,7 +1023,10 @@ async fn run_model_training(
     args.insert("model_id".into(), json!(model_id));
     args.insert("model_name".into(), json!(body.name));
     if kind == TrainingKind::Instance {
-        args.insert("instance_diameter_nm".into(), json!(instance_diameter_nm));
+        args.insert(
+            "instance_diameter_nm".into(),
+            json!(instance_diameter_nm.map(play_json_double)),
+        );
     }
     args.insert(
         "custom_configuration".into(),
@@ -1215,7 +1212,7 @@ async fn run_model_inference(
     body: RunInferenceParameters,
     kind: InferenceKind,
 ) -> RunResult<ResponseJson<Value>> {
-    let generic_not_found = || Failure::with_status(NOT_FOUND, StatusCode::NOT_FOUND);
+    let generic_not_found = || Failure::with_status(crate::msg::NOT_FOUND, StatusCode::NOT_FOUND);
     let dataset =
         crate::job::submission::find_readable_dataset(state, user, body.dataset_id.as_str())
             .await?
@@ -1253,7 +1250,7 @@ async fn run_model_inference(
     let mut connection = state.pool.acquire().await?;
     let store_url = find_data_store_url(&mut connection, &user.id, &data_store)
         .await?
-        .ok_or_else(|| Failure::new(DATA_STORE_NOT_FOUND))?;
+        .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
     crate::dataset::create::validate_dataset_name(&body.new_dataset_name)?;
     // BoundingBox.fromLiteral(..).toFox: the empty Fox.
     let mag1_bounding_box = crate::job::submission::BoundingBox::from_literal(&body.bounding_box)
@@ -1269,7 +1266,7 @@ async fn run_model_inference(
         .ok_or_else(|| crate::job::submission::RunError::Api(ApiError::internal()))?;
     let mags = crate::job::submission::layer_mags(state, &dataset, &layer.name).await?;
     let target_mag = find_best_matching_mag(model_voxel_size_nm, dataset_voxel_size_nm, &mags)
-        .ok_or_else(|| Failure::new(crate::job::submission::NO_MAGS))?;
+        .ok_or_else(|| Failure::new(crate::msg::dataset::NO_MAGS))?;
     let target_mag_bounding_box = mag1_bounding_box
         .divide(target_mag)
         .ok_or_else(|| crate::job::submission::RunError::Api(ApiError::internal()))?;
@@ -1315,22 +1312,22 @@ async fn run_model_inference(
             );
             args.insert(
                 "eval_max_edge_length".into(),
-                json!(body.eval_max_edge_length),
+                json!(body.eval_max_edge_length.map(play_json_double)),
             );
             args.insert(
                 "eval_sparse_tube_threshold_nm".into(),
-                json!(body.eval_sparse_tube_threshold_nm),
+                json!(body.eval_sparse_tube_threshold_nm.map(play_json_double)),
             );
             args.insert(
                 "eval_min_merger_path_length_nm".into(),
-                json!(body.eval_min_merger_path_length_nm),
+                json!(body.eval_min_merger_path_length_nm.map(play_json_double)),
             );
             ("infer_neurons", "neuron")
         }
         InferenceKind::Instance => {
             args.insert(
                 "seed_generator_distance_threshold".into(),
-                json!(body.seed_generator_distance_threshold),
+                json!(body.seed_generator_distance_threshold.map(play_json_double)),
             );
             ("infer_instances", "instance")
         }
@@ -1420,7 +1417,7 @@ pub(crate) async fn inference_public_writes(
     jobs_enabled: bool,
     inference: &AiInference,
 ) -> ApiResult<Value> {
-    let empty = || ApiError::not_found(NOT_FOUND);
+    let empty = || ApiError::not_found(crate::msg::NOT_FOUND);
     let job = crate::job::routes::find_job(connection, &user.id, &inference.inference_job)
         .await?
         .ok_or_else(empty)?;
@@ -1514,7 +1511,7 @@ async fn read_inference(
         .bind(id.as_str())
         .fetch_optional(&mut *connection)
         .await?
-        .ok_or_else(|| ApiError::not_found(INFERENCE_NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::ai_inference::NOT_FOUND))?;
     Ok(ResponseJson(
         inference_public_writes(&mut connection, &clients, &user, jobs_enabled, &inference).await?,
     ))

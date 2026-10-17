@@ -66,6 +66,14 @@ async fn accepts_existing_credentials_via_all_transports_and_touches_activity() 
             StatusCode::OK
         );
     }
+    // Silhouette only touches tokens with an idle timeout; this one has none.
+    assert_eq!(last_used(&database, &fixture.token).await, before);
+    sqlx::query("UPDATE webknossos.tokens SET idleTimeout = 3600000 WHERE value = $1")
+        .bind(&fixture.token)
+        .execute(&database.pool)
+        .await
+        .unwrap();
+    authenticate(&database.pool, &fixture.token).await.unwrap();
     assert!(last_used(&database, &fixture.token).await > before);
     let user = authenticate(&database.pool, &fixture.token).await.unwrap();
     assert_eq!(user.id, fixture.user_id);
@@ -104,7 +112,7 @@ async fn missing_invalid_and_wrong_purpose_tokens_are_unauthorized() {
     let job_token = database.seed_token(&fixture.user_id, "Job").await;
     let before = last_used(&database, &job_token).await;
     assert!(authenticate(&database.pool, &job_token).await.is_ok());
-    assert!(last_used(&database, &job_token).await > before);
+    assert_eq!(last_used(&database, &job_token).await, before);
     database.cleanup().await;
 }
 

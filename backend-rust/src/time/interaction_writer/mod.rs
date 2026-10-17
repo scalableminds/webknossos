@@ -63,9 +63,6 @@ use crate::{
     util::id::ObjectId,
 };
 
-/// Play `Msg.notFound`, returned for a `Fox.Empty` (annotation reload failed).
-pub const RESOURCE_NOT_FOUND: &str = "Could not find or access the requested resource.";
-
 /// 400 message for timestamps the database cannot store.
 pub const TIMESTAMP_NOT_STORABLE: &str = "Interaction timestamp is out of the storable range.";
 
@@ -367,7 +364,7 @@ async fn execute_plan(
             access.global,
         )
         .await?
-        .ok_or_else(|| ApiError::not_found(RESOURCE_NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
         if let Some(task_id) = annotation.task_id {
             sqlx::query(
                 "UPDATE webknossos.tasks SET tracingTime=COALESCE(tracingTime,0)+$2 WHERE _id=$1",

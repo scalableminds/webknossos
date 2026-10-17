@@ -113,33 +113,43 @@ pub(crate) fn extract_token(parts: &Parts) -> ApiResult<String> {
 
 /// Authenticate and touch the token in one statement. Invalid or revoked tokens are
 /// never touched, and overlapping requests cannot move lastUsedDateTime backwards.
+/// Like Silhouette's BearerTokenAuthenticatorService.touch, only tokens with an idle
+/// timeout are written: tokens without one are read-only, so concurrent requests with
+/// the same token neither lock its row nor create a new row version per request.
 pub async fn authenticate(pool: &PgPool, token: &str) -> ApiResult<AuthUser> {
     let user = sqlx::query_as::<_, AuthUser>(
         r#"
-        UPDATE webknossos.tokens AS token
-        SET lastUsedDateTime = GREATEST(token.lastUsedDateTime, statement_timestamp())
-        FROM webknossos.users AS usr
-        JOIN webknossos.multiUsers AS multi ON multi._id = usr._multiUser
-        JOIN webknossos.organizations AS org ON org._id = usr._organization
-        WHERE token.value = $1
-          AND token._user = usr._id
-          AND NOT token.isDeleted
-          AND token.tokenType IN ('Authentication', 'DataStore', 'Job')
-          AND token.expirationDateTime > statement_timestamp()
-          AND (token.idleTimeout IS NULL OR (
-            token.idleTimeout > 0 AND
-            EXTRACT(EPOCH FROM (statement_timestamp() - token.lastUsedDateTime)) * 1000
-              < token.idleTimeout
-          ))
-          AND NOT usr.isDeleted AND NOT usr.isDeactivated
-          AND NOT multi.isDeleted AND NOT org.isDeleted
-          AND (usr.loggedOutEverywhereTime IS NULL
-            OR token.created > usr.loggedOutEverywhereTime)
-          AND (SELECT COUNT(*) FROM webknossos.tokens AS matching
-            WHERE matching.value = $1 AND NOT matching.isDeleted) = 1
-        RETURNING usr._id AS id, usr._organization AS organization_id,
-          usr.isAdmin AS is_admin, usr.isDatasetManager AS is_dataset_manager,
-          multi.isSuperUser AS is_superuser
+        WITH matched AS (
+          SELECT token._id AS token_id, token.idleTimeout IS NOT NULL AS has_idle_timeout,
+            usr._id AS id, usr._organization AS organization_id,
+            usr.isAdmin AS is_admin, usr.isDatasetManager AS is_dataset_manager,
+            multi.isSuperUser AS is_superuser
+          FROM webknossos.tokens AS token
+          JOIN webknossos.users AS usr ON usr._id = token._user
+          JOIN webknossos.multiUsers AS multi ON multi._id = usr._multiUser
+          JOIN webknossos.organizations AS org ON org._id = usr._organization
+          WHERE token.value = $1
+            AND NOT token.isDeleted
+            AND token.tokenType IN ('Authentication', 'DataStore', 'Job')
+            AND token.expirationDateTime > statement_timestamp()
+            AND (token.idleTimeout IS NULL OR (
+              token.idleTimeout > 0 AND
+              EXTRACT(EPOCH FROM (statement_timestamp() - token.lastUsedDateTime)) * 1000
+                < token.idleTimeout
+            ))
+            AND NOT usr.isDeleted AND NOT usr.isDeactivated
+            AND NOT multi.isDeleted AND NOT org.isDeleted
+            AND (usr.loggedOutEverywhereTime IS NULL
+              OR token.created > usr.loggedOutEverywhereTime)
+            AND (SELECT COUNT(*) FROM webknossos.tokens AS matching
+              WHERE matching.value = $1 AND NOT matching.isDeleted) = 1
+        ), touched AS (
+          UPDATE webknossos.tokens AS token
+          SET lastUsedDateTime = GREATEST(token.lastUsedDateTime, statement_timestamp())
+          FROM matched
+          WHERE token._id = matched.token_id AND matched.has_idle_timeout
+        )
+        SELECT id, organization_id, is_admin, is_dataset_manager, is_superuser FROM matched
         "#,
     )
     .bind(token)

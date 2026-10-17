@@ -50,7 +50,7 @@ async fn read(
         .bind(id.as_str())
         .fetch_optional(&state.pool)
         .await?
-        .ok_or_else(|| ApiError::not_found("Publication could not be found."))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::PUBLICATION_NOT_FOUND))?;
     let mut connection = state.pool.acquire().await?;
     Ok(Json(
         publication_json(&mut connection, publication, jobs_enabled).await?,

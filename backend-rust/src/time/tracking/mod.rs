@@ -322,14 +322,14 @@ async fn overview(
         "Invalid annotation state.",
     )?;
     if types.is_empty() {
-        return Err(ApiError::bad_request("No annotation types specified."));
+        return Err(ApiError::bad_request(crate::msg::annotation::TYPES_EMPTY));
     }
     if !types
         .iter()
         .all(|typ| typ == "Explorational" || typ == "Task")
     {
         return Err(ApiError::bad_request(
-            "One of the selected annotation types is not supported for time tracking.",
+            crate::msg::time_tracking::UNSUPPORTED_ANNOTATION_TYPE,
         ));
     }
     let projects = parse_object_ids(query.project_ids.as_deref(), None)?;

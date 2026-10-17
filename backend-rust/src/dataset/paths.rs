@@ -40,7 +40,7 @@ fn authenticate(config: &DatasetRouteConfig, key: &str) -> ApiResult<()> {
         Ok(())
     } else {
         Err(ApiError::bad_request(
-            "Wrong key for external path deletion service.",
+            crate::msg::dataset::PATH_DELETION_WRONG_KEY,
         ))
     }
 }

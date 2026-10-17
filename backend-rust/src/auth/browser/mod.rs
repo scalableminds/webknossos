@@ -539,9 +539,7 @@ pub(crate) fn issue_cookie(
 
 pub(crate) fn signer_secret(config: &BrowserAuthConfig) -> ApiResult<&str> {
     config.signer_secret.as_deref().ok_or_else(|| {
-        ApiError::service_unavailable(
-            "Browser sessions are not configured on this server (WK_COOKIE_SIGNER_SECRET).",
-        )
+        ApiError::service_unavailable(crate::msg::user::BROWSER_SESSIONS_NOT_CONFIGURED)
     })
 }
 
@@ -717,7 +715,7 @@ impl<S: Send + Sync> FromRequest<S> for FormBody {
             .unwrap_or_default();
         let bytes = Bytes::from_request(request, state)
             .await
-            .map_err(|_| ApiError::bad_request("Invalid request body."))?;
+            .map_err(|_| ApiError::bad_request(crate::msg::request::INVALID_BODY))?;
         let mut data = HashMap::new();
         if content_type == "application/json" || content_type == "text/json" {
             let value: Value = serde_json::from_slice(&bytes)
@@ -725,7 +723,7 @@ impl<S: Send + Sync> FromRequest<S> for FormBody {
             flatten_json("", &value, &mut data);
         } else if content_type == "application/x-www-form-urlencoded" {
             let pairs: Vec<(String, String)> = serde_urlencoded::from_bytes(&bytes)
-                .map_err(|_| ApiError::bad_request("Invalid form request body."))?;
+                .map_err(|_| ApiError::bad_request(crate::msg::request::INVALID_FORM_BODY))?;
             for (key, value) in pairs {
                 data.entry(key).or_insert(value);
             }
@@ -907,9 +905,7 @@ const BCRYPT_MAX_BYTES: usize = 72;
 
 pub async fn hash_password(password: String) -> ApiResult<String> {
     if password.len() > BCRYPT_MAX_BYTES {
-        return Err(ApiError::bad_request(
-            "Password must not be longer than 72 bytes.",
-        ));
+        return Err(ApiError::bad_request(crate::msg::user::PASSWORD_TOO_LONG));
     }
     tokio::task::spawn_blocking(move || {
         bcrypt::hash_with_result(password.as_bytes(), BCRYPT_COST)

@@ -54,12 +54,12 @@ pub(crate) fn validate_dataset_name(name: &str) -> ApiResult<()> {
 pub(crate) fn validate_layer_name_lax(name: &str) -> ApiResult<()> {
     if name.contains('/') {
         return Err(ApiError::bad_request(
-            "Layer name contains invalid characters.",
+            crate::msg::dataset::layer::NAME_INVALID_CHARACTERS,
         ));
     }
     if name.starts_with('.') {
         return Err(ApiError::bad_request(
-            "Layer name must not start with a dot.",
+            crate::msg::dataset::layer::NAME_INVALID_STARTS_WITH_DOT,
         ));
     }
     Ok(())
@@ -70,7 +70,9 @@ pub(crate) fn assert_valid_data_source(source: &UsableDataSource) -> ApiResult<(
     if source.validation_errors().is_empty() {
         Ok(())
     } else {
-        Err(ApiError::bad_request("DataSource is invalid"))
+        Err(ApiError::bad_request(
+            crate::msg::dataset::data_source::INVALID,
+        ))
     }
 }
 

@@ -131,9 +131,7 @@ async fn update(
     let mut transaction = state.pool.begin().await?;
     let old = find(&mut transaction, &user.organization_id, &id, true).await?;
     if old.owner_id != user.id {
-        return Err(ApiError::forbidden(
-            "You do not have permission to update this script. Please ask the script owner.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::script::UPDATE_ONLY_OWNER));
     }
     validate(&body)?;
     let target_exists: bool = sqlx::query_scalar(
@@ -169,9 +167,7 @@ async fn remove(
     let mut transaction = state.pool.begin().await?;
     let old = find(&mut transaction, &user.organization_id, &id, true).await?;
     if old.owner_id != user.id {
-        return Err(ApiError::forbidden(
-            "You do not have permission to delete this script. Please ask the script owner.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::script::DELETE_ONLY_OWNER));
     }
     sqlx::query("UPDATE webknossos.scripts SET isDeleted = TRUE WHERE _id = $1")
         .bind(&id)
@@ -196,7 +192,7 @@ fn validate(body: &ScriptParameters) -> ApiResult<()> {
         .and_then(|host| host.chars().next())
         .is_some_and(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
     {
-        return Err(ApiError::bad_request("Invalid script gist URL."));
+        return Err(ApiError::bad_request(crate::msg::script::INVALID_GIST_URL));
     }
     Ok(())
 }
@@ -204,14 +200,10 @@ fn validate(body: &ScriptParameters) -> ApiResult<()> {
 fn validate_name(name: &str) -> ApiResult<()> {
     let length = name.encode_utf16().count();
     if length < 2 {
-        return Err(ApiError::bad_request(
-            "Script name must be at least two characters long.",
-        ));
+        return Err(ApiError::bad_request(crate::msg::script::NAME_TOO_SHORT));
     }
     if length > 50 {
-        return Err(ApiError::bad_request(
-            "Script name must be at most 50 characters long.",
-        ));
+        return Err(ApiError::bad_request(crate::msg::script::NAME_TOO_LONG));
     }
     if !name.chars().all(crate::teams::valid_name_character) {
         return Err(ApiError::bad_request(format!(

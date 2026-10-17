@@ -543,7 +543,7 @@ async fn status(
         for command in worker.commands {
             if !is_job_command(&command) {
                 return Err(ApiError::bad_request(
-                    "Parsing failed for a row in webknossos.workers during list query",
+                    crate::msg::request::list_row_parse_failed("webknossos.workers"),
                 ));
             }
             if !commands.contains(&command) {

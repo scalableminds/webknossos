@@ -345,7 +345,7 @@ fn json_body(parts: &Parts, body: Result<Bytes, BytesRejection>) -> RunResult<Ma
     if !json_content_type {
         return Err(RunError::Api(ApiError::new(
             StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            "Expecting text/json or application/json body",
+            crate::msg::request::EXPECTING_JSON_BODY,
         )));
     }
     let bytes = body.map_err(|rejection| {

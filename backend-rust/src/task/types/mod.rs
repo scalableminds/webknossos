@@ -105,7 +105,7 @@ fn validate(parameters: &TaskTypeParameters) -> ApiResult<()> {
         .is_some_and(|v| !v.is_object())
     {
         return Err(ApiError::bad_request(
-            "taskType.recommendedConfigurationInvalid",
+            crate::msg::task_type::RECOMMENDED_CONFIGURATION_INVALID,
         ));
     }
     Ok(())

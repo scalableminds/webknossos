@@ -91,7 +91,10 @@ pub(crate) async fn read_multipart(
     };
     let field_error = |error: MultipartError| {
         if error.status() == StatusCode::PAYLOAD_TOO_LARGE {
-            ApiError::new(StatusCode::PAYLOAD_TOO_LARGE, "Request Entity Too Large")
+            ApiError::new(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                crate::msg::request::ENTITY_TOO_LARGE,
+            )
         } else {
             invalid()
         }

@@ -343,7 +343,7 @@ async fn access_list(
     .fetch_one(&state.pool)
     .await?;
     if !can_read_organization {
-        return Err(ApiError::not_found("Organization not found."));
+        return Err(ApiError::not_found(crate::msg::organization::MISSING));
     }
     let rows = sqlx::query_scalar(
         r#"SELECT jsonb_build_object('id',u._id,'email',m.email,'firstName',m.firstName,'lastName',m.lastName,
@@ -924,7 +924,7 @@ pub(crate) async fn list_values(
     query: &ListQuery,
 ) -> ApiResult<Vec<Value>> {
     if query.limit.is_some_and(|n| n < 0) {
-        return Err(ApiError::bad_request("Invalid limit."));
+        return Err(ApiError::bad_request(crate::msg::request::INVALID_LIMIT));
     }
     let organization = if query.only_my_organization.unwrap_or(false) {
         user.as_ref().map(|u| u.organization_id.as_str())
@@ -1064,7 +1064,7 @@ async fn require_read(state: &AppState, user: &AuthUser, id: &ObjectId) -> ApiRe
 async fn require_edit(state: &AppState, user: &AuthUser, id: &ObjectId) -> ApiResult<()> {
     require_read(state, user, id).await?;
     if !crate::dataset::access::can_edit(&state.pool, user, id.as_str()).await? {
-        return Err(ApiError::forbidden("Not allowed."));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
     }
     Ok(())
 }
@@ -1090,7 +1090,7 @@ async fn sharing_token(
     .fetch_optional(&state.pool)
     .await?;
     Ok(Json(
-        json!({"sharingToken": result.ok_or_else(|| ApiError::forbidden("Not allowed."))?.trim()}),
+        json!({"sharingToken": result.ok_or_else(|| ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT))?.trim()}),
     ))
 }
 
@@ -1113,7 +1113,7 @@ async fn delete_sharing_token(
     .execute(&state.pool)
     .await?;
     if result.rows_affected() != 1 {
-        return Err(ApiError::forbidden("Not allowed."));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
     }
     Ok(())
 }

@@ -242,7 +242,7 @@ pub(crate) async fn initial_team_memberships(
     .bind(organization_id)
     .fetch_optional(&mut **tx)
     .await?
-    .ok_or_else(|| ApiError::bad_request("Could not find the organization team."))?;
+    .ok_or_else(|| ApiError::bad_request(crate::msg::organization::TEAM_MISSING))?;
     Ok(vec![(team, false)])
 }
 
@@ -1129,13 +1129,13 @@ async fn send_invites(
             .await?
         {
             return Err(ApiError::bad_request(
-                "Can only send invites with team roles for teams you manage.",
+                crate::msg::user::invite::TEAMS_NOT_MANAGED,
             ));
         }
     }
     if (body.is_admin || body.is_dataset_manager) && !user.is_admin {
         return Err(ApiError::bad_request(
-            "Only admins can send invites that promote new users to admin or dataset manager.",
+            crate::msg::user::invite::PROMOTION_ADMIN_ONLY,
         ));
     }
     let mut tx = state.pool.begin().await?;

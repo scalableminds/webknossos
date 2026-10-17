@@ -48,7 +48,7 @@ async fn update(
         return Err(ApiError::not_found(crate::msg::user::MISSING));
     }
     Ok(Json(
-        json!({"messages": [{"success": "Your configuration was successfully updated."}]}),
+        json!({"messages": [{"success": crate::msg::user::configuration::UPDATE_SUCCESS}]}),
     ))
 }
 
@@ -77,6 +77,6 @@ async fn update_shortcuts(
         return Err(ApiError::not_found(crate::msg::user::MISSING));
     }
     Ok(Json(
-        json!({"messages": [{"success": "Keyboard shortcuts configuration was successfully updated."}]}),
+        json!({"messages": [{"success": crate::msg::user::configuration::UPDATED_KEYBOARD_SHORTCUTS_CONFIG}]}),
     ))
 }

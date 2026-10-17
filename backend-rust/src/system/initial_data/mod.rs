@@ -381,7 +381,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
     if !projects_present {
         let owner = user_for_email(&mut tx, &sample.email)
             .await?
-            .ok_or_else(|| ApiError::not_found("User could not be found."))?;
+            .ok_or_else(|| ApiError::not_found(crate::msg::user::UNKNOWN))?;
         sqlx::query(
             r#"INSERT INTO webknossos.projects(_id, _organization, _team, _owner, name, priority,
                  paused, expectedTime, isBlacklistedFromReport, created, isDeleted)

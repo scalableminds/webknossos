@@ -293,7 +293,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
     }
     app.fallback(fallback)
         .method_not_allowed_fallback(|| async {
-            ApiError::new(StatusCode::METHOD_NOT_ALLOWED, "Method not allowed.")
+            ApiError::new(StatusCode::METHOD_NOT_ALLOWED, crate::msg::request::METHOD_NOT_ALLOWED)
         })
         .layer(DefaultBodyLimit::max(body_limit))
         .layer(axum::Extension(clients))
@@ -360,7 +360,8 @@ async fn timeout(State(duration): State<Duration>, request: Request, next: Next)
     };
     match tokio::time::timeout(duration, next.run(request)).await {
         Ok(response) => response,
-        Err(_) => ApiError::new(StatusCode::GATEWAY_TIMEOUT, "Request timed out.").into_response(),
+        Err(_) => ApiError::new(StatusCode::GATEWAY_TIMEOUT, crate::msg::request::TIMED_OUT)
+            .into_response(),
     }
 }
 
@@ -431,6 +432,6 @@ async fn fallback(uri: axum::http::Uri) -> ApiError {
         Some(version) if !(OLDEST..=CURRENT).contains(&version) => ApiError::not_found(format!(
             "This WEBKNOSSOS instance does not support the requested HTTP API version. Client requested {version} but must be at least {OLDEST} and at most {CURRENT}."
         )),
-        _ => ApiError::not_found("Route not implemented by the Rust backend."),
+        _ => ApiError::not_found(crate::msg::request::ROUTE_NOT_IMPLEMENTED),
     }
 }

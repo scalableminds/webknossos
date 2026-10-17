@@ -217,9 +217,9 @@ async fn single_sign_on(
     RawQuery(query): RawQuery,
 ) -> ApiResult<Response> {
     let sso = query_param(query.as_deref(), "sso")
-        .ok_or_else(|| ApiError::bad_request("Missing parameter: sso"))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter("sso")))?;
     let sig = query_param(query.as_deref(), "sig")
-        .ok_or_else(|| ApiError::bad_request("Missing parameter: sig"))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter("sig")))?;
     let key = &oidc.config.sso_key;
     if key.is_empty() {
         tracing::warn!(
@@ -343,9 +343,7 @@ struct RsaKey {
 impl Oidc {
     fn assert_valid(&self) -> ApiResult<()> {
         if !self.config.enabled {
-            return Err(ApiError::bad_request(
-                "SSO/OIDC is not enabled for this WEBKNOSSOS instance.",
-            ));
+            return Err(ApiError::bad_request(crate::msg::oidc::NOT_ENABLED));
         }
         if self.config.provider_url.is_empty() {
             return Err(ApiError::bad_request(messages::CONFIGURATION_INVALID));

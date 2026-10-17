@@ -145,7 +145,7 @@ async fn assert_editable(
     id: &str,
 ) -> ApiResult<()> {
     if !access(connection, user, id, true).await? {
-        return Err(ApiError::forbidden("No write access on this folder."));
+        return Err(ApiError::forbidden(crate::msg::folder::UPDATE_NOT_ALLOWED));
     }
     Ok(())
 }
@@ -341,12 +341,10 @@ async fn move_folder(
     ObjectId::parse(&query.new_parent_id)?;
     let (mut transaction, root) = mutation(&state, &user).await?;
     if root == id {
-        return Err(ApiError::bad_request(
-            "Cannot move the organization’s root folder.",
-        ));
+        return Err(ApiError::bad_request(crate::msg::folder::MOVE_ROOT));
     }
     if id == query.new_parent_id {
-        return Err(ApiError::bad_request("Cannot move a folder into itself."));
+        return Err(ApiError::bad_request(crate::msg::folder::MOVE_SELF));
     }
     readable(&mut transaction, &user, &id).await?;
     readable(&mut transaction, &user, &query.new_parent_id).await?;
@@ -356,7 +354,7 @@ async fn move_folder(
         .bind(&id).bind(&query.new_parent_id).fetch_one(&mut *transaction).await?;
     if cycle {
         return Err(ApiError::bad_request(
-            "Cannot move a folder into one of its descendants.",
+            crate::msg::folder::MOVE_INTO_DESCENDANT,
         ));
     }
     sqlx::query("DELETE FROM webknossos.folder_paths p
@@ -388,9 +386,7 @@ async fn remove(
     let id = ObjectId::parse_path(&id)?.to_string();
     let (mut transaction, root) = mutation(&state, &user).await?;
     if root == id {
-        return Err(ApiError::bad_request(
-            "Cannot delete the organization’s root folder.",
-        ));
+        return Err(ApiError::bad_request(crate::msg::folder::DELETE_ROOT));
     }
     readable(&mut transaction, &user, &id).await?;
     assert_editable(&mut transaction, &user, &id).await?;
@@ -402,7 +398,7 @@ async fn remove(
     .await?;
     if children {
         return Err(ApiError::bad_request(
-            "Cannot delete folders that still contain other folders.",
+            crate::msg::folder::DELETE_NOT_EMPTY_CHILDREN,
         ));
     }
     let datasets: bool =
@@ -412,7 +408,7 @@ async fn remove(
             .await?;
     if datasets {
         return Err(ApiError::bad_request(
-            "Cannot delete folders that still contain datasets.",
+            crate::msg::folder::DELETE_NOT_EMPTY_DATASETS,
         ));
     }
     sqlx::query("UPDATE webknossos.folders SET isDeleted = TRUE WHERE _id = $1")
@@ -430,7 +426,7 @@ async fn remove(
 fn validate_name(name: &str) -> ApiResult<()> {
     if name.contains('/') {
         return Err(ApiError::bad_request(
-            "Folder names cannot contain forward slashes.",
+            crate::msg::folder::NAME_MUST_NOT_CONTAIN_SLASH,
         ));
     }
     Ok(())

@@ -169,7 +169,7 @@ async fn cancel_typed(
             .await?
         {
             return Err(ApiError::bad_request(
-                "FAILED: AnnotationSQLDAO.assertUpdateAccess",
+                crate::msg::annotation::ASSERT_UPDATE_ACCESS_FAILED,
             ));
         }
         sqlx::query("UPDATE webknossos.annotations SET state='Cancelled' WHERE _id=$1")
@@ -223,9 +223,9 @@ async fn collaboration_mode(
     Query(query): Query<CollaborationQuery>,
 ) -> ApiResult<StatusCode> {
     let id = ObjectId::parse_path(&id)?;
-    let mode = query
-        .collaboration_mode
-        .ok_or_else(|| ApiError::bad_request("Missing parameter: collaborationMode"))?;
+    let mode = query.collaboration_mode.ok_or_else(|| {
+        ApiError::bad_request(crate::msg::request::missing_parameter("collaborationMode"))
+    })?;
     let provided = provider
         .provide(AccessContext::requester(Some(&user)), &typ, &id)
         .await

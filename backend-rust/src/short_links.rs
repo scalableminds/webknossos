@@ -31,7 +31,8 @@ pub fn router() -> Router<AppState> {
 }
 
 fn validate_link(base: &Url, value: &str) -> ApiResult<()> {
-    let link = Url::parse(value).map_err(|_| ApiError::bad_request("Invalid short link URL."))?;
+    let link = Url::parse(value)
+        .map_err(|_| ApiError::bad_request(crate::msg::short_link::INVALID_URL))?;
     let base_path = base.path().trim_end_matches('/');
     // A string prefix check would accept https://webknossos.org.attacker.example.
     if link.origin() != base.origin()
@@ -39,9 +40,7 @@ fn validate_link(base: &Url, value: &str) -> ApiResult<()> {
         || link.password().is_some()
         || !(link.path() == base_path || link.path().starts_with(&format!("{base_path}/")))
     {
-        return Err(ApiError::bad_request(
-            "Could not generate short link: URI does not match",
-        ));
+        return Err(ApiError::bad_request(crate::msg::short_link::URI_MISMATCH));
     }
     Ok(())
 }

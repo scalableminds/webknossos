@@ -546,11 +546,11 @@ async fn ingest(
     let analytics = &misc.config().analytics;
     if !analytics.save_to_database_enabled {
         return Err(ApiError::bad_request(
-            "Database logging of events is not enabled",
+            crate::msg::analytics::DATABASE_LOGGING_DISABLED,
         ));
     }
     let well_known = parse_well_known_uris(&analytics.well_known_uris)
-        .ok_or_else(|| ApiError::bad_request("wellKnownUris configuration is incorrect"))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::analytics::WELL_KNOWN_URIS_INVALID))?;
     let authorized = events.iter().all(|event| {
         well_known
             .get(&event.user_properties.webknossos_uri)
@@ -559,12 +559,12 @@ async fn ingest(
     if !authorized {
         return Err(ApiError::new(
             StatusCode::UNAUTHORIZED,
-            "Provided API key is not correct for provided webknossosUri",
+            crate::msg::analytics::WRONG_API_KEY,
         ));
     }
     if events.is_empty() {
         // Play renders an empty multi-row INSERT, which PostgreSQL rejects.
-        return Err(ApiError::bad_request("No analytics events provided."));
+        return Err(ApiError::bad_request(crate::msg::analytics::NO_EVENTS));
     }
     insert_many(&state.pool, &events).await?;
     Ok(ok_empty())

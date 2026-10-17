@@ -116,7 +116,7 @@ pub async fn lock_for_mutation(
         .bind(id)
         .fetch_optional(&mut **transaction)
         .await?
-        .ok_or_else(|| ApiError::forbidden("You are not allowed to edit this annotation."))
+        .ok_or_else(|| ApiError::forbidden(crate::msg::annotation::EDIT_NOT_ALLOWED))
 }
 
 /// Readable live annotation metadata (AnnotationDAO read access), row-locked

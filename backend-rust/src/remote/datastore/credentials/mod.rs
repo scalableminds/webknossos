@@ -185,7 +185,7 @@ async fn find_credential(
     let row = sqlx::query_as::<_, StoredCredential>(
         "SELECT type::text AS kind, name, identifier, secret, _user AS user_id, _organization AS organization FROM webknossos.credentials WHERE _id = $1 AND NOT isDeleted",
     ).bind(query.credential_id.as_str()).fetch_optional(&mut *tx).await?;
-    let credential = row.ok_or_else(|| ApiError::not_found("Credential not found."))?;
+    let credential = row.ok_or_else(|| ApiError::not_found(crate::msg::credential::MISSING))?;
     let response = credential.datastore_json()?;
     tx.commit().await?;
     Ok(Json(response).into_response())

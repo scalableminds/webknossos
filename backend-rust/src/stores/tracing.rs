@@ -49,11 +49,11 @@ async fn update(
     Json(body): Json<StoreUpdate>,
 ) -> ApiResult<ResponseJson<Value>> {
     if !user.is_admin {
-        return Err(ApiError::forbidden("Not allowed."));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
     }
     if body.name != name {
         return Err(ApiError::bad_request(
-            "Tracing store name cannot be changed.",
+            crate::msg::tracing_store::NAME_IMMUTABLE,
         ));
     }
     // The existing API permits an organization admin to update this shared

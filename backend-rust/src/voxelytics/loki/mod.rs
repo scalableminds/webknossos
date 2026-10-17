@@ -73,14 +73,17 @@ pub(crate) struct LokiClient {
 }
 
 fn loki_failed(status: StatusCode) -> ApiError {
-    ApiError::new(status, "Loki request failed.")
+    ApiError::new(status, crate::msg::voxelytics::loki::REQUEST_FAILED)
 }
 
 fn map_transport(error: reqwest::Error) -> ApiError {
     if error.is_timeout() {
-        ApiError::new(StatusCode::GATEWAY_TIMEOUT, "Loki request timed out.")
+        ApiError::new(
+            StatusCode::GATEWAY_TIMEOUT,
+            crate::msg::voxelytics::loki::TIMED_OUT,
+        )
     } else {
-        ApiError::service_unavailable("Loki is unavailable.")
+        ApiError::service_unavailable(crate::msg::voxelytics::loki::UNAVAILABLE)
     }
 }
 
@@ -125,7 +128,9 @@ impl LokiClient {
     /// Play's memoized lazy value, a failed wait is retried by later requests.
     async fn ensure_ready(&self) -> ApiResult<()> {
         if !self.enabled() {
-            return Err(ApiError::bad_request("Loki is not enabled."));
+            return Err(ApiError::bad_request(
+                crate::msg::voxelytics::loki::NOT_ENABLED,
+            ));
         }
         if self.ready.load(Ordering::Acquire) {
             return Ok(());
@@ -150,7 +155,7 @@ impl LokiClient {
                 _ => {
                     return Err(ApiError::new(
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        "Unexpected error while trying to connect to Loki.",
+                        crate::msg::voxelytics::loki::CONNECT_FAILED,
                     ));
                 }
             };
@@ -243,7 +248,7 @@ impl LokiClient {
                 end = current_start;
             } else {
                 let head_time = head[0]["timestamp"].as_i64().ok_or_else(|| {
-                    ApiError::bad_request("Could not parse the Loki log entries.")
+                    ApiError::bad_request(crate::msg::voxelytics::loki::PARSE_FAILED)
                 })?;
                 segments.push(head);
                 // Defensive: Loki must answer strictly before `end`.
@@ -288,7 +293,7 @@ impl LokiClient {
             .map_err(map_transport)?;
         let body = Self::read_body(response).await?;
         parse_query_response(&body)
-            .ok_or_else(|| ApiError::bad_request("Could not parse the Loki log entries."))
+            .ok_or_else(|| ApiError::bad_request(crate::msg::voxelytics::loki::PARSE_FAILED))
     }
 
     /// bulkInsertBatched: push entries in batches of 1000.
@@ -315,7 +320,7 @@ impl LokiClient {
         }
         self.ensure_ready().await?;
         let streams = push_streams(public_uri, entries, organization_id)
-            .ok_or_else(|| ApiError::bad_request("Invalid voxelytics log entries."))?;
+            .ok_or_else(|| ApiError::bad_request(crate::msg::voxelytics::INVALID_LOG_ENTRIES))?;
         let request = self
             .http
             .post(self.url("/loki/api/v1/push"))

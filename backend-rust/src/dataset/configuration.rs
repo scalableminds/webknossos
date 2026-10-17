@@ -197,7 +197,9 @@ async fn read_admin(
 }
 
 fn success() -> Json<Value> {
-    Json(json!({"messages":[{"success":"Dataset configuration was successfully updated."}]}))
+    Json(
+        json!({"messages":[{"success":crate::msg::user::configuration::UPDATE_SUCCESS_FOR_DATASET}]}),
+    )
 }
 
 async fn update(
@@ -252,7 +254,7 @@ async fn update_admin(
     RequestJson(mut config): RequestJson<Map<String, Value>>,
 ) -> ApiResult<Json<Value>> {
     if !crate::dataset::access::can_edit(&state.pool, &user, id.as_str()).await? {
-        return Err(ApiError::forbidden("Not allowed."));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
     }
     let mut transaction = state.pool.begin().await?;
     crate::dataset::access::lock_edit(&mut transaction, &user, id.as_str(), true).await?;

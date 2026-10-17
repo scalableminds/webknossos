@@ -149,7 +149,7 @@ pub async fn lock_edit(
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
     if !edit {
-        return Err(ApiError::forbidden("Not allowed."));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
     }
     Ok(())
 }

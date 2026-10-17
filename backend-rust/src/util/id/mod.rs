@@ -54,9 +54,7 @@ impl ObjectId {
         if value.len() == 24 && value.bytes().all(|c| c.is_ascii_hexdigit()) {
             Ok(Self(value.to_ascii_lowercase()))
         } else {
-            Err(ApiError::bad_request(
-                "Invalid ObjectId: expected 24 hexadecimal characters.",
-            ))
+            Err(ApiError::bad_request(crate::msg::object_id::INVALID_FORMAT))
         }
     }
     /// Play's path binder permits a human-readable prefix. JSON and query

@@ -109,7 +109,8 @@ fn join_literal(base: &str, child: &str) -> Result<UPath, UPathError> {
 }
 
 fn join(base: &str, child: &str) -> ApiResult<UPath> {
-    join_literal(base, child).map_err(|_| ApiError::bad_request("Invalid path."))
+    join_literal(base, child)
+        .map_err(|_| ApiError::bad_request(crate::msg::request::INVALID_STORAGE_PATH))
 }
 
 /// UploadToPathsService.generateAttachmentPath.
@@ -185,7 +186,7 @@ pub(crate) async fn resolve_linked_layers(
     user: &AuthUser,
     linked: &[LinkedLayer],
 ) -> ApiResult<Vec<StaticLayer>> {
-    let failed = || ApiError::bad_request("Could not resolve layers to link.");
+    let failed = || ApiError::bad_request(crate::msg::dataset::layer_to_link::FAILED);
     let mut layers = Vec::new();
     for link in linked {
         if !crate::dataset::access::can_read(
@@ -234,9 +235,7 @@ async fn referenced_data_store(
     .fetch_all(&mut *connection)
     .await?;
     if names.len() > 1 {
-        return Err(ApiError::bad_request(
-            "Can only link layers of datasets from the same data store.",
-        ));
+        return Err(ApiError::bad_request(crate::msg::data_store::AMBIGUOUS));
     }
     let store: Option<(String, bool)> = sqlx::query_as(
         r#"SELECT name, allowsUploadToPaths FROM webknossos.dataStores_
@@ -252,7 +251,7 @@ async fn referenced_data_store(
         store.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     if !allows {
         return Err(ApiError::bad_request(
-            "The data store that holds the layers requested to be linked does not support dataset upload to paths.",
+            crate::msg::data_store::UPLOAD_TO_PATHS_NOT_ALLOWED,
         ));
     }
     Ok(name)
@@ -281,7 +280,7 @@ pub(crate) async fn add_initial_teams(
     distinct.dedup();
     if allowed != distinct.len() as i64 {
         return Err(ApiError::bad_request(
-            "Can only assign teams the requesting user is in.",
+            crate::msg::dataset::initial_teams::INVALID_TEAMS,
         ));
     }
     let readable: bool = sqlx::query_scalar(&format!(
@@ -294,7 +293,9 @@ pub(crate) async fn add_initial_teams(
     .fetch_one(&mut *connection)
     .await?;
     if !readable {
-        return Err(ApiError::bad_request("No access to update dataset teams."));
+        return Err(ApiError::bad_request(
+            crate::msg::dataset::initial_teams::FORBIDDEN,
+        ));
     }
     sqlx::query("INSERT INTO webknossos.dataset_allowedTeams (_dataset, _team) SELECT $1, unnest($2::text[]) ON CONFLICT DO NOTHING")
         .bind(dataset)
@@ -369,7 +370,7 @@ async fn reserve_upload_to_paths(
     );
     if source.data_layers.is_empty() {
         return Err(ApiError::bad_request(
-            "Cannot reserve upload for dataset with no layers.",
+            crate::msg::dataset::upload::NO_LAYERS,
         ));
     }
     let parent = dataset_parent(&config, path_prefix.as_deref(), &user.organization_id)?;
@@ -461,7 +462,7 @@ async fn reserve_for_preliminary(
     }
     if uploader.as_deref() != Some(user.id.as_str()) {
         return Err(ApiError::bad_request(
-            "Cannot reserve paths for a dataset someone else uploaded.",
+            crate::msg::dataset::upload::to_paths::OTHER_UPLOADER,
         ));
     }
     source.id = DataSourceId::new(directory, &user.organization_id);
@@ -521,7 +522,7 @@ async fn reserve_mag_upload_to_path(
     let record = crate::dataset::lifecycle::require_readable(&state, &user, &id).await?;
     if !record.is_virtual {
         return Err(ApiError::bad_request(
-            "Adding mags to existing datasets is only allowed for virtual datasets.",
+            crate::msg::dataset::upload::MAG_UPLOAD_ONLY_VIRTUAL,
         ));
     }
     if !crate::dataset::access::can_edit(&state.pool, &user, id.as_str()).await? {

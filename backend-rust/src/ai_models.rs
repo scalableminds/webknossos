@@ -255,9 +255,9 @@ async fn list_all_models(connection: &mut PgConnection, user_id: &str) -> ApiRes
         .map(AiModel::parse)
         .collect::<Result<_, _>>()
         .map_err(|_| {
-            ApiError::bad_request(
-                "Parsing failed for a row in webknossos.aiModels during list query",
-            )
+            ApiError::bad_request(crate::msg::request::list_row_parse_failed(
+                "webknossos.aiModels",
+            ))
         })
 }
 
@@ -332,7 +332,7 @@ async fn path_with_fallback(
     let organization = model
         .organization
         .as_deref()
-        .ok_or_else(|| ApiError::bad_request("aiModel.noOrganization"))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::ai_model::NO_ORGANIZATION))?;
     // DataStoreDAO.findOneByName with GlobalAccessContext.
     let url: String = sqlx::query_scalar("SELECT url FROM webknossos.dataStores_ WHERE name = $1")
         .bind(&model.data_store)
@@ -681,8 +681,9 @@ fn generate_model_path(
     requested_prefix: Option<&str>,
 ) -> ApiResult<String> {
     let prefix = crate::dataset::upload_paths::select_path_prefix(config, requested_prefix)?;
-    let prefix =
-        UPath::parse(&prefix).map_err(|_: UPathError| ApiError::bad_request("Invalid path."))?;
+    let prefix = UPath::parse(&prefix).map_err(|_: UPathError| {
+        ApiError::bad_request(crate::msg::request::INVALID_STORAGE_PATH)
+    })?;
     Ok(prefix
         .join(organization)
         .join(".aiModels")

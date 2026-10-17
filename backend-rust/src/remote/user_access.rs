@@ -155,7 +155,7 @@ async fn tracingstore(
 }
 
 fn required_id(id: Option<&str>) -> ApiResult<ObjectId> {
-    let id = id.ok_or_else(|| ApiError::bad_request("Resource identifier is required."))?;
+    let id = id.ok_or_else(|| ApiError::bad_request(crate::msg::request::RESOURCE_ID_REQUIRED))?;
     ObjectId::parse(id)
 }
 async fn validate(
@@ -180,7 +180,8 @@ async fn validate(
             if id == Some("dummyTracingId") {
                 return Ok(Answer::granted());
             }
-            let id = id.ok_or_else(|| ApiError::bad_request("Tracing identifier is required."))?;
+            let id =
+                id.ok_or_else(|| ApiError::bad_request(crate::msg::request::TRACING_ID_REQUIRED))?;
             let annotation_id: String = sqlx::query_scalar(
                 "SELECT a._id FROM webknossos.annotations_ a JOIN \
                     webknossos.annotation_layers layer ON layer._annotation=a._id WHERE \
@@ -212,7 +213,9 @@ async fn dataset(
         )),
         Mode::Write | Mode::Delete => {
             if mode == Mode::Delete && !features.allow_delete_datasets {
-                return Err(ApiError::bad_request("Dataset deletion is not enabled."));
+                return Err(ApiError::bad_request(
+                    crate::msg::dataset::delete::NOT_ENABLED_FOR_DATA_STORE,
+                ));
             }
             let id = required_id(id)?;
             let id = id.as_str();

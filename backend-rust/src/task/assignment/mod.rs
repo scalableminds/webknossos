@@ -422,7 +422,7 @@ async fn assign_one(
 ) -> ApiResult<ResponseJson<Value>> {
     let assignee_id = query
         .user_id
-        .ok_or_else(|| ApiError::bad_request("Missing parameter: userId"))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter("userId")))?;
     let assignee_id = ObjectId::parse(&assignee_id)?.to_string();
     let task_id = ObjectId::parse_path(&id)?.to_string();
     let pool = &state.pool;

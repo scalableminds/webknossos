@@ -65,7 +65,7 @@ async fn owned_link<'e, E: Executor<'e, Database = Postgres>>(
         .bind(id)
         .fetch_optional(executor)
         .await?
-        .ok_or_else(|| ApiError::not_found("Annotation private link not found."))
+        .ok_or_else(|| ApiError::not_found(crate::msg::annotation::private_link::MISSING))
 }
 
 async fn list(
@@ -107,7 +107,7 @@ async fn read(
         .is_some_and(|expiration| expiration <= Utc::now())
     {
         return Err(ApiError::not_found(
-            "Annotation private link token is expired.",
+            crate::msg::annotation::private_link::EXPIRED,
         ));
     }
     crate::annotation::access::find(&state.pool, Some(&user), &link.annotation, false).await?;
@@ -136,7 +136,7 @@ async fn create(
     // lookup atomic so a rejected request cannot leave an inaccessible link.
     if annotation.owner_id != user.id {
         return Err(ApiError::forbidden(
-            "Only the annotation owner can manage its private links.",
+            crate::msg::annotation::private_link::OWNER_ONLY,
         ));
     }
     let id = ObjectId::new().to_string();
@@ -173,7 +173,7 @@ async fn update(
             crate::annotation::access::lock_for_mutation(&mut tx, &user, annotation_id).await?;
         if annotation.owner_id != user.id {
             return Err(ApiError::forbidden(
-                "Only the annotation owner can manage its private links.",
+                crate::msg::annotation::private_link::OWNER_ONLY,
             ));
         }
     }
@@ -205,7 +205,7 @@ async fn delete(
         .await?;
     tx.commit().await?;
     Ok(ResponseJson(
-        json!({"messages":[{"success":"Annotation private link was successfully deleted."}]}),
+        json!({"messages":[{"success":crate::msg::annotation::private_link::DELETE_SUCCESS}]}),
     ))
 }
 
@@ -255,7 +255,7 @@ async fn source(
     .bind(via_private_link)
     .fetch_optional(&state.pool)
     .await?
-    .ok_or_else(|| ApiError::not_found("Annotation source not found."))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::annotation::SOURCE_MISSING))?;
     if value["tracingStoreUrl"].is_null() {
         return Err(ApiError::not_found(crate::msg::tracing_store::MISSING));
     }

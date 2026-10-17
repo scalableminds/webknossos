@@ -265,7 +265,7 @@ async fn delete_dataset(
     let record = require_readable(&state, &user, &id).await?;
     if !features.allow_delete_datasets {
         return Err(ApiError::bad_request(
-            "Dataset deletion is not enabled for this WEBKNOSSOS instance.",
+            crate::msg::dataset::delete::NOT_ENABLED,
         ));
     }
     if !crate::dataset::access::can_edit(&state.pool, &user, id.as_str()).await? {
@@ -290,7 +290,7 @@ async fn delete_dataset(
     } else if let Some(root) = record.root_path.clone().or(record.root_real_path.clone()) {
         if !crate::organization::storage::is_local_path(&root) {
             return Err(ApiError::bad_request(
-                "Cannot delete a dataset whose root path is not local.",
+                crate::msg::dataset::delete::ROOT_NOT_LOCAL,
             ));
         }
         let directory = if root.ends_with('/') {
@@ -329,7 +329,7 @@ async fn delete_dataset(
                 None,
             )
             .await
-            .map_err(|_| ApiError::bad_request("Could not delete the dataset on disk."))?;
+            .map_err(|_| ApiError::bad_request(crate::msg::dataset::delete::FAILED))?;
     }
     let mut transaction = state.pool.begin().await?;
     let exists: Option<String> =
@@ -423,12 +423,12 @@ async fn write_mirror(
     let record = require_editable(&state, &user, &id).await?;
     if !record.is_virtual {
         return Err(ApiError::bad_request(
-            "Can only write on-disk dataset mirrors for virtual (db-based) datasets.",
+            crate::msg::dataset::mirror::ONLY_FOR_VIRTUAL,
         ));
     }
     if !record.is_usable {
         return Err(ApiError::bad_request(
-            "Can only write on-disk dataset mirrors for usable datasets.",
+            crate::msg::dataset::mirror::ONLY_FOR_USABLE,
         ));
     }
     write_mirror_for_virtual(&state.pool, &clients, &record)
@@ -437,7 +437,7 @@ async fn write_mirror(
             if error.status.is_server_error() {
                 error
             } else {
-                ApiError::bad_request("Could not write on-disk dataset mirror.")
+                ApiError::bad_request(crate::msg::dataset::mirror::WRITE_FAILED)
             }
         })
 }
@@ -508,9 +508,7 @@ async fn finish_upload_to_paths(
         )));
     }
     if usable {
-        return Err(ApiError::bad_request(
-            "Dataset is already marked as usable.",
-        ));
+        return Err(ApiError::bad_request(crate::msg::dataset::ALREADY_USABLE));
     }
     sqlx::query("UPDATE webknossos.datasets SET isUsable = true, status = '' WHERE _id = $1")
         .bind(id.as_str())
@@ -598,7 +596,7 @@ async fn finish_mag_upload_to_path(
     .await?;
     if updated.rows_affected() == 0 {
         return Err(ApiError::bad_request(
-            "This mag is not marked as pending upload to path.",
+            crate::msg::dataset::upload::to_paths::MAG_NOT_PENDING,
         ));
     }
     after_artifact_finished(&state, &clients, &record).await
@@ -624,7 +622,7 @@ async fn finish_attachment_upload_to_path(
     .await?;
     if updated.rows_affected() == 0 {
         return Err(ApiError::bad_request(
-            "This attachment is not marked as pending (upload to path).",
+            crate::msg::dataset::upload::to_paths::ATTACHMENT_NOT_PENDING,
         ));
     }
     after_artifact_finished(&state, &clients, &record).await

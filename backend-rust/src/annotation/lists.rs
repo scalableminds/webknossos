@@ -350,7 +350,8 @@ pub(crate) async fn full_json_for(
     };
     value["task"] = task.clone().unwrap_or(Value::Null);
     value["settings"] = if matches!(metadata.annotation_type.as_str(), "Task" | "TracingBase") {
-        task.ok_or_else(|| ApiError::not_found("Task not found."))?["type"]["settings"].clone()
+        task.ok_or_else(|| ApiError::not_found(crate::msg::task::MISSING))?["type"]["settings"]
+            .clone()
     } else {
         let skeleton = value["annotationLayers"]
             .as_array()
@@ -369,7 +370,7 @@ pub(crate) async fn compact_user(connection: &mut PgConnection, id: &str) -> Api
         .bind(id)
         .fetch_optional(connection)
         .await?
-        .ok_or_else(|| ApiError::not_found("Annotation user not found."))
+        .ok_or_else(|| ApiError::not_found(crate::msg::annotation::USER_MISSING))
 }
 async fn task_list(
     pool: &PgPool,
@@ -464,7 +465,7 @@ async fn task_annotations(
     .bind(&id)
     .fetch_optional(&state.pool)
     .await?
-    .ok_or_else(|| ApiError::not_found("Task not found."))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::task::MISSING))?;
     if !user.can_manage_team(&state.pool, &team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }

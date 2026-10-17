@@ -94,12 +94,12 @@ async fn add_credits(
     })?;
     if money_spent.is_negative() {
         return Err(ApiError::bad_request(
-            "moneySpent must be a positive number",
+            crate::msg::credit_transaction::MONEY_SPENT_NOT_POSITIVE,
         ));
     }
     if query.credit_amount <= 0 {
         return Err(ApiError::bad_request(
-            "creditAmount must be a positive number",
+            crate::msg::credit_transaction::CREDIT_AMOUNT_NOT_POSITIVE,
         ));
     }
     let comment = query.comment.unwrap_or_else(|| {
@@ -119,14 +119,13 @@ async fn add_credits(
     };
     if expiration.is_some_and(|date| date < Utc::now()) {
         return Err(ApiError::bad_request(
-            "Expiration date must be in the future",
+            crate::msg::credit_transaction::EXPIRATION_NOT_IN_FUTURE,
         ));
     }
     // Scala multiplies with Int overflow; refuse amounts whose milli credits do not fit.
-    let milli_credits = query
-        .credit_amount
-        .checked_mul(1000)
-        .ok_or_else(|| ApiError::bad_request("creditAmount is too large"))?;
+    let milli_credits = query.credit_amount.checked_mul(1000).ok_or_else(|| {
+        ApiError::bad_request(crate::msg::credit_transaction::CREDIT_AMOUNT_TOO_LARGE)
+    })?;
     let mut transaction = serializable(&state.pool).await?;
     sqlx::query(
         r#"INSERT INTO webknossos.credit_transactions
@@ -164,9 +163,7 @@ pub(crate) fn balance_error(error: sqlx::Error) -> ApiError {
     if let sqlx::Error::Database(database) = &error
         && database.code().as_deref() == Some("P0004")
     {
-        return ApiError::bad_request(
-            "Transaction would result in a negative credit balance for this organization.",
-        );
+        return ApiError::bad_request(crate::msg::credit_transaction::NEGATIVE_BALANCE);
     }
     error.into()
 }
@@ -284,12 +281,12 @@ async fn refund(
         row.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if organization != query.organization_id {
         return Err(ApiError::bad_request(
-            "Transaction is not for this organization",
+            crate::msg::credit_transaction::WRONG_ORGANIZATION,
         ));
     }
     if transaction_state != "Pending" {
         return Err(ApiError::bad_request(
-            "Can only refund pending transactions.",
+            crate::msg::credit_transaction::REFUND_ONLY_PENDING,
         ));
     }
     // Scala's guarded INSERT/UPDATE affect no row (or fail) for these; it reports this text.
@@ -499,7 +496,7 @@ struct CreditTransaction {
 async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<Vec<Value>>> {
     if !(user.is_superuser || user.is_admin) {
         return Err(ApiError::bad_request(
-            "Only organization admins can list credit transactions.",
+            crate::msg::organization::LIST_CREDIT_TRANSACTIONS_ONLY_ADMIN,
         ));
     }
     // Scala has no ORDER BY; creation order is the deterministic equivalent.

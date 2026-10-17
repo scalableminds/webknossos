@@ -201,9 +201,7 @@ async fn read(
 ) -> ApiResult<Json<Value>> {
     let result = document(&state, &user, id.as_str(), &verification).await?;
     if result["isEditable"] != true {
-        return Err(ApiError::forbidden(
-            "User is not editable by the requesting user.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::user::NOT_EDITABLE));
     }
     Ok(Json(result))
 }
@@ -223,9 +221,7 @@ async fn update_task_type(
 ) -> ApiResult<Json<Value>> {
     let original = document(&state, &user, id.as_str(), &verification).await?;
     if original["isEditable"] != true && user.id != id.as_str() {
-        return Err(ApiError::forbidden(
-            "User is not editable by the requesting user.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::user::NOT_EDITABLE));
     }
     let result = sqlx::query(r#"
         UPDATE webknossos.users AS target SET lastTaskTypeId = $2
@@ -244,9 +240,7 @@ async fn update_task_type(
         .bind(id.as_str()).bind(body.last_task_type_id.as_ref().map(ObjectId::as_str))
         .bind(&user.id).bind(&user.organization_id).bind(user.is_admin).execute(&state.pool).await?;
     if result.rows_affected() != 1 {
-        return Err(ApiError::forbidden(
-            "User is no longer editable by the requesting user.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::user::NO_LONGER_EDITABLE));
     }
     Ok(Json(
         document(&state, &user, id.as_str(), &verification).await?,
@@ -261,9 +255,7 @@ async fn update_experience(
     RequestJson(body): RequestJson<Map<String, Value>>,
 ) -> ApiResult<Json<Value>> {
     if user.id != id.as_str() {
-        return Err(ApiError::forbidden(
-            "Users can only update their own experience information.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::user::EXPERIENCE_OWN_ONLY));
     }
     sqlx::query("UPDATE webknossos.multiUsers AS multi SET novelUserExperienceInfos = $2 FROM webknossos.users_ AS usr WHERE usr._id = $1 AND usr._multiUser = multi._id AND NOT multi.isDeleted")
         .bind(&user.id).bind(Value::Object(body)).execute(&state.pool).await?;

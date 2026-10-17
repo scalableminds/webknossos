@@ -491,7 +491,7 @@ async fn register_start(
         .ok_or_else(|| {
             ApiError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to fetch Passkeys",
+                crate::msg::passkeys::LIST_FAILED,
             )
         })?;
     let exclude: Vec<JsonValue> = credentials
@@ -584,7 +584,7 @@ async fn register_finalize(
     if inserted.is_err() {
         return Err(ApiError::new(
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to add Passkey",
+            crate::msg::passkeys::ADD_FAILED,
         ));
     }
     Ok(Json(json!({"message": "Key registered successfully"})))

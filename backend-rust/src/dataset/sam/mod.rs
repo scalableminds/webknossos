@@ -134,11 +134,11 @@ async fn segment_anything_mask(
     }
     if !config.segment_anything_enabled {
         return Err(ApiError::bad_request(
-            "AI-based quick select is not enabled for this WEBKNOSSOS instance.",
+            crate::msg::segment_anything::NOT_ENABLED,
         ));
     }
     if config.segment_anything.uri.is_empty() {
-        return Err(ApiError::bad_request("No URI for SAM server configured."));
+        return Err(ApiError::bad_request(crate::msg::segment_anything::NO_URI));
     }
     let record = crate::dataset::lifecycle::require_readable(&state, &user, &id).await?;
     if !record.is_usable {
@@ -170,7 +170,7 @@ async fn segment_anything_mask(
     }
     if sorted[0] > 50 {
         return Err(ApiError::bad_request(
-            "Target-mag selected bbox depth must be at most 50",
+            crate::msg::segment_anything::BOUNDING_BOX_TOO_DEEP,
         ));
     }
     if sorted[2] != sorted[1] {
@@ -185,14 +185,14 @@ async fn segment_anything_mask(
             && parameters.selection_bottom_right_y.is_some())
     {
         return Err(ApiError::bad_request(
-            "Missing selectionTopLeft and selectionBottomRight parameters for bounding box interaction.",
+            crate::msg::segment_anything::MISSING_BOUNDING_BOX,
         ));
     }
     if parameters.interaction_type == Interaction::Point
         && !(parameters.point_x.is_some() && parameters.point_y.is_some())
     {
         return Err(ApiError::bad_request(
-            "Missing pointX and pointY parameters for point interaction.",
+            crate::msg::segment_anything::MISSING_POINT,
         ));
     }
     let top_left = bbox.top_left;
@@ -219,13 +219,13 @@ async fn segment_anything_mask(
         .await
         .map_err(|error| {
             tracing::warn!(%error, "Loading SAM input data failed");
-            ApiError::bad_request("Could not get image data to send to SAM server.")
+            ApiError::bad_request(crate::msg::segment_anything::GET_DATA_FAILED)
         })?;
     if matches!(layer.element_class.as_str(), "float" | "double")
         && !(query.intensity_min.is_some() && query.intensity_max.is_some())
     {
         return Err(ApiError::bad_request(
-            "For float and double data, a supplied intensity range is required.",
+            crate::msg::segment_anything::INTENSITY_RANGE_REQUIRED,
         ));
     }
     let payload = mask_request(
@@ -242,7 +242,7 @@ async fn segment_anything_mask(
         .await
         .map_err(|error| {
             tracing::warn!(%error, "SAM mask request failed");
-            ApiError::bad_request("Could not get image mask from SAM server.")
+            ApiError::bad_request(crate::msg::segment_anything::GET_MASK_FAILED)
         })?;
     Ok((
         [(

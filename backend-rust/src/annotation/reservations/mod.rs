@@ -158,12 +158,12 @@ async fn reserved_ids(
     Path(id): Path<String>,
     Query(query): Query<ReservedIdsQuery>,
 ) -> ApiResult<Json<Vec<i64>>> {
-    let tracing_id = query
-        .tracing_id
-        .ok_or_else(|| ApiError::bad_request("Missing parameter: tracingId"))?;
+    let tracing_id = query.tracing_id.ok_or_else(|| {
+        ApiError::bad_request(crate::msg::request::missing_parameter("tracingId"))
+    })?;
     let domain = query
         .domain
-        .ok_or_else(|| ApiError::bad_request("Missing parameter: domain"))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter("domain")))?;
     let id = ObjectId::parse_path(&id)?;
     authorize(&provider, &user, &id, Permission::Access).await?;
     // AnnotationIdDomain.fromString(domain).toFox: Empty -> 404 Msg.notFound.

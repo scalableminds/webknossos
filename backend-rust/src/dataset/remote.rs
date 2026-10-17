@@ -87,7 +87,7 @@ async fn health(
         .await?;
     if result.get("position").is_none_or(Value::is_null) {
         return Err(ApiError::bad_request(
-            "Could not load data for the requested dataset.",
+            crate::msg::dataset::LOADING_DATA_FAILED,
         ));
     }
     Ok("Ok")
@@ -135,7 +135,7 @@ async fn used_storage_details(
 ) -> ApiResult<Json<Vec<Value>>> {
     require_read(&state, Some(&user), &id, None).await?;
     if !crate::dataset::access::can_edit(&state.pool, &user, id.as_str()).await? {
-        return Err(ApiError::forbidden("Not allowed."));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
     }
     let usable: bool = sqlx::query_scalar("SELECT isUsable FROM webknossos.datasets_ WHERE _id=$1")
         .bind(id.as_str())

@@ -73,13 +73,11 @@ async fn create(
     RequestJson(body): RequestJson<TeamParameters>,
 ) -> ApiResult<Json<Value>> {
     if !user.is_admin {
-        return Err(ApiError::forbidden(
-            "You do not have permission to create teams. Please ask an organization admin.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::team::CREATE_ONLY_ADMIN));
     }
     // Teams have only the database's character constraint, not the script length constraint.
     if body.name.is_empty() || !body.name.chars().all(valid_name_character) {
-        return Err(ApiError::bad_request("Invalid team name."));
+        return Err(ApiError::bad_request(crate::msg::team::INVALID_NAME));
     }
     let id = ObjectId::new().to_string();
     let inserted =
@@ -104,7 +102,7 @@ async fn create(
     Ok(Json(json!({
         "id": id, "name": body.name, "organization": user.organization_id,
         "isOrganizationTeam": false,
-        "messages": [{"success": "Team was successfully created."}]
+        "messages": [{"success": crate::msg::team::CREATE_SUCCESS}]
     })))
 }
 
@@ -115,9 +113,7 @@ async fn remove(
 ) -> ApiResult<Json<Value>> {
     let id = ObjectId::parse_path(&id)?.to_string();
     if !user.is_admin {
-        return Err(ApiError::forbidden(
-            "You do not have permission to delete teams. Please ask an organization admin.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::team::DELETE_ONLY_ADMIN));
     }
     let mut transaction = state.pool.begin().await?;
     // READ COMMITTED intentionally refreshes the reference-check snapshot after
@@ -135,7 +131,7 @@ async fn remove(
     };
     if is_organization_team {
         return Err(ApiError::forbidden(
-            "This team cannot be deleted. Each organization requires at least one base team.",
+            crate::msg::team::DELETE_ORGANIZATION_TEAM,
         ));
     }
     let referenced: bool = sqlx::query_scalar(
@@ -146,9 +142,7 @@ async fn remove(
     .fetch_one(&mut *transaction)
     .await?;
     if referenced {
-        return Err(ApiError::forbidden(
-            "Team cannot be deleted as it is referenced by at least one annotation, project or task type.",
-        ));
+        return Err(ApiError::forbidden(crate::msg::team::DELETE_IN_USE));
     }
     sqlx::query("UPDATE webknossos.teams SET isDeleted = TRUE, name = name || $2 WHERE _id = $1")
         .bind(&id)
@@ -172,7 +166,7 @@ async fn remove(
     }
     transaction.commit().await?;
     Ok(Json(
-        json!({"messages": [{"success": "Team was successfully deleted."}]}),
+        json!({"messages": [{"success": crate::msg::team::DELETE_SUCCESS}]}),
     ))
 }
 

@@ -357,14 +357,14 @@ struct GroupedEvents {
 fn parse_events(values: Vec<Value>) -> ApiResult<GroupedEvents> {
     fn event<T: serde::de::DeserializeOwned>(value: Value) -> ApiResult<T> {
         serde_json::from_value(value)
-            .map_err(|_| ApiError::bad_request("Invalid voxelytics workflow event."))
+            .map_err(|_| ApiError::bad_request(crate::msg::voxelytics::INVALID_WORKFLOW_EVENT))
     }
     let mut grouped = GroupedEvents::default();
     for value in values {
         let kind = value
             .get("type")
             .and_then(Value::as_str)
-            .ok_or_else(|| ApiError::bad_request("Invalid voxelytics workflow event."))?
+            .ok_or_else(|| ApiError::bad_request(crate::msg::voxelytics::INVALID_WORKFLOW_EVENT))?
             .to_owned();
         match kind.as_str() {
             "RUN_STATE_CHANGE" => grouped.run_states.push(event(value)?),
@@ -374,7 +374,9 @@ fn parse_events(values: Vec<Value>) -> ApiResult<GroupedEvents> {
             "CHUNK_PROFILING" => grouped.profiling.push(event(value)?),
             "ARTIFACT_FILE_CHECKSUM" => grouped.checksums.push(event(value)?),
             _ => {
-                return Err(ApiError::bad_request("Invalid voxelytics workflow event."));
+                return Err(ApiError::bad_request(
+                    crate::msg::voxelytics::INVALID_WORKFLOW_EVENT,
+                ));
             }
         }
     }
@@ -772,7 +774,7 @@ async fn store_workflow_events(
 ) -> ApiResult<Response> {
     let run_name = query
         .run_name
-        .ok_or_else(|| ApiError::bad_request("Missing parameter: runName"))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter("runName")))?;
     let events = parse_events(parse_body(&body)?)?;
     ensure_enabled(&misc)?;
     let run_id =
@@ -938,7 +940,7 @@ fn required_task_name(query: &StatisticsQuery) -> ApiResult<&str> {
     query
         .task_name
         .as_deref()
-        .ok_or_else(|| ApiError::bad_request("Missing parameter: taskName"))
+        .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter("taskName")))
 }
 
 fn statistics_json(entry: &dao::StatisticsEntry) -> Value {
@@ -1087,7 +1089,7 @@ async fn get_logs(
             value
                 .parse::<i32>()
                 .map(i64::from)
-                .map_err(|_| ApiError::bad_request("Invalid parameter: limit"))
+                .map_err(|_| ApiError::bad_request(crate::msg::request::invalid_parameter("limit")))
         })
         .transpose()?;
     ensure_enabled(&misc)?;

@@ -138,12 +138,12 @@ async fn job_export_properties(
     .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let run_id = job
         .latest_run_id
-        .ok_or_else(|| ApiError::bad_request("Job has not run yet."))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_RUN))?;
     let file = job
         .args
         .get("export_file_name")
         .and_then(Value::as_str)
-        .ok_or_else(|| ApiError::bad_request("Job does not have an export file name."))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::job::NO_EXPORT_FILE_NAME))?;
     Ok(ResponseJson(
         json!({"jobId": job.id, "runId": run_id, "organizationId": organization, "exportFileName": file}),
     ))

@@ -40,7 +40,7 @@ struct SessionQuery {
 fn session(query: SessionQuery) -> ApiResult<String> {
     query
         .session_id
-        .ok_or_else(|| ApiError::bad_request("Missing parameter: sessionId"))
+        .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter("sessionId")))
 }
 
 fn acquisition_gate(
@@ -102,7 +102,7 @@ async fn acquire(
     let micros = i64::try_from(expiry.as_micros())
         .ok()
         .filter(|value| *value > 0)
-        .ok_or_else(|| ApiError::bad_request("Invalid annotation mutex expiry."))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::mutex::INVALID_EXPIRY))?;
 
     let mut transaction = state
         .pool

@@ -156,7 +156,7 @@ async fn explore(
     }
     if names.len() != 1 {
         return Err(ApiError::bad_request(
-            "All layers must be on the same data store for exploration.",
+            crate::msg::dataset::explore::DATA_STORE_MUST_BE_EQUAL_FOR_ALL,
         ));
     }
     let url: Option<String> = sqlx::query_scalar(
@@ -244,8 +244,7 @@ async fn get_or_create_folder(
     user: &AuthUser,
     literal: &str,
 ) -> ApiResult<String> {
-    let failed =
-        || ApiError::bad_request("Could not get or create folder during dataset exploration.");
+    let failed = || ApiError::bad_request(crate::msg::dataset::explore::AUTO_ADD_GET_FOLDER_FAILED);
     let root: String =
         sqlx::query_scalar("SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1")
             .bind(&user.organization_id)
@@ -355,7 +354,7 @@ async fn explore_and_add_remote(
     let source = explored
         .get("dataSource")
         .filter(|s| !s.is_null())
-        .ok_or_else(|| ApiError::bad_request("Could not explore remote dataset."))?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::explore::FAILED))?;
     let source = UsableDataSource::from_json(source)
         .map_err(|_| ApiError::from(ServiceError::InvalidJson))?;
     if source.data_layers.is_empty() {
@@ -392,7 +391,7 @@ async fn explore_and_add_remote(
         if error.status.is_server_error() {
             error
         } else {
-            ApiError::bad_request("Could not automatically import the explored dataset.")
+            ApiError::bad_request(crate::msg::dataset::explore::AUTO_ADD_FAILED)
         }
     })?;
     transaction.commit().await?;
@@ -539,7 +538,7 @@ async fn duplicate_to_orga(
         .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     if !record.is_virtual {
         return Err(ApiError::bad_request(
-            "duplicateToOrga is only possible for virtual datasets",
+            crate::msg::dataset::DUPLICATE_ONLY_VIRTUAL,
         ));
     }
     let organization_exists: bool = sqlx::query_scalar(

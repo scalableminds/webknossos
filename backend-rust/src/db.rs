@@ -62,7 +62,7 @@ pub async fn ready(pool: &PgPool) -> ApiResult<()> {
         .execute(pool)
         .await
         .map_err(|_| ApiError::service_unavailable(crate::msg::request::DATABASE_UNAVAILABLE))?;
-    check_schema(pool)
-        .await
-        .map_err(|_| ApiError::service_unavailable("Database schema unavailable or incompatible."))
+    check_schema(pool).await.map_err(|_| {
+        ApiError::service_unavailable(crate::msg::request::DATABASE_SCHEMA_INCOMPATIBLE)
+    })
 }

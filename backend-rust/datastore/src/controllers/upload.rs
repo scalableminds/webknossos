@@ -423,12 +423,23 @@ pub(super) async fn unfinished_uploads(
     Ok(Json(
         enriched
             .into_iter()
-            .map(|mut upload| {
-                // Scala `withoutDataSourceId`.
-                if let Value::Object(map) = &mut upload {
-                    map.shift_remove("dataSourceId");
-                }
-                upload
+            .map(|upload| {
+                // Scala `withoutDataSourceId`: the `UnfinishedUploadWithoutDataSourceId` fields in
+                // declaration order (Play drops everything else WK sent).
+                let fields = [
+                    "uploadId",
+                    "datasetName",
+                    "folderId",
+                    "created",
+                    "filePaths",
+                    "allowedTeams",
+                ];
+                Value::Object(
+                    fields
+                        .into_iter()
+                        .filter_map(|key| Some((key.to_owned(), upload.get(key)?.clone())))
+                        .collect(),
+                )
             })
             .collect(),
     ))

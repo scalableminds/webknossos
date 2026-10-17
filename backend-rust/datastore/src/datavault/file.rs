@@ -60,11 +60,10 @@ fn read_at(path: &Path, position: u64, length: u64) -> VaultResult<Vec<u8>> {
 }
 
 fn read_local(path: &Path, range: ByteRange) -> VaultResult<RawRead> {
-    // Scala `Files.exists` (follows symlinks; directories exist too).
-    let metadata = match std::fs::metadata(path) {
-        Ok(metadata) => metadata,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(VaultError::NotFound),
-        Err(e) => return Err(io_failure(e)),
+    // Scala `Files.exists` (follows symlinks; directories exist too). It answers false whenever
+    // the stat fails (ENOENT, but also ENOTDIR below a file, EACCES, ELOOP), so all are absent.
+    let Ok(metadata) = std::fs::metadata(path) else {
+        return Err(VaultError::NotFound);
     };
     let file_size = metadata.len();
     let (bytes, content_range) = match range {

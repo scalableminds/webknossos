@@ -84,17 +84,18 @@ async fn unsupported_api_versions_answer_scala_404() {
 #[tokio::test]
 async fn legacy_override_binders_and_missing_newer_chunk_routes_are_preserved() {
     let port = closed_port().await;
-    let (status, _, body) = get(
+    let (status, headers, body) = get(
         router(state_with_redis_port(port)),
         "/data/v14/zarr/abc/datasource-properties.json",
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+    // Route binder failures render Play's HTML error page (tests/binding_errors.rs).
+    assert_eq!(headers["content-type"], "text/html; charset=UTF-8");
     assert!(
-        json(&body)["messages"][0]["error"]
-            .as_str()
+        String::from_utf8(body)
             .unwrap()
-            .contains("Cannot parse URI path parameter datasetId")
+            .contains("Cannot parse URI path parameter datasetId with value “abc” as ObjectId.")
     );
     for version in 14..=16 {
         let (status, _, _) = get(

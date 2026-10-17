@@ -37,6 +37,15 @@ fn io_failure(e: impl std::fmt::Display) -> DsError {
     DsError::failure(e.to_string())
 }
 
+/// Commons IO `copyDirectory` with a missing source (`requireDirectoryExists`).
+fn missing_directory(dir: &Path) -> DsError {
+    let message = format!("Directory '{}' does not exist.", dir.display());
+    DsError {
+        exception: Some(format!("java.io.FileNotFoundException: {message}")),
+        ..DsError::failure(message)
+    }
+}
+
 /// Files below `dir` up to `max_depth` (Java `Files.walk(dir, maxDepth, FOLLOW_LINKS)` minus the
 /// root, regular files only), sorted for determinism.
 pub fn list_files_recursive(dir: &Path, max_depth: usize) -> DsResult<Vec<PathBuf>> {
@@ -802,7 +811,14 @@ impl FinishContext<'_> {
                 .join(format!("uploadBackup__{upload_id}"));
             let dir = upload_dir.clone();
             tracing::info!("finishUpload for {dataset_id}: Backing up raw uploaded data...");
-            blocking(move || copy_directory(&dir, &backup).map_err(io_failure)).await?;
+            blocking(move || {
+                if !dir.exists() {
+                    // No chunk arrived yet. Commons IO fails before creating the backup directory.
+                    return Err(missing_directory(&dir));
+                }
+                copy_directory(&dir, &backup).map_err(io_failure)
+            })
+            .await?;
         }
         self.check_within_requested_file_size(&upload_dir, upload_id, dataset_id, domain)
             .await

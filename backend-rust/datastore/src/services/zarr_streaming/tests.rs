@@ -62,5 +62,17 @@ fn directory_listing_escapes_entries() {
     let html = directory_html("Datastore", "id/<x>", &[".zgroup".into(), "a&b".into()]);
     assert!(html.contains("WEBKNOSSOS Datastore “id/&lt;x&gt;” folder."));
     assert!(html.contains("<li><a href=\"a&amp;b\">a&amp;b</a></li>"));
-    assert!(html.starts_with("\n<!DOCTYPE html>"));
+    assert!(html.starts_with("<!DOCTYPE html>"));
+}
+
+#[test]
+fn directory_listing_matches_captured_scala_bytes() {
+    // GET /data/zarr3/<id>/color/1 from the Scala datastore (live differential run 2026-10-17).
+    let scala = include_str!("../../../tests/fixtures/zarr_listing/scala_zarr3_mag_dir.html");
+    let html = directory_html(
+        "Datastore",
+        "000000000000000000000004/color/1",
+        &["zarr.json".into()],
+    );
+    assert_eq!(html, scala);
 }

@@ -418,8 +418,9 @@ async fn cancels_uploads_and_lists_unfinished() {
     .await;
     upload_chunk(&f.app, "dataset", "up1/a/b.bin", 1, 4, b"1234").await;
 
-    // Scala stores the upload id JSON-encoded but reads it raw, so enrichment never finds the
-    // file paths and the list stays empty (kept for parity).
+    // The reserved upload is enriched with its upload id and file paths (the reverse lookup value
+    // is JSON-encoded and parsed); WK entries without Redis metadata ("gone") are dropped. Fields
+    // and order of Scala `UnfinishedUploadWithoutDataSourceId`.
     for path in [
         "/data/datasets/upload/dataset/unfinishedUploads?organizationName=org",
         "/data/v10/datasets/unfinishedUploads?organizationName=org",
@@ -429,7 +430,11 @@ async fn cancels_uploads_and_lists_unfinished() {
     ] {
         let (status, body) = request(&f.app, "GET", path).await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(serde_json::from_slice::<Value>(&body).unwrap(), json!([]));
+        assert_eq!(
+            String::from_utf8(body).unwrap(),
+            r#"[{"uploadId":"up1","datasetName":"x","folderId":"f","created":1,"filePaths":["a/b.bin"],"allowedTeams":[]}]"#,
+            "{path}"
+        );
     }
     let (status, _) = request(
         &f.app,

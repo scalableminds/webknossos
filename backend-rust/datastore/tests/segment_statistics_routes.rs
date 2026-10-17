@@ -637,7 +637,8 @@ async fn surface_statistics_file_precedes_mesh_lookup_and_does_not_remap() {
     let body = json!({"mag":[2,2,2],"segmentIds":[2,1,3],"meshFileName":"not-present","annotationVersion":99});
     let (status, value) = call_token(&app, "surfaceArea", Some(body), "t").await;
     assert_eq!(status, StatusCode::OK, "{value}");
-    assert_eq!(value, json!([12., 4., 0.]));
+    // Play writes whole floats without `.0` (Scala `Seq[Float]`, differential 2026-10-17).
+    assert_eq!(value, json!([12, 4, 0]));
     let (status, value) = call_token(
         &app,
         "surfaceArea",

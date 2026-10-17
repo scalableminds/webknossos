@@ -131,52 +131,96 @@ impl RedisStore {
 
     /// One command; reconnects lazily and drops the connection after IO errors.
     pub async fn command(&self, args: &[&[u8]]) -> DsResult<Reply> {
+        self.command_with_timeout(
+            args,
+            COMMAND_TIMEOUT,
+            "io.lettuce.core.RedisCommandTimeoutException: Command timed out after 1 minute(s)",
+        )
+        .await
+    }
+
+    /// Scala `checkHealth`: `PING` on the shared connection must answer `PONG` within one second.
+    /// (A connection per check would leave a TIME_WAIT socket per health request.)
+    pub async fn ping(&self) -> DsResult<()> {
+        let reply = self
+            .command_with_timeout(
+                &[b"PING"],
+                CONNECTION_TIMEOUT,
+                "java.util.concurrent.TimeoutException: Redis PING timed out after 1 second",
+            )
+            .await?;
+        let unexpected = match reply {
+            Reply::Simple(pong) if pong == "PONG" => return Ok(()),
+            Reply::Simple(other) => other,
+            other => format!("{other:?}"),
+        };
+        Err(
+            DsError::failure(format!("Unexpected Redis ping reply: {unexpected}"))
+                .wrap("Redis access failure"),
+        )
+    }
+
+    /// The timeout covers the exchange only; it fires inside the lock so a timed-out command
+    /// drops the connection instead of leaving its reply for the next command.
+    async fn command_with_timeout(
+        &self,
+        args: &[&[u8]],
+        timeout: Duration,
+        timeout_exception: &str,
+    ) -> DsResult<Reply> {
         let mut guard = self.connection.lock().await;
-        if guard.is_none() {
-            let connect = TcpStream::connect((self.address.as_str(), self.port));
-            let stream = match tokio::time::timeout(CONNECTION_TIMEOUT, connect).await {
-                Ok(Ok(stream)) => stream,
+        let request = encode(args);
+        // A kept connection may have been closed by Redis (restart, idle timeout) since its last
+        // use; like Lettuce's reconnect, an IO error on it is retried once on a fresh connection.
+        let mut attempts_left = if guard.is_some() { 2 } else { 1 };
+        loop {
+            attempts_left -= 1;
+            if guard.is_none() {
+                *guard = Some(BufStream::new(self.connect().await?));
+            }
+            let stream = guard.as_mut().expect("connected above");
+            let exchange = async {
+                stream.write_all(&request).await?;
+                stream.flush().await?;
+                read_reply(stream).await
+            };
+            let result = tokio::time::timeout(timeout, exchange).await;
+            let error = match result {
+                Ok(Ok(Reply::Error(message))) => {
+                    return Err(DsError::from_exception(format!(
+                        "io.lettuce.core.RedisCommandExecutionException: {message}"
+                    ))
+                    .wrap("Redis access failure"));
+                }
+                Ok(Ok(reply)) => return Ok(reply),
                 Ok(Err(e)) => {
-                    let message = format!("Redis access exception on {}: {e}", self.authority);
-                    tracing::error!("{message}");
-                    return Err(DsError::failure(message));
+                    *guard = None;
+                    if attempts_left > 0 {
+                        continue;
+                    }
+                    DsError::from_exception(format!("java.io.IOException: {e}"))
                 }
                 Err(_) => {
-                    let message = format!(
-                        "Redis access exception on {}: connection timed out after 1 second",
-                        self.authority
-                    );
-                    tracing::error!("{message}");
-                    return Err(DsError::failure(message));
+                    *guard = None;
+                    DsError::from_exception(timeout_exception)
                 }
             };
-            *guard = Some(BufStream::new(stream));
+            return Err(error.wrap("Redis access failure"));
         }
-        let stream = guard.as_mut().expect("connected above");
-        let request = encode(args);
-        let exchange = async {
-            stream.write_all(&request).await?;
-            stream.flush().await?;
-            read_reply(stream).await
+    }
+
+    async fn connect(&self) -> DsResult<TcpStream> {
+        let connect = TcpStream::connect((self.address.as_str(), self.port));
+        let message = match tokio::time::timeout(CONNECTION_TIMEOUT, connect).await {
+            Ok(Ok(stream)) => return Ok(stream),
+            Ok(Err(e)) => format!("Redis access exception on {}: {e}", self.authority),
+            Err(_) => format!(
+                "Redis access exception on {}: connection timed out after 1 second",
+                self.authority
+            ),
         };
-        let result = match tokio::time::timeout(COMMAND_TIMEOUT, exchange).await {
-            Ok(Ok(reply)) => Ok(reply),
-            Ok(Err(e)) => Err(DsError::from_exception(format!("java.io.IOException: {e}"))),
-            Err(_) => Err(DsError::from_exception(
-                "io.lettuce.core.RedisCommandTimeoutException: Command timed out after 1 minute(s)",
-            )),
-        };
-        match result {
-            Ok(Reply::Error(message)) => Err(DsError::from_exception(format!(
-                "io.lettuce.core.RedisCommandExecutionException: {message}"
-            ))
-            .wrap("Redis access failure")),
-            Ok(reply) => Ok(reply),
-            Err(e) => {
-                *guard = None;
-                Err(e.wrap("Redis access failure"))
-            }
-        }
+        tracing::error!("{message}");
+        Err(DsError::failure(message))
     }
 
     fn unexpected(reply: &Reply) -> DsError {

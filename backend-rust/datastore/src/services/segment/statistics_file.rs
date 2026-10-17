@@ -83,10 +83,9 @@ impl StatisticsFileService {
             .as_ref()
             .and_then(|a| a.segment_statistics.clone())
             .ok_or_else(|| {
-                DsError::failure(
-                    "Could not find a registered segment statistics file for this layer.",
-                )
-                .with_status(axum::http::StatusCode::NOT_FOUND)
+                // Scala `Box.fromOption(..) ?-> Msg.SegmentStatisticsFile.notFound`: `?->` only
+                // annotates Failures and passes Empty through, so the answer is the generic 404.
+                DsError::empty()
             })?;
         if !attachment.path.is_absolute() {
             return Err(DsError::failure(

@@ -322,12 +322,14 @@ async fn errors_default_to_not_found() {
     }
 
     // Play's route binder rejects non-ObjectId ids before the controller default applies.
-    let (status, _, body) = get(&app, "/data/zarr/not-an-id/.zgroup").await;
+    // (Play's HTML error page, see tests/binding_errors.rs.)
+    let (status, headers, body) = get(&app, "/data/zarr/not-an-id/.zgroup").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
-    let body: Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(
-        body["messages"][0]["error"],
-        "Cannot parse URI path parameter datasetId with value “not-an-id” as ObjectId."
+    assert_eq!(headers["content-type"], "text/html; charset=UTF-8");
+    assert!(
+        String::from_utf8(body).unwrap().contains(
+            "Cannot parse URI path parameter datasetId with value “not-an-id” as ObjectId."
+        )
     );
 
     // Raw cubes of a missing layer: 503 (Scala `~> SERVICE_UNAVAILABLE`).

@@ -133,3 +133,53 @@ async fn request_timeout_answers_like_pekko() {
         "The server was not able to produce a timely response to your request.\r\nPlease try again in a short while!"
     );
 }
+
+/// Redis that answers PINGs on each connection until it closes; counts accepted connections.
+async fn counting_redis(
+    pings_per_connection: usize,
+) -> (u16, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let accepted = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let counter = accepted.clone();
+    tokio::spawn(async move {
+        while let Ok((mut socket, _)) = listener.accept().await {
+            counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            tokio::spawn(async move {
+                for _ in 0..pings_per_connection {
+                    let mut buffer = [0u8; 14];
+                    if socket.read_exact(&mut buffer).await.is_err() {
+                        return;
+                    }
+                    let _ = socket.write_all(b"+PONG\r\n").await;
+                }
+            });
+        }
+    });
+    (port, accepted)
+}
+
+#[tokio::test]
+async fn health_reuses_one_redis_connection() {
+    // A connection per check left one TIME_WAIT socket per request and exhausted ephemeral ports
+    // under load (differential load phase 2026-10-17); Scala keeps one Lettuce connection.
+    let (port, accepted) = counting_redis(usize::MAX).await;
+    let app = router(state_with_redis_port(port));
+    for _ in 0..3 {
+        let (status, _, body) = get(app.clone(), "/data/health").await;
+        assert_eq!((status, body.as_slice()), (StatusCode::OK, &b"Ok"[..]));
+    }
+    assert_eq!(accepted.load(std::sync::atomic::Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn health_reconnects_after_redis_closed_the_connection() {
+    let (port, accepted) = counting_redis(1).await;
+    let app = router(state_with_redis_port(port));
+    for _ in 0..3 {
+        let (status, _, body) = get(app.clone(), "/data/health").await;
+        assert_eq!((status, body.as_slice()), (StatusCode::OK, &b"Ok"[..]));
+    }
+    assert_eq!(accepted.load(std::sync::atomic::Ordering::SeqCst), 3);
+}

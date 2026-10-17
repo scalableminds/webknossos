@@ -152,6 +152,112 @@ class ReplayTests(unittest.TestCase):
             with self.assertRaises(r.InvalidCorpus):
                 r.base_url(value)
 
+    def test_binary_body_and_range_header(self):
+        agglomerates = '/data/datasets/id/layers/seg/agglomerates/agg/agglomeratesForSegments'
+        case = r.prepare({'version': 1, 'cases': [{'name': 'proto', 'path': agglomerates, 'method': 'POST',
+                                                   'body_hex': '0a020102'}]}, {})[0]
+        self.assertEqual((case['body'], case['headers']['Content-Type']), (b'\x0a\x02\x01\x02', 'application/octet-stream'))
+        proxy = '/data/datasets/id/proxy/layers/color/mags/1-1-1/0.0.0'
+        case = r.prepare({'version': 1, 'cases': [{'name': 'range', 'path': proxy, 'headers': {'Range': 'bytes=0-15'}}]}, {})[0]
+        self.assertEqual(case['headers']['Range'], 'bytes=0-15')
+        for bad in ({'path': agglomerates, 'body_hex': '0a'}, {'path': agglomerates, 'method': 'POST', 'body_hex': 'zz'},
+                    {'path': agglomerates, 'method': 'POST', 'body_hex': '0a', 'json': []},
+                    {'path': proxy, 'headers': {'Range': 'bytes=0-1\r\nX: y'}}, {'path': proxy, 'headers': {'Cookie': 'a'}}):
+            with self.subTest(case=bad), self.assertRaises(r.InvalidCorpus):
+                r.prepare({'version': 1, 'cases': [dict(name='bad', **bad)]}, {})
+
+    def test_declared_divergence_needs_oracles_and_never_hides_other_differences(self):
+        a, b = b'\x10\x20', b'\x11\x20'
+        sha = lambda x: hashlib.sha256(x).hexdigest()
+        declared = {'reason': 'documented', 'differences': ['body']}
+        with self.assertRaises(r.InvalidCorpus):  # no oracle per side
+            r.prepare(document(compare='bytes', declared_divergence=declared), {})
+        with self.assertRaises(r.InvalidCorpus):  # empty reason
+            r.prepare(document(compare='bytes', declared_divergence=dict(declared, reason=' '),
+                               expected_sha256={'scala': sha(a), 'rust': sha(b)}), {})
+        cases = r.prepare(document(compare='bytes', declared_divergence=declared,
+                                   expected_sha256={'scala': sha(a), 'rust': sha(b)}), {})
+        octet = {'Content-Type': 'application/octet-stream'}
+        with server(body=a, headers=octet) as (left, _), server(body=b, headers=octet) as (right, _):
+            result = r.replay(left, right, cases, 1)
+        self.assertTrue(result['passed'])
+        self.assertEqual(result['results'][0]['declared_differences'], ['body'])
+        with server(body=a, headers=octet) as (left, _), server(body=b, headers={'Content-Type': 'text/plain'}) as (right, _):
+            result = r.replay(left, right, cases, 1)
+        self.assertEqual(result['results'][0]['differences'], ['header:content-type'])
+        with server(body=a, headers=octet) as (left, _), server(body=a, headers=octet) as (right, _):
+            result = r.replay(left, right, cases, 1)
+        self.assertIn('declared_divergence_resolved', result['results'][0]['differences'])
+
+    def test_declared_byte_delta_and_unverified(self):
+        a = b'\x10\x20'
+        sha = lambda x: hashlib.sha256(x).hexdigest()
+        bounded = {'reason': 'rounding', 'differences': ['body'], 'max_byte_delta': 1}
+        cases = r.prepare(document(compare='bytes', declared_divergence=bounded, expected_sha256={'scala': sha(a)}), {})
+        octet = {'Content-Type': 'application/octet-stream'}
+        for other, ok in ((b'\x11\x1f', True), (b'\x12\x20', False), (b'\x10', False)):
+            with server(body=a, headers=octet) as (left, _), server(body=other, headers=octet) as (right, _):
+                self.assertEqual(r.replay(left, right, cases, 1)['passed'], ok, other)
+        with self.assertRaises(r.InvalidCorpus):  # a bound needs a bytes comparison
+            r.prepare(document(declared_divergence=bounded, expected_sha256={'scala': sha(a)}), {})
+        unverified = {'reason': 'cache dependent', 'differences': ['body'], 'unverified': True}
+        cases = r.prepare(document(compare='bytes', declared_divergence=unverified), {})
+        with server(body=a, headers=octet) as (left, _), server(body=b'\x00', headers=octet) as (right, _):
+            result = r.replay(left, right, cases, 1)
+        self.assertTrue(result['passed'])
+        self.assertTrue(result['results'][0]['declared_unverified'])
+
+    def test_error_chain_server_time_is_ignored_but_nothing_else(self):
+        chain = lambda t, m='x': json.dumps({'messages': [{'error': m}, {'chain': f'[Server Time {t}] cause'}]}).encode()
+        cases = r.prepare(document(), {})
+        with server(body=chain('2026-10-17T08:36:48.304Z')) as (a, _), server(body=chain('2026-10-17T08:36:49.011Z')) as (b, _):
+            self.assertTrue(r.replay(a, b, cases, 1)['passed'])
+        with server(body=chain('2026-10-17T08:36:48.304Z')) as (a, _), server(body=chain('2026-10-17T08:36:48.304Z', 'y')) as (b, _):
+            self.assertEqual(r.replay(a, b, cases, 1)['results'][0]['differences'], ['body'])
+
+    def test_json_set_order_and_image_json_fallback(self):
+        cases = r.prepare(document(compare='json-set'), {})
+        with server(body=b'["a","b"]') as (a, _), server(body=b'["b","a"]') as (b, _):
+            self.assertTrue(r.replay(a, b, cases, 1)['passed'])
+        for other in (b'["a"]', b'["a","a","b"]', b'{"a":1}'):
+            with server(body=b'["a","b"]') as (a, _), server(body=other) as (b, _):
+                self.assertEqual(r.replay(a, b, cases, 1)['results'][0]['differences'], ['body'], other)
+        # Image cases answered with JSON errors on both sides compare as JSON (server time ignored).
+        cases = r.prepare(document(compare='image'), {})
+        chain = lambda t: json.dumps({'messages': [{'error': 'x'}, {'chain': f'[Server Time {t}] y'}]}).encode()
+        with server(body=chain('2026-10-17T08:36:48.304Z')) as (a, _), server(body=chain('2026-10-17T08:36:49Z')) as (b, _):
+            self.assertTrue(r.replay(a, b, cases, 1)['passed'])
+        with server(body=b'not an image', headers={'Content-Type': 'image/jpeg'}) as (a, _), \
+                server(body=b'not an image', headers={'Content-Type': 'image/jpeg'}) as (b, _):
+            self.assertIn('invalid_image', r.replay(a, b, cases, 1)['results'][0]['differences'])
+
+    def test_stl_vertices_exact_normals_bounded(self):
+        import struct
+        def stl(normal, vertex=1.0):
+            return b'\0' * 80 + struct.pack('<I', 1) + struct.pack('<12f', *normal, vertex, 0, 0, 0, 1, 0, 0, 0, 1) + b'\0\0'
+        octet = {'Content-Type': 'application/octet-stream'}
+        cases = r.prepare(document(compare='stl'), {})
+        for right, expected in ((stl((0, 0, 1.0)), []), (stl((0, 1.2e-7, 1.0)), []), (stl((0, 1e-3, 1.0)), ['stl-normals']),
+                                (stl((0, 0, 1.0), vertex=1.0000001), ['body']), (stl((0, 0, 1.0))[:-1], ['body'])):
+            with server(body=stl((0, 0, 1.0)), headers=octet) as (a, _), server(body=right, headers=octet) as (b, _):
+                self.assertEqual(r.replay(a, b, cases, 1)['results'][0]['differences'], expected)
+
+    def test_error_chain_category_and_corpus_wide_declaration(self):
+        err = lambda m, c: json.dumps({'messages': [{'error': m}, {'chain': c}]}).encode()
+        plain = r.prepare(document(), {})
+        doc = document()
+        doc['declared_differences'] = {'error-chain': 'exception wording'}
+        ambient = r.prepare(doc, {})
+        with server(status=400, body=err('x', 'java text')) as (a, _), server(status=400, body=err('x', 'rust text')) as (b, _):
+            self.assertEqual(r.replay(a, b, plain, 1)['results'][0]['differences'], ['error-chain'])
+            result = r.replay(a, b, ambient, 1)
+        self.assertTrue(result['passed'])
+        self.assertEqual(result['results'][0]['declared_differences'], ['error-chain'])
+        with server(status=400, body=err('x', 'c')) as (a, _), server(status=400, body=err('y', 'c')) as (b, _):
+            self.assertEqual(r.replay(a, b, ambient, 1)['results'][0]['differences'], ['body'])
+        with self.assertRaises(r.InvalidCorpus):
+            r.prepare(dict(doc, declared_differences={'error-chain': ''}), {})
+
     def test_checked_in_corpora_validate(self):
         directory = Path(__file__).with_name('datastore_replay')
         with patch.dict(os.environ, WK_REPLAY_TOKEN='fixture-token', WK_REPLAY_DENIED_TOKEN='denied-token'):

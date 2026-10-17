@@ -259,12 +259,15 @@ async fn rejects_bad_paths_mags_and_missing_files() {
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(error(&body), "Data layer “seg” does not have mag “2-2-2”.");
 
-    let (status, _, body) = get(&app, &format!("{base}/1-1-1/missing"), "good", None).await;
-    assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(
-        error(&body),
-        "Could not find or access the requested resource."
-    );
+    // A path below a regular file (ENOTDIR) is absent too: Scala `Files.exists` is false.
+    for path in ["1-1-1/missing", "1-1-1/0-1_0-1_0-1/below"] {
+        let (status, _, body) = get(&app, &format!("{base}/{path}"), "good", None).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{path}");
+        assert_eq!(
+            error(&body),
+            "Could not find or access the requested resource."
+        );
+    }
 
     let (status, _, body) = get(
         &app,
@@ -311,8 +314,9 @@ async fn serves_adapted_precomputed_info() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         body_json(&body),
+        // Play renders whole doubles without `.0` (actual Scala response, differential 2026-10-17).
         json!({"type":"image","data_type":"uint8","num_channels":1,"scales":[{
-            "key":"1","size":[8,8,8],"resolution":[4.0,4.0,40.0],"chunk_sizes":[[8,8,8]],
+            "key":"1","size":[8,8,8],"resolution":[4,4,40],"chunk_sizes":[[8,8,8]],
             "encoding":"raw","sharding":{"@type":"neuroglancer_uint64_sharded_v1",
             "preshift_bits":0,"hash":"identity","minishard_bits":0,"shard_bits":0,
             "minishard_index_encoding":"raw","data_encoding":"raw"}}]})

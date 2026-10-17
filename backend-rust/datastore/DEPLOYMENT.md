@@ -66,14 +66,44 @@ wait "$DS_PID"
 
 The binary path assumes no `CARGO_TARGET_DIR` override. Probe a concrete loopback/host address when binding `0.0.0.0` or IPv6. An HTTP health success is only a dependency smoke test. Rehearse SIGTERM during a long read/upload and confirm completion or bounded cancellation; align service-manager termination grace with `WK_DS_SHUTDOWN_TIMEOUT` plus process overhead. TLS termination, request limits, streaming/idle timeouts and query redaction belong in the reverse proxy.
 
+## Shared state and ownership during coexistence
+
+The datastore has no SQL schema. During a staged cutover Scala and Rust run side by side on the **same** registered identity, base directories and Redis, so these formats are shared contracts and must not change on one side only:
+
+| State | Owner during coexistence | Guard |
+|---|---|---|
+| Redis upload metadata: `upload___<domain>___<uploadId>___<suffix>`, per-file `…___file___<name>___chunkCount/chunkSet`, reverse lookup `…___<DataSourceId JSON>___datasourceId`, 14-day idle expiry | Scala `UploadMetadataStore.scala` is authoritative; Rust mirrors it byte for byte | `python3 tools/datastore_replay/check_shared_formats.py` (also checks the special directories); run it in CI and before every deploy |
+| Special directories under each base directory: `.uploading`, `.unpacked`, `.forConversion`, `.converting`, `.trash`, `.mirror` | Scala | same script |
+| `datasource-properties.json` written by disk PUT, upload finish and mirrors | Scala JSON shape; Rust uses Play key order and number rendering (`play_f64`, `play_f32`) | differential corpus (`run_live_replay.py --breadth`) compares served datasources |
+| WK ↔ datastore RPC (`/api/datastores/<name>/…` on WK, `/data/…` WK-initiated calls) | the main application (Scala WK or the Rust main app); changes go into both datastores in the same release | main-app and datastore route inventories, `fixture_server.py` contract |
+| Datastore HTTP API versions v10–v16 (frontend, libraries) | Scala routes files | `tools/datastore_route_inventory.py --check`, contract corpus aliases |
+| Registration row in WK's `datastores` table (name, key, URL) | WK; both datastores report the same name, key and public URI | status ping uses `WK_DS_HTTP_URI`, must equal Scala's `http.uri` |
+
+Process for a change to any of these: change Scala and Rust in the same PR, rerun the guard and the differential, and only deploy when both are rolled out together (or the change is backwards compatible for the rollback window: new keys tolerated by the old reader, old keys still written).
+
+In-memory state is per process: dataset/datasource cache (24 h TTL, 1 h idle), chunk contents, providers, agglomerate/mesh/connectome caches, Zarr private-link resolutions. WEBKNOSSOS invalidates them through the registered URL, so the proxy must fan invalidations out (see below).
+
+## Route classes for staged traffic
+
+- **R — read-only data and metadata** (safe to split by percentage): `GET /data/health`; binary data `POST …/data`, `POST|GET …/readData|data`, knossos `bucket.raw`, thumbnails, `findData`, `histogram`, `mappings`, all Zarr2/Zarr3 streaming incl. `/data/annotations/zarr*` private links, `proxy/…`, agglomerate/mesh/connectome/segment-index/statistics reads (POST bodies select data only), `adHocMesh`, `exploreRemote`, `validatePaths`, `measureUsedStorage`, `getOneBaseDirForOrgaAbsolute`, `getOrganizationBaseDirectory`, `aiModels/effectiveVoxelSize`, exports download.
+- **I — cache invalidation and reload** (must reach both backends while both serve R): `DELETE /data/datasets/:id`, `POST /data/triggers/reload/:org/:id`, `PUT /data/datasets/:id` (writes the file, then invalidates; send the write to the writer and a `DELETE /data/datasets/:id` to the other).
+- **W — writes** (exactly one owner at a time): uploads (`/data/datasets/upload/…` reserve, chunks, finish, cancel, clean-up), `deleteOnDisk`, `deletePaths`, `writeMirrors`, `triggers/checkInboxBlocking`, `createOrganizationDirectory`, `scanRealPathsForVirtual`.
+- **B — background work** per process: status ping (always on), startup orphan clean-up of staging directories (always on, after 10 s), inbox watcher (`WK_DS_WATCH_FILE_SYSTEM_ENABLED`), Slack. Run the watcher on one backend only; the ping is idempotent when both report the same URI; the orphan clean-up reads the shared Redis, so both see the same uploads.
+
 ## Acceptance gates and staged traffic
 
-1. Record the exact Scala version, Rust revision/binary checksum, all translated nonsecret settings, dataset snapshot and Redis backup. Preserve the previous Scala launch/config and proxy target. Verify name/key, public URL, organization boundaries, whitelist and vault credential prefixes against deployed configuration.
-2. Replay representative authenticated read requests against isolated Scala/Rust instances on the same immutable data. Compare status/headers/JSON/binary payloads, current-token behavior on warm caches, reload invalidation and denial side effects. Include WKW/Zarr2/Zarr3/N5/precomputed, HDF5 attachments, mesh/connectome/segment statistics, mapping and all deployed API versions. Consult checkpointed JPEG tolerance and deliberate Scala bug fixes; approve divergences explicitly.
-3. Measure cold/warm p50/p95/p99 latency, throughput, RSS, file descriptors and CPU under representative concurrency and remote-store failures. Check missing buckets, malformed input, authorization rejection and large streaming requests. Retain logs and metric baselines; no performance threshold is implied by route coverage.
-4. In a maintenance window, stop admitting new writes/uploads to the Scala datastore and drain active work. Verify no active writers or resumable requests before switching upload ownership. Preserve Redis metadata and staging directories together; restore testing must not discard ongoing uploads. Rehearse dataset/mag/attachment reserve, chunk, finish/cancel, S3 transfer failure and retry on disposable storage first.
-5. Deploy Rust behind an internal candidate upstream. Keep one writable owner for each storage/Redis namespace. Start with read-only canary routing, then increase traffic only when error rate, authorization, payload comparisons and resource limits match agreed gates. Status callbacks and the registered public URI must remain consistent with the intended proxy address; a separate candidate identity avoids status-report races during shadow operation.
-6. Enable writes only after the isolated upload/recovery gates pass and ownership is transferred. Keep Scala available for rollback; perform post-switch health, authenticated reads, upload/download, reload, discovery and tracingstore integration checks. Capture a concrete rollback trigger and responsible operator before proceeding.
+Stage 0 — rehearsal (done for the fixture corpus, repeat with production-like data):
+1. Record the Scala version, Rust revision and binary checksum, all translated non-secret settings, dataset snapshot and Redis backup. Verify name/key, public URL, organization boundaries, whitelist and vault credential prefixes against the deployed configuration.
+2. Differential on isolated copies: `run_live_replay.py --breadth --rounds 3` must pass (declared divergences only; review `declared_cases` and the breadth `status_counts`). Add representative real datasets (all deployed formats, HDF5/Zarr attachments, remote stores) as extra corpora. `check_shared_formats.py` passes.
+3. Load: `run_live_replay.py --bench` on hardware like production; no non-200 answers, Rust throughput ≥ Scala per scenario (2026-10-17 laptop run: all scenarios ≥ Scala except readData 128³ at ~0.9×), RSS/CPU recorded. Repeat with remote-store latency and failures.
+
+Stage 1 — shadow: put a reverse proxy in front of the registered datastore URL. Keep all traffic on Scala; mirror R to Rust (responses discarded), Rust with watcher off. Gate: Rust error rate and latency over a few days of real traffic; no Rust process restarts; log review (`RUST_LOG=info`, request ids).
+
+Stage 2 — read canary: route a percentage of R to Rust (sticky per dataset is preferable so caches stay warm), I fanned out to both, W and B-watcher on Scala. Gate per step (5 % → 25 % → 100 %): error rate and p99 at or below Scala, no authorization differences in logs, no increase in frontend bucket failures (`failure-bucket-indices`). Note the declared behavior differences users can see: findData/histogram clip to the layer bounding box (pending decision), thumbnails of uint64 data, compressed-segmentation uint32 and remote ZIP bugs fixed on the Rust side.
+
+Stage 3 — writes: in a maintenance window stop admitting new uploads on Scala, wait until no upload is in progress, then route W to Rust and move the watcher to Rust. Check progress via Redis (`upload___dataset___*___datasetId` keys) and the `.uploading` staging directories. `unfinishedUploads` is reliable only once both sides carry the reverse-lookup fix (datastore-cutover.md DC1e); older Scala builds always answer `[]`. Shared Redis and staging layout mean in-progress uploads continue on either side, but never run two writers concurrently. Gate: `run_live_replay.py --uploads` passes on the release binary (answers, Redis state, files and WK calls identical for reserve/chunk/finish/cancel and the failure paths); rehearse S3 targets, failure and retry on disposable storage.
+
+Stage 4 — Scala off: keep its launch configuration and binaries for the rollback window; I no longer needs fan-out.
 
 ## Rollback
 

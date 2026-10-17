@@ -53,7 +53,7 @@ pub fn parse_dot_coordinates(
         .map(|literal| {
             literal
                 .parse::<i32>()
-                .map_err(|_| DsError::failure(format!("For input string: \"{literal}\"")))
+                .map_err(|_| DsError::number_format(literal))
         })
         .collect::<DsResult<Vec<i32>>>()?;
     let Some(&channel) = ints.first() else {
@@ -169,9 +169,11 @@ pub fn directory_html(kind: &str, name: &str, folder_contents: &[String]) -> Str
             format!("\n        <li><a href=\"{entry}\">{entry}</a></li>\n      ")
         })
         .collect();
+    // Byte-identical to the Twirl output: no leading newline, trailing spaces kept (`{sp}`, so
+    // editors cannot strip them), the removed `@* *@` comment and a blank CSS line leave their
+    // indentation (`{blank4}`, `{blank6}`).
     format!(
-        r#"
-<!DOCTYPE html>
+        r#"<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
@@ -180,14 +182,14 @@ pub fn directory_html(kind: &str, name: &str, folder_contents: &[String]) -> Str
     <script type="text/javascript">
       // forward to path with trailing slash
       if (!window.location.pathname.endsWith('/')) {{
-        var url = window.location.protocol + '//' +
-                  window.location.host +
-                  window.location.pathname + '/' +
+        var url = window.location.protocol + '//' +{sp}
+                  window.location.host +{sp}
+                  window.location.pathname + '/' +{sp}
                   window.location.search;
         window.location.replace(url);
       }}
     </script>
-
+{blank4}
     <style>
       * {{
         font-family: "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -195,7 +197,7 @@ pub fn directory_html(kind: &str, name: &str, folder_contents: &[String]) -> Str
         sans-serif;
         text-align: center
       }}
-
+{blank6}
       ul {{
         list-style: none;
       }}
@@ -214,7 +216,10 @@ pub fn directory_html(kind: &str, name: &str, folder_contents: &[String]) -> Str
     </ul>
   </body>
 </html>
-"#
+"#,
+        sp = " ",
+        blank4 = " ".repeat(4),
+        blank6 = " ".repeat(6),
     )
 }
 

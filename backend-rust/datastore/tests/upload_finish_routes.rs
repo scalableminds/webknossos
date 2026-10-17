@@ -218,6 +218,24 @@ const PROPERTIES: &str = r#"{"id":{"name":"x","team":"y"},"scale":[1,1,1],"dataL
     "mags":[{"mag":[1,1,1]}]}]}"#;
 
 #[tokio::test]
+async fn finish_before_any_chunk_fails_like_commons_io_without_backup_dir() {
+    let f = fixture().await;
+    reserve_dataset(&f, &["ds.zip"], false).await;
+    let (status, body) = finish(&f, "dataset", "up1").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    let dir = f.orga_dir.join(".uploading/dataset/up1");
+    let message = format!("Directory '{}' does not exist.", dir.display());
+    let chain = body["messages"][1]["chain"].as_str().unwrap();
+    assert!(
+        chain.ends_with(&format!(
+            "{message} java.io.FileNotFoundException: {message}"
+        )),
+        "{chain}"
+    );
+    assert!(!f.orga_dir.join(".trash").exists());
+}
+
+#[tokio::test]
 async fn finishes_zipped_explored_dataset_uploads() {
     let f = fixture().await;
     reserve_dataset(&f, &["ds.zip"], false).await;

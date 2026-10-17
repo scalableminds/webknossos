@@ -17,7 +17,7 @@ use crate::{
     models::{
         BUCKET_LENGTH, StaticLayer, UsableDataSource, Vec3Int,
         datasource::{read_unsigned_long, unsigned_long_envelope},
-        json::{Fields, JsError, JsResult, read_i64, read_list, read_string},
+        json::{Fields, JsError, JsResult, play_f32_value, read_i64, read_list, read_string},
     },
     services::segment::index::{
         SegmentIndexService, segment_ids_for_agglomerate_id_if_needed,
@@ -293,15 +293,17 @@ impl Metric {
         matches!(self, Self::Volume | Self::Covariance | Self::Center)
     }
 }
+/// Scala `Seq[Float]`-based results, written with Play's float rendering.
 fn rows_json(metric: Metric, rows: Vec<Vec<f32>>) -> Value {
+    let floats = |row: &[f32]| Value::Array(row.iter().map(|v| play_f32_value(*v)).collect());
     match metric {
-        Metric::Center => json!(rows),
-        Metric::Covariance => json!(
-            rows.into_iter()
-                .map(|row| row.as_chunks::<3>().0.to_vec())
-                .collect::<Vec<_>>()
+        Metric::Center => Value::Array(rows.iter().map(|row| floats(row)).collect()),
+        Metric::Covariance => Value::Array(
+            rows.iter()
+                .map(|row| Value::Array(row.as_chunks::<3>().0.iter().map(|r| floats(r)).collect()))
+                .collect(),
         ),
-        _ => json!(rows.into_iter().map(|row| row[0]).collect::<Vec<_>>()),
+        _ => Value::Array(rows.iter().map(|row| play_f32_value(row[0])).collect()),
     }
 }
 async fn from_statistics_file(
@@ -386,15 +388,22 @@ async fn from_statistics_file(
                 .float_rows(&key, "center_of_mass", &ids, token)
                 .await?;
             if matches!(metric, Metric::Center) {
-                values.push(json!(
-                    weighted_center(&centers, &volumes)?.map(|v| v as f32)
+                let center = weighted_center(&centers, &volumes)?;
+                values.push(Value::Array(
+                    center.iter().map(|v| play_f32_value(*v as f32)).collect(),
                 ));
             } else {
                 let matrices = state
                     .statistics_file
                     .float_rows(&key, "covariance_matrix", &ids, token)
                     .await?;
-                values.push(json!(combined_covariance(&matrices, &centers, &volumes)?));
+                let matrix = combined_covariance(&matrices, &centers, &volumes)?;
+                values.push(Value::Array(
+                    matrix
+                        .iter()
+                        .map(|row| Value::Array(row.iter().map(|v| play_f32_value(*v)).collect()))
+                        .collect(),
+                ));
             }
         }
     }
@@ -591,5 +600,8 @@ async fn segment_surface_area(
         }
         values
     };
-    Ok(Json(values).into_response())
+    Ok(Json(Value::Array(
+        values.into_iter().map(play_f32_value).collect(),
+    ))
+    .into_response())
 }

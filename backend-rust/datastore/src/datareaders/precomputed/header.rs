@@ -39,6 +39,8 @@ impl PrecomputedHeader {
 pub struct PrecomputedScale {
     pub key: String,
     pub size: Vec<i64>,
+    // Scala `Array[Double]`, re-rendered by the info proxy: `1.0` is written as `1`.
+    #[serde(serialize_with = "crate::models::json::play_f64_seq")]
     pub resolution: Vec<f64>,
     pub chunk_sizes: Vec<Vec<i32>>,
     pub encoding: String,

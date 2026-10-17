@@ -44,3 +44,29 @@ async fn caches_successes_and_evicts_by_weight() {
     assert!(failed.is_err() && !cache.contains("d"));
     assert_eq!(cache.clear_matching(|k| k == "a"), 1);
 }
+
+#[tokio::test]
+async fn large_caches_are_sharded_and_small_ones_stay_one_lru() {
+    assert_eq!(ChunkContentsCache::new(5_000).shards.len(), 1);
+    let cache = ChunkContentsCache::new(super::DEFAULT_MAX_SIZE_BYTES);
+    assert_eq!(cache.shards.len(), 30);
+    for i in 0..300 {
+        cache
+            .get_or_load(&format!("key-{i}"), || async { Ok(chunk(1000)) }, |_| 1000)
+            .await
+            .unwrap();
+    }
+    assert_eq!(cache.len(), 300);
+    assert_eq!(cache.weight_kb(), 300);
+    // Keys spread over the shards (each shard locks independently).
+    assert!(
+        cache
+            .shards
+            .iter()
+            .filter(|s| !s.lock().unwrap().entries.is_empty())
+            .count()
+            > 20
+    );
+    assert_eq!(cache.clear_matching(|k| k.ends_with('7')), 30);
+    assert_eq!(cache.len(), 270);
+}

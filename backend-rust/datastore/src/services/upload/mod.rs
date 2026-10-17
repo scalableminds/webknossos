@@ -346,14 +346,16 @@ impl UploadMetadataStore {
             .await
     }
 
-    /// Dataset domain: Scala `findUploadIdByDataSourceId` reads the raw (still JSON-encoded) value.
+    /// Dataset domain: Scala `findUploadIdByDataSourceId` (`findParsed[String]`); the value is stored
+    /// JSON-encoded by `insertSerialized`.
     pub async fn find_upload_id_by_data_source_id(
         &self,
         id: &DataSourceId,
     ) -> DsResult<Option<String>> {
-        self.store
-            .find(&self.upload_id_by_data_source_key(id))
-            .await
+        self.find_json(&self.upload_id_by_data_source_key(id))
+            .await?
+            .map(|v| serde_json::from_value(v).map_err(parse_failure))
+            .transpose()
     }
 
     /// Single-value keys of the domain subclass (removed/expired with the upload).

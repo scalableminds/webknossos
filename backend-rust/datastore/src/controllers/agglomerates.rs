@@ -162,7 +162,10 @@ async fn agglomerates_for_segments(
     body: Bytes,
 ) -> AccessResult<Response> {
     let Ok(request) = ListOfLong::decode(body) else {
-        return Ok((StatusCode::BAD_REQUEST, "Invalid protobuf request body").into_response());
+        // Play `validateProto` body parser: rejected before the action, so no Action.fox headers.
+        return Ok(crate::binding_errors::mark_bypass(
+            (StatusCode::BAD_REQUEST, "Invalid protobuf request body").into_response(),
+        ));
     };
     let key = file_key(&state, &tc, &id, &layer_name, &mapping).await?;
     let segment_ids: Vec<i64> = request.items.iter().map(|i| *i as i64).collect();

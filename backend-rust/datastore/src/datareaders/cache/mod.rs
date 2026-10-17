@@ -92,14 +92,22 @@ pub(crate) fn source_layer_cache_key(id: &crate::models::DataSourceId, layer: &s
         .expect("string array serializes")
 }
 pub struct ChunkContentsCache {
-    state: Mutex<State>,
-    max_weight_kb: u64,
+    /// Independent LRU shards chosen by key hash. One global lock serialized every chunk access of
+    /// every request (differential load phase 2026-10-17: readData/histogram stopped scaling past
+    /// 8 connections); Scala's Caffeine cache is concurrent. Weight limits apply per shard.
+    shards: Box<[Mutex<State>]>,
+    max_weight_kb_per_shard: u64,
 }
+
+/// Each shard holds at least this much, so small (test) caches stay one exact LRU.
+const MIN_SHARD_WEIGHT_KB: u64 = 64 * 1024;
+const MAX_SHARDS: u64 = 32;
 
 impl std::fmt::Debug for ChunkContentsCache {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ChunkContentsCache")
-            .field("max_weight_kb", &self.max_weight_kb)
+            .field("max_weight_kb_per_shard", &self.max_weight_kb_per_shard)
+            .field("shards", &self.shards.len())
             .field("entries", &self.len())
             .finish()
     }
@@ -109,18 +117,34 @@ impl ChunkContentsCache {
     /// Scala `ChunkCacheService` with `maxSizeBytes` (`WK_DS` config
     /// `cache.image_array_chunks_max_size_bytes`).
     pub fn new(max_size_bytes: u64) -> Self {
+        let max_weight_kb = max_size_bytes / 1000;
+        let shards = (max_weight_kb / MIN_SHARD_WEIGHT_KB).clamp(1, MAX_SHARDS);
         Self {
-            state: Mutex::new(State::default()),
-            max_weight_kb: max_size_bytes / 1000,
+            shards: (0..shards).map(|_| Mutex::new(State::default())).collect(),
+            max_weight_kb_per_shard: max_weight_kb / shards,
         }
     }
 
-    fn lock(&self) -> std::sync::MutexGuard<'_, State> {
-        self.state.lock().unwrap_or_else(|e| e.into_inner())
+    fn lock_shard(shard: &Mutex<State>) -> std::sync::MutexGuard<'_, State> {
+        shard.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// The shard of `key`; the key is hashed before any lock is taken.
+    fn lock(&self, key: &str) -> std::sync::MutexGuard<'_, State> {
+        use std::hash::{BuildHasher, BuildHasherDefault, DefaultHasher};
+        let hash = BuildHasherDefault::<DefaultHasher>::default().hash_one(key);
+        Self::lock_shard(&self.shards[(hash % self.shards.len() as u64) as usize])
+    }
+
+    fn sum(&self, f: impl Fn(&State) -> u64) -> u64 {
+        self.shards
+            .iter()
+            .map(|shard| f(&Self::lock_shard(shard)))
+            .sum()
     }
 
     pub fn len(&self) -> usize {
-        self.lock().entries.len()
+        self.sum(|state| state.entries.len() as u64) as usize
     }
 
     pub fn is_empty(&self) -> bool {
@@ -129,26 +153,30 @@ impl ChunkContentsCache {
 
     /// Total weight of loaded entries in kilobytes.
     pub fn weight_kb(&self) -> u64 {
-        self.lock().total_weight
+        self.sum(|state| state.total_weight)
     }
 
     pub fn contains(&self, key: &str) -> bool {
-        self.lock().entries.contains_key(key)
+        self.lock(key).entries.contains_key(key)
     }
 
     /// Scala `clear(predicate)`: removes matching keys, returns how many.
     pub fn clear_matching(&self, mut predicate: impl FnMut(&str) -> bool) -> usize {
-        let mut state = self.lock();
-        let keys: Vec<String> = state
-            .entries
-            .keys()
-            .filter(|k| predicate(k))
-            .cloned()
-            .collect();
-        for key in &keys {
-            state.remove(key);
+        let mut removed = 0;
+        for shard in &self.shards {
+            let mut state = Self::lock_shard(shard);
+            let keys: Vec<String> = state
+                .entries
+                .keys()
+                .filter(|k| predicate(k))
+                .cloned()
+                .collect();
+            for key in &keys {
+                state.remove(key);
+            }
+            removed += keys.len();
         }
-        keys.len()
+        removed
     }
 
     /// Clear exactly one source/layer, including names containing the old __ delimiter.
@@ -178,7 +206,7 @@ impl ChunkContentsCache {
         Fut: Future<Output = DsResult<ChunkContents>>,
     {
         let cell: Cell = {
-            let mut state = self.lock();
+            let mut state = self.lock(key);
             let now = Instant::now();
             let live = state.entries.get(key).map(|e| !State::is_expired(e, now));
             match live {
@@ -210,7 +238,7 @@ impl ChunkContentsCache {
             .get_or_init(|| async { load().await.map(Arc::new) })
             .await
             .clone();
-        let mut state = self.lock();
+        let mut state = self.lock(key);
         let is_ours = state
             .entries
             .get(key)
@@ -229,7 +257,7 @@ impl ChunkContentsCache {
                             entry.accessed_at = now;
                         }
                         state.total_weight += weight;
-                        let max = self.max_weight_kb;
+                        let max = self.max_weight_kb_per_shard;
                         state.evict(max);
                     }
                 }

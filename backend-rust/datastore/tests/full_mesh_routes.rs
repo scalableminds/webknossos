@@ -509,7 +509,8 @@ async fn mapped_geometry_and_surface_cache_invalidate_and_warm_cache_denial_is_e
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         serde_json::from_slice::<Value>(&changed).unwrap(),
-        json!([0.])
+        // Play writes whole floats without `.0`.
+        json!([0])
     );
 }
 #[tokio::test]

@@ -54,11 +54,20 @@ impl<T> IndexCache<T> {
         let cell = {
             let mut entries = self.entries.lock().unwrap_or_else(|e| e.into_inner());
             let now = Instant::now();
-            entries.retain(|_, e| {
+            let expired = |e: &Entry<T>| {
                 e.loaded
-                    .is_none_or(|t| now.duration_since(t) < Duration::from_secs(7200))
-                    && now.duration_since(e.accessed) < Duration::from_secs(3600)
-            });
+                    .is_some_and(|t| now.duration_since(t) >= Duration::from_secs(7200))
+                    || now.duration_since(e.accessed) >= Duration::from_secs(3600)
+            };
+            // Expiry is checked per entry; a full sweep (O(entries) under the lock) runs only when
+            // a new entry is added. Sweeping on every lookup made each bucket request scan the
+            // whole provider cache (up to 5000 entries) while holding the lock.
+            if entries.get(key).is_some_and(expired) {
+                entries.remove(key);
+            }
+            if !entries.contains_key(key) {
+                entries.retain(|_, e| !expired(e));
+            }
             let entry = entries.entry(key.to_owned()).or_insert_with(|| Entry {
                 cell: Arc::new(OnceCell::new()),
                 loaded: None,

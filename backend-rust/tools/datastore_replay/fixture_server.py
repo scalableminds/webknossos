@@ -2,6 +2,7 @@
 """Isolated loopback WEBKNOSSOS RPC/HTTP-range fixture server (no real backend)."""
 import argparse
 from collections import Counter
+import hashlib
 import hmac
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -37,16 +38,22 @@ def expand(value, root, origin, token):
 
 
 class FixtureState:
-    def __init__(self, root, catalog, key, tokens):
+    def __init__(self, root, catalog, key, tokens, second_key=None):
         self.root = Path(root).resolve(strict=True)
         temp_roots = {Path(tempfile.gettempdir()).resolve(), Path('/tmp').resolve()}
         if not self.root.is_dir() or not any(self.root != t and self.root.is_relative_to(t) for t in temp_roots):
             raise InvalidFixture('explicit fixture root must be a directory below temporary storage')
         if not key or not tokens or any(not t for t in tokens) or key in tokens:
             raise InvalidFixture('distinct nonempty key and token required')
+        if second_key is not None and (not second_key or second_key == key or second_key in tokens):
+            raise InvalidFixture('second datastore key must be distinct and nonempty')
         if catalog.get('version') != 1 or catalog.get('organization') != 'replay-org' or catalog.get('datastore') != 'replay-ds':
             raise InvalidFixture('only replay v1 organization/datastore identity supported')
         self.key = key
+        # The upload phase gives each datastore its own key, so upload RPCs and their effects stay
+        # per side (`scala` for the first key, `rust` for the second).
+        self.keys = {'scala': key, **({'rust': second_key} if second_key else {})}
+        self.uploads = {side: {'reserved': {}, 'calls': []} for side in self.keys}
         self.tokens = tokens
         self.catalog = catalog
         self.datasets = {}
@@ -92,6 +99,41 @@ class FixtureState:
                 return 'primary' if index == 0 else 'alternate'
         return 'denied'
 
+    def side(self, key):
+        for side, expected in self.keys.items():
+            if hmac.compare_digest(key, expected):
+                return side
+        return None
+
+    def record(self, side, action, query, body):
+        with self.lock:
+            self.uploads[side]['calls'].append({'action': action, 'query': query, 'body': body})
+
+    def reserve(self, side, info):
+        """WK `reserveDatasetUpload`: a deterministic id and directory name per dataset name."""
+        name = info['datasetName']
+        identifier = 'f00000' + hashlib.sha256(name.encode()).hexdigest()[:18]
+        directory = re.sub(r'[^A-Za-z0-9_-]', '_', name)
+        with self.lock:
+            self.uploads[side]['reserved'][identifier] = {
+                'uploadId': info['resumableUploadInfo']['uploadId'], 'name': name, 'directory': directory,
+                'filePaths': info['resumableUploadInfo'].get('filePaths'), 'finished': False}
+        return {'newDatasetId': identifier, 'directoryName': directory}
+
+    def unfinished(self, side):
+        with self.lock:
+            return [{'uploadId': '', 'dataSourceId': {'name': r['directory'], 'team': 'replay-org'},
+                     'datasetName': r['name'], 'folderId': '000000000000000000000001', 'created': 1760000000000,
+                     'filePaths': r['filePaths'], 'allowedTeams': []}
+                    for r in self.uploads[side]['reserved'].values() if not r['finished']]
+
+    def upload_access(self, side, resource, mode, identifier):
+        with self.lock:
+            reserved = self.uploads[side]['reserved'] if side else {}
+            return resource == 'dataset' and (
+                (mode == 'administrate' and identifier == 'replay-org')
+                or (mode in ('read', 'write', 'delete') and identifier in reserved))
+
     def data_source(self, identifier):
         return expand(self.datasets[identifier]['dataSource'], self.root, self.origin, self.tokens[0])
 
@@ -135,6 +177,11 @@ def make_server(state, port=0):
             if self.command == 'GET' and path == '/counters':
                 self.reply(200, state.counters())
                 return
+            if self.command == 'GET' and path == '/upload-calls':
+                # Recorded upload RPCs of one side (bodies only carry fixture identities).
+                with state.lock:
+                    self.reply(200, state.uploads.get(one('side'), {}).get('calls', []))
+                return
             if path.startswith('/files/'):
                 self.remote_file(path[len('/files/'):])
                 return
@@ -144,17 +191,22 @@ def make_server(state, port=0):
                 self.reply(404, {'error': 'unsupported_fixture_rpc'})
                 return
             action = path[len(prefix):]
-            if not hmac.compare_digest(one('key'), state.key):
+            side = state.side(one('key'))
+            if side is None:
                 state.count('key_denied')
                 self.reply(403, {'error': 'fixture_key_denied'})
                 return
             token_label = state.token_label(one('token'))
+            if self.upload_rpc(action, side, token_label, one):
+                return
             if self.command == 'POST' and action == 'validateUserAccess':
                 request = self.body()
                 identifier = request.get('resourceId')
                 resource = request.get('resourceType')
                 mode = request.get('mode')
-                granted = token_label != 'denied' and resource == 'dataset' and mode == 'read' and identifier in state.datasets
+                granted = token_label != 'denied' and (
+                    resource == 'dataset' and mode == 'read' and identifier in state.datasets
+                    or state.upload_access(side, resource, mode, identifier))
                 state.count('access_' + token_label + ('_granted' if granted else '_denied'))
                 self.reply(200, {'granted': granted, **({} if granted else {'msg': 'Fixture access denied.'})})
                 return
@@ -206,6 +258,37 @@ def make_server(state, port=0):
                 return
             state.count('unsupported_rpc')
             self.reply(404, {'error': 'unsupported_fixture_rpc'})
+        def upload_rpc(self, action, side, token_label, one):
+            """Dataset upload RPCs (DC1e); every call is recorded per side for the comparison."""
+            if self.command == 'POST' and action == 'reserveDatasetUpload':
+                info = self.body()
+                state.record(side, action, {}, info)
+                if token_label == 'denied':
+                    self.reply(403, {'messages': [{'error': 'Fixture access denied.'}]})
+                else:
+                    self.reply(200, state.reserve(side, info))
+            elif self.command == 'POST' and action == 'reportDatasetUpload':
+                body = self.body()
+                state.record(side, action, {'datasetId': one('datasetId')}, body)
+                with state.lock:
+                    reserved = state.uploads[side]['reserved'].get(one('datasetId'))
+                    if reserved:
+                        reserved['finished'] = True
+                self.reply(200 if reserved else 404, {} if reserved else {'error': 'fixture_upload_missing'})
+            elif self.command == 'POST' and action == 'deleteDataset':
+                body = self.body()
+                state.record(side, action, {}, body)
+                with state.lock:
+                    removed = state.uploads[side]['reserved'].pop(body, None) if isinstance(body, str) else None
+                # Only datasets this side reserved can be deleted; catalog datasets never.
+                self.reply(200 if removed else 404, {} if removed else {'error': 'fixture_upload_missing'})
+            elif self.command == 'GET' and action == 'getUnfinishedDatasetUploadsForUser':
+                state.record(side, action, {'organizationName': one('organizationName')}, None)
+                self.reply(200, state.unfinished(side))
+            else:
+                return False
+            state.count('upload_' + action)
+            return True
         def remote_file(self, alias):
             state.count('remote_request')
             if self.command not in ('GET', 'HEAD') or alias not in state.files:
@@ -272,7 +355,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         tokens = [os.environ[name] for name in (args.token_env or ['WK_REPLAY_TOKEN'])]
-        state = FixtureState(args.root, json.loads(args.catalog.read_text()), os.environ['WK_REPLAY_FIXTURE_KEY'], tokens)
+        state = FixtureState(args.root, json.loads(args.catalog.read_text()), os.environ['WK_REPLAY_FIXTURE_KEY'], tokens,
+                             os.environ.get('WK_REPLAY_FIXTURE_KEY_RUST'))
         server = make_server(state, args.port)
     except (ValueError, KeyError, TypeError, AttributeError, OSError):
         print(json.dumps({'ready': False, 'error': 'invalid_fixture_configuration'}), flush=True)

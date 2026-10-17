@@ -231,7 +231,7 @@ async fn lists_and_looks_up_agglomerates() {
         assert_eq!(serde_json::from_slice::<Value>(&body).unwrap(), position);
     }
 
-    let (status, _, body) = request(
+    let (status, headers, body) = request(
         &app,
         "POST",
         &base("agglomerates/agg/agglomeratesForSegments"),
@@ -240,6 +240,12 @@ async fn lists_and_looks_up_agglomerates() {
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(body, b"Invalid protobuf request body");
+    // Scala rejects in the body parser, before Action.fox adds cache/CORS headers.
+    assert!(headers.get("cache-control").is_none(), "{headers:?}");
+    assert!(
+        headers.get("access-control-allow-origin").is_none(),
+        "{headers:?}"
+    );
 }
 
 #[tokio::test]

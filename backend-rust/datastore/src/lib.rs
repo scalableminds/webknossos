@@ -63,6 +63,8 @@ pub struct AppState {
     pub access: AccessTokenService,
     /// RPC client to tracingstores (Scala `DSRemoteTracingstoreClient`).
     pub tracingstore: crate::clients::tracingstore::TracingstoreClient,
+    /// The one Redis connection (Scala `DataStoreRedisStore`), shared by health and uploads.
+    pub redis: crate::redis::store::RedisStore,
     /// Resumable uploads (Scala `UploadService`, Redis metadata).
     pub uploads: crate::services::upload::UploadService,
     /// Agglomerate files (Scala `AgglomerateService`), also the data mapper of `binary_data`.
@@ -109,9 +111,10 @@ impl AppState {
         ));
         let base_dirs = crate::services::BaseDirService::new(config.base_directories.clone());
         let data_sources = crate::services::DataSourceService::new(data_vaults.clone());
+        let redis = crate::redis::store::RedisStore::new(&config.redis);
         let uploads = crate::services::upload::UploadService::new(
             base_dirs.clone(),
-            crate::redis::store::RedisStore::new(&config.redis),
+            redis.clone(),
             config.upload_delete_temporary_files_after_upload,
         );
         let segment_index = Arc::new(crate::services::segment::index::SegmentIndexService::new(
@@ -155,6 +158,7 @@ impl AppState {
                     Arc::clone(&chunk_contents_cache),
                 ),
             ),
+            redis,
             uploads,
             agglomerates,
             segment_index,
@@ -469,7 +473,11 @@ pub fn redact_uri(uri: &str) -> String {
 /// Scala `Application.health`.
 async fn health(State(state): State<AppState>) -> DsResult<&'static str> {
     let before = Instant::now();
-    redis::check_health(&state.config.redis).await?;
+    state
+        .redis
+        .ping()
+        .await
+        .map_err(|e| e.wrap("Redis health check failed."))?;
     let redis_duration = before.elapsed();
     if state
         .health

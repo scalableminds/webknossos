@@ -1,5 +1,13 @@
 # Rust migration coordinator checkpoint
 
+## Active main-app cutover work — Claude Code, 2026-10-16
+
+User asked this session to work on main-application cutover: differential tests against Play, observability/performance, schema migration ownership, staged traffic cutover. First bounded pass DONE (2026-10-17); round 2 DONE the same day (users/annotation list rewrites at or near Play, jobs/AI-model, upload, OIDC and WebAuthn corpora, one upload callback bug fixed, a Play passkey counter bug found). Plan, status, evidence and open decisions: **checkpoints/cutover.md** (read it first when resuming); operator document: CUTOVER.md. Isolated `wk_diff_*` databases and ports 1959x only; the user's dev DB/Redis/FossilDB stay untouched. The DS6 "active live replay" entry below (Codex, 2026-10-12) is stale: none of its processes are running anymore.
+
+## Active datastore cutover work — Claude Code, 2026-10-17
+
+User asked for datastore differential tests vs Scala, observability/performance, ownership and staged cutover. Paused at usage limit; plan, status, evidence and ordered next steps in **checkpoints/datastore-cutover.md**. Harness: `tools/datastore_replay/run_live_replay.py --stage-lib target/universal/stage/lib --java <jdk21> [--breadth] [--bench]`, isolated child processes only.
+
 ## Active DS6 live replay — Codex, 2026-10-12
 
 Status: IN PROGRESS. Previous continuation was progress (436 tests and substantive runtime/tooling changes), not a no-progress turn. Revalidated external state: canonical checkout now has compiled Scala datastore and matching sources; root integrated Scala9001 health200. Prepared separate datastore-only237-entry classpath, source equality283files. Isolated owned processes launched on loopback Scala19491/Rust19494, fixture WK/range19493, disposable Redis19492; both actual `/data/health`200. Existing user servers unchanged. Temp immutable catalog27datasets29datacases covers all formats/native codecs/ZIP; optional attachment revision28datasets41cases generated. Three agents own Scala launch/catalog/WK fixture server with checkpoints. Parent runs paired corpus, investigates mismatches and owns source fixes/centralverification.
@@ -29,7 +37,7 @@ Route registration is complete for both services (main app 287/287, datastore 13
 - G12 pool health logging and G13 `.env.example`/README hygiene: not started.
 - D1 product decision: mail bodies are plain text (no HTML templates, branding, Reply-To).
 - Known bug: compound merge returns 500 when a dataset layer has no mags (`datasets::data_source_for_rpc`).
-- Cutover work: differential tests against Play, observability/performance, schema ownership, staged traffic cutover.
+- Cutover work: first pass and round 2 done 2026-10-17 (checkpoints/cutover.md, CUTOVER.md, tools/app_differential/). Open: decision on invalid credentials for user-aware routes; Play change for a shared store RPC token (blocker before stage 3); voxelytics corpus; Rust CI job.
 - DONE and wired in `main.rs`: G1 SMTP, G2 housekeeping, G3 credit ticker, G4 Slack, G5 worker liveness, G7 used-storage scan.
 
 ### Datastore

@@ -81,6 +81,48 @@ class FixtureServerTests(unittest.TestCase):
             for secret in (KEY,TOKEN,ALT,'cross-organization-token',root,ID):
                 self.assertNotIn(secret,output)
 
+    def test_upload_rpcs_are_recorded_per_side(self):
+        with tempfile.TemporaryDirectory(prefix='wk-fixture-test-') as root:
+            Path(root, 'dataset').mkdir()
+            Path(root, 'data.bin').write_bytes(b'0')
+            rust_key = 'test-secret-rust-key'
+            state = f.FixtureState(root, catalog(), KEY, [TOKEN], rust_key)
+            server = f.make_server(state)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                info = {'resumableUploadInfo': {'uploadId': 'u1', 'totalFileCount': 1, 'filePaths': ['a.zip']},
+                        'datasetName': 'My DS', 'organizationId': 'replay-org', 'initialTeamIds': []}
+                post = lambda action, key, body, token=TOKEN: request(state.origin, '/api/datastores/replay-ds/' + action
+                    + ('&' if '?' in action else '?') + 'key=' + key + '&token=' + token, 'POST', body)
+                status, _, body = post('reserveDatasetUpload', KEY, info)
+                reserved = json.loads(body)
+                self.assertEqual((status, reserved['directoryName']), (200, 'My_DS'))
+                self.assertEqual(json.loads(post('reserveDatasetUpload', rust_key, info)[2]), reserved)
+                self.assertEqual(post('reserveDatasetUpload', KEY, info, token='denied')[0], 403)
+                write = dict(resourceType='dataset', mode='write', resourceId=reserved['newDatasetId'])
+                self.assertTrue(json.loads(post('validateUserAccess', KEY, write)[2])['granted'])
+                admin = dict(resourceType='dataset', mode='administrate', resourceId='replay-org')
+                self.assertTrue(json.loads(post('validateUserAccess', rust_key, admin)[2])['granted'])
+                self.assertFalse(json.loads(post('validateUserAccess', KEY, dict(admin, resourceId='other'))[2])['granted'])
+                unfinished = lambda key: json.loads(request(state.origin, '/api/datastores/replay-ds/getUnfinishedDatasetUploadsForUser?organizationName=replay-org&key=' + key + '&token=' + TOKEN)[2])
+                self.assertEqual([u['dataSourceId'] for u in unfinished(KEY)], [{'name': 'My_DS', 'team': 'replay-org'}])
+                self.assertEqual(post('reportDatasetUpload?datasetId=' + reserved['newDatasetId'], KEY, {'needsConversion': False})[0], 200)
+                self.assertEqual((unfinished(KEY), len(unfinished(rust_key))), ([], 1))
+                self.assertEqual(post('deleteDataset', rust_key, reserved['newDatasetId'])[0], 200)
+                self.assertEqual(post('deleteDataset', rust_key, reserved['newDatasetId'])[0], 404)
+                self.assertFalse(json.loads(post('validateUserAccess', rust_key, write)[2])['granted'])
+                calls = lambda side: [c['action'] for c in json.loads(request(state.origin, '/upload-calls?side=' + side)[2])]
+                self.assertEqual(calls('scala'), ['reserveDatasetUpload', 'reserveDatasetUpload', 'getUnfinishedDatasetUploadsForUser',
+                                                  'reportDatasetUpload', 'getUnfinishedDatasetUploadsForUser'])
+                self.assertEqual(calls('rust'), ['reserveDatasetUpload', 'getUnfinishedDatasetUploadsForUser', 'deleteDataset', 'deleteDataset'])
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join()
+            with self.assertRaises(f.InvalidFixture):
+                f.FixtureState(root, catalog(), KEY, [TOKEN], KEY)
+
     def test_range_full_head_suffix_invalid_and_token_after_cache(self):
         with fixture() as (state,_):
             path='/files/data.bin'

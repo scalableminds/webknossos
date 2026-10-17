@@ -63,6 +63,16 @@ impl DsError {
         }
     }
 
+    /// Scala `tryo(literal.toInt)`: the `NumberFormatException` message, with the exception
+    /// attached so a wrapping failure's chain shows both.
+    pub fn number_format(literal: &str) -> Self {
+        let message = format!("For input string: \"{literal}\"");
+        Self {
+            exception: Some(format!("java.lang.NumberFormatException: {message}")),
+            ..Self::failure(message)
+        }
+    }
+
     /// Scala `Empty` → `404` with `Msg.notFound`.
     pub fn empty() -> Self {
         Self::failure(MSG_NOT_FOUND).with_status(StatusCode::NOT_FOUND)

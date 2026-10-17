@@ -108,12 +108,12 @@ struct Mock {
 impl Mock {
     async fn start(handler: impl Fn(&Req) -> Resp + Send + Sync + 'static) -> Self {
         let requests: Arc<Mutex<Vec<Req>>> = Arc::default();
-        let recorded = requests.clone();
+        let recorded = Arc::clone(&requests);
         let handler = Arc::new(handler);
         let app = Router::new().fallback(
             move |method: Method, uri: Uri, headers: HeaderMap, body: Bytes| {
-                let recorded = recorded.clone();
-                let handler = handler.clone();
+                let recorded = Arc::clone(&recorded);
+                let handler = Arc::clone(&handler);
                 async move {
                     let req = Req {
                         method: method.to_string(),
@@ -497,7 +497,7 @@ async fn s3_maps_not_found_to_empty_and_errors_to_sdk_failures() {
     let options = s3_override(&mock);
     let vault: Arc<dyn DataVault> = Arc::new(s3_vault("s3://b/", None, &options));
     let read = |key: &str| {
-        let vault = vault.clone();
+        let vault = Arc::clone(&vault);
         let path = upath(&format!("s3://b/{key}"));
         async move {
             vault
@@ -520,14 +520,14 @@ async fn s3_maps_not_found_to_empty_and_errors_to_sdk_failures() {
     );
     let gz = read("gz").await.unwrap();
     assert_eq!(gz.encoding, Encoding::Gzip);
-    let decoded = VaultPath::new(upath("s3://b/gz"), vault.clone())
+    let decoded = VaultPath::new(upath("s3://b/gz"), Arc::clone(&vault))
         .read_bytes(ByteRange::Complete, None)
         .await
         .unwrap();
     assert_eq!(&decoded[..], b"hello");
     assert_eq!(read("chunked").await.unwrap().encoding, Encoding::Identity);
     // `VaultPath` keeps `Empty` and annotates failures.
-    let vault_path = VaultPath::new(upath("s3://b/missing"), vault.clone());
+    let vault_path = VaultPath::new(upath("s3://b/missing"), Arc::clone(&vault));
     assert!(
         vault_path
             .read_bytes(ByteRange::Complete, None)
@@ -858,7 +858,7 @@ async fn gcs_anonymous_reads_with_ranges_and_stored_encoding() {
     let options = gcs_options(&mock);
     let vault: Arc<dyn DataVault> = Arc::new(gcs_vault("gs://my_bucket/", None, &options));
     let read = |name: &str, range: ByteRange| {
-        let vault = vault.clone();
+        let vault = Arc::clone(&vault);
         let path = upath(&format!("gs://my_bucket/{name}"));
         async move {
             vault
@@ -895,7 +895,7 @@ async fn gcs_anonymous_reads_with_ranges_and_stored_encoding() {
         Encoding::Gzip,
         "stored encoding is passed through"
     );
-    let decoded = VaultPath::new(upath("gs://my_bucket/gz"), vault.clone())
+    let decoded = VaultPath::new(upath("gs://my_bucket/gz"), Arc::clone(&vault))
         .read_bytes(ByteRange::Complete, None)
         .await
         .unwrap();
@@ -1381,7 +1381,7 @@ async fn service_mag_credentials_lookup_legacy_and_errors() {
         credentials: HashMap::from([("cred1".to_owned(), basic_credential())]),
         calls: Mutex::default(),
     });
-    let service = service_with(lookup.clone(), &[]);
+    let service = service_with(Arc::clone(&lookup), &[]);
 
     let mut mag = MagLocator::new(Vec3Int::new(1, 1, 1));
     mag.path = Some(upath(&format!("{}/data/1", mock.base())));

@@ -82,7 +82,9 @@ async fn compose_and_in_place_additions_build_virtual_datasets() {
     let db = TestDb::new().await;
     let fixture = db.fixture().await;
     let calls = Calls::default();
-    let mock = Router::new().fallback(datastore).with_state(calls.clone());
+    let mock = Router::new()
+        .fallback(datastore)
+        .with_state(Arc::clone(&calls));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
     let server = tokio::spawn(async move { axum::serve(listener, mock).await.unwrap() });

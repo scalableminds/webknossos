@@ -410,7 +410,7 @@ impl TimeInteractionState {
     pub async fn lock_user(&self, user_id: &ObjectId) -> UserActivityGuard {
         let slot = {
             let mut users = self.users.lock().unwrap_or_else(|e| e.into_inner());
-            users.entry(user_id.clone()).or_default().clone()
+            Arc::clone(users.entry(user_id.clone()).or_default())
         };
         UserActivityGuard {
             user_id: user_id.clone(),

@@ -17,7 +17,7 @@ impl Drop for Dropped {
 #[tokio::test]
 async fn server_failure_stops_background_without_waiting_for_signal() {
     let dropped = Arc::new(AtomicBool::new(false));
-    let guard = Dropped(dropped.clone());
+    let guard = Dropped(Arc::clone(&dropped));
     let job = tokio::spawn(async move {
         let _guard = guard;
         std::future::pending::<()>().await;
@@ -63,7 +63,7 @@ async fn signal_requests_graceful_drain() {
 #[tokio::test]
 async fn drain_timeout_aborts_server() {
     let dropped = Arc::new(AtomicBool::new(false));
-    let guard = Dropped(dropped.clone());
+    let guard = Dropped(Arc::clone(&dropped));
     let mut server = tokio::spawn(async move {
         let _guard = guard;
         std::future::pending::<()>().await;

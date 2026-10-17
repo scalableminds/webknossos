@@ -225,11 +225,11 @@ async fn raw_server(
     response: &'static str,
 ) -> (String, Arc<Mutex<Vec<RawObservation>>>) {
     let observed: Arc<Mutex<Vec<RawObservation>>> = Arc::default();
-    let state = observed.clone();
+    let state = Arc::clone(&observed);
     let router = Router::new().route(
         "/{*path}",
         any(move |request: Request| {
-            let state = state.clone();
+            let state = Arc::clone(&state);
             async move {
                 let method = request.method().to_string();
                 let uri = request.uri().to_string();

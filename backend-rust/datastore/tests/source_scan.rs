@@ -645,13 +645,18 @@ async fn watcher_initial_delay_retries_and_completion_interval_prevent_overlap()
     let cycles = Arc::new(AtomicUsize::new(0));
     let records = Arc::new(std::sync::Mutex::new(Vec::new()));
     let (a, m, c, r) = (
-        active.clone(),
-        maximum.clone(),
-        cycles.clone(),
-        records.clone(),
+        Arc::clone(&active),
+        Arc::clone(&maximum),
+        Arc::clone(&cycles),
+        Arc::clone(&records),
     );
     let app = Router::new().fallback(move |uri: Uri| {
-        let (a, m, c, r) = (a.clone(), m.clone(), c.clone(), r.clone());
+        let (a, m, c, r) = (
+            Arc::clone(&a),
+            Arc::clone(&m),
+            Arc::clone(&c),
+            Arc::clone(&r),
+        );
         async move {
             let n = a.fetch_add(1, Ordering::SeqCst) + 1;
             m.fetch_max(n, Ordering::SeqCst);

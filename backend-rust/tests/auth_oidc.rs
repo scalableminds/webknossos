@@ -172,7 +172,7 @@ async fn provider() -> Provider {
         )
         .route("/realms/test/protocol/openid-connect/certs", get(certs))
         .route("/realms/test/protocol/openid-connect/token", post(token))
-        .with_state(state.clone());
+        .with_state(Arc::clone(&state));
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
     state
 }

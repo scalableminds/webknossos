@@ -32,7 +32,7 @@ async fn mock_slack() -> (SlackNotificationService, Bodies) {
     let bodies = Bodies::default();
     let hook = Router::new()
         .route("/services/hook", post(record))
-        .with_state(bodies.clone());
+        .with_state(Arc::clone(&bodies));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let uri = format!("http://{}/services/hook", listener.local_addr().unwrap());
     tokio::spawn(async move { axum::serve(listener, hook).await.unwrap() });

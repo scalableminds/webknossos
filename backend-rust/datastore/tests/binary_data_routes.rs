@@ -646,7 +646,7 @@ async fn request_tokens_reach_remote_chunks_after_datasource_and_array_cache_hit
             listener,
             Router::new()
                 .route("/array/{file}", get(serve))
-                .with_state(reads.clone()),
+                .with_state(Arc::clone(&reads)),
         )
         .into_future(),
     );

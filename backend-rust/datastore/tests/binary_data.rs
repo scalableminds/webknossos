@@ -351,19 +351,19 @@ async fn batch_missing_failures_partial_cuboids_and_reload_are_distinct() {
     // A corrupt second chunk is a failed bucket, not a missing magnification.
     std::fs::write(p.join("1.0.0"), [1u8]).unwrap();
     let good = request(
-        l.clone(),
+        Arc::clone(&l),
         Vec3Int::zeros(),
         Vec3Int::full(32),
         Vec3Int::ones(),
     );
     let failed = request(
-        l.clone(),
+        Arc::clone(&l),
         Vec3Int::new(32, 0, 0),
         Vec3Int::full(32),
         Vec3Int::ones(),
     );
     let missing = request(
-        l.clone(),
+        Arc::clone(&l),
         Vec3Int::zeros(),
         Vec3Int::full(32),
         Vec3Int::full(2),
@@ -384,7 +384,7 @@ async fn batch_missing_failures_partial_cuboids_and_reload_are_distinct() {
     assert_eq!(result.failed_indices, vec![2]);
     assert_eq!(result.data.len(), 32768);
     let partial = request(
-        l.clone(),
+        Arc::clone(&l),
         Vec3Int::new(31, 0, 0),
         Vec3Int::new(3, 1, 1),
         Vec3Int::ones(),
@@ -401,15 +401,15 @@ async fn batch_missing_failures_partial_cuboids_and_reload_are_distinct() {
     );
     let instruction = DataReadInstruction {
         data_source_id: DataSourceId::new("ds", "org"),
-        data_layer: l.clone(),
+        data_layer: Arc::clone(&l),
         bucket: good.cuboid.top_left.to_bucket(),
         version: Some(7),
     };
     let provider = DatasetArrayBucketProvider::new(
-        l.clone(),
+        Arc::clone(&l),
         instruction.data_source_id.clone(),
         s.data_vaults.clone(),
-        s.chunk_contents_cache.clone(),
+        Arc::clone(&s.chunk_contents_cache),
     );
     let (a, b) = tokio::join!(
         provider.load(&instruction, None),
@@ -511,7 +511,7 @@ async fn clipping_precedes_mapping_and_half_byte_and_missing_mapper_fails() {
     assert!(s.binary_data.read(&r, Some("mapping-token")).await.is_err());
     let service = BinaryDataService::new(
         s.data_vaults.clone(),
-        s.chunk_contents_cache.clone(),
+        Arc::clone(&s.chunk_contents_cache),
         s.health.clone(),
         Some(Arc::new(MappingFixture)),
     );
@@ -649,7 +649,7 @@ async fn current_token_reaches_http_chunks_after_mag_header_is_cached() {
             listener,
             Router::new()
                 .route("/array/{file}", get(serve))
-                .with_state(reads.clone()),
+                .with_state(Arc::clone(&reads)),
         )
         .into_future(),
     );
@@ -668,7 +668,7 @@ async fn current_token_reaches_http_chunks_after_mag_header_is_cached() {
     .unwrap();
     let l = Arc::new(l);
     let a = request(
-        l.clone(),
+        Arc::clone(&l),
         Vec3Int::zeros(),
         Vec3Int::full(32),
         Vec3Int::ones(),

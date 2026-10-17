@@ -524,7 +524,7 @@ async fn genuine_compound_merge_cache_saved_precedence_and_invalidation() {
             listener,
             Router::new()
                 .route("/tracings/annotation/mergedFromIds", post(merge))
-                .with_state(count.clone()),
+                .with_state(Arc::clone(&count)),
         )
         .into_future(),
     );

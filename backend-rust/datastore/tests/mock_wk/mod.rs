@@ -74,11 +74,11 @@ impl MockWk {
     pub async fn start(handler: impl Fn(&Call) -> Reply + Send + Sync + 'static) -> Self {
         let calls: Arc<Mutex<Vec<Call>>> = Arc::default();
         let handler: Handler = Arc::new(handler);
-        let recorded = calls.clone();
+        let recorded = Arc::clone(&calls);
         let app = Router::new().fallback(
             move |method: Method, uri: Uri, headers: HeaderMap, body: Bytes| {
-                let recorded = recorded.clone();
-                let handler = handler.clone();
+                let recorded = Arc::clone(&recorded);
+                let handler = Arc::clone(&handler);
                 async move {
                     let call = Call {
                         method: method.to_string(),

@@ -53,7 +53,7 @@ async fn upstream() -> (String, StoreRequests, tokio::task::JoinHandle<()>) {
                 },
             ),
         )
-        .with_state(requests.clone());
+        .with_state(Arc::clone(&requests));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
     let task = tokio::spawn(async move { axum::serve(listener, service).await.unwrap() });

@@ -483,7 +483,9 @@ async fn status_updates_complete_and_refund_credits() {
     let mailer = RecordingMailer::default();
     let app = app(&db, false, &mailer);
     let calls = Calls::default();
-    let upstream = Router::new().fallback(record).with_state(calls.clone());
+    let upstream = Router::new()
+        .fallback(record)
+        .with_state(Arc::clone(&calls));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
     let server = tokio::spawn(async move { axum::serve(listener, upstream).await.unwrap() });

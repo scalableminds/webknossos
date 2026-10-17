@@ -47,7 +47,9 @@ async fn datastore(State(calls): State<Calls>, request: Request) -> Response {
 
 async fn mock_store(db: &TestDb) -> (Calls, tokio::task::JoinHandle<()>) {
     let calls = Calls::default();
-    let mock = Router::new().fallback(datastore).with_state(calls.clone());
+    let mock = Router::new()
+        .fallback(datastore)
+        .with_state(Arc::clone(&calls));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
     let server = tokio::spawn(async move { axum::serve(listener, mock).await.unwrap() });

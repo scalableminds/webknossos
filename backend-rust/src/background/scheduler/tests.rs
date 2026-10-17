@@ -1,4 +1,5 @@
 use super::*;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 fn schedule(interval_ms: u64, initial_delay_ms: u64) -> JobSchedule {
@@ -22,11 +23,15 @@ async fn runs_never_overlap_and_interval_counts_from_completion() {
     let active = Arc::new(AtomicUsize::new(0));
     let max_active = Arc::new(AtomicUsize::new(0));
     let runs = Arc::new(AtomicUsize::new(0));
-    let (a, m, r) = (active.clone(), max_active.clone(), runs.clone());
+    let (a, m, r) = (
+        Arc::clone(&active),
+        Arc::clone(&max_active),
+        Arc::clone(&runs),
+    );
     let mut scheduler = Scheduler::new();
     // The run (30 ms) is far longer than the interval (1 ms).
     scheduler.add(Job::new("slow", schedule(1, 0), move || {
-        let (a, m, r) = (a.clone(), m.clone(), r.clone());
+        let (a, m, r) = (Arc::clone(&a), Arc::clone(&m), Arc::clone(&r));
         async move {
             let now = a.fetch_add(1, Ordering::SeqCst) + 1;
             m.fetch_max(now, Ordering::SeqCst);
@@ -49,7 +54,7 @@ async fn runs_never_overlap_and_interval_counts_from_completion() {
 #[tokio::test]
 async fn errors_and_panics_do_not_stop_the_schedule() {
     let runs = Arc::new(AtomicUsize::new(0));
-    let r = runs.clone();
+    let r = Arc::clone(&runs);
     let mut scheduler = Scheduler::new();
     scheduler.add(Job::new("flaky", schedule(1, 0), move || {
         let run = r.fetch_add(1, Ordering::SeqCst);
@@ -74,7 +79,7 @@ async fn errors_and_panics_do_not_stop_the_schedule() {
 async fn disabled_jobs_never_run_and_initial_delay_is_respected() {
     let disabled_runs = Arc::new(AtomicUsize::new(0));
     let delayed_runs = Arc::new(AtomicUsize::new(0));
-    let (d, l) = (disabled_runs.clone(), delayed_runs.clone());
+    let (d, l) = (Arc::clone(&disabled_runs), Arc::clone(&delayed_runs));
     let mut scheduler = Scheduler::new();
     scheduler
         .add(Job::new(
@@ -107,10 +112,10 @@ async fn disabled_jobs_never_run_and_initial_delay_is_respected() {
 async fn shutdown_waits_for_in_flight_run_then_stops() {
     let started_runs = Arc::new(AtomicUsize::new(0));
     let finished_runs = Arc::new(AtomicUsize::new(0));
-    let (s, f) = (started_runs.clone(), finished_runs.clone());
+    let (s, f) = (Arc::clone(&started_runs), Arc::clone(&finished_runs));
     let mut scheduler = Scheduler::new();
     scheduler.add(Job::new("long", schedule(1, 0), move || {
-        let (s, f) = (s.clone(), f.clone());
+        let (s, f) = (Arc::clone(&s), Arc::clone(&f));
         async move {
             s.fetch_add(1, Ordering::SeqCst);
             tokio::time::sleep(Duration::from_millis(50)).await;

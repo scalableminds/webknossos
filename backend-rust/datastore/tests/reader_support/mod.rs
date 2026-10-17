@@ -60,7 +60,10 @@ impl webknossos_datastore::datavault::DataVault for RecordingVault {
 pub fn recording_path(p: &std::path::Path) -> (VaultPath, Arc<RecordingVault>) {
     let vault = Arc::new(RecordingVault::default());
     (
-        VaultPath::new(UPath::parse(p.to_str().unwrap()).unwrap(), vault.clone()),
+        VaultPath::new(
+            UPath::parse(p.to_str().unwrap()).unwrap(),
+            Arc::clone(&vault) as Arc<dyn webknossos_datastore::datavault::DataVault>,
+        ),
         vault,
     )
 }

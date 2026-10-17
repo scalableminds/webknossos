@@ -142,7 +142,7 @@ async fn counting_redis(
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
     let accepted = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let counter = accepted.clone();
+    let counter = std::sync::Arc::clone(&accepted);
     tokio::spawn(async move {
         while let Ok((mut socket, _)) = listener.accept().await {
             counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);

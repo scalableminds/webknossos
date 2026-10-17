@@ -34,6 +34,10 @@ tower = { version = "0.5", features = ["util"] }
 [workspace.lints.rust]
 unsafe_code = "forbid"
 
+[workspace.lints.clippy]
+# `Arc::clone(&x)` marks a reference-count bump, not a deep copy.
+clone_on_ref_ptr = "warn"
+
 [package]
 name = "webknossos-backend"
 description = "Incremental Rust implementation of the WEBKNOSSOS application backend"

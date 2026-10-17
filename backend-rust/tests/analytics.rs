@@ -218,11 +218,11 @@ async fn ingest_validates_config_api_keys_and_stores_events() {
 /// A local stand-in for the analytics relay recording each POST body.
 async fn relay() -> (String, Arc<Mutex<Vec<Value>>>) {
     let received = Arc::new(Mutex::new(Vec::new()));
-    let sink = received.clone();
+    let sink = Arc::clone(&received);
     let router = axum::Router::new().route(
         "/events",
         axum::routing::post(move |axum::Json(body): axum::Json<Value>| {
-            let sink = sink.clone();
+            let sink = Arc::clone(&sink);
             async move {
                 sink.lock().unwrap().push(body);
                 "ok"

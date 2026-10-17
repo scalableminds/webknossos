@@ -64,12 +64,13 @@ impl Metrics {
             .get(&key)
             .cloned();
         let series = existing.unwrap_or_else(|| {
-            self.series
-                .write()
-                .unwrap_or_else(|poisoned| poisoned.into_inner())
-                .entry(key)
-                .or_default()
-                .clone()
+            Arc::clone(
+                self.series
+                    .write()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner())
+                    .entry(key)
+                    .or_default(),
+            )
         });
         series.count.fetch_add(1, Ordering::Relaxed);
         series

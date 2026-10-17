@@ -37,7 +37,7 @@ fn message(error: VaultError) -> String {
 async fn real_archives_stored_ranges_listing_and_storage() {
     for file in ["stored.zip", "zip64.zip"] {
         let (outer, vault) = local(file);
-        let path = entry(outer.clone(), vault.clone(), "/root.txt/");
+        let path = entry(outer.clone(), Arc::clone(&vault), "/root.txt/");
         for (range, expected, header) in [
             (ByteRange::Complete, &b"0123456789"[..], "bytes 0-9/10"),
             (
@@ -65,7 +65,7 @@ async fn real_archives_stored_ranges_listing_and_storage() {
             assert_eq!(read.encoding, Encoding::Identity);
             assert_eq!(read.content_range.as_deref(), Some(header));
         }
-        let directory = entry(outer.clone(), vault.clone(), "folder/");
+        let directory = entry(outer.clone(), Arc::clone(&vault), "folder/");
         let mut children: Vec<_> = directory
             .list_directory(99, None)
             .await
@@ -79,7 +79,7 @@ async fn real_archives_stored_ranges_listing_and_storage() {
         assert_eq!(directory.list_directory(1, None).await.unwrap().len(), 1);
         assert_eq!(directory.used_storage_bytes(None).await.unwrap(), 9);
         assert_eq!(
-            entry(outer.clone(), vault.clone(), "unicode/ä.txt")
+            entry(outer.clone(), Arc::clone(&vault), "unicode/ä.txt")
                 .read_bytes(ByteRange::Complete, None)
                 .await
                 .unwrap()
@@ -87,7 +87,7 @@ async fn real_archives_stored_ranges_listing_and_storage() {
             b"utf8"
         );
         assert_eq!(
-            entry(outer.clone(), vault.clone(), "missing")
+            entry(outer.clone(), Arc::clone(&vault), "missing")
                 .read_bytes(ByteRange::Complete, None)
                 .await
                 .unwrap_err(),
@@ -95,7 +95,7 @@ async fn real_archives_stored_ranges_listing_and_storage() {
         );
         assert!(
             message(
-                entry(outer.clone(), vault.clone(), "compressed.txt")
+                entry(outer.clone(), Arc::clone(&vault), "compressed.txt")
                     .read_bytes(ByteRange::Complete, None)
                     .await
                     .unwrap_err()
@@ -124,10 +124,10 @@ async fn remote(
     fail_first: bool,
 ) -> (UPath, Arc<ZipDataVault>, Arc<Mutex<Vec<Request>>>) {
     let requests = Arc::new(Mutex::new(Vec::new()));
-    let recorded = requests.clone();
+    let recorded = Arc::clone(&requests);
     let app = Router::new().fallback(move |method: Method, headers: HeaderMap| {
         let data = data.clone();
-        let recorded = recorded.clone();
+        let recorded = Arc::clone(&recorded);
         async move {
             let req = Request {
                 method: method.clone(),

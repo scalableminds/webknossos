@@ -9,7 +9,11 @@ use std::{
     io::Write,
     net::SocketAddr,
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicUsize, Ordering},
+    },
+    time::Duration,
 };
 
 use axum::{
@@ -30,8 +34,8 @@ use webknossos_datastore::{
     datavault::{
         AwsCredentials, ByteRange, CredentialLookup, CredentializedUPath, DataVault,
         DataVaultCredential, DataVaultService, DataVaultServiceOptions, Encoding, GcsOptions,
-        GoogleCloudDataVault, MSG_MAG_PATH_NOT_ABSOLUTE, MSG_SETUP_FAILED, S3DataVault, S3Options,
-        ServiceAccountTokenSource, UPath, VaultError, VaultPath,
+        GoogleCloudDataVault, MSG_MAG_PATH_NOT_ABSOLUTE, MSG_SETUP_FAILED, RetryPolicy,
+        S3DataVault, S3Options, ServiceAccountTokenSource, UPath, VaultError, VaultPath,
         sigv4::{self, EMPTY_PAYLOAD_SHA256, SigningRequest},
     },
     error::{DsError, DsResult},
@@ -278,10 +282,17 @@ fn s3_vault(path: &str, credential: Option<AwsCredentials>, options: &S3Options)
     )
 }
 
+/// Retries as in production, without the waiting.
+const FAST_RETRY: RetryPolicy = RetryPolicy {
+    attempts: 3,
+    initial_delay: Duration::from_millis(1),
+};
+
 fn s3_override(mock: &Mock) -> S3Options {
     S3Options {
         env_credentials: None,
         aws_endpoint_override: Some(mock.base()),
+        read_retry: FAST_RETRY,
     }
 }
 
@@ -527,6 +538,81 @@ async fn s3_maps_not_found_to_empty_and_errors_to_sdk_failures() {
 }
 
 #[tokio::test]
+async fn s3_transient_failures_are_retried() {
+    let flaky = AtomicUsize::new(0);
+    let mock = Mock::start(move |req| match req.path.as_str() {
+        "/b/flaky" if flaky.fetch_add(1, Ordering::SeqCst) == 0 => Resp::new(
+            503,
+            "<Error><Code>SlowDown</Code><Message>Reduce your request rate.</Message></Error>",
+        ),
+        "/b/flaky" => Resp::new(500, "<Error><Code>InternalError</Code></Error>")
+            .with("x-amz-request-id", "R2"),
+        "/b/throttled" => Resp::new(429, ""),
+        "/b/denied" => Resp::new(
+            403,
+            "<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>",
+        ),
+        "/b/missing" => Resp::new(404, "<Error><Code>NoSuchKey</Code></Error>"),
+        _ => Resp::new(200, "data"),
+    })
+    .await;
+    let options = s3_override(&mock);
+    let vault = s3_vault("s3://b/", None, &options);
+    let read = |key: &str| {
+        let path = upath(&format!("s3://b/{key}"));
+        let vault = &vault;
+        async move {
+            vault
+                .read_bytes_encoding_and_range_header(&path, ByteRange::Complete, None)
+                .await
+        }
+    };
+    let attempts = |key: &str| {
+        mock.requests()
+            .iter()
+            .filter(|r| r.path == format!("/b/{key}"))
+            .count()
+    };
+    // The last attempt's error is reported as without retries.
+    let error = failure(read("flaky").await.unwrap_err());
+    assert_eq!(attempts("flaky"), 3);
+    assert_eq!(
+        error.message,
+        "null (Service: S3, Status Code: 500, Request ID: R2)"
+    );
+    assert!(read("throttled").await.is_err());
+    assert_eq!(attempts("throttled"), 3);
+    assert!(read("denied").await.is_err());
+    assert_eq!(attempts("denied"), 1);
+    assert_eq!(read("missing").await.unwrap_err(), VaultError::NotFound);
+    assert_eq!(attempts("missing"), 1);
+
+    let recovering = AtomicUsize::new(0);
+    let mock = Mock::start(move |_| match recovering.fetch_add(1, Ordering::SeqCst) {
+        0 | 1 => Resp::new(503, "<Error><Code>ServiceUnavailable</Code></Error>"),
+        _ => Resp::new(206, "345").with("content-range", "bytes 3-5/10"),
+    })
+    .await;
+    let vault = s3_vault("s3://b/", None, &s3_override(&mock));
+    let read = vault
+        .read_bytes_encoding_and_range_header(
+            &upath("s3://b/k"),
+            ByteRange::start_end_exclusive(3, 6),
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(&read.bytes[..], b"345");
+    let requests = mock.requests();
+    assert_eq!(requests.len(), 3);
+    assert!(
+        requests
+            .iter()
+            .all(|r| r.header("range") == Some("bytes=3-5"))
+    );
+}
+
+#[tokio::test]
 async fn s3_cross_region_redirect_is_retried_and_remembered() {
     let mock = Mock::start(|req| {
         if req.header("authorization").unwrap().contains("/us-east-1/") {
@@ -681,6 +767,7 @@ async fn s3_custom_endpoint_uses_path_style_over_http() {
     let options = S3Options {
         env_credentials: None,
         aws_endpoint_override: Some("http://127.0.0.1:1".into()),
+        read_retry: FAST_RETRY,
     };
     let vault = s3_vault(&path, Some(credentials.clone()), &options);
     let read = vault
@@ -716,6 +803,7 @@ fn gcs_options(mock: &Mock) -> GcsOptions {
     GcsOptions {
         endpoint: mock.base(),
         default_service_account_json: None,
+        read_retry: FAST_RETRY,
     }
 }
 
@@ -843,6 +931,60 @@ async fn gcs_anonymous_reads_with_ranges_and_stored_encoding() {
     assert_eq!(requests[0].path, "/storage/v1/b/my_bucket/o/dir%2Fobj.bin");
     assert_eq!(requests[0].header("range"), Some("bytes=2-5"));
     assert_eq!(requests[1].header("range"), Some("bytes=-3"));
+}
+
+#[tokio::test]
+async fn gcs_transient_failures_are_retried() {
+    let flaky = AtomicUsize::new(0);
+    let mock = Mock::start(move |req| {
+        let object = req.path.rsplit('/').next().unwrap();
+        match object {
+            "flaky" => match flaky.fetch_add(1, Ordering::SeqCst) {
+                0 => Resp::new(503, "busy"),
+                1 => Resp::new(429, "slow down"),
+                _ => Resp::new(200, "payload"),
+            },
+            "down" => Resp::json(
+                500,
+                json!({"error": {"code": 500, "message": "backend error"}}),
+            ),
+            "denied" => Resp::json(403, json!({"error": {"code": 403, "message": "denied"}})),
+            "missing" => Resp::json(
+                404,
+                json!({"error": {"code": 404, "message": "No such object"}}),
+            ),
+            _ => Resp::new(500, "unexpected"),
+        }
+    })
+    .await;
+    let options = gcs_options(&mock);
+    let vault = gcs_vault("gs://bucket/", None, &options);
+    let read = |name: &str| {
+        let path = upath(&format!("gs://bucket/{name}"));
+        let vault = &vault;
+        async move {
+            vault
+                .read_bytes_encoding_and_range_header(&path, ByteRange::Complete, None)
+                .await
+        }
+    };
+    let attempts = |name: &str| {
+        mock.requests()
+            .iter()
+            .filter(|r| r.path.ends_with(&format!("/{name}")))
+            .count()
+    };
+    assert_eq!(&read("flaky").await.unwrap().bytes[..], b"payload");
+    assert_eq!(attempts("flaky"), 3);
+    assert_eq!(
+        failure(read("down").await.unwrap_err()).message,
+        "backend error"
+    );
+    assert_eq!(attempts("down"), 3);
+    assert!(read("denied").await.is_err());
+    assert_eq!(attempts("denied"), 1);
+    assert_eq!(read("missing").await.unwrap_err(), VaultError::NotFound);
+    assert_eq!(attempts("missing"), 1);
 }
 
 #[tokio::test]

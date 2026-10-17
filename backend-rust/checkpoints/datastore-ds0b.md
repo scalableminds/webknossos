@@ -37,6 +37,7 @@ async fn handler(State(state): State<AppState>, tc: TokenContext, Path(id): Path
 ## Deviations
 
 - AlfuCache eviction at capacity: expired entries first, then least-recently-accessed (Caffeine uses W-TinyLFU).
+- 2026-10-17: AlfuCache moved to `src/cache/` on moka (sync cache of tokio OnceCell load cells, LRU policy, per-entry expiry so loads in progress never expire). It also backs ChunkContentsCache (weighted), IndexCache and the WKW shard-index cache. A key invalidated during its load never receives the stale value.
 - Error text for transport/JSON failures has no Java stack trace / Play JsError formatting.
 - `get_annotation_source` and `get_credential` return `serde_json::Value` (models not yet ported: AnnotationSource/AnnotationLayer, DataVaultCredential sealed trait). Typing them is a DS1b/DS4 TODO; credentials JSON contains secrets — never log it.
 - Scala itself never yields 401 from access checks; 401 appears only when WK answers 401 (status preserved). Tested as such.

@@ -1,7 +1,6 @@
 //! RPC client from the datastore to the WEBKNOSSOS main application.
 //!
-//! Ports Scala `rpc.RPC`/`rpc.RPCRequest` (generic request builder, error/log semantics),
-//! `util.cache.AlfuCache` (async loading cache that never keeps failures) and
+//! Ports Scala `rpc.RPC`/`rpc.RPCRequest` (generic request builder, error/log semantics) and
 //! `services.DSRemoteWebknossosClient` (every WK callback, its query parameters and caches,
 //! plus the `IntervalScheduler` status ping).
 //!
@@ -10,11 +9,10 @@
 //! `standalone-datastore.conf` (`play.ws.timeout.{request,idle,connection} = 2 hours`).
 
 use std::{
-    collections::HashMap,
     hash::Hash,
     path::PathBuf,
     sync::{
-        Arc, Mutex,
+        Arc,
         atomic::{AtomicU64, Ordering},
     },
     time::{Duration, Instant},
@@ -23,7 +21,7 @@ use std::{
 use axum::http::{Method, StatusCode, header};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::Value;
-use tokio::{sync::OnceCell, task::JoinHandle};
+use tokio::task::JoinHandle;
 use url::Url;
 
 use crate::{
@@ -41,152 +39,7 @@ pub const PING_INITIAL_DELAY: Duration = Duration::from_secs(10);
 /// Scala `IntervalScheduler.innerTickerInterval`: shorter intervals are rejected at startup.
 pub const PING_MIN_INTERVAL: Duration = Duration::from_millis(100);
 
-// ---------------------------------------------------------------------------------------------
-// AlfuCache
-// ---------------------------------------------------------------------------------------------
-
-/// Scala `AlfuCache`: an async loading cache. Concurrent loads of one key share a single load,
-/// successful values are kept until `time_to_live` after the load or `time_to_idle` after the
-/// last access (whichever comes first), and failed loads are removed so the next call retries.
-///
-/// Deviation: Caffeine evicts by W-TinyLFU once `max_capacity` is exceeded; this cache first drops
-/// expired entries and then the least recently accessed one.
-pub struct AlfuCache<K, V> {
-    entries: Mutex<HashMap<K, CacheEntry<V>>>,
-    max_capacity: usize,
-    time_to_live: Duration,
-    time_to_idle: Duration,
-}
-
-struct CacheEntry<V> {
-    cell: Arc<OnceCell<DsResult<V>>>,
-    /// Set once the load completed; in-flight loads never expire (Caffeine async semantics).
-    loaded_at: Option<Instant>,
-    accessed_at: Instant,
-}
-
-impl<V> CacheEntry<V> {
-    fn is_expired(&self, now: Instant, ttl: Duration, tti: Duration) -> bool {
-        self.loaded_at.is_some_and(|loaded| {
-            now.duration_since(loaded) >= ttl || now.duration_since(self.accessed_at) >= tti
-        })
-    }
-}
-
-impl<K: Eq + Hash + Clone, V: Clone> AlfuCache<K, V> {
-    /// Scala `AlfuCache.apply` defaults: capacity 1000, time to live 2 h, time to idle 1 h.
-    pub fn with_defaults() -> Self {
-        Self::new(
-            1000,
-            Duration::from_secs(2 * 60 * 60),
-            Duration::from_secs(60 * 60),
-        )
-    }
-
-    pub fn new(max_capacity: usize, time_to_live: Duration, time_to_idle: Duration) -> Self {
-        Self {
-            entries: Mutex::new(HashMap::new()),
-            max_capacity: max_capacity.max(1),
-            time_to_live,
-            time_to_idle,
-        }
-    }
-
-    fn lock(&self) -> std::sync::MutexGuard<'_, HashMap<K, CacheEntry<V>>> {
-        self.entries.lock().unwrap_or_else(|e| e.into_inner())
-    }
-
-    /// Scala `getOrLoad`.
-    pub async fn get_or_load<F, Fut>(&self, key: K, load: F) -> DsResult<V>
-    where
-        F: FnOnce() -> Fut,
-        Fut: Future<Output = DsResult<V>>,
-    {
-        let cell = {
-            let mut entries = self.lock();
-            let now = Instant::now();
-            let live = entries
-                .get(&key)
-                .is_some_and(|e| !e.is_expired(now, self.time_to_live, self.time_to_idle));
-            if live {
-                let entry = entries.get_mut(&key).expect("checked above");
-                entry.accessed_at = now;
-                entry.cell.clone()
-            } else {
-                entries.remove(&key);
-                self.make_room(&mut entries, now);
-                let cell = Arc::new(OnceCell::new());
-                entries.insert(
-                    key.clone(),
-                    CacheEntry {
-                        cell: cell.clone(),
-                        loaded_at: None,
-                        accessed_at: now,
-                    },
-                );
-                cell
-            }
-        };
-        let result = cell.get_or_init(load).await.clone();
-        let mut entries = self.lock();
-        if let Some(entry) = entries.get_mut(&key)
-            && Arc::ptr_eq(&entry.cell, &cell)
-        {
-            if result.is_err() {
-                // "Do not cache failures"
-                entries.remove(&key);
-            } else if entry.loaded_at.is_none() {
-                let now = Instant::now();
-                entry.loaded_at = Some(now);
-                entry.accessed_at = now;
-            }
-        }
-        result
-    }
-
-    fn make_room(&self, entries: &mut HashMap<K, CacheEntry<V>>, now: Instant) {
-        if entries.len() < self.max_capacity {
-            return;
-        }
-        entries.retain(|_, e| !e.is_expired(now, self.time_to_live, self.time_to_idle));
-        while entries.len() >= self.max_capacity {
-            let Some(oldest) = entries
-                .iter()
-                .min_by_key(|(_, e)| e.accessed_at)
-                .map(|(k, _)| k.clone())
-            else {
-                return;
-            };
-            entries.remove(&oldest);
-        }
-    }
-
-    /// Scala `remove`.
-    pub fn remove(&self, key: &K) {
-        self.lock().remove(key);
-    }
-
-    /// Scala `clear(fn)`: removes all keys matching `predicate`, returns how many.
-    pub fn clear_matching(&self, mut predicate: impl FnMut(&K) -> bool) -> usize {
-        let mut entries = self.lock();
-        let before = entries.len();
-        entries.retain(|k, _| !predicate(k));
-        before - entries.len()
-    }
-
-    /// Scala `clear()`.
-    pub fn clear(&self) {
-        self.lock().clear();
-    }
-
-    pub fn len(&self) -> usize {
-        self.lock().len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-}
+pub use crate::cache::AlfuCache;
 
 // ---------------------------------------------------------------------------------------------
 // Generic RPC machinery (Scala `RPC` / `RPCRequest`)

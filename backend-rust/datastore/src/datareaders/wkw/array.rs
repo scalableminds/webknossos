@@ -1,11 +1,6 @@
 //! Scala `WKWArray`: Morton-addressed blocks in range-readable WKW shards.
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-    time::{Duration, Instant},
-};
-use tokio::sync::OnceCell;
+use std::sync::Arc;
 
 use super::{
     header::{FILENAME_HEADER_WKW, WkwHeader, wkw_file_path},
@@ -14,33 +9,25 @@ use super::{
 use crate::{
     datareaders::{
         ArrayFormat, ChunkContentsCache, DatasetArray, DatasetHeader, assert_chunk_size_limit,
+        index_cache::IndexCache,
     },
     datavault::{BoxFuture, ByteRange, VaultError, VaultPath, VaultResult},
     error::{DsError, DsResult},
     models::{AxisOrder, DataSourceId},
 };
 
-type IndexCell = Arc<OnceCell<Arc<Vec<i64>>>>;
-#[derive(Debug)]
-struct IndexEntry {
-    cell: IndexCell,
-    created: Instant,
-    accessed: Instant,
-}
-
 /// Per-array shard-index cache, with Scala AlfuCache's 1000-entry, 2h write/1h access limits.
-/// Eviction uses LRU instead of Caffeine's frequency-based policy. Failed loads are retried.
 #[derive(Debug)]
 pub struct WkwArrayFormat {
     header: Arc<WkwHeader>,
-    indices: Mutex<HashMap<String, IndexEntry>>,
+    indices: IndexCache<Vec<i64>>,
 }
 
 impl WkwArrayFormat {
     pub fn new(header: Arc<WkwHeader>) -> Self {
         Self {
             header,
-            indices: Mutex::new(HashMap::new()),
+            indices: IndexCache::default(),
         }
     }
 
@@ -49,34 +36,8 @@ impl WkwArrayFormat {
         path: &VaultPath,
         token: Option<&str>,
     ) -> VaultResult<Arc<Vec<i64>>> {
-        let cell = {
-            let mut indices = self.indices.lock().unwrap_or_else(|e| e.into_inner());
-            let now = Instant::now();
-            indices.retain(|_, e| {
-                now.duration_since(e.created) < Duration::from_secs(7200)
-                    && now.duration_since(e.accessed) < Duration::from_secs(3600)
-            });
-            let key = path.to_string();
-            if !indices.contains_key(&key)
-                && indices.len() >= 1000
-                && let Some(oldest) = indices
-                    .iter()
-                    .filter(|(_, e)| e.cell.initialized())
-                    .min_by_key(|(_, e)| e.accessed)
-                    .map(|(k, _)| k.clone())
-            {
-                indices.remove(&oldest);
-            }
-            let entry = indices.entry(key).or_insert_with(|| IndexEntry {
-                cell: Arc::new(OnceCell::new()),
-                created: now,
-                accessed: now,
-            });
-            entry.accessed = now;
-            Arc::clone(&entry.cell)
-        };
-        let result = cell
-            .get_or_try_init(|| async {
+        self.indices
+            .get_or_load(&path.to_string(), || async {
                 let entries = if self.header.is_compressed() {
                     self.header.num_chunks_per_shard() as u64 + 1
                 } else {
@@ -103,31 +64,9 @@ impl WkwArrayFormat {
                 if index.iter().any(|i| *i < 0) || index.windows(2).any(|w| w[1] < w[0]) {
                     return Err(VaultError::failure("Invalid WKW block byte range"));
                 }
-                Ok(Arc::new(index))
+                Ok(index)
             })
             .await
-            .cloned();
-        let mut indices = self.indices.lock().unwrap_or_else(|e| e.into_inner());
-        if result.is_err()
-            && indices
-                .get(&path.to_string())
-                .is_some_and(|e| Arc::ptr_eq(&e.cell, &cell))
-        {
-            indices.remove(&path.to_string());
-        }
-        while indices.len() > 1000 {
-            let oldest = indices
-                .iter()
-                .filter(|(_, e)| e.cell.initialized())
-                .min_by_key(|(_, e)| e.accessed)
-                .map(|(k, _)| k.clone());
-            if let Some(key) = oldest {
-                indices.remove(&key);
-            } else {
-                break;
-            }
-        }
-        result
     }
 
     fn morton_index(&self, index: &[i64]) -> VaultResult<usize> {

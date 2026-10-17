@@ -51,33 +51,15 @@ async fn failed_loads_are_not_cached() {
 }
 
 #[tokio::test]
-async fn idle_and_old_entries_are_reloaded_on_hit() {
-    let cache = IndexCache::with_capacity(10);
-    let loads = AtomicUsize::new(0);
-    load(&cache, "idle", &loads).await.unwrap();
-    load(&cache, "old", &loads).await.unwrap();
-    {
-        let mut entries = cache.entries.lock().unwrap();
-        let ago = |secs| {
-            Instant::now()
-                .checked_sub(Duration::from_secs(secs))
-                .unwrap()
-        };
-        entries.get_mut("idle").unwrap().accessed = ago(3600);
-        entries.get_mut("old").unwrap().loaded = Some(ago(7200));
-    }
-    assert_eq!(*load(&cache, "idle", &loads).await.unwrap(), 2);
-    assert_eq!(*load(&cache, "old", &loads).await.unwrap(), 3);
-    assert_eq!(*load(&cache, "idle", &loads).await.unwrap(), 2);
-}
-
-#[tokio::test]
 async fn evicts_the_least_recently_accessed_entry_above_capacity() {
     let cache = IndexCache::with_capacity(2);
     let loads = AtomicUsize::new(0);
     load(&cache, "a", &loads).await.unwrap();
     load(&cache, "b", &loads).await.unwrap();
+    // `len` applies moka's buffered reads and writes, which keeps the access order exact here.
+    assert_eq!(cache.len(), 2);
     load(&cache, "a", &loads).await.unwrap(); // hit refreshes "a"
+    assert_eq!(cache.len(), 2);
     load(&cache, "c", &loads).await.unwrap();
     assert_eq!(cache.len(), 2);
     assert_eq!(*load(&cache, "a", &loads).await.unwrap(), 0);

@@ -4,6 +4,7 @@
 
 pub mod access;
 pub mod binding_errors;
+pub mod cache;
 pub mod clients;
 pub mod compression;
 pub mod config;

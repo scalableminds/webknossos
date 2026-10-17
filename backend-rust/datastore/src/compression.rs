@@ -3,12 +3,14 @@
 //! zarr3 `BloscCodec`/`GzipCodec`/`ZstdCodec`, `PrecomputedCompressorFactory` sharding encodings,
 //! plus the WKW LZ4 block helpers of `WKWCompressionHelper`).
 //!
-//! Everything is pure Rust: Blosc1 is implemented here (see `compression/blosc.rs`), LZ4 blocks
-//! are decoded by `compression/lz4.rs` and encoded with `lz4_flex`, zlib/gzip use `flate2`
-//! (miniz_oxide backend) and zstd uses `ruzstd`.
+//! Blosc1 is implemented here (see `compression/blosc.rs`), LZ4 blocks are decoded by `lz4_flex`
+//! with a bounded fallback decoder for exact errors (`compression/lz4.rs`) and encoded with
+//! `lz4_flex`, zlib/gzip use `flate2` (miniz_oxide backend) and zstd uses libzstd through the
+//! `zstd` crate.
 //!
-//! Decompression never trusts sizes announced by the input: output is bounded by the caller's
-//! expected length or [`DEFAULT_MAX_DECOMPRESSED_BYTES`], and buffers grow incrementally.
+//! Decompression output is bounded by the caller's expected length or
+//! [`DEFAULT_MAX_DECOMPRESSED_BYTES`]; sizes announced by the input are only used within that
+//! bound.
 //!
 //! Not here: `JpegCompressor` (Precomputed `jpeg`, DS2d), `CompressoCompressor` (DS5b) and
 //! `CompressedSegmentationCompressor` (DS2d).
@@ -438,7 +440,7 @@ impl Compressor {
                     .map_err(|e| fail(format!("gzip compression failed: {e}")))
             }
             Self::Blosc(config) => blosc::compress(input, config).map_err(fail),
-            Self::Zstd { .. } => Ok(zstd_compress(input)),
+            Self::Zstd { level, checksum } => zstd_compress(input, *level, *checksum).map_err(fail),
             Self::Chained(compressors) => {
                 let mut bytes = input.to_vec();
                 for compressor in compressors {
@@ -551,56 +553,60 @@ fn gzip_decompress(input: &[u8], limit: usize) -> Result<Vec<u8>, String> {
 }
 
 /// Decodes concatenated zstd frames (skippable frames are skipped), verifying content checksums.
+///
+/// A lone frame that announces its content size (within `limit`) is decoded in one call into a
+/// buffer of that size. Several frames, unknown sizes and every failure go through the streaming
+/// decoder, which bounds the output by `limit` and produces the error messages.
 pub(crate) fn zstd_decompress(input: &[u8], limit: usize) -> Result<Vec<u8>, String> {
-    use ruzstd::decoding::{
-        StreamingDecoder,
-        errors::{FrameDecoderError, ReadFrameHeaderError},
-    };
+    use zstd::zstd_safe;
+    if let Ok(Some(size)) = zstd_safe::get_frame_content_size(input)
+        && let Ok(size) = usize::try_from(size)
+        && size <= limit
+        && zstd_safe::find_frame_compressed_size(input) == Ok(input.len())
+        && let Ok(out) = zstd::bulk::decompress(input, size)
+        && out.len() == size
+    {
+        return Ok(out);
+    }
+    zstd_decompress_streaming(input, limit)
+}
+
+fn zstd_decompress_streaming(input: &[u8], limit: usize) -> Result<Vec<u8>, String> {
     let mut out = Vec::new();
-    let mut src = input;
-    while !src.is_empty() {
-        let mut decoder = match StreamingDecoder::new(&mut src) {
-            Ok(decoder) => decoder,
-            Err(FrameDecoderError::ReadFrameHeaderError(ReadFrameHeaderError::SkipFrame {
-                length,
-                ..
-            })) => {
-                let length = length as usize;
-                src = src
-                    .get(length..)
-                    .ok_or_else(|| "zstd: truncated skippable frame".to_owned())?;
-                continue;
-            }
-            Err(e) => return Err(format!("zstd: {e}")),
-        };
-        let budget = (limit - out.len()) as u64 + 1;
-        (&mut decoder)
-            .take(budget)
-            .read_to_end(&mut out)
-            .map_err(|e| format!("zstd: {e}"))?;
-        if out.len() > limit {
-            return Err(format!(
-                "zstd: decompressed data exceeds the allowed {limit} bytes"
-            ));
-        }
-        let frame = &decoder.decoder;
-        if !frame.is_finished() {
-            return Err("zstd: truncated frame".to_owned());
-        }
-        if let (Some(stored), Some(computed)) = (
-            frame.get_checksum_from_data(),
-            frame.get_calculated_checksum(),
-        ) && stored != computed
-        {
-            return Err("zstd: content checksum mismatch".to_owned());
-        }
+    if input.is_empty() {
+        return Ok(out);
+    }
+    let mut decoder = zstd::stream::read::Decoder::with_buffer(input).map_err(zstd_error)?;
+    // Accept every window size the format allows (libzstd's streaming default stops at 2^27).
+    decoder.window_log_max(31).map_err(zstd_error)?;
+    decoder
+        .take(limit as u64 + 1)
+        .read_to_end(&mut out)
+        .map_err(zstd_error)?;
+    if out.len() > limit {
+        return Err(format!(
+            "zstd: decompressed data exceeds the allowed {limit} bytes"
+        ));
     }
     Ok(out)
 }
 
-/// One zstd frame (ruzstd's "fastest" level; content checksum always written).
-pub(crate) fn zstd_compress(input: &[u8]) -> Vec<u8> {
-    ruzstd::encoding::compress_to_vec(input, ruzstd::encoding::CompressionLevel::Fastest)
+fn zstd_error(error: std::io::Error) -> String {
+    match error.to_string().as_str() {
+        "Restored data doesn't match checksum" => "zstd: content checksum mismatch".to_owned(),
+        "incomplete frame" => "zstd: truncated frame".to_owned(),
+        message => format!("zstd: {message}"),
+    }
+}
+
+/// One zstd frame at `level` (libzstd semantics: 0 is the default level), with a content checksum
+/// if `checksum` is set (Scala zstd-jni `ZstdCompressorOutputStream`).
+pub(crate) fn zstd_compress(input: &[u8], level: i32, checksum: bool) -> Result<Vec<u8>, String> {
+    let mut compressor = zstd::bulk::Compressor::new(level).map_err(zstd_error)?;
+    compressor
+        .set_parameter(zstd::zstd_safe::CParameter::ChecksumFlag(checksum))
+        .map_err(zstd_error)?;
+    compressor.compress(input).map_err(zstd_error)
 }
 
 /// Scala `WKWCompressionHelper.decompressChunk` for LZ4/LZ4HC blocks (lz4-java

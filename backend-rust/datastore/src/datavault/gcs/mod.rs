@@ -27,8 +27,8 @@ use serde_json::{Value, json};
 use tokio::sync::Mutex;
 
 use super::{
-    BoxFuture, ByteRange, DataVault, Encoding, RawRead, RemoteUri, ToRemoteUri, UPath, VaultError,
-    VaultResult, sigv4::uri_encode,
+    BoxFuture, ByteRange, DataVault, Encoding, RawRead, RemoteUri, RetryPolicy, ToRemoteUri, UPath,
+    VaultError, VaultResult, sigv4::uri_encode,
 };
 use crate::error::DsError;
 
@@ -41,6 +41,13 @@ const TOKEN_EXPIRY_MARGIN: Duration = Duration::from_secs(5 * 60);
 const JWT_LIFETIME_SECONDS: u64 = 3600;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
 
+/// google-cloud-storage's default `RetrySettings` (6 attempts, 1 s initial delay, multiplier 2),
+/// which Scala's `StorageOptions` use for every vault request.
+pub const DEFAULT_READ_RETRY: RetryPolicy = RetryPolicy {
+    attempts: 6,
+    initial_delay: Duration::from_secs(1),
+};
+
 /// Process-wide GCS settings.
 #[derive(Debug, Clone)]
 pub struct GcsOptions {
@@ -49,6 +56,8 @@ pub struct GcsOptions {
     /// Application default credentials: the service-account key from
     /// `GOOGLE_APPLICATION_CREDENTIALS` (JSON text), used when a vault has no credential.
     pub default_service_account_json: Option<String>,
+    /// Retries of every JSON API request (not of token exchanges).
+    pub read_retry: RetryPolicy,
 }
 
 impl Default for GcsOptions {
@@ -56,6 +65,7 @@ impl Default for GcsOptions {
         Self {
             endpoint: DEFAULT_GCS_ENDPOINT.into(),
             default_service_account_json: None,
+            read_retry: DEFAULT_READ_RETRY,
         }
     }
 }
@@ -63,11 +73,11 @@ impl Default for GcsOptions {
 impl GcsOptions {
     pub fn from_env() -> Self {
         Self {
-            endpoint: DEFAULT_GCS_ENDPOINT.into(),
             default_service_account_json: std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
                 .ok()
                 .filter(|p| !p.is_empty())
                 .and_then(|path| std::fs::read_to_string(path).ok()),
+            ..Self::default()
         }
     }
 }
@@ -237,6 +247,7 @@ pub struct GoogleCloudDataVault {
     token_source: Option<Result<Arc<ServiceAccountTokenSource>, String>>,
     client: Client,
     endpoint: String,
+    read_retry: RetryPolicy,
 }
 
 impl GoogleCloudDataVault {
@@ -256,6 +267,7 @@ impl GoogleCloudDataVault {
             }),
             client,
             endpoint: options.endpoint.trim_end_matches('/').to_owned(),
+            read_retry: options.read_retry,
             uri,
         }
     }
@@ -294,12 +306,37 @@ impl GoogleCloudDataVault {
         }
     }
 
-    async fn send(&self, request: RequestBuilder) -> VaultResult<Response> {
-        self.authorized(request)
-            .await?
-            .send()
-            .await
-            .map_err(|e| storage_exception(e.to_string()))
+    /// Sends an authorized request, retrying I/O failures and the statuses google-cloud-storage
+    /// retries (408, 429, 500, 502, 503, 504) per `read_retry`. The last attempt's response is
+    /// returned as is.
+    async fn send(&self, mut request: RequestBuilder) -> VaultResult<Response> {
+        let mut attempt = 1;
+        loop {
+            let retry_request = if attempt < self.read_retry.attempts {
+                request.try_clone()
+            } else {
+                None
+            };
+            let result = self.authorized(request).await?.send().await;
+            let transient = match &result {
+                Ok(response) => {
+                    matches!(
+                        response.status().as_u16(),
+                        408 | 429 | 500 | 502 | 503 | 504
+                    )
+                }
+                Err(error) => !error.is_builder(),
+            };
+            match retry_request {
+                Some(next) if transient => {
+                    tracing::debug!(bucket = %self.bucket, attempt, "GCS request failed transiently; retrying");
+                    tokio::time::sleep(self.read_retry.delay(attempt)).await;
+                    request = next;
+                    attempt += 1;
+                }
+                _ => return result.map_err(|e| storage_exception(e.to_string())),
+            }
+        }
     }
 
     /// Object listing pages (`delimiter` = Scala `currentDirectory()`).

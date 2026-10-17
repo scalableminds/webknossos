@@ -22,6 +22,8 @@ async fn caches_successes_and_evicts_by_weight() {
         .get_or_load("b", || async { Ok(chunk(2000)) }, weigh)
         .await
         .unwrap();
+    // `len` applies moka's buffered reads and writes, which keeps the access order exact here.
+    assert_eq!(cache.len(), 2);
     // cached: the loader must not run
     cache
         .get_or_load("a", || async { panic!("reloaded") }, weigh)
@@ -32,6 +34,7 @@ async fn caches_successes_and_evicts_by_weight() {
         .get_or_load("c", || async { Ok(chunk(2000)) }, weigh)
         .await
         .unwrap();
+    assert_eq!(cache.len(), 2);
     // b was least recently used
     assert!(cache.contains("a") && cache.contains("c") && !cache.contains("b"));
     let failed = cache
@@ -46,10 +49,8 @@ async fn caches_successes_and_evicts_by_weight() {
 }
 
 #[tokio::test]
-async fn large_caches_are_sharded_and_small_ones_stay_one_lru() {
-    assert_eq!(ChunkContentsCache::new(5_000).shards.len(), 1);
+async fn clearing_counts_removed_entries() {
     let cache = ChunkContentsCache::new(super::DEFAULT_MAX_SIZE_BYTES);
-    assert_eq!(cache.shards.len(), 30);
     for i in 0..300 {
         cache
             .get_or_load(&format!("key-{i}"), || async { Ok(chunk(1000)) }, |_| 1000)
@@ -58,15 +59,6 @@ async fn large_caches_are_sharded_and_small_ones_stay_one_lru() {
     }
     assert_eq!(cache.len(), 300);
     assert_eq!(cache.weight_kb(), 300);
-    // Keys spread over the shards (each shard locks independently).
-    assert!(
-        cache
-            .shards
-            .iter()
-            .filter(|s| !s.lock().unwrap().entries.is_empty())
-            .count()
-            > 20
-    );
     assert_eq!(cache.clear_matching(|k| k.ends_with('7')), 30);
     assert_eq!(cache.len(), 270);
 }

@@ -3,87 +3,28 @@
 //! weighted in kilobytes (`sizeBytes / 1000`) with a maximum weight of
 //! `floor(imageArrayChunks.maxSizeBytes / 1000)` (default 2 GB), expire after write 2 h and after
 //! access 1 h (Scala `AlfuCache` defaults). Concurrent loads of one key share a single load;
-//! failures are not cached.
-//!
-//! Deviation: Caffeine evicts with W-TinyLFU; this cache evicts least recently used entries.
+//! failures are not cached. See [`crate::cache`] for the moka-backed implementation and its
+//! eviction deviation.
 
-use std::{
-    collections::{BTreeMap, HashMap},
-    future::Future,
-    sync::{Arc, Mutex},
-    time::{Duration, Instant},
-};
-
-use tokio::sync::OnceCell;
+use std::{future::Future, sync::Arc, time::Duration};
 
 use super::chunk::ChunkContents;
-use crate::error::DsResult;
+use crate::{
+    cache::AlfuCache,
+    error::{DsError, DsResult},
+};
 
 /// Scala default `datastore.cache.imageArrayChunks.maxSizeBytes`.
 pub const DEFAULT_MAX_SIZE_BYTES: u64 = 2_000_000_000;
 const TIME_TO_LIVE: Duration = Duration::from_secs(2 * 60 * 60);
 const TIME_TO_IDLE: Duration = Duration::from_secs(60 * 60);
 
-type Cell = Arc<OnceCell<DsResult<Arc<ChunkContents>>>>;
-
-struct Entry {
-    cell: Cell,
-    /// Weight in kilobytes once loaded; `None` while loading.
-    weight: Option<u64>,
-    loaded_at: Option<Instant>,
-    accessed_at: Instant,
-    tick: u64,
-}
-
-#[derive(Default)]
-struct State {
-    entries: HashMap<String, Entry>,
-    /// Access order: tick → key (oldest first).
-    order: BTreeMap<u64, String>,
-    next_tick: u64,
-    total_weight: u64,
-}
-
-impl State {
-    fn touch(&mut self, key: &str, now: Instant) {
-        let tick = self.next_tick;
-        self.next_tick += 1;
-        if let Some(entry) = self.entries.get_mut(key) {
-            self.order.remove(&entry.tick);
-            entry.tick = tick;
-            entry.accessed_at = now;
-            self.order.insert(tick, key.to_string());
-        }
-    }
-
-    fn remove(&mut self, key: &str) {
-        if let Some(entry) = self.entries.remove(key) {
-            self.order.remove(&entry.tick);
-            self.total_weight -= entry.weight.unwrap_or(0);
-        }
-    }
-
-    fn is_expired(entry: &Entry, now: Instant) -> bool {
-        entry.loaded_at.is_some_and(|loaded| {
-            now.duration_since(loaded) >= TIME_TO_LIVE
-                || now.duration_since(entry.accessed_at) >= TIME_TO_IDLE
-        })
-    }
-
-    fn evict(&mut self, max_weight: u64) {
-        let mut skipped = Vec::new();
-        while self.total_weight > max_weight {
-            let Some((&tick, key)) = self.order.iter().find(|(t, _)| !skipped.contains(*t)) else {
-                break;
-            };
-            let key = key.clone();
-            if self.entries.get(&key).is_some_and(|e| e.weight.is_none()) {
-                skipped.push(tick); // in-flight loads are not evicted
-                continue;
-            }
-            self.remove(&key);
-        }
-    }
+/// A loaded chunk with its weight in kilobytes (the weight depends on the array header, which
+/// only the loader knows).
+#[derive(Clone)]
+struct WeighedChunk {
+    contents: Arc<ChunkContents>,
+    weight_kb: u32,
 }
 
 /// The shared chunk contents cache (Scala `AlfuCache[String, MultiArray]`).
@@ -91,92 +32,46 @@ pub(crate) fn source_layer_cache_key(id: &crate::models::DataSourceId, layer: &s
     serde_json::to_string(&[&id.organization_id, &id.directory_name, layer])
         .expect("string array serializes")
 }
+
+#[derive(Debug)]
 pub struct ChunkContentsCache {
-    /// Independent LRU shards chosen by key hash. One global lock serialized every chunk access of
-    /// every request (differential load phase 2026-10-17: readData/histogram stopped scaling past
-    /// 8 connections); Scala's Caffeine cache is concurrent. Weight limits apply per shard.
-    shards: Box<[Mutex<State>]>,
-    max_weight_kb_per_shard: u64,
-}
-
-/// Each shard holds at least this much, so small (test) caches stay one exact LRU.
-const MIN_SHARD_WEIGHT_KB: u64 = 64 * 1024;
-const MAX_SHARDS: u64 = 32;
-
-impl std::fmt::Debug for ChunkContentsCache {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ChunkContentsCache")
-            .field("max_weight_kb_per_shard", &self.max_weight_kb_per_shard)
-            .field("shards", &self.shards.len())
-            .field("entries", &self.len())
-            .finish()
-    }
+    cache: AlfuCache<String, WeighedChunk, DsError>,
 }
 
 impl ChunkContentsCache {
     /// Scala `ChunkCacheService` with `maxSizeBytes` (`WK_DS` config
     /// `cache.image_array_chunks_max_size_bytes`).
     pub fn new(max_size_bytes: u64) -> Self {
-        let max_weight_kb = max_size_bytes / 1000;
-        let shards = (max_weight_kb / MIN_SHARD_WEIGHT_KB).clamp(1, MAX_SHARDS);
         Self {
-            shards: (0..shards).map(|_| Mutex::new(State::default())).collect(),
-            max_weight_kb_per_shard: max_weight_kb / shards,
+            cache: AlfuCache::weighted(
+                max_size_bytes / 1000,
+                TIME_TO_LIVE,
+                TIME_TO_IDLE,
+                |chunk: &WeighedChunk| chunk.weight_kb,
+            ),
         }
     }
 
-    fn lock_shard(shard: &Mutex<State>) -> std::sync::MutexGuard<'_, State> {
-        shard.lock().unwrap_or_else(|e| e.into_inner())
-    }
-
-    /// The shard of `key`; the key is hashed before any lock is taken.
-    fn lock(&self, key: &str) -> std::sync::MutexGuard<'_, State> {
-        use std::hash::{BuildHasher, BuildHasherDefault, DefaultHasher};
-        let hash = BuildHasherDefault::<DefaultHasher>::default().hash_one(key);
-        Self::lock_shard(&self.shards[(hash % self.shards.len() as u64) as usize])
-    }
-
-    fn sum(&self, f: impl Fn(&State) -> u64) -> u64 {
-        self.shards
-            .iter()
-            .map(|shard| f(&Self::lock_shard(shard)))
-            .sum()
-    }
-
     pub fn len(&self) -> usize {
-        self.sum(|state| state.entries.len() as u64) as usize
+        self.cache.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.cache.is_empty()
     }
 
     /// Total weight of loaded entries in kilobytes.
     pub fn weight_kb(&self) -> u64 {
-        self.sum(|state| state.total_weight)
+        self.cache.weighted_size()
     }
 
     pub fn contains(&self, key: &str) -> bool {
-        self.lock(key).entries.contains_key(key)
+        self.cache.contains(key)
     }
 
     /// Scala `clear(predicate)`: removes matching keys, returns how many.
     pub fn clear_matching(&self, mut predicate: impl FnMut(&str) -> bool) -> usize {
-        let mut removed = 0;
-        for shard in &self.shards {
-            let mut state = Self::lock_shard(shard);
-            let keys: Vec<String> = state
-                .entries
-                .keys()
-                .filter(|k| predicate(k))
-                .cloned()
-                .collect();
-            for key in &keys {
-                state.remove(key);
-            }
-            removed += keys.len();
-        }
-        removed
+        self.cache.clear_matching(|key| predicate(key))
     }
 
     /// Clear exactly one source/layer, including names containing the old __ delimiter.
@@ -205,65 +100,17 @@ impl ChunkContentsCache {
         F: FnOnce() -> Fut,
         Fut: Future<Output = DsResult<ChunkContents>>,
     {
-        let cell: Cell = {
-            let mut state = self.lock(key);
-            let now = Instant::now();
-            let live = state.entries.get(key).map(|e| !State::is_expired(e, now));
-            match live {
-                Some(true) => {
-                    state.touch(key, now);
-                    Arc::clone(&state.entries[key].cell)
-                }
-                _ => {
-                    state.remove(key);
-                    let cell: Cell = Arc::new(OnceCell::new());
-                    let tick = state.next_tick;
-                    state.next_tick += 1;
-                    state.entries.insert(
-                        key.to_string(),
-                        Entry {
-                            cell: Arc::clone(&cell),
-                            weight: None,
-                            loaded_at: None,
-                            accessed_at: now,
-                            tick,
-                        },
-                    );
-                    state.order.insert(tick, key.to_string());
-                    cell
-                }
-            }
-        };
-        let result = cell
-            .get_or_init(|| async { load().await.map(Arc::new) })
+        self.cache
+            .get_or_load_by_ref(key, || async {
+                let contents = load().await?;
+                let weight_kb = u32::try_from(weigh(&contents) / 1000).unwrap_or(u32::MAX);
+                Ok(WeighedChunk {
+                    contents: Arc::new(contents),
+                    weight_kb,
+                })
+            })
             .await
-            .clone();
-        let mut state = self.lock(key);
-        let is_ours = state
-            .entries
-            .get(key)
-            .is_some_and(|e| Arc::ptr_eq(&e.cell, &cell));
-        if is_ours {
-            match &result {
-                Err(_) => state.remove(key),
-                Ok(value) => {
-                    let pending = state.entries.get(key).is_some_and(|e| e.weight.is_none());
-                    if pending {
-                        let weight = (weigh(value) / 1000) as u64;
-                        let now = Instant::now();
-                        if let Some(entry) = state.entries.get_mut(key) {
-                            entry.weight = Some(weight);
-                            entry.loaded_at = Some(now);
-                            entry.accessed_at = now;
-                        }
-                        state.total_weight += weight;
-                        let max = self.max_weight_kb_per_shard;
-                        state.evict(max);
-                    }
-                }
-            }
-        }
-        result
+            .map(|chunk| chunk.contents)
     }
 }
 

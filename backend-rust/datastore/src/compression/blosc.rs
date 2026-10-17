@@ -524,6 +524,11 @@ fn encode_stream(stream: &[u8], cname: BloscCname, clevel: i32) -> Result<Option
                 .map(Some)
                 .map_err(|e| format!("blosc: zlib compression failed: {e}"))?
         }
-        BloscCname::Zstd => Some(super::zstd_compress(stream)),
+        BloscCname::Zstd => {
+            // c-blosc 1.21 `zstd_wrap_compress`: blosc levels below 9 map to `2 * clevel - 1`,
+            // 9 to libzstd's maximum level; no content checksum.
+            let level = if clevel < 9 { clevel * 2 - 1 } else { 22 };
+            Some(super::zstd_compress(stream, level, false).map_err(|e| format!("blosc: {e}"))?)
+        }
     })
 }

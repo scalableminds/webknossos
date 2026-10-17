@@ -24,8 +24,8 @@ use reqwest::{Client, Method, StatusCode, header::HeaderMap};
 use tokio::sync::OnceCell;
 
 use super::{
-    BoxFuture, ByteRange, DataVault, Encoding, RawRead, RemoteUri, ToRemoteUri, UPath, VaultError,
-    VaultResult,
+    BoxFuture, ByteRange, DataVault, Encoding, RawRead, RemoteUri, RetryPolicy, ToRemoteUri, UPath,
+    VaultError, VaultResult,
     sigv4::{self, AwsCredentials, SigningRequest},
 };
 use crate::error::DsError;
@@ -236,21 +236,40 @@ pub fn parse_signing_region(authority: &str) -> Option<String> {
 // Vault
 // ---------------------------------------------------------------------------------------------
 
+/// Retries of read, listing and bucket requests: the AWS SDK v2 standard retry mode of Scala's
+/// default (non-upload) S3 client.
+pub const DEFAULT_READ_RETRY: RetryPolicy = RetryPolicy {
+    attempts: 3,
+    initial_delay: Duration::from_millis(100),
+};
+
 /// Process-wide S3 settings (Scala reads them from the environment / SDK defaults).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct S3Options {
     /// Environment credentials, used when a vault has no credential (Scala
     /// `EnvironmentVariableCredentialsProvider`). `Err` = present but incomplete.
     pub env_credentials: Option<Result<AwsCredentials, String>>,
     /// Base URL replacing the Amazon S3 endpoints (path-style). Only for tests.
     pub aws_endpoint_override: Option<String>,
+    /// Retries of requests without a payload (uploads have their own retries).
+    pub read_retry: RetryPolicy,
+}
+
+impl Default for S3Options {
+    fn default() -> Self {
+        Self {
+            env_credentials: None,
+            aws_endpoint_override: None,
+            read_retry: DEFAULT_READ_RETRY,
+        }
+    }
 }
 
 impl S3Options {
     pub fn from_env() -> Self {
         Self {
             env_credentials: AwsCredentials::from_env_vars(|name| std::env::var(name).ok()),
-            aws_endpoint_override: None,
+            ..Self::default()
         }
     }
 }
@@ -290,6 +309,7 @@ pub struct S3DataVault {
     endpoint: Endpoint,
     /// Cross-region access: bucket → region learned from redirects.
     bucket_regions: Mutex<HashMap<String, String>>,
+    read_retry: RetryPolicy,
 }
 
 impl std::fmt::Debug for S3DataVault {
@@ -434,14 +454,35 @@ fn sdk_failure(response: &S3Response) -> VaultError {
     })
 }
 
+/// Message prefix of [`transport_failure`] (the SDK's `SdkClientException` for I/O errors).
+const TRANSPORT_FAILURE: &str = "Unable to execute HTTP request";
+
 fn transport_failure(error: reqwest::Error) -> VaultError {
-    let message = format!("Unable to execute HTTP request: {error}");
+    let message = format!("{TRANSPORT_FAILURE}: {error}");
     VaultError::Failure(DsError {
         exception: Some(format!(
             "software.amazon.awssdk.core.exception.SdkClientException: {message}"
         )),
         ..DsError::failure(message)
     })
+}
+
+/// SDK retry conditions for requests without payload: I/O failures, throttling, server errors
+/// and transient error codes. Successful bodies are object data and are never parsed.
+fn is_transient(result: &VaultResult<S3Response>) -> bool {
+    match result {
+        Ok(response) if response.status.is_success() => false,
+        Ok(response) => {
+            response.status.is_server_error()
+                || response.status == StatusCode::TOO_MANY_REQUESTS
+                || matches!(
+                    parse_error_body(&response.body).code.as_deref(),
+                    Some("SlowDown" | "InternalError" | "RequestTimeout" | "ServiceUnavailable")
+                )
+        }
+        Err(VaultError::Failure(error)) => error.message.starts_with(TRANSPORT_FAILURE),
+        Err(VaultError::NotFound) => false,
+    }
 }
 
 /// Bucket names that can be used as a virtual host over TLS.
@@ -541,6 +582,7 @@ impl S3DataVault {
             client,
             endpoint,
             bucket_regions: Mutex::new(HashMap::new()),
+            read_retry: options.read_retry,
         }
     }
 
@@ -636,7 +678,8 @@ impl S3DataVault {
         }
     }
 
-    /// Send one signed request (`key = None` addresses the bucket itself).
+    /// Send one signed request without payload (`key = None` addresses the bucket itself),
+    /// retrying transient failures per `read_retry`. The last attempt's result is returned as is.
     async fn send_once(
         &self,
         method: Method,
@@ -646,8 +689,31 @@ impl S3DataVault {
         range: Option<String>,
         region: &str,
     ) -> VaultResult<S3Response> {
-        self.send_once_with_payload(method, bucket, key, query, range, region, None)
-            .await
+        let mut attempt = 1;
+        loop {
+            let result = self
+                .send_once_with_payload(
+                    method.clone(),
+                    bucket,
+                    key,
+                    query,
+                    range.clone(),
+                    region,
+                    None,
+                )
+                .await;
+            if attempt >= self.read_retry.attempts || !is_transient(&result) {
+                return result;
+            }
+            tracing::debug!(
+                bucket,
+                key,
+                attempt,
+                "S3 request failed transiently; retrying"
+            );
+            tokio::time::sleep(self.read_retry.delay(attempt)).await;
+            attempt += 1;
+        }
     }
 
     #[allow(clippy::too_many_arguments)] // Read requests and replayable upload payloads share signing.

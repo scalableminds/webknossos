@@ -35,7 +35,55 @@ pub(crate) enum Lz4End {
 }
 
 /// Decodes a raw LZ4 block. Returns the output and the number of consumed input bytes.
+///
+/// Well-formed blocks are decoded by `lz4_flex` into a buffer of the exact output size (`limit`
+/// for [`Lz4End::OutputFull`], the length summed from the sequence headers otherwise). Whatever it
+/// rejects, and an `OutputFull` block that ends early, is decoded again by
+/// [`decode_block_reference`], so errors and partially consumed inputs stay those of the Java
+/// decoders.
 pub(crate) fn decode_block(
+    input: &[u8],
+    limit: usize,
+    end: Lz4End,
+) -> Result<(Vec<u8>, usize), Lz4Error> {
+    let size = match end {
+        Lz4End::OutputFull => Some(limit),
+        Lz4End::InputExhausted => decoded_len(input).filter(|&n| n <= limit),
+    };
+    if let Some(size) = size {
+        let mut out = vec![0; size];
+        // On success lz4_flex has consumed the whole input.
+        if matches!(lz4_flex::block::decompress_into(input, &mut out), Ok(n) if n == size) {
+            return Ok((out, input.len()));
+        }
+    }
+    decode_block_reference(input, limit, end)
+}
+
+/// Output length of a block, summed from its sequence headers (literals are skipped, offsets are
+/// not checked). `None` if the headers run past the input.
+fn decoded_len(input: &[u8]) -> Option<usize> {
+    let mut ip = 0usize;
+    let mut total = 0usize;
+    while ip < input.len() {
+        let token = input[ip];
+        ip += 1;
+        let literal_len = read_length(input, &mut ip, usize::from(token >> 4)).ok()?;
+        ip = ip.checked_add(literal_len)?;
+        total = total.checked_add(literal_len)?;
+        if ip >= input.len() {
+            return (ip == input.len()).then_some(total);
+        }
+        ip += 2;
+        let match_len = read_length(input, &mut ip, usize::from(token & 0x0f)).ok()? + 4;
+        total = total.checked_add(match_len)?;
+    }
+    Some(total)
+}
+
+/// The bounded byte-wise decoder behind [`decode_block`]; it mirrors the Java decoders' checks and
+/// stopping rules.
+pub(crate) fn decode_block_reference(
     input: &[u8],
     limit: usize,
     end: Lz4End,

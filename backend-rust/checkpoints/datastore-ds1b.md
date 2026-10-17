@@ -22,7 +22,7 @@ DONE (2026-10-11 15:05). S3, GCS and DataVaultService implemented, registered an
 
 ## Deviations / open points
 
-- No AWS SDK/object_store: own SigV4 + XML parsing. Not replicated: SDK retries/backoff, checksum validation, IMDS/profile/web-identity credential providers (only static + env), S3 Express, path-style for non-DNS buckets beyond `.`.
+- No AWS SDK/object_store: own SigV4 + XML parsing. Retries (2026-10-17): S3 requests without payload retry I/O failures, 5xx, 429 and SlowDown/InternalError/RequestTimeout/ServiceUnavailable (3 attempts, 100 ms jittered exponential backoff = SDK standard mode); GCS requests retry I/O failures and 408/429/500/502/503/504 (6 attempts from 1 s = google-cloud-storage defaults); `S3Options`/`GcsOptions::read_retry`. Not replicated: checksum validation, IMDS/profile/web-identity credential providers (only static + env), S3 Express, path-style for non-DNS buckets beyond `.`.
 - GCS: only service-account keys (no metadata-server/user ADC); encoding comes from response headers instead of a second `storage.get` call (one request instead of two).
 - ZIP paths: stored entries/ZIP64, range reads and central-directory cache now implemented and verified against Scala goldens, actual HTTP/token/denial tests and real reader/router/reload tests (2026-10-12). Compressed entries remain unsupported as in Scala; see datastore-ds1-zip.md.
 - `CredentialLookup` for `WkClient` relies on wk_client's own 5 s credential cache; parse failures produce `Could not parse credential <id>: <field reason>`.

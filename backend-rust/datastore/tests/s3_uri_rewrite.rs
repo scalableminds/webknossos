@@ -45,6 +45,7 @@ fn service(base: &str) -> DataVaultService {
             s3: S3Options {
                 env_credentials: None,
                 aws_endpoint_override: Some(base.into()),
+                ..S3Options::default()
             },
             gcs: GcsOptions::from_env(),
         },

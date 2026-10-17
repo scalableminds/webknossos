@@ -1,49 +1,43 @@
 //! Bounded single-flight cache for immutable shard/minishard indexes (Scala AlfuCache defaults).
-use crate::datavault::VaultResult;
-use std::{
-    collections::HashMap,
-    future::Future,
-    sync::{Arc, Mutex},
-    time::{Duration, Instant},
+use crate::{
+    cache::AlfuCache,
+    datavault::{VaultError, VaultResult},
 };
-use tokio::sync::OnceCell;
-struct Entry<T> {
-    cell: Arc<OnceCell<Arc<T>>>,
-    loaded: Option<Instant>,
-    accessed: Instant,
-}
+use std::{future::Future, sync::Arc, time::Duration};
+
 pub(crate) struct IndexCache<T> {
-    entries: Mutex<HashMap<String, Entry<T>>>,
-    capacity: usize,
+    cache: AlfuCache<String, Arc<T>, VaultError>,
 }
-impl<T> Default for IndexCache<T> {
+
+impl<T: Send + Sync + 'static> Default for IndexCache<T> {
     fn default() -> Self {
-        Self {
-            entries: Mutex::new(HashMap::new()),
-            capacity: 1000,
-        }
+        Self::with_capacity(1000)
     }
 }
+
 impl<T> std::fmt::Debug for IndexCache<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("IndexCache")
     }
 }
-impl<T> IndexCache<T> {
+
+impl<T: Send + Sync + 'static> IndexCache<T> {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            entries: Mutex::new(HashMap::new()),
-            capacity,
+            cache: AlfuCache::new(
+                capacity,
+                Duration::from_secs(2 * 60 * 60),
+                Duration::from_secs(60 * 60),
+            ),
         }
     }
+
     pub fn clear_matching(&self, mut predicate: impl FnMut(&str) -> bool) -> usize {
-        let mut entries = self.entries.lock().unwrap_or_else(|e| e.into_inner());
-        let before = entries.len();
-        entries.retain(|key, _| !predicate(key));
-        before - entries.len()
+        self.cache.clear_matching(|key| predicate(key))
     }
+
     pub fn len(&self) -> usize {
-        self.entries.lock().unwrap_or_else(|e| e.into_inner()).len()
+        self.cache.len()
     }
 
     pub async fn get_or_load<F, Fut>(&self, key: &str, load: F) -> VaultResult<Arc<T>>
@@ -51,72 +45,11 @@ impl<T> IndexCache<T> {
         F: FnOnce() -> Fut,
         Fut: Future<Output = VaultResult<T>>,
     {
-        let cell = {
-            let mut entries = self.entries.lock().unwrap_or_else(|e| e.into_inner());
-            let now = Instant::now();
-            let expired = |e: &Entry<T>| {
-                e.loaded
-                    .is_some_and(|t| now.duration_since(t) >= Duration::from_secs(7200))
-                    || now.duration_since(e.accessed) >= Duration::from_secs(3600)
-            };
-            // Expiry is checked per entry; a full sweep (O(entries) under the lock) runs only when
-            // a new entry is added. Sweeping on every lookup made each bucket request scan the
-            // whole provider cache (up to 5000 entries) while holding the lock.
-            match entries.get_mut(key) {
-                Some(e) if expired(e) => {
-                    entries.remove(key);
-                }
-                Some(e) => {
-                    e.accessed = now;
-                    // Hit on a completed load: one lock, no key allocation. Every bucket of a
-                    // cuboid passes through here, concurrently with all other requests.
-                    if e.loaded.is_some()
-                        && let Some(value) = e.cell.get()
-                    {
-                        return Ok(Arc::clone(value));
-                    }
-                }
-                None => {}
-            }
-            if !entries.contains_key(key) {
-                entries.retain(|_, e| !expired(e));
-            }
-            let entry = entries.entry(key.to_owned()).or_insert_with(|| Entry {
-                cell: Arc::new(OnceCell::new()),
-                loaded: None,
-                accessed: now,
-            });
-            Arc::clone(&entry.cell)
-        };
-        let result = cell
-            .get_or_try_init(|| async { load().await.map(Arc::new) })
+        self.cache
+            .get_or_load_by_ref(key, || async { load().await.map(Arc::new) })
             .await
-            .cloned();
-        let mut entries = self.entries.lock().unwrap_or_else(|e| e.into_inner());
-        if entries
-            .get(key)
-            .is_some_and(|e| Arc::ptr_eq(&e.cell, &cell))
-        {
-            if result.is_err() {
-                entries.remove(key);
-            } else if let Some(e) = entries.get_mut(key) {
-                e.loaded.get_or_insert_with(Instant::now);
-            }
-        }
-        while entries.len() > self.capacity {
-            if let Some(old) = entries
-                .iter()
-                .filter(|(_, e)| e.loaded.is_some())
-                .min_by_key(|(_, e)| e.accessed)
-                .map(|(k, _)| k.clone())
-            {
-                entries.remove(&old);
-            } else {
-                break;
-            }
-        }
-        result
     }
 }
+
 #[cfg(test)]
 mod tests;

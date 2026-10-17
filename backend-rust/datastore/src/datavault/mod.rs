@@ -18,7 +18,14 @@ pub mod sigv4;
 mod uri;
 mod zip;
 
-use std::{fmt, future::Future, io::Read, pin::Pin, sync::Arc};
+use std::{
+    fmt,
+    future::Future,
+    io::Read,
+    pin::Pin,
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use axum::http::StatusCode;
 use bytes::Bytes;
@@ -53,6 +60,31 @@ pub enum VaultError {
 }
 
 pub type VaultResult<T> = Result<T, VaultError>;
+
+/// How often a remote vault sends a request that failed transiently, with exponential backoff and
+/// jitter between attempts (the SDK retry settings the Scala vaults inherited).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RetryPolicy {
+    /// Total attempts, including the first.
+    pub attempts: u32,
+    /// Upper bound of the delay before the first retry; it doubles with every further retry.
+    pub initial_delay: Duration,
+}
+
+impl RetryPolicy {
+    /// Delay before retry number `retry` (1-based): between half and all of
+    /// `initial_delay * 2^(retry - 1)`, so concurrent readers of a throttled store spread out.
+    pub(crate) fn delay(&self, retry: u32) -> Duration {
+        let full = self
+            .initial_delay
+            .saturating_mul(1 << retry.saturating_sub(1).min(16));
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .subsec_nanos();
+        full.mul_f64(0.5 + f64::from(nanos % 1024) / 2048.0)
+    }
+}
 
 impl VaultError {
     pub fn failure(message: impl Into<String>) -> Self {

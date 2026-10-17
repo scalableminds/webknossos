@@ -32,6 +32,7 @@ fn vault(mock: &MockS3) -> Arc<S3DataVault> {
         &S3Options {
             env_credentials: None,
             aws_endpoint_override: Some(mock.base()),
+            ..S3Options::default()
         },
     ))
 }
@@ -141,6 +142,7 @@ async fn directory_upload_uses_global_credentials_and_keeps_nested_hidden_empty_
             s3: S3Options {
                 env_credentials: None,
                 aws_endpoint_override: Some(mock.base()),
+                ..S3Options::default()
             },
             gcs: GcsOptions::from_env(),
         },

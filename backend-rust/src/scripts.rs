@@ -222,5 +222,4 @@ fn validate_name(name: &str) -> ApiResult<()> {
 }
 
 #[cfg(test)]
-#[path = "scripts_tests.rs"]
 mod tests;

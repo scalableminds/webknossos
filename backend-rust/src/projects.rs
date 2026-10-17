@@ -628,5 +628,4 @@ async fn transfer_active_tasks(
 }
 
 #[cfg(test)]
-#[path = "projects_tests.rs"]
 mod tests;

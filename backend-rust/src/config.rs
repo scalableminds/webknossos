@@ -433,5 +433,4 @@ fn dataset_route_config(
 }
 
 #[cfg(test)]
-#[path = "config_tests.rs"]
 mod tests;

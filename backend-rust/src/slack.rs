@@ -551,5 +551,4 @@ pub fn workflow_link_slack_formatted(public_uri: &str, workflow_hash: Option<&st
 }
 
 #[cfg(test)]
-#[path = "slack_tests.rs"]
 mod tests;

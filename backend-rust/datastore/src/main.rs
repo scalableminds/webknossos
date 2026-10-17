@@ -126,6 +126,6 @@ async fn shutdown_signal() {
     }
 }
 
+// `tests` is the library's test module in this directory.
 #[cfg(test)]
-#[path = "main_tests.rs"]
-mod tests;
+mod main_tests;

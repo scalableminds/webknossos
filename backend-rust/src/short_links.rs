@@ -74,5 +74,4 @@ async fn read(
 }
 
 #[cfg(test)]
-#[path = "short_links_tests.rs"]
 mod tests;

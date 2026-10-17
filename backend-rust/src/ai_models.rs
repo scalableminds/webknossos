@@ -1526,5 +1526,4 @@ async fn read_inference(
 }
 
 #[cfg(test)]
-#[path = "ai_models_tests.rs"]
 mod tests;

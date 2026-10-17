@@ -457,5 +457,4 @@ fn validate_metadata(metadata: &[Value]) -> ApiResult<()> {
 }
 
 #[cfg(test)]
-#[path = "folders_tests.rs"]
 mod tests;

@@ -181,5 +181,4 @@ pub(crate) fn valid_name_character(character: char) -> bool {
 }
 
 #[cfg(test)]
-#[path = "teams_tests.rs"]
 mod tests;

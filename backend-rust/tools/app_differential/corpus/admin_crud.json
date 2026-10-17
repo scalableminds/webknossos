@@ -1,0 +1,913 @@
+{
+ "version": 1,
+ "description": "Admin CRUD mutations on the seeded sample organization; run after `stack.py reset` and diff the databases (--db-diff).",
+ "header_divergences": {
+  "cache-control": "Rust sends `Cache-Control: no-store` on every API response (README: cache prevention); Play sends `no-cache` on most and nothing on auth errors. Play sends no validators (ETag/Last-Modified), so both force a refetch; no-store additionally forbids storage. Deliberate."
+ },
+ "drop_play_chain_messages": "Play appends {\"chain\": \"[Server Time \u2026] \u2026\"} to messages of failed Fox chains (debug context with the server time). Rust returns only the error entry; the frontend shows `error` entries.",
+ "unordered_keys": {
+  "annotationLayers": "Play's AnnotationLayerDAO orders layers by tracingId, a random UUID per side.",
+  "tags": "Scala Set semantics (annotation.tags ++ Set(dataset.name)); hash order for more than four tags.",
+  "jobsSupportedByAvailableWorkers": "DataStoreService.publicWrites serializes JobService.jobsSupportedByAvailableWorkers, a Scala Set (hash order); Rust sorts.",
+  "supportedJobCommands": "Worker.supportedJobCommands is a Scala Set (hash order); Rust keeps the stored order."
+ },
+ "side_rewrites": {
+  "rust": {
+   "http://127.0.0.1:19595": "http://127.0.0.1:19590",
+   "http://127.0.0.1:19596": "http://127.0.0.1:19590",
+   "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
+  }
+ },
+ "identities": {
+  "admin": {
+   "token": "secretSampleUserToken"
+  },
+  "user2": {
+   "cookie": "{user2Cookie}"
+  }
+ },
+ "steps": [
+  {
+   "name": "user2-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "team-create",
+   "method": "POST",
+   "path": "/api/teams",
+   "as": "admin",
+   "json": {
+    "name": "diff-team"
+   },
+   "capture": {
+    "teamId": "$.id"
+   }
+  },
+  {
+   "name": "team-create-duplicate",
+   "method": "POST",
+   "path": "/api/teams",
+   "as": "admin",
+   "json": {
+    "name": "diff-team"
+   }
+  },
+  {
+   "name": "team-create-invalid",
+   "method": "POST",
+   "path": "/api/teams",
+   "as": "admin",
+   "json": {
+    "nome": "x"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure ({\"obj.name\":[{\"msg\":[\"error.path.missing\"],\"args\":[]}]}), Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients.",
+    "paths": [
+     "$"
+    ]
+   }
+  },
+  {
+   "name": "team-create-as-user2",
+   "method": "POST",
+   "path": "/api/teams",
+   "as": "user2",
+   "json": {
+    "name": "user2-team"
+   }
+  },
+  {
+   "name": "teams-after-create",
+   "method": "GET",
+   "path": "/api/teams",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "user2-update",
+   "method": "PATCH",
+   "path": "/api/users/6ad299887e8ea1667bf4110b",
+   "as": "admin",
+   "json": {
+    "firstName": "Changed",
+    "lastName": "Person",
+    "email": "sample2@scm.io",
+    "isActive": true,
+    "isAdmin": false,
+    "isDatasetManager": true,
+    "teams": [
+     {
+      "id": "6ad299887e8ea1667bf41107",
+      "name": "Default",
+      "isTeamManager": false
+     },
+     {
+      "id": "{teamId}",
+      "name": "diff-team",
+      "isTeamManager": true
+     }
+    ],
+    "experiences": {
+     "diff-domain": 3
+    }
+   }
+  },
+  {
+   "name": "user2-read",
+   "method": "GET",
+   "path": "/api/users/6ad299887e8ea1667bf4110b",
+   "as": "admin"
+  },
+  {
+   "name": "user2-theme",
+   "method": "PUT",
+   "path": "/api/users/6ad299887e8ea1667bf4110b/selectedTheme",
+   "as": "admin",
+   "raw": "\"dark\"",
+   "headers": {
+    "Content-Type": "application/json"
+   }
+  },
+  {
+   "name": "self-theme",
+   "method": "PUT",
+   "path": "/api/users/6ad299887e8ea1667bf41109/selectedTheme",
+   "as": "admin",
+   "raw": "\"dark\"",
+   "headers": {
+    "Content-Type": "application/json"
+   }
+  },
+  {
+   "name": "self-novel-ux",
+   "method": "PUT",
+   "path": "/api/users/6ad299887e8ea1667bf41109/novelUserExperienceInfos",
+   "as": "admin",
+   "json": {
+    "hasSeenDashboardWelcomeBanner": true
+   }
+  },
+  {
+   "name": "self-task-type-id",
+   "method": "PUT",
+   "path": "/api/users/6ad299887e8ea1667bf41109/taskTypeId",
+   "as": "admin",
+   "json": {
+    "lastTaskTypeId": "63721e2cef0100470266c485"
+   }
+  },
+  {
+   "name": "user-configuration-put",
+   "method": "PUT",
+   "path": "/api/user/userConfiguration",
+   "as": "admin",
+   "json": {
+    "moveValue": 300,
+    "sphericalCapRadius": 140,
+    "dynamicSpaceDirection": true
+   }
+  },
+  {
+   "name": "user-configuration-get",
+   "method": "GET",
+   "path": "/api/user/userConfiguration",
+   "as": "admin"
+  },
+  {
+   "name": "keyboard-shortcuts-put",
+   "method": "PUT",
+   "path": "/api/user/keyboardShortcutsConfig",
+   "as": "admin",
+   "json": {
+    "toggleSegmentation": "KeyX"
+   }
+  },
+  {
+   "name": "keyboard-shortcuts-get",
+   "method": "GET",
+   "path": "/api/user/keyboardShortcutsConfig",
+   "as": "admin"
+  },
+  {
+   "name": "users-after-update",
+   "method": "GET",
+   "path": "/api/users",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "script-create",
+   "method": "POST",
+   "path": "/api/scripts",
+   "as": "admin",
+   "json": {
+    "name": "diff-script",
+    "gist": "https://gist.github.com/x/1",
+    "owner": "6ad299887e8ea1667bf41109"
+   },
+   "capture": {
+    "scriptId": "$.id"
+   }
+  },
+  {
+   "name": "script-create-foreign-owner",
+   "method": "POST",
+   "path": "/api/scripts",
+   "as": "admin",
+   "json": {
+    "name": "diff-script-2",
+    "gist": "https://gist.github.com/x/2",
+    "owner": "6ad299887e8ea1667bf4110b"
+   }
+  },
+  {
+   "name": "script-update",
+   "method": "PUT",
+   "path": "/api/scripts/{scriptId}",
+   "as": "admin",
+   "json": {
+    "name": "diff-script-renamed",
+    "gist": "https://gist.github.com/x/3",
+    "owner": "6ad299887e8ea1667bf41109"
+   }
+  },
+  {
+   "name": "script-read",
+   "method": "GET",
+   "path": "/api/scripts/{scriptId}",
+   "as": "admin"
+  },
+  {
+   "name": "scripts-list",
+   "method": "GET",
+   "path": "/api/scripts",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "task-type-create",
+   "method": "POST",
+   "path": "/api/taskTypes",
+   "as": "admin",
+   "json": {
+    "summary": "diff-tasktype",
+    "description": "desc",
+    "teamId": "{teamId}",
+    "settings": {
+     "allowedModes": [
+      "orthogonal",
+      "flight"
+     ],
+     "preferredMode": "orthogonal",
+     "branchPointsAllowed": true,
+     "somaClickingAllowed": true,
+     "volumeInterpolationAllowed": false,
+     "mergerMode": false,
+     "magRestrictions": {}
+    },
+    "recommendedConfiguration": null,
+    "tracingType": "skeleton"
+   },
+   "capture": {
+    "taskTypeId": "$.id"
+   }
+  },
+  {
+   "name": "task-type-create-duplicate",
+   "method": "POST",
+   "path": "/api/taskTypes",
+   "as": "admin",
+   "json": {
+    "summary": "diff-tasktype",
+    "description": "desc",
+    "teamId": "{teamId}",
+    "settings": {
+     "allowedModes": [
+      "orthogonal",
+      "flight"
+     ],
+     "preferredMode": "orthogonal",
+     "branchPointsAllowed": true,
+     "somaClickingAllowed": true,
+     "volumeInterpolationAllowed": false,
+     "mergerMode": false,
+     "magRestrictions": {}
+    },
+    "recommendedConfiguration": null,
+    "tracingType": "skeleton"
+   }
+  },
+  {
+   "name": "task-type-create-short",
+   "method": "POST",
+   "path": "/api/taskTypes",
+   "as": "admin",
+   "json": {
+    "summary": "d",
+    "description": "desc",
+    "teamId": "{teamId}",
+    "settings": {
+     "allowedModes": [
+      "orthogonal",
+      "flight"
+     ],
+     "preferredMode": "orthogonal",
+     "branchPointsAllowed": true,
+     "somaClickingAllowed": true,
+     "volumeInterpolationAllowed": false,
+     "mergerMode": false,
+     "magRestrictions": {}
+    },
+    "recommendedConfiguration": null,
+    "tracingType": "skeleton"
+   }
+  },
+  {
+   "name": "task-type-update",
+   "method": "PUT",
+   "path": "/api/taskTypes/{taskTypeId}",
+   "as": "admin",
+   "json": {
+    "summary": "diff-tasktype-2",
+    "description": "desc2",
+    "teamId": "{teamId}",
+    "settings": {
+     "allowedModes": [
+      "orthogonal",
+      "flight"
+     ],
+     "preferredMode": "orthogonal",
+     "branchPointsAllowed": true,
+     "somaClickingAllowed": true,
+     "volumeInterpolationAllowed": false,
+     "mergerMode": false,
+     "magRestrictions": {}
+    },
+    "recommendedConfiguration": {
+     "zoom": 2
+    },
+    "tracingType": "skeleton"
+   }
+  },
+  {
+   "name": "task-type-update-tracing-type",
+   "method": "PUT",
+   "path": "/api/taskTypes/{taskTypeId}",
+   "as": "admin",
+   "json": {
+    "summary": "diff-tasktype-2",
+    "description": "desc2",
+    "teamId": "{teamId}",
+    "settings": {
+     "allowedModes": [
+      "orthogonal",
+      "flight"
+     ],
+     "preferredMode": "orthogonal",
+     "branchPointsAllowed": true,
+     "somaClickingAllowed": true,
+     "volumeInterpolationAllowed": false,
+     "mergerMode": false,
+     "magRestrictions": {}
+    },
+    "recommendedConfiguration": null,
+    "tracingType": "volume"
+   }
+  },
+  {
+   "name": "task-type-read",
+   "method": "GET",
+   "path": "/api/taskTypes/{taskTypeId}",
+   "as": "admin"
+  },
+  {
+   "name": "task-type-missing",
+   "method": "GET",
+   "path": "/api/taskTypes/0123456789abcdef01234567",
+   "as": "admin"
+  },
+  {
+   "name": "project-create",
+   "method": "POST",
+   "path": "/api/projects",
+   "as": "admin",
+   "json": {
+    "name": "diffProject",
+    "team": "{teamId}",
+    "priority": 10,
+    "paused": false,
+    "expectedTime": 90000,
+    "owner": "6ad299887e8ea1667bf41109",
+    "isBlacklistedFromReport": false
+   },
+   "capture": {
+    "projectId": "$.id"
+   }
+  },
+  {
+   "name": "project-create-duplicate",
+   "method": "POST",
+   "path": "/api/projects",
+   "as": "admin",
+   "json": {
+    "name": "diffProject",
+    "team": "{teamId}",
+    "priority": 10,
+    "paused": false,
+    "expectedTime": 90000,
+    "owner": "6ad299887e8ea1667bf41109",
+    "isBlacklistedFromReport": false
+   }
+  },
+  {
+   "name": "project-create-short-name",
+   "method": "POST",
+   "path": "/api/projects",
+   "as": "admin",
+   "json": {
+    "name": "ab",
+    "team": "{teamId}",
+    "priority": 10,
+    "paused": false,
+    "expectedTime": 90000,
+    "owner": "6ad299887e8ea1667bf41109",
+    "isBlacklistedFromReport": false
+   }
+  },
+  {
+   "name": "project-create-bad-chars",
+   "method": "POST",
+   "path": "/api/projects",
+   "as": "admin",
+   "json": {
+    "name": "bad name!",
+    "team": "{teamId}",
+    "priority": 10,
+    "paused": false,
+    "expectedTime": 90000,
+    "owner": "6ad299887e8ea1667bf41109",
+    "isBlacklistedFromReport": false
+   }
+  },
+  {
+   "name": "project-pause",
+   "method": "PATCH",
+   "path": "/api/projects/{projectId}/pause",
+   "as": "admin"
+  },
+  {
+   "name": "project-resume",
+   "method": "PATCH",
+   "path": "/api/projects/{projectId}/resume",
+   "as": "admin"
+  },
+  {
+   "name": "project-increment",
+   "method": "PATCH",
+   "path": "/api/projects/{projectId}/incrementEachTasksInstances",
+   "as": "admin",
+   "query": {
+    "delta": "2"
+   },
+   "expected_divergence": {
+    "reason": "Play bug kept fixed in Rust: TaskDAO.countPendingInstancesAndTimeForProject yields no row for a project without tasks, so Play answers 404 (Msg.notFound) although the project exists; Rust returns the project with pendingInstances 0.",
+    "paths": [
+     "$",
+     "<status>"
+    ]
+   }
+  },
+  {
+   "name": "project-increment-negative",
+   "method": "PATCH",
+   "path": "/api/projects/{projectId}/incrementEachTasksInstances",
+   "as": "admin",
+   "query": {
+    "delta": "-1"
+   }
+  },
+  {
+   "name": "project-update",
+   "method": "PUT",
+   "path": "/api/projects/{projectId}",
+   "as": "admin",
+   "json": {
+    "name": "diffProject",
+    "team": "{teamId}",
+    "priority": 20,
+    "paused": true,
+    "expectedTime": 120000,
+    "owner": "6ad299887e8ea1667bf41109",
+    "isBlacklistedFromReport": true
+   }
+  },
+  {
+   "name": "project-by-name",
+   "method": "GET",
+   "path": "/api/projects/byName/diffProject",
+   "as": "admin"
+  },
+  {
+   "name": "projects-with-status",
+   "method": "GET",
+   "path": "/api/projects/withStatus",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "task-type-projects",
+   "method": "GET",
+   "path": "/api/taskTypes/{taskTypeId}/projects",
+   "as": "admin"
+  },
+  {
+   "name": "folder-create",
+   "method": "POST",
+   "path": "/api/folders/create",
+   "as": "admin",
+   "query": {
+    "parentId": "6ad299887e8ea1667bf41108",
+    "name": "diff-folder"
+   },
+   "capture": {
+    "folderId": "$.id"
+   }
+  },
+  {
+   "name": "folder-create-child",
+   "method": "POST",
+   "path": "/api/folders/create",
+   "as": "admin",
+   "query": {
+    "parentId": "{folderId}",
+    "name": "diff-child"
+   },
+   "capture": {
+    "childFolderId": "$.id"
+   }
+  },
+  {
+   "name": "folder-update",
+   "method": "PUT",
+   "path": "/api/folders/{folderId}",
+   "as": "admin",
+   "json": {
+    "name": "diff-folder-renamed",
+    "allowedTeams": [
+     "{teamId}"
+    ],
+    "metadata": [
+     {
+      "key": "k",
+      "type": "string",
+      "value": "v"
+     }
+    ]
+   }
+  },
+  {
+   "name": "folder-move",
+   "method": "PUT",
+   "path": "/api/folders/{childFolderId}/move",
+   "as": "admin",
+   "query": {
+    "newParentId": "6ad299887e8ea1667bf41108"
+   }
+  },
+  {
+   "name": "folder-move-into-self",
+   "method": "PUT",
+   "path": "/api/folders/{folderId}/move",
+   "as": "admin",
+   "query": {
+    "newParentId": "{folderId}"
+   }
+  },
+  {
+   "name": "folder-tree",
+   "method": "GET",
+   "path": "/api/folders/tree",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "folder-read",
+   "method": "GET",
+   "path": "/api/folders/{folderId}",
+   "as": "admin"
+  },
+  {
+   "name": "folder-delete-child",
+   "method": "DELETE",
+   "path": "/api/folders/{childFolderId}",
+   "as": "admin"
+  },
+  {
+   "name": "dataset-update",
+   "method": "PATCH",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "json": {
+    "description": "diff description",
+    "displayName": "Diff Display",
+    "isPublic": true,
+    "tags": [
+     "a",
+     "b"
+    ],
+    "metadata": [
+     {
+      "key": "species",
+      "type": "string",
+      "value": "mouse"
+     }
+    ],
+    "folderId": "{folderId}"
+   }
+  },
+  {
+   "name": "dataset-update-duplicate-metadata",
+   "method": "PATCH",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "json": {
+    "isPublic": true,
+    "tags": [],
+    "metadata": [
+     {
+      "key": "a",
+      "type": "string",
+      "value": "1"
+     },
+     {
+      "key": "a",
+      "type": "string",
+      "value": "2"
+     }
+    ]
+   }
+  },
+  {
+   "name": "dataset-update-partial",
+   "method": "PATCH",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/updatePartial",
+   "as": "admin",
+   "json": {
+    "description": "partial"
+   }
+  },
+  {
+   "name": "dataset-teams",
+   "method": "PATCH",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/teams",
+   "as": "admin",
+   "json": [
+    "{teamId}"
+   ]
+  },
+  {
+   "name": "dataset-read-after-update",
+   "method": "GET",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62",
+   "as": "admin"
+  },
+  {
+   "name": "dataset-sharing-token-create",
+   "method": "GET",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/sharingToken",
+   "as": "admin",
+   "capture": {
+    "sharingToken": "$.sharingToken"
+   },
+   "ignore": [
+    {
+     "path": "$.sharingToken",
+     "reason": "random per side, paired via capture"
+    }
+   ]
+  },
+  {
+   "name": "dataset-sharing-token-delete",
+   "method": "DELETE",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/sharingToken",
+   "as": "admin"
+  },
+  {
+   "name": "dataset-config-default-put",
+   "method": "PUT",
+   "path": "/api/datasetConfigurations/default/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "json": {
+    "zoom": 3,
+    "layers": {
+     "color": {
+      "brightness": 10,
+      "isDisabled": false
+     }
+    }
+   }
+  },
+  {
+   "name": "dataset-config-default-get",
+   "method": "GET",
+   "path": "/api/datasetConfigurations/default/68b80290d4000090f8f4aa62",
+   "as": "admin"
+  },
+  {
+   "name": "dataset-config-user-put",
+   "method": "PUT",
+   "path": "/api/datasetConfigurations/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "json": {
+    "zoom": 5,
+    "layers": {
+     "color": {
+      "alpha": 50
+     }
+    }
+   }
+  },
+  {
+   "name": "dataset-config-user-get",
+   "method": "POST",
+   "path": "/api/datasetConfigurations/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "json": []
+  },
+  {
+   "name": "datasets-after-update",
+   "method": "GET",
+   "path": "/api/datasets",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "dataset-access-list-after",
+   "method": "GET",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/accessList",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "maintenance-create",
+   "method": "POST",
+   "path": "/api/maintenances",
+   "as": "admin",
+   "json": {
+    "startTime": 1893456000000,
+    "endTime": 1893459600000,
+    "message": "diff maintenance"
+   },
+   "capture": {
+    "maintenanceId": "$.id"
+   }
+  },
+  {
+   "name": "maintenance-update",
+   "method": "PUT",
+   "path": "/api/maintenances/{maintenanceId}",
+   "as": "admin",
+   "json": {
+    "startTime": 1893456000000,
+    "endTime": 1893463200000,
+    "message": "diff maintenance 2"
+   }
+  },
+  {
+   "name": "maintenance-read",
+   "method": "GET",
+   "path": "/api/maintenances/{maintenanceId}",
+   "as": "admin"
+  },
+  {
+   "name": "maintenance-list-all",
+   "method": "GET",
+   "path": "/api/maintenances/listAll",
+   "as": "admin"
+  },
+  {
+   "name": "maintenance-delete",
+   "method": "DELETE",
+   "path": "/api/maintenances/{maintenanceId}",
+   "as": "admin"
+  },
+  {
+   "name": "short-link-create",
+   "method": "POST",
+   "path": "/api/shortLinks",
+   "as": "admin",
+   "raw": "\"http://127.0.0.1:19590/datasets/abc/view#1,2,3\"",
+   "headers": {
+    "Content-Type": "application/json"
+   },
+   "capture": {
+    "shortKey": "$.key"
+   },
+   "ignore": [
+    {
+     "path": "$.key",
+     "reason": "random key per side, paired via capture"
+    }
+   ]
+  },
+  {
+   "name": "short-link-foreign",
+   "method": "POST",
+   "path": "/api/shortLinks",
+   "as": "admin",
+   "raw": "\"https://evil.example/x\"",
+   "headers": {
+    "Content-Type": "application/json"
+   }
+  },
+  {
+   "name": "short-link-read",
+   "method": "GET",
+   "path": "/api/shortLinks/byKey/{shortKey}"
+  },
+  {
+   "name": "organization-update",
+   "method": "PATCH",
+   "path": "/api/organizations/sample_organization",
+   "as": "admin",
+   "json": {
+    "name": "Sample Org Renamed",
+    "newUserMailingList": "list@example.com"
+   }
+  },
+  {
+   "name": "organization-read-after",
+   "method": "GET",
+   "path": "/api/organizations/sample_organization",
+   "as": "admin"
+  },
+  {
+   "name": "organization-update-missing",
+   "method": "PATCH",
+   "path": "/api/organizations/nope",
+   "as": "admin",
+   "json": {
+    "name": "x",
+    "newUserMailingList": ""
+   }
+  },
+  {
+   "name": "project-delete",
+   "method": "DELETE",
+   "path": "/api/projects/{projectId}",
+   "as": "admin"
+  },
+  {
+   "name": "task-type-delete",
+   "method": "DELETE",
+   "path": "/api/taskTypes/{taskTypeId}",
+   "as": "admin"
+  },
+  {
+   "name": "script-delete",
+   "method": "DELETE",
+   "path": "/api/scripts/{scriptId}",
+   "as": "admin"
+  },
+  {
+   "name": "folder-delete-nonempty",
+   "method": "DELETE",
+   "path": "/api/folders/{folderId}",
+   "as": "admin"
+  },
+  {
+   "name": "team-delete-in-use",
+   "method": "DELETE",
+   "path": "/api/teams/{teamId}",
+   "as": "admin"
+  },
+  {
+   "name": "team-delete-missing",
+   "method": "DELETE",
+   "path": "/api/teams/0123456789abcdef01234567",
+   "as": "admin"
+  }
+ ]
+}

@@ -1,5 +1,6 @@
 //! AnnotationController cancellation and collaboration mode, resolved through
 //! the real annotation provider (including temporary compound annotations).
+use crate::response::Messages;
 use axum::{
     Extension, Json, Router,
     extract::State,
@@ -7,7 +8,6 @@ use axum::{
     routing::{delete, patch},
 };
 use serde::Deserialize;
-use serde_json::{Value, json};
 use sqlx::{PgConnection, Postgres, Transaction};
 
 use crate::{
@@ -98,7 +98,7 @@ async fn cancel(
     Extension(provider): Extension<AnnotationProvider>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Messages>> {
     cancel_typed(&state, &provider, &user, &typ, &ObjectId::parse_path(&id)?).await
 }
 
@@ -107,7 +107,7 @@ async fn cancel_without_type(
     Extension(provider): Extension<AnnotationProvider>,
     user: AuthUser,
     Path(id): Path<String>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Messages>> {
     let id = ObjectId::parse_path(&id)?;
     let saved = provider
         .provide_saved(AccessContext::requester(Some(&user)), &id)
@@ -129,7 +129,7 @@ async fn cancel_typed(
     user: &AuthUser,
     typ: &str,
     id: &ObjectId,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Messages>> {
     let provided = provider
         .provide(AccessContext::requester(Some(user)), typ, id)
         .await
@@ -186,7 +186,7 @@ async fn cancel_typed(
             provider.remove_from_cache(&key);
         }
     }
-    Ok(Json(json!({"messages":[{"success":message}]})))
+    Ok(Messages::success(message))
 }
 
 pub(crate) async fn task_cache_keys(

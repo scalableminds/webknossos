@@ -3,6 +3,7 @@
 //! annotation through the [`AnnotationProvider`] first (so compound types run
 //! or hit the compound merge exactly like Scala, even when the route then
 //! rejects them) and writes to the database only for saved annotations.
+use crate::response::Messages;
 use axum::{
     Extension, Json as ResponseJson, Router,
     extract::{RawQuery, State},
@@ -104,7 +105,7 @@ async fn edit(
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
     Json(body): Json<EditParameters>,
-) -> ApiResult<ResponseJson<Value>> {
+) -> ApiResult<ResponseJson<Messages>> {
     let id = path_id(&id)?;
     let context = AccessContext::requester(Some(&user));
     let provided = provider
@@ -186,9 +187,7 @@ async fn edit(
         .await?;
     }
     transaction.commit().await?;
-    Ok(ResponseJson(
-        json!({"messages":[{"success": EDIT_SUCCESS}]}),
-    ))
+    Ok(Messages::success(EDIT_SUCCESS))
 }
 
 /// `restrictionsFor(..) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND`.

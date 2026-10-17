@@ -17,6 +17,7 @@ pub mod proto;
 pub mod publications;
 pub mod remote;
 pub mod reports;
+pub mod response;
 pub mod routes;
 pub mod scripts;
 pub mod short_links;

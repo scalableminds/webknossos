@@ -1,3 +1,4 @@
+use crate::response::Messages;
 use axum::{
     Json as ResponseJson, Router,
     extract::State,
@@ -413,7 +414,7 @@ async fn delete(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<String>,
-) -> ApiResult<ResponseJson<Value>> {
+) -> ApiResult<ResponseJson<Messages>> {
     let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     lock_project(&mut tx, &id, &user.organization_id).await?;
@@ -430,9 +431,7 @@ async fn delete(
         .bind(&id).execute(&mut *tx).await?;
     delete_tasks(&mut tx, "_project", &id).await?;
     tx.commit().await?;
-    Ok(ResponseJson(
-        json!({"messages":[{"success":crate::msg::project::DELETE_SUCCESS}]}),
-    ))
+    Ok(Messages::success(crate::msg::project::DELETE_SUCCESS))
 }
 
 async fn lock_project(

@@ -1,3 +1,4 @@
+use crate::response::Messages;
 use axum::{
     Json, Router,
     extract::State,
@@ -196,10 +197,8 @@ async fn read_admin(
     ))
 }
 
-fn success() -> Json<Value> {
-    Json(
-        json!({"messages":[{"success":crate::msg::user::configuration::UPDATE_SUCCESS_FOR_DATASET}]}),
-    )
+fn success() -> Json<Messages> {
+    Messages::success(crate::msg::user::configuration::UPDATE_SUCCESS_FOR_DATASET)
 }
 
 async fn update(
@@ -207,7 +206,7 @@ async fn update(
     user: AuthUser,
     Path(id): Path<PathObjectId>,
     RequestJson(mut config): RequestJson<Map<String, Value>>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Messages>> {
     let mut transaction = state.pool.begin().await?;
     // UserService intentionally permits saving a personal configuration for
     // any existing dataset; dataset sharing permissions are not an edit grant.
@@ -252,7 +251,7 @@ async fn update_admin(
     user: AuthUser,
     Path(id): Path<PathObjectId>,
     RequestJson(mut config): RequestJson<Map<String, Value>>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Messages>> {
     if !crate::dataset::access::can_edit(&state.pool, &user, id.as_str()).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
     }

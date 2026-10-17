@@ -1,9 +1,10 @@
 //! Owner-managed annotation private links and database-backed annotation sources.
+use crate::response::Messages;
 use axum::{Json as ResponseJson, Router, extract::State, routing::get};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
-use serde_json::{Value, json};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sqlx::{Executor, FromRow, Postgres};
 
 use crate::{
@@ -39,17 +40,18 @@ struct Parameters {
     expiration: Option<DateTime<Utc>>,
 }
 
-#[derive(FromRow)]
+/// AnnotationPrivateLinkService.publicWrites.
+#[derive(FromRow, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct PrivateLink {
     id: ObjectId,
     annotation: String,
     access_token: String,
+    #[serde(
+        rename = "expirationDateTime",
+        with = "chrono::serde::ts_milliseconds_option"
+    )]
     expiration: Option<DateTime<Utc>>,
-}
-impl PrivateLink {
-    fn public_json(self) -> Value {
-        json!({"id":self.id,"annotation":self.annotation,"accessToken":self.access_token,"expirationDateTime":self.expiration.map(|date|date.timestamp_millis())})
-    }
 }
 const SELECT: &str = "SELECT link._id AS id,link._annotation AS annotation,link.accessToken AS access_token,link.expirationDateTime AS expiration FROM webknossos.annotation_privateLinks link JOIN webknossos.annotations a ON a._id=link._annotation WHERE NOT link.isDeleted AND NOT a.isDeleted AND a._user=$1";
 async fn owned_link<'e, E: Executor<'e, Database = Postgres>>(
@@ -70,35 +72,31 @@ async fn owned_link<'e, E: Executor<'e, Database = Postgres>>(
 async fn list(
     State(state): State<AppState>,
     user: AuthUser,
-) -> ApiResult<ResponseJson<Vec<Value>>> {
+) -> ApiResult<ResponseJson<Vec<PrivateLink>>> {
     let links: Vec<PrivateLink> = sqlx::query_as(SELECT)
         .bind(&user.id)
         .fetch_all(&state.pool)
         .await?;
-    Ok(ResponseJson(
-        links.into_iter().map(PrivateLink::public_json).collect(),
-    ))
+    Ok(ResponseJson(links))
 }
 async fn by_annotation(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<String>,
-) -> ApiResult<ResponseJson<Vec<Value>>> {
+) -> ApiResult<ResponseJson<Vec<PrivateLink>>> {
     let id = ObjectId::parse_path(&id)?;
     let links: Vec<PrivateLink> = sqlx::query_as(&format!("{SELECT} AND link._annotation=$2"))
         .bind(&user.id)
         .bind(id)
         .fetch_all(&state.pool)
         .await?;
-    Ok(ResponseJson(
-        links.into_iter().map(PrivateLink::public_json).collect(),
-    ))
+    Ok(ResponseJson(links))
 }
 async fn read(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<String>,
-) -> ApiResult<ResponseJson<Value>> {
+) -> ApiResult<ResponseJson<PrivateLink>> {
     let id = ObjectId::parse_path(&id)?;
     let link = owned_link(&state.pool, &user, &id, false).await?;
     if link
@@ -110,7 +108,7 @@ async fn read(
         ));
     }
     crate::annotation::access::find(&state.pool, Some(&user), &link.annotation, false).await?;
-    Ok(ResponseJson(link.public_json()))
+    Ok(ResponseJson(link))
 }
 
 fn token() -> ApiResult<String> {
@@ -123,7 +121,7 @@ async fn create(
     State(state): State<AppState>,
     user: AuthUser,
     Json(parameters): Json<Parameters>,
-) -> ApiResult<ResponseJson<Value>> {
+) -> ApiResult<ResponseJson<PrivateLink>> {
     let mut tx = state.pool.begin().await?;
     let annotation = crate::annotation::access::lock_for_mutation(
         &mut tx,
@@ -150,16 +148,16 @@ async fn create(
     .bind(parameters.expiration)
     .execute(&mut *tx)
     .await?;
-    let value = owned_link(&mut *tx, &user, &id, false).await?.public_json();
+    let link = owned_link(&mut *tx, &user, &id, false).await?;
     tx.commit().await?;
-    Ok(ResponseJson(value))
+    Ok(ResponseJson(link))
 }
 async fn update(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<String>,
     Json(parameters): Json<Parameters>,
-) -> ApiResult<ResponseJson<Value>> {
+) -> ApiResult<ResponseJson<PrivateLink>> {
     let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     let link = owned_link(&mut *tx, &user, &id, true).await?;
@@ -185,15 +183,15 @@ async fn update(
     .bind(parameters.expiration)
     .execute(&mut *tx)
     .await?;
-    let value = owned_link(&mut *tx, &user, &id, false).await?.public_json();
+    let link = owned_link(&mut *tx, &user, &id, false).await?;
     tx.commit().await?;
-    Ok(ResponseJson(value))
+    Ok(ResponseJson(link))
 }
 async fn delete(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<String>,
-) -> ApiResult<ResponseJson<Value>> {
+) -> ApiResult<ResponseJson<Messages>> {
     let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     let link = owned_link(&mut *tx, &user, &id, true).await?;
@@ -203,8 +201,8 @@ async fn delete(
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
-    Ok(ResponseJson(
-        json!({"messages":[{"success":crate::msg::annotation::private_link::DELETE_SUCCESS}]}),
+    Ok(Messages::success(
+        crate::msg::annotation::private_link::DELETE_SUCCESS,
     ))
 }
 

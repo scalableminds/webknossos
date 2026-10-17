@@ -8,7 +8,7 @@ use axum::{
     routing::{get, post, put},
 };
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sqlx::{FromRow, PgConnection, Postgres, Transaction};
 
@@ -39,12 +39,34 @@ struct FolderParameters {
     allowed_teams: Vec<String>,
     metadata: Vec<Value>,
 }
-#[derive(FromRow)]
+#[derive(FromRow, Serialize)]
 struct Folder {
     id: ObjectId,
     name: String,
     metadata: Value,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
     created: DateTime<Utc>,
+}
+
+/// FolderService.publicWrites.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FolderJson {
+    #[serde(flatten)]
+    folder: Folder,
+    allowed_teams: Vec<Value>,
+    allowed_teams_cumulative: Vec<Value>,
+    is_editable: bool,
+}
+
+/// One entry of FolderService.publicWritesTree.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FolderTreeEntry {
+    #[serde(flatten)]
+    folder: Folder,
+    parent: Option<ObjectId>,
+    is_editable: bool,
 }
 
 pub fn router() -> Router<AppState> {
@@ -175,18 +197,19 @@ async fn public_json(
     connection: &mut PgConnection,
     user: &AuthUser,
     folder: Folder,
-) -> ApiResult<Value> {
+) -> ApiResult<FolderJson> {
     let direct = allowed_teams(connection, user, &folder.id, false).await?;
     let cumulative = allowed_teams(connection, user, &folder.id, true).await?;
     let editable = access(connection, user, &folder.id, true).await?;
-    Ok(
-        json!({"id": folder.id, "name": folder.name, "metadata": folder.metadata,
-        "created": folder.created.timestamp_millis(), "allowedTeams": direct,
-        "allowedTeamsCumulative": cumulative, "isEditable": editable}),
-    )
+    Ok(FolderJson {
+        folder,
+        allowed_teams: direct,
+        allowed_teams_cumulative: cumulative,
+        is_editable: editable,
+    })
 }
 
-async fn root(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<Value>> {
+async fn root(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<FolderJson>> {
     let mut connection = state.pool.acquire().await?;
     let id = organization_root(&mut connection, &user, false).await?;
     let folder = readable(&mut connection, &user, &id).await?;
@@ -197,14 +220,17 @@ async fn fetch(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<String>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<FolderJson>> {
     let id = ObjectId::parse_path(&id)?;
     let mut connection = state.pool.acquire().await?;
     let folder = readable(&mut connection, &user, &id).await?;
     Ok(Json(public_json(&mut connection, &user, folder).await?))
 }
 
-async fn tree(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<Vec<Value>>> {
+async fn tree(
+    State(state): State<AppState>,
+    user: AuthUser,
+) -> ApiResult<Json<Vec<FolderTreeEntry>>> {
     let mut connection = state.pool.acquire().await?;
     let root = organization_root(&mut connection, &user, false).await?;
     let folders: Vec<Folder> = sqlx::query_as(
@@ -218,7 +244,7 @@ async fn tree(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<V
     let mut output = Vec::new();
     for folder in folders {
         if access(&mut connection, &user, &folder.id, false).await? {
-            let parent: Option<String> = sqlx::query_scalar(
+            let parent: Option<ObjectId> = sqlx::query_scalar(
                 "SELECT _ancestor FROM webknossos.folder_paths WHERE _descendant = $1 \
                     AND depth = 1",
             )
@@ -226,8 +252,11 @@ async fn tree(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<V
             .fetch_optional(&mut *connection)
             .await?;
             let editable = access(&mut connection, &user, &folder.id, true).await?;
-            output.push(json!({"id": folder.id, "name": folder.name, "parent": parent,
-                "metadata": folder.metadata, "created": folder.created.timestamp_millis(), "isEditable": editable}));
+            output.push(FolderTreeEntry {
+                folder,
+                parent,
+                is_editable: editable,
+            });
         }
     }
     Ok(Json(output))
@@ -250,7 +279,7 @@ async fn create(
     State(state): State<AppState>,
     user: AuthUser,
     Query(query): Query<CreateQuery>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<FolderJson>> {
     validate_name(&query.name)?;
     let (mut transaction, _) = mutation(&state, &user).await?;
     readable(&mut transaction, &user, &query.parent_id).await?;
@@ -281,7 +310,7 @@ async fn update(
     user: AuthUser,
     Path(id): Path<String>,
     RequestJson(body): RequestJson<FolderParameters>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<FolderJson>> {
     let id = ObjectId::parse_path(&id)?;
     let (mut transaction, _) = mutation(&state, &user).await?;
     readable(&mut transaction, &user, &id).await?;
@@ -337,7 +366,7 @@ async fn move_folder(
     user: AuthUser,
     Path(id): Path<String>,
     Query(query): Query<MoveQuery>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<FolderJson>> {
     let id = ObjectId::parse_path(&id)?;
     let (mut transaction, root) = mutation(&state, &user).await?;
     if root == id {

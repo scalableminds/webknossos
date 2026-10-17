@@ -1,11 +1,11 @@
 //! Organization teams. These routes mirror TeamController (there is no get/update route).
+use crate::response::{Messages, WithMessages};
 use axum::{
     Json, Router,
     extract::State,
     routing::{delete, get},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
 use sqlx::FromRow;
 
 use crate::{
@@ -71,7 +71,7 @@ async fn create(
     State(state): State<AppState>,
     user: AuthUser,
     RequestJson(body): RequestJson<TeamParameters>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<WithMessages<Team>>> {
     if !user.is_admin {
         return Err(ApiError::forbidden(crate::msg::team::CREATE_ONLY_ADMIN));
     }
@@ -99,18 +99,22 @@ async fn create(
         }
         return Err(error.into());
     }
-    Ok(Json(json!({
-        "id": id, "name": body.name, "organization": user.organization_id,
-        "isOrganizationTeam": false,
-        "messages": [{"success": crate::msg::team::CREATE_SUCCESS}]
-    })))
+    Ok(WithMessages::success(
+        Team {
+            id,
+            name: body.name,
+            organization: user.organization_id,
+            is_organization_team: false,
+        },
+        crate::msg::team::CREATE_SUCCESS,
+    ))
 }
 
 async fn remove(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<String>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Messages>> {
     let id = ObjectId::parse_path(&id)?;
     if !user.is_admin {
         return Err(ApiError::forbidden(crate::msg::team::DELETE_ONLY_ADMIN));
@@ -165,9 +169,7 @@ async fn remove(
             .await?;
     }
     transaction.commit().await?;
-    Ok(Json(
-        json!({"messages": [{"success": crate::msg::team::DELETE_SUCCESS}]}),
-    ))
+    Ok(Messages::success(crate::msg::team::DELETE_SUCCESS))
 }
 
 pub(crate) fn valid_name_character(character: char) -> bool {

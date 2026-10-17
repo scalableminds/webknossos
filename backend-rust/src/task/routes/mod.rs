@@ -1,4 +1,5 @@
 //! Task administration and task previews. Creation and assignment require tracing services.
+use crate::response::Messages;
 use axum::{
     Json as ResponseJson, Router,
     extract::State,
@@ -386,7 +387,7 @@ async fn delete(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<String>,
-) -> ApiResult<ResponseJson<Value>> {
+) -> ApiResult<ResponseJson<Messages>> {
     let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     lock_managed_task(&mut tx, &user, &id).await?;
@@ -399,9 +400,7 @@ async fn delete(
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
-    Ok(ResponseJson(
-        json!({"messages":[{"success":crate::msg::task::DELETE_SUCCESS}]}),
-    ))
+    Ok(Messages::success(crate::msg::task::DELETE_SUCCESS))
 }
 async fn experience_domains(
     State(state): State<AppState>,

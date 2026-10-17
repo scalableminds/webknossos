@@ -1,7 +1,7 @@
 //! Script CRUD with organization-scoped reads and owner-only mutations.
 use axum::{Json, Router, extract::State, http::StatusCode, routing::get};
-use serde::Deserialize;
-use serde_json::{Value, json};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sqlx::{FromRow, PgConnection};
 
 use crate::{
@@ -20,19 +20,15 @@ struct ScriptParameters {
     owner: String,
 }
 
-#[derive(FromRow)]
+/// ScriptService.publicWrites (the owner as UserService.compactWrites).
+#[derive(FromRow, Serialize)]
 struct Script {
     id: ObjectId,
+    #[serde(skip)]
     owner_id: ObjectId,
     name: String,
     gist: String,
     owner: Value,
-}
-
-impl Script {
-    fn public_json(self) -> Value {
-        json!({"id": self.id, "name": self.name, "gist": self.gist, "owner": self.owner})
-    }
 }
 
 // Compact owner JSON is the UserService.compactWrites contract, including memberships.
@@ -55,12 +51,12 @@ pub fn router() -> Router<AppState> {
         .route("/scripts/{id}", get(fetch).put(update).delete(remove))
 }
 
-async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<Vec<Value>>> {
+async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<Vec<Script>>> {
     let scripts = sqlx::query_as::<_, Script>(&format!("{SELECT_SCRIPT} ORDER BY s._id"))
         .bind(&user.organization_id)
         .fetch_all(&state.pool)
         .await?;
-    Ok(Json(scripts.into_iter().map(Script::public_json).collect()))
+    Ok(Json(scripts))
 }
 
 async fn find(
@@ -86,13 +82,11 @@ async fn fetch(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<String>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Script>> {
     let id = ObjectId::parse_path(&id)?;
     let mut connection = state.pool.acquire().await?;
     Ok(Json(
-        find(&mut connection, &user.organization_id, &id, false)
-            .await?
-            .public_json(),
+        find(&mut connection, &user.organization_id, &id, false).await?,
     ))
 }
 
@@ -100,7 +94,7 @@ async fn create(
     State(state): State<AppState>,
     user: AuthUser,
     RequestJson(body): RequestJson<ScriptParameters>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Script>> {
     ObjectId::parse(&body.owner)?;
     if !user.is_team_manager_or_admin(&state.pool).await? || body.owner != user.id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
@@ -117,7 +111,7 @@ async fn create(
         .await?;
     let script = find(&mut transaction, &user.organization_id, &id, false).await?;
     transaction.commit().await?;
-    Ok(Json(script.public_json()))
+    Ok(Json(script))
 }
 
 async fn update(
@@ -125,7 +119,7 @@ async fn update(
     user: AuthUser,
     Path(id): Path<String>,
     RequestJson(body): RequestJson<ScriptParameters>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Script>> {
     let id = ObjectId::parse_path(&id)?;
     ObjectId::parse(&body.owner)?;
     let mut transaction = state.pool.begin().await?;
@@ -155,7 +149,7 @@ async fn update(
         .await?;
     let script = find(&mut transaction, &user.organization_id, &id, false).await?;
     transaction.commit().await?;
-    Ok(Json(script.public_json()))
+    Ok(Json(script))
 }
 
 async fn remove(

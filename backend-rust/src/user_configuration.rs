@@ -1,3 +1,4 @@
+use crate::response::Messages;
 use axum::{Json, Router, extract::State, routing::get};
 use serde_json::{Map, Value, json};
 
@@ -35,7 +36,7 @@ async fn update(
     State(state): State<AppState>,
     user: AuthUser,
     RequestJson(configuration): RequestJson<Map<String, Value>>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Messages>> {
     // The Scala UserDAO replaces the entire configuration, without merging keys.
     let result = sqlx::query(
         "UPDATE webknossos.users SET userConfiguration = $2 WHERE _id = $1 AND NOT isDeleted",
@@ -47,8 +48,8 @@ async fn update(
     if result.rows_affected() != 1 {
         return Err(ApiError::not_found(crate::msg::user::MISSING));
     }
-    Ok(Json(
-        json!({"messages": [{"success": crate::msg::user::configuration::UPDATE_SUCCESS}]}),
+    Ok(Messages::success(
+        crate::msg::user::configuration::UPDATE_SUCCESS,
     ))
 }
 
@@ -69,14 +70,14 @@ async fn update_shortcuts(
     State(state): State<AppState>,
     user: AuthUser,
     RequestJson(configuration): RequestJson<Map<String, Value>>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Messages>> {
     let result = sqlx::query(
         "INSERT INTO webknossos.multiUser_keyboardShortcutsConfigs (_multiUser, shortcutsConfig) SELECT _multiUser, $2 FROM webknossos.users_ WHERE _id = $1 ON CONFLICT (_multiUser) DO UPDATE SET shortcutsConfig = EXCLUDED.shortcutsConfig"
     ).bind(user.id).bind(Value::Object(configuration)).execute(&state.pool).await?;
     if result.rows_affected() != 1 {
         return Err(ApiError::not_found(crate::msg::user::MISSING));
     }
-    Ok(Json(
-        json!({"messages": [{"success": crate::msg::user::configuration::UPDATED_KEYBOARD_SHORTCUTS_CONFIG}]}),
+    Ok(Messages::success(
+        crate::msg::user::configuration::UPDATED_KEYBOARD_SHORTCUTS_CONFIG,
     ))
 }

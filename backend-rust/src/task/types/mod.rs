@@ -1,3 +1,4 @@
+use crate::response::Messages;
 use axum::{Json as ResponseJson, Router, extract::State, routing::get};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -333,7 +334,7 @@ async fn delete(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<String>,
-) -> ApiResult<ResponseJson<Value>> {
+) -> ApiResult<ResponseJson<Messages>> {
     let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     lock_task_type(&mut tx, &id, &user.organization_id).await?;
@@ -351,9 +352,9 @@ async fn delete(
         .bind(&id).execute(&mut *tx).await?;
     crate::projects::delete_tasks(&mut tx, "_tasktype", &id).await?;
     tx.commit().await?;
-    Ok(ResponseJson(
-        json!({"messages":[{"success":crate::msg::task_type::delete_success(existing["summary"].as_str().unwrap_or_default())}]}),
-    ))
+    Ok(Messages::success(crate::msg::task_type::delete_success(
+        existing["summary"].as_str().unwrap_or_default(),
+    )))
 }
 
 async fn lock_task_type(

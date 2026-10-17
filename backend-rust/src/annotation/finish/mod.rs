@@ -17,6 +17,7 @@
 //! project grant rows locked), and the compound caches are cleared only after
 //! commit. Time logging is the writer's own transaction (TW2), so a writer
 //! failure leaves the annotation Finished, exactly as in Scala.
+use crate::response::Messages;
 use axum::{
     Extension, Json, Router,
     extract::{FromRequestParts, State},
@@ -363,13 +364,13 @@ async fn finish_all(
     Timestamp(timestamp): Timestamp,
     user: AuthUser,
     extract::Json(body): extract::Json<FinishAllParameters>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Messages>> {
     for id in &body.annotations {
         finish_annotation(&state, &provider, &writer, &user, &typ, id, timestamp)
             .await
             .map_err(FinishFailure::into_inner)?;
     }
-    Ok(Json(json!({"messages":[{"success":ALL_FINISHED}]})))
+    Ok(Messages::success(ALL_FINISHED))
 }
 
 #[cfg(test)]

@@ -402,7 +402,9 @@ impl RpcRequest {
             "Failed {rpc_info}. Response: {} '{response_preview}'",
             status.as_u16()
         ))
-        .with_status(StatusCode::from_u16(status.as_u16()).unwrap_or(StatusCode::BAD_REQUEST)))
+        .with_param_status(
+            StatusCode::from_u16(status.as_u16()).unwrap_or(StatusCode::BAD_REQUEST),
+        ))
     }
 }
 

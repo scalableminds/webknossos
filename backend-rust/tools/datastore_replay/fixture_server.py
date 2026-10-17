@@ -282,6 +282,21 @@ def make_server(state, port=0):
                     removed = state.uploads[side]['reserved'].pop(body, None) if isinstance(body, str) else None
                 # Only datasets this side reserved can be deleted; catalog datasets never.
                 self.reply(200 if removed else 404, {} if removed else {'error': 'fixture_upload_missing'})
+            elif self.command == 'POST' and action in ('reserveMagUpload', 'reserveAttachmentUpload'):
+                # WK answers with the target dataset's id; only datasets this side uploaded exist.
+                info = self.body()
+                state.record(side, action, {}, info)
+                with state.lock:
+                    reserved = state.uploads[side]['reserved'].get(info.get('datasetId'))
+                if token_label == 'denied':
+                    self.reply(403, {'messages': [{'error': 'Fixture access denied.'}]})
+                elif not reserved or info.get('layerName') != 'color':
+                    self.reply(400, {'messages': [{'error': 'Fixture dataset or layer not found.'}]})
+                else:
+                    self.reply(200, {'dataSourceId': {'name': reserved['directory'], 'team': 'replay-org'}})
+            elif self.command == 'POST' and action in ('reportMagUpload', 'reportAttachmentUpload'):
+                state.record(side, action, {}, self.body())
+                self.reply(200, {})
             elif self.command == 'GET' and action == 'getUnfinishedDatasetUploadsForUser':
                 state.record(side, action, {'organizationName': one('organizationName')}, None)
                 self.reply(200, state.unfinished(side))

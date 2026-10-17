@@ -46,6 +46,19 @@ fn missing_directory(dir: &Path) -> DsError {
     }
 }
 
+/// Commons IO `sizeOfDirectoryAsBigInteger` with a missing directory: the `FileNotFoundException`
+/// arrives wrapped in an `UncheckedIOException`; Scala's `tryo` keeps both texts.
+fn missing_directory_unchecked(dir: &Path) -> DsError {
+    let cause = format!(
+        "java.io.FileNotFoundException: Directory '{}' does not exist.",
+        dir.display()
+    );
+    DsError {
+        exception: Some(format!("java.io.UncheckedIOException: {cause}")),
+        ..DsError::failure(cause)
+    }
+}
+
 /// Files below `dir` up to `max_depth` (Java `Files.walk(dir, maxDepth, FOLLOW_LINKS)` minus the
 /// root, regular files only), sorted for determinism.
 pub fn list_files_recursive(dir: &Path, max_depth: usize) -> DsResult<Vec<PathBuf>> {
@@ -646,9 +659,14 @@ impl FinishContext<'_> {
             return Ok(());
         };
         let dir = upload_dir.to_path_buf();
-        let actual = blocking(move || size_of_directory(&dir).map_err(io_failure))
-            .await
-            .map_err(|e| e.wrap("Could not measure actual file size"))? as i64;
+        let actual = blocking(move || {
+            if !dir.exists() {
+                return Err(missing_directory_unchecked(&dir));
+            }
+            size_of_directory(&dir).map_err(io_failure)
+        })
+        .await
+        .map_err(|e| e.wrap("Could not measure actual file size"))? as i64;
         if actual > reserved {
             // Scala starts this clean-up without awaiting it.
             if let Err(e) = self.clean_up_exceeding_size(upload_id, domain).await {

@@ -32,6 +32,9 @@ pub struct DsError {
     pub exception: Option<String>,
     /// Causes, newest first, already formatted like Scala `formatOneFailure + formatStackTrace`.
     pub chain: Vec<String>,
+    /// Scala `ParamFailure` from `Failure ~> status`: its chain entries read `<message> <status>`,
+    /// and wrapping keeps the param (`ParamFailure ?~> msg` is a `ParamFailure` again).
+    pub param_failure: bool,
 }
 
 impl DsError {
@@ -51,6 +54,7 @@ impl DsError {
             message: message.into(),
             exception: None,
             chain: Vec::new(),
+            param_failure: false,
         }
     }
 
@@ -84,10 +88,22 @@ impl DsError {
         self
     }
 
+    /// Scala `Failure ~> status` where the param shows in the chain (e.g. failed RPCs).
+    /// `with_status` models statuses that Scala does not attach as a `ParamFailure`.
+    pub fn with_param_status(mut self, status: StatusCode) -> Self {
+        self.status = status;
+        self.param_failure = true;
+        self
+    }
+
     /// Scala `?~> msg` / `?-> msg` on a failure: the new message becomes the outer message and the
     /// current failure moves to the front of the chain. An explicit status is preserved.
     pub fn wrap(mut self, message: impl Into<String>) -> Self {
         let mut previous = std::mem::replace(&mut self.message, message.into());
+        if self.param_failure {
+            previous.push(' ');
+            previous.push_str(self.status.as_str());
+        }
         if let Some(exception) = self.exception.take() {
             previous.push(' ');
             previous.push_str(&exception);

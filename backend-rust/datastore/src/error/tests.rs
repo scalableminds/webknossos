@@ -36,6 +36,28 @@ fn wrapped_failures_render_scala_chain() {
 }
 
 #[test]
+fn param_failures_show_their_status_in_every_chain_entry() {
+    // Scala (live): Failure("Failed RPC …") ~> 400 ?~> "inner" ?~> "outer"; `ParamFailure ?~>`
+    // keeps the param, and `formatOneFailure` renders `msg + " " + param`.
+    let error = DsError::failure("Failed RPC 1: POST /x. Response: 400 '{}'")
+        .with_param_status(StatusCode::BAD_REQUEST)
+        .wrap("inner")
+        .wrap("outer");
+    assert_eq!(
+        error.body_at(UNIX_EPOCH),
+        serde_json::json!({"messages": [
+            {"error": "outer"},
+            {"chain": "[Server Time 1970-01-01T00:00:00Z] inner 400 <~ Failed RPC 1: POST /x. Response: 400 '{}' 400"}
+        ]})
+    );
+    // Statuses set with `with_status` are not params.
+    let plain = DsError::failure("a")
+        .with_status(StatusCode::FORBIDDEN)
+        .wrap("b");
+    assert_eq!(plain.chain, ["a"]);
+}
+
+#[test]
 fn explicit_status_survives_wrapping_and_empty_is_404() {
     let error = DsError::failure("inner")
         .with_status(StatusCode::FORBIDDEN)

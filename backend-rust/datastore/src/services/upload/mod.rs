@@ -475,12 +475,15 @@ fn parse_failure_js(e: &crate::models::JsError) -> DsError {
     ))
 }
 
-/// Scala `ResumableUploadInfo`.
-#[derive(Debug, Clone, PartialEq)]
+/// Scala `ResumableUploadInfo` (serialized like `Json.toJson`: absent options omitted).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ResumableUploadInfo {
     pub upload_id: String,
     pub total_file_count: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub file_paths: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_file_size_in_bytes: Option<i64>,
 }
 

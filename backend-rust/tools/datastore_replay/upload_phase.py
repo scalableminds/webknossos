@@ -27,9 +27,18 @@ import zipfile
 BOUNDARY = 'dc1e-boundary-7f3a'
 SETTLE_SECONDS = 3
 SERVER_TIME = re.compile(r'\[Server Time [^\]]+\]')
+# Finished mag/attachment uploads move to `<layer>/<mag or attachment>__<ObjectId.generate>`.
+GENERATED_ID = re.compile(r'__[0-9a-f]{24}\b')
 ZARRAY = {'zarr_format': 2, 'shape': [32, 32, 32], 'chunks': [32, 32, 32], 'dtype': '|u1', 'order': 'F',
           'compressor': None, 'fill_value': 0, 'filters': None, 'dimension_separator': '.'}
 CHUNK = bytes((x * 7 + y * 3 + z) & 255 for z in range(32) for y in range(32) for x in range(32))
+MAG_ZARRAY = dict(ZARRAY, shape=[16, 16, 16], chunks=[16, 16, 16])
+MAG_CHUNK = bytes((x + y * 5 + z * 9) & 255 for z in range(16) for y in range(16) for x in range(16))
+
+
+def dataset_id(name):
+    """fixture_server.FixtureState.reserve: the id WK assigns to an uploaded dataset."""
+    return 'f00000' + hashlib.sha256(name.encode()).hexdigest()[:18]
 
 
 def properties(name):
@@ -71,22 +80,26 @@ def scenarios():
     explore = zipped([('raw/color/1/.zarray', json.dumps(ZARRAY).encode()), ('raw/color/1/0.0.0', CHUNK)])
     folder = [('folder/datasource-properties.json', json.dumps(properties('folder-ds')).encode()),
               ('folder/color/1/.zarray', json.dumps(ZARRAY).encode()), ('folder/color/1/0.0.0', CHUNK)]
-    up = '/data/datasets/upload/dataset'
+    base = '/data/datasets/upload/'
+    up = base + 'dataset'
 
-    def chunk(upload_id, file, data, number=1, total=1, chunk_size=None):
-        return ('POST', up, {}, 'multipart', {'resumableChunkNumber': number, 'resumableChunkSize': chunk_size or len(data),
-                                              'resumableCurrentChunkSize': len(data), 'resumableTotalChunks': total,
-                                              'resumableIdentifier': f'{upload_id}/{file}', 'file': data}, 'primary')
+    def chunk(upload_id, file, data, number=1, total=1, chunk_size=None, domain='dataset'):
+        return ('POST', base + domain, {}, 'multipart', {'resumableChunkNumber': number,
+                'resumableChunkSize': chunk_size or len(data), 'resumableCurrentChunkSize': len(data),
+                'resumableTotalChunks': total, 'resumableIdentifier': f'{upload_id}/{file}', 'file': data}, 'primary')
 
-    def test(upload_id, file, number):
-        return ('GET', up, {'resumableChunkNumber': str(number), 'resumableIdentifier': f'{upload_id}/{file}'},
+    def test(upload_id, file, number, domain='dataset'):
+        return ('GET', base + domain, {'resumableChunkNumber': str(number), 'resumableIdentifier': f'{upload_id}/{file}'},
                 None, None, 'primary')
 
-    def finish(upload_id):
-        return ('POST', up + '/finishUpload', {'uploadId': upload_id}, 'json', {}, 'primary')
+    def finish(upload_id, domain='dataset'):
+        return ('POST', base + domain + '/finishUpload', {'uploadId': upload_id}, 'json', {}, 'primary')
 
-    def reserve(body, token='primary'):
-        return ('POST', up + '/reserveUpload', {}, 'json', body, token)
+    def cancel(upload_id, domain='dataset'):
+        return ('POST', base + domain + '/cancelUpload', {'uploadId': upload_id}, 'json', {}, 'primary')
+
+    def reserve(body, token='primary', domain='dataset'):
+        return ('POST', base + domain + '/reserveUpload', {}, 'json', body, token)
 
     unfinished = ('GET', up + '/unfinishedUploads', {'organizationName': 'replay-org'}, None, None, 'primary')
     yield 'zip-with-properties', [
@@ -119,8 +132,8 @@ def scenarios():
     yield 'cancel', [
         ('reserve', reserve(reserve_body('dc1e-cancel', 'cancel-ds', ['cancel-ds.zip']))),
         ('chunk-1', chunk('dc1e-cancel', 'cancel-ds.zip', with_properties[:half], 1, 2, half)),
-        ('cancel-unknown', ('POST', up + '/cancelUpload', {'uploadId': 'dc1e-unknown'}, 'json', {}, 'primary')),
-        ('cancel', ('POST', up + '/cancelUpload', {'uploadId': 'dc1e-cancel'}, 'json', {}, 'primary')),
+        ('cancel-unknown', cancel('dc1e-unknown')),
+        ('cancel', cancel('dc1e-cancel')),
         ('test-chunk-after-cancel', test('dc1e-cancel', 'cancel-ds.zip', 1)),
         ('unfinished-after', unfinished),
     ]
@@ -139,6 +152,89 @@ def scenarios():
         ('reserve', reserve(reserve_body('dc1e-convert', 'convert-ds', ['stack.tif'], needs_conversion=True))),
         ('chunk', chunk('dc1e-convert', 'stack.tif', b'II*\0' + bytes(60))),
         ('finish', finish('dc1e-convert')),
+    ]
+    yield from mag_and_attachment_scenarios(chunk, test, finish, cancel, reserve)
+
+
+def mag_and_attachment_scenarios(chunk, test, finish, cancel, reserve):
+    """Mag and attachment uploads into the dataset uploaded by `zip-with-properties` (layer `color`)."""
+    target = dataset_id('zip-ds')
+
+    def resumable(upload_id, files, total_size):
+        info = {'uploadId': upload_id, 'totalFileCount': len(files), 'filePaths': files}
+        return info if total_size is None else dict(info, totalFileSizeInBytes=total_size)
+
+    def mag_body(upload_id, files, mag, total_size=None, layer='color'):
+        return {'resumableUploadInfo': resumable(upload_id, files, total_size), 'datasetId': target,
+                'layerName': layer, 'mag': {'mag': mag}, 'overwritePending': False}
+
+    def attachment_body(upload_id, files, name, kind, data_format, total_size=None):
+        return {'resumableUploadInfo': resumable(upload_id, files, total_size), 'datasetId': target,
+                'layerName': 'color', 'attachmentType': kind,
+                'attachment': {'name': name, 'path': 'pending', 'dataFormat': data_format}, 'overwritePending': False}
+
+    mag_zip = zipped([('mag2/.zarray', json.dumps(MAG_ZARRAY).encode()), ('mag2/0.0.0', MAG_CHUNK),
+                      ('mag2/.DS_Store', b'hidden')])
+    mag_folder = [('4/.zarray', json.dumps(MAG_ZARRAY).encode()), ('4/0.0.0', MAG_CHUNK)]
+    hdf5 = b'\x89HDF\r\n\x1a\n' + bytes(56)
+    mesh_zip = zipped([('meshfile/zarr.json', b'{"zarr_format":3,"node_type":"group"}'), ('meshfile/c/0', b'1234')])
+    m, a = {'domain': 'mag'}, {'domain': 'attachment'}
+    yield 'mag-zip', [
+        ('reserve-denied', reserve(mag_body('dc1e-mag', ['mag.zip'], [2, 2, 2]), 'denied', **m)),
+        ('reserve-invalid-body', reserve({'resumableUploadInfo': {'uploadId': 'dc1e-mag'}, 'datasetId': target}, **m)),
+        ('reserve-unknown-layer', reserve(mag_body('dc1e-mag', ['mag.zip'], [2, 2, 2], layer='other'), **m)),
+        ('reserve', reserve(mag_body('dc1e-mag', ['mag.zip'], [2, 2, 2], len(mag_zip)), **m)),
+        ('reserve-again', reserve(mag_body('dc1e-mag', ['mag.zip'], [2, 2, 2], len(mag_zip)), **m)),
+        ('unfinished-mag', ('GET', '/data/datasets/upload/mag/unfinishedUploads', {'organizationName': 'replay-org'},
+                            None, None, 'primary')),
+        ('test-chunk-before', test('dc1e-mag', 'mag.zip', 1, **m)),
+        ('finish-before-chunks', finish('dc1e-mag', **m)),
+        ('chunk', chunk('dc1e-mag', 'mag.zip', mag_zip, **m)),
+        ('test-chunk-after', test('dc1e-mag', 'mag.zip', 1, **m)),
+        ('test-chunk-wrong-domain', test('dc1e-mag', 'mag.zip', 1)),
+        ('finish-wrong-domain', finish('dc1e-mag', domain='attachment')),
+        ('finish', finish('dc1e-mag', **m)),
+        ('finish-again', finish('dc1e-mag', **m)),
+    ]
+    yield 'mag-folder', [
+        ('reserve', reserve(mag_body('dc1e-mag-folder', [p for p, _ in mag_folder], [4, 4, 4]), **m)),
+        *[(f'chunk-{index}', chunk('dc1e-mag-folder', path, data, **m)) for index, (path, data) in enumerate(mag_folder)],
+        ('finish', finish('dc1e-mag-folder', **m)),
+    ]
+    yield 'mag-size-exceeded', [
+        ('reserve', reserve(mag_body('dc1e-mag-size', ['mag.zip'], [8, 8, 8], 16), **m)),
+        ('chunk', chunk('dc1e-mag-size', 'mag.zip', mag_zip, **m)),
+        ('finish', finish('dc1e-mag-size', **m)),
+    ]
+    yield 'mag-cancel', [
+        ('reserve', reserve(mag_body('dc1e-mag-cancel', ['mag.zip'], [16, 16, 16]), **m)),
+        ('chunk', chunk('dc1e-mag-cancel', 'mag.zip', mag_zip, **m)),
+        ('cancel', cancel('dc1e-mag-cancel', **m)),
+        ('test-chunk-after-cancel', test('dc1e-mag-cancel', 'mag.zip', 1, **m)),
+    ]
+    yield 'attachment-hdf5', [
+        ('reserve-denied', reserve(attachment_body('dc1e-att', ['view.hdf5'], 'Agglomerate Ü view #5', 'agglomerate',
+                                                   'hdf5'), 'denied', **a)),
+        ('reserve-invalid-type', reserve(attachment_body('dc1e-att', ['view.hdf5'], 'view', 'volume', 'hdf5'), **a)),
+        ('reserve', reserve(attachment_body('dc1e-att', ['view.hdf5'], 'Agglomerate Ü view #5', 'agglomerate', 'hdf5',
+                                            len(hdf5)), **a)),
+        ('chunk', chunk('dc1e-att', 'view.hdf5', hdf5, **a)),
+        ('finish', finish('dc1e-att', **a)),
+    ]
+    yield 'attachment-zarr3-zip', [
+        ('reserve', reserve(attachment_body('dc1e-att-mesh', ['mesh.zip'], 'meshfile', 'mesh', 'zarr3'), **a)),
+        ('chunk', chunk('dc1e-att-mesh', 'mesh.zip', mesh_zip, **a)),
+        ('finish', finish('dc1e-att-mesh', **a)),
+    ]
+    yield 'attachment-unnamed', [
+        ('reserve', reserve(attachment_body('dc1e-att-none', ['x.hdf5'], '###', 'segmentIndex', 'hdf5'), **a)),
+        ('chunk', chunk('dc1e-att-none', 'x.hdf5', hdf5, **a)),
+        ('finish', finish('dc1e-att-none', **a)),
+        ('cancel-finished', cancel('dc1e-att-none', **a)),
+    ]
+    yield 'unknown-domain', [
+        ('finish', finish('dc1e-mag', domain='volume')),
+        ('test-chunk', test('dc1e-mag', 'mag.zip', 1, domain='volume')),
     ]
 
 
@@ -220,7 +316,8 @@ class Redis:
 
 
 def tree(root):
-    """Relative path -> file digest (or 'dir'), hidden staging/trash directories included."""
+    """Relative path -> file digest (or 'dir'), hidden staging/trash directories included; generated ids
+    of finished mag/attachment directories normalized."""
     result = {}
     for path in sorted(root.rglob('*')):
         relative = str(path.relative_to(root))
@@ -230,7 +327,7 @@ def tree(root):
             result[relative] = 'dir'
         else:
             result[relative] = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
-    return result
+    return {GENERATED_ID.sub('__<OBJECTID>', key): value for key, value in result.items()}
 
 
 def normalized(value, root):
@@ -238,7 +335,7 @@ def normalized(value, root):
     text = json.dumps(value, sort_keys=True, ensure_ascii=False)
     for form in {str(root), str(root.resolve())}:
         text = text.replace(form, '<UPLOAD_ROOT>')
-    return json.loads(SERVER_TIME.sub('[Server Time]', text))
+    return json.loads(GENERATED_ID.sub('__<OBJECTID>', SERVER_TIME.sub('[Server Time]', text)))
 
 
 def answer(status, content_type, body, root):

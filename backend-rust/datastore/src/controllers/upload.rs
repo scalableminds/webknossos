@@ -126,39 +126,74 @@ pub(super) fn read_linked_layer(json: &Value) -> JsResult<Value> {
     Ok(value)
 }
 
-/// Scala `DatasetUploadInfo` (fields used by the datastore).
+/// Scala `DatasetUploadInfo`.
 struct DatasetUploadInfo {
     resumable: ResumableUploadInfo,
+    dataset_name: String,
     organization_id: String,
     layers_to_link: Option<Vec<Value>>,
+    initial_team_ids: Vec<String>,
+    folder_id: Option<String>,
+    require_unique_name: Option<bool>,
+    is_virtual: Option<bool>,
     needs_conversion: Option<bool>,
     voxel_size_factor: Option<Vec3Double>,
     voxel_size_unit: Option<LengthUnit>,
+}
+
+/// Inserts `key` unless the option is empty (Play `writeNullable`).
+fn insert_some<T: serde::Serialize>(object: &mut Value, key: &str, value: &Option<T>) {
+    if let Some(value) = value {
+        object[key] = json!(value);
+    }
 }
 
 impl DatasetUploadInfo {
     fn from_json(json: &Value) -> JsResult<Self> {
         let mut f = Fields::new(json);
         let resumable = f.req("resumableUploadInfo", ResumableUploadInfo::from_json);
-        let _dataset_name = f.req("datasetName", read_string);
+        let dataset_name = f.req("datasetName", read_string);
         let organization_id = f.req("organizationId", read_string);
         let layers_to_link = f.opt("layersToLink", |v| read_list(v, read_linked_layer));
-        let _initial_team_ids = f.req("initialTeamIds", |v| read_list(v, read_object_id));
-        let _folder_id = f.opt("folderId", read_object_id);
-        let _require_unique_name = f.opt("requireUniqueName", read_bool);
-        let _is_virtual = f.opt("isVirtual", read_bool);
+        let initial_team_ids = f.req("initialTeamIds", |v| read_list(v, read_object_id));
+        let folder_id = f.opt("folderId", read_object_id);
+        let require_unique_name = f.opt("requireUniqueName", read_bool);
+        let is_virtual = f.opt("isVirtual", read_bool);
         let needs_conversion = f.opt("needsConversion", read_bool);
         let voxel_size_factor = f.opt("voxelSizeFactor", Vec3Double::from_json);
         let voxel_size_unit = f.opt("voxelSizeUnit", LengthUnit::from_json);
         f.finish()?;
         Ok(Self {
             resumable: resumable?,
+            dataset_name: dataset_name?,
             organization_id: organization_id?,
             layers_to_link: layers_to_link?,
+            initial_team_ids: initial_team_ids?,
+            folder_id: folder_id?,
+            require_unique_name: require_unique_name?,
+            is_virtual: is_virtual?,
             needs_conversion: needs_conversion?,
             voxel_size_factor: voxel_size_factor?,
             voxel_size_unit: voxel_size_unit?,
         })
+    }
+
+    /// The parsed body as Scala forwards it to WK (`Json.toJson(request.body)`).
+    fn to_json(&self) -> Value {
+        let mut value = json!({
+            "resumableUploadInfo": self.resumable,
+            "datasetName": self.dataset_name,
+            "organizationId": self.organization_id,
+        });
+        insert_some(&mut value, "layersToLink", &self.layers_to_link);
+        value["initialTeamIds"] = json!(self.initial_team_ids);
+        insert_some(&mut value, "folderId", &self.folder_id);
+        insert_some(&mut value, "requireUniqueName", &self.require_unique_name);
+        insert_some(&mut value, "isVirtual", &self.is_virtual);
+        insert_some(&mut value, "needsConversion", &self.needs_conversion);
+        insert_some(&mut value, "voxelSizeFactor", &self.voxel_size_factor);
+        insert_some(&mut value, "voxelSizeUnit", &self.voxel_size_unit);
+        value
     }
 }
 
@@ -167,17 +202,19 @@ struct ExistingDatasetUploadInfo {
     resumable: ResumableUploadInfo,
     dataset_id: String,
     layer_name: String,
+    overwrite_pending: bool,
 }
 
 fn read_existing(f: &mut Fields<'_>) -> JsResult<ExistingDatasetUploadInfo> {
     let resumable = f.req("resumableUploadInfo", ResumableUploadInfo::from_json);
     let dataset_id = f.req("datasetId", read_object_id);
     let layer_name = f.req("layerName", read_string);
-    let _overwrite_pending = f.req("overwritePending", read_bool);
+    let overwrite_pending = f.req("overwritePending", read_bool);
     Ok(ExistingDatasetUploadInfo {
         resumable: resumable?,
         dataset_id: dataset_id?,
         layer_name: layer_name?,
+        overwrite_pending: overwrite_pending?,
     })
 }
 
@@ -218,11 +255,7 @@ pub(super) async fn reserve_dataset_upload(
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
-    let raw = match validated_body(body, |v| Ok(v.clone())) {
-        Ok(raw) => raw,
-        Err(response) => return Ok(*response),
-    };
-    let info = match validated_body(Ok(Json(raw.clone())), DatasetUploadInfo::from_json) {
+    let info = match validated_body(body, DatasetUploadInfo::from_json) {
         Ok(info) => info,
         Err(response) => return Ok(*response),
     };
@@ -243,7 +276,7 @@ pub(super) async fn reserve_dataset_upload(
     }
     let additional: Value = state
         .wk_client
-        .reserve_dataset_upload(&raw, &tc)
+        .reserve_dataset_upload(&info.to_json(), &tc)
         .await
         .map_err(|e| e.wrap(VALIDATION_FAILED))?;
     let dataset_id = additional
@@ -295,11 +328,7 @@ async fn reserve_mag_upload(
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
-    let raw = match validated_body(body, |v| Ok(v.clone())) {
-        Ok(raw) => raw,
-        Err(response) => return Ok(*response),
-    };
-    let (info, mag) = match validated_body(Ok(Json(raw.clone())), read_mag_upload) {
+    let (info, mag) = match validated_body(body, read_mag_upload) {
         Ok(parsed) => parsed,
         Err(response) => return Ok(*response),
     };
@@ -315,7 +344,16 @@ async fn reserve_mag_upload(
     {
         let additional: Value = state
             .wk_client
-            .reserve_mag_upload(&raw, &tc)
+            .reserve_mag_upload(
+                &json!({
+                    "resumableUploadInfo": info.resumable,
+                    "datasetId": info.dataset_id,
+                    "layerName": info.layer_name,
+                    "mag": mag,
+                    "overwritePending": info.overwrite_pending,
+                }),
+                &tc,
+            )
             .await
             .map_err(|e| e.wrap(VALIDATION_FAILED))?;
         let source = data_source_id_from(&additional, "dataSourceId")?;
@@ -344,15 +382,10 @@ async fn reserve_attachment_upload(
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
-    let raw = match validated_body(body, |v| Ok(v.clone())) {
-        Ok(raw) => raw,
+    let (info, kind, attachment) = match validated_body(body, read_attachment_upload) {
+        Ok(parsed) => parsed,
         Err(response) => return Ok(*response),
     };
-    let (info, kind, attachment) =
-        match validated_body(Ok(Json(raw.clone())), read_attachment_upload) {
-            Ok(parsed) => parsed,
-            Err(response) => return Ok(*response),
-        };
     state
         .access
         .validate_access(UserAccessRequest::write_dataset(&info.dataset_id), &tc)
@@ -365,7 +398,17 @@ async fn reserve_attachment_upload(
     {
         let additional: Value = state
             .wk_client
-            .reserve_attachment_upload(&raw, &tc)
+            .reserve_attachment_upload(
+                &json!({
+                    "resumableUploadInfo": info.resumable,
+                    "datasetId": info.dataset_id,
+                    "layerName": info.layer_name,
+                    "attachmentType": kind,
+                    "attachment": attachment,
+                    "overwritePending": info.overwrite_pending,
+                }),
+                &tc,
+            )
             .await
             // Scala uses the message key here instead of the message text.
             .map_err(|e| e.wrap("dataset.upload.validation.failed"))?;

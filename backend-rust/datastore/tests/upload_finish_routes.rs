@@ -236,6 +236,33 @@ async fn finish_before_any_chunk_fails_like_commons_io_without_backup_dir() {
 }
 
 #[tokio::test]
+async fn mag_finish_before_any_chunk_fails_in_the_size_check_like_commons_io() {
+    let f = fixture().await;
+    let (status, body) = post_json(
+        &f.app,
+        "/data/datasets/upload/mag/reserveUpload",
+        json!({"resumableUploadInfo":{"uploadId":"m1","totalFileCount":1,"totalFileSizeInBytes":10},
+            "datasetId":ID,"layerName":"color","overwritePending":false,"mag":{"mag":[2,2,1]}}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) = finish(&f, "mag", "m1").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    // Live Scala text: sizeOfDirectoryAsBigInteger wraps the FileNotFoundException.
+    let missing = format!(
+        "java.io.FileNotFoundException: Directory '{}' does not exist.",
+        f.orga_dir.join(".uploading/mag/m1").display()
+    );
+    let chain = body["messages"][1]["chain"].as_str().unwrap();
+    assert!(
+        chain.ends_with(&format!(
+            "dataset.upload.fileSizeCheck.failed <~ Could not measure actual file size <~ {missing} java.io.UncheckedIOException: {missing}"
+        )),
+        "{chain}"
+    );
+}
+
+#[tokio::test]
 async fn finishes_zipped_explored_dataset_uploads() {
     let f = fixture().await;
     reserve_dataset(&f, &["ds.zip"], false).await;

@@ -123,6 +123,28 @@ class FixtureServerTests(unittest.TestCase):
             with self.assertRaises(f.InvalidFixture):
                 f.FixtureState(root, catalog(), KEY, [TOKEN], KEY)
 
+    def test_mag_and_attachment_upload_rpcs_target_reserved_datasets(self):
+        with fixture() as (state, root):
+            post = lambda action, body, token=TOKEN: request(state.origin, '/api/datastores/replay-ds/' + action
+                + '?key=' + KEY + '&token=' + token, 'POST', body)
+            info = {'resumableUploadInfo': {'uploadId': 'u1', 'totalFileCount': 1}, 'datasetName': 'My DS',
+                    'organizationId': 'replay-org', 'initialTeamIds': []}
+            dataset = json.loads(post('reserveDatasetUpload', info)[2])['newDatasetId']
+            mag = {'resumableUploadInfo': {'uploadId': 'm1', 'totalFileCount': 1}, 'datasetId': dataset,
+                   'layerName': 'color', 'mag': {'mag': [2, 2, 2]}, 'overwritePending': False}
+            status, _, body = post('reserveMagUpload', mag)
+            self.assertEqual((status, json.loads(body)), (200, {'dataSourceId': {'name': 'My_DS', 'team': 'replay-org'}}))
+            self.assertEqual(post('reserveAttachmentUpload', dict(mag, layerName='other'))[0], 400)
+            self.assertEqual(post('reserveMagUpload', dict(mag, datasetId=ID))[0], 400)  # catalog datasets are read-only
+            self.assertEqual(post('reserveMagUpload', mag, token='denied')[0], 403)
+            self.assertEqual(post('reportMagUpload', {'datasetId': dataset, 'magSizeBytes': 1})[0], 200)
+            self.assertEqual(post('reportAttachmentUpload', {'datasetId': dataset})[0], 200)
+            calls = json.loads(request(state.origin, '/upload-calls?side=scala')[2])
+            self.assertEqual([c['action'] for c in calls], ['reserveDatasetUpload', 'reserveMagUpload',
+                             'reserveAttachmentUpload', 'reserveMagUpload', 'reserveMagUpload', 'reportMagUpload',
+                             'reportAttachmentUpload'])
+            self.assertEqual(calls[-2]['body'], {'datasetId': dataset, 'magSizeBytes': 1})
+
     def test_range_full_head_suffix_invalid_and_token_after_cache(self):
         with fixture() as (state,_):
             path='/files/data.bin'

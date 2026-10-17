@@ -49,7 +49,8 @@ async fn fixture() -> Fixture {
                 StatusCode::OK,
                 json!({"newDatasetId":ID,"directoryName":"my_ds"}),
             )
-        } else if path.ends_with("/reserveMagUpload") {
+        } else if path.ends_with("/reserveMagUpload") || path.ends_with("/reserveAttachmentUpload")
+        {
             Reply::json(
                 StatusCode::OK,
                 json!({"dataSourceId":{"name":"my_ds","team":"org"}}),
@@ -192,6 +193,12 @@ fn error(body: &[u8]) -> Value {
     serde_json::from_slice::<Value>(body).unwrap()["messages"][0]["error"].clone()
 }
 
+fn forwarded(f: &Fixture, rpc: &str) -> String {
+    let calls = f.wk.calls();
+    let call = calls.iter().find(|c| c.path.ends_with(rpc)).expect(rpc);
+    String::from_utf8(call.body.clone()).unwrap()
+}
+
 fn dataset_reservation() -> Value {
     json!({"resumableUploadInfo":{"uploadId":"up1","totalFileCount":1,"filePaths":["a/b.bin"],
             "totalFileSizeInBytes":100},
@@ -251,6 +258,14 @@ async fn reserves_dataset_uploads_in_scala_redis_format() {
         14 * 24 * 3600
     );
     assert!(f.orga_dir.is_dir(), "organization directory created");
+    // WEBKNOSSOS gets the parsed body re-written like Scala's `Json.toJson` (field order of the
+    // case class, absent options omitted), not the client's JSON.
+    assert_eq!(
+        forwarded(&f, "/reserveDatasetUpload"),
+        format!(
+            r#"{{"resumableUploadInfo":{{"uploadId":"up1","totalFileCount":1,"filePaths":["a/b.bin"],"totalFileSizeInBytes":100}},"datasetName":"My DS","organizationId":"org","layersToLink":[{{"datasetId":"{ID}","layerName":"color"}}],"initialTeamIds":[],"voxelSizeFactor":[4,4,40]}}"#
+        )
+    );
 
     // Re-reserving a known upload does not ask WEBKNOSSOS again.
     let reservations = || {
@@ -391,6 +406,13 @@ async fn reserves_mag_uploads() {
         f.redis.text("upload___mag___m1___mag").as_deref(),
         Some(r#"{"mag":[2,2,1]}"#)
     );
+    // Scala forwards the request body including the mag's credential; only Redis drops it.
+    assert_eq!(
+        forwarded(&f, "/reserveMagUpload"),
+        format!(
+            r#"{{"resumableUploadInfo":{{"uploadId":"m1","totalFileCount":1}},"datasetId":"{ID}","layerName":"color","mag":{{"mag":[2,2,1],"credentialId":"secret"}},"overwritePending":false}}"#
+        )
+    );
     assert_eq!(
         f.redis.text("upload___mag___m1___layerName").as_deref(),
         Some("color")
@@ -404,6 +426,33 @@ async fn reserves_mag_uploads() {
     assert_eq!(
         std::fs::read(f.orga_dir.join(".uploading/mag/m1/0.0.0")).unwrap(),
         b"chunk"
+    );
+}
+
+#[tokio::test]
+async fn reserves_attachment_uploads_and_forwards_normalized_paths() {
+    let f = fixture().await;
+    let (status, body) = post_json(
+        &f.app,
+        "/data/datasets/upload/attachment/reserveUpload",
+        json!({"overwritePending":true,"layerName":"color","datasetId":ID,"attachmentType":"agglomerate",
+            "attachment":{"name":"view","path":"pending","dataFormat":"hdf5"},"extra":1,
+            "resumableUploadInfo":{"uploadId":"a1","totalFileCount":1,"filePaths":["view.hdf5"]}}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", String::from_utf8_lossy(&body));
+    // Live differential: Scala parses the relative path as UPath and writes `./pending`.
+    assert_eq!(
+        forwarded(&f, "/reserveAttachmentUpload"),
+        format!(
+            r#"{{"resumableUploadInfo":{{"uploadId":"a1","totalFileCount":1,"filePaths":["view.hdf5"]}},"datasetId":"{ID}","layerName":"color","attachmentType":"agglomerate","attachment":{{"name":"view","path":"./pending","dataFormat":"hdf5"}},"overwritePending":true}}"#
+        )
+    );
+    assert_eq!(
+        f.redis
+            .text("upload___attachment___a1___attachmentType")
+            .as_deref(),
+        Some(r#""agglomerate""#)
     );
 }
 

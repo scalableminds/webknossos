@@ -88,7 +88,7 @@ async fn generate(
         .datasets
         .get_with_layer(&id, &name)
         .await
-        .map_err(|e| e.with_status(axum::http::StatusCode::NOT_FOUND))?;
+        .map_err(|e| e.with_param_status(axum::http::StatusCode::NOT_FOUND))?;
     let cuboid = Cuboid::new(
         VoxelPosition::new(request.position, request.mag)?,
         request.shape,

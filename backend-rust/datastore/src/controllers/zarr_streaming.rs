@@ -25,7 +25,7 @@ use crate::{
             NgffMetadataV0_5,
         },
     },
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, ExplicitStatus},
     models::{
         BUCKET_LENGTH, FILENAME_DATASOURCE_PROPERTIES_JSON, StaticLayer, UsableDataSource, Vec3Int,
         data_requests::{
@@ -199,9 +199,10 @@ pub fn router() -> Router<AppState> {
 }
 
 /// Play `defaultErrorCode = NOT_FOUND`: no handler of this controller sets an explicit 400, so
-/// every 400 is a failure that took the controller default. A `datasetId` that is not an ObjectId
-/// fails in Play's route binder before the action runs and keeps its 400 (private-link routes
-/// take a plain String).
+/// every 400 is a failure that took the controller default, unless it is a `ParamFailure`
+/// status passed through (a WK/tracingstore RPC answering 400, `ExplicitStatus`). A `datasetId`
+/// that is not an ObjectId fails in Play's route binder before the action runs and keeps its 400
+/// (private-link routes take a plain String).
 async fn not_found_by_default(request: Request, next: Next) -> Response {
     // ["", "data", "zarr…", datasetId, …] or ["", "data", "annotations", "zarr…", token, …]
     let mut segments = request.uri().path().split('/').skip(2);
@@ -210,7 +211,10 @@ async fn not_found_by_default(request: Request, next: Next) -> Response {
         _ => segments.next().is_some_and(|id| dataset_id(id).is_ok()),
     };
     let mut response = next.run(request).await;
-    if binder_ok && response.status() == StatusCode::BAD_REQUEST {
+    if binder_ok
+        && response.status() == StatusCode::BAD_REQUEST
+        && response.extensions().get::<ExplicitStatus>().is_none()
+    {
         *response.status_mut() = StatusCode::NOT_FOUND;
     }
     response
@@ -250,24 +254,23 @@ async fn layer_or_not_found(
     std::sync::Arc<UsableDataSource>,
     std::sync::Arc<StaticLayer>,
 )> {
-    state
-        .datasets
-        .get_with_layer(id, layer)
-        .await
-        .map_err(|e| e.wrap(SOURCE_NOT_FOUND).with_status(StatusCode::NOT_FOUND))
+    state.datasets.get_with_layer(id, layer).await.map_err(|e| {
+        e.wrap(SOURCE_NOT_FOUND)
+            .with_param_status(StatusCode::NOT_FOUND)
+    })
 }
 
 /// `Vec3Int.fromMagLiteral(mag, allowScalar = true)` + `containsMag`, both `~> NOT_FOUND`.
 fn existing_mag(layer: &StaticLayer, layer_name: &str, mag: &str) -> DsResult<Vec3Int> {
     let parsed = Vec3Int::from_mag_literal(mag, true).ok_or_else(|| {
         DsError::failure(format!("Invalid mag “{mag}”. Please use “x-y-z”."))
-            .with_status(StatusCode::NOT_FOUND)
+            .with_param_status(StatusCode::NOT_FOUND)
     })?;
     if !layer.contains_mag(parsed) {
         return Err(DsError::failure(format!(
             "Data layer “{layer_name}” does not have mag “{mag}”."
         ))
-        .with_status(StatusCode::NOT_FOUND));
+        .with_param_status(StatusCode::NOT_FOUND));
     }
     Ok(parsed)
 }
@@ -290,11 +293,10 @@ async fn source_dir<const V: u8>(
     Path(id): Path<String>,
 ) -> AccessResult<Response> {
     let id = authorize(&state, &tc, &id).await?;
-    let source = state
-        .datasets
-        .get_by_id(&id)
-        .await
-        .map_err(|e| e.wrap(SOURCE_NOT_FOUND).with_status(StatusCode::NOT_FOUND))?;
+    let source = state.datasets.get_by_id(&id).await.map_err(|e| {
+        e.wrap(SOURCE_NOT_FOUND)
+            .with_param_status(StatusCode::NOT_FOUND)
+    })?;
     let mut entries = source_dir_entries::<V>();
     entries.extend(source.data_layers.iter().map(|l| l.name.clone()));
     Ok(html(directory_html("Datastore", &id, &entries)))
@@ -352,7 +354,7 @@ pub(super) async fn data_source<const V: u8>(
         .datasets
         .get_by_id(&id)
         .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
     let layers = zarr_layers(&source.data_layers, V)?;
     Ok(play_json(&zarr_source_json(&source, layers)?))
 }
@@ -449,7 +451,7 @@ async fn mag_dir_inner(
         .datasets
         .get_with_layer(id, layer_name)
         .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
     existing_mag(&layer, layer_name, mag)?;
     let entry = if zarr_version == 2 {
         FILENAME_DOT_ZARRAY
@@ -530,7 +532,7 @@ async fn raw_cube_inner(
         .datasets
         .get_with_layer(id, layer_name)
         .await
-        .map_err(|e| e.with_status(StatusCode::SERVICE_UNAVAILABLE))?;
+        .map_err(|e| e.with_param_status(StatusCode::SERVICE_UNAVAILABLE))?;
     let axes = reorder_additional_axes(layer.additional_axes.as_deref().unwrap_or_default());
     // Coordinate and mag failures stay 404: neuroglancer probes `:layer/:mag/.zattrs`.
     let (x, y, z, additional_coordinates) =
@@ -538,7 +540,7 @@ async fn raw_cube_inner(
             e.wrap(format!(
                 "Invalid chunk coordinates {coordinates}. Expected dot-separated coordinates like “c.<additional_axes.>x.y.z”."
             ))
-            .with_status(StatusCode::NOT_FOUND)
+            .with_param_status(StatusCode::NOT_FOUND)
         })?;
     let mag = existing_mag(&layer, layer_name, mag)?;
     let cube = BUCKET_LENGTH;
@@ -563,9 +565,8 @@ async fn raw_cube_inner(
         .handle_data_requests(&[request], tc.user_token.as_deref())
         .await;
     if !result.missing_indices.is_empty() || !result.failed_indices.is_empty() {
-        return Err(
-            DsError::failure(CHUNK_LOADING_ERROR).with_status(StatusCode::INTERNAL_SERVER_ERROR)
-        );
+        return Err(DsError::failure(CHUNK_LOADING_ERROR)
+            .with_param_status(StatusCode::INTERNAL_SERVER_ERROR));
     }
     Ok(octet_stream(result.data))
 }
@@ -582,11 +583,22 @@ async fn annotation_source(
     access_token: &str,
     tc: &TokenContext,
 ) -> DsResult<AnnotationSource> {
+    annotation_source_with_rpc_status(state, access_token, tc)
+        .await
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))
+}
+
+/// Scala `getAnnotationSource(accessToken)` without `~>` (`dataSourceDirectoryContentsPrivateLink`):
+/// a failed RPC keeps WEBKNOSSOS's status.
+async fn annotation_source_with_rpc_status(
+    state: &AppState,
+    access_token: &str,
+    tc: &TokenContext,
+) -> DsResult<AnnotationSource> {
     let value = state
         .wk_client
         .get_annotation_source(access_token, tc)
-        .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?;
+        .await?;
     AnnotationSource::from_json(value)
 }
 
@@ -640,13 +652,16 @@ async fn private_source_dir<const V: u8>(
     tc: TokenContext,
     Path(access_token): Path<String>,
 ) -> AccessResult<Response> {
-    // Scala: no `~> NOT_FOUND` here, but the controller default is 404 anyway.
-    let source = annotation_source(&state, &access_token, &tc).await?;
+    // Scala: no `~> NOT_FOUND` here; a failed RPC answers with WEBKNOSSOS's status.
+    let source = annotation_source_with_rpc_status(&state, &access_token, &tc).await?;
     let data_source = state
         .datasets
         .get_by_id(&source.dataset_id)
         .await
-        .map_err(|e| e.wrap(SOURCE_NOT_FOUND).with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| {
+            e.wrap(SOURCE_NOT_FOUND)
+                .with_param_status(StatusCode::NOT_FOUND)
+        })?;
     let annotation_names: Vec<String> = source.volume_layers().map(|l| l.name.clone()).collect();
     let mut entries = source_dir_entries::<V>();
     entries.extend(annotation_names.iter().cloned());
@@ -676,7 +691,10 @@ pub(super) async fn private_data_source<const V: u8>(
         .datasets
         .get_by_id(&source.dataset_id)
         .await
-        .map_err(|e| e.wrap(SOURCE_NOT_FOUND).with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| {
+            e.wrap(SOURCE_NOT_FOUND)
+                .with_param_status(StatusCode::NOT_FOUND)
+        })?;
     let remaining: Vec<StaticLayer> = data_source
         .data_layers
         .iter()

@@ -50,6 +50,21 @@ fn param_failures_show_their_status_in_every_chain_entry() {
             {"chain": "[Server Time 1970-01-01T00:00:00Z] inner 400 <~ Failed RPC 1: POST /x. Response: 400 '{}' 400"}
         ]})
     );
+    // Scala `ParamFailure ~> 404` nests the failure; a plain failure only gets the status.
+    // Live: `datasetCache.getById(id) ?~> notFound ~> NOT_FOUND` after a failed datasource RPC.
+    let nested = error.with_param_status(StatusCode::NOT_FOUND);
+    assert_eq!(nested.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        nested.chain,
+        [
+            "outer 400",
+            "inner 400",
+            "Failed RPC 1: POST /x. Response: 400 '{}' 400"
+        ]
+    );
+    let plain = DsError::failure("a").with_param_status(StatusCode::NOT_FOUND);
+    assert!(plain.chain.is_empty());
+    assert_eq!(plain.wrap("b").chain, ["a 404"]);
     // Statuses set with `with_status` are not params.
     let plain = DsError::failure("a")
         .with_status(StatusCode::FORBIDDEN)

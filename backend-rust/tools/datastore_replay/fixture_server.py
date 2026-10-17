@@ -69,6 +69,12 @@ class FixtureState:
             self.datasets[identifier] = dataset
         if not self.datasets:
             raise InvalidFixture('fixture datasets required')
+        # Readable datasets whose datasource RPC fails with the given status (WK-side errors).
+        self.broken = catalog.get('brokenDatasets', {})
+        for identifier, status in self.broken.items():
+            if not re.fullmatch(r'000000[0-9a-f]{18}', identifier) or identifier in self.datasets \
+                    or type(status) is not int or not 400 <= status <= 599:
+                raise InvalidFixture('broken datasets need unique test identifiers and an error status')
         self.files = {}
         for alias, entry in catalog.get('remoteFiles', {}).items():
             if not re.fullmatch(r'[A-Za-z0-9_.-]{1,100}', alias) or '..' in alias:
@@ -185,6 +191,12 @@ def make_server(state, port=0):
             if path.startswith('/files/'):
                 self.remote_file(path[len('/files/'):])
                 return
+            if path.startswith('/api/annotations/source/'):
+                # No annotation private links exist: WK answers 404, or the status a probe token names.
+                state.count('annotation_source')
+                status = {'forbidden-link': 403, 'bad-link': 400}.get(path.rsplit('/', 1)[-1], 404)
+                self.reply(status, {'messages': [{'error': 'Fixture annotation not found.'}]})
+                return
             prefix = '/api/datastores/replay-ds/'
             if not path.startswith(prefix):
                 state.count('unsupported_rpc')
@@ -205,7 +217,7 @@ def make_server(state, port=0):
                 resource = request.get('resourceType')
                 mode = request.get('mode')
                 granted = token_label != 'denied' and (
-                    resource == 'dataset' and mode == 'read' and identifier in state.datasets
+                    resource == 'dataset' and mode == 'read' and (identifier in state.datasets or identifier in state.broken)
                     or state.upload_access(side, resource, mode, identifier))
                 state.count('access_' + token_label + ('_granted' if granted else '_denied'))
                 self.reply(200, {'granted': granted, **({} if granted else {'msg': 'Fixture access denied.'})})
@@ -213,7 +225,9 @@ def make_server(state, port=0):
             if self.command == 'GET' and action.startswith('datasources/'):
                 identifier = action[len('datasources/'):]
                 state.count('datasource')
-                if identifier not in state.datasets:
+                if identifier in state.broken:
+                    self.reply(state.broken[identifier], {'messages': [{'error': 'Fixture data source unavailable.'}]})
+                elif identifier not in state.datasets:
                     self.reply(404, {'error': 'fixture_dataset_missing'})
                 else:
                     self.reply(200, state.data_source(identifier))

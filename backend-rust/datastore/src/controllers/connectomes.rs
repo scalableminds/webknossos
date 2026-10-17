@@ -44,7 +44,7 @@ async fn layer(
         .datasets
         .get_with_layer(&id, name)
         .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?)
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?)
 }
 async fn list(
     State(state): State<AppState>,
@@ -153,7 +153,7 @@ async fn partners(
         .datasets
         .get_with_layer(&dataset, &name)
         .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
     let key = ConnectomeService::look_up(&source.id, &layer, &body.file)?;
     let values = state
         .connectomes

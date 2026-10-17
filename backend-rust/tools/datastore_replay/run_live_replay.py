@@ -151,6 +151,8 @@ def contract_document(catalog):
     document = json.loads((HERE / 'dataset.template.json').read_text())
     health = json.loads((HERE / 'health.json').read_text())['cases'][0]
     document['cases'].append(health)
+    # Error answers whose chains depend on Scala ParamFailure nesting (`~>`), compared exactly.
+    document['cases'] += json.loads((HERE / 'error-chains.json').read_text())['cases']
     aliases = [case for case in document['cases'] if case['name'] in ('raw-cuboid', 'metadata', 'health')]
     for version in (10, 14, 16):
         for case in aliases:

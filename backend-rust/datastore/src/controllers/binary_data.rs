@@ -89,7 +89,10 @@ async fn webknossos(
             .datasets
             .get_with_layer(&id, &layer)
             .await
-            .map_err(|e| e.wrap(SOURCE_NOT_FOUND).with_status(StatusCode::NOT_FOUND))?;
+            .map_err(|e| {
+                e.wrap(SOURCE_NOT_FOUND)
+                    .with_param_status(StatusCode::NOT_FOUND)
+            })?;
         let requests = requests
             .iter()
             .map(|r| {
@@ -144,7 +147,7 @@ async fn raw_post(
         .datasets
         .get_with_layer(&id, &layer)
         .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
     let request = DataServiceDataRequest {
         dataset_id: Some(id),
         data_source_id: Some(source.id.clone()),
@@ -180,7 +183,7 @@ async fn raw_get(
         .datasets
         .get_with_layer(&id, &layer)
         .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
     let mag = Vec3Int::from_mag_literal(literal, false)
         .ok_or_else(|| DsError::failure(format!("Invalid mag “{literal}”. Please use “x-y-z”.")))?;
     let request = DataServiceDataRequest {
@@ -235,7 +238,10 @@ async fn knossos(
         .datasets
         .get_with_layer(&id, &layer)
         .await
-        .map_err(|e| e.wrap(SOURCE_NOT_FOUND).with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| {
+            e.wrap(SOURCE_NOT_FOUND)
+                .with_param_status(StatusCode::NOT_FOUND)
+        })?;
     let scale = size
         .checked_mul(mag)
         .ok_or_else(|| DsError::failure("Knossos bucket position overflows Int."))?;
@@ -276,7 +282,10 @@ async fn find_data(
         .datasets
         .get_with_layer(&id, &layer)
         .await
-        .map_err(|e| e.wrap(SOURCE_NOT_FOUND).with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| {
+            e.wrap(SOURCE_NOT_FOUND)
+                .with_param_status(StatusCode::NOT_FOUND)
+        })?;
     let target = FindDataTarget {
         dataset_id: &id,
         data_source_id: &source.id,
@@ -308,7 +317,7 @@ async fn histogram(
             e.wrap(format!(
                 "Could not generate histogram data: missing layer “{layer_name}”."
             ))
-            .with_status(StatusCode::NOT_FOUND)
+            .with_param_status(StatusCode::NOT_FOUND)
         })?;
     let target = FindDataTarget {
         dataset_id: &id,
@@ -339,7 +348,10 @@ async fn mapping_json(
         .datasets
         .get_with_layer(&id, &layer_name)
         .await
-        .map_err(|e| e.wrap(SOURCE_NOT_FOUND).with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| {
+            e.wrap(SOURCE_NOT_FOUND)
+                .with_param_status(StatusCode::NOT_FOUND)
+        })?;
     if !layer.is_segmentation() {
         // Scala `tryo(dataLayer.asInstanceOf[SegmentationLayer]) ?~> Layer.notFound`.
         return Err(DsError::failure(

@@ -217,7 +217,7 @@ async fn reload(
         .wk_client
         .get_data_source(&id)
         .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
     check_organization(&source.id().organization_id, &organization)?;
     clear_source_caches(&state, &source, layer).await;
     Ok(Json(refresh_source(&state, &id, &organization, &tc).await?))
@@ -254,7 +254,7 @@ fn check_organization(actual: &str, expected: &str) -> DsResult<()> {
     } else {
         Err(
             DsError::failure("Dataset does not belong to the requested organization.")
-                .with_status(StatusCode::NOT_FOUND),
+                .with_param_status(StatusCode::NOT_FOUND),
         )
     }
 }
@@ -269,7 +269,7 @@ async fn refresh_source(
         .wk_client
         .get_data_source(id)
         .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
     check_organization(&source.id().organization_id, organization)?;
     let root = state.wk_client.get_local_root_path_or_empty(id).await?;
     let disk_source = match root {
@@ -295,7 +295,7 @@ async fn refresh_source(
             Ok(DataSource::Usable((*source).clone()))
         }
         (_, Some(source)) => Ok(source),
-        _ => Err(DsError::failure("DataSource not found").with_status(StatusCode::NOT_FOUND)),
+        _ => Err(DsError::failure("DataSource not found").with_param_status(StatusCode::NOT_FOUND)),
     }
 }
 
@@ -388,7 +388,7 @@ async fn delete_on_disk(
         .wk_client
         .get_data_source(&id)
         .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
     let directory_name = source.id().directory_name.clone();
     blocking(move || {
         crate::services::dataset::files::move_to_trash(

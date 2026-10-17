@@ -18,6 +18,8 @@ import zlib
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / 'datastore/tests/fixtures'
 ORG = 'replay-org'
+# Readable for the fixture WK, but its datasource RPC answers 404 (error-chains.json probes).
+BROKEN_DATASET = '000000bad000000000000404'
 
 
 def write_json(path, value):
@@ -104,7 +106,8 @@ class Catalog:
             local = json.loads(json.dumps(record['dataSource']).replace('${FIXTURE_ROOT}', str(self.output)))
             write_json(self.output / record['rootPath'] / 'datasource-properties.json', local)
         write_json(self.output / 'catalog.json', {'version': 1, 'organization': ORG, 'datastore': 'replay-ds',
-                    'datasets': self.datasets, 'remoteFiles': self.remote})
+                    'datasets': self.datasets, 'remoteFiles': self.remote,
+                    'brokenDatasets': {BROKEN_DATASET: 404}})
         write_json(self.output / 'corpus.json', {'version': 1, 'cases': self.cases})
         write_json(self.output / 'goldens.json', {'version': 1, 'cases': self.goldens, 'intentional_divergences': self.divergences})
         files = []

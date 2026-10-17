@@ -81,7 +81,7 @@ fn layer_not_found(name: &str) -> String {
 async fn layer(state: &AppState, id: &str, name: &str) -> DsResult<std::sync::Arc<StaticLayer>> {
     let (_, layer) = state.datasets.get_with_layer(id, name).await.map_err(|e| {
         e.wrap(layer_not_found(name))
-            .with_status(axum::http::StatusCode::NOT_FOUND)
+            .with_param_status(axum::http::StatusCode::NOT_FOUND)
     })?;
     Ok(layer)
 }
@@ -145,7 +145,7 @@ async fn proxy_mag(
             DsError::failure(format!(
                 "Data layer “{layer_name}” does not have mag “{mag}”."
             ))
-            .with_status(axum::http::StatusCode::NOT_FOUND)
+            .with_param_status(axum::http::StatusCode::NOT_FOUND)
         })?;
     let mag_path = state.data_vaults.vault_path_for_mag(locator).await?;
     Ok(passthrough(mag_path.join(&path), &headers, tc.user_token.as_deref()).await?)
@@ -166,7 +166,7 @@ async fn proxy_precomputed_info(
     let layer = layer(&state, &id, &layer_name).await?;
     let first = layer.mags.first().ok_or_else(|| {
         DsError::failure(format!("Data layer “{layer_name}” has zero mags."))
-            .with_status(axum::http::StatusCode::NOT_FOUND)
+            .with_param_status(axum::http::StatusCode::NOT_FOUND)
     })?;
     let mag_path = state.data_vaults.vault_path_for_mag(first).await?;
     let bytes = mag_path
@@ -223,7 +223,7 @@ async fn proxy_attachment(
             DsError::failure(format!(
                 "Data layer “{layer_name}” does not have attachment “{attachment_name}”."
             ))
-            .with_status(axum::http::StatusCode::NOT_FOUND)
+            .with_param_status(axum::http::StatusCode::NOT_FOUND)
         })?;
     let attachment_path = state
         .data_vaults
@@ -249,7 +249,7 @@ pub(super) async fn proxy_datasource(
         .await?;
     let source = state.datasets.get_by_id(&id).await.map_err(|e| {
         e.wrap(SOURCE_NOT_FOUND)
-            .with_status(axum::http::StatusCode::NOT_FOUND)
+            .with_param_status(axum::http::StatusCode::NOT_FOUND)
     })?;
     Ok(Json(adapt_paths_for_data_source(&source)?))
 }

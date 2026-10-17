@@ -347,3 +347,37 @@ async fn errors_default_to_not_found() {
             .all(|c| c.path.ends_with("/validateUserAccess"))
     );
 }
+
+#[tokio::test]
+async fn failed_private_link_lookups_follow_scala_param_failure_statuses() {
+    let wk = MockWk::start(|call| {
+        let status = if call.path.ends_with("/source/bad-link") {
+            StatusCode::BAD_REQUEST
+        } else {
+            StatusCode::FORBIDDEN
+        };
+        Reply::json(status, json!({"messages":[{"error":"no"}]}))
+    })
+    .await;
+    let app = router(AppState::new(wk.config()));
+    // `dataSourceDirectoryContentsPrivateLink` has no `~> NOT_FOUND`: WEBKNOSSOS's status wins,
+    // including a 400 that the controller default (404) must not replace.
+    for (link, expected) in [
+        ("forbidden-link", StatusCode::FORBIDDEN),
+        ("bad-link", StatusCode::BAD_REQUEST),
+    ] {
+        let (status, _, _) = get(&app, &format!("/data/annotations/zarr/{link}")).await;
+        assert_eq!(status, expected, "{link}");
+    }
+    // Elsewhere `getAnnotationSource(…) ~> NOT_FOUND` nests the RPC ParamFailure (live Scala).
+    let (status, body) = get_json(
+        &app,
+        "/data/annotations/zarr/forbidden-link/datasource-properties.json",
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let error = body["messages"][0]["error"].as_str().unwrap();
+    assert!(error.starts_with("Failed RPC "), "{error}");
+    let chain = body["messages"][1]["chain"].as_str().unwrap();
+    assert!(chain.ends_with(&format!("] {error} 403")), "{chain}");
+}

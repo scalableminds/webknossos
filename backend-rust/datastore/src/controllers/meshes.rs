@@ -81,7 +81,7 @@ async fn layer(
         .datasets
         .get_with_layer(&id, name)
         .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?)
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?)
 }
 fn json_response(value: Value) -> Response {
     (

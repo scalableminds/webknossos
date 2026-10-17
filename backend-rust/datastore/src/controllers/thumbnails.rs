@@ -211,7 +211,10 @@ async fn render_layer(
         .datasets
         .get_with_layer(id, &p.data_layer_name)
         .await
-        .map_err(|e| e.wrap(SOURCE_NOT_FOUND).with_status(StatusCode::NOT_FOUND))?;
+        .map_err(|e| {
+            e.wrap(SOURCE_NOT_FOUND)
+                .with_param_status(StatusCode::NOT_FOUND)
+        })?;
     let mag = Vec3Int::from_mag_literal(&p.mag, false)
         .ok_or_else(|| DsError::failure(format!("Invalid mag “{}”. Please use “x-y-z”.", p.mag)))?;
     ensure_mapping_supported(&source, &layer, p.mapping_name.as_deref(), mag)?;

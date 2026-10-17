@@ -85,7 +85,7 @@ async fn layer(
         .datasets
         .get_with_layer(&id, layer)
         .await
-        .map_err(|e| e.with_status(StatusCode::NOT_FOUND))?)
+        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?)
 }
 
 async fn file_key(

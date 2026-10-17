@@ -88,9 +88,20 @@ impl DsError {
         self
     }
 
-    /// Scala `Failure ~> status` where the param shows in the chain (e.g. failed RPCs).
-    /// `with_status` models statuses that Scala does not attach as a `ParamFailure`.
+    /// Scala `~> status` (failed RPCs, controller statuses): the failure becomes a
+    /// `ParamFailure`. On a failure that already is one, Scala nests it
+    /// (`ParamFailure(msg, exception, Full(this), status)`), so the previous failure with its old
+    /// status becomes the newest chain entry. `with_status` models statuses that Scala does not
+    /// attach with `~>` (router fallbacks, `Empty`).
     pub fn with_param_status(mut self, status: StatusCode) -> Self {
+        if self.param_failure {
+            let mut previous = format!("{} {}", self.message, self.status.as_str());
+            if let Some(exception) = &self.exception {
+                previous.push(' ');
+                previous.push_str(exception);
+            }
+            self.chain.insert(0, previous);
+        }
         self.status = status;
         self.param_failure = true;
         self
@@ -166,6 +177,11 @@ impl From<webknossos_common::upath::UPathError> for DsError {
     }
 }
 
+/// Response extension: the status came from a Scala `ParamFailure` (`~> status`), so Play
+/// answers with it instead of the controller's `defaultErrorCode`.
+#[derive(Debug, Clone, Copy)]
+pub struct ExplicitStatus;
+
 impl IntoResponse for DsError {
     fn into_response(self) -> Response {
         if self.binding_error {
@@ -175,7 +191,12 @@ impl IntoResponse for DsError {
             }
             .into_response();
         }
-        (self.status, Json(self.body_at(SystemTime::now()))).into_response()
+        let explicit = self.param_failure;
+        let mut response = (self.status, Json(self.body_at(SystemTime::now()))).into_response();
+        if explicit {
+            response.extensions_mut().insert(ExplicitStatus);
+        }
+        response
     }
 }
 

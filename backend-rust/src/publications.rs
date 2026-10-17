@@ -4,6 +4,7 @@
 //! PublicationService.publicWrites renders with GlobalAccessContext and no
 //! requesting user, so the result never depends on the caller; the controller
 //! also sets `allowRemoteOrigin` (CORS headers on every response).
+use crate::util::id::ObjectId;
 use crate::{
     AppState,
     error::{ApiError, ApiResult},
@@ -30,7 +31,7 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
 
 #[derive(sqlx::FromRow)]
 struct Publication {
-    id: String,
+    id: ObjectId,
     publication_date: Option<DateTime<Utc>>,
     image_url: Option<String>,
     title: Option<String>,

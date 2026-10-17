@@ -396,7 +396,7 @@ async fn manages_team(pool: &PgPool, requester: &AuthUser, team_id: &str) -> Api
 async fn manages_user(
     pool: &PgPool,
     requester: &AuthUser,
-    assignee_id: &str,
+    assignee_id: &ObjectId,
     assignee_organization: &str,
 ) -> ApiResult<bool> {
     if requester.is_admin && requester.organization_id == assignee_organization {
@@ -423,8 +423,8 @@ async fn assign_one(
     let assignee_id = query
         .user_id
         .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter("userId")))?;
-    let assignee_id = ObjectId::parse(&assignee_id)?.to_string();
-    let task_id = ObjectId::parse_path(&id)?.to_string();
+    let assignee_id = ObjectId::parse(&assignee_id)?;
+    let task_id = ObjectId::parse_path(&id)?;
     let pool = &state.pool;
 
     // userService.findOneCached(userId): UserDAO.readAccessQ, Empty → 404.
@@ -479,15 +479,15 @@ async fn assign_one(
         ));
     }
 
-    let annotation_id = assign_one_to(pool, &task_id, &assignee_id)
+    let annotation_id = assign_one_to(pool, task_id.as_str(), assignee_id.as_str())
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::task::UNAVAILABLE))?;
     initialize_task_annotation(
         pool,
         &tracing_store,
         &user,
-        &assignee_id,
-        &task_id,
+        assignee_id.as_str(),
+        task_id.as_str(),
         &annotation_id,
     )
     .await?;

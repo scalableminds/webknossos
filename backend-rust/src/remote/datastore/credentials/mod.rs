@@ -197,7 +197,7 @@ struct StoredCredential {
     name: String,
     identifier: Option<String>,
     secret: Option<String>,
-    user_id: String,
+    user_id: ObjectId,
     organization: String,
 }
 

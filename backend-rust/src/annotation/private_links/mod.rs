@@ -41,7 +41,7 @@ struct Parameters {
 
 #[derive(FromRow)]
 struct PrivateLink {
-    id: String,
+    id: ObjectId,
     annotation: String,
     access_token: String,
     expiration: Option<DateTime<Utc>>,
@@ -55,10 +55,9 @@ const SELECT: &str = "SELECT link._id AS id,link._annotation AS annotation,link.
 async fn owned_link<'e, E: Executor<'e, Database = Postgres>>(
     executor: E,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
     lock: bool,
 ) -> ApiResult<PrivateLink> {
-    ObjectId::parse(id)?;
     let suffix = if lock { " FOR UPDATE OF link" } else { "" };
     sqlx::query_as(&format!("{SELECT} AND link._id=$2{suffix}"))
         .bind(&user.id)
@@ -85,7 +84,7 @@ async fn by_annotation(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Vec<Value>>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let links: Vec<PrivateLink> = sqlx::query_as(&format!("{SELECT} AND link._annotation=$2"))
         .bind(&user.id)
         .bind(id)
@@ -100,7 +99,7 @@ async fn read(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let link = owned_link(&state.pool, &user, &id, false).await?;
     if link
         .expiration
@@ -139,7 +138,7 @@ async fn create(
             crate::msg::annotation::private_link::OWNER_ONLY,
         ));
     }
-    let id = ObjectId::new().to_string();
+    let id = ObjectId::new();
     sqlx::query(
         "INSERT INTO \
             webknossos.annotation_privateLinks(_id,_annotation,accessToken,expirationDateTime) \
@@ -161,7 +160,7 @@ async fn update(
     Path(id): Path<String>,
     Json(parameters): Json<Parameters>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     let link = owned_link(&mut *tx, &user, &id, true).await?;
     // Lock annotation references in id order to avoid rebind deadlocks.
@@ -195,7 +194,7 @@ async fn delete(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     let link = owned_link(&mut *tx, &user, &id, true).await?;
     crate::annotation::access::lock_for_mutation(&mut tx, &user, &link.annotation).await?;
@@ -231,14 +230,15 @@ async fn source(
     let annotation = if let Some(id) = linked {
         crate::annotation::access::find(&state.pool, None, &id, true).await?
     } else {
-        let token_or_id = ObjectId::parse(&token_or_id)?.to_string();
+        let token_or_id = ObjectId::parse(&token_or_id)?;
         // This raw Action uses only userToken, not normal authentication headers.
         // Invalid userToken falls back to anonymous annotation access.
         let user = match query.user_token {
             Some(token) => crate::auth::user_for_service_token(&state.pool, &token).await?,
             None => None,
         };
-        crate::annotation::access::find(&state.pool, user.as_ref(), &token_or_id, false).await?
+        crate::annotation::access::find(&state.pool, user.as_ref(), token_or_id.as_str(), false)
+            .await?
     };
     let value: Value = sqlx::query_scalar(
         r#"SELECT jsonb_build_object('id',a._id,

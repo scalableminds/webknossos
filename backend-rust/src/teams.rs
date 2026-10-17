@@ -31,7 +31,7 @@ struct TeamParameters {
 #[derive(Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 struct Team {
-    id: String,
+    id: ObjectId,
     name: String,
     organization: String,
     is_organization_team: bool,
@@ -79,7 +79,7 @@ async fn create(
     if body.name.is_empty() || !body.name.chars().all(valid_name_character) {
         return Err(ApiError::bad_request(crate::msg::team::INVALID_NAME));
     }
-    let id = ObjectId::new().to_string();
+    let id = ObjectId::new();
     let inserted =
         sqlx::query("INSERT INTO webknossos.teams (_id, _organization, name) VALUES ($1, $2, $3)")
             .bind(&id)
@@ -111,7 +111,7 @@ async fn remove(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<Json<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     if !user.is_admin {
         return Err(ApiError::forbidden(crate::msg::team::DELETE_ONLY_ADMIN));
     }

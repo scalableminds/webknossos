@@ -23,15 +23,13 @@ use crate::{
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CreateQuery {
-    #[serde(deserialize_with = "crate::util::id::deserialize_string")]
-    parent_id: String,
+    parent_id: ObjectId,
     name: String,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct MoveQuery {
-    #[serde(deserialize_with = "crate::util::id::deserialize_string")]
-    new_parent_id: String,
+    new_parent_id: ObjectId,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -43,7 +41,7 @@ struct FolderParameters {
 }
 #[derive(FromRow)]
 struct Folder {
-    id: String,
+    id: ObjectId,
     name: String,
     metadata: Value,
     created: DateTime<Utc>,
@@ -62,7 +60,7 @@ async fn organization_root(
     connection: &mut PgConnection,
     user: &AuthUser,
     lock: bool,
-) -> ApiResult<String> {
+) -> ApiResult<ObjectId> {
     let suffix = if lock { " FOR UPDATE OF f" } else { "" };
     sqlx::query_scalar(&format!(
         "SELECT o._rootFolder FROM webknossos.organizations_ o
@@ -77,7 +75,7 @@ async fn organization_root(
 async fn access(
     connection: &mut PgConnection,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
     write: bool,
 ) -> ApiResult<bool> {
     Ok(sqlx::query_scalar(
@@ -122,7 +120,7 @@ async fn access(
 /// Msg.Folder.notFound; FolderController maps it without a status, i.e. 400.
 const FOLDER_NOT_FOUND: &str = "Could not find the requested folder.";
 
-async fn load(connection: &mut PgConnection, id: &str) -> ApiResult<Folder> {
+async fn load(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<Folder> {
     sqlx::query_as(
         "SELECT _id AS id, name, metadata, created FROM webknossos.folders_ WHERE _id = $1",
     )
@@ -132,7 +130,11 @@ async fn load(connection: &mut PgConnection, id: &str) -> ApiResult<Folder> {
     .ok_or_else(|| ApiError::bad_request(FOLDER_NOT_FOUND))
 }
 
-async fn readable(connection: &mut PgConnection, user: &AuthUser, id: &str) -> ApiResult<Folder> {
+async fn readable(
+    connection: &mut PgConnection,
+    user: &AuthUser,
+    id: &ObjectId,
+) -> ApiResult<Folder> {
     if !access(connection, user, id, false).await? {
         return Err(ApiError::bad_request(FOLDER_NOT_FOUND));
     }
@@ -142,7 +144,7 @@ async fn readable(connection: &mut PgConnection, user: &AuthUser, id: &str) -> A
 async fn assert_editable(
     connection: &mut PgConnection,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<()> {
     if !access(connection, user, id, true).await? {
         return Err(ApiError::forbidden(crate::msg::folder::UPDATE_NOT_ALLOWED));
@@ -153,7 +155,7 @@ async fn assert_editable(
 async fn allowed_teams(
     connection: &mut PgConnection,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
     cumulative: bool,
 ) -> ApiResult<Vec<Value>> {
     Ok(sqlx::query_scalar(
@@ -196,7 +198,7 @@ async fn fetch(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<Json<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let mut connection = state.pool.acquire().await?;
     let folder = readable(&mut connection, &user, &id).await?;
     Ok(Json(public_json(&mut connection, &user, folder).await?))
@@ -234,7 +236,7 @@ async fn tree(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<V
 async fn mutation(
     state: &AppState,
     user: &AuthUser,
-) -> ApiResult<(Transaction<'static, Postgres>, String)> {
+) -> ApiResult<(Transaction<'static, Postgres>, ObjectId)> {
     let mut transaction = state.pool.begin().await?;
     sqlx::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
         .execute(&mut *transaction)
@@ -249,12 +251,11 @@ async fn create(
     user: AuthUser,
     Query(query): Query<CreateQuery>,
 ) -> ApiResult<Json<Value>> {
-    ObjectId::parse(&query.parent_id)?;
     validate_name(&query.name)?;
     let (mut transaction, _) = mutation(&state, &user).await?;
     readable(&mut transaction, &user, &query.parent_id).await?;
     assert_editable(&mut transaction, &user, &query.parent_id).await?;
-    let id = ObjectId::new().to_string();
+    let id = ObjectId::new();
     sqlx::query("INSERT INTO webknossos.folders (_id, name) VALUES ($1, $2)")
         .bind(&id)
         .bind(&query.name)
@@ -281,7 +282,7 @@ async fn update(
     Path(id): Path<String>,
     RequestJson(body): RequestJson<FolderParameters>,
 ) -> ApiResult<Json<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let (mut transaction, _) = mutation(&state, &user).await?;
     readable(&mut transaction, &user, &id).await?;
     assert_editable(&mut transaction, &user, &id).await?;
@@ -337,8 +338,7 @@ async fn move_folder(
     Path(id): Path<String>,
     Query(query): Query<MoveQuery>,
 ) -> ApiResult<Json<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
-    ObjectId::parse(&query.new_parent_id)?;
+    let id = ObjectId::parse_path(&id)?;
     let (mut transaction, root) = mutation(&state, &user).await?;
     if root == id {
         return Err(ApiError::bad_request(crate::msg::folder::MOVE_ROOT));
@@ -383,7 +383,7 @@ async fn remove(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<StatusCode> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let (mut transaction, root) = mutation(&state, &user).await?;
     if root == id {
         return Err(ApiError::bad_request(crate::msg::folder::DELETE_ROOT));

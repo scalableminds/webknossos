@@ -91,9 +91,8 @@ const ACCESS: &str = " p._organization=$2 AND (p._owner=$1 OR $3 OR EXISTS(SELEC
 async fn project_json<'e, E: sqlx::Executor<'e, Database = Postgres>>(
     executor: E,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<Value> {
-    ObjectId::parse(id)?;
     let query = format!("{PUBLIC_PROJECT} WHERE {ACCESS} AND p._id=$4");
     sqlx::query_scalar(&query)
         .bind(&user.id)
@@ -177,7 +176,7 @@ async fn read(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     Ok(ResponseJson(project_json(&state.pool, &user, &id).await?))
 }
 async fn by_name(
@@ -228,7 +227,7 @@ async fn create(
     Json(parameters): Json<ProjectParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
     validate_name(&parameters.name)?;
-    let id = ObjectId::new().to_string();
+    let id = ObjectId::new();
     let mut tx = state.pool.begin().await?;
     check_references(&mut tx, &user, &parameters).await?;
     // Projects have no database uniqueness constraint. Serialize contenders for
@@ -276,7 +275,7 @@ async fn create(
 async fn managed_project(
     tx: &mut Transaction<'_, Postgres>,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<Value> {
     let project = project_json(&mut **tx, user, id).await?;
     if !can_manage_team_in_tx(
@@ -297,7 +296,7 @@ async fn update(
     Path(id): Path<String>,
     Json(parameters): Json<ProjectParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     lock_project(&mut tx, &id, &user.organization_id).await?;
     managed_project(&mut tx, &user, &id).await?;
@@ -321,8 +320,12 @@ async fn update(
     Ok(ResponseJson(response))
 }
 
-async fn set_paused(pool: &PgPool, user: &AuthUser, id: &str, paused: bool) -> ApiResult<Value> {
-    ObjectId::parse(id)?;
+async fn set_paused(
+    pool: &PgPool,
+    user: &AuthUser,
+    id: &ObjectId,
+    paused: bool,
+) -> ApiResult<Value> {
     let mut tx = pool.begin().await?;
     lock_project(&mut tx, id, &user.organization_id).await?;
     managed_project(&mut tx, user, id).await?;
@@ -340,7 +343,7 @@ async fn pause(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     Ok(ResponseJson(
         set_paused(&state.pool, &user, &id, true).await?,
     ))
@@ -350,7 +353,7 @@ async fn resume(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     Ok(ResponseJson(
         set_paused(&state.pool, &user, &id, false).await?,
     ))
@@ -366,7 +369,7 @@ async fn increment_instances(
     Path(id): Path<String>,
     Query(parameters): Query<IncrementParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let delta = parameters.delta.unwrap_or(1);
     if delta < 0 {
         return Err(ApiError::bad_request(
@@ -388,7 +391,7 @@ async fn increment_instances(
 pub(crate) async fn delete_tasks(
     tx: &mut Transaction<'_, Postgres>,
     column: &str,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<()> {
     // column is chosen only by these two internal call sites, never request input.
     if !matches!(column, "_project" | "_tasktype") {
@@ -411,7 +414,7 @@ async fn delete(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     lock_project(&mut tx, &id, &user.organization_id).await?;
     project_json(&mut *tx, &user, &id).await?;
@@ -434,7 +437,7 @@ async fn delete(
 
 async fn lock_project(
     tx: &mut Transaction<'_, Postgres>,
-    id: &str,
+    id: &ObjectId,
     organization: &str,
 ) -> ApiResult<()> {
     sqlx::query_scalar::<_, String>(
@@ -475,7 +478,7 @@ async fn for_task_type(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let exists: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM webknossos.tasktypes_ t WHERE t._id=$1 AND \
             t._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE \
@@ -509,7 +512,7 @@ async fn active_users(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     project_json(&state.pool, &user, &id).await?;
     let values: Vec<Value> = sqlx::query_scalar("SELECT \
             jsonb_build_object('email',m.email,'firstName',m.firstname,'lastName',m.lastname,'activeTasks',count(a._id)) FROM webknossos.annotations_ a JOIN webknossos.tasks_ t ON t._id=a._task JOIN webknossos.users_ u ON u._id=a._user JOIN webknossos.multiusers_ m ON m._id=u._multiuser WHERE t._project=$1 AND a.state='Active' AND a.typ='Task' GROUP BY m.email,m.firstname,m.lastname")
@@ -532,7 +535,7 @@ async fn transfer_active_tasks(
     Path(id): Path<String>,
     Json(parameters): Json<TransferParameters>,
 ) -> ApiResult<StatusCode> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let new_user = parameters.user_id.as_str();
     let mut tx = state.pool.begin().await?;
     // ProjectDAO.findOne with the requester's read access.

@@ -109,10 +109,10 @@ const ANNOTATION_READ: &str = r#"($5 OR a.visibility='Public' OR
 pub(crate) async fn public_json(
     connection: &mut PgConnection,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
     global: bool,
 ) -> ApiResult<Value> {
-    public_json_for(connection, Some(user), id, global).await
+    public_json_for(connection, Some(user), id.as_str(), global).await
 }
 
 /// Global annotation serialization can have no authenticated requester.
@@ -169,7 +169,7 @@ async fn read(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let mut connection = state.pool.acquire().await?;
     Ok(ResponseJson(
         public_json(&mut connection, &user, &id, false).await?,
@@ -180,7 +180,7 @@ async fn task_ids(
     connection: &mut PgConnection,
     user: &AuthUser,
     parameters: &ListParameters,
-) -> ApiResult<Vec<String>> {
+) -> ApiResult<Vec<ObjectId>> {
     let order = if parameters.random == Some(true) {
         " ORDER BY RANDOM()"
     } else {
@@ -211,7 +211,7 @@ async fn task_ids(
 async fn serialize_all(
     connection: &mut PgConnection,
     user: &AuthUser,
-    ids: Vec<String>,
+    ids: Vec<ObjectId>,
 ) -> ApiResult<Value> {
     let mut values = Vec::with_capacity(ids.len());
     for id in ids {
@@ -235,9 +235,9 @@ async fn for_task_type(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let parameters = ListParameters {
-        task_type: Some(ObjectId::parse(&id)?),
+        task_type: Some(id.clone()),
         ..Default::default()
     };
     let mut connection = state.pool.acquire().await?;
@@ -253,7 +253,7 @@ async fn for_project(
     Path(id): Path<String>,
     Query(parameters): Query<ProjectQuery>,
 ) -> ApiResult<(HeaderMap, ResponseJson<Value>)> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let limit = parameters.limit.unwrap_or(i32::MAX);
     let page = parameters.page_number.unwrap_or(0);
     if limit < 0 || page < 0 {
@@ -321,7 +321,7 @@ async fn for_project(
 async fn lock_managed_task(
     tx: &mut Transaction<'_, Postgres>,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<(i64, i64)> {
     // Lock the project before the task, in the same order as project mutations.
     // This keeps concurrent changes to project team/visibility from invalidating authorization.
@@ -365,7 +365,7 @@ async fn update(
     Path(id): Path<String>,
     Json(parameters): Json<TaskParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     let (total, pending) = lock_managed_task(&mut tx, &user, &id).await?;
     let total = total
@@ -387,7 +387,7 @@ async fn delete(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     lock_managed_task(&mut tx, &user, &id).await?;
     sqlx::query("UPDATE webknossos.tasks SET isdeleted=true WHERE _id=$1")
@@ -418,7 +418,7 @@ async fn experience_domains(
 }
 async fn peek(State(state): State<AppState>, user: AuthUser) -> ApiResult<ResponseJson<Value>> {
     let manager = user.is_team_manager_or_admin(&state.pool).await?;
-    let id: String = sqlx::query_scalar(
+    let id: ObjectId = sqlx::query_scalar(
         r#"SELECT t._id FROM webknossos.tasks_ t
         JOIN webknossos.user_experiences e ON e.domain=t.neededexperience_domain AND e._user=$1 AND e.value>=t.neededexperience_value
         JOIN webknossos.projects_ p ON p._id=t._project

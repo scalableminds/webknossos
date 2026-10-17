@@ -480,7 +480,7 @@ async fn revoke_grant(
 
 #[derive(sqlx::FromRow, Clone)]
 struct CreditTransaction {
-    id: String,
+    id: ObjectId,
     organization: String,
     related_transaction: Option<String>,
     paid_job: Option<String>,
@@ -559,7 +559,7 @@ fn compact_free_credits_for_display(
     transactions
         .iter()
         .filter(|t| !revocation_ids.contains(t.id.as_str()))
-        .map(|t| match revocation_by_grant.get(&t.id) {
+        .map(|t| match revocation_by_grant.get(t.id.as_str()) {
             Some(revocation) => {
                 let net = t.milli_credit_delta + revocation.milli_credit_delta;
                 CreditTransaction {

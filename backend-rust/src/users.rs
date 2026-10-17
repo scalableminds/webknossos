@@ -359,7 +359,7 @@ struct Target {
     is_dataset_manager: bool,
     is_deactivated: bool,
     is_organization_owner: bool,
-    last_task_type_id: Option<String>,
+    last_task_type_id: Option<ObjectId>,
     email: String,
     first_name: String,
     last_name: String,
@@ -464,7 +464,6 @@ async fn update(
     let experiences = body.experiences.unwrap_or_else(|| old_experiences.clone());
     let last_task_type_id = body
         .last_task_type_id
-        .map(|id| id.as_str().to_owned())
         .or_else(|| target.last_task_type_id.clone());
 
     if !is_self && !is_editable {

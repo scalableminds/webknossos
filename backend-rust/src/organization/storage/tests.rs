@@ -7,7 +7,7 @@ fn paths_resolve_like_java_nio() {
     assert!(is_local_path("/srv/a") && is_local_path("file:///srv/a"));
     assert!(!is_local_path("s3://bucket/a"));
     let mag = MagRow {
-        dataset_id: "0123456789abcdef01234567".into(),
+        dataset_id: ObjectId::parse("0123456789abcdef01234567").unwrap(),
         layer_name: "color".into(),
         mag_x: 2,
         mag_y: 2,

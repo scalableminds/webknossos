@@ -1059,10 +1059,7 @@ async fn create_one(
         tx.commit().await?;
 
         let mut connection = pool.acquire().await?;
-        Ok(
-            crate::task::routes::public_json(&mut connection, user, task_id.as_str(), false)
-                .await?,
-        )
+        Ok(crate::task::routes::public_json(&mut connection, user, &task_id, false).await?)
     };
     match attempt.await {
         Ok(json) => Ok(Ok(json)),

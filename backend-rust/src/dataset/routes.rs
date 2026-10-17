@@ -1034,10 +1034,10 @@ pub(crate) async fn list_values(
 #[derive(sqlx::FromRow, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct CompactDataset {
-    id: String,
+    id: ObjectId,
     name: String,
     owning_organization: String,
-    folder_id: String,
+    folder_id: ObjectId,
     is_active: bool,
     directory_name: String,
     created: i64,

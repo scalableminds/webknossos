@@ -22,8 +22,8 @@ struct ScriptParameters {
 
 #[derive(FromRow)]
 struct Script {
-    id: String,
-    owner_id: String,
+    id: ObjectId,
+    owner_id: ObjectId,
     name: String,
     gist: String,
     owner: Value,
@@ -66,7 +66,7 @@ async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<V
 async fn find(
     connection: &mut PgConnection,
     organization_id: &str,
-    id: &str,
+    id: &ObjectId,
     lock: bool,
 ) -> ApiResult<Script> {
     let suffix = if lock {
@@ -87,7 +87,7 @@ async fn fetch(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<Json<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let mut connection = state.pool.acquire().await?;
     Ok(Json(
         find(&mut connection, &user.organization_id, &id, false)
@@ -106,7 +106,7 @@ async fn create(
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     validate(&body)?;
-    let id = ObjectId::new().to_string();
+    let id = ObjectId::new();
     let mut transaction = state.pool.begin().await?;
     sqlx::query("INSERT INTO webknossos.scripts (_id, _owner, name, gist) VALUES ($1, $2, $3, $4)")
         .bind(&id)
@@ -126,11 +126,11 @@ async fn update(
     Path(id): Path<String>,
     RequestJson(body): RequestJson<ScriptParameters>,
 ) -> ApiResult<Json<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     ObjectId::parse(&body.owner)?;
     let mut transaction = state.pool.begin().await?;
     let old = find(&mut transaction, &user.organization_id, &id, true).await?;
-    if old.owner_id != user.id {
+    if old.owner_id.as_str() != user.id {
         return Err(ApiError::forbidden(crate::msg::script::UPDATE_ONLY_OWNER));
     }
     validate(&body)?;
@@ -163,10 +163,10 @@ async fn remove(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<StatusCode> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let mut transaction = state.pool.begin().await?;
     let old = find(&mut transaction, &user.organization_id, &id, true).await?;
-    if old.owner_id != user.id {
+    if old.owner_id.as_str() != user.id {
         return Err(ApiError::forbidden(crate::msg::script::DELETE_ONLY_OWNER));
     }
     sqlx::query("UPDATE webknossos.scripts SET isDeleted = TRUE WHERE _id = $1")

@@ -491,7 +491,7 @@ where
 
 #[derive(sqlx::FromRow)]
 pub(crate) struct Dataset {
-    pub(crate) id: String,
+    pub(crate) id: ObjectId,
     pub(crate) name: String,
     pub(crate) directory_name: String,
     pub(crate) organization: String,

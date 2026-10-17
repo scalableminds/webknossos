@@ -230,8 +230,7 @@ async fn readable(
     activity(&state.pool, &user).await?;
     Ok(result)
 }
-async fn assert_editable_user(pool: &PgPool, user: &AuthUser, id: &str) -> ApiResult<()> {
-    ObjectId::parse(id)?;
+async fn assert_editable_user(pool: &PgPool, user: &AuthUser, id: &ObjectId) -> ApiResult<()> {
     let access: Option<(bool, bool)> = sqlx::query_as(
         r#"SELECT ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles target_role
         JOIN webknossos.teams_ team ON team._id=target_role._team AND team._organization=$2
@@ -260,13 +259,13 @@ async fn user_annotations(
     Path(id): Path<String>,
     Query(filters): Query<Filters>,
 ) -> ApiResult<(HeaderMap, Json<Value>)> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     assert_editable_user(&state.pool, &user, &id).await?;
     let filters = Filters {
         dataset_id: None,
         ..filters
     };
-    compact_response(&state.pool, &user, Some(&id), &filters, false, true).await
+    compact_response(&state.pool, &user, Some(id.as_str()), &filters, false, true).await
 }
 
 /// AnnotationService.publicWrites is database-only; callers apply route-specific
@@ -441,9 +440,9 @@ async fn user_tasks(
     Query(filters): Query<Filters>,
     Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
 ) -> ApiResult<(HeaderMap, Json<Value>)> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     assert_editable_user(&state.pool, &user, &id).await?;
-    task_list(&state.pool, &user, &id, &filters, jobs).await
+    task_list(&state.pool, &user, id.as_str(), &filters, jobs).await
 }
 async fn task_annotations(
     State(state): State<AppState>,
@@ -451,7 +450,7 @@ async fn task_annotations(
     Path(id): Path<String>,
     Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
 ) -> ApiResult<Json<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let team: String = sqlx::query_scalar(
         "SELECT p._team FROM webknossos.tasks_ task JOIN webknossos.projects_ p ON \
             p._id=task._project JOIN webknossos.teams_ team ON team._id=p._team AND \

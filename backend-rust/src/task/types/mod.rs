@@ -125,9 +125,8 @@ const ACCESS: &str = " tt._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webkn
 async fn public_json<'e, E: sqlx::Executor<'e, Database = sqlx::Postgres>>(
     executor: E,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<Value> {
-    ObjectId::parse(id)?;
     let query = format!("{PUBLIC_TASK_TYPE} WHERE {ACCESS} AND tt._id=$4");
     sqlx::query_scalar(&query)
         .bind(&user.id)
@@ -160,7 +159,7 @@ async fn read(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let value = public_json(&state.pool, &user, &id).await?;
     check_manage(
         &state.pool,
@@ -177,7 +176,7 @@ async fn create(
     Json(parameters): Json<TaskTypeParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
     validate(&parameters)?;
-    let id = ObjectId::new().to_string();
+    let id = ObjectId::new();
     let mut tx = state.pool.begin().await?;
     if !crate::projects::can_manage_team_in_tx(&mut tx, &user, &parameters.team_id).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
@@ -251,7 +250,7 @@ async fn update(
     Path(id): Path<String>,
     Json(parameters): Json<TaskTypeParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     validate(&parameters)?;
     let mut tx = state.pool.begin().await?;
     lock_task_type(&mut tx, &id, &user.organization_id).await?;
@@ -335,7 +334,7 @@ async fn delete(
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let id = ObjectId::parse_path(&id)?.to_string();
+    let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     lock_task_type(&mut tx, &id, &user.organization_id).await?;
     let existing = public_json(&mut *tx, &user, &id).await?;
@@ -359,7 +358,7 @@ async fn delete(
 
 async fn lock_task_type(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    id: &str,
+    id: &ObjectId,
     organization: &str,
 ) -> ApiResult<()> {
     sqlx::query_scalar::<_, String>(

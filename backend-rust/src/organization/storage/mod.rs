@@ -11,6 +11,7 @@
 //! `housekeeping.rs`: every run holds `pg_try_advisory_xact_lock(advisory_lock_key(JOB_NAME))` in
 //! one transaction for its whole duration and is skipped if another instance holds it. The Scala
 //! backend takes no lock; a parallel Scala scan only measures the same organizations again.
+use crate::util::id::ObjectId;
 use std::{collections::HashMap, time::Duration};
 
 use chrono::Utc;
@@ -34,7 +35,7 @@ const MAX_PATHS_PER_REQUEST: usize = 200;
 
 #[derive(Clone, sqlx::FromRow)]
 struct MagRow {
-    dataset_id: String,
+    dataset_id: ObjectId,
     layer_name: String,
     mag_x: i32,
     mag_y: i32,
@@ -46,7 +47,7 @@ struct MagRow {
 
 #[derive(Clone, sqlx::FromRow)]
 struct AttachmentRow {
-    dataset_id: String,
+    dataset_id: ObjectId,
     layer_name: String,
     name: String,
     path: String,

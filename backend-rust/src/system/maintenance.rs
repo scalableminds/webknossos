@@ -50,7 +50,7 @@ fn read_timestamp<'de, D: serde::Deserializer<'de>>(
 #[derive(Serialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
 struct Maintenance {
-    id: String,
+    id: ObjectId,
     #[serde(with = "chrono::serde::ts_milliseconds")]
     start_time: DateTime<Utc>,
     #[serde(with = "chrono::serde::ts_milliseconds")]

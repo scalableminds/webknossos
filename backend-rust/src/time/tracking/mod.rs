@@ -39,7 +39,7 @@ const MANAGEABLE: &str = r#"(($3 AND u._organization = $2) OR EXISTS(
 /// facts UserService.isEditableBy / isTeamManagerOrAdminOf derive from it.
 #[derive(sqlx::FromRow)]
 struct TargetUser {
-    id: String,
+    id: ObjectId,
     manageable: bool,
     has_teams: bool,
 }
@@ -192,7 +192,7 @@ async fn user_time_filters(
         "Invalid annotation state.",
     )?;
     let user = require_user(pool, requester, id).await?;
-    if !(user.manageable || user.id == requester.id) {
+    if !(user.manageable || user.id.as_str() == requester.id) {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok((

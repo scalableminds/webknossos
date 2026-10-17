@@ -3,15 +3,16 @@ mod codecs;
 pub mod ngff;
 mod store;
 
+use crate::datareaders::{ArrayAxes, ArraySource};
 use crate::{
     compression::Compressor,
     datareaders::{
-        ArrayDataType, ArrayFormat, ArrayOrder, ByteOrder, ChunkContents, ChunkContentsCache,
-        DatasetArray, DatasetHeader, DimensionSeparator, FillValue, assert_chunk_size_limit,
+        ArrayDataType, ArrayFormat, ArrayOrder, ByteOrder, ChunkContents, DatasetArray,
+        DatasetHeader, DimensionSeparator, FillValue, assert_chunk_size_limit,
     },
     datavault::{BoxFuture, ByteRange, VaultPath},
     error::{DsError, DsResult},
-    models::{AdditionalAxis, AxisOrder, DataSourceId},
+    models::AxisOrder,
 };
 use serde_json::Value;
 use std::{
@@ -322,17 +323,22 @@ impl ArrayFormat for Zarr3Format {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn open_zarr3_array(
-    path: &VaultPath,
-    id: DataSourceId,
-    layer: &str,
-    axis: Option<AxisOrder>,
-    channel: Option<i32>,
-    additional: Option<Vec<AdditionalAxis>>,
-    cache: Arc<ChunkContentsCache>,
+    source: ArraySource<'_>,
+    axes: ArrayAxes,
     token: Option<&str>,
 ) -> DsResult<DatasetArray> {
+    let ArraySource {
+        path,
+        data_source_id: id,
+        layer_name: layer,
+        cache,
+    } = source;
+    let ArrayAxes {
+        axis_order: axis,
+        channel_index: channel,
+        additional_axes: additional,
+    } = axes;
     let bytes = path
         .join(FILENAME_ZARR_JSON)
         .read_bytes(ByteRange::Complete, token)

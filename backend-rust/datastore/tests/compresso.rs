@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use std::path::PathBuf;
 use webknossos_datastore::datareaders::precomputed::compresso::{CompressoHeader, decode};
+use webknossos_datastore::datareaders::{ArrayAxes, ArraySource};
 fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/compresso")
 }
@@ -109,13 +110,17 @@ async fn compresso_precomputed_reads_plain_and_sharded_gzip_boundary_chunks_with
         for mode in ["plain", "shard_raw", "shard_gzip"] {
             let p = root().join("volumes").join(format!("u{width}_{mode}"));
             let array = open_precomputed_array(
-                &vault(&p.join("1")),
-                DataSourceId::new("ds", "org"),
-                "seg",
-                Some(AxisOrder::XYZ),
-                None,
-                None,
-                Arc::new(ChunkContentsCache::new(1 << 20)),
+                ArraySource {
+                    path: &vault(&p.join("1")),
+                    data_source_id: DataSourceId::new("ds", "org"),
+                    layer_name: "seg",
+                    cache: Arc::new(ChunkContentsCache::new(1 << 20)),
+                },
+                ArrayAxes {
+                    axis_order: Some(AxisOrder::XYZ),
+                    channel_index: None,
+                    additional_axes: None,
+                },
                 None,
             )
             .await
@@ -180,13 +185,17 @@ async fn mismatched_compresso_chunk_shapes_widths_and_channels_fail_before_decod
         }
         std::fs::write(p.join("1/5-9_7-10_11-13"), bytes).unwrap();
         let array = open_precomputed_array(
-            &vault(&p.join("1")),
-            DataSourceId::new("ds", "org"),
-            "seg",
-            Some(AxisOrder::XYZ),
-            None,
-            None,
-            Arc::new(ChunkContentsCache::new(1 << 20)),
+            ArraySource {
+                path: &vault(&p.join("1")),
+                data_source_id: DataSourceId::new("ds", "org"),
+                layer_name: "seg",
+                cache: Arc::new(ChunkContentsCache::new(1 << 20)),
+            },
+            ArrayAxes {
+                axis_order: Some(AxisOrder::XYZ),
+                channel_index: None,
+                additional_axes: None,
+            },
             None,
         )
         .await;
@@ -269,13 +278,17 @@ async fn compresso_remote_shard_cache_uses_each_current_token_for_fragment_reads
         .await
         .unwrap();
     let array = open_precomputed_array(
-        &path,
-        DataSourceId::new("ds", "org"),
-        "seg",
-        Some(AxisOrder::XYZ),
-        None,
-        None,
-        Arc::new(ChunkContentsCache::new(1 << 20)),
+        ArraySource {
+            path: &path,
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "seg",
+            cache: Arc::new(ChunkContentsCache::new(1 << 20)),
+        },
+        ArrayAxes {
+            axis_order: Some(AxisOrder::XYZ),
+            channel_index: None,
+            additional_axes: None,
+        },
         Some("first"),
     )
     .await

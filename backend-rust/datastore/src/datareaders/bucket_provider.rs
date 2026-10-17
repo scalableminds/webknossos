@@ -1,4 +1,5 @@
 //! Scala DatasetArrayBucketProvider: all static formats, credentialized paths, 50-mag cache.
+use crate::datareaders::{ArrayAxes, ArraySource};
 use crate::{
     datareaders::{
         ChunkContentsCache, DatasetArray, index_cache::IndexCache, n5::open_n5_array,
@@ -82,68 +83,24 @@ impl DatasetArrayBucketProvider {
                     .await
                     .map_err(VaultError::from)?;
                 let before = Instant::now();
+                let source = ArraySource {
+                    path: &path,
+                    data_source_id: self.id.clone(),
+                    layer_name: &self.layer.name,
+                    cache: Arc::clone(&self.chunks),
+                };
+                let axes = ArrayAxes {
+                    axis_order: locator.axis_order,
+                    channel_index: locator.channel_index,
+                    additional_axes: self.layer.additional_axes.clone(),
+                };
                 let result = match self.layer.data_format {
-                    DataFormat::Wkw => {
-                        open_wkw_array(
-                            &path,
-                            self.id.clone(),
-                            &self.layer.name,
-                            Arc::clone(&self.chunks),
-                            token,
-                        )
-                        .await
-                    }
-                    DataFormat::Zarr => {
-                        open_zarr_array(
-                            &path,
-                            self.id.clone(),
-                            &self.layer.name,
-                            locator.axis_order,
-                            locator.channel_index,
-                            self.layer.additional_axes.clone(),
-                            Arc::clone(&self.chunks),
-                            token,
-                        )
-                        .await
-                    }
-                    DataFormat::Zarr3 => {
-                        open_zarr3_array(
-                            &path,
-                            self.id.clone(),
-                            &self.layer.name,
-                            locator.axis_order,
-                            locator.channel_index,
-                            self.layer.additional_axes.clone(),
-                            Arc::clone(&self.chunks),
-                            token,
-                        )
-                        .await
-                    }
-                    DataFormat::N5 => {
-                        open_n5_array(
-                            &path,
-                            self.id.clone(),
-                            &self.layer.name,
-                            locator.axis_order,
-                            locator.channel_index,
-                            self.layer.additional_axes.clone(),
-                            Arc::clone(&self.chunks),
-                            token,
-                        )
-                        .await
-                    }
+                    DataFormat::Wkw => open_wkw_array(source, token).await,
+                    DataFormat::Zarr => open_zarr_array(source, axes, token).await,
+                    DataFormat::Zarr3 => open_zarr3_array(source, axes, token).await,
+                    DataFormat::N5 => open_n5_array(source, axes, token).await,
                     DataFormat::NeuroglancerPrecomputed => {
-                        open_precomputed_array(
-                            &path,
-                            self.id.clone(),
-                            &self.layer.name,
-                            locator.axis_order,
-                            locator.channel_index,
-                            self.layer.additional_axes.clone(),
-                            Arc::clone(&self.chunks),
-                            token,
-                        )
-                        .await
+                        open_precomputed_array(source, axes, token).await
                     }
                     DataFormat::Tracing => Err(DsError::failure(format!(
                         "Cannot open {} layer “{}” as DatasetArray",

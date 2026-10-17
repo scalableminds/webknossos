@@ -4,12 +4,13 @@ pub mod compresso;
 pub mod header;
 pub mod jpeg;
 pub mod sharding;
+use crate::datareaders::{ArrayAxes, ArraySource};
 use crate::{
     compression::Compressor,
-    datareaders::{ArrayFormat, ChunkContents, ChunkContentsCache, DatasetArray, DatasetHeader},
+    datareaders::{ArrayFormat, ChunkContents, DatasetArray, DatasetHeader},
     datavault::{BoxFuture, ByteRange, VaultError, VaultPath},
     error::{DsError, DsResult},
-    models::{AdditionalAxis, AxisOrder, DataSourceId, Vec3Int},
+    models::{AxisOrder, Vec3Int},
 };
 pub use header::{PrecomputedHeader, PrecomputedScale, PrecomputedScaleHeader};
 use sharding::{ShardReader, compressed_morton_code};
@@ -155,17 +156,22 @@ impl ArrayFormat for PrecomputedFormat {
         }))
     }
 }
-#[allow(clippy::too_many_arguments)]
 pub async fn open_precomputed_array(
-    path: &VaultPath,
-    id: DataSourceId,
-    layer: &str,
-    axis: Option<AxisOrder>,
-    channel: Option<i32>,
-    additional: Option<Vec<AdditionalAxis>>,
-    cache: Arc<ChunkContentsCache>,
+    source: ArraySource<'_>,
+    axes: ArrayAxes,
     token: Option<&str>,
 ) -> DsResult<DatasetArray> {
+    let ArraySource {
+        path,
+        data_source_id: id,
+        layer_name: layer,
+        cache,
+    } = source;
+    let ArrayAxes {
+        axis_order: axis,
+        channel_index: channel,
+        additional_axes: additional,
+    } = axes;
     let bytes = path
         .parent()
         .join(header::FILENAME_INFO)

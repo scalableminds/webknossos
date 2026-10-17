@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+use webknossos_datastore::datareaders::{ArrayAxes, ArraySource};
 use webknossos_datastore::{
     datareaders::{
         ArrayDataType, ChunkContentsCache,
@@ -127,13 +128,17 @@ async fn independent_raw_and_sharded_arrays_with_offsets_edge_chunks_and_missing
         let p = fixtures().join(name);
         let path = root(&p.join("1"));
         let a = open_precomputed_array(
-            &path,
-            DataSourceId::new("ds", "org"),
-            "color",
-            Some(AxisOrder::XYZ),
-            None,
-            None,
-            cache(),
+            ArraySource {
+                path: &path,
+                data_source_id: DataSourceId::new("ds", "org"),
+                layer_name: "color",
+                cache: cache(),
+            },
+            ArrayAxes {
+                axis_order: Some(AxisOrder::XYZ),
+                channel_index: None,
+                additional_axes: None,
+            },
             None,
         )
         .await
@@ -180,13 +185,17 @@ async fn compressed_segmentation_reader_and_empty_minishards_are_fill() {
     shard.extend(index);
     std::fs::write(p.join("1/0.shard"), shard).unwrap();
     let a = open_precomputed_array(
-        &root(&p.join("1")),
-        DataSourceId::new("ds", "org"),
-        "seg",
-        Some(AxisOrder::XYZ),
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&p.join("1")),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "seg",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: Some(AxisOrder::XYZ),
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -226,13 +235,17 @@ async fn shard_range_reads_cache_indexes_and_forward_current_token() {
     let p = fixtures().join("shard_identity/1");
     let (path, vault) = reader_support::recording_path(&p);
     let a = open_precomputed_array(
-        &path,
-        DataSourceId::new("ds", "org"),
-        "color",
-        Some(AxisOrder::XYZ),
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &path,
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: Some(AxisOrder::XYZ),
+            channel_index: None,
+            additional_axes: None,
+        },
         Some("opening-token"),
     )
     .await
@@ -293,13 +306,17 @@ async fn default_zyx_axes_and_jpeg_array_reads() {
     std::fs::write(p.join("info"), serde_json::to_vec(&metadata).unwrap()).unwrap();
     std::fs::write(p.join("1/0-3_0-2_0-1"), [1, 2, 3, 4, 5, 6]).unwrap();
     let a = open_precomputed_array(
-        &root(&p.join("1")),
-        DataSourceId::new("ds", "org"),
-        "color",
-        None,
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&p.join("1")),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: None,
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -327,13 +344,17 @@ async fn default_zyx_axes_and_jpeg_array_reads() {
     )
     .unwrap();
     let a = open_precomputed_array(
-        &root(&p.join("1")),
-        DataSourceId::new("ds", "org"),
-        "color",
-        Some(AxisOrder::XYZ),
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&p.join("1")),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: Some(AxisOrder::XYZ),
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -372,13 +393,17 @@ async fn corrupt_shard_index_fails_and_header_validation_is_explicit() {
     data[8..16].copy_from_slice(&2u64.to_le_bytes());
     std::fs::write(p.join("1/1.shard"), data).unwrap();
     let a = open_precomputed_array(
-        &root(&p.join("1")),
-        DataSourceId::new("ds", "org"),
-        "color",
-        Some(AxisOrder::XYZ),
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&p.join("1")),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: Some(AxisOrder::XYZ),
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -396,13 +421,17 @@ async fn corrupt_shard_index_fails_and_header_validation_is_explicit() {
     std::fs::write(p.join("info"), serde_json::to_vec(&header).unwrap()).unwrap();
     assert!(
         open_precomputed_array(
-            &root(&p.join("1")),
-            DataSourceId::new("ds", "org"),
-            "color",
-            None,
-            None,
-            None,
-            cache(),
+            ArraySource {
+                path: &root(&p.join("1")),
+                data_source_id: DataSourceId::new("ds", "org"),
+                layer_name: "color",
+                cache: cache()
+            },
+            ArrayAxes {
+                axis_order: None,
+                channel_index: None,
+                additional_axes: None
+            },
             None
         )
         .await
@@ -421,13 +450,17 @@ async fn multichannel_raw_rgb_channel_selection_and_segment_channels() {
         .collect();
     std::fs::write(p.join("1/0-3_0-2_0-1"), planar).unwrap();
     let a = open_precomputed_array(
-        &root(&p.join("1")),
-        DataSourceId::new("ds", "org"),
-        "color",
-        Some(AxisOrder::XYZ),
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&p.join("1")),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: Some(AxisOrder::XYZ),
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -448,13 +481,17 @@ async fn multichannel_raw_rgb_channel_selection_and_segment_channels() {
         expected
     );
     let a = open_precomputed_array(
-        &root(&p.join("1")),
-        DataSourceId::new("ds", "org"),
-        "color",
-        Some(AxisOrder::XYZ),
-        Some(1),
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&p.join("1")),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: Some(AxisOrder::XYZ),
+            channel_index: Some(1),
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -485,13 +522,17 @@ async fn multichannel_raw_rgb_channel_selection_and_segment_channels() {
     )
     .unwrap();
     let a = open_precomputed_array(
-        &root(&p.join("1")),
-        DataSourceId::new("ds", "org"),
-        "seg",
-        Some(AxisOrder::XYZ),
-        Some(1),
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&p.join("1")),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "seg",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: Some(AxisOrder::XYZ),
+            channel_index: Some(1),
+            additional_axes: None,
+        },
         None,
     )
     .await

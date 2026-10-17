@@ -1,29 +1,34 @@
 //! Scala `zarr/ZarrArray.open`.
 
+use crate::datareaders::{ArrayAxes, ArraySource};
 use std::sync::Arc;
 
 use super::header::{FILENAME_DOT_ZARRAY, ZarrHeader};
-use crate::datareaders::cache::ChunkContentsCache;
 use crate::datareaders::chunk::DefaultArrayFormat;
 use crate::datareaders::dataset_array::{DatasetArray, assert_chunk_size_limit};
 use crate::datareaders::header::DatasetHeader;
-use crate::datavault::{ByteRange, VaultPath};
+use crate::datavault::ByteRange;
 use crate::error::{DsError, DsResult};
-use crate::models::{AdditionalAxis, AxisOrder, DataSourceId};
+use crate::models::AxisOrder;
 
 /// Scala `ZarrArray.open`: reads and parses `<path>/.zarray`, checks the chunk size limit and
 /// builds the `DatasetArray` (default axis order: z,y,x as the last three dimensions).
-#[allow(clippy::too_many_arguments)]
 pub async fn open_zarr_array(
-    path: &VaultPath,
-    data_source_id: DataSourceId,
-    layer_name: &str,
-    axis_order: Option<AxisOrder>,
-    channel_index: Option<i32>,
-    additional_axes: Option<Vec<AdditionalAxis>>,
-    cache: Arc<ChunkContentsCache>,
+    source: ArraySource<'_>,
+    axes: ArrayAxes,
     user_token: Option<&str>,
 ) -> DsResult<DatasetArray> {
+    let ArraySource {
+        path,
+        data_source_id,
+        layer_name,
+        cache,
+    } = source;
+    let ArrayAxes {
+        axis_order,
+        channel_index,
+        additional_axes,
+    } = axes;
     let header_bytes = path
         .join(FILENAME_DOT_ZARRAY)
         .read_bytes(ByteRange::Complete, user_token)

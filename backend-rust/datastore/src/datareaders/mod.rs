@@ -31,7 +31,8 @@ pub use data_type::{
     ArrayDataType, ArrayOrder, ByteOrder, DimensionSeparator, FillValue, JavaNumber,
 };
 pub use dataset_array::{
-    CHUNK_SIZE_LIMIT_BYTES, DatasetArray, RequestedAdditionalCoordinate, assert_chunk_size_limit,
+    ArrayAxes, ArraySource, CHUNK_SIZE_LIMIT_BYTES, DatasetArray, RequestedAdditionalCoordinate,
+    assert_chunk_size_limit,
 };
 pub use header::DatasetHeader;
 pub use nd_array::{MaDataType, NdArray};

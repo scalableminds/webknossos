@@ -1,14 +1,14 @@
 //! Scala-compatible N5 metadata and block reads, including variable-length edge blocks.
+use crate::datareaders::{ArrayAxes, ArraySource};
 use crate::{
     compression::{CompressionSetting, Compressor},
     datareaders::{
-        ArrayDataType, ArrayFormat, ArrayOrder, ByteOrder, ChunkBytesAndShape, ChunkContentsCache,
-        DatasetArray, DatasetHeader, DimensionSeparator, FillValue, JavaNumber,
-        assert_chunk_size_limit,
+        ArrayDataType, ArrayFormat, ArrayOrder, ByteOrder, ChunkBytesAndShape, DatasetArray,
+        DatasetHeader, DimensionSeparator, FillValue, JavaNumber, assert_chunk_size_limit,
     },
     datavault::{BoxFuture, ByteRange, VaultError, VaultPath, VaultResult},
     error::{DsError, DsResult},
-    models::{AdditionalAxis, AxisOrder, DataSourceId},
+    models::AxisOrder,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -222,17 +222,22 @@ impl ArrayFormat for N5Format {
         })
     }
 }
-#[allow(clippy::too_many_arguments)]
 pub async fn open_n5_array(
-    path: &VaultPath,
-    id: DataSourceId,
-    layer: &str,
-    axis: Option<AxisOrder>,
-    channel: Option<i32>,
-    additional: Option<Vec<AdditionalAxis>>,
-    cache: Arc<ChunkContentsCache>,
+    source: ArraySource<'_>,
+    axes: ArrayAxes,
     token: Option<&str>,
 ) -> DsResult<DatasetArray> {
+    let ArraySource {
+        path,
+        data_source_id: id,
+        layer_name: layer,
+        cache,
+    } = source;
+    let ArrayAxes {
+        axis_order: axis,
+        channel_index: channel,
+        additional_axes: additional,
+    } = axes;
     let bytes = path
         .join(FILENAME_ATTRIBUTES_JSON)
         .read_bytes(ByteRange::Complete, token)

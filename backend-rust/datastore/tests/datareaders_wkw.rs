@@ -7,6 +7,7 @@ use std::{
         atomic::{AtomicUsize, Ordering},
     },
 };
+use webknossos_datastore::datareaders::ArraySource;
 use webknossos_datastore::{
     compression::wkw_compress_block,
     datareaders::{
@@ -34,10 +35,12 @@ fn path(p: &Path) -> VaultPath {
 }
 async fn open(p: &Path) -> DatasetArray {
     open_wkw_array(
-        &path(p),
-        DataSourceId::new("ds", "org"),
-        "color",
-        Arc::new(ChunkContentsCache::new(100_000_000)),
+        ArraySource {
+            path: &path(p),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: Arc::new(ChunkContentsCache::new(100_000_000)),
+        },
         None,
     )
     .await
@@ -238,10 +241,12 @@ async fn concurrent_chunks_share_one_ranged_shard_index_load_and_forward_token()
     write(&p, ChunkType::Lz4, 1);
     let (root, vault) = reader_support::recording_path(&p);
     let array = open_wkw_array(
-        &root,
-        DataSourceId::new("ds", "org"),
-        "color",
-        Arc::new(ChunkContentsCache::new(100_000_000)),
+        ArraySource {
+            path: &root,
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: Arc::new(ChunkContentsCache::new(100_000_000)),
+        },
         Some("test-token"),
     )
     .await

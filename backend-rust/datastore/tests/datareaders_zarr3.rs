@@ -1,4 +1,5 @@
 use std::{path::Path, sync::Arc};
+use webknossos_datastore::datareaders::{ArrayAxes, ArraySource};
 use webknossos_datastore::{
     datareaders::{ChunkContentsCache, zarr3::open_zarr3_array},
     datavault::{FileSystemDataVault, UPath, VaultPath},
@@ -25,13 +26,17 @@ async fn python_zarr3_golden_codecs_endian_transpose_and_sharding() {
     ] {
         let p = fixtures.join(name);
         let a = open_zarr3_array(
-            &root(&p),
-            DataSourceId::new("ds", "org"),
-            "color",
-            None,
-            None,
-            None,
-            Arc::new(ChunkContentsCache::new(100_000_000)),
+            ArraySource {
+                path: &root(&p),
+                data_source_id: DataSourceId::new("ds", "org"),
+                layer_name: "color",
+                cache: Arc::new(ChunkContentsCache::new(100_000_000)),
+            },
+            ArrayAxes {
+                axis_order: None,
+                channel_index: None,
+                additional_axes: None,
+            },
             None,
         )
         .await
@@ -91,13 +96,17 @@ async fn ranged_shards_cache_index_and_use_each_requests_token() {
         let p = fixture(name);
         let (root, vault) = reader_support::recording_path(&p);
         let a = open_zarr3_array(
-            &root,
-            DataSourceId::new("ds", "org"),
-            "color",
-            None,
-            None,
-            None,
-            cache(),
+            ArraySource {
+                path: &root,
+                data_source_id: DataSourceId::new("ds", "org"),
+                layer_name: "color",
+                cache: cache(),
+            },
+            ArrayAxes {
+                axis_order: None,
+                channel_index: None,
+                additional_axes: None,
+            },
             Some("opening-token"),
         )
         .await
@@ -176,13 +185,17 @@ async fn crc_corruption_fails_for_chunks_and_shard_indices() {
         std::fs::create_dir_all(p.join(key).parent().unwrap()).unwrap();
         std::fs::write(p.join(key), bytes).unwrap();
         let a = open_zarr3_array(
-            &root(&p),
-            DataSourceId::new("ds", "org"),
-            "color",
-            None,
-            None,
-            None,
-            cache(),
+            ArraySource {
+                path: &root(&p),
+                data_source_id: DataSourceId::new("ds", "org"),
+                layer_name: "color",
+                cache: cache(),
+            },
+            ArrayAxes {
+                axis_order: None,
+                channel_index: None,
+                additional_axes: None,
+            },
             None,
         )
         .await
@@ -212,13 +225,17 @@ async fn invalid_metadata_is_rejected_and_legacy_metadata_is_normalized() {
         std::fs::write(p.join("zarr.json"), serde_json::to_vec(&meta).unwrap()).unwrap();
         assert!(
             open_zarr3_array(
-                &root(&p),
-                DataSourceId::new("ds", "org"),
-                "color",
-                None,
-                None,
-                None,
-                cache(),
+                ArraySource {
+                    path: &root(&p),
+                    data_source_id: DataSourceId::new("ds", "org"),
+                    layer_name: "color",
+                    cache: cache()
+                },
+                ArrayAxes {
+                    axis_order: None,
+                    channel_index: None,
+                    additional_axes: None
+                },
                 None
             )
             .await
@@ -233,13 +250,17 @@ async fn invalid_metadata_is_rejected_and_legacy_metadata_is_normalized() {
     legacy["chunk_key_encoding"] = serde_json::json!({"name":"v2"});
     std::fs::write(p.join("zarr.json"), serde_json::to_vec(&legacy).unwrap()).unwrap();
     let a = open_zarr3_array(
-        &root(&p),
-        DataSourceId::new("ds", "org"),
-        "color",
-        None,
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&p),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: None,
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -271,17 +292,21 @@ async fn attachments_1d_and_2d_arrays_keep_physical_chunk_addresses() {
             std::fs::write(p.join("0.1"), [1, 2, 3, 4]).unwrap();
         }
         let a = open_zarr3_array(
-            &root(&p),
-            DataSourceId::new("ds", "org"),
-            "color",
-            if dims == 1 {
-                None
-            } else {
-                Some(AxisOrder::new(0, 1, None, None))
+            ArraySource {
+                path: &root(&p),
+                data_source_id: DataSourceId::new("ds", "org"),
+                layer_name: "color",
+                cache: cache(),
             },
-            None,
-            None,
-            cache(),
+            ArrayAxes {
+                axis_order: if dims == 1 {
+                    None
+                } else {
+                    Some(AxisOrder::new(0, 1, None, None))
+                },
+                channel_index: None,
+                additional_axes: None,
+            },
             None,
         )
         .await
@@ -328,13 +353,17 @@ async fn overflowed_shard_offsets_fail_before_library_arithmetic() {
     std::fs::create_dir_all(p.join(key).parent().unwrap()).unwrap();
     std::fs::write(p.join(key), shard).unwrap();
     let a = open_zarr3_array(
-        &root(&p),
-        DataSourceId::new("ds", "org"),
-        "color",
-        None,
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&p),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: None,
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await

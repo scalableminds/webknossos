@@ -1,4 +1,5 @@
 //! Scala connectome readers: CSR/CSC agglomerate pairs and ordered synapse attributes.
+use crate::datareaders::{ArrayAxes, ArraySource};
 use crate::{
     clients::wk::AlfuCache,
     datareaders::{
@@ -168,13 +169,17 @@ impl ConnectomeService {
                     .await?;
                 Ok(Arc::new(
                     open_zarr3_array(
-                        &group.join(name),
-                        key.source.clone(),
-                        &key.layer,
-                        None,
-                        None,
-                        None,
-                        Arc::clone(&self.chunks),
+                        ArraySource {
+                            path: &group.join(name),
+                            data_source_id: key.source.clone(),
+                            layer_name: &key.layer,
+                            cache: Arc::clone(&self.chunks),
+                        },
+                        ArrayAxes {
+                            axis_order: None,
+                            channel_index: None,
+                            additional_axes: None,
+                        },
                         token,
                     )
                     .await?,

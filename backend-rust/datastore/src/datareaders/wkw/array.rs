@@ -1,5 +1,6 @@
 //! Scala `WKWArray`: Morton-addressed blocks in range-readable WKW shards.
 
+use crate::datareaders::ArraySource;
 use std::sync::Arc;
 
 use super::{
@@ -8,12 +9,11 @@ use super::{
 };
 use crate::{
     datareaders::{
-        ArrayFormat, ChunkContentsCache, DatasetArray, DatasetHeader, assert_chunk_size_limit,
-        index_cache::IndexCache,
+        ArrayFormat, DatasetArray, DatasetHeader, assert_chunk_size_limit, index_cache::IndexCache,
     },
     datavault::{BoxFuture, ByteRange, VaultError, VaultPath, VaultResult},
     error::{DsError, DsResult},
-    models::{AxisOrder, DataSourceId},
+    models::AxisOrder,
 };
 
 /// Per-array shard-index cache, with Scala AlfuCache's 1000-entry, 2h write/1h access limits.
@@ -135,12 +135,15 @@ impl ArrayFormat for WkwArrayFormat {
 
 /// Scala `WKWArray.open` (cxyz, no selected channel or additional axes).
 pub async fn open_wkw_array(
-    path: &VaultPath,
-    id: DataSourceId,
-    layer: &str,
-    cache: Arc<ChunkContentsCache>,
+    source: ArraySource<'_>,
     token: Option<&str>,
 ) -> DsResult<DatasetArray> {
+    let ArraySource {
+        path,
+        data_source_id: id,
+        layer_name: layer,
+        cache,
+    } = source;
     let bytes = path
         .join(FILENAME_HEADER_WKW)
         .read_bytes(ByteRange::Complete, token)

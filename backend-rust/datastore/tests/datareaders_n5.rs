@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+use webknossos_datastore::datareaders::{ArrayAxes, ArraySource};
 use webknossos_datastore::{
     compression::{CompressionSetting, Compressor},
     datareaders::{
@@ -85,13 +86,17 @@ async fn codecs_and_smaller_edge_chunks_preserve_n5_axes_and_big_endian() {
         let p = temp();
         write(&p, compression);
         let a = open_n5_array(
-            &root(&p),
-            DataSourceId::new("ds", "org"),
-            "color",
-            Some(AxisOrder::XYZ),
-            None,
-            None,
-            cache(),
+            ArraySource {
+                path: &root(&p),
+                data_source_id: DataSourceId::new("ds", "org"),
+                layer_name: "color",
+                cache: cache(),
+            },
+            ArrayAxes {
+                axis_order: Some(AxisOrder::XYZ),
+                channel_index: None,
+                additional_axes: None,
+            },
             None,
         )
         .await
@@ -116,13 +121,17 @@ async fn codecs_and_smaller_edge_chunks_preserve_n5_axes_and_big_endian() {
         }
         assert_eq!(bytes, expected);
         let a = open_n5_array(
-            &root(&p),
-            DataSourceId::new("ds", "org"),
-            "color",
-            None,
-            None,
-            None,
-            cache(),
+            ArraySource {
+                path: &root(&p),
+                data_source_id: DataSourceId::new("ds", "org"),
+                layer_name: "color",
+                cache: cache(),
+            },
+            ArrayAxes {
+                axis_order: None,
+                channel_index: None,
+                additional_axes: None,
+            },
             None,
         )
         .await
@@ -166,13 +175,17 @@ async fn varlength_mode_uses_shape_and_pads_short_payload_ignoring_element_count
     std::fs::create_dir_all(p.join("0/0")).unwrap();
     std::fs::write(p.join("0/0/0"), block).unwrap();
     let a = open_n5_array(
-        &root(&p),
-        DataSourceId::new("ds", "org"),
-        "color",
-        None,
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&p),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: None,
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -197,13 +210,17 @@ async fn varlength_mode_uses_shape_and_pads_short_payload_ignoring_element_count
     )
     .unwrap();
     let a = open_n5_array(
-        &root(&empty),
-        DataSourceId::new("ds", "org"),
-        "color",
-        None,
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&empty),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: None,
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -239,13 +256,17 @@ fn header_and_block_validation() {
 async fn real_n5_gzip_block_matches_independent_numpy_oracle() {
     let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/n5/real_gzip");
     let a = open_n5_array(
-        &root(&p),
-        DataSourceId::new("ds", "org"),
-        "color",
-        Some(AxisOrder::XYZ),
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &root(&p),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "color",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: Some(AxisOrder::XYZ),
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await

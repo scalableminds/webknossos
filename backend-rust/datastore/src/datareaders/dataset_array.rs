@@ -140,6 +140,25 @@ fn to_usize_shape(shape: &[i32]) -> DsResult<Vec<usize>> {
         .collect()
 }
 
+/// Where an array lives and how its chunks are cached; every `open_*_array` takes one
+/// (Scala `DatasetArray.open`'s path, data source, layer and shared chunk cache).
+#[derive(Clone)]
+pub struct ArraySource<'a> {
+    pub path: &'a VaultPath,
+    pub data_source_id: DataSourceId,
+    pub layer_name: &'a str,
+    pub cache: Arc<ChunkContentsCache>,
+}
+
+/// The wk-facing axis configuration of a mag (`axisOrder`, `channelIndex`) and the layer's
+/// additional axes. WKW arrays have none, so `open_wkw_array` does not take it.
+#[derive(Clone, Debug, Default)]
+pub struct ArrayAxes {
+    pub axis_order: Option<AxisOrder>,
+    pub channel_index: Option<i32>,
+    pub additional_axes: Option<Vec<AdditionalAxis>>,
+}
+
 /// Scala `DatasetArray` (format-independent read path). Format specifics come in via the
 /// [`DatasetHeader`] and [`ArrayFormat`] implementations.
 pub struct DatasetArray {

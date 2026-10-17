@@ -1,5 +1,6 @@
 //! MeshFileService + local HDF5/Zarr3 and sharded precomputed mesh-file readers.
 
+use crate::datareaders::{ArrayAxes, ArraySource};
 use crate::services::mesh::manifest::{Manifest, MeshLod, SegmentInfo, merge};
 use crate::services::segment::index::hash_function;
 use crate::{
@@ -212,13 +213,17 @@ impl MeshFileService {
                     .await?;
                 Ok(Arc::new(
                     open_zarr3_array(
-                        &group.join(name),
-                        key.source.clone(),
-                        &key.layer,
-                        None,
-                        None,
-                        None,
-                        Arc::clone(&self.chunks),
+                        ArraySource {
+                            path: &group.join(name),
+                            data_source_id: key.source.clone(),
+                            layer_name: &key.layer,
+                            cache: Arc::clone(&self.chunks),
+                        },
+                        ArrayAxes {
+                            axis_order: None,
+                            channel_index: None,
+                            additional_axes: None,
+                        },
                         token,
                     )
                     .await?,

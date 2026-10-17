@@ -9,6 +9,7 @@ use std::{
         atomic::{AtomicUsize, Ordering},
     },
 };
+use webknossos_datastore::datareaders::{ArrayAxes, ArraySource};
 
 use serde_json::{Value, json};
 use webknossos_datastore::{
@@ -140,13 +141,17 @@ async fn open(
     additional_axes: Option<Vec<AdditionalAxis>>,
 ) -> DatasetArray {
     open_zarr_array(
-        &vault_path(dir),
-        id(),
-        "layer",
-        axis_order,
-        channel_index,
-        additional_axes,
-        cache(),
+        ArraySource {
+            path: &vault_path(dir),
+            data_source_id: id(),
+            layer_name: "layer",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order,
+            channel_index,
+            additional_axes,
+        },
         None,
     )
     .await
@@ -533,13 +538,17 @@ async fn two_d_array_and_multi_array_reads() {
 
     // readAsMultiArray: physical order (plus the adapter dimension), C layout
     let plain = open_zarr_array(
-        &vault_path(&dir),
-        id(),
-        "layer",
-        Some(AxisOrder::new(1, 0, None, None)),
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &vault_path(&dir),
+            data_source_id: id(),
+            layer_name: "layer",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: Some(AxisOrder::new(1, 0, None, None)),
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -622,13 +631,17 @@ async fn errors_cache_and_header_failures() {
     // header errors
     let missing = temp_dir("missing");
     let error = open_zarr_array(
-        &vault_path(&missing),
-        id(),
-        "l",
-        None,
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &vault_path(&missing),
+            data_source_id: id(),
+            layer_name: "l",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: None,
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -636,13 +649,17 @@ async fn errors_cache_and_header_failures() {
     assert_eq!(error.message, "Could not read header at .zarray");
     std::fs::write(missing.join(".zarray"), br#"{"zarr_format": 2}"#).unwrap();
     let error = open_zarr_array(
-        &vault_path(&missing),
-        id(),
-        "l",
-        None,
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &vault_path(&missing),
+            data_source_id: id(),
+            layer_name: "l",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: None,
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await
@@ -652,13 +669,17 @@ async fn errors_cache_and_header_failures() {
         "dtype": "<f8", "order": "C"});
     std::fs::write(missing.join(".zarray"), too_big.to_string()).unwrap();
     let error = open_zarr_array(
-        &vault_path(&missing),
-        id(),
-        "l",
-        None,
-        None,
-        None,
-        cache(),
+        ArraySource {
+            path: &vault_path(&missing),
+            data_source_id: id(),
+            layer_name: "l",
+            cache: cache(),
+        },
+        ArrayAxes {
+            axis_order: None,
+            channel_index: None,
+            additional_axes: None,
+        },
         None,
     )
     .await

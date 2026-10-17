@@ -2,6 +2,7 @@
 //!
 //! A segment index file maps segment ids (through a hash table) to the mag-1 top-left corners of
 //! the buckets containing them. Zarr3 and local HDF5 attachments share the Scala hash contract.
+use crate::datareaders::{ArrayAxes, ArraySource};
 use std::{collections::HashSet, sync::Arc};
 
 use futures::{StreamExt, stream};
@@ -273,13 +274,17 @@ impl SegmentIndexService {
                     .vault_path_for_attachment(&key.attachment)
                     .await?;
                 let array = open_zarr3_array(
-                    &group.join(name),
-                    key.data_source_id.clone(),
-                    &key.layer_name,
-                    None,
-                    None,
-                    None,
-                    Arc::clone(&self.chunks),
+                    ArraySource {
+                        path: &group.join(name),
+                        data_source_id: key.data_source_id.clone(),
+                        layer_name: &key.layer_name,
+                        cache: Arc::clone(&self.chunks),
+                    },
+                    ArrayAxes {
+                        axis_order: None,
+                        channel_index: None,
+                        additional_axes: None,
+                    },
                     token,
                 )
                 .await?;

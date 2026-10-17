@@ -110,14 +110,25 @@ impl BinaryDataService {
     async fn load_bucket(
         &self,
         r: &DataServiceDataRequest,
-        mut bucket: BucketPosition,
+        bucket: BucketPosition,
         token: Option<&str>,
     ) -> VaultResult<Vec<u8>> {
         if !r.data_layer.contains_mag(bucket.mag()) {
             return Err(VaultError::NotFound);
         }
-        bucket.additional_coordinates = r.settings.additional_coordinates.clone();
         let provider = self.provider(r).await?;
+        self.load_bucket_from(&**provider, r, bucket, token).await
+    }
+    /// All buckets of one request share the provider; `load_cuboid` looks it up once.
+    /// Callers check that the layer has the bucket's mag.
+    async fn load_bucket_from(
+        &self,
+        provider: &dyn BucketProvider,
+        r: &DataServiceDataRequest,
+        mut bucket: BucketPosition,
+        token: Option<&str>,
+    ) -> VaultResult<Vec<u8>> {
+        bucket.additional_coordinates = r.settings.additional_coordinates.clone();
         let id = r.data_source_id_or_volume_dummy();
         let instruction = DataReadInstruction {
             data_source_id: id.clone(),
@@ -149,10 +160,17 @@ impl BinaryDataService {
             .checked_mul(r.data_layer.bytes_per_element())
             .ok_or_else(|| DsError::failure("Cuboid byte size overflow"))?;
         let mut result = vec![0; size];
-        let mut loads = stream::iter(r.cuboid.buckets()?)
+        let buckets = r.cuboid.buckets()?;
+        // Every bucket would answer NotFound (zero fill); do not create a provider for that.
+        if !r.data_layer.contains_mag(r.cuboid.mag()) {
+            return Ok(result);
+        }
+        let provider = self.provider(r).await?;
+        let provider = &**provider;
+        let mut loads = stream::iter(buckets)
             .map(|next| async move {
                 let bucket = next?;
-                self.load_bucket(r, bucket.clone(), token)
+                self.load_bucket_from(provider, r, bucket.clone(), token)
                     .await
                     .map(|data| (bucket, data))
             })

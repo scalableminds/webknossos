@@ -62,8 +62,21 @@ impl<T> IndexCache<T> {
             // Expiry is checked per entry; a full sweep (O(entries) under the lock) runs only when
             // a new entry is added. Sweeping on every lookup made each bucket request scan the
             // whole provider cache (up to 5000 entries) while holding the lock.
-            if entries.get(key).is_some_and(expired) {
-                entries.remove(key);
+            match entries.get_mut(key) {
+                Some(e) if expired(e) => {
+                    entries.remove(key);
+                }
+                Some(e) => {
+                    e.accessed = now;
+                    // Hit on a completed load: one lock, no key allocation. Every bucket of a
+                    // cuboid passes through here, concurrently with all other requests.
+                    if e.loaded.is_some()
+                        && let Some(value) = e.cell.get()
+                    {
+                        return Ok(Arc::clone(value));
+                    }
+                }
+                None => {}
             }
             if !entries.contains_key(key) {
                 entries.retain(|_, e| !expired(e));
@@ -73,7 +86,6 @@ impl<T> IndexCache<T> {
                 loaded: None,
                 accessed: now,
             });
-            entry.accessed = now;
             Arc::clone(&entry.cell)
         };
         let result = cell
@@ -106,3 +118,5 @@ impl<T> IndexCache<T> {
         result
     }
 }
+#[cfg(test)]
+mod tests;

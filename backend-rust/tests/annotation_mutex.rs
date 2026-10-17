@@ -56,10 +56,29 @@ async fn world(db: &TestDb, tracing_url: &str) -> World {
     sqlx::query("INSERT INTO webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey,isUsable,voxelSizeFactor,voxelSizeUnit) SELECT $1,'lifecycle',_id,_rootfolder,'Dataset','dir',now(),true,ROW(1,1,1)::webknossos.vector3,'nanometer'::webknossos.LENGTH_UNIT FROM webknossos.organizations WHERE _id=$2")
         .bind(&dataset).bind(&f.organization_id).execute(&db.pool).await.unwrap();
     let (task, project, task_type) = (object_id(), object_id(), object_id());
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,'Lifecycle project')")
-        .bind(&project).bind(&f.organization_id).bind(&f.team_id).bind(&f.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'Lifecycle type','',true,true)")
-        .bind(&task_type).bind(&f.organization_id).bind(&f.team_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+            VALUES($1,$2,$3,$4,'Lifecycle project')",
+    )
+    .bind(&project)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,\
+            'Lifecycle type','',true,true)",
+    )
+    .bind(&task_type)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation,boundingbox) VALUES($1,$2,$3,'test',0,10,10,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3,ROW(1,2,3,10,20,30)::webknossos.BOUNDING_BOX)")
         .bind(&task).bind(&project).bind(&task_type).execute(&db.pool).await.unwrap();
     World {
@@ -82,9 +101,29 @@ async fn annotation(
     mode: &str,
 ) -> String {
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,visibility,state,collaborationMode,isLockedByOwner,modified) VALUES($1,$2,$3,$4,$5::webknossos.ANNOTATION_TYPE,$6::webknossos.ANNOTATION_VISIBILITY,$7::webknossos.ANNOTATION_STATE,$8::webknossos.ANNOTATION_COLLABORATION_MODE,false,TIMESTAMPTZ '2020-01-01T00:00:00Z')")
-        .bind(&id).bind(&w.dataset).bind(if matches!(typ,"Task"|"TracingBase"){Some(&w.task)}else{None})
-        .bind(&w.owner.user_id).bind(typ).bind(visibility).bind(state).bind(mode).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.annotations(_id,_dataset,_task,_user,typ,visibility,state,\
+            collaborationMode,isLockedByOwner,modified) VALUES($1,$2,$3,$4,\
+            $5::webknossos.ANNOTATION_TYPE,$6::webknossos.ANNOTATION_VISIBILITY,\
+            $7::webknossos.ANNOTATION_STATE,$8::webknossos.ANNOTATION_COLLABORATION_MODE,false,\
+            TIMESTAMPTZ '2020-01-01T00:00:00Z')",
+    )
+    .bind(&id)
+    .bind(&w.dataset)
+    .bind(if matches!(typ, "Task" | "TracingBase") {
+        Some(&w.task)
+    } else {
+        None
+    })
+    .bind(&w.owner.user_id)
+    .bind(typ)
+    .bind(visibility)
+    .bind(state)
+    .bind(mode)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) VALUES($1,$2,'Skeleton','Skeleton','{}')")
         .bind(&id).bind(format!("tracing-{id}")).execute(&db.pool).await.unwrap();
     id
@@ -158,7 +197,16 @@ async fn acquisition_renewal_blocked_user_json_and_expired_takeover_match_contra
         (&w.f.organization_id, true),
     ] {
         let team = object_id();
-        sqlx::query("INSERT INTO webknossos.teams(_id,_organization,name,isDeleted) VALUES($1,$2,'hidden team',$3)").bind(&team).bind(organization).bind(deleted).execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO webknossos.teams(_id,_organization,name,isDeleted) \
+                VALUES($1,$2,'hidden team',$3)",
+        )
+        .bind(&team)
+        .bind(organization)
+        .bind(deleted)
+        .execute(&db.pool)
+        .await
+        .unwrap();
         sqlx::query(
             "INSERT INTO webknossos.user_team_roles(_user,_team,isTeamManager) VALUES($1,$2,true)",
         )
@@ -185,8 +233,14 @@ async fn acquisition_renewal_blocked_user_json_and_expired_takeover_match_contra
         (&initial.0, &initial.1),
         (&w.owner.user_id, &owner_session.to_owned())
     );
-    let before_remaining: f64=sqlx::query_scalar("SELECT extract(epoch FROM expiry-statement_timestamp())::double precision FROM webknossos.annotation_mutexes WHERE _annotation=$1")
-        .bind(&id).fetch_one(&db.pool).await.unwrap();
+    let before_remaining: f64 = sqlx::query_scalar(
+        "SELECT extract(epoch FROM expiry-statement_timestamp())::double precision FROM \
+            webknossos.annotation_mutexes WHERE _annotation=$1",
+    )
+    .bind(&id)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert!((115.0..=120.0).contains(&before_remaining));
     // Same user but a different session is blocked and receives full compact
     // user fields, even without holder session mutex ownership.
@@ -237,7 +291,17 @@ async fn acquisition_renewal_blocked_user_json_and_expired_takeover_match_contra
     assert_eq!((status, body), (StatusCode::OK, acquired()));
     assert_eq!(holder(&db, &id).await.unwrap().0, w.outsider.user_id);
     assert_eq!(holder(&db, &id).await.unwrap().1, "");
-    assert_eq!(sqlx::query_scalar::<_,i64>("SELECT floor(extract(epoch FROM modified)*1000)::bigint FROM webknossos.annotations WHERE _id=$1").bind(&id).fetch_one(&db.pool).await.unwrap(),1577836800000);
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>(
+            "SELECT floor(extract(epoch FROM modified)*1000)::bigint FROM \
+            webknossos.annotations WHERE _id=$1"
+        )
+        .bind(&id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap(),
+        1577836800000
+    );
     db.cleanup().await;
 }
 

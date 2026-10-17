@@ -313,9 +313,21 @@ async fn start_returns_scala_creation_options_and_feature_gates() {
         .step_by(2)
         .map(|i| u8::from_str_radix(&scala_credential[i..i + 2], 16).unwrap())
         .collect();
-    sqlx::query("INSERT INTO webknossos.webauthnCredentials (_id, _multiUser, credentialId, name, userVerified, backupEligible, backupState, serializedAttestationStatement, serializedAttestedCredential, serializedExtensions) VALUES ($1, $2, $3, 'Scala key', TRUE, FALSE, FALSE, '{\"fmt\": \"none\", \"format\": \"none\", \"attestationStatement\": {}}'::jsonb, $4, '{}'::jsonb)")
-        .bind(object_id()).bind(&fixture.multi_user_id).bind((1u8..=16).collect::<Vec<u8>>()).bind(&scala_bytes)
-        .execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.webauthnCredentials (_id, _multiUser, credentialId, \
+            name, userVerified, backupEligible, backupState, serializedAttestationStatement, \
+            serializedAttestedCredential, serializedExtensions) VALUES ($1, $2, $3, \
+            'Scala key', TRUE, FALSE, FALSE, \
+            '{\"fmt\": \"none\", \"format\": \"none\", \"attestationStatement\": {}}'::jsonb, \
+            $4, '{}'::jsonb)",
+    )
+    .bind(object_id())
+    .bind(&fixture.multi_user_id)
+    .bind((1u8..=16).collect::<Vec<u8>>())
+    .bind(&scala_bytes)
+    .execute(&database.pool)
+    .await
+    .unwrap();
     // Soft-deleted credentials are not excluded (existingCollectionName view).
     sqlx::query("INSERT INTO webknossos.webauthnCredentials (_id, _multiUser, credentialId, name, userVerified, backupEligible, backupState, serializedAttestationStatement, serializedAttestedCredential, serializedExtensions, isDeleted) VALUES ($1, $2, 'garbage', 'Deleted', TRUE, FALSE, FALSE, '{}'::jsonb, 'garbage', '{}'::jsonb, TRUE)")
         .bind(object_id()).bind(&fixture.multi_user_id)

@@ -181,8 +181,15 @@ async fn validate(
                 return Ok(Answer::granted());
             }
             let id = id.ok_or_else(|| ApiError::bad_request("Tracing identifier is required."))?;
-            let annotation_id:String=sqlx::query_scalar("SELECT a._id FROM webknossos.annotations_ a JOIN webknossos.annotation_layers layer ON layer._annotation=a._id WHERE layer.tracingId=$1 LIMIT 1")
-                .bind(id).fetch_optional(&state.pool).await?.ok_or_else(||ApiError::not_found(crate::msg::annotation::MISSING))?;
+            let annotation_id: String = sqlx::query_scalar(
+                "SELECT a._id FROM webknossos.annotations_ a JOIN \
+                    webknossos.annotation_layers layer ON layer._annotation=a._id WHERE \
+                    layer.tracingId=$1 LIMIT 1",
+            )
+            .bind(id)
+            .fetch_optional(&state.pool)
+            .await?
+            .ok_or_else(|| ApiError::not_found(crate::msg::annotation::MISSING))?;
             annotation(state, user.as_ref(), Some(&annotation_id), body.mode, token).await
         }
         Resource::JobExport => job_export(state, user.as_ref(), id, body.mode).await,
@@ -255,8 +262,14 @@ async fn annotation(
     let metadata = crate::annotation::access::find(&state.pool, user, id, true).await?;
     // Preserve the existing private-link grant used by datastore requests;
     // the dedicated source endpoint separately enforces link expiration.
-    let allowed_by_link:bool=sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.annotation_privateLinks_ WHERE _annotation=$1 AND accessToken=$2)")
-        .bind(id).bind(token).fetch_one(&state.pool).await?;
+    let allowed_by_link: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM webknossos.annotation_privateLinks_ WHERE \
+            _annotation=$1 AND accessToken=$2)",
+    )
+    .bind(id)
+    .bind(token)
+    .fetch_one(&state.pool)
+    .await?;
     let restrictions = crate::annotation::access::restrictions(&metadata, user);
     let allowed = allowed_by_link
         || match mode {
@@ -283,13 +296,20 @@ async fn job_export(
     }
     let id = required_id(id)?;
     let id = id.as_str();
-    let allowed:bool=sqlx::query_scalar(r#"SELECT EXISTS(SELECT 1 FROM webknossos.jobs_ j WHERE j._id=$1 AND
+    let allowed: bool = sqlx::query_scalar(
+        r#"SELECT EXISTS(SELECT 1 FROM webknossos.jobs_ j WHERE j._id=$1 AND
       (j._owner=$2 OR $3 OR ($4 AND EXISTS (SELECT 1 FROM webknossos.users_ owner WHERE owner._id=j._owner AND owner._organization=$5))
       OR EXISTS(SELECT 1 FROM webknossos.user_team_roles requester JOIN webknossos.user_team_roles owner_role ON owner_role._team=requester._team
         JOIN webknossos.teams_ team ON team._id=requester._team AND team._organization=$5
         JOIN webknossos.users_ owner ON owner._id=owner_role._user AND owner._organization=$5
-        WHERE requester._user=$2 AND requester.isTeamManager AND owner._id=j._owner)))"#)
-        .bind(id).bind(user.map(|u|u.id.as_str())).bind(user.is_some_and(|u|u.is_superuser))
-        .bind(user.is_some_and(|u|u.is_admin)).bind(user.map(|u|u.organization_id.as_str())).fetch_one(&state.pool).await?;
+        WHERE requester._user=$2 AND requester.isTeamManager AND owner._id=j._owner)))"#,
+    )
+    .bind(id)
+    .bind(user.map(|u| u.id.as_str()))
+    .bind(user.is_some_and(|u| u.is_superuser))
+    .bind(user.is_some_and(|u| u.is_admin))
+    .bind(user.map(|u| u.organization_id.as_str()))
+    .fetch_one(&state.pool)
+    .await?;
     Ok(Answer::condition(allowed, "No read access to job export"))
 }

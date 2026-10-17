@@ -563,7 +563,11 @@ async fn callback_rejects_invalid_tokens() {
     p.lock().unwrap().jwks = json!({ "keys": [jwk()] });
     let mut claims = id_claims("eve@example.test");
     claims.as_object_mut().unwrap().remove("family_name");
-    p.lock().unwrap().token_response = json!({"access_token": jwt(access_claims()), "id_token": jwt(claims), "token_type": "Bearer"});
+    p.lock().unwrap().token_response = json!({
+        "access_token": jwt(access_claims()),
+        "id_token": jwt(claims),
+        "token_type": "Bearer"
+    });
     let reply = send(&app, "/api/auth/oidc/callback?code=c", None, None).await;
     assert_eq!(reply.status, StatusCode::BAD_REQUEST);
     assert_eq!(

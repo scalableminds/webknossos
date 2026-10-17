@@ -27,7 +27,21 @@ fn copy_dir(from: &Path, to: &Path) {
 }
 fn array(dir: &Path, shape: &[usize], dtype: &str, bytes: Vec<u8>) {
     std::fs::create_dir_all(dir).unwrap();
-    std::fs::write(dir.join("zarr.json"),serde_json::to_vec(&json!({"zarr_format":3,"node_type":"array","shape":shape,"data_type":dtype,"chunk_grid":{"name":"regular","configuration":{"chunk_shape":shape}},"chunk_key_encoding":{"name":"default","configuration":{"separator":"/"}},"fill_value":0,"codecs":[{"name":"bytes","configuration":{"endian":"little"}}]})).unwrap()).unwrap();
+    std::fs::write(
+        dir.join("zarr.json"),
+        serde_json::to_vec(&json!({
+            "zarr_format":3,
+            "node_type":"array",
+            "shape":shape,
+            "data_type":dtype,
+            "chunk_grid":{"name":"regular","configuration":{"chunk_shape":shape}},
+            "chunk_key_encoding":{"name":"default","configuration":{"separator":"/"}},
+            "fill_value":0,
+            "codecs":[{"name":"bytes","configuration":{"endian":"little"}}]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
     let path = dir.join(
         std::iter::once("c")
             .chain(shape.iter().map(|_| "0"))
@@ -38,7 +52,25 @@ fn array(dir: &Path, shape: &[usize], dtype: &str, bytes: Vec<u8>) {
 }
 fn index(dir: &Path) {
     std::fs::create_dir_all(dir).unwrap();
-    std::fs::write(dir.join("zarr.json"),serde_json::to_vec(&json!({"zarr_format":3,"node_type":"group","attributes":{"voxelytics":{"artifact_schema_version":1,"artifact_attributes":{"n_hash_buckets":1,"hash_function":"identity","dtype_bucket_entries":"uint16"}}}})).unwrap()).unwrap();
+    std::fs::write(
+        dir.join("zarr.json"),
+        serde_json::to_vec(&json!({
+            "zarr_format":3,
+            "node_type":"group",
+            "attributes":{
+                "voxelytics":{
+                    "artifact_schema_version":1,
+                    "artifact_attributes":{
+                        "n_hash_buckets":1,
+                        "hash_function":"identity",
+                        "dtype_bucket_entries":"uint16"
+                    }
+                }
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
     array(
         &dir.join("hash_bucket_offsets"),
         &[2],
@@ -58,7 +90,20 @@ fn index(dir: &Path) {
 }
 fn segmentation(dir: &Path, width: usize, points: &[(usize, usize, usize, u64)], xsize: usize) {
     std::fs::create_dir_all(dir).unwrap();
-    std::fs::write(dir.join(".zarray"),serde_json::to_vec(&json!({"zarr_format":2,"shape":[xsize,32,32],"chunks":[32,32,32],"dtype":format!("<u{width}"),"order":"F","compressor":null,"fill_value":0})).unwrap()).unwrap();
+    std::fs::write(
+        dir.join(".zarray"),
+        serde_json::to_vec(&json!({
+            "zarr_format":2,
+            "shape":[xsize,32,32],
+            "chunks":[32,32,32],
+            "dtype":format!("<u{width}"),
+            "order":"F",
+            "compressor":null,
+            "fill_value":0
+        }))
+        .unwrap(),
+    )
+    .unwrap();
     for bucket in 0..xsize.div_ceil(32) {
         let mut bytes = vec![0; 32768 * width];
         for &(x, y, z, id) in points {

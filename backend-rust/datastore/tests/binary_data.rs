@@ -46,7 +46,17 @@ fn layer(
     bbox: BoundingBox,
     axis: serde_json::Value,
 ) -> Arc<StaticLayer> {
-    Arc::new(serde_json::from_value(json!({"name":"color","category":"color","dataFormat":format,"elementClass":element,"boundingBox":bbox,"mags":[{"mag":[1,1,1],"path":path.to_str().unwrap(),"axisOrder":axis}]})).unwrap())
+    Arc::new(
+        serde_json::from_value(json!({
+            "name":"color",
+            "category":"color",
+            "dataFormat":format,
+            "elementClass":element,
+            "boundingBox":bbox,
+            "mags":[{"mag":[1,1,1],"path":path.to_str().unwrap(),"axisOrder":axis}]
+        }))
+        .unwrap(),
+    )
 }
 fn request(
     layer: Arc<StaticLayer>,
@@ -68,7 +78,21 @@ fn value(x: i32, y: i32, z: i32) -> u8 {
 fn write_array(p: &Path, format: &str) {
     std::fs::create_dir_all(p).unwrap();
     if format == "zarr" {
-        std::fs::write(p.join(".zarray"),serde_json::to_vec(&json!({"zarr_format":2,"shape":[35,35,35],"chunks":[32,32,32],"dtype":"|u1","order":"F","compressor":null,"filters":null,"fill_value":0})).unwrap()).unwrap();
+        std::fs::write(
+            p.join(".zarray"),
+            serde_json::to_vec(&json!({
+                "zarr_format":2,
+                "shape":[35,35,35],
+                "chunks":[32,32,32],
+                "dtype":"|u1",
+                "order":"F",
+                "compressor":null,
+                "filters":null,
+                "fill_value":0
+            }))
+            .unwrap(),
+        )
+        .unwrap();
     } else if format == "n5" {
         std::fs::write(
             p.join("attributes.json"),
@@ -79,7 +103,25 @@ fn write_array(p: &Path, format: &str) {
         )
         .unwrap();
     } else {
-        std::fs::write(p.parent().unwrap().join("info"),serde_json::to_vec(&json!({"type":"image","data_type":"uint8","num_channels":1,"scales":[{"key":"1","size":[35,35,35],"resolution":[1,1,1],"chunk_sizes":[[32,32,32]],"encoding":"raw"}]})).unwrap()).unwrap();
+        std::fs::write(
+            p.parent().unwrap().join("info"),
+            serde_json::to_vec(&json!({
+                "type":"image",
+                "data_type":"uint8",
+                "num_channels":1,
+                "scales":[
+                    {
+                        "key":"1",
+                        "size":[35,35,35],
+                        "resolution":[1,1,1],
+                        "chunk_sizes":[[32,32,32]],
+                        "encoding":"raw"
+                    }
+                ]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
     }
     for bx in 0..2 {
         for by in 0..2 {
@@ -615,7 +657,15 @@ async fn current_token_reaches_http_chunks_after_mag_header_is_cached() {
     let mut config = DatastoreConfig::defaults(&temp());
     config.http.uri = base.clone();
     let s = AppState::new(config);
-    let l:StaticLayer=serde_json::from_value(json!({"name":"color","category":"color","dataFormat":"zarr","elementClass":"uint8","boundingBox":{"topLeft":[0,0,0],"width":64,"height":32,"depth":32},"mags":[{"mag":[1,1,1],"path":format!("{base}/array")}]})).unwrap();
+    let l: StaticLayer = serde_json::from_value(json!({
+        "name":"color",
+        "category":"color",
+        "dataFormat":"zarr",
+        "elementClass":"uint8",
+        "boundingBox":{"topLeft":[0,0,0],"width":64,"height":32,"depth":32},
+        "mags":[{"mag":[1,1,1],"path":format!("{base}/array")}]
+    }))
+    .unwrap();
     let l = Arc::new(l);
     let a = request(
         l.clone(),
@@ -650,7 +700,16 @@ async fn current_token_reaches_http_chunks_after_mag_header_is_cached() {
 #[test]
 fn frontend_request_json_uses_play_numeric_and_optional_rules() {
     use webknossos_datastore::models::data_requests::{RawCuboidRequest, WebknossosDataRequest};
-    let req:WebknossosDataRequest=serde_json::from_value(json!({"position":[1,2,3],"mag":[1,1,1],"cubeSize":32.0,"fourBit":true,"applyAgglomerate":"mapping","additionalCoordinates":[{"name":"t","value":4.0,"length":32.0}],"version":3})).unwrap();
+    let req: WebknossosDataRequest = serde_json::from_value(json!({
+        "position":[1,2,3],
+        "mag":[1,1,1],
+        "cubeSize":32.0,
+        "fourBit":true,
+        "applyAgglomerate":"mapping",
+        "additionalCoordinates":[{"name":"t","value":4.0,"length":32.0}],
+        "version":3
+    }))
+    .unwrap();
     assert!(req.settings().half_byte);
     assert_eq!(
         req.settings().additional_coordinates.unwrap()[0].length,
@@ -674,7 +733,25 @@ fn frontend_request_json_uses_play_numeric_and_optional_rules() {
 async fn unsupported_precomputed_encoding_is_not_reported_as_black_cuboid_data() {
     let p = temp();
     std::fs::create_dir_all(p.join("1")).unwrap();
-    std::fs::write(p.join("info"),serde_json::to_vec(&json!({"type":"segmentation","data_type":"uint32","num_channels":1,"scales":[{"key":"1","size":[32,32,32],"resolution":[1,1,1],"chunk_sizes":[[32,32,32]],"encoding":"unsupported"}]})).unwrap()).unwrap();
+    std::fs::write(
+        p.join("info"),
+        serde_json::to_vec(&json!({
+            "type":"segmentation",
+            "data_type":"uint32",
+            "num_channels":1,
+            "scales":[
+                {
+                    "key":"1",
+                    "size":[32,32,32],
+                    "resolution":[1,1,1],
+                    "chunk_sizes":[[32,32,32]],
+                    "encoding":"unsupported"
+                }
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
     let l = layer(
         "neuroglancerPrecomputed",
         &p.join("1"),

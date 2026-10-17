@@ -140,8 +140,15 @@ async fn compose_and_in_place_additions_build_virtual_datasets() {
     assert_eq!(status, StatusCode::OK, "{body}");
     let composed = body["newDatasetId"].as_str().unwrap().to_owned();
     // Differing voxel sizes without explicit transforms are rescaled to 4 nm.
-    let rows: Vec<(String, i32, i32, String)> = sqlx::query_as("SELECT l.name,(m.mag).x::int,(l.boundingBox).width::int,m.path FROM webknossos.dataset_layers l JOIN webknossos.dataset_mags m ON m._dataset=l._dataset AND m.dataLayerName=l.name WHERE l._dataset=$1 ORDER BY l.name,(m.mag).x")
-        .bind(&composed).fetch_all(&db.pool).await.unwrap();
+    let rows: Vec<(String, i32, i32, String)> = sqlx::query_as(
+        "SELECT l.name,(m.mag).x::int,(l.boundingBox).width::int,m.path FROM \
+            webknossos.dataset_layers l JOIN webknossos.dataset_mags m ON m._dataset=l._dataset \
+            AND m.dataLayerName=l.name WHERE l._dataset=$1 ORDER BY l.name,(m.mag).x",
+    )
+    .bind(&composed)
+    .fetch_all(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         rows,
         [
@@ -161,7 +168,8 @@ async fn compose_and_in_place_additions_build_virtual_datasets() {
             ),
         ]
     );
-    let meta: (String, bool, bool, Option<String>, String, f64, String) = sqlx::query_as("SELECT creationType::text,isVirtual,isUsable,_uploader,_folder,(voxelSizeFactor).x,directoryName FROM webknossos.datasets WHERE _id=$1")
+    let meta: (String, bool, bool, Option<String>, String, f64, String) = sqlx::query_as("SELECT \
+            creationType::text,isVirtual,isUsable,_uploader,_folder,(voxelSizeFactor).x,directoryName FROM webknossos.datasets WHERE _id=$1")
         .bind(&composed).fetch_one(&db.pool).await.unwrap();
     assert_eq!(
         meta,
@@ -192,8 +200,14 @@ async fn compose_and_in_place_additions_build_virtual_datasets() {
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let id = body["newDatasetId"].as_str().unwrap();
-    let (transforms, factor): (i64, f64) = sqlx::query_as("SELECT (SELECT count(*) FROM webknossos.dataset_layer_coordinateTransformations WHERE _dataset=$1),(voxelSizeFactor).x FROM webknossos.datasets WHERE _id=$1")
-        .bind(id).fetch_one(&db.pool).await.unwrap();
+    let (transforms, factor): (i64, f64) = sqlx::query_as(
+        "SELECT (SELECT count(*) FROM webknossos.dataset_layer_coordinateTransformations \
+            WHERE _dataset=$1),(voxelSizeFactor).x FROM webknossos.datasets WHERE _id=$1",
+    )
+    .bind(id)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!((transforms, factor), (1, 4.0));
     calls.lock().unwrap().clear();
 
@@ -272,10 +286,47 @@ async fn compose_and_in_place_additions_build_virtual_datasets() {
     );
 
     let add_mag = format!("/datasets/{composed}/compose/addMag");
-    assert_eq!(post(&app, &add_mag, &fixture.token, json!({"sourceDatasetId": fine, "sourceLayerName": "color", "targetLayerName": "c1_2", "sourceMag": [2, 2, 2]})).await.0, StatusCode::BAD_REQUEST);
-    assert_eq!(post(&app, &add_mag, &fixture.token, json!({"sourceDatasetId": fine, "sourceLayerName": "color", "targetLayerName": "c1_2", "sourceMag": [2, 2, 2], "targetMag": [1, 1, 1]})).await.0, StatusCode::OK);
-    let mags: Vec<(i32, String)> = sqlx::query_as("SELECT (mag).x::int,path FROM webknossos.dataset_mags WHERE _dataset=$1 AND dataLayerName='c1_2' ORDER BY (mag).x")
-        .bind(&composed).fetch_all(&db.pool).await.unwrap();
+    assert_eq!(
+        post(
+            &app,
+            &add_mag,
+            &fixture.token,
+            json!({
+                "sourceDatasetId": fine,
+                "sourceLayerName": "color",
+                "targetLayerName": "c1_2",
+                "sourceMag": [2, 2, 2]
+            })
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        post(
+            &app,
+            &add_mag,
+            &fixture.token,
+            json!({
+                "sourceDatasetId": fine,
+                "sourceLayerName": "color",
+                "targetLayerName": "c1_2",
+                "sourceMag": [2, 2, 2],
+                "targetMag": [1, 1, 1]
+            })
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let mags: Vec<(i32, String)> = sqlx::query_as(
+        "SELECT (mag).x::int,path FROM webknossos.dataset_mags WHERE _dataset=$1 AND \
+            dataLayerName='c1_2' ORDER BY (mag).x",
+    )
+    .bind(&composed)
+    .fetch_all(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(mags[0], (1, format!("s3://data/{fine}/color/2")));
     assert_eq!(mags.len(), 3);
 
@@ -295,8 +346,14 @@ async fn compose_and_in_place_additions_build_virtual_datasets() {
             Some("Could not add attachment to composed dataset.")
         )
     );
-    let names: Vec<String> = sqlx::query_scalar("SELECT name FROM webknossos.dataset_layer_attachments WHERE _dataset=$1 AND layerName='seg2' ORDER BY name")
-        .bind(&composed).fetch_all(&db.pool).await.unwrap();
+    let names: Vec<String> = sqlx::query_scalar(
+        "SELECT name FROM webknossos.dataset_layer_attachments WHERE _dataset=$1 AND \
+            layerName='seg2' ORDER BY name",
+    )
+    .bind(&composed)
+    .fetch_all(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(names, ["m", "m-copy"]);
     server.abort();
     db.cleanup().await;

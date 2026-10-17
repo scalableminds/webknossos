@@ -581,7 +581,12 @@ mod n5 {
     }
 
     fn voxel_size_from_transform(t: &Transform) -> DsResult<Vec3Double> {
-        let axis = axis_order(&t.axes).map_err(|e| e.wrap("Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"))?;
+        let axis = axis_order(&t.axes).map_err(|e| {
+            e.wrap(
+                "Could not extract XYZ axis order mapping. Does the data have x, y and z \
+                axes, stated in multiscales metadata?",
+            )
+        })?;
         let factors = axis_unit_factors(t.units.as_deref(), &axis)
             .map_err(|e| e.wrap("Could not extract axis unit-to-nm factors"))?;
         let in_units = voxel_size_in_axis_units(&t.scale, &axis)
@@ -682,7 +687,12 @@ mod n5 {
                 .ok_or_else(|| DsError::failure("empty.minBy"))?;
             let mut mags = Vec::new();
             for (dataset_path, t) in &datasets {
-                let axis = axis_order(&t.axes).map_err(|e| e.wrap("Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"))?;
+                let axis = axis_order(&t.axes).map_err(|e| {
+                    e.wrap(
+                        "Could not extract XYZ axis order mapping. Does the data have x, y \
+                        and z axes, stated in multiscales metadata?",
+                    )
+                })?;
                 let mag_voxel_size = voxel_size_from_transform(t)
                     .map_err(|e| e.wrap("Could not extract mag from transforms"))?;
                 let mag = (mag_voxel_size / voxel_size).round().to_vec3_int();
@@ -1185,7 +1195,12 @@ mod ngff {
     ) -> DsResult<usize> {
         let first = multiscale.datasets.first().ok_or_else(DsError::empty)?;
         let (_, _, shape) = mag_header(ctx, version, &path.join(&first.path), None).await?;
-        let axis = axis_order(&multiscale.axes).map_err(|e| e.wrap("Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"))?;
+        let axis = axis_order(&multiscale.axes).map_err(|e| {
+            e.wrap(
+                "Could not extract XYZ axis order mapping. Does the data have x, y and z \
+                axes, stated in multiscales metadata?",
+            )
+        })?;
         Ok(match axis.c {
             Some(c) => *shape.get(c as usize).ok_or_else(axis_error)? as usize,
             None => 1,
@@ -1277,7 +1292,12 @@ mod ngff {
         attributes: Option<&[ChannelAttributes]>,
         is_segmentation: bool,
     ) -> DsResult<Vec<Explored>> {
-        let axis = axis_order(&multiscale.axes).map_err(|e| e.wrap("Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"))?;
+        let axis = axis_order(&multiscale.axes).map_err(|e| {
+            e.wrap(
+                "Could not extract XYZ axis order mapping. Does the data have x, y and z \
+                axes, stated in multiscales metadata?",
+            )
+        })?;
         let unit = select_axis_unit(&multiscale.axes, &axis)?;
         let factors = axis_unit_factors(unit, &multiscale.axes, &axis)
             .map_err(|e| e.wrap("Could not extract axis unit-to-nm factors"))?;

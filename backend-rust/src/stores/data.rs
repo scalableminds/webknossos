@@ -85,10 +85,19 @@ async fn create(
     // The original DTO does not accept onlyAllowedOrganization or storage
     // reporting configuration. Unknown fields cannot set those private flags.
     sqlx::query(
-        "INSERT INTO webknossos.dataStores (name, url, publicUrl, key, isScratch, allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled) VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE)",
-    ).bind(&body.name).bind(&body.url).bind(&body.public_url).bind(&body.key)
-        .bind(body.is_scratch.unwrap_or(false)).bind(body.allows_upload.unwrap_or(true)).bind(body.allows_upload_to_paths.unwrap_or(true))
-        .execute(&mut *tx).await?;
+        "INSERT INTO webknossos.dataStores (name, url, publicUrl, key, isScratch, \
+                allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled) VALUES ($1, $2, \
+                $3, $4, $5, $6, $7, FALSE)",
+    )
+    .bind(&body.name)
+    .bind(&body.url)
+    .bind(&body.public_url)
+    .bind(&body.key)
+    .bind(body.is_scratch.unwrap_or(false))
+    .bind(body.allows_upload.unwrap_or(true))
+    .bind(body.allows_upload_to_paths.unwrap_or(true))
+    .execute(&mut *tx)
+    .await?;
     let response = public_datastore_json_on_connection(&mut tx, &body.name, jobs_enabled).await?;
     tx.commit().await?;
     Ok(ResponseJson(response))

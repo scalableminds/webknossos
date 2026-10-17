@@ -50,8 +50,20 @@ fn app(db: &TestDb, provider: &AnnotationProvider) -> Router {
 }
 async fn setup() -> (TestDb, AnnotationProvider, Router) {
     let db = TestDb::new().await;
-    sqlx::query("INSERT INTO webknossos.tracingStores(name,url,publicUrl,key) VALUES ('tracing','http://tracing.invalid','http://public-tracing.invalid','service-key')").execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataStores(name,url,publicUrl,key) VALUES ('data','http://data.internal','http://data.public','data-secret')").execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.tracingStores(name,url,publicUrl,key) VALUES \
+            ('tracing','http://tracing.invalid','http://public-tracing.invalid','service-key')",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataStores(name,url,publicUrl,key) VALUES \
+            ('data','http://data.internal','http://data.public','data-secret')",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let provider = provider(&db);
     let app = app(&db, &provider);
     (db, provider, app)
@@ -204,9 +216,37 @@ async fn saved_annotations_sources_real_paths_credentials_and_dataset_failures()
     let dataset = dataset(&db, &owner.organization_id).await;
     let annotation = annotation(&db, &dataset, &owner.user_id).await;
     layer(&db, &annotation, "arbitrary-saved-tracing").await;
-    sqlx::query("INSERT INTO webknossos.dataset_layers(_dataset,name,category,elementClass,boundingBox,dataFormat) VALUES ($1,'seg','segmentation','uint32',ROW(0,0,0,10,20,30)::webknossos.BOUNDING_BOX,'zarr3')").bind(&dataset).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_mags(_dataset,dataLayerName,mag,path,realPath,credentialId) VALUES ($1,'seg',ROW(1,1,1)::webknossos.VECTOR3,'s3://stored/mag','s3://resolved/mag','mag-credential')").bind(&dataset).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_layer_attachments(_dataset,layerName,name,path,realPath,type,dataFormat,credentialId) VALUES ($1,'seg','mesh','s3://stored/mesh','s3://resolved/mesh','mesh','hdf5','attachment-credential')").bind(&dataset).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.dataset_layers(_dataset,name,category,elementClass,boundingBox,\
+            dataFormat) VALUES ($1,'seg','segmentation','uint32',ROW(0,0,0,10,20,\
+            30)::webknossos.BOUNDING_BOX,'zarr3')",
+    )
+    .bind(&dataset)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.dataset_mags(_dataset,dataLayerName,mag,path,realPath,credentialId) \
+            VALUES \
+            ($1,'seg',ROW(1,1,1)::webknossos.VECTOR3,'s3://stored/mag','s3://resolved/mag',\
+            'mag-credential')",
+    )
+    .bind(&dataset)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.dataset_layer_attachments(_dataset,layerName,name,path,realPath,type,\
+            dataFormat,credentialId) VALUES ($1,'seg','mesh','s3://stored/mesh',\
+            's3://resolved/mesh','mesh','hdf5','attachment-credential')",
+    )
+    .bind(&dataset)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("UPDATE webknossos.dataStores SET onlyAllowedOrganization='unrelated-org'")
         .execute(&db.pool)
         .await
@@ -310,7 +350,14 @@ async fn saved_annotations_sources_real_paths_credentials_and_dataset_failures()
         answer(&app, &source_path("datasources", &dataset)).await,
         (StatusCode::OK, expected.clone())
     );
-    sqlx::query("UPDATE webknossos.datasets SET voxelSizeFactor=ROW(4,5,6)::webknossos.VECTOR3 WHERE _id=$1").bind(&dataset).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "UPDATE webknossos.datasets SET voxelSizeFactor=ROW(4,5,6)::webknossos.VECTOR3 \
+            WHERE _id=$1",
+    )
+    .bind(&dataset)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let unusable = answer(&app, &source_path("datasources", &dataset)).await.1;
     assert_eq!(unusable["scale"]["factor"], json!([4, 5, 6]));
     assert!(unusable.get("dataLayers").is_none());
@@ -489,11 +536,55 @@ async fn genuine_compound_merge_cache_saved_precedence_and_invalidation() {
     let project = object_id();
     let task_type = object_id();
     let task = object_id();
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES ($1,$2,$3,$4,'Read compound')").bind(&project).bind(&owner.organization_id).bind(&owner.team_id).bind(&owner.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.taskTypes(_id,_organization,_team,summary,description,settings_branchPointsAllowed,settings_somaClickingAllowed) VALUES ($1,$2,$3,'Read compound','',TRUE,TRUE)").bind(&task_type).bind(&owner.organization_id).bind(&owner.team_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_taskType,neededExperience_domain,neededExperience_value,totalInstances,pendingInstances,editPosition,editRotation) VALUES ($1,$2,$3,'test',0,1,1,ROW(0,0,0)::webknossos.VECTOR3,ROW(0,0,0)::webknossos.VECTOR3)").bind(&task).bind(&project).bind(&task_type).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES \
+            ($1,$2,$3,$4,'Read compound')",
+    )
+    .bind(&project)
+    .bind(&owner.organization_id)
+    .bind(&owner.team_id)
+    .bind(&owner.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.taskTypes(_id,_organization,_team,summary,description,\
+            settings_branchPointsAllowed,settings_somaClickingAllowed) VALUES ($1,$2,$3,'Read \
+            compound','',TRUE,TRUE)",
+    )
+    .bind(&task_type)
+    .bind(&owner.organization_id)
+    .bind(&owner.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasks(_id,_project,_taskType,neededExperience_domain,\
+            neededExperience_value,totalInstances,pendingInstances,editPosition,editRotation) \
+            VALUES ($1,$2,$3,'test',0,1,1,ROW(0,0,0)::webknossos.VECTOR3,ROW(0,0,\
+            0)::webknossos.VECTOR3)",
+    )
+    .bind(&task)
+    .bind(&project)
+    .bind(&task_type)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let finished = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,state,visibility) VALUES ($1,$2,$3,$4,'Task','Finished','Private')").bind(&finished).bind(&dataset).bind(&task).bind(&owner.user_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.annotations(_id,_dataset,_task,_user,typ,state,visibility) VALUES \
+            ($1,$2,$3,$4,'Task','Finished','Private')",
+    )
+    .bind(&finished)
+    .bind(&dataset)
+    .bind(&task)
+    .bind(&owner.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     layer(&db, &finished, "finished-tracing").await;
     let user = AuthUser {
         id: owner.user_id.clone(),

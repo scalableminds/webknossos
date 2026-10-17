@@ -31,8 +31,18 @@ async fn world(db: &TestDb) -> World {
     sqlx::query("INSERT INTO webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey,isUsable,voxelSizeFactor,voxelSizeUnit) SELECT $1,'tw2',_id,_rootfolder,'Dataset','dir',now(),true,ROW(1,1,1)::webknossos.vector3,'nanometer'::webknossos.LENGTH_UNIT FROM webknossos.organizations WHERE _id=$2")
         .bind(&dataset).bind(&f.organization_id).execute(&db.pool).await.unwrap();
     let task_type = object_id();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'TW2 type','',true,true)")
-        .bind(&task_type).bind(&f.organization_id).bind(&f.team_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'TW2 \
+            type','',true,true)",
+    )
+    .bind(&task_type)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     World {
         f,
         owner,
@@ -45,9 +55,20 @@ async fn world(db: &TestDb) -> World {
 /// Project owned by the fixture admin, with one task; returns the task id.
 async fn task(db: &TestDb, w: &World, expected_time: Option<i64>) -> String {
     let (project, task) = (object_id(), object_id());
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name,expectedTime) VALUES($1,$2,$3,$4,$5,$6)")
-        .bind(&project).bind(&w.f.organization_id).bind(&w.f.team_id).bind(&w.f.user_id)
-        .bind(format!("Project {}", &project[..6])).bind(expected_time).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.projects(_id,_organization,_team,_owner,name,expectedTime) \
+            VALUES($1,$2,$3,$4,$5,$6)",
+    )
+    .bind(&project)
+    .bind(&w.f.organization_id)
+    .bind(&w.f.team_id)
+    .bind(&w.f.user_id)
+    .bind(format!("Project {}", &project[..6]))
+    .bind(expected_time)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation,boundingbox) VALUES($1,$2,$3,'test',0,10,10,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3,ROW(1,2,3,10,20,30)::webknossos.BOUNDING_BOX)")
         .bind(&task).bind(&project).bind(&w.task_type).execute(&db.pool).await.unwrap();
     task
@@ -416,8 +437,14 @@ async fn over_limit_mail_is_sent_once_when_crossing_expected_time() {
     let user = auth(&w.owner);
     let access = AccessContext::requester(Some(&user));
     let uid = oid(&w.owner.user_id);
-    let project_name: String = sqlx::query_scalar("SELECT p.name FROM webknossos.projects p JOIN webknossos.tasks t ON t._project=p._id WHERE t._id=$1")
-        .bind(&limited).fetch_one(&db.pool).await.unwrap();
+    let project_name: String = sqlx::query_scalar(
+        "SELECT p.name FROM webknossos.projects p JOIN webknossos.tasks t ON \
+            t._project=p._id WHERE t._id=$1",
+    )
+    .bind(&limited)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     let project_owner_email: String =
         sqlx::query_scalar("SELECT email FROM webknossos.multiUsers WHERE _id=$1")
             .bind(&w.f.multi_user_id)

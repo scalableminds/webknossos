@@ -52,7 +52,13 @@ async fn start() -> (MockWk, Router, PathBuf) {
         root.join("agg.hdf5"),
     )
     .unwrap();
-    let mesh = |name: &str, format: &str, path: PathBuf| json!({"name":name,"dataFormat":format,"path":path});
+    let mesh = |name: &str, format: &str, path: PathBuf| {
+        json!({
+            "name":name,
+            "dataFormat":format,
+            "path":path
+        })
+    };
     let source = json!({"id":{"name":"ds","team":"org"},"scale":[1,1,1],"dataLayers":[{"name":"seg","category":"segmentation","elementClass":"uint8","dataFormat":"zarr","largestSegmentId":5,"boundingBox":{"topLeft":[0,0,0],"width":32,"height":32,"depth":32},"mags":[{"mag":[1,1,1],"path":root.join("seg")}],"attachments":{"meshes":[mesh("local","hdf5",root.join("local.hdf5")),mesh("zarr3","zarr3",root.join("zarr3")),mesh("precomputed","neuroglancerPrecomputed",root.join("precomputed")),mesh("gzip","hdf5",root.join("gzip.hdf5")),mesh("missing-hdf","hdf5",root.join("absent.hdf5")),mesh("missing-zarr","zarr3",root.join("absent-zarr")),mesh("missing-precomputed","neuroglancerPrecomputed",root.join("absent-pc"))],"agglomerates":[{"name":"agg","dataFormat":"hdf5","path":root.join("agg.hdf5")}]}}]});
     let wk = MockWk::start(move |call| {
         if call.path.ends_with("/validateUserAccess") {
@@ -87,7 +93,16 @@ async fn call(
     send(app.clone(), request.body(Body::from(bytes)).unwrap()).await
 }
 async fn chunks(app: &Router, name: &str, id: u64, query: &str) -> Value {
-    let (status,_,bytes)=call(app,&format!("/chunks{query}"),Some(json!({"meshFileName":name,"segmentId":{"customJsonEncoding":"bigint","value":id.to_string()}})),"t").await;
+    let (status, _, bytes) = call(
+        app,
+        &format!("/chunks{query}"),
+        Some(json!({
+            "meshFileName":name,
+            "segmentId":{"customJsonEncoding":"bigint","value":id.to_string()}
+        })),
+        "t",
+    )
+    .await;
     assert_eq!(
         status,
         StatusCode::OK,
@@ -118,7 +133,16 @@ async fn reads_all_format_chunks_in_requested_order_and_sets_gzip_header() {
             .cloned()
             .collect::<Vec<_>>();
         pieces.rotate_right(1);
-        let requests=pieces.into_iter().map(|chunk|json!({"byteOffset":chunk["byteOffset"],"byteSize":chunk["byteSize"],"segmentId":{"customJsonEncoding":"bigint","value":"18446744073709551615"}})).collect::<Vec<_>>();
+        let requests = pieces
+            .into_iter()
+            .map(|chunk| {
+                json!({
+                    "byteOffset":chunk["byteOffset"],
+                    "byteSize":chunk["byteSize"],
+                    "segmentId":{"customJsonEncoding":"bigint","value":"18446744073709551615"}
+                })
+            })
+            .collect::<Vec<_>>();
         let (status, headers, bytes) = call(
             &app,
             "/chunks/data",
@@ -301,7 +325,18 @@ async fn current_tokens_reach_remote_manifests_and_fragments_after_cache_hits() 
         );
         let info: Value = serde_json::from_slice(&bytes).unwrap();
         let chunk = &info["lods"][0]["chunks"][0];
-        let (status,_,bytes)=call(&app,"/chunks/data",Some(json!({"meshFileName":"remote","requests":[{"byteOffset":chunk["byteOffset"],"byteSize":chunk["byteSize"],"segmentId":2}]})),token).await;
+        let (status, _, bytes) = call(
+            &app,
+            "/chunks/data",
+            Some(json!({
+                "meshFileName":"remote",
+                "requests":[
+                    {"byteOffset":chunk["byteOffset"],"byteSize":chunk["byteSize"],"segmentId":2}
+                ]
+            })),
+            token,
+        )
+        .await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(bytes, b"ABCD");
     }

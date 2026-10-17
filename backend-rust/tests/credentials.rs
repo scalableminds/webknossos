@@ -50,9 +50,18 @@ fn path(store: &str, key: &str, id: &str) -> String {
 }
 
 async fn seed_store(database: &TestDb, name: &str, key: &str, only_organization: Option<&str>) {
-    sqlx::query("INSERT INTO webknossos.dataStores (name, url, publicUrl, key, onlyAllowedOrganization) VALUES ($1, $2, $3, $4, $5)")
-        .bind(name).bind(format!("http://{name}.internal.test")).bind(format!("https://{name}.example.test"))
-        .bind(key).bind(only_organization).execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataStores (name, url, publicUrl, key, \
+            onlyAllowedOrganization) VALUES ($1, $2, $3, $4, $5)",
+    )
+    .bind(name)
+    .bind(format!("http://{name}.internal.test"))
+    .bind(format!("https://{name}.example.test"))
+    .bind(key)
+    .bind(only_organization)
+    .execute(&database.pool)
+    .await
+    .unwrap();
 }
 
 #[tokio::test]
@@ -113,8 +122,14 @@ async fn every_credential_variant_round_trips_with_exact_datastore_wire_format()
         let id = store_credential(&database.pool, &user, &input)
             .await
             .unwrap();
-        let stored: (String, Option<String>, Option<String>, String, String) = sqlx::query_as("SELECT type::text, identifier, secret, _user, _organization FROM webknossos.credentials WHERE _id = $1")
-            .bind(id.as_str()).fetch_one(&database.pool).await.unwrap();
+        let stored: (String, Option<String>, Option<String>, String, String) = sqlx::query_as(
+            "SELECT type::text, identifier, secret, _user, _organization FROM \
+                webknossos.credentials WHERE _id = $1",
+        )
+        .bind(id.as_str())
+        .fetch_one(&database.pool)
+        .await
+        .unwrap();
         assert_eq!(
             stored,
             (

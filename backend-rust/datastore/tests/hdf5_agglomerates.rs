@@ -219,7 +219,17 @@ fn request(
             Cuboid, DataServiceDataRequest, DataServiceRequestSettings, VoxelPosition,
         },
     };
-    let layer=StaticLayer::from_json(&json!({"name":"seg","category":"segmentation","dataFormat":"zarr","elementClass":"uint8","largestSegmentId":5,"boundingBox":{"topLeft":[0,0,0],"width":64,"height":32,"depth":32},"mags":[{"mag":[1,1,1],"path":"/tmp/seg"}],"attachments":{"agglomerates":[{"name":"agg","path":path,"dataFormat":"hdf5"}]}})).unwrap();
+    let layer = StaticLayer::from_json(&json!({
+        "name":"seg",
+        "category":"segmentation",
+        "dataFormat":"zarr",
+        "elementClass":"uint8",
+        "largestSegmentId":5,
+        "boundingBox":{"topLeft":[0,0,0],"width":64,"height":32,"depth":32},
+        "mags":[{"mag":[1,1,1],"path":"/tmp/seg"}],
+        "attachments":{"agglomerates":[{"name":"agg","path":path,"dataFormat":"hdf5"}]}
+    }))
+    .unwrap();
     DataServiceDataRequest {
         dataset_id: None,
         data_source_id: Some(DataSourceId::new("ds", "org")),

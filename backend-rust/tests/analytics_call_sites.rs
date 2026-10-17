@@ -282,8 +282,19 @@ async fn seed_dataset(db: &TestDb, f: &Fixture, name: &str, uploader: Option<&st
     sqlx::query("INSERT INTO webknossos.dataStores (name,url,publicUrl,key) VALUES ('test-store','http://localhost:9001','http://localhost:9002','secret-key') ON CONFLICT DO NOTHING")
         .execute(&db.pool).await.unwrap();
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.datasets (_id,_dataStore,_organization,_folder,name,directoryName,isPublic,sortingKey,_uploader) SELECT $1,'test-store',$2,_rootFolder,$3,$3,TRUE,NOW(),$4 FROM webknossos.organizations WHERE _id=$2")
-        .bind(&id).bind(&f.organization_id).bind(name).bind(uploader).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.datasets \
+            (_id,_dataStore,_organization,_folder,name,directoryName,isPublic,sortingKey,\
+            _uploader) SELECT $1,'test-store',$2,_rootFolder,$3,$3,TRUE,NOW(),$4 FROM \
+            webknossos.organizations WHERE _id=$2",
+    )
+    .bind(&id)
+    .bind(&f.organization_id)
+    .bind(name)
+    .bind(uploader)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     id
 }
 

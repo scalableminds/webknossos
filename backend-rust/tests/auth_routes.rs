@@ -103,8 +103,14 @@ async fn token_reuse_creation_and_deletion_preserve_wire_contracts() {
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM webknossos.tokens WHERE _user = $1 AND tokenType = 'Authentication' AND NOT isDeleted")
         .bind(&fixture.user_id).fetch_one(&database.pool).await.unwrap();
     assert_eq!(count, 1);
-    let (expiry_ms, idle_ms): (i64, Option<i64>) = sqlx::query_as("SELECT ROUND(EXTRACT(EPOCH FROM (expirationDateTime - created)) * 1000)::bigint, idleTimeout FROM webknossos.tokens WHERE value = $1")
-        .bind(token).fetch_one(&database.pool).await.unwrap();
+    let (expiry_ms, idle_ms): (i64, Option<i64>) = sqlx::query_as(
+        "SELECT ROUND(EXTRACT(EPOCH FROM (expirationDateTime - created)) * \
+            1000)::bigint, idleTimeout FROM webknossos.tokens WHERE value = $1",
+    )
+    .bind(token)
+    .fetch_one(&database.pool)
+    .await
+    .unwrap();
     assert_eq!(expiry_ms, 23_000 * 86_400_000);
     assert_eq!(idle_ms, Some(expiry_ms));
     database.cleanup().await;
@@ -204,8 +210,14 @@ async fn datastore_generation_handles_anonymous_and_authenticated_users_with_con
         fixture.user_id
     );
     assert!(!is_deleted(&database, first).await);
-    let (expiry_ms, idle_ms): (i64, Option<i64>) = sqlx::query_as("SELECT ROUND(EXTRACT(EPOCH FROM (expirationDateTime - created)) * 1000)::bigint, idleTimeout FROM webknossos.tokens WHERE value = $1")
-        .bind(first).fetch_one(&database.pool).await.unwrap();
+    let (expiry_ms, idle_ms): (i64, Option<i64>) = sqlx::query_as(
+        "SELECT ROUND(EXTRACT(EPOCH FROM (expirationDateTime - created)) * \
+            1000)::bigint, idleTimeout FROM webknossos.tokens WHERE value = $1",
+    )
+    .bind(first)
+    .fetch_one(&database.pool)
+    .await
+    .unwrap();
     assert_eq!(expiry_ms, 120_000);
     assert_eq!(idle_ms, Some(90_000));
     for path in [
@@ -375,8 +387,19 @@ async fn concurrent_issuance_cannot_leave_a_live_datastore_token_after_account_l
 
 async fn seed_key(database: &TestDb, multi_user: &str, name: &str) -> String {
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.webauthnCredentials (_id, _multiUser, credentialId, name, userVerified, backupEligible, backupState, serializedAttestationStatement, serializedAttestedCredential, serializedExtensions) VALUES ($1, $2, $3, $4, TRUE, FALSE, FALSE, '{}'::jsonb, $3, '{}'::jsonb)")
-        .bind(&id).bind(multi_user).bind(id.as_bytes()).bind(name).execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.webauthnCredentials (_id, _multiUser, credentialId, \
+            name, userVerified, backupEligible, backupState, serializedAttestationStatement, \
+            serializedAttestedCredential, serializedExtensions) VALUES ($1, $2, $3, $4, TRUE, \
+            FALSE, FALSE, '{}'::jsonb, $3, '{}'::jsonb)",
+    )
+    .bind(&id)
+    .bind(multi_user)
+    .bind(id.as_bytes())
+    .bind(name)
+    .execute(&database.pool)
+    .await
+    .unwrap();
     id
 }
 

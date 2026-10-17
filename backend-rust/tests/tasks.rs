@@ -53,8 +53,15 @@ async fn seed(db: &TestDb, f: &Fixture) -> Tasks {
         base: object_id(),
         script: object_id(),
     };
-    sqlx::query("INSERT INTO webknossos.datastores(name,url,publicurl,key) VALUES('task-tests','http://localhost:9000','http://localhost:9000','key')").execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey) SELECT $1,'task-tests',_id,_rootfolder,'Dataset','tasks',now() FROM webknossos.organizations WHERE _id=$2")
+    sqlx::query(
+        "INSERT INTO webknossos.datastores(name,url,publicurl,key) \
+            VALUES('task-tests','http://localhost:9000','http://localhost:9000','key')",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO \
+            webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey) SELECT $1,'task-tests',_id,_rootfolder,'Dataset','tasks',now() FROM webknossos.organizations WHERE _id=$2")
         .bind(&tasks.dataset).bind(&f.organization_id).execute(&db.pool).await.unwrap();
     sqlx::query("INSERT INTO webknossos.dataset_allowedteams(_dataset,_team) VALUES($1,$2)")
         .bind(&tasks.dataset)
@@ -62,16 +69,65 @@ async fn seed(db: &TestDb, f: &Fixture) -> Tasks {
         .execute(&db.pool)
         .await
         .unwrap();
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name,priority) VALUES($1,$2,$3,$4,'Project',100)")
-        .bind(&tasks.project).bind(&f.organization_id).bind(&f.team_id).bind(&f.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_allowedmodes,settings_preferredmode,settings_branchpointsallowed,settings_somaclickingallowed,tracingtype) VALUES($1,$2,$3,'Type','Instructions',ARRAY['orthogonal']::webknossos.tasktype_modes[],'orthogonal',true,true,'skeleton')")
-        .bind(&tasks.task_type).bind(&f.organization_id).bind(&f.team_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.scripts(_id,_owner,name,gist) VALUES($1,$2,'Script','https://example.test/script')")
-        .bind(&tasks.script).bind(&f.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,_script,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,tracingtime,boundingbox,editposition,editrotation,creationinfo,created) VALUES($1,$2,$3,$4,'test',2,4,4,123,ROW(1,2,3,4,5,6)::webknossos.bounding_box,ROW(7,8,9)::webknossos.vector3,ROW(0.1,0.2,0.3)::webknossos.vector3,'import',TIMESTAMPTZ '2020-01-01T00:00:00Z')")
-        .bind(&tasks.task).bind(&tasks.project).bind(&tasks.task_type).bind(&tasks.script).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,state) VALUES($1,$2,$3,$4,'TracingBase','Finished')")
-        .bind(&tasks.base).bind(&tasks.dataset).bind(&tasks.task).bind(&f.user_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name,priority) \
+            VALUES($1,$2,$3,$4,'Project',100)",
+    )
+    .bind(&tasks.project)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_allowedmodes,settings_preferredmode,settings_branchpointsallowed,\
+            settings_somaclickingallowed,tracingtype) VALUES($1,$2,$3,'Type','Instructions',\
+            ARRAY['orthogonal']::webknossos.tasktype_modes[],'orthogonal',true,true,'skeleton')",
+    )
+    .bind(&tasks.task_type)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.scripts(_id,_owner,name,gist) \
+            VALUES($1,$2,'Script','https://example.test/script')",
+    )
+    .bind(&tasks.script)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasks(_id,_project,_tasktype,_script,neededexperience_domain,\
+            neededexperience_value,totalinstances,pendinginstances,tracingtime,boundingbox,\
+            editposition,editrotation,creationinfo,created) VALUES($1,$2,$3,$4,'test',2,4,4,123,\
+            ROW(1,2,3,4,5,6)::webknossos.bounding_box,ROW(7,8,9)::webknossos.vector3,ROW(0.1,\
+            0.2,0.3)::webknossos.vector3,'import',TIMESTAMPTZ '2020-01-01T00:00:00Z')",
+    )
+    .bind(&tasks.task)
+    .bind(&tasks.project)
+    .bind(&tasks.task_type)
+    .bind(&tasks.script)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,state) \
+            VALUES($1,$2,$3,$4,'TracingBase','Finished')",
+    )
+    .bind(&tasks.base)
+    .bind(&tasks.dataset)
+    .bind(&tasks.task)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     tasks
 }
 async fn team_user(db: &TestDb, f: &Fixture, manager: bool) -> UserFixture {
@@ -89,8 +145,21 @@ async fn team_user(db: &TestDb, f: &Fixture, manager: bool) -> UserFixture {
 }
 async fn annotation(db: &TestDb, t: &Tasks, user: &str, state: &str, visibility: &str) -> String {
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,state,visibility) VALUES($1,$2,$3,$4,'Task',$5::webknossos.annotation_state,$6::webknossos.annotation_visibility)")
-        .bind(&id).bind(&t.dataset).bind(&t.task).bind(user).bind(state).bind(visibility).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.annotations(_id,_dataset,_task,_user,typ,state,visibility) \
+            VALUES($1,$2,$3,$4,'Task',$5::webknossos.annotation_state,\
+            $6::webknossos.annotation_visibility)",
+    )
+    .bind(&id)
+    .bind(&t.dataset)
+    .bind(&t.task)
+    .bind(user)
+    .bind(state)
+    .bind(visibility)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     id
 }
 fn update_parameters(t: &Tasks, pending: i32) -> Value {
@@ -252,7 +321,24 @@ async fn task_lists_obey_management_filters_pagination_and_organization_domains(
         .2,
         json!([])
     );
-    assert_eq!(request(&app,&manager.token,"POST","/api/tasks/list",Some(json!({"project":t.project,"taskType":t.task_type,"ids":[t.task],"user":member.user_id,"random":true}))).await.2[0]["id"],t.task);
+    assert_eq!(
+        request(
+            &app,
+            &manager.token,
+            "POST",
+            "/api/tasks/list",
+            Some(json!({
+                "project":t.project,
+                "taskType":t.task_type,
+                "ids":[t.task],
+                "user":member.user_id,
+                "random":true
+            }))
+        )
+        .await
+        .2[0]["id"],
+        t.task
+    );
     assert_eq!(
         request(
             &app,
@@ -346,7 +432,15 @@ async fn task_lists_obey_management_filters_pagination_and_organization_domains(
         .0,
         StatusCode::BAD_REQUEST
     );
-    sqlx::query("INSERT INTO webknossos.experiencedomains(domain,_organization) VALUES('test',$1),('foreign',$2)").bind(&f.organization_id).bind(&foreign.organization_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.experiencedomains(domain,_organization) \
+            VALUES('test',$1),('foreign',$2)",
+    )
+    .bind(&f.organization_id)
+    .bind(&foreign.organization_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         request(
             &app,
@@ -516,7 +610,16 @@ async fn task_peek_uses_experience_membership_priority_and_cancellation_rules() 
         request(&app, &member.token, "GET", path, None).await.0,
         StatusCode::BAD_REQUEST
     );
-    sqlx::query("INSERT INTO webknossos.user_experiences(_user,domain,value) VALUES($1,'test',2),($2,'test',2),($3,'test',2)").bind(&member.user_id).bind(&manager.user_id).bind(&f.user_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.user_experiences(_user,domain,value) \
+            VALUES($1,'test',2),($2,'test',2),($3,'test',2)",
+    )
+    .bind(&member.user_id)
+    .bind(&manager.user_id)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         request(&app, &f.token, "GET", path, None).await.0,
         StatusCode::BAD_REQUEST
@@ -583,12 +686,41 @@ async fn task_peek_uses_experience_membership_priority_and_cancellation_rules() 
     let foreign = db.fixture().await;
     let foreign_project = object_id();
     let foreign_task = object_id();
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name,priority) VALUES($1,$2,$3,$4,'Foreign',1000)")
-        .bind(&foreign_project).bind(&foreign.organization_id).bind(&foreign.team_id).bind(&foreign.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation) VALUES($1,$2,$3,'test',1,1,1,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3)")
-        .bind(&foreign_task).bind(&foreign_project).bind(&t.task_type).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ) VALUES($1,$2,$3,$4,'TracingBase')")
-        .bind(object_id()).bind(&t.dataset).bind(&foreign_task).bind(&foreign.user_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name,priority) \
+            VALUES($1,$2,$3,$4,'Foreign',1000)",
+    )
+    .bind(&foreign_project)
+    .bind(&foreign.organization_id)
+    .bind(&foreign.team_id)
+    .bind(&foreign.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,\
+            neededexperience_value,totalinstances,pendinginstances,editposition,editrotation) \
+            VALUES($1,$2,$3,'test',1,1,1,ROW(0,0,0)::webknossos.vector3,ROW(0,0,\
+            0)::webknossos.vector3)",
+    )
+    .bind(&foreign_task)
+    .bind(&foreign_project)
+    .bind(&t.task_type)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ) \
+            VALUES($1,$2,$3,$4,'TracingBase')",
+    )
+    .bind(object_id())
+    .bind(&t.dataset)
+    .bind(&foreign_task)
+    .bind(&foreign.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.user_team_roles(_user,_team) VALUES($1,$2)")
         .bind(&manager.user_id)
         .bind(&foreign.team_id)

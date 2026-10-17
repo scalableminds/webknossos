@@ -570,7 +570,21 @@ async fn legacy_reserve_upload_adapts_v10_through_v13_and_discards_conversion() 
         } else {
             json!([{"datasetId":ID,"layerName":"a"}])
         };
-        let (status, body) = post_json(&f.app, &format!("/data/v{version}/datasets/reserveUpload"), json!({"uploadId":"old", "name":"legacy", "organization":"org", "totalFileCount":1, "filePaths":["file"], "initialTeams":[], "layersToLink":links, "needsConversion":true})).await;
+        let (status, body) = post_json(
+            &f.app,
+            &format!("/data/v{version}/datasets/reserveUpload"),
+            json!({
+                "uploadId":"old",
+                "name":"legacy",
+                "organization":"org",
+                "totalFileCount":1,
+                "filePaths":["file"],
+                "initialTeams":[],
+                "layersToLink":links,
+                "needsConversion":true
+            }),
+        )
+        .await;
         assert_eq!(status, StatusCode::OK, "{body}");
         let call =
             f.wk.calls()

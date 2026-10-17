@@ -33,7 +33,13 @@ async fn start() -> (MockWk, Router, AppState, PathBuf) {
         N.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     ));
     copy(&fixtures(), &root);
-    let attachment = |name: &str, path: PathBuf, format: &str| json!({"name":name,"path":path,"dataFormat":format});
+    let attachment = |name: &str, path: PathBuf, format: &str| {
+        json!({
+            "name":name,
+            "path":path,
+            "dataFormat":format
+        })
+    };
     let source = json!({"id":{"name":"ds","team":"org"},"scale":[1,1,1],"dataLayers":[{"name":"seg","category":"segmentation","elementClass":"uint8","dataFormat":"zarr","largestSegmentId":7,"boundingBox":{"topLeft":[0,0,0],"width":32,"height":32,"depth":32},"mags":[{"mag":[1,1,1],"path":"/not-read"}],"attachments":{"connectomes":[attachment("hdf",root.join("contiguous.hdf5"),"hdf5"),attachment("filtered",root.join("chunked_v4.hdf5"),"hdf5"),attachment("zarr",root.join("zarr3"),"zarr3"),attachment("missing",root.join("absent.hdf5"),"hdf5"),attachment("unsupported",root.join("contiguous.hdf5"),"neuroglancerPrecomputed")]}}]});
     let wk = MockWk::start(move |call| {
         if call.path.ends_with("/validateUserAccess") {
@@ -111,7 +117,17 @@ async fn all_five_routes_match_actual_scala_native_and_zarr_oracles() {
             );
         }
         for direction in ["src", "dst"] {
-            let expected=oracle[direction].as_array().unwrap().iter().map(|id|json!({"customJsonEncoding":"bigint","value":(id.as_i64().unwrap() as u64).to_string()})).collect::<Vec<_>>();
+            let expected = oracle[direction]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|id| {
+                    json!({
+                        "customJsonEncoding":"bigint",
+                        "value":(id.as_i64().unwrap() as u64).to_string()
+                    })
+                })
+                .collect::<Vec<_>>();
             assert_eq!(
                 call(
                     &app,
@@ -234,7 +250,24 @@ async fn auth_schema_direction_and_missing_files_are_enforced() {
         .await,
         (StatusCode::OK, json!([]))
     );
-    assert_eq!(call(&app,"/synapses",Some(json!({"connectomeFile":"zarr","agglomerateIds":[{"customJsonEncoding":"bigint","value":"18446744073709551615"}]})),"t").await,(StatusCode::OK,json!([{"in":[],"out":[]}])));
+    assert_eq!(
+        call(
+            &app,
+            "/synapses",
+            Some(json!({
+                "connectomeFile":"zarr",
+                "agglomerateIds":[{"customJsonEncoding":"bigint","value":"18446744073709551615"}]
+            })),
+            "t"
+        )
+        .await,
+        (
+            StatusCode::OK,
+            json!([
+                {"in":[],"out":[]}
+            ])
+        )
+    );
 }
 #[tokio::test]
 async fn warm_cache_authorization_and_http_invalidation_reload_changed_tables() {

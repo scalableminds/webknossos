@@ -51,12 +51,23 @@ async fn seed(db: &TestDb, f: &Fixture) -> Annotations {
         annotation: object_id(),
         other: object_id(),
     };
-    sqlx::query("INSERT INTO webknossos.dataStores(name,url,publicUrl,key) VALUES('links','http://localhost:9000','https://data.example.test','never-return-this-key')").execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tracingStores(name,url,publicUrl,key) VALUES('tracing','http://localhost:9001','https://tracing.example.test','never-return-tracing-key')").execute(&db.pool).await.unwrap();
+    sqlx::query("INSERT INTO webknossos.dataStores(name,url,publicUrl,key) \
+            VALUES('links','http://localhost:9000','https://data.example.test','never-return-this-key')").execute(&db.pool).await.unwrap();
+    sqlx::query("INSERT INTO webknossos.tracingStores(name,url,publicUrl,key) \
+            VALUES('tracing','http://localhost:9001','https://tracing.example.test','never-return-tracing-key')").execute(&db.pool).await.unwrap();
     sqlx::query("INSERT INTO webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey) SELECT $1,'links',_id,_rootfolder,'Dataset','directory',now() FROM webknossos.organizations WHERE _id=$2")
         .bind(&data.dataset).bind(&f.organization_id).execute(&db.pool).await.unwrap();
     for id in [&data.annotation, &data.other] {
-        sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_user,typ,visibility) VALUES($1,$2,$3,'Explorational','Private')").bind(id).bind(&data.dataset).bind(&f.user_id).execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO webknossos.annotations(_id,_dataset,_user,typ,visibility) \
+                VALUES($1,$2,$3,'Explorational','Private')",
+        )
+        .bind(id)
+        .bind(&data.dataset)
+        .bind(&f.user_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
     sqlx::query("INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) VALUES($1,'a-skeleton','Skeleton','Skeleton','{\"treeCount\":2}'::jsonb),($1,'b-volume','Volume','Volume','{\"segmentCount\":3}'::jsonb)")
         .bind(&data.annotation).execute(&db.pool).await.unwrap();
@@ -203,7 +214,16 @@ async fn private_link_permissions_are_owner_only_and_rejected_rebind_is_atomic()
     let member = db.seed_user(&object_id(), &f.organization_id, false).await;
     let foreign = db.fixture().await;
     let target = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_user,typ,visibility) VALUES($1,$2,$3,'Explorational','Internal')").bind(&target).bind(&a.dataset).bind(&admin.user_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotations(_id,_dataset,_user,typ,visibility) \
+            VALUES($1,$2,$3,'Explorational','Internal')",
+    )
+    .bind(&target)
+    .bind(&a.dataset)
+    .bind(&admin.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let app = router(AppState {
         pool: db.pool.clone(),
     });
@@ -471,7 +491,14 @@ async fn annotation_source_uses_private_link_or_query_user_token_and_real_metada
         .0,
         StatusCode::OK
     );
-    sqlx::query("UPDATE webknossos.annotation_privateLinks SET expirationDateTime=TIMESTAMPTZ '2020-01-01T00:00:00Z' WHERE _id=$1").bind(created["id"].as_str().unwrap()).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "UPDATE webknossos.annotation_privateLinks SET expirationDateTime=TIMESTAMPTZ \
+            '2020-01-01T00:00:00Z' WHERE _id=$1",
+    )
+    .bind(created["id"].as_str().unwrap())
+    .execute(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         request(
             &app,
@@ -525,7 +552,14 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
             && restricted.allow_finish
             && restricted.allow_download
     );
-    sqlx::query("UPDATE webknossos.annotations SET collaborationMode='Exclusive',visibility='Internal' WHERE _id=$1").bind(&a.annotation).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "UPDATE webknossos.annotations SET \
+            collaborationMode='Exclusive',visibility='Internal' WHERE _id=$1",
+    )
+    .bind(&a.annotation)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let metadata =
         webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &a.annotation, false)
             .await
@@ -534,7 +568,15 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
     assert!(restricted.allow_access && restricted.allow_update);
     assert!(!restricted.allow_update_with_mutex);
     assert!(!restricted.allow_finish);
-    sqlx::query("INSERT INTO webknossos.annotation_mutexes(_annotation,_user,sessionId,expiry) VALUES($1,$2,'session',now()+interval '1 hour')").bind(&a.annotation).bind(&peer.id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotation_mutexes(_annotation,_user,sessionId,expiry) \
+            VALUES($1,$2,'session',now()+interval '1 hour')",
+    )
+    .bind(&a.annotation)
+    .bind(&peer.id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let metadata =
         webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &a.annotation, false)
             .await
@@ -593,10 +635,53 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
     .execute(&db.pool)
     .await
     .unwrap();
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,'Managed-task')").bind(&project).bind(&f.organization_id).bind(&f.team_id).bind(&f.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'Managed-type','',true,true)").bind(&task_type).bind(&f.organization_id).bind(&f.team_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation) VALUES($1,$2,$3,'test',0,1,1,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3)").bind(&task).bind(&project).bind(&task_type).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,visibility) VALUES($1,$2,$3,$4,'Task','Private')").bind(&task_annotation).bind(&a.dataset).bind(&task).bind(&f.user_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+            VALUES($1,$2,$3,$4,'Managed-task')",
+    )
+    .bind(&project)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,\
+            'Managed-type','',true,true)",
+    )
+    .bind(&task_type)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,\
+            neededexperience_value,totalinstances,pendinginstances,editposition,editrotation) \
+            VALUES($1,$2,$3,'test',0,1,1,ROW(0,0,0)::webknossos.vector3,ROW(0,0,\
+            0)::webknossos.vector3)",
+    )
+    .bind(&task)
+    .bind(&project)
+    .bind(&task_type)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,visibility) \
+            VALUES($1,$2,$3,$4,'Task','Private')",
+    )
+    .bind(&task_annotation)
+    .bind(&a.dataset)
+    .bind(&task)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     assert!(
         webknossos_backend::annotation::access::find(
             &db.pool,

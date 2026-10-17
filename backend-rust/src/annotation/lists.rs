@@ -232,15 +232,22 @@ async fn readable(
 }
 async fn assert_editable_user(pool: &PgPool, user: &AuthUser, id: &str) -> ApiResult<()> {
     ObjectId::parse(id)?;
-    let access:Option<(bool,bool)>=sqlx::query_as(r#"SELECT ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles target_role
+    let access: Option<(bool, bool)> = sqlx::query_as(
+        r#"SELECT ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles target_role
         JOIN webknossos.teams_ team ON team._id=target_role._team AND team._organization=$2
         JOIN webknossos.user_team_roles requester_role ON requester_role._team=team._id AND requester_role._user=$1 AND requester_role.isTeamManager
         WHERE target_role._user=target._id)) AS manager,
         NOT EXISTS(SELECT 1 FROM webknossos.user_team_roles role JOIN webknossos.teams_ team ON team._id=role._team WHERE role._user=target._id AND team._organization=target._organization) AS unteamed
         FROM webknossos.users_ target WHERE target._id=$4 AND target._organization=$2 AND (target._id=$1 OR $3 OR EXISTS(
           SELECT 1 FROM webknossos.user_team_roles target_role JOIN webknossos.teams_ team ON team._id=target_role._team AND team._organization=$2
-          JOIN webknossos.user_team_roles requester_role ON requester_role._team=team._id AND requester_role._user=$1 AND requester_role.isTeamManager WHERE target_role._user=target._id))"#)
-        .bind(&user.id).bind(&user.organization_id).bind(user.is_admin).bind(id).fetch_optional(pool).await?;
+          JOIN webknossos.user_team_roles requester_role ON requester_role._team=team._id AND requester_role._user=$1 AND requester_role.isTeamManager WHERE target_role._user=target._id))"#,
+    )
+    .bind(&user.id)
+    .bind(&user.organization_id)
+    .bind(user.is_admin)
+    .bind(id)
+    .fetch_optional(pool)
+    .await?;
     match access {
         None => Err(ApiError::not_found(crate::msg::user::MISSING)),
         Some((true, _)) | Some((_, true)) => Ok(()),
@@ -310,7 +317,14 @@ pub(crate) async fn full_json_for(
     };
     value["owner"] = owner.clone();
     value["user"] = owner;
-    let contributor_ids:Vec<String>=sqlx::query_scalar("SELECT u._id FROM webknossos.annotation_contributors contributor JOIN webknossos.users_ u ON u._id=contributor._user WHERE contributor._annotation=$1 AND NOT u.isUnlisted ORDER BY u._id").bind(id).fetch_all(&mut *connection).await?;
+    let contributor_ids: Vec<String> = sqlx::query_scalar(
+        "SELECT u._id FROM webknossos.annotation_contributors contributor JOIN \
+            webknossos.users_ u ON u._id=contributor._user WHERE contributor._annotation=$1 AND \
+            NOT u.isUnlisted ORDER BY u._id",
+    )
+    .bind(id)
+    .fetch_all(&mut *connection)
+    .await?;
     let mut contributors = Vec::new();
     for id in contributor_ids {
         contributors.push(compact_user(connection, &id).await?);
@@ -437,8 +451,20 @@ async fn task_annotations(
     Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
 ) -> ApiResult<Json<Value>> {
     let id = ObjectId::parse_path(&id)?.to_string();
-    let team:String=sqlx::query_scalar("SELECT p._team FROM webknossos.tasks_ task JOIN webknossos.projects_ p ON p._id=task._project JOIN webknossos.teams_ team ON team._id=p._team AND team._organization=$2 WHERE task._id=$4 AND p._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles role WHERE role._team=p._team AND role._user=$1))")
-        .bind(&user.id).bind(&user.organization_id).bind(user.is_admin).bind(&id).fetch_optional(&state.pool).await?.ok_or_else(||ApiError::not_found("Task not found."))?;
+    let team: String = sqlx::query_scalar(
+        "SELECT p._team FROM webknossos.tasks_ task JOIN webknossos.projects_ p ON \
+            p._id=task._project JOIN webknossos.teams_ team ON team._id=p._team AND \
+            team._organization=$2 WHERE task._id=$4 AND p._organization=$2 AND ($3 OR \
+            EXISTS(SELECT 1 FROM webknossos.user_team_roles role WHERE role._team=p._team AND \
+            role._user=$1))",
+    )
+    .bind(&user.id)
+    .bind(&user.organization_id)
+    .bind(user.is_admin)
+    .bind(&id)
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| ApiError::not_found("Task not found."))?;
     if !user.can_manage_team(&state.pool, &team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }

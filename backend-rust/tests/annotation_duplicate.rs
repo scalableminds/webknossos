@@ -253,10 +253,29 @@ async fn world(db: &TestDb, tracing_url: Option<&str>) -> World {
             .execute(&db.pool).await.unwrap();
     }
     let (task, project, task_type) = (object_id(), object_id(), object_id());
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,'Dup-project')")
-        .bind(&project).bind(&f.organization_id).bind(&f.team_id).bind(&f.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'Dup-type','',true,true)")
-        .bind(&task_type).bind(&f.organization_id).bind(&f.team_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+            VALUES($1,$2,$3,$4,'Dup-project')",
+    )
+    .bind(&project)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,\
+            'Dup-type','',true,true)",
+    )
+    .bind(&task_type)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation,boundingbox) VALUES($1,$2,$3,'test',0,10,8,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3,ROW(1,2,3,10,20,30)::webknossos.BOUNDING_BOX)")
         .bind(&task).bind(&project).bind(&task_type).execute(&db.pool).await.unwrap();
     let w = World {

@@ -253,8 +253,14 @@ async fn storage_details_and_cache_clear_have_exact_shapes_and_permissions() {
             .0,
         StatusCode::OK
     );
-    let (count,version):(i64,i32)=sqlx::query_as("SELECT (SELECT count(*) FROM webknossos.dataset_thumbnails WHERE _dataset=$1),thumbnailCacheVersion FROM webknossos.datasets WHERE _id=$1")
-        .bind(&id).fetch_one(&db.pool).await.unwrap();
+    let (count, version): (i64, i32) = sqlx::query_as(
+        "SELECT (SELECT count(*) FROM webknossos.dataset_thumbnails WHERE \
+            _dataset=$1),thumbnailCacheVersion FROM webknossos.datasets WHERE _id=$1",
+    )
+    .bind(&id)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!((count, version), (0, 1));
     let foreign = db.fixture().await;
     assert_eq!(

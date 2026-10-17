@@ -110,7 +110,19 @@ async fn explore_add_virtual_and_duplicate_create_datasets_through_the_datastore
     });
 
     // exploreRemote: credentials stored, datastore called with a fresh user DataStore token.
-    let (status, body) = post(&app, "/datasets/exploreRemote", &fixture.token, json!([{"remoteUri": "s3://bucket/a.zarr/.zattrs", "credentialIdentifier": "key", "credentialSecret": "secret"}])).await;
+    let (status, body) = post(
+        &app,
+        "/datasets/exploreRemote",
+        &fixture.token,
+        json!([
+            {
+                "remoteUri": "s3://bucket/a.zarr/.zattrs",
+                "credentialIdentifier": "key",
+                "credentialSecret": "secret"
+            }
+        ]),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["report"], "Found 1 layer");
     let (credential_id, name, user): (String, String, String) =
@@ -176,8 +188,16 @@ async fn explore_add_virtual_and_duplicate_create_datasets_through_the_datastore
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let id = body.as_str().unwrap().to_owned();
-    let (creation, folder_name, path, uploader): (String, String, String, Option<String>) = sqlx::query_as("SELECT d.creationType::text,f.name,m.path,d._uploader FROM webknossos.datasets d JOIN webknossos.folders f ON f._id=d._folder JOIN webknossos.dataset_mags m ON m._dataset=d._id WHERE d._id=$1")
-        .bind(&id).fetch_one(&db.pool).await.unwrap();
+    let (creation, folder_name, path, uploader): (String, String, String, Option<String>) =
+        sqlx::query_as(
+            "SELECT d.creationType::text,f.name,m.path,d._uploader FROM webknossos.datasets \
+            d JOIN webknossos.folders f ON f._id=d._folder JOIN webknossos.dataset_mags m ON \
+            m._dataset=d._id WHERE d._id=$1",
+        )
+        .bind(&id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
     assert_eq!(
         (
             creation.as_str(),
@@ -321,8 +341,16 @@ async fn explore_add_virtual_and_duplicate_create_datasets_through_the_datastore
     let (status, body) = post(&app, &duplicate, &fixture.token, json!({})).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let copy = body.as_str().unwrap().to_owned();
-    let row: (String, String, Option<String>, String, String, i64) = sqlx::query_as("SELECT d._organization,d.name,d.description,d.creationType::text,d.directoryName,(SELECT count(*) FROM webknossos.dataset_mags WHERE _dataset=d._id) FROM webknossos.datasets d WHERE d._id=$1")
-        .bind(&copy).fetch_one(&db.pool).await.unwrap();
+    let row: (String, String, Option<String>, String, String, i64) = sqlx::query_as(
+        "SELECT \
+            d._organization,d.name,d.description,d.creationType::text,d.directoryName,(SELECT \
+            count(*) FROM webknossos.dataset_mags WHERE _dataset=d._id) FROM \
+            webknossos.datasets d WHERE d._id=$1",
+    )
+    .bind(&copy)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         row,
         (

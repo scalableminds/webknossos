@@ -22,12 +22,28 @@ use axum::{
 use serde_json::Value;
 use std::sync::Arc;
 pub fn router() -> Router<AppState> {
-    controller(Router::new()
-        .route("/data/datasets/{datasetId}/layers/{dataLayerName}/connectomes",get(list))
-        .route("/data/datasets/{datasetId}/layers/{dataLayerName}/connectomes/synapses/positions",post(positions))
-        .route("/data/datasets/{datasetId}/layers/{dataLayerName}/connectomes/synapses/types",post(types))
-        .route("/data/datasets/{datasetId}/layers/{dataLayerName}/connectomes/synapses/{direction}",post(partners))
-        .route("/data/datasets/{datasetId}/layers/{dataLayerName}/connectomes/synapses",post(synapses)),true)
+    let routes = Router::new()
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/connectomes",
+            get(list),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/connectomes/synapses/positions",
+            post(positions),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/connectomes/synapses/types",
+            post(types),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/connectomes/synapses/{direction}",
+            post(partners),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/connectomes/synapses",
+            post(synapses),
+        );
+    controller(routes, true)
 }
 async fn layer(
     state: &AppState,

@@ -45,19 +45,42 @@ async fn seed_dependencies(
     let dataset = object_id();
     let task = object_id();
     let annotation = object_id();
-    sqlx::query("INSERT INTO webknossos.datastores(name,url,publicurl,key) VALUES('rust-test','http://localhost:9000','http://localhost:9000','key')")
-        .execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey) SELECT $1,'rust-test',_id,_rootfolder,'Test dataset','test',now() FROM webknossos.organizations WHERE _id=$2")
+    sqlx::query(
+        "INSERT INTO webknossos.datastores(name,url,publicurl,key) \
+            VALUES('rust-test','http://localhost:9000','http://localhost:9000','key')",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO \
+            webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey) SELECT $1,'rust-test',_id,_rootfolder,'Test dataset','test',now() FROM webknossos.organizations WHERE _id=$2")
         .bind(&dataset).bind(&f.organization_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,tracingtime,editposition,editrotation) VALUES($1,$2,$3,'test',0,2,2,99,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3)")
+    sqlx::query("INSERT INTO \
+            webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,tracingtime,editposition,editrotation) VALUES($1,$2,$3,'test',0,2,2,99,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3)")
         .bind(&task).bind(project).bind(task_type).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ) VALUES($1,$2,$3,$4,'Task')")
-        .bind(&annotation).bind(dataset).bind(&task).bind(&f.user_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ) \
+            VALUES($1,$2,$3,$4,'Task')",
+    )
+    .bind(&annotation)
+    .bind(dataset)
+    .bind(&task)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     (task, annotation)
 }
 async fn assert_dependencies_deleted(db: &TestDb, task: &str, annotation: &str) {
-    let deleted: bool=sqlx::query_scalar("SELECT t.isdeleted AND a.isdeleted FROM webknossos.tasks t JOIN webknossos.annotations a ON a._task=t._id WHERE t._id=$1 AND a._id=$2")
-        .bind(task).bind(annotation).fetch_one(&db.pool).await.unwrap();
+    let deleted: bool = sqlx::query_scalar(
+        "SELECT t.isdeleted AND a.isdeleted FROM webknossos.tasks t JOIN \
+            webknossos.annotations a ON a._task=t._id WHERE t._id=$1 AND a._id=$2",
+    )
+    .bind(task)
+    .bind(annotation)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert!(deleted);
 }
 

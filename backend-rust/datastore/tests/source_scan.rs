@@ -376,8 +376,12 @@ fn report_dtos_keep_play_option_fields_and_typed_error_paths() {
         error.to_play_json(),
         json!({"obj.rootPath":[{"msg":["error.expected.jsstring"],"args":[]}]})
     );
-    let paths:DataSourcePathInfo=serde_json::from_value(json!({"dataSourceId":{"name":"ds","team":"org"},
-        "magPathInfos":[{"path":"s3://bucket/a","realPath":"s3://bucket/a","hasLocalData":false}],"attachmentPathInfos":[]})).unwrap();
+    let paths: DataSourcePathInfo = serde_json::from_value(json!({
+        "dataSourceId":{"name":"ds","team":"org"},
+        "magPathInfos":[{"path":"s3://bucket/a","realPath":"s3://bucket/a","hasLocalData":false}],
+        "attachmentPathInfos":[]
+    }))
+    .unwrap();
     assert!(!paths.is_empty());
     assert_eq!(paths.mag_path_infos[0].path.to_string(), "s3://bucket/a");
 }
@@ -523,7 +527,15 @@ async fn denied_scan_create_and_path_report_have_no_filesystem_or_reporting_effe
 async fn create_and_lookup_organization_directory_obey_required_boolean_binders() {
     let root = temp();
     let (wk, _, app) = route_app(&root).await;
-    let (status,_,body)=http(&app,"GET","/data/getOrganizationBaseDirectory?organizationId=org&requireAllowsUpload=1&requireLocal=true","admin",None).await;
+    let (status, _, body) = http(
+        &app,
+        "GET",
+        "/data/getOrganizationBaseDirectory?organizationId=org&requireAllowsUpload=1&\
+            requireLocal=true",
+        "admin",
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(common::json(&body), json!(root.join("org")));
     assert!(

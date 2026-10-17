@@ -60,8 +60,13 @@ async fn health(
     require_read(&state, user.as_ref(), &id, query.sharing_token.as_deref()).await?;
     // Global datastore lookup after the dataset grant allows public/shared
     // datasets to use a service restricted to another organization.
-    let (usable,has_voxel,base):(bool,bool,String)=sqlx::query_as("SELECT d.isUsable,d.voxelSizeFactor IS NOT NULL,s.url FROM webknossos.datasets_ d JOIN webknossos.dataStores_ s ON s.name=trim(d._dataStore) WHERE d._id=$1")
-        .bind(id.as_str()).fetch_one(&state.pool).await?;
+    let (usable, has_voxel, base): (bool, bool, String) = sqlx::query_as(
+        "SELECT d.isUsable,d.voxelSizeFactor IS NOT NULL,s.url FROM webknossos.datasets_ \
+            d JOIN webknossos.dataStores_ s ON s.name=trim(d._dataStore) WHERE d._id=$1",
+    )
+    .bind(id.as_str())
+    .fetch_one(&state.pool)
+    .await?;
     if !usable {
         return Err(unusable(&id));
     }
@@ -139,15 +144,23 @@ async fn used_storage_details(
     if !usable {
         return Err(unusable(&id));
     }
-    let mut rows=sqlx::query_scalar::<_,Value>(r#"SELECT jsonb_build_object('layerName',layerName,
+    let mut rows = sqlx::query_scalar::<_, Value>(
+        r#"SELECT jsonb_build_object('layerName',layerName,
       'name',concat((mag).x::int,'-',(mag).y::int,'-',(mag).z::int),'usedStorageBytes',usedStorageBytes,
       'lastUpdated',floor(extract(epoch from lastUpdated)*1000)::bigint)
-      FROM webknossos.organization_usedStorage_mags WHERE _dataset=$1"#)
-        .bind(id.as_str()).fetch_all(&state.pool).await?;
-    let attachments=sqlx::query_scalar::<_,Value>(r#"SELECT jsonb_build_object('layerName',layerName,'name',name,
+      FROM webknossos.organization_usedStorage_mags WHERE _dataset=$1"#,
+    )
+    .bind(id.as_str())
+    .fetch_all(&state.pool)
+    .await?;
+    let attachments = sqlx::query_scalar::<_, Value>(
+        r#"SELECT jsonb_build_object('layerName',layerName,'name',name,
       'attachmentType',type,'usedStorageBytes',usedStorageBytes,'lastUpdated',floor(extract(epoch from lastUpdated)*1000)::bigint)
-      FROM webknossos.organization_usedStorage_attachments WHERE _dataset=$1"#)
-        .bind(id.as_str()).fetch_all(&state.pool).await?;
+      FROM webknossos.organization_usedStorage_attachments WHERE _dataset=$1"#,
+    )
+    .bind(id.as_str())
+    .fetch_all(&state.pool)
+    .await?;
     rows.extend(attachments);
     Ok(Json(rows))
 }

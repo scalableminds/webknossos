@@ -243,7 +243,16 @@ async fn reads_hdf5_segment_indices() {
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body, json!([[0, 0, 0], [32, 0, 0]]));
-    let (status,result)=call(&app,"POST","seg/segmentIndex",Some(json!({"segmentIds":[{"customJsonEncoding":"bigint","value":"18446744073709551615"}],"mag":[1,1,1]}))).await;
+    let (status, result) = call(
+        &app,
+        "POST",
+        "seg/segmentIndex",
+        Some(json!({
+            "segmentIds":[{"customJsonEncoding":"bigint","value":"18446744073709551615"}],
+            "mag":[1,1,1]
+        })),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK, "{result}");
     assert_eq!(
         result,

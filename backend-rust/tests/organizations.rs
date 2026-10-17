@@ -50,11 +50,28 @@ async fn seed_billing(db: &TestDb, f: &Fixture) {
     sqlx::query("UPDATE webknossos.organizations SET additionalinformation='Public information',newusermailinglist='private@example.test',lasttermsofserviceacceptanceversion=7,lasttermsofserviceacceptancetime='2026-01-01T00:00:00Z',pricingplan='Team',aiplan='Team_AI',includedusers=10,includedstorage=100000,paiduntil='2027-01-01T00:00:00Z' WHERE _id=$1")
         .bind(&f.organization_id).execute(&db.pool).await.unwrap();
     for (delta, deleted) in [(1000, false), (-200, false), (8000, true)] {
-        sqlx::query("INSERT INTO webknossos.credit_transactions(_id,_organization,milli_credit_delta,comment,transaction_state,credit_state,is_deleted) VALUES($1,$2,$3,'test','Complete','AddCredits',$4)")
-            .bind(object_id()).bind(&f.organization_id).bind(delta).bind(deleted).execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO \
+                webknossos.credit_transactions(_id,_organization,milli_credit_delta,comment,\
+                transaction_state,credit_state,is_deleted) VALUES($1,$2,$3,'test','Complete',\
+                'AddCredits',$4)",
+        )
+        .bind(object_id())
+        .bind(&f.organization_id)
+        .bind(delta)
+        .bind(deleted)
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
     let dataset = object_id();
-    sqlx::query("INSERT INTO webknossos.datastores(name,url,publicurl,key) VALUES('rust-test','http://localhost:9000','http://localhost:9000','key')").execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.datastores(name,url,publicurl,key) \
+            VALUES('rust-test','http://localhost:9000','http://localhost:9000','key')",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey) SELECT $1,'rust-test',_id,_rootfolder,'Test dataset','test',now() FROM webknossos.organizations WHERE _id=$2")
         .bind(&dataset).bind(&f.organization_id).execute(&db.pool).await.unwrap();
     sqlx::query("INSERT INTO webknossos.dataset_layers(_dataset,name,category,elementclass,boundingbox) VALUES($1,'layer','segmentation','uint8',ROW(0,0,0,10,10,10)::webknossos.bounding_box)")
@@ -169,8 +186,18 @@ async fn default_invite_and_account_organization_listing() {
             .1["id"],
         f.organization_id
     );
-    sqlx::query("INSERT INTO webknossos.invites(_id,tokenvalue,_organization,autoactivate,expirationdatetime) VALUES($1,'valid-invite',$2,true,now()+interval '1 hour'),($3,'expired-invite',$2,true,now()-interval '1 hour')")
-        .bind(object_id()).bind(&f.organization_id).bind(object_id()).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.invites(_id,tokenvalue,_organization,autoactivate,expirationdatetime) \
+            VALUES($1,'valid-invite',$2,true,now()+interval \
+            '1 hour'),($3,'expired-invite',$2,true,now()-interval '1 hour')",
+    )
+    .bind(object_id())
+    .bind(&f.organization_id)
+    .bind(object_id())
+    .execute(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         request(
             &app,
@@ -234,8 +261,16 @@ async fn default_invite_and_account_organization_listing() {
         1
     );
     // A second identity of the same account makes its organization listable.
-    sqlx::query("INSERT INTO webknossos.users(_id,_multiuser,_organization,userconfiguration) VALUES($1,$2,$3,'{}')")
-        .bind(object_id()).bind(&f.multi_user_id).bind(&other.organization_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.users(_id,_multiuser,_organization,userconfiguration) \
+            VALUES($1,$2,$3,'{}')",
+    )
+    .bind(object_id())
+    .bind(&f.multi_user_id)
+    .bind(&other.organization_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         request(
             &app,
@@ -311,8 +346,17 @@ async fn organization_patch_is_admin_only_and_preserves_billing_and_root() {
     let other = db.seed_user(&object_id(), "other-rust-org", true).await;
     let app = app(&db);
     let path = format!("/organizations/{}", f.organization_id);
-    let immutable:Value=sqlx::query_scalar("SELECT jsonb_build_object('root',_rootfolder,'pricingPlan',pricingplan,'aiPlan',aiplan,'includedUsers',includedusers,'includedStorage',includedstorage,'paidUntil',paiduntil,'tosVersion',lasttermsofserviceacceptanceversion) FROM webknossos.organizations WHERE _id=$1")
-        .bind(&f.organization_id).fetch_one(&db.pool).await.unwrap();
+    let immutable: Value = sqlx::query_scalar(
+        "SELECT \
+            jsonb_build_object('root',_rootfolder,'pricingPlan',pricingplan,'aiPlan',aiplan,\
+            'includedUsers',includedusers,'includedStorage',includedstorage,'paidUntil',\
+            paiduntil,'tosVersion',lasttermsofserviceacceptanceversion) FROM \
+            webknossos.organizations WHERE _id=$1",
+    )
+    .bind(&f.organization_id)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     let body = json!({"name":"Renamed organization","newUserMailingList":"new@example.test","pricingPlan":"Personal","includedStorageBytes":1,"_rootFolder":object_id()});
     assert_eq!(
         request(
@@ -336,8 +380,17 @@ async fn organization_patch_is_admin_only_and_preserves_billing_and_root() {
     assert_eq!(code, StatusCode::OK, "{value}");
     assert_eq!(value["name"], "Renamed organization");
     assert_eq!(value["newUserMailingList"], "new@example.test");
-    let after:Value=sqlx::query_scalar("SELECT jsonb_build_object('root',_rootfolder,'pricingPlan',pricingplan,'aiPlan',aiplan,'includedUsers',includedusers,'includedStorage',includedstorage,'paidUntil',paiduntil,'tosVersion',lasttermsofserviceacceptanceversion) FROM webknossos.organizations WHERE _id=$1")
-        .bind(&f.organization_id).fetch_one(&db.pool).await.unwrap();
+    let after: Value = sqlx::query_scalar(
+        "SELECT \
+            jsonb_build_object('root',_rootfolder,'pricingPlan',pricingplan,'aiPlan',aiplan,\
+            'includedUsers',includedusers,'includedStorage',includedstorage,'paidUntil',\
+            paiduntil,'tosVersion',lasttermsofserviceacceptanceversion) FROM \
+            webknossos.organizations WHERE _id=$1",
+    )
+    .bind(&f.organization_id)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(immutable, after);
     assert_eq!(
         request(

@@ -99,7 +99,16 @@ fn cross(vertices: [[f32; 3]; 3]) -> [f32; 3] {
     ]
 }
 pub fn combine_stl(chunks: &[Vec<u8>]) -> DsResult<Vec<u8>> {
-    let total=chunks.iter().try_fold(84usize,|n,c|n.checked_add(c.len())).filter(|n|*n<=i32::MAX as usize).ok_or_else(||DsError::failure("Mesh is too large to combine into a single STL buffer. Use per-chunk surface area computation instead."))?;
+    let total = chunks
+        .iter()
+        .try_fold(84usize, |n, c| n.checked_add(c.len()))
+        .filter(|n| *n <= i32::MAX as usize)
+        .ok_or_else(|| {
+            DsError::failure(
+                "Mesh is too large to combine into a single STL buffer. Use per-chunk surface \
+            area computation instead.",
+            )
+        })?;
     if chunks.iter().any(|c| !c.len().is_multiple_of(50)) {
         return Err(DsError::failure("Invalid raw STL chunk byte count."));
     }

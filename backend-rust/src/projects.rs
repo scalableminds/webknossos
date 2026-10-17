@@ -124,8 +124,14 @@ async fn add_status_to_all(pool: &PgPool, projects: &mut [Value]) -> ApiResult<(
         return Ok(());
     }
     let ids: Vec<&str> = projects.iter().filter_map(|p| p["id"].as_str()).collect();
-    let rows: Vec<(String,i64,i64)> = sqlx::query_as("SELECT _project,COALESCE(sum(pendinginstances),0)::bigint,COALESCE(sum(tracingtime),0)::bigint FROM webknossos.tasks_ WHERE _project=ANY($1) GROUP BY _project")
-        .bind(ids).fetch_all(pool).await?;
+    let rows: Vec<(String, i64, i64)> = sqlx::query_as(
+        "SELECT \
+            _project,COALESCE(sum(pendinginstances),0)::bigint,COALESCE(sum(tracingtime),\
+            0)::bigint FROM webknossos.tasks_ WHERE _project=ANY($1) GROUP BY _project",
+    )
+    .bind(ids)
+    .fetch_all(pool)
+    .await?;
     let counts: std::collections::HashMap<_, _> = rows
         .into_iter()
         .map(|(id, pending, time)| (id, (pending, time)))
@@ -145,8 +151,13 @@ async fn add_status<'e, E: sqlx::Executor<'e, Database = Postgres>>(
     executor: E,
     project: &mut Value,
 ) -> ApiResult<()> {
-    let (pending, time): (i64,i64) = sqlx::query_as("SELECT COALESCE(sum(pendinginstances),0)::bigint, COALESCE(sum(tracingtime),0)::bigint FROM webknossos.tasks_ WHERE _project=$1")
-        .bind(project["id"].as_str().ok_or_else(ApiError::internal)?).fetch_one(executor).await?;
+    let (pending, time): (i64, i64) = sqlx::query_as(
+        "SELECT COALESCE(sum(pendinginstances),0)::bigint, \
+            COALESCE(sum(tracingtime),0)::bigint FROM webknossos.tasks_ WHERE _project=$1",
+    )
+    .bind(project["id"].as_str().ok_or_else(ApiError::internal)?)
+    .fetch_one(executor)
+    .await?;
     project["pendingInstances"] = json!(pending);
     project["tracingTime"] = json!(time);
     Ok(())
@@ -241,10 +252,22 @@ async fn create(
             &parameters.name,
         )));
     }
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name,priority,paused,expectedtime,isblacklistedfromreport) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)")
-        .bind(&id).bind(&user.organization_id).bind(&parameters.team).bind(&parameters.owner).bind(&parameters.name)
-        .bind(i64::from(parameters.priority)).bind(parameters.paused.unwrap_or(false)).bind(parameters.expected_time)
-        .bind(parameters.is_blacklisted_from_report).execute(&mut *tx).await?;
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.projects(_id,_organization,_team,_owner,name,priority,paused,\
+            expectedtime,isblacklistedfromreport) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+    )
+    .bind(&id)
+    .bind(&user.organization_id)
+    .bind(&parameters.team)
+    .bind(&parameters.owner)
+    .bind(&parameters.name)
+    .bind(i64::from(parameters.priority))
+    .bind(parameters.paused.unwrap_or(false))
+    .bind(parameters.expected_time)
+    .bind(parameters.is_blacklisted_from_report)
+    .execute(&mut *tx)
+    .await?;
     let response = project_json(&mut *tx, &user, &id).await?;
     tx.commit().await?;
     Ok(ResponseJson(response))
@@ -280,9 +303,19 @@ async fn update(
     managed_project(&mut tx, &user, &id).await?;
     check_references(&mut tx, &user, &parameters).await?;
     // Project names and paused state are immutable through PUT in Scala.
-    sqlx::query("UPDATE webknossos.projects SET _team=$2,_owner=$3,priority=$4,expectedtime=$5,isblacklistedfromreport=$6 WHERE _id=$1 AND NOT isdeleted")
-        .bind(&id).bind(parameters.team).bind(parameters.owner).bind(i64::from(parameters.priority))
-        .bind(parameters.expected_time).bind(parameters.is_blacklisted_from_report).execute(&mut *tx).await?;
+    sqlx::query(
+        "UPDATE webknossos.projects SET \
+            _team=$2,_owner=$3,priority=$4,expectedtime=$5,isblacklistedfromreport=$6 WHERE \
+            _id=$1 AND NOT isdeleted",
+    )
+    .bind(&id)
+    .bind(parameters.team)
+    .bind(parameters.owner)
+    .bind(i64::from(parameters.priority))
+    .bind(parameters.expected_time)
+    .bind(parameters.is_blacklisted_from_report)
+    .execute(&mut *tx)
+    .await?;
     let response = project_json(&mut *tx, &user, &id).await?;
     tx.commit().await?;
     Ok(ResponseJson(response))
@@ -404,9 +437,15 @@ async fn lock_project(
     id: &str,
     organization: &str,
 ) -> ApiResult<()> {
-    sqlx::query_scalar::<_,String>("SELECT _id FROM webknossos.projects WHERE _id=$1 AND _organization=$2 AND NOT isdeleted FOR UPDATE")
-        .bind(id).bind(organization).fetch_optional(&mut **tx).await?
-        .ok_or_else(||ApiError::not_found(crate::msg::project::not_found(id)))?;
+    sqlx::query_scalar::<_, String>(
+        "SELECT _id FROM webknossos.projects WHERE _id=$1 AND _organization=$2 AND NOT \
+            isdeleted FOR UPDATE",
+    )
+    .bind(id)
+    .bind(organization)
+    .fetch_optional(&mut **tx)
+    .await?
+    .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(id)))?;
     Ok(())
 }
 
@@ -417,8 +456,17 @@ pub(crate) async fn can_manage_team_in_tx(
 ) -> ApiResult<bool> {
     // SHARE conflicts with soft deletion (KEY SHARE would not). Hold the live
     // referenced team until the project/task type mutation commits.
-    let team: Option<String> = sqlx::query_scalar("SELECT t._id FROM webknossos.teams t WHERE t._id=$1 AND t._organization=$2 AND NOT t.isDeleted AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE _team=t._id AND _user=$4 AND isteammanager)) FOR SHARE OF t")
-        .bind(team).bind(&user.organization_id).bind(user.is_admin).bind(&user.id).fetch_optional(&mut **tx).await?;
+    let team: Option<String> = sqlx::query_scalar(
+        "SELECT t._id FROM webknossos.teams t WHERE t._id=$1 AND t._organization=$2 AND \
+            NOT t.isDeleted AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE \
+            _team=t._id AND _user=$4 AND isteammanager)) FOR SHARE OF t",
+    )
+    .bind(team)
+    .bind(&user.organization_id)
+    .bind(user.is_admin)
+    .bind(&user.id)
+    .fetch_optional(&mut **tx)
+    .await?;
     Ok(team.is_some())
 }
 
@@ -428,8 +476,17 @@ async fn for_task_type(
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
     let id = ObjectId::parse_path(&id)?.to_string();
-    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.tasktypes_ t WHERE t._id=$1 AND t._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE _user=$4 AND _team=t._team)))")
-        .bind(&id).bind(&user.organization_id).bind(user.is_admin).bind(&user.id).fetch_one(&state.pool).await?;
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM webknossos.tasktypes_ t WHERE t._id=$1 AND \
+            t._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE \
+            _user=$4 AND _team=t._team)))",
+    )
+    .bind(&id)
+    .bind(&user.organization_id)
+    .bind(user.is_admin)
+    .bind(&user.id)
+    .fetch_one(&state.pool)
+    .await?;
     if !exists {
         return Err(ApiError::not_found(crate::msg::task_type::not_found(&id)));
     }
@@ -454,7 +511,8 @@ async fn active_users(
 ) -> ApiResult<ResponseJson<Value>> {
     let id = ObjectId::parse_path(&id)?.to_string();
     project_json(&state.pool, &user, &id).await?;
-    let values: Vec<Value> = sqlx::query_scalar("SELECT jsonb_build_object('email',m.email,'firstName',m.firstname,'lastName',m.lastname,'activeTasks',count(a._id)) FROM webknossos.annotations_ a JOIN webknossos.tasks_ t ON t._id=a._task JOIN webknossos.users_ u ON u._id=a._user JOIN webknossos.multiusers_ m ON m._id=u._multiuser WHERE t._project=$1 AND a.state='Active' AND a.typ='Task' GROUP BY m.email,m.firstname,m.lastname")
+    let values: Vec<Value> = sqlx::query_scalar("SELECT \
+            jsonb_build_object('email',m.email,'firstName',m.firstname,'lastName',m.lastname,'activeTasks',count(a._id)) FROM webknossos.annotations_ a JOIN webknossos.tasks_ t ON t._id=a._task JOIN webknossos.users_ u ON u._id=a._user JOIN webknossos.multiusers_ m ON m._id=u._multiuser WHERE t._project=$1 AND a.state='Active' AND a.typ='Task' GROUP BY m.email,m.firstname,m.lastname")
         .bind(id).fetch_all(&state.pool).await?;
     Ok(ResponseJson(Value::Array(values)))
 }
@@ -503,8 +561,15 @@ async fn transfer_active_tasks(
     if transferee.is_none() {
         return Err(ApiError::bad_request(crate::msg::user::not_found(new_user)));
     }
-    let annotations: Vec<String> = sqlx::query_scalar("SELECT a._id FROM webknossos.annotations_ a JOIN webknossos.tasks_ t ON a._task=t._id JOIN webknossos.projects_ p ON t._project=p._id JOIN webknossos.users_ u ON a._user=u._id WHERE p._id=$1 AND a.state='Active' AND a.typ='Task' ORDER BY a._id")
-        .bind(&id).fetch_all(&mut *tx).await?;
+    let annotations: Vec<String> = sqlx::query_scalar(
+        "SELECT a._id FROM webknossos.annotations_ a JOIN webknossos.tasks_ t ON \
+            a._task=t._id JOIN webknossos.projects_ p ON t._project=p._id JOIN \
+            webknossos.users_ u ON a._user=u._id WHERE p._id=$1 AND a.state='Active' AND \
+            a.typ='Task' ORDER BY a._id",
+    )
+    .bind(&id)
+    .fetch_all(&mut *tx)
+    .await?;
     for annotation in annotations {
         // AnnotationService.transferAnnotationToUser, under the requester's context.
         let (dataset, mutable): (String, bool) = sqlx::query_as(&format!(

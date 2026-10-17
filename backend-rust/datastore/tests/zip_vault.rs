@@ -346,15 +346,49 @@ mod scala_oracle {
                 })),
                 case["inner"].as_str().unwrap().into(),
             );
-            let result:Result<Value,VaultError>=match case["operation"].as_str().unwrap() {
-            "list" => vault.list_directory(&path,case["max"].as_u64().unwrap()as usize,None).await.map(|paths|json!({"names":paths.into_iter().map(|p|match p { UPath::ZipEntry(_,name)=>name,_=>unreachable!() }).collect::<Vec<_>>()})),
-            "size" => vault.used_storage_bytes(&path,None).await.map(|size|json!({"size":size})),
-            "read" => {
-                let range=match case["range"].as_str().unwrap() { "complete"=>ByteRange::Complete,"start3end17"=>ByteRange::StartEnd{start:3,end:17},"suffix2"=>ByteRange::suffix(2),"suffix100"=>ByteRange::suffix(100),"start40end50"=>ByteRange::StartEnd{start:40,end:50},"start5end2"=>ByteRange::StartEnd{start:5,end:2},"start0end0"=>ByteRange::StartEnd{start:0,end:0},_=>unreachable!() };
-                vault.read_bytes_encoding_and_range_header(&path,range,None).await.map(|raw| { assert_eq!(raw.encoding,Encoding::Identity);json!({"bytes":STANDARD.encode(raw.bytes),"encoding":"identity","contentRange":raw.content_range}) })
-            }
-            _=>unreachable!(),
-        };
+            let result: Result<Value, VaultError> = match case["operation"].as_str().unwrap() {
+                "list" => {
+                    let max = case["max"].as_u64().unwrap() as usize;
+                    vault.list_directory(&path, max, None).await.map(|paths| {
+                        let names = paths
+                            .into_iter()
+                            .map(|p| match p {
+                                UPath::ZipEntry(_, name) => name,
+                                _ => unreachable!(),
+                            })
+                            .collect::<Vec<_>>();
+                        json!({"names": names})
+                    })
+                }
+                "size" => vault
+                    .used_storage_bytes(&path, None)
+                    .await
+                    .map(|size| json!({"size": size})),
+                "read" => {
+                    let range = match case["range"].as_str().unwrap() {
+                        "complete" => ByteRange::Complete,
+                        "start3end17" => ByteRange::StartEnd { start: 3, end: 17 },
+                        "suffix2" => ByteRange::suffix(2),
+                        "suffix100" => ByteRange::suffix(100),
+                        "start40end50" => ByteRange::StartEnd { start: 40, end: 50 },
+                        "start5end2" => ByteRange::StartEnd { start: 5, end: 2 },
+                        "start0end0" => ByteRange::StartEnd { start: 0, end: 0 },
+                        _ => unreachable!(),
+                    };
+                    vault
+                        .read_bytes_encoding_and_range_header(&path, range, None)
+                        .await
+                        .map(|raw| {
+                            assert_eq!(raw.encoding, Encoding::Identity);
+                            json!({
+                                "bytes":STANDARD.encode(raw.bytes),
+                                "encoding":"identity",
+                                "contentRange":raw.content_range
+                            })
+                        })
+                }
+                _ => unreachable!(),
+            };
             if case["expected"].get("exception").is_some() {
                 assert!(result.is_err(), "{case}");
                 continue;

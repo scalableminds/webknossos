@@ -63,10 +63,29 @@ async fn world(db: &TestDb, tracing_url: &str) -> World {
     sqlx::query("INSERT INTO webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey,isUsable,voxelSizeFactor,voxelSizeUnit) SELECT $1,'lifecycle',_id,_rootfolder,'Dataset','dir',now(),true,ROW(1,1,1)::webknossos.vector3,'nanometer'::webknossos.LENGTH_UNIT FROM webknossos.organizations WHERE _id=$2")
         .bind(&dataset).bind(&f.organization_id).execute(&db.pool).await.unwrap();
     let (task, project, task_type) = (object_id(), object_id(), object_id());
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,'Lifecycle project')")
-        .bind(&project).bind(&f.organization_id).bind(&f.team_id).bind(&f.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'Lifecycle type','',true,true)")
-        .bind(&task_type).bind(&f.organization_id).bind(&f.team_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+            VALUES($1,$2,$3,$4,'Lifecycle project')",
+    )
+    .bind(&project)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,\
+            'Lifecycle type','',true,true)",
+    )
+    .bind(&task_type)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation,boundingbox) VALUES($1,$2,$3,'test',0,10,10,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3,ROW(1,2,3,10,20,30)::webknossos.BOUNDING_BOX)")
         .bind(&task).bind(&project).bind(&task_type).execute(&db.pool).await.unwrap();
     World {
@@ -91,9 +110,29 @@ async fn annotation(
     mode: &str,
 ) -> String {
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,visibility,state,collaborationMode,isLockedByOwner,modified) VALUES($1,$2,$3,$4,$5::webknossos.ANNOTATION_TYPE,$6::webknossos.ANNOTATION_VISIBILITY,$7::webknossos.ANNOTATION_STATE,$8::webknossos.ANNOTATION_COLLABORATION_MODE,true,TIMESTAMPTZ '2020-01-01T00:00:00Z')")
-        .bind(&id).bind(&w.dataset).bind(if matches!(typ,"Task"|"TracingBase"){Some(&w.task)}else{None})
-        .bind(&w.owner.user_id).bind(typ).bind(visibility).bind(state).bind(mode).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.annotations(_id,_dataset,_task,_user,typ,visibility,state,\
+            collaborationMode,isLockedByOwner,modified) VALUES($1,$2,$3,$4,\
+            $5::webknossos.ANNOTATION_TYPE,$6::webknossos.ANNOTATION_VISIBILITY,\
+            $7::webknossos.ANNOTATION_STATE,$8::webknossos.ANNOTATION_COLLABORATION_MODE,true,\
+            TIMESTAMPTZ '2020-01-01T00:00:00Z')",
+    )
+    .bind(&id)
+    .bind(&w.dataset)
+    .bind(if matches!(typ, "Task" | "TracingBase") {
+        Some(&w.task)
+    } else {
+        None
+    })
+    .bind(&w.owner.user_id)
+    .bind(typ)
+    .bind(visibility)
+    .bind(state)
+    .bind(mode)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) VALUES($1,$2,'Skeleton','Skeleton','{}')")
         .bind(&id).bind(format!("tracing-{id}")).execute(&db.pool).await.unwrap();
     id
@@ -154,8 +193,18 @@ async fn state(db: &TestDb, id: &str) -> (String, String, bool, i64) {
 }
 async fn reserve(db: &TestDb, w: &World, id: &str) {
     for (domain, user) in [("Segment", &w.owner.user_id), ("Tree", &w.manager.user_id)] {
-        sqlx::query("INSERT INTO webknossos.annotation_reserved_ids(_annotation,tracingId,domain,_user,id) VALUES($1,$2,$3::webknossos.ANNOTATION_ID_DOMAIN,$4,1)")
-            .bind(id).bind(format!("tracing-{id}")).bind(domain).bind(user).execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO \
+                webknossos.annotation_reserved_ids(_annotation,tracingId,domain,_user,id) \
+                VALUES($1,$2,$3::webknossos.ANNOTATION_ID_DOMAIN,$4,1)",
+        )
+        .bind(id)
+        .bind(format!("tracing-{id}"))
+        .bind(domain)
+        .bind(user)
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
 }
 async fn reservations(db: &TestDb, id: &str) -> i64 {

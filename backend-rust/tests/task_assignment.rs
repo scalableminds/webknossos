@@ -254,10 +254,29 @@ async fn world(db: &TestDb, tracing_url: Option<&str>) -> World {
         .await
         .unwrap();
     let (project, task_type) = (object_id(), object_id());
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,'Assign-project')")
-        .bind(&project).bind(&f.organization_id).bind(&f.team_id).bind(&f.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'Assign-type','',true,true)")
-        .bind(&task_type).bind(&f.organization_id).bind(&f.team_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+            VALUES($1,$2,$3,$4,'Assign-project')",
+    )
+    .bind(&project)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,\
+            'Assign-type','',true,true)",
+    )
+    .bind(&task_type)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let mut w = World {
         f,
         manager,
@@ -280,8 +299,20 @@ async fn world(db: &TestDb, tracing_url: Option<&str>) -> World {
 /// admin (Internal, Concurrent, name/description/tags/tracingTime set).
 async fn task(db: &TestDb, w: &World, pending: i64) -> (String, String) {
     let task = object_id();
-    sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation) VALUES($1,$2,$3,'test',0,$4,$4,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3)")
-        .bind(&task).bind(&w.project).bind(&w.task_type).bind(pending).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,\
+            neededexperience_value,totalinstances,pendinginstances,editposition,editrotation) \
+            VALUES($1,$2,$3,'test',0,$4,$4,ROW(0,0,0)::webknossos.vector3,ROW(0,0,\
+            0)::webknossos.vector3)",
+    )
+    .bind(&task)
+    .bind(&w.project)
+    .bind(&w.task_type)
+    .bind(pending)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let base = object_id();
     sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,visibility,state,collaborationMode,name,description,tags,tracingTime,created,modified) VALUES($1,$2,$3,$4,'TracingBase','Internal','Active','Concurrent','Base name','Base description',ARRAY['tag'],1234,TIMESTAMPTZ '2020-01-01T00:00:00Z',TIMESTAMPTZ '2020-01-02T00:00:00Z')")
         .bind(&base).bind(&w.dataset).bind(&task).bind(&w.f.user_id)

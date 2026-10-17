@@ -48,7 +48,13 @@ async fn tracing_store_registry_exposes_only_public_fields_and_requires_admin_up
     let db = TestDb::new().await;
     let f = db.fixture().await;
     let member = db.seed_user(&object_id(), &f.organization_id, false).await;
-    sqlx::query("INSERT INTO webknossos.tracingStores(name,url,publicUrl,key) VALUES('tracing','http://private:9001','https://public.example','private-key')").execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.tracingStores(name,url,publicUrl,key) \
+            VALUES('tracing','http://private:9001','https://public.example','private-key')",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let app = router(AppState {
         pool: db.pool.clone(),
     });

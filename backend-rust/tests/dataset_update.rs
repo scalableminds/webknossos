@@ -95,9 +95,17 @@ async fn seed(db: &TestDb, fixture: &Fixture, is_virtual: bool, root: Option<&st
             .bind(&id).bind(name).bind(category).execute(&db.pool).await.unwrap();
     }
     for (layer, mag) in [("color", 1), ("color", 2), ("seg", 1)] {
-        sqlx::query("INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,path) VALUES ($1,$2,ROW($3,$3,$3)::webknossos.VECTOR3,$4)")
-            .bind(&id).bind(layer).bind(f64::from(mag)).bind(format!("s3://managed/{id}/{layer}/{mag}"))
-            .execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,path) \
+                VALUES ($1,$2,ROW($3,$3,$3)::webknossos.VECTOR3,$4)",
+        )
+        .bind(&id)
+        .bind(layer)
+        .bind(f64::from(mag))
+        .bind(format!("s3://managed/{id}/{layer}/{mag}"))
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
     for (name, typ) in [("m1", "mesh"), ("a1", "agglomerate")] {
         sqlx::query("INSERT INTO webknossos.dataset_layer_attachments (_dataset,layerName,name,path,type,dataFormat) VALUES ($1,'seg',$2,$3,$4::webknossos.LAYER_ATTACHMENT_TYPE,'hdf5')")
@@ -358,8 +366,15 @@ async fn data_source_changes_rename_drop_and_add_layers_and_queue_removed_paths(
         .await
         .unwrap();
     assert_eq!(queued, 2);
-    let (version, thumbnails, default_config): (i32, i64, Option<Value>) = sqlx::query_as("SELECT thumbnailCacheVersion,(SELECT count(*) FROM webknossos.dataset_thumbnails WHERE _dataset=$1),defaultViewConfiguration FROM webknossos.datasets WHERE _id=$1")
-        .bind(&id).fetch_one(&db.pool).await.unwrap();
+    let (version, thumbnails, default_config): (i32, i64, Option<Value>) = sqlx::query_as(
+        "SELECT thumbnailCacheVersion,(SELECT count(*) FROM \
+            webknossos.dataset_thumbnails WHERE _dataset=$1),defaultViewConfiguration FROM \
+            webknossos.datasets WHERE _id=$1",
+    )
+    .bind(&id)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         (version, thumbnails, default_config),
         (1, 0, Some(json!({"zoom": 3})))
@@ -399,8 +414,14 @@ async fn disk_datasets_write_the_source_before_commit_and_roll_back_on_failure()
     )
     .await;
     assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
-    let (name, layers): (String, i64) = sqlx::query_as("SELECT name,(SELECT count(*) FROM webknossos.dataset_layers WHERE _dataset=$1) FROM webknossos.datasets WHERE _id=$1")
-        .bind(&id).fetch_one(&db.pool).await.unwrap();
+    let (name, layers): (String, i64) = sqlx::query_as(
+        "SELECT name,(SELECT count(*) FROM webknossos.dataset_layers WHERE _dataset=$1) \
+            FROM webknossos.datasets WHERE _id=$1",
+    )
+    .bind(&id)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!((name.as_str(), layers), ("Original", 2));
     let calls = store.take();
     assert_eq!(calls.len(), 1);

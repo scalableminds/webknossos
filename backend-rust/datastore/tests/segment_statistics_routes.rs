@@ -23,7 +23,22 @@ fn temp() -> PathBuf {
 }
 fn array(dir: &Path, shape: &[usize], dtype: &str, data: Vec<u8>) {
     std::fs::create_dir_all(dir).unwrap();
-    std::fs::write(dir.join("zarr.json"),serde_json::to_vec(&json!({"zarr_format":3,"node_type":"array","shape":shape,"data_type":dtype,"chunk_grid":{"name":"regular","configuration":{"chunk_shape":shape}},"chunk_key_encoding":{"name":"default","configuration":{"separator":"/"}},"fill_value":0,"codecs":[{"name":"bytes","configuration":{"endian":"little"}}],"attributes":{}})).unwrap()).unwrap();
+    std::fs::write(
+        dir.join("zarr.json"),
+        serde_json::to_vec(&json!({
+            "zarr_format":3,
+            "node_type":"array",
+            "shape":shape,
+            "data_type":dtype,
+            "chunk_grid":{"name":"regular","configuration":{"chunk_shape":shape}},
+            "chunk_key_encoding":{"name":"default","configuration":{"separator":"/"}},
+            "fill_value":0,
+            "codecs":[{"name":"bytes","configuration":{"endian":"little"}}],
+            "attributes":{}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
     let chunk = dir.join(
         std::iter::once("c")
             .chain(shape.iter().map(|_| "0"))
@@ -40,7 +55,21 @@ fn floats(values: &[f32]) -> Vec<u8> {
 }
 fn statistics_file(root: &Path) {
     std::fs::create_dir_all(root).unwrap();
-    std::fs::write(root.join("zarr.json"),serde_json::to_vec(&json!({"zarr_format":3,"node_type":"group","attributes":{"voxelytics":{"artifact_schema_version":11,"artifact_attributes":{"mag":[2,1,1],"mapping_name":""}}}})).unwrap()).unwrap();
+    std::fs::write(
+        root.join("zarr.json"),
+        serde_json::to_vec(&json!({
+            "zarr_format":3,
+            "node_type":"group",
+            "attributes":{
+                "voxelytics":{
+                    "artifact_schema_version":11,
+                    "artifact_attributes":{"mag":[2,1,1],"mapping_name":""}
+                }
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
     array(&root.join("ids"), &[4], "uint64", integers(&[0, 1, 2, 3]));
     array(
         &root.join("volumes"),
@@ -87,7 +116,25 @@ fn statistics_file(root: &Path) {
 }
 fn index(root: &Path) {
     std::fs::create_dir_all(root).unwrap();
-    std::fs::write(root.join("zarr.json"),serde_json::to_vec(&json!({"zarr_format":3,"node_type":"group","attributes":{"voxelytics":{"artifact_schema_version":1,"artifact_attributes":{"n_hash_buckets":1,"hash_function":"identity","dtype_bucket_entries":"uint16"}}}})).unwrap()).unwrap();
+    std::fs::write(
+        root.join("zarr.json"),
+        serde_json::to_vec(&json!({
+            "zarr_format":3,
+            "node_type":"group",
+            "attributes":{
+                "voxelytics":{
+                    "artifact_schema_version":1,
+                    "artifact_attributes":{
+                        "n_hash_buckets":1,
+                        "hash_function":"identity",
+                        "dtype_bucket_entries":"uint16"
+                    }
+                }
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
     array(
         &root.join("hash_bucket_offsets"),
         &[2],
@@ -112,7 +159,20 @@ fn index(root: &Path) {
 }
 fn segmentation(root: &Path, coarse: bool) {
     std::fs::create_dir_all(root).unwrap();
-    std::fs::write(root.join(".zarray"),serde_json::to_vec(&json!({"zarr_format":2,"shape":if coarse{vec![64,16,16]}else{vec![128,32,32]},"chunks":[32,32,32],"dtype":"|u1","order":"F","compressor":null,"fill_value":0})).unwrap()).unwrap();
+    std::fs::write(
+        root.join(".zarray"),
+        serde_json::to_vec(&json!({
+            "zarr_format":2,
+            "shape":if coarse{vec![64,16,16]}else{vec![128,32,32]},
+            "chunks":[32,32,32],
+            "dtype":"|u1",
+            "order":"F",
+            "compressor":null,
+            "fill_value":0
+        }))
+        .unwrap(),
+    )
+    .unwrap();
     let mut first = vec![0u8; 32768];
     let mut second = first.clone();
     if coarse {
@@ -225,7 +285,18 @@ async fn call(
     mag: [i32; 3],
     mapping: Option<&str>,
 ) -> (StatusCode, Value) {
-    call_token(app,metric,Some(json!({"mag":mag,"segmentIds":ids,"mappingName":mapping,"additionalCoordinates":[{"name":"t","value":42}]})),"t").await
+    call_token(
+        app,
+        metric,
+        Some(json!({
+            "mag":mag,
+            "segmentIds":ids,
+            "mappingName":mapping,
+            "additionalCoordinates":[{"name":"t","value":42}]
+        })),
+        "t",
+    )
+    .await
 }
 async fn invalidate(app: &Router) {
     let request = Request::builder()

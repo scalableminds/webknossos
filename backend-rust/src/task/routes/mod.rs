@@ -262,11 +262,29 @@ async fn for_project(
         ));
     }
     let mut connection = state.pool.acquire().await?;
-    let team: String = sqlx::query_scalar("SELECT p._team FROM webknossos.projects_ p WHERE p._id=$4 AND p._organization=$2 AND (p._owner=$1 OR $3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE _user=$1 AND _team=p._team))")
-        .bind(&user.id).bind(&user.organization_id).bind(user.is_admin).bind(&id).fetch_optional(&mut *connection).await?
-        .ok_or_else(||ApiError::not_found(crate::msg::project::not_found(&id)))?;
-    let can_manage: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.teams_ t WHERE t._id=$1 AND t._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles r WHERE r._team=t._id AND r._user=$4 AND r.isteammanager)))")
-        .bind(&team).bind(&user.organization_id).bind(user.is_admin).bind(&user.id).fetch_one(&mut *connection).await?;
+    let team: String = sqlx::query_scalar(
+        "SELECT p._team FROM webknossos.projects_ p WHERE p._id=$4 AND \
+            p._organization=$2 AND (p._owner=$1 OR $3 OR EXISTS(SELECT 1 FROM \
+            webknossos.user_team_roles WHERE _user=$1 AND _team=p._team))",
+    )
+    .bind(&user.id)
+    .bind(&user.organization_id)
+    .bind(user.is_admin)
+    .bind(&id)
+    .fetch_optional(&mut *connection)
+    .await?
+    .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(&id)))?;
+    let can_manage: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM webknossos.teams_ t WHERE t._id=$1 AND \
+            t._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles r \
+            WHERE r._team=t._id AND r._user=$4 AND r.isteammanager)))",
+    )
+    .bind(&team)
+    .bind(&user.organization_id)
+    .bind(user.is_admin)
+    .bind(&user.id)
+    .fetch_one(&mut *connection)
+    .await?;
     if !can_manage {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
@@ -307,16 +325,39 @@ async fn lock_managed_task(
 ) -> ApiResult<(i64, i64)> {
     // Lock the project before the task, in the same order as project mutations.
     // This keeps concurrent changes to project team/visibility from invalidating authorization.
-    let project: String=sqlx::query_scalar("SELECT t._project FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON p._id=t._project WHERE t._id=$4 AND p._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE _user=$1 AND _team=p._team))")
-        .bind(&user.id).bind(&user.organization_id).bind(user.is_admin).bind(id).fetch_optional(&mut **tx).await?
-        .ok_or_else(||ApiError::not_found(crate::msg::task::not_found(id)))?;
-    let team:String=sqlx::query_scalar("SELECT _team FROM webknossos.projects WHERE _id=$1 AND _organization=$2 AND NOT isdeleted FOR SHARE")
-        .bind(&project).bind(&user.organization_id).fetch_optional(&mut **tx).await?.ok_or_else(||ApiError::not_found(crate::msg::project::not_found(&project)))?;
+    let project: String = sqlx::query_scalar(
+        "SELECT t._project FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON \
+            p._id=t._project WHERE t._id=$4 AND p._organization=$2 AND ($3 OR EXISTS(SELECT 1 \
+            FROM webknossos.user_team_roles WHERE _user=$1 AND _team=p._team))",
+    )
+    .bind(&user.id)
+    .bind(&user.organization_id)
+    .bind(user.is_admin)
+    .bind(id)
+    .fetch_optional(&mut **tx)
+    .await?
+    .ok_or_else(|| ApiError::not_found(crate::msg::task::not_found(id)))?;
+    let team: String = sqlx::query_scalar(
+        "SELECT _team FROM webknossos.projects WHERE _id=$1 AND _organization=$2 AND NOT \
+            isdeleted FOR SHARE",
+    )
+    .bind(&project)
+    .bind(&user.organization_id)
+    .fetch_optional(&mut **tx)
+    .await?
+    .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(&project)))?;
     if !crate::projects::can_manage_team_in_tx(tx, user, &team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    sqlx::query_as("SELECT totalinstances,pendinginstances FROM webknossos.tasks WHERE _id=$1 AND _project=$2 AND NOT isdeleted FOR UPDATE")
-        .bind(id).bind(&project).fetch_optional(&mut **tx).await?.ok_or_else(||ApiError::not_found(crate::msg::task::not_found(id)))
+    sqlx::query_as(
+        "SELECT totalinstances,pendinginstances FROM webknossos.tasks WHERE _id=$1 AND \
+            _project=$2 AND NOT isdeleted FOR UPDATE",
+    )
+    .bind(id)
+    .bind(&project)
+    .fetch_optional(&mut **tx)
+    .await?
+    .ok_or_else(|| ApiError::not_found(crate::msg::task::not_found(id)))
 }
 async fn update(
     State(state): State<AppState>,
@@ -377,13 +418,21 @@ async fn experience_domains(
 }
 async fn peek(State(state): State<AppState>, user: AuthUser) -> ApiResult<ResponseJson<Value>> {
     let manager = user.is_team_manager_or_admin(&state.pool).await?;
-    let id:String=sqlx::query_scalar(r#"SELECT t._id FROM webknossos.tasks_ t
+    let id: String = sqlx::query_scalar(
+        r#"SELECT t._id FROM webknossos.tasks_ t
         JOIN webknossos.user_experiences e ON e.domain=t.neededexperience_domain AND e._user=$1 AND e.value>=t.neededexperience_value
         JOIN webknossos.projects_ p ON p._id=t._project
         JOIN webknossos.teams_ team ON team._id=p._team AND team._organization=$3
         WHERE p._organization=$3 AND t.pendinginstances>0 AND NOT p.paused AND p._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$1)
         AND NOT EXISTS (SELECT 1 FROM webknossos.annotations_ a WHERE a._task=t._id AND a._user=$1 AND a.typ='Task' AND NOT ($2 AND a.state='Cancelled'))
-        ORDER BY p.priority DESC LIMIT 1"#).bind(&user.id).bind(manager).bind(&user.organization_id).fetch_optional(&state.pool).await?.ok_or_else(||ApiError::bad_request(crate::msg::task::UNAVAILABLE))?;
+        ORDER BY p.priority DESC LIMIT 1"#,
+    )
+    .bind(&user.id)
+    .bind(manager)
+    .bind(&user.organization_id)
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| ApiError::bad_request(crate::msg::task::UNAVAILABLE))?;
     let mut connection = state.pool.acquire().await?;
     Ok(ResponseJson(
         public_json(&mut connection, &user, &id, true).await?,

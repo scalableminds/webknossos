@@ -313,14 +313,39 @@ async fn seed(db: &TestDb) -> Seed {
     .await
     .unwrap();
     let dataset = object_id();
-    sqlx::query("INSERT INTO webknossos.dataStores(name,url,publicUrl,key) VALUES('provider','http://localhost:9000','https://data.example.test','k')").execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataStores(name,url,publicUrl,key) \
+            VALUES('provider','http://localhost:9000','https://data.example.test','k')",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey) SELECT $1,'provider',_id,_rootfolder,'Dataset','directory',now() FROM webknossos.organizations WHERE _id=$2")
         .bind(&dataset).bind(&f.organization_id).execute(&db.pool).await.unwrap();
     let (project, task_type, task) = (object_id(), object_id(), object_id());
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,'Provider-project')")
-        .bind(&project).bind(&f.organization_id).bind(&f.team_id).bind(&f.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'Provider-type','',true,true)")
-        .bind(&task_type).bind(&f.organization_id).bind(&f.team_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+            VALUES($1,$2,$3,$4,'Provider-project')",
+    )
+    .bind(&project)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,\
+            'Provider-type','',true,true)",
+    )
+    .bind(&task_type)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation) VALUES($1,$2,$3,'test',0,1,1,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3)")
         .bind(&task).bind(&project).bind(&task_type).execute(&db.pool).await.unwrap();
     let ids: Vec<String> = (0..6).map(|_| object_id()).collect();
@@ -333,9 +358,30 @@ async fn seed(db: &TestDb) -> Seed {
         (&ids[5], None, "Explorational", "Public", "Active", true),
     ];
     for (id, task, typ, visibility, state, deleted) in rows {
-        sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,visibility,state,isDeleted) VALUES($1,$2,$3,$4,$5::webknossos.ANNOTATION_TYPE,$6::webknossos.ANNOTATION_VISIBILITY,$7::webknossos.ANNOTATION_STATE,$8)")
-            .bind(id).bind(&dataset).bind(task).bind(&owner).bind(typ).bind(visibility).bind(state).bind(deleted)
-            .execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO \
+                webknossos.annotations(_id,_dataset,_task,_user,typ,visibility,state,isDeleted) \
+                \
+                \
+                \
+                \
+                \
+                \
+                \
+                VALUES($1,$2,$3,$4,$5::webknossos.ANNOTATION_TYPE,\
+                $6::webknossos.ANNOTATION_VISIBILITY,$7::webknossos.ANNOTATION_STATE,$8)",
+        )
+        .bind(id)
+        .bind(&dataset)
+        .bind(task)
+        .bind(&owner)
+        .bind(typ)
+        .bind(visibility)
+        .bind(state)
+        .bind(deleted)
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
     Seed {
         organization: f.organization_id,
@@ -740,7 +786,13 @@ async fn world(db: &TestDb, tracing_store_url: &str) -> World {
         .await
         .unwrap();
     }
-    sqlx::query("INSERT INTO webknossos.dataStores(name,url,publicUrl,key) VALUES('compound','http://localhost:9000','https://data.example.test','k')").execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataStores(name,url,publicUrl,key) \
+            VALUES('compound','http://localhost:9000','https://data.example.test','k')",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.tracingStores(name,url,publicUrl,key) VALUES('compound-ts',$1,'https://tracing.example.test','k')")
         .bind(tracing_store_url).execute(&db.pool).await.unwrap();
     let dataset = insert_dataset(db, &f.organization_id, "main", true).await;
@@ -761,15 +813,36 @@ async fn world(db: &TestDb, tracing_store_url: &str) -> World {
         (&project, "Compound-main"),
         (&edge_project, "Compound-edge"),
     ] {
-        sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,$5)")
-            .bind(id).bind(&f.organization_id).bind(&f.team_id).bind(&f.user_id).bind(name).execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+                VALUES($1,$2,$3,$4,$5)",
+        )
+        .bind(id)
+        .bind(&f.organization_id)
+        .bind(&f.team_id)
+        .bind(&f.user_id)
+        .bind(name)
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
     for (id, summary) in [
         (&task_type, "Compound-main"),
         (&edge_task_type, "Compound-edge"),
     ] {
-        sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,$4,'',true,true)")
-            .bind(id).bind(&f.organization_id).bind(&f.team_id).bind(summary).execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO \
+                webknossos.tasktypes(_id,_organization,_team,summary,description,\
+                settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,$4,\
+                '',true,true)",
+        )
+        .bind(id)
+        .bind(&f.organization_id)
+        .bind(&f.team_id)
+        .bind(summary)
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
     let task_a = insert_task(db, &project, &task_type, true).await;
     let task_b = insert_task(db, &project, &task_type, false).await;

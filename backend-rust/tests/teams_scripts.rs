@@ -226,8 +226,17 @@ async fn team_delete_checks_live_references_and_atomically_cleans_all_membership
         .await
         .unwrap();
     let task_type = object_id();
-    sqlx::query("INSERT INTO webknossos.taskTypes (_id, _organization, _team, summary, description, settings_branchPointsAllowed, settings_somaClickingAllowed) VALUES ($1, $2, $3, 'Type', '', TRUE, TRUE)")
-        .bind(&task_type).bind(&fixture.organization_id).bind(&fixture.team_id).execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.taskTypes (_id, _organization, _team, summary, \
+            description, settings_branchPointsAllowed, settings_somaClickingAllowed) VALUES \
+            ($1, $2, $3, 'Type', '', TRUE, TRUE)",
+    )
+    .bind(&task_type)
+    .bind(&fixture.organization_id)
+    .bind(&fixture.team_id)
+    .execute(&database.pool)
+    .await
+    .unwrap();
     assert_eq!(
         request(&router, "DELETE", &path, &fixture.token, None)
             .await
@@ -270,8 +279,16 @@ async fn team_delete_checks_live_references_and_atomically_cleans_all_membership
     sqlx::query("INSERT INTO webknossos.dataStores (name, url, publicUrl, key) VALUES ('test', 'http://store.test', 'http://store.test', 'test')")
         .execute(&database.pool).await.unwrap();
     let dataset = object_id();
-    sqlx::query("INSERT INTO webknossos.datasets (_id, _dataStore, _organization, _folder, name, directoryName, sortingKey) VALUES ($1, 'test', $2, $3, 'Dataset', 'Dataset', NOW())")
-        .bind(&dataset).bind(&fixture.organization_id).bind(root).execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.datasets (_id, _dataStore, _organization, _folder, name, \
+            directoryName, sortingKey) VALUES ($1, 'test', $2, $3, 'Dataset', 'Dataset', NOW())",
+    )
+    .bind(&dataset)
+    .bind(&fixture.organization_id)
+    .bind(root)
+    .execute(&database.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.dataset_allowedTeams (_dataset, _team) VALUES ($1, $2)")
         .bind(&dataset)
         .bind(&fixture.team_id)
@@ -279,8 +296,16 @@ async fn team_delete_checks_live_references_and_atomically_cleans_all_membership
         .await
         .unwrap();
     let annotation = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations (_id, _dataset, _user, typ) VALUES ($1, $2, $3, 'Explorational')")
-        .bind(&annotation).bind(dataset).bind(&fixture.user_id).execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotations (_id, _dataset, _user, typ) VALUES ($1, $2, \
+            $3, 'Explorational')",
+    )
+    .bind(&annotation)
+    .bind(dataset)
+    .bind(&fixture.user_id)
+    .execute(&database.pool)
+    .await
+    .unwrap();
     sqlx::query(
         "INSERT INTO webknossos.annotation_sharedTeams (_annotation, _team) VALUES ($1, $2)",
     )
@@ -462,8 +487,19 @@ async fn script_transfer_and_task_cleanup_are_owner_scoped_and_transactional() {
 
     let project = seed_project(&database, &owner).await;
     let task = object_id();
-    sqlx::query("INSERT INTO webknossos.tasks (_id, _project, _script, _taskType, neededExperience_domain, neededExperience_value, totalInstances, pendingInstances, editPosition, editRotation, isDeleted) VALUES ($1, $2, $3, $4, 'test', 1, 1, 1, (0,0,0)::webknossos.VECTOR3, (0,0,0)::webknossos.VECTOR3, TRUE)")
-        .bind(&task).bind(project).bind(id).bind(object_id()).execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.tasks (_id, _project, _script, _taskType, \
+            neededExperience_domain, neededExperience_value, totalInstances, pendingInstances, \
+            editPosition, editRotation, isDeleted) VALUES ($1, $2, $3, $4, 'test', 1, 1, 1, \
+            (0,0,0)::webknossos.VECTOR3, (0,0,0)::webknossos.VECTOR3, TRUE)",
+    )
+    .bind(&task)
+    .bind(project)
+    .bind(id)
+    .bind(object_id())
+    .execute(&database.pool)
+    .await
+    .unwrap();
     sqlx::raw_sql("CREATE FUNCTION webknossos.reject_script_cleanup() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test cleanup failure'; END $$; CREATE TRIGGER reject_script_cleanup BEFORE UPDATE ON webknossos.tasks FOR EACH ROW EXECUTE FUNCTION webknossos.reject_script_cleanup();")
         .execute(&database.pool).await.unwrap();
     assert_eq!(

@@ -167,20 +167,40 @@ impl S3DataVault {
             while start < length {
                 let count = part_size.min(length - start);
                 let body = UploadBody::file(file, start, count).await?;
-                let pairs = vec![("partNumber".into(), number.to_string()), ("uploadId".into(), upload_id.clone())];
-                let response = self.send_upload(Method::PUT, &key, &pairs, Some(&body)).await?;
-                let etag = response.header("etag").ok_or_else(|| VaultError::failure("S3 UploadPart response is missing ETag."))?;
-                parts.push_str(&format!("<Part><PartNumber>{number}</PartNumber><ETag>{}</ETag></Part>", quick_xml::escape::escape(&etag)));
+                let pairs = vec![
+                    ("partNumber".into(), number.to_string()),
+                    ("uploadId".into(), upload_id.clone()),
+                ];
+                let response = self
+                    .send_upload(Method::PUT, &key, &pairs, Some(&body))
+                    .await?;
+                let etag = response.header("etag").ok_or_else(|| {
+                    VaultError::failure("S3 UploadPart response is missing ETag.")
+                })?;
+                parts.push_str(&format!(
+                    "<Part><PartNumber>{number}</PartNumber><ETag>{}</ETag></Part>",
+                    quick_xml::escape::escape(&etag)
+                ));
                 start += count;
                 number += 1;
             }
-            let body = UploadBody::xml(format!("<CompleteMultipartUpload xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">{parts}</CompleteMultipartUpload>"));
+            let body = UploadBody::xml(format!(
+                "<CompleteMultipartUpload \
+                    \
+                    \
+                    \
+                    xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">\
+                    {parts}</CompleteMultipartUpload>"
+            ));
             let pairs = vec![("uploadId".into(), upload_id.clone())];
-            let response = self.send_upload(Method::POST, &key, &pairs, Some(&body)).await?;
+            let response = self
+                .send_upload(Method::POST, &key, &pairs, Some(&body))
+                .await?;
             // An HTTP 200 with whitespace/error XML must not publish an uploaded dataset.
             xml_field(&response.body, "ETag")?;
             Ok(())
-        }.await;
+        }
+        .await;
         guard.disarmed = result.is_ok() || self.abort_upload(&key, &upload_id).await.is_ok();
         result
     }

@@ -460,9 +460,16 @@ async fn invites_are_permission_checked_mailed_and_consumed_once() {
         (joined.status, &joined.body),
         (StatusCode::OK, &Value::Null)
     );
-    let (new_user, configuration, is_admin, deactivated): (String, Value, bool, bool) = sqlx::query_as(
-        "SELECT _id, userConfiguration, isAdmin, isDeactivated FROM webknossos.users WHERE _multiUser = $1 AND _organization = $2")
-        .bind(&outsider.multi_user_id).bind(&fixture.organization_id).fetch_one(&database.pool).await.unwrap();
+    let (new_user, configuration, is_admin, deactivated): (String, Value, bool, bool) =
+        sqlx::query_as(
+            "SELECT _id, userConfiguration, isAdmin, isDeactivated FROM webknossos.users \
+                WHERE _multiUser = $1 AND _organization = $2",
+        )
+        .bind(&outsider.multi_user_id)
+        .bind(&fixture.organization_id)
+        .fetch_one(&database.pool)
+        .await
+        .unwrap();
     assert_eq!(
         (configuration, is_admin, deactivated),
         (json!({"theme":1}), true, false)
@@ -606,11 +613,16 @@ async fn organization_creation_and_superuser_account_administration() {
             && !owner.is_deactivated
             && !owner.is_dataset_manager
     );
-    let (name, plan, tos_version, folder_name, depth): (String, String, i32, String, i32) = sqlx::query_as(
-        r#"SELECT o.name, o.pricingPlan::text, o.lastTermsOfServiceAcceptanceVersion, f.name, p.depth
+    let (name, plan, tos_version, folder_name, depth): (String, String, i32, String, i32) =
+        sqlx::query_as(
+            r#"SELECT o.name, o.pricingPlan::text, o.lastTermsOfServiceAcceptanceVersion, f.name, p.depth
            FROM webknossos.organizations o JOIN webknossos.folders f ON f._id = o._rootFolder
-           JOIN webknossos.folder_paths p ON p._ancestor = f._id AND p._descendant = f._id WHERE o._id = $1"#)
-        .bind(&owner.organization).fetch_one(&database.pool).await.unwrap();
+           JOIN webknossos.folder_paths p ON p._ancestor = f._id AND p._descendant = f._id WHERE o._id = $1"#,
+        )
+        .bind(&owner.organization)
+        .fetch_one(&database.pool)
+        .await
+        .unwrap();
     assert_eq!(
         (
             name.as_str(),

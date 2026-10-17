@@ -286,12 +286,15 @@ async fn upgrade_request(
     }
     let (organization_name, pricing_plan, ai_plan): (String, String, Option<String>) =
         sqlx::query_as(
-            "SELECT name, pricingPlan::text, aiPlan::text FROM webknossos.organizations_ WHERE _id = $1",
+            "SELECT name, pricingPlan::text, aiPlan::text FROM \
+                    webknossos.organizations_ WHERE _id = $1",
         )
         .bind(&user.organization_id)
         .fetch_optional(&state.pool)
         .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::organization::not_found(&user.organization_id)))?;
+        .ok_or_else(|| {
+            ApiError::not_found(crate::msg::organization::not_found(&user.organization_id))
+        })?;
     let current_plan = PricingPlan::parse(&pricing_plan).ok_or_else(ApiError::internal)?;
     if let Some(plan) = request.plan
         && !(matches!(plan, PricingPlan::Team | PricingPlan::Power)
@@ -354,12 +357,15 @@ pub(crate) const COUNT_USERS_FOR_ORGANIZATION: &str = r#"SELECT COUNT(*) FROM we
 async fn status(State(state): State<AppState>, user: AuthUser) -> ApiResult<axum::Json<Value>> {
     let (pricing_plan, included_users, paid_until): (String, Option<i32>, Option<DateTime<Utc>>) =
         sqlx::query_as(
-            "SELECT pricingPlan::text, includedUsers, paidUntil FROM webknossos.organizations_ WHERE _id = $1",
+            "SELECT pricingPlan::text, includedUsers, paidUntil FROM \
+                    webknossos.organizations_ WHERE _id = $1",
         )
         .bind(&user.organization_id)
         .fetch_optional(&state.pool)
         .await?
-        .ok_or_else(|| ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id)))?;
+        .ok_or_else(|| {
+            ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
+        })?;
     let active_users: i64 = sqlx::query_scalar(COUNT_USERS_FOR_ORGANIZATION)
         .bind(&user.organization_id)
         .fetch_one(&state.pool)
@@ -542,12 +548,15 @@ async fn update_plan(
     }
     let mut tx = state.pool.begin().await?;
     let (organization_name, previous_plan): (String, String) = sqlx::query_as(
-        "SELECT name, pricingPlan::text FROM webknossos.organizations WHERE _id = $1 AND NOT isDeleted FOR UPDATE",
+        "SELECT name, pricingPlan::text FROM webknossos.organizations WHERE _id = $1 \
+                AND NOT isDeleted FOR UPDATE",
     )
     .bind(&update.organization_id)
     .fetch_optional(&mut *tx)
     .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::organization::not_found(&update.organization_id)))?;
+    .ok_or_else(|| {
+        ApiError::not_found(crate::msg::organization::not_found(&update.organization_id))
+    })?;
     let previous_plan = PricingPlan::parse(&previous_plan).ok_or_else(ApiError::internal)?;
     sqlx::query(
         r#"INSERT INTO webknossos.organization_plan_updates(
@@ -715,13 +724,17 @@ async fn plan_updates(
             Option<i64>,
             DateTime<Utc>,
         );
-        let (pricing_plan, ai_plan, paid_until, included_users, included_storage, created): OrganizationRow = sqlx::query_as(
-            "SELECT pricingPlan::text, aiPlan::text, paidUntil, includedUsers, includedStorage, created FROM webknossos.organizations_ WHERE _id = $1",
+        let row: OrganizationRow = sqlx::query_as(
+            "SELECT pricingPlan::text, aiPlan::text, paidUntil, includedUsers, \
+                    includedStorage, created FROM webknossos.organizations_ WHERE _id = $1",
         )
         .bind(&user.organization_id)
         .fetch_optional(&state.pool)
         .await?
-        .ok_or_else(|| ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id)))?;
+        .ok_or_else(|| {
+            ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
+        })?;
+        let (pricing_plan, ai_plan, paid_until, included_users, included_storage, created) = row;
         let mut update = Map::new();
         update.insert("organizationId".into(), json!(user.organization_id));
         update.insert("description".into(), json!("Organization created"));

@@ -144,8 +144,15 @@ async fn acquire(
     // conflicting insert commits. Advisory serialization also covers release.
     let (holder, holder_session) = match acquired {
         Some(holder) => holder,
-        None => sqlx::query_as("SELECT _user,sessionId FROM webknossos.annotation_mutexes WHERE _annotation=$1 FOR UPDATE")
-            .bind(id.as_str()).fetch_one(&mut *transaction).await.map_err(ApiError::from).map_err(acquisition_error)?,
+        None => sqlx::query_as(
+            "SELECT _user,sessionId FROM webknossos.annotation_mutexes WHERE \
+                _annotation=$1 FOR UPDATE",
+        )
+        .bind(id.as_str())
+        .fetch_one(&mut *transaction)
+        .await
+        .map_err(ApiError::from)
+        .map_err(acquisition_error)?,
     };
     let can_edit = holder == user.id && holder_session == session;
     let (blocked_user, blocked_session) = if can_edit {
@@ -188,12 +195,21 @@ async fn release(
         let mut transaction = state.pool.begin().await?;
         sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
             .bind(format!("annotation-mutex:{id}"))
-            .execute(&mut *transaction).await?;
-        sqlx::query("DELETE FROM webknossos.annotation_mutexes WHERE _annotation=$1 AND _user=$2 AND sessionId=$3")
-            .bind(id.as_str()).bind(&user.id).bind(session).execute(&mut *transaction).await?;
+            .execute(&mut *transaction)
+            .await?;
+        sqlx::query(
+            "DELETE FROM webknossos.annotation_mutexes WHERE _annotation=$1 AND _user=$2 \
+                AND sessionId=$3",
+        )
+        .bind(id.as_str())
+        .bind(&user.id)
+        .bind(session)
+        .execute(&mut *transaction)
+        .await?;
         transaction.commit().await?;
-        Ok::<_,sqlx::Error>(())
-    }.await;
+        Ok::<_, sqlx::Error>(())
+    }
+    .await;
     operation.map_err(|error| {
         let error = ApiError::from(error);
         ApiError::new(error.status, RELEASE_FAILED)

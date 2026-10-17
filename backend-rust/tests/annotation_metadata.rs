@@ -120,9 +120,28 @@ type Row<'a> = (
 async fn insert_annotation(db: &TestDb, dataset: &str, owner: &str, row: Row<'_>) -> String {
     let (typ, visibility, state, mode, locked, task, deleted) = row;
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,visibility,state,collaborationMode,isLockedByOwner,isDeleted,name,description,tags,created,modified) VALUES($1,$2,$3,$4,$5::webknossos.ANNOTATION_TYPE,$6::webknossos.ANNOTATION_VISIBILITY,$7::webknossos.ANNOTATION_STATE,$8::webknossos.ANNOTATION_COLLABORATION_MODE,$9,$10,'Original','Description',ARRAY['old'],TIMESTAMPTZ '2020-01-01T00:00:00Z',TIMESTAMPTZ '2020-01-02T00:00:00Z')")
-        .bind(&id).bind(dataset).bind(task).bind(owner).bind(typ).bind(visibility).bind(state).bind(mode).bind(locked).bind(deleted)
-        .execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.annotations(_id,_dataset,_task,_user,typ,visibility,state,\
+            collaborationMode,isLockedByOwner,isDeleted,name,description,tags,created,modified) \
+            VALUES($1,$2,$3,$4,$5::webknossos.ANNOTATION_TYPE,\
+            $6::webknossos.ANNOTATION_VISIBILITY,$7::webknossos.ANNOTATION_STATE,\
+            $8::webknossos.ANNOTATION_COLLABORATION_MODE,$9,$10,'Original','Description',\
+            ARRAY['old'],TIMESTAMPTZ '2020-01-01T00:00:00Z',TIMESTAMPTZ '2020-01-02T00:00:00Z')",
+    )
+    .bind(&id)
+    .bind(dataset)
+    .bind(task)
+    .bind(owner)
+    .bind(typ)
+    .bind(visibility)
+    .bind(state)
+    .bind(mode)
+    .bind(locked)
+    .bind(deleted)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     id
 }
 
@@ -172,7 +191,13 @@ async fn world(db: &TestDb, tracing_store_url: &str) -> World {
     // A stale foreign role must not broaden team read access.
     add_role(db, &owner.user_id, &foreign_team, false).await;
 
-    sqlx::query("INSERT INTO webknossos.dataStores(name,url,publicUrl,key) VALUES('metadata','http://localhost:9000','https://data.example.test','k')").execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataStores(name,url,publicUrl,key) \
+            VALUES('metadata','http://localhost:9000','https://data.example.test','k')",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.tracingStores(name,url,publicUrl,key) VALUES('metadata-ts',$1,'https://tracing.example.test','k')")
         .bind(tracing_store_url).execute(&db.pool).await.unwrap();
     let dataset = object_id();
@@ -185,10 +210,29 @@ async fn world(db: &TestDb, tracing_store_url: &str) -> World {
         .await
         .unwrap();
     let (project, task_type, task) = (object_id(), object_id(), object_id());
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,'Metadata-project')")
-        .bind(&project).bind(&f.organization_id).bind(&f.team_id).bind(&f.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'Metadata-type','',true,true)")
-        .bind(&task_type).bind(&f.organization_id).bind(&f.team_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+            VALUES($1,$2,$3,$4,'Metadata-project')",
+    )
+    .bind(&project)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,\
+            'Metadata-type','',true,true)",
+    )
+    .bind(&task_type)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation,boundingbox) VALUES($1,$2,$3,'test',0,10,10,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3,ROW(1,2,3,10,20,30)::webknossos.BOUNDING_BOX)")
         .bind(&task).bind(&project).bind(&task_type).execute(&db.pool).await.unwrap();
 

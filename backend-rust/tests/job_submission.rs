@@ -262,8 +262,14 @@ async fn all_eight_routes_submit_pending_jobs_with_contract_arguments_and_costs(
     assert_eq!(responses[7]["args"]["bounding_box"], "0,1,2,10,20,30");
     assert_eq!(responses[7]["args"]["mag_for_textures"], json!([2, 2, 2]));
     assert_eq!(counts(&db).await, (8, 3, 812));
-    let reservations: Vec<(i32, String, String, Option<String>)> = sqlx::query_as("SELECT milli_credit_delta, transaction_state::text, credit_state::text, _paid_job FROM webknossos.credit_transactions WHERE milli_credit_delta < 0 ORDER BY milli_credit_delta")
-        .fetch_all(&db.pool).await.unwrap();
+    let reservations: Vec<(i32, String, String, Option<String>)> = sqlx::query_as(
+        "SELECT milli_credit_delta, transaction_state::text, credit_state::text, \
+            _paid_job FROM webknossos.credit_transactions WHERE milli_credit_delta < 0 ORDER BY \
+            milli_credit_delta",
+    )
+    .fetch_all(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         reservations,
         vec![
@@ -361,8 +367,13 @@ async fn failed_paid_submission_refunds_expected_failures_and_rolls_back_databas
         assert!(refund.reservation_job.is_none());
         assert!(refund.refund_job.is_none());
     }
-    let comments_match: bool = sqlx::query_scalar("SELECT bool_and(comment = 'Refund for transaction ' || _related_transaction || '.') FROM webknossos.credit_transactions WHERE credit_state='Refunding'")
-        .fetch_one(&db.pool).await.unwrap();
+    let comments_match: bool = sqlx::query_scalar(
+        "SELECT bool_and(comment = 'Refund for transaction ' || _related_transaction || \
+            '.') FROM webknossos.credit_transactions WHERE credit_state='Refunding'",
+    )
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert!(comments_match);
     // A job insert constraint error is unexpected; its preceding reservation must roll back.
     sqlx::raw_sql("CREATE FUNCTION webknossos.reject_test_job() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test insertion failure' USING ERRCODE='23514'; END $$; CREATE TRIGGER reject_test_job BEFORE INSERT ON webknossos.jobs FOR EACH ROW EXECUTE FUNCTION webknossos.reject_test_job();")

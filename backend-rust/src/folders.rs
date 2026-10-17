@@ -216,8 +216,13 @@ async fn tree(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<V
     let mut output = Vec::new();
     for folder in folders {
         if access(&mut connection, &user, &folder.id, false).await? {
-            let parent: Option<String> = sqlx::query_scalar("SELECT _ancestor FROM webknossos.folder_paths WHERE _descendant = $1 AND depth = 1")
-                .bind(&folder.id).fetch_optional(&mut *connection).await?;
+            let parent: Option<String> = sqlx::query_scalar(
+                "SELECT _ancestor FROM webknossos.folder_paths WHERE _descendant = $1 \
+                    AND depth = 1",
+            )
+            .bind(&folder.id)
+            .fetch_optional(&mut *connection)
+            .await?;
             let editable = access(&mut connection, &user, &folder.id, true).await?;
             output.push(json!({"id": folder.id, "name": folder.name, "parent": parent,
                 "metadata": folder.metadata, "created": folder.created.timestamp_millis(), "isEditable": editable}));

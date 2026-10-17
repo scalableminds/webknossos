@@ -391,19 +391,23 @@ async fn identity_can_access(
             match crate::annotation::access::find(pool, Some(identity), id.as_str(), true).await {
                 Ok(annotation) => {
                     annotation.state != "Cancelled"
-                        && crate::annotation::access::restrictions(&annotation, Some(identity)).allow_access
+                        && crate::annotation::access::restrictions(&annotation, Some(identity))
+                            .allow_access
                 }
                 Err(error) if error.status == StatusCode::NOT_FOUND => false,
                 Err(error) => return Err(error),
             }
         }
-        Target::Workflow(hash) => sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM webknossos.voxelytics_workflows WHERE _organization = $1 AND hash = $2)",
-        )
-        .bind(&identity.organization_id)
-        .bind(hash)
-        .fetch_one(pool)
-        .await?,
+        Target::Workflow(hash) => {
+            sqlx::query_scalar(
+                "SELECT EXISTS(SELECT 1 FROM webknossos.voxelytics_workflows WHERE \
+                    _organization = $1 AND hash = $2)",
+            )
+            .bind(&identity.organization_id)
+            .bind(hash)
+            .fetch_one(pool)
+            .await?
+        }
     })
 }
 

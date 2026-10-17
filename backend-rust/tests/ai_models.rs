@@ -139,8 +139,18 @@ async fn share(db: &TestDb, model: &str, organization: &str) {
 
 async fn seed_job(db: &TestDb, owner: &str, state: &str) -> String {
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.jobs (_id,_owner,_dataStore,command,commandArgs,state,created) VALUES ($1,$2,'store','infer_neurons',$3,$4::webknossos.JOB_STATE,to_timestamp(1000))")
-        .bind(&id).bind(owner).bind(json!({"dataset_name": "test", "webknossos_token": "private-job-token"})).bind(state).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.jobs \
+            (_id,_owner,_dataStore,command,commandArgs,state,created) VALUES \
+            ($1,$2,'store','infer_neurons',$3,$4::webknossos.JOB_STATE,to_timestamp(1000))",
+    )
+    .bind(&id)
+    .bind(owner)
+    .bind(json!({"dataset_name": "test", "webknossos_token": "private-job-token"}))
+    .bind(state)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     id
 }
 
@@ -152,8 +162,21 @@ async fn seed_inference(
     dataset: Option<&str>,
 ) -> String {
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.aiInferences (_id,_organization,_inferenceJob,_aiModel,_newDataset,boundingBox,newSegmentationLayerName,maskAnnotationLayerName,created) VALUES ($1,$2,$3,$4,$5,ROW(0,0,0,10,20,30)::webknossos.BOUNDING_BOX,'segmentation','mask',to_timestamp(1000))")
-        .bind(&id).bind(organization).bind(job).bind(model).bind(dataset).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.aiInferences \
+            (_id,_organization,_inferenceJob,_aiModel,_newDataset,boundingBox,\
+            newSegmentationLayerName,maskAnnotationLayerName,created) VALUES ($1,$2,$3,$4,$5,\
+            ROW(0,0,0,10,20,30)::webknossos.BOUNDING_BOX,'segmentation','mask',to_timestamp(\
+            1000))",
+    )
+    .bind(&id)
+    .bind(organization)
+    .bind(job)
+    .bind(model)
+    .bind(dataset)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     id
 }
 
@@ -196,7 +219,14 @@ async fn model_read_scopes_pretrained_datastore_and_serialization() {
         .await
         .unwrap();
     let pretrained = "576500000000000000000001";
-    sqlx::query("INSERT INTO webknossos.aiModels (_id,_dataStore,name,isPretrained) VALUES ($1,'store','pretrained',TRUE)").bind(pretrained).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.aiModels (_id,_dataStore,name,isPretrained) VALUES \
+            ($1,'store','pretrained',TRUE)",
+    )
+    .bind(pretrained)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("UPDATE webknossos.aiModels SET _user=$1 WHERE _id=$2")
         .bind(&owner.user_id)
         .bind(&owned)
@@ -394,7 +424,14 @@ async fn model_update_preserves_hidden_sharing_and_rolls_back_failed_sharing() {
         updated["sharedOrganizationIds"],
         json!([owner.organization_id])
     );
-    let shares: Vec<String> = sqlx::query_scalar("SELECT _organization FROM webknossos.aiModel_organizations WHERE _aiModel=$1 ORDER BY _organization").bind(&model).fetch_all(&db.pool).await.unwrap();
+    let shares: Vec<String> = sqlx::query_scalar(
+        "SELECT _organization FROM webknossos.aiModel_organizations WHERE _aiModel=$1 \
+            ORDER BY _organization",
+    )
+    .bind(&model)
+    .fetch_all(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(shares.len(), 2);
     assert!(shares.contains(&owner.organization_id) && shares.contains(&hidden.organization_id));
     assert_eq!(
@@ -456,7 +493,14 @@ async fn model_update_preserves_hidden_sharing_and_rolls_back_failed_sharing() {
             .await
             .unwrap();
     assert_eq!(name_comment, ("renamed".into(), None));
-    let current: Vec<String> = sqlx::query_scalar("SELECT _organization FROM webknossos.aiModel_organizations WHERE _aiModel=$1 ORDER BY _organization").bind(&model).fetch_all(&db.pool).await.unwrap();
+    let current: Vec<String> = sqlx::query_scalar(
+        "SELECT _organization FROM webknossos.aiModel_organizations WHERE _aiModel=$1 \
+            ORDER BY _organization",
+    )
+    .bind(&model)
+    .fetch_all(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(shares, current);
     let duplicate = seed_model(
         &db,
@@ -612,10 +656,7 @@ async fn voxel_size_uses_pretrained_values_and_real_authenticated_datastore_requ
                 None
             )
             .await,
-            (
-                200,
-                json!({"factor": [4, 5, 6], "unit": "micrometer"})
-            )
+            (200, json!({"factor": [4, 5, 6], "unit": "micrometer"}))
         );
     }
     let (_, fallback_json) = send(
@@ -646,7 +687,14 @@ async fn voxel_size_uses_pretrained_values_and_real_authenticated_datastore_requ
         json!({"modelPath": format!("s3://bucket/organization/.aiModels/{fallback}")})
     );
     let pretrained = "576500000000000000000003";
-    sqlx::query("INSERT INTO webknossos.aiModels (_id,_dataStore,name,isPretrained) VALUES ($1,'store','pretrained',TRUE)").bind(pretrained).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.aiModels (_id,_dataStore,name,isPretrained) VALUES \
+            ($1,'store','pretrained',TRUE)",
+    )
+    .bind(pretrained)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         send(
             &app,
@@ -1375,8 +1423,16 @@ const TRAIN_COMMANDS: [&str; 2] = ["train_neuron_model", "train_instance_model"]
 /// Worker for `store`, an AI plan for the organization, and a usable dataset
 /// (two layers) with two annotations of `owner`. Returns (dataset, [annotations]).
 async fn seed_training(db: &TestDb, organization: &str, owner: &str) -> (String, [String; 2]) {
-    sqlx::query("INSERT INTO webknossos.workers (_id,_dataStore,key,supportedJobCommands) VALUES ($1,'store',$2,$3)")
-        .bind(object_id()).bind(object_id()).bind(TRAIN_COMMANDS.to_vec()).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.workers (_id,_dataStore,key,supportedJobCommands) VALUES \
+            ($1,'store',$2,$3)",
+    )
+    .bind(object_id())
+    .bind(object_id())
+    .bind(TRAIN_COMMANDS.to_vec())
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("UPDATE webknossos.organizations SET aiPlan='Team_AI' WHERE _id=$1")
         .bind(organization)
         .execute(&db.pool)
@@ -1489,13 +1545,15 @@ async fn training_submits_paid_job_and_pending_model_atomically() {
         assert!(uri.contains(&format!("organizationId={org}")), "{uri}");
     }
 
-    let (command, args, owner_id, store, state): (String, Value, String, String, String) = sqlx::query_as(
-        "SELECT command, commandArgs, _owner, TRIM(_dataStore), state::text FROM webknossos.jobs WHERE _id=$1",
-    )
-    .bind(&job_id)
-    .fetch_one(&db.pool)
-    .await
-    .unwrap();
+    let (command, args, owner_id, store, state): (String, Value, String, String, String) =
+        sqlx::query_as(
+            "SELECT command, commandArgs, _owner, TRIM(_dataStore), state::text FROM \
+                webknossos.jobs WHERE _id=$1",
+        )
+        .bind(&job_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
     assert_eq!(
         (
             command.as_str(),
@@ -1523,9 +1581,20 @@ async fn training_submits_paid_job_and_pending_model_atomically() {
             "custom_configuration": {"epochs": 3, "nested": {"a": [1]}},
         })
     );
-    let (delta, comment, paid_job, transaction_state, credit_state): (i32, String, Option<String>, String, String) =
-        sqlx::query_as("SELECT milli_credit_delta, comment, _paid_job, transaction_state::text, credit_state::text FROM webknossos.credit_transactions WHERE _organization=$1")
-            .bind(&org).fetch_one(&db.pool).await.unwrap();
+    let (delta, comment, paid_job, transaction_state, credit_state): (
+        i32,
+        String,
+        Option<String>,
+        String,
+        String,
+    ) = sqlx::query_as(
+        "SELECT milli_credit_delta, comment, _paid_job, transaction_state::text, \
+                credit_state::text FROM webknossos.credit_transactions WHERE _organization=$1",
+    )
+    .bind(&org)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         (
             delta,
@@ -1559,9 +1628,19 @@ async fn training_submits_paid_job_and_pending_model_atomically() {
             Some("em_neurons")
         )
     );
-    let (training_job, user_id, model_org, store): (Option<String>, Option<String>, Option<String>, String) =
-        sqlx::query_as("SELECT _trainingJob, _user, _organization, _dataStore FROM webknossos.aiModels WHERE _id=$1")
-            .bind(&id).fetch_one(&db.pool).await.unwrap();
+    let (training_job, user_id, model_org, store): (
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        String,
+    ) = sqlx::query_as(
+        "SELECT _trainingJob, _user, _organization, _dataStore FROM \
+                webknossos.aiModels WHERE _id=$1",
+    )
+    .bind(&id)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         (training_job, user_id, model_org, store.as_str()),
         (
@@ -1681,7 +1760,12 @@ async fn training_validation_order_permissions_and_rollback() {
             .await
         }
     };
-    let body = |annotations: Vec<Value>, name: &str| json!({"trainingAnnotations": annotations, "name": name});
+    let body = |annotations: Vec<Value>, name: &str| {
+        json!({
+            "trainingAnnotations": annotations,
+            "name": name
+        })
+    };
     let valid = || body(vec![training_annotation(&first, [1, 1, 1])], "model");
     let not_found = (
         404,
@@ -1772,8 +1856,16 @@ async fn training_validation_order_permissions_and_rollback() {
     // Dataset of another organization: unreadable is empty, readable is 403.
     let foreign_dataset = seed_dataset(&db, &foreign.organization_id).await;
     let foreign_annotation = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations (_id,_dataset,_user,typ,visibility) VALUES ($1,$2,$3,'Explorational','Public')")
-        .bind(&foreign_annotation).bind(&foreign_dataset).bind(&foreign.user_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotations (_id,_dataset,_user,typ,visibility) VALUES \
+            ($1,$2,$3,'Explorational','Public')",
+    )
+    .bind(&foreign_annotation)
+    .bind(&foreign_dataset)
+    .bind(&foreign.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let foreign_body = body(
         vec![training_annotation(&foreign_annotation, [1, 1, 1])],
         "m",
@@ -1915,8 +2007,13 @@ async fn training_validation_order_permissions_and_rollback() {
         "{response}"
     );
     assert_eq!(training_counts(&db).await, (0, 2, 2, 0));
-    let states: Vec<(String, String)> = sqlx::query_as("SELECT transaction_state::text, credit_state::text FROM webknossos.credit_transactions ORDER BY credit_state")
-        .fetch_all(&db.pool).await.unwrap();
+    let states: Vec<(String, String)> = sqlx::query_as(
+        "SELECT transaction_state::text, credit_state::text FROM \
+            webknossos.credit_transactions ORDER BY credit_state",
+    )
+    .fetch_all(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         states,
         [
@@ -1964,8 +2061,16 @@ const INFER_COMMANDS: [&str; 2] = ["infer_neurons", "infer_instances"];
 /// 1 µm whose color layer has mags 1-1-1, 2-2-1, 4-4-2, 8-8-4 (the
 /// segmentation layer has none), and an annotation. Returns (dataset, annotation).
 async fn seed_inference_setup(db: &TestDb, organization: &str, owner: &str) -> (String, String) {
-    sqlx::query("INSERT INTO webknossos.workers (_id,_dataStore,key,supportedJobCommands) VALUES ($1,'store',$2,$3)")
-        .bind(object_id()).bind(object_id()).bind(INFER_COMMANDS.to_vec()).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.workers (_id,_dataStore,key,supportedJobCommands) VALUES \
+            ($1,'store',$2,$3)",
+    )
+    .bind(object_id())
+    .bind(object_id())
+    .bind(INFER_COMMANDS.to_vec())
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.credit_transactions (_id,_organization,milli_credit_delta,comment,transaction_state,credit_state) VALUES ($1,$2,5000,'test grant','Complete','AddCredits')")
         .bind(object_id()).bind(organization).execute(&db.pool).await.unwrap();
     let dataset = seed_dataset(db, organization).await;
@@ -1975,8 +2080,17 @@ async fn seed_inference_setup(db: &TestDb, organization: &str, owner: &str) -> (
         .await
         .unwrap();
     for [x, y, z] in [[1, 1, 1], [2, 2, 1], [4, 4, 2], [8, 8, 4]] {
-        sqlx::query("INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag) VALUES ($1,'color',ROW($2,$3,$4)::webknossos.VECTOR3)")
-            .bind(&dataset).bind(f64::from(x)).bind(f64::from(y)).bind(f64::from(z)).execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag) VALUES \
+                ($1,'color',ROW($2,$3,$4)::webknossos.VECTOR3)",
+        )
+        .bind(&dataset)
+        .bind(f64::from(x))
+        .bind(f64::from(y))
+        .bind(f64::from(z))
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
     // A pending upload is not part of the data source.
     sqlx::query("INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,uploadIsPending) VALUES ($1,'color',ROW(3,3,3)::webknossos.VECTOR3,TRUE)")

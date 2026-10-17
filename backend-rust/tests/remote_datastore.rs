@@ -61,9 +61,18 @@ async fn setup() -> Setup {
         ("scratch", "http://scratch.invalid", "s", true),
         ("other", "http://other.invalid", "o", false),
     ] {
-        sqlx::query("INSERT INTO webknossos.dataStores (name,url,publicUrl,key,isScratch) VALUES ($1,$2,$3,$4,$5)")
-            .bind(name).bind(url).bind(format!("http://public-{name}.invalid")).bind(key).bind(scratch)
-            .execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO webknossos.dataStores (name,url,publicUrl,key,isScratch) VALUES \
+                ($1,$2,$3,$4,$5)",
+        )
+        .bind(name)
+        .bind(url)
+        .bind(format!("http://public-{name}.invalid"))
+        .bind(key)
+        .bind(scratch)
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
     let clients = ServiceClients::new(ServiceClientConfig {
         request_timeout: Duration::from_secs(5),

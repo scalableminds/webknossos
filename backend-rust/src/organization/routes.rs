@@ -167,8 +167,14 @@ async fn by_invite(
     Path(token): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
     // This route intentionally stays anonymous, matching the plain Action.
-    let organization: String=sqlx::query_scalar("SELECT _organization FROM webknossos.invites_ WHERE tokenvalue=$1 AND expirationdatetime>statement_timestamp() LIMIT 1")
-        .bind(token).fetch_optional(&state.pool).await?.ok_or_else(||ApiError::not_found(crate::msg::organization::NOT_FOUND_BY_INVITE))?;
+    let organization: String = sqlx::query_scalar(
+        "SELECT _organization FROM webknossos.invites_ WHERE tokenvalue=$1 AND \
+            expirationdatetime>statement_timestamp() LIMIT 1",
+    )
+    .bind(token)
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| ApiError::not_found(crate::msg::organization::NOT_FOUND_BY_INVITE))?;
     Ok(ResponseJson(
         public_json(&state.pool, &organization, None, false, false).await?,
     ))
@@ -194,8 +200,16 @@ async fn update(
     Json(parameters): Json<OrganizationParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
     let mut tx = state.pool.begin().await?;
-    let accessible:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.organizations_ o WHERE o._id=$1 AND ($3 OR o._id IN(SELECT _organization FROM webknossos.users_ WHERE _multiuser=(SELECT _multiuser FROM webknossos.users_ WHERE _id=$2))))")
-        .bind(&id).bind(&user.id).bind(user.is_superuser).fetch_one(&mut *tx).await?;
+    let accessible: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM webknossos.organizations_ o WHERE o._id=$1 AND ($3 \
+            OR o._id IN(SELECT _organization FROM webknossos.users_ WHERE _multiuser=(SELECT \
+            _multiuser FROM webknossos.users_ WHERE _id=$2))))",
+    )
+    .bind(&id)
+    .bind(&user.id)
+    .bind(user.is_superuser)
+    .fetch_one(&mut *tx)
+    .await?;
     if !accessible {
         return Err(ApiError::not_found(crate::msg::organization::not_found(
             &id,
@@ -204,8 +218,15 @@ async fn update(
     if !user.is_admin || user.organization_id != id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let updated=sqlx::query("UPDATE webknossos.organizations SET name=$2,newusermailinglist=$3 WHERE _id=$1 AND NOT isdeleted")
-        .bind(&id).bind(parameters.name).bind(parameters.new_user_mailing_list).execute(&mut *tx).await?;
+    let updated = sqlx::query(
+        "UPDATE webknossos.organizations SET name=$2,newusermailinglist=$3 WHERE _id=$1 \
+            AND NOT isdeleted",
+    )
+    .bind(&id)
+    .bind(parameters.name)
+    .bind(parameters.new_user_mailing_list)
+    .execute(&mut *tx)
+    .await?;
     if updated.rows_affected() == 0 {
         return Err(ApiError::not_found(crate::msg::organization::not_found(
             &id,

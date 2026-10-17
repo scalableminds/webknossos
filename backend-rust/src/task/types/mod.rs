@@ -207,13 +207,39 @@ async fn create(
         .iter()
         .map(TracingMode::as_str)
         .collect();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_allowedmodes,settings_preferredmode,settings_branchpointsallowed,settings_somaclickingallowed,settings_volumeinterpolationallowed,settings_mergermode,settings_magrestrictions_min,settings_magrestrictions_max,recommendedconfiguration,tracingtype) VALUES($1,$2,$3,$4,$5,$6::text[]::webknossos.tasktype_modes[],$7::text::webknossos.tasktype_modes,$8,$9,$10,$11,$12,$13,$14,$15::text::webknossos.tasktype_tracingtypes)")
-        .bind(&id).bind(&user.organization_id).bind(&parameters.team_id).bind(&parameters.summary).bind(&parameters.description)
-        .bind(modes).bind(parameters.settings.preferred_mode.as_ref().map(TracingMode::as_str))
-        .bind(parameters.settings.branch_points_allowed).bind(parameters.settings.soma_clicking_allowed)
-        .bind(parameters.settings.volume_interpolation_allowed).bind(parameters.settings.merger_mode)
-        .bind(parameters.settings.mag_restrictions.min).bind(parameters.settings.mag_restrictions.max)
-        .bind(&parameters.recommended_configuration).bind(parameters.tracing_type.as_str()).execute(&mut *tx).await?;
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_allowedmodes,settings_preferredmode,settings_branchpointsallowed,\
+            settings_somaclickingallowed,settings_volumeinterpolationallowed,\
+            settings_mergermode,settings_magrestrictions_min,settings_magrestrictions_max,\
+            recommendedconfiguration,tracingtype) VALUES($1,$2,$3,$4,$5,\
+            $6::text[]::webknossos.tasktype_modes[],$7::text::webknossos.tasktype_modes,$8,$9,\
+            $10,$11,$12,$13,$14,$15::text::webknossos.tasktype_tracingtypes)",
+    )
+    .bind(&id)
+    .bind(&user.organization_id)
+    .bind(&parameters.team_id)
+    .bind(&parameters.summary)
+    .bind(&parameters.description)
+    .bind(modes)
+    .bind(
+        parameters
+            .settings
+            .preferred_mode
+            .as_ref()
+            .map(TracingMode::as_str),
+    )
+    .bind(parameters.settings.branch_points_allowed)
+    .bind(parameters.settings.soma_clicking_allowed)
+    .bind(parameters.settings.volume_interpolation_allowed)
+    .bind(parameters.settings.merger_mode)
+    .bind(parameters.settings.mag_restrictions.min)
+    .bind(parameters.settings.mag_restrictions.max)
+    .bind(&parameters.recommended_configuration)
+    .bind(parameters.tracing_type.as_str())
+    .execute(&mut *tx)
+    .await?;
     let response = public_json(&mut *tx, &user, &id).await?;
     tx.commit().await?;
     Ok(ResponseJson(response))
@@ -270,12 +296,34 @@ async fn update(
         .iter()
         .map(TracingMode::as_str)
         .collect();
-    sqlx::query("UPDATE webknossos.tasktypes SET _team=$2,summary=$3,description=$4,settings_allowedmodes=$5::text[]::webknossos.tasktype_modes[],settings_preferredmode=$6::text::webknossos.tasktype_modes,settings_branchpointsallowed=$7,settings_somaclickingallowed=$8,settings_volumeinterpolationallowed=$9,settings_mergermode=$10,recommendedconfiguration=$11 WHERE _id=$1 AND NOT isdeleted")
-        .bind(&id).bind(&parameters.team_id).bind(&parameters.summary).bind(&parameters.description).bind(modes)
-        .bind(parameters.settings.preferred_mode.as_ref().map(TracingMode::as_str))
-        .bind(parameters.settings.branch_points_allowed).bind(parameters.settings.soma_clicking_allowed)
-        .bind(parameters.settings.volume_interpolation_allowed).bind(parameters.settings.merger_mode)
-        .bind(&parameters.recommended_configuration).execute(&mut *tx).await?;
+    sqlx::query(
+        "UPDATE webknossos.tasktypes SET \
+            _team=$2,summary=$3,description=$4,\
+            settings_allowedmodes=$5::text[]::webknossos.tasktype_modes[],\
+            settings_preferredmode=$6::text::webknossos.tasktype_modes,\
+            settings_branchpointsallowed=$7,settings_somaclickingallowed=$8,\
+            settings_volumeinterpolationallowed=$9,settings_mergermode=$10,\
+            recommendedconfiguration=$11 WHERE _id=$1 AND NOT isdeleted",
+    )
+    .bind(&id)
+    .bind(&parameters.team_id)
+    .bind(&parameters.summary)
+    .bind(&parameters.description)
+    .bind(modes)
+    .bind(
+        parameters
+            .settings
+            .preferred_mode
+            .as_ref()
+            .map(TracingMode::as_str),
+    )
+    .bind(parameters.settings.branch_points_allowed)
+    .bind(parameters.settings.soma_clicking_allowed)
+    .bind(parameters.settings.volume_interpolation_allowed)
+    .bind(parameters.settings.merger_mode)
+    .bind(&parameters.recommended_configuration)
+    .execute(&mut *tx)
+    .await?;
     let mut value = public_json(&mut *tx, &user, &id).await?;
     tx.commit().await?;
     value["messages"] = json!([{"success":crate::msg::task_type::EDIT_SUCCESS}]);
@@ -314,9 +362,15 @@ async fn lock_task_type(
     id: &str,
     organization: &str,
 ) -> ApiResult<()> {
-    sqlx::query_scalar::<_,String>("SELECT _id FROM webknossos.tasktypes WHERE _id=$1 AND _organization=$2 AND NOT isdeleted FOR UPDATE")
-        .bind(id).bind(organization).fetch_optional(&mut **tx).await?
-        .ok_or_else(||ApiError::not_found(crate::msg::task_type::not_found(id)))?;
+    sqlx::query_scalar::<_, String>(
+        "SELECT _id FROM webknossos.tasktypes WHERE _id=$1 AND _organization=$2 AND NOT \
+            isdeleted FOR UPDATE",
+    )
+    .bind(id)
+    .bind(organization)
+    .fetch_optional(&mut **tx)
+    .await?
+    .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))?;
     Ok(())
 }
 

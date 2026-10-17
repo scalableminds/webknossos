@@ -101,17 +101,40 @@ async fn seed_dataset(
     usable: bool,
 ) -> String {
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.datasets (_id,_dataStore,_organization,_folder,name,directoryName,isUsable,isVirtual,status,voxelSizeFactor,sortingKey,_uploader) SELECT $1,'store',_id,_rootFolder,$1,$1,$4,$3,$5,ROW(1,1,1)::webknossos.VECTOR3,NOW(),$6 FROM webknossos.organizations WHERE _id=$2")
-        .bind(&id).bind(&fixture.organization_id).bind(virtual_).bind(usable).bind(status).bind(&fixture.user_id)
-        .execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.datasets \
+            (_id,_dataStore,_organization,_folder,name,directoryName,isUsable,isVirtual,status,\
+            voxelSizeFactor,sortingKey,_uploader) SELECT $1,'store',_id,_rootFolder,$1,$1,$4,$3,\
+            $5,ROW(1,1,1)::webknossos.VECTOR3,NOW(),$6 FROM webknossos.organizations WHERE \
+            _id=$2",
+    )
+    .bind(&id)
+    .bind(&fixture.organization_id)
+    .bind(virtual_)
+    .bind(usable)
+    .bind(status)
+    .bind(&fixture.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     for (name, category, class) in [
         ("color", "color", "uint8"),
         ("seg", "segmentation", "uint32"),
     ] {
-        sqlx::query("INSERT INTO webknossos.dataset_layers (_dataset,name,category,elementClass,boundingBox,dataFormat) VALUES ($1,$2,$3::webknossos.DATASET_LAYER_CATEGORY,$4::webknossos.DATASET_LAYER_ELEMENT_CLASS,ROW(0,0,0,10,10,10)::webknossos.BOUNDING_BOX,'zarr3')")
+        sqlx::query("INSERT INTO webknossos.dataset_layers \
+                (_dataset,name,category,elementClass,boundingBox,dataFormat) VALUES \
+                ($1,$2,$3::webknossos.DATASET_LAYER_CATEGORY,$4::webknossos.DATASET_LAYER_ELEMENT_CLASS,ROW(0,0,0,10,10,10)::webknossos.BOUNDING_BOX,'zarr3')")
             .bind(&id).bind(name).bind(category).bind(class).execute(&db.pool).await.unwrap();
-        sqlx::query("INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,path) VALUES ($1,$2,ROW(1,1,1)::webknossos.VECTOR3,$3)")
-            .bind(&id).bind(name).bind(format!("/srv/other/{id}/{name}/1")).execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,path) \
+                VALUES ($1,$2,ROW(1,1,1)::webknossos.VECTOR3,$3)",
+        )
+        .bind(&id)
+        .bind(name)
+        .bind(format!("/srv/other/{id}/{name}/1"))
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
     id
 }
@@ -248,8 +271,15 @@ async fn reserve_upload_to_paths_creates_pending_virtual_dataset_with_generated_
         layers[1]["attachments"]["segmentIndex"]["path"],
         format!("{prefix}/seg/segmentIndex/si")
     );
-    let row: (String, bool, bool, String, String, Option<String>, String) = sqlx::query_as("SELECT status,isUsable,isVirtual,creationType::text,_dataStore,_uploader,directoryName FROM webknossos.datasets WHERE _id=$1")
-        .bind(&id).fetch_one(&db.pool).await.unwrap();
+    let row: (String, bool, bool, String, String, Option<String>, String) = sqlx::query_as(
+        "SELECT \
+            status,isUsable,isVirtual,creationType::text,_dataStore,_uploader,directoryName \
+            FROM webknossos.datasets WHERE _id=$1",
+    )
+    .bind(&id)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         row,
         (
@@ -352,8 +382,14 @@ async fn preliminary_mag_and_attachment_reservations_enforce_pending_rules() {
             fixture.organization_id
         )
     );
-    let (usable, unit, mags): (bool, String, i64) = sqlx::query_as("SELECT isUsable,voxelSizeUnit::text,(SELECT count(*) FROM webknossos.dataset_mags WHERE _dataset=$1) FROM webknossos.datasets WHERE _id=$1")
-        .bind(&uploading).fetch_one(&db.pool).await.unwrap();
+    let (usable, unit, mags): (bool, String, i64) = sqlx::query_as(
+        "SELECT isUsable,voxelSizeUnit::text,(SELECT count(*) FROM \
+            webknossos.dataset_mags WHERE _dataset=$1) FROM webknossos.datasets WHERE _id=$1",
+    )
+    .bind(&uploading)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!((usable, unit.as_str(), mags), (false, "nanometer", 3));
     sqlx::query("UPDATE webknossos.datasets SET status='' WHERE _id=$1")
         .bind(&uploading)
@@ -440,8 +476,14 @@ async fn preliminary_mag_and_attachment_reservations_enforce_pending_rules() {
             json!([first])
         )]
     );
-    let pending: Vec<(String, bool, Value)> = sqlx::query_as("SELECT path,uploadToPathIsPending,axisOrder FROM webknossos.dataset_mags WHERE _dataset=$1 AND dataLayerName='color' AND (mag).x=2")
-        .bind(&dataset).fetch_all(&db.pool).await.unwrap();
+    let pending: Vec<(String, bool, Value)> = sqlx::query_as(
+        "SELECT path,uploadToPathIsPending,axisOrder FROM webknossos.dataset_mags WHERE \
+            _dataset=$1 AND dataLayerName='color' AND (mag).x=2",
+    )
+    .bind(&dataset)
+    .fetch_all(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         pending,
         [(
@@ -453,9 +495,23 @@ async fn preliminary_mag_and_attachment_reservations_enforce_pending_rules() {
 
     // Attachments: singleton types and names must be free, pending ones conflict.
     let reserve_attachment = format!("/datasets/{dataset}/reserveAttachmentUploadToPath");
-    sqlx::query("INSERT INTO webknossos.dataset_layer_attachments (_dataset,layerName,name,path,type,dataFormat) VALUES ($1,'seg','si','/a','segmentIndex','hdf5'),($1,'seg','taken','/b','mesh','hdf5')")
-        .bind(&dataset).execute(&db.pool).await.unwrap();
-    let attachment = |name: &str, typ: &str| json!({"layerName": "seg", "attachmentName": name, "attachmentType": typ, "attachmentDataformat": "hdf5"});
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_layer_attachments \
+            (_dataset,layerName,name,path,type,dataFormat) VALUES \
+            ($1,'seg','si','/a','segmentIndex','hdf5'),($1,'seg','taken','/b','mesh','hdf5')",
+    )
+    .bind(&dataset)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    let attachment = |name: &str, typ: &str| {
+        json!({
+            "layerName": "seg",
+            "attachmentName": name,
+            "attachmentType": typ,
+            "attachmentDataformat": "hdf5"
+        })
+    };
     let (status, response) = post(
         &app,
         &reserve_attachment,

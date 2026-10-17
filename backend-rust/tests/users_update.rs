@@ -138,7 +138,13 @@ async fn admin_updates_permissions_teams_experiences_and_names() {
         ])
     );
     assert!(body.get("password").is_none() && body.get("userConfiguration").is_none());
-    let domain: i64 = scalar(&database, "SELECT COUNT(*) FROM webknossos.experienceDomains WHERE domain = 'proofreading' AND _organization = $1", &admin.organization_id).await;
+    let domain: i64 = scalar(
+        &database,
+        "SELECT COUNT(*) FROM webknossos.experienceDomains WHERE domain = 'proofreading' \
+            AND _organization = $1",
+        &admin.organization_id,
+    )
+    .await;
     assert_eq!(domain, 1);
 
     // Omitted fields keep their values, and lastTaskTypeId cannot be cleared.
@@ -487,13 +493,72 @@ async fn activation_and_deactivation_invariants() {
     let project = object_id();
     let task_type = object_id();
     let task = object_id();
-    sqlx::query("INSERT INTO webknossos.dataStores(name,url,publicUrl,key) VALUES('store','http://localhost:9000','https://data.example.test','key')").execute(&database.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.datasets(_id,_dataStore,_organization,_folder,name,directoryName,sortingKey) SELECT $1,'store',_id,_rootFolder,'Dataset','directory',NOW() FROM webknossos.organizations WHERE _id=$2").bind(&dataset).bind(&organization).execute(&database.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,'Project')").bind(&project).bind(&organization).bind(&admin.team_id).bind(&admin.user_id).execute(&database.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.taskTypes(_id,_organization,_team,summary,description,settings_branchPointsAllowed,settings_somaClickingAllowed) VALUES($1,$2,$3,'Type','',true,true)").bind(&task_type).bind(&organization).bind(&admin.team_id).execute(&database.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_taskType,neededExperience_domain,neededExperience_value,totalInstances,pendingInstances,editPosition,editRotation) VALUES($1,$2,$3,'test',0,1,1,ROW(0,0,0)::webknossos.VECTOR3,ROW(0,0,0)::webknossos.VECTOR3)").bind(&task).bind(&project).bind(&task_type).execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataStores(name,url,publicUrl,key) \
+            VALUES('store','http://localhost:9000','https://data.example.test','key')",
+    )
+    .execute(&database.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.datasets(_id,_dataStore,_organization,_folder,name,directoryName,\
+            sortingKey) SELECT $1,'store',_id,_rootFolder,'Dataset','directory',NOW() FROM \
+            webknossos.organizations WHERE _id=$2",
+    )
+    .bind(&dataset)
+    .bind(&organization)
+    .execute(&database.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+            VALUES($1,$2,$3,$4,'Project')",
+    )
+    .bind(&project)
+    .bind(&organization)
+    .bind(&admin.team_id)
+    .bind(&admin.user_id)
+    .execute(&database.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.taskTypes(_id,_organization,_team,summary,description,\
+            settings_branchPointsAllowed,settings_somaClickingAllowed) VALUES($1,$2,$3,'Type',\
+            '',true,true)",
+    )
+    .bind(&task_type)
+    .bind(&organization)
+    .bind(&admin.team_id)
+    .execute(&database.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasks(_id,_project,_taskType,neededExperience_domain,\
+            neededExperience_value,totalInstances,pendingInstances,editPosition,editRotation) \
+            VALUES($1,$2,$3,'test',0,1,1,ROW(0,0,0)::webknossos.VECTOR3,ROW(0,0,\
+            0)::webknossos.VECTOR3)",
+    )
+    .bind(&task)
+    .bind(&project)
+    .bind(&task_type)
+    .execute(&database.pool)
+    .await
+    .unwrap();
     let annotation = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,state) VALUES($1,$2,$3,$4,'Task','Active')").bind(&annotation).bind(&dataset).bind(&task).bind(&user.user_id).execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,state) \
+            VALUES($1,$2,$3,$4,'Task','Active')",
+    )
+    .bind(&annotation)
+    .bind(&dataset)
+    .bind(&task)
+    .bind(&user.user_id)
+    .execute(&database.pool)
+    .await
+    .unwrap();
     assert_eq!(
         patch(
             &app,

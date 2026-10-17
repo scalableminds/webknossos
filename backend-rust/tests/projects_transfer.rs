@@ -71,7 +71,13 @@ async fn transfers_active_task_annotations_with_play_permissions() {
         (&transferee.user_id, "false"),
         (&manager.user_id, "true"),
     ] {
-        execute(&database, "INSERT INTO webknossos.user_team_roles (_user, _team, isTeamManager) VALUES ($1, $2, $3::BOOLEAN)", &[user, team, is_manager]).await;
+        execute(
+            &database,
+            "INSERT INTO webknossos.user_team_roles (_user, _team, isTeamManager) VALUES \
+                ($1, $2, $3::BOOLEAN)",
+            &[user, team, is_manager],
+        )
+        .await;
     }
     let (dataset, project, other_project, task_type, task, other_task) = (
         object_id(),
@@ -82,13 +88,22 @@ async fn transfers_active_task_annotations_with_play_permissions() {
         object_id(),
     );
     execute(&database, "INSERT INTO webknossos.dataStores(name,url,publicUrl,key) VALUES('store','http://localhost:9000','https://data.example.test','key')", &[]).await;
-    execute(&database, "INSERT INTO webknossos.datasets(_id,_dataStore,_organization,_folder,name,directoryName,sortingKey) SELECT $1,'store',_id,_rootFolder,'Dataset','directory',NOW() FROM webknossos.organizations WHERE _id=$2", &[&dataset, organization]).await;
+    execute(&database, "INSERT INTO \
+            webknossos.datasets(_id,_dataStore,_organization,_folder,name,directoryName,sortingKey) SELECT $1,'store',_id,_rootFolder,'Dataset','directory',NOW() FROM webknossos.organizations WHERE _id=$2", &[&dataset, organization]).await;
     for (id, name) in [(&project, "Project"), (&other_project, "Other")] {
-        execute(&database, "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,$5)", &[id, organization, team, &admin.user_id, name]).await;
+        execute(
+            &database,
+            "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+                VALUES($1,$2,$3,$4,$5)",
+            &[id, organization, team, &admin.user_id, name],
+        )
+        .await;
     }
-    execute(&database, "INSERT INTO webknossos.taskTypes(_id,_organization,_team,summary,description,settings_branchPointsAllowed,settings_somaClickingAllowed) VALUES($1,$2,$3,'Type','',true,true)", &[&task_type, organization, team]).await;
+    execute(&database, "INSERT INTO \
+            webknossos.taskTypes(_id,_organization,_team,summary,description,settings_branchPointsAllowed,settings_somaClickingAllowed) VALUES($1,$2,$3,'Type','',true,true)", &[&task_type, organization, team]).await;
     for (id, project) in [(&task, &project), (&other_task, &other_project)] {
-        execute(&database, "INSERT INTO webknossos.tasks(_id,_project,_taskType,neededExperience_domain,neededExperience_value,totalInstances,pendingInstances,editPosition,editRotation) VALUES($1,$2,$3,'test',0,3,3,ROW(0,0,0)::webknossos.VECTOR3,ROW(0,0,0)::webknossos.VECTOR3)", &[id, project, &task_type]).await;
+        execute(&database, "INSERT INTO \
+                webknossos.tasks(_id,_project,_taskType,neededExperience_domain,neededExperience_value,totalInstances,pendingInstances,editPosition,editRotation) VALUES($1,$2,$3,'test',0,3,3,ROW(0,0,0)::webknossos.VECTOR3,ROW(0,0,0)::webknossos.VECTOR3)", &[id, project, &task_type]).await;
     }
     let (active, finished, other_active) = (object_id(), object_id(), object_id());
     for (id, task, state) in [
@@ -96,7 +111,13 @@ async fn transfers_active_task_annotations_with_play_permissions() {
         (&finished, &task, "Finished"),
         (&other_active, &other_task, "Active"),
     ] {
-        execute(&database, "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,state) VALUES($1,$2,$3,$4,'Task',$5::webknossos.ANNOTATION_STATE)", &[id, &dataset, task, &annotator.user_id, state]).await;
+        execute(
+            &database,
+            "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,state) \
+                VALUES($1,$2,$3,$4,'Task',$5::webknossos.ANNOTATION_STATE)",
+            &[id, &dataset, task, &annotator.user_id, state],
+        )
+        .await;
     }
     let body = json!({"userId": transferee.user_id});
 

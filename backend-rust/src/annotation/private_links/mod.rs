@@ -140,8 +140,17 @@ async fn create(
         ));
     }
     let id = ObjectId::new().to_string();
-    sqlx::query("INSERT INTO webknossos.annotation_privateLinks(_id,_annotation,accessToken,expirationDateTime) VALUES($1,$2,$3,$4)")
-        .bind(&id).bind(parameters.annotation.as_str()).bind(token()?).bind(parameters.expiration).execute(&mut *tx).await?;
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.annotation_privateLinks(_id,_annotation,accessToken,expirationDateTime) \
+            VALUES($1,$2,$3,$4)",
+    )
+    .bind(&id)
+    .bind(parameters.annotation.as_str())
+    .bind(token()?)
+    .bind(parameters.expiration)
+    .execute(&mut *tx)
+    .await?;
     let value = owned_link(&mut *tx, &user, &id, false).await?.public_json();
     tx.commit().await?;
     Ok(ResponseJson(value))
@@ -168,8 +177,15 @@ async fn update(
             ));
         }
     }
-    sqlx::query("UPDATE webknossos.annotation_privateLinks SET _annotation=$2,expirationDateTime=$3 WHERE _id=$1 AND NOT isDeleted")
-        .bind(&id).bind(parameters.annotation.as_str()).bind(parameters.expiration).execute(&mut *tx).await?;
+    sqlx::query(
+        "UPDATE webknossos.annotation_privateLinks SET \
+            _annotation=$2,expirationDateTime=$3 WHERE _id=$1 AND NOT isDeleted",
+    )
+    .bind(&id)
+    .bind(parameters.annotation.as_str())
+    .bind(parameters.expiration)
+    .execute(&mut *tx)
+    .await?;
     let value = owned_link(&mut *tx, &user, &id, false).await?.public_json();
     tx.commit().await?;
     Ok(ResponseJson(value))
@@ -203,8 +219,14 @@ async fn source(
     Path(token_or_id): Path<String>,
     Query(query): Query<SourceQuery>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let linked:Option<String>=sqlx::query_scalar("SELECT link._annotation FROM webknossos.annotation_privateLinks_ link JOIN webknossos.annotations_ a ON a._id=link._annotation WHERE link.accessToken=$1 AND (link.expirationDateTime IS NULL OR link.expirationDateTime>statement_timestamp())")
-        .bind(&token_or_id).fetch_optional(&state.pool).await?;
+    let linked: Option<String> = sqlx::query_scalar(
+        "SELECT link._annotation FROM webknossos.annotation_privateLinks_ link JOIN \
+            webknossos.annotations_ a ON a._id=link._annotation WHERE link.accessToken=$1 AND \
+            (link.expirationDateTime IS NULL OR link.expirationDateTime>statement_timestamp())",
+    )
+    .bind(&token_or_id)
+    .fetch_optional(&state.pool)
+    .await?;
     let via_private_link = linked.is_some();
     let annotation = if let Some(id) = linked {
         crate::annotation::access::find(&state.pool, None, &id, true).await?
@@ -218,7 +240,8 @@ async fn source(
         };
         crate::annotation::access::find(&state.pool, user.as_ref(), &token_or_id, false).await?
     };
-    let value:Value=sqlx::query_scalar(r#"SELECT jsonb_build_object('id',a._id,
+    let value: Value = sqlx::query_scalar(
+        r#"SELECT jsonb_build_object('id',a._id,
         'annotationLayers',COALESCE((SELECT jsonb_agg(jsonb_build_object('tracingId',layer.tracingId,'typ',layer.typ,'name',layer.name,'stats',layer.statistics) ORDER BY layer.tracingId) FROM webknossos.annotation_layers layer WHERE layer._annotation=a._id),'[]'::jsonb),
         'datasetDirectoryName',d.directoryName,'datasetId',d._id,'organizationId',organization._id,
         'dataStoreUrl',store.publicUrl,'tracingStoreUrl',(SELECT publicUrl FROM webknossos.tracingStores_ LIMIT 1),
@@ -226,7 +249,13 @@ async fn source(
         FROM webknossos.annotations_ a JOIN webknossos.datasets_ d ON d._id=a._dataset
         JOIN webknossos.organizations_ organization ON organization._id=d._organization
         JOIN webknossos.dataStores_ store ON store.name=trim(d._dataStore)
-        WHERE a._id=$1"#).bind(&annotation.id).bind(via_private_link).fetch_optional(&state.pool).await?.ok_or_else(||ApiError::not_found("Annotation source not found."))?;
+        WHERE a._id=$1"#,
+    )
+    .bind(&annotation.id)
+    .bind(via_private_link)
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| ApiError::not_found("Annotation source not found."))?;
     if value["tracingStoreUrl"].is_null() {
         return Err(ApiError::not_found(crate::msg::tracing_store::MISSING));
     }

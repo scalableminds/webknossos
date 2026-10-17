@@ -15,7 +15,16 @@ async fn queue_timeout_keeps_pool_bounded_and_never_starts_a_read() {
         1,
     );
     let permit = service.pool.acquire().await.unwrap();
-    let layer=StaticLayer::from_json(&serde_json::json!({"name":"seg","category":"segmentation","dataFormat":"zarr","elementClass":"uint8","largestSegmentId":1,"boundingBox":{"topLeft":[0,0,0],"width":32,"height":32,"depth":32},"mags":[{"mag":[1,1,1],"path":"/not-read"}]})).unwrap();
+    let layer = StaticLayer::from_json(&serde_json::json!({
+        "name":"seg",
+        "category":"segmentation",
+        "dataFormat":"zarr",
+        "elementClass":"uint8",
+        "largestSegmentId":1,
+        "boundingBox":{"topLeft":[0,0,0],"width":32,"height":32,"depth":32},
+        "mags":[{"mag":[1,1,1],"path":"/not-read"}]
+    }))
+    .unwrap();
     let request = AdHocMeshRequest {
         dataset_id: None,
         data_source_id: None,

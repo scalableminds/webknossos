@@ -256,10 +256,29 @@ async fn world(db: &TestDb, tracing_url: &str) -> World {
         .await
         .unwrap();
     let (task, project, task_type) = (object_id(), object_id(), object_id());
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,'Proj€ö')")
-        .bind(&project).bind(&f.organization_id).bind(&f.team_id).bind(&f.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'Type summary','',true,true)")
-        .bind(&task_type).bind(&f.organization_id).bind(&f.team_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+            VALUES($1,$2,$3,$4,'Proj€ö')",
+    )
+    .bind(&project)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .bind(&f.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'Type \
+            summary','',true,true)",
+    )
+    .bind(&task_type)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation,boundingbox) VALUES($1,$2,$3,'test',0,10,8,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3,ROW(1,2,3,10,20,30)::webknossos.BOUNDING_BOX)")
         .bind(&task).bind(&project).bind(&task_type).execute(&db.pool).await.unwrap();
     World {
@@ -288,12 +307,37 @@ struct Seed<'a> {
 async fn annotation(db: &TestDb, w: &World, seed: Seed<'_>) -> String {
     let id = object_id();
     let task = matches!(seed.typ, "Task" | "TracingBase").then_some(&w.task);
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,visibility,state,collaborationMode,name,description,tags,created,modified) VALUES($1,$2,$3,$4,$5::webknossos.ANNOTATION_TYPE,$6::webknossos.ANNOTATION_VISIBILITY,$7::webknossos.ANNOTATION_STATE,'OwnerOnly',$8,'Desc',ARRAY[]::text[],now(),now())")
-        .bind(&id).bind(&w.dataset).bind(task).bind(seed.owner).bind(seed.typ).bind(seed.visibility).bind(seed.state).bind(seed.name)
-        .execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.annotations(_id,_dataset,_task,_user,typ,visibility,state,\
+            collaborationMode,name,description,tags,created,modified) VALUES($1,$2,$3,$4,\
+            $5::webknossos.ANNOTATION_TYPE,$6::webknossos.ANNOTATION_VISIBILITY,\
+            $7::webknossos.ANNOTATION_STATE,'OwnerOnly',$8,'Desc',ARRAY[]::text[],now(),now())",
+    )
+    .bind(&id)
+    .bind(&w.dataset)
+    .bind(task)
+    .bind(seed.owner)
+    .bind(seed.typ)
+    .bind(seed.visibility)
+    .bind(seed.state)
+    .bind(seed.name)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     for (suffix, typ, name) in seed.layers {
-        sqlx::query("INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}')")
-            .bind(&id).bind(format!("{suffix}-{id}")).bind(typ).bind(name).execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO \
+                webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) \
+                VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}')",
+        )
+        .bind(&id)
+        .bind(format!("{suffix}-{id}"))
+        .bind(typ)
+        .bind(name)
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
     id
 }

@@ -65,8 +65,13 @@ async fn find_dataset_id(
         )));
     }
     let id: Option<String> = sqlx::query_scalar(
-        "SELECT _id FROM webknossos.datasets_ WHERE directoryName=$1 AND _organization=$2 ORDER BY created ASC, _id ASC LIMIT 1",
-    ).bind(&query.dataset_directory_name).bind(&query.organization_id).fetch_optional(&state.pool).await?;
+        "SELECT _id FROM webknossos.datasets_ WHERE directoryName=$1 AND \
+                _organization=$2 ORDER BY created ASC, _id ASC LIMIT 1",
+    )
+    .bind(&query.dataset_directory_name)
+    .bind(&query.organization_id)
+    .fetch_optional(&state.pool)
+    .await?;
     Ok(ResponseJson(id.ok_or_else(|| {
         ApiError::bad_request(crate::msg::dataset::not_found_by_name(
             &query.dataset_directory_name,
@@ -124,8 +129,13 @@ async fn job_export_properties(
         )));
     }
     let organization: String = sqlx::query_scalar(
-        "SELECT o._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON o._id=u._organization WHERE u._id=$1",
-    ).bind(&job.owner).fetch_optional(&state.pool).await?.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+        "SELECT o._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON \
+                o._id=u._organization WHERE u._id=$1",
+    )
+    .bind(&job.owner)
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let run_id = job
         .latest_run_id
         .ok_or_else(|| ApiError::bad_request("Job has not run yet."))?;

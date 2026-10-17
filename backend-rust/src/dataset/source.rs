@@ -116,17 +116,31 @@ pub(crate) async fn write_layers(
                 largest_segment_id,
                 mappings,
             } => {
-                sqlx::query(r#"INSERT INTO webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration, dataFormat, numChannels)
+                sqlx::query(
+                    r#"INSERT INTO webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration, dataFormat, numChannels)
                     VALUES ($1, $2, 'segmentation', $3::webknossos.DATASET_LAYER_ELEMENT_CLASS, ROW($4,$5,$6,$7,$8,$9)::webknossos.BOUNDING_BOX, $10, $11, $12, $13, $14::webknossos.DATASET_LAYER_DATAFORMAT, $15)
                     ON CONFLICT (_dataset, name) DO UPDATE SET category = EXCLUDED.category, elementClass = EXCLUDED.elementClass,
                       boundingBox = EXCLUDED.boundingBox, largestSegmentId = EXCLUDED.largestSegmentId, mappings = EXCLUDED.mappings,
                       defaultViewConfiguration = EXCLUDED.defaultViewConfiguration, adminViewConfiguration = EXCLUDED.adminViewConfiguration,
-                      numChannels = EXCLUDED.numChannels, dataFormat = EXCLUDED.dataFormat"#)
-                    .bind(dataset_id).bind(&layer.name).bind(element_class)
-                    .bind(x).bind(y).bind(z).bind(width).bind(height).bind(depth)
-                    .bind(largest_segment_id.map(|id| id as i64)).bind(mappings.clone().unwrap_or_default())
-                    .bind(default).bind(admin).bind(data_format).bind(channels)
-                    .execute(&mut *connection).await?;
+                      numChannels = EXCLUDED.numChannels, dataFormat = EXCLUDED.dataFormat"#,
+                )
+                .bind(dataset_id)
+                .bind(&layer.name)
+                .bind(element_class)
+                .bind(x)
+                .bind(y)
+                .bind(z)
+                .bind(width)
+                .bind(height)
+                .bind(depth)
+                .bind(largest_segment_id.map(|id| id as i64))
+                .bind(mappings.clone().unwrap_or_default())
+                .bind(default)
+                .bind(admin)
+                .bind(data_format)
+                .bind(channels)
+                .execute(&mut *connection)
+                .await?;
             }
             LayerKind::Color => {
                 sqlx::query(r#"INSERT INTO webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration, dataFormat, numChannels)
@@ -183,11 +197,19 @@ pub(crate) async fn write_layers(
         .bind(dataset_id).execute(&mut *connection).await?;
     for layer in layers {
         for (typ, attachment) in layer.attachments.iter().flat_map(typed_attachments) {
-            sqlx::query(r#"INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending)
-                VALUES ($1, $2, $3, $4, $5::webknossos.LAYER_ATTACHMENT_TYPE, $6::webknossos.LAYER_ATTACHMENT_DATAFORMAT, $7, false, false)"#)
-                .bind(dataset_id).bind(&layer.name).bind(&attachment.name).bind(attachment.path.to_string())
-                .bind(typ.as_str()).bind(attachment.data_format.as_str()).bind(&attachment.credential_id)
-                .execute(&mut *connection).await?;
+            sqlx::query(
+                r#"INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending)
+                VALUES ($1, $2, $3, $4, $5::webknossos.LAYER_ATTACHMENT_TYPE, $6::webknossos.LAYER_ATTACHMENT_DATAFORMAT, $7, false, false)"#,
+            )
+            .bind(dataset_id)
+            .bind(&layer.name)
+            .bind(&attachment.name)
+            .bind(attachment.path.to_string())
+            .bind(typ.as_str())
+            .bind(attachment.data_format.as_str())
+            .bind(&attachment.credential_id)
+            .execute(&mut *connection)
+            .await?;
         }
     }
     sqlx::query("DELETE FROM webknossos.dataset_layer_additionalAxes WHERE _dataset = $1")

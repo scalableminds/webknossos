@@ -64,9 +64,18 @@ async fn request(
 }
 
 async fn seed_store(database: &TestDb, name: &str, only_organization: Option<&str>) {
-    sqlx::query("INSERT INTO webknossos.dataStores (name, url, publicUrl, key, onlyAllowedOrganization, isScratch, allowsUploadToPaths, reportUsedStorageEnabled) VALUES ($1, $2, $3, 'private-datastore-key', $4, TRUE, FALSE, TRUE)")
-        .bind(name).bind(format!("http://{name}.internal.test")).bind(format!("https://{name}.example.test"))
-        .bind(only_organization).execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataStores (name, url, publicUrl, key, \
+            onlyAllowedOrganization, isScratch, allowsUploadToPaths, reportUsedStorageEnabled) \
+            VALUES ($1, $2, $3, 'private-datastore-key', $4, TRUE, FALSE, TRUE)",
+    )
+    .bind(name)
+    .bind(format!("http://{name}.internal.test"))
+    .bind(format!("https://{name}.example.test"))
+    .bind(only_organization)
+    .execute(&database.pool)
+    .await
+    .unwrap();
 }
 
 async fn make_superuser(database: &TestDb, multi_user: &str) {
@@ -151,8 +160,17 @@ async fn public_registry_reuses_worker_job_semantics_and_never_returns_keys_or_i
         (vec!["convert_to_wkw"], false),
         (vec!["infer_nuclei"], true),
     ] {
-        sqlx::query("INSERT INTO webknossos.workers (_id, _dataStore, key, supportedJobCommands, isDeleted) VALUES ($1, 'job-store', $2, $3, $4)")
-            .bind(object_id()).bind(object_id()).bind(commands).bind(deleted).execute(&database.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO webknossos.workers (_id, _dataStore, key, supportedJobCommands, \
+                isDeleted) VALUES ($1, 'job-store', $2, $3, $4)",
+        )
+        .bind(object_id())
+        .bind(object_id())
+        .bind(commands)
+        .bind(deleted)
+        .execute(&database.pool)
+        .await
+        .unwrap();
     }
     let enabled = app(&database, true);
     let (status, body) = request(
@@ -239,8 +257,13 @@ async fn datastore_creation_requires_superuser_and_preserves_dto_defaults_and_pu
     assert_eq!(body, public_store("new-store"));
     assert!(!body.to_string().contains("creation-secret"));
     assert!(!body.to_string().contains("internal.test"));
-    let flags: (bool, bool, bool, bool, Option<String>) = sqlx::query_as("SELECT isScratch, allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled, onlyAllowedOrganization FROM webknossos.dataStores WHERE name = 'new-store'")
-        .fetch_one(&database.pool).await.unwrap();
+    let flags: (bool, bool, bool, bool, Option<String>) = sqlx::query_as(
+        "SELECT isScratch, allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled, \
+            onlyAllowedOrganization FROM webknossos.dataStores WHERE name = 'new-store'",
+    )
+    .fetch_one(&database.pool)
+    .await
+    .unwrap();
     assert_eq!(flags, (false, true, true, false, None));
     assert_eq!(
         request(
@@ -268,8 +291,13 @@ async fn datastore_creation_requires_superuser_and_preserves_dto_defaults_and_pu
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["allowsUpload"], false);
-    let flags: (bool, bool, bool) = sqlx::query_as("SELECT isScratch, allowsUpload, allowsUploadToPaths FROM webknossos.dataStores WHERE name = 'explicit-store'")
-        .fetch_one(&database.pool).await.unwrap();
+    let flags: (bool, bool, bool) = sqlx::query_as(
+        "SELECT isScratch, allowsUpload, allowsUploadToPaths FROM webknossos.dataStores \
+            WHERE name = 'explicit-store'",
+    )
+    .fetch_one(&database.pool)
+    .await
+    .unwrap();
     assert_eq!(flags, (true, false, false));
     database.cleanup().await;
 }
@@ -377,8 +405,18 @@ async fn datastore_deletion_is_superuser_only_idempotent_soft_and_preserves_depe
         request(&app, "GET", "/api/datastores", Some(&fixture.token), None).await,
         (StatusCode::OK, json!([]))
     );
-    let retained: (bool, bool, bool) = sqlx::query_as("SELECT EXISTS(SELECT 1 FROM webknossos.datasets WHERE _id = $1 AND NOT isDeleted), EXISTS(SELECT 1 FROM webknossos.workers WHERE _id = $2 AND NOT isDeleted), EXISTS(SELECT 1 FROM webknossos.credentials WHERE _id = $3 AND NOT isDeleted)")
-        .bind(&dataset_id).bind(&worker_id).bind(credential.as_str()).fetch_one(&database.pool).await.unwrap();
+    let retained: (bool, bool, bool) = sqlx::query_as(
+        "SELECT EXISTS(SELECT 1 FROM webknossos.datasets WHERE _id = $1 AND NOT \
+            isDeleted), EXISTS(SELECT 1 FROM webknossos.workers WHERE _id = $2 AND NOT \
+            isDeleted), EXISTS(SELECT 1 FROM webknossos.credentials WHERE _id = $3 AND NOT \
+            isDeleted)",
+    )
+    .bind(&dataset_id)
+    .bind(&worker_id)
+    .bind(credential.as_str())
+    .fetch_one(&database.pool)
+    .await
+    .unwrap();
     assert_eq!(retained, (true, true, true));
     let recreate = json!({"name":"referenced-store","url":"http://recreate.internal.test","publicUrl":"https://recreate.example.test","key":"recreate-key"});
     assert_eq!(

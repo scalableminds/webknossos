@@ -24,8 +24,13 @@ async fn first(
     State(state): State<AppState>,
     _user: OptionalAuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
-    let value = sqlx::query_scalar("SELECT jsonb_build_object('name', name, 'url', publicUrl) FROM webknossos.tracingStores_ LIMIT 1")
-        .fetch_optional(&state.pool).await?.ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
+    let value = sqlx::query_scalar(
+        "SELECT jsonb_build_object('name', name, 'url', publicUrl) FROM \
+            webknossos.tracingStores_ LIMIT 1",
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
     Ok(ResponseJson(value))
 }
 

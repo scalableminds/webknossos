@@ -99,8 +99,16 @@ async fn complete(
     }
     if let Some(user) = user {
         let names: Vec<&str> = layers.keys().map(String::as_str).collect();
-        let existing:Vec<(String,Value)> = sqlx::query_as("SELECT layerName, viewConfiguration FROM webknossos.user_datasetLayerConfigurations WHERE _user = $1 AND _dataset = $2 AND layerName = ANY($3::text[])")
-            .bind(&user.id).bind(dataset_id).bind(&names).fetch_all(pool).await?;
+        let existing: Vec<(String, Value)> = sqlx::query_as(
+            "SELECT layerName, viewConfiguration FROM \
+                webknossos.user_datasetLayerConfigurations WHERE _user = $1 AND _dataset = $2 \
+                AND layerName = ANY($3::text[])",
+        )
+        .bind(&user.id)
+        .bind(dataset_id)
+        .bind(&names)
+        .fetch_all(pool)
+        .await?;
         for (name, config) in existing {
             if let Some(Value::Object(layer)) = layers.get_mut(&name) {
                 merge(layer, Some(config));
@@ -127,8 +135,14 @@ async fn read(
     // GlobalAccessContext. Only if it does not exist does it fall back to the
     // dataset default configuration through normal sharing-aware read access.
     let existing = if let Some(user) = user.as_ref() {
-        sqlx::query_scalar::<_,Value>("SELECT viewConfiguration FROM webknossos.user_datasetConfigurations WHERE _user = $1 AND _dataset = $2")
-            .bind(&user.id).bind(id.as_str()).fetch_optional(&state.pool).await?
+        sqlx::query_scalar::<_, Value>(
+            "SELECT viewConfiguration FROM webknossos.user_datasetConfigurations WHERE \
+                _user = $1 AND _dataset = $2",
+        )
+        .bind(&user.id)
+        .bind(id.as_str())
+        .fetch_optional(&state.pool)
+        .await?
     } else {
         None
     };
@@ -202,13 +216,31 @@ async fn update(
     if let Some(Value::Object(layers)) = config.remove("layers") {
         for (name, layer) in layers {
             if layer.is_object() {
-                sqlx::query("INSERT INTO webknossos.user_datasetLayerConfigurations (_user,_dataset,layerName,viewConfiguration) VALUES ($1,$2,$3,$4) ON CONFLICT (_user,_dataset,layerName) DO UPDATE SET viewConfiguration = EXCLUDED.viewConfiguration")
-                .bind(&user.id).bind(id.as_str()).bind(name).bind(layer).execute(&mut *transaction).await?;
+                sqlx::query(
+                    "INSERT INTO webknossos.user_datasetLayerConfigurations \
+                        (_user,_dataset,layerName,viewConfiguration) VALUES ($1,$2,$3,$4) ON \
+                        CONFLICT (_user,_dataset,layerName) DO UPDATE SET viewConfiguration = \
+                        EXCLUDED.viewConfiguration",
+                )
+                .bind(&user.id)
+                .bind(id.as_str())
+                .bind(name)
+                .bind(layer)
+                .execute(&mut *transaction)
+                .await?;
             }
         }
     }
-    sqlx::query("INSERT INTO webknossos.user_datasetConfigurations (_user,_dataset,viewConfiguration) VALUES ($1,$2,$3) ON CONFLICT (_user,_dataset) DO UPDATE SET viewConfiguration = EXCLUDED.viewConfiguration")
-        .bind(&user.id).bind(id.as_str()).bind(Value::Object(config)).execute(&mut *transaction).await?;
+    sqlx::query(
+        "INSERT INTO webknossos.user_datasetConfigurations \
+            (_user,_dataset,viewConfiguration) VALUES ($1,$2,$3) ON CONFLICT (_user,_dataset) \
+            DO UPDATE SET viewConfiguration = EXCLUDED.viewConfiguration",
+    )
+    .bind(&user.id)
+    .bind(id.as_str())
+    .bind(Value::Object(config))
+    .execute(&mut *transaction)
+    .await?;
     transaction.commit().await?;
     Ok(success())
 }
@@ -224,8 +256,18 @@ async fn update_admin(
     }
     let mut transaction = state.pool.begin().await?;
     crate::dataset::access::lock_edit(&mut transaction, &user, id.as_str(), true).await?;
-    sqlx::query("UPDATE webknossos.datasets SET adminViewConfiguration = $2, thumbnailCacheVersion = thumbnailCacheVersion + 1 WHERE _id = $1 AND NOT isDeleted")
-        .bind(id.as_str()).bind(Value::Object({let mut dataset=config.clone();dataset.remove("layers");dataset})).execute(&mut *transaction).await?;
+    sqlx::query(
+        "UPDATE webknossos.datasets SET adminViewConfiguration = $2, \
+            thumbnailCacheVersion = thumbnailCacheVersion + 1 WHERE _id = $1 AND NOT isDeleted",
+    )
+    .bind(id.as_str())
+    .bind(Value::Object({
+        let mut dataset = config.clone();
+        dataset.remove("layers");
+        dataset
+    }))
+    .execute(&mut *transaction)
+    .await?;
     if let Some(Value::Object(layers)) = config.remove("layers") {
         // The Scala decoder accepts the whole layer map only when every
         // configuration is an object. An invalid entry causes all to be ignored.

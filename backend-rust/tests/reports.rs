@@ -59,9 +59,21 @@ async fn experience(db: &TestDb, user: &str, domain: &str, value: i32) {
 
 async fn project(db: &TestDb, f: &Fixture, name: &str, paused: bool, blacklisted: bool) -> String {
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name,paused,isBlacklistedFromReport,priority) VALUES($1,$2,$3,$4,$5,$6,$7,42)")
-        .bind(&id).bind(&f.organization_id).bind(&f.team_id).bind(&f.user_id).bind(name).bind(paused).bind(blacklisted)
-        .execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.projects(_id,_organization,_team,_owner,name,paused,\
+            isBlacklistedFromReport,priority) VALUES($1,$2,$3,$4,$5,$6,$7,42)",
+    )
+    .bind(&id)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .bind(&f.user_id)
+    .bind(name)
+    .bind(paused)
+    .bind(blacklisted)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     id
 }
 
@@ -75,9 +87,23 @@ async fn task(
     tracing_time: Option<i64>,
 ) -> String {
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,tracingtime,editposition,editrotation) VALUES($1,$2,$3,$4,$5,$6,$6,$7,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3)")
-        .bind(&id).bind(project).bind(task_type).bind(domain).bind(value).bind(instances).bind(tracing_time)
-        .execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,\
+            neededexperience_value,totalinstances,pendinginstances,tracingtime,editposition,\
+            editrotation) VALUES($1,$2,$3,$4,$5,$6,$6,$7,ROW(0,0,0)::webknossos.vector3,ROW(0,0,\
+            0)::webknossos.vector3)",
+    )
+    .bind(&id)
+    .bind(project)
+    .bind(task_type)
+    .bind(domain)
+    .bind(value)
+    .bind(instances)
+    .bind(tracing_time)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     id
 }
 

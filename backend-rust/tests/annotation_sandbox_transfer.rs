@@ -50,8 +50,20 @@ async fn world(db: &TestDb) -> World {
 
 async fn annotation(db: &TestDb, w: &World, visibility: &str, state: &str) -> String {
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_user,typ,visibility,state,name) VALUES($1,$2,$3,'Explorational',$4::webknossos.ANNOTATION_VISIBILITY,$5::webknossos.ANNOTATION_STATE,'Transfer me')")
-        .bind(&id).bind(&w.dataset).bind(&w.owner.user_id).bind(visibility).bind(state).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.annotations(_id,_dataset,_user,typ,visibility,state,name) \
+            VALUES($1,$2,$3,'Explorational',$4::webknossos.ANNOTATION_VISIBILITY,\
+            $5::webknossos.ANNOTATION_STATE,'Transfer me')",
+    )
+    .bind(&id)
+    .bind(&w.dataset)
+    .bind(&w.owner.user_id)
+    .bind(visibility)
+    .bind(state)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) VALUES($1,$2,'Skeleton','Skeleton','{}')")
         .bind(&id).bind(format!("tracing-{id}")).execute(&db.pool).await.unwrap();
     id

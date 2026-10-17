@@ -57,7 +57,7 @@ Edit `.env` before launching: bind to loopback on a separate port; set the publi
 set -a
 . ./datastore/.env
 set +a
-./datastore/target/release/webknossos-datastore > /tmp/wk-datastore-rehearsal.log 2>&1 &
+./target/release/webknossos-datastore > /tmp/wk-datastore-rehearsal.log 2>&1 &
 DS_PID=$!
 curl --fail --silent --show-error "http://${WK_DS_HTTP_ADDRESS}:${WK_DS_HTTP_PORT}/data/health"
 kill -TERM "$DS_PID"

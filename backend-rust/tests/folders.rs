@@ -319,8 +319,16 @@ async fn folder_hierarchy_moves_roots_nonempty_delete_and_atomic_mutations() {
     sqlx::query("INSERT INTO webknossos.dataStores (name, url, publicUrl, key) VALUES ('test', 'http://store.test', 'http://store.test', 'test')")
         .execute(&database.pool).await.unwrap();
     let dataset = object_id();
-    sqlx::query("INSERT INTO webknossos.datasets (_id, _dataStore, _organization, _folder, name, directoryName, sortingKey) VALUES ($1, 'test', $2, $3, 'Dataset', 'Dataset', NOW())")
-        .bind(&dataset).bind(&user.organization_id).bind(&child).execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.datasets (_id, _dataStore, _organization, _folder, name, \
+            directoryName, sortingKey) VALUES ($1, 'test', $2, $3, 'Dataset', 'Dataset', NOW())",
+    )
+    .bind(&dataset)
+    .bind(&user.organization_id)
+    .bind(&child)
+    .execute(&database.pool)
+    .await
+    .unwrap();
     assert_eq!(
         request(
             &router,
@@ -453,8 +461,17 @@ async fn inherited_folder_access_and_grant_updates_preserve_unmanaged_teams() {
     sqlx::query("INSERT INTO webknossos.dataStores (name, url, publicUrl, key) VALUES ('test', 'http://store.test', 'http://store.test', 'test')")
         .execute(&database.pool).await.unwrap();
     let dataset = object_id();
-    sqlx::query("INSERT INTO webknossos.datasets (_id, _dataStore, _organization, _folder, name, directoryName, sortingKey, isPublic) VALUES ($1, 'test', $2, $3, 'Dataset', 'Dataset', NOW(), TRUE)")
-        .bind(&dataset).bind(&admin.organization_id).bind(&hidden).execute(&database.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.datasets (_id, _dataStore, _organization, _folder, name, \
+            directoryName, sortingKey, isPublic) VALUES ($1, 'test', $2, $3, 'Dataset', \
+            'Dataset', NOW(), TRUE)",
+    )
+    .bind(&dataset)
+    .bind(&admin.organization_id)
+    .bind(&hidden)
+    .execute(&database.pool)
+    .await
+    .unwrap();
     let (status, breadcrumb) =
         request(&router, "GET", &format!("/folders/{hidden}"), &token, None).await;
     assert_eq!(status, StatusCode::OK);

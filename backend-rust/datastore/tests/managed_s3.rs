@@ -237,11 +237,29 @@ async fn signed_puts_stream_exact_payloads_and_replay_after_region_and_server_er
     let count = Arc::clone(&attempts);
     let mock = MockS3::start(move |call| {
         let attempt = count.fetch_add(1, Ordering::SeqCst);
-        if attempt == 0 { return Reply::xml(StatusCode::BAD_REQUEST, "<Error><Code>AuthorizationHeaderMalformed</Code><Region>eu-central-1</Region></Error>"); }
-        assert!(call.headers["authorization"].to_str().unwrap().contains("/eu-central-1/"));
-        if attempt == 1 { Reply::xml(StatusCode::SERVICE_UNAVAILABLE, "<Error><Code>SlowDown</Code></Error>") }
-        else { Reply::ok() }
-    }).await;
+        if attempt == 0 {
+            return Reply::xml(
+                StatusCode::BAD_REQUEST,
+                "<Error><Code>AuthorizationHeaderMalformed</Code><Region>\
+                eu-central-1</Region></Error>",
+            );
+        }
+        assert!(
+            call.headers["authorization"]
+                .to_str()
+                .unwrap()
+                .contains("/eu-central-1/")
+        );
+        if attempt == 1 {
+            Reply::xml(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "<Error><Code>SlowDown</Code></Error>",
+            )
+        } else {
+            Reply::ok()
+        }
+    })
+    .await;
     let path = temp().join("small");
     std::fs::write(&path, b"exact\0body\xff").unwrap();
     let vault = vault(&mock);
@@ -261,18 +279,35 @@ async fn multipart_streams_ordered_parts_and_escapes_completion_etags_and_upload
     let failures = Arc::new(AtomicUsize::new(0));
     let count = Arc::clone(&failures);
     let mock = MockS3::start(move |call| {
-        if call.query.contains_key("uploads") { return Reply::xml(StatusCode::OK, "<InitiateMultipartUploadResult><UploadId>id+/&amp;=</UploadId></InitiateMultipartUploadResult>"); }
+        if call.query.contains_key("uploads") {
+            return Reply::xml(
+                StatusCode::OK,
+                "<InitiateMultipartUploadResult><UploadId>id+/&amp;=</UploadId>\
+                </InitiateMultipartUploadResult>",
+            );
+        }
         assert_eq!(call.query["uploadId"], "id+/&=");
         if call.method == "PUT" {
-            if call.query["partNumber"] == "1" && count.fetch_add(1, Ordering::SeqCst) == 0 { return Reply::xml(StatusCode::INTERNAL_SERVER_ERROR, "<Error><Code>InternalError</Code></Error>"); }
+            if call.query["partNumber"] == "1" && count.fetch_add(1, Ordering::SeqCst) == 0 {
+                return Reply::xml(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "<Error><Code>InternalError</Code></Error>",
+                );
+            }
             return Reply::part();
         }
-        assert_eq!(call.method, "POST"); assert_eq!(call.headers["content-type"], "application/xml");
+        assert_eq!(call.method, "POST");
+        assert_eq!(call.headers["content-type"], "application/xml");
         let body = std::str::from_utf8(&call.body).unwrap();
         assert!(body.contains("<PartNumber>1</PartNumber><ETag>&quot;part&amp;etag&quot;</ETag>"));
         assert!(body.contains("<PartNumber>2</PartNumber>"));
-        Reply::xml(StatusCode::OK, "<CompleteMultipartUploadResult><ETag>final</ETag></CompleteMultipartUploadResult>")
-    }).await;
+        Reply::xml(
+            StatusCode::OK,
+            "<CompleteMultipartUploadResult><ETag>final</ETag>\
+                </CompleteMultipartUploadResult>",
+        )
+    })
+    .await;
     let (path, expected) = large_file();
     vault(&mock).upload_file(&path, &target()).await.unwrap();
     let calls = mock.calls();

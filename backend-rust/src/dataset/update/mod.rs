@@ -299,9 +299,16 @@ async fn update_partial(
     crate::dataset::access::lock_edit(&mut transaction, &user, id.as_str(), true).await?;
     if let Some(folder) = &body.folder_id {
         // Same hardening as the full PATCH: keep the dataset in a live folder of its organization.
-        sqlx::query("SELECT f._id FROM webknossos.folders_ f JOIN webknossos.folder_paths fp ON fp._descendant=f._id JOIN webknossos.organizations_ o ON o._rootFolder=fp._ancestor WHERE f._id=$1 AND o._id=$2 FOR SHARE OF f, fp")
-            .bind(folder.as_str()).bind(&record.organization).fetch_optional(&mut *transaction).await?
-            .ok_or_else(|| ApiError::bad_request(crate::msg::folder::NOT_IN_DATASET_ORGANIZATION))?;
+        sqlx::query(
+            "SELECT f._id FROM webknossos.folders_ f JOIN webknossos.folder_paths fp ON \
+                fp._descendant=f._id JOIN webknossos.organizations_ o ON \
+                o._rootFolder=fp._ancestor WHERE f._id=$1 AND o._id=$2 FOR SHARE OF f, fp",
+        )
+        .bind(folder.as_str())
+        .bind(&record.organization)
+        .fetch_optional(&mut *transaction)
+        .await?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::folder::NOT_IN_DATASET_ORGANIZATION))?;
     }
     sqlx::query(
         r#"UPDATE webknossos.datasets SET

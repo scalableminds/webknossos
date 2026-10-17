@@ -76,9 +76,21 @@ async fn seed_dataset(
     admin_configuration: Value,
 ) -> String {
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.datasets (_id,_dataStore,_organization,_folder,name,directoryName,isUsable,voxelSizeFactor,sortingKey,sharingToken,defaultViewConfiguration,adminViewConfiguration) SELECT $1,$3,_id,_rootFolder,$1,$1,true,ROW(1,1,1)::webknossos.VECTOR3,NOW(),'thumb-share',$4,$5 FROM webknossos.organizations WHERE _id=$2")
-        .bind(&id).bind(&fixture.organization_id).bind(store_name).bind(default_configuration).bind(admin_configuration)
-        .execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.datasets \
+            (_id,_dataStore,_organization,_folder,name,directoryName,isUsable,voxelSizeFactor,\
+            sortingKey,sharingToken,defaultViewConfiguration,adminViewConfiguration) SELECT $1,\
+            $3,_id,_rootFolder,$1,$1,true,ROW(1,1,1)::webknossos.VECTOR3,NOW(),'thumb-share',$4,\
+            $5 FROM webknossos.organizations WHERE _id=$2",
+    )
+    .bind(&id)
+    .bind(&fixture.organization_id)
+    .bind(store_name)
+    .bind(default_configuration)
+    .bind(admin_configuration)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     id
 }
 
@@ -98,9 +110,18 @@ async fn seed_layer(
         .bind(configurations.0).bind(configurations.1)
         .execute(&db.pool).await.unwrap();
     for mag in mags {
-        sqlx::query("INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,path) VALUES ($1,$2,ROW($3,$4,$5)::webknossos.VECTOR3,'s3://bucket/mag')")
-            .bind(id).bind(name).bind(f64::from(mag[0])).bind(f64::from(mag[1])).bind(f64::from(mag[2]))
-            .execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,path) \
+                VALUES ($1,$2,ROW($3,$4,$5)::webknossos.VECTOR3,'s3://bucket/mag')",
+        )
+        .bind(id)
+        .bind(name)
+        .bind(f64::from(mag[0]))
+        .bind(f64::from(mag[1]))
+        .bind(f64::from(mag[2]))
+        .execute(&db.pool)
+        .await
+        .unwrap();
     }
 }
 

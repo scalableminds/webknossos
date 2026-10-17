@@ -1,48 +1,83 @@
-[package]
-name = "webknossos-backend"
+[workspace]
+members = ["common", "datastore"]
+resolver = "3"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.91"
 publish = false
 license = "AGPL-3.0-only"
-description = "Incremental Rust implementation of the WEBKNOSSOS application backend"
 
-[dependencies]
+# Shared dependency versions. Members opt in with `{ workspace = true }` and add features locally.
+# Features unify across the members of one cargo invocation: the datastore's
+# `serde_json/preserve_order` changes the app's JSON key order. Build and test per package (`-p`).
+[workspace.dependencies]
 webknossos-common = { path = "common" }
 axum = { version = "0.8", features = ["json", "query", "tokio", "http1", "multipart"] }
 base64 = "0.22"
+prost = "0.14"
+quick-xml = "0.42"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+ring = "0.17"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "sync", "time"] }
+tower-http = { version = "0.6", features = ["request-id", "trace", "timeout", "catch-panic"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+url = "2"
+zip = { version = "9.0.1", default-features = false }
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[package]
+name = "webknossos-backend"
+description = "Incremental Rust implementation of the WEBKNOSSOS application backend"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+webknossos-common.workspace = true
+axum.workspace = true
+base64.workspace = true
 bcrypt = "0.17"
 chrono = { version = "0.4", features = ["serde"] }
 getrandom = "0.4"
 hmac = "0.12"
 futures-util = "0.3"
-ring = "0.17"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+ring.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 sha1 = "0.10"
 serde_urlencoded = "0.7"
 sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "derive"] }
 subtle = "2"
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "sync", "time"] }
-tower-http = { version = "0.6", features = ["request-id", "trace", "timeout", "catch-panic"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tokio.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
 uuid = { version = "1", features = ["v4"] }
-url = "2"
-prost = "0.14"
-quick-xml = "0.42.0"
-zip = { version = "9.0.1", default-features = false, features = ["deflate"] }
+url.workspace = true
+prost.workspace = true
+quick-xml.workspace = true
+zip = { workspace = true, features = ["deflate"] }
 lettre = { version = "0.11.23", default-features = false, features = ["smtp-transport", "tokio1", "tokio1-rustls-tls", "builder", "hostname", "ring"] }
 
 [dev-dependencies]
-http-body-util = "0.1"
-tower = { version = "0.5", features = ["util"] }
+http-body-util.workspace = true
+tower.workspace = true
 
-[lints.rust]
-unsafe_code = "forbid"
+[lints]
+workspace = true
 
 [profile.release]
 lto = "thin"
 strip = true
-

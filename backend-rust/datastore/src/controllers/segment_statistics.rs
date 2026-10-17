@@ -34,30 +34,52 @@ use crate::{
 use super::helpers::{dataset_id, validated_body};
 
 pub fn router() -> Router<AppState> {
-    controller(
-        Router::new()
-            .route(
-                "/data/datasets/{datasetId}/layers/{dataLayerName}/hasSegmentIndex",
-                get(has_segment_index),
-            )
-            .route(
-                "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentIndex",
-                post(query_segment_index),
-            )
-            .route(
-                "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentIndex/{segmentId}",
-                post(segment_index),
-            )
-            .route("/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatisticsFile",get(statistics_file_info))
-            .route("/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/volume",post(segment_volume))
-            .route("/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/boundingBox",post(segment_bounding_box))
-            .route("/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/covarianceMatrix",post(segment_covariance))
-            .route("/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/maxDistance",post(segment_max_distance))
-            .route("/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/centerOfMass",post(segment_center))
-            .route("/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/sphericity",post(segment_sphericity))
-            .route("/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/surfaceArea",post(segment_surface_area)),
-        true,
-    )
+    let routes = Router::new()
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/hasSegmentIndex",
+            get(has_segment_index),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentIndex",
+            post(query_segment_index),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentIndex/{segmentId}",
+            post(segment_index),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatisticsFile",
+            get(statistics_file_info),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/volume",
+            post(segment_volume),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/boundingBox",
+            post(segment_bounding_box),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/covarianceMatrix",
+            post(segment_covariance),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/maxDistance",
+            post(segment_max_distance),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/centerOfMass",
+            post(segment_center),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/sphericity",
+            post(segment_sphericity),
+        )
+        .route(
+            "/data/datasets/{datasetId}/layers/{dataLayerName}/segmentStatistics/surfaceArea",
+            post(segment_surface_area),
+        );
+    controller(routes, true)
 }
 
 async fn layer(

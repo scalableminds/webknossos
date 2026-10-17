@@ -99,12 +99,27 @@ async fn world() -> World {
     let project = object_id();
     let task_type = object_id();
     let task = object_id();
-    sqlx::query("INSERT INTO webknossos.datastores(name,url,publicurl,key) VALUES('rust-test','http://localhost:9000','http://localhost:9000','key')")
-        .execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey) SELECT $1,'rust-test',_id,_rootfolder,'Time dataset','time',now() FROM webknossos.organizations WHERE _id=$2")
+    sqlx::query(
+        "INSERT INTO webknossos.datastores(name,url,publicurl,key) \
+            VALUES('rust-test','http://localhost:9000','http://localhost:9000','key')",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO \
+            webknossos.datasets(_id,_datastore,_organization,_folder,name,directoryname,sortingkey) SELECT $1,'rust-test',_id,_rootfolder,'Time dataset','time',now() FROM webknossos.organizations WHERE _id=$2")
         .bind(&dataset).bind(&org).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) VALUES($1,$2,$3,$4,'Time project')")
-        .bind(&project).bind(&org).bind(&admin.team_id).bind(&admin.user_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.projects(_id,_organization,_team,_owner,name) \
+            VALUES($1,$2,$3,$4,'Time project')",
+    )
+    .bind(&project)
+    .bind(&org)
+    .bind(&admin.team_id)
+    .bind(&admin.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.taskTypes(_id,_organization,_team,summary,description,settings_branchPointsAllowed,settings_somaClickingAllowed) VALUES($1,$2,$3,'Time type','d',TRUE,FALSE)")
         .bind(&task_type).bind(&org).bind(&admin.team_id).execute(&db.pool).await.unwrap();
     sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation) VALUES($1,$2,$3,'test',0,2,2,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3)")

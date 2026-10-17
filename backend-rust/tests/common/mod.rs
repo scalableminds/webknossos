@@ -130,10 +130,23 @@ impl TestDb {
                 .execute(&self.pool)
                 .await
                 .expect("Cannot seed root folder");
-            sqlx::query("INSERT INTO webknossos.folder_paths (_ancestor, _descendant, depth) VALUES ($1, $1, 0)")
-                .bind(&root_folder).execute(&self.pool).await.expect("Cannot seed root closure path");
-            sqlx::query("INSERT INTO webknossos.organizations (_id, _rootFolder, name) VALUES ($1, $2, 'Test organization')")
-                .bind(organization_id).bind(root_folder).execute(&self.pool).await.expect("Cannot seed organization");
+            sqlx::query(
+                "INSERT INTO webknossos.folder_paths (_ancestor, _descendant, depth) \
+                    VALUES ($1, $1, 0)",
+            )
+            .bind(&root_folder)
+            .execute(&self.pool)
+            .await
+            .expect("Cannot seed root closure path");
+            sqlx::query(
+                "INSERT INTO webknossos.organizations (_id, _rootFolder, name) VALUES \
+                    ($1, $2, 'Test organization')",
+            )
+            .bind(organization_id)
+            .bind(root_folder)
+            .execute(&self.pool)
+            .await
+            .expect("Cannot seed organization");
         }
         let multi_user = object_id();
         sqlx::query("INSERT INTO webknossos.multiUsers (_id, email, passwordInfo_password, firstName, lastName) VALUES ($1, $2, '', 'Rust', 'Test')")

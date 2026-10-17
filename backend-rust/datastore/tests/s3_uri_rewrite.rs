@@ -122,13 +122,36 @@ async fn explore_remote_returns_regional_or_global_paths_and_denial_has_no_regio
     for regional in [false, true] {
         let s3 = MockS3::start(move |call| {
             if call.method == "HEAD" {
-                let reply = Reply::xml(StatusCode::FORBIDDEN,"");
-                return if regional { reply.with("x-amz-bucket-region","eu-central-1") } else { reply };
+                let reply = Reply::xml(StatusCode::FORBIDDEN, "");
+                return if regional {
+                    reply.with("x-amz-bucket-region", "eu-central-1")
+                } else {
+                    reply
+                };
             }
-            assert_eq!(call.method,"GET");
-            if call.path.ends_with("/.zarray") { Reply::xml(StatusCode::OK,&json!({"zarr_format":2,"shape":[4,5,6],"chunks":[4,5,6],"dtype":"|u1","order":"C","compressor":null,"fill_value":0}).to_string()) }
-            else { Reply::xml(StatusCode::NOT_FOUND,"<Error><Code>NoSuchKey</Code></Error>") }
-        }).await;
+            assert_eq!(call.method, "GET");
+            if call.path.ends_with("/.zarray") {
+                Reply::xml(
+                    StatusCode::OK,
+                    &json!({
+                        "zarr_format":2,
+                        "shape":[4,5,6],
+                        "chunks":[4,5,6],
+                        "dtype":"|u1",
+                        "order":"C",
+                        "compressor":null,
+                        "fill_value":0
+                    })
+                    .to_string(),
+                )
+            } else {
+                Reply::xml(
+                    StatusCode::NOT_FOUND,
+                    "<Error><Code>NoSuchKey</Code></Error>",
+                )
+            }
+        })
+        .await;
         let wk = mock_wk::MockWk::start(|call| {
             assert!(call.path.ends_with("/validateUserAccess"));
             mock_wk::Reply::json(

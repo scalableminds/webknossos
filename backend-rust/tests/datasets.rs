@@ -68,8 +68,20 @@ async fn seed_dataset(db: &TestDb, fixture: &Fixture, name: &str, public: bool) 
     sqlx::query("INSERT INTO webknossos.dataStores (name,url,publicUrl,key) VALUES ('test-store','http://localhost:9001','http://localhost:9002','secret-key') ON CONFLICT DO NOTHING")
         .execute(&db.pool).await.unwrap();
     let id = object_id();
-    sqlx::query("INSERT INTO webknossos.datasets (_id,_dataStore,_organization,_folder,name,directoryName,isPublic,sortingKey,_uploader) SELECT $1,'test-store',$2,_rootFolder,$3,$3,$4,NOW(),$5 FROM webknossos.organizations WHERE _id=$2")
-        .bind(&id).bind(&fixture.organization_id).bind(name).bind(public).bind(&fixture.user_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.datasets \
+            (_id,_dataStore,_organization,_folder,name,directoryName,isPublic,sortingKey,\
+            _uploader) SELECT $1,'test-store',$2,_rootFolder,$3,$3,$4,NOW(),$5 FROM \
+            webknossos.organizations WHERE _id=$2",
+    )
+    .bind(&id)
+    .bind(&fixture.organization_id)
+    .bind(name)
+    .bind(public)
+    .bind(&fixture.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     id
 }
 
@@ -198,8 +210,26 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
             .unwrap()
     );
     let annotation = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations (_id,_dataset,_user,typ) VALUES ($1,$2,$3,'Explorational')").bind(&annotation).bind(&id).bind(&member.user_id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.annotation_privateLinks (_id,_annotation,accessToken,expirationDateTime) VALUES ($1,$2,'private-link',NOW()-INTERVAL '1 day')").bind(object_id()).bind(&annotation).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotations (_id,_dataset,_user,typ) VALUES \
+            ($1,$2,$3,'Explorational')",
+    )
+    .bind(&annotation)
+    .bind(&id)
+    .bind(&member.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotation_privateLinks \
+            (_id,_annotation,accessToken,expirationDateTime) VALUES \
+            ($1,$2,'private-link',NOW()-INTERVAL '1 day')",
+    )
+    .bind(object_id())
+    .bind(&annotation)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     // DatasetDAO intentionally treats a private-link token as a dataset grant
     // without expiration filtering; annotation-link routes own that check.
     assert!(
@@ -247,16 +277,67 @@ async fn compact_and_full_dataset_responses_preserve_composites_paths_unsigned_i
     let fixture = db.fixture().await;
     let id = seed_dataset(&db, &fixture, "Public_sample", true).await;
     let private = seed_dataset(&db, &fixture, "Other_private", false).await;
-    sqlx::query("UPDATE webknossos.datasets SET isUsable=true,voxelSizeFactor=ROW(4,5,6)::webknossos.VECTOR3,voxelSizeUnit='micrometer',tags=ARRAY['z','a'] WHERE _id=$1").bind(&id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_layers (_dataset,name,category,elementClass,boundingBox,dataFormat,largestSegmentId,defaultViewConfiguration) VALUES ($1,'seg','segmentation','uint64',ROW(1,2,3,20,30,40)::webknossos.BOUNDING_BOX,'zarr3',-1,'{\"nested\":{\"credentialId\":\"secret\",\"credentials\":{\"password\":\"secret\"},\"visible\":null}}')").bind(&id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,path,realPath,axisOrder,channelIndex) VALUES ($1,'seg',ROW(2,2,1)::webknossos.VECTOR3,'relative','/absolute/real','{\"x\":0,\"y\":1,\"z\":2}',4),($1,'seg',ROW(1,1,1)::webknossos.VECTOR3,'pending',NULL,NULL,NULL)").bind(&id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "UPDATE webknossos.datasets SET \
+            isUsable=true,voxelSizeFactor=ROW(4,5,6)::webknossos.VECTOR3,\
+            voxelSizeUnit='micrometer',tags=ARRAY['z','a'] WHERE _id=$1",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_layers \
+            (_dataset,name,category,elementClass,boundingBox,dataFormat,largestSegmentId,\
+            defaultViewConfiguration) VALUES ($1,'seg','segmentation','uint64',ROW(1,2,3,20,30,\
+            40)::webknossos.BOUNDING_BOX,'zarr3',-1,'{\"nested\":{\"credentialId\":\"secret\",\
+            \"credentials\":{\"password\":\"secret\"},\"visible\":null}}')",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_mags \
+            (_dataset,dataLayerName,mag,path,realPath,axisOrder,channelIndex) VALUES \
+            ($1,'seg',ROW(2,2,1)::webknossos.VECTOR3,'relative','/absolute/real','{\"x\":0,\
+            \"y\":1,\"z\":2}',4),($1,'seg',ROW(1,1,1)::webknossos.VECTOR3,'pending',NULL,NULL,\
+            NULL)",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("UPDATE webknossos.dataset_mags SET uploadIsPending=true WHERE path='pending'")
         .execute(&db.pool)
         .await
         .unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_layer_additionalAxes (_dataset,layerName,name,lowerBound,upperBound,index) VALUES ($1,'seg','time',0,10,3)").bind(&id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_layer_attachments (_dataset,layerName,name,path,realPath,type,dataFormat) VALUES ($1,'seg','mesh-file','relative','/absolute/mesh','mesh','hdf5')").bind(&id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.workers (_id,_dataStore,key,supportedJobCommands) VALUES ($1,'test-store','worker-key',ARRAY['convert_to_wkw','compute_mesh_file'])").bind(object_id()).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_layer_additionalAxes \
+            (_dataset,layerName,name,lowerBound,upperBound,index) VALUES \
+            ($1,'seg','time',0,10,3)",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_layer_attachments \
+            (_dataset,layerName,name,path,realPath,type,dataFormat) VALUES \
+            ($1,'seg','mesh-file','relative','/absolute/mesh','mesh','hdf5')",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.workers (_id,_dataStore,key,supportedJobCommands) VALUES \
+            ($1,'test-store','worker-key',ARRAY['convert_to_wkw','compute_mesh_file'])",
+    )
+    .bind(object_id())
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let application = app(&db);
     let (status, list) = request(
         &application,
@@ -492,10 +573,43 @@ async fn stored_transform_and_axis_order_payloads_are_typed_and_canonicalized() 
     let db = TestDb::new().await;
     let fixture = db.fixture().await;
     let id = seed_dataset(&db, &fixture, "Typed_layers", true).await;
-    sqlx::query("UPDATE webknossos.datasets SET isUsable=true,voxelSizeFactor=ROW(1,1,1)::webknossos.VECTOR3 WHERE _id=$1").bind(&id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_layers (_dataset,name,category,elementClass,boundingBox,dataFormat,mappings) VALUES ($1,'seg','segmentation','uint8',ROW(0,0,0,1,1,1)::webknossos.BOUNDING_BOX,'zarr3',ARRAY['a','a','b'])").bind(&id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,axisOrder) VALUES ($1,'seg',ROW(1,1,1)::webknossos.VECTOR3,'{\"x\":1.0,\"y\":0,\"z\":null,\"c\":null,\"extra\":9}')").bind(&id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_layer_coordinateTransformations (_dataset,layerName,type,matrix,correspondences) VALUES ($1,'seg','affine','[[1,0],[0,1]]','{\"ignored\":true}')").bind(&id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "UPDATE webknossos.datasets SET \
+            isUsable=true,voxelSizeFactor=ROW(1,1,1)::webknossos.VECTOR3 WHERE _id=$1",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_layers \
+            (_dataset,name,category,elementClass,boundingBox,dataFormat,mappings) VALUES \
+            ($1,'seg','segmentation','uint8',ROW(0,0,0,1,1,1)::webknossos.BOUNDING_BOX,'zarr3',\
+            ARRAY['a','a','b'])",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,axisOrder) \
+            VALUES \
+            ($1,'seg',ROW(1,1,1)::webknossos.VECTOR3,'{\"x\":1.0,\"y\":0,\"z\":null,\"c\":null,\
+            \"extra\":9}')",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_layer_coordinateTransformations \
+            (_dataset,layerName,type,matrix,correspondences) VALUES \
+            ($1,'seg','affine','[[1,0],[0,1]]','{\"ignored\":true}')",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let application = app(&db);
     let path = format!("/datasets/{id}");
     let (status, full) = request(&application, "GET", &path, None, None).await;
@@ -507,8 +621,23 @@ async fn stored_transform_and_axis_order_payloads_are_typed_and_canonicalized() 
         layer["coordinateTransformations"],
         json!([{"type":"affine","matrix":[[1,0],[0,1]]}])
     );
-    sqlx::query("UPDATE webknossos.dataset_mags SET axisOrder='{\"x\":\"invalid\",\"y\":0}' WHERE _dataset=$1").bind(&id).execute(&db.pool).await.unwrap();
-    sqlx::query("UPDATE webknossos.dataset_layer_coordinateTransformations SET type='thin_plate_spline',correspondences='{\"source\":[[1,2,3]],\"target\":[[4,5,6]],\"extra\":9}' WHERE _dataset=$1").bind(&id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "UPDATE webknossos.dataset_mags SET axisOrder='{\"x\":\"invalid\",\"y\":0}' \
+            WHERE _dataset=$1",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "UPDATE webknossos.dataset_layer_coordinateTransformations SET \
+            type='thin_plate_spline',correspondences='{\"source\":[[1,2,3]],\"target\":[[4,5,\
+            6]],\"extra\":9}' WHERE _dataset=$1",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let (status, full) = request(&application, "GET", &path, None, None).await;
     assert_eq!(status, StatusCode::OK, "{full}");
     let layer = &full["dataSource"]["dataLayers"][0];
@@ -527,8 +656,17 @@ async fn stored_transform_and_axis_order_payloads_are_typed_and_canonicalized() 
             Some(json!({"source":[[1,2]],"target":[[1,2,3]]})),
         ),
     ] {
-        sqlx::query("UPDATE webknossos.dataset_layer_coordinateTransformations SET type=$2,matrix=$3,correspondences=$4 WHERE _dataset=$1")
-            .bind(&id).bind(typ).bind(matrix).bind(correspondences).execute(&db.pool).await.unwrap();
+        sqlx::query(
+            "UPDATE webknossos.dataset_layer_coordinateTransformations SET \
+                type=$2,matrix=$3,correspondences=$4 WHERE _dataset=$1",
+        )
+        .bind(&id)
+        .bind(typ)
+        .bind(matrix)
+        .bind(correspondences)
+        .execute(&db.pool)
+        .await
+        .unwrap();
         assert_eq!(
             request(&application, "GET", &path, None, None).await.0,
             StatusCode::INTERNAL_SERVER_ERROR
@@ -587,10 +725,42 @@ async fn metadata_settings_access_lists_and_raw_superuser_sources_preserve_permi
         .execute(&db.pool)
         .await
         .unwrap();
-    sqlx::query("UPDATE webknossos.datasets SET isUsable=true,voxelSizeFactor=ROW(1,1,1)::webknossos.VECTOR3,metadata='[{\"key\":\"existing\",\"value\":1}]',sortingKey=NOW()-INTERVAL '2 days' WHERE _id=$1").bind(&id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_layers (_dataset,name,category,elementClass,boundingBox,dataFormat) VALUES ($1,'color','color','uint8',ROW(0,0,0,1,1,1)::webknossos.BOUNDING_BOX,'wkw')").bind(&id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,credentialId) VALUES ($1,'color',ROW(1,1,1)::webknossos.VECTOR3,'mag-credential-reference')").bind(&id).execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.dataset_layer_attachments (_dataset,layerName,name,path,type,dataFormat,credentialId) VALUES ($1,'color','mesh','relative','mesh','hdf5','attachment-credential-reference')").bind(&id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "UPDATE webknossos.datasets SET \
+            isUsable=true,voxelSizeFactor=ROW(1,1,1)::webknossos.VECTOR3,\
+            metadata='[{\"key\":\"existing\",\"value\":1}]',sortingKey=NOW()-INTERVAL '2 days' \
+            WHERE _id=$1",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_layers \
+            (_dataset,name,category,elementClass,boundingBox,dataFormat) VALUES \
+            ($1,'color','color','uint8',ROW(0,0,0,1,1,1)::webknossos.BOUNDING_BOX,'wkw')",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,credentialId) \
+            VALUES ($1,'color',ROW(1,1,1)::webknossos.VECTOR3,'mag-credential-reference')",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_layer_attachments \
+            (_dataset,layerName,name,path,type,dataFormat,credentialId) VALUES \
+            ($1,'color','mesh','relative','mesh','hdf5','attachment-credential-reference')",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let application = app(&db);
     let access_path = format!("/datasets/{id}/accessList");
     let (member_status, member_list) =
@@ -651,7 +821,23 @@ async fn metadata_settings_access_lists_and_raw_superuser_sources_preserve_permi
             .get("credentialId")
             .is_none()
     );
-    assert_eq!(request(&application,"PATCH",&format!("/datasets/{id}"),Some(&fixture.token),Some(json!({"name":"Duplicate","isPublic":true,"tags":[],"metadata":[{"key":"same"},{"nested":{"key":"same"}}]}))).await.0,StatusCode::BAD_REQUEST);
+    assert_eq!(
+        request(
+            &application,
+            "PATCH",
+            &format!("/datasets/{id}"),
+            Some(&fixture.token),
+            Some(json!({
+                "name":"Duplicate",
+                "isPublic":true,
+                "tags":[],
+                "metadata":[{"key":"same"},{"nested":{"key":"same"}}]
+            }))
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
     assert_eq!(
         request(
             &application,
@@ -1014,8 +1200,23 @@ async fn metadata_updates_render_before_commit_and_work_with_one_database_connec
         json!("1577836800000"),
         json!("2020-01-01T00:00:00Z"),
     ] {
-        let (status,result)=tokio::time::timeout(std::time::Duration::from_secs(3),request(&application,"PATCH",&path,Some(&manager.token),Some(json!({"name":"Atomic_settings","isPublic":false,"tags":[],"sortingKey":timestamp}))))
-            .await.expect("metadata response rendering must use the transaction connection");
+        let (status, result) = tokio::time::timeout(
+            std::time::Duration::from_secs(3),
+            request(
+                &application,
+                "PATCH",
+                &path,
+                Some(&manager.token),
+                Some(json!({
+                    "name":"Atomic_settings",
+                    "isPublic":false,
+                    "tags":[],
+                    "sortingKey":timestamp
+                })),
+            ),
+        )
+        .await
+        .expect("metadata response rendering must use the transaction connection");
         assert_eq!(status, StatusCode::OK, "{result}");
         assert_eq!(result["sortingKey"], 1577836800000_i64);
     }

@@ -42,11 +42,21 @@ fn temp() -> PathBuf {
     path
 }
 fn source(path: &Path, absolute: bool) -> Value {
-    let layers:Vec<_>=["color","color__extra"].iter().map(|name|json!({
-        "name":name,"category":"color","elementClass":"uint8","dataFormat":"zarr",
-        "boundingBox":{"topLeft":[0,0,0],"width":32,"height":32,"depth":32},
-        "mags":[{"mag":[1,1,1],"path":if absolute {path.join(name).join("1").to_string_lossy().into_owned()}
-            else {format!("{name}/1")},"axisOrder":{"x":0,"y":1,"z":2}}]})).collect();
+    let layers: Vec<_> = ["color", "color__extra"]
+        .iter()
+        .map(|name| {
+            let mag_path = if absolute {
+                path.join(name).join("1").to_string_lossy().into_owned()
+            } else {
+                format!("{name}/1")
+            };
+            json!({
+                "name":name,"category":"color","elementClass":"uint8","dataFormat":"zarr",
+                "boundingBox":{"topLeft":[0,0,0],"width":32,"height":32,"depth":32},
+                "mags":[{"mag":[1,1,1],"path":mag_path,"axisOrder":{"x":0,"y":1,"z":2}}]
+            })
+        })
+        .collect();
     json!({"id":{"name":path.file_name().unwrap().to_str().unwrap(),"team":"org"},
         "scale":[1,1,1],"dataLayers":layers})
 }

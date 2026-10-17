@@ -212,7 +212,18 @@ async fn datastore_keys_directory_lookup_and_local_root_contracts() {
             error("You are not authorized to view or edit this resource.")
         )
     );
-    assert_eq!(call(&app, "GET", "/datastores/other/findDatasetLocalRootPath?key=other-key&datasetId=prefix-0123456789abcdef01234567", None).await.0, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        call(
+            &app,
+            "GET",
+            "/datastores/other/findDatasetLocalRootPath?key=other-key&\
+            datasetId=prefix-0123456789abcdef01234567",
+            None
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
     let missing = object_id();
     assert_eq!(
         call(
@@ -310,8 +321,16 @@ async fn deletion_is_idempotent_transactional_and_retains_annotated_datasets() {
     // No user token or dataset-own-store match is required by the Scala callback.
     // Pending conversion jobs are not cancelled by this database-only callback.
     let conversion = object_id();
-    sqlx::query("INSERT INTO webknossos.jobs (_id,_owner,_dataStore,command,commandArgs,state) VALUES ($1,$2,'other','convert_to_wkw',$3,'PENDING')")
-        .bind(&conversion).bind(&owner.user_id).bind(json!({"dataset_id": hard})).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.jobs (_id,_owner,_dataStore,command,commandArgs,state) \
+            VALUES ($1,$2,'other','convert_to_wkw',$3,'PENDING')",
+    )
+    .bind(&conversion)
+    .bind(&owner.user_id)
+    .bind(json!({"dataset_id": hard}))
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let (a, b) = tokio::join!(
         call(&app, "POST", endpoint, Some(json!(hard.to_uppercase()))),
         call(&app, "POST", endpoint, Some(json!(hard)))
@@ -385,8 +404,16 @@ async fn job_export_properties_require_live_job_owner_org_run_and_string_filenam
     let (db, app) = setup().await;
     let owner = db.fixture().await;
     let job = object_id();
-    sqlx::query("INSERT INTO webknossos.jobs (_id,_owner,_dataStore,command,commandArgs,state) VALUES ($1,$2,'other','export_tiff',$3,'SUCCESS')")
-        .bind(&job).bind(&owner.user_id).bind(json!({"export_file_name": "out.zip", "webknossos_token": "private-job-token"})).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.jobs (_id,_owner,_dataStore,command,commandArgs,state) \
+            VALUES ($1,$2,'other','export_tiff',$3,'SUCCESS')",
+    )
+    .bind(&job)
+    .bind(&owner.user_id)
+    .bind(json!({"export_file_name": "out.zip", "webknossos_token": "private-job-token"}))
+    .execute(&db.pool)
+    .await
+    .unwrap();
     let uri = format!(
         "/datastores/store/jobExportProperties?key=service-key&jobId={}",
         job.to_uppercase()
@@ -411,7 +438,18 @@ async fn job_export_properties_require_live_job_owner_org_run_and_string_filenam
         call(&app, "GET", &uri.replace("service-key", "wrong"), None).await,
         (StatusCode::FORBIDDEN, forbidden())
     );
-    assert_eq!(call(&app, "GET", "/datastores/store/jobExportProperties?key=service-key&jobId=prefix-0123456789abcdef01234567", None).await.0, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        call(
+            &app,
+            "GET",
+            "/datastores/store/jobExportProperties?key=service-key&\
+            jobId=prefix-0123456789abcdef01234567",
+            None
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
     for args in [json!({}), json!({"export_file_name": 42})] {
         sqlx::query("UPDATE webknossos.jobs SET commandArgs=$2 WHERE _id=$1")
             .bind(&job)

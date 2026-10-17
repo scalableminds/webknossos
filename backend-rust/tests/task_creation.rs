@@ -385,13 +385,17 @@ async fn base_of(
     String,
     Vec<(String, String, String, Value)>,
 ) {
-    let (id, user, dataset, description, summary): (String, String, String, String, String) = sqlx::query_as(
-        "SELECT _id,_user,_dataset,description,visibility::text||'|'||state::text||'|'||name||'|'||collaborationMode::text FROM webknossos.annotations WHERE _task=$1 AND typ='TracingBase'",
-    )
-    .bind(task)
-    .fetch_one(&db.pool)
-    .await
-    .unwrap();
+    let (id, user, dataset, description, summary): (String, String, String, String, String) =
+        sqlx::query_as(
+            "SELECT \
+                _id,_user,_dataset,description,\
+                visibility::text||'|'||state::text||'|'||name||'|'||collaborationMode::text \
+                FROM webknossos.annotations WHERE _task=$1 AND typ='TracingBase'",
+        )
+        .bind(task)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
     let layers = sqlx::query_as("SELECT tracingId,typ::text,name,statistics FROM webknossos.annotation_layers WHERE _annotation=$1 ORDER BY typ")
         .bind(&id).fetch_all(&db.pool).await.unwrap();
     (id, user, dataset, description, summary, layers)
@@ -553,7 +557,15 @@ async fn creates_skeleton_tasks_with_fresh_bases() {
         )
     );
     assert_eq!(
-        count(&db, &format!("SELECT count(*) FROM webknossos.experienceDomains WHERE domain='basic' AND _organization='{}'", w.f.organization_id)).await,
+        count(
+            &db,
+            &format!(
+                "SELECT count(*) FROM webknossos.experienceDomains WHERE domain='basic' AND \
+                _organization='{}'",
+                w.f.organization_id
+            )
+        )
+        .await,
         1
     );
     assert_eq!(totals(&db).await, (2, 2, 2));
@@ -790,8 +802,17 @@ async fn duplicates_base_annotations_and_tasks() {
     sqlx::query("INSERT INTO webknossos.tasks(_id,_project,_tasktype,neededexperience_domain,neededexperience_value,totalinstances,pendinginstances,editposition,editrotation) VALUES($1,$2,$3,'test',0,1,1,ROW(0,0,0)::webknossos.vector3,ROW(0,0,0)::webknossos.vector3)")
         .bind(&base_task).bind(&project_a).bind(&w.skeleton_type).execute(&db.pool).await.unwrap();
     let finished = object_id();
-    sqlx::query("INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,state) VALUES($1,$2,$3,$4,'Task','Finished')")
-        .bind(&finished).bind(&w.dataset).bind(&base_task).bind(&w.outsider.user_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,typ,state) \
+            VALUES($1,$2,$3,$4,'Task','Finished')",
+    )
+    .bind(&finished)
+    .bind(&w.dataset)
+    .bind(&base_task)
+    .bind(&w.outsider.user_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     sqlx::query("INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) VALUES($1,'task-skeleton','Skeleton','Skeleton','{}')")
         .bind(&finished).execute(&db.pool).await.unwrap();
     w.mock.clear();

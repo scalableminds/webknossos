@@ -456,8 +456,14 @@ async fn delete_handles_virtual_paths_disk_datasets_and_annotation_soft_delete()
         )
     );
     // Annotations keep the row as a soft-deleted, unusable dataset.
-    let (status_text, usable, layers): (String, bool, i64) = sqlx::query_as("SELECT status,isUsable,(SELECT count(*) FROM webknossos.dataset_layers WHERE _dataset=$1) FROM webknossos.datasets WHERE _id=$1")
-        .bind(&disk).fetch_one(&db.pool).await.unwrap();
+    let (status_text, usable, layers): (String, bool, i64) = sqlx::query_as(
+        "SELECT status,isUsable,(SELECT count(*) FROM webknossos.dataset_layers WHERE \
+            _dataset=$1) FROM webknossos.datasets WHERE _id=$1",
+    )
+    .bind(&disk)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         (status_text.as_str(), usable, layers),
         ("Deleted by user.", false, 0)
@@ -658,8 +664,15 @@ async fn mirrors_and_finish_upload_routes_drive_datastore_side_effects() {
     );
     assert!(calls[0].2[0].get("rootPath").is_none());
     assert_eq!(calls[2].2, json!({"paths":["/local/pending/1"]}));
-    let (usable, status_text, bytes): (bool, String, i64) = sqlx::query_as("SELECT isUsable,status,(SELECT sum(usedStorageBytes)::bigint FROM webknossos.organization_usedStorage_mags WHERE _dataset=$1) FROM webknossos.datasets WHERE _id=$1")
-        .bind(&pending).fetch_one(&db.pool).await.unwrap();
+    let (usable, status_text, bytes): (bool, String, i64) = sqlx::query_as(
+        "SELECT isUsable,status,(SELECT sum(usedStorageBytes)::bigint FROM \
+            webknossos.organization_usedStorage_mags WHERE _dataset=$1) FROM \
+            webknossos.datasets WHERE _id=$1",
+    )
+    .bind(&pending)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!((usable, status_text.as_str(), bytes), (true, "", 100));
     let (status, body) = call(&application, "POST", &finish, Some(&fixture.token), None).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
@@ -790,8 +803,14 @@ async fn mirrors_and_finish_upload_routes_drive_datastore_side_effects() {
             ),
         ]
     );
-    let rows: Vec<(String, i64)> = sqlx::query_as("SELECT name,usedStorageBytes FROM webknossos.organization_usedStorage_attachments WHERE _dataset=$1")
-        .bind(&mirrored).fetch_all(&db.pool).await.unwrap();
+    let rows: Vec<(String, i64)> = sqlx::query_as(
+        "SELECT name,usedStorageBytes FROM \
+            webknossos.organization_usedStorage_attachments WHERE _dataset=$1",
+    )
+    .bind(&mirrored)
+    .fetch_all(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(rows, [("agg".to_owned(), 100)]);
     assert_eq!(
         call(

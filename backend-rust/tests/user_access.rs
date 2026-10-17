@@ -66,8 +66,15 @@ async fn request(
     )
 }
 async fn seed(db: &TestDb, f: &Fixture) -> String {
-    sqlx::query("INSERT INTO webknossos.dataStores(name,url,publicUrl,key) VALUES('rpc','http://data.example','http://public.example','store-secret')").execute(&db.pool).await.unwrap();
-    sqlx::query("INSERT INTO webknossos.tracingStores(name,url,publicUrl,key) VALUES('tracing','http://tracing.example','http://public-tracing.example','tracing-secret')").execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataStores(name,url,publicUrl,key) \
+            VALUES('rpc','http://data.example','http://public.example','store-secret')",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO webknossos.tracingStores(name,url,publicUrl,key) \
+            VALUES('tracing','http://tracing.example','http://public-tracing.example','tracing-secret')").execute(&db.pool).await.unwrap();
     let id = object_id();
     sqlx::query("INSERT INTO webknossos.datasets(_id,_dataStore,_organization,_folder,name,directoryName,sortingKey,sharingToken) SELECT $1,'rpc',_id,_rootFolder,'Dataset','dataset',now(),'share-token' FROM webknossos.organizations WHERE _id=$2")
         .bind(&id).bind(&f.organization_id).execute(&db.pool).await.unwrap();

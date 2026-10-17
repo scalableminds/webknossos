@@ -168,8 +168,18 @@ async fn world(db: &TestDb, tracing_url: &str) -> World {
         .await
         .unwrap();
     let task_type = object_id();
-    sqlx::query("INSERT INTO webknossos.tasktypes(_id,_organization,_team,summary,description,settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,'Request-type','',true,true)")
-        .bind(&task_type).bind(&f.organization_id).bind(&f.team_id).execute(&db.pool).await.unwrap();
+    sqlx::query(
+        "INSERT INTO \
+            webknossos.tasktypes(_id,_organization,_team,summary,description,\
+            settings_branchpointsallowed,settings_somaclickingallowed) VALUES($1,$2,$3,\
+            'Request-type','',true,true)",
+    )
+    .bind(&task_type)
+    .bind(&f.organization_id)
+    .bind(&f.team_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
     World {
         f,
         dataset,
@@ -500,8 +510,14 @@ async fn concurrent_requests_never_over_assign() {
         );
     }
     assert_eq!(pending(&db, &contested).await, 0);
-    let (count, distinct): (i64, i64) = sqlx::query_as("SELECT count(*),count(DISTINCT _user) FROM webknossos.annotations WHERE _task=$1 AND typ='Task' AND state='Active'")
-        .bind(&contested).fetch_one(&db.pool).await.unwrap();
+    let (count, distinct): (i64, i64) = sqlx::query_as(
+        "SELECT count(*),count(DISTINCT _user) FROM webknossos.annotations WHERE \
+            _task=$1 AND typ='Task' AND state='Active'",
+    )
+    .bind(&contested)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!((count, distinct), (3, 3));
     assert_eq!(mock.calls().len(), 3);
 
@@ -523,8 +539,15 @@ async fn concurrent_requests_never_over_assign() {
         results.iter().all(|(s, _)| *s == StatusCode::OK),
         "{results:?}"
     );
-    let assigned: Vec<String> = sqlx::query_scalar("SELECT _task FROM webknossos.annotations WHERE _user=$1 AND typ='Task' AND _task=ANY($2) ORDER BY _task")
-        .bind(&user.user_id).bind(&tasks).fetch_all(&db.pool).await.unwrap();
+    let assigned: Vec<String> = sqlx::query_scalar(
+        "SELECT _task FROM webknossos.annotations WHERE _user=$1 AND typ='Task' AND \
+            _task=ANY($2) ORDER BY _task",
+    )
+    .bind(&user.user_id)
+    .bind(&tasks)
+    .fetch_all(&db.pool)
+    .await
+    .unwrap();
     let mut expected = tasks.clone();
     expected.sort();
     assert_eq!(assigned, expected);

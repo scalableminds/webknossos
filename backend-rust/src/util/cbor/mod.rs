@@ -9,6 +9,7 @@
 //! map keys, invalid UTF-8 and nesting deeper than [`MAX_DEPTH`].
 //! Non-minimal integer/length encodings are accepted like Jackson does.
 use std::fmt;
+use webknossos_common::bytes::{u16_be, u32_be, u64_be};
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 use ring::signature;
@@ -82,9 +83,9 @@ impl Decoder<'_> {
         Ok(match info {
             0..=23 => u64::from(info),
             24 => u64::from(self.take(1)?[0]),
-            25 => u64::from(u16::from_be_bytes(self.take(2)?.try_into().expect("2"))),
-            26 => u64::from(u32::from_be_bytes(self.take(4)?.try_into().expect("4"))),
-            27 => u64::from_be_bytes(self.take(8)?.try_into().expect("8")),
+            25 => u64::from(u16_be(self.take(2)?)),
+            26 => u64::from(u32_be(self.take(4)?)),
+            27 => u64_be(self.take(8)?),
             31 => return Err(CborError("indefinite length")),
             _ => return Err(CborError("reserved additional information")),
         })

@@ -7,6 +7,7 @@ pub mod mapping;
 
 use crate::datareaders::{ArrayAxes, ArraySource};
 use std::{collections::HashSet, sync::Arc, time::SystemTime};
+use webknossos_common::bytes::{i16_le, i32_le, i64_le, u16_le, u32_le};
 
 use futures::{StreamExt, stream};
 
@@ -59,11 +60,11 @@ pub(crate) fn segment_id_at(
     match (bytes_per_element, signed) {
         (1, true) => i64::from(b[0] as i8),
         (1, false) => i64::from(b[0]),
-        (2, true) => i64::from(i16::from_le_bytes([b[0], b[1]])),
-        (2, false) => i64::from(u16::from_le_bytes([b[0], b[1]])),
-        (4, true) => i64::from(i32::from_le_bytes(b.try_into().expect("4 bytes"))),
-        (4, false) => i64::from(u32::from_le_bytes(b.try_into().expect("4 bytes"))),
-        _ => i64::from_le_bytes(b.try_into().expect("8 bytes")),
+        (2, true) => i64::from(i16_le(b)),
+        (2, false) => i64::from(u16_le(b)),
+        (4, true) => i64::from(i32_le(b)),
+        (4, false) => i64::from(u32_le(b)),
+        _ => i64_le(b),
     }
 }
 

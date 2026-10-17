@@ -6,6 +6,7 @@ use crate::{
     error::{DsError, DsResult},
 };
 use serde::{Deserialize, Serialize};
+use webknossos_common::bytes::u64_le;
 fn raw() -> String {
     "raw".into()
 }
@@ -218,8 +219,8 @@ impl ShardReader {
                 let pair = index
                     .get(pos..pos + 16)
                     .ok_or_else(|| VaultError::failure("Invalid minishard number"))?;
-                let start = u64::from_le_bytes(pair[..8].try_into().expect("8 bytes"));
-                let end = u64::from_le_bytes(pair[8..].try_into().expect("8 bytes"));
+                let start = u64_le(pair);
+                let end = u64_le(&pair[8..]);
                 if start == end {
                     return Ok(Vec::new());
                 }

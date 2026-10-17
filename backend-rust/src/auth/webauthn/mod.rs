@@ -12,6 +12,7 @@ use std::{
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
+use webknossos_common::bytes::{array, u32_be};
 
 use axum::{
     Extension, Json, Router,
@@ -161,10 +162,7 @@ impl RelyingParty {
     }
 
     pub(crate) fn rp_id_hash(&self) -> [u8; 32] {
-        digest(&SHA256, self.rp_id.as_bytes())
-            .as_ref()
-            .try_into()
-            .expect("SHA-256 is 32 bytes")
+        array(digest(&SHA256, self.rp_id.as_bytes()).as_ref())
     }
 }
 
@@ -240,7 +238,7 @@ impl AttestedCredential {
         if bytes.len() < 18 {
             return Err("attested credential data");
         }
-        let aaguid: [u8; 16] = bytes[..16].try_into().expect("16 bytes");
+        let aaguid: [u8; 16] = array(bytes);
         let id_len = usize::from(u16::from_be_bytes([bytes[16], bytes[17]]));
         let id_end = 18 + id_len;
         if id_len == 0 || bytes.len() < id_end {
@@ -296,9 +294,9 @@ impl AuthenticatorData {
         if bytes.len() < 37 {
             return Err("authenticator data too short");
         }
-        let rp_id_hash: [u8; 32] = bytes[..32].try_into().expect("32 bytes");
+        let rp_id_hash: [u8; 32] = array(bytes);
         let flags = bytes[32];
-        let sign_count = u32::from_be_bytes(bytes[33..37].try_into().expect("4 bytes"));
+        let sign_count = u32_be(&bytes[33..]);
         let mut rest = &bytes[37..];
         let attested = if flags & FLAG_AT != 0 {
             let (credential, used) = AttestedCredential::parse_prefix(rest)?;

@@ -4,6 +4,7 @@ use super::{
 };
 use crate::{clients::wk::AlfuCache, error::DsError};
 use std::{collections::HashMap, fmt, sync::Arc, time::Duration};
+use webknossos_common::bytes::{u16_le, u32_le, u64_le};
 
 const EOCD: u32 = 0x06054b50;
 const LOCATOR64: u32 = 0x07064b50;
@@ -53,17 +54,13 @@ fn bytes_at(bytes: &[u8], offset: usize, count: usize) -> VaultResult<&[u8]> {
         .ok_or_else(|| failure("Truncated zip metadata"))
 }
 fn u16_at(bytes: &[u8], offset: usize) -> VaultResult<u16> {
-    Ok(u16::from_le_bytes(
-        bytes_at(bytes, offset, 2)?.try_into().expect("two bytes"),
-    ))
+    Ok(u16_le(bytes_at(bytes, offset, 2)?))
 }
 fn u32_at(bytes: &[u8], offset: usize) -> VaultResult<u32> {
-    Ok(u32::from_le_bytes(
-        bytes_at(bytes, offset, 4)?.try_into().expect("four bytes"),
-    ))
+    Ok(u32_le(bytes_at(bytes, offset, 4)?))
 }
 fn u64_at(bytes: &[u8], offset: usize) -> VaultResult<u64> {
-    let value = u64::from_le_bytes(bytes_at(bytes, offset, 8)?.try_into().expect("eight bytes"));
+    let value = u64_le(bytes_at(bytes, offset, 8)?);
     if value > i64::MAX as u64 {
         return Err(failure("ZIP64 size or offset exceeds signed 64-bit range"));
     }

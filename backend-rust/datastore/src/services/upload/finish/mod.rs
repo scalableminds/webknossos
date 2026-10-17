@@ -5,6 +5,7 @@ use std::{
     path::{Component, Path, PathBuf},
     sync::atomic::{AtomicU32, Ordering},
 };
+use webknossos_common::bytes::array;
 
 use serde_json::{Value, json};
 
@@ -581,7 +582,7 @@ fn generate_object_id() -> String {
         ring::rand::SecureRandom::fill(&ring::rand::SystemRandom::new(), &mut bytes[..n]).ok();
         bytes
     };
-    let process = PROCESS.get_or_init(|| random(5)[..5].try_into().unwrap());
+    let process = PROCESS.get_or_init(|| array(&random(5)));
     let counter = COUNTER.get_or_init(|| {
         let b = random(3);
         std::sync::atomic::AtomicU32::new(u32::from_be_bytes([0, b[0], b[1], b[2]]))

@@ -4,6 +4,7 @@ use crate::{
     models::datasource::unsigned_long_envelope,
 };
 use serde::{Serialize, Serializer};
+use webknossos_common::bytes::array;
 fn unsigned<S: Serializer>(id: &u64, s: S) -> Result<S::Ok, S::Error> {
     unsigned_long_envelope(*id).serialize(s)
 }
@@ -52,7 +53,7 @@ impl Cursor<'_> {
             .get(self.offset..end)
             .ok_or_else(|| DsError::failure("Truncated mesh manifest."))?;
         self.offset = end;
-        Ok(bytes.try_into().expect("four bytes"))
+        Ok(array(bytes))
     }
     fn int(&mut self) -> DsResult<i32> {
         Ok(i32::from_le_bytes(self.word()?))

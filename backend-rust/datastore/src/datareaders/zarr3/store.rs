@@ -1,6 +1,7 @@
 //! Read-only zarrs store using existing credentialized, token-aware datastore vaults.
 use crate::datavault::{ByteRange, VaultError, VaultPath};
 use futures::{StreamExt, stream};
+use webknossos_common::bytes::array;
 use zarrs::storage::{
     AsyncMaybeBytesIterator, AsyncReadableStorageTraits, StorageError, StoreKey,
     byte_range::{ByteRange as ZRange, ByteRangeIterator},
@@ -40,8 +41,8 @@ impl IndexValidation {
                     u64::from_le_bytes(b)
                 }
             };
-            let offset = number(pair[..8].try_into().expect("8 bytes"));
-            let size = number(pair[8..].try_into().expect("8 bytes"));
+            let offset = number(array(pair));
+            let size = number(array(&pair[8..]));
             if offset == u64::MAX && size == u64::MAX {
                 continue;
             }

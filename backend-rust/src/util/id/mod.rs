@@ -7,6 +7,7 @@ use std::{
     sync::atomic::{AtomicU32, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+use webknossos_common::bytes::array;
 
 /// BSON-compatible 12-byte ObjectId: seconds, process randomness, atomic counter.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -34,7 +35,7 @@ impl ObjectId {
         let seed = SEED.get_or_init(|| {
             let bytes = *uuid::Uuid::new_v4().as_bytes();
             // UUID bytes 8..16 have no fixed version bits.
-            bytes[8..16].try_into().expect("eight-byte slice")
+            array(&bytes[8..])
         });
         let seconds = SystemTime::now()
             .duration_since(UNIX_EPOCH)

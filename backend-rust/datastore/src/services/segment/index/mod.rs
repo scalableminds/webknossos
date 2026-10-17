@@ -4,6 +4,7 @@
 //! the buckets containing them. Zarr3 and local HDF5 attachments share the Scala hash contract.
 use crate::datareaders::{ArrayAxes, ArraySource};
 use std::{collections::HashSet, sync::Arc};
+use webknossos_common::bytes::u64_le;
 
 use futures::{StreamExt, stream};
 use serde_json::Value;
@@ -40,8 +41,8 @@ pub fn murmur3_x64_128(data: &[u8]) -> (i64, i64) {
     let blocks = data.len() / 16;
     for i in 0..blocks {
         let b = &data[i * 16..i * 16 + 16];
-        let mut k1 = u64::from_le_bytes(b[..8].try_into().expect("8 bytes"));
-        let mut k2 = u64::from_le_bytes(b[8..].try_into().expect("8 bytes"));
+        let mut k1 = u64_le(b);
+        let mut k2 = u64_le(&b[8..]);
         k1 = k1.wrapping_mul(C1).rotate_left(31).wrapping_mul(C2);
         h1 ^= k1;
         h1 = h1

@@ -13,6 +13,7 @@ use super::super::header::DatasetHeader;
 use crate::compression::Compressor;
 use crate::error::{DsError, DsResult};
 use crate::models::{BUCKET_LENGTH, Vec3Int};
+use webknossos_common::bytes::i64_le;
 
 /// Scala `WKWDataFormatHelper.FILENAME_HEADER_WKW`.
 pub const FILENAME_HEADER_WKW: &str = "header.wkw";
@@ -132,7 +133,7 @@ impl<'a> LeReader<'a> {
             .get(self.position..end)
             .ok_or_else(|| java_exception_without_message("java.io.EOFException"))?;
         self.position = end;
-        Ok(i64::from_le_bytes(slice.try_into().expect("8 bytes")))
+        Ok(i64_le(slice))
     }
 }
 

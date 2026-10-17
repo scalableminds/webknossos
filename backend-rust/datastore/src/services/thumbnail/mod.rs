@@ -9,6 +9,7 @@ use crate::{
     error::{DsError, DsResult},
     models::ElementClass,
 };
+use webknossos_common::bytes::{f32_le, i16_le, i32_le, i64_le, u16_le, u32_le, u64_le};
 
 pub const MAX_THUMBNAIL_DIMENSION: i32 = 3000;
 const IMAGE_CREATE_FAILED: &str = "Could not create 2d image from underlying image data.";
@@ -116,21 +117,17 @@ fn normalize(value: f64, (lo, hi): (f64, f64)) -> i32 {
 }
 
 fn gray_value(data: &[u8], idx: usize, element_class: ElementClass) -> DsResult<f64> {
-    let bytes = |n: usize| -> [u8; 8] {
-        let mut out = [0u8; 8];
-        out[..n].copy_from_slice(&data[idx..idx + n]);
-        out
-    };
+    let value = &data[idx..];
     Ok(match element_class {
         ElementClass::Uint8 | ElementClass::Uint24 => f64::from(data[idx]),
         ElementClass::Int8 => f64::from(data[idx] as i8),
-        ElementClass::Uint16 => f64::from(u16::from_le_bytes([data[idx], data[idx + 1]])),
-        ElementClass::Int16 => f64::from(i16::from_le_bytes([data[idx], data[idx + 1]])),
-        ElementClass::Uint32 => f64::from(u32::from_le_bytes(bytes(4)[..4].try_into().unwrap())),
-        ElementClass::Int32 => f64::from(i32::from_le_bytes(bytes(4)[..4].try_into().unwrap())),
-        ElementClass::Uint64 => u64::from_le_bytes(bytes(8)) as f64,
-        ElementClass::Int64 => i64::from_le_bytes(bytes(8)) as f64,
-        ElementClass::Float => f64::from(f32::from_le_bytes(bytes(4)[..4].try_into().unwrap())),
+        ElementClass::Uint16 => f64::from(u16_le(value)),
+        ElementClass::Int16 => f64::from(i16_le(value)),
+        ElementClass::Uint32 => f64::from(u32_le(value)),
+        ElementClass::Int32 => f64::from(i32_le(value)),
+        ElementClass::Uint64 => u64_le(value) as f64,
+        ElementClass::Int64 => i64_le(value) as f64,
+        ElementClass::Float => f64::from(f32_le(value)),
         ElementClass::Double => {
             return Err(DsError::failure(
                 "Unsupported ElementClass for color layer thumbnail: double",

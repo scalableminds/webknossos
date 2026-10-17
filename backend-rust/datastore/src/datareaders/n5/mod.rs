@@ -13,6 +13,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
+use webknossos_common::bytes::{i16_be, i32_be};
 
 pub const FILENAME_ATTRIBUTES_JSON: &str = "attributes.json";
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,24 +133,8 @@ pub struct N5BlockHeader {
 /// Scala N5DataExtractor: all block-header fields are big endian. Mode 2 has no shape.
 pub fn extract_block(bytes: &[u8]) -> DsResult<(N5BlockHeader, &[u8])> {
     let eof = || DsError::from_exception("java.io.EOFException");
-    let short = |pos| -> DsResult<i16> {
-        Ok(i16::from_be_bytes(
-            bytes
-                .get(pos..pos + 2)
-                .ok_or_else(eof)?
-                .try_into()
-                .expect("2 bytes"),
-        ))
-    };
-    let int = |pos| -> DsResult<i32> {
-        Ok(i32::from_be_bytes(
-            bytes
-                .get(pos..pos + 4)
-                .ok_or_else(eof)?
-                .try_into()
-                .expect("4 bytes"),
-        ))
-    };
+    let short = |pos| -> DsResult<i16> { Ok(i16_be(bytes.get(pos..pos + 2).ok_or_else(eof)?)) };
+    let int = |pos| -> DsResult<i32> { Ok(i32_be(bytes.get(pos..pos + 4).ok_or_else(eof)?)) };
     let mode = short(0)?;
     if mode == 2 {
         return Ok((

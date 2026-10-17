@@ -1,6 +1,7 @@
 //! Code shared by the Rust backend and datastore, like Scala's `util` project and the datastore
 //! models the Scala backend imports directly.
 
+pub mod bytes;
 pub mod datasource;
 pub mod enums;
 pub mod explore_layers;

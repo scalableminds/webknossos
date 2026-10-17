@@ -530,7 +530,6 @@ async fn finish_upload_to_paths(
 /// ReserveMagUploadToPathRequest, also the finish request body.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub(crate) struct MagUploadRequest {
     pub layer_name: String,
     pub mag: [i32; 3],
@@ -543,7 +542,6 @@ pub(crate) struct MagUploadRequest {
 /// ReserveAttachmentUploadToPathRequest, also the finish request body.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub(crate) struct AttachmentUploadRequest {
     pub layer_name: String,
     pub attachment_name: String,

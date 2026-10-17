@@ -149,7 +149,10 @@ async fn validate_layer_to_link(
 /// null). `needsConversion` and the voxel size are only used by the datastore.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
+#[expect(
+    dead_code,
+    reason = "needsConversion and the voxel size are only used by the datastore"
+)]
 struct DatasetUploadInfo {
     resumable_upload_info: ResumableUploadInfo,
     dataset_name: String,

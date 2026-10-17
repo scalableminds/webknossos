@@ -62,7 +62,10 @@ struct LayerAttachment {
     name: String,
     path: String,
     data_format: LayerAttachmentDataformat,
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "required in the request like Play's Reads, otherwise unused"
+    )]
     credential_id: Option<String>,
 }
 
@@ -112,7 +115,10 @@ fn exists_error(typ: LayerAttachmentType) -> ApiError {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct AttachmentUploadInfo {
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "required in the request like Play's Reads, otherwise unused"
+    )]
     resumable_upload_info: ResumableUploadInfo,
     dataset_id: ObjectId,
     layer_name: String,
@@ -205,7 +211,10 @@ struct ReportAttachmentUploadParameters {
     layer_name: String,
     attachment_type: LayerAttachmentType,
     attachment: LayerAttachment,
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "required in the request like Play's Reads, otherwise unused"
+    )]
     attachment_size_bytes: i64,
 }
 

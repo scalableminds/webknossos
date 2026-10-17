@@ -21,8 +21,6 @@
 //!
 //! `created_timestamp` is an explicit input (Scala: `System.currentTimeMillis()`)
 //! so the output is deterministic.
-// TI2 wires the routes that call this API; until then only tests use it.
-#![allow(dead_code)]
 
 use std::fmt;
 
@@ -206,7 +204,8 @@ pub(crate) struct AnnotationLayerParameters {
 }
 
 impl AnnotationLayerParameters {
-    /// getNameWithDefault.
+    /// getNameWithDefault. Production callers name layers themselves.
+    #[cfg(test)]
     pub(crate) fn name_with_default(&self) -> String {
         self.name
             .clone()
@@ -454,6 +453,7 @@ pub(crate) enum InitialTracing {
 }
 
 impl InitialTracing {
+    #[cfg(test)]
     pub(crate) fn layer_type(&self) -> AnnotationLayerType {
         match self {
             Self::Skeleton(_) => AnnotationLayerType::Skeleton,
@@ -869,7 +869,8 @@ pub(crate) fn adapt_volume_tracing(
 /// to the old precedence layer. `fallback_layer_has_segment_index` is the
 /// hasSegmentIndexFile answer (ignored for skeletons / without fallback).
 /// Callers that must skip the RPC when no fallback exists use
-/// [`plan_volume_tracing`] directly.
+/// [`plan_volume_tracing`] directly, so only the tests use this composition.
+#[cfg(test)]
 pub(crate) fn create_tracing_for_explorational(
     dataset: &ExplorationalDataset<'_>,
     params: &AnnotationLayerParameters,

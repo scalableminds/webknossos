@@ -63,7 +63,6 @@ struct ComposeLayer {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 struct ComposeRequest {
     new_dataset_name: String,
     target_folder_id: ObjectId,
@@ -245,7 +244,6 @@ struct AddLayerRequest {
     source_dataset_id: ObjectId,
     source_layer_name: String,
     target_layer_name: String,
-    #[allow(dead_code)]
     transformations: Option<Vec<Value>>,
 }
 

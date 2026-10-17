@@ -89,7 +89,10 @@ pub(crate) async fn user_for_token_forbidden(
 /// ResumableUploadInfo; validated like Play's Reads, otherwise unused here.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
+#[expect(
+    dead_code,
+    reason = "required in the request like Play's Reads, otherwise unused"
+)]
 pub(crate) struct ResumableUploadInfo {
     pub upload_id: String,
     pub total_file_count: i64,
@@ -223,7 +226,10 @@ fn mag_locator(value: &Value) -> ApiResult<MagLocator> {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct MagUploadInfo {
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "required in the request like Play's Reads, otherwise unused"
+    )]
     resumable_upload_info: ResumableUploadInfo,
     dataset_id: ObjectId,
     layer_name: String,
@@ -360,7 +366,10 @@ struct ReportMagUploadParameters {
     dataset_id: ObjectId,
     layer_name: String,
     mag: Value,
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "required in the request like Play's Reads, otherwise unused"
+    )]
     mag_size_bytes: i64,
 }
 

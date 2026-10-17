@@ -152,10 +152,9 @@ pub(crate) struct Job {
     pub args: Value,
     pub state: String,
     pub manual_state: Option<String>,
-    #[allow(dead_code)] // Read by the worker routes (later job batches).
+    #[expect(dead_code, reason = "selected with the job row, not rendered")]
     pub worker: Option<String>,
     pub workflow_hash: Option<String>,
-    #[allow(dead_code)] // Read by the worker routes (later job batches).
     pub latest_run_id: Option<String>,
     pub error_details: Option<Value>,
     pub return_value: Option<String>,

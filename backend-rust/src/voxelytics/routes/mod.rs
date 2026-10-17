@@ -180,7 +180,10 @@ struct DescriptionConfig {
     global_parameters: Map<String, Value>,
     paths: Vec<String>,
     schema_version: Option<i64>,
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "required in the request like Play's Reads, otherwise unused"
+    )]
     git_hash: Option<String>,
     tasks: ordered::OrderedMap<TaskConfig>,
 }

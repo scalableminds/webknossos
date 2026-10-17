@@ -1126,7 +1126,10 @@ struct RunInferenceParameters {
     annotation_id: Option<ObjectId>,
     mask_annotation_layer_name: Option<String>,
     new_dataset_name: String,
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "required in the request like Play's Reads, otherwise unused"
+    )]
     workflow_yaml: Option<String>,
     seed_generator_distance_threshold: Option<f64>,
     do_split_merger_evaluation: Option<bool>,

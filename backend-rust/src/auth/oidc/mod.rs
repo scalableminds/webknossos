@@ -302,7 +302,7 @@ impl<E: fmt::Display> From<E> for ClientError {
 struct ProviderInfo {
     authorization_endpoint: String,
     token_endpoint: String,
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "part of the provider response format, not needed")]
     userinfo_endpoint: String,
     jwks_uri: String,
 }
@@ -311,9 +311,9 @@ struct ProviderInfo {
 struct TokenResponse {
     access_token: String,
     id_token: Option<String>,
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "part of the provider response format, not needed")]
     token_type: String,
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "part of the provider response format, not needed")]
     refresh_token: Option<String>,
     scope: Option<String>,
 }
@@ -327,7 +327,7 @@ struct JsonWebKeySet {
 #[derive(Deserialize)]
 struct JsonWebKey {
     kty: String,
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "required on every key by Play's format, not used")]
     alg: String,
     #[serde(rename = "use")]
     usage: String,

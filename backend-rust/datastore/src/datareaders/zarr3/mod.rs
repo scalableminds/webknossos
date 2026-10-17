@@ -284,8 +284,11 @@ impl ArrayFormat for Zarr3Format {
             // including its whole-chunk shortcut. This is a permutation, not numeric conversion.
             let size = self.header.bytes_per_element();
             let shape = &self.header.chunk;
-            let count = shape.iter().map(|d| *d as usize).product::<usize>();
-            if bytes.len() != count * size {
+            let count = shape
+                .iter()
+                .try_fold(1usize, |p, d| p.checked_mul(usize::try_from(*d).ok()?))
+                .ok_or_else(|| error("Invalid Zarr3 chunk shape"))?;
+            if count.checked_mul(size) != Some(bytes.len()) {
                 return Err(error("Unexpected decoded Zarr3 chunk size"));
             }
             let mut output = vec![0u8; bytes.len()];

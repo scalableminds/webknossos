@@ -450,18 +450,23 @@ fn copy_rows(
     let bottom = bbox.bottom_right();
     for z in bbox.top_left.z..bottom.z {
         for y in bbox.top_left.y..bottom.y {
-            let index = (i64::from(bbox.top_left.x)
+            let index = i64::from(bbox.top_left.x)
                 + i64::from(y) * i64::from(width)
-                + i64::from(z) * i64::from(width) * i64::from(height))
-                as usize;
-            let offset = index
-                .checked_mul(bytes)
+                + i64::from(z) * i64::from(width) * i64::from(height);
+            let row = usize::try_from(index)
+                .ok()
+                .and_then(|n| n.checked_mul(bytes))
+                .and_then(|offset| {
+                    let size = usize::try_from(bottom.x - bbox.top_left.x)
+                        .ok()?
+                        .checked_mul(bytes)?;
+                    Some(offset..offset.checked_add(size)?)
+                })
                 .ok_or_else(|| DsError::failure("Row offset overflow"))?;
-            let size = (bottom.x - bbox.top_left.x) as usize * bytes;
-            let from = input.get(offset..offset + size).ok_or_else(|| {
+            let from = input.get(row.clone()).ok_or_else(|| {
                 DsError::failure("Input data is smaller than the requested clipping row")
             })?;
-            out.get_mut(offset..offset + size)
+            out.get_mut(row)
                 .ok_or_else(|| DsError::failure("Clipping row exceeds output size"))?
                 .copy_from_slice(from);
         }
@@ -545,3 +550,6 @@ pub fn convert_to_half_byte(input: &[u8]) -> Vec<u8> {
     }
     result
 }
+
+#[cfg(test)]
+mod tests;

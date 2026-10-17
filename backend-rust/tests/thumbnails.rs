@@ -2,6 +2,8 @@ mod common;
 
 use std::sync::{Arc, Mutex};
 
+use webknossos_common::text::hex;
+
 use axum::{
     Router,
     body::{Body, Bytes, to_bytes},
@@ -297,10 +299,6 @@ async fn layer_thumbnail_selects_parameters_caches_and_keeps_public_cache_header
 
     server.abort();
     db.cleanup().await;
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 #[tokio::test]

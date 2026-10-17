@@ -905,7 +905,7 @@ fn java_long_from_u64(value: u64) -> String {
     (value as i64).to_string()
 }
 
-pub use crate::util::java_format::{java_double, java_float};
+pub use webknossos_common::java_format::{java_double, java_float};
 
 // ---------------------------------------------------------------------------
 // Minimal port of txw2 IndentingXMLStreamWriter over Woodstox

@@ -31,14 +31,16 @@ use serde_json::{Map, Value, json};
 
 use crate::{
     annotation::provider::{AnnotationLayer, AnnotationLayerType},
-    dataset::source::{Axis, Category, DataSource, Layer},
+    dataset::source::{AdditionalAxis, StaticLayer, UsableDataSource},
     proto::datastore::{
-        AdditionalAxisProto, AdditionalCoordinateProto, BoundingBoxProto, Id32WithBool,
-        NamedBoundingBoxProto, SkeletonTracing, SkeletonUserStateProto, Vec2IntProto,
-        Vec3DoubleProto, Vec3IntProto, VolumeTracing, VolumeUserStateProto,
-        volume_tracing::ElementClassProto,
+        AdditionalAxisProto, AdditionalCoordinateProto, Id32WithBool, NamedBoundingBoxProto,
+        SkeletonTracing, SkeletonUserStateProto, Vec2IntProto, Vec3DoubleProto, Vec3IntProto,
+        VolumeTracing, VolumeUserStateProto, volume_tracing::ElementClassProto,
     },
     util::id::ObjectId,
+};
+use webknossos_common::{
+    datasource::LayerKind, enums::ElementClass, geometry::Vec3Int, json::read_i32,
 };
 
 /// AnnotationLayer.defaultSkeletonLayerName.
@@ -62,13 +64,9 @@ const SKELETON_DEFAULT_ZOOM_LEVEL: f64 = 2.0;
 /// VolumeTracingDefaults.zoomLevel.
 const VOLUME_DEFAULT_ZOOM_LEVEL: f64 = 1.0;
 /// VolumeTracingDefaults.elementClass.
-const VOLUME_DEFAULT_ELEMENT_CLASS: &str = "uint32";
+pub(crate) const VOLUME_DEFAULT_ELEMENT_CLASS: ElementClass = ElementClass::Uint32;
 /// VolumeTracingDefaults.largestSegmentId (fresh layer without fallback).
 const VOLUME_DEFAULT_LARGEST_SEGMENT_ID: Option<i64> = Some(0);
-/// ElementClass.segmentationElementClasses.
-const SEGMENTATION_ELEMENT_CLASSES: &[&str] = &[
-    "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64",
-];
 
 // ---------------------------------------------------------------- errors
 
@@ -157,12 +155,12 @@ pub(crate) struct MagRestrictions {
 }
 
 impl MagRestrictions {
-    pub(crate) fn is_allowed(&self, mag: [i32; 3]) -> bool {
-        let max_dim = max_dim(mag);
+    pub(crate) fn is_allowed(&self, mag: Vec3Int) -> bool {
+        let max_dim = mag.max_dim();
         self.min.unwrap_or(0) <= max_dim && self.max.unwrap_or(i32::MAX) >= max_dim
     }
 
-    pub(crate) fn filter_allowed(&self, mags: &[[i32; 3]]) -> Vec<[i32; 3]> {
+    pub(crate) fn filter_allowed(&self, mags: &[Vec3Int]) -> Vec<Vec3Int> {
         mags.iter()
             .copied()
             .filter(|m| self.is_allowed(*m))
@@ -204,7 +202,7 @@ pub(crate) struct AnnotationLayerParameters {
     pub mag_restrictions: Option<MagRestrictions>,
     pub name: Option<String>,
     /// Parsed for validation only; createTracingForExplorational ignores it.
-    pub additional_axes: Option<Vec<Axis>>,
+    pub additional_axes: Option<Vec<AdditionalAxis>>,
 }
 
 impl AnnotationLayerParameters {
@@ -243,7 +241,7 @@ impl AnnotationLayerParameters {
                     axes.as_array()
                         .ok_or("additionalAxes: expected array")?
                         .iter()
-                        .map(additional_axis_from_json)
+                        .map(|axis| AdditionalAxis::from_json(axis).map_err(|e| e.to_string()))
                         .collect::<Result<Vec<_>, String>>()
                 })
                 .transpose()?,
@@ -306,116 +304,11 @@ fn optional_string(object: &Map<String, Value>, key: &str) -> Result<Option<Stri
 
 fn optional_int(object: &Map<String, Value>, key: &str) -> Result<Option<i32>, String> {
     present(object, key)
-        .map(|v| crate::dataset::source::int(v).map_err(|_| format!("{key}: expected int")))
+        .map(|v| read_i32(v).map_err(|_| format!("{key}: expected int")))
         .transpose()
 }
 
-/// AdditionalAxis JsonAutoFormat (no bounds-length check, unlike data sources).
-fn additional_axis_from_json(value: &Value) -> Result<Axis, String> {
-    let object = value.as_object().ok_or("additionalAxes: expected object")?;
-    let name = object
-        .get("name")
-        .and_then(Value::as_str)
-        .ok_or("additionalAxes.name: expected string")?
-        .to_owned();
-    let bounds = object
-        .get("bounds")
-        .and_then(Value::as_array)
-        .ok_or("additionalAxes.bounds: expected array")?
-        .iter()
-        .map(|b| {
-            crate::dataset::source::int(b)
-                .map_err(|_| "additionalAxes.bounds: expected int".to_owned())
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    let index = object
-        .get("index")
-        .ok_or("additionalAxes.index: missing")
-        .and_then(|v| {
-            crate::dataset::source::int(v).map_err(|_| "additionalAxes.index: expected int")
-        })?;
-    Ok(Axis {
-        name,
-        bounds,
-        index,
-    })
-}
-
 // ---------------------------------------------------------------- geometry
-
-/// Vec3Int.maxDim.
-fn max_dim(mag: [i32; 3]) -> i32 {
-    mag[0].max(mag[1]).max(mag[2])
-}
-
-/// BoundingBox.bottomRight (JVM Int wrapping).
-fn bottom_right(bbox: &[i32; 6]) -> [i32; 3] {
-    [
-        bbox[0].wrapping_add(bbox[3]),
-        bbox[1].wrapping_add(bbox[4]),
-        bbox[2].wrapping_add(bbox[5]),
-    ]
-}
-
-/// BoundingBox.union (pairwise).
-fn bbox_union(a: &[i32; 6], b: &[i32; 6]) -> [i32; 6] {
-    let (br_a, br_b) = (bottom_right(a), bottom_right(b));
-    let x = a[0].min(b[0]);
-    let y = a[1].min(b[1]);
-    let z = a[2].min(b[2]);
-    [
-        x,
-        y,
-        z,
-        br_a[0].max(br_b[0]).wrapping_sub(x),
-        br_a[1].max(br_b[1]).wrapping_sub(y),
-        br_a[2].max(br_b[2]).wrapping_sub(z),
-    ]
-}
-
-/// UsableDataSource.boundingBox: BoundingBox.union of all layer boxes
-/// (BoundingBox.empty for no layers).
-pub(crate) fn data_source_bounding_box(data_source: &DataSource) -> [i32; 6] {
-    let mut boxes = data_source.layers.iter().map(|l| l.bounding_box);
-    match boxes.next() {
-        Some(first) => boxes.fold(first, |acc, b| bbox_union(&acc, &b)),
-        None => [0; 6],
-    }
-}
-
-/// BoundingBox.center: `topLeft.move(bottomRight).scale(0.5f)`, i.e. Int→Float,
-/// times 0.5f, truncating (saturating) Float→Int.
-fn bbox_center(bbox: &[i32; 6]) -> [i32; 3] {
-    let br = bottom_right(bbox);
-    let half = |a: i32, b: i32| (a.wrapping_add(b) as f32 * 0.5f32) as i32;
-    [
-        half(bbox[0], br[0]),
-        half(bbox[1], br[1]),
-        half(bbox[2], br[2]),
-    ]
-}
-
-/// UsableDataSource.center.
-pub(crate) fn data_source_center(data_source: &DataSource) -> [i32; 3] {
-    bbox_center(&data_source_bounding_box(data_source))
-}
-
-fn vec3_int_proto(v: [i32; 3]) -> Vec3IntProto {
-    Vec3IntProto {
-        x: v[0],
-        y: v[1],
-        z: v[2],
-    }
-}
-
-fn bbox_proto(bbox: &[i32; 6]) -> BoundingBoxProto {
-    BoundingBoxProto {
-        top_left: vec3_int_proto([bbox[0], bbox[1], bbox[2]]),
-        width: bbox[3],
-        height: bbox[4],
-        depth: bbox[5],
-    }
-}
 
 fn zero_rotation() -> Vec3DoubleProto {
     Vec3DoubleProto {
@@ -425,81 +318,18 @@ fn zero_rotation() -> Vec3DoubleProto {
     }
 }
 
-/// Java `String.hashCode` (UTF-16 code units, wrapping).
-fn java_string_hash(value: &str) -> i32 {
-    value.encode_utf16().fold(0i32, |h, unit| {
-        h.wrapping_mul(31).wrapping_add(i32::from(unit))
-    })
-}
-
-fn axis_bound(axis: &Axis, index: usize) -> i32 {
-    // Data-source parsing guarantees two bounds (Scala would throw otherwise).
-    axis.bounds.get(index).copied().unwrap_or(0)
-}
-
-/// AdditionalAxis.merge (UsableDataSource.additionalAxesUnion): per name the
-/// first-seen index and the min lower / max upper bound. The result order
-/// reproduces iteration of Scala 2.13's `mutable.HashMap[String, _]` (buckets by
-/// `h ^ (h >>> 16)` masked to the table size, ascending signed hash within a
-/// bucket, growth to double size whenever `size + 1 >= 0.75 * capacity` before
-/// each `update`).
-pub(crate) fn additional_axes_union(data_source: &DataSource) -> Option<Vec<Axis>> {
-    let mut entries: Vec<(String, i32, i32, i32)> = Vec::new();
-    let mut capacity: usize = 16;
-    for axes in data_source
-        .layers
-        .iter()
-        .filter_map(|l| l.additional_axes.as_ref())
-    {
-        for axis in axes {
-            if entries.len() + 1 >= capacity * 3 / 4 {
-                capacity *= 2;
-            }
-            let (lower, upper) = (axis_bound(axis, 0), axis_bound(axis, 1));
-            match entries.iter_mut().find(|e| e.0 == axis.name) {
-                Some(entry) => {
-                    entry.2 = entry.2.min(lower);
-                    entry.3 = entry.3.max(upper);
-                }
-                None => entries.push((axis.name.clone(), axis.index, lower, upper)),
-            }
-        }
-    }
-    if entries.is_empty() {
-        return None;
-    }
-    let improved = |name: &str| {
-        let h = java_string_hash(name);
-        h ^ ((h as u32) >> 16) as i32
-    };
-    let mask = (capacity - 1) as i32;
-    // Stable sort keeps insertion order for equal hashes, like the bucket lists.
-    entries.sort_by_key(|e| {
-        let hash = improved(&e.0);
-        (hash & mask, hash)
-    });
-    Some(
-        entries
-            .into_iter()
-            .map(|(name, index, lower, upper)| Axis {
-                name,
-                bounds: vec![lower, upper],
-                index,
-            })
-            .collect(),
-    )
-}
-
 /// AdditionalAxis.toProto.
-pub(crate) fn additional_axes_to_proto(axes: Option<&[Axis]>) -> Vec<AdditionalAxisProto> {
+pub(crate) fn additional_axes_to_proto(
+    axes: Option<&[AdditionalAxis]>,
+) -> Vec<AdditionalAxisProto> {
     axes.unwrap_or_default()
         .iter()
         .map(|axis| AdditionalAxisProto {
             name: axis.name.clone(),
             index: axis.index,
             bounds: Vec2IntProto {
-                x: axis_bound(axis, 0),
-                y: axis_bound(axis, 1),
+                x: axis.lower_bound().unwrap_or_default(),
+                y: axis.upper_bound().unwrap_or_default(),
             },
         })
         .collect()
@@ -507,48 +337,36 @@ pub(crate) fn additional_axes_to_proto(axes: Option<&[Axis]>) -> Vec<AdditionalA
 
 // ---------------------------------------------------------------- element class / mags
 
-/// ElementClass.largestSegmentIdIsInRange.
-pub(crate) fn largest_segment_id_is_in_range(
-    largest_segment_id: Option<i64>,
-    element_class: &str,
-) -> bool {
-    if !SEGMENTATION_ELEMENT_CLASSES.contains(&element_class) {
-        return false;
-    }
-    let Some(id) = largest_segment_id else {
-        return true;
-    };
-    let max = match element_class {
-        // Every Long bit pattern is a valid non-negative uint64 value.
-        "uint64" => return true,
-        "uint8" => Some((1i64 << 8) - 1),
-        "int8" => Some(i64::from(i8::MAX)),
-        "uint16" => Some((1i64 << 16) - 1),
-        "int16" => Some(i64::from(i16::MAX)),
-        "uint32" => Some((1i64 << 32) - 1),
-        "int32" => Some(i64::from(i32::MAX)),
-        "int64" => Some(i64::MAX),
-        _ => None,
-    };
-    id >= 0 && max.is_none_or(|max| id <= max)
-}
-
 /// ElementClass.toProto.
 pub(crate) fn element_class_to_proto(
-    element_class: &str,
+    element_class: ElementClass,
 ) -> Result<ElementClassProto, TracingInitError> {
     Ok(match element_class {
-        "uint8" => ElementClassProto::Uint8,
-        "uint16" => ElementClassProto::Uint16,
-        "uint24" => ElementClassProto::Uint24,
-        "uint32" => ElementClassProto::Uint32,
-        "uint64" => ElementClassProto::Uint64,
-        "int8" => ElementClassProto::Int8,
-        "int16" => ElementClassProto::Int16,
-        "int32" => ElementClassProto::Int32,
-        "int64" => ElementClassProto::Int64,
-        other => return Err(TracingInitError::UnsupportedElementClass(other.to_owned())),
+        ElementClass::Uint8 => ElementClassProto::Uint8,
+        ElementClass::Uint16 => ElementClassProto::Uint16,
+        ElementClass::Uint24 => ElementClassProto::Uint24,
+        ElementClass::Uint32 => ElementClassProto::Uint32,
+        ElementClass::Uint64 => ElementClassProto::Uint64,
+        ElementClass::Int8 => ElementClassProto::Int8,
+        ElementClass::Int16 => ElementClassProto::Int16,
+        ElementClass::Int32 => ElementClassProto::Int32,
+        ElementClass::Int64 => ElementClassProto::Int64,
+        ElementClass::Float | ElementClass::Double => {
+            return Err(TracingInitError::UnsupportedElementClass(
+                element_class.as_str().to_owned(),
+            ));
+        }
     })
+}
+
+/// A segmentation layer's largestSegmentId as Scala's `Option[Long]` bit pattern.
+pub(crate) fn layer_largest_segment_id(layer: &StaticLayer) -> Option<i64> {
+    match layer.kind {
+        LayerKind::Segmentation {
+            largest_segment_id, ..
+        } => largest_segment_id.map(|id| id as i64),
+        LayerKind::Color => None,
+    }
 }
 
 /// AnnotationLayerPrecedence.combineLargestSegmentIdsByPrecedence.
@@ -565,12 +383,8 @@ pub(crate) fn combine_largest_segment_ids_by_precedence(
     }
 }
 
-fn layer_mags(layer: &Layer) -> Vec<[i32; 3]> {
-    layer.mags.iter().map(|m| m.mag).collect()
-}
-
-fn distinct(mags: impl IntoIterator<Item = [i32; 3]>) -> Vec<[i32; 3]> {
-    let mut result: Vec<[i32; 3]> = Vec::new();
+fn distinct(mags: impl IntoIterator<Item = Vec3Int>) -> Vec<Vec3Int> {
+    let mut result: Vec<Vec3Int> = Vec::new();
     for mag in mags {
         if !result.contains(&mag) {
             result.push(mag);
@@ -581,14 +395,19 @@ fn distinct(mags: impl IntoIterator<Item = [i32; 3]>) -> Vec<[i32; 3]> {
 
 /// VolumeTracingMags.magsForVolumeTracing.
 pub(crate) fn mags_for_volume_tracing(
-    data_source: &DataSource,
-    fallback_layer: Option<&Layer>,
-) -> Vec<[i32; 3]> {
+    data_source: &UsableDataSource,
+    fallback_layer: Option<&StaticLayer>,
+) -> Vec<Vec3Int> {
     let mut mags = match fallback_layer {
-        Some(layer) => layer_mags(layer),
+        Some(layer) => layer.resolutions(),
         None => {
-            let union = distinct(data_source.layers.iter().flat_map(layer_mags));
-            let max_dims = union.iter().map(|m| max_dim(*m)).collect::<Vec<_>>();
+            let union = distinct(
+                data_source
+                    .data_layers
+                    .iter()
+                    .flat_map(StaticLayer::resolutions),
+            );
+            let max_dims = union.iter().map(|m| m.max_dim()).collect::<Vec<_>>();
             let distinct_max_dims = max_dims
                 .iter()
                 .enumerate()
@@ -597,17 +416,20 @@ pub(crate) fn mags_for_volume_tracing(
                 union
             } else {
                 // Scala maxBy: the first layer with the most mags.
-                let mut template: Option<&Layer> = None;
-                for layer in &data_source.layers {
+                let mut template: Option<&StaticLayer> = None;
+                for layer in &data_source.data_layers {
                     if template.is_none_or(|t| layer.mags.len() > t.mags.len()) {
                         template = Some(layer);
                     }
                 }
-                template.map(layer_mags).map(distinct).unwrap_or_default()
+                template
+                    .map(StaticLayer::resolutions)
+                    .map(distinct)
+                    .unwrap_or_default()
             }
         }
     };
-    mags.sort_by_key(|m| max_dim(*m));
+    mags.sort_by_key(|m| m.max_dim());
     mags
 }
 
@@ -617,7 +439,7 @@ pub(crate) fn mags_for_volume_tracing(
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct ExplorationalDataset<'a> {
     /// `datasetService.usableDataSourceFor(dataset)`.
-    pub data_source: &'a DataSource,
+    pub data_source: &'a UsableDataSource,
     /// `dataset.name` (skeleton `datasetName`; volume uses the data source's directory name).
     pub dataset_name: &'a str,
     /// `dataset._organization`.
@@ -670,14 +492,14 @@ pub(crate) fn build_skeleton_tracing(
     dataset: &ExplorationalDataset<'_>,
     created_timestamp: i64,
 ) -> SkeletonTracing {
-    let axes = additional_axes_union(dataset.data_source);
+    let axes = dataset.data_source.additional_axes_union();
     SkeletonTracing {
         dataset_name: dataset.dataset_name.to_owned(),
         trees: Vec::new(),
         created_timestamp,
         bounding_box: None,
         active_node_id: None,
-        edit_position: vec3_int_proto(data_source_center(dataset.data_source)),
+        edit_position: Vec3IntProto::from(dataset.data_source.center()),
         edit_rotation: zero_rotation(),
         zoom_level: SKELETON_DEFAULT_ZOOM_LEVEL,
         version: 0,
@@ -696,34 +518,35 @@ pub(crate) fn build_skeleton_tracing(
 #[derive(Clone, Debug)]
 pub(crate) struct VolumeTracingPlan<'a> {
     dataset: ExplorationalDataset<'a>,
-    fallback_layer: Option<&'a Layer>,
-    mags: Vec<[i32; 3]>,
+    fallback_layer: Option<&'a StaticLayer>,
+    mags: Vec<Vec3Int>,
     mapping_name: Option<String>,
 }
 
 /// The first StaticSegmentationLayer (getAutoFallbackLayerName).
-fn auto_fallback_layer_name(data_source: &DataSource) -> Option<&str> {
+fn auto_fallback_layer_name(data_source: &UsableDataSource) -> Option<&str> {
     data_source
-        .layers
-        .iter()
-        .find(|l| l.category == Category::Segmentation)
+        .segmentation_layers()
+        .next()
         .map(|l| l.name.as_str())
 }
 
 /// getFallbackLayer: first segmentation layer with that name, validated range.
 fn fallback_layer<'a>(
-    data_source: &'a DataSource,
+    data_source: &'a UsableDataSource,
     name: &str,
-) -> Result<&'a Layer, TracingInitError> {
+) -> Result<&'a StaticLayer, TracingInitError> {
     let layer = data_source
-        .layers
-        .iter()
-        .find(|l| l.name == name && l.category == Category::Segmentation)
+        .segmentation_layers()
+        .find(|l| l.name == name)
         .ok_or_else(|| TracingInitError::FallbackLayerNotFound(name.to_owned()))?;
-    if !largest_segment_id_is_in_range(layer.largest_segment_id, &layer.element_class) {
+    if !layer
+        .element_class
+        .largest_segment_id_is_in_range(layer.largest_segment_id())
+    {
         return Err(TracingInitError::LargestSegmentIdExceedsRange {
-            largest_segment_id: layer.largest_segment_id.unwrap_or(-1),
-            element_class: layer.element_class.clone(),
+            largest_segment_id: layer_largest_segment_id(layer).unwrap_or(-1),
+            element_class: layer.element_class.as_str().to_owned(),
         });
     }
     Ok(layer)
@@ -776,25 +599,23 @@ impl VolumeTracingPlan<'_> {
         let data_source = self.dataset.data_source;
         let fallback = self.fallback_layer;
         let element_class = element_class_to_proto(
-            fallback
-                .map(|l| l.element_class.as_str())
-                .unwrap_or(VOLUME_DEFAULT_ELEMENT_CLASS),
+            fallback.map_or(VOLUME_DEFAULT_ELEMENT_CLASS, |l| l.element_class),
         )?;
         let bounding_box = fallback
             .map(|l| l.bounding_box)
-            .unwrap_or_else(|| data_source_bounding_box(data_source));
+            .unwrap_or_else(|| data_source.bounding_box());
         let axes = match fallback {
             Some(layer) => layer.additional_axes.clone(),
-            None => additional_axes_union(data_source),
+            None => data_source.additional_axes_union(),
         };
         let largest_segment_id =
-            combine_largest_segment_ids_by_precedence(None, fallback.map(|l| l.largest_segment_id));
+            combine_largest_segment_ids_by_precedence(None, fallback.map(layer_largest_segment_id));
         Ok(VolumeTracing {
             active_segment_id: None,
-            bounding_box: bbox_proto(&bounding_box),
+            bounding_box: bounding_box.into(),
             created_timestamp,
-            dataset_name: data_source.directory_name.clone(),
-            edit_position: vec3_int_proto(data_source_center(data_source)),
+            dataset_name: data_source.id.directory_name.clone(),
+            edit_position: Vec3IntProto::from(data_source.center()),
             edit_rotation: zero_rotation(),
             element_class: element_class as i32,
             fallback_layer: fallback.map(|l| l.name.clone()),
@@ -805,7 +626,7 @@ impl VolumeTracingPlan<'_> {
             user_bounding_box: None,
             user_bounding_boxes: Vec::new(),
             organization_id: Some(self.dataset.organization_id.to_owned()),
-            mags: self.mags.iter().copied().map(vec3_int_proto).collect(),
+            mags: self.mags.iter().copied().map(Vec3IntProto::from).collect(),
             segments: Vec::new(),
             mapping_name: self.mapping_name.clone(),
             has_editable_mapping: None,

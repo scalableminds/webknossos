@@ -406,8 +406,8 @@ fn dataset_route_config(
     let mut upload_to_paths = crate::dataset::options::UploadToPathsConfig::default();
     if let Some(prefixes) = env.get("WK_UPLOAD_TO_PATHS_PREFIXES") {
         for prefix in prefixes.split(',').map(str::trim).filter(|p| !p.is_empty()) {
-            let parsed = crate::dataset::source::normalize_upath(prefix)
-                .and_then(|p| crate::dataset::source::upath_to_absolute(&p))
+            let parsed = webknossos_common::upath::UPath::parse(prefix)
+                .map(|p| p.to_absolute().to_string())
                 .map_err(|_| {
                     ConfigError("WK_UPLOAD_TO_PATHS_PREFIXES must contain valid paths".into())
                 })?;

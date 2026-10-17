@@ -515,27 +515,13 @@ async fn deliver(transport: &AsyncSmtpTransport<Tokio1Executor>, mail: Mail) {
 /// checkpoint smtp-mail.md). `from` stays empty and the additional footer is a
 /// slot; [`MailSender::send`] fills both from the configured [`MailSettings`].
 pub mod templates {
+    use webknossos_common::text::escape_html;
+
     use super::Mail;
 
     /// Placeholder for `mail.additionalFooter`. Interpolated values are
     /// HTML-escaped, so they can never contain this marker.
     pub(super) const FOOTER_SLOT: &str = "<!--wk:additionalFooter-->";
-
-    /// Twirl `HtmlFormat.escape`.
-    pub fn escape_html(text: &str) -> String {
-        let mut escaped = String::with_capacity(text.len());
-        for c in text.chars() {
-            match c {
-                '<' => escaped.push_str("&lt;"),
-                '>' => escaped.push_str("&gt;"),
-                '"' => escaped.push_str("&quot;"),
-                '\'' => escaped.push_str("&#x27;"),
-                '&' => escaped.push_str("&amp;"),
-                c => escaped.push(c),
-            }
-        }
-        escaped
-    }
 
     fn e(text: &str) -> String {
         escape_html(text)

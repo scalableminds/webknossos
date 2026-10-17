@@ -8,6 +8,7 @@ license = "AGPL-3.0-only"
 description = "Rust implementation of the WEBKNOSSOS datastore service"
 
 [dependencies]
+webknossos-common = { path = "../common" }
 async-trait = "0.1"
 futures = "0.3"
 inventory = "0.3"
@@ -38,9 +39,6 @@ hdf5-reader = { version = "=0.9.1", default-features = false }
 lru = "=0.16.4"
 draco-core = { version = "=2.3.2", default-features = false, features = ["decoder", "edgebreaker_valence_decode", "legacy_bitstream_decode"] }
 
-[build-dependencies]
-prost-build = "0.14"
-protox = "0.10"
 
 [dev-dependencies]
 http-body-util = "0.1"

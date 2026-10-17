@@ -8,9 +8,10 @@ use std::fmt;
 use serde::{Serialize, Serializer, ser::SerializeTuple};
 use serde_json::Value;
 
-use super::json::{
+use crate::json::{
     Fields, JsError, JsResult, deserialize_via_from_json, play_f64_number, read_i32,
 };
+use crate::math::ceil_div;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub struct Vec3Int {
@@ -156,6 +157,12 @@ impl Vec3Int {
     }
 }
 
+impl From<[i32; 3]> for Vec3Int {
+    fn from([x, y, z]: [i32; 3]) -> Self {
+        Self::new(x, y, z)
+    }
+}
+
 impl std::ops::Add for Vec3Int {
     type Output = Self;
     fn add(self, o: Self) -> Self {
@@ -228,7 +235,7 @@ impl Serialize for Vec3Int {
 deserialize_via_from_json!(Vec3Int);
 
 /// Java `Integer.parseInt` (optional sign, ASCII digits, i32 range).
-pub(crate) fn parse_java_int(s: &str) -> Option<i32> {
+pub fn parse_java_int(s: &str) -> Option<i32> {
     let digits = s.strip_prefix(['+', '-']).unwrap_or(s);
     if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
         return None;
@@ -329,7 +336,7 @@ impl Vec3Double {
                     [Some(x), Some(y), Some(z)] => Ok(Self::new(x, y, z)),
                     _ => Err(JsError::new(format!(
                         "Invalid array content: {}",
-                        super::json::compact(json)
+                        crate::json::compact(json)
                     ))),
                 }
             }
@@ -368,6 +375,12 @@ impl std::ops::Div for Vec3Double {
     }
 }
 
+impl From<[f64; 3]> for Vec3Double {
+    fn from([x, y, z]: [f64; 3]) -> Self {
+        Self::new(x, y, z)
+    }
+}
+
 impl Serialize for Vec3Double {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut tuple = serializer.serialize_tuple(3)?;
@@ -391,16 +404,6 @@ pub struct BoundingBox {
     pub width: i32,
     pub height: i32,
     pub depth: i32,
-}
-
-/// Scala `MathUtils.ceilDiv(Int, Int)`.
-pub fn ceil_div(num: i32, divisor: i32) -> i32 {
-    let sign = num.signum() * divisor.signum();
-    sign.wrapping_mul(
-        num.wrapping_abs()
-            .wrapping_add(divisor.wrapping_abs())
-            .wrapping_sub(1),
-    ) / divisor.wrapping_abs()
 }
 
 impl BoundingBox {
@@ -513,6 +516,11 @@ impl BoundingBox {
             ceil_div(self.height, mag.y),
             ceil_div(self.depth, mag.z),
         )
+    }
+
+    /// [`Self::div_mag`], or `None` for a zero mag component (an `ArithmeticException` in Scala).
+    pub fn checked_div_mag(&self, mag: Vec3Int) -> Option<Self> {
+        (mag.x != 0 && mag.y != 0 && mag.z != 0).then(|| self.div_mag(mag))
     }
 
     pub fn moved(&self, delta: Vec3Int) -> Self {

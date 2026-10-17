@@ -35,7 +35,7 @@ use crate::{
         build_skeleton_tracing, layer_name, plan_volume_tracing,
     },
     auth::AuthUser,
-    dataset::source::DataSource,
+    dataset::source::UsableDataSource,
     error::{ApiError, ApiResult},
     extract::extension,
     extract::{self, Path},
@@ -108,7 +108,7 @@ pub(crate) async fn find_dataset(pool: &PgPool, id: &ObjectId) -> ApiResult<Opti
 /// its rendered JSON (stored in the AnnotationDataSourceTemporaryStore by
 /// saveVolumeTracing).
 pub(crate) struct UsableSource {
-    pub source: DataSource,
+    pub source: UsableDataSource,
     pub rendered: Value,
 }
 
@@ -133,8 +133,7 @@ pub(crate) async fn usable_data_source(
     }
     let rendered =
         crate::dataset::routes::data_source_for_rpc(pool, dataset.id.as_str(), true).await?;
-    let source =
-        crate::dataset::source::parse_data_source(&rendered).map_err(|_| ApiError::internal())?;
+    let source = UsableDataSource::from_json(&rendered).map_err(|_| ApiError::internal())?;
     Ok(UsableSource { source, rendered })
 }
 

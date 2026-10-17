@@ -5,8 +5,8 @@ use std::{collections::HashMap, sync::Mutex, time::Duration};
 use reqwest::{Client, Method, RequestBuilder, Response, StatusCode, header};
 
 use super::{
-    BoxFuture, ByteRange, DataVault, DataVaultCredential, Encoding, RawRead, RemoteUri, UPath,
-    VaultError, VaultResult,
+    BoxFuture, ByteRange, DataVault, DataVaultCredential, Encoding, RawRead, RemoteUri,
+    ToRemoteUri, UPath, VaultError, VaultResult,
 };
 
 /// Scala `readTimeout = 10 minutes`.

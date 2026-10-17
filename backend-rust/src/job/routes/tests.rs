@@ -1,34 +1,6 @@
 use super::*;
 
 #[test]
-fn bounding_box_literals_follow_the_java_pattern() {
-    assert_eq!(
-        parse_bounding_box("0,0,0,10,20,30"),
-        Some([0, 0, 0, 10, 20, 30])
-    );
-    assert_eq!(
-        parse_bounding_box(" -1, -2,-3 , 4, 5,6 "),
-        Some([-1, -2, -3, 4, 5, 6])
-    );
-    assert_eq!(
-        parse_bounding_box("007,0,0,1,1,1"),
-        Some([7, 0, 0, 1, 1, 1])
-    );
-    for invalid in [
-        "",
-        "1,2,3,4,5",
-        "1 ,2,3,4,5,6",
-        "1,2,3,-4,5,6",
-        "1,2,3,4,5,6,7",
-        "+1,2,3,4,5,6",
-        "1,2,3,4,5,99999999999",
-        "a,2,3,4,5,6",
-    ] {
-        assert_eq!(parse_bounding_box(invalid), None, "{invalid}");
-    }
-}
-
-#[test]
 fn job_costs() {
     let features = crate::system::application_info::default_features();
     assert_eq!(

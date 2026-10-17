@@ -24,7 +24,8 @@ use reqwest::{Client, Method, StatusCode, header::HeaderMap};
 use tokio::sync::OnceCell;
 
 use super::{
-    BoxFuture, ByteRange, DataVault, Encoding, RawRead, RemoteUri, UPath, VaultError, VaultResult,
+    BoxFuture, ByteRange, DataVault, Encoding, RawRead, RemoteUri, ToRemoteUri, UPath, VaultError,
+    VaultResult,
     sigv4::{self, AwsCredentials, SigningRequest},
 };
 use crate::error::DsError;
@@ -906,7 +907,7 @@ impl DataVault for S3DataVault {
                 .take(max_items)
                 .map(|key| {
                     UPath::parse(&uri_literal_for_object_key(&self.uri, &bucket, key))
-                        .map_err(VaultError::Failure)
+                        .map_err(|e| VaultError::Failure(e.into()))
                 })
                 .collect()
         })

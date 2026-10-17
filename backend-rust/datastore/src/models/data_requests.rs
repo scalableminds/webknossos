@@ -369,7 +369,8 @@ pub struct RawCuboidRequest {
 impl RawCuboidRequest {
     pub fn from_json(value: &serde_json::Value) -> super::JsResult<Self> {
         use super::json::Fields;
-        let mut f = Fields::new(value);
+        // Scala `derives JsonAutoFormat`.
+        let mut f = Fields::object(value)?;
         let position = f.req("position", Vec3Int::from_json);
         let cube_size = f.req("cubeSize", Vec3Int::from_json);
         let mag = f.req("mag", Vec3Int::from_json);

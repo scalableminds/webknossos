@@ -54,12 +54,12 @@ use crate::{
         AnnotationLayer, AnnotationLayerType, AnnotationProvider, ProviderError,
     },
     annotation::tracing_initialization::{
-        DEFAULT_SKELETON_LAYER_NAME, DEFAULT_VOLUME_LAYER_NAME,
-        combine_largest_segment_ids_by_precedence, data_source_bounding_box,
-        element_class_to_proto, mags_for_volume_tracing,
+        DEFAULT_SKELETON_LAYER_NAME, DEFAULT_VOLUME_LAYER_NAME, VOLUME_DEFAULT_ELEMENT_CLASS,
+        combine_largest_segment_ids_by_precedence, element_class_to_proto,
+        layer_largest_segment_id, mags_for_volume_tracing,
     },
     auth::AuthUser,
-    dataset::source::{Category, DataSource, Layer},
+    dataset::source::{StaticLayer, UsableDataSource},
     error::{ApiError, ApiResult},
     extract::extension,
     extract::read_multipart,
@@ -73,6 +73,7 @@ use crate::{
     util::id::ObjectId,
     util::instant::now_millis,
 };
+use webknossos_common::geometry::Vec3Int;
 
 /// Play `parser.maxDiskBuffer` (multipart files).
 const PLAY_MAX_DISK_BUFFER: usize = 1024 * 1024 * 1024;
@@ -87,8 +88,6 @@ const MULTIPLE_EDITABLE_MAPPINGS: &str =
 /// Msg.Annotation.uploadEditableMappingIncompleteInformation.
 const EDITABLE_MAPPING_INCOMPLETE: &str =
     "Could not store editable mapping, either file or baseMappingName is missing.";
-/// VolumeTracingDefaults.elementClass.
-const VOLUME_DEFAULT_ELEMENT_CLASS: &str = "uint32";
 
 pub fn router(_jobs_enabled: bool) -> Router<AppState> {
     Router::new()
@@ -147,23 +146,9 @@ fn java_parse_double(raw: &str) -> Option<f64> {
     s.parse::<f64>().ok()
 }
 
-/// `Vec3Int.fromUriLiteral`: `(\d+),(\d+),(\d+)` (whole string), each
-/// `Integer.parseInt`.
+/// `Vec3Int.fromUriLiteral`.
 fn parse_vec3_int(raw: &str) -> Option<Vec3IntProto> {
-    let parts: Vec<&str> = raw.split(',').collect();
-    if parts.len() != 3
-        || parts
-            .iter()
-            .any(|p| p.is_empty() || !p.bytes().all(|b| b.is_ascii_digit()))
-    {
-        return None;
-    }
-    let parse = |p: &str| p.parse::<i32>().ok();
-    Some(Vec3IntProto {
-        x: parse(parts[0])?,
-        y: parse(parts[1])?,
-        z: parse(parts[2])?,
-    })
+    Vec3Int::from_uri_literal(raw).map(Vec3IntProto::from)
 }
 
 /// `Vec3Double.fromUriLiteral`: `s.trim.split(",")` (Java drops trailing empty
@@ -201,60 +186,46 @@ fn parse_optional<T>(raw: Option<&str>, parse: impl Fn(&str) -> Option<T>) -> Ap
 // adaptVolumeTracingsToFallbackLayer
 // ---------------------------------------------------------------------------
 
-fn bbox_proto(bbox: &[i32; 6]) -> BoundingBoxProto {
-    BoundingBoxProto {
-        top_left: Vec3IntProto {
-            x: bbox[0],
-            y: bbox[1],
-            z: bbox[2],
-        },
-        width: bbox[3],
-        height: bbox[4],
-        depth: bbox[5],
-    }
-}
-
 /// BoundingBox.isEmpty of `boundingBoxFromProto`.
 fn bbox_proto_is_empty(bbox: &BoundingBoxProto) -> bool {
     bbox.width <= 0 || bbox.height <= 0 || bbox.depth <= 0
 }
 
 /// The first StaticSegmentationLayer named like the tracing's fallback layer.
-fn fallback_layer_for<'a>(source: &'a DataSource, tracing: &VolumeTracing) -> Option<&'a Layer> {
+fn fallback_layer_for<'a>(
+    source: &'a UsableDataSource,
+    tracing: &VolumeTracing,
+) -> Option<&'a StaticLayer> {
     let name = tracing.fallback_layer.as_deref()?;
     source
-        .layers
-        .iter()
-        .find(|layer| layer.category == Category::Segmentation && layer.name == name)
+        .segmentation_layers()
+        .find(|layer| layer.name == name)
 }
 
 /// adaptPropertiesToFallbackLayer without the RPC: `has_segment_index` is
 /// the `canHaveSegmentIndex` answer (`true` without fallback layer).
 fn adapt_properties(
     tracing: &VolumeTracing,
-    source: &DataSource,
-    fallback: Option<&Layer>,
+    source: &UsableDataSource,
+    fallback: Option<&StaticLayer>,
     has_segment_index: bool,
 ) -> Result<VolumeTracing, ProviderError> {
     let bounding_box = if bbox_proto_is_empty(&tracing.bounding_box) {
-        bbox_proto(
-            &fallback
-                .map(|layer| layer.bounding_box)
-                .unwrap_or_else(|| data_source_bounding_box(source)),
-        )
+        fallback
+            .map(|layer| layer.bounding_box)
+            .unwrap_or_else(|| source.bounding_box())
+            .into()
     } else {
         tracing.bounding_box
     };
     let element_class = element_class_to_proto(
-        fallback
-            .map(|layer| layer.element_class.as_str())
-            .unwrap_or(VOLUME_DEFAULT_ELEMENT_CLASS),
+        fallback.map_or(VOLUME_DEFAULT_ELEMENT_CLASS, |layer| layer.element_class),
     )
     .map_err(|error| ProviderError::failure(error.to_string()))?;
     let largest_segment_id = combine_largest_segment_ids_by_precedence(
         // ScalaPB uint64 carries the Long bit pattern.
         tracing.largest_segment_id.map(|id| id as i64),
-        fallback.map(|layer| layer.largest_segment_id),
+        fallback.map(layer_largest_segment_id),
     );
     Ok(VolumeTracing {
         bounding_box,
@@ -263,7 +234,7 @@ fn adapt_properties(
         largest_segment_id: largest_segment_id.map(|id| id as u64),
         mags: mags_for_volume_tracing(source, fallback)
             .into_iter()
-            .map(|[x, y, z]| Vec3IntProto { x, y, z })
+            .map(Vec3IntProto::from)
             .collect(),
         has_segment_index: Some(has_segment_index),
         ..tracing.clone()

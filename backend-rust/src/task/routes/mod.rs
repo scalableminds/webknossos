@@ -8,6 +8,7 @@ use axum::{
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{PgConnection, Postgres, Transaction};
+use webknossos_common::geometry::BoundingBox;
 
 use crate::{
     AppState,
@@ -33,17 +34,6 @@ struct Experience {
     _domain: String,
     #[serde(rename = "value")]
     _value: i32,
-}
-#[derive(Deserialize)]
-struct BoundingBox {
-    #[serde(rename = "topLeft")]
-    _top_left: [i32; 3],
-    #[serde(rename = "width")]
-    _width: i32,
-    #[serde(rename = "height")]
-    _height: i32,
-    #[serde(rename = "depth")]
-    _depth: i32,
 }
 #[derive(Deserialize)]
 struct BaseAnnotation {

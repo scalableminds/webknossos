@@ -4,12 +4,12 @@ use std::collections::HashMap;
 use axum::{Extension, Json, Router, extract::State, routing::patch};
 use serde::{Deserialize, Deserializer};
 use serde_json::{Value, json};
+use webknossos_common::{enums::LayerAttachmentType, upath::UPath};
 
 use crate::{
     AppState,
     auth::AuthUser,
-    dataset::lifecycle::AttachmentType,
-    dataset::source::{Attachments, Category, DataSource, Layer},
+    dataset::source::{DataLayerAttachments, LayerKind, StaticLayer, UsableDataSource},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
     stores::client::ServiceClients,
@@ -53,7 +53,7 @@ struct AttachmentRenaming {
     /// The new layer name if the layer is renamed in the same request.
     layer_name: String,
     old_name: String,
-    attachment_type: AttachmentType,
+    attachment_type: LayerAttachmentType,
     new_name: String,
 }
 
@@ -85,7 +85,7 @@ struct PartialUpdate {
 /// DatasetService.applyLayerUpdates: only category, bounding box, transforms,
 /// view configurations and largestSegmentId are taken over; mags and
 /// attachments can only be removed.
-fn apply_layer_updates(existing: &Layer, update: &Layer) -> Layer {
+fn apply_layer_updates(existing: &StaticLayer, update: &StaticLayer) -> StaticLayer {
     let mut layer = existing.clone();
     layer.mags = existing
         .mags
@@ -101,59 +101,47 @@ fn apply_layer_updates(existing: &Layer, update: &Layer) -> Layer {
     layer.coordinate_transformations = update.coordinate_transformations.clone();
     layer.default_view_configuration = update.default_view_configuration.clone();
     layer.admin_view_configuration = update.admin_view_configuration.clone();
-    match (existing.category, update.category) {
-        (Category::Segmentation, Category::Segmentation) => {
-            layer.largest_segment_id = update.largest_segment_id;
+    layer.kind = match (&existing.kind, &update.kind) {
+        (LayerKind::Segmentation { mappings, .. }, LayerKind::Segmentation { .. }) => {
+            LayerKind::Segmentation {
+                largest_segment_id: update.largest_segment_id(),
+                mappings: mappings.clone(),
+            }
         }
-        (Category::Color, Category::Segmentation) => {
-            layer.category = Category::Segmentation;
-            layer.largest_segment_id = update.largest_segment_id;
-            layer.mappings = None;
-        }
-        (Category::Segmentation, Category::Color) => {
-            layer.category = Category::Color;
-            layer.largest_segment_id = None;
-            layer.mappings = None;
-        }
-        (Category::Color, Category::Color) => {}
-    }
+        (LayerKind::Color, LayerKind::Segmentation { .. }) => LayerKind::Segmentation {
+            largest_segment_id: update.largest_segment_id(),
+            mappings: None,
+        },
+        (_, LayerKind::Color) => LayerKind::Color,
+    };
     layer
 }
 
 /// DatasetService.applyDataSourceUpdates.
 fn apply_updates(
-    existing: &DataSource,
-    updates: &DataSource,
+    existing: &UsableDataSource,
+    updates: &UsableDataSource,
     layer_renamings: &[LayerRenaming],
     attachment_renamings: &[AttachmentRenaming],
-) -> Result<DataSource, String> {
+) -> Result<UsableDataSource, String> {
     let layer_names: HashMap<&str, &str> = layer_renamings
         .iter()
         .map(|r| (r.old_name.as_str(), r.new_name.as_str()))
         .collect();
-    let mut renamed = existing.layers.clone();
+    let mut renamed = existing.data_layers.clone();
     for layer in &mut renamed {
         if let Some(new_name) = layer_names.get(layer.name.as_str()) {
             layer.name = (*new_name).to_owned();
         }
     }
     for layer in &mut renamed {
-        let attachment_names: HashMap<(&str, &str), &str> = attachment_renamings
+        let attachment_names: HashMap<(LayerAttachmentType, String), String> = attachment_renamings
             .iter()
             .filter(|r| r.layer_name == layer.name)
-            .map(|r| {
-                (
-                    (r.attachment_type.as_str(), r.old_name.as_str()),
-                    r.new_name.as_str(),
-                )
-            })
+            .map(|r| ((r.attachment_type, r.old_name.clone()), r.new_name.clone()))
             .collect();
         if let Some(attachments) = &mut layer.attachments {
-            attachments.for_each_mut(|typ, attachment| {
-                if let Some(new_name) = attachment_names.get(&(typ, attachment.name.as_str())) {
-                    attachment.name = (*new_name).to_owned();
-                }
-            });
+            *attachments = attachments.rename_by_map(&attachment_names);
         }
     }
     let mut seen = std::collections::HashSet::new();
@@ -163,22 +151,22 @@ fn apply_updates(
     if renamed.iter().any(|l| {
         l.attachments
             .as_ref()
-            .is_some_and(Attachments::contains_duplicate_names)
+            .is_some_and(DataLayerAttachments::contains_duplicate_names)
     }) {
         return Err("Attachment renamings create name collisions.".into());
     }
-    let mut layers: Vec<Layer> = renamed
+    let mut layers: Vec<StaticLayer> = renamed
         .iter()
         .filter_map(|layer| {
             updates
-                .layers
+                .data_layers
                 .iter()
                 .find(|u| u.name == layer.name)
                 .map(|update| apply_layer_updates(layer, update))
         })
         .collect();
-    let added: Vec<&Layer> = updates
-        .layers
+    let added: Vec<&StaticLayer> = updates
+        .data_layers
         .iter()
         .filter(|u| !renamed.iter().any(|l| l.name == u.name))
         .collect();
@@ -194,12 +182,20 @@ fn apply_updates(
         return Err("New layers may not have attachments. Add empty layers instead and then add attachments.".into());
     }
     layers.extend(added.into_iter().cloned());
-    Ok(DataSource {
-        layers,
-        factor: updates.factor,
-        unit: updates.unit.clone(),
+    Ok(UsableDataSource {
+        data_layers: layers,
+        scale: updates.scale,
         ..existing.clone()
     })
+}
+
+/// UsableDataSource.allExplicitPaths as strings.
+fn explicit_paths(source: &UsableDataSource) -> Vec<String> {
+    source
+        .all_explicit_paths()
+        .into_iter()
+        .map(ToString::to_string)
+        .collect()
 }
 
 /// Seq.diff: multiset difference preserving order.
@@ -232,12 +228,16 @@ async fn paths_used_only_by(pool: &sqlx::PgPool, dataset_id: &str) -> ApiResult<
     .fetch_all(pool)
     .await?;
     raw.iter()
-        .map(|p| crate::dataset::source::normalize_upath(p).map_err(|_| ApiError::internal()))
+        .map(|p| {
+            UPath::parse(p)
+                .map(|p| p.to_string())
+                .map_err(|_| ApiError::internal())
+        })
         .collect()
 }
 
 struct SourceChange {
-    updated: DataSource,
+    updated: UsableDataSource,
     paths_to_delete: Vec<String>,
 }
 
@@ -258,8 +258,7 @@ async fn update_partial(
         .data_source
         .as_ref()
         .map(|value| {
-            crate::dataset::source::parse_data_source(value)
-                .map_err(crate::dataset::source::invalid_body)
+            UsableDataSource::from_json(value).map_err(crate::dataset::source::invalid_body)
         })
         .transpose()?;
     let mut change = None;
@@ -278,7 +277,7 @@ async fn update_partial(
         .map_err(ApiError::bad_request)?;
         if updated != existing {
             let removed =
-                multiset_difference(&existing.explicit_paths(), &updated.explicit_paths());
+                multiset_difference(&explicit_paths(&existing), &explicit_paths(&updated));
             let only_this = if removed.is_empty() {
                 Vec::new()
             } else {
@@ -342,14 +341,18 @@ async fn update_partial(
                WHERE _id = $1"#,
         )
         .bind(id.as_str())
-        .bind(change.updated.factor[0])
-        .bind(change.updated.factor[1])
-        .bind(change.updated.factor[2])
-        .bind(&change.updated.unit)
+        .bind(change.updated.scale.factor.x)
+        .bind(change.updated.scale.factor.y)
+        .bind(change.updated.scale.factor.z)
+        .bind(change.updated.scale.unit.as_str())
         .execute(&mut *transaction)
         .await?;
-        crate::dataset::source::write_layers(&mut transaction, id.as_str(), &change.updated.layers)
-            .await?;
+        crate::dataset::source::write_layers(
+            &mut transaction,
+            id.as_str(),
+            &change.updated.data_layers,
+        )
+        .await?;
     }
     let readable: bool = sqlx::query_scalar(&format!(
         "SELECT {} FROM webknossos.datasets_ d WHERE d._id=$3",
@@ -372,7 +375,7 @@ async fn update_partial(
         crate::dataset::lifecycle::update_data_source_on_disk(
             &clients,
             &record,
-            &crate::dataset::source::data_source_json(&change.updated),
+            &json!(change.updated),
             root,
         )
         .await?;

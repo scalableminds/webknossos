@@ -8,6 +8,7 @@ license = "AGPL-3.0-only"
 description = "Incremental Rust implementation of the WEBKNOSSOS application backend"
 
 [dependencies]
+webknossos-common = { path = "common" }
 axum = { version = "0.8", features = ["json", "query", "tokio", "http1", "multipart"] }
 base64 = "0.22"
 bcrypt = "0.17"
@@ -45,6 +46,3 @@ unsafe_code = "forbid"
 lto = "thin"
 strip = true
 
-[build-dependencies]
-prost-build = "0.14"
-protox = "0.10"

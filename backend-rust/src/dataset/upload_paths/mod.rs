@@ -8,15 +8,21 @@ use crate::{
     auth::AuthUser,
     dataset::create::NewDataset,
     dataset::lifecycle::{
-        AttachmentDataformat, AttachmentUploadRequest, MagUploadRequest, NOT_YET_UPLOADED,
-        NOT_YET_UPLOADED_TO_PATHS,
+        AttachmentUploadRequest, MagUploadRequest, NOT_YET_UPLOADED, NOT_YET_UPLOADED_TO_PATHS,
     },
     dataset::options::{DatasetRouteConfig, UploadToPathsConfig},
-    dataset::source::{Attachment, DataSource, Layer},
+    dataset::source::{StaticLayer, UsableDataSource},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
     stores::client::ServiceClients,
     util::id::{ObjectId, PathObjectId},
+};
+use webknossos_common::{
+    datasource::DataSourceId,
+    enums::{LayerAttachmentDataformat, LayerAttachmentType},
+    geometry::Vec3Int,
+    json::read_i32,
+    upath::{UPath, UPathError},
 };
 
 const NO_MATCHING_PREFIX: &str =
@@ -48,7 +54,9 @@ pub fn router(config: DatasetRouteConfig) -> Router<AppState> {
 pub(crate) fn parse_prefix(prefix: Option<&str>) -> ApiResult<Option<String>> {
     prefix
         .map(|p| {
-            crate::dataset::source::normalize_upath(p).map_err(crate::dataset::source::invalid_body)
+            UPath::parse(p)
+                .map(|p| p.to_string())
+                .map_err(crate::dataset::source::invalid_body)
         })
         .transpose()
 }
@@ -81,7 +89,8 @@ fn dataset_parent(
     organization: &str,
 ) -> ApiResult<String> {
     let join = |base: &str, child: &str| {
-        crate::dataset::source::upath_join(base, child)
+        join_literal(base, child)
+            .map(|path| path.to_string())
             .map_err(|_| ApiError::bad_request(NO_MATCHING_PREFIX))
     };
     let mut parent = select_path_prefix(config, requested)?;
@@ -94,79 +103,54 @@ fn dataset_parent(
     Ok(parent)
 }
 
-fn join(base: &str, child: &str) -> ApiResult<String> {
-    crate::dataset::source::upath_join(base, child)
-        .map_err(|_| ApiError::bad_request("Invalid path."))
+/// UPath `/` on a UPath literal.
+fn join_literal(base: &str, child: &str) -> Result<UPath, UPathError> {
+    Ok(UPath::parse(base)?.join(child))
 }
 
-fn mag_literal_scalar(mag: [i32; 3]) -> String {
-    if mag[0] == mag[1] && mag[1] == mag[2] {
-        mag[0].to_string()
-    } else {
-        format!("{}-{}-{}", mag[0], mag[1], mag[2])
-    }
-}
-
-fn default_directory(typ: &str) -> &'static str {
-    match typ {
-        "mesh" => "meshes",
-        "agglomerate" | "cumsum" => "agglomerates",
-        "segmentIndex" => "segmentIndex",
-        "connectome" => "connectomes",
-        _ => "segmentStatistics",
-    }
-}
-
-fn suffix(data_format: &str) -> &'static str {
-    match data_format {
-        "hdf5" => ".hdf5",
-        "json" => ".json",
-        _ => "",
-    }
+fn join(base: &str, child: &str) -> ApiResult<UPath> {
+    join_literal(base, child).map_err(|_| ApiError::bad_request("Invalid path."))
 }
 
 /// UploadToPathsService.generateAttachmentPath.
 fn attachment_path(
     name: &str,
-    data_format: &str,
-    typ: &str,
-    layer_path: &str,
-) -> ApiResult<String> {
+    data_format: LayerAttachmentDataformat,
+    typ: LayerAttachmentType,
+    layer_path: &UPath,
+) -> ApiResult<UPath> {
     let safe = match crate::util::text::normalize_strong(name) {
         Some(safe) => safe,
         None => format!("{typ}__{}", crate::dataset::create::random_id(12)?),
     };
-    join(
-        &join(layer_path, default_directory(typ))?,
-        &format!("{safe}{}", suffix(data_format)),
-    )
+    Ok(layer_path
+        .join(typ.default_directory_name())
+        .join(&format!("{safe}{}", data_format.suffix())))
 }
 
 /// addPathsToDatasource: every mag and attachment gets a generated path below
 /// `<parent>/<directoryName>/<layer>`.
-fn add_paths(source: &mut DataSource, parent: &str) -> ApiResult<()> {
-    let dataset_path = join(parent, &source.directory_name)?;
-    for layer in &mut source.layers {
-        let layer_path = join(&dataset_path, &layer.name)?;
+fn add_paths(source: &mut UsableDataSource, parent: &str) -> ApiResult<()> {
+    let dataset_path = join(parent, &source.id.directory_name)?;
+    for layer in &mut source.data_layers {
+        let layer_path = dataset_path.join(&layer.name);
         for mag in &mut layer.mags {
-            mag.path = Some(join(&layer_path, &mag_literal_scalar(mag.mag))?);
+            mag.path = Some(layer_path.join(&mag.mag.to_mag_literal(true)));
         }
-        if let Some(attachments) = &mut layer.attachments {
-            let mut result = Ok(());
-            attachments.for_each_mut(|typ, attachment| {
-                if result.is_ok() {
-                    match attachment_path(
-                        &attachment.name,
-                        &attachment.data_format,
-                        typ,
-                        &layer_path,
-                    ) {
-                        Ok(path) => attachment.path = path,
-                        Err(error) => result = Err(error),
-                    }
+        if let Some(attachments) = &layer.attachments {
+            let failure = std::cell::RefCell::new(None);
+            let mapped = attachments.mapped_with_type(|attachment, typ| {
+                let mut attachment = attachment.clone();
+                match attachment_path(&attachment.name, attachment.data_format, typ, &layer_path) {
+                    Ok(path) => attachment.path = path,
+                    Err(error) => *failure.borrow_mut() = Some(error),
                 }
+                attachment
             });
-            result?;
+            if let Some(error) = failure.into_inner() {
+                return Err(error);
+            }
+            layer.attachments = Some(mapped);
         }
     }
     Ok(())
@@ -200,7 +184,7 @@ pub(crate) async fn resolve_linked_layers(
     state: &AppState,
     user: &AuthUser,
     linked: &[LinkedLayer],
-) -> ApiResult<Vec<Layer>> {
+) -> ApiResult<Vec<StaticLayer>> {
     let failed = || ApiError::bad_request("Could not resolve layers to link.");
     let mut layers = Vec::new();
     for link in linked {
@@ -224,7 +208,7 @@ pub(crate) async fn resolve_linked_layers(
         }
         let source = crate::dataset::source::load(&state.pool, link.dataset_id.as_str()).await?;
         let mut layer = source
-            .layers
+            .data_layers
             .into_iter()
             .find(|l| l.name == link.layer_name)
             .ok_or_else(failed)?;
@@ -326,7 +310,7 @@ async fn reserve_upload_to_paths(
     Extension(config): Extension<UploadToPathsConfig>,
     RequestJson(body): RequestJson<ReserveRequest>,
 ) -> ApiResult<Json<Value>> {
-    let mut source = crate::dataset::source::parse_data_source(&body.data_source)
+    let mut source = UsableDataSource::from_json(&body.data_source)
         .map_err(crate::dataset::source::invalid_body)?;
     let path_prefix = parse_prefix(body.path_prefix.as_deref())?;
     let (root_folder, included): (String, Option<i64>) = sqlx::query_as(
@@ -368,7 +352,7 @@ async fn reserve_upload_to_paths(
         }
     }
     crate::dataset::create::validate_dataset_name(&body.dataset_name)?;
-    for layer in &source.layers {
+    for layer in &source.data_layers {
         crate::dataset::create::validate_layer_name_lax(&layer.name)?;
     }
     for name in body
@@ -379,10 +363,11 @@ async fn reserve_upload_to_paths(
         crate::dataset::create::validate_layer_name_lax(name)?;
     }
     let id = ObjectId::new().to_string();
-    source.directory_name =
-        crate::dataset::create::generate_directory_name(&body.dataset_name, &id);
-    source.organization = user.organization_id.clone();
-    if source.layers.is_empty() {
+    source.id = DataSourceId::new(
+        crate::dataset::create::generate_directory_name(&body.dataset_name, &id),
+        &user.organization_id,
+    );
+    if source.data_layers.is_empty() {
         return Err(ApiError::bad_request(
             "Cannot reserve upload for dataset with no layers.",
         ));
@@ -391,11 +376,11 @@ async fn reserve_upload_to_paths(
     add_paths(&mut source, &parent)?;
     let mut with_linked = source.clone();
     let mut layers = resolve_linked_layers(&state, &user, &body.layers_to_link).await?;
-    layers.extend(with_linked.layers);
-    with_linked.layers = layers;
+    layers.extend(with_linked.data_layers);
+    with_linked.data_layers = layers;
     let mut names = std::collections::HashSet::new();
     if !with_linked
-        .layers
+        .data_layers
         .iter()
         .all(|l| names.insert(l.name.clone()))
     {
@@ -422,7 +407,7 @@ async fn reserve_upload_to_paths(
             name: &body.dataset_name,
             source: &with_linked,
             is_usable: false,
-            voxel_size: Some((with_linked.factor, &with_linked.unit)),
+            voxel_size: Some(with_linked.scale),
             status: NOT_YET_UPLOADED_TO_PATHS,
             is_virtual: true,
             metadata: json!([]),
@@ -441,9 +426,7 @@ async fn reserve_upload_to_paths(
     add_initial_teams(&mut transaction, &user, &id, &body.initial_team_ids).await?;
     transaction.commit().await?;
     // Linked layers are managed by the server; the client only needs its own paths.
-    Ok(Json(
-        json!({"newDatasetId": id, "dataSource": crate::dataset::source::data_source_json(&source)}),
-    ))
+    Ok(Json(json!({"newDatasetId": id, "dataSource": source})))
 }
 
 #[derive(Deserialize)]
@@ -460,7 +443,7 @@ async fn reserve_for_preliminary(
     Extension(config): Extension<UploadToPathsConfig>,
     RequestJson(body): RequestJson<PreliminaryRequest>,
 ) -> ApiResult<Json<Value>> {
-    let mut source = crate::dataset::source::parse_data_source(&body.data_source)
+    let mut source = UsableDataSource::from_json(&body.data_source)
         .map_err(crate::dataset::source::invalid_body)?;
     let path_prefix = parse_prefix(body.path_prefix.as_deref())?;
     crate::dataset::lifecycle::require_readable(&state, &user, &id).await?;
@@ -481,8 +464,7 @@ async fn reserve_for_preliminary(
             "Cannot reserve paths for a dataset someone else uploaded.",
         ));
     }
-    source.directory_name = directory;
-    source.organization = user.organization_id.clone();
+    source.id = DataSourceId::new(directory, &user.organization_id);
     source.status_opt = Some(NOT_YET_UPLOADED.to_owned());
     let parent = dataset_parent(&config, path_prefix.as_deref(), &user.organization_id)?;
     add_paths(&mut source, &parent)?;
@@ -496,18 +478,17 @@ async fn reserve_for_preliminary(
     .bind(id.as_str())
     .bind(&user.organization_id)
     .bind(source.default_view_configuration.clone().map(Value::Object))
-    .bind(source.factor[0])
-    .bind(source.factor[1])
-    .bind(source.factor[2])
-    .bind(&source.unit)
+    .bind(source.scale.factor.x)
+    .bind(source.scale.factor.y)
+    .bind(source.scale.factor.z)
+    .bind(source.scale.unit.as_str())
     .bind(NOT_YET_UPLOADED)
     .execute(&mut *transaction)
     .await?;
-    crate::dataset::source::write_layers(&mut transaction, id.as_str(), &source.layers).await?;
+    crate::dataset::source::write_layers(&mut transaction, id.as_str(), &source.data_layers)
+        .await?;
     transaction.commit().await?;
-    Ok(Json(
-        json!({"dataSource": crate::dataset::source::data_source_json(&source)}),
-    ))
+    Ok(Json(json!({"dataSource": source})))
 }
 
 fn not_usable(id: &ObjectId) -> ApiError {
@@ -527,8 +508,8 @@ async fn reserve_mag_upload_to_path(
         .axis_order
         .as_ref()
         .map(|order| {
-            let x = order.get("x").map(crate::dataset::source::int);
-            let y = order.get("y").map(crate::dataset::source::int);
+            let x = order.get("x").map(read_i32);
+            let y = order.get("y").map(read_i32);
             match (x, y) {
                 (Some(Ok(_)), Some(Ok(_))) => Ok(order.clone()),
                 _ => Err(ApiError::bad_request(
@@ -589,15 +570,14 @@ async fn reserve_mag_upload_to_path(
             .bind(id.as_str())
             .fetch_one(&state.pool)
             .await?;
-    let layer_path = join(&join(&parent, &directory)?, &body.layer_name)?;
-    let path = join(
-        &layer_path,
-        &format!(
+    let layer_path = join(&parent, &directory)?.join(&body.layer_name);
+    let path = layer_path
+        .join(&format!(
             "{}__{}",
-            mag_literal_scalar(body.mag),
+            Vec3Int::from(body.mag).to_mag_literal(true),
             crate::dataset::create::random_id(12)?
-        ),
-    )?;
+        ))
+        .to_string();
     let mut transaction = state.pool.begin().await?;
     if body.overwrite_pending {
         sqlx::query(&format!(
@@ -632,7 +612,8 @@ async fn reserve_attachment_upload_to_path(
     if !record.is_usable {
         return Err(not_usable(&id));
     }
-    let typ = body.attachment_type.as_str();
+    let attachment_type = body.attachment_type;
+    let typ = attachment_type.as_str();
     let mut transaction = state.pool.begin().await?;
     sqlx::query("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
         .bind(id.as_str())
@@ -688,19 +669,14 @@ async fn reserve_attachment_upload_to_path(
             .fetch_one(&mut *transaction)
             .await?;
     let parent = dataset_parent(&config, path_prefix.as_deref(), &record.organization)?;
-    let layer_path = join(&join(&parent, &directory)?, &body.layer_name)?;
-    let format: AttachmentDataformat = body.attachment_dataformat;
-    let path = attachment_path(&body.attachment_name, format.as_str(), typ, &layer_path)?;
-    let attachment = Attachment {
-        name: body.attachment_name.clone(),
-        path: path.clone(),
-        data_format: format.as_str().to_owned(),
-        credential_id: None,
-    };
+    let layer_path = join(&parent, &directory)?.join(&body.layer_name);
+    let format = body.attachment_dataformat;
+    let path =
+        attachment_path(&body.attachment_name, format, attachment_type, &layer_path)?.to_string();
     sqlx::query(r#"INSERT INTO webknossos.dataset_layer_attachments (_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending, uploadIsPending)
         VALUES ($1, $2, $3, $4, $5::webknossos.LAYER_ATTACHMENT_TYPE, $6::webknossos.LAYER_ATTACHMENT_DATAFORMAT, true, false)"#)
-        .bind(id.as_str()).bind(&body.layer_name).bind(&attachment.name).bind(&attachment.path)
-        .bind(typ).bind(&attachment.data_format)
+        .bind(id.as_str()).bind(&body.layer_name).bind(&body.attachment_name).bind(&path)
+        .bind(typ).bind(format.as_str())
         .execute(&mut *transaction).await?;
     transaction.commit().await?;
     Ok(Json(path))

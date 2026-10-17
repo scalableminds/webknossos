@@ -8,6 +8,7 @@ use std::{
         atomic::{AtomicUsize, Ordering},
     },
 };
+use webknossos_datastore::datavault::ToRemoteUri;
 use webknossos_datastore::datavault::{AwsCredentials, S3DataVault, S3Options, UPath};
 
 fn temp() -> PathBuf {

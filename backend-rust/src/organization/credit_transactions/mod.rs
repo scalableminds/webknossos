@@ -10,7 +10,6 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::{Path, Query},
     util::id::{ObjectId, PathObjectId},
-    util::java_format::java_double,
 };
 use axum::{
     Json, Router,
@@ -22,6 +21,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{Acquire, PgConnection, PgPool, Postgres, Transaction};
+use webknossos_common::java_format::java_double;
 
 /// CreditTransactionDAO.listAccessQ ($1 = requesting user).
 const LIST_ACCESS: &str = r#"(_organization IN (SELECT _organization FROM webknossos.users_ WHERE (isAdmin OR isDatasetManager) AND _id = $1)

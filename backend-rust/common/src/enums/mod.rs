@@ -4,7 +4,7 @@
 
 use serde_json::Value;
 
-use super::json::{JsError, JsResult, deserialize_via_from_json, string_enum};
+use crate::json::{JsError, JsResult, deserialize_via_from_json, string_enum};
 
 string_enum!(
     /// Scala `ElementClass`.

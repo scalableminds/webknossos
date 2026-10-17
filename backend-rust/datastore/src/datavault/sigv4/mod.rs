@@ -6,6 +6,7 @@
 use std::{fmt, time::SystemTime};
 
 use ring::{digest, hmac};
+use webknossos_common::text::hex;
 
 /// Hex SHA-256 of the empty payload.
 pub const EMPTY_PAYLOAD_SHA256: &str =
@@ -121,10 +122,6 @@ fn hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
     hmac::sign(&hmac::Key::new(hmac::HMAC_SHA256, key), data)
         .as_ref()
         .to_vec()
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 /// `(canonical headers block, signed header list)`: lowercase names, trimmed values with inner

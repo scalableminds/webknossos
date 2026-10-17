@@ -38,7 +38,7 @@ pub use service::{
     MSG_MAG_PATH_NOT_ABSOLUTE, MSG_SETUP_FAILED, VAULT_CACHE_CAPACITY,
 };
 pub use sigv4::AwsCredentials;
-pub use uri::RemoteUri;
+pub use uri::{RemoteUri, ToRemoteUri};
 pub use zip::ZipDataVault;
 
 /// Boxed future used by the object-safe vault traits.

@@ -13,8 +13,8 @@ use std::{
 use reqwest::Client;
 
 use super::{
-    BoxFuture, DataVault, DataVaultCredential, FileSystemDataVault, HttpsDataVault, UPath,
-    VaultPath,
+    BoxFuture, DataVault, DataVaultCredential, FileSystemDataVault, HttpsDataVault, ToRemoteUri,
+    UPath, VaultPath,
     gcs::{GcsOptions, GoogleCloudDataVault},
     http::build_http_client,
     s3::{S3DataVault, S3Options, build_s3_http_client},

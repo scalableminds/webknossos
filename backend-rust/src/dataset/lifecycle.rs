@@ -9,6 +9,7 @@ use axum::{
 use reqwest::Method;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use webknossos_common::enums::{LayerAttachmentDataformat, LayerAttachmentType};
 
 use crate::{
     AppState,
@@ -546,62 +547,10 @@ pub(crate) struct MagUploadRequest {
 pub(crate) struct AttachmentUploadRequest {
     pub layer_name: String,
     pub attachment_name: String,
-    pub attachment_type: AttachmentType,
-    pub attachment_dataformat: AttachmentDataformat,
+    pub attachment_type: LayerAttachmentType,
+    pub attachment_dataformat: LayerAttachmentDataformat,
     pub path_prefix: Option<String>,
     pub overwrite_pending: Option<bool>,
-}
-
-#[derive(Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
-#[serde(rename_all = "camelCase")]
-pub(crate) enum AttachmentType {
-    Agglomerate,
-    Connectome,
-    SegmentIndex,
-    Mesh,
-    Cumsum,
-    SegmentStatistics,
-}
-
-impl AttachmentType {
-    pub(crate) fn as_str(self) -> &'static str {
-        match self {
-            Self::Agglomerate => "agglomerate",
-            Self::Connectome => "connectome",
-            Self::SegmentIndex => "segmentIndex",
-            Self::Mesh => "mesh",
-            Self::Cumsum => "cumsum",
-            Self::SegmentStatistics => "segmentStatistics",
-        }
-    }
-
-    /// LayerAttachmentType.isSingletonAttachment.
-    pub(crate) fn is_singleton(self) -> bool {
-        matches!(
-            self,
-            Self::SegmentIndex | Self::Cumsum | Self::SegmentStatistics
-        )
-    }
-}
-
-#[derive(Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
-#[serde(rename_all = "camelCase")]
-pub(crate) enum AttachmentDataformat {
-    Hdf5,
-    Zarr3,
-    Json,
-    NeuroglancerPrecomputed,
-}
-
-impl AttachmentDataformat {
-    pub(crate) fn as_str(self) -> &'static str {
-        match self {
-            Self::Hdf5 => "hdf5",
-            Self::Zarr3 => "zarr3",
-            Self::Json => "json",
-            Self::NeuroglancerPrecomputed => "neuroglancerPrecomputed",
-        }
-    }
 }
 
 /// Shared tail of the finish-upload-to-path routes (DatasetController).

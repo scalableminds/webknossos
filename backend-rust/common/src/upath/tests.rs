@@ -208,3 +208,29 @@ fn json_format_is_a_string() {
     );
     assert!(serde_json::from_str::<UPath>("5").is_err());
 }
+
+#[test]
+fn backend_literals_and_joins() {
+    for (input, expected) in [
+        ("/a/./b/../c/", "/a/c"),
+        ("./color//1", "./color/1"),
+        ("file:///srv/a/../b", "/srv/b"),
+        ("https://host:9000/..", "https://host:9000"),
+        ("s3://bucket//double/", "s3://bucket//double/"),
+        ("s3://b/x.zip|zip", "s3://b/x.zip|zip"),
+    ] {
+        assert_eq!(round(input), expected, "{input}");
+    }
+    assert!(p("./a").is_local() && p("file:///a").is_local());
+    assert!(!p("s3://b/a.zip|zip:x").is_local());
+    assert_eq!(
+        p("./binaryData").join("org").to_string(),
+        "./binaryData/org"
+    );
+    assert_eq!(p("/srv/a").join("../b").to_string(), "/srv/b");
+    assert_eq!(
+        p("s3://bucket/x/").join("y/1").to_string(),
+        "s3://bucket/x/y/1"
+    );
+    assert_eq!(p("/a.zip|zip").join("c").to_string(), "/a.zip|zip:c");
+}

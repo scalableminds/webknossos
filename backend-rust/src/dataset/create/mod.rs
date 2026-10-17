@@ -2,10 +2,11 @@
 //! helpers shared by upload-to-paths, compose, explore+add and duplication.
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde_json::{Value, json};
+use webknossos_common::datasource::DataSourceId;
 
 use crate::{
     auth::AuthUser,
-    dataset::source::{Category, DataSource},
+    dataset::source::{UsableDataSource, VoxelSize},
     error::{ApiError, ApiResult},
     stores::client::ServiceClients,
     util::id::ObjectId,
@@ -64,112 +65,9 @@ pub(crate) fn validate_layer_name_lax(name: &str) -> ApiResult<()> {
     Ok(())
 }
 
-fn largest_segment_id_in_range(id: Option<i64>, element_class: &str) -> bool {
-    let max: Option<i64> = match element_class {
-        "uint8" => Some(i64::from(u8::MAX)),
-        "int8" => Some(i64::from(i8::MAX)),
-        "uint16" => Some(i64::from(u16::MAX)),
-        "int16" => Some(i64::from(i16::MAX)),
-        "uint32" => Some(i64::from(u32::MAX)),
-        "int32" => Some(i64::from(i32::MAX)),
-        "int64" => Some(i64::MAX),
-        // Every bit pattern is a valid non-negative uint64 value.
-        "uint64" => return true,
-        _ => return false,
-    };
-    id.is_none_or(|id| id >= 0 && max.is_none_or(|max| id <= max))
-}
-
-/// DataSourceValidation.validateDataSourceGetErrors.
-pub(crate) fn data_source_errors(source: &DataSource) -> Vec<&'static str> {
-    let mut errors = Vec::new();
-    let mut check = |ok: bool, message: &'static str| {
-        if !ok {
-            errors.push(message);
-        }
-    };
-    let sorted: Vec<Vec<[i32; 3]>> = source
-        .layers
-        .iter()
-        .map(|layer| {
-            let mut mags: Vec<[i32; 3]> = layer.mags.iter().map(|m| m.mag).collect();
-            mags.sort_by_key(|m| m[0].max(m[1]).max(m[2]));
-            mags
-        })
-        .collect();
-    let monotonic = (0..3).all(|axis| {
-        sorted
-            .iter()
-            .all(|mags| mags.windows(2).all(|w| w[0][axis] <= w[1][axis]))
-    });
-    check(
-        source.factor.iter().all(|f| *f > 0.0),
-        "Voxel size (scale) is negative in at least one dimension.",
-    );
-    check(
-        monotonic,
-        "Mags do not monotonically increase in all dimensions.",
-    );
-    check(
-        sorted.iter().all(|mags| {
-            let mut seen = std::collections::HashSet::new();
-            mags.iter().all(|m| seen.insert(*m))
-        }),
-        "There are duplicate mags in a layer.",
-    );
-    check(!source.layers.is_empty(), "No layers.");
-    check(
-        source
-            .layers
-            .iter()
-            .all(|l| l.bounding_box[3] > 0 && l.bounding_box[4] > 0 && l.bounding_box[5] > 0),
-        "Empty bounding box in a layer.",
-    );
-    let segmentation = source
-        .layers
-        .iter()
-        .filter(|l| l.category == Category::Segmentation);
-    check(
-        segmentation.clone().all(|l| {
-            matches!(
-                l.element_class.as_str(),
-                "uint8" | "uint16" | "uint32" | "uint64" | "int8" | "int16" | "int32" | "int64"
-            )
-        }),
-        "Invalid element class for a segmentation layer.",
-    );
-    check(
-        segmentation
-            .clone()
-            .all(|l| largest_segment_id_in_range(l.largest_segment_id, &l.element_class)),
-        "Largest segment id exceeds range (must be nonnegative and within the element class's value range).",
-    );
-    let mut names = std::collections::HashSet::new();
-    check(
-        source.layers.iter().all(|l| names.insert(l.name.as_str())),
-        "Layer names must be unique. At least two layers have the same name.",
-    );
-    check(
-        source.layers.iter().all(|l| !l.name.contains('/')),
-        "Layer names must not contain forward slash.",
-    );
-    check(
-        source.layers.iter().all(|l| !l.name.starts_with('.')),
-        "Layer names must not start with dot.",
-    );
-    check(
-        source.layers.iter().all(|l| {
-            l.attachments
-                .as_ref()
-                .is_none_or(|a| !a.contains_duplicate_names())
-        }),
-        "Layer attachments must have unique names in their respective category.",
-    );
-    errors
-}
-
-pub(crate) fn assert_valid_data_source(source: &DataSource) -> ApiResult<()> {
-    if data_source_errors(source).is_empty() {
+/// DataSourceValidation.assertValidDataSource.
+pub(crate) fn assert_valid_data_source(source: &UsableDataSource) -> ApiResult<()> {
+    if source.validation_errors().is_empty() {
         Ok(())
     } else {
         Err(ApiError::bad_request("DataSource is invalid"))
@@ -202,10 +100,10 @@ pub(crate) struct NewDataset<'a> {
     pub id: &'a str,
     pub store_name: &'a str,
     pub name: &'a str,
-    pub source: &'a DataSource,
+    pub source: &'a UsableDataSource,
     pub is_usable: bool,
     /// None keeps the voxel size unset (unusable data sources).
-    pub voxel_size: Option<([f64; 3], &'a str)>,
+    pub voxel_size: Option<VoxelSize>,
     pub status: &'a str,
     pub is_virtual: bool,
     pub metadata: Value,
@@ -223,12 +121,12 @@ pub(crate) async fn insert_dataset(
     let root: Option<String> = sqlx::query_scalar(
         "SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1 FOR SHARE",
     )
-    .bind(&new.source.organization)
+    .bind(&new.source.id.organization_id)
     .fetch_optional(&mut *connection)
     .await?;
     let root = root.ok_or_else(|| {
         ApiError::bad_request(crate::msg::organization::not_found(
-            &new.source.organization,
+            &new.source.id.organization_id,
         ))
     })?;
     let status: String = new.status.chars().take(1024).collect();
@@ -243,25 +141,25 @@ pub(crate) async fn insert_dataset(
     )
     .bind(new.id)
     .bind(new.store_name)
-    .bind(&new.source.organization)
+    .bind(&new.source.id.organization_id)
     .bind(&root)
     .bind(new.source.default_view_configuration.clone().map(Value::Object))
     .bind(new.description)
-    .bind(&new.source.directory_name)
+    .bind(&new.source.id.directory_name)
     .bind(new.is_usable)
     .bind(new.is_virtual)
     .bind(new.name)
-    .bind(new.voxel_size.map(|v| v.0[0]))
-    .bind(new.voxel_size.map(|v| v.0[1]))
-    .bind(new.voxel_size.map(|v| v.0[2]))
-    .bind(new.voxel_size.map(|v| v.1))
+    .bind(new.voxel_size.map(|v| v.factor.x))
+    .bind(new.voxel_size.map(|v| v.factor.y))
+    .bind(new.voxel_size.map(|v| v.factor.z))
+    .bind(new.voxel_size.map(|v| v.unit.as_str()))
     .bind(status)
     .bind(new.metadata)
     .bind(new.creation_type)
     .bind(new.import_url)
     .execute(&mut *connection)
     .await?;
-    crate::dataset::source::write_layers(connection, new.id, &new.source.layers).await
+    crate::dataset::source::write_layers(connection, new.id, &new.source.data_layers).await
 }
 
 /// DatasetService.createAndSetUpDataset (database part, in the caller's
@@ -270,7 +168,7 @@ pub(crate) async fn insert_dataset(
 pub(crate) struct SetUp<'a> {
     pub name: &'a str,
     pub store_name: &'a str,
-    pub source: &'a DataSource,
+    pub source: &'a UsableDataSource,
     pub folder: Option<&'a str>,
     pub creation_type: &'a str,
     pub import_url: Option<&'a str>,
@@ -297,8 +195,10 @@ pub(crate) async fn set_up_dataset(
     }
     let id = ObjectId::new().to_string();
     let mut source = setup.source.clone();
-    source.directory_name = generate_directory_name(setup.name, &id);
-    source.organization = user.organization_id.clone();
+    source.id = DataSourceId::new(
+        generate_directory_name(setup.name, &id),
+        &user.organization_id,
+    );
     insert_dataset(
         connection,
         NewDataset {
@@ -307,7 +207,7 @@ pub(crate) async fn set_up_dataset(
             name: setup.name,
             source: &source,
             is_usable: true,
-            voxel_size: Some((source.factor, &source.unit)),
+            voxel_size: Some(source.scale),
             status: source.status_opt.as_deref().unwrap_or(""),
             is_virtual: true,
             metadata: json!([]),

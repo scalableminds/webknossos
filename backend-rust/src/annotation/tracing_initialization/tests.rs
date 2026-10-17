@@ -1,8 +1,20 @@
 use super::*;
+use crate::proto::datastore::BoundingBoxProto;
 use prost::Message;
+use webknossos_common::geometry::BoundingBox;
 
-fn source(layers: Value) -> DataSource {
-    crate::dataset::source::parse_data_source(&json!({
+fn bbox_proto(bbox: &[i32; 6]) -> BoundingBoxProto {
+    BoundingBox::new(
+        Vec3Int::new(bbox[0], bbox[1], bbox[2]),
+        bbox[3],
+        bbox[4],
+        bbox[5],
+    )
+    .into()
+}
+
+fn source(layers: Value) -> UsableDataSource {
+    UsableDataSource::from_json(&json!({
         "id": {"name": "dir_name", "team": "org"},
         "dataLayers": layers,
         "scale": [11.24, 11.24, 28.0],
@@ -30,7 +42,7 @@ fn mags(list: &[[i32; 3]]) -> Value {
     Value::Array(list.iter().map(|m| json!({"mag": m})).collect())
 }
 
-fn default_source() -> DataSource {
+fn default_source() -> UsableDataSource {
     source(json!([
         color(
             "color",
@@ -46,7 +58,7 @@ fn default_source() -> DataSource {
     ]))
 }
 
-fn dataset(source: &DataSource) -> ExplorationalDataset<'_> {
+fn dataset(source: &UsableDataSource) -> ExplorationalDataset<'_> {
     ExplorationalDataset {
         data_source: source,
         dataset_name: "Dataset Name",
@@ -121,7 +133,10 @@ fn skeleton_defaults_match_scala() {
     let source = default_source();
     let tracing = build_skeleton_tracing(&dataset(&source), 1_700_000_000_123);
     // Union box: topLeft (-5,0,0), bottomRight (110,101,64) → center trunc((105)/2)=52.
-    assert_eq!(data_source_bounding_box(&source), [-5, 0, 0, 115, 101, 64]);
+    assert_eq!(
+        source.bounding_box(),
+        BoundingBox::new(Vec3Int::new(-5, 0, 0), 115, 101, 64)
+    );
     let expected = SkeletonTracing {
         dataset_name: "Dataset Name".into(),
         trees: vec![],
@@ -157,15 +172,8 @@ fn skeleton_defaults_match_scala() {
 }
 
 #[test]
-fn center_uses_jvm_float_truncation() {
-    // (-5 + -2) * 0.5f = -3.5 → -3 (toward zero); odd positive sums truncate down.
-    assert_eq!(bbox_center(&[-5, 0, 1, 3, 3, 2]), [-3, 1, 2]);
-    // Int → Float rounding for large coordinates (16777217 is not a float).
-    assert_eq!(
-        bbox_center(&[16_777_216, 0, 0, 2, 0, 0]),
-        [16_777_216, 0, 0]
-    );
-    assert_eq!(data_source_center(&source(json!([]))), [0, 0, 0]);
+fn center_of_a_source_without_layers_is_the_origin() {
+    assert_eq!(source(json!([])).center(), Vec3Int::new(0, 0, 0));
 }
 
 #[test]
@@ -296,26 +304,15 @@ fn fallback_layer_errors() {
         }
     );
     assert!(plan("unset").is_ok());
-
-    assert!(largest_segment_id_is_in_range(Some(-5), "uint64"));
-    assert!(largest_segment_id_is_in_range(
-        Some(i64::from(u32::MAX)),
-        "uint32"
-    ));
-    assert!(!largest_segment_id_is_in_range(Some(1 << 32), "uint32"));
-    assert!(largest_segment_id_is_in_range(Some(127), "int8"));
-    assert!(!largest_segment_id_is_in_range(Some(128), "int8"));
-    assert!(!largest_segment_id_is_in_range(None, "uint24"));
-    assert!(!largest_segment_id_is_in_range(None, "float"));
     assert_eq!(
-        element_class_to_proto("float")
+        element_class_to_proto(ElementClass::Float)
             .unwrap_err()
             .message()
             .as_deref(),
         Some("Unsupported element class float for ElementClassProto")
     );
     assert_eq!(
-        element_class_to_proto("int64").unwrap(),
+        element_class_to_proto(ElementClass::Int64).unwrap(),
         ElementClassProto::Int64
     );
 }
@@ -346,19 +343,20 @@ fn mag_restrictions_and_template_layer() {
         &[[1, 1, 1], [2, 2, 2], [2, 2, 2], [8, 8, 8]],
         &[[1, 1, 1], [4, 4, 4], [16, 16, 16]],
     ]);
+    let mags = |list: &[[i32; 3]]| list.iter().copied().map(Vec3Int::from).collect::<Vec<_>>();
     assert_eq!(
         mags_for_volume_tracing(&conflicting, None),
-        vec![[1, 1, 1], [2, 2, 2], [8, 8, 8]]
+        mags(&[[1, 1, 1], [2, 2, 2], [8, 8, 8]])
     );
     // A fallback layer's mags are used as-is (sorted, not deduplicated).
-    let fallback = &conflicting.layers[1];
+    let fallback = &conflicting.data_layers[1];
     assert_eq!(
         mags_for_volume_tracing(&conflicting, Some(fallback)),
-        vec![[1, 1, 1], [2, 2, 2], [2, 2, 2], [8, 8, 8]]
+        mags(&[[1, 1, 1], [2, 2, 2], [2, 2, 2], [8, 8, 8]])
     );
 }
 
-fn source_with_layers(layer_mags: &[&[[i32; 3]]]) -> DataSource {
+fn source_with_layers(layer_mags: &[&[[i32; 3]]]) -> UsableDataSource {
     source(Value::Array(
         layer_mags
             .iter()
@@ -392,28 +390,27 @@ fn additional_axes_union_merges_like_scala_hash_map() {
     ]);
     let source = source(json!([layer_a, layer_b]));
     // "c".hashCode = 99 → bucket 3; "t" = 116 → bucket 4.
-    let axes = additional_axes_union(&source).unwrap();
+    let axes = source.additional_axes_union().unwrap();
     assert_eq!(
         axes,
         vec![
-            Axis {
+            AdditionalAxis {
                 name: "c".into(),
                 bounds: vec![0, 2],
                 index: 1
             },
-            Axis {
+            AdditionalAxis {
                 name: "t".into(),
                 bounds: vec![0, 5],
                 index: 3
             },
         ]
     );
-    assert_eq!(java_string_hash("time"), 3_560_141);
-    assert_eq!(additional_axes_union(&default_source_without_axes()), None);
+    assert_eq!(default_source_without_axes().additional_axes_union(), None);
     assert!(additional_axes_to_proto(None).is_empty());
 }
 
-fn default_source_without_axes() -> DataSource {
+fn default_source_without_axes() -> UsableDataSource {
     source_with_layers(&[&[[1, 1, 1]]])
 }
 

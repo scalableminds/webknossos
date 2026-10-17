@@ -16,15 +16,12 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use sqlx::PgConnection;
 
-use crate::util::java_format::play_json_double;
 use crate::{
     AppState,
     auth::AuthUser,
     dataset::options::UploadToPathsConfig,
     dataset::routes::{full_json_on_connection, public_datastore_json_on_connection},
-    dataset::source::{
-        nanometers_per_unit, normalize_upath, upath_join, voxel_size as parse_voxel_size,
-    },
+    dataset::source::VoxelSize,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
     job::routes::Job,
@@ -33,6 +30,11 @@ use crate::{
     system::application_info::MiscState,
     users,
     util::id::{ObjectId, PathObjectId},
+};
+use webknossos_common::{
+    geometry::{BoundingBox, Vec3Double},
+    json::play_f64_value,
+    upath::{UPath, UPathError},
 };
 
 const MODEL_NOT_FOUND: &str = "Could not find requested AI model.";
@@ -202,7 +204,7 @@ impl AiModel {
     /// is always part of the shared organizations.
     fn parse(mut self) -> Result<Self, ()> {
         if let Some(path) = &self.path {
-            self.path = Some(normalize_upath(path).map_err(|_| ())?);
+            self.path = Some(UPath::parse(path).map_err(|_| ())?.to_string());
         }
         if let Some(organization) = &self.organization
             && !self.shared_organizations.contains(organization)
@@ -344,10 +346,8 @@ async fn path_with_fallback(
             &[("organizationId", organization.to_owned())],
         )
         .await?;
-    let invalid = |_| ApiError::from(ServiceError::InvalidJson);
-    let base = normalize_upath(&base).map_err(invalid)?;
-    let models_dir = upath_join(&base, ".aiModels").map_err(invalid)?;
-    upath_join(&models_dir, &model.id).map_err(invalid)
+    let base = UPath::parse(&base).map_err(|_| ApiError::from(ServiceError::InvalidJson))?;
+    Ok(base.join(".aiModels").join(&model.id).to_string())
 }
 
 /// AiModelService.publicWrites with the requesting user's access context.
@@ -483,20 +483,20 @@ async fn model_voxel_size(
     let store_url = find_data_store_url(&mut connection, &user.id, &model.data_store)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
-    let (factor, unit) = find_model_voxel_size(connection, &clients, &store_url, &model).await?;
-    Ok(ResponseJson(json!({"factor": factor, "unit": unit})))
+    let voxel_size = find_model_voxel_size(connection, &clients, &store_url, &model).await?;
+    Ok(ResponseJson(json!(voxel_size)))
 }
 
 /// AiModelService.findModelVoxelSize (and the same lookup in
 /// inferenceBBoxToTargetMag): pretrained constants (nanometers), otherwise
 /// `POST data/aiModels/effectiveVoxelSize` on the datastore at `store_url` for the
-/// model path (with fallback). Returns (factor, unit).
+/// model path (with fallback).
 async fn find_model_voxel_size(
     mut connection: sqlx::pool::PoolConnection<sqlx::Postgres>,
     clients: &ServiceClients,
     store_url: &str,
     model: &AiModel,
-) -> ApiResult<([f64; 3], String)> {
+) -> ApiResult<VoxelSize> {
     if model.is_pretrained {
         let factor = PRETRAINED_VOXEL_SIZES
             .iter()
@@ -508,7 +508,9 @@ async fn find_model_voxel_size(
                     model.name
                 ))
             })?;
-        return Ok((factor, "nanometer".to_owned()));
+        return Ok(VoxelSize::from_factor_with_default_unit(Vec3Double::from(
+            factor,
+        )));
     }
     let model_path = path_with_fallback(&mut connection, clients, model).await?;
     drop(connection);
@@ -520,7 +522,7 @@ async fn find_model_voxel_size(
             &json!({"modelPath": model_path}),
         )
         .await?;
-    parse_voxel_size(&response).map_err(|_| ApiError::from(ServiceError::InvalidJson))
+    VoxelSize::from_json(&response).map_err(|_| ApiError::from(ServiceError::InvalidJson))
 }
 
 #[derive(Deserialize)]
@@ -679,10 +681,13 @@ fn generate_model_path(
     requested_prefix: Option<&str>,
 ) -> ApiResult<String> {
     let prefix = crate::dataset::upload_paths::select_path_prefix(config, requested_prefix)?;
-    let invalid = |_| ApiError::bad_request("Invalid path.");
-    let organization_dir = upath_join(&prefix, organization).map_err(invalid)?;
-    let models_dir = upath_join(&organization_dir, ".aiModels").map_err(invalid)?;
-    upath_join(&models_dir, id).map_err(invalid)
+    let prefix =
+        UPath::parse(&prefix).map_err(|_: UPathError| ApiError::bad_request("Invalid path."))?;
+    Ok(prefix
+        .join(organization)
+        .join(".aiModels")
+        .join(id)
+        .to_string())
 }
 
 /// Reserve a path for uploading model files, either for a new model or for a
@@ -1025,7 +1030,7 @@ async fn run_model_training(
     if kind == TrainingKind::Instance {
         args.insert(
             "instance_diameter_nm".into(),
-            json!(instance_diameter_nm.map(play_json_double)),
+            json!(instance_diameter_nm.map(play_f64_value)),
         );
     }
     args.insert(
@@ -1253,14 +1258,14 @@ async fn run_model_inference(
         .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
     crate::dataset::create::validate_dataset_name(&body.new_dataset_name)?;
     // BoundingBox.fromLiteral(..).toFox: the empty Fox.
-    let mag1_bounding_box = crate::job::submission::BoundingBox::from_literal(&body.bounding_box)
-        .ok_or_else(generic_not_found)?;
+    let mag1_bounding_box =
+        BoundingBox::from_literal(&body.bounding_box).ok_or_else(generic_not_found)?;
 
     // AiModelService.inferenceBBoxToTargetMag (model voxel size via the dataset's datastore).
-    let (model_factor, model_unit) =
-        find_model_voxel_size(connection, clients, &store_url, &model).await?;
-    let model_voxel_size_nm =
-        model_factor.map(|component| component * nanometers_per_unit(&model_unit));
+    let model_voxel_size_nm = find_model_voxel_size(connection, clients, &store_url, &model)
+        .await?
+        .to_nanometer()
+        .to_array();
     let dataset_voxel_size_nm = dataset
         .voxel_size_in_nanometers()
         .ok_or_else(|| crate::job::submission::RunError::Api(ApiError::internal()))?;
@@ -1268,7 +1273,7 @@ async fn run_model_inference(
     let target_mag = find_best_matching_mag(model_voxel_size_nm, dataset_voxel_size_nm, &mags)
         .ok_or_else(|| Failure::new(crate::msg::dataset::NO_MAGS))?;
     let target_mag_bounding_box = mag1_bounding_box
-        .divide(target_mag)
+        .checked_div_mag(target_mag.into())
         .ok_or_else(|| crate::job::submission::RunError::Api(ApiError::internal()))?;
 
     let model_id = body.ai_model_id.as_ref().map(ObjectId::as_str);
@@ -1312,22 +1317,22 @@ async fn run_model_inference(
             );
             args.insert(
                 "eval_max_edge_length".into(),
-                json!(body.eval_max_edge_length.map(play_json_double)),
+                json!(body.eval_max_edge_length.map(play_f64_value)),
             );
             args.insert(
                 "eval_sparse_tube_threshold_nm".into(),
-                json!(body.eval_sparse_tube_threshold_nm.map(play_json_double)),
+                json!(body.eval_sparse_tube_threshold_nm.map(play_f64_value)),
             );
             args.insert(
                 "eval_min_merger_path_length_nm".into(),
-                json!(body.eval_min_merger_path_length_nm.map(play_json_double)),
+                json!(body.eval_min_merger_path_length_nm.map(play_f64_value)),
             );
             ("infer_neurons", "neuron")
         }
         InferenceKind::Instance => {
             args.insert(
                 "seed_generator_distance_threshold".into(),
-                json!(body.seed_generator_distance_threshold.map(play_json_double)),
+                json!(body.seed_generator_distance_threshold.map(play_f64_value)),
             );
             ("infer_instances", "instance")
         }

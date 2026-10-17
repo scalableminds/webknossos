@@ -15,13 +15,14 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
+use webknossos_common::{datasource::DataSourceId, geometry::Vec3Double};
 
 use crate::{
     AppState,
     auth::AuthUser,
     dataset::create::NewDataset,
     dataset::lifecycle::NOT_YET_UPLOADED,
-    dataset::source::DataSource,
+    dataset::source::{UsableDataSource, VoxelSize},
     dataset::upload_paths::{LinkedLayer, add_initial_teams},
     error::{ApiError, ApiResult},
     extract::{Json, Query},
@@ -253,12 +254,14 @@ async fn create_and_set_up_dataset(
         return Err(failed());
     }
     let id = ObjectId::new().to_string();
-    let source = DataSource {
-        directory_name: crate::dataset::create::generate_directory_name(name, &id),
-        organization: user.organization_id.clone(),
-        layers: Vec::new(),
-        factor: [0.0; 3],
-        unit: String::new(),
+    // The voxel size stays unset (`voxel_size: None` below).
+    let source = UsableDataSource {
+        id: DataSourceId::new(
+            crate::dataset::create::generate_directory_name(name, &id),
+            &user.organization_id,
+        ),
+        data_layers: Vec::new(),
+        scale: VoxelSize::from_factor_with_default_unit(Vec3Double::new(0.0, 0.0, 0.0)),
         default_view_configuration: None,
         status_opt: Some(NOT_YET_UPLOADED.to_owned()),
     };
@@ -294,7 +297,7 @@ async fn create_and_set_up_dataset(
         .bind(&user.id)
         .execute(&mut *connection)
         .await?;
-    Ok((id, source.directory_name))
+    Ok((id, source.id.directory_name))
 }
 
 // ---------------------------------------------------------------- unfinished list

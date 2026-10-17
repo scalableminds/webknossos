@@ -1,7 +1,8 @@
 //! DSRemoteWebknossosClient datasource/root/real-path report JSON.
-use super::{
-    DataSource, DataSourceId, JsResult, UPath,
-    json::{Fields, read_bool, read_list, read_string},
+use crate::{
+    datasource::{DataSource, DataSourceId},
+    json::{Fields, JsResult, read_bool, read_list, read_string},
+    upath::UPath,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -29,7 +30,7 @@ impl DataSourceWithRootPathInfo {
         })
     }
 }
-super::json::deserialize_via_from_json!(DataSourceWithRootPathInfo);
+crate::json::deserialize_via_from_json!(DataSourceWithRootPathInfo);
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -52,7 +53,7 @@ impl RealPathInfo {
         })
     }
 }
-super::json::deserialize_via_from_json!(RealPathInfo);
+crate::json::deserialize_via_from_json!(RealPathInfo);
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -80,4 +81,4 @@ impl DataSourcePathInfo {
         })
     }
 }
-super::json::deserialize_via_from_json!(DataSourcePathInfo);
+crate::json::deserialize_via_from_json!(DataSourcePathInfo);

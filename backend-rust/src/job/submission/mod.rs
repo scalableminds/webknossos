@@ -32,7 +32,10 @@ use crate::{
     stores::client::ServiceClients,
     system::application_info::MiscState,
     util::id::ObjectId,
-    util::math::ceil_div,
+};
+use webknossos_common::{
+    enums::LengthUnit,
+    geometry::{BoundingBox, Vec3Int},
 };
 
 const NO_WORKER: &str =
@@ -417,30 +420,6 @@ fn read_enum(body: &Map<String, Value>, key: &str, values: &[&str]) -> RunResult
     }
 }
 
-/// Vec3IntReads: an array of exactly three Ints.
-fn json_vec3(value: &Value) -> Option<[i32; 3]> {
-    let array = value.as_array().filter(|array| array.len() == 3)?;
-    Some([
-        json_int(&array[0])?,
-        json_int(&array[1])?,
-        json_int(&array[2])?,
-    ])
-}
-
-/// BoundingBox (JsonAutoFormat): topLeft, width, height, depth.
-fn json_bounding_box(value: &Value) -> Option<BoundingBox> {
-    let object = value.as_object()?;
-    let top_left = json_vec3(object.get("topLeft")?)?;
-    Some(BoundingBox {
-        x: top_left[0],
-        y: top_left[1],
-        z: top_left[2],
-        width: json_int(object.get("width")?)?,
-        height: json_int(object.get("height")?)?,
-        depth: json_int(object.get("depth")?)?,
-    })
-}
-
 fn json_object_id(value: &Value) -> Option<String> {
     value.as_str().and_then(parse_object_id)
 }
@@ -453,122 +432,14 @@ fn optional_json<T: Into<Value>>(value: Option<T>) -> Value {
 // Geometry (com.scalableminds.util.geometry with JVM Int arithmetic)
 // ---------------------------------------------------------------------------
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct BoundingBox {
-    x: i32,
-    y: i32,
-    z: i32,
-    width: i32,
-    height: i32,
-    depth: i32,
-}
-
-impl BoundingBox {
-    pub(crate) fn from_literal(literal: &str) -> Option<Self> {
-        let [x, y, z, width, height, depth] = crate::job::routes::parse_bounding_box(literal)?;
-        Some(Self {
-            x,
-            y,
-            z,
-            width,
-            height,
-            depth,
-        })
-    }
-
-    fn bottom_right(&self) -> [i32; 3] {
-        [
-            self.x.wrapping_add(self.width),
-            self.y.wrapping_add(self.height),
-            self.z.wrapping_add(self.depth),
-        ]
-    }
-
-    fn union(&self, other: &Self) -> Self {
-        let (a, b) = (self.bottom_right(), other.bottom_right());
-        let (x, y, z) = (
-            self.x.min(other.x),
-            self.y.min(other.y),
-            self.z.min(other.z),
-        );
-        Self {
-            x,
-            y,
-            z,
-            width: a[0].max(b[0]).wrapping_sub(x),
-            height: a[1].max(b[1]).wrapping_sub(y),
-            depth: a[2].max(b[2]).wrapping_sub(z),
-        }
-    }
-
-    /// `/(Vec3Int)`: truncating division of the top left, ceilDiv of the size.
-    /// `None` for a zero component (an ArithmeticException in Scala).
-    pub(crate) fn divide(&self, mag: [i32; 3]) -> Option<Self> {
-        if mag.contains(&0) {
-            return None;
-        }
-        Some(Self {
-            x: self.x.wrapping_div(mag[0]),
-            y: self.y.wrapping_div(mag[1]),
-            z: self.z.wrapping_div(mag[2]),
-            width: ceil_div(self.width, mag[0]),
-            height: ceil_div(self.height, mag[1]),
-            depth: ceil_div(self.depth, mag[2]),
-        })
-    }
-
-    pub(crate) fn volume(&self) -> i64 {
-        // Scala Long multiplication wraps, including for oversized request boxes.
-        i64::from(self.width)
-            .wrapping_mul(i64::from(self.height))
-            .wrapping_mul(i64::from(self.depth))
-    }
-
-    fn max_dim(&self) -> i32 {
-        self.width.max(self.height).max(self.depth)
-    }
-
-    pub(crate) fn to_literal(self) -> String {
-        format!(
-            "{},{},{},{},{},{}",
-            self.x, self.y, self.z, self.width, self.height, self.depth
-        )
-    }
-
-    fn to_wk_libs_json(self) -> Map<String, Value> {
-        let mut object = Map::new();
-        object.insert("topLeft".into(), json!([self.x, self.y, self.z]));
-        object.insert("width".into(), json!(self.width));
-        object.insert("height".into(), json!(self.height));
-        object.insert("depth".into(), json!(self.depth));
-        object
-    }
-}
-
-/// Vec3Int.fromMagLiteral(allowScalar = true): an Int scalar or `x-y-z`.
-fn parse_mag(literal: &str) -> Option<[i32; 3]> {
-    if let Some(scalar) = parse_java_int(literal) {
-        return Some([scalar; 3]);
-    }
-    let mut parts = literal.split('-');
-    let mut mag = [0; 3];
-    for component in &mut mag {
-        let digits = parts.next()?;
-        if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
-            return None;
-        }
-        *component = digits.parse().ok()?;
-    }
-    parts.next().is_none().then_some(mag)
-}
-
-/// Integer.parseInt: optional sign and ASCII digits.
-fn parse_java_int(literal: &str) -> Option<i32> {
-    let digits = literal.strip_prefix(['+', '-']).unwrap_or(literal);
-    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
-        return None;
-    }
-    literal.parse().ok()
+/// The `BoundingBox` JSON wkLibs reads: topLeft, width, height, depth.
+fn to_wk_libs_json(bounding_box: BoundingBox) -> Map<String, Value> {
+    let mut object = Map::new();
+    object.insert("topLeft".into(), json!(bounding_box.top_left));
+    object.insert("width".into(), json!(bounding_box.width));
+    object.insert("height".into(), json!(bounding_box.height));
+    object.insert("depth".into(), json!(bounding_box.depth));
+    object
 }
 
 /// JobService.assertBoundingBoxLimits.
@@ -578,8 +449,8 @@ fn assert_bounding_box_limits(
     mag: Option<&str>,
 ) -> RunResult<()> {
     let bounding_box_in_mag = BoundingBox::from_literal(bounding_box)
-        .zip(parse_mag(mag.unwrap_or("1-1-1")))
-        .and_then(|(bounding_box, mag)| bounding_box.divide(mag))
+        .zip(Vec3Int::from_mag_literal(mag.unwrap_or("1-1-1"), true))
+        .and_then(|(bounding_box, mag)| bounding_box.checked_div_mag(mag))
         .ok_or_else(|| Failure::new(INVALID_BOUNDING_BOX_OR_MAG))?;
     let features = &misc.config().features;
     let feature =
@@ -588,7 +459,8 @@ fn assert_bounding_box_limits(
     if bounding_box_in_mag.volume() > max_volume {
         return Err(Failure::new(VOLUME_EXCEEDED).into());
     }
-    if i64::from(bounding_box_in_mag.max_dim()) > feature("exportTiffMaxEdgeLengthVx", 8192) {
+    if i64::from(bounding_box_in_mag.size().max_dim()) > feature("exportTiffMaxEdgeLengthVx", 8192)
+    {
         return Err(Failure::new(EDGE_LENGTH_EXCEEDED).into());
     }
     Ok(())
@@ -638,7 +510,8 @@ impl Dataset {
         let per_unit = self
             .voxel_size_unit
             .as_deref()
-            .map_or(1.0, crate::dataset::source::nanometers_per_unit);
+            .and_then(LengthUnit::from_name)
+            .map_or(1.0, LengthUnit::to_nanometer);
         Some(factor.map(|component| component * per_unit))
     }
 }
@@ -797,8 +670,8 @@ pub(crate) async fn usable_data_source(
     .await?;
     let mut layers = Vec::with_capacity(rows.len());
     for row in rows {
-        let [x, y, z, width, height, depth] = <[i32; 6]>::try_from(row.bounding_box)
-            .map_err(|_| RunError::Api(ApiError::internal()))?;
+        let bounding_box = BoundingBox::from_sql(&row.bounding_box)
+            .ok_or_else(|| RunError::Api(ApiError::internal()))?;
         let finest_mag = row
             .finest_mag
             .map(<[i32; 3]>::try_from)
@@ -806,14 +679,7 @@ pub(crate) async fn usable_data_source(
             .map_err(|_| RunError::Api(ApiError::internal()))?;
         layers.push(DataLayer {
             name: row.name,
-            bounding_box: BoundingBox {
-                x,
-                y,
-                z,
-                width,
-                height,
-                depth,
-            },
+            bounding_box,
             finest_mag,
         });
     }
@@ -821,14 +687,7 @@ pub(crate) async fn usable_data_source(
         .iter()
         .map(|layer| layer.bounding_box)
         .reduce(|a, b| a.union(&b))
-        .unwrap_or(BoundingBox {
-            x: 0,
-            y: 0,
-            z: 0,
-            width: 0,
-            height: 0,
-            depth: 0,
-        });
+        .unwrap_or_else(BoundingBox::empty);
     Ok((data_source_box, layers))
 }
 
@@ -1276,7 +1135,7 @@ async fn infer_mitochondria(
     let mag1_bounding_box = BoundingBox::from_literal(&bbox).ok_or_else(not_found)?;
     let target_mag = layer.finest_mag.ok_or_else(not_found)?;
     let target_bounding_box = mag1_bounding_box
-        .divide(target_mag)
+        .checked_div_mag(target_mag.into())
         .ok_or_else(|| RunError::Api(ApiError::internal()))?;
     let args = json!({
         "dataset_id": dataset.id,
@@ -1338,7 +1197,7 @@ async fn align_sections(
         .finest_mag
         .ok_or_else(|| Failure::new(crate::msg::dataset::NO_MAGS))?;
     let finest_mag_box = data_source_box
-        .divide(layer_mag)
+        .checked_div_mag(layer_mag.into())
         .ok_or_else(|| RunError::Api(ApiError::internal()))?;
     let args = json!({
         "dataset_id": dataset.id,
@@ -1460,7 +1319,7 @@ async fn export_tiff(
             },
         )
         .collect();
-    let mut nd_bbox = three_d_box.to_wk_libs_json();
+    let mut nd_bbox = to_wk_libs_json(three_d_box);
     nd_bbox.insert("additionalAxes".into(), Value::Array(axes_json));
     nd_bbox.insert(
         "axisOrder".into(),
@@ -1619,7 +1478,7 @@ struct AnimationOptions {
     movie_resolution: String,
     movie_duration: String,
     camera_position: String,
-    mag_for_textures: [i32; 3],
+    mag_for_textures: Vec3Int,
     annotation_id: Option<String>,
     include_skeletons: bool,
     hide_image_data: bool,
@@ -1632,7 +1491,7 @@ fn read_animation_options(body: &Map<String, Value>) -> RunResult<AnimationOptio
         layer_name: read_string(body, "layerName")?,
         bounding_box: body
             .get("boundingBox")
-            .and_then(json_bounding_box)
+            .and_then(|value| BoundingBox::from_json(value).ok())
             .ok_or_else(invalid_body)?,
         include_watermark: read_bool(body, "includeWatermark")?,
         meshes: body.get("meshes").cloned().ok_or_else(invalid_body)?,
@@ -1651,7 +1510,7 @@ fn read_animation_options(body: &Map<String, Value>) -> RunResult<AnimationOptio
         )?,
         mag_for_textures: body
             .get("magForTextures")
-            .and_then(json_vec3)
+            .and_then(|value| Vec3Int::from_json(value).ok())
             .ok_or_else(invalid_body)?,
         annotation_id: read_optional(body, "annotationId", json_object_id)?,
         include_skeletons: read_bool(body, "includeSkeletons")?,

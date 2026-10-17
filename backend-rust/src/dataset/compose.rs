@@ -2,12 +2,16 @@
 use axum::{Extension, Json, Router, extract::State, routing::post};
 use serde::Deserialize;
 use serde_json::{Value, json};
+use webknossos_common::{
+    datasource::DataSourceId, enums::LayerAttachmentType,
+    explore_layers::adapt_layers_and_voxel_size, geometry::Vec3Int,
+};
 
 use crate::{
     AppState,
     auth::AuthUser,
-    dataset::lifecycle::{AttachmentType, DatasetRecord},
-    dataset::source::{DataSource, Layer, Transform},
+    dataset::lifecycle::DatasetRecord,
+    dataset::source::{CoordinateTransformation, UsableDataSource, VoxelSize},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
     stores::client::ServiceClients,
@@ -30,109 +34,12 @@ pub fn router() -> Router<AppState> {
         )
 }
 
-#[derive(Clone, Debug, PartialEq)]
-struct VoxelSize {
-    factor: [f64; 3],
-    unit: String,
-}
-
-impl VoxelSize {
-    fn nanometers(&self) -> [f64; 3] {
-        let scale = crate::dataset::source::nanometers_per_unit(&self.unit);
-        self.factor.map(|f| f * scale)
-    }
-    /// VoxelSize./ (same unit: factors, otherwise nanometers).
-    fn divide(&self, other: &VoxelSize) -> [f64; 3] {
-        let (a, b) = if self.unit == other.unit {
-            (self.factor, other.factor)
-        } else {
-            (self.nanometers(), other.nanometers())
-        };
-        std::array::from_fn(|i| a[i] / b[i])
-    }
-}
-
-fn is_power_of_two(x: i32) -> bool {
-    x != 0 && (x & x.wrapping_sub(1)) == 0
-}
-
-/// Java Math.round(double).toInt.
-fn round(x: f64) -> i32 {
-    let rounded = (x + 0.5).floor();
-    (if rounded.is_nan() { 0 } else { rounded as i64 }) as i32
-}
-
-/// ExploreLayerUtils.adaptLayersAndVoxelSize without a preferred voxel size:
-/// rescale all layers to the finest common voxel size (powers of two only)
-/// and make layer names unique.
-fn adapt_layers_and_voxel_size(
-    layers: Vec<(Layer, VoxelSize)>,
-) -> Result<(Vec<Layer>, VoxelSize), String> {
-    let mut voxel_sizes: Vec<VoxelSize> = Vec::new();
-    for (layer, size) in &layers {
-        for mag in &layer.mags {
-            let scaled = VoxelSize {
-                factor: std::array::from_fn(|i| size.factor[i] * f64::from(mag.mag[i])),
-                unit: size.unit.clone(),
-            };
-            if !voxel_sizes.contains(&scaled) {
-                voxel_sizes.push(scaled);
-            }
-        }
-    }
-    let base = voxel_sizes
-        .iter()
-        .min_by(|a, b| {
-            let (a, b) = (a.nanometers(), b.nanometers());
-            a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .cloned()
-        .ok_or("Could not extract common voxel size from layers")?;
-    let mut mags = Vec::new();
-    for size in &voxel_sizes {
-        let mag = size.divide(&base).map(round);
-        if !mag.iter().all(|m| is_power_of_two(*m)) {
-            return Err("voxel sizes for layers are not uniform".into());
-        }
-        mags.push(mag);
-    }
-    let mut max_dims: Vec<i32> = mags.iter().map(|m| m[0].max(m[1]).max(m[2])).collect();
-    let count = max_dims.len();
-    max_dims.sort_unstable();
-    max_dims.dedup();
-    if max_dims.len() != count {
-        return Err("detected mags are not unique".into());
-    }
-    let mut result: Vec<Layer> = Vec::new();
-    let mut names = std::collections::HashSet::new();
-    for (mut layer, size) in layers {
-        let factors = size.divide(&base).map(|f| f as i32);
-        for (i, factor) in factors.iter().enumerate() {
-            layer.bounding_box[i] = layer.bounding_box[i].wrapping_mul(*factor);
-            layer.bounding_box[i + 3] = layer.bounding_box[i + 3].wrapping_mul(*factor);
-        }
-        for mag in &mut layer.mags {
-            mag.mag = std::array::from_fn(|i| mag.mag[i].wrapping_mul(factors[i]));
-        }
-        let mut candidate = layer.name.clone();
-        let mut index = 1;
-        while names.contains(&candidate) {
-            index += 1;
-            candidate = format!("{}_{index}", layer.name);
-        }
-        names.insert(candidate.clone());
-        layer.name = candidate;
-        result.push(layer);
-    }
-    Ok((result, base))
-}
-
 /// usableDataSourceFor on a dataset the user can read.
 async fn readable_source(
     state: &AppState,
     user: &AuthUser,
     id: &ObjectId,
-) -> Result<(DatasetRecord, DataSource), ()> {
+) -> Result<(DatasetRecord, UsableDataSource), ()> {
     let record = crate::dataset::lifecycle::require_readable(state, user, id)
         .await
         .map_err(|_| ())?;
@@ -165,12 +72,12 @@ struct ComposeRequest {
     layers: Vec<ComposeLayer>,
 }
 
-fn transforms(values: &Option<Vec<Value>>) -> ApiResult<Option<Vec<Transform>>> {
+fn transforms(values: &Option<Vec<Value>>) -> ApiResult<Option<Vec<CoordinateTransformation>>> {
     values
         .as_ref()
         .map(|list| {
             list.iter()
-                .map(crate::dataset::source::transform)
+                .map(CoordinateTransformation::from_json)
                 .collect::<Result<Vec<_>, _>>()
         })
         .transpose()
@@ -183,9 +90,8 @@ async fn compose(
     Extension(clients): Extension<ServiceClients>,
     RequestJson(body): RequestJson<ComposeRequest>,
 ) -> ApiResult<Json<Value>> {
-    let (factor, unit) = crate::dataset::source::voxel_size(&body.voxel_size)
-        .map_err(crate::dataset::source::invalid_body)?;
-    let requested_size = VoxelSize { factor, unit };
+    let requested_size =
+        VoxelSize::from_json(&body.voxel_size).map_err(crate::dataset::source::invalid_body)?;
     let mut extra_transforms = Vec::new();
     for layer in &body.layers {
         extra_transforms.push(transforms(&layer.transformations)?);
@@ -214,7 +120,7 @@ async fn compose(
             .await
             .map_err(|_| failed())?;
         let mut layer = source
-            .layers
+            .data_layers
             .into_iter()
             .find(|l| l.name == request.source_layer_name)
             .ok_or_else(failed)?;
@@ -222,13 +128,7 @@ async fn compose(
         let mut combined = layer.coordinate_transformations.take().unwrap_or_default();
         combined.extend(extra.unwrap_or_default());
         layer.coordinate_transformations = (!combined.is_empty()).then_some(combined);
-        layers.push((
-            layer,
-            VoxelSize {
-                factor: source.factor,
-                unit: source.unit,
-            },
-        ));
+        layers.push((layer, source.scale));
     }
     let mut distinct_sizes: Vec<&VoxelSize> = Vec::new();
     for (_, size) in &layers {
@@ -238,16 +138,14 @@ async fn compose(
     }
     let (layers, size) =
         if body.layers.iter().all(|l| l.transformations.is_none()) && distinct_sizes.len() > 1 {
-            adapt_layers_and_voxel_size(layers).map_err(|_| failed())?
+            adapt_layers_and_voxel_size(layers, None).map_err(|_| failed())?
         } else {
             (layers.into_iter().map(|(l, _)| l).collect(), requested_size)
         };
-    let source = DataSource {
-        directory_name: body.new_dataset_name.clone(),
-        organization: body.organization_id.clone(),
-        layers,
-        factor: size.factor,
-        unit: size.unit,
+    let source = UsableDataSource {
+        id: DataSourceId::new(&body.new_dataset_name, &body.organization_id),
+        data_layers: layers,
+        scale: size,
         default_view_configuration: None,
         status_opt: None,
     };
@@ -293,7 +191,7 @@ async fn target_and_source(
     target_id: &ObjectId,
     source_id: &ObjectId,
     failure: &'static str,
-) -> ApiResult<(DatasetRecord, DataSource, DataSource)> {
+) -> ApiResult<(DatasetRecord, UsableDataSource, UsableDataSource)> {
     let failed = || ApiError::bad_request(failure);
     let target = crate::dataset::lifecycle::require_readable(state, user, target_id)
         .await
@@ -320,7 +218,7 @@ async fn save(
     user: &AuthUser,
     clients: &ServiceClients,
     target: &DatasetRecord,
-    source: &DataSource,
+    source: &UsableDataSource,
 ) -> ApiResult<()> {
     let mut transaction = state.pool.begin().await?;
     crate::dataset::access::lock_edit(&mut transaction, user, &target.id, true).await?;
@@ -330,13 +228,13 @@ async fn save(
            WHERE _id = $1"#,
     )
     .bind(&target.id)
-    .bind(source.factor[0])
-    .bind(source.factor[1])
-    .bind(source.factor[2])
-    .bind(&source.unit)
+    .bind(source.scale.factor.x)
+    .bind(source.scale.factor.y)
+    .bind(source.scale.factor.z)
+    .bind(source.scale.unit.as_str())
     .execute(&mut *transaction)
     .await?;
-    crate::dataset::source::write_layers(&mut transaction, &target.id, &source.layers).await?;
+    crate::dataset::source::write_layers(&mut transaction, &target.id, &source.data_layers).await?;
     transaction.commit().await?;
     crate::dataset::lifecycle::invalidate_cache(clients, target).await
 }
@@ -369,19 +267,19 @@ async fn add_layer(
     )
     .await?;
     if target_source
-        .layers
+        .data_layers
         .iter()
         .any(|l| l.name == body.target_layer_name)
     {
         return Err(failed());
     }
     let mut layer = source
-        .layers
+        .data_layers
         .into_iter()
         .find(|l| l.name == body.source_layer_name)
         .ok_or_else(failed)?;
     layer.name = body.target_layer_name.clone();
-    target_source.layers.push(layer);
+    target_source.data_layers.push(layer);
     save(&state, &user, &clients, &target, &target_source).await
 }
 
@@ -402,27 +300,27 @@ async fn add_mag(
     Extension(clients): Extension<ServiceClients>,
     RequestJson(body): RequestJson<AddMagRequest>,
 ) -> ApiResult<()> {
-    let source_mag = crate::dataset::source::vec3_int(&body.source_mag)
-        .map_err(crate::dataset::source::invalid_body)?;
+    let source_mag =
+        Vec3Int::from_json(&body.source_mag).map_err(crate::dataset::source::invalid_body)?;
     let target_mag = body
         .target_mag
         .as_ref()
         .filter(|v| !v.is_null())
-        .map(crate::dataset::source::vec3_int)
+        .map(Vec3Int::from_json)
         .transpose()
         .map_err(crate::dataset::source::invalid_body)?;
     let failed = || ApiError::bad_request(ADD_MAG_FAILED);
     let (target, mut target_source, source) =
         target_and_source(&state, &user, &id, &body.source_dataset_id, ADD_MAG_FAILED).await?;
     if !target_source
-        .layers
+        .data_layers
         .iter()
         .any(|l| l.name == body.target_layer_name)
     {
         return Err(failed());
     }
     let mut mag = source
-        .layers
+        .data_layers
         .iter()
         .find(|l| l.name == body.source_layer_name)
         .ok_or_else(failed)?
@@ -433,20 +331,14 @@ async fn add_mag(
         .ok_or_else(failed)?;
     mag.mag = target_mag.unwrap_or(source_mag);
     let layer = target_source
-        .layers
+        .data_layers
         .iter_mut()
         .find(|l| l.name == body.target_layer_name)
         .ok_or_else(failed)?;
     layer.mags.push(mag);
-    layer
-        .mags
-        .sort_by_key(|m| m.mag[0].max(m.mag[1]).max(m.mag[2]));
+    layer.mags.sort_by_key(|m| m.mag.max_dim());
     let mut max_dims = std::collections::HashSet::new();
-    if !layer
-        .mags
-        .iter()
-        .all(|m| max_dims.insert(m.mag[0].max(m.mag[1]).max(m.mag[2])))
-    {
+    if !layer.mags.iter().all(|m| max_dims.insert(m.mag.max_dim())) {
         return Err(failed());
     }
     save(&state, &user, &clients, &target, &target_source).await
@@ -458,7 +350,7 @@ struct AddAttachmentRequest {
     source_dataset_id: ObjectId,
     source_layer_name: String,
     target_layer_name: String,
-    attachment_type: AttachmentType,
+    attachment_type: LayerAttachmentType,
     source_attachment_name: String,
     target_attachment_name: Option<String>,
 }
@@ -479,45 +371,40 @@ async fn add_attachment(
         ADD_ATTACHMENT_FAILED,
     )
     .await?;
-    let typ = body.attachment_type.as_str();
+    let typ = body.attachment_type;
     if !target_source
-        .layers
+        .data_layers
         .iter()
         .any(|l| l.name == body.target_layer_name)
     {
         return Err(failed());
     }
     let mut attachment = source
-        .layers
+        .data_layers
         .iter()
         .find(|l| l.name == body.source_layer_name)
         .ok_or_else(failed)?
         .attachments
         .as_ref()
-        .and_then(|attachments| {
-            attachments
-                .typed()
-                .into_iter()
-                .find(|(t, a)| *t == typ && a.name == body.source_attachment_name)
-                .map(|(_, a)| a.clone())
-        })
+        .and_then(|attachments| attachments.get_by_type_and_name(typ, &body.source_attachment_name))
+        .cloned()
         .ok_or_else(failed)?;
     if let Some(name) = &body.target_attachment_name {
         attachment.name = name.clone();
     }
     let layer = target_source
-        .layers
+        .data_layers
         .iter_mut()
         .find(|l| l.name == body.target_layer_name)
         .ok_or_else(failed)?;
-    let mut attachments = layer.attachments.take().unwrap_or_default();
-    attachments.add(typ, attachment);
+    let attachments = layer
+        .attachments
+        .take()
+        .unwrap_or_default()
+        .with_added(attachment, typ);
     if attachments.contains_duplicate_names() {
         return Err(failed());
     }
     layer.attachments = Some(attachments);
     save(&state, &user, &clients, &target, &target_source).await
 }
-
-#[cfg(test)]
-mod tests;

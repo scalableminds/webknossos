@@ -1,4 +1,6 @@
 use super::*;
+use crate::proto::Vec3IntProto;
+use webknossos_common::geometry::Vec3Int;
 
 #[test]
 fn java_double_literals() {
@@ -10,13 +12,7 @@ fn java_double_literals() {
     assert_eq!(java_double(1.25e-5), "1.25E-5");
     assert_eq!(vec3_double_literal([0.0, 12.5, 360.0]), "0.0,12.5,360.0");
     assert_eq!(
-        BoundingBox {
-            top_left: [1, -2, 3],
-            width: 4,
-            height: 5,
-            depth: 6
-        }
-        .literal(),
+        BoundingBox::new(Vec3Int::new(1, -2, 3), 4, 5, 6).to_literal(),
         "1,-2,3,4,5,6"
     );
 }
@@ -67,12 +63,7 @@ fn batch_limit_and_ids_follow_tracing_type() {
 
 #[test]
 fn skeleton_base_has_one_node_tree() {
-    let empty = BoundingBox {
-        top_left: [0, 0, 0],
-        width: 0,
-        height: 1,
-        depth: 1,
-    };
+    let empty = BoundingBox::new(Vec3Int::zeros(), 0, 1, 1);
     let tracing = skeleton_tracing_base(Some(empty), [1, 2, 3], [0.0, 90.0, 0.0]);
     assert_eq!(tracing.bounding_box, None);
     assert_eq!(tracing.dataset_name, "unused");

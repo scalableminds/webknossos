@@ -7,12 +7,13 @@ use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use reqwest::Method;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use webknossos_common::{datasource::DataSourceId, enums::LengthUnit, geometry::Vec3Double};
 
 use crate::{
     AppState,
     auth::AuthUser,
     dataset::create::{NewDataset, SetUp},
-    dataset::source::DataSource,
+    dataset::source::{UsableDataSource, VoxelSize},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path, Query},
     remote::datastore::credentials::CredentialInput,
@@ -142,8 +143,7 @@ async fn explore(
             value["credentialId"] = json!(id);
         }
         if let Some(size) = &parameter.preferred_voxel_size {
-            crate::dataset::source::voxel_size(size)
-                .map_err(crate::dataset::source::invalid_body)?;
+            VoxelSize::from_json(size).map_err(crate::dataset::source::invalid_body)?;
             value["preferredVoxelSize"] = size.clone();
         }
         layer_parameters.push(value);
@@ -201,15 +201,20 @@ async fn explore_remote(
 async fn validate_paths(
     clients: &ServiceClients,
     store_url: &str,
-    source: &DataSource,
+    source: &UsableDataSource,
 ) -> ApiResult<()> {
+    let paths: Vec<String> = source
+        .all_explicit_paths()
+        .into_iter()
+        .map(ToString::to_string)
+        .collect();
     let response = clients
         .request(
             Method::POST,
             store_url,
             &["data", "datasets", "validatePaths"],
             &[],
-            Some(&json!(source.explicit_paths())),
+            Some(&json!(paths)),
         )
         .await
         .map_err(|_| ApiError::bad_request(ADD_PATHS_NOT_ALLOWED))?;
@@ -351,9 +356,9 @@ async fn explore_and_add_remote(
         .get("dataSource")
         .filter(|s| !s.is_null())
         .ok_or_else(|| ApiError::bad_request("Could not explore remote dataset."))?;
-    let source = crate::dataset::source::parse_data_source(source)
+    let source = UsableDataSource::from_json(source)
         .map_err(|_| ApiError::from(ServiceError::InvalidJson))?;
-    if source.layers.is_empty() {
+    if source.data_layers.is_empty() {
         return Err(ApiError::bad_request(ZERO_LAYERS));
     }
     let mut connection = state.pool.acquire().await?;
@@ -367,7 +372,7 @@ async fn explore_and_add_remote(
         (None, None) => None,
     };
     crate::dataset::create::validate_dataset_name(&body.dataset_name)?;
-    for layer in &source.layers {
+    for layer in &source.data_layers {
         crate::dataset::create::validate_layer_name_lax(&layer.name)?;
     }
     let id = crate::dataset::create::set_up_dataset(
@@ -412,7 +417,7 @@ async fn add_virtual_dataset(
     slack: SlackNotificationService,
     RequestJson(body): RequestJson<RegistrationInfo>,
 ) -> ApiResult<Json<Value>> {
-    let source = crate::dataset::source::parse_data_source(&body.data_source)
+    let source = UsableDataSource::from_json(&body.data_source)
         .map_err(crate::dataset::source::invalid_body)?;
     let store: Option<(String, String)> = sqlx::query_as(
         "SELECT name, url FROM webknossos.dataStores_ WHERE name = $1 AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $2)",
@@ -433,7 +438,7 @@ async fn add_virtual_dataset(
     if !(team_manager || user.is_admin || user.is_dataset_manager) {
         return Err(crate::dataset::lifecycle::not_allowed());
     }
-    if source.layers.is_empty() {
+    if source.data_layers.is_empty() {
         return Err(ApiError::bad_request(ZERO_LAYERS));
     }
     validate_paths(&clients, &store_url, &source).await?;
@@ -510,15 +515,20 @@ async fn duplicate_to_orga(
     .bind(id.as_str())
     .fetch_one(&state.pool)
     .await?;
+    let unit = unit
+        .as_deref()
+        .and_then(LengthUnit::from_name)
+        .unwrap_or(VoxelSize::DEFAULT_UNIT);
     let source = if record.is_usable {
         crate::dataset::source::load(&state.pool, id.as_str()).await?
     } else {
-        DataSource {
-            directory_name: String::new(),
-            organization: String::new(),
-            layers: Vec::new(),
-            factor: [0.0; 3],
-            unit: unit.clone().unwrap_or_default(),
+        UsableDataSource {
+            id: DataSourceId::new("", ""),
+            data_layers: Vec::new(),
+            scale: VoxelSize {
+                factor: Vec3Double::new(0.0, 0.0, 0.0),
+                unit,
+            },
             default_view_configuration: None,
             status_opt: Some(status.clone()),
         }
@@ -545,15 +555,17 @@ async fn duplicate_to_orga(
     }
     let new_id = ObjectId::new().to_string();
     let mut adapted = source;
-    adapted.directory_name = crate::dataset::create::generate_directory_name(&name, &new_id);
-    adapted.organization = query.target_organization_id.clone();
+    adapted.id = DataSourceId::new(
+        crate::dataset::create::generate_directory_name(&name, &new_id),
+        &query.target_organization_id,
+    );
     let voxel_size = if record.is_usable {
-        Some((adapted.factor, adapted.unit.as_str()))
+        Some(adapted.scale)
     } else {
-        factor
-            .as_ref()
-            .filter(|f| f.len() == 3)
-            .map(|f| ([f[0], f[1], f[2]], unit.as_deref().unwrap_or("nanometer")))
+        factor.as_ref().filter(|f| f.len() == 3).map(|f| VoxelSize {
+            factor: Vec3Double::new(f[0], f[1], f[2]),
+            unit,
+        })
     };
     let mut transaction = state.pool.begin().await?;
     crate::dataset::create::insert_dataset(

@@ -20,7 +20,7 @@ pub struct FileSystemDataVault;
 impl FileSystemDataVault {
     fn local_path(path: &UPath) -> VaultResult<PathBuf> {
         let local = path.to_local_path().map_err(|e| {
-            VaultError::Failure(e).wrap(format!(
+            VaultError::Failure(e.into()).wrap(format!(
                 "trying to read from FileSystemDataVault, but path {path} is not local."
             ))
         })?;

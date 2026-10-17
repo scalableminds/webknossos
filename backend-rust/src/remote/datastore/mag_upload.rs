@@ -14,11 +14,12 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
+use webknossos_common::geometry::Vec3Int;
 
 use crate::{
     AppState,
     auth::{self, AuthUser},
-    dataset::source::ParseResult,
+    dataset::source::MagLocator,
     error::{ApiError, ApiResult},
     extract::{Json, Query},
     remote::datastore::ValidatedDataStore,
@@ -212,70 +213,9 @@ pub(crate) async fn after_upload_reported(
     crate::organization::storage::refresh_for_dataset(pool, clients, dataset_id).await
 }
 
-// ---------------------------------------------------------------- MagLocator
-
-/// The MagLocator fields these callbacks use (Reads[MagLocator]: scalar or
-/// vector mag, UPath path, AxisOrder with required x/y).
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct MagLocator {
-    pub mag: [i32; 3],
-    pub path: Option<String>,
-    pub axis_order: Option<Value>,
-    pub channel_index: Option<i32>,
-}
-
-fn present<'a>(object: &'a Value, key: &str) -> Option<&'a Value> {
-    object.get(key).filter(|value| !value.is_null())
-}
-
-fn axis_order(value: &Value) -> ParseResult<Value> {
-    let required = |key: &str| crate::dataset::source::int(value.get(key).ok_or("missing axis")?);
-    let optional = |key: &str| {
-        present(value, key)
-            .map(crate::dataset::source::int)
-            .transpose()
-    };
-    let mut result = json!({"x": required("x")?, "y": required("y")?});
-    if let Some(z) = optional("z")? {
-        result["z"] = json!(z);
-    }
-    if let Some(c) = optional("c")? {
-        result["c"] = json!(c);
-    }
-    Ok(result)
-}
-
-fn parse_mag_locator(value: &Value) -> ParseResult<MagLocator> {
-    if !value.is_object() {
-        return Err("expected object".into());
-    }
-    let path = match present(value, "path") {
-        None => None,
-        Some(path) => Some(crate::dataset::source::normalize_upath(
-            path.as_str().ok_or("expected string path")?,
-        )?),
-    };
-    Ok(MagLocator {
-        mag: crate::dataset::source::mag_vec(value.get("mag").ok_or("missing mag")?)?,
-        path,
-        axis_order: present(value, "axisOrder").map(axis_order).transpose()?,
-        channel_index: present(value, "channelIndex")
-            .map(crate::dataset::source::int)
-            .transpose()?,
-    })
-}
-
+/// Reads[MagLocator] (invalid → 400 Invalid JSON request body).
 fn mag_locator(value: &Value) -> ApiResult<MagLocator> {
-    parse_mag_locator(value).map_err(crate::dataset::source::invalid_body)
-}
-
-/// Vec3Int.toString.
-fn vec3_display(mag: [i32; 3]) -> String {
-    format!("({}, {}, {})", mag[0], mag[1], mag[2])
-}
-
-fn max_dim(mag: [i32; 3]) -> i32 {
-    mag.into_iter().max().unwrap_or_default()
+    MagLocator::from_json(value).map_err(crate::dataset::source::invalid_body)
 }
 
 // ---------------------------------------------------------------- reserve
@@ -303,7 +243,7 @@ async fn reserve_mag_upload(
     let user = user_for_callback_token(pool, &query.token).await?;
     let target = load_virtual_upload_target(pool, &user, &body.dataset_id, MAG_NOT_VIRTUAL).await?;
     require_usable_layer(pool, &target, &body.layer_name).await?;
-    let [x, y, z] = mag.mag.map(f64::from);
+    let [x, y, z] = [mag.mag.x, mag.mag.y, mag.mag.z].map(f64::from);
     // DatasetMagDAO.findMagLocatorsForLayer excludes pending mags.
     let existing: Vec<(i32, i32, i32)> = sqlx::query_as(
         r#"SELECT (mag).x::int, (mag).y::int, (mag).z::int FROM webknossos.dataset_mags
@@ -315,11 +255,11 @@ async fn reserve_mag_upload(
     .await?;
     if existing
         .iter()
-        .any(|&(ex, ey, ez)| max_dim([ex, ey, ez]) == max_dim(mag.mag))
+        .any(|&(ex, ey, ez)| Vec3Int::new(ex, ey, ez).max_dim() == mag.mag.max_dim())
     {
         return Err(ApiError::bad_request(format!(
             "New mag {} conflicts with existing mag of the layer.",
-            vec3_display(mag.mag)
+            mag.mag
         )));
     }
     require_same_datastore(&target, &store.name, DIFFERENT_DATASTORE)?;
@@ -403,7 +343,7 @@ async fn reserve_mag_upload(
     .bind(x)
     .bind(y)
     .bind(z)
-    .bind(&mag.axis_order)
+    .bind(mag.axis_order.map(|order| json!(order)))
     .bind(mag.channel_index)
     .execute(&mut *transaction)
     .await?;
@@ -443,8 +383,8 @@ async fn report_mag_upload(
     if !exists {
         return Err(crate::dataset::lifecycle::not_found(id));
     }
-    let [x, y, z] = mag.mag.map(f64::from);
-    let finished = match &mag.path {
+    let [x, y, z] = [mag.mag.x, mag.mag.y, mag.mag.z].map(f64::from);
+    let finished = match mag.path.as_ref().map(ToString::to_string) {
         // DatasetMagDAO.finishUpload, guarded by findOneWithPendingUpload in
         // the same statement.
         Some(path) => {
@@ -457,7 +397,7 @@ async fn report_mag_upload(
             .bind(x)
             .bind(y)
             .bind(z)
-            .bind(path)
+            .bind(&path)
             .execute(pool)
             .await?
             .rows_affected()
@@ -486,6 +426,3 @@ async fn report_mag_upload(
     after_upload_reported(pool, &clients, id).await?;
     Ok(StatusCode::OK)
 }
-
-#[cfg(test)]
-mod tests;

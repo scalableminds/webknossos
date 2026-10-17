@@ -39,6 +39,13 @@ fn bounding_box_center_and_mag_scaling() {
     assert_eq!(bb(0, 0, 0, 5, 7, 9).center(), Vec3Int::new(2, 3, 4));
     assert_eq!(bb(-3, 0, 0, 0, 0, 0).center(), Vec3Int::new(-3, 0, 0));
     assert_eq!(bb(-3, 0, 0, 1, 0, 0).center(), Vec3Int::new(-2, 0, 0));
+    // (-5 + -2) * 0.5f = -3.5 → -3 (toward zero); odd positive sums truncate down.
+    assert_eq!(bb(-5, 0, 1, 3, 3, 2).center(), Vec3Int::new(-3, 1, 2));
+    // Int → Float rounding for large coordinates (16777217 is not a float).
+    assert_eq!(
+        bb(16_777_216, 0, 0, 2, 0, 0).center(),
+        Vec3Int::new(16_777_216, 0, 0)
+    );
     let mag = Vec3Int::new(2, 2, 1);
     assert_eq!(bb(5, 5, 5, 11, 10, 3).div_mag(mag), bb(2, 2, 5, 6, 5, 3));
     // topLeft uses truncating JVM division, not floor division
@@ -48,6 +55,10 @@ fn bounding_box_center_and_mag_scaling() {
     );
     assert_eq!(bb(1, 2, 3, 4, 5, 6).mul_mag(mag), bb(2, 4, 3, 8, 10, 6));
     assert_eq!(bb(0, 0, 0, 1000, 1000, 1000).volume(), 1_000_000_000);
+    assert_eq!(
+        bb(0, 0, 0, i32::MAX, i32::MAX, i32::MAX).volume(),
+        4_611_686_024_869_838_847
+    );
     assert_eq!(ceil_div(-5, 2), -3);
     assert_eq!(ceil_div(5, 2), 3);
 }
@@ -62,6 +73,21 @@ fn literals() {
     assert_eq!(BoundingBox::from_literal("1 ,2,3,4,5,6"), None);
     assert_eq!(BoundingBox::from_literal("1,2,3,4,5"), None);
     assert_eq!(BoundingBox::from_literal("1,2,3,4,5,99999999999"), None);
+    assert_eq!(
+        BoundingBox::from_literal("007,0,0,1,1,1"),
+        Some(bb(7, 0, 0, 1, 1, 1))
+    );
+    for invalid in ["", "1,2,3,4,5,6,7", "+1,2,3,4,5,6", "a,2,3,4,5,6"] {
+        assert_eq!(BoundingBox::from_literal(invalid), None, "{invalid}");
+    }
+    assert_eq!(
+        bb(5, -5, 7, 10, 3, 1).checked_div_mag(Vec3Int::new(2, 2, 4)),
+        Some(bb(2, -2, 1, 5, 2, 1))
+    );
+    assert_eq!(
+        bb(0, 0, 0, 1, 1, 1).checked_div_mag(Vec3Int::new(0, 1, 1)),
+        None
+    );
     assert_eq!(bb(1, 2, 3, 4, 5, 6).to_literal(), "1,2,3,4,5,6");
     assert_eq!(
         BoundingBox::from_literal_with_mag_opt("0,0,0,10,10,10", Some("4")),
@@ -74,6 +100,12 @@ fn literals() {
     assert_eq!(Vec3Int::from_mag_literal("2", false), None);
     assert_eq!(Vec3Int::from_mag_literal("2", true), Some(Vec3Int::full(2)));
     assert_eq!(Vec3Int::from_mag_literal("-2-2-1", true), None);
+    assert_eq!(
+        Vec3Int::from_mag_literal("-1", true),
+        Some(Vec3Int::full(-1))
+    );
+    assert_eq!(Vec3Int::from_mag_literal("1-2-4-8", true), None);
+    assert_eq!(Vec3Int::from_mag_literal("1-+2-4", true), None);
     assert_eq!(Vec3Int::new(2, 2, 1).to_mag_literal(true), "2-2-1");
     assert_eq!(Vec3Int::full(4).to_mag_literal(true), "4");
     assert_eq!(

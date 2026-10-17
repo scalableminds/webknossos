@@ -8,6 +8,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use std::error::Error;
+use webknossos_common::text::escape_html;
 
 /// Signals the outer request handler to render the production Play client-error page.
 #[derive(Debug, Clone)]
@@ -51,21 +52,6 @@ pub fn render_client_error(error: ClientError, method: &str, uri: &str) -> Respo
         )
             .into_response(),
     )
-}
-
-fn escape_html(value: &str) -> String {
-    let mut result = String::with_capacity(value.len());
-    for c in value.chars() {
-        match c {
-            '&' => result.push_str("&amp;"),
-            '<' => result.push_str("&lt;"),
-            '>' => result.push_str("&gt;"),
-            '"' => result.push_str("&quot;"),
-            '\'' => result.push_str("&#x27;"),
-            _ => result.push(c),
-        }
-    }
-    result
 }
 
 /// Preserve the distinction between a parser failure and a JSON model validation failure.

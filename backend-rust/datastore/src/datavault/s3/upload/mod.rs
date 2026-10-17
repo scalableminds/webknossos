@@ -11,6 +11,7 @@ use std::{
     time::Duration,
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use webknossos_common::text::hex;
 
 const PART_BYTES: u64 = 8 * 1024 * 1024;
 const MAX_PART_BYTES: u64 = 5 * 1024 * 1024 * 1024;
@@ -29,10 +30,6 @@ pub(super) enum UploadBody {
         bytes: Bytes,
         sha256: String,
     },
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 impl UploadBody {

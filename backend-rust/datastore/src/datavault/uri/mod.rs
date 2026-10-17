@@ -119,11 +119,15 @@ impl fmt::Display for RemoteUri {
     }
 }
 
-/// Vault-specific part of the canonical [`UPath`] (kept here so the models stay free of URI
+/// Vault-specific part of the shared [`UPath`] (kept here so the models stay free of URI
 /// parsing).
-impl UPath {
+pub trait ToRemoteUri {
     /// Scala `toRemoteUri` (`new URI(toString)`).
-    pub fn to_remote_uri(&self) -> Result<RemoteUri, DsError> {
+    fn to_remote_uri(&self) -> Result<RemoteUri, DsError>;
+}
+
+impl ToRemoteUri for UPath {
+    fn to_remote_uri(&self) -> Result<RemoteUri, DsError> {
         match self {
             Self::Local(_) => Err(DsError::failure(format!(
                 "Called toRemoteUri on LocalUPath {self}"

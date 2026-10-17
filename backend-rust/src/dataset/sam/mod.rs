@@ -18,8 +18,8 @@ use crate::{
     extract::{Json as RequestJson, Path, Query},
     stores::client::ServiceClients,
     util::id::PathObjectId,
-    util::math::ceil_div,
 };
+use webknossos_common::{geometry::BoundingBox, json::read_i32, math::ceil_div};
 
 pub fn router(config: DatasetRouteConfig) -> Router<AppState> {
     Router::new()
@@ -121,14 +121,12 @@ async fn segment_anything_mask(
     Extension(clients): Extension<ServiceClients>,
     RequestJson(parameters): RequestJson<MaskParameters>,
 ) -> ApiResult<Response> {
-    let bbox = crate::dataset::source::bounding_box(&parameters.surrounding_bounding_box)
+    let bbox = BoundingBox::from_json(&parameters.surrounding_bounding_box)
         .map_err(crate::dataset::source::invalid_body)?;
     if let Some(coordinates) = &parameters.additional_coordinates
-        && !coordinates.iter().all(|c| {
-            c["name"].is_string()
-                && c.get("value")
-                    .is_some_and(|v| crate::dataset::source::int(v).is_ok())
-        })
+        && !coordinates
+            .iter()
+            .all(|c| c["name"].is_string() && c.get("value").is_some_and(|v| read_i32(v).is_ok()))
     {
         return Err(ApiError::bad_request(
             crate::msg::request::INVALID_JSON_BODY,
@@ -148,7 +146,7 @@ async fn segment_anything_mask(
     }
     let source = crate::dataset::source::load(&state.pool, id.as_str()).await?;
     let layer = source
-        .layers
+        .data_layers
         .iter()
         .find(|l| l.name == layer_name)
         .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::NO_LAYERS))?;
@@ -160,7 +158,8 @@ async fn segment_anything_mask(
         ));
     }
     // BoundingBox./ : floor-less Int division for topLeft, ceilDiv for the size.
-    let size: [i32; 3] = std::array::from_fn(|i| ceil_div(bbox[i + 3], mag[i]));
+    let extent = [bbox.width, bbox.height, bbox.depth];
+    let size: [i32; 3] = std::array::from_fn(|i| ceil_div(extent[i], mag[i]));
     let mut sorted = size;
     sorted.sort_unstable();
     let size_text = format!("({}, {}, {})", size[0], size[1], size[2]);
@@ -196,7 +195,9 @@ async fn segment_anything_mask(
             "Missing pointX and pointY parameters for point interaction.",
         ));
     }
-    let mut cuboid = json!({"position": [bbox[0], bbox[1], bbox[2]], "cubeSize": size, "mag": mag});
+    let top_left = bbox.top_left;
+    let mut cuboid =
+        json!({"position": [top_left.x, top_left.y, top_left.z], "cubeSize": size, "mag": mag});
     if let Some(coordinates) = &parameters.additional_coordinates {
         cuboid["additionalCoordinates"] = json!(coordinates);
     }
@@ -229,7 +230,7 @@ async fn segment_anything_mask(
     }
     let payload = mask_request(
         &data.bytes,
-        &layer.element_class,
+        layer.element_class.as_str(),
         &parameters,
         size,
         (query.intensity_min, query.intensity_max),

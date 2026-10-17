@@ -2535,6 +2535,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "webknossos-common"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "prost-build",
+ "protox",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "webknossos-datastore"
 version = "0.1.0"
 dependencies = [
@@ -2554,8 +2565,6 @@ dependencies = [
  "lz4_flex",
  "percent-encoding",
  "prost",
- "prost-build",
- "protox",
  "quick-xml",
  "reqwest",
  "ring",
@@ -2569,6 +2578,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "webknossos-common",
  "zarrs",
  "zip",
  "zune-jpeg",

@@ -3,10 +3,13 @@
 check:
 	cargo fmt --check
 	cargo clippy --locked --all-targets -- -D warnings
+	cargo fmt --manifest-path common/Cargo.toml --check
+	cargo clippy --manifest-path common/Cargo.toml --locked --all-targets -- -D warnings
 	python3 tools/route_inventory.py --check
 
 test:
 	cargo test --locked
+	cargo test --manifest-path common/Cargo.toml --locked
 
 test-db:
 	@test -n "$$WK_RUST_TEST_DATABASE_URL" || (echo 'Set WK_RUST_TEST_DATABASE_URL to a PostgreSQL administrative URL with CREATEDB'; exit 1)

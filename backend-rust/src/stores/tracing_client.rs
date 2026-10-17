@@ -25,6 +25,7 @@ use crate::{
     stores::client::{PROTOBUF_CONTENT_TYPE, ServiceClientConfig, ServiceClients, ServiceError},
     util::id::ObjectId,
 };
+use webknossos_common::geometry::BoundingBox;
 
 /// RPCRequest.withLongTimeout.
 pub const LONG_REQUEST_TIMEOUT: Duration = Duration::from_secs(2 * 60 * 60);
@@ -79,15 +80,6 @@ pub struct NamedBoundingBox {
     #[serde(skip_serializing_if = "Option::is_none", serialize_with = "color_json")]
     pub color: Option<[f64; 4]>,
     pub bounding_box: BoundingBox,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BoundingBox {
-    pub top_left: [i32; 3],
-    pub width: i32,
-    pub height: i32,
-    pub depth: i32,
 }
 
 fn color_json<S: serde::Serializer>(color: &Option<[f64; 4]>, s: S) -> Result<S::Ok, S::Error> {

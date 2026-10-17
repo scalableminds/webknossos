@@ -39,10 +39,11 @@ use crate::{
     proto::{AnnotationLayerTypeProto, AnnotationProto},
     stores::client::ServiceError,
     stores::tracing_client::{
-        BoundingBox, MergeRequest, NamedBoundingBox, TracingStoreClient, TracingStoreError,
+        MergeRequest, NamedBoundingBox, TracingStoreClient, TracingStoreError,
     },
     util::id::ObjectId,
 };
+use webknossos_common::geometry::{BoundingBox, Vec3Int};
 
 /// Msg.Annotation.Restrictions.notFound, used by routes for restriction failures.
 pub const RESTRICTIONS_NOT_FOUND: &str = "Could not determine annotation access restrictions.";
@@ -1127,12 +1128,7 @@ impl AnnotationProvider {
                 )),
                 is_visible: None,
                 color: None,
-                bounding_box: BoundingBox {
-                    top_left: [x, y, z],
-                    width,
-                    height,
-                    depth,
-                },
+                bounding_box: BoundingBox::new(Vec3Int::new(x, y, z), width, height, depth),
             });
         }
         Ok(boxes)

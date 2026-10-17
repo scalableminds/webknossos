@@ -28,6 +28,7 @@ use crate::{
     error::{ApiError, ApiResult},
     stores::client::{ServiceClients, ServiceError},
 };
+use webknossos_common::geometry::Vec3Int;
 
 const MAX_PATHS_PER_REQUEST: usize = 200;
 
@@ -83,14 +84,6 @@ struct StorageReports {
     mags: Vec<(MagRow, String, i64)>,
     attachments: Vec<(AttachmentRow, String, i64)>,
 }
-fn mag_literal(mag: [i32; 3], allow_scalar: bool) -> String {
-    if allow_scalar && mag[0] == mag[1] && mag[1] == mag[2] {
-        mag[0].to_string()
-    } else {
-        format!("{}-{}-{}", mag[0], mag[1], mag[2])
-    }
-}
-
 /// java.nio Path.normalize for '/'-separated relative paths.
 fn normalize(path: &str) -> String {
     let absolute = path.starts_with('/');
@@ -129,8 +122,8 @@ fn mag_paths(mag: &MagRow) -> Vec<String> {
     let layer = normalize(&format!("{}/{}", mag.directory_name, mag.layer_name));
     let vector = [mag.mag_x, mag.mag_y, mag.mag_z];
     let mut paths = vec![
-        format!("{layer}/{}", mag_literal(vector, true)),
-        format!("{layer}/{}", mag_literal(vector, false)),
+        format!("{layer}/{}", Vec3Int::from(vector).to_mag_literal(true)),
+        format!("{layer}/{}", Vec3Int::from(vector).to_mag_literal(false)),
     ];
     paths.dedup();
     paths

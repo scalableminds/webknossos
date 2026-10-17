@@ -1,5 +1,5 @@
-//! Scala `AxisOrder` helpers (the case class itself is `crate::models::AxisOrder`) and
-//! `FullAxisOrder`.
+//! Scala `FullAxisOrder` (the `AxisOrder` case class and its helpers live in
+//! `webknossos_common::datasource`).
 //!
 //! Two orderings are in play: "physical" (the on-disk dimension order declared by the data source;
 //! `AxisOrder.x/y/z/c` and `AdditionalAxis.index` are physical indices) and "wk" (always
@@ -11,61 +11,6 @@ use serde_json::{Map, Value};
 
 use crate::error::{DsError, DsResult};
 use crate::models::{AdditionalAxis, AxisOrder};
-
-impl AxisOrder {
-    pub const fn new(x: i32, y: i32, z: Option<i32>, c: Option<i32>) -> Self {
-        Self { x, y, z, c }
-    }
-
-    /// Scala `AxisOrder.xyz(x, y, z)`.
-    pub const fn xyz_at(x: i32, y: i32, z: i32) -> Self {
-        Self::new(x, y, Some(z), None)
-    }
-
-    /// Scala `AxisOrder.xyz`.
-    pub const XYZ: AxisOrder = AxisOrder::xyz_at(0, 1, 2);
-
-    pub fn has_z_axis(&self) -> bool {
-        self.z.is_some()
-    }
-
-    /// Scala `zWithFallback`: z is appended after the last axis for 2-d data.
-    pub fn z_with_fallback(&self) -> i32 {
-        match self.z {
-            Some(z) => z,
-            None => self.x.max(self.y).max(self.c.unwrap_or(-1)) + 1,
-        }
-    }
-
-    /// Scala `length`.
-    pub fn length(&self) -> usize {
-        2 + 1 + usize::from(self.c.is_some())
-    }
-
-    /// Scala `asZyxFromRank`: the last three dimensions are z,y,x (OME-NGFF).
-    pub fn as_zyx_from_rank(rank: i32) -> Self {
-        Self::xyz_at(rank - 1, rank - 2, rank - 3)
-    }
-
-    /// Scala `asCxyzFromRank`: the last three dimensions are x,y,z, preceded by c for rank > 3.
-    pub fn as_cxyz_from_rank(rank: i32) -> Self {
-        if rank == 3 {
-            Self::xyz_at(rank - 3, rank - 2, rank - 1)
-        } else {
-            Self::new(rank - 3, rank - 2, Some(rank - 1), Some(rank - 4))
-        }
-    }
-
-    /// Scala `AxisOrder.cxyz`.
-    pub fn cxyz() -> Self {
-        Self::as_cxyz_from_rank(4)
-    }
-
-    /// Scala `cAdditionalxyz`: additional coordinates between c and xyz.
-    pub fn c_additional_xyz(rank: i32) -> Self {
-        Self::new(rank - 3, rank - 2, Some(rank - 1), Some(0))
-    }
-}
 
 /// Scala `FullAxisOrder`: one axis name per physical dimension (full rank, plus the appended z
 /// of the 2-d adapter). Unnamed slots (`""`) are treated like additional axes.

@@ -2801,8 +2801,6 @@ dependencies = [
  "http-body-util",
  "lettre",
  "prost",
- "prost-build",
- "protox",
  "quick-xml",
  "reqwest",
  "ring",
@@ -2819,7 +2817,19 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "uuid",
+ "webknossos-common",
  "zip",
+]
+
+[[package]]
+name = "webknossos-common"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "prost-build",
+ "protox",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

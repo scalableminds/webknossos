@@ -27,8 +27,8 @@ use serde_json::{Value, json};
 use tokio::sync::Mutex;
 
 use super::{
-    BoxFuture, ByteRange, DataVault, Encoding, RawRead, RemoteUri, UPath, VaultError, VaultResult,
-    sigv4::uri_encode,
+    BoxFuture, ByteRange, DataVault, Encoding, RawRead, RemoteUri, ToRemoteUri, UPath, VaultError,
+    VaultResult, sigv4::uri_encode,
 };
 use crate::error::DsError;
 
@@ -508,7 +508,7 @@ impl DataVault for GoogleCloudDataVault {
                 .take(max_items)
                 .map(|prefix| {
                     UPath::parse(&format!("{}://{}/{prefix}", self.uri.scheme(), self.bucket))
-                        .map_err(VaultError::Failure)
+                        .map_err(|e| VaultError::Failure(e.into()))
                 })
                 .collect()
         })

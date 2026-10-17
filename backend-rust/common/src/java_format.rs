@@ -97,15 +97,3 @@ fn java_layout(negative: bool, scientific: &str) -> String {
         format!("{sign}{first}.{rest}E{exponent}")
     }
 }
-
-/// play-json's `Writes[Double]`: the value as a BigDecimal with trailing zeros stripped, so
-/// integral doubles serialize as integers (`800.0` → `800`). Use it where Scala writes a Double
-/// into JSON (responses or stored JSONB) that Rust builds from an `f64`.
-pub fn play_json_double(value: f64) -> serde_json::Value {
-    if value.fract() == 0.0 && value.abs() < 1e15 {
-        // Exact: |value| < 2^53, so the conversion loses nothing (-0.0 becomes 0 like BigDecimal).
-        serde_json::Value::from(value as i64)
-    } else {
-        serde_json::Value::from(value)
-    }
-}

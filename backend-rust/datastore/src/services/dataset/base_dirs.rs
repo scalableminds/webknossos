@@ -34,7 +34,7 @@ impl BaseDirService {
             .filter(eligible)
             .find(|d| d.organization_id.as_deref() == Some(org))
         {
-            return UPath::parse(&d.path);
+            return Ok(UPath::parse(&d.path)?);
         }
         if let Some(d) = self
             .entries

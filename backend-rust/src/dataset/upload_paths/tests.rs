@@ -21,10 +21,25 @@ fn dataset_parents_use_prefix_organization_and_infix() {
         infix: None,
     };
     assert_eq!(dataset_parent(&plain, None, "org").unwrap(), "./binaryData");
+    let layer = UPath::parse("/p/layer").unwrap();
     assert_eq!(
-        attachment_path("Mesh ä", "hdf5", "mesh", "/p/layer").unwrap(),
+        attachment_path(
+            "Mesh ä",
+            LayerAttachmentDataformat::Hdf5,
+            LayerAttachmentType::Mesh,
+            &layer
+        )
+        .unwrap()
+        .to_string(),
         "/p/layer/meshes/Mesh ae.hdf5"
     );
-    let generated = attachment_path("§", "zarr3", "cumsum", "/p/layer").unwrap();
+    let generated = attachment_path(
+        "§",
+        LayerAttachmentDataformat::Zarr3,
+        LayerAttachmentType::Cumsum,
+        &layer,
+    )
+    .unwrap()
+    .to_string();
     assert!(generated.starts_with("/p/layer/agglomerates/cumsum__"));
 }

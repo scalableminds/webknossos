@@ -300,7 +300,8 @@ fn additional_axes_helpers() {
     let a = [axis("t", 0, 5, 0), axis("c", 0, 2, 1)];
     let b = [axis("t", 3, 9, 7)];
     let merged = AdditionalAxis::merge([Some(&a[..]), Some(&b[..]), None]).unwrap();
-    assert_eq!(merged, vec![axis("t", 0, 9, 0), axis("c", 0, 2, 1)]);
+    // Scala's mutable.HashMap order: "c" (hash 99) before "t" (hash 116).
+    assert_eq!(merged, vec![axis("c", 0, 2, 1), axis("t", 0, 9, 0)]);
     assert_eq!(
         AdditionalAxis::merge_and_assert_same([Some(&a[..]), Some(&b[..])]),
         Err("Additional coordinates differ in merged units.")

@@ -279,7 +279,7 @@ pub fn adapt_paths_for_data_source(source: &UsableDataSource) -> DsResult<Usable
                 attachment
             });
             if let Some(e) = failure.into_inner() {
-                return Err(e);
+                return Err(e.into());
             }
             layer.attachments = Some(mapped);
         }

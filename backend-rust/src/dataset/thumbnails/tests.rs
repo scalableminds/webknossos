@@ -21,19 +21,8 @@ fn java_double_formatting_matches_double_to_string() {
 }
 
 #[test]
-fn rounding_and_center_follow_jvm_semantics() {
+fn rounding_follows_java_math_round() {
     assert_eq!(java_round_to_int(2.5), 3);
     assert_eq!(java_round_to_int(-2.5), -2);
     assert_eq!(java_round_to_int(f64::NAN), 0);
-    let bbox = BoundingBox {
-        top_left: Vec3([-5, 0, 1]),
-        size: [10, 3, 2],
-    };
-    assert_eq!(bbox.center(), Vec3([0, 1, 2]));
-    let odd = BoundingBox {
-        top_left: Vec3([-3, 0, 0]),
-        size: [2, 1, 1],
-    };
-    // (-3 + -1) * 0.5 = -2; (0 + 1) * 0.5 truncates to 0.
-    assert_eq!(odd.center(), Vec3([-2, 0, 0]));
 }

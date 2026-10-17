@@ -8,6 +8,7 @@ use axum::{
 use mock_s3::{MockS3, Reply};
 use serde_json::{Value, json};
 use std::{path::PathBuf, sync::Arc};
+use webknossos_datastore::datavault::ToRemoteUri;
 use webknossos_datastore::{
     AppState,
     datavault::{

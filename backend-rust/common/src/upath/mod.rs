@@ -1,7 +1,6 @@
 //! Scala `helpers/UPath.scala`: local, remote and zip-entry paths with Scala's string semantics,
 //! as they appear in `datasource-properties.json` (`mags[].path`, attachment `path`) and as used by
-//! the data vaults (DS1b). This is the single canonical `UPath` of the datastore crate;
-//! `crate::datavault` re-exports it and adds `to_remote_uri` (see `datavault/uri.rs`).
+//! the data vaults. The datastore's `datavault` adds `to_remote_uri` (see `datavault/uri`).
 //!
 //! Equality: Scala compares `toString`; the structural equality derived here is equivalent
 //! because every variant's string form determines its fields.
@@ -14,8 +13,7 @@ use std::{
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 
-use super::json::{JsError, JsResult};
-use crate::error::DsError;
+use crate::json::{JsError, JsResult};
 
 const SCHEME_SEPARATOR: &str = "://";
 /// Scala `ZipEntryUPath.separatorWithPath`.
@@ -27,16 +25,41 @@ pub const ZIP_RELEVANT_FILE_EXTENSIONS: &[&str] = &[".zip", ".ozx"];
 /// Scala `PathSchemes.schemeFile`.
 pub const SCHEME_FILE: &str = "file";
 
-/// A failed `UPath.fromStringUnsafe`: the message plus the `toString` of the thrown exception,
-/// like Scala `tryo` (`Failure(e.getMessage, Full(e), Empty)`).
-fn parse_failure(exception_class: &str, message: String) -> DsError {
-    DsError {
-        exception: Some(format!("{exception_class}: {message}")),
-        ..DsError::failure(message)
+/// A failed `UPath` operation: Scala's failure message plus, for thrown exceptions, the
+/// exception's `toString` (Scala `Failure(msg, Full(e), Empty)`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UPathError {
+    pub message: String,
+    pub exception: Option<String>,
+}
+
+impl UPathError {
+    fn failure(message: String) -> Self {
+        Self {
+            message,
+            exception: None,
+        }
     }
 }
 
-fn exception(message: String) -> DsError {
+impl fmt::Display for UPathError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for UPathError {}
+
+/// A failed `UPath.fromStringUnsafe`: the message plus the `toString` of the thrown exception,
+/// like Scala `tryo` (`Failure(e.getMessage, Full(e), Empty)`).
+fn parse_failure(exception_class: &str, message: String) -> UPathError {
+    UPathError {
+        exception: Some(format!("{exception_class}: {message}")),
+        message,
+    }
+}
+
+fn exception(message: String) -> UPathError {
     parse_failure("java.lang.Exception", message)
 }
 
@@ -244,7 +267,7 @@ pub enum UPath {
 
 impl UPath {
     /// Scala `UPath.fromString` (failure messages and exceptions as the thrown ones').
-    pub fn parse(literal: &str) -> Result<Self, DsError> {
+    pub fn parse(literal: &str) -> Result<Self, UPathError> {
         if let Some((outer, inner)) = detect_and_split_zip_entry_path(literal)? {
             return Ok(Self::ZipEntry(Box::new(Self::parse(outer)?), inner));
         }
@@ -350,26 +373,26 @@ impl UPath {
     }
 
     /// Scala `toLocalPath`.
-    pub fn to_local_path(&self) -> Result<PathBuf, DsError> {
+    pub fn to_local_path(&self) -> Result<PathBuf, UPathError> {
         match self {
             Self::Local(path) => Ok(path.to_path_buf()),
-            Self::Remote(_) => Err(DsError::failure(format!(
+            Self::Remote(_) => Err(UPathError::failure(format!(
                 "Accessed toLocalPath on RemotePath {self}"
             ))),
-            Self::ZipEntry(..) => Err(DsError::failure(format!(
+            Self::ZipEntry(..) => Err(UPathError::failure(format!(
                 "ZipEntryUPath cannot be accessed as a local path: {self}"
             ))),
         }
     }
 
     /// Scala `toZipEntryUPath`: `(outer, inner)` of a zip entry path.
-    pub fn to_zip_entry(&self) -> Result<(&UPath, &str), DsError> {
+    pub fn to_zip_entry(&self) -> Result<(&UPath, &str), UPathError> {
         match self {
             Self::ZipEntry(outer, inner) => Ok((outer, inner)),
-            Self::Local(_) => Err(DsError::failure(format!(
+            Self::Local(_) => Err(UPathError::failure(format!(
                 "Called toZipEntryUPath on LocalUPath {self}"
             ))),
-            Self::Remote(_) => Err(DsError::failure(format!(
+            Self::Remote(_) => Err(UPathError::failure(format!(
                 "Called toZipEntryUPath on RemotePath {self}"
             ))),
         }
@@ -387,11 +410,17 @@ impl UPath {
     }
 
     /// Scala `toReal` (`toRealPath`, resolving symlinks; the path must exist).
-    pub fn to_real(&self) -> Result<Self, DsError> {
+    pub fn to_real(&self) -> Result<Self, UPathError> {
         match self {
             Self::Local(path) => std::fs::canonicalize(path.to_path_buf())
                 .map(|p| Self::from_local_path(&p))
-                .map_err(DsError::from_exception),
+                .map_err(|e| {
+                    let text = e.to_string();
+                    UPathError {
+                        exception: Some(text.clone()),
+                        message: text,
+                    }
+                }),
             Self::Remote(_) => Ok(self.clone()),
             Self::ZipEntry(outer, inner) => {
                 Ok(Self::ZipEntry(Box::new(outer.to_real()?), inner.clone()))
@@ -514,7 +543,7 @@ impl UPath {
 }
 
 /// Scala `f"Invalid UPath: $f"` for the `tryo` failure (case-class `toString` of `Failure`).
-fn invalid_upath_message(error: &DsError) -> String {
+fn invalid_upath_message(error: &UPathError) -> String {
     let exception = error
         .exception
         .as_ref()
@@ -547,7 +576,7 @@ impl fmt::Display for UPath {
 }
 
 impl std::str::FromStr for UPath {
-    type Err = DsError;
+    type Err = UPathError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::parse(s)
     }
@@ -586,7 +615,7 @@ fn collapse_slashes(value: &str) -> String {
 }
 
 /// Scala `detectAndSplitZipEntryPath` + `splitZipLiteralUnsafe`.
-fn detect_and_split_zip_entry_path(literal: &str) -> Result<Option<(&str, String)>, DsError> {
+fn detect_and_split_zip_entry_path(literal: &str) -> Result<Option<(&str, String)>, UPathError> {
     let with_path_idx = literal.find(ZIP_SEPARATOR_WITH_PATH);
     let is_root_reference = with_path_idx.is_none() && literal.ends_with(ZIP_SEPARATOR_ROOT_ONLY);
     if with_path_idx.is_none() && !is_root_reference {

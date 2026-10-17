@@ -12,6 +12,12 @@ fn element_class_helpers() {
         (3, "|u1")
     );
     let in_range = ElementClass::largest_segment_id_is_in_range;
+    // A negative Long bit pattern is a valid uint64 id only.
+    assert!(in_range(ElementClass::Uint64, Some(-5i64 as u64)));
+    assert!(!in_range(ElementClass::Int64, Some(-5i64 as u64)));
+    assert!(!in_range(ElementClass::Uint32, Some(1 << 32)));
+    assert!(!in_range(ElementClass::Uint24, None));
+    assert!(!in_range(ElementClass::Float, None));
     assert!(in_range(ElementClass::Uint8, Some(255)));
     assert!(!in_range(ElementClass::Uint8, Some(256)));
     assert!(in_range(ElementClass::Int8, Some(127)));

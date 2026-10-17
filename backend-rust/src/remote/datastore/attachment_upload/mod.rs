@@ -11,10 +11,13 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::Value;
+use webknossos_common::{
+    enums::{LayerAttachmentDataformat, LayerAttachmentType},
+    upath::UPath,
+};
 
 use crate::{
     AppState,
-    dataset::lifecycle::{AttachmentDataformat, AttachmentType},
     error::{ApiError, ApiResult},
     extract::{Json, Query},
     remote::datastore::ValidatedDataStore,
@@ -58,7 +61,7 @@ pub fn router() -> Router<AppState> {
 struct LayerAttachment {
     name: String,
     path: String,
-    data_format: AttachmentDataformat,
+    data_format: LayerAttachmentDataformat,
     #[allow(dead_code)]
     credential_id: Option<String>,
 }
@@ -66,7 +69,8 @@ struct LayerAttachment {
 impl LayerAttachment {
     /// The normalized UPath (invalid → 400 Invalid JSON request body).
     fn upath(&self) -> ApiResult<String> {
-        crate::dataset::source::normalize_upath(&self.path)
+        UPath::parse(&self.path)
+            .map(|path| path.to_string())
             .map_err(crate::dataset::source::invalid_body)
     }
 }
@@ -78,7 +82,7 @@ async fn existing_attachment<'e>(
     executor: impl sqlx::PgExecutor<'e>,
     dataset: &str,
     layer: &str,
-    typ: AttachmentType,
+    typ: LayerAttachmentType,
     name: &str,
 ) -> ApiResult<bool> {
     let name = (!typ.is_singleton()).then_some(name);
@@ -95,7 +99,7 @@ async fn existing_attachment<'e>(
     .await?)
 }
 
-fn exists_error(typ: AttachmentType) -> ApiError {
+fn exists_error(typ: LayerAttachmentType) -> ApiError {
     ApiError::bad_request(if typ.is_singleton() {
         crate::msg::dataset::layer::ATTACHMENT_SINGLETON_ALREADY_FILLED
     } else {
@@ -112,7 +116,7 @@ struct AttachmentUploadInfo {
     resumable_upload_info: ResumableUploadInfo,
     dataset_id: ObjectId,
     layer_name: String,
-    attachment_type: AttachmentType,
+    attachment_type: LayerAttachmentType,
     attachment: LayerAttachment,
     overwrite_pending: bool,
 }
@@ -199,7 +203,7 @@ async fn reserve_attachment_upload(
 struct ReportAttachmentUploadParameters {
     dataset_id: ObjectId,
     layer_name: String,
-    attachment_type: AttachmentType,
+    attachment_type: LayerAttachmentType,
     attachment: LayerAttachment,
     #[allow(dead_code)]
     attachment_size_bytes: i64,

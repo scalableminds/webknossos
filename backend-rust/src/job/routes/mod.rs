@@ -28,6 +28,7 @@ use crate::{
     system::application_info::MiscState,
     util::id::{ObjectId, PathObjectId},
 };
+use webknossos_common::geometry::BoundingBox;
 
 const ALREADY_RETRIED: &str = "This job has already been retried once and failed again. This is likely a persistent failure. Please contact an administrator for help.";
 pub(crate) const NOT_ENOUGH_CREDITS: &str =
@@ -945,56 +946,6 @@ pub(crate) fn job_cost_in_milli_credits(
     Ok(cost.max(0))
 }
 
-/// BoundingBox.fromLiteral: `x,y,z,width,height,depth` (Java regex and Integer.parseInt).
-pub(crate) fn parse_bounding_box(text: &str) -> Option<[i32; 6]> {
-    // Java's \s: space, \t, \n, \x0B, \f, \r.
-    fn is_space(c: char) -> bool {
-        matches!(c, ' ' | '\t' | '\n' | '\x0B' | '\x0C' | '\r')
-    }
-    fn number(rest: &mut &str, signed: bool) -> Option<i32> {
-        let negative = signed && rest.starts_with('-');
-        let digits_start = usize::from(negative);
-        let length = rest[digits_start..]
-            .find(|c: char| !c.is_ascii_digit())
-            .unwrap_or(rest.len() - digits_start);
-        if length == 0 {
-            return None;
-        }
-        let (literal, tail) = rest.split_at(digits_start + length);
-        *rest = tail;
-        literal.parse().ok()
-    }
-    fn skip_space(rest: &mut &str) {
-        *rest = rest.trim_start_matches(is_space);
-    }
-    fn comma(rest: &mut &str) -> Option<()> {
-        *rest = rest.strip_prefix(',')?;
-        Some(())
-    }
-    let mut rest = text;
-    let mut values = [0; 6];
-    skip_space(&mut rest);
-    values[0] = number(&mut rest, true)?;
-    comma(&mut rest)?;
-    skip_space(&mut rest);
-    values[1] = number(&mut rest, true)?;
-    comma(&mut rest)?;
-    skip_space(&mut rest);
-    values[2] = number(&mut rest, true)?;
-    skip_space(&mut rest);
-    comma(&mut rest)?;
-    skip_space(&mut rest);
-    values[3] = number(&mut rest, false)?;
-    comma(&mut rest)?;
-    skip_space(&mut rest);
-    values[4] = number(&mut rest, false)?;
-    comma(&mut rest)?;
-    skip_space(&mut rest);
-    values[5] = number(&mut rest, false)?;
-    skip_space(&mut rest);
-    rest.is_empty().then_some(values)
-}
-
 // Query extraction precedes authentication: Play binds route parameters first.
 async fn credit_cost(
     State(state): State<AppState>,
@@ -1002,15 +953,17 @@ async fn credit_cost(
     Query(query): Query<CreditCostQuery>,
     user: AuthUser,
 ) -> ApiResult<Json<Value>> {
-    let bounding_box = parse_bounding_box(&query.bounding_box_in_mag)
+    let bounding_box = BoundingBox::from_literal(&query.bounding_box_in_mag)
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if !is_job_command(&query.command) {
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
-    let volume =
-        i64::from(bounding_box[3]) * i64::from(bounding_box[4]) * i64::from(bounding_box[5]);
-    let cost = job_cost_in_milli_credits(&misc.config().features, &query.command, volume)
-        .map_err(ApiError::bad_request)?;
+    let cost = job_cost_in_milli_credits(
+        &misc.config().features,
+        &query.command,
+        bounding_box.volume(),
+    )
+    .map_err(ApiError::bad_request)?;
     let mut connection = state.pool.acquire().await?;
     let balance = milli_credit_balance(&mut connection, &user.id, &user.organization_id).await?;
     Ok(Json(json!({

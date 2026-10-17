@@ -8,17 +8,17 @@
 use serde::{Serialize, Serializer, ser::SerializeMap};
 use serde_json::{Map, Value};
 
-use super::enums::{
+use crate::enums::{
     CoordinateTransformationType, DataFormat, ElementClass, LayerAttachmentDataformat,
     LayerAttachmentType, LayerCategory, LengthUnit,
 };
-use super::geometry::{BoundingBox, Vec3Double, Vec3Int};
-use super::json::{
+use crate::geometry::{BoundingBox, Vec3Double, Vec3Int};
+use crate::json::{
     Fields, JsError, JsResult, PlayValue, deserialize_via_from_json, lookup, lookup_opt,
     play_f64_number, read_any, read_f64, read_i32, read_list, read_object, read_string,
     read_string_set,
 };
-use super::upath::UPath;
+use crate::upath::{UPath, UPathError};
 
 /// Scala `LayerViewConfiguration` / `DatasetViewConfiguration` (`Map[String, JsValue]`).
 pub type ViewConfiguration = Map<String, Value>;
@@ -156,6 +156,59 @@ pub struct AxisOrder {
 }
 
 impl AxisOrder {
+    pub const fn new(x: i32, y: i32, z: Option<i32>, c: Option<i32>) -> Self {
+        Self { x, y, z, c }
+    }
+
+    /// Scala `AxisOrder.xyz(x, y, z)`.
+    pub const fn xyz_at(x: i32, y: i32, z: i32) -> Self {
+        Self::new(x, y, Some(z), None)
+    }
+
+    /// Scala `AxisOrder.xyz`.
+    pub const XYZ: AxisOrder = AxisOrder::xyz_at(0, 1, 2);
+
+    pub fn has_z_axis(&self) -> bool {
+        self.z.is_some()
+    }
+
+    /// Scala `zWithFallback`: z is appended after the last axis for 2-d data.
+    pub fn z_with_fallback(&self) -> i32 {
+        match self.z {
+            Some(z) => z,
+            None => self.x.max(self.y).max(self.c.unwrap_or(-1)) + 1,
+        }
+    }
+
+    /// Scala `length`.
+    pub fn length(&self) -> usize {
+        2 + 1 + usize::from(self.c.is_some())
+    }
+
+    /// Scala `asZyxFromRank`: the last three dimensions are z,y,x (OME-NGFF).
+    pub fn as_zyx_from_rank(rank: i32) -> Self {
+        Self::xyz_at(rank - 1, rank - 2, rank - 3)
+    }
+
+    /// Scala `asCxyzFromRank`: the last three dimensions are x,y,z, preceded by c for rank > 3.
+    pub fn as_cxyz_from_rank(rank: i32) -> Self {
+        if rank == 3 {
+            Self::xyz_at(rank - 3, rank - 2, rank - 1)
+        } else {
+            Self::new(rank - 3, rank - 2, Some(rank - 1), Some(rank - 4))
+        }
+    }
+
+    /// Scala `AxisOrder.cxyz`.
+    pub fn cxyz() -> Self {
+        Self::as_cxyz_from_rank(4)
+    }
+
+    /// Scala `cAdditionalxyz`: additional coordinates between c and xyz.
+    pub fn c_additional_xyz(rank: i32) -> Self {
+        Self::new(rank - 3, rank - 2, Some(rank - 1), Some(0))
+    }
+
     pub fn from_json(json: &Value) -> JsResult<Self> {
         let mut fields = Fields::new(json);
         let x = fields.req("x", read_i32);
@@ -363,13 +416,19 @@ impl AdditionalAxis {
         })
     }
 
-    /// Scala `AdditionalAxis.merge`: per name, min lower / max upper bound, first index wins.
-    /// Output order is first-seen order (Scala iterates a hash map, i.e. unspecified order).
+    /// Scala `AdditionalAxis.merge`: per name the first-seen index and the min lower / max upper
+    /// bound. The result order reproduces iteration of Scala 2.13's `mutable.HashMap[String, _]`
+    /// (buckets by `h ^ (h >>> 16)` masked to the table size, ascending signed hash within a
+    /// bucket, growth to double size whenever `size + 1 >= 0.75 * capacity` before each update).
     pub fn merge<'a>(
         axes: impl IntoIterator<Item = Option<&'a [AdditionalAxis]>>,
     ) -> Option<Vec<AdditionalAxis>> {
         let mut merged: Vec<AdditionalAxis> = Vec::new();
+        let mut capacity: usize = 16;
         for axis in axes.into_iter().flatten().flatten() {
+            if merged.len() + 1 >= capacity * 3 / 4 {
+                capacity *= 2;
+            }
             let (lower, upper) = (
                 axis.lower_bound().unwrap_or_default(),
                 axis.upper_bound().unwrap_or_default(),
@@ -386,8 +445,28 @@ impl AdditionalAxis {
                 }),
             }
         }
-        (!merged.is_empty()).then_some(merged)
+        if merged.is_empty() {
+            return None;
+        }
+        let improved = |name: &str| {
+            let h = java_string_hash(name);
+            h ^ ((h as u32) >> 16) as i32
+        };
+        let mask = (capacity - 1) as i32;
+        // Stable sort keeps insertion order for equal hashes, like the bucket lists.
+        merged.sort_by_key(|axis| {
+            let hash = improved(&axis.name);
+            (hash & mask, hash)
+        });
+        Some(merged)
     }
+}
+
+/// Java `String.hashCode` (UTF-16 code units, wrapping).
+fn java_string_hash(value: &str) -> i32 {
+    value.encode_utf16().fold(0i32, |h, unit| {
+        h.wrapping_mul(31).wrapping_add(i32::from(unit))
+    })
 }
 
 /// Scala `Msg.Dataset.additionalCoordinatesDiffer`.
@@ -516,7 +595,7 @@ impl LayerAttachment {
     }
 
     /// Scala `localPath` (fails for remote and zip paths).
-    pub fn local_path(&self) -> Result<std::path::PathBuf, crate::error::DsError> {
+    pub fn local_path(&self) -> Result<std::path::PathBuf, UPathError> {
         self.path.to_local_path()
     }
 
@@ -1270,14 +1349,14 @@ impl UsableDataSource {
     /// The `datasource-properties.json` content written by Scala `JsonHelper.writeToFile`
     /// (Play `Json.prettyPrint`, Jackson style, no trailing newline), in Play's key order.
     pub fn to_properties_file_content(&self) -> String {
-        super::json::pretty_print_serialize(&OnDiskDataSource(self))
+        crate::json::pretty_print_serialize(&OnDiskDataSource(self))
     }
 
     /// Scala `DataSourceMirrorService.writeMirrorProperties`: regular `Json.toJson` with all
     /// `resolutions` keys removed, pretty-printed (no `largestSegmentId` downgrade).
     pub fn to_mirror_properties_file_content(&self) -> String {
         let value = serde_json::to_value(self).unwrap_or(Value::Null);
-        super::json::pretty_print_serialize(&remove_key_recursively(value, "resolutions"))
+        crate::json::pretty_print_serialize(&remove_key_recursively(value, "resolutions"))
     }
 }
 
@@ -1301,7 +1380,7 @@ fn remove_key_recursively(value: Value, key: &str) -> Value {
 }
 
 /// Scala `patchKeyRecursively(_, "largestSegmentId")(UnsignedLong.downgradeToPlainNumberIfSafe)`.
-pub(crate) fn patch_largest_segment_id(value: Value) -> Value {
+pub fn patch_largest_segment_id(value: Value) -> Value {
     match value {
         Value::Object(object) => Value::Object(
             object
@@ -1534,3 +1613,6 @@ deserialize_via_from_json!(
     UnusableDataSource,
     DataSource,
 );
+
+#[cfg(test)]
+mod tests;

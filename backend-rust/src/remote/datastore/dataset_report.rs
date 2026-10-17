@@ -19,7 +19,7 @@ use serde_json::{Map, Value, json};
 use crate::{
     AppState,
     auth::AuthUser,
-    dataset::source::{AnyDataSource, DataSource},
+    dataset::source::{DataSource, UsableDataSource, VoxelSize},
     dataset::thumbnails::java_double_string,
     dataset::upload_paths::{LinkedLayer, resolve_linked_layers},
     error::{ApiError, ApiResult},
@@ -116,14 +116,14 @@ async fn report(
     let data_source = body
         .data_source_opt
         .as_ref()
-        .map(crate::dataset::source::parse_data_source)
+        .map(UsableDataSource::from_json)
         .transpose()
         .map_err(crate::dataset::source::invalid_body)
         .map_err(RunError::Api)?;
     let voxel_size = body
         .voxel_size
         .as_ref()
-        .map(crate::dataset::source::voxel_size)
+        .map(VoxelSize::from_json)
         .transpose()
         .map_err(crate::dataset::source::invalid_body)
         .map_err(RunError::Api)?;
@@ -206,11 +206,11 @@ async fn track_new_dataset(
 async fn add_layers_to_link(
     state: &AppState,
     user: &AuthUser,
-    mut data_source: DataSource,
+    mut data_source: UsableDataSource,
     layers_to_link: &[LinkedLayer],
-) -> ApiResult<DataSource> {
+) -> ApiResult<UsableDataSource> {
     let mut layers = resolve_linked_layers(state, user, layers_to_link).await?;
-    layers.append(&mut data_source.layers);
+    layers.append(&mut data_source.data_layers);
     let mut names: Vec<&str> = layers.iter().map(|layer| layer.name.as_str()).collect();
     names.sort_unstable();
     if names.windows(2).any(|pair| pair[0] == pair[1]) {
@@ -218,7 +218,7 @@ async fn add_layers_to_link(
             crate::msg::dataset::layer::DUPLICATE_NAMES,
         ));
     }
-    data_source.layers = layers;
+    data_source.data_layers = layers;
     Ok(data_source)
 }
 
@@ -227,10 +227,10 @@ async fn add_layers_to_link(
 async fn update_data_source(
     pool: &sqlx::PgPool,
     dataset: &ReportedDataset,
-    data_source: DataSource,
+    data_source: UsableDataSource,
 ) -> ApiResult<()> {
-    let source = AnyDataSource::Usable(data_source);
-    let hash = source.inbox_source_hash();
+    let source = DataSource::Usable(data_source);
+    let hash = crate::dataset::source::inbox_source_hash(&source);
     let mut transaction = pool.begin().await?;
     crate::remote::datastore::write_data_source(
         &mut transaction,
@@ -271,14 +271,23 @@ async fn submit_conversion(
     user: &AuthUser,
     dataset: &ReportedDataset,
     updated: &ReportedDataset,
-    voxel_size: Option<([f64; 3], String)>,
+    voxel_size: Option<VoxelSize>,
 ) -> RunResult<()> {
-    let (factor, unit) =
+    let VoxelSize { factor, unit } =
         voxel_size.ok_or_else(|| RunError::Api(ApiError::bad_request(MISSING_VOXEL_SIZE)))?;
     let base_directory = organization_base_directory(&state.pool, clients, dataset)
         .await
         .map_err(RunError::Api)?;
-    submit_convert_to_wkw_job(state, misc, user, updated, factor, &unit, base_directory).await
+    submit_convert_to_wkw_job(
+        state,
+        misc,
+        user,
+        updated,
+        factor.to_array(),
+        unit.as_str(),
+        base_directory,
+    )
+    .await
 }
 
 /// DatasetService.clientFor(dataset)(GlobalAccessContext)

@@ -1,44 +1,8 @@
 use super::*;
 use chrono::TimeZone;
 
-fn bbox(values: [i32; 6]) -> BoundingBox {
-    let [x, y, z, width, height, depth] = values;
-    BoundingBox {
-        x,
-        y,
-        z,
-        width,
-        height,
-        depth,
-    }
-}
-
 #[test]
-fn bounding_box_division_and_union_follow_scala() {
-    assert_eq!(
-        bbox([5, -5, 7, 10, 3, 1]).divide([2, 2, 4]),
-        Some(bbox([2, -2, 1, 5, 2, 1]))
-    );
-    assert_eq!(bbox([0, 0, 0, 1, 1, 1]).divide([0, 1, 1]), None);
-    assert_eq!(
-        bbox([0, 0, 0, 10, 10, 10]).union(&bbox([5, -5, 2, 10, 2, 2])),
-        bbox([0, -5, 0, 15, 15, 10])
-    );
-    assert_eq!(bbox([1, 2, 3, 4, 5, 6]).to_literal(), "1,2,3,4,5,6");
-    assert_eq!(
-        bbox([0, 0, 0, i32::MAX, i32::MAX, i32::MAX]).volume(),
-        4_611_686_024_869_838_847
-    );
-}
-
-#[test]
-fn mags_and_play_booleans() {
-    assert_eq!(parse_mag("2"), Some([2, 2, 2]));
-    assert_eq!(parse_mag("-1"), Some([-1, -1, -1]));
-    assert_eq!(parse_mag("1-2-4"), Some([1, 2, 4]));
-    assert_eq!(parse_mag("1-2"), None);
-    assert_eq!(parse_mag("1-2-4-8"), None);
-    assert_eq!(parse_mag("1-+2-4"), None);
+fn play_booleans() {
     assert_eq!(parse_play_boolean(" true "), Some(true));
     assert_eq!(parse_play_boolean("0"), Some(false));
     assert_eq!(parse_play_boolean("2"), Some(true));

@@ -21,11 +21,12 @@ use webknossos_backend::{
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     stores::client::{ServiceClientConfig, ServiceError},
     stores::tracing_client::{
-        BoundingBox, MergeRequest, NamedBoundingBox, TracingStoreClient, TracingStoreError,
+        MergeRequest, NamedBoundingBox, TracingStoreClient, TracingStoreError,
         decode_annotation_proto, first_tracing_store_url,
     },
     util::id::ObjectId,
 };
+use webknossos_common::geometry::{BoundingBox, Vec3Int};
 
 const TOKEN: &str = "rpc-secret-for-tracingstore-tests";
 
@@ -184,36 +185,21 @@ async fn merge_posts_exact_query_and_json_body_and_returns_annotation_proto() {
                 name: Some("Task bounding box of instance a of task b".to_owned()),
                 is_visible: None,
                 color: None,
-                bounding_box: BoundingBox {
-                    top_left: [-1, 2, 3],
-                    width: 10,
-                    height: 20,
-                    depth: 30,
-                },
+                bounding_box: BoundingBox::new(Vec3Int::new(-1, 2, 3), 10, 20, 30),
             },
             NamedBoundingBox {
                 id: 4,
                 name: None,
                 is_visible: Some(false),
                 color: Some([0.5, 0.25, 1.0, 1.0]),
-                bounding_box: BoundingBox {
-                    top_left: [0, 0, 0],
-                    width: 1,
-                    height: 1,
-                    depth: 1,
-                },
+                bounding_box: BoundingBox::new(Vec3Int::new(0, 0, 0), 1, 1, 1),
             },
             NamedBoundingBox {
                 id: 5,
                 name: None,
                 is_visible: Some(true),
                 color: Some([0.5, 0.25, 1.0, 0.5]),
-                bounding_box: BoundingBox {
-                    top_left: [0, 0, 0],
-                    width: 0,
-                    height: 0,
-                    depth: 0,
-                },
+                bounding_box: BoundingBox::new(Vec3Int::new(0, 0, 0), 0, 0, 0),
             },
         ],
         new_annotation_id: ids[3].clone(),

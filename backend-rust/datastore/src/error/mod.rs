@@ -131,6 +131,15 @@ impl std::fmt::Display for DsError {
 
 impl std::error::Error for DsError {}
 
+impl From<webknossos_common::upath::UPathError> for DsError {
+    fn from(error: webknossos_common::upath::UPathError) -> Self {
+        Self {
+            exception: error.exception,
+            ..Self::failure(error.message)
+        }
+    }
+}
+
 impl IntoResponse for DsError {
     fn into_response(self) -> Response {
         if self.binding_error {

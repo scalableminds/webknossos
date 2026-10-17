@@ -168,6 +168,14 @@ impl<'a> Fields<'a> {
         }
     }
 
+    /// Readers from Play's `Json.format` macro (`derives JsonAutoFormat`) reject a non-object
+    /// root before reading any field (`obj: error.expected.jsobject`); hand-written field
+    /// combinators ([`Fields::new`]) report each field as missing instead.
+    pub fn object(json: &'a Value) -> JsResult<Self> {
+        read_object_ref(json)?;
+        Ok(Self::new(json))
+    }
+
     fn record<T>(&mut self, result: JsResult<T>) -> JsResult<T> {
         if let Err(error) = &result {
             self.errors.merge(error.clone());
@@ -312,6 +320,13 @@ pub fn read_object(json: &Value) -> JsResult<Map<String, Value>> {
     }
 }
 
+fn read_object_ref(json: &Value) -> JsResult<&Map<String, Value>> {
+    match json {
+        Value::Object(object) => Ok(object),
+        _ => Err(JsError::new("error.expected.jsobject")),
+    }
+}
+
 /// Play `Reads[JsValue]` (any value).
 pub fn read_any(json: &Value) -> JsResult<Value> {
     Ok(json.clone())
@@ -321,23 +336,82 @@ pub fn read_any(json: &Value) -> JsResult<Value> {
 /// stripped: whole numbers below 1e20 are written as integers (`28.0` → `28`), everything else
 /// as the shortest round-tripping decimal.
 pub fn play_f64_number(value: f64) -> Option<Number> {
-    if value.is_finite() && value.fract() == 0.0 && value.abs() < 1e20 {
-        if value >= i64::MIN as f64 && value < i64::MAX as f64 {
-            return Some(Number::from(value as i64));
-        }
-        if value >= 0.0 && value < u64::MAX as f64 {
-            return Some(Number::from(value as u64));
-        }
+    match play_whole_number(value) {
+        Some(whole) => i64::try_from(whole)
+            .map(Number::from)
+            .or_else(|_| u64::try_from(whole).map(Number::from))
+            .ok()
+            .or_else(|| Number::from_f64(value)),
+        None => Number::from_f64(value),
     }
-    Number::from_f64(value)
+}
+
+/// The integer Play prints for a whole double below 1e20. `BigDecimal(d)` starts from Java's
+/// shortest `Double.toString` digits, so above 2^53 the digits are padded with zeros instead of
+/// spelling out the binary value (`2^64` → `18446744073709552000`, not `…551616`).
+fn play_whole_number(value: f64) -> Option<i128> {
+    if !value.is_finite() || value.fract() != 0.0 || value.abs() >= 1e20 {
+        return None;
+    }
+    if value.abs() < 9_007_199_254_740_992.0 {
+        return Some(value as i128);
+    }
+    // `{:e}` is the shortest round-trip representation, like Java 19+ `Double.toString`.
+    let formatted = format!("{:e}", value.abs());
+    let (mantissa, exponent) = formatted.split_once('e')?;
+    let digits: String = mantissa.chars().filter(|c| *c != '.').collect();
+    let exponent: usize = exponent.parse().ok()?;
+    let padded = format!("{digits:0<width$}", width = exponent + 1);
+    let magnitude: i128 = padded.parse().ok()?;
+    Some(if value < 0.0 { -magnitude } else { magnitude })
+}
+
+/// Play `Writes[Float]` → `BigDecimal.decimal(f)` (via `Float.toString`, so `0.1f` stays `0.1`
+/// instead of widening to `0.10000000149011612`), then the double rules above.
+pub fn play_f32_number(value: f32) -> Option<Number> {
+    // Shortest f32 digits; any such decimal round-trips through f64 unchanged.
+    play_f64_number(value.to_string().parse().ok()?)
+}
+
+/// [`play_f64_number`] as a JSON value (`null` for non-finite values).
+pub fn play_f64_value(value: f64) -> Value {
+    play_f64_number(value).map_or(Value::Null, Value::Number)
+}
+
+/// [`play_f32_number`] as a JSON value (`null` for non-finite values).
+pub fn play_f32_value(value: f32) -> Value {
+    play_f32_number(value).map_or(Value::Null, Value::Number)
 }
 
 /// serde `serialize_with` helper for Play-formatted doubles.
 pub fn play_f64<S: Serializer>(value: &f64, serializer: S) -> Result<S::Ok, S::Error> {
-    match play_f64_number(*value) {
+    // Above u64 (up to 1e20) a `Number` cannot hold Play's integer; the serializer can.
+    if let Some(whole) = play_whole_number(*value) {
+        return match i64::try_from(whole) {
+            Ok(small) => serializer.serialize_i64(small),
+            Err(_) => serializer.serialize_i128(whole),
+        };
+    }
+    match Number::from_f64(*value) {
         Some(number) => number.serialize(serializer),
         None => serializer.serialize_unit(),
     }
+}
+
+/// serde `serialize_with` helper for a `Seq[Double]` written by Play.
+pub fn play_f64_seq<S: Serializer>(values: &[f64], serializer: S) -> Result<S::Ok, S::Error> {
+    use serde::ser::SerializeSeq;
+    struct Element(f64);
+    impl Serialize for Element {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            play_f64(&self.0, serializer)
+        }
+    }
+    let mut seq = serializer.serialize_seq(Some(values.len()))?;
+    for value in values {
+        seq.serialize_element(&Element(*value))?;
+    }
+    seq.end()
 }
 
 /// Serializes a [`Value`] the way Play would re-render it after parsing: whole floats lose their
@@ -490,21 +564,23 @@ impl serde_json::ser::Formatter for JacksonPrettyFormatter {
 }
 
 /// Implements [`serde::Deserialize`] through the type's Play-compatible `from_json` reader.
+#[macro_export]
 macro_rules! deserialize_via_from_json {
     ($($ty:ty),* $(,)?) => {
         $(
-            impl<'de> serde::Deserialize<'de> for $ty {
-                fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-                    let value = serde_json::Value::deserialize(deserializer)?;
-                    <$ty>::from_json(&value).map_err(serde::de::Error::custom)
+            impl<'de> $crate::__serde::Deserialize<'de> for $ty {
+                fn deserialize<D: $crate::__serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+                    let value = <$crate::__serde_json::Value as $crate::__serde::Deserialize>::deserialize(deserializer)?;
+                    <$ty>::from_json(&value).map_err($crate::__serde::de::Error::custom)
                 }
             }
         )*
     };
 }
-pub(crate) use deserialize_via_from_json;
+pub use crate::deserialize_via_from_json;
 
 /// Defines a Scala `Enumeration`-like string enum with Play `Json.formatEnum` semantics.
+#[macro_export]
 macro_rules! string_enum {
     ($(#[$meta:meta])* $name:ident { $($variant:ident => $text:literal),* $(,)? }) => {
         $(#[$meta])*
@@ -532,12 +608,12 @@ macro_rules! string_enum {
             }
 
             /// Play `Json.formatEnum` reads.
-            pub fn from_json(json: &serde_json::Value) -> $crate::models::json::JsResult<Self> {
+            pub fn from_json(json: &$crate::__serde_json::Value) -> $crate::json::JsResult<Self> {
                 match json {
-                    serde_json::Value::String(s) => Self::from_name(s).ok_or_else(|| {
-                        $crate::models::json::JsError::new("error.expected.validenumvalue")
+                    $crate::__serde_json::Value::String(s) => Self::from_name(s).ok_or_else(|| {
+                        $crate::json::JsError::new("error.expected.validenumvalue")
                     }),
-                    _ => Err($crate::models::json::JsError::new("error.expected.enumstring")),
+                    _ => Err($crate::json::JsError::new("error.expected.enumstring")),
                 }
             }
         }
@@ -548,16 +624,16 @@ macro_rules! string_enum {
             }
         }
 
-        impl serde::Serialize for $name {
-            fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        impl $crate::__serde::Serialize for $name {
+            fn serialize<S: $crate::__serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
                 serializer.serialize_str(self.as_str())
             }
         }
 
-        $crate::models::json::deserialize_via_from_json!($name);
+        $crate::json::deserialize_via_from_json!($name);
     };
 }
-pub(crate) use string_enum;
+pub use crate::string_enum;
 
 #[cfg(test)]
 mod tests;

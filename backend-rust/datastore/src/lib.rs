@@ -42,6 +42,7 @@ use crate::{
     error::{DsError, DsResult},
     versioning::RequestedApiVersion,
 };
+use webknossos_common::text::escape_html;
 
 /// Shared state of the datastore service.
 #[derive(Clone)]
@@ -547,22 +548,6 @@ function fetchHealth() {{
 </html>
 "#
     )
-}
-
-/// Twirl `HtmlFormat.escape`.
-fn escape_html(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    for c in value.chars() {
-        match c {
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&#x27;"),
-            '&' => out.push_str("&amp;"),
-            other => out.push(other),
-        }
-    }
-    out
 }
 
 #[cfg(test)]

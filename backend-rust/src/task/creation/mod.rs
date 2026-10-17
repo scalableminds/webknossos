@@ -59,7 +59,7 @@ use crate::{
     extract::extension,
     proto::{
         AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto, BoundingBoxProto,
-        ColorProto, Vec3DoubleProto, Vec3IntProto,
+        ColorProto,
         datastore::{
             BranchPoint, Node, SkeletonTracing, SkeletonTracingOpt, SkeletonTracingsWithIds,
             StringOpt, Tree, VolumeTracing,
@@ -68,7 +68,10 @@ use crate::{
     stores::tracing_client::{SaveMultipleResult, TracingStoreClient, VolumeSaveDataSource},
     util::id::ObjectId,
     util::instant::now_millis,
-    util::java_format::java_double,
+};
+use webknossos_common::{
+    geometry::{BoundingBox, Vec3Int},
+    java_format::java_double,
 };
 
 // ---------------------------------------------------------------------------
@@ -102,38 +105,9 @@ pub(crate) struct Experience {
     pub value: i32,
 }
 
-/// `BoundingBox` JSON `{topLeft: [x,y,z], width, height, depth}`.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct BoundingBox {
-    pub top_left: [i32; 3],
-    pub width: i32,
-    pub height: i32,
-    pub depth: i32,
-}
-
-impl BoundingBox {
-    /// BoundingBox.isEmpty.
-    pub(crate) fn is_empty(&self) -> bool {
-        self.width <= 0 || self.height <= 0 || self.depth <= 0
-    }
-    /// BoundingBox.toLiteral.
-    fn literal(&self) -> String {
-        let [x, y, z] = self.top_left;
-        format!("{x},{y},{z},{},{},{}", self.width, self.height, self.depth)
-    }
-    fn to_proto(self) -> BoundingBoxProto {
-        BoundingBoxProto {
-            top_left: vec3_int(self.top_left),
-            width: self.width,
-            height: self.height,
-            depth: self.depth,
-        }
-    }
-    /// `boundingBox.flatMap(box => if (box.isEmpty) None else Some(box))`.
-    fn non_empty(this: Option<Self>) -> Option<Self> {
-        this.filter(|b| !b.is_empty())
-    }
+/// `boundingBox.flatMap(box => if (box.isEmpty) None else Some(box))`.
+fn non_empty(bounding_box: Option<BoundingBox>) -> Option<BoundingBox> {
+    bounding_box.filter(|b| !b.is_empty())
 }
 
 /// `BaseAnnotation(baseId, skeletonId, volumeId)`.
@@ -332,13 +306,6 @@ impl<S: Send + Sync> FromRequestParts<S> for CreationServices {
 // Tracing bases
 // ---------------------------------------------------------------------------
 
-fn vec3_int([x, y, z]: [i32; 3]) -> Vec3IntProto {
-    Vec3IntProto { x, y, z }
-}
-fn vec3_double([x, y, z]: [f64; 3]) -> Vec3DoubleProto {
-    Vec3DoubleProto { x, y, z }
-}
-
 /// SkeletonTracingDefaults.zoomLevel.
 const SKELETON_ZOOM_LEVEL: f64 = 2.0;
 
@@ -352,8 +319,8 @@ pub(crate) fn skeleton_tracing_base(
     let now = Utc::now().timestamp_millis();
     let node = Node {
         id: 1,
-        position: vec3_int(start_position),
-        rotation: vec3_double(start_rotation),
+        position: start_position.into(),
+        rotation: start_rotation.into(),
         radius: 1.0,
         viewport: 1,
         mag: 1,
@@ -383,10 +350,10 @@ pub(crate) fn skeleton_tracing_base(
         dataset_name: "unused".into(),
         trees: vec![tree],
         created_timestamp: now,
-        bounding_box: BoundingBox::non_empty(bounding_box).map(BoundingBox::to_proto),
+        bounding_box: non_empty(bounding_box).map(BoundingBoxProto::from),
         active_node_id: Some(1),
-        edit_position: vec3_int(start_position),
-        edit_rotation: vec3_double(start_rotation),
+        edit_position: start_position.into(),
+        edit_rotation: start_rotation.into(),
         zoom_level: SKELETON_ZOOM_LEVEL,
         version: 0,
         ..Default::default()
@@ -434,11 +401,11 @@ pub(crate) async fn volume_tracing_base(
     let mut tracing = plan
         .build(false, Utc::now().timestamp_millis())
         .map_err(ProviderError::from)?;
-    if let Some(bounding_box) = BoundingBox::non_empty(bounding_box) {
-        tracing.bounding_box = bounding_box.to_proto();
+    if let Some(bounding_box) = non_empty(bounding_box) {
+        tracing.bounding_box = bounding_box.into();
     }
-    tracing.edit_position = vec3_int(start_position);
-    tracing.edit_rotation = vec3_double(start_rotation);
+    tracing.edit_position = start_position.into();
+    tracing.edit_rotation = start_rotation.into();
     Ok(tracing)
 }
 
@@ -447,9 +414,6 @@ pub(crate) async fn volume_tracing_base(
 // the plain volume save inside TracingStoreClient)
 // ---------------------------------------------------------------------------
 
-fn vec3_int_literal([x, y, z]: [i32; 3]) -> String {
-    format!("{x},{y},{z}")
-}
 fn vec3_double_literal([x, y, z]: [f64; 3]) -> String {
     format!("{},{},{}", java_double(x), java_double(y), java_double(z))
 }
@@ -473,7 +437,10 @@ impl DuplicateTracing<'_> {
             ("newTracingId", self.new_tracing_id.to_owned()),
             ("ownerId", self.owner_id.to_owned()),
             ("requestingUserId", self.requesting_user_id.to_owned()),
-            ("editPosition", vec3_int_literal(self.edit_position)),
+            (
+                "editPosition",
+                Vec3Int::from(self.edit_position).to_uri_literal(),
+            ),
             ("editRotation", vec3_double_literal(self.edit_rotation)),
         ]
     }
@@ -487,7 +454,7 @@ async fn duplicate_skeleton_tracing(
     bounding_box: Option<BoundingBox>,
 ) -> Result<(), ProviderError> {
     let mut query = request.query();
-    query.extend(bounding_box.map(|b| ("boundingBox", b.literal())));
+    query.extend(bounding_box.map(|b| ("boundingBox", b.to_literal())));
     tracing_store
         .long_clients()
         .request(
@@ -1033,7 +1000,7 @@ async fn create_one(
         let task_id = ObjectId::new();
         let created = now_millis();
         let domain = params.needed_experience.domain.trim();
-        let bbox = BoundingBox::non_empty(params.bounding_box);
+        let bbox = non_empty(params.bounding_box);
         let mut tx = pool.begin().await?;
         sqlx::query(
             "INSERT INTO webknossos.tasks(_id,_project,_script,_taskType,neededExperience_domain,neededExperience_value,
@@ -1049,9 +1016,9 @@ async fn create_one(
         .bind(domain)
         .bind(params.needed_experience.value)
         .bind(i64::from(params.pending_instances))
-        .bind(bbox.map(|b| f64::from(b.top_left[0])))
-        .bind(bbox.map(|b| f64::from(b.top_left[1])))
-        .bind(bbox.map(|b| f64::from(b.top_left[2])))
+        .bind(bbox.map(|b| f64::from(b.top_left.x)))
+        .bind(bbox.map(|b| f64::from(b.top_left.y)))
+        .bind(bbox.map(|b| f64::from(b.top_left.z)))
         .bind(bbox.map(|b| f64::from(b.width)))
         .bind(bbox.map(|b| f64::from(b.height)))
         .bind(bbox.map(|b| f64::from(b.depth)))

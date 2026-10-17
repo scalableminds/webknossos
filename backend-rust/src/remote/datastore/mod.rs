@@ -37,10 +37,14 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
+use webknossos_common::{
+    json::read_list,
+    source_paths::{DataSourcePathInfo, DataSourceWithRootPathInfo, RealPathInfo},
+};
 
 use crate::{
     AppState,
-    dataset::source::AnyDataSource,
+    dataset::source::DataSource,
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
     stores::client::ServiceClients,
@@ -178,36 +182,8 @@ async fn status_update(
 
 // ---------------------------------------------------------------- reports
 
-/// DataSourceWithRootPathInfo.
-struct ReportedSource {
-    source: AnyDataSource,
-    root_path: Option<String>,
-    root_real_path: Option<String>,
-}
-
-fn optional_string(value: &Value, key: &str) -> ApiResult<Option<String>> {
-    match value.get(key) {
-        None | Some(Value::Null) => Ok(None),
-        Some(Value::String(s)) => Ok(Some(s.clone())),
-        Some(_) => Err(invalid_body()),
-    }
-}
-
-fn parse_reported(value: &Value) -> ApiResult<ReportedSource> {
-    if !value.is_object() {
-        return Err(invalid_body());
-    }
-    let source = value
-        .get("dataSource")
-        .ok_or_else(invalid_body)
-        .and_then(|s| {
-            crate::dataset::source::parse_any_data_source(s).map_err(|_| invalid_body())
-        })?;
-    Ok(ReportedSource {
-        source,
-        root_path: optional_string(value, "rootPath")?,
-        root_real_path: optional_string(value, "rootRealPath")?,
-    })
+fn parse_reported(value: &Value) -> ApiResult<DataSourceWithRootPathInfo> {
+    DataSourceWithRootPathInfo::from_json(value).map_err(|_| invalid_body())
 }
 
 /// updateOne: a single data source; root path info None never overwrites.
@@ -217,10 +193,9 @@ async fn update_one(
     ValidatedDataStore(store): ValidatedDataStore,
     Json(body): Json<Value>,
 ) -> ApiResult<StatusCode> {
-    let source =
-        crate::dataset::source::parse_any_data_source(&body).map_err(|_| invalid_body())?;
-    let reported = vec![ReportedSource {
-        source,
+    let data_source = DataSource::from_json(&body).map_err(|_| invalid_body())?;
+    let reported = vec![DataSourceWithRootPathInfo {
+        data_source,
         root_path: None,
         root_real_path: None,
     }];
@@ -256,8 +231,8 @@ async fn update_all(
     tracing::info!(
         datastore = %store.name,
         "Received dataset list from datastore {label}: {} active, {} inactive",
-        reported.iter().filter(|r| r.source.is_usable()).count(),
-        reported.iter().filter(|r| !r.source.is_usable()).count(),
+        reported.iter().filter(|r| r.data_source.is_usable()).count(),
+        reported.iter().filter(|r| !r.data_source.is_usable()).count(),
     );
     let started = std::time::Instant::now();
     run_detached(
@@ -284,7 +259,7 @@ async fn run_detached(
     state: AppState,
     clients: ServiceClients,
     store: DataStoreRecord,
-    reported: Vec<ReportedSource>,
+    reported: Vec<DataSourceWithRootPathInfo>,
     deactivate_unreported: Option<Option<String>>,
 ) -> ApiResult<()> {
     tokio::spawn(async move {
@@ -319,13 +294,13 @@ async fn apply_report(
     pool: &sqlx::PgPool,
     clients: &ServiceClients,
     store: &DataStoreRecord,
-    reported: Vec<ReportedSource>,
+    reported: Vec<DataSourceWithRootPathInfo>,
     deactivate_unreported: Option<Option<String>>,
 ) -> ApiResult<()> {
-    let mut by_organization: BTreeMap<String, Vec<ReportedSource>> = BTreeMap::new();
+    let mut by_organization: BTreeMap<String, Vec<DataSourceWithRootPathInfo>> = BTreeMap::new();
     for entry in reported {
         by_organization
-            .entry(entry.source.organization().to_owned())
+            .entry(entry.data_source.id().organization_id.clone())
             .or_default()
             .push(entry);
     }
@@ -358,7 +333,10 @@ async fn apply_report(
             );
             continue;
         }
-        let names: Vec<&str> = entries.iter().map(|e| e.source.directory_name()).collect();
+        let names: Vec<&str> = entries
+            .iter()
+            .map(|e| e.data_source.id().directory_name.as_str())
+            .collect();
         let found: Vec<FoundDataset> = sqlx::query_as(
             r#"SELECT _id AS id, directoryName AS directory_name, _dataStore AS data_store,
                  isVirtual AS is_virtual, inboxSourceHash AS inbox_source_hash, rootPath AS root_path,
@@ -378,8 +356,8 @@ async fn apply_report(
                 .or_insert(dataset);
         }
         for entry in &entries {
-            let hash = entry.source.inbox_source_hash();
-            match by_name.get(entry.source.directory_name()) {
+            let hash = crate::dataset::source::inbox_source_hash(&entry.data_source);
+            match by_name.get(entry.data_source.id().directory_name.as_str()) {
                 // Virtual datasets are not expected on the datastore's disk.
                 Some(found) if found.is_virtual => existing_ids.push(found.id.clone()),
                 Some(found) if found.data_store == store.name => {
@@ -454,7 +432,7 @@ async fn replace_data_source(
     id: &str,
     store: &DataStoreRecord,
     hash: i32,
-    entry: &ReportedSource,
+    entry: &DataSourceWithRootPathInfo,
 ) -> ApiResult<()> {
     sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE _dataset = $1")
         .bind(id)
@@ -471,7 +449,7 @@ async fn replace_data_source(
         id,
         &store.name,
         hash,
-        &entry.source,
+        &entry.data_source,
         entry.root_path.as_deref(),
         entry.root_real_path.as_deref(),
     )
@@ -484,18 +462,23 @@ pub(crate) async fn write_data_source(
     id: &str,
     store_name: &str,
     hash: i32,
-    source: &AnyDataSource,
+    source: &DataSource,
     root_path: Option<&str>,
     root_real_path: Option<&str>,
 ) -> ApiResult<()> {
     let organization: Option<String> =
         sqlx::query_scalar("SELECT _id FROM webknossos.organizations_ WHERE _id = $1")
-            .bind(source.organization())
+            .bind(&source.id().organization_id)
             .fetch_optional(&mut *connection)
             .await?;
     let organization = organization.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
-    let voxel_size = source.voxel_size();
-    let status: String = source.status().chars().take(1024).collect();
+    let voxel_size = source.voxel_size_opt();
+    let status: String = source
+        .status_opt()
+        .unwrap_or_default()
+        .chars()
+        .take(1024)
+        .collect();
     sqlx::query(
         r#"UPDATE webknossos.datasets SET _dataStore = $2, _organization = $3, inboxSourceHash = $4,
              defaultViewConfiguration = $5, isUsable = $6,
@@ -510,16 +493,16 @@ pub(crate) async fn write_data_source(
     .bind(hash)
     .bind(source.default_view_configuration().cloned().map(Value::Object))
     .bind(source.is_usable())
-    .bind(voxel_size.map(|v| v.0[0]))
-    .bind(voxel_size.map(|v| v.0[1]))
-    .bind(voxel_size.map(|v| v.0[2]))
-    .bind(voxel_size.map(|v| v.1))
+    .bind(voxel_size.map(|v| v.factor.x))
+    .bind(voxel_size.map(|v| v.factor.y))
+    .bind(voxel_size.map(|v| v.factor.z))
+    .bind(voxel_size.map(|v| v.unit.as_str()))
     .bind(status)
     .bind(root_path)
     .bind(root_real_path)
     .execute(&mut *connection)
     .await?;
-    crate::dataset::source::write_layers(connection, id, source.layers()).await
+    crate::dataset::source::write_layers(connection, id, source.all_layers()).await
 }
 
 /// DatasetService.createDataset for a newly discovered inbox data source.
@@ -527,21 +510,21 @@ async fn create_disk_scan_dataset(
     connection: &mut sqlx::PgConnection,
     store: &DataStoreRecord,
     hash: i32,
-    entry: &ReportedSource,
+    entry: &DataSourceWithRootPathInfo,
 ) -> ApiResult<String> {
     let id = ObjectId::new().to_string();
-    let source = &entry.source;
-    let shape = source.as_usable_shape();
+    let source = &entry.data_source;
+    let shape = crate::dataset::source::as_usable_shape(source);
     crate::dataset::create::insert_dataset(
         connection,
         crate::dataset::create::NewDataset {
             id: &id,
             store_name: &store.name,
-            name: source.directory_name(),
+            name: &source.id().directory_name,
             source: &shape,
             is_usable: source.is_usable(),
-            voxel_size: source.voxel_size(),
-            status: source.status(),
+            voxel_size: source.voxel_size_opt(),
+            status: source.status_opt().unwrap_or_default(),
             is_virtual: false,
             metadata: json!([]),
             description: None,
@@ -600,39 +583,16 @@ async fn deactivate(
 
 // ---------------------------------------------------------------- real paths
 
-#[derive(Deserialize)]
-struct DataSourceIdBody {
-    name: String,
-    team: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct RealPathBody {
-    path: String,
-    real_path: String,
-    has_local_data: bool,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DataSourcePathInfo {
-    data_source_id: DataSourceIdBody,
-    mag_path_infos: Vec<RealPathBody>,
-    attachment_path_infos: Vec<RealPathBody>,
-}
-
-/// RealPathInfo with UPath-normalized paths.
-fn normalized(infos: &[RealPathBody]) -> ApiResult<Vec<(String, String, bool)>> {
+/// RealPathInfo as stored strings.
+fn normalized(infos: &[RealPathInfo]) -> Vec<(String, String, bool)> {
     infos
         .iter()
         .map(|info| {
-            Ok((
-                crate::dataset::source::normalize_upath(&info.path).map_err(|_| invalid_body())?,
-                crate::dataset::source::normalize_upath(&info.real_path)
-                    .map_err(|_| invalid_body())?,
+            (
+                info.path.to_string(),
+                info.real_path.to_string(),
                 info.has_local_data,
-            ))
+            )
         })
         .collect()
 }
@@ -644,14 +604,13 @@ async fn update_real_paths(
     ValidatedDataStore(_store): ValidatedDataStore,
     Json(body): Json<Value>,
 ) -> ApiResult<StatusCode> {
-    let infos: Vec<DataSourcePathInfo> =
-        serde_json::from_value(body).map_err(|_| invalid_body())?;
+    let infos = read_list(&body, DataSourcePathInfo::from_json).map_err(|_| invalid_body())?;
     let mut parsed = Vec::with_capacity(infos.len());
     for info in &infos {
         parsed.push((
             &info.data_source_id,
-            normalized(&info.mag_path_infos)?,
-            normalized(&info.attachment_path_infos)?,
+            normalized(&info.mag_path_infos),
+            normalized(&info.attachment_path_infos),
         ));
     }
     let mut tx = state.pool.begin().await?;
@@ -659,8 +618,8 @@ async fn update_real_paths(
         let dataset: Option<String> = sqlx::query_scalar(
             "SELECT _id FROM webknossos.datasets_ WHERE directoryName = $1 AND _organization = $2 LIMIT 1",
         )
-        .bind(&source_id.name)
-        .bind(&source_id.team)
+        .bind(&source_id.directory_name)
+        .bind(&source_id.organization_id)
         .fetch_optional(&mut *tx)
         .await?;
         let Some(dataset) = dataset else { continue };
@@ -722,8 +681,7 @@ async fn update_data_source(
     ValidatedDataStore(_store): ValidatedDataStore,
     Json(body): Json<Value>,
 ) -> ApiResult<StatusCode> {
-    let source =
-        crate::dataset::source::parse_any_data_source(&body).map_err(|_| invalid_body())?;
+    let source = DataSource::from_json(&body).map_err(|_| invalid_body())?;
     let mut tx = state.pool.begin().await?;
     let is_virtual: Option<bool> = sqlx::query_scalar(
         "SELECT isVirtual FROM webknossos.datasets_ WHERE _id = $1 FOR NO KEY UPDATE",
@@ -733,7 +691,7 @@ async fn update_data_source(
     .await?;
     let is_virtual = is_virtual.ok_or_else(|| crate::dataset::lifecycle::not_found(id.as_str()))?;
     if !is_virtual {
-        let hash = source.inbox_source_hash();
+        let hash = crate::dataset::source::inbox_source_hash(&source);
         write_data_source(&mut tx, id.as_str(), &name, hash, &source, None, None).await?;
     }
     tx.commit().await?;

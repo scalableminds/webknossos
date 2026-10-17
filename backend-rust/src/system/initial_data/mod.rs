@@ -18,6 +18,7 @@ use serde_json::{Value, json};
 use crate::{
     AppState,
     auth::browser::onboarding::create_organization_directory,
+    dataset::source::UsableDataSource,
     error::{ApiError, ApiResult},
     stores::client::ServiceClients,
     system::application_info::{LocalStoreConfig, MiscConfig, MiscState, ok_empty},
@@ -682,7 +683,7 @@ async fn insert_dataset_if_absent(
     if present {
         return Ok(());
     }
-    let source = crate::dataset::source::parse_data_source(&dataset.source).map_err(|error| {
+    let source = UsableDataSource::from_json(&dataset.source).map_err(|error| {
         tracing::error!(%error, "Invalid built-in sample data source");
         ApiError::internal()
     })?;
@@ -698,22 +699,22 @@ async fn insert_dataset_if_absent(
     )
     .bind(dataset.id)
     .bind(data_store)
-    .bind(&source.organization)
+    .bind(&source.id.organization_id)
     .bind(dataset.publication)
     .bind(uploader)
     .bind(folder)
     .bind(dataset.description)
-    .bind(&source.directory_name)
+    .bind(&source.id.directory_name)
     .bind(dataset.is_public)
     .bind(&dataset.name)
-    .bind(source.factor[0])
-    .bind(source.factor[1])
-    .bind(source.factor[2])
-    .bind(&source.unit)
+    .bind(source.scale.factor.x)
+    .bind(source.scale.factor.y)
+    .bind(source.scale.factor.z)
+    .bind(source.scale.unit.as_str())
     .bind(&dataset.metadata)
     .execute(&mut **tx)
     .await?;
-    crate::dataset::source::write_layers(tx, dataset.id, &source.layers).await
+    crate::dataset::source::write_layers(tx, dataset.id, &source.data_layers).await
 }
 
 #[cfg(test)]

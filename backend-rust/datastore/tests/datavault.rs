@@ -24,6 +24,7 @@ use base64::{
 };
 use mock_wk::{MockWk, Reply};
 use serde_json::{Value, json};
+use webknossos_datastore::datavault::ToRemoteUri;
 use webknossos_datastore::{
     clients::wk::WkClient,
     datavault::{

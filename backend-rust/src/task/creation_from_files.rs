@@ -46,19 +46,18 @@ use crate::{
     },
     annotation::nml::parser::SharedParsingParameters,
     annotation::provider::ProviderError,
-    annotation::tracing_initialization::data_source_bounding_box,
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::read_multipart,
-    proto::BoundingBoxProto,
     task::creation::{
-        BoundingBox, CreationServices, Experience, RequestedTask, RequestedTaskResult, TaskFailure,
+        CreationServices, Experience, RequestedTask, RequestedTaskResult, TaskFailure,
         TaskParameters, TaskTypeFacts, TracingType, VolumeBase, add_new_ids, assert_batch_limit,
         create_tasks, find_project, find_readable_dataset, find_task_type, skeleton_tracing_base,
         volume_tracing_base,
     },
     util::id::ObjectId,
 };
+use webknossos_common::geometry::BoundingBox;
 
 /// Play `parser.maxDiskBuffer` (multipart files).
 const PLAY_MAX_DISK_BUFFER: usize = 1024 * 1024 * 1024;
@@ -209,13 +208,7 @@ async fn add_volume_fallback_bounding_boxes(
             .await?
             .ok_or(ProviderError::Empty)?;
         let source = crate::annotation::create::usable_data_source(pool, &dataset).await?;
-        let [x, y, z, width, height, depth] = data_source_bounding_box(&source.source);
-        layer.tracing.bounding_box = BoundingBoxProto {
-            top_left: crate::proto::Vec3IntProto { x, y, z },
-            width,
-            height,
-            depth,
-        };
+        layer.tracing.bounding_box = source.source.bounding_box().into();
     }
     Ok(())
 }
@@ -232,12 +225,7 @@ fn build_full_params(
     let skeleton = container.skeleton.as_ref().map_err(TaskFailure::new)?;
     let dataset_id = container.dataset_id.as_ref().map_err(TaskFailure::new)?;
     let dataset_id = ObjectId::parse(dataset_id).map_err(|_| TaskFailure::new(NO_DATASET))?;
-    let parsed_box = skeleton.bounding_box.as_ref().map(|b| BoundingBox {
-        top_left: [b.top_left.x, b.top_left.y, b.top_left.z],
-        width: b.width,
-        height: b.height,
-        depth: b.depth,
-    });
+    let parsed_box = skeleton.bounding_box.map(BoundingBox::from);
     let position = &skeleton.edit_position;
     let rotation = &skeleton.edit_rotation;
     Ok(TaskParameters {

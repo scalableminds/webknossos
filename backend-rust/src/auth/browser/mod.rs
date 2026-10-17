@@ -42,6 +42,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use sqlx::{PgPool, Postgres, Transaction};
+use webknossos_common::text::hex;
 
 use crate::{
     AppState,
@@ -350,10 +351,6 @@ fn hmac_hex(secret: &str, data: &str) -> String {
     mac.update(data.as_bytes());
     mac.update(SIGNER_PEPPER.as_bytes());
     hex(&mac.finalize().into_bytes())
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 /// JcaSigner.sign

@@ -614,7 +614,7 @@ async fn voxel_size_uses_pretrained_values_and_real_authenticated_datastore_requ
             .await,
             (
                 200,
-                json!({"factor": [4.0, 5.0, 6.0], "unit": "micrometer"})
+                json!({"factor": [4, 5, 6], "unit": "micrometer"})
             )
         );
     }
@@ -658,7 +658,7 @@ async fn voxel_size_uses_pretrained_values_and_real_authenticated_datastore_requ
         .await,
         (
             200,
-            json!({"factor": [179.84, 179.84, 224.0], "unit": "nanometer"})
+            json!({"factor": [179.84, 179.84, 224], "unit": "nanometer"})
         )
     );
     assert_eq!(calls.lock().unwrap().len(), 4);

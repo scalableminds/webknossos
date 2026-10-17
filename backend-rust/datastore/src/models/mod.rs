@@ -5,13 +5,9 @@
 
 pub mod annotation;
 pub mod data_requests;
-pub mod datasource;
 pub mod disk_writer;
-pub mod enums;
-pub mod geometry;
-pub mod json;
-pub mod source_paths;
-pub mod upath;
+
+pub use webknossos_common::{datasource, enums, geometry, json, source_paths, upath};
 
 pub use datasource::{
     ADDITIONAL_COORDINATES_DIFFER, AdditionalAxis, AdditionalCoordinate, AxisOrder, BUCKET_LENGTH,
@@ -28,4 +24,4 @@ pub use enums::{
 pub use geometry::{BoundingBox, Vec3Double, Vec3Int};
 pub use json::{JsError, JsResult};
 pub use source_paths::{DataSourcePathInfo, DataSourceWithRootPathInfo, RealPathInfo};
-pub use upath::{LocalPath, RemotePath, UPath};
+pub use upath::{LocalPath, RemotePath, UPath, UPathError};

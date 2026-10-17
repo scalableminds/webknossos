@@ -19,6 +19,7 @@ use crate::{
     stores::client::ServiceClients,
     util::id::{ObjectId, PathObjectId},
 };
+use webknossos_common::{datasource::StaticLayer, geometry::Vec3Int, json::read_i32};
 
 const DEFAULT_SIZE: i32 = 400;
 const MAX_SIZE: i32 = 4000;
@@ -120,90 +121,9 @@ struct DatasetRow {
     admin_configuration: Option<Value>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct Vec3([i32; 3]);
-
-impl Vec3 {
-    fn max_dim(self) -> i32 {
-        self.0[0].max(self.0[1]).max(self.0[2])
-    }
-    fn mag_literal(self) -> String {
-        format!("{}-{}-{}", self.0[0], self.0[1], self.0[2])
-    }
-}
-
-#[derive(Clone, Copy)]
-struct BoundingBox {
-    top_left: Vec3,
-    size: [i32; 3],
-}
-
-impl BoundingBox {
-    fn bottom_right(&self) -> [i32; 3] {
-        std::array::from_fn(|i| self.top_left.0[i].wrapping_add(self.size[i]))
-    }
-    /// Vec3Int.move then scale(0.5f): float multiplication truncated to Int.
-    fn center(&self) -> Vec3 {
-        let bottom_right = self.bottom_right();
-        Vec3(std::array::from_fn(|i| {
-            (self.top_left.0[i].wrapping_add(bottom_right[i]) as f32 * 0.5_f32) as i32
-        }))
-    }
-    fn intersection(&self, other: &BoundingBox) -> Option<BoundingBox> {
-        let (a, b) = (self.bottom_right(), other.bottom_right());
-        let top_left: [i32; 3] =
-            std::array::from_fn(|i| self.top_left.0[i].max(other.top_left.0[i]));
-        let bottom_right: [i32; 3] = std::array::from_fn(|i| a[i].min(b[i]));
-        (0..3)
-            .all(|i| top_left[i] < bottom_right[i])
-            .then(|| BoundingBox {
-                top_left: Vec3(top_left),
-                size: std::array::from_fn(|i| bottom_right[i] - top_left[i]),
-            })
-    }
-}
-
-struct Layer {
-    name: String,
-    category: String,
-    bounding_box: BoundingBox,
-    mags: Vec<Vec3>,
-}
-
-fn int(value: &Value) -> Option<i32> {
-    // Play's Int reads accept integral JSON numbers within range, e.g. 1.0.
-    let number = value.as_f64()?;
-    (number.fract() == 0.0 && number >= f64::from(i32::MIN) && number <= f64::from(i32::MAX))
-        .then_some(number as i32)
-}
-
-fn vec3(value: &Value) -> Option<Vec3> {
-    let array = value.as_array().filter(|a| a.len() == 3)?;
-    Some(Vec3([int(&array[0])?, int(&array[1])?, int(&array[2])?]))
-}
-
-fn parse_layer(layer: &Value) -> ApiResult<Layer> {
-    let bbox = &layer["boundingBox"];
-    let parsed = (|| {
-        Some(Layer {
-            name: layer["name"].as_str()?.to_owned(),
-            category: layer["category"].as_str()?.to_owned(),
-            bounding_box: BoundingBox {
-                top_left: vec3(&bbox["topLeft"])?,
-                size: [
-                    int(&bbox["width"])?,
-                    int(&bbox["height"])?,
-                    int(&bbox["depth"])?,
-                ],
-            },
-            mags: layer["resolutions"]
-                .as_array()?
-                .iter()
-                .map(vec3)
-                .collect::<Option<Vec<_>>>()?,
-        })
-    })();
-    parsed.ok_or_else(ApiError::internal)
+/// A rendered data layer (StaticLayer reads).
+fn parse_layer(layer: &Value) -> ApiResult<StaticLayer> {
+    StaticLayer::from_json(layer).map_err(|_| ApiError::internal())
 }
 
 /// DatasetConfigurationService.getDatasetViewConfigurationForDataset without a
@@ -237,8 +157,10 @@ impl Config<'_> {
     fn layer(&self, name: &str, key: &str) -> Option<&Value> {
         self.0.get("layers")?.get(name)?.get(key)
     }
-    fn position(&self) -> Option<Vec3> {
-        self.0.get("position").and_then(vec3)
+    fn position(&self) -> Option<Vec3Int> {
+        self.0
+            .get("position")
+            .and_then(|position| Vec3Int::from_json(position).ok())
     }
     fn zoom(&self) -> f64 {
         self.0.get("zoom").and_then(Value::as_f64).unwrap_or(1.0)
@@ -252,7 +174,7 @@ impl Config<'_> {
     fn color(&self, name: &str) -> Option<(String, bool)> {
         let color = self.layer(name, "color")?.as_array()?;
         let channel = |index: usize| -> Option<String> {
-            let value = int(color.get(index)?)?;
+            let value = read_i32(color.get(index)?).ok()?;
             let scaled = (f64::from(value) / 255.0 * 255.0) as i32;
             Some(format!("{:02x}", scaled as u32))
         };
@@ -308,7 +230,11 @@ impl Config<'_> {
     }
 }
 
-fn center_and_zoom(config: &Config, layers: &[Layer], fallback: &Layer) -> (Vec3, f64) {
+fn center_and_zoom(
+    config: &Config,
+    layers: &[StaticLayer],
+    fallback: &StaticLayer,
+) -> (Vec3Int, f64) {
     let intersection = layers.split_first().and_then(|(first, rest)| {
         rest.iter()
             .try_fold(first.bounding_box, |accumulated, layer| {
@@ -323,9 +249,9 @@ fn center_and_zoom(config: &Config, layers: &[Layer], fallback: &Layer) -> (Vec3
 }
 
 /// First mag (in stored order) whose largest dimension is closest to the zoom.
-fn mag_for_zoom(layer: &Layer, zoom: f64) -> Option<Vec3> {
-    layer.mags.iter().copied().min_by(|a, b| {
-        let distance = |mag: Vec3| (f64::from(mag.max_dim()) - zoom).abs();
+fn mag_for_zoom(layer: &StaticLayer, zoom: f64) -> Option<Vec3Int> {
+    layer.resolutions().into_iter().min_by(|a, b| {
+        let distance = |mag: Vec3Int| (f64::from(mag.max_dim()) - zoom).abs();
         distance(*a)
             .partial_cmp(&distance(*b))
             .unwrap_or(std::cmp::Ordering::Equal)
@@ -340,7 +266,7 @@ fn java_round_to_int(value: f64) -> i32 {
 
 /// Java's Double.toString, used for RPC query parameters (shared, JDK-verified).
 pub(crate) fn java_double_string(value: f64) -> String {
-    crate::util::java_format::java_double(value)
+    webknossos_common::java_format::java_double(value)
 }
 
 async fn load_dataset(state: &AppState, id: &ObjectId) -> ApiResult<DatasetRow> {
@@ -382,7 +308,7 @@ struct ThumbnailRecord<'a> {
     width: i32,
     height: i32,
     mapping: Option<&'a str>,
-    mag: Vec3,
+    mag: Vec3Int,
     bounding_box: [i32; 6],
 }
 
@@ -406,7 +332,7 @@ async fn store(
         return Ok(());
     }
     let [x, y, z, width, height, depth] = record.bounding_box.map(f64::from);
-    let [mx, my, mz] = record.mag.0.map(f64::from);
+    let [mx, my, mz] = record.mag.to_array().map(f64::from);
     sqlx::query(
         r#"INSERT INTO webknossos.dataset_thumbnails
           (_dataset, dataLayerName, width, height, mappingName, image, mimetype, mag, mag1BoundingBox, created)
@@ -469,14 +395,14 @@ async fn layer_thumbnail(
     let config = Config(&configuration);
     let (center, zoom) = center_and_zoom(&config, &layers, layer);
     let mag = mag_for_zoom(layer, zoom).ok_or_else(ApiError::internal)?;
-    if mag.0.iter().any(|component| *component <= 0) {
+    if mag.to_array().iter().any(|component| *component <= 0) {
         return Err(ApiError::internal());
     }
-    let mag1_width = width.wrapping_mul(mag.0[0]);
-    let mag1_height = height.wrapping_mul(mag.0[1]);
-    let x = center.0[0].wrapping_sub(mag1_width / 2);
-    let y = center.0[1].wrapping_sub(mag1_height / 2);
-    let z = center.0[2];
+    let mag1_width = width.wrapping_mul(mag.x);
+    let mag1_height = height.wrapping_mul(mag.y);
+    let x = center.x.wrapping_sub(mag1_width / 2);
+    let y = center.y.wrapping_sub(mag1_height / 2);
+    let z = center.z;
     let mapping = query
         .mapping_name
         .clone()
@@ -485,7 +411,7 @@ async fn layer_thumbnail(
     let color = config.color(&layer_name);
     // Query parameter order and formatting follow WKRemoteDataStoreClient.
     let mut parameters: Vec<(&str, String)> = vec![
-        ("mag", mag.mag_literal()),
+        ("mag", mag.to_mag_literal(false)),
         ("x", x.to_string()),
         ("y", y.to_string()),
         ("z", z.to_string()),
@@ -562,13 +488,13 @@ struct LayerParameters {
 
 /// ThumbnailService.selectLayersToRender: ordered enabled color layers plus the
 /// alphabetically first segmentation layer, falling back to all renderable.
-fn layers_to_render<'a>(config: &Config, layers: &'a [Layer]) -> Vec<&'a Layer> {
-    let select = |candidates: Vec<&'a Layer>| -> Vec<&'a Layer> {
+fn layers_to_render<'a>(config: &Config, layers: &'a [StaticLayer]) -> Vec<&'a StaticLayer> {
+    let select = |candidates: Vec<&'a StaticLayer>| -> Vec<&'a StaticLayer> {
         let order = config.color_layer_order();
-        let mut colors: Vec<&Layer> = candidates
+        let mut colors: Vec<&StaticLayer> = candidates
             .iter()
             .copied()
-            .filter(|l| l.category == "color")
+            .filter(|l| !l.is_segmentation())
             .collect();
         // Stable sort, like Scala's sortBy.
         colors.sort_by_key(|layer| {
@@ -580,12 +506,12 @@ fn layers_to_render<'a>(config: &Config, layers: &'a [Layer]) -> Vec<&'a Layer> 
         let segmentation = candidates
             .iter()
             .copied()
-            .filter(|l| l.category == "segmentation")
+            .filter(|l| l.is_segmentation())
             .min_by(|a, b| a.name.cmp(&b.name));
         colors.extend(segmentation);
         colors
     };
-    let renderable: Vec<&Layer> = layers.iter().filter(|l| !l.mags.is_empty()).collect();
+    let renderable: Vec<&StaticLayer> = layers.iter().filter(|l| !l.mags.is_empty()).collect();
     let enabled = select(
         renderable
             .iter()
@@ -628,16 +554,16 @@ async fn dataset_thumbnail(
     let first = *to_render
         .first()
         .ok_or_else(|| ApiError::not_found(crate::msg::dataset::NO_MAGS))?;
-    let has_color_layers = to_render.iter().any(|l| l.category == "color");
+    let has_color_layers = to_render.iter().any(|l| !l.is_segmentation());
     let (center, zoom) = center_and_zoom(&config, &layers, first);
     let mag1_width = java_round_to_int(f64::from(width) * zoom);
     let mag1_height = java_round_to_int(f64::from(height) * zoom);
-    let x = center.0[0].wrapping_sub(mag1_width / 2);
-    let y = center.0[1].wrapping_sub(mag1_height / 2);
+    let x = center.x.wrapping_sub(mag1_width / 2);
+    let y = center.y.wrapping_sub(mag1_height / 2);
     let mut parameters = Vec::new();
     for layer in &to_render {
         let mag = mag_for_zoom(layer, zoom).ok_or_else(ApiError::internal)?;
-        if mag.0.iter().any(|component| *component <= 0) {
+        if mag.to_array().iter().any(|component| *component <= 0) {
             return Err(ApiError::internal());
         }
         let intensity = config.intensity_range(&layer.name);
@@ -646,20 +572,16 @@ async fn dataset_thumbnail(
             data_layer_name: layer.name.clone(),
             x,
             y,
-            z: center.0[2],
-            mag: mag.mag_literal(),
-            width: (mag1_width / mag.0[0]).max(1),
-            height: (mag1_height / mag.0[1]).max(1),
+            z: center.z,
+            mag: mag.to_mag_literal(false),
+            width: (mag1_width / mag.x).max(1),
+            height: (mag1_height / mag.y).max(1),
             mapping_name: config.mapping_name(&layer.name),
             intensity_min: intensity.map(|r| r.0),
             intensity_max: intensity.map(|r| r.1),
             color: color.as_ref().map(|c| c.0.clone()),
             invert_color: color.as_ref().map(|c| c.1),
-            opacity: config.opacity(
-                &layer.name,
-                layer.category == "segmentation",
-                has_color_layers,
-            ),
+            opacity: config.opacity(&layer.name, layer.is_segmentation(), has_color_layers),
         });
     }
     let body = json!({
@@ -686,8 +608,8 @@ async fn dataset_thumbnail(
             width,
             height,
             mapping: None,
-            mag: Vec3([1, 1, 1]),
-            bounding_box: [x, y, center.0[2], mag1_width, mag1_height, 1],
+            mag: Vec3Int::ones(),
+            bounding_box: [x, y, center.z, mag1_width, mag1_height, 1],
         },
         &response.bytes,
     )

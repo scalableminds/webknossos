@@ -94,8 +94,7 @@ async fn find_dataset_local_root_path(
     let root = record
         .root_path
         .filter(|root| {
-            crate::dataset::source::normalize_upath(root)
-                .is_ok_and(|parsed| crate::dataset::source::upath_is_local(&parsed))
+            webknossos_common::upath::UPath::parse(root).is_ok_and(|parsed| parsed.is_local())
         })
         .unwrap_or_default();
     Ok(ResponseJson(root))

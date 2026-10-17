@@ -11,6 +11,7 @@ use crate::{
         Vec3Int,
     },
 };
+use webknossos_common::text::escape_html;
 
 pub const FILENAME_ZARR_JSON: &str = "zarr.json";
 
@@ -155,22 +156,6 @@ pub fn convert_layer_to_zarr_layer(layer: &StaticLayer, zarr_version: u8) -> DsR
             .map(reorder_additional_axes),
         ..layer.clone()
     })
-}
-
-/// Twirl `HtmlFormat.escape`.
-fn escape_html(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    for c in value.chars() {
-        match c {
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&#x27;"),
-            '&' => out.push_str("&amp;"),
-            other => out.push(other),
-        }
-    }
-    out
 }
 
 /// Scala `views.html.datastoreZarrDatasourceDir(kind, name, folderContents)`.

@@ -10,6 +10,16 @@ fn play_double_rendering() {
     assert_eq!(render(25.92000000000001), "25.92000000000001");
     assert_eq!(render(1e19), "10000000000000000000");
     assert_eq!(render(0.0), "0");
+    // Above 2^53 Play pads Java's shortest digits with zeros (uint64 histogram max, differential
+    // 2026-10-17), it does not spell out the binary value.
+    assert_eq!(render(2f64.powi(64)), "18446744073709552000");
+    assert_eq!(render(2f64.powi(63)), "9223372036854776000");
+    assert_eq!(render(-(2f64.powi(63))), "-9223372036854776000");
+    assert_eq!(render(9_007_199_254_740_994.0), "9007199254740994");
+    assert_eq!(
+        play_f64_number(2f64.powi(63)),
+        Some(Number::from(9_223_372_036_854_776_000u64))
+    );
 }
 
 #[test]

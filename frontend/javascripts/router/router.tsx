@@ -75,6 +75,7 @@ const AsyncWorkflowView = loadable<EmptyObject>(() => import("admin/voxelytics/w
 const AsyncWorkflowListView = loadable<EmptyObject>(
   () => import("admin/voxelytics/workflow_list_view"),
 );
+const AsyncDeviceDebugView = loadable<EmptyObject>(() => import("admin/debug/device_debug_view"));
 
 function RootLayout() {
   return (
@@ -485,6 +486,8 @@ const routes: RouteObject[] = [
           { path: "token", element: <AccountAuthTokenView /> },
         ],
       },
+      // Runs the GPU operations of the viewer step by step to find out what crashes on a device.
+      { path: "/debug", element: <AsyncDeviceDebugView /> },
       { path: "*", element: <PageNotFoundView /> },
     ],
   },

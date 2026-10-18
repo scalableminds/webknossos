@@ -1,51 +1,38 @@
 import {
   CheckCircleOutlined,
+  ClockCircleOutlined,
   CloseCircleOutlined,
   ExclamationCircleOutlined,
   LoadingOutlined,
-  MinusCircleOutlined,
 } from "@ant-design/icons";
-import {
-  Alert,
-  Button,
-  Card,
-  Checkbox,
-  Collapse,
-  Descriptions,
-  Input,
-  InputNumber,
-  Progress,
-  Select,
-  Space,
-  Typography,
-} from "antd";
+import { Alert, Button, Card, Collapse, Input, Progress, Space, Typography } from "antd";
 import { useEffect, useRef, useState } from "react";
-import type { ElementClass } from "types/api_types";
+import {
+  diagnose,
+  type ExperimentStatus,
+  type ExperimentSummary,
+  summarizeExperiments,
+} from "./device_debug_diagnosis";
+import { EXPERIMENTS } from "./device_debug_experiments";
 import {
   clearPreviousRecord,
-  DEFAULT_CONFIG,
-  type DebugConfig,
-  loadConfig,
+  createRecord,
   loadPreviousRecord,
   type RunRecord,
-  runDebugSteps,
-  STEP_GROUPS,
+  runExperiments,
   type StepResult,
-  type StepStatus,
-  storeConfig,
-} from "./device_debug_steps";
+} from "./device_debug_runner";
 
 const { Title, Paragraph, Text } = Typography;
 
-const COLOR_ELEMENT_CLASSES: ElementClass[] = ["uint8", "uint16", "uint24", "float"];
-const SEGMENTATION_ELEMENT_CLASSES: Array<ElementClass | "none"> = ["none", "uint32", "uint64"];
+const AUTO_CONTINUE_DELAY_S = 5;
 
-const STATUS_ICONS: Record<StepStatus, React.ReactNode> = {
+const STATUS_ICONS: Record<ExperimentStatus, React.ReactNode> = {
+  pending: <ClockCircleOutlined style={{ color: "#999" }} />,
   running: <LoadingOutlined style={{ color: "#1677ff" }} />,
   passed: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
   failed: <CloseCircleOutlined style={{ color: "#ff4d4f" }} />,
   crashed: <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />,
-  skipped: <MinusCircleOutlined style={{ color: "#999" }} />,
 };
 
 function StepItem({ step }: { step: StepResult }) {
@@ -54,7 +41,7 @@ function StepItem({ step }: { step: StepResult }) {
     step.usedHeapMB != null ? `heap ${step.usedHeapMB} MB` : null,
   ].filter((part) => part != null);
   return (
-    <div style={{ padding: "8px 0", borderBottom: "1px solid rgba(128, 128, 128, 0.2)" }}>
+    <div style={{ padding: "4px 0 4px 24px" }}>
       <Space align="start">
         {STATUS_ICONS[step.status]}
         <div>
@@ -74,110 +61,29 @@ function StepItem({ step }: { step: StepResult }) {
   );
 }
 
-function ConfigForm({
-  config,
-  onChange,
-  disabled,
-}: {
-  config: DebugConfig;
-  onChange: (config: DebugConfig) => void;
-  disabled: boolean;
-}) {
-  const update = (partial: Partial<DebugConfig>) => onChange({ ...config, ...partial });
+function ExperimentItem({ summary }: { summary: ExperimentSummary }) {
   return (
-    <Space orientation="vertical" style={{ width: "100%" }}>
-      <Descriptions column={1} size="small" bordered>
-        <Descriptions.Item label="GPU memory factor">
-          <InputNumber
-            min={1}
-            max={16}
-            value={config.gpuMemoryFactor}
-            onChange={(value) => update({ gpuMemoryFactor: value ?? 1 })}
-            disabled={disabled}
-          />
-        </Descriptions.Item>
-        <Descriptions.Item label="Color layers">
-          <Space wrap>
-            <InputNumber
-              min={0}
-              max={8}
-              value={config.colorLayerCount}
-              onChange={(value) => update({ colorLayerCount: value ?? 0 })}
-              disabled={disabled}
-            />
-            <Select
-              value={config.colorElementClass}
-              options={COLOR_ELEMENT_CLASSES.map((value) => ({ value, label: value }))}
-              onChange={(colorElementClass) => update({ colorElementClass })}
-              disabled={disabled}
-              style={{ width: 100 }}
-            />
-          </Space>
-        </Descriptions.Item>
-        <Descriptions.Item label="Segmentation layer">
-          <Select
-            value={config.segmentationElementClass}
-            options={SEGMENTATION_ELEMENT_CLASSES.map((value) => ({ value, label: value }))}
-            onChange={(segmentationElementClass) => update({ segmentationElementClass })}
-            disabled={disabled}
-            style={{ width: 100 }}
-          />
-        </Descriptions.Item>
-        <Descriptions.Item label="JS memory limit (MB)">
-          <InputNumber
-            min={64}
-            step={64}
-            value={config.jsMemoryLimitMB}
-            onChange={(value) => update({ jsMemoryLimitMB: value ?? 64 })}
-            disabled={disabled}
-          />
-        </Descriptions.Item>
-        <Descriptions.Item label="GPU stress limit (MB)">
-          <InputNumber
-            min={64}
-            step={64}
-            value={config.gpuStressLimitMB}
-            onChange={(value) => update({ gpuStressLimitMB: value ?? 64 })}
-            disabled={disabled}
-          />
-        </Descriptions.Item>
-        <Descriptions.Item label="Delay per step (ms)">
-          <InputNumber
-            min={0}
-            step={100}
-            value={config.delayMs}
-            onChange={(value) => update({ delayMs: value ?? 0 })}
-            disabled={disabled}
-          />
-        </Descriptions.Item>
-      </Descriptions>
-      <Text strong>Enabled step groups</Text>
-      <Checkbox.Group
-        style={{ display: "flex", flexDirection: "column" }}
-        value={STEP_GROUPS.map(({ id }) => id).filter((id) => !config.disabledGroups.includes(id))}
-        options={STEP_GROUPS.map(({ id, label }) => ({ value: id, label }))}
-        onChange={(enabledGroups) =>
-          update({
-            disabledGroups: STEP_GROUPS.map(({ id }) => id).filter(
-              (id) => !enabledGroups.includes(id),
-            ),
-          })
-        }
-        disabled={disabled}
-      />
-      <Button size="small" onClick={() => onChange(DEFAULT_CONFIG)} disabled={disabled}>
-        Reset to defaults
-      </Button>
-    </Space>
+    <div style={{ padding: "8px 0", borderBottom: "1px solid rgba(128, 128, 128, 0.2)" }}>
+      <details open={summary.status !== "passed"}>
+        <summary style={{ cursor: "pointer" }}>
+          {STATUS_ICONS[summary.status]} <Text strong>{summary.experiment.label}</Text>
+        </summary>
+        {summary.steps.map((step) => (
+          <StepItem key={step.index} step={step} />
+        ))}
+      </details>
+    </div>
   );
 }
 
 export default function DeviceDebugView() {
-  const [config, setConfig] = useState<DebugConfig>(loadConfig);
-  const [previousRecord] = useState(loadPreviousRecord);
-  const [record, setRecord] = useState<RunRecord | null>(previousRecord);
+  const [record, setRecord] = useState<RunRecord | null>(loadPreviousRecord);
   const [isRunning, setIsRunning] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [statusText, setStatusText] = useState<string | null>(null);
+  // The run is continued automatically after the page was reopened during a run.
+  const [autoContinueIn, setAutoContinueIn] = useState<number | null>(() =>
+    record != null && record.finishedAt == null ? AUTO_CONTINUE_DELAY_S : null,
+  );
   const abortRef = useRef(false);
 
   useEffect(() => {
@@ -187,60 +93,94 @@ export default function DeviceDebugView() {
     };
   }, []);
 
-  const onChangeConfig = (newConfig: DebugConfig) => {
-    setConfig(newConfig);
-    storeConfig(newConfig);
-  };
-
-  const start = async () => {
-    if (canvasRef.current == null) return;
+  const run = async (runRecord: RunRecord) => {
     abortRef.current = false;
+    setAutoContinueIn(null);
     setIsRunning(true);
     try {
-      await runDebugSteps(config, canvasRef.current, setRecord, () => abortRef.current);
+      await runExperiments(
+        EXPERIMENTS,
+        runRecord,
+        setRecord,
+        setStatusText,
+        () => abortRef.current,
+      );
     } finally {
       setIsRunning(false);
     }
   };
 
-  const crashedStep = previousRecord?.steps.find((step) => step.status === "crashed");
-  const failedSteps = record?.steps.filter((step) => step.status === "failed") ?? [];
-  const runningStep = record?.steps.find((step) => step.status === "running");
-  // The number of steps is only known while running, so the progress is based on the groups.
-  const currentGroupIndex = STEP_GROUPS.findIndex(({ id }) => id === record?.steps.at(-1)?.group);
+  const continueRun = () => {
+    if (record != null) run(structuredClone(record));
+  };
+
+  useEffect(() => {
+    if (autoContinueIn == null) return;
+    if (autoContinueIn === 0) {
+      continueRun();
+      return;
+    }
+    const timeout = setTimeout(() => setAutoContinueIn(autoContinueIn - 1), 1000);
+    return () => clearTimeout(timeout);
+  });
+
+  const summaries = summarizeExperiments(record);
+  const conclusions = record != null && record.steps.length > 0 ? diagnose(summaries) : [];
+  const finishedExperimentCount = summaries.filter(
+    (summary) => summary.status !== "pending" && summary.status !== "running",
+  ).length;
+  const hasRemainingExperiments = summaries.some((summary) => summary.status === "pending");
+  const crashedStep = record?.steps.find((step) => step.status === "crashed");
   const report = record != null ? JSON.stringify(record, null, 2) : "";
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: 16 }}>
       <Title level={3}>Device Debugging</Title>
       <Paragraph>
-        This page runs the GPU and memory operations that WEBKNOSSOS performs when opening a
-        dataset, one step at a time. The progress is saved after each step. If the page crashes,
-        reopen it to see which step was running at that time.
+        This page runs the GPU operations of WEBKNOSSOS one by one to find out which of them crash
+        on this device. Press Start and wait until all tests are done (about 1–2 minutes). If the
+        page crashes, open it again. It continues automatically with the next test.
       </Paragraph>
 
-      {previousRecord?.crashed && record === previousRecord && (
+      {autoContinueIn != null && !isRunning && (
         <Alert
-          type="error"
+          type="warning"
           showIcon
           style={{ marginBottom: 16 }}
-          title="The previous run did not finish"
+          title="The last run was interrupted"
           description={
-            <>
-              {crashedStep != null
-                ? `The page crashed (or was closed) during step ${crashedStep.index}: ${crashedStep.label}.`
-                : "The page crashed (or was closed) between two steps."}{" "}
-              The run was started at {new Date(previousRecord.startedAt).toLocaleString()}. To test
-              the remaining steps, disable the step group of the crashed step below and start again.
-            </>
+            <Space orientation="vertical">
+              <span>
+                {crashedStep != null
+                  ? `The page crashed during step ${crashedStep.index}: ${crashedStep.label}. `
+                  : ""}
+                Continuing with the next test in {autoContinueIn} s.
+              </span>
+              <Space wrap>
+                <Button size="small" type="primary" onClick={continueRun}>
+                  Continue now
+                </Button>
+                <Button size="small" onClick={() => setAutoContinueIn(null)}>
+                  Cancel
+                </Button>
+              </Space>
+            </Space>
           }
         />
       )}
 
       <Space wrap style={{ marginBottom: 16 }}>
-        <Button type="primary" onClick={start} loading={isRunning}>
-          {isRunning ? "Running…" : "Start"}
+        <Button
+          type="primary"
+          onClick={() => run(createRecord())}
+          loading={isRunning}
+          disabled={isRunning}
+        >
+          {isRunning ? "Running…" : record == null ? "Start" : "Start new run"}
         </Button>
+        {!isRunning && hasRemainingExperiments && record != null && (
+          <Button onClick={continueRun}>Continue</Button>
+        )}
         <Button
           danger
           disabled={!isRunning}
@@ -248,102 +188,86 @@ export default function DeviceDebugView() {
             abortRef.current = true;
           }}
         >
-          Abort
+          Stop
         </Button>
         <Button
           disabled={isRunning || record == null}
           onClick={() => {
             clearPreviousRecord();
             setRecord(null);
+            setAutoContinueIn(null);
           }}
         >
           Clear results
         </Button>
       </Space>
 
-      <Collapse
-        style={{ marginBottom: 16 }}
-        items={[
-          {
-            key: "config",
-            label: "Settings",
-            children: <ConfigForm config={config} onChange={onChangeConfig} disabled={isRunning} />,
-          },
-        ]}
-      />
-
-      {/* The renderer of WEBKNOSSOS is created for the canvas with this id. */}
-      <canvas
-        id="render-canvas"
-        ref={canvasRef}
-        style={{ width: "100%", maxWidth: 376, height: 200, display: "block", marginBottom: 16 }}
-      />
-
       {record != null && (
-        <Card
-          size="small"
-          title={
-            <Space orientation="vertical" size={0} style={{ padding: "8px 0" }}>
-              <span>
-                Run started at {new Date(record.startedAt).toLocaleString()}
-                {record.aborted ? " (aborted)" : ""}
-              </span>
-              {isRunning && runningStep != null && (
-                <Text type="secondary">Running step {runningStep.index}…</Text>
-              )}
-              {!isRunning && record.finishedAt != null && (
-                <Text type={failedSteps.length > 0 ? "danger" : "success"}>
-                  {failedSteps.length > 0
-                    ? `${failedSteps.length} step(s) failed`
-                    : record.crashed
-                      ? "Crashed"
-                      : "All executed steps passed"}
-                </Text>
-              )}
-            </Space>
-          }
-        >
-          {isRunning && (
-            <Progress
-              percent={Math.round((100 * Math.max(0, currentGroupIndex)) / STEP_GROUPS.length)}
-              status="active"
-              showInfo={false}
-            />
+        <>
+          <Progress
+            percent={Math.round((100 * finishedExperimentCount) / EXPERIMENTS.length)}
+            status={isRunning ? "active" : "normal"}
+          />
+          {statusText != null && <Text type="secondary">{statusText}</Text>}
+
+          {conclusions.length > 0 && (
+            <Card
+              size="small"
+              style={{ margin: "16px 0" }}
+              title={hasRemainingExperiments ? "Diagnosis (preliminary)" : "Diagnosis"}
+            >
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {conclusions.map((conclusion) => (
+                  <li key={conclusion}>{conclusion}</li>
+                ))}
+              </ul>
+            </Card>
           )}
+
           {record.events.length > 0 && (
             <Alert
               type="warning"
-              style={{ marginBottom: 8 }}
+              style={{ marginBottom: 16 }}
               title="Events"
               description={
                 <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{record.events.join("\n")}</pre>
               }
             />
           )}
-          {record.steps.map((step) => (
-            <StepItem key={step.index} step={step} />
-          ))}
-        </Card>
-      )}
 
-      {record != null && !isRunning && (
-        <Collapse
-          style={{ marginTop: 16 }}
-          items={[
-            {
-              key: "report",
-              label: "Report (JSON)",
-              children: (
-                <Space orientation="vertical" style={{ width: "100%" }}>
-                  <Button onClick={() => navigator.clipboard?.writeText(report)}>
-                    Copy to clipboard
-                  </Button>
-                  <Input.TextArea value={report} readOnly autoSize={{ minRows: 4, maxRows: 20 }} />
-                </Space>
-              ),
-            },
-          ]}
-        />
+          <Card
+            size="small"
+            title={`Run started at ${new Date(record.startedAt).toLocaleString()}`}
+          >
+            {summaries.map((summary) => (
+              <ExperimentItem key={summary.experiment.id} summary={summary} />
+            ))}
+          </Card>
+
+          {!isRunning && (
+            <Collapse
+              style={{ marginTop: 16 }}
+              items={[
+                {
+                  key: "report",
+                  label: "Report (JSON)",
+                  children: (
+                    <Space orientation="vertical" style={{ width: "100%" }}>
+                      <Button onClick={() => navigator.clipboard?.writeText(report)}>
+                        Copy to clipboard
+                      </Button>
+                      <Input.TextArea
+                        value={report}
+                        readOnly
+                        autoSize={{ minRows: 4, maxRows: 20 }}
+                      />
+                    </Space>
+                  ),
+                },
+              ]}
+            />
+          )}
+        </>
       )}
     </div>
   );

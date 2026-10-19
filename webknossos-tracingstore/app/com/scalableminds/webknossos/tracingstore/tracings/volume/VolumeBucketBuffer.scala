@@ -4,6 +4,7 @@ import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -88,8 +89,15 @@ class VolumeBucketBuffer(
       previousBucketBytesOrEmpty <- bytesWithEmptyFallback(previousBucketBytesBox).toFox
       updatedBucketBytes <- transform(previousBucketBytesOrEmpty).toFox
       _ = put(bucketPosition, updatedBucketBytes)
-      (additions, removals) <- scanSegmentAdditionsAndRemovals(previousBucketBytesOrEmpty, updatedBucketBytes).toFox
-      _ = incorporateAdditionsAndRemovals(bucketPosition, additions, removals)
+      _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex) {
+        for {
+          (additions, removals) <- scanSegmentAdditionsAndRemovals(
+            previousBucketBytesOrEmpty,
+            updatedBucketBytes
+          ).toFox
+          _ = incorporateAdditionsAndRemovals(bucketPosition, additions, removals)
+        } yield ()
+      }
     } yield ()
 
   def applyUpdateBucketPartialAction(action: UpdateBucketPartialVolumeAction): Fox[Unit] =
@@ -187,14 +195,15 @@ class VolumeBucketBuffer(
         case _ => None
       }
     }.toSeq
-    saveBuckets(volumeLayer, fullDirtyBuckets.map(_._1), fullDirtyBuckets.map(_._2), version, toTemporaryStore)
+    if (fullDirtyBuckets.isEmpty) Fox.successful(())
+    else saveBuckets(volumeLayer, fullDirtyBuckets.map(_._1), fullDirtyBuckets.map(_._2), version, toTemporaryStore)
   }
 
-  // Caution, this returns a new VolumeBucketBuffer but also mutates the collections! Do not use the old copy afterwards
-  def resetForNextUpdateGroup(newTargetVersion: Long): VolumeBucketBuffer =
+  // Returns an empty buffer. Flush this one before, as its unflushed changes are dropped.
+  def resetForNextUpdateGroup(newTargetVersion: Long, currentTracing: Option[VolumeTracing]): VolumeBucketBuffer =
     new VolumeBucketBuffer(
       version = newTargetVersion,
-      volumeLayer,
+      currentTracing.map(tracing => volumeLayer.copy(tracing = tracing)).getOrElse(volumeLayer),
       volumeDataStore,
       temporaryTracingService,
       toTemporaryStore

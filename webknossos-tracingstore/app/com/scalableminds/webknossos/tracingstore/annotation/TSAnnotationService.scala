@@ -826,7 +826,9 @@ class TSAnnotationService @Inject() (
       .serialCombined(annotationWithTracings.volumeBucketBuffersByTracingId.toList) { case (tracingId, bucketBuffer) =>
         for {
           tracing <- annotationWithTracings.getVolume(tracingId).toFox
-          _ <- Fox.runIf(tracing.getHasSegmentIndex) {
+          hasSegmentIndexChanges =
+            (bucketBuffer.segmentAdditions ++ bucketBuffer.segmentRemovals).exists(_._2.nonEmpty)
+          _ <- Fox.runIf(tracing.getHasSegmentIndex && hasSegmentIndexChanges) {
             for {
               fallbackLayerOpt <- volumeTracingService.getFallbackLayer(annotationId, tracing)
               _ <- volumeSegmentIndexService.updateFromBucketRemovalsAndAdditions(

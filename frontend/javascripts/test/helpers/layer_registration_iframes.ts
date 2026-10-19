@@ -1,3 +1,4 @@
+import { location } from "libs/window";
 import { buildInfo } from "test/fixtures/build_info";
 import type { WebknossosTestContext } from "test/helpers/apiHelpers";
 import type { Vector3 } from "viewer/constants";
@@ -18,7 +19,7 @@ import {
 import { vi } from "vitest";
 
 // How an iframe handles the messages of the page, e.g. handleCrossOriginApiMessage.
-type IframeMessageHandler = (event: { data: any; source: IframeWindow }) => unknown;
+type IframeMessageHandler = (event: { data: any; source: IframeWindow; origin: string }) => unknown;
 
 // Like window.postMessage, the message arrives asynchronously.
 function deliverLater(deliver: () => unknown) {
@@ -50,11 +51,16 @@ export class FakeLayerRegistrationIframes {
   }
 
   // Mounts an iframe. Returns its view of the page, through which the iframe sends messages.
-  mount(role: IframeRole, handleMessage: IframeMessageHandler): IframeWindow {
+  // The page has the origin of WEBKNOSSOS unless another one is given.
+  mount(
+    role: IframeRole,
+    handleMessage: IframeMessageHandler,
+    pageOrigin: string = location.origin,
+  ): IframeWindow {
     const iframeWindow: IframeWindow = {
       postMessage: (data: any) => {
         this.sentMessages[role].push(data);
-        deliverLater(() => handleMessage({ data, source: pageWindow }));
+        deliverLater(() => handleMessage({ data, source: pageWindow, origin: pageOrigin }));
       },
     };
     const pageWindow: IframeWindow = {
@@ -74,8 +80,8 @@ export class FakeLayerRegistrationIframes {
   }
 
   // Mounts an iframe whose API is ready right away.
-  mountReady(role: IframeRole, handleMessage: IframeMessageHandler) {
-    this.mount(role, handleMessage).postMessage({ type: "init" }, "*");
+  mountReady(role: IframeRole, handleMessage: IframeMessageHandler, pageOrigin?: string) {
+    this.mount(role, handleMessage, pageOrigin).postMessage({ type: "init" }, "*");
   }
 
   sentCommandTypes(role: IframeRole): string[] {

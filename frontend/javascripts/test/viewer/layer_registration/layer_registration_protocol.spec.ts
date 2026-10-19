@@ -1,4 +1,5 @@
 import { sleep } from "libs/utils";
+import { location } from "libs/window";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import {
   FakeLayerRegistrationIframes,
@@ -130,6 +131,29 @@ describe("Layer registration protocol", () => {
     ).rejects.toThrow('"replaceTreesInGroup" failed');
     // A broken NML must not delete the stored landmarks.
     expect(readStoredLandmarks(FIXED_SIDE_PATH)).toEqual([{ pairId: 1, position: [1, 2, 3] }]);
+  });
+
+  it("only runs its commands for a page of the same origin and replies only to it", async () => {
+    const otherIframes = new FakeLayerRegistrationIframes();
+    otherIframes.mountReady("store", handleCrossOriginApiMessage, "https://other.test");
+    await expect(
+      otherIframes.bridge.sendMessage("store", "exportTreesAsNmlString"),
+    ).rejects.toThrow("only available to pages of the same origin");
+
+    const replyTargetOrigins: string[] = [];
+    iframes.mountReady("store", (event) =>
+      handleCrossOriginApiMessage({
+        ...event,
+        source: {
+          postMessage: (message, targetOrigin) => {
+            replyTargetOrigins.push(targetOrigin);
+            event.source.postMessage(message, targetOrigin);
+          },
+        },
+      }),
+    );
+    await iframes.bridge.sendMessage("store", "exportTreesAsNmlString");
+    expect(replyTargetOrigins).toEqual([location.origin]);
   });
 
   it("matches the replies to the commands, also if they arrive in another order", async () => {

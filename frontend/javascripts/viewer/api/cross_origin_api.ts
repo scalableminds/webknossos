@@ -1,9 +1,13 @@
 import app from "app";
+import { location } from "libs/window";
 import isObject from "lodash-es/isObject";
 import isString from "lodash-es/isString";
 import { useEffect } from "react";
 import { api } from "viewer/singletons";
-import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
+import {
+  type IframeCommand,
+  isLayerRegistrationWorker,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 import {
   exportLandmarkPairsAsNml,
   importLandmarks,
@@ -21,6 +25,32 @@ function assertLayerRegistrationWorker() {
   }
 }
 
+// The commands that the layer registration page sends to its iframes (see IframeCommands). They
+// can read and change the annotation, so only a page of the same origin may send them, and only
+// it gets the replies. A page of another origin may embed WEBKNOSSOS while the user is logged in
+// (e.g. if the session cookie is configured with SameSite=None) and must not get the annotation.
+const SAME_ORIGIN_COMMANDS: Record<IframeCommand, true> = {
+  importLandmarks: true,
+  setLandmarkPairInfo: true,
+  setLayerRegistrationViewState: true,
+  setOverlayLayerColors: true,
+  exportLandmarkPairsAsNml: true,
+  setActiveNode: true,
+  deleteNode: true,
+  deleteTree: true,
+  getCameraPosition: true,
+  centerPositionAnimated: true,
+  setLayerVisibility: true,
+  setAffineLayerTransforms: true,
+  exportTreesAsNmlString: true,
+  ensureTreeGroupPath: true,
+  findTreeGroupPath: true,
+  replaceTreesInGroup: true,
+  setAnnotationName: true,
+  setAnnotationDescription: true,
+  save: true,
+};
+
 // This component allows cross origin communication, for example, between a host page
 // and an embedded webKnossos iframe.
 // Currently, this is only used for a couple of API functions, but the interface may be extended in the future
@@ -34,6 +64,10 @@ const handleMessage = async (event) => {
   if (!isObject(event.data)) return;
   const { type, args, messageId } = event.data;
   if (type == null || !Array.isArray(args)) return;
+  const isSameOriginCommand = Object.hasOwn(SAME_ORIGIN_COMMANDS, type);
+  if (isSameOriginCommand && event.origin !== location.origin) {
+    throw new Error("This command is only available to pages of the same origin.");
+  }
   let returnValue = null;
 
   switch (type) {
@@ -266,7 +300,7 @@ const handleMessage = async (event) => {
       messageId,
       returnValue,
     },
-    "*",
+    isSameOriginCommand ? location.origin : "*",
   );
 };
 
@@ -275,10 +309,13 @@ type MessageSender = { postMessage: (message: unknown, targetOrigin: string) => 
 
 // Runs the command of a message and replies with "ack" and the return value, or with "err".
 // If a command throws, this logs the error and replies with an error, so that the sender
-// doesn't wait for a reply forever.
+// doesn't wait for a reply forever. The error reply goes to any origin, because it only holds
+// the error message.
 export async function handleCrossOriginApiMessage(event: {
   data: any;
   source: MessageSender | null;
+  // The origin of the page that sent the message.
+  origin: string;
 }) {
   try {
     await handleMessage(event);
@@ -300,7 +337,11 @@ export async function handleCrossOriginApiMessage(event: {
 // The messages of this API come from the windows that embed this page, so their source is a
 // window.
 const onMessage = (event: MessageEvent) =>
-  handleCrossOriginApiMessage({ data: event.data, source: event.source as Window | null });
+  handleCrossOriginApiMessage({
+    data: event.data,
+    source: event.source as Window | null,
+    origin: event.origin,
+  });
 
 function CrossOriginApi() {
   useEffect(() => {

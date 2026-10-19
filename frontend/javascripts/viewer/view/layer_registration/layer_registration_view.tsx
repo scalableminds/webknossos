@@ -120,7 +120,7 @@ function LayerRegistrationView() {
       onSwitchMovingLayer={(layerName) =>
         setSearchParams({ [MOVING_LAYER_URL_PARAM]: layerName }, { replace: true })
       }
-      landmarkAnnotation={annotation}
+      layerRegistrationAnnotation={annotation}
       onRestart={async () => {
         // The workspace starts with the name and description of the loaded annotation, which
         // may have been edited since.

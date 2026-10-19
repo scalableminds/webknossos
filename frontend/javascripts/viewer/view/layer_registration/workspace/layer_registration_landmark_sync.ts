@@ -13,8 +13,9 @@ import {
 } from "../helpers/layer_registration_helpers";
 import type { SendMessage } from "./layer_registration_iframe_bridge";
 
-// What is compared to decide whether a side must be written to the landmark annotation. Tree
-// ids change on every import and colors follow the pair ids, so both are left out.
+// What is compared to decide whether a side must be written to the layer registration
+// annotation. Tree ids change on every import and colors follow the pair ids, so both are left
+// out.
 function getStoredFields(
   landmarks: Landmark[],
 ): Array<{ pairId: number | null; position: Vector3 }> {
@@ -44,14 +45,15 @@ export type LandmarkSyncListener = {
   onHasUnsyncedLandmarksChange: (hasUnsyncedLandmarks: boolean) => void;
 };
 
-/** Keeps the landmarks of the two workers and the persisted landmark annotation in sync:
+/** Keeps the landmarks of the two workers and the persisted layer registration annotation in
+ * sync:
  * 1. importStoredLandmarks imports the stored landmarks of each side into the worker of that
  *    side. The worker annotations are sandboxes and start empty.
  * 2. Afterwards, each worker is the source of truth for its side. Each call of sync reads the
  *    landmarks of both workers. When the landmarks of a worker changed (added, deleted,
- *    moved, undo, ...), the group of that side in the landmark annotation is replaced with
- *    the trees of the worker. Each worker also gets the pair info that it needs to name its
- *    next landmark (see getLandmarkPairInfo).
+ *    moved, undo, ...), the group of that side in the layer registration annotation is
+ *    replaced with the trees of the worker. Each worker also gets the pair info that it needs
+ *    to name its next landmark (see getLandmarkPairInfo).
  * The sync can be stopped for good (e.g. after a worker lost its landmarks), or stopped after
  * writing the last changes and resumed (e.g. before and after a failed switch to another
  * moving layer).
@@ -60,7 +62,7 @@ export class LandmarkSync {
   // The ids of the tree groups that hold the landmarks of each side in the landmark
   // annotation. Null until the stored landmarks were imported into the workers.
   private groupIds: Record<Side, number> | null = null;
-  // The landmarks of each side as they were last written to the landmark annotation.
+  // The landmarks of each side as they were last written to the layer registration annotation.
   private storedFields: Record<Side, ReturnType<typeof getStoredFields>> = {
     fixed: [],
     moving: [],
@@ -69,8 +71,8 @@ export class LandmarkSync {
   private sentPairInfo: Partial<Record<Side, LandmarkPairInfo>> = {};
   private landmarks: Record<Side, Landmark[]> = { fixed: [], moving: [] };
   // Set when a worker was reloaded. Its landmarks are then missing until the stored ones are
-  // imported again, so writing them to the landmark annotation would delete landmarks. Also
-  // set while switching to another moving layer.
+  // imported again, so writing them to the layer registration annotation would delete
+  // landmarks. Also set while switching to another moving layer.
   private isStopped = false;
   // The sync run that is in progress, if any.
   private runningSync: Promise<void> | null = null;
@@ -203,7 +205,7 @@ export class LandmarkSync {
     this.isStopped = true;
   };
 
-  // Writes the current landmarks of both workers to the landmark annotation, so that a
+  // Writes the current landmarks of both workers to the layer registration annotation, so that a
   // landmark placed right before is not lost, and stops the sync. Throws if writing fails.
   flushAndStop = async () => {
     this.isStopped = true;

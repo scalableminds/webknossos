@@ -49,6 +49,7 @@ export type IncomingMessageHandlers = {
 
 /** The page side of the protocol between the layer registration page and its iframes (see
  * layer_registration_protocol.ts).
+ * This lives in the layer registration page. The workers use layer_registration_worker.
  * - sendMessage calls a command of the cross-origin API of an iframe and resolves with its
  *   return value. It waits until the API of that iframe sent "init", and rejects if the
  *   command fails or no reply arrives in time.

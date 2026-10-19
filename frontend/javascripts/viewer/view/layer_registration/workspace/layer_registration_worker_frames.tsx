@@ -121,7 +121,7 @@ function WorkspaceOverlay({
 export function LayerRegistrationWorkerFrames({
   dataset,
   layerNames,
-  landmarkAnnotationId,
+  layerRegistrationAnnotationId,
   iframes,
   onIframeLoad,
   openPairIds,
@@ -130,7 +130,7 @@ export function LayerRegistrationWorkerFrames({
 }: {
   dataset: APIDataset;
   layerNames: LayerNames;
-  landmarkAnnotationId: string;
+  layerRegistrationAnnotationId: string;
   iframes: IframeElements;
   onIframeLoad: (role: IframeRole) => void;
   // Per view, the pair ids whose landmark is missing in that view, see getLandmarkPairInfo.
@@ -165,7 +165,7 @@ export function LayerRegistrationWorkerFrames({
         ref={(element) => iframes.set("store", element)}
         title="Layer registration annotation"
         style={{ display: "none" }}
-        src={getLayerRegistrationStoreUrl(landmarkAnnotationId)}
+        src={getLayerRegistrationStoreUrl(layerRegistrationAnnotationId)}
         onLoad={() => onIframeLoad("store")}
       />
       {overlayStatus != null ? (

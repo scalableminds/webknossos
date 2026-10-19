@@ -54,7 +54,7 @@ type Props = {
   // mount the workspace anew, with fresh iframes: the workers' undo history can't be cleared,
   // so undo would bring back the landmarks of the previous layer.
   onSwitchMovingLayer: (movingLayerName: string) => void;
-  landmarkAnnotation: APIAnnotation;
+  layerRegistrationAnnotation: APIAnnotation;
   // Called after one of the iframes loaded a new page, e.g. because it was reloaded (see
   // restartAfterReload). The parent must then mount the workspace anew, with fresh iframes.
   onRestart: () => void;
@@ -65,14 +65,14 @@ export function LayerRegistrationWorkspace({
   layerNames,
   movingLayerNames,
   onSwitchMovingLayer,
-  landmarkAnnotation,
+  layerRegistrationAnnotation,
   onRestart,
 }: Props) {
   const [isLandmarkPanelOpen, setIsLandmarkPanelOpen] = useState(true);
   const [landmarkPanelWidth, setLandmarkPanelWidth] = useState(DEFAULT_LANDMARK_PANEL_WIDTH);
-  const [annotationName, setAnnotationName] = useState(landmarkAnnotation.name);
+  const [annotationName, setAnnotationName] = useState(layerRegistrationAnnotation.name);
   const [annotationDescription, setAnnotationDescription] = useState(
-    landmarkAnnotation.description,
+    layerRegistrationAnnotation.description,
   );
   const [isRestarting, setIsRestarting] = useState(false);
   // Set while the landmarks are saved before switching to this moving layer.
@@ -200,7 +200,7 @@ export function LayerRegistrationWorkspace({
     }
   };
 
-  // Saves the landmark annotation right away instead of waiting for its auto-save.
+  // Saves the layer registration annotation right away instead of waiting for its auto-save.
   // Reloading this page closes all iframes at once, which may interrupt the auto-save.
   const forceSave = async () => {
     try {
@@ -313,7 +313,7 @@ export function LayerRegistrationWorkspace({
         <LayerRegistrationWorkerFrames
           dataset={dataset}
           layerNames={layerNames}
-          landmarkAnnotationId={landmarkAnnotation.id}
+          layerRegistrationAnnotationId={layerRegistrationAnnotation.id}
           iframes={iframes}
           onIframeLoad={handleIframeLoad}
           openPairIds={openPairIds}

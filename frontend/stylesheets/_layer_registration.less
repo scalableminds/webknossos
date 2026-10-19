@@ -31,10 +31,10 @@
     }
   }
 
-  // Above the status bar at the bottom of the viewer. Clicks go through to the view.
+  // Above the status bar at the bottom of the worker. Clicks go through to the view.
   .layer-registration-next-landmark-hint {
     position: absolute;
-    bottom: 48px;
+    bottom: calc(var(--footer-height) + 28px);
     left: 50%;
     transform: translateX(-50%);
     max-width: calc(100% - 32px);

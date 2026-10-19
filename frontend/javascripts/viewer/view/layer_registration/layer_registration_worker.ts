@@ -59,8 +59,8 @@ const SHORTCUT_COMMANDS: Record<string, LayerRegistrationCommand> = {
   y: "syncOtherView",
 };
 
-// Key events don't bubble out of an iframe, so the worker forwards the layer registration
-// shortcuts to the layer registration page.
+/* Key events don't bubble out of an iframe, so the worker forwards the layer registration
+ * shortcuts to the layer registration page. */
 export function useLayerRegistrationShortcutRelay() {
   useEffect(() => {
     if (!isLayerRegistrationWorker()) {

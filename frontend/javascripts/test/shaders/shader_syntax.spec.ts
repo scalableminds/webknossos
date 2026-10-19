@@ -1,6 +1,7 @@
 import { parser } from "@shaderfrog/glsl-parser";
 import mags from "test/fixtures/mags";
 import getMainFragmentShader, {
+  computeVertexBucketAlignmentLayerCap,
   getMainVertexShader,
   type Params,
 } from "viewer/shaders/main_data_shaders.glsl";
@@ -354,3 +355,16 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
     });
   },
 );
+
+describe("computeVertexBucketAlignmentLayerCap", () => {
+  it("stays below the layer counts that were measured to link in Chrome", () => {
+    // Measured maximum: 24 layers with 32 varying vectors, 23 with 31; every
+    // TPS layer reduces it by one.
+    expect(computeVertexBucketAlignmentLayerCap(32, 0)).toBe(23);
+    expect(computeVertexBucketAlignmentLayerCap(31, 0)).toBe(22);
+    expect(computeVertexBucketAlignmentLayerCap(32, 4)).toBe(19);
+    // WebGL2 minimum.
+    expect(computeVertexBucketAlignmentLayerCap(15, 0)).toBe(6);
+    expect(computeVertexBucketAlignmentLayerCap(15, 10)).toBe(1);
+  });
+});

@@ -1,7 +1,7 @@
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "3.8.4"
+ThisBuild / scalaVersion := "3.10.0"
 ThisBuild / semanticdbEnabled := false
 
 // fix jni for scala version 3
@@ -20,7 +20,9 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:postfixOps",
   "-Wconf:src=target/.*:s",
   "-Wconf:src=webknossos-datastore/target/.*:s",
-  "-Wconf:src=webknossos-tracingstore/target/.*:s"
+  "-Wconf:src=webknossos-tracingstore/target/.*:s",
+  // play-json's Json.format macro expands to Predef.ArrowAssoc, deprecated since Scala 3.10
+  "-Wconf:cat=deprecation&msg=ArrowAssoc:s"
 ) ++ failOnWarning
 ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",

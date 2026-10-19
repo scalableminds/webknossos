@@ -57,7 +57,10 @@ import {
 } from "viewer/controller/combinations/skeleton_handlers";
 import UrlManager from "viewer/controller/url_manager";
 import type { WebKnossosModel } from "viewer/model";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isConcurrentCollaborationMode,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -2432,6 +2435,13 @@ class DataApi {
         ? state.flycam.additionalCoordinates
         : optAdditionalCoordinates;
     if (!allowUpdate || globalPositionsMag1.length === 0) return;
+    if (isConcurrentCollaborationMode(state)) {
+      // labelVoxels saves whole buckets, which would overwrite concurrent edits of
+      // the same buckets by others.
+      throw new Error(
+        "labelVoxels is not supported while simultaneous editing is enabled in the sharing settings.",
+      );
+    }
 
     const volumeTracing = enforceActiveVolumeTracing(state);
     const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);

@@ -52,7 +52,7 @@ const DISABLED_EXPLANATION = {
   ROTATION_ACTIVE:
     "The tool is disabled because you are currently viewing the dataset rotated. Please reset the rotation to 0,0,0 to be able to use this tool.",
   LIVE_COLLAB_MODE:
-    "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading and bounding boxes can be edited in that mode.",
+    "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading, bounding boxes, the brush, the eraser (via brush) and the fill tool can be used in that mode.",
   NO_VISIBLE_SEGMENTATION_TRACING:
     "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.",
   MERGER_MODE_ACTIVE: "Volume annotation is disabled while the merger mode is active.",
@@ -241,8 +241,19 @@ const skeletonTransformedRule = new DisableRule(
     areGeometriesTransformed ? DISABLED_EXPLANATION.SKELETON_LAYER_TRANSFORMED : null,
 );
 
+// Volume tools may only be used in live collaboration if they save their edits
+// as partial bucket updates (see getVolumeSaveMode). The others save whole buckets,
+// which would overwrite concurrent edits of the same buckets by others.
+const VolumeToolsAllowedInLiveCollaboration: AnnotationTool[] = [
+  AnnotationTool.BRUSH,
+  AnnotationTool.ERASE_BRUSH,
+  AnnotationTool.FILL_CELL,
+];
 const concurrentCollabModeRule = new DisableRule(
-  [AnnotationTool.SKELETON, ...VolumeTools],
+  [
+    AnnotationTool.SKELETON,
+    ...VolumeTools.filter((tool) => !VolumeToolsAllowedInLiveCollaboration.includes(tool)),
+  ],
   ({ isConcurrentCollabMode }, tool) =>
     isConcurrentCollabMode
       ? `The ${tool.readableName} ${DISABLED_EXPLANATION.LIVE_COLLAB_MODE}`

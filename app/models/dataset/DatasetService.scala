@@ -154,7 +154,8 @@ class DatasetService @Inject() (
       creationType: DatasetCreationType.Value,
       importURL: Option[String] = None,
       rootPath: Option[String] = None,
-      rootRealPath: Option[String] = None
+      rootRealPath: Option[String] = None,
+      reuseExistingOnDirectoryNameConflict: Boolean = false
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
 
@@ -190,13 +191,26 @@ class DatasetService @Inject() (
         rootPath = rootPath,
         rootRealPath = rootRealPath
       )
-      _ <- datasetDAO.insertOne(dataset)
-      _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
-      _ <- teamDAO.updateAllowedTeamsForDataset(datasetId, List())
+      inserted <- datasetDAO.insertOne(dataset, skipOnDirectoryNameConflict = reuseExistingOnDirectoryNameConflict)
+      resultDataset <-
+        if (inserted) setUpInsertedDataset(dataset, dataSource)
+        else {
+          // Concurrent disk scans may report the same new dataset
+          logger.info(
+            s"Dataset ${dataSource.id} was inserted concurrently by another request, using existing one instead."
+          )
+          datasetDAO.findOneByDataSourceId(dataSource.id)
+        }
+    } yield resultDataset
+  }
+
+  private def setUpInsertedDataset(dataset: Dataset, dataSource: DataSource)(using ctx: DBAccessContext): Fox[Dataset] =
+    for {
+      _ <- datasetDataLayerDAO.updateLayers(dataset._id, dataSource)
+      _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, List())
       _ <- scanRealpathsIfVirtual(dataset)
       _ <- writeMirrorForVirtual(dataset)
     } yield dataset
-  }
 
   def updateDataSources(dataStore: DataStore, dataSourcesWithPathInfo: List[DataSourceWithRootPathInfo])(using
       ctx: DBAccessContext
@@ -260,7 +274,8 @@ class DatasetService @Inject() (
             dataSource,
             creationType = DatasetCreationType.DiskScan,
             rootPath = rootPath,
-            rootRealPath = rootRealPath
+            rootRealPath = rootRealPath,
+            reuseExistingOnDirectoryNameConflict = true
           ).map(ds => Some(ds._id))
       }
     }

@@ -50,7 +50,10 @@ function getNextStepContent(
         text: (
           <>
             Press <Keycap>T</Keycap> in a view to compare transformed and untransformed. If it looks
-            right, apply it to the dataset.
+            right,{" "}
+            {nextStep.hasSeveralMovingLayers
+              ? "continue with the next layer or apply the transforms to the dataset."
+              : "apply it to the dataset."}
           </>
         ),
       };
@@ -172,7 +175,10 @@ export function TransformStatusCard({
                   ? ` · mean error ${formatResidual(meanResidual, voxelSize)}`
                   : ""
               }`
-            : `${completePairCount} of at least ${MIN_LANDMARK_PAIR_COUNT} pairs`}
+            : completePairCount >= MIN_LANDMARK_PAIR_COUNT
+              ? // The warning below says why and what helps.
+                `${completePairCount} pairs, but no transform could be calculated`
+              : `${completePairCount} of at least ${MIN_LANDMARK_PAIR_COUNT} pairs`}
         </Typography.Text>
       </Flex>
       {nextStepContent != null ? (

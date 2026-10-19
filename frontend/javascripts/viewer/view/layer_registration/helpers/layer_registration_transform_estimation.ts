@@ -91,7 +91,7 @@ export function estimateMovingToFixedTransform(
   }
   return {
     errorMessage:
-      "The landmarks don't allow estimating a transform, e.g. because they all lie on one line. Spread them out more.",
+      "The landmarks don't allow calculating a transform, e.g. because they all lie on one line. Spread them out in all directions, e.g. by moving some of them or adding pairs elsewhere.",
   };
 }
 

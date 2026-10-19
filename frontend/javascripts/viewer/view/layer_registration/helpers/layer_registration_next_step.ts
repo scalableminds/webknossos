@@ -16,7 +16,7 @@ export type NextStep =
   | { type: "completePair"; pair: LandmarkPair; missingSide: Side }
   | { type: "placeMorePairs"; missingPairCount: number }
   | { type: "checkOutlier"; pair: LandmarkPair; errorFactor: number }
-  | { type: "compareAndApply" }
+  | { type: "compareAndApply"; hasSeveralMovingLayers: boolean }
   | { type: "nextLayer"; layerName: string; completePairCount: number; appliedState: AppliedState }
   | { type: "allApplied"; hasSeveralMovingLayers: boolean };
 
@@ -70,7 +70,7 @@ function getOutlierStep(
 function getApplyStep(movingLayerRows: MovingLayerRow[], activeLayerName: string): NextStep | null {
   const activeRow = movingLayerRows.find((row) => row.layerName === activeLayerName);
   if (activeRow?.status !== "loaded" || activeRow.appliedState !== "applied") {
-    return { type: "compareAndApply" };
+    return { type: "compareAndApply", hasSeveralMovingLayers: movingLayerRows.length > 1 };
   }
   for (const row of movingLayerRows) {
     if (row.status === "loaded" && row.appliedState !== "applied") {

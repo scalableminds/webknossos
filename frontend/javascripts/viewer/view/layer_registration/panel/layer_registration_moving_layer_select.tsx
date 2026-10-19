@@ -80,8 +80,8 @@ export function MovingLayerSelect({
   onSelect: (layerName: string) => void;
 }) {
   const { token } = theme.useToken();
-  const activeRow = rows.find((row) => row.layerName === activeLayerName);
   const activeIndex = rows.findIndex((row) => row.layerName === activeLayerName);
+  const activeRow = rows[activeIndex];
 
   return (
     <Flex

@@ -71,8 +71,7 @@ export function LayerRegistrationPanelHeader({
   layerRegistrationListUrl: string;
 }) {
   const { token } = theme.useToken();
-  // Navigating asks first if the landmarks aren't saved yet (see the blocker in
-  // layer_registration_workspace.tsx).
+  // Navigating asks first if the landmarks aren't saved yet (see useLeavePrompt).
   const navigate = useNavigate();
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false);

@@ -333,7 +333,7 @@ export function LayerRegistrationWorkspace({
             layerRegistrationListUrl={getLayerRegistrationListUrl(dataset)}
             voxelSize={dataset.dataSource.scale}
             layerNames={layerNames}
-            landmarks={landmarks}
+            estimate={activePairEstimate}
             annotationName={annotationName}
             annotationDescription={annotationDescription}
             onChangeAnnotationName={(name) => {
@@ -344,7 +344,6 @@ export function LayerRegistrationWorkspace({
               setAnnotationDescription(description);
               updateAnnotation("setAnnotationDescription", description);
             }}
-            estimation={estimation}
             viewSettings={viewSettings}
             canApplyTransformToDataset={dataset.isEditable}
             onApplyTransformToDataset={applyTransforms}

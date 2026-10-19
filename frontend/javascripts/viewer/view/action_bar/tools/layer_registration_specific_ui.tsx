@@ -3,6 +3,7 @@ import AffineTransformationIcon from "@images/icons/icon-affine-transformation.s
 import NoTransformationIcon from "@images/icons/icon-no-transformation.svg?react";
 import { Space } from "antd";
 import { ToggleButton } from "viewer/view/components/button_component";
+import { MIN_LANDMARK_PAIR_COUNT } from "viewer/view/layer_registration/helpers/layer_registration_transform_estimation";
 import {
   sendCommandToLayerRegistrationPage,
   useLayerRegistrationViewState,
@@ -30,7 +31,7 @@ function TransformToggleButton() {
   const { isTransformShown, isTransformAvailable } = useLayerRegistrationViewState();
   const isTransformed = isTransformAvailable && isTransformShown;
   const title = !isTransformAvailable
-    ? "Place at least three landmark pairs to estimate a transform."
+    ? `Place at least ${MIN_LANDMARK_PAIR_COUNT} landmark pairs to estimate a transform.`
     : isTransformShown
       ? "The other layer is shown transformed onto this one. Click to show it untransformed (T)."
       : "The other layer is shown untransformed. Click to show it transformed onto this one (T).";

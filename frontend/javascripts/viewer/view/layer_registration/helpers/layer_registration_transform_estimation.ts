@@ -7,6 +7,7 @@ import {
   getLandmarkPairs,
   getMeanResidual,
   type Landmark,
+  type LandmarkPair,
   type Side,
 } from "./layer_registration_helpers";
 
@@ -98,6 +99,8 @@ export function estimateMovingToFixedTransform(
 export type LayerPairTransformEstimate = {
   landmarks: Record<Side, Landmark[]>;
   estimation: TransformEstimation;
+  // All pairs with their residuals, see getLandmarkPairs.
+  pairs: LandmarkPair[];
   completePairCount: number;
   // See getMeanResidual. Null if no transform could be estimated.
   meanResidual: number | null;
@@ -110,12 +113,12 @@ export function getLayerPairTransformEstimate(
   const estimation = estimateMovingToFixedTransform(landmarks);
   const movingToFixedTransform =
     "errorMessage" in estimation ? null : estimation.movingToFixedTransform;
+  const pairs = getLandmarkPairs(landmarks, movingToFixedTransform, voxelSizeFactor);
   return {
     landmarks,
     estimation,
+    pairs,
     completePairCount: getCompleteLandmarkPairs(landmarks).length,
-    meanResidual: getMeanResidual(
-      getLandmarkPairs(landmarks, movingToFixedTransform, voxelSizeFactor),
-    ),
+    meanResidual: getMeanResidual(pairs),
   };
 }

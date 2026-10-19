@@ -1,13 +1,21 @@
 // Keep authentication away from binary-data and worker-script requests. The app
 // supplies datastore/tracingstore tokens itself through its normal API flow.
-export async function authenticateLocalPage(page, baseUrl, token, shouldAuthenticate = () => true) {
+// jsonRewrites holds `{ path, rewrite }` entries that adjust GET API responses for this browser
+// context only; entries may be added later, before the page requests the matching path.
+export async function authenticateLocalPage(
+  page,
+  baseUrl,
+  token,
+  shouldAuthenticate = () => true,
+  jsonRewrites = [],
+) {
   const origin = new URL(baseUrl).origin;
   await page.context().route(
     (url) =>
       url.origin === origin &&
       (url.pathname.startsWith("/api/") ||
         url.pathname === "/" ||
-        /^\/(datasets|annotations|dashboard|users|teams|projects|tasks|taskTypes|jobs|onboarding|auth)(\/|$)/.test(
+        /^\/(datasets|annotations|dashboard|users|teams|projects|tasks|taskTypes|jobs|onboarding|auth|organization|account)(\/|$)/.test(
           url.pathname,
         )),
     async (route) => {
@@ -21,8 +29,33 @@ export async function authenticateLocalPage(page, baseUrl, token, shouldAuthenti
       ) {
         headers["x-auth-token"] = token;
       }
-      await route.continue({ headers });
+      const { pathname } = new URL(request.url());
+      const rewrites =
+        request.method() === "GET"
+          ? [lightTheme, ...jsonRewrites].filter(({ path }) => path.test(pathname))
+          : [];
+      if (!rewrites.length) return route.continue({ headers });
+      const response = await route.fetch({ headers });
+      if (!response.ok() || !response.headers()["content-type"]?.includes("application/json"))
+        return route.fulfill({ response });
+      let json = await response.json();
+      for (const { rewrite } of rewrites) json = rewrite(json);
+      await route.fulfill({ response, json });
     },
+  );
+}
+
+// Screenshots are always light: the account's theme setting would otherwise override the
+// emulated light color scheme. Only the capture's browser context sees the rewritten user records.
+const lightTheme = { path: /^\/api\/users?(\/|$)/, rewrite: withLightTheme };
+
+export function withLightTheme(value) {
+  if (Array.isArray(value)) return value.map(withLightTheme);
+  if (value == null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) =>
+      key === "selectedTheme" ? [key, "light"] : [key, withLightTheme(entry)],
+    ),
   );
 }
 
@@ -94,6 +127,7 @@ export function captureContextOptions(recipe = {}) {
     timezoneId: "UTC",
     locale: "en-US",
     reducedMotion: "reduce",
+    colorScheme: "light",
   };
 }
 
@@ -153,6 +187,8 @@ async function waitForStableBox(page, locator, timeout = 5000) {
 }
 
 export async function captureScreenshot(page, result, recipe) {
+  if (await page.locator(".dark-theme").count())
+    throw new Error("The page uses the dark theme; screenshots must be taken in light mode.");
   if (recipe.mobileControls !== true) {
     await page.locator(".floating-buttons-bar").waitFor({ state: "hidden", timeout: 5000 });
   }

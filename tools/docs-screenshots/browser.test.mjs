@@ -11,6 +11,7 @@ import {
   clickText,
   contextualClip,
   waitForViewer,
+  withLightTheme,
 } from "./browser.mjs";
 
 test("scoped authentication leaves worker data fetches running and supports anonymous pages", {
@@ -195,5 +196,15 @@ test("contextual crops retain surroundings and clamp to the viewport", () => {
     () =>
       contextualClip([{ x: 200, y: 200, width: 10, height: 10 }], { width: 100, height: 100 }, 0),
     /outside/,
+  );
+});
+
+test("user records always select the light theme", () => {
+  assert.deepEqual(
+    withLightTheme([
+      { id: "a", selectedTheme: "dark", teams: [{ name: "x" }] },
+      { selectedTheme: "auto" },
+    ]),
+    [{ id: "a", selectedTheme: "light", teams: [{ name: "x" }] }, { selectedTheme: "light" }],
   );
 });

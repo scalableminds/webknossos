@@ -210,12 +210,17 @@ async function run() {
         page.setDefaultTimeout(30000);
         page.setDefaultNavigationTimeout(60000);
         let authenticate = true;
-        await authenticateLocalPage(page, baseUrl, token, () => authenticate);
+        const jsonRewrites = [];
+        await authenticateLocalPage(page, baseUrl, token, () => authenticate, jsonRewrites);
         const ctx = {
           page,
           baseUrl,
           dataset,
           fixtures,
+          // Adjusts GET API responses matching `path` for this recipe's browser context only.
+          rewriteJson(path, rewrite) {
+            jsonRewrites.push({ path, rewrite });
+          },
           async anonymous() {
             authenticate = false;
             await context.clearCookies();

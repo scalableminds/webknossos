@@ -8,6 +8,10 @@
     "kind": "screenshot"
   },
   {
+    "path": "docs/images/account_profile.jpeg",
+    "kind": "screenshot"
+  },
+  {
     "path": "docs/images/blend-mode-example-additive-bosch-et-al.png",
     "kind": "static",
     "reason": "Excluded for now: illustrates blend modes with two distinct color channels (Bosch et al.); the documentation dataset has no suitable second channel."
@@ -142,6 +146,10 @@
   },
   {
     "path": "docs/images/onboarding_user.jpeg",
+    "kind": "screenshot"
+  },
+  {
+    "path": "docs/images/organization_overview.jpeg",
     "kind": "screenshot"
   },
   {

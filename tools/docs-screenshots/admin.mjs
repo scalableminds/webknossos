@@ -429,6 +429,29 @@ export const recipes = [
     await dialog(ctx).waitFor({ state: "visible" });
     return { target: dialog(ctx), padding: 64 };
   }),
+  recipe("organization_overview.jpeg", async (ctx) => {
+    // Shows a representative paid plan regardless of the local organization's plan and storage
+    // reports. Only this browser context sees the adjusted organization.
+    const plan = fixture(ctx, "organizationPlan", "Pricing plan, user and storage quota to show.");
+    ctx.rewriteJson(/^\/api\/organizations\/[^/]+$/, (organization) => ({
+      ...organization,
+      ...plan,
+      paidUntil: null,
+    }));
+    ctx.rewriteJson(/^\/api\/pricing\/status$/, () => ({
+      pricingPlan: plan.pricingPlan,
+      isExceeded: false,
+      isAlmostExceeded: false,
+    }));
+    await goto(ctx, "/organization/overview", "Manage your organization.");
+    await settled(ctx);
+    return content(ctx);
+  }),
+  recipe("account_profile.jpeg", async (ctx) => {
+    await goto(ctx, "/account/profile", "Profile");
+    await settled(ctx);
+    return content(ctx);
+  }),
   recipe("team_overview.jpg", async (ctx) => {
     await goto(ctx, "/teams", "Teams");
     // Expand the team with the most members to show its member list.

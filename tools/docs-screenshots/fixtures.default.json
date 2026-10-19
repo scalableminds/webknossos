@@ -54,6 +54,13 @@
     "allowedModes": ["orthogonal", "flight"]
   },
   "teams": ["Axon Tracing", "Dendrite Proofreading", "Synapse Annotation", "Student Annotators"],
+  "organizationPlan": {
+    "pricingPlan": "Power",
+    "includedUsers": 10,
+    "includedStorageBytes": 100000000000,
+    "usedStorageBytes": 4300000000,
+    "milliCreditBalance": 850000
+  },
   "exampleDatasets": {
     "tag": "Example data",
     "datasets": {

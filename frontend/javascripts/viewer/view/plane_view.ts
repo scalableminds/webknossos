@@ -36,6 +36,7 @@ import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
 import type { MeshSceneNode, SceneGroupForMeshes } from "viewer/controller/segment_mesh_controller";
+import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import {
@@ -498,6 +499,27 @@ class PlaneView {
           // Note that this code is responsible for highlighting the *active*
           // (not necessarily hovered) segment.
           segmentMeshController.updateActiveUnmappedSegmentIdHighlighting(activeUnmappedSegmentId),
+        true,
+      ),
+    );
+    this.unsubscribeFunctions.push(
+      listenToStoreProperty(
+        // Within the 3D viewport, performMeshHitTest takes care of highlighting hovered meshes.
+        // In proofreading mode, highlighting the whole agglomerate mesh would hide the
+        // highlighting of the active supervoxel.
+        (storeState) =>
+          storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView &&
+          storeState.uiInformation.activeTool !== AnnotationTool.PROOFREAD
+            ? storeState.temporaryConfiguration.hoveredSegmentId
+            : null,
+        (hoveredSegmentId) => {
+          const storeState = Store.getState();
+          segmentMeshController.updateHoveredSegmentIdHighlightingFrom2D(
+            hoveredSegmentId,
+            getVisibleSegmentationLayer(storeState)?.name ?? null,
+            storeState.flycam.additionalCoordinates,
+          );
+        },
         true,
       ),
     );

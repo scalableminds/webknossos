@@ -114,6 +114,10 @@ export default class SegmentMeshController {
     >
   > = {};
 
+  // Meshes highlighted because their segment is hovered in a 2D viewport (or in the
+  // segments list). Hovering meshes in the 3D viewport is handled by PlaneView.performMeshHitTest.
+  private meshesHighlightedByHoverIn2D: MeshSceneNode[] = [];
+
   constructor() {
     this.lightsGroup = new Group();
     this.meshesLayerLODRootGroup = new Group();
@@ -742,6 +746,40 @@ export default class SegmentMeshController {
         this.updateMeshAppearance(obj, undefined, undefined, false, null);
       }
     });
+  };
+
+  updateHoveredSegmentIdHighlightingFrom2D = (
+    hoveredSegmentId: bigint | null,
+    layerName: string | null,
+    additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  ) => {
+    for (const mesh of this.meshesHighlightedByHoverIn2D) {
+      // Skip meshes that were removed from the scene graph in the meantime.
+      if (mesh.parent?.parent != null) {
+        this.updateMeshAppearance(mesh, false, undefined, undefined, null);
+      }
+    }
+    this.meshesHighlightedByHoverIn2D = [];
+
+    if (!hoveredSegmentId || layerName == null) {
+      return;
+    }
+    const meshGroupsByLOD = this.getMeshGroups(
+      getAdditionalCoordinatesAsString(additionalCoordinates),
+      layerName,
+      hoveredSegmentId,
+    );
+    if (meshGroupsByLOD == null) {
+      return;
+    }
+    for (const lodGroup of Object.values(meshGroupsByLOD) as GroupForLOD[]) {
+      // Highlighting one mesh with "full" recolors all meshes of its LOD group.
+      const mesh = lodGroup.children[0]?.children[0];
+      if (mesh != null) {
+        this.updateMeshAppearance(mesh, true, undefined, undefined, "full");
+        this.meshesHighlightedByHoverIn2D.push(mesh);
+      }
+    }
   };
 
   throttledUpdateActiveUnmappedSegmentIdHighlighting = throttle(

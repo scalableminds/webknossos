@@ -644,7 +644,9 @@ class AnnotationIOController @Inject() (
       fileExtension = exportExtensionForAnnotation(annotation)
       fileName = URLEncoder.encode(name + fileExtension, "UTF-8").replace("+", "%20")
       mimeType = exportMimeTypeForAnnotation(annotation)
-      _ <- restrictions.allowDownload(requestingUser) ?~> Msg.Annotation.Download.notAllowed ~> FORBIDDEN
+      _ <- Fox.assertTrue(
+        restrictions.allowDownload(requestingUser)
+      ) ?~> Msg.Annotation.Download.notAllowed ~> FORBIDDEN
       dataset <- datasetDAO.findOne(annotation._dataset)(using GlobalAccessContext) ?~> Msg.Dataset
         .notFoundForAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization

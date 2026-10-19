@@ -1,16 +1,16 @@
 package backend
 
 import com.scalableminds.util.box.Full
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
-import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, NgffMetadataV0_5, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   ChunkGridSpecification,
   TransposeCodecConfiguration,
   Zarr3ArrayHeader
 }
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
-import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import org.scalatest.wordspec.AsyncWordSpec
 
@@ -71,6 +71,41 @@ class ZarrStreamingAdditionalAxesTestSuite extends AsyncWordSpec with Zarr3Outpu
     }
   }
 
+  "OME-NGFF metadata for an array with additional axes" should {
+
+    val voxelSize = VoxelSize(Vec3Double(11, 11, 24), LengthUnit.nanometer)
+    val mags = Seq(Vec3Int.ones, Vec3Int(2, 2, 1))
+
+    "match the array rank in axes and scales (v0.4, .zattrs)" in {
+      val header = ZarrHeader.forArray(ElementClass.uint32, boundingBox, singletonTAxis, Vec3Int.ones)
+      val multiscales =
+        NgffMetadata.fromNameVoxelSizeAndMags("layer", voxelSize, mags, Some(singletonTAxis)).multiscales
+      assert(multiscales.head.axes.length == header.rank)
+      assert(
+        multiscales.head.datasets.flatMap(_.coordinateTransformations).forall(_.scale.exists(_.length == header.rank))
+      )
+      assert(
+        multiscales.head.datasets(1).coordinateTransformations.head.scale.contains(List(1.0, 1.0, 22.0, 22.0, 24.0))
+      )
+    }
+
+    "match the array rank in axes and scales (v0.5, zarr.json)" in {
+      val header = Zarr3ArrayHeader.forArray(ElementClass.uint32, boundingBox, unorderedAxes, Vec3Int.ones)
+      val multiscales =
+        NgffMetadataV0_5.fromNameVoxelSizeAndMags("layer", voxelSize, mags, Some(unorderedAxes)).multiscales
+      assert(multiscales.head.axes.length == header.rank)
+      assert(
+        multiscales.head.datasets.flatMap(_.coordinateTransformations).forall(_.scale.exists(_.length == header.rank))
+      )
+    }
+
+    "keep four axes without additional axes" in {
+      val multiscales = NgffMetadata.fromNameVoxelSizeAndMags("layer", voxelSize, mags).multiscales
+      assert(multiscales.head.axes.map(_.name) == List("c", "x", "y", "z"))
+      assert(multiscales.head.datasets.head.coordinateTransformations.head.scale.contains(List(1.0, 11.0, 11.0, 24.0)))
+    }
+  }
+
   "Chunk keys of the served arrays" should {
 
     "be accepted by the coordinates parser for a singleton additional axis" in {
@@ -82,7 +117,7 @@ class ZarrStreamingAdditionalAxesTestSuite extends AsyncWordSpec with Zarr3Outpu
         .map(result => assert(result == Full((33, 27, 4, Some(List(AdditionalCoordinate("t", 0)))))))
     }
 
-    "map additional coordinates in index order" in {
+    "map additional coordinates in index order" in
       ZarrCoordinatesParser
         .parseNDimensionalDotCoordinates("0.2.4.1.1.1", Some(reorderAdditionalAxes(unorderedAxes)))
         .futureBox
@@ -91,14 +126,12 @@ class ZarrStreamingAdditionalAxesTestSuite extends AsyncWordSpec with Zarr3Outpu
             result == Full((1, 1, 1, Some(List(AdditionalCoordinate("angle", 2), AdditionalCoordinate("t", 4)))))
           )
         )
-    }
 
-    "reject 4D chunk keys for an array with additional axes" in {
+    "reject 4D chunk keys for an array with additional axes" in
       ZarrCoordinatesParser
         .parseNDimensionalDotCoordinates("0.33.27.4", Some(reorderAdditionalAxes(singletonTAxis)))
         .futureBox
         .map(result => assert(result.isEmpty))
-    }
   }
 
 }

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.models.VoxelSize
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 
 case class NgffGroupHeader(zarr_format: Int) derives JsonAutoFormat
 object NgffGroupHeader {
@@ -27,22 +28,30 @@ object NgffMetadata {
   def fromNameVoxelSizeAndMags(
       dataLayerName: String,
       dataSourceVoxelSize: VoxelSize,
-      mags: Seq[Vec3Int]
+      mags: Seq[Vec3Int],
+      additionalAxes: Option[Seq[AdditionalAxis]] = None
   ): NgffMetadata = {
+    val additionalAxesCount = additionalAxes.map(_.length).getOrElse(0)
     val datasets = mags.map(mag =>
       NgffDataset(
         path = mag.toMagLiteral(allowScalar = true),
         List(
           NgffCoordinateTransformation(
-            scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList),
+            // channel, additional axes, xyz
+            scale = Some(
+              List[Double](1.0) ++ List.fill(additionalAxesCount)(1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(
+                mag
+              )).toList
+            ),
             translation = None
           )
         )
       )
     )
     val lengthUnitStr = dataSourceVoxelSize.unit.toString
-    val axes = List(
-      NgffAxis(name = "c", `type` = "channel"),
+    val axes = List(NgffAxis(name = "c", `type` = "channel")) ++ List
+      .range(0, additionalAxesCount)
+      .map(index => NgffAxis(name = s"t$index", `type` = "space", unit = Some(lengthUnitStr))) ++ List(
       NgffAxis(name = "x", `type` = "space", unit = Some(lengthUnitStr)),
       NgffAxis(name = "y", `type` = "space", unit = Some(lengthUnitStr)),
       NgffAxis(name = "z", `type` = "space", unit = Some(lengthUnitStr))

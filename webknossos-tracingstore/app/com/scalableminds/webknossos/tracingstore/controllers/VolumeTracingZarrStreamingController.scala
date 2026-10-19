@@ -191,7 +191,8 @@ class VolumeTracingZarrStreamingController @Inject() (
         omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(
           tracingId,
           dataSourceVoxelSize = dataSource.scale,
-          mags = existingMags.toList
+          mags = existingMags.toList,
+          additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes).map(reorderAdditionalAxes)
         )
       } yield Ok(Json.toJson(omeNgffHeader))
     }

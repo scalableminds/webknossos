@@ -48,7 +48,13 @@ object NgffMetadataV0_5 {
         path = mag.toMagLiteral(allowScalar = true),
         List(
           NgffCoordinateTransformation(
-            scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList),
+            // channel, additional axes, xyz
+            scale = Some(
+              List[Double](1.0) ++ List
+                .fill(additionalAxes.map(_.length).getOrElse(0))(1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(
+                mag
+              )).toList
+            ),
             translation = None
           )
         )

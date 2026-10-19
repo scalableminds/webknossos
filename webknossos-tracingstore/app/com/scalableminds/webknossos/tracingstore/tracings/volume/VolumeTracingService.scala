@@ -63,8 +63,6 @@ class VolumeTracingService @Inject() (
 
   implicit val volumeDataStore: FossilDBClient = tracingDataStore.volumeData
 
-  implicit val tracingCompanion: VolumeTracing.type = VolumeTracing
-
   val tracingType: TracingType = TracingType.volume
 
   val tracingStore: FossilDBClient = tracingDataStore.volumes

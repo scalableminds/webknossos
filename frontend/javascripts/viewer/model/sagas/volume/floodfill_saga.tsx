@@ -267,7 +267,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     const startTimeOfFloodfill = performance.now();
 
     const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
-    // Floored, unlike brush's toMagVoxel: a flood-fill seed is used for direct
+    // Floored, unlike the brush center (getBrushCenterInMag): a flood-fill seed is used for direct
     // array indexing (resolveFloodFill), so it must land exactly on a
     // source-mag voxel. A mag1 position is only guaranteed to divide evenly
     // by the mag factor when it happens to be mag-aligned (e.g. z=43 at

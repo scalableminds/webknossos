@@ -6,6 +6,7 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
+import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
 import { APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -17,6 +18,7 @@ import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
+import type { StoreAnnotation, StoreDataset, UserBoundingBox } from "viewer/store";
 
 // These values should be kept in sync with the documentation:
 // docs/automation/choosing_mags_and_bboxes.md
@@ -60,6 +62,143 @@ type Props = {
   // Pre-fills the training type selector. When null, defaults to neuron segmentation.
   jobType: APIJobCommand | null;
 };
+
+/**
+ * Generates non-overlapping bounding boxes distributed randomly across the dataset:
+ * 1. Compute the valid placement range: positions where a box of `sizeInMag1` fits
+ *    entirely within the dataset bounds.
+ * 2. Optionally seed the collision set with any bounding boxes already present in the
+ *    annotation so that new boxes do not overlap existing ones.
+ * 3. Repeatedly sample a random position, snap it to the magnification grid by
+ *    choosing uniformly from all discrete mag-aligned slots within the valid range,
+ *    and reject candidates that overlap any already-placed box.
+ * 4. Dispatch all accepted boxes to the Redux store in a single batched action and
+ *    warn the user if the retry budget is exhausted before all requested boxes are placed.
+ */
+async function generateBoundingBoxes({
+  dispatch,
+  annotation,
+  dataset,
+  nativelyRenderedLayerName,
+  existingBoundingBoxes,
+  restrictToBox,
+  restrictToBoxId,
+  avoidExistingBoxes,
+  mag,
+  sizeInMag1,
+  numberOfBoxes,
+  onClose,
+}: {
+  dispatch: Dispatch<any>;
+  annotation: StoreAnnotation;
+  dataset: StoreDataset;
+  nativelyRenderedLayerName: string | null;
+  existingBoundingBoxes: UserBoundingBox[];
+  restrictToBox: UserBoundingBox | null;
+  restrictToBoxId: number | null;
+  avoidExistingBoxes: boolean;
+  mag: Vector3;
+  sizeInMag1: Vector3;
+  numberOfBoxes: number;
+  onClose: () => void;
+}) {
+  // Restrict sampling to a selected bounding box if one is chosen, otherwise the whole dataset.
+  const samplingBbox = restrictToBox
+    ? new BoundingBox(restrictToBox.boundingBox)
+    : getTransformedDatasetBoundingBox(dataset, nativelyRenderedLayerName);
+  const { min, max } = samplingBbox;
+
+  const placementMax: Vector3 = V3.sub(max, sizeInMag1);
+
+  if (placementMax[0] < min[0] || placementMax[1] < min[1] || placementMax[2] < min[2]) {
+    Toast.warning(
+      restrictToBox
+        ? "The selected box size does not fit into the selected bounding box at the chosen magnification."
+        : "The selected box size does not fit into the dataset at the chosen magnification.",
+    );
+    return;
+  }
+
+  const MAX_RETRIES = 500;
+  // Optionally seed with existing boxes so new ones don't overlap them. The bounding box used
+  // to restrict the sampling space is excluded so it doesn't block all placements.
+  const placedBoxes: BoundingBox[] = avoidExistingBoxes
+    ? existingBoundingBoxes
+        .filter((bb) => bb.id !== restrictToBoxId)
+        .map((bb) => new BoundingBox(bb.boundingBox))
+    : [];
+
+  // Sample a position by choosing uniformly from the discrete set of mag-aligned
+  // slots within [min, placementMax]. Snapping is applied to the absolute coordinate
+  // (not the offset) to avoid misalignment when min is not itself a multiple of mag.
+  const samplePosition = (): Vector3 =>
+    [0, 1, 2].map((dim) => {
+      const firstSlot = Math.ceil(min[dim] / mag[dim]) * mag[dim];
+      const lastSlot = Math.floor(placementMax[dim] / mag[dim]) * mag[dim];
+      const slotCount = Math.floor((lastSlot - firstSlot) / mag[dim]) + 1;
+
+      if (slotCount <= 0) return firstSlot;
+
+      const k = Math.floor(Math.random() * slotCount);
+      return firstSlot + k * mag[dim];
+    }) as Vector3;
+
+  let placed = 0;
+  let retries = 0;
+  const actions: ReturnType<typeof addUserBoundingBoxAction>[] = [];
+  const tracingId = getSomeTracing(annotation).tracingId;
+
+  while (placed < numberOfBoxes && retries < MAX_RETRIES) {
+    const boxMin = samplePosition();
+    const boxMax: Vector3 = V3.add(boxMin, sizeInMag1);
+    const candidate = new BoundingBox({ min: boxMin, max: boxMax });
+
+    if (
+      placedBoxes.some((existing) => {
+        const r = existing.intersectedWithFast(candidate);
+        return (r.max[0] - r.min[0]) * (r.max[1] - r.min[1]) * (r.max[2] - r.min[2]) > 0;
+      })
+    ) {
+      retries++;
+      continue;
+    }
+
+    placedBoxes.push(candidate);
+    // Reserved sequentially so every generated box gets a collision-free id, even in
+    // collaborative annotations where other users might be creating bounding boxes too.
+    // If this turns out to become a bottleneck, we can batch-allocate ID before this
+    // loop. This will only be relevant when generating bounding boxes in a collaborative
+    // context, though.
+    const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
+    actions.push(
+      addUserBoundingBoxAction(
+        {
+          boundingBox: { min: boxMin, max: boxMax },
+          name: `Generated Bounding Box ${placed + 1}`,
+          color: getRandomColor(),
+          isVisible: true,
+        },
+        undefined,
+        id,
+      ),
+    );
+    placed++;
+  }
+
+  if (actions.length > 0) {
+    // Wait out any active rebase so the batch is not dropped by the rebase edit guard
+    // (see rebase_edit_guard.ts), then dispatch synchronously. Ids were already reserved
+    // above and stay valid across the rebase.
+    await waitUntilRebaseFinished();
+    dispatch(batchActions(actions, "ADD_NEW_USER_BOUNDING_BOX") as unknown as Action);
+  }
+
+  if (placed < numberOfBoxes) {
+    Toast.warning(`Only ${placed} of ${numberOfBoxes} boxes could be placed without overlapping.`);
+  }
+
+  onClose();
+}
 
 function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobType }: Props) {
   const dispatch = useDispatch();
@@ -124,18 +263,6 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
   const sizeInMag1: Vector3 = V3.scale3([sizeX, sizeY, sizeZ], selectedMag);
   const isMag1 = V3.equals(selectedMag, [1, 1, 1]);
 
-  /**
-   * Generates non-overlapping bounding boxes distributed randomly across the dataset:
-   * 1. Compute the valid placement range: positions where a box of `sizeInMag1` fits
-   *    entirely within the dataset bounds.
-   * 2. Optionally seed the collision set with any bounding boxes already present in the
-   *    annotation so that new boxes do not overlap existing ones.
-   * 3. Repeatedly sample a random position, snap it to the magnification grid by
-   *    choosing uniformly from all discrete mag-aligned slots within the valid range,
-   *    and reject candidates that overlap any already-placed box.
-   * 4. Dispatch all accepted boxes to the Redux store in a single batched action and
-   *    warn the user if the retry budget is exhausted before all requested boxes are placed.
-   */
   const handleGenerate = () => {
     if (hasSizeError || isGenerating) return;
     setIsGenerating(true);
@@ -143,105 +270,20 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
     // Defer the loop to allow the loading state to render first.
     setTimeout(async () => {
       try {
-        const mag = selectedMag;
-        // Restrict sampling to a selected bounding box if one is chosen, otherwise the whole dataset.
-        const samplingBbox = restrictToBox
-          ? new BoundingBox(restrictToBox.boundingBox)
-          : getTransformedDatasetBoundingBox(dataset, nativelyRenderedLayerName);
-        const { min, max } = samplingBbox;
-
-        const placementMax: Vector3 = V3.sub(max, sizeInMag1);
-
-        if (placementMax[0] < min[0] || placementMax[1] < min[1] || placementMax[2] < min[2]) {
-          Toast.warning(
-            restrictToBox
-              ? "The selected box size does not fit into the selected bounding box at the chosen magnification."
-              : "The selected box size does not fit into the dataset at the chosen magnification.",
-          );
-          return;
-        }
-
-        const MAX_RETRIES = 500;
-        // Optionally seed with existing boxes so new ones don't overlap them. The bounding box used
-        // to restrict the sampling space is excluded so it doesn't block all placements.
-        const placedBoxes: BoundingBox[] = avoidExistingBoxes
-          ? existingBoundingBoxes
-              .filter((bb) => bb.id !== restrictToBoxId)
-              .map((bb) => new BoundingBox(bb.boundingBox))
-          : [];
-
-        // Sample a position by choosing uniformly from the discrete set of mag-aligned
-        // slots within [min, placementMax]. Snapping is applied to the absolute coordinate
-        // (not the offset) to avoid misalignment when min is not itself a multiple of mag.
-        const samplePosition = (): Vector3 =>
-          [0, 1, 2].map((dim) => {
-            const firstSlot = Math.ceil(min[dim] / mag[dim]) * mag[dim];
-            const lastSlot = Math.floor(placementMax[dim] / mag[dim]) * mag[dim];
-            const slotCount = Math.floor((lastSlot - firstSlot) / mag[dim]) + 1;
-
-            if (slotCount <= 0) return firstSlot;
-
-            const k = Math.floor(Math.random() * slotCount);
-            return firstSlot + k * mag[dim];
-          }) as Vector3;
-
-        let placed = 0;
-        let retries = 0;
-        const actions: ReturnType<typeof addUserBoundingBoxAction>[] = [];
-        const tracingId = getSomeTracing(annotation).tracingId;
-
-        while (placed < numberOfBoxes && retries < MAX_RETRIES) {
-          const boxMin = samplePosition();
-          const boxMax: Vector3 = V3.add(boxMin, sizeInMag1);
-          const candidate = new BoundingBox({ min: boxMin, max: boxMax });
-
-          if (
-            placedBoxes.some((existing) => {
-              const r = existing.intersectedWithFast(candidate);
-              return (r.max[0] - r.min[0]) * (r.max[1] - r.min[1]) * (r.max[2] - r.min[2]) > 0;
-            })
-          ) {
-            retries++;
-            continue;
-          }
-
-          placedBoxes.push(candidate);
-          // Reserved sequentially so every generated box gets a collision-free id, even in
-          // collaborative annotations where other users might be creating bounding boxes too.
-          // If this turns out to become a bottleneck, we can batch-allocate ID before this
-          // loop. This will only be relevant when generating bounding boxes in a collaborative
-          // context, though.
-          const id = await dispatchGetNewIdAsync(dispatch, tracingId, "BoundingBox");
-          actions.push(
-            addUserBoundingBoxAction(
-              {
-                boundingBox: { min: boxMin, max: boxMax },
-                name: `Generated Bounding Box ${placed + 1}`,
-                color: getRandomColor(),
-                isVisible: true,
-              },
-              undefined,
-              id,
-            ),
-          );
-          placed++;
-        }
-
-        if (actions.length > 0) {
-          // Wait out any active rebase so the batch is not dropped by the rebase edit guard
-          // (see rebase_edit_guard.ts), then dispatch synchronously. Ids were already reserved
-          // above and stay valid across the rebase.
-          await waitUntilRebaseFinished();
-          dispatch(batchActions(actions, "ADD_NEW_USER_BOUNDING_BOX") as unknown as Action);
-        }
-
-        if (placed < numberOfBoxes) {
-          Toast.warning(
-            `Only ${placed} of ${numberOfBoxes} boxes could be placed without overlapping.`,
-          );
-        }
-
-        onClose();
+        await generateBoundingBoxes({
+          dispatch,
+          annotation,
+          dataset,
+          nativelyRenderedLayerName,
+          existingBoundingBoxes,
+          restrictToBox,
+          restrictToBoxId,
+          avoidExistingBoxes,
+          mag: selectedMag,
+          sizeInMag1,
+          numberOfBoxes,
+          onClose,
+        });
       } catch (error) {
         handleGenericError(error as Error, "Could not generate the bounding boxes.");
       } finally {

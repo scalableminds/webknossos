@@ -10,7 +10,29 @@ First, a _Task Type_ needs to be created:
 2. Fill out the form to create the Task Type:
    - Note that the `Description` field supports Markdown formatting.
    - If you don't have a sophisticated team structure, select the [default Team](../users/organizations.md).
-   - Take a look at the additional settings to configure the new _Task&nbsp;Type_:
+   - Take a look at the additional settings to configure the new _Task&nbsp;Type_ (see below).
+
+### Task Type Options
+
+| Option | Description |
+|--------|-------------|
+| `Annotation Type` | `Skeleton`, `Volume`, or `Skeleton and Volume`. Determines which annotation layers the tasks' annotations have. Can't be changed after the task type was created. |
+| `Allowed Modes` | The view modes annotators may use: `Orthogonal` and/or `Flight`. |
+| `Preferred Mode` | The view mode tasks open in. With `Any`, no mode is preset. |
+| `Allow Single-node-tree mode ("Soma clicking")` | Lets annotators use the single-node-tree mode, where each new node creates a new tree. Not available for volume-only task types. |
+| `Allow Branchpoints` | Lets annotators mark branchpoints. Not available for volume-only task types. |
+| `Merger Mode` | Activates the [merger mode](../proofreading/merger_mode.md) automatically when annotators open a task. Not available for volume-only task types. |
+| `Allow Volume Interpolation` | Lets annotators label only every second slice and fill the slices in between by [interpolation](../volume_annotation/tools.md#volume-interpolation). Not available for skeleton-only task types. |
+| `Restrict Magnifications` | Limits annotating to a range of magnifications, given as power-of-two numbers in `Minimum` and `Maximum` (e.g., `1` and `2` for the finest and second finest magnification). Annotators are warned and can't annotate when zoomed outside the allowed range. For task types with volume annotations, the volume layer only stores data in the allowed magnifications. Can't be changed after the task type was created. |
+| `Add Recommended User Settings` | Suggests viewer settings to annotators (see below). |
+
+#### Recommended Configuration
+
+With `Add Recommended User Settings`, you can define viewer settings as JSON that annotators should use for the tasks, e.g., a specific zoom or brush size. Use the buttons below the editor to remove orthogonal-only, flight, or volume-only settings that are irrelevant for your task type.
+
+When annotators open a task with a different task type than their previous one and their current settings differ from the recommended ones, WEBKNOSSOS shows the recommended settings in a dialog. Annotators can `Accept` to apply them or `Decline` to keep their own settings.
+
+The following settings are supported:
 
 ??? settings
       | Display Name                              | Key                        | Default Value           | Comment                                 |
@@ -129,6 +151,8 @@ Manual assignments can be done by:
 4. Select a user for the assignment from the dropdown
 5. Confirm the assignment with "ok"
 
+The user is notified about the manual assignment by email, including a link to start the task.
+
 Existing, active and finished task instances can also be transferred to other users, e.g. for proofreading, continued annotation or to change ownership:
 
 1. Navigate to the task list
@@ -137,6 +161,8 @@ Existing, active and finished task instances can also be transferred to other us
 4. From the `Actions` menu on the right-hand side, select "Transfer"
 5. Select a user for the task transferal from the dropdown
 6. Confirm the task transfer with "ok"
+
+The new owner of a transferred annotation is notified by email.
 
 ![Transfer a task instance to a new user and additional task administration actions.](../images/task_instance_actions.jpg)
 /// caption

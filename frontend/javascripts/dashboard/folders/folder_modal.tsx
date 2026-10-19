@@ -28,13 +28,13 @@ function EditFolderModalContent({ folderId, onClose }: { folderId: string; onClo
   const [form] = Form.useForm();
   const context = useDatasetCollectionContext();
   const inputElement = useRef<InputRef>(null);
+  const isFormVisible = folder != null && !isFetching;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: This is an intentional side effect to focus the input element.
   useEffect(() => {
-    if (inputElement.current) {
-      inputElement.current.focus();
+    if (isFormVisible) {
+      inputElement.current?.focus();
     }
-  }, [inputElement.current, isFetching]);
+  }, [isFormVisible]);
 
   const onSave = async () => {
     const name = form.getFieldValue("name");
@@ -57,7 +57,7 @@ function EditFolderModalContent({ folderId, onClose }: { folderId: string; onClo
   const content =
     // Don't initialize form when isFetching==true, because
     // this would populate the form with outdated initial values.
-    folder != null && !isFetching ? (
+    isFormVisible ? (
       <div>
         <Shortcut keys="enter" onTrigger={onSave} supportInputElements />
         <Form
@@ -99,14 +99,6 @@ function CreateFolderModalContent({
   const context = useDatasetCollectionContext();
   const inputElement = useRef<InputRef>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: This is an intentional side effect to focus and select the input element.
-  useEffect(() => {
-    if (inputElement.current) {
-      inputElement.current.focus();
-      inputElement.current.select();
-    }
-  }, [inputElement.current]);
-
   const onSave = async () => {
     const name = form.getFieldValue("name");
     const allowedTeams = (form.getFieldValue("allowedTeams") as APITeam[]) ?? [];
@@ -131,7 +123,15 @@ function CreateFolderModalContent({
   };
 
   return (
-    <Modal title="New Folder" open okText="Create" onOk={onSave} onCancel={onClose}>
+    <Modal
+      title="New Folder"
+      open
+      okText="Create"
+      onOk={onSave}
+      onCancel={onClose}
+      // Focusing the input on mount does not work reliably inside the modal, so wait until it is open.
+      afterOpenChange={(isOpen) => isOpen && inputElement.current?.focus({ cursor: "all" })}
+    >
       <div>
         <Shortcut keys="enter" onTrigger={onSave} supportInputElements />
         <Form

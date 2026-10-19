@@ -135,14 +135,21 @@ export async function requestResult<T>(
       const outOfAttempts = attempt >= retries;
       const outOfTime = remainingAfterFailure != null && remainingAfterFailure <= 0;
       if (outOfAttempts || outOfTime || !isRetryable(error)) {
+        if (attempt > 0) {
+          console.warn(`Request failed after ${attempt + 1} attempts. Giving up.`, error.message);
+        }
         if (showErrorToast) showErrorToastFor(error);
         return { ok: false, error };
       }
-      attempt++;
       const sleepMs =
         remainingAfterFailure != null
           ? Math.min(delay, maxDelayMs, remainingAfterFailure)
           : Math.min(delay, maxDelayMs);
+      console.warn(
+        `Request failed (attempt ${attempt + 1}/${retries + 1}). Retrying in ${sleepMs} ms...`,
+        error.message,
+      );
+      attempt++;
       await sleep(sleepMs);
       delay *= backoffFactor;
     }

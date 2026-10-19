@@ -121,8 +121,8 @@ class JobService @Inject() (
         case JobCommand.export_tiff =>
           Some(
             genericEmailTemplate(
-              "Tiff Export",
-              "Your dataset has been exported as Tiff and is ready for download."
+              "TIFF / OME-Zarr Export",
+              "Your data export is ready for download."
             )
           )
         case JobCommand.infer_neurons =>
@@ -375,10 +375,13 @@ class JobService @Inject() (
     }
 
   def calculateJobCostInMilliCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[Int] =
-    getJobCostInMilliCreditsPerGVx(jobCommand).map { costPerGVx =>
-      val volumeInGVx = boundingBoxInTargetMag.volume / ONE_GIGAVOXEL
-      val costInMilliCredits = math.ceil(volumeInGVx * costPerGVx).toInt
-      math.max(costInMilliCredits, 0)
-    }
+    for {
+      costPerGVx <- getJobCostInMilliCreditsPerGVx(jobCommand)
+      // Computed as Double so that huge bounding boxes cannot overflow; Double.toInt saturates at Int.MaxValue
+      volumeInGVx =
+        if (boundingBoxInTargetMag.isEmpty) 0.0
+        else
+          boundingBoxInTargetMag.width.toDouble * boundingBoxInTargetMag.height * boundingBoxInTargetMag.depth / ONE_GIGAVOXEL
+    } yield math.max(math.ceil(volumeInGVx * costPerGVx).toInt, 0)
 
 }

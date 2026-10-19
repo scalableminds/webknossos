@@ -1,3 +1,4 @@
+import type { ApiResult } from "admin/api/api_result";
 import {
   fetchMapping,
   getAgglomeratesForDatasetLayer,
@@ -180,9 +181,8 @@ export default function* watchActivatedMappings(): Saga<void> {
     function* handler(action: EnsureLayerMappingsAreLoadedAction) {
       const layerName =
         action.layerName || (yield* select((state) => getVisibleSegmentationLayer(state)?.name));
-      if (layerName) {
-        yield* loadLayerMappings(layerName, true);
-      }
+      const layerMappings = layerName ? yield* loadLayerMappings(layerName, true) : [];
+      action.callback(layerMappings != null);
     },
   );
   yield* takeEvery("DEBUG__RELOAD_HDF5_MAPPING", reloadHdf5Mapping);
@@ -372,7 +372,11 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
   }
 }
 
-function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[string[], string[]]> {
+// Returns null if the mappings could not be loaded (an error toast was already shown in that case).
+function* loadLayerMappings(
+  layerName: string,
+  updateInStore: boolean,
+): Saga<[string[], string[]] | null> {
   const dataset = yield* select((state) => state.dataset);
   const layerInfo = getLayerByName(dataset, layerName);
 
@@ -400,10 +404,15 @@ function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[st
         ? layerInfo.fallbackLayer
         : layerInfo.name,
     ] as const;
-    [jsonMappings, serverHdf5Mappings] = yield* all([
+    const [jsonMappingsResult, serverHdf5MappingsResult] = yield* all([
       call(getMappingsForDatasetLayer, ...params),
       call(getAgglomeratesForDatasetLayer, ...params),
     ]);
+    if (!jsonMappingsResult.ok || !serverHdf5MappingsResult.ok) {
+      return null;
+    }
+    jsonMappings = jsonMappingsResult.value;
+    serverHdf5Mappings = serverHdf5MappingsResult.value;
   }
 
   if (updateInStore) {
@@ -727,16 +736,16 @@ function* handleSetJsonMapping(
 ): Saga<void> {
   console.time("MappingSaga JSON");
   const fetchedMappings: APIMappings = {};
-  try {
-    yield* call(fetchMappings, layerName, mappingName, fetchedMappings);
-  } catch (exception) {
+  const result = yield* call(fetchMappings, layerName, mappingName, fetchedMappings);
+  if (!result.ok) {
     yield* call(
       [Toast, Toast.error],
       "The requested mapping could not be loaded.",
       { sticky: true },
-      `${exception}`,
+      result.error.message,
     );
-    console.error(exception);
+    console.error(result.error.cause);
+    message.destroy(MAPPING_MESSAGE_KEY);
     yield* put(setMappingAction(layerName, null, mappingType, false));
     return;
   }
@@ -803,7 +812,7 @@ function* fetchMappings(
   layerName: string,
   mappingName: string,
   fetchedMappings: APIMappings,
-): Saga<void> {
+): Saga<ApiResult<void>> {
   const dataset = yield* select((state) => state.dataset);
   const layerInfo = getLayerByName(dataset, layerName);
   // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
@@ -811,18 +820,25 @@ function* fetchMappings(
     "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
       ? layerInfo.fallbackLayer
       : layerName;
-  const mapping = yield* call(
+  const result = yield* call(
     fetchMapping,
     dataset.dataStore.url,
     dataset,
     mappingLayerName,
     mappingName,
+    // The caller shows a more specific error toast.
+    { showErrorToast: false },
   );
+  if (!result.ok) {
+    return result;
+  }
+  const mapping = result.value;
   fetchedMappings[mappingName] = mapping;
 
   if (mapping.parent != null) {
-    yield* call(fetchMappings, layerName, mapping.parent, fetchedMappings);
+    return yield* call(fetchMappings, layerName, mapping.parent, fetchedMappings);
   }
+  return { ok: true, value: undefined };
 }
 
 function buildMappingObject(mappingName: string, fetchedMappings: APIMappings): Mapping {
@@ -873,11 +889,13 @@ function* ensureMappingsAreLoadedAndRequestedMappingExists(
   // Make sure the available mappings are persisted in the store if they are not already
   const areServerHdf5MappingsInStore =
     "agglomerates" in layerInfo && layerInfo.agglomerates != null;
-  const [jsonMappings, serverHdf5Mappings] = yield* call(
-    loadLayerMappings,
-    layerName,
-    !areServerHdf5MappingsInStore,
-  );
+  const layerMappings = yield* call(loadLayerMappings, layerName, !areServerHdf5MappingsInStore);
+  if (layerMappings == null) {
+    message.destroy(MAPPING_MESSAGE_KEY);
+    yield* put(setMappingAction(layerName, null, mappingType, true, {}));
+    return false;
+  }
+  const [jsonMappings, serverHdf5Mappings] = layerMappings;
 
   const editableMappings = yield* select((state) =>
     state.annotation.volumes

@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router";
 import type { VoxelyticsWorkflowReport } from "types/api_types";
-import { collapseMetaTasksInDag, getMetaTaskAncestors, isInMetaTask } from "./task_hierarchy";
+import {
+  collapseMetaTasksInDag,
+  getMetaTaskAncestors,
+  isInMetaTask,
+  mergeActiveKeysOfCollapse,
+} from "./task_hierarchy";
 import type { TaskListLocationState } from "./task_runs_tab";
 
 export function getTaskPanelId(taskNameOrMetaTaskKey: string) {
@@ -41,14 +46,9 @@ export function useDagMetaTaskExpansion(
 export function useTaskPanelExpansion() {
   const [expandedKeys, setExpandedKeys] = useState<Array<string>>([]);
 
-  // Each collapse only reports its own active keys, so only those are replaced.
   const setActiveKeysOfCollapse = useCallback(
     (collapseKeys: Array<string>, activeKeys: string | Array<string>) => {
-      const newKeys = Array.isArray(activeKeys) ? activeKeys : [activeKeys];
-      setExpandedKeys((expanded) => [
-        ...expanded.filter((key) => !collapseKeys.includes(key)),
-        ...newKeys,
-      ]);
+      setExpandedKeys((expanded) => mergeActiveKeysOfCollapse(expanded, collapseKeys, activeKeys));
     },
     [],
   );

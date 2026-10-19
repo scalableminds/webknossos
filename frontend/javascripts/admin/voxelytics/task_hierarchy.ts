@@ -22,6 +22,21 @@ export function isInMetaTask(taskName: string, metaTaskKey: string): boolean {
   return taskName.startsWith(`${metaTaskKey}@`);
 }
 
+// All (nested) collapses of the task list share the expanded keys as their activeKey, so a collapse
+// reports the keys of the other collapses, too. Only its own keys are taken over; otherwise, the
+// keys of the other collapses would be duplicated with every change.
+export function mergeActiveKeysOfCollapse(
+  expandedKeys: Array<string>,
+  collapseKeys: Array<string>,
+  activeKeys: string | Array<string>,
+): Array<string> {
+  const newKeys = Array.isArray(activeKeys) ? activeKeys : [activeKeys];
+  return [
+    ...expandedKeys.filter((key) => !collapseKeys.includes(key)),
+    ...newKeys.filter((key) => collapseKeys.includes(key)),
+  ];
+}
+
 // Builds the meta task hierarchy, keeping the order of the tasks in the report. If a root meta
 // task is given (the meta task opened in the extra view), it is the top level of the hierarchy.
 export function getTasksWithHierarchy(

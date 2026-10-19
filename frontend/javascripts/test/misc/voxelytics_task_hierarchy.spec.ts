@@ -5,6 +5,7 @@ import {
   getTaskInfosWithHierarchy,
   getTasksWithHierarchy,
   isInMetaTask,
+  mergeActiveKeysOfCollapse,
 } from "admin/voxelytics/task_hierarchy";
 import {
   VoxelyticsRunState,
@@ -185,5 +186,21 @@ describe("getTaskInfosWithHierarchy", () => {
     const taskInfos = getTaskInfosWithHierarchy(tasksWithHierarchy, allTaskInfos, "run");
     expect(taskInfos.get("a@x")?.state).toBe(VoxelyticsRunState.SKIPPED);
     expect(taskInfos.get("a")?.state).toBe(VoxelyticsRunState.SKIPPED);
+  });
+});
+
+describe("mergeActiveKeysOfCollapse", () => {
+  const topLevelKeys = ["a", "b"];
+  const nestedKeys = ["a@x", "a@y"];
+
+  it("only takes over the keys of the changed collapse", () => {
+    // The nested collapse reports the shared active keys, including "a" of the top-level collapse.
+    const expandedKeys = mergeActiveKeysOfCollapse(["a"], nestedKeys, ["a", "a@x"]);
+    expect(expandedKeys).toEqual(["a", "a@x"]);
+  });
+
+  it("keeps the keys of other collapses when collapsing a panel", () => {
+    // Collapsing "a" in the top-level collapse.
+    expect(mergeActiveKeysOfCollapse(["a", "a@x"], topLevelKeys, ["a@x"])).toEqual(["a@x"]);
   });
 });

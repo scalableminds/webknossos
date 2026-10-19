@@ -54,11 +54,12 @@ import {
   isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, isBrushTool } from "viewer/model/accessors/tool_accessor";
-import { calculateGlobalPos, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
+import { getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
   getActiveUnmappedSegmentId,
+  getBrushCenterPosition,
   getBucketRetrievalSourceFn,
   getHideUnregisteredSegmentsForLayer,
   getProofreadingMarkerPosition,
@@ -220,7 +221,7 @@ class PlaneMaterialFactory {
       hideUnmappedIds: {
         value: false,
       },
-      globalMousePosition: {
+      brushCenterPosition: {
         value: new ThreeVector3(0, 0, 0),
       },
       proofreadingMarkerPosition: {
@@ -739,8 +740,8 @@ class PlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.mousePosition,
-          (globalMousePosition) => {
-            if (!globalMousePosition) {
+          (mousePosition) => {
+            if (!mousePosition) {
               this.uniforms.isMouseInCanvas.value = false;
               return;
             }
@@ -751,12 +752,16 @@ class PlaneMaterialFactory {
               return;
             }
 
-            const [x, y, z] = calculateGlobalPos(state, {
-              x: globalMousePosition[0],
-              y: globalMousePosition[1],
-            }).rounded;
-            this.uniforms.globalMousePosition.value.set(x, y, z);
             this.uniforms.isMouseInCanvas.value = true;
+          },
+          true,
+        ),
+        listenToStoreProperty(
+          (storeState) => getBrushCenterPosition(storeState),
+          (brushCenterPosition) => {
+            if (brushCenterPosition != null) {
+              this.uniforms.brushCenterPosition.value.set(...brushCenterPosition);
+            }
           },
           true,
         ),

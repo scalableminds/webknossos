@@ -160,7 +160,7 @@ uniform vec3 positionOffset;
 uniform vec3 proofreadingMarkerPosition;
 uniform float zoomValue;
 uniform float blendMode;
-uniform vec3 globalMousePosition;
+uniform vec3 brushCenterPosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform vec3 brushMag;

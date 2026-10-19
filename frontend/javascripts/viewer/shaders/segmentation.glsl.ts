@@ -8,7 +8,6 @@ import {
   hsvToRgb,
   jsColormapJet,
   jsGetElementOfPermutation,
-  roundHalfUp,
 } from "viewer/shaders/utils.glsl";
 import { getUnrotatedWorldCoordUVW } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
@@ -293,7 +292,6 @@ export const jsConvertCellIdToRGBA = (
 };
 
 export const getBrushOverlay: ShaderModule = {
-  requirements: [roundHalfUp],
   code: `
     vec4 getBrushOverlay(vec3 worldCoordUVW) {
       vec4 brushOverlayColor = vec4(0.0);
@@ -302,22 +300,22 @@ export const getBrushOverlay: ShaderModule = {
         return brushOverlayColor;
       }
       // Mirrors isInsideCapsule in voxel_rasterizer.ts for a single brush dab:
-      // a voxel of the brush mag is painted if its center lies within the radius
-      // around the (unfloored) mouse position.
-      vec3 brushMagUVW = transDim(brushMag);
-      vec2 voxelCenterInMag1 = (floor(worldCoordUVW.xy / brushMagUVW.xy) + 0.5) * brushMagUVW.xy;
+      // a voxel of the brush mag is painted if its center lies strictly within the
+      // radius around the brush center (see getBrushCenterInMag).
+      vec2 brushMagUV = transDim(brushMag).xy;
+      vec2 voxelCenter = (floor(worldCoordUVW.xy / brushMagUV) + 0.5) * brushMagUV;
 
       // Compute the anisotropy of the dataset so that the brush looks the same in
       // each viewport
       float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
       vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
 
-      vec2 delta = (voxelCenterInMag1 - transDim(globalMousePosition).xy) * anisotropyFactorUVW.xy;
-      float radius = roundHalfUp(brushSizeInPixel / 2.0);
-      // Compare squared values to avoid the imprecise sqrt. For voxels exactly on the
-      // circle border, the shader may still disagree with the rasterizer, which
-      // divides by the radius before squaring (e.g., brush size 26, mag 2).
-      if (dot(delta, delta) <= radius * radius) {
+      vec2 delta = (voxelCenter - transDim(brushCenterPosition).xy) * anisotropyFactorUVW.xy;
+      float radius = brushSizeInPixel / 2.0;
+      // Compare squared values to avoid the imprecise sqrt. Since the brush center
+      // is snapped to a voxel center or corner depending on the parity of the brush
+      // size, no voxel center lies exactly on the border for isotropic voxels.
+      if (dot(delta, delta) < radius * radius) {
         brushOverlayColor = vec4(vec3(1.0), 0.5);
       }
 

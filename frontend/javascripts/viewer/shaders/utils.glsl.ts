@@ -309,17 +309,6 @@ export const isFlightMode: ShaderModule = {
   `,
 };
 
-export const roundHalfUp: ShaderModule = {
-  code: `
-    // Rounds .5 up for positive values (like Math.round). GLSL's built-in round
-    // is implementation-defined for a fractional part of exactly 0.5 and may
-    // round down or up.
-    float roundHalfUp(float x) {
-      return floor(x + 0.5);
-    }
-  `,
-};
-
 export const almostEq: ShaderModule = {
   code: `
     // These functions are useful for debugging.

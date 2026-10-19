@@ -17,7 +17,7 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
       - `Reload from server`: Reload the layer data from server. Useful if the raw data has been changed on disk and you want to refresh your current session.
       - `Jump to data`: Navigates the WEBKNOSSOS camera to the center position within the dataset where there is data available for the respective layer. This is especially useful for working with smaller layers - likely segmentations - that might not cover the whole dataset and are hard to find manually.
       - `Edit layer transforms`: Opens the live transform editor for the layer. See [Live Layer Transform Editor](#live-layer-transform-editor) below.
-      - `Register layers…`: Opens the [layer registration](../datasets/registering_layers.md) page in a new tab, where you register the layers of the dataset to one of them by placing matching landmarks. Only shown if the dataset has at least two layers.
+      - `Register Layers…`: Opens the [layer registration](../datasets/registering_layers.md) page in a new tab, where you register the layers of the dataset to one of them by placing matching landmarks. Only shown if the dataset has at least two layers.
 
 - `Opacity`: Increase / Decrease the opacity of a layer. 0% opacity makes a layer invisible. 100% opacity makes it totally opaque. Useful for overlaying several layers above one another.
 - `Gamma Correction`: Increase / Decrease the luminance, brightness and contrast of a layer through a non-linear gamma correction. Low values darken the image, high values increase the perceived brightness. (Color layers only.)

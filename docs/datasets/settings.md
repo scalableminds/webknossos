@@ -25,7 +25,7 @@ Transformations can be applied to individual layers or entire datasets to create
 - `Simple`: You can rotate the dataset around the X, Y, and Z axes. You can also mirror the axes.  
 - `Advanced`: You can define complex transformations per layer with a JSON. See below for the exact format.
 
-To align one layer with another by placing matching landmarks instead of writing the transformations by hand, click **Register Layers…** at the top of the `Data Source` tab. See [Registering Layers](./registering_layers.md).
+To align one layer with another by placing matching landmarks instead of writing the transformations by hand, click **Register Layers…** next to the `Transformation Mode` field in the `Data Source` tab. See [Registering Layers](./registering_layers.md).
 
 
 #### JSON Schema for Advanced Transformations

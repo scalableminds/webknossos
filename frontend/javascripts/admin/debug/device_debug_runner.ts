@@ -23,6 +23,9 @@ export type StepResult = {
   details?: string;
   error?: string;
   contextLost?: boolean;
+  // The browser refused to create a WebGL context (e.g., because it blocks WebGL after a
+  // crash). Such experiments are repeated when continuing the run.
+  webglUnavailable?: boolean;
   usedHeapMB?: number;
 };
 
@@ -53,6 +56,7 @@ export type Experiment = {
 
 class ExperimentStopped extends Error {}
 class AbortError extends Error {}
+export class WebGlUnavailableError extends Error {}
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
@@ -117,6 +121,10 @@ export async function runExperiments(
   shouldAbort: () => boolean,
 ): Promise<void> {
   record.finishedAt = undefined;
+  const blockedExperimentIds = new Set(
+    record.steps.filter((step) => step.webglUnavailable).map((step) => step.experimentId),
+  );
+  record.steps = record.steps.filter((step) => !blockedExperimentIds.has(step.experimentId));
   record.aborted = undefined;
   const update = () => {
     persistRecord(record);
@@ -175,7 +183,8 @@ export async function runExperiments(
         async step(label, fn) {
           if (shouldAbort()) throw new AbortError();
           const result: StepResult = {
-            index: record.steps.length + 1,
+            // Steps of repeated experiments were removed, so the length is not sufficient.
+            index: Math.max(0, ...record.steps.map((step) => step.index)) + 1,
             experimentId: experiment.id,
             label,
             status: "running",
@@ -196,8 +205,10 @@ export async function runExperiments(
             }
             result.status = "passed";
           } catch (error) {
+            if (error instanceof AbortError) throw error;
             result.status = "failed";
             result.error = error instanceof Error ? error.message : String(error);
+            result.webglUnavailable = error instanceof WebGlUnavailableError;
           }
           result.durationMs = Math.round(performance.now() - startTime);
           for (let elapsed = 0; elapsed < CONTEXT_LOSS_POLL_DURATION_MS; elapsed += 50) {

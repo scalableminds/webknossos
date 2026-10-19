@@ -2,10 +2,18 @@ import {
   EXPERIMENTS,
   SHADER_PROBE_IDS,
   WEBKNOSSOS_SHADER_EXPERIMENT_IDS,
+  WORKAROUND_EXPERIMENT_IDS,
 } from "./device_debug_experiments";
 import type { Experiment, RunRecord, StepResult } from "./device_debug_runner";
 
-export type ExperimentStatus = "pending" | "running" | "passed" | "failed" | "crashed";
+export type ExperimentStatus =
+  | "pending"
+  | "running"
+  | "passed"
+  | "failed"
+  | "crashed"
+  // The browser refused to create a WebGL context, so the experiment could not run.
+  | "blocked";
 
 export type ExperimentSummary = {
   experiment: Experiment;
@@ -21,6 +29,8 @@ export function summarizeExperiments(record: RunRecord | null): ExperimentSummar
     let status: ExperimentStatus = "passed";
     if (steps.length === 0) {
       status = "pending";
+    } else if (failedStep?.webglUnavailable) {
+      status = "blocked";
     } else if (failedStep != null) {
       status = failedStep.status === "crashed" ? "crashed" : "failed";
     } else if (steps.some((step) => step.status === "running")) {
@@ -62,6 +72,13 @@ export function diagnose(summaries: ExperimentSummary[]): string[] {
     }
   }
 
+  const blockedSummaries = summaries.filter((summary) => summary.status === "blocked");
+  if (blockedSummaries.length > 0) {
+    conclusions.push(
+      `These tests could not run, because the browser blocked WebGL after a crash: ${blockedSummaries.map((summary) => summary.experiment.label).join("; ")}. Press Continue later to repeat them.`,
+    );
+  }
+
   const trivial = byId.get("probe-trivial");
   if (isBroken(trivial)) {
     conclusions.push(
@@ -75,6 +92,19 @@ export function diagnose(summaries: ExperimentSummary[]): string[] {
   if (brokenProbes.length > 0) {
     conclusions.push(
       `These GLSL features fail on this device: ${brokenProbes.map((summary) => describeFailure(summary!)).join("; ")}.`,
+    );
+  }
+
+  const samplerArrayProbes = [
+    "probe-samplerArraySingle",
+    "probe-samplerArrayFloat",
+    "probe-samplerArrayUint",
+    "probe-samplerArray",
+  ].map((id) => byId.get(id));
+  const separateSamplers = byId.get("probe-separateSamplers");
+  if (samplerArrayProbes.some(isBroken) && separateSamplers?.status === "passed") {
+    conclusions.push(
+      "Arrays of samplers (e.g., uniform sampler2D textures[4]) break the shader compilation, while separate sampler uniforms work.",
     );
   }
 
@@ -109,6 +139,20 @@ export function diagnose(summaries: ExperimentSummary[]): string[] {
         "None of the GLSL feature probes fails. The problem is likely caused by the size or complexity of the WEBKNOSSOS shader, or by a feature which is not covered by the probes.",
       );
     }
+  }
+
+  const workarounds = Object.values(WORKAROUND_EXPERIMENT_IDS).map((id) => byId.get(id));
+  if (brokenShaders.length > 0 && workarounds.every((summary) => summary?.status === "passed")) {
+    conclusions.push(
+      "Replacing the sampler arrays with separate sampler uniforms makes the WEBKNOSSOS shaders work. This is a viable workaround.",
+    );
+  } else if (workarounds.some(isBroken)) {
+    conclusions.push(
+      `The WEBKNOSSOS shaders also fail without sampler arrays: ${workarounds
+        .filter(isBroken)
+        .map((summary) => describeFailure(summary!))
+        .join("; ")}. So there is at least one other problem.`,
+    );
   }
 
   const realistic = byId.get("realisticSetup");

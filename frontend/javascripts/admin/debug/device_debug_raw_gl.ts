@@ -7,9 +7,10 @@ import {
   WebGLRenderer,
 } from "three";
 import constants, { PLANE_SUBDIVISION } from "viewer/constants";
-import type { ExperimentContext } from "./device_debug_runner";
+import { type ExperimentContext, WebGlUnavailableError } from "./device_debug_runner";
 
-const CONTEXT_CREATION_ATTEMPTS = 6;
+// Chrome blocked WebGL for more than a minute after repeated crashes on a Galaxy S22.
+const CONTEXT_CREATION_ATTEMPTS = 18;
 const CONTEXT_CREATION_RETRY_DELAY_MS = 10000;
 const CANVAS_SIZE = 512;
 
@@ -33,7 +34,7 @@ export async function createWebGlContext(ex: ExperimentContext): Promise<WebGL2R
       return gl;
     }
     if (attempt === CONTEXT_CREATION_ATTEMPTS) {
-      throw new Error(
+      throw new WebGlUnavailableError(
         `Could not create a WebGL 2 context (${attempt} attempts). The browser might block WebGL after a crash.`,
       );
     }
@@ -261,6 +262,27 @@ export function getThreeShaderSources(
   return { vertex: sources[0], fragment: sources[1] };
 }
 
+// Replaces arrays of samplers (e.g., uniform sampler2D x_textures[2]) with separate sampler
+// uniforms (x_textures_0, x_textures_1). This works for the WEBKNOSSOS shaders, since they
+// only access these arrays with constant indices (see texture_access.glsl.ts).
+export function replaceSamplerArrays(source: string): string {
+  const arrayNames: string[] = [];
+  let result = source.replace(
+    /uniform\s+(highp\s+|mediump\s+|lowp\s+)?(\w*sampler2D)\s+(\w+)\[(\d+)\];/g,
+    (_match, precision: string | undefined, type: string, name: string, count: string) => {
+      arrayNames.push(name);
+      return Array.from(
+        { length: Number(count) },
+        (_value, i) => `uniform ${precision ?? ""}${type} ${name}_${i};`,
+      ).join("\n");
+    },
+  );
+  for (const name of arrayNames) {
+    result = result.replace(new RegExp(`\\b${name}\\[(\\d+)\\]`, "g"), `${name}_$1`);
+  }
+  return result;
+}
+
 const PROBE_VERTEX_SHADER = `#version 300 es
 precision highp float;
 in vec3 position;
@@ -286,8 +308,75 @@ void main() {
     },
   },
   {
+    id: "vectorModulo",
+    label: "Integer vector modulo (ivec2 % int)",
+    sources: {
+      vertex: PROBE_VERTEX_SHADER,
+      fragment: `#version 300 es
+precision highp float;
+precision highp int;
+out vec4 color;
+void main() {
+  ivec2 p = ivec2(gl_FragCoord.xy) % 4;
+  color = vec4(vec2(p) / 4.0, 0.0, 1.0);
+}
+`,
+    },
+  },
+  {
+    id: "samplerArraySingle",
+    label: "Array of one float sampler (like a WEBKNOSSOS uint8 color layer)",
+    sources: {
+      vertex: PROBE_VERTEX_SHADER,
+      fragment: `#version 300 es
+precision highp float;
+uniform highp sampler2D textures[1];
+out vec4 color;
+void main() {
+  color = texelFetch(textures[0], ivec2(0, 0), 0);
+}
+`,
+    },
+  },
+  {
+    id: "samplerArrayFloat",
+    label: "Array of four float samplers",
+    sources: {
+      vertex: PROBE_VERTEX_SHADER,
+      fragment: `#version 300 es
+precision highp float;
+uniform highp sampler2D textures[4];
+out vec4 color;
+void main() {
+  ivec2 p = ivec2(0, 0);
+  color = texelFetch(textures[0], p, 0) + texelFetch(textures[1], p, 0)
+    + texelFetch(textures[2], p, 0) + texelFetch(textures[3], p, 0);
+}
+`,
+    },
+  },
+  {
+    id: "samplerArrayUint",
+    label: "Array of four unsigned integer samplers",
+    sources: {
+      vertex: PROBE_VERTEX_SHADER,
+      fragment: `#version 300 es
+precision highp float;
+precision highp int;
+uniform highp usampler2D textures[4];
+out vec4 color;
+void main() {
+  ivec2 p = ivec2(0, 0);
+  uvec4 sum = texelFetch(textures[0], p, 0) + texelFetch(textures[1], p, 0)
+    + texelFetch(textures[2], p, 0) + texelFetch(textures[3], p, 0);
+  color = vec4(sum) / 255.0;
+}
+`,
+    },
+  },
+  {
     id: "samplerArray",
-    label: "Array of unsigned integer samplers (texelFetch)",
+    label: "Array of four unsigned integer samplers, indexed with vector modulo",
     sources: {
       vertex: PROBE_VERTEX_SHADER,
       fragment: `#version 300 es
@@ -299,6 +388,28 @@ void main() {
   ivec2 p = ivec2(gl_FragCoord.xy) % 4;
   uvec4 sum = texelFetch(textures[0], p, 0) + texelFetch(textures[1], p, 0)
     + texelFetch(textures[2], p, 0) + texelFetch(textures[3], p, 0);
+  color = vec4(sum) / 255.0;
+}
+`,
+    },
+  },
+  {
+    id: "separateSamplers",
+    label: "Four separate unsigned integer samplers, indexed with vector modulo",
+    sources: {
+      vertex: PROBE_VERTEX_SHADER,
+      fragment: `#version 300 es
+precision highp float;
+precision highp int;
+uniform highp usampler2D texture0;
+uniform highp usampler2D texture1;
+uniform highp usampler2D texture2;
+uniform highp usampler2D texture3;
+out vec4 color;
+void main() {
+  ivec2 p = ivec2(gl_FragCoord.xy) % 4;
+  uvec4 sum = texelFetch(texture0, p, 0) + texelFetch(texture1, p, 0)
+    + texelFetch(texture2, p, 0) + texelFetch(texture3, p, 0);
   color = vec4(sum) / 255.0;
 }
 `,

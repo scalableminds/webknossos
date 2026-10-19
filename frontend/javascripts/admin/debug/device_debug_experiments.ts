@@ -37,6 +37,7 @@ import {
   createWebGlContext,
   getThreeShaderSources,
   loseContext,
+  replaceSamplerArrays,
   runShaderSteps,
   SHADER_PROBES,
 } from "./device_debug_raw_gl";
@@ -482,6 +483,7 @@ function webknossosShaderExperiment(
   id: string,
   label: string,
   layers: SimulatedLayer[],
+  { withoutSamplerArrays = false }: { withoutSamplerArrays?: boolean } = {},
 ): Experiment {
   return {
     id,
@@ -490,7 +492,16 @@ function webknossosShaderExperiment(
     run: (ex) =>
       runShaderSteps(ex, (gl) => {
         const { vertex, fragment } = getWebknossosShaders(layers, readGpuSpecs(gl));
-        return getThreeShaderSources(gl, vertex, fragment);
+        const sources = getThreeShaderSources(gl, vertex, fragment);
+        if (!withoutSamplerArrays) return sources;
+        const rewrittenSources = {
+          vertex: replaceSamplerArrays(sources.vertex),
+          fragment: replaceSamplerArrays(sources.fragment),
+        };
+        if (rewrittenSources.fragment === sources.fragment) {
+          throw new Error("The fragment shader does not contain any sampler arrays.");
+        }
+        return rewrittenSources;
       }),
   };
 }
@@ -502,6 +513,11 @@ export const WEBKNOSSOS_SHADER_EXPERIMENT_IDS = {
   segmentation32: "wkShader-segmentation32",
   segmentation64: "wkShader-segmentation64",
   colorAndSegmentation: "wkShader-colorAndSegmentation",
+};
+
+export const WORKAROUND_EXPERIMENT_IDS = {
+  color: "wkShaderWithoutSamplerArrays-color",
+  colorAndSegmentation: "wkShaderWithoutSamplerArrays-colorAndSegmentation",
 };
 
 // Ordered from simple to complex. Each experiment uses its own WebGL context, so that a
@@ -566,6 +582,19 @@ export const EXPERIMENTS: Experiment[] = [
       usesGpu: true,
       run: (ex) => runShaderSteps(ex, () => probe.sources),
     }),
+  ),
+  // Tests whether avoiding sampler arrays is a viable workaround.
+  webknossosShaderExperiment(
+    WORKAROUND_EXPERIMENT_IDS.color,
+    "WEBKNOSSOS shader without sampler arrays: color layer (uint8)",
+    [COLOR_UINT8],
+    { withoutSamplerArrays: true },
+  ),
+  webknossosShaderExperiment(
+    WORKAROUND_EXPERIMENT_IDS.colorAndSegmentation,
+    "WEBKNOSSOS shader without sampler arrays: color (uint8) and segmentation (uint32) layer",
+    [COLOR_UINT8, SEGMENTATION_UINT32],
+    { withoutSamplerArrays: true },
   ),
   webknossosShaderExperiment(
     WEBKNOSSOS_SHADER_EXPERIMENT_IDS.color,

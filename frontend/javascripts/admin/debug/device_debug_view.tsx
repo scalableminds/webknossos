@@ -4,6 +4,7 @@ import {
   CloseCircleOutlined,
   ExclamationCircleOutlined,
   LoadingOutlined,
+  StopOutlined,
 } from "@ant-design/icons";
 import { Alert, Button, Card, Collapse, Input, Progress, Space, Typography } from "antd";
 import { useEffect, useRef, useState } from "react";
@@ -33,6 +34,7 @@ const STATUS_ICONS: Record<ExperimentStatus, React.ReactNode> = {
   passed: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
   failed: <CloseCircleOutlined style={{ color: "#ff4d4f" }} />,
   crashed: <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />,
+  blocked: <StopOutlined style={{ color: "#faad14" }} />,
 };
 
 function StepItem({ step }: { step: StepResult }) {
@@ -129,7 +131,9 @@ export default function DeviceDebugView() {
   const finishedExperimentCount = summaries.filter(
     (summary) => summary.status !== "pending" && summary.status !== "running",
   ).length;
-  const hasRemainingExperiments = summaries.some((summary) => summary.status === "pending");
+  const hasRemainingExperiments = summaries.some(
+    (summary) => summary.status === "pending" || summary.status === "blocked",
+  );
   const crashedStep = record?.steps.find((step) => step.status === "crashed");
   const report = record != null ? JSON.stringify(record, null, 2) : "";
 

@@ -13,7 +13,7 @@ import { isUserAdminOrDatasetManager } from "libs/utils";
 import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import partial from "lodash-es/partial";
 import { type RecommendedConfiguration, settings, settingsTooltips } from "messages";
-import React from "react";
+import React, { useState } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { ModalWidth } from "theme";
@@ -44,6 +44,7 @@ import type {
 import Store from "viewer/store";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action_bar/materialize_volume_annotation_modal";
 import ColorLayerSettings from "./components/color_layer_settings";
+import LayerBucketInspector from "./components/layer_bucket_inspector";
 import LayerSettingsHeader from "./components/layer_settings_header";
 import NumberSliderSetting from "./components/number_slider_setting";
 import SegmentationLayerSettings from "./components/segmentation_layer_settings";
@@ -106,14 +107,19 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isColorLayer,
     isLastLayer,
     hasLessThanTwoColorLayers = true,
+    shouldCollapseByDefault,
   }: {
     layerName: string;
     layerConfiguration: DatasetLayerConfiguration | null | undefined;
     isColorLayer: boolean;
     isLastLayer: boolean;
     hasLessThanTwoColorLayers?: boolean;
+    shouldCollapseByDefault: boolean;
   }) => {
     const { setNodeRef, transform, transition, isDragging } = useSortable({ id: layerName });
+    // null until the user toggles it; until then, the default applies.
+    const [isCollapsedOverride, setIsCollapsedOverride] = useState<boolean | null>(null);
+    const isCollapsed = isCollapsedOverride ?? shouldCollapseByDefault;
 
     // Ensure that every layer needs a layer configuration and that color layers have a color layer.
     if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
@@ -157,6 +163,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           isInEditMode={isInEditMode}
           isHistogramAvailable={isHistogramAvailable}
           hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={() => setIsCollapsedOverride(!isCollapsed)}
           onShowAddVolumeLayerModal={(preselectedLayerName) => {
             this.setState({
               isAddVolumeLayerModalVisible: true,
@@ -168,7 +176,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             this.setState({ layerToMergeWithFallback: layer })
           }
         />
-        {isDisabled ? null : (
+        {isDisabled || isCollapsed ? null : (
           <div
             style={{
               ...betweenLayersMarginBottom,
@@ -347,6 +355,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       (layerName) => !getIsColorLayer(this.props.dataset, layerName),
     );
     const hasLessThanTwoColorLayers = colorLayerOrder.length < 2;
+    // Expanded settings take up a lot of space, so collapse them when there
+    // are many layers.
+    const shouldCollapseByDefault = colorLayerOrder.length + segmentationLayerNames.length > 4;
     const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
       return (
         <LayerSettings
@@ -356,6 +367,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           isColorLayer
           isLastLayer={index === colorLayerOrder.length - 1}
           hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
+          shouldCollapseByDefault={shouldCollapseByDefault}
         />
       );
     });
@@ -366,6 +378,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           layerName={layerName}
           isLastLayer={index === segmentationLayerNames.length - 1}
           layerConfiguration={layers[layerName]}
+          shouldCollapseByDefault={shouldCollapseByDefault}
           isColorLayer={false}
         />
       );
@@ -379,6 +392,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <div className="tracing-settings-menu">
+        <Row justify="end" style={{ marginBottom: 4 }}>
+          <LayerBucketInspector />
+        </Row>
         <DndContext
           onDragEnd={this.onSortLayerSettingsEnd}
           onDragStart={() =>

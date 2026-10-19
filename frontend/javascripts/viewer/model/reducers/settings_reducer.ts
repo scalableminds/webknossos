@@ -221,7 +221,6 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
         gpuSetup: {
           smallestCommonBucketCapacity: action.bucketCapacity,
           initializedGpuFactor: action.gpuFactor,
-          maximumLayerCountToRender: action.maximumLayerCountToRender,
         },
       });
     }

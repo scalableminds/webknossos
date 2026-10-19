@@ -52,11 +52,9 @@ import UrlManager, {
 } from "viewer/controller/url_manager";
 import {
   determineAllowedModes,
-  getColorLayers,
   getDataLayers,
   getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
-  hasSegmentation,
   isElementClassSupported,
   isSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
@@ -269,14 +267,8 @@ export async function initialize(
     if (userState != null) {
       Store.dispatch(setZoomStepAction(userState.zoomLevel));
     }
-    const { smallestCommonBucketCapacity, maximumLayerCountToRender } = initializationInformation;
-    Store.dispatch(
-      initializeGpuSetupAction(
-        smallestCommonBucketCapacity,
-        gpuMemoryFactor,
-        maximumLayerCountToRender,
-      ),
-    );
+    const { smallestCommonBucketCapacity } = initializationInformation;
+    Store.dispatch(initializeGpuSetupAction(smallestCommonBucketCapacity, gpuMemoryFactor));
   }
 
   // There is no need to initialize the annotation if there is no annotation (View mode).
@@ -565,31 +557,26 @@ function initializeSettings(
 function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   dataLayers: DataLayerCollection;
   smallestCommonBucketCapacity: number;
-  maximumLayerCountToRender: number;
 } {
   const { dataset } = Store.getState();
-  const layers = dataset.dataSource.dataLayers;
   const specs = getSupportedTextureSpecs();
   validateSpecsForLayers(dataset, specs);
   // Stored as gpuSetup.smallestCommonBucketCapacity. getLayerPoolPlan sizes
   // the pools with it, and the max-zoom computation relies on it.
   const { bucketCapacity: smallestCommonBucketCapacity } = computeLayerPoolPlan(
-    layers,
+    dataset.dataSource.dataLayers,
     getRequiredBucketCapacityPerLayer(
       gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
-      layers.length,
+      dataset.dataSource.dataLayers.length,
     ),
     specs.maxArrayTextureLayers,
   );
-  // The pools don't need texture units per layer. Only one segmentation layer
-  // can be visible at a time (see settings_reducer).
-  const maximumLayerCountToRender =
-    getColorLayers(dataset).length + (hasSegmentation(dataset) ? 1 : 0);
 
   if (import.meta.env.MODE !== "test") {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");
   }
 
+  const layers = dataset.dataSource.dataLayers;
   const dataLayers: DataLayerCollection = {};
 
   for (const layer of layers) {
@@ -608,7 +595,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   return {
     dataLayers,
     smallestCommonBucketCapacity,
-    maximumLayerCountToRender,
   };
 }
 

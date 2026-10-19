@@ -35,20 +35,15 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
             isColor: true,
             packingDegree: 4.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_1",
             elementClass: "uint8",
           },
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_2",
             elementClass: "uint8",
           },
         },
-        orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
         segmentationLayerNames: [],
         magnificationsCount: mags.length,
         voxelSizeFactor: [1, 1, 1],
@@ -56,8 +51,9 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         voxelSizeFactorInverted: [1, 1, 1],
         useInterpolation: false,
         tpsTransformPerLayer: {},
-        isWindows: false,
+        maxActiveColorLayers: 8,
         vertexBucketAlignmentLayerCap: 8,
+        isWindows: false,
       });
 
       /*
@@ -79,28 +75,21 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
             isColor: true,
             packingDegree: 4.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_1",
             elementClass: "uint8",
           },
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_2",
             elementClass: "uint8",
           },
           ["segmentationLayer"]: {
             isColor: true,
             packingDegree: 1.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "segmentationLayer",
             elementClass: "uint8",
           },
         },
-        orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
         segmentationLayerNames: ["segmentationLayer"],
         magnificationsCount: mags.length,
         voxelSizeFactor: [1, 1, 1],
@@ -108,56 +97,9 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         useInterpolation: false,
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
-        isWindows: true,
+        maxActiveColorLayers: 8,
         vertexBucketAlignmentLayerCap: 8,
-      });
-      parser.parse(code);
-      expect(warningEmittedCount).toBe(0);
-    });
-
-    it<TestContext>("Ortho Mode (vertexBucketAlignmentLayerCap of 1, more layers than the cap)", ({
-      warningEmittedCount,
-    }) => {
-      // The smallest cap (for GPUs with the WebGL2 minimum of varyings).
-      const code = getShader({
-        globalLayerCount: 3,
-        colorLayerNames: ["color_layer_1", "color_layer_2"],
-        textureLayerInfos: {
-          ["color_layer_1"]: {
-            isColor: true,
-            packingDegree: 4.0,
-            isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_1",
-            elementClass: "uint8",
-          },
-          ["color_layer_2"]: {
-            isColor: true,
-            packingDegree: 4.0,
-            isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_2",
-            elementClass: "uint8",
-          },
-          ["segmentationLayer"]: {
-            isColor: true,
-            packingDegree: 1.0,
-            isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "segmentationLayer",
-            elementClass: "uint8",
-          },
-        },
-        orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
-        segmentationLayerNames: ["segmentationLayer"],
-        magnificationsCount: mags.length,
-        voxelSizeFactor: [1, 1, 1],
-        isOrthogonal: true,
-        useInterpolation: false,
-        voxelSizeFactorInverted: [1, 1, 1],
-        tpsTransformPerLayer: {},
-        isWindows: false,
-        vertexBucketAlignmentLayerCap: 1,
+        isWindows: true,
       });
       parser.parse(code);
       expect(warningEmittedCount).toBe(0);
@@ -172,28 +114,21 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
             isColor: true,
             packingDegree: 4.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_1",
             elementClass: "uint8",
           },
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_2",
             elementClass: "uint8",
           },
           ["segmentationLayer"]: {
             isColor: false,
             packingDegree: 1.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "segmentationLayer",
             elementClass: "uint8",
           },
         },
-        orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
         segmentationLayerNames: ["segmentationLayer"],
         magnificationsCount: mags.length,
         voxelSizeFactor: [1, 1, 1],
@@ -201,8 +136,9 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         useInterpolation: true,
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
-        isWindows: true,
+        maxActiveColorLayers: 8,
         vertexBucketAlignmentLayerCap: 8,
+        isWindows: true,
       });
 
       parser.parse(code);
@@ -218,20 +154,15 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
             isColor: true,
             packingDegree: 4.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_1",
             elementClass: "uint8",
           },
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_2",
             elementClass: "uint8",
           },
         },
-        orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
         segmentationLayerNames: [],
         magnificationsCount: mags.length,
         voxelSizeFactor: [1, 1, 1],
@@ -239,8 +170,9 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         useInterpolation: false,
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
-        isWindows: true,
+        maxActiveColorLayers: 8,
         vertexBucketAlignmentLayerCap: 8,
+        isWindows: true,
       });
       parser.parse(code);
       expect(warningEmittedCount).toBe(0);
@@ -255,28 +187,21 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
             isColor: true,
             packingDegree: 4.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_1",
             elementClass: "uint8",
           },
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_2",
             elementClass: "uint8",
           },
           ["segmentationLayer"]: {
             isColor: false,
             packingDegree: 1.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "segmentationLayer",
             elementClass: "uint8",
           },
         },
-        orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
         segmentationLayerNames: ["segmentationLayer"],
         magnificationsCount: mags.length,
         voxelSizeFactor: [1, 1, 1],
@@ -284,8 +209,9 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         useInterpolation: true,
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
-        isWindows: false,
+        maxActiveColorLayers: 8,
         vertexBucketAlignmentLayerCap: 8,
+        isWindows: false,
       });
       parser.parse(code);
       expect(warningEmittedCount).toBe(0);
@@ -300,20 +226,15 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
             isColor: true,
             packingDegree: 1.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_1",
             elementClass: "uint24",
           },
           ["color_layer_2"]: {
             isColor: true,
             packingDegree: 4.0,
             isSigned: false,
-            glslPrefix: "",
-            unsanitizedName: "color_layer_2",
             elementClass: "float",
           },
         },
-        orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
         segmentationLayerNames: [],
         magnificationsCount: mags.length,
         voxelSizeFactor: [1, 1, 1],
@@ -321,8 +242,113 @@ describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
         useInterpolation: false,
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
-        isWindows: true,
+        maxActiveColorLayers: 8,
         vertexBucketAlignmentLayerCap: 8,
+        isWindows: true,
+      });
+      parser.parse(code);
+      expect(warningEmittedCount).toBe(0);
+    });
+
+    it<TestContext>("Ortho Mode (int32 and uint32 layers)", ({ warningEmittedCount }) => {
+      // Covers the int32/uint32 branches of the color-blending loop.
+      const code = getShader({
+        globalLayerCount: 2,
+        colorLayerNames: ["color_layer_1", "color_layer_2"],
+        textureLayerInfos: {
+          ["color_layer_1"]: {
+            isColor: true,
+            packingDegree: 1.0,
+            isSigned: true,
+            elementClass: "int32",
+          },
+          ["color_layer_2"]: {
+            isColor: true,
+            packingDegree: 1.0,
+            isSigned: false,
+            elementClass: "uint32",
+          },
+        },
+        segmentationLayerNames: [],
+        magnificationsCount: mags.length,
+        voxelSizeFactor: [1, 1, 1],
+        isOrthogonal: true,
+        useInterpolation: false,
+        voxelSizeFactorInverted: [1, 1, 1],
+        tpsTransformPerLayer: {},
+        maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 8,
+        isWindows: false,
+      });
+      parser.parse(code);
+      expect(warningEmittedCount).toBe(0);
+    });
+
+    it<TestContext>("Ortho Mode (more declared layers than maxActiveColorLayers)", ({
+      warningEmittedCount,
+    }) => {
+      const colorLayerNames = Array.from({ length: 20 }, (_, i) => `color_layer_${i}`);
+      const textureLayerInfos: Params["textureLayerInfos"] = Object.fromEntries(
+        colorLayerNames.map((name) => [
+          name,
+          {
+            isColor: true,
+            packingDegree: 4.0,
+            isSigned: false,
+            elementClass: "uint8" as const,
+          },
+        ]),
+      );
+      const code = getShader({
+        globalLayerCount: colorLayerNames.length,
+        colorLayerNames,
+        textureLayerInfos,
+        segmentationLayerNames: [],
+        magnificationsCount: mags.length,
+        voxelSizeFactor: [1, 1, 1],
+        isOrthogonal: true,
+        useInterpolation: false,
+        voxelSizeFactorInverted: [1, 1, 1],
+        tpsTransformPerLayer: {},
+        maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 8,
+        isWindows: false,
+      });
+      parser.parse(code);
+      expect(warningEmittedCount).toBe(0);
+    });
+
+    it<TestContext>("Ortho Mode (vertexBucketAlignmentLayerCap of 1, more layers than the cap)", ({
+      warningEmittedCount,
+    }) => {
+      // The smallest cap (for GPUs with the WebGL2 minimum of varyings), with
+      // more layers than the cap.
+      const colorLayerNames = Array.from({ length: 5 }, (_, i) => `color_layer_${i}`);
+      const textureLayerInfos: Params["textureLayerInfos"] = Object.fromEntries(
+        colorLayerNames.map((name) => [
+          name,
+          {
+            isColor: true,
+            packingDegree: 4.0,
+            isSigned: false,
+            elementClass: "uint8" as const,
+          },
+        ]),
+      );
+      const code = getShader({
+        globalLayerCount: colorLayerNames.length,
+        colorLayerNames,
+        textureLayerInfos,
+        segmentationLayerNames: [],
+        magnificationsCount: mags.length,
+        voxelSizeFactor: [1, 1, 1],
+        isOrthogonal: true,
+        useInterpolation: false,
+        voxelSizeFactorInverted: [1, 1, 1],
+        tpsTransformPerLayer: {},
+        maxActiveColorLayers: 8,
+        vertexBucketAlignmentLayerCap: 1,
+        isWindows: false,
       });
       parser.parse(code);
       expect(warningEmittedCount).toBe(0);

@@ -446,7 +446,6 @@ export type TemporaryConfiguration = {
     // these gpu setup variables here.
     readonly smallestCommonBucketCapacity: number;
     readonly initializedGpuFactor: number;
-    readonly maximumLayerCountToRender: number;
   };
   readonly preferredQualityForMeshPrecomputation: number;
   readonly preferredQualityForMeshAdHocComputation: number;

@@ -69,7 +69,7 @@ const getSharedLookUpCuckooTable = memoizeOne(
 function createLayerPoolPlan() {
   const { dataset, temporaryConfiguration } = Store.getState();
   // Computed at init by computeLayerPoolPlan, so that every pool fits the
-  // GPU's limits.
+  // GPU's limit of slices per texture array.
   const bucketCapacity = temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity;
   const { assignmentByLayerName, poolDepths } = computeLayerPoolAssignments(
     dataset.dataSource.dataLayers,
@@ -222,6 +222,7 @@ export default class LayerRenderingManager {
   setupDataTextures(): void {
     const { dataset } = Store.getState();
     const elementClass = getElementClass(dataset, this.name);
+
     const { assignmentByLayerName, poolTextureManagers, bucketCapacity } = getLayerPoolPlan();
     const assignment = assignmentByLayerName.get(this.name);
     if (assignment == null) {
@@ -236,7 +237,11 @@ export default class LayerRenderingManager {
       assignment.dataTextureCount,
       elementClass,
       this.cube,
-      { poolTextureManager, baseSlice: assignment.baseSlice, bucketCapacity },
+      {
+        poolTextureManager,
+        baseSlice: assignment.baseSlice,
+        bucketCapacity,
+      },
     );
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);

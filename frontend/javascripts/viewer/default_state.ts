@@ -140,7 +140,6 @@ const defaultState: WebknossosState = {
       smallestCommonBucketCapacity:
         Constants.GPU_FACTOR_MULTIPLIER * Constants.DEFAULT_GPU_MEMORY_FACTOR,
       initializedGpuFactor: Constants.GPU_FACTOR_MULTIPLIER,
-      maximumLayerCountToRender: 32,
     },
     preferredQualityForMeshPrecomputation: 2,
     preferredQualityForMeshAdHocComputation: 2,

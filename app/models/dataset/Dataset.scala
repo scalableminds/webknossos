@@ -199,6 +199,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
             FROM webknossos.annotation_privateLinks_ apl
             JOIN webknossos.annotations_ a ON apl._annotation = a._id
             WHERE apl.accessToken = $t
+            AND (apl.expirationDateTime IS NULL OR apl.expirationDateTime > ${Instant.now})
           )""")
       .getOrElse(q"FALSE")
     // token can either be a dataset sharingToken or a matching annotation’s private link token
@@ -325,7 +326,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               COALESCE(
                 (
                   (u.isAdmin AND u._organization = d._organization) OR
-                  u.isDatasetManager OR
+                  (u.isDatasetManager AND u._organization = d._organization) OR
                   d._id IN (              -- team manager of team that has access to the dataset
                     SELECT _dataset
                     FROM webknossos.dataset_allowedTeams dt
@@ -339,7 +340,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                       SELECT at._folder
                       FROM webknossos.folder_allowedTeams at
                       JOIN webknossos.user_team_roles utr ON at._team = utr._team
-                      WHERE utr._user = u._id
+                      WHERE utr._user = u._id AND utr.isTeamManager
                     )
                   )
                 ), FALSE
@@ -1020,7 +1021,7 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       _ <- if (updateQueries.nonEmpty) runAsSerializableTransaction(updateQueries) else Fox.successful(())
     } yield ()
 
-  implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
+  implicit private def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
     r => {
       val datasetId = ObjectId(r.nextString())
       val layerName = r.nextString()
@@ -1655,7 +1656,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
            """.asUpdate)
     } yield ()
 
-  implicit def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =
+  implicit private def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =
     r =>
       StorageRelevantDataLayerAttachment(
         ObjectId(r.nextString()),

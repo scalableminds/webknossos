@@ -4,7 +4,6 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
@@ -24,12 +23,11 @@ case class PathStorageUsageResponse(reports: Seq[PathStorageReport]) derives Jso
 case class PathPair(original: String, upath: UPath)
 
 class DSUsedStorageService @Inject() (
-    config: DataStoreConfig,
     dataVaultService: DataVaultService,
     managedS3Service: ManagedS3Service
 ) extends LazyLogging {
 
-  def measureStorageForPaths(paths: Seq[String], organizationId: String)(implicit
+  def measureStorageForPaths(paths: Seq[String])(implicit
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[PathStorageReport]] =

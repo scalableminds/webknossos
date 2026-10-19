@@ -62,15 +62,26 @@ import {
   mayEditAnnotationProperties,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { hasEditableMapping } from "viewer/model/accessors/volumetracing_accessor";
+import { hasEditableMapping, isMappingLocked } from "viewer/model/accessors/volumetracing_accessor";
 import {
   setAnnotationVisibilityAction,
   setCollaborationModeAction,
 } from "viewer/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "viewer/model/actions/ui_actions";
-import Store from "viewer/store";
+import Store, { type WebknossosState } from "viewer/store";
 
 const RadioGroup = Radio.Group;
+
+// Live collaboration requires the mapping (or that no mapping is used) to be locked, so that
+// collaborators can't lock different mappings with their first edits. An editable mapping is
+// always locked, but the backend doesn't necessarily set mappingIsLocked for it.
+function isMappingStateFixedForLiveCollaboration(state: WebknossosState): boolean {
+  return hasEditableMapping(state) || isMappingLocked(state);
+}
+
+const MAPPING_NOT_LOCKED_EXPLANATION =
+  "Live collaboration requires the mapping of the annotation to be locked. Use the brush or the proofreading tool once to lock the active mapping (or that no mapping is used).";
+
 const sharingActiveNode = true;
 type Props = {
   isOpen: boolean;
@@ -230,7 +241,7 @@ function ShareModalViewInner(props: Props) {
   }, [othersMayEdit, allowConcurrentEditing]);
 
   const hasUpdatePermissions = useWkSelector(mayEditAnnotationProperties);
-  const annotationHasEditableMapping = useWkSelector(hasEditableMapping);
+  const isMappingStateFixed = useWkSelector(isMappingStateFixedForLiveCollaboration);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {
@@ -347,10 +358,8 @@ function ShareModalViewInner(props: Props) {
 
   const handleConcurrentEditingCheckboxChange = async (event: CheckboxChangeEvent) => {
     const value = event.target.checked;
-    if (value && !hasEditableMapping(Store.getState())) {
-      Toast.warning(
-        "Concurrent editing is currently only supported for proofreading annotations. Please select a mapping and perform one proofreading action. Afterwards, you may select the Concurrent mode.",
-      );
+    if (value && !isMappingStateFixedForLiveCollaboration(Store.getState())) {
+      Toast.warning(MAPPING_NOT_LOCKED_EXPLANATION);
       return;
     }
     if (!hasUpdatePermissions) {
@@ -427,11 +436,11 @@ function ShareModalViewInner(props: Props) {
     if (isChangingInProgress) {
       return "A change of the settings is currently being saved.";
     }
-    if (!annotationHasEditableMapping) {
-      return "The annotation needs to have at least one saved proofreading action. Enable a mapping and use the proofreading tool for that.";
+    if (!isMappingStateFixed) {
+      return MAPPING_NOT_LOCKED_EXPLANATION;
     }
     return null;
-  }, [hasUpdatePermissions, newOthersMayEdit, isChangingInProgress, annotationHasEditableMapping]);
+  }, [hasUpdatePermissions, newOthersMayEdit, isChangingInProgress, isMappingStateFixed]);
 
   return (
     <Modal

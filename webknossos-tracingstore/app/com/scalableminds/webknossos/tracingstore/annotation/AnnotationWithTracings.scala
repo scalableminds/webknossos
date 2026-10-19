@@ -131,7 +131,8 @@ case class AnnotationWithTracings(
     this.copy(
       annotation = annotation.copy(annotationLayers = annotation.annotationLayers.filter(_.tracingId != a.tracingId)),
       tracingsById = tracingsById.removed(a.tracingId),
-      editableMappingsByTracingId = editableMappingsByTracingId.removed(a.tracingId)
+      editableMappingsByTracingId = editableMappingsByTracingId.removed(a.tracingId),
+      volumeBucketBuffersByTracingId = volumeBucketBuffersByTracingId.removed(a.tracingId)
     )
 
   def updateLayerMetadata(a: UpdateLayerMetadataAnnotationAction): AnnotationWithTracings =

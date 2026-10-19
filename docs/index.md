@@ -56,5 +56,11 @@ WEBKNOSSOS' impact on data annotation in neuroscience and Connectomics has been 
 
 WEBKNOSSOS is developed by [scalable minds](https://scalableminds.com) in collaboration with the [Max Planck Institute for Brain Research](https://brain.mpg.de/connectomics).
 
-If you need help with WEBKNOSSOS, feel free to contact us at [support@webknossos.org](mailto:support@webknossos.org) or [write a post in the community forum](https://forum.image.sc/tag/webknossos).
+If you need help with WEBKNOSSOS, feel free to contact us at [support@webknossos.org](mailto:support@webknossos.org) or [write a post in the community forum](https://forum.image.sc/tag/webknossos). You can also [ask a question](#ask-a-question) directly within WEBKNOSSOS.
 scalable minds also offers [commercial support, managed hosting, and image analysis services](https://webknossos.org/pricing).
+
+### Ask a Question
+When you are logged in, you can ask questions directly from within WEBKNOSSOS: Select `Help` > `Ask a Question` in the navigation bar, or click the `Help` tab at the right edge of the screen.
+
+- **AI Assistant**: Type your question and click `Send` to get an immediate answer from an AI assistant. Your conversation is kept until you close the browser tab. Click the `+` button (`New conversation`) to start over.
+- **Email**: Switch to the `Email` tab to send a message to the support team. You will receive a copy of your message, and the answer is sent to your email address. The link to the page you are currently on is included automatically.

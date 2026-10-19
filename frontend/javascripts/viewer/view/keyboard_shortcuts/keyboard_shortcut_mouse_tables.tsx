@@ -352,7 +352,7 @@ export function VolumeToolMouseShortcutsTable() {
         },
         {
           shortcuts: [<React.Fragment key="1">{modifierKeyToUiElement("Shift")}</React.Fragment>],
-          action: "Quick Switch to Segment Picker Tool",
+          action: "Quick Switch to Voxel Pipette Tool",
         },
         {
           shortcuts: [

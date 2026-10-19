@@ -121,7 +121,7 @@ export function useNoNodeContextMenuOptions(
 
   const segmentIdLabel =
     isProofreadingActive && maybeUnmappedSegmentId != null
-      ? `within Segment ${maybeUnmappedSegmentId}`
+      ? `within Segment ${segmentIdAtPosition}`
       : segmentIdAtPosition;
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";

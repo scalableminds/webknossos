@@ -5,7 +5,7 @@ import { useFetch } from "libs/react_helpers";
 import { useDebouncedValue, useWkSelector } from "libs/react_hooks";
 import compact from "lodash-es/compact";
 import range from "lodash-es/range";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -27,7 +27,11 @@ import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracin
 import { setVoxelPipetteTooltipPinnedPositionAction } from "viewer/model/actions/ui_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { api, Store } from "viewer/singletons";
-import { getTooltipPosition, isPositionStillInPlane } from "./viewport_tooltip_helpers";
+import {
+  getTooltipPosition,
+  isPositionStillInPlane,
+  useTooltipWidth,
+} from "./viewport_tooltip_helpers";
 
 function VoxelValueEntry({
   layerName,
@@ -68,7 +72,7 @@ export default function VoxelValueTooltip() {
   const datasetScale = useWkSelector((state) =>
     getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
   );
-  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [tooltipRef, tooltipWidth] = useTooltipWidth();
   const dispatch = useDispatch();
   const orthoView = useWkSelector((state) => state.viewModeData.plane.activeViewport);
 
@@ -159,7 +163,7 @@ export default function VoxelValueTooltip() {
 
   const { left, top } = getTooltipPosition(
     pinnedPosition == null,
-    tooltipRef,
+    tooltipWidth,
     viewportRect,
     tooltipPosition,
   );

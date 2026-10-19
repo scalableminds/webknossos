@@ -11,6 +11,7 @@ import {
   SIDES,
   type Side,
 } from "../helpers/layer_registration_helpers";
+import type { IframeRole } from "../layer_registration_protocol";
 import type { SendMessage } from "./layer_registration_iframe_bridge";
 
 // What is compared to decide whether a side must be written to the layer registration
@@ -22,11 +23,21 @@ function getStoredFields(
   return landmarks.map(({ pairId, position }) => ({ pairId, position }));
 }
 
-// The landmarks of one worker, as NML and parsed.
-type WorkerLandmarks = { nmlString: string; landmarks: Landmark[] };
+// The landmarks of one iframe, as NML and parsed.
+type IframeLandmarks = { nmlString: string; landmarks: Landmark[] };
+
+// Reads the landmarks of an iframe: of a worker all trees, of the store the trees of one group.
+export async function readLandmarksOfIframe(
+  sendMessage: SendMessage,
+  role: IframeRole,
+  groupId?: number,
+): Promise<IframeLandmarks> {
+  const nmlString = await sendMessage(role, "exportTreesAsNmlString", { groupId });
+  return { nmlString, landmarks: getLandmarksFromTrees((await parseNml(nmlString)).trees) };
+}
 
 function getParsedLandmarks(
-  workerLandmarks: Record<Side, WorkerLandmarks>,
+  workerLandmarks: Record<Side, IframeLandmarks>,
 ): Record<Side, Landmark[]> {
   return { fixed: workerLandmarks.fixed.landmarks, moving: workerLandmarks.moving.landmarks };
 }
@@ -92,14 +103,16 @@ export class LandmarkSync {
       "ensureTreeGroupPath",
       getLandmarkGroupPath(this.layerNames, side),
     );
-    const nmlString = await this.sendMessage("store", "exportTreesAsNmlString", { groupId });
+    const { nmlString, landmarks } = await readLandmarksOfIframe(
+      this.sendMessage,
+      "store",
+      groupId,
+    );
     if (isCancelled()) {
       return groupId;
     }
     await this.sendMessage(side, "importLandmarks", nmlString);
-    this.storedFields[side] = getStoredFields(
-      getLandmarksFromTrees((await parseNml(nmlString)).trees),
-    );
+    this.storedFields[side] = getStoredFields(landmarks);
     return groupId;
   }
 
@@ -123,15 +136,10 @@ export class LandmarkSync {
     }
   }
 
-  private async fetchLandmarksOfWorker(side: Side): Promise<WorkerLandmarks> {
-    const nmlString = await this.sendMessage(side, "exportTreesAsNmlString");
-    return { nmlString, landmarks: getLandmarksFromTrees((await parseNml(nmlString)).trees) };
-  }
-
   // Reads the landmarks of both workers and reports them if they changed.
-  private async fetchWorkerLandmarks(): Promise<Record<Side, WorkerLandmarks>> {
+  private async fetchWorkerLandmarks(): Promise<Record<Side, IframeLandmarks>> {
     const [fixed, moving] = await Promise.all(
-      SIDES.map((side) => this.fetchLandmarksOfWorker(side)),
+      SIDES.map((side) => readLandmarksOfIframe(this.sendMessage, side)),
     );
     const workerLandmarks = { fixed, moving };
     const newLandmarks = getParsedLandmarks(workerLandmarks);
@@ -148,7 +156,7 @@ export class LandmarkSync {
 
   // Replaces the stored landmarks of each side whose landmarks changed in its worker.
   private async storeChangedLandmarks(
-    workerLandmarks: Record<Side, WorkerLandmarks>,
+    workerLandmarks: Record<Side, IframeLandmarks>,
     groupIds: Record<Side, number>,
   ) {
     for (const side of SIDES) {

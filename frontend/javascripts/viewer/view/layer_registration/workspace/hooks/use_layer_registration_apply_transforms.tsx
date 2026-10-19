@@ -38,8 +38,11 @@ function getChangeDescription(
   fixedLayerTransforms: LayerTransformsInDataset[string],
   movingLayerTransforms: LayerTransformsInDataset[string],
 ): string {
-  if (estimation == null || "errorMessage" in estimation) {
-    return "stays unchanged (not enough landmark pairs)";
+  if (estimation == null) {
+    return "stays unchanged (its landmarks could not be read)";
+  }
+  if ("errorMessage" in estimation) {
+    return "stays unchanged (no transform could be estimated)";
   }
   return getAppliedState(estimation, fixedLayerTransforms, movingLayerTransforms) === "applied"
     ? "already uses its transform"

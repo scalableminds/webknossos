@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Vector3 } from "viewer/constants";
-import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   getLandmarkGroupPath,
-  getLandmarksFromTrees,
   type Landmark,
   SIDES,
   type Side,
@@ -11,6 +9,7 @@ import {
 import type { InactivePair, InactivePairs } from "../../helpers/layer_registration_moving_layers";
 import { getLayerPairTransformEstimate } from "../../helpers/layer_registration_transform_estimation";
 import type { SendMessage } from "../layer_registration_iframe_bridge";
+import { readLandmarksOfIframe } from "../layer_registration_landmark_sync";
 
 async function readStoredSide(
   sendMessage: SendMessage,
@@ -21,8 +20,7 @@ async function readStoredSide(
   if (groupId == null) {
     return { nmlString: null, landmarks: [] };
   }
-  const nmlString = await sendMessage("store", "exportTreesAsNmlString", { groupId });
-  return { nmlString, landmarks: getLandmarksFromTrees((await parseNml(nmlString)).trees) };
+  return readLandmarksOfIframe(sendMessage, "store", groupId);
 }
 
 async function readInactivePair(

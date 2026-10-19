@@ -142,13 +142,13 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
       const target = event.target as Element;
       // Submenus may be rendered as separate popups outside of the menu container.
       const isInsideMenu =
-        inputRef?.current?.contains(target) ||
+        containerElement?.contains(target) ||
         target.closest?.(".ant-dropdown, .ant-dropdown-menu-submenu-popup") != null;
       if (!isInsideMenu) hideContextMenu();
     };
     document.addEventListener("mousedown", onMouseDown);
     return () => document.removeEventListener("mousedown", onMouseDown);
-  }, [isOpen, inputRef, hideContextMenu]);
+  }, [isOpen, containerElement, hideContextMenu]);
 
   let menu: MenuProps = { items: [] };
 

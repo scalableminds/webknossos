@@ -6,7 +6,7 @@ import { Button, Col, Dropdown, Flex, Form, Grid, Input, Row, Select, theme } fr
 import Persistence from "libs/persistence";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import size from "lodash-es/size";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { APIProject, APITaskType, APIUser } from "types/api_types";
 
 const FormItem = Form.Item;
@@ -53,23 +53,6 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
   const [projects, setProjects] = useState<APIProject[]>([]);
   const [taskTypes, setTaskTypes] = useState<APITaskType[]>([]);
   const [isFetchingData, setIsFetchingData] = useState(false);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  useEffectOnlyOnce(() => {
-    // initialize form with default values when navigating from
-    // project / taskType list views or when restoring values from persisted state
-    const { fieldValues: persistedfieldValues } = persistence.load();
-    const persistedFieldValues = persistedfieldValues != null ? persistedfieldValues : {};
-    const fieldValues = initialFieldValues != null ? initialFieldValues : persistedFieldValues;
-
-    if (size(fieldValues) > 0) {
-      form.setFieldsValue(fieldValues);
-      handleSearchFormFinish(false);
-    }
-  });
 
   async function fetchData() {
     setIsFetchingData(true);
@@ -119,6 +102,23 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
       handleFormFinish(isRandom, onChange, validFormValues);
     });
   }
+
+  useEffectOnlyOnce(() => {
+    fetchData();
+  });
+
+  useEffectOnlyOnce(() => {
+    // initialize form with default values when navigating from
+    // project / taskType list views or when restoring values from persisted state
+    const { fieldValues: persistedfieldValues } = persistence.load();
+    const persistedFieldValues = persistedfieldValues != null ? persistedfieldValues : {};
+    const fieldValues = initialFieldValues != null ? initialFieldValues : persistedFieldValues;
+
+    if (size(fieldValues) > 0) {
+      form.setFieldsValue(fieldValues);
+      handleSearchFormFinish(false);
+    }
+  });
 
   function handleDownloadAllTasks() {
     form

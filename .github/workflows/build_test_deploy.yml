@@ -46,6 +46,8 @@ jobs:
         run: yarn typecheck
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
+      - name: Check that the React Compiler compiles all components
+        run: yarn check-react-compiler
       - name: Run frontend tests
         run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true --silent=passed-only
       - name:
@@ -244,7 +246,8 @@ jobs:
           if [ "$GITHUB_REF_TYPE" == "branch" ]; then
             echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" | tee -a "$GITHUB_ENV"
           else
-            CI_TAG=$GITHUB_REF_NAME
+            # release tags in the monorepo (scalableminds/mono) are webknossos/<version>
+            CI_TAG=${GITHUB_REF_NAME#webknossos/}
             echo "CI_TAG=$CI_TAG" | tee -a "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=$CI_TAG" | tee -a "$GITHUB_ENV"
           fi

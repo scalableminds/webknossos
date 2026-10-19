@@ -210,34 +210,46 @@ class DatasetArray(
       shape,
       totalOffset.map(_.toLong)
     )
-    if (!isBatchedRead && partialCopyingIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
+    if (!isBatchedRead && partialCopyIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(
           fullAxisOrder.permuteIndicesWkToPhysicalLong(chunkIndex),
           useSkipTypingShortcut = true
         )
-      } yield sourceChunk
-    } else {
-      val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
-      val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
-      val copiedFox = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
-        for {
-          sourceChunk: MultiArray <- getSourceChunkDataWithCache(
-            fullAxisOrder.permuteIndicesWkToPhysicalLong(chunkIndex)
-          )
-          sourceChunkInWkFOrder: MultiArray = MultiArrayUtils
-            .axisOrderXYZViewF(sourceChunk, fullAxisOrder, sourceIsF = header.order == ArrayOrder.F)
-          offsetInChunkFOrder = computeOffsetInChunk(chunkIndex, totalOffset).reverse
-          _ <- tryo(
-            MultiArrayUtils.copyRange(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)
-          ).toFox ?~> formatCopyRangeError(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)
-        } yield ()
-      })
+        result <-
+          if (hasExpectedByteCount(sourceChunk, shape)) Fox.successful(sourceChunk)
+          else readAsFortranOrderWithPartialCopy(shape, totalOffset, chunkIndices)
+      } yield result
+    } else readAsFortranOrderWithPartialCopy(shape, totalOffset, chunkIndices)
+  }
+
+  private def readAsFortranOrderWithPartialCopy(
+      shape: Array[Int],
+      totalOffset: Array[Int],
+      chunkIndices: Seq[Array[Long]]
+  )(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[MultiArray] = {
+    val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
+    val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
+    val copiedFox = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
       for {
-        _ <- copiedFox
-      } yield targetMultiArray
-    }
+        sourceChunk: MultiArray <- getSourceChunkDataWithCache(
+          fullAxisOrder.permuteIndicesWkToPhysicalLong(chunkIndex)
+        )
+        sourceChunkInWkFOrder: MultiArray = MultiArrayUtils
+          .axisOrderXYZViewF(sourceChunk, fullAxisOrder, sourceIsF = header.order == ArrayOrder.F)
+        offsetInChunkFOrder = computeOffsetInChunk(chunkIndex, totalOffset).reverse
+        _ <- tryo(
+          MultiArrayUtils.copyRange(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)
+        ).toFox ?~> formatCopyRangeError(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)
+      } yield ()
+    })
+    for {
+      _ <- copiedFox
+    } yield targetMultiArray
   }
 
   def readAsMultiArray(offset: Long, shape: Int)(using ec: ExecutionContext, tc: TokenContext): Fox[MultiArray] =
@@ -254,28 +266,48 @@ class DatasetArray(
     } else {
       val totalOffset: Array[Long] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
       val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape, chunkShape, shape, totalOffset)
-      if (partialCopyingIsNotNeededForMultiArray(shape, totalOffset, chunkIndices)) {
+      if (partialCopyIsNotNeededForMultiArray(shape, totalOffset, chunkIndices)) {
         for {
           chunkIndex <- chunkIndices.headOption.toFox
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex, useSkipTypingShortcut = true)
-        } yield sourceChunk
-      } else {
-        val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
-        val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape)
-        val copiedFuture = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
-          for {
-            sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
-            offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset)
-            _ <- tryo(
-              MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, targetMultiArray)
-            ).toFox ?~> formatCopyRangeErrorWithoutAxisOrder(offsetInChunk, sourceChunk, targetMultiArray)
-          } yield ()
-        })
-        for {
-          _ <- copiedFuture
-        } yield targetMultiArray
-      }
+          result <-
+            if (hasExpectedByteCount(sourceChunk, shape)) Fox.successful(sourceChunk)
+            else readAsMultiArrayWithPartialCopy(shape, totalOffset, chunkIndices)
+        } yield result
+      } else readAsMultiArrayWithPartialCopy(shape, totalOffset, chunkIndices)
     }
+
+  private def readAsMultiArrayWithPartialCopy(
+      shape: Array[Int],
+      totalOffset: Array[Long],
+      chunkIndices: Seq[Array[Long]]
+  )(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[MultiArray] = {
+    val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
+    val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape)
+    val copiedFuture = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
+      for {
+        sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
+        offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset)
+        _ <- tryo(
+          MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, targetMultiArray)
+        ).toFox ?~> formatCopyRangeErrorWithoutAxisOrder(offsetInChunk, sourceChunk, targetMultiArray)
+      } yield ()
+    })
+    for {
+      _ <- copiedFuture
+    } yield targetMultiArray
+  }
+
+  // Formats with per-chunk shapes (N5) may store edge chunks clipped, which only shows after reading the chunk
+  private def hasExpectedByteCount(shortcutChunk: MultiArray, shape: Array[Int]): Boolean =
+    shortcutChunk.getSize == shape.map(_.toLong).product * header.bytesPerElement
+
+  // The shortcut passes stored bytes through unchanged, but callers expect little-endian values
+  private lazy val shortcutPreservesByteOrder: Boolean =
+    header.byteOrder == ByteOrder.LITTLE_ENDIAN || header.bytesPerElement == 1
 
   private def formatCopyRangeError(offsetInChunk: Array[Int], sourceChunk: MultiArray, target: MultiArray): String =
     s"Copying data from dataset chunk failed. Chunk shape (F): ${printAsWkF(sourceChunk.getShape)}, target shape (F): ${printAsWkF(target.getShape)}, offsetInChunk: ${printAsWkF(offsetInChunk)}. Axis order (C): $fullAxisOrder (wk: ${fullAxisOrder.toStringWk})"
@@ -295,9 +327,11 @@ class DatasetArray(
 
   private val chunkContentsCacheKeyPrefix: String = s"${dataSourceId}__${layerName}__${vaultPath}__chunk_"
 
-  private def chunkContentsCacheKey(chunkIndex: Array[Long]): String = {
-    val builder = new java.lang.StringBuilder(chunkContentsCacheKeyPrefix.length + chunkIndex.length * 4)
+  private def chunkContentsCacheKey(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean): String = {
+    val builder = new java.lang.StringBuilder(chunkContentsCacheKeyPrefix.length + chunkIndex.length * 4 + 1)
     builder.append(chunkContentsCacheKeyPrefix)
+    // Shortcut-typed chunks are flat byte arrays, so they must not be served to reads that expect typed chunks (and vice versa)
+    if (useSkipTypingShortcut) builder.append('s')
     // Builder + while loop is faster than mkString, and this is a very hot code path.
     var i = 0
     while (i < chunkIndex.length) {
@@ -314,7 +348,7 @@ class DatasetArray(
   ): Fox[MultiArray] =
     // Note: we omit the tokenContext from the cacheKey because (a) Failures aren’t cached anyway and (b) the dataset access is checked again in the controllers. Omitting it here prevents wasteful data duplicates in the cache.
     sharedChunkContentsCache.getOrLoad(
-      chunkContentsCacheKey(chunkIndex),
+      chunkContentsCacheKey(chunkIndex, useSkipTypingShortcut),
       _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut)
     )
 
@@ -346,7 +380,7 @@ class DatasetArray(
       chunkIndex.drop(1).mkString(header.dimension_separator.toString) // (c),x,y,z -> z is dropped in 2d case
     }
 
-  private def partialCopyingIsNotNeededForMultiArray(
+  private def partialCopyIsNotNeededForMultiArray(
       bufferShape: Array[Int],
       globalOffset: Array[Long],
       chunkIndices: Seq[Array[Long]]
@@ -354,12 +388,13 @@ class DatasetArray(
     chunkIndices match {
       case chunkIndex :: Nil =>
         val offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, globalOffset)
+        shortcutPreservesByteOrder &&
         isZeroOffset(offsetInChunk) &&
-        isBufferShapeEqualChunkShape(bufferShape)
+        util.Arrays.equals(bufferShape, chunkShapeAtIndex(chunkIndex))
       case _ => false
     }
 
-  private def partialCopyingIsNotNeededForWkOrder(
+  private def partialCopyIsNotNeededForWkOrder(
       bufferShape: Array[Int],
       globalOffset: Array[Int],
       chunkIndices: Seq[Array[Long]]
@@ -367,15 +402,14 @@ class DatasetArray(
     chunkIndices.headOption match {
       case Some(chunkIndex) =>
         val offsetInChunk = computeOffsetInChunk(chunkIndex, globalOffset)
+        shortcutPreservesByteOrder &&
         header.order == ArrayOrder.F &&
         isZeroOffset(offsetInChunk) &&
-        isBufferShapeEqualChunkShape(bufferShape) &&
-        axisOrder == AxisOrder.asCxyzFromRank(rank)
+        axisOrder == AxisOrder.asCxyzFromRank(rank) &&
+        // Must come after the axis order check: wk and physical order coincide only for cxyz
+        util.Arrays.equals(bufferShape, chunkShapeAtIndex(chunkIndex))
       case _ => false
     }
-
-  private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =
-    util.Arrays.equals(bufferShape, chunkShape)
 
   private def isZeroOffset(offset: Array[Int]): Boolean =
     offset.forall(_ == 0)

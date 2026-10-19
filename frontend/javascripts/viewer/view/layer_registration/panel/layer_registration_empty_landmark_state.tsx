@@ -92,7 +92,7 @@ export function EmptyLandmarkState({
   const steps = [
     `Click a clear structure in the left view (${layerNames.fixed}).`,
     `Click the same structure in the right view (${layerNames.moving}).`,
-    `Repeat. From ${MIN_LANDMARK_PAIR_COUNT} pairs on, the right view shows the transformed result. Spread the pairs out in x, y and z.`,
+    `Repeat. From ${MIN_LANDMARK_PAIR_COUNT} pairs on, both views show the other layer transformed onto their own. Spread the pairs out in x, y and z.`,
   ];
   return (
     <Flex vertical gap={16}>

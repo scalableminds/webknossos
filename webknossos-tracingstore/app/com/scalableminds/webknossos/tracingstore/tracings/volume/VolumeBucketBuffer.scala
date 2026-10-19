@@ -35,6 +35,11 @@ class VolumeBucketBuffer(
   def segmentAdditions: Map[BucketPosition, Set[Long]] = segmentAdditionsBuffer.toMap
   def segmentRemovals: Map[BucketPosition, Set[Long]] = segmentRemovalsBuffer.toMap
 
+  def bucketPositionsWithPendingAddition(segmentId: Long): List[BucketPosition] =
+    segmentAdditionsBuffer.collect {
+      case (bucketPosition, segmentIds) if segmentIds.contains(segmentId) => bucketPosition
+    }.toList
+
   private lazy val bucketScanner = new NativeBucketScanner()
 
   // Loads the buckets in one batch. Skips buffered ones, which may hold changes not yet flushed.

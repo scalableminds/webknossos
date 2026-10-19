@@ -214,7 +214,8 @@ class TSAnnotationService @Inject() (
       case a: UpdateBucketPartialVolumeAction =>
         annotationWithTracings.applyUpdateBucketPartialVolumeAction(a)
       case a: DeleteSegmentDataVolumeAction =>
-        applyDeleteSegmentDataVolumeAction(annotationId, annotationWithTracings, a) ?~> "Failed to delete segment data."
+        applyDeleteSegmentDataVolumeAction(annotationId, annotationWithTracings, a, targetVersion) ?~>
+          "Failed to delete segment data."
       case a: ApplyableVolumeUpdateAction =>
         annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.volumeActionFailed
       case a: EditableMappingUpdateAction =>
@@ -414,7 +415,8 @@ class TSAnnotationService @Inject() (
   private def applyDeleteSegmentDataVolumeAction(
       annotationId: ObjectId,
       annotationWithTracings: AnnotationWithTracings,
-      action: DeleteSegmentDataVolumeAction
+      action: DeleteSegmentDataVolumeAction,
+      targetVersion: Long
   )(using ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       tracing <- annotationWithTracings.getVolume(action.actionTracingId).toFox
@@ -423,15 +425,20 @@ class TSAnnotationService @Inject() (
       ) ?~> "Cannot delete segment data for annotations without segment index."
       bucketBuffer <- annotationWithTracings.volumeBucketBuffersByTracingId.get(action.actionTracingId).toFox
       fallbackLayerOpt <- volumeTracingService.getFallbackLayer(annotationId, tracing)
-      bucketPositions <- volumeSegmentIndexService.getAllBucketPositionsForSegment(
+      // At targetVersion rather than tracing.version, so that the index includes eager bucket updates saved
+      // within the update groups currently being applied.
+      indexedBucketPositions <- volumeSegmentIndexService.getAllBucketPositionsForSegment(
         tracing,
         fallbackLayerOpt,
         action.actionTracingId,
         action.id.toLong,
         tracing.mappingName,
         editableMappingTracingId = None, // bucket buffers only exist for volumesThatDoNotHaveEditableMapping
-        tracing.version
+        targetVersion
       )
+      // Lazy bucket updates earlier in these update groups reach the index only after they are all applied.
+      bufferedBucketPositions = bucketBuffer.bucketPositionsWithPendingAddition(action.id.toLong)
+      bucketPositions = (indexedBucketPositions ++ bufferedBucketPositions).distinct
       _ <- bucketBuffer.applyDeleteSegmentDataAction(bucketPositions, action.id.toLong)
     } yield annotationWithTracings
 

@@ -287,6 +287,15 @@ class BucketScannerTestSuite extends AsyncWordSpec {
       assert(changedIndices(updated) == Set(flatIndex(2, 7, 3), flatIndex(2, 7, 4)))
     }
 
+    "apply voxel runs in z order that cover a whole slice, as sent for a fully covered XZ stroke" in {
+      // Linear index z + 32·x + 1024·y: the run covers all x and z at y = 7, so every transposed row is full.
+      // 1234 is above the bucket's initial values (at most 1000), so every written voxel counts as changed.
+      val updated = applyToUint16Bucket(voxelRunsBytes(value = 1234, runs = Seq((1024 * 7, 1024)), runAxis = 2))
+      val expected = (for { x <- 0 until 32; z <- 0 until 32 } yield flatIndex(x, 7, z)).toSet
+      assert(changedIndices(updated) == expected)
+      assert(expected.forall(updated(_) == 1234))
+    }
+
     "apply a run that covers the whole bucket, with multi-byte varints" in {
       val updated = applyToUint16Bucket(voxelRunsBytes(value = 999, runs = Seq((0, bucketVoxelCount))))
       assert(updated.forall(_ == 999))

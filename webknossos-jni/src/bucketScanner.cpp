@@ -284,7 +284,9 @@ void writeVoxelRunsZOrder(const jbyte *bytes, size_t lengthBytes, const VoxelRun
             T *rowStart = bucket + (y + z * bucketWidth) * bucketWidth;
             while (row != 0) {
                 const unsigned start = __builtin_ctz(row);
-                const unsigned length = __builtin_ctz(~(row >> start));
+                const uint32_t shifted = row >> start;
+                // __builtin_ctz(0) is undefined, and ~shifted is 0 for a full row.
+                const unsigned length = ~shifted == 0 ? 32 : __builtin_ctz(~shifted);
                 std::fill(rowStart + start, rowStart + start + length, value);
                 row &= ~static_cast<uint32_t>(((uint64_t{1} << length) - 1) << start);
             }

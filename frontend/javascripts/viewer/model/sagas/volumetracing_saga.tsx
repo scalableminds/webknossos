@@ -71,6 +71,7 @@ import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_se
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
+import { maskShapeFromVoxelBuffer2D } from "viewer/model/volumetracing/integration/fill_mask";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/legacy/section_labeling";
 import { api, Model } from "viewer/singletons";
@@ -352,15 +353,20 @@ export function* editVolumeLayerAsync(): Saga<never> {
     }
 
     if (brushDriver != null) {
+      // A stroke released near its start fills the area it encloses. The fill
+      // joins the stroke's transaction, so both are propagated and saved as one.
+      const fill = currentSectionLabeler.getFillingVoxelBuffer2D(activeTool);
+      if (!fill.isEmpty()) {
+        brushDriver.fill(maskShapeFromVoxelBuffer2D(fill, startEditingAction.planeId));
+      }
       // Pointer-up: mag propagation runs once over the coalesced write set.
       // Only a stroke that wrote something counts, so that the "no voxels
       // were changed" hint below still fires when overwrite-empty skipped all.
       if (brushDriver.finish().voxels > 0) wroteVoxelsBox.value = true;
     }
-    // For every tool, including the brush: fills the area enclosed by the
-    // stroke if there is one (for the brush, only when it is released near its
-    // start), within the same undo step, and registers the stroke for volume
-    // interpolation.
+    // For the trace tool: fills the area enclosed by the stroke, within the
+    // same undo step. For every tool, including the brush: registers the stroke
+    // for volume interpolation.
     yield* call(
       finishSectionLabeler,
       currentSectionLabeler,
@@ -410,7 +416,8 @@ export function* finishSectionLabeler(
     return;
   }
 
-  if (isVolumeDrawingTool(activeTool)) {
+  // The brush fills within its own transaction (see editVolumeLayerAsync).
+  if (isVolumeDrawingTool(activeTool) && !isBrushTool(activeTool)) {
     yield* call(
       labelWithVoxelBuffer2D,
       sectionLabeler.getFillingVoxelBuffer2D(activeTool),

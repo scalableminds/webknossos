@@ -58,6 +58,9 @@ export function Slider(props: SliderProps) {
       )
         return;
       event.preventDefault();
+      const sliderRange = max - min;
+      const ensuredStep = step || DEFAULT_STEP;
+      const wheelStep = getDiffPerSliderStep(sliderRange, wheelFactor, ensuredStep);
       const diff = getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
       // differentiate between single value and range slider
       if (range === false || range == null) {
@@ -72,7 +75,7 @@ export function Slider(props: SliderProps) {
         onChange([clampedNewLowerValue, clampedNewUpperValue]);
       }
     },
-    [value, min, max, onChange, range, onWheelDisabled],
+    [value, min, max, onChange, range, onWheelDisabled, step, wheelFactor],
   );
 
   // Reacts onWheel is passive by default, this means that it can't preventDefault.
@@ -90,10 +93,6 @@ export function Slider(props: SliderProps) {
 
   if (min == null || max == null || onChange == null || value == null || disabled)
     return <AntdSlider {...props} />;
-  const sliderRange = max - min;
-  const ensuredStep = step || DEFAULT_STEP;
-
-  const wheelStep = getDiffPerSliderStep(sliderRange, wheelFactor, ensuredStep);
 
   const handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = (event) => {
     if (

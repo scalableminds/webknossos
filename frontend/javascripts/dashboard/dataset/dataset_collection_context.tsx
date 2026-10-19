@@ -1,12 +1,15 @@
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import {
   clearCache,
+  type DatasetSortBy,
   type DatasetUpdater,
   getDatastores,
   triggerDatasetCheck,
 } from "admin/rest_api";
+import features from "features";
 import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
+import { isUserAdminOrDatasetManager } from "libs/utils";
 import last from "lodash-es/last";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -17,6 +20,8 @@ import type {
   FolderItem,
 } from "types/api_types";
 import {
+  type DatasetListParams,
+  MINIMUM_SEARCH_QUERY_LENGTH,
   useCreateFolderMutation,
   useDatasetSearchQuery,
   useDatasetsInFolderQuery,
@@ -36,6 +41,9 @@ import {
 export type FolderModalState =
   | { mode: "edit"; folderId: string }
   | { mode: "create"; parentFolderId: string };
+
+export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
+type DatasetSortOption = Exclude<DatasetSortBy, "searchRelevance">;
 
 export type DatasetCollectionContextValue = {
   datasets: Array<APIDatasetCompact>;
@@ -59,6 +67,13 @@ export type DatasetCollectionContextValue = {
   setGlobalSearchQuery: (val: string | null) => void;
   searchRecursively: boolean;
   setSearchRecursively: (val: boolean) => void;
+  searchTags: string[];
+  setSearchTags: (tags: string[]) => void;
+  datasetFilteringMode: DatasetFilteringMode;
+  setDatasetFilteringMode: (mode: DatasetFilteringMode) => void;
+  sortBy: DatasetSortBy;
+  setSortBy: (sortBy: DatasetSortBy) => void;
+  canSortBySearchRelevance: boolean;
   getBreadcrumbs: (dataset: APIDatasetCompactWithoutStatusAndLayerNames) => string[] | null;
   getActiveSubfolders: () => FolderItem[];
   folderModalState: FolderModalState | null;
@@ -117,7 +132,53 @@ export default function DatasetCollectionContextProvider({
     setGlobalSearchQueryInner(value ? value : null);
   }, []);
   const [searchRecursively, setSearchRecursively] = useState<boolean>(true);
+  const [searchTags, setSearchTags] = useState<string[]>([]);
+  const [datasetFilteringMode, setDatasetFilteringMode] =
+    useState<DatasetFilteringMode>("onlyShowReported");
+  // Sort order used when not sorting by search relevance.
+  const [sortOption, setSortOption] = useState<DatasetSortOption>("lastUsed");
+  const [hasUserSetSort, setHasUserSetSort] = useState(false);
+  const setSortBy = useCallback((sortBy: DatasetSortBy) => {
+    if (sortBy === "searchRelevance") {
+      setHasUserSetSort(false);
+    } else {
+      setSortOption(sortBy);
+      setHasUserSetSort(true);
+    }
+  }, []);
   const queryClient = useQueryClient();
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const isAdminOrDatasetManager = activeUser != null && isUserAdminOrDatasetManager(activeUser);
+
+  // Fall back to relevance-sorting exactly when the search box is initially filled,
+  // unless the user explicitly picks a sort option afterwards.
+  const isSearchActive = globalSearchQuery != null;
+  useEffect(() => {
+    if (isSearchActive) {
+      setHasUserSetSort(false);
+    }
+  }, [isSearchActive]);
+  const canSortBySearchRelevance =
+    globalSearchQuery != null && globalSearchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH;
+  const sortBy: DatasetSortBy =
+    canSortBySearchRelevance && !hasUserSetSort ? "searchRelevance" : sortOption;
+
+  const listParams: DatasetListParams = useMemo(
+    () => ({
+      tags: searchTags,
+      isUnreported:
+        datasetFilteringMode === "onlyShowReported"
+          ? false
+          : datasetFilteringMode === "onlyShowUnreported"
+            ? true
+            : undefined,
+      // Only admins and dataset managers see datasets without usable layers.
+      isActive: isAdminOrDatasetManager ? undefined : true,
+      onlyMyOrganization: features().isWkorgInstance || undefined,
+      sortBy,
+    }),
+    [searchTags, datasetFilteringMode, isAdminOrDatasetManager, sortBy],
+  );
 
   // Keep url GET parameters in sync with search and active folder
   useManagedUrlParams(
@@ -170,11 +231,13 @@ export default function DatasetCollectionContextProvider({
   }, [folderHierarchyQuery.data, selectedFolder]);
   const datasetsInFolderQuery = useDatasetsInFolderQuery(
     globalSearchQuery == null ? activeFolderId : null,
+    listParams,
   );
   const datasetSearchQuery = useDatasetSearchQuery(
     globalSearchQuery,
     activeFolderId,
     searchRecursively,
+    listParams,
   );
   const createFolderMutation = useCreateFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
@@ -232,6 +295,7 @@ export default function DatasetCollectionContextProvider({
       ? datasetSearchQuery.isFetching
       : folderHierarchyQuery.isPending ||
         datasetsInFolderQuery.isFetching ||
+        datasetsInFolderQuery.isPlaceholderData ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): omitted to maintain stability as underlying data dependencies are already tracked
@@ -283,6 +347,13 @@ export default function DatasetCollectionContextProvider({
       setGlobalSearchQuery,
       searchRecursively,
       setSearchRecursively,
+      searchTags,
+      setSearchTags,
+      datasetFilteringMode,
+      setDatasetFilteringMode,
+      sortBy,
+      setSortBy,
+      canSortBySearchRelevance,
       queries: {
         folderHierarchyQuery,
         datasetsInFolderQuery,
@@ -320,6 +391,11 @@ export default function DatasetCollectionContextProvider({
       setGlobalSearchQuery,
       usedStorageInOrga,
       folderModalState,
+      searchTags,
+      datasetFilteringMode,
+      sortBy,
+      setSortBy,
+      canSortBySearchRelevance,
     ],
   );
 

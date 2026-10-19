@@ -324,13 +324,19 @@ class DatasetController @Inject() (
       recursive: Option[Boolean],
       // Optional filtering: List only datasets with names matching this search query
       searchQuery: Option[String],
+      // Optional filtering: List only datasets that have all of these tags (pass the parameter once per tag)
+      tags: List[String],
+      // Optional sorting, one of DatasetSortBy. If not set, the order is unspecified.
+      sortBy: Option[String],
       // return only the first n matching datasets.
       limit: Option[Int],
       // include the number of active explorational annotations the requesting user can list per dataset
       includeAnnotationCount: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
-      _ <- Fox.successful(())
+      sortByOpt <- Fox.runOptional(sortBy)(s =>
+        DatasetSortBy.fromString(s).toFox ?~> s"Invalid sortBy value: $s" ~> BAD_REQUEST
+      )
       organizationIdOpt =
         if (onlyMyOrganization.getOrElse(false))
           request.identity.map(_._organization)
@@ -345,6 +351,8 @@ class DatasetController @Inject() (
         searchQuery,
         request.identity.map(_._id),
         recursive.getOrElse(false),
+        tags = tags.filter(_.nonEmpty),
+        sortByOpt = sortByOpt,
         limitOpt = limit,
         requestingUserOrga = request.identity.map(_._organization),
         includeAnnotationCount = includeAnnotationCount.getOrElse(false)

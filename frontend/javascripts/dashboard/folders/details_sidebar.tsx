@@ -312,7 +312,7 @@ function FolderDetails({
   const hierarchy = context.queries.folderHierarchyQuery.data;
   // The organization's root folder can't be deleted. Unknown folders count as root to be safe.
   const isRootFolder = folderId == null || hierarchy?.itemById[folderId]?.parent == null;
-  let message = getMaybeSelectMessage(datasetCount);
+  let message = datasetCount > 0 ? "Select a dataset to see details." : "";
   if (!displayedFolderEqualsActiveFolder) {
     message =
       datasetCount > 0
@@ -343,13 +343,7 @@ function FolderDetails({
             <FolderOpenOutlined style={{ marginRight: 8 }} />
             {folder.name}
           </Typography.Title>
-          <p>
-            This folder contains{" "}
-            <Tooltip title="This number is independent of any filters that might be applied to the current view (e.g., only showing available datasets)">
-              {datasetCount} {pluralize("dataset", datasetCount)}*
-            </Tooltip>
-            . {message}
-          </p>
+          {message ? <p>{message}</p> : null}
           <SidebarSection label="Access Permissions">
             <FolderTeamTags folder={folder} />
           </SidebarSection>

@@ -69,8 +69,10 @@ function DatasetFolderViewInner(props: Props) {
     }
     context.setSelectedFolder(folder);
   };
+  // Only used for the unfiltered dataset count of the selected subfolder.
   const { data: selectedFolderDatasets } = useDatasetsInFolderQuery(
     context.selectedFolder?.key || null,
+    {},
   );
   const folderIdForDetailsSidebar = context.selectedFolder?.key ?? context.activeFolderId;
   const datasetCountForDetailsSidebar =

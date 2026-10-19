@@ -36,7 +36,7 @@ import models.annotation.AnnotationDAO
 import models.dataset.DatasetCreationType.DatasetCreationType
 import models.job.JobDAO
 import models.storage.UsedStorageService
-import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.{FORBIDDEN, NOT_FOUND}
 import play.api.libs.json.{JsArray, JsObject, Json}
 import security.RandomIDGenerator
 import telemetry.SlackNotificationService
@@ -633,10 +633,13 @@ class DatasetService @Inject() (
             userService.teamManagerMembershipsFor(user._id)
           )
         } yield user.isAdminOf(dataset._organization)
-          || user.isDatasetManager
+          || user.isDatasetManagerOf(dataset._organization)
           || teamManagerMemberships.map(_.teamId).intersect(datasetAllowedTeams).nonEmpty
       case _ => Fox.successful(false)
     }
+
+  def assertEditableBy(dataset: Dataset, user: User): Fox[Unit] =
+    Fox.assertTrue(isEditableBy(dataset, Some(user))) ?~> Msg.notAllowed ~> FORBIDDEN
 
   def isUnreported(dataset: Dataset): Boolean = dataset.status == DataSourceStatus.unreported
 

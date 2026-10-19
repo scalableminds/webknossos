@@ -104,7 +104,7 @@ class AnalyticsService @Inject() (
 
 class AnalyticsLookUpService @Inject() (userDAO: UserDAO, multiUserDAO: MultiUserDAO, wkConf: WkConf)
     extends LazyLogging {
-  implicit val ctx: DBAccessContext = GlobalAccessContext
+  implicit private val ctx: DBAccessContext = GlobalAccessContext
 
   def isSuperUser(multiUserId: ObjectId): Fox[Boolean] =
     for {

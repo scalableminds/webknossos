@@ -233,6 +233,14 @@ const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
     // erase-buttons which hide under their neighbors would not hide properly.
     colorBgContainerDisabled: ColorInk2Disabled,
   },
+  components: {
+    // Hovering or pressing a button only highlights its border. The icon keeps its color, so
+    // that it stays readable against the dark surface. See _action_bar.less for radio buttons.
+    Button: {
+      defaultHoverColor: ColorTextOnInkSecondary,
+      defaultActiveColor: ColorTextOnInkSecondary,
+    },
+  },
 };
 export const NavAndStatusBarTheme = merge(
   getAntdTheme("dark"),

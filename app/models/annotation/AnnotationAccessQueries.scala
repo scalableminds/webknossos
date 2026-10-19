@@ -1,6 +1,5 @@
 package models.annotation
 
-import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SqlInterpolationSyntax, SqlToken, SqlTypeImplicits}
 
 // Kept independent of the DAOs so that DatasetDAO can use it without depending on AnnotationDAO.
@@ -9,7 +8,8 @@ object AnnotationAccessQueries extends SqlTypeImplicits with SqlInterpolationSyn
   // Annotations owned by the user, or public/internal ones shared with them via a team or contribution.
   // Does not check dataset access: callers must ensure the user can read the annotation's dataset,
   // either via sharedCondition or by only joining datasets that were already access-checked.
-  def ownedOrSharedQ(requestingUserId: ObjectId, prefix: SqlToken, sharedCondition: SqlToken = q"TRUE"): SqlToken =
+  // The user id may also be a column (e.g. q"u._id"), to check the access of many users at once.
+  def ownedOrSharedQ(requestingUserId: SqlToken, prefix: SqlToken, sharedCondition: SqlToken = q"TRUE"): SqlToken =
     q"""
         (
           ${prefix}_user = $requestingUserId

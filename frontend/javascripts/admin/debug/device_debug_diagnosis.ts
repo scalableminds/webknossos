@@ -1,5 +1,6 @@
 import {
   EXPERIMENTS,
+  SAMPLER_ARRAY_PROBE_IDS,
   SHADER_PROBE_IDS,
   WEBKNOSSOS_SHADER_EXPERIMENT_IDS,
   WORKAROUND_EXPERIMENT_IDS,
@@ -12,6 +13,8 @@ export type ExperimentStatus =
   | "passed"
   | "failed"
   | "crashed"
+  // The outcome was already known from earlier experiments.
+  | "skipped"
   // The browser refused to create a WebGL context, so the experiment could not run.
   | "blocked";
 
@@ -29,6 +32,8 @@ export function summarizeExperiments(record: RunRecord | null): ExperimentSummar
     let status: ExperimentStatus = "passed";
     if (steps.length === 0) {
       status = "pending";
+    } else if (steps.every((step) => step.status === "skipped")) {
+      status = "skipped";
     } else if (failedStep?.webglUnavailable) {
       status = "blocked";
     } else if (failedStep != null) {
@@ -95,14 +100,10 @@ export function diagnose(summaries: ExperimentSummary[]): string[] {
     );
   }
 
-  const samplerArrayProbes = [
-    "probe-samplerArraySingle",
-    "probe-samplerArrayFloat",
-    "probe-samplerArrayUint",
-    "probe-samplerArray",
-  ].map((id) => byId.get(id));
-  const separateSamplers = byId.get("probe-separateSamplers");
-  if (samplerArrayProbes.some(isBroken) && separateSamplers?.status === "passed") {
+  const samplerArraysBroken =
+    SAMPLER_ARRAY_PROBE_IDS.some((id) => isBroken(byId.get(id))) &&
+    byId.get("probe-separateSamplers")?.status === "passed";
+  if (samplerArraysBroken) {
     conclusions.push(
       "Arrays of samplers (e.g., uniform sampler2D textures[4]) break the shader compilation, while separate sampler uniforms work.",
     );
@@ -142,7 +143,10 @@ export function diagnose(summaries: ExperimentSummary[]): string[] {
   }
 
   const workarounds = Object.values(WORKAROUND_EXPERIMENT_IDS).map((id) => byId.get(id));
-  if (brokenShaders.length > 0 && workarounds.every((summary) => summary?.status === "passed")) {
+  if (
+    (brokenShaders.length > 0 || samplerArraysBroken) &&
+    workarounds.every((summary) => summary?.status === "passed")
+  ) {
     conclusions.push(
       "Replacing the sampler arrays with separate sampler uniforms makes the WEBKNOSSOS shaders work. This is a viable workaround.",
     );
@@ -156,7 +160,15 @@ export function diagnose(summaries: ExperimentSummary[]): string[] {
   }
 
   const realistic = byId.get("realisticSetup");
-  if (isBroken(realistic) && brokenShaders.length === 0 && workingShaders.length > 0) {
+  if (samplerArraysBroken && realistic?.status === "passed") {
+    conclusions.push(
+      "With separate samplers instead of sampler arrays, the realistic WEBKNOSSOS setup works (textures, tables, shader compilation and rendering). Avoiding sampler arrays should make WEBKNOSSOS work on this device.",
+    );
+  } else if (samplerArraysBroken && isBroken(realistic)) {
+    conclusions.push(
+      `Even with separate samplers instead of sampler arrays, this fails: ${describeFailure(realistic!)}. So there is at least one other problem.`,
+    );
+  } else if (isBroken(realistic) && brokenShaders.length === 0 && workingShaders.length > 0) {
     conclusions.push(
       `The WEBKNOSSOS shaders work on their own, but ${describeFailure(realistic!)}. This points to memory pressure or the three.js integration.`,
     );

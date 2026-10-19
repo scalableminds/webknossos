@@ -4,6 +4,7 @@ import {
   CloseCircleOutlined,
   ExclamationCircleOutlined,
   LoadingOutlined,
+  MinusCircleOutlined,
   StopOutlined,
 } from "@ant-design/icons";
 import { Alert, Button, Card, Collapse, Input, Progress, Space, Typography } from "antd";
@@ -35,6 +36,7 @@ const STATUS_ICONS: Record<ExperimentStatus, React.ReactNode> = {
   failed: <CloseCircleOutlined style={{ color: "#ff4d4f" }} />,
   crashed: <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />,
   blocked: <StopOutlined style={{ color: "#faad14" }} />,
+  skipped: <MinusCircleOutlined style={{ color: "#999" }} />,
 };
 
 function StepItem({ step }: { step: StepResult }) {

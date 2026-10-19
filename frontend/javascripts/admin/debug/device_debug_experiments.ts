@@ -41,7 +41,13 @@ import {
   runShaderSteps,
   SHADER_PROBES,
 } from "./device_debug_raw_gl";
-import { type Experiment, type ExperimentContext, nextFrame, sleep } from "./device_debug_runner";
+import {
+  type Experiment,
+  type ExperimentContext,
+  nextFrame,
+  type PreviousResults,
+  sleep,
+} from "./device_debug_runner";
 
 // Mirror the constants from layer_rendering_manager.ts
 const LOOKUP_CUCKOO_TEXTURE_WIDTH = 256;
@@ -355,8 +361,13 @@ async function runRealisticSetup(ex: ExperimentContext) {
       },
     );
 
+    // If sampler arrays are known to crash, test whether the rest of the setup works with
+    // the workaround.
+    const avoidSamplerArrays = areSamplerArraysBroken(ex);
     const { scene, camera } = await ex.step(
-      "Compile WEBKNOSSOS shaders via three.js",
+      avoidSamplerArrays
+        ? "Compile WEBKNOSSOS shaders via three.js (with separate samplers instead of sampler arrays)"
+        : "Compile WEBKNOSSOS shaders via three.js",
       (setDetails) => {
         const params = getShaderParams(plans, setup.maximumLayerCountToRender);
         const nullTexture = AbstractCuckooTable.getNullTexture();
@@ -366,14 +377,24 @@ async function runRealisticSetup(ex: ExperimentContext) {
           segmentation_mapping_texture: { value: mappingTable?.getTexture() ?? nullTexture },
         };
         for (const plan of plans) {
-          uniforms[`${sanitizeName(plan.name)}_textures`] = {
-            value: dataTexturesByLayer.get(plan.name) ?? [],
-          };
+          const textures = dataTexturesByLayer.get(plan.name) ?? [];
+          const uniformName = `${sanitizeName(plan.name)}_textures`;
+          if (avoidSamplerArrays) {
+            textures.forEach((texture, i) => {
+              uniforms[`${uniformName}_${i}`] = { value: texture };
+            });
+          } else {
+            uniforms[uniformName] = { value: textures };
+          }
         }
+        const vertexShader = getMainVertexShader(params);
+        const fragmentShader = getMainFragmentShader(params);
         const material = new ShaderMaterial({
           uniforms,
-          vertexShader: getMainVertexShader(params),
-          fragmentShader: getMainFragmentShader(params),
+          vertexShader: avoidSamplerArrays ? replaceSamplerArrays(vertexShader) : vertexShader,
+          fragmentShader: avoidSamplerArrays
+            ? replaceSamplerArrays(fragmentShader)
+            : fragmentShader,
         });
         material.side = DoubleSide;
         const width = constants.VIEWPORT_WIDTH;
@@ -489,6 +510,11 @@ function webknossosShaderExperiment(
     id,
     label,
     usesGpu: true,
+    // Avoid crashing the GPU again (which makes the browser block WebGL for a while).
+    getSkipReason: (results) =>
+      !withoutSamplerArrays && areSamplerArraysBroken(results)
+        ? "Skipped, since this shader uses sampler arrays, which are known to crash on this device (see the GLSL probes)."
+        : null,
     run: (ex) =>
       runShaderSteps(ex, (gl) => {
         const { vertex, fragment } = getWebknossosShaders(layers, readGpuSpecs(gl));
@@ -507,6 +533,21 @@ function webknossosShaderExperiment(
 }
 
 export const SHADER_PROBE_IDS = SHADER_PROBES.map(({ id }) => `probe-${id}`);
+
+export const SAMPLER_ARRAY_PROBE_IDS = [
+  "probe-samplerArraySingle",
+  "probe-samplerArrayFloat",
+  "probe-samplerArrayUint",
+  "probe-samplerArray",
+];
+
+// True if sampler arrays break the compilation, while separate samplers work.
+export function areSamplerArraysBroken(results: PreviousResults): boolean {
+  return (
+    SAMPLER_ARRAY_PROBE_IDS.some((id) => results.didFail(id)) &&
+    results.didPass("probe-separateSamplers")
+  );
+}
 
 export const WEBKNOSSOS_SHADER_EXPERIMENT_IDS = {
   color: "wkShader-color",

@@ -12,7 +12,7 @@ const CONTEXT_LOSS_POLL_DURATION_MS = 300;
 // Chrome may block WebGL for a while after the GPU process crashed.
 const GPU_COOLDOWN_MS = 15000;
 
-export type StepStatus = "running" | "passed" | "failed" | "crashed";
+export type StepStatus = "running" | "passed" | "failed" | "crashed" | "skipped";
 
 export type StepResult = {
   index: number;
@@ -39,7 +39,13 @@ export type RunRecord = {
   events: string[];
 };
 
-export type ExperimentContext = {
+// Results of earlier experiments of the run, so that later experiments can adapt.
+export type PreviousResults = {
+  didFail(experimentId: string): boolean;
+  didPass(experimentId: string): boolean;
+};
+
+export type ExperimentContext = PreviousResults & {
   // Runs a step. If it fails, the rest of the experiment is not executed.
   step<T>(label: string, fn: (setDetails: (details: string) => void) => T | Promise<T>): Promise<T>;
   // Subsequent steps check whether this context was lost.
@@ -51,6 +57,8 @@ export type Experiment = {
   id: string;
   label: string;
   usesGpu: boolean;
+  // Allows to skip experiments whose outcome is already known (e.g., to avoid crashes).
+  getSkipReason?: (results: PreviousResults) => string | null;
   run(ctx: ExperimentContext): Promise<void>;
 };
 
@@ -151,11 +159,37 @@ export async function runExperiments(
     onStatus(null);
   };
 
+  // Steps of repeated experiments are removed, so the length is not sufficient.
+  const getNextIndex = () => Math.max(0, ...record.steps.map((step) => step.index)) + 1;
+  const getSteps = (experimentId: string) =>
+    record.steps.filter((step) => step.experimentId === experimentId);
+  const previousResults: PreviousResults = {
+    didFail: (experimentId) =>
+      getSteps(experimentId).some(
+        (step) => (step.status === "failed" || step.status === "crashed") && !step.webglUnavailable,
+      ),
+    didPass: (experimentId) => {
+      const steps = getSteps(experimentId);
+      return steps.length > 0 && steps.every((step) => step.status === "passed");
+    },
+  };
   let currentExperimentId: string | null = null;
   try {
     for (const experiment of experiments) {
       if (record.steps.some((step) => step.experimentId === experiment.id)) continue;
       currentExperimentId = experiment.id;
+
+      const skipReason = experiment.getSkipReason?.(previousResults);
+      if (skipReason != null) {
+        record.steps.push({
+          index: getNextIndex(),
+          experimentId: experiment.id,
+          label: skipReason,
+          status: "skipped",
+        });
+        update();
+        continue;
+      }
 
       const previousGpuExperimentSteps = [...experiments]
         .reverse()
@@ -172,6 +206,7 @@ export async function runExperiments(
 
       const watchedContexts: Array<{ gl: WebGL2RenderingContext; isLost: () => boolean }> = [];
       const ctx: ExperimentContext = {
+        ...previousResults,
         watchContext(gl) {
           let wasLost = false;
           gl.canvas.addEventListener("webglcontextlost", () => {
@@ -183,8 +218,7 @@ export async function runExperiments(
         async step(label, fn) {
           if (shouldAbort()) throw new AbortError();
           const result: StepResult = {
-            // Steps of repeated experiments were removed, so the length is not sufficient.
-            index: Math.max(0, ...record.steps.map((step) => step.index)) + 1,
+            index: getNextIndex(),
             experimentId: experiment.id,
             label,
             status: "running",

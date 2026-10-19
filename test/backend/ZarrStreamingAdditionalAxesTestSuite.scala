@@ -97,6 +97,11 @@ class ZarrStreamingAdditionalAxesTestSuite extends AsyncWordSpec with Zarr3Outpu
       assert(
         multiscales.head.datasets.flatMap(_.coordinateTransformations).forall(_.scale.exists(_.length == header.rank))
       )
+      // Axis names must match the zarr 3 dimension_names
+      assert(header.dimension_names.exists(_.sameElements(multiscales.head.axes.map(_.name))))
+      // Only xyz are space axes, the additional ones have no length unit
+      assert(multiscales.head.axes.filter(_.`type` == "space").map(_.name) == List("x", "y", "z"))
+      assert(multiscales.head.axes.slice(1, 3).forall(_.unit.isEmpty))
     }
 
     "keep four axes without additional axes" in {

@@ -61,12 +61,7 @@ object NgffMetadataV0_5 {
       )
     )
     val lengthUnitStr = dataSourceVoxelSize.unit.toString
-    val axes = List(NgffAxis(name = "c", `type` = "channel")) ++ additionalAxes
-      .getOrElse(List.empty)
-      .zipWithIndex
-      .map(axisAndIndex =>
-        NgffAxis(name = s"t${axisAndIndex._2}", `type` = "space", unit = Some(lengthUnitStr))
-      ) ++ List(
+    val axes = List(NgffAxis(name = "c", `type` = "channel")) ++ NgffAxis.forAdditionalAxes(additionalAxes) ++ List(
       NgffAxis(name = "x", `type` = "space", unit = Some(lengthUnitStr)),
       NgffAxis(name = "y", `type` = "space", unit = Some(lengthUnitStr)),
       NgffAxis(name = "z", `type` = "space", unit = Some(lengthUnitStr))

@@ -1,8 +1,11 @@
 import { getUrlParamValue, hasUrlParam } from "libs/utils";
 import type { Matrix4x4 } from "mjs";
-import type { APIDataset } from "types/api_types";
+import type { APIDataset, APIDatasetCompact, APIMaybeUnimportedDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import {
+  getMappingFromLayerNameToBaseDatasetLayerName,
+  getReadableURLPart,
+} from "viewer/model/accessors/dataset_accessor";
 import type { LandmarkPairInfo, Side } from "./helpers/layer_registration_helpers";
 
 // The layer registration view (layer_registration_view.tsx) embeds two normal sandbox views of the
@@ -44,6 +47,22 @@ export function getLayerRegistrationWorkerLayerName(): string {
 
 export function isLayerRegistrationStore(): boolean {
   return hasUrlParam(STORE_URL_PARAM);
+}
+
+// Whether the layers of a dataset can be registered: it needs to be active and have a fixed layer
+// and at least one moving layer (any other layer, see getMovingLayerNames). All entry points use
+// this, so that they match what the layer registration view accepts.
+export function canRegisterLayers(dataset: APIDatasetCompact | APIMaybeUnimportedDataset): boolean {
+  if (!dataset.isActive) {
+    return false;
+  }
+  // In the viewer, the dataset also contains the volume annotation layers. The mapping counts
+  // only the layers of the dataset itself.
+  const layerCount =
+    "colorLayerNames" in dataset
+      ? dataset.colorLayerNames.length + dataset.segmentationLayerNames.length
+      : getMappingFromLayerNameToBaseDatasetLayerName(dataset).size;
+  return layerCount >= 2;
 }
 
 // The page that lists the layer registration annotations of a dataset and creates new ones.

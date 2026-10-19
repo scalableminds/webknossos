@@ -17,11 +17,14 @@ import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, type NavigateFunction } from "react-router";
 import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
-import { getLayerRegistrationListUrl } from "viewer/view/layer_registration/layer_registration_protocol";
+import {
+  canRegisterLayers,
+  getLayerRegistrationListUrl,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 
 function NewAnnotationLink({
   dataset,
@@ -165,11 +168,13 @@ export function getDatasetActionContextMenu({
   datasets,
   hideContextMenu,
   modal,
+  navigate,
 }: {
   clearCacheAndReloadDataset: (arg0: string) => Promise<void>;
   datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
   modal: useAppProps["modal"];
+  navigate: NavigateFunction;
 }): MenuProps {
   if (datasets.length !== 1) {
     return getNoActionsAvailableMenu(hideContextMenu);
@@ -208,15 +213,12 @@ export function getDatasetActionContextMenu({
                 },
               }
             : null,
-          dataset.isActive &&
-          dataset.colorLayerNames.length + dataset.segmentationLayerNames.length >= 2
+          canRegisterLayers(dataset)
             ? {
                 key: "register-layers",
                 icon: <NodeIndexOutlined className="icon-margin-right" />,
                 label: "Register Layers…",
-                onClick: () => {
-                  window.location.href = getLayerRegistrationListUrl(dataset);
-                },
+                onClick: () => navigate(getLayerRegistrationListUrl(dataset)),
               }
             : null,
           {

@@ -6,16 +6,15 @@ import { useWkSelector } from "libs/react_hooks";
 import { Link, type useNavigate } from "react-router";
 import { ModalWidth } from "theme";
 import type { APIDataset } from "types/api_types";
-import {
-  getColorLayers,
-  getReadableURLPart,
-  getViewDatasetURL,
-} from "viewer/model/accessors/dataset_accessor";
+import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import {
   canRunAIAlignment,
   getViewDatasetUrlWithAIAlignment,
 } from "viewer/view/ai_jobs/ai_job_url_param";
-import { getLayerRegistrationListUrl } from "viewer/view/layer_registration/layer_registration_protocol";
+import {
+  canRegisterLayers,
+  getLayerRegistrationListUrl,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 
 const addTypeToVerb: Record<DatasetAddType, string> = {
   upload: "uploaded",
@@ -42,11 +41,11 @@ function NextStepHints({
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const activeUser = useWkSelector((state) => state.activeUser);
-  const canRegisterLayers = getColorLayers(dataset).length >= 2;
+  const showRegisterLayers = canRegisterLayers(dataset);
   const layerRegistrationListUrl = getLayerRegistrationListUrl(dataset);
 
   if (datasetAddType === DatasetAddType.COMPOSE) {
-    return canRegisterLayers ? (
+    return showRegisterLayers ? (
       <Alert
         type="info"
         showIcon
@@ -54,7 +53,7 @@ function NextStepHints({
         description="Register them in WEBKNOSSOS: place matching landmarks in the layers side by side, check the result right away and apply it to the dataset."
         action={
           <Button size="small" onClick={() => navigate(layerRegistrationListUrl)}>
-            Register Layers
+            Register Layers…
           </Button>
         }
       />
@@ -62,7 +61,7 @@ function NextStepHints({
   }
 
   const canAlignSections = canRunAIAlignment(dataset, activeUser);
-  if (!canRegisterLayers && !canAlignSections) {
+  if (!showRegisterLayers && !canAlignSections) {
     return null;
   }
   return (
@@ -75,7 +74,7 @@ function NextStepHints({
             <Link to={getViewDatasetUrlWithAIAlignment(dataset)}>Align them with AI</Link>
           </li>
         ) : null}
-        {canRegisterLayers ? (
+        {showRegisterLayers ? (
           <li>
             The layers don&apos;t line up?{" "}
             <Link to={layerRegistrationListUrl}>Register them with landmarks</Link>

@@ -51,7 +51,7 @@ import type React from "react";
 import { Fragment, PureComponent, useCallback, useContext, useEffect } from "react";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { Unicode } from "viewer/constants";
@@ -129,6 +129,7 @@ type ContextMenuProps = {
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = useContext(ContextMenuContext);
   const { modal } = App.useApp();
+  const navigate = useNavigate();
   const { datasets, contextMenuPosition, hideContextMenu, folder, datasetCollectionContext } =
     propsWithInputRef;
   const { clearCacheAndReloadDataset } = datasetCollectionContext;
@@ -161,6 +162,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
         datasets,
         clearCacheAndReloadDataset,
         modal,
+        navigate,
       });
     } else if (folder != null) {
       menu = generateSettingsForFolder(folder, datasetCollectionContext, true);

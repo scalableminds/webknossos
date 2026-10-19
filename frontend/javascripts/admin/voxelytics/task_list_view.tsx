@@ -511,7 +511,7 @@ export default function TaskListView({
             <Search
               placeholder="Filter tasks"
               onSearch={handleOnSearch}
-              style={{ minWidth: 150 }}
+              style={{ flex: "1 1 150px" }}
               allowClear
             />
             <Space wrap>

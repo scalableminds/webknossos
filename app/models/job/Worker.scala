@@ -74,6 +74,19 @@ class WorkerDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
+  def insertOrUpdateSupportedJobCommands(w: Worker): Fox[Unit] =
+    for {
+      supportedJobCommandsStr: Set[String] = w.supportedJobCommands.map(_.toString)
+      _ <- run(q"""INSERT INTO webknossos.workers(
+                     _id, _dataStore, name, key, maxParallelHighPriorityJobs, maxParallelLowPriorityJobs,
+                     supportedJobCommands, lastHeartBeat, lastReportedVersion, created, isDeleted
+                   ) VALUES(
+                     ${w._id}, ${w._dataStore}, ${w.name}, ${w.key}, ${w.maxParallelHighPriorityJobs}, ${w.maxParallelLowPriorityJobs},
+                     $supportedJobCommandsStr, ${w.lastHeartBeat}, ${w.lastReportedVersion}, ${w.created}, ${w.isDeleted}
+                   )
+                   ON CONFLICT (_id) DO UPDATE SET supportedJobCommands = EXCLUDED.supportedJobCommands""".asUpdate)
+    } yield ()
+
   def updateHeartBeat(workerId: ObjectId): Unit = {
     run(q"UPDATE webknossos.workers SET lastHeartBeat = NOW() WHERE _id = $workerId".asUpdate)
     // Note that this should not block the jobs polling operation, failures here are not critical

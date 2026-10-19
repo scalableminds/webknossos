@@ -504,17 +504,18 @@ class PlaneView {
     );
     this.unsubscribeFunctions.push(
       listenToStoreProperty(
-        // Within the 3D viewport, performMeshHitTest takes care of highlighting hovered meshes.
+        // This is not restricted to the 2D viewports, because hovering the segments list
+        // does not change the active viewport. In the 3D viewport, performMeshHitTest sets
+        // hoveredSegmentId to the hit mesh, which is then highlighted in the same way.
         // In proofreading mode, highlighting the whole agglomerate mesh would hide the
         // highlighting of the active supervoxel.
         (storeState) =>
-          storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView &&
           storeState.uiInformation.activeTool !== AnnotationTool.PROOFREAD
             ? storeState.temporaryConfiguration.hoveredSegmentId
             : null,
         (hoveredSegmentId) => {
           const storeState = Store.getState();
-          segmentMeshController.updateHoveredSegmentIdHighlightingFrom2D(
+          segmentMeshController.updateHoveredSegmentIdHighlighting(
             hoveredSegmentId,
             getVisibleSegmentationLayer(storeState)?.name ?? null,
             storeState.flycam.additionalCoordinates,

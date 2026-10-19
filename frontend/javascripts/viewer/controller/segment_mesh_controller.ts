@@ -114,9 +114,14 @@ export default class SegmentMeshController {
     >
   > = {};
 
-  // Meshes highlighted because their segment is hovered in a 2D viewport (or in the
-  // segments list). Hovering meshes in the 3D viewport is handled by PlaneView.performMeshHitTest.
-  private meshesHighlightedByHoverIn2D: MeshSceneNode[] = [];
+  // The segment whose meshes are highlighted because it is hovered (in a 2D viewport,
+  // the segments list or the 3D viewport). Only the key is stored (instead of the meshes)
+  // so that removed meshes are neither updated nor kept alive.
+  private hoveredSegmentToHighlight: {
+    segmentId: bigint;
+    layerName: string;
+    additionalCoordKey: string;
+  } | null = null;
 
   constructor() {
     this.lightsGroup = new Group();
@@ -268,6 +273,17 @@ export default class SegmentMeshController {
 
     group.segmentId = segmentId;
     this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, group);
+
+    // Mesh chunks can stream in while their segment is hovered. Highlight them, too.
+    const hoveredSegment = this.hoveredSegmentToHighlight;
+    if (
+      hoveredSegment != null &&
+      hoveredSegment.segmentId === segmentId &&
+      hoveredSegment.layerName === layerName &&
+      hoveredSegment.additionalCoordKey === additionalCoordinatesString
+    ) {
+      this.updateMeshAppearance(meshChunk, true, undefined, undefined, "full");
+    }
 
     const state = Store.getState();
     if (isNewlyAddedMesh) {
@@ -748,38 +764,40 @@ export default class SegmentMeshController {
     });
   };
 
-  updateHoveredSegmentIdHighlightingFrom2D = (
+  updateHoveredSegmentIdHighlighting = (
     hoveredSegmentId: bigint | null,
     layerName: string | null,
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   ) => {
-    for (const mesh of this.meshesHighlightedByHoverIn2D) {
-      // Skip meshes that were removed from the scene graph in the meantime.
-      if (mesh.parent?.parent != null) {
-        this.updateMeshAppearance(mesh, false, undefined, undefined, null);
-      }
+    const previous = this.hoveredSegmentToHighlight;
+    if (previous != null) {
+      // Meshes that were removed in the meantime are no longer part of meshesGroupsPerSegmentId
+      // and are therefore skipped.
+      forEach(
+        this.getMeshGroups(previous.additionalCoordKey, previous.layerName, previous.segmentId),
+        (lodGroup) => {
+          lodGroup.traverse((obj) => {
+            if (obj instanceof Mesh && (obj as MeshSceneNode).hoveredState != null) {
+              this.updateMeshAppearance(obj as MeshSceneNode, false, undefined, undefined, null);
+            }
+          });
+        },
+      );
     }
-    this.meshesHighlightedByHoverIn2D = [];
+    this.hoveredSegmentToHighlight = null;
 
     if (!hoveredSegmentId || layerName == null) {
       return;
     }
-    const meshGroupsByLOD = this.getMeshGroups(
-      getAdditionalCoordinatesAsString(additionalCoordinates),
-      layerName,
-      hoveredSegmentId,
-    );
-    if (meshGroupsByLOD == null) {
-      return;
-    }
-    for (const lodGroup of Object.values(meshGroupsByLOD) as GroupForLOD[]) {
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+    this.hoveredSegmentToHighlight = { segmentId: hoveredSegmentId, layerName, additionalCoordKey };
+    forEach(this.getMeshGroups(additionalCoordKey, layerName, hoveredSegmentId), (lodGroup) => {
       // Highlighting one mesh with "full" recolors all meshes of its LOD group.
-      const mesh = lodGroup.children[0]?.children[0];
+      const mesh = lodGroup.children[0]?.children[0] as MeshSceneNode | undefined;
       if (mesh != null) {
         this.updateMeshAppearance(mesh, true, undefined, undefined, "full");
-        this.meshesHighlightedByHoverIn2D.push(mesh);
       }
-    }
+    });
   };
 
   throttledUpdateActiveUnmappedSegmentIdHighlighting = throttle(

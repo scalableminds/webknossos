@@ -11,9 +11,9 @@ import {
   theme,
 } from "antd";
 import type { ColumnsType, ColumnType } from "antd/es/table";
-import { useElementSize } from "libs/react_hooks";
+import useResizeObserver from "beautiful-react-hooks/useResizeObserver";
 import capitalize from "lodash-es/capitalize";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { VoxelSize } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -417,7 +417,13 @@ export function LandmarkPairSection({
 }) {
   const { token } = theme.useToken();
   const [sortKey, setSortKey] = useState<SortKey>("pair");
-  const [tableAreaRef, tableAreaSize] = useElementSize();
+  const tableAreaRef = useRef<HTMLDivElement>(null);
+  // Undefined until the table area was measured. The cast is needed because the hook's types
+  // predate React 19, whose refs include null.
+  const tableAreaSize = useResizeObserver(tableAreaRef as React.RefObject<HTMLDivElement>) ?? {
+    width: 0,
+    height: 0,
+  };
   const columns = getPairColumns({
     tableWidth: tableAreaSize.width,
     pairs,

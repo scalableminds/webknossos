@@ -6,7 +6,7 @@ import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import { location } from "libs/window";
 import messages from "messages";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { APIAnnotationTypeEnum } from "types/api_types";
 import { api, Model } from "viewer/singletons";
 import ButtonComponent from "viewer/view/components/button_component";
@@ -54,7 +54,7 @@ function TaskCompletionActions() {
     };
   }, [task]);
 
-  const handleReopenTask = useCallback(async () => {
+  const handleReopenTask = async () => {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
     if (!localStorageEntry) return;
     const { annotationId } = JSON.parse(localStorageEntry);
@@ -72,36 +72,29 @@ function TaskCompletionActions() {
         },
       });
     }
-  }, [modal.confirm]);
+  };
 
-  const finishAndNextTaskButton = useMemo(
-    () =>
-      restrictions.allowFinish && task ? (
-        <ButtonComponent
-          key="next-button"
-          icon={<VerticalLeftOutlined />}
-          onClick={handleFinishAndGetNextTask}
-        >
-          Finish and Get Next Task
-        </ButtonComponent>
-      ) : null,
-    [restrictions, task],
-  );
+  const finishAndNextTaskButton =
+    restrictions.allowFinish && task ? (
+      <ButtonComponent
+        key="next-button"
+        icon={<VerticalLeftOutlined />}
+        onClick={handleFinishAndGetNextTask}
+      >
+        Finish and Get Next Task
+      </ButtonComponent>
+    ) : null;
 
-  const reopenTaskButton = useMemo(
-    () =>
-      isReopenAllowed ? (
-        <ButtonComponent
-          key="reopen-button"
-          icon={<VerticalRightOutlined />}
-          onClick={handleReopenTask}
-          danger
-        >
-          Undo Finish
-        </ButtonComponent>
-      ) : null,
-    [isReopenAllowed, handleReopenTask],
-  );
+  const reopenTaskButton = isReopenAllowed ? (
+    <ButtonComponent
+      key="reopen-button"
+      icon={<VerticalRightOutlined />}
+      onClick={handleReopenTask}
+      danger
+    >
+      Undo Finish
+    </ButtonComponent>
+  ) : null;
 
   return (
     <>

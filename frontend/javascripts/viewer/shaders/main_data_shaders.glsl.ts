@@ -76,9 +76,25 @@ export type Params = {
   useInterpolation: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
   isWindows: boolean;
-  // See getVertexBucketAlignmentLayerCap in plane_material_factory.ts.
+  // See computeVertexBucketAlignmentLayerCap.
   vertexBucketAlignmentLayerCap: number;
 };
+
+// Varying rows the vertex shader uses besides the per-layer arrays: 8 for the
+// fixed varyings, plus one row of headroom.
+const BASELINE_VARYING_ROWS = 9;
+
+// How many layers can get the outputMagIdx/outputSeed/outputAddress varyings.
+// The three per-layer arrays share one varying row per layer, and every TPS
+// layer needs one more row for its offset. Measured with Chrome's (ANGLE's)
+// packing: with 32 varying vectors, 24 layers link (31: 23). WebGL2 only
+// guarantees 15, and exceeding the limit fails with "Could not pack varying".
+export function computeVertexBucketAlignmentLayerCap(
+  maxVaryingVectors: number,
+  tpsLayerCount: number,
+): number {
+  return Math.max(1, maxVaryingVectors - BASELINE_VARYING_ROWS - tpsLayerCount);
+}
 
 const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;

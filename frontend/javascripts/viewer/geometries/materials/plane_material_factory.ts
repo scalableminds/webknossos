@@ -79,6 +79,7 @@ import {
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
 import getMainFragmentShader, {
+  computeVertexBucketAlignmentLayerCap,
   getMainVertexShader,
   type Params,
 } from "viewer/shaders/main_data_shaders.glsl";
@@ -105,21 +106,13 @@ export type Uniforms = Record<
 
 const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
 
-// Varying vectors reserved for the shader's other varyings.
-const RESERVED_BASELINE_VARYING_ROWS = 12;
-const VARYING_ROWS_PER_LAYER = 3;
 // The vertex shader precomputes a bucket address per layer and passes it on
-// via the outputMagIdx/outputSeed/outputAddress varyings. WebGL2 only
-// guarantees 15 varying vectors, and exceeding the driver's limit fails with
-// "Could not pack varying". So only layers whose global index is below this
-// cap get these varyings; the others do the full lookup per fragment.
-const getVertexBucketAlignmentLayerCap = memoizeOne((): number => {
+// via the outputMagIdx/outputSeed/outputAddress varyings. Only layers whose
+// global index is below this cap get these varyings; the others do the full
+// lookup per fragment (see computeVertexBucketAlignmentLayerCap).
+const getMaxVaryingVectors = memoizeOne((): number => {
   const gl = getRenderer().getContext() as WebGL2RenderingContext;
-  const maxVaryingVectors: number = gl.getParameter(gl.MAX_VARYING_VECTORS);
-  return Math.max(
-    1,
-    Math.floor((maxVaryingVectors - RESERVED_BASELINE_VARYING_ROWS) / VARYING_ROWS_PER_LAYER),
-  );
+  return gl.getParameter(gl.MAX_VARYING_VECTORS);
 });
 
 function sanitizeName(name: string | null | undefined): string {
@@ -1229,7 +1222,10 @@ class PlaneMaterialFactory {
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
       isWindows: isWindows(),
-      vertexBucketAlignmentLayerCap: getVertexBucketAlignmentLayerCap(),
+      vertexBucketAlignmentLayerCap: computeVertexBucketAlignmentLayerCap(
+        getMaxVaryingVectors(),
+        Object.keys(this.scaledTpsInvPerLayer).length,
+      ),
     });
     return [
       code,
@@ -1271,7 +1267,10 @@ class PlaneMaterialFactory {
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
       isWindows: isWindows(),
-      vertexBucketAlignmentLayerCap: getVertexBucketAlignmentLayerCap(),
+      vertexBucketAlignmentLayerCap: computeVertexBucketAlignmentLayerCap(
+        getMaxVaryingVectors(),
+        Object.keys(this.scaledTpsInvPerLayer).length,
+      ),
     });
   }
 

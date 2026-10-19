@@ -57,7 +57,7 @@ function referenceStroke(path: Vector3[], radius: Vector3, planeAxis: 0 | 1 | 2)
         const delta = (voxel[axis] + 0.5 - closest) / radius[axis];
         distanceSquared += delta * delta;
       }
-      if (distanceSquared <= 1) inside = true;
+      if (distanceSquared < 1) inside = true;
     }
     if (inside) painted.add(keyOf(voxel));
   }

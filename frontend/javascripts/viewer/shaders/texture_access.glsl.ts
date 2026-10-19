@@ -198,30 +198,18 @@ export const getColorForCoords: ShaderModule = {
 
       float bucketAddress;
       vec3 offsetInBucket;
-<% if (isVertexAlignmentCapped) { %>      uint renderedMagIdx = activeMagIdx;
-
+<% if (isVertexAlignmentCapped) { %>
       // Layers at or above VERTEX_ALIGNMENT_LAYER_CAP have no precomputed
-      // bucket address. Also don't use it at bucket borders, to avoid rare
-      // rendering artifacts.
+      // bucket address.
+      uint renderedMagIdx = activeMagIdx;
       bool beSafe = globalLayerIndex >= VERTEX_ALIGNMENT_LAYER_CAP || useBucketBorderVertexOptimization < 0.5;
       if (!beSafe) {
-        renderedMagIdx = outputMagIdx[globalLayerIndex];
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
-        offsetInBucket = mod(coords, bucketWidth);
-        vec3 offsetInBucketUVW = transDim(offsetInBucket);
-        if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
-            || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
-            || isnan(offsetInBucketUVW.x) || isnan(offsetInBucketUVW.y)
-            || isnan(offsetInBucketUVW.z)
-          ) {
-          beSafe = true;
-        }
-      }
-<% } else { %>      uint renderedMagIdx;
-
+<% } else { %>
+      uint renderedMagIdx;
+      bool beSafe = useBucketBorderVertexOptimization < 0.5;
+<% } %>
       // To avoid rare rendering artifacts, don't use the precomputed
       // bucket address when being at the border of buckets.
-      bool beSafe = useBucketBorderVertexOptimization < 0.5;
       renderedMagIdx = outputMagIdx[globalLayerIndex];
       vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
       vec3 absoluteBucketPosition = div(coords, bucketWidth);
@@ -233,6 +221,8 @@ export const getColorForCoords: ShaderModule = {
           || isnan(offsetInBucketUVW.z)
         ) {
         beSafe = true;
+      }
+<% if (isVertexAlignmentCapped) { %>
       }
 <% } %>
 

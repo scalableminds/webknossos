@@ -54,14 +54,16 @@ import {
   isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, isBrushTool } from "viewer/model/accessors/tool_accessor";
-import { calculateGlobalPos, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
+import { getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
   getActiveUnmappedSegmentId,
+  getBrushCenterPosition,
   getBucketRetrievalSourceFn,
   getHideUnregisteredSegmentsForLayer,
   getProofreadingMarkerPosition,
+  getRenderableMagForActiveSegmentationTracing,
   isZoomThresholdExceededForAgglomerateMapping,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
@@ -107,10 +109,10 @@ const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
 // colorRenderOrder uniform array, so raising it is cheap.
 export const MAX_ACTIVE_COLOR_LAYERS = 32;
 
-// The vertex shader precomputes a bucket address per layer and passes it on
-// via the outputMagIdx/outputSeed/outputAddress varyings. Only layers whose
-// global index is below this cap get these varyings; the others do the full
-// lookup per fragment (see computeVertexBucketAlignmentLayerCap).
+// As a performance optimization, the vertex shader precomputes a bucket
+// address per layer and passes it on via the outputMagIdx/outputSeed/outputAddress
+// varyings. Only layers whose global index is below this cap get these varyings;
+// the others do the full lookup per fragment (see computeVertexBucketAlignmentLayerCap).
 const getMaxVaryingVectors = memoizeOne((): number => {
   const gl = getRenderer().getContext() as WebGL2RenderingContext;
   return gl.getParameter(gl.MAX_VARYING_VECTORS);
@@ -277,7 +279,7 @@ class PlaneMaterialFactory {
       hideUnmappedIds: {
         value: false,
       },
-      globalMousePosition: {
+      brushCenterPosition: {
         value: new ThreeVector3(0, 0, 0),
       },
       proofreadingMarkerPosition: {
@@ -285,6 +287,9 @@ class PlaneMaterialFactory {
       },
       brushSizeInPixel: {
         value: 0,
+      },
+      brushMag: {
+        value: new ThreeVector3(1, 1, 1),
       },
       segmentationPatternOpacity: {
         value: 40,
@@ -789,8 +794,8 @@ class PlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.mousePosition,
-          (globalMousePosition) => {
-            if (!globalMousePosition) {
+          (mousePosition) => {
+            if (!mousePosition) {
               this.uniforms.isMouseInCanvas.value = false;
               return;
             }
@@ -801,12 +806,16 @@ class PlaneMaterialFactory {
               return;
             }
 
-            const [x, y, z] = calculateGlobalPos(state, {
-              x: globalMousePosition[0],
-              y: globalMousePosition[1],
-            }).rounded;
-            this.uniforms.globalMousePosition.value.set(x, y, z);
             this.uniforms.isMouseInCanvas.value = true;
+          },
+          true,
+        ),
+        listenToStoreProperty(
+          (storeState) => getBrushCenterPosition(storeState),
+          (brushCenterPosition) => {
+            if (brushCenterPosition != null) {
+              this.uniforms.brushCenterPosition.value.set(...brushCenterPosition);
+            }
           },
           true,
         ),
@@ -826,6 +835,16 @@ class PlaneMaterialFactory {
           (storeState) => storeState.userConfiguration.brushSize,
           (brushSize) => {
             this.uniforms.brushSizeInPixel.value = brushSize;
+          },
+          true,
+        ),
+        listenToStoreProperty(
+          (storeState) => getRenderableMagForActiveSegmentationTracing(storeState)?.mag,
+          (mag) => {
+            // The brush preview should snap to the voxel grid of the mag in which
+            // the brush is actually applied.
+            const [x, y, z] = mag ?? [1, 1, 1];
+            this.uniforms.brushMag.value.set(x, y, z);
           },
           true,
         ),

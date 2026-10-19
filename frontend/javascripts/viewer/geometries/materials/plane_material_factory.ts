@@ -99,10 +99,10 @@ export type Uniforms = Record<
 
 const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
 
-// The vertex shader precomputes a bucket address per layer and passes it on
-// via the outputMagIdx/outputSeed/outputAddress varyings. Only layers whose
-// global index is below this cap get these varyings; the others do the full
-// lookup per fragment (see computeVertexBucketAlignmentLayerCap).
+// As a performance optimization, the vertex shader precomputes a bucket
+// address per layer and passes it on via the outputMagIdx/outputSeed/outputAddress
+// varyings. Only layers whose global index is below this cap get these varyings;
+// the others do the full lookup per fragment (see computeVertexBucketAlignmentLayerCap).
 const getMaxVaryingVectors = memoizeOne((): number => {
   const gl = getRenderer().getContext() as WebGL2RenderingContext;
   return gl.getParameter(gl.MAX_VARYING_VECTORS);

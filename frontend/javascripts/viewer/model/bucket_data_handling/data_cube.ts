@@ -83,7 +83,7 @@ const makeLocalMax = (max: Vector3, mag: Vector3): Vector3 => {
 };
 
 class DataCube {
-  BUCKET_COUNT_SOFT_LIMIT: number = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
+  BUCKET_COUNT_SOFT_LIMIT: number = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER; // Note that the value is adapted once again in the constructor
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;

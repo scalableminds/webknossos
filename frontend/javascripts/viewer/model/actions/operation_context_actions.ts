@@ -15,7 +15,8 @@ export type OperationId =
   | "UNDO"
   | "REDO"
   | "SAVE"
-  | "REBASE";
+  | "REBASE"
+  | "SAVE_BEFORE_LIVE_COLLABORATION";
 
 export const SYNC_RELATED_OPERATION_IDS: OperationId[] = ["SAVE", "REBASE"];
 

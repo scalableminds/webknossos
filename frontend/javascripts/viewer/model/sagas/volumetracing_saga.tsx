@@ -38,6 +38,7 @@ import type { Action } from "viewer/model/actions/actions";
 import type {
   AddAdHocMeshAction,
   AddPrecomputedMeshAction,
+  SetCollaborationModeAction,
 } from "viewer/model/actions/annotation_actions";
 import {
   updateTemporarySettingAction,
@@ -61,7 +62,10 @@ import Dimensions from "viewer/model/dimensions";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
-import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
+import {
+  createOperationContext,
+  type OperationContext,
+} from "viewer/model/sagas/operation_context_saga";
 import {
   requestBucketModificationInVolumeTracing,
   takeEveryInOperationContext,
@@ -658,6 +662,30 @@ function* ensureValidBrushSize(): Saga<void> {
   );
 }
 
+function* saveWholeBucketsBeforeLiveCollaboration(): Saga<void> {
+  // In live collaboration, volume edits are saved as partial bucket updates (see
+  // getVolumeSaveMode). Whole buckets still waiting in a push queue would be saved
+  // after such updates and overwrite them, so they are saved first, while the
+  // operation context blocks further edits.
+  function* saveWholeBuckets(action: SetCollaborationModeAction): Saga<void> {
+    if (action.collaborationMode !== "Concurrent") return;
+    const arePushQueuesSaved = Object.values(Model.dataLayers ?? {}).every((layer) =>
+      layer.pushQueue.stateSaved(),
+    );
+    if (arePushQueuesSaved) return;
+    const ctx = yield* createOperationContext({
+      id: "SAVE_BEFORE_LIVE_COLLABORATION",
+      description: "Saving volume changes before live collaboration starts.",
+      behaviorWhenDisallowed: "wait",
+    });
+    if (ctx == null) return;
+    yield* ctx.execute(function* () {
+      yield* call([Model, Model.ensureSavedState], ctx);
+    });
+  }
+  yield* takeEvery("SET_COLLABORATION_MODE", saveWholeBuckets);
+}
+
 function* handleDeleteSegmentData(
   action: DeleteSegmentDataAction,
   ctx: OperationContext,
@@ -690,4 +718,5 @@ export default [
   maintainVolumeTransactionEnds,
   ensureValidBrushSize,
   warnAboutInvalidSegmentId,
+  saveWholeBucketsBeforeLiveCollaboration,
 ];

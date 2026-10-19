@@ -195,14 +195,11 @@ case class AnnotationWithTracings(
     val editableMappingsUpdated = editableMappingsByTracingId.view.mapValues { case (mapping, updater) =>
       (mapping, updater.resetForNextUpdateGroup(materializedVersion, targetVersion))
     }
-    // Pass the current tracing, as previous update groups may have changed it (e.g. its mapping name).
-    val volumeBucketBuffersUpdated = volumeBucketBuffersByTracingId.map { case (tracingId, buffer) =>
-      val currentTracingOpt = tracingsById.get(tracingId).collect { case Right(vt: VolumeTracing) => vt }
-      tracingId -> buffer.resetForNextUpdateGroup(targetVersion, currentTracingOpt)
-    }
+    val volumeBucketBuffersUpdated =
+      volumeBucketBuffersByTracingId.view.mapValues(buffer => buffer.resetForNextUpdateGroup(targetVersion))
     this.copy(
       editableMappingsByTracingId = editableMappingsUpdated.toMap,
-      volumeBucketBuffersByTracingId = volumeBucketBuffersUpdated
+      volumeBucketBuffersByTracingId = volumeBucketBuffersUpdated.toMap
     )
   }
 

@@ -4,7 +4,6 @@ import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -200,10 +199,10 @@ class VolumeBucketBuffer(
   }
 
   // Returns an empty buffer. Flush this one before, as its unflushed changes are dropped.
-  def resetForNextUpdateGroup(newTargetVersion: Long, currentTracing: Option[VolumeTracing]): VolumeBucketBuffer =
+  def resetForNextUpdateGroup(newTargetVersion: Long): VolumeBucketBuffer =
     new VolumeBucketBuffer(
       version = newTargetVersion,
-      currentTracing.map(tracing => volumeLayer.copy(tracing = tracing)).getOrElse(volumeLayer),
+      volumeLayer,
       volumeDataStore,
       temporaryTracingService,
       toTemporaryStore

@@ -129,17 +129,11 @@ type DataLayerCollection = Record<string, DataLayer>;
 // Layer registration annotations are worked on in the layer registration view, so the user who may
 // work on one there is redirected. Everybody else sees it in the normal viewer, which offers to
 // copy it. The hidden store iframe of the layer registration view is never redirected.
-function getLayerRegistrationViewUrlToRedirectTo(annotation: APIAnnotation): string | null {
-  if (
-    annotation.layerRegistration == null ||
-    isLayerRegistrationStore() ||
-    getLayerRegistrationEditBlocker(annotation, Store.getState().activeUser?.id) != null
-  ) {
-    return null;
-  }
-  return getLayerRegistrationViewUrl(
-    { name: annotation.dataSetName, id: annotation.datasetId },
-    annotation.id,
+function shouldRedirectToLayerRegistrationView(annotation: APIAnnotation): boolean {
+  return (
+    annotation.layerRegistration != null &&
+    !isLayerRegistrationStore() &&
+    getLayerRegistrationEditBlocker(annotation, Store.getState().activeUser?.id) == null
   );
 }
 
@@ -174,10 +168,13 @@ export async function initialize(
         throw unversionedAnnotationResult.error.cause;
       }
       let unversionedAnnotation = unversionedAnnotationResult.value;
-      const layerRegistrationViewUrl =
-        getLayerRegistrationViewUrlToRedirectTo(unversionedAnnotation);
-      if (layerRegistrationViewUrl != null) {
-        location.replace(layerRegistrationViewUrl);
+      if (shouldRedirectToLayerRegistrationView(unversionedAnnotation)) {
+        location.replace(
+          getLayerRegistrationViewUrl(
+            { name: unversionedAnnotation.dataSetName, id: unversionedAnnotation.datasetId },
+            unversionedAnnotation.id,
+          ),
+        );
         // Keep showing the loading spinner until the browser has left this page.
         await new Promise(() => {});
       }

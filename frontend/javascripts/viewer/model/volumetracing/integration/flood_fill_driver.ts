@@ -62,7 +62,7 @@ export interface FloodFillResult extends DriverResult {
  */
 export async function runFloodFill(options: FloodFillDriverOptions): Promise<FloodFillResult> {
   const startedAt = performance.now();
-  const adapter = new WkLoadingCubeAdapter(options.cube);
+  const adapter = new WkLoadingCubeAdapter(options.cube, options.saveMode);
   const ctx: EditContext = {
     sourceMagIndex: options.magIndex,
     activeSegmentId: options.segmentId,
@@ -140,6 +140,7 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
   return {
     voxels,
     buckets: diff.bucketDiffs.length,
+    bucketDiffs: diff.bucketDiffs,
     mags: [...new Set(diff.bucketDiffs.map((d) => d.address[3]))].sort((a, b) => a - b),
     durationMs: performance.now() - startedAt,
     wasBoundingBoxExceeded,

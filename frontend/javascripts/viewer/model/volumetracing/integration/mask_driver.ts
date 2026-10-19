@@ -27,7 +27,7 @@ export function runMaskEdit(
   toolName: string,
 ): DriverResult {
   const startedAt = performance.now();
-  const adapter = new WkDataCubeAdapter(options.cube);
+  const adapter = new WkDataCubeAdapter(options.cube, options.saveMode);
   const ctx: EditContext = {
     sourceMagIndex: options.magIndex,
     activeSegmentId: options.segmentId,
@@ -55,6 +55,7 @@ export function runMaskEdit(
   return {
     voxels,
     buckets: diff.bucketDiffs.length,
+    bucketDiffs: diff.bucketDiffs,
     mags: [...new Set(diff.bucketDiffs.map((d) => d.address[3]))].sort((a, b) => a - b),
     durationMs: performance.now() - startedAt,
   };

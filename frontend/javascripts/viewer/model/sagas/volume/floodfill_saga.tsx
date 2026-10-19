@@ -31,12 +31,15 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import { requestBucketModificationInVolumeTracing } from "viewer/model/sagas/saga_helpers";
+import { runAxisForPlane } from "viewer/model/volumetracing/core/bucket_diff";
+import type { RunAxis } from "viewer/model/volumetracing/core/bucket_voxel_mask";
 import { runFloodFill } from "viewer/model/volumetracing/integration/flood_fill_driver";
 import { Model, Store } from "viewer/singletons";
 import {
   getSomeTracing,
   getUserBoundingBoxesThatContainPosition,
 } from "../../accessors/tracing_accessor";
+import { getVolumeSaveMode, pushPartialBucketUpdates } from "./helpers";
 
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 const NO_SUCCESS_MSG_WHEN_WITHIN_MS = 500;
@@ -258,6 +261,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
       Toast.close(NO_FLOODFILL_BBOX_TOAST_KEY);
     }
     const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+    const saveMode = yield* call(getVolumeSaveMode);
 
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
@@ -299,7 +303,22 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
         max: toExclusiveSourceMagBound(boundingBoxForFloodFill.max),
       },
       splitBoundaryMesh,
+      saveMode,
     });
+    // A 2D fill lies in the viewport's plane, so it uses the run order in which
+    // that plane is contiguous. A 3D fill has no such plane and keeps x order.
+    const runAxis: RunAxis =
+      fillMode === FillModeEnum._3D
+        ? 0
+        : runAxisForPlane(Dimensions.thirdDimensionForPlane(planeId) as 0 | 1 | 2);
+    yield* call(
+      pushPartialBucketUpdates,
+      saveMode,
+      stats.bucketDiffs,
+      magInfo,
+      volumeTracing.tracingId,
+      runAxis,
+    );
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
     yield* put(
       updateSegmentAction(

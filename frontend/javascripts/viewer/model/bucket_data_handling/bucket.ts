@@ -113,6 +113,11 @@ export class DataBucket {
   // - not yet created by the PushQueue, since the PushQueue creates the snapshots
   //   in a debounced manner
   dirtyCount: number = 0;
+  // Whether the bucket's changes are saved as partial bucket updates by the tools
+  // that made them (live collaboration), not as a whole bucket via the push queue.
+  // Such a bucket only has to stay dirty until the backend's data has been merged
+  // into it (see endDataMutationForPartialUpdates).
+  savedViaPartialUpdates: boolean = false;
   pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
   // The bucket-picker tick during which this bucket was last marked as needed.
@@ -494,8 +499,44 @@ export class DataBucket {
     /*
      * See Bucket.getDataForMutation() for a safe way of using this method.
      */
+    // Saving the whole bucket covers any earlier changes that were saved as
+    // partial updates, too.
+    this.savedViaPartialUpdates = false;
     this.cube.pushQueue.insert(this);
     this.throttledTriggerLabeled();
+  }
+
+  startDataMutationForPartialUpdates(): void {
+    // Unlike startDataMutation, without an undo snapshot: undo is unavailable when
+    // edits are saved as partial updates (live collaboration). The bucket is still
+    // marked dirty, so that backend data arriving later is merged into it instead
+    // of replacing the edit.
+    this.dirty = true;
+  }
+
+  endDataMutationForPartialUpdates(): void {
+    // Unlike endDataMutation, the bucket is not pushed: the tool saves its change
+    // as partial bucket updates.
+    this.savedViaPartialUpdates = true;
+    this.clearDirtyIfSavedViaPartialUpdates();
+    this.throttledTriggerLabeled();
+  }
+
+  clearDirtyIfSavedViaPartialUpdates(): void {
+    // Once the backend's data is merged (or there is none), nothing depends on a
+    // bucket that is saved via partial updates being dirty anymore. A bucket that
+    // is still loading is cleared by the TemporalBucketManager once it arrives. A
+    // whole-bucket save that is still pending clears it via markAsPushed.
+    // Known gap: until its partial updates are saved, a bucket that is evicted and
+    // loaded again lacks them. Re-applying pending partial updates on load would
+    // close it.
+    if (
+      this.savedViaPartialUpdates &&
+      this.dirtyCount === 0 &&
+      (this.state === BucketStateEnum.LOADED || this.state === BucketStateEnum.MISSING)
+    ) {
+      this.dirty = false;
+    }
   }
 
   applyVoxelMap(

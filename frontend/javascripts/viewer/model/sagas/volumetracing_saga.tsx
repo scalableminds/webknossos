@@ -57,7 +57,6 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
-import { createSendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import Dimensions from "viewer/model/dimensions";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import type { Saga } from "viewer/model/sagas/effect_generators";
@@ -70,25 +69,26 @@ import {
 } from "viewer/model/sagas/saga_helpers";
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
-import {
-  deleteSegmentDataVolumeAction,
-  updateBucketPartial,
-} from "viewer/model/sagas/volume/update_actions";
+import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import {
-  encodeBucketDiffBase64,
-  runAxisForPlane,
-} from "viewer/model/volumetracing/core/bucket_diff";
+import { runAxisForPlane } from "viewer/model/volumetracing/core/bucket_diff";
 import type { RunAxis } from "viewer/model/volumetracing/core/bucket_voxel_mask";
 import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
 import { maskShapeFromVoxelBuffer2D } from "viewer/model/volumetracing/integration/fill_mask";
+import type { SaveMode } from "viewer/model/volumetracing/integration/tool_driver_types";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/legacy/section_labeling";
 import { api, Model } from "viewer/singletons";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
-import { type BooleanBox, createSectionLabeler, labelWithVoxelBuffer2D } from "./volume/helpers";
+import {
+  type BooleanBox,
+  createSectionLabeler,
+  getVolumeSaveMode,
+  labelWithVoxelBuffer2D,
+  pushPartialBucketUpdates,
+} from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
@@ -274,6 +274,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       magInfo: MagInfo;
       // Run order of the wire encoding, in which this viewport's strokes are contiguous.
       runAxis: RunAxis;
+      saveMode: SaveMode;
     } | null = null;
 
     if (isBrushTool(activeTool)) {
@@ -291,6 +292,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       // space, not an ellipsoid) and the mag.
       const baseVoxelFactors = getBaseVoxelFactorsInUnit(voxelSize);
       const unzoomedRadius = Math.round(brushSize / 2);
+      const saveMode = yield* call(getVolumeSaveMode);
       const radius: Vector3 = [0, 1, 2].map(
         (axis) => (unzoomedRadius * baseVoxelFactors[axis]) / labeledMag[axis],
       ) as Vector3;
@@ -310,6 +312,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
           additionalCoordinates: additionalCoordinates ?? null,
           radius,
           planeAxis,
+          saveMode,
         },
         toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
       );
@@ -317,6 +320,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
         driver,
         magInfo: segmentationLayer.cube.magInfo,
         runAxis: runAxisForPlane(planeAxis),
+        saveMode,
       };
     }
 
@@ -386,22 +390,14 @@ export function* editVolumeLayerAsync(): Saga<never> {
       // Only a stroke that wrote something counts, so that the "no voxels
       // were changed" hint below still fires when overwrite-empty skipped all.
       if (voxels > 0) wroteVoxelsBox.value = true;
-      if (bucketDiffs.length > 0) {
-        const { magInfo, runAxis } = brushStroke;
-        // The core's BucketAddress is structurally the viewer's, additional
-        // coordinates included, so it goes into createSendBucketInfo as-is.
-        yield* put(
-          pushSaveQueueTransaction(
-            bucketDiffs.map((diff) =>
-              updateBucketPartial(
-                createSendBucketInfo(diff.address, magInfo),
-                encodeBucketDiffBase64(diff, runAxis),
-                volumeTracing.tracingId,
-              ),
-            ),
-          ),
-        );
-      }
+      yield* call(
+        pushPartialBucketUpdates,
+        brushStroke.saveMode,
+        bucketDiffs,
+        brushStroke.magInfo,
+        volumeTracing.tracingId,
+        brushStroke.runAxis,
+      );
     }
     // For the trace tool: fills the area enclosed by the stroke, within the
     // same undo step. For every tool, including the brush: registers the stroke

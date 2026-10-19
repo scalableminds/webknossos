@@ -4,12 +4,12 @@
  *
  * `editVolumeLayerAsync` (viewer/model/sagas/volumetracing_saga.tsx) owns the
  * event loop (START_EDITING / ADD_TO_CONTOUR_LIST / FINISH_EDITING); this owns
- * everything between. The driver itself touches neither the save queue nor
- * undo: it mutates buckets in place and returns the committed bucket diffs,
- * which the saga turns into `updateBucketPartial` update actions.
+ * everything between. The driver itself emits no update actions: it mutates
+ * buckets in place and returns the committed bucket diffs. Depending on the
+ * SaveMode, the buckets are saved whole via the push queue, or the saga turns
+ * the diffs into `updateBucketPartial` update actions.
  */
 
-import type { BucketDiff } from "../core/bucket_diff";
 import type {
   EditContext,
   OverwriteMode,
@@ -21,14 +21,6 @@ import { VolumeTransaction } from "../core/volume_transaction";
 import { rasterize } from "../core/voxel_rasterizer";
 import type { DriverOptions, DriverResult } from "./tool_driver_types";
 import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_data_cube_adapter";
-
-export interface BrushResult extends DriverResult {
-  /**
-   * The committed per-bucket diffs, for the caller to send as
-   * `updateBucketPartial` update actions.
-   */
-  bucketDiffs: BucketDiff[];
-}
 
 export interface BrushDriverOptions extends DriverOptions {
   overwriteMode: OverwriteMode;
@@ -55,7 +47,7 @@ export class BrushDriver {
     private readonly options: BrushDriverOptions,
     start: Vector3,
   ) {
-    this.adapter = new WkDataCubeAdapter(options.cube);
+    this.adapter = new WkDataCubeAdapter(options.cube, options.saveMode);
     this.ctx = {
       sourceMagIndex: options.magIndex,
       activeSegmentId: options.segmentId,
@@ -108,9 +100,9 @@ export class BrushDriver {
   /**
    * Pointer-up: run mag propagation once over the coalesced write set, apply
    * it, and report what happened — including the bucket diffs, which the
-   * caller is responsible for handing to the save queue.
+   * caller hands to the save queue under the "partialUpdates" SaveMode.
    */
-  finish(): BrushResult {
+  finish(): DriverResult {
     const diff = this.transaction.commit(0, "brush");
     this.adapter.flush();
 

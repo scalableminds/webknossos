@@ -435,8 +435,8 @@ void main() {
       1,
       Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
     ),
-    // Only emit the cap checks if some layer is actually above the cap. They
-    // change the generated code, which measurably slowed down rendering.
+    // Only emit the cap checks if some layer is actually above the cap, so the
+    // shaders stay identical to the uncapped ones otherwise.
     isVertexAlignmentCapped: params.vertexBucketAlignmentLayerCap < params.globalLayerCount,
     ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
@@ -659,8 +659,8 @@ void main() {
       1,
       Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
     ),
-    // Only emit the cap checks if some layer is actually above the cap. They
-    // change the generated code, which measurably slowed down rendering.
+    // Only emit the cap checks if some layer is actually above the cap, so the
+    // shaders stay identical to the uncapped ones otherwise.
     isVertexAlignmentCapped: params.vertexBucketAlignmentLayerCap < params.globalLayerCount,
     ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),

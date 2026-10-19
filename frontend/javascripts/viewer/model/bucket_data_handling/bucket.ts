@@ -522,6 +522,15 @@ export class DataBucket {
     this.throttledTriggerLabeled();
   }
 
+  applyRemoteChange(mutate: (data: BucketDataArray) => void): void {
+    // For a change by another user, which the backend already has: unlike a local
+    // mutation, the bucket is neither marked dirty nor pushed, and no undo snapshot
+    // is taken.
+    mutate(this.getData());
+    this.invalidateValueSet();
+    this.throttledTriggerLabeled();
+  }
+
   clearDirtyIfSavedViaPartialUpdates(): void {
     // Once the backend's data is merged (or there is none), nothing depends on a
     // bucket that is saved via partial updates being dirty anymore. A bucket that

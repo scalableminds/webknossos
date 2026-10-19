@@ -48,6 +48,11 @@ export const WkDevFlags = {
   debugging: {
     showCurrentVersionInInfoTab: false,
   },
+  liveCollaboration: {
+    // Remote updateBucketPartial actions are applied to loaded buckets directly.
+    // Set to true to evict and re-fetch those buckets instead, as for updateBucket.
+    refetchBucketsForRemotePartialUpdates: true,
+  },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,
   },

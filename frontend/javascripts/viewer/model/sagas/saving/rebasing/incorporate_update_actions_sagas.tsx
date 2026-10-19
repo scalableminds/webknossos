@@ -4,6 +4,7 @@ import { addToNestedMap, addToSetMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import type { LayerNameAsKey } from "types/type_utils";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   getAllLoadedMeshes,
@@ -32,6 +33,8 @@ import {
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
+import { applyRun, decodeBucketDiff } from "viewer/model/volumetracing/core/bucket_diff";
+import type { SegmentBucketData } from "viewer/model/volumetracing/core/volume_annotation_types";
 import { Model } from "viewer/singletons";
 import {
   splitAgglomeratesInMapping,
@@ -168,10 +171,6 @@ export function* tryToIncorporateActions(
         /////////////
         // Volume
         /////////////
-        // updateBucketPartial carries the same bucket-addressing fields as
-        // updateBucket, only with a run-length diff instead of the whole
-        // bucket, so the same "drop the local cache, force a re-fetch"
-        // handling is correct for it.
         case "updateBucket":
         case "updateBucketPartial": {
           const { value } = action;
@@ -185,6 +184,26 @@ export function* tryToIncorporateActions(
           );
 
           const bucket = cube.getBucket(bucketAddress);
+          const voxelRunsBase64 =
+            action.name === "updateBucketPartial" ? action.value.voxelRunsBase64 : "";
+          if (
+            voxelRunsBase64 !== "" &&
+            bucket.type === "data" &&
+            bucket.isLoaded() &&
+            !WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates
+          ) {
+            // A loaded bucket gets the runs applied directly. Concurrent local edits
+            // of the same voxels are not reconciled yet: locally, the remote values win.
+            const runs = decodeBucketDiff(
+              Uint8Array.from(atob(voxelRunsBase64), (char) => char.charCodeAt(0)),
+            );
+            bucket.applyRemoteChange((data) => {
+              for (const run of runs) applyRun(data as SegmentBucketData, run);
+            });
+            break;
+          }
+          // Otherwise, drop the local cache and force a re-fetch. A bucket that is
+          // not loaded yet may still receive backend data from before the change.
           if (bucket != null && bucket.type !== "null") {
             cube.removeBucket(bucket);
             refreshLayerFunctionByTracing[value.actionTracingId] = () => {

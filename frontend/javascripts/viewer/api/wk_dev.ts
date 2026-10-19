@@ -49,6 +49,10 @@ export const WkDevFlags = {
     showCurrentVersionInInfoTab: false,
   },
   liveCollaboration: {
+    // Allows the brush, eraser and fill tool in live collaboration, and switching to live
+    // collaboration when the mapping is locked (not only with an editable mapping).
+    // todop: set to false before merging
+    allowCollaborativeVolumeAnnotation: true,
     // Remote updateBucketPartial actions are applied to loaded buckets directly.
     // Set to true to evict and re-fetch those buckets instead, as for updateBucket.
     refetchBucketsForRemotePartialUpdates: true,

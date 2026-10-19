@@ -5,6 +5,7 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import type { AnnotationCollaborationMode } from "types/api_types";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { FillModeEnum, OrthoViews, type Vector3 } from "viewer/constants";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -23,7 +24,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Model, Store } from "viewer/singletons";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Volume edits are saved as partial bucket updates in live collaboration, where
 // undo/redo is unavailable, and as whole buckets otherwise (see getVolumeSaveMode).
@@ -71,7 +72,13 @@ const getValue = (context: WebknossosTestContext) =>
   context.api.data.getDataValue(VOLUME_TRACING_ID, position);
 
 describe("Volume save mode", () => {
+  const previousAllowFlag = WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation;
+  beforeEach(() => {
+    WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = true;
+  });
+
   afterEach<WebknossosTestContext>(async (context) => {
+    WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = previousAllowFlag;
     expect(hasRootSagaCrashed()).toBe(false);
     context.tearDownPullQueues();
   });
@@ -147,6 +154,12 @@ describe("Volume save mode", () => {
     }
     // labelVoxels saves whole buckets, too.
     expect(() => context.api.data.labelVoxels([position], 5n)).toThrow();
+
+    WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = false;
+    // getDisabledInfoForTools is memoized on the state.
+    Store.dispatch(updateUserSettingAction("brushSize", 11));
+    const disabledInfoWithoutFlag = getDisabledInfoForTools(Store.getState());
+    expect(disabledInfoWithoutFlag[AnnotationTool.BRUSH.id].isDisabled).toBe(true);
   });
 
   it<WebknossosTestContext>("saves pending whole buckets before live collaboration starts and discards the undo history", async (context) => {

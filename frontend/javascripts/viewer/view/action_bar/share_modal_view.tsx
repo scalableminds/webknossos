@@ -55,6 +55,7 @@ import type {
   APIDataset,
   APITeam,
 } from "types/api_types";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
 import {
@@ -76,11 +77,18 @@ const RadioGroup = Radio.Group;
 // collaborators can't lock different mappings with their first edits. An editable mapping is
 // always locked, but the backend doesn't necessarily set mappingIsLocked for it.
 function isMappingStateFixedForLiveCollaboration(state: WebknossosState): boolean {
+  if (!WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation) {
+    return hasEditableMapping(state);
+  }
   return hasEditableMapping(state) || isMappingLocked(state);
 }
 
-const MAPPING_NOT_LOCKED_EXPLANATION =
-  "Live collaboration requires the mapping of the annotation to be locked. Use the brush or the proofreading tool once to lock the active mapping (or that no mapping is used).";
+function getMappingNotLockedExplanation(): string {
+  if (!WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation) {
+    return "The annotation needs to have at least one saved proofreading action. Enable a mapping and use the proofreading tool for that.";
+  }
+  return "Live collaboration requires the mapping of the annotation to be locked. Use the brush or the proofreading tool once to lock the active mapping (or that no mapping is used).";
+}
 
 const sharingActiveNode = true;
 type Props = {
@@ -359,7 +367,7 @@ function ShareModalViewInner(props: Props) {
   const handleConcurrentEditingCheckboxChange = async (event: CheckboxChangeEvent) => {
     const value = event.target.checked;
     if (value && !isMappingStateFixedForLiveCollaboration(Store.getState())) {
-      Toast.warning(MAPPING_NOT_LOCKED_EXPLANATION);
+      Toast.warning(getMappingNotLockedExplanation());
       return;
     }
     if (!hasUpdatePermissions) {
@@ -437,7 +445,7 @@ function ShareModalViewInner(props: Props) {
       return "A change of the settings is currently being saved.";
     }
     if (!isMappingStateFixed) {
-      return MAPPING_NOT_LOCKED_EXPLANATION;
+      return getMappingNotLockedExplanation();
     }
     return null;
   }, [hasUpdatePermissions, newOthersMayEdit, isChangingInProgress, isMappingStateFixed]);

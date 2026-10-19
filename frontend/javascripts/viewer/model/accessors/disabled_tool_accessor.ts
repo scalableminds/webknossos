@@ -5,6 +5,7 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import memoizeOne from "memoize-one";
 import type { APIOrganization, APIUser } from "types/api_types";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { IdentityTransform, OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated, isRotated } from "viewer/model/accessors/flycam_accessor";
@@ -53,6 +54,8 @@ const DISABLED_EXPLANATION = {
     "The tool is disabled because you are currently viewing the dataset rotated. Please reset the rotation to 0,0,0 to be able to use this tool.",
   LIVE_COLLAB_MODE:
     "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading, bounding boxes, the brush, the eraser (via brush) and the fill tool can be used in that mode.",
+  LIVE_COLLAB_MODE_WITHOUT_VOLUME_ANNOTATION:
+    "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading and bounding boxes can be used in that mode.",
   NO_VISIBLE_SEGMENTATION_TRACING:
     "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.",
   MERGER_MODE_ACTIVE: "Volume annotation is disabled while the merger mode is active.",
@@ -250,14 +253,16 @@ const VolumeToolsAllowedInLiveCollaboration: AnnotationTool[] = [
   AnnotationTool.FILL_CELL,
 ];
 const concurrentCollabModeRule = new DisableRule(
-  [
-    AnnotationTool.SKELETON,
-    ...VolumeTools.filter((tool) => !VolumeToolsAllowedInLiveCollaboration.includes(tool)),
-  ],
-  ({ isConcurrentCollabMode }, tool) =>
-    isConcurrentCollabMode
-      ? `The ${tool.readableName} ${DISABLED_EXPLANATION.LIVE_COLLAB_MODE}`
-      : null,
+  [AnnotationTool.SKELETON, ...VolumeTools],
+  ({ isConcurrentCollabMode }, tool) => {
+    if (!isConcurrentCollabMode) return null;
+    if (!WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation) {
+      return `The ${tool.readableName} ${DISABLED_EXPLANATION.LIVE_COLLAB_MODE_WITHOUT_VOLUME_ANNOTATION}`;
+    }
+    return VolumeToolsAllowedInLiveCollaboration.includes(tool)
+      ? null
+      : `The ${tool.readableName} ${DISABLED_EXPLANATION.LIVE_COLLAB_MODE}`;
+  },
 );
 
 const boundingBoxRotationRule = new DisableRule(

@@ -52,6 +52,9 @@ case class User(
   def isAdminOf(otherUser: User): Boolean =
     isAdminOf(otherUser._organization)
 
+  def isDatasetManagerOf(organizationId: String): Boolean =
+    isDatasetManager && organizationId == this._organization
+
 }
 
 case class UserCompactInfo(

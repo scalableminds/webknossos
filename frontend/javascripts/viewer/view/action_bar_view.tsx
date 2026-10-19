@@ -5,7 +5,7 @@ import { isJobAvailable } from "admin/organization/pricing_plan_utils";
 import { createExplorational } from "admin/rest_api";
 import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
-import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
+import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_annotation_modal";
 import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";

@@ -55,6 +55,7 @@ export function OrganizationDangerZoneView() {
       />
       <SettingsCard
         title="Danger Zone"
+        style={{ height: "auto" }}
         icon={<DeleteOutlined style={{ color: token.colorError }} />}
         content={`Delete ${organization.name}`}
         hint="Removes all annotations, datasets and user accounts. This cannot be undone."

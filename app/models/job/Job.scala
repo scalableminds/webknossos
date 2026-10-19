@@ -34,7 +34,8 @@ case class Job(
     ended: Option[Instant] = None,
     lastRetry: Option[Instant] = None,
     created: Instant = Instant.now,
-    isDeleted: Boolean = false
+    isDeleted: Boolean = false,
+    _alignmentProject: Option[ObjectId] = None
 ) extends JobResultLinks {
   protected def id: ObjectId = _id
 
@@ -83,7 +84,8 @@ case class JobCompactInfo(
     started: Option[Instant],
     ended: Option[Instant],
     lastRetry: Option[Instant],
-    costInMilliCredits: Option[Int]
+    costInMilliCredits: Option[Int],
+    alignmentProjectId: Option[ObjectId]
 ) extends JobResultLinks derives JsonAutoFormat {
 
   protected def effectiveState: JobState = state
@@ -125,7 +127,8 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       r.ended.map(Instant.fromSql),
       r.lastretry.map(Instant.fromSql),
       Instant.fromSql(r.created),
-      r.isdeleted
+      r.isdeleted,
+      r._alignmentproject.map(ObjectId(_))
     )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
@@ -150,12 +153,15 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
          ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = ${prefix}_owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
        """
 
-  def findAllCompact(commandOpt: Option[JobCommand], skipForDeletedDatasets: Boolean)(using
-      ctx: DBAccessContext
-  ): Fox[Seq[JobCompactInfo]] =
+  def findAllCompact(
+      commandOpt: Option[JobCommand],
+      skipForDeletedDatasets: Boolean,
+      alignmentProjectIdOpt: Option[ObjectId] = None
+  )(using ctx: DBAccessContext): Fox[Seq[JobCompactInfo]] =
     for {
       accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQ, q"j.")
       commandQuery = commandOpt.map(command => q"j.command = $command").getOrElse(q"TRUE")
+      alignmentProjectQuery = alignmentProjectIdOpt.map(id => q"j._alignmentProject = $id").getOrElse(q"TRUE")
       skipForDeletedQuery =
         if (skipForDeletedDatasets)
           q"(j.commandargs->>'dataset_id')::text IN (SELECT _id FROM webknossos.datasets WHERE status NOT IN ${SqlToken
@@ -164,14 +170,15 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       rows <- run(
         q"""
           SELECT j._id, j.command, u._organization, mu.firstName, mu.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
-                 j.returnValue, j.latestRunErrorDetails, j._voxelytics_workflowHash, j.created, j.started, j.ended, j.lastRetry, ct.milli_credit_delta
+                 j.returnValue, j.latestRunErrorDetails, j._voxelytics_workflowHash, j.created, j.started, j.ended, j.lastRetry, ct.milli_credit_delta,
+                 j._alignmentProject
           FROM webknossos.jobs_ j
           JOIN webknossos.users_ u on j._owner = u._id
           JOIN webknossos.multiusers_ mu on u._multiUser = mu._id
           -- due to retries multiple credit_transactions can be attached to this job.
           -- They should all have the same milli_credit_delta, so this avoids fanout while returning the correct price
           LEFT JOIN LATERAL (SELECT milli_credit_delta FROM webknossos.credit_transactions_ WHERE _paid_job = j._id LIMIT 1) ct ON TRUE
-          WHERE $commandQuery AND $accessQuery AND $skipForDeletedQuery
+          WHERE $commandQuery AND $accessQuery AND $skipForDeletedQuery AND $alignmentProjectQuery
           ORDER BY j.created DESC -- list newest first
          """.as[
           (
@@ -190,7 +197,8 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
               Option[Instant],
               Option[Instant],
               Option[Instant],
-              Option[Int]
+              Option[Int],
+              Option[ObjectId]
           )
         ]
       )
@@ -217,7 +225,8 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
           started = row._13,
           ended = row._14,
           lastRetry = row._15,
-          costInMilliCredits = row._16.map(_ * -1) // delta is negative, so cost should be positive.
+          costInMilliCredits = row._16.map(_ * -1), // delta is negative, so cost should be positive.
+          alignmentProjectId = row._17
         )
       }
     } yield parsed
@@ -230,6 +239,28 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    AND commandArgs->>'dataset_id' = $datasetId
                    AND (state = ${JobState.PENDING} OR state = ${JobState.STARTED})
             """.asUpdate)
+    } yield ()
+
+  def findAllUnfinishedByAlignmentProject(alignmentProjectId: ObjectId): Fox[List[Job]] =
+    for {
+      r <- run(q"""SELECT $columns FROM $existingCollectionName
+                   WHERE _alignmentProject = $alignmentProjectId
+                   AND COALESCE(manualState, state) IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                   """.as[JobsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
+  def countByAlignmentProject(alignmentProjectId: ObjectId): Fox[Int] =
+    for {
+      r <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _alignmentProject = $alignmentProjectId".as[Int])
+      count <- r.headOption.toFox
+    } yield count
+
+  def clearAlignmentProject(alignmentProjectId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(
+        q"UPDATE webknossos.jobs SET _alignmentProject = NULL WHERE _alignmentProject = $alignmentProjectId".asUpdate
+      )
     } yield ()
 
   def countUnassignedPendingForDataStore(dataStoreName: String, jobCommands: Set[JobCommand]): Fox[Int] =
@@ -301,13 +332,13 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
                     _id, _owner, _dataStore, command, commandArgs,
                     state, manualState, _worker,
                     latestRunId, latestRunErrorDetails, returnValue, started, ended, lastRetry,
-                    created, isDeleted
+                    created, isDeleted, _alignmentProject
                    )
                    VALUES(
                     ${j._id}, ${j._owner}, ${j._dataStore}, ${j.command}, ${j.args},
                     ${j.state}, ${j.manualState}, ${j._worker},
                     ${j.latestRunId}, ${j.latestRunErrorDetails}, ${j.returnValue}, ${j.started}, ${j.ended}, ${j.lastRetry},
-                    ${j.created}, ${j.isDeleted})""".asUpdate)
+                    ${j.created}, ${j.isDeleted}, ${j._alignmentProject})""".asUpdate)
     } yield ()
 
   def updateManualState(id: ObjectId, manualState: JobState)(using ctx: DBAccessContext): Fox[Unit] =

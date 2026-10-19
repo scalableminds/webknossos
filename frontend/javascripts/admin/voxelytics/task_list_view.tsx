@@ -266,23 +266,6 @@ export default function TaskListView({
 
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 
-  // Links to a task in another run pass the task via the location state. Depending on the
-  // location key (instead of the task name) re-focuses the task on every navigation, because
-  // this view stays mounted when switching between runs.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Only run when navigating.
-  useEffect(() => {
-    const highlightedTask = (location.state as TaskListLocationState | null)?.highlightedTask;
-    if (highlightedTask != null) handleSelectTask(highlightedTask);
-  }, [location.key]);
-
-  // Scroll only after the task panel was expanded (and the search was cleared) and rendered.
-  // Other panels stay as they are, so the layout above the task doesn't shift during the scroll.
-  useEffect(() => {
-    if (taskToFocus == null) return;
-    const element = document.getElementById(`task-panel-${taskToFocus.taskName}`);
-    element?.scrollIntoView({ block: "start", behavior: "smooth" });
-  }, [taskToFocus]);
-
   const miniSearch = useMemo(() => {
     const miniSearch: MiniSearch<VoxelyticsTaskConfig> = new MiniSearch({
       fields: ["taskName", "task", "config.name"],
@@ -340,6 +323,23 @@ export default function TaskListView({
     ]);
     setTaskToFocus({ taskName });
   }
+
+  // Links to a task in another run pass the task via the location state. Depending on the
+  // location key (instead of the task name) re-focuses the task on every navigation, because
+  // this view stays mounted when switching between runs.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only run when navigating.
+  useEffect(() => {
+    const highlightedTask = (location.state as TaskListLocationState | null)?.highlightedTask;
+    if (highlightedTask != null) handleSelectTask(highlightedTask);
+  }, [location.key]);
+
+  // Scroll only after the task panel was expanded (and the search was cleared) and rendered.
+  // Other panels stay as they are, so the layout above the task doesn't shift during the scroll.
+  useEffect(() => {
+    if (taskToFocus == null) return;
+    const element = document.getElementById(`task-panel-${taskToFocus.taskName}`);
+    element?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [taskToFocus]);
 
   function copyAllArtifactPaths() {
     const artifactPaths = Object.values(report.artifacts).flatMap((artifactObject) =>

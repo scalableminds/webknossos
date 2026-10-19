@@ -319,7 +319,7 @@ class DatasetService @Inject() (
     (for {
       originalDataStore <- dataStoreDAO.findOneByName(foundDataset._dataStore)
     } yield
-      if (originalDataStore.isScratch && !dataStore.isScratch || isUnreported(foundDataset)) {
+      if (isUnreported(foundDataset)) {
         logger.info(
           s"Replacing dataset ${foundDataset.name} (with id ${foundDataset._id} and status: ${foundDataset.status}) from datastore ${originalDataStore.name} by the one from ${dataStore.name}"
         )

@@ -101,7 +101,7 @@ class VolumeBucketBuffer(
     } yield ()
 
   def applyUpdateBucketPartialAction(action: UpdateBucketPartialVolumeAction): Fox[Unit] =
-    applyBucketMutation(action.bucketPosition)(previous => applyVoxelRuns(previous, action.voxelRunsBinary))
+    applyBucketMutation(action.bucketPosition)(previous => applyVoxelRuns(previous, action))
 
   def applyDeleteSegmentDataAction(bucketPositions: List[BucketPosition], segmentId: Long): Fox[Unit] =
     for {
@@ -132,14 +132,14 @@ class VolumeBucketBuffer(
 
   private def applyVoxelRuns(
       previousBucketBytes: Array[Byte],
-      voxelRunsBinary: Array[Byte]
+      action: UpdateBucketPartialVolumeAction
   ): Box[Array[Byte]] =
     tryo(
       bucketScanner.applyVoxelRuns(
         previousBucketBytes,
         ElementClass.bytesPerElement(volumeLayer.elementClass),
         ElementClass.isSigned(volumeLayer.elementClass),
-        voxelRunsBinary
+        action.voxelRunsBinary
       )
     )
 

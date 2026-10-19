@@ -66,6 +66,8 @@ import { shortcutBuilder } from "./helpers";
 import { useMeshItems } from "./mesh_items";
 import { useMultiCutToolOptions } from "./min_cut_item";
 
+const NO_SEGMENT_ID = 0n;
+
 export function useNoNodeContextMenuOptions(
   contextInfo: ContextMenuInfo,
   segmentIdAtPosition: bigint,
@@ -109,8 +111,11 @@ export function useNoNodeContextMenuOptions(
   // proofreading (agglomerate) operations remain available.
   const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
 
-  const maybeUnmappedSegmentId =
-    globalPosition != null ? getUnmappedSegmentIdForPosition(globalPosition) : null;
+  // The segment id depends on live state that is not passed to the function (e.g., loaded
+  // buckets, visible layer). Reading it in a selector keeps it up to date.
+  const maybeUnmappedSegmentId = useWkSelector(() =>
+    globalPosition != null ? getUnmappedSegmentIdForPosition(globalPosition) : null,
+  );
 
   const boundingBoxActions = useBoundingBoxMenuOptions(contextInfo);
   const meshRelatedItems = useMeshItems(contextInfo);
@@ -127,7 +132,7 @@ export function useNoNodeContextMenuOptions(
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
 
   const proofreadingMultiSplitToolActions = useMultiCutToolOptions(
-    maybeUnmappedSegmentId ?? 0n,
+    maybeUnmappedSegmentId ?? NO_SEGMENT_ID,
     segmentIdAtPosition,
     segmentOrSuperVoxel,
     segmentIdLabel,
@@ -175,7 +180,7 @@ export function useNoNodeContextMenuOptions(
 
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
-    if (segmentId === 0n) {
+    if (segmentId === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -199,7 +204,7 @@ export function useNoNodeContextMenuOptions(
     }
     const clickedSegmentId = getSegmentIdForPosition(globalPosition);
     const layerName = visibleSegmentationLayer.name;
-    if (clickedSegmentId === 0n) {
+    if (clickedSegmentId === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -216,7 +221,7 @@ export function useNoNodeContextMenuOptions(
       return;
     }
     const clickedSegmentId = getSegmentIdForPosition(globalPosition);
-    if (clickedSegmentId === 0n) {
+    if (clickedSegmentId === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -252,7 +257,7 @@ export function useNoNodeContextMenuOptions(
       return;
     }
     const clickedSegmentId = getSegmentIdForPosition(globalPosition);
-    if (clickedSegmentId === 0n) {
+    if (clickedSegmentId === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -275,7 +280,7 @@ export function useNoNodeContextMenuOptions(
 
     const segmentId = getSegmentIdForPosition(globalPosition);
 
-    if (segmentId === 0n) {
+    if (segmentId === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -522,7 +527,7 @@ export function useNoNodeContextMenuOptions(
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          segmentIdAtPosition !== 0n && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
+          segmentIdAtPosition !== NO_SEGMENT_ID && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
             ? {
                 key: "select-cell",
                 onClick: () => {
@@ -544,9 +549,9 @@ export function useNoNodeContextMenuOptions(
                 ),
               }
             : null,
-          segmentIdAtPosition !== 0n ? onlyShowThisSegmentItem : null,
-          segmentIdAtPosition !== 0n ? toggleSegmentVisibilityItem : null,
-          segmentIdAtPosition !== 0n ? showAllSegmentsItem : null,
+          segmentIdAtPosition !== NO_SEGMENT_ID ? onlyShowThisSegmentItem : null,
+          segmentIdAtPosition !== NO_SEGMENT_ID ? toggleSegmentVisibilityItem : null,
+          segmentIdAtPosition !== NO_SEGMENT_ID ? showAllSegmentsItem : null,
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,

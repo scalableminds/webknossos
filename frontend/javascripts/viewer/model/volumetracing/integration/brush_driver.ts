@@ -15,6 +15,7 @@ import type {
   SegmentId,
   Vector3,
 } from "../core/volume_annotation_types";
+import type { MaskShape } from "../core/volume_edit_intents";
 import { VolumeTransaction } from "../core/volume_transaction";
 import { rasterize } from "../core/voxel_rasterizer";
 import type { DriverOptions, DriverResult } from "./tool_driver_types";
@@ -84,6 +85,15 @@ export class BrushDriver {
     // Write through so the stroke is visible while the pointer is still down.
     this.transaction.flushToCube();
     this.adapter.flush();
+  }
+
+  /**
+   * Add the auto-fill of a closed stroke to the stroke's transaction, so that
+   * stroke and fill are propagated, diffed and undone as one. Call it before
+   * `finish`, which writes the fill to the cube along with everything else.
+   */
+  fill(mask: MaskShape): void {
+    rasterize(mask, this.ctx, this.transaction);
   }
 
   /**

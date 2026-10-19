@@ -82,11 +82,18 @@ class WebknossosBearerTokenAuthenticatorService(
     } yield tokenId
 
   def userForToken(tokenValue: String): Fox[User] =
+    userForAuthenticator(repository.findOneUsableForAuthentication(tokenValue))
+
+  def userForResetPasswordToken(tokenValue: String): Fox[User] =
+    userForAuthenticator(repository.findOneByValueAndType(tokenValue, TokenType.ResetPassword))
+
+  private def userForAuthenticator(tokenAuthenticatorFox: Fox[BearerTokenAuthenticator]): Fox[User] =
     for {
-      tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> Msg.User.Token.invalid
+      tokenAuthenticator <- tokenAuthenticatorFox ?~> Msg.User.Token.invalid
       _ <- Fox.fromBool(tokenAuthenticator.isValid) ?~> Msg.User.Token.invalid
       idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> Msg.User.Token.invalid
       user <- userService.findOneCached(idValidated)(using GlobalAccessContext)
+      _ <- Fox.fromBool(!user.isDeactivated) ?~> Msg.User.isDeactivated
     } yield user
 
   def userForTokenOpt(tokenOpt: Option[String]): Fox[User] = tokenOpt match {

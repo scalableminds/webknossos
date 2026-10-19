@@ -152,9 +152,10 @@ class UserTokenController @Inject() (
     def tryAdministrate: Fox[UserAccessAnswer] =
       userBox match {
         case Full(user) =>
+          val organizationId = idOpt.getOrElse(user._organization)
           for {
-            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, idOpt.getOrElse(user._organization))
-          } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
+            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, organizationId)
+          } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManagerOf(organizationId))
         case _ => Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token")))
       }
 
@@ -217,7 +218,10 @@ class UserTokenController @Inject() (
           .map(annotationPrivateLinkDAO.findOneByAccessToken)
           .getOrElse(Fox.empty)
           .shiftBox
-        allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
+        // Private links only grant read access, and only until they expire
+        allowedByToken = mode == AccessMode.read && annotationAccessByToken.exists(link =>
+          annotation._id == link._annotation && !link.isExpired
+        )
         restrictions <- annotationInformationProvider.restrictionsFor(
           AnnotationIdentifier(annotation.typ, annotation._id)
         )(using GlobalAccessContext) ?~> Msg.Annotation.Restrictions.notFound

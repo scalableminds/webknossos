@@ -732,10 +732,9 @@ class TSAnnotationService @Inject() (
     if (updates.isEmpty) Fox.successful(annotationWithTracings)
     else {
       for {
-        updated <- updateIter(
-          Fox.successful(annotationWithTracings.withNewUpdaters(annotationWithTracings.version, targetVersion)),
-          updates
-        )
+        withNewUpdaters = annotationWithTracings.withNewUpdaters(annotationWithTracings.version, targetVersion)
+        _ <- withNewUpdaters.prefillVolumeBucketBuffers(updates) ?~> "Failed to prefill volume bucket buffers."
+        updated <- updateIter(Fox.successful(withNewUpdaters), updates)
         updatedWithNewVersion = updated.withVersion(targetVersion)
         _ <- updatedWithNewVersion
           .flushEditableMappingUpdaterBuffers() ?~> Msg.Annotation.flushEditableMappingUpdaterBuffersFailed

@@ -255,6 +255,20 @@ case class AnnotationWithTracings(
     } yield ()
   }
 
+  // Batch-loads the buckets that the update group's updateBucketPartial actions will mutate.
+  def prefillVolumeBucketBuffers(updates: List[UpdateAction])(implicit ec: ExecutionContext): Fox[Unit] = {
+    val bucketPositionsByTracingId =
+      updates.collect { case a: UpdateBucketPartialVolumeAction => a }.groupMap(_.actionTracingId)(_.bucketPosition)
+    for {
+      _ <- Fox.serialCombined(bucketPositionsByTracingId.toList) { case (tracingId, bucketPositions) =>
+        volumeBucketBuffersByTracingId.get(tracingId) match {
+          case Some(bucketBuffer) => bucketBuffer.prefill(bucketPositions)
+          case None               => Fox.successful(()) // applying the actions will fail with a proper message
+        }
+      }
+    } yield ()
+  }
+
   def flushVolumeBucketBuffers()(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(volumeBucketBuffersByTracingId.values)(bucketBuffer => bucketBuffer.flush())

@@ -37,11 +37,13 @@ class VolumeBucketBuffer(
 
   private lazy val bucketScanner = new NativeBucketScanner()
 
-  // TODO make use of prefill
-  def prefill(bucketPositions: Seq[BucketPosition]): Fox[Unit] =
+  // Loads the buckets in one batch. Skips buffered ones, which may hold changes not yet flushed.
+  def prefill(bucketPositions: Seq[BucketPosition]): Fox[Unit] = {
+    val unbufferedPositions = bucketPositions.distinct.filterNot(bucketDataBuffer.contains)
     for {
-      _ <- getMultipleFromFossilOrFallbackLayer(bucketPositions)
+      _ <- Fox.runIf(unbufferedPositions.nonEmpty)(getMultipleFromFossilOrFallbackLayer(unbufferedPositions))
     } yield ()
+  }
 
   def getWithFallback(bucketPosition: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     bucketDataBuffer.get(bucketPosition) match {
@@ -89,11 +91,12 @@ class VolumeBucketBuffer(
     applyBucketMutation(action.bucketPosition)(previous => applyVoxelRuns(previous, action.voxelRunsBinary))
 
   def applyDeleteSegmentDataAction(bucketPositions: List[BucketPosition], segmentId: Long): Fox[Unit] =
-    Fox
-      .serialCombined(bucketPositions)(bucketPosition =>
+    for {
+      _ <- prefill(bucketPositions)
+      _ <- Fox.serialCombined(bucketPositions)(bucketPosition =>
         applyBucketMutation(bucketPosition)(previous => deleteSegmentFromBucket(previous, segmentId))
       )
-      .map(_ => ())
+    } yield ()
 
   private def incorporateAdditionsAndRemovals(
       bucketPosition: BucketPosition,

@@ -31,7 +31,6 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
     "pass the e2e tests" in new WithServer(app = application, port = testPort) {
       override def running(): Unit = {
 
-        runFrontendBuild()
         ensureTestDataset()
 
         val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort/api/health").get(), 2 seconds)
@@ -42,8 +41,6 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
     }
 
   }
-
-  private def runFrontendBuild() = "yarn build".run().exitValue()
 
   private def runWebdriverTests = "yarn test-e2e".run().exitValue()
 

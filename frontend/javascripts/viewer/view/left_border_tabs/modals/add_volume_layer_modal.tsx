@@ -5,7 +5,7 @@ import FastTooltip from "components/fast_tooltip";
 import {
   NewVolumeLayerSelection,
   RestrictMagnificationSlider,
-} from "dashboard/advanced_dataset/create_explorative_modal";
+} from "dashboard/advanced_dataset/create_annotation_modal";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import clone from "lodash-es/clone";
@@ -233,7 +233,7 @@ export default function AddVolumeLayerModal({
   };
 
   return (
-    <Modal title="Add Volume Annotation Layer" footer={null} width={500} onCancel={onCancel} open>
+    <Modal title="Add Volume Annotation Layer" footer={null} onCancel={onCancel} open>
       Layer Name:{" "}
       <InputComponent
         size="small"

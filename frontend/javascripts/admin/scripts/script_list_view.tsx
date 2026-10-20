@@ -12,7 +12,7 @@ import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIScript, APIUser } from "types/api_types";
 
 const { Column } = Table;
@@ -35,14 +35,14 @@ function ScriptListView() {
   useEffect(() => {
     const { searchQuery } = persistence.load();
     setSearchQuery(searchQuery || "");
-    fetchData();
+    fetchScripts();
   }, []);
 
   useEffect(() => {
     persistence.persist({ searchQuery });
   }, [searchQuery]);
 
-  async function fetchData(): Promise<void> {
+  async function fetchScripts(): Promise<void> {
     const scripts = await getScripts();
     setIsLoading(false);
     setScripts(scripts);

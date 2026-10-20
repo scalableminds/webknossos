@@ -5,7 +5,7 @@ import play.api.mvc.RequestHeader
 
 trait ApiVersioning {
 
-  protected val CURRENT_API_VERSION: Int = 15
+  protected val CURRENT_API_VERSION: Int = 16
   protected val OLDEST_SUPPORTED_API_VERSION: Int = 10
 
   protected lazy val apiVersioningInfo: JsObject =

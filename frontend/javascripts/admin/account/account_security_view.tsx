@@ -1,4 +1,4 @@
-import { EditOutlined, LockOutlined } from "@ant-design/icons";
+import { EditOutlined, LockOutlined, LogoutOutlined } from "@ant-design/icons";
 import { unwrapOrThrow } from "admin/api/api_result";
 import { changePassword, logoutUserEverywhere } from "admin/rest_api";
 import { Alert, App, Button, Col, Form, Input, Row, Space } from "antd";
@@ -6,7 +6,7 @@ import features from "features";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import { SettingsTitle } from "./helpers/settings_title";
 
@@ -153,41 +153,8 @@ function AccountSecurityView() {
           </Space>
         </FormItem>
       </Form>
-    ) : (
-      "***********"
-    );
+    ) : null;
   }
-
-  const handleLogoutEverywhere = () => {
-    modal.confirm({
-      title: "Confirm Logout",
-      content: <p>Are you sure you want to log out on all devices?</p>,
-      onOk: handleLogout,
-    });
-  };
-  const securityItems: SettingsCardProps[] = [
-    {
-      title: "Password",
-      content: getPasswordComponent(),
-      action: (
-        <Button
-          type="default"
-          shape="circle"
-          icon={<EditOutlined />}
-          size="small"
-          onClick={handleResetPassword}
-        />
-      ),
-    },
-    {
-      title: "Log out everywhere",
-      content: (
-        <Button type="default" onClick={handleLogoutEverywhere}>
-          Log out on all devices
-        </Button>
-      ),
-    },
-  ];
 
   function handleResetPassword() {
     setResetPasswordVisible(!isResetPasswordVisible);
@@ -206,6 +173,42 @@ function AccountSecurityView() {
       });
   }
 
+  const handleLogoutEverywhere = () => {
+    modal.confirm({
+      title: "Confirm Logout",
+      content: <p>Are you sure you want to log out on all devices?</p>,
+      onOk: handleLogout,
+    });
+  };
+  const securityItems: SettingsCardProps[] = [
+    {
+      title: "Password",
+      icon: <LockOutlined />,
+      // While editing, the form replaces the value and already explains the logout.
+      content: isResetPasswordVisible ? null : "•••••••••••",
+      hint: isResetPasswordVisible ? null : "Changing it logs you out on all devices",
+      children: getPasswordComponent(),
+      action: (
+        <Button
+          type="default"
+          shape="circle"
+          icon={<EditOutlined />}
+          size="small"
+          onClick={handleResetPassword}
+        />
+      ),
+    },
+    {
+      title: "Log out everywhere",
+      icon: <LogoutOutlined />,
+      content: (
+        <Button type="default" onClick={handleLogoutEverywhere}>
+          Log out on all devices
+        </Button>
+      ),
+    },
+  ];
+
   const { passkeysEnabled } = features();
 
   return (
@@ -217,7 +220,7 @@ function AccountSecurityView() {
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         {securityItems.map((item) => (
           <Col span={12} key={item.title}>
-            <SettingsCard title={item.title} content={item.content} action={item.action} />
+            <SettingsCard {...item} />
           </Col>
         ))}
       </Row>

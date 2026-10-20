@@ -1,6 +1,6 @@
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import type React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 type Props = {
   redirectTo: () => Promise<string>;

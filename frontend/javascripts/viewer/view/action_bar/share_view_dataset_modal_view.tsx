@@ -3,8 +3,9 @@ import { Button, Col, Dropdown, Input, Modal, Row, Space } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
+import { ModalWidth } from "theme";
 import { useZarrLinkMenu } from "./private_links_view";
-import { CopyableSharingLink, getUrl, useDatasetSharingToken } from "./share_modal_view";
+import { CopyableSharingLink, useDatasetSharingToken, useSharingUrl } from "./share_modal_view";
 
 const sharingActiveNode = false;
 
@@ -17,7 +18,7 @@ function ShareViewDatasetModalViewInner(props: Props) {
   const { isOpen, onOk } = props;
   const dataset = useWkSelector((state) => state.dataset);
   const sharingToken = useDatasetSharingToken(dataset);
-  const longUrl = getUrl(sharingToken, !dataset.isPublic);
+  const longUrl = useSharingUrl(isOpen, sharingToken, !dataset.isPublic);
 
   const {
     baseUrl: zarrBaseUrl,
@@ -31,8 +32,7 @@ function ShareViewDatasetModalViewInner(props: Props) {
     <Modal
       title="Share this Dataset"
       open={isOpen}
-      width={800}
-      okText="Ok"
+      width={ModalWidth.Large}
       onOk={onOk}
       onCancel={onOk}
     >

@@ -25,14 +25,14 @@ import { zoomedPositionToZoomedAddress } from "viewer/model/helpers/position_con
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { getHalfViewportExtentsInVx } from "viewer/model/sagas/saga_selectors";
-import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
+import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import {
   TransformedSectionLabeler,
   type VoxelBuffer2D,
-} from "viewer/model/volumetracing/section_labeling";
+} from "viewer/model/volumetracing/legacy/section_labeling";
 import sampleVoxelMapToMagnification, {
   applyVoxelMap,
-} from "viewer/model/volumetracing/volume_annotation_sampling";
+} from "viewer/model/volumetracing/legacy/volume_annotation_sampling";
 import { Model } from "viewer/singletons";
 import type { VolumeTracing } from "viewer/store";
 
@@ -224,7 +224,7 @@ export function* labelWithVoxelBuffer2D(
       throw new Error("When iterating over the buckets, we shouldn't visit the same bucket twice");
     }
 
-    const labelMapOfBucket = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
+    const labelMapOfBucket = new Uint8Array(Constants.BUCKET_SIZE_2D);
     currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
 
     // globalA (first dim) and globalB (second dim) are global coordinates in layer-space.

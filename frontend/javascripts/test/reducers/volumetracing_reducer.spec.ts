@@ -193,12 +193,14 @@ describe("VolumeTracing", () => {
     // Cycle tool to Brush
     let newState = UiReducer(initialState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.BRUSH);
-    newState = UiReducer(newState, cycleTool);
-    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.ERASE_BRUSH);
 
     // Cycle tool to Trace
     newState = UiReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.TRACE);
+
+    // Cycle tool to the erase tools
+    newState = UiReducer(newState, cycleTool);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.ERASE_BRUSH);
     newState = UiReducer(newState, cycleTool);
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.ERASE_TRACE);
     newState = UiReducer(newState, cycleTool);

@@ -97,7 +97,7 @@ class SegmentStatisticsFileService @Inject() (
     for {
       attachment <- Box.fromOption(
         dataLayer.attachments.flatMap(_.segmentStatistics)
-      ) ?~> Msg.SegmentStatisticsFile.notFound
+      ) ?-> Msg.SegmentStatisticsFile.notFound
       _ <- Box.fromBool(attachment.path.isAbsolute) ?~> Msg.SegmentStatisticsFile.pathNotAbsolute
     } yield SegmentStatisticsFileKey(
       dataSourceId,

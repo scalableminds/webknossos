@@ -39,6 +39,14 @@ export function createWorker<TExposed extends UseCreateWorkerToUseMe<AnyFn> | An
     const workerModulePromise = import(
       /* @vite-ignore */ `./${pathToWorkerWithoutExtension}.worker.ts`
     );
+    // Mark the eager kick-off as handled. Many specs import a module that calls
+    // createWorker() without ever invoking the worker (e.g. because they inject their own
+    // compressor), which leaves nobody to await this promise. If Vitest tears the
+    // environment down while the import is still in flight, the resulting
+    // EnvironmentTeardownError would otherwise be reported as an unhandled rejection and
+    // fail the run. Callers below await `workerModulePromise` itself, so a genuine import
+    // failure still propagates to them.
+    workerModulePromise.catch(() => {});
     return async (...params: Parameters<UnwrapExposedWorkerFn<TExposed>>) => {
       const workerModule = await workerModulePromise;
       return workerModule.default(...params);
@@ -64,5 +72,12 @@ export function createWorker<TExposed extends UseCreateWorkerToUseMe<AnyFn> | An
     throw new Error(`Worker not found: ${pathToWorker}`);
   }
 
-  return wrap(new workerConstructor({ type: "module" }));
+  // Spawn the worker on the first call. Modules call createWorker() at import time, so eagerly
+  // instantiating here would start (and download) every worker on each page load, including
+  // the dashboard where none of them is needed.
+  let wrappedWorker: AnyFn | undefined;
+  return (...params: Parameters<UnwrapExposedWorkerFn<TExposed>>) => {
+    const worker = (wrappedWorker ??= wrap(new workerConstructor({ type: "module" })));
+    return worker(...params);
+  };
 }

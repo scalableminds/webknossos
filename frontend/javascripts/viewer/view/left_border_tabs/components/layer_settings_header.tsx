@@ -33,6 +33,7 @@ import isEqual from "lodash-es/isEqual";
 import minBy from "lodash-es/minBy";
 import React, { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
+import type { Dispatch } from "redux";
 import {
   AnnotationLayerEnum,
   type AnnotationLayerType,
@@ -68,7 +69,7 @@ import {
 import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { api, Model } from "viewer/singletons";
-import type { DatasetLayerConfiguration, VolumeTracing } from "viewer/store";
+import type { DatasetLayerConfiguration, StoreDataset, VolumeTracing } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
@@ -97,6 +98,70 @@ function EnableDisableLayerSwitch({
         <Switch size="small" onChange={onChange} checked={!isDisabled} />
       </div>
     </FastTooltip>
+  );
+}
+
+async function findDataAndJumpToIt(
+  dataset: StoreDataset,
+  dispatch: Dispatch,
+  targetLayerName: string,
+  isDataLayer: boolean,
+  volume: VolumeTracing | null | undefined,
+) {
+  const { tracingStore } = Store.getState().annotation;
+  let foundPosition;
+  let foundMag;
+
+  if (volume && !isDataLayer) {
+    const { position, mag } = await findDataPositionForVolumeTracing(
+      tracingStore.url,
+      volume.tracingId,
+    );
+
+    if ((!position || !mag) && volume.fallbackLayer) {
+      await findDataAndJumpToIt(dataset, dispatch, volume.fallbackLayer, true, volume);
+      return;
+    }
+
+    foundPosition = position;
+    foundMag = mag;
+  } else {
+    const { position, mag } = await findDataPositionForLayer(
+      dataset.dataStore.url,
+      dataset,
+      targetLayerName,
+    );
+    foundPosition = position;
+    foundMag = mag;
+  }
+
+  if (foundPosition && foundMag) {
+    const foundLayer = getLayerByName(dataset, targetLayerName, true);
+    const transformMatrix = getTransformsForLayerOrNull(
+      dataset,
+      foundLayer,
+      Store.getState().datasetConfiguration.nativelyRenderedLayerName,
+    )?.affineMatrix;
+    if (transformMatrix) {
+      const matrix = M4x4.transpose(transformMatrix);
+      V3.mul4x4(matrix, foundPosition, foundPosition);
+    }
+  } else {
+    const centerPosition = getLayerBoundingBox(dataset, targetLayerName).getCenter();
+    Toast.warning(
+      `Couldn't find data within layer "${targetLayerName}." Jumping to the center of the layer's bounding box.`,
+    );
+    dispatch(setPositionAction(centerPosition));
+    return;
+  }
+
+  dispatch(setPositionAction(foundPosition));
+  const targetZoomValue = getMaxZoomValueForMag(Store.getState(), targetLayerName, foundMag);
+  dispatch(setZoomStepAction(targetZoomValue));
+  Toast.success(
+    `Jumping to position ${foundPosition
+      .map((el: number) => Math.floor(el))
+      .join(", ")} and zooming to ${targetZoomValue.toFixed(2)}`,
   );
 }
 
@@ -181,67 +246,8 @@ export default function LayerSettingsHeader({
   );
 
   const handleFindData = useCallback(
-    async (
-      targetLayerName: string,
-      isDataLayer: boolean,
-      volume: VolumeTracing | null | undefined,
-    ) => {
-      const { tracingStore } = Store.getState().annotation;
-      let foundPosition;
-      let foundMag;
-
-      if (volume && !isDataLayer) {
-        const { position, mag } = await findDataPositionForVolumeTracing(
-          tracingStore.url,
-          volume.tracingId,
-        );
-
-        if ((!position || !mag) && volume.fallbackLayer) {
-          await handleFindData(volume.fallbackLayer, true, volume);
-          return;
-        }
-
-        foundPosition = position;
-        foundMag = mag;
-      } else {
-        const { position, mag } = await findDataPositionForLayer(
-          dataset.dataStore.url,
-          dataset,
-          targetLayerName,
-        );
-        foundPosition = position;
-        foundMag = mag;
-      }
-
-      if (foundPosition && foundMag) {
-        const foundLayer = getLayerByName(dataset, targetLayerName, true);
-        const transformMatrix = getTransformsForLayerOrNull(
-          dataset,
-          foundLayer,
-          Store.getState().datasetConfiguration.nativelyRenderedLayerName,
-        )?.affineMatrix;
-        if (transformMatrix) {
-          const matrix = M4x4.transpose(transformMatrix);
-          V3.mul4x4(matrix, foundPosition, foundPosition);
-        }
-      } else {
-        const centerPosition = getLayerBoundingBox(dataset, targetLayerName).getCenter();
-        Toast.warning(
-          `Couldn't find data within layer "${targetLayerName}." Jumping to the center of the layer's bounding box.`,
-        );
-        dispatch(setPositionAction(centerPosition));
-        return;
-      }
-
-      dispatch(setPositionAction(foundPosition));
-      const targetZoomValue = getMaxZoomValueForMag(Store.getState(), targetLayerName, foundMag);
-      dispatch(setZoomStepAction(targetZoomValue));
-      Toast.success(
-        `Jumping to position ${foundPosition
-          .map((el: number) => Math.floor(el))
-          .join(", ")} and zooming to ${targetZoomValue.toFixed(2)}`,
-      );
-    },
+    (targetLayerName: string, isDataLayer: boolean, volume: VolumeTracing | null | undefined) =>
+      findDataAndJumpToIt(dataset, dispatch, targetLayerName, isDataLayer, volume),
     [dataset, dispatch],
   );
 
@@ -271,17 +277,11 @@ export default function LayerSettingsHeader({
           ? "Changes to the original segmentation layer will be discarded and the original state will be displayed again. "
           : "";
       const shouldDelete = await modal.confirm({
-        title: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone. Are you sure you want to delete this layer?`,
-        okText: `Yes, delete annotation layer "${readableAnnotationLayerName}"`,
+        title: `Delete annotation layer "${readableAnnotationLayerName}"?`,
+        content: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone.`,
+        okText: "Delete",
+        okType: "danger",
         cancelText: "Cancel",
-        okButtonProps: {
-          danger: true,
-          block: true,
-          style: { whiteSpace: "normal", height: "auto", margin: "10px 0 0 0" },
-        },
-        cancelButtonProps: {
-          block: true,
-        },
       });
       if (!shouldDelete) return;
       dispatch(

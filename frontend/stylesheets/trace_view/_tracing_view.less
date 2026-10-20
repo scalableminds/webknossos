@@ -43,7 +43,7 @@
   }
 
   &.TDView {
-    border-color: white;
+    border: none;
   }
 }
 
@@ -269,22 +269,6 @@
   padding: 0px 2px 0px 2px;
 }
 
-.keyboard-mouse-icon svg {
-  width: 2em;
-  height: 2em;
-}
-
-span.keyboard-key-icon:first-child,
-img.keyboard-mouse-icon:first-child {
-  margin-left: 0px;
-}
-
-.shortcut-table-info-tab {
-  margin-top: 25px;
-  max-width: 500px;
-  font-size: 14px;
-}
-
 #portal-navbarTracingSlot {
   width: 100%;
   line-height: normal;
@@ -364,7 +348,10 @@ img.keyboard-mouse-icon:first-child {
     }
 
     &:hover {
-      z-index: 1 !important;
+      // Bring hovered elements to the front so that their (highlighted) border isn't covered
+      // by adjacent elements. Keep in sync with the hover z-index antd uses for Space.Compact
+      // items (non-hovered compact items have a z-index of 2).
+      z-index: 4 !important;
     }
   }
 

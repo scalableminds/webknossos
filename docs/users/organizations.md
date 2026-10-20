@@ -24,6 +24,8 @@ The overview tab provides a summary of your organization, including:
 - **Member Information:** A count of the total users in the organization.
 - **WEBKNOSSOS Credits:** The amount of credits available to the organization for AI jobs.
 
+![Overview of an organization on the Power plan](../images/organization_overview.jpeg)
+
 ### Notifications
 
 This tab allows admins to configure email notifications for the organization:
@@ -74,3 +76,5 @@ A WEBKNOSSOS user account can be part of more than one organization, e.g., when 
 If you are part of multiple organizations, you can switch between them from the "User avatar" menu. 
 Click on your user avatar in the top-right corner of the screen and select an entry from the "Switch Organization" menu.
 WEBKNOSSOS will quickly reload and switch your account to that organization, i.e. refresh your dashboard, access permissions, annotations, etc. to match your account in the selected organization.
+
+Alternatively, open the [command palette](../ui/index.md#command-palette) with ++ctrl++ / ++cmd++ + ++p++, select `Switch Organization`, and pick the organization from the list.

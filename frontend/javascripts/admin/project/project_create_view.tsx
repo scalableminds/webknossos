@@ -8,9 +8,9 @@ import {
   updateProject,
 } from "admin/rest_api";
 import { Button, Checkbox, Col, Form, Input, InputNumber, Row, Select, theme } from "antd";
-import { useWkSelector } from "libs/react_hooks";
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import type { APITeam, APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
@@ -27,11 +27,6 @@ function ProjectCreateView() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
-
-  useEffect(() => {
-    fetchData();
-    applyDefaults();
-  }, []);
 
   async function fetchData() {
     setIsFetchingData(true);
@@ -55,6 +50,11 @@ function ProjectCreateView() {
     form.setFieldsValue(defaultFormValues);
   }
 
+  useEffectOnlyOnce(() => {
+    fetchData();
+    applyDefaults();
+  });
+
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const handleSubmit = async (formValues) => {
     if (projectId) {
@@ -67,7 +67,7 @@ function ProjectCreateView() {
   };
 
   const isEditMode = projectId != null;
-  const projectName = form.getFieldValue("name");
+  const projectName = Form.useWatch("name", form);
   const title =
     isEditMode && projectId ? `Update Project ${projectName || projectId}` : "Create Project";
   const fullWidth = {

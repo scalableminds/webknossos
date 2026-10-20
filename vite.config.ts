@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
+import assertWorkerPurity from "./frontend/vite/vite-plugin-assert-worker-purity";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import replaceSvgColorWithCurrentColor from "./frontend/vite/vite-plugin-replace-svg-color";
 
@@ -13,7 +14,7 @@ const alias = {
 };
 
 // https://vite.dev/config/
-export const viteConfig = {
+const viteConfig = {
   resolve: { alias, tsconfigPaths: true },
   plugins: [
     react(),
@@ -34,6 +35,13 @@ export const viteConfig = {
             { name: "convertStyleToAttrs" }, // converts <SVG style="..."> to individual attrs
             {
               name: "preset-default",
+              params: {
+                overrides: {
+                  // Keep the viewBox so that icons scale with the 1em size set by svgr's icon option.
+                  // Otherwise, icons whose width/height match the viewBox would be clipped.
+                  removeViewBox: false,
+                },
+              },
             },
           ],
         },
@@ -56,10 +64,17 @@ export const viteConfig = {
   },
   worker: {
     format: "es" as const,
+    // Vite bundles workers in a separate rolldown pass, so plugins that need to inspect
+    // worker chunks have to be registered here rather than in `plugins` above.
+    plugins: () => [assertWorkerPurity()],
   },
   server: {
     port: 9000,
     cors: true,
+    // Start compiling the entry's module graph on server start instead of on the first page request.
+    warmup: {
+      clientFiles: ["./frontend/javascripts/main.tsx"],
+    },
     // https: {
     //   // Enable HTTPS with self-signed certificates for testing passkeys etc
     //   // Make sure you've generated SSL certificates using the ./tools/gen-ssl-dev-certs.sh script
@@ -78,7 +93,7 @@ export const viteConfig = {
         changeOrigin: true,
       },
     },
-    hmr: false, // disable Hot Module Replacement for now
+    hmr: process.env.VITE_HMR === "true", // disabled by default, opt in via VITE_HMR=true
     watch: {
       ignored: [
         "**/node_modules/**",

@@ -22,6 +22,7 @@ import {
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
+import features from "features";
 import Markdown from "libs/markdown_adapter";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -30,7 +31,8 @@ import { filterWithSearchQueryAND, scrollToTop } from "libs/utils";
 import uniq from "lodash-es/uniq";
 import type { Key } from "react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
+import { ModalWidth } from "theme";
 import type { AiModel } from "types/api_types";
 import { enforceActiveUser, formatUserName } from "viewer/model/accessors/user_accessor";
 
@@ -183,7 +185,7 @@ const renderActionsForModel = (
   return (
     <Col>
       {trainingJobState === "SUCCESS" ? <Row>{organizationSharingButton}</Row> : null}
-      {voxelyticsWorkflowHash != null ? (
+      {voxelyticsWorkflowHash != null && features().voxelyticsEnabled ? (
         <Row>
           <Link to={`/workflows/${voxelyticsWorkflowHash}`}>
             <LinkButton icon={<FileTextOutlined />}>Voxelytics Report</LinkButton>
@@ -246,7 +248,7 @@ function EditModelSharedOrganizationsModal({
       onOk={submitNewSharedOrganizations}
       onCancel={onClose}
       mask={{ closable: false }}
-      width={800}
+      width={ModalWidth.Large}
     >
       <p>
         Select all organizations that should have access to the AI model{" "}
@@ -267,11 +269,12 @@ function EditModelSharedOrganizationsModal({
           placeholder="Please select"
           onChange={handleChange}
           options={options}
-          filterOption={(input, option) =>
-            option != null &&
-            (option.label.toLowerCase().includes(input.toLowerCase()) ||
-              option.value.toLowerCase().includes(input.toLowerCase()))
-          }
+          showSearch={{
+            filterOption: (input, option) =>
+              option != null &&
+              (option.label.toLowerCase().includes(input.toLowerCase()) ||
+                option.value.toLowerCase().includes(input.toLowerCase())),
+          }}
           value={selectedOrganizationIds}
         />
       </Flex>

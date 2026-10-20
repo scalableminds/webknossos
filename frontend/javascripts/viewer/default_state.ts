@@ -156,6 +156,7 @@ const defaultState: WebknossosState = {
     folderId: "dummy-folder-id",
     isUnreported: false,
     created: 123,
+    thumbnailCacheVersion: 0,
     dataSource: {
       dataLayers: [],
       scale: { factor: [5, 5, 5], unit: UnitLong.nm },

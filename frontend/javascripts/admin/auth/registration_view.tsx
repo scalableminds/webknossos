@@ -7,7 +7,7 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useEffect, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router";
 import type { APIOrganization } from "types/api_types";
 
 function RegistrationViewGeneric() {

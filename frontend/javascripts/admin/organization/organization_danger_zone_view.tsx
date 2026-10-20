@@ -1,21 +1,23 @@
+import { DeleteOutlined } from "@ant-design/icons";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteOrganization } from "admin/api/organization";
-import { App, Button, Typography } from "antd";
-import { useWkSelector } from "libs/react_hooks";
+import { App, Button, Typography, theme } from "antd";
 import { useState } from "react";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { ModalWidth } from "theme";
+import { useActiveOrganization, useCanManageOrganization } from "./organization_hooks";
 
 export function OrganizationDangerZoneView() {
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
+  const organization = useActiveOrganization();
+  const canManageOrganization = useCanManageOrganization();
   const [isDeleting, setIsDeleting] = useState(false);
   const { modal } = App.useApp();
+  const { token } = theme.useToken();
 
   async function handleDeleteButtonClicked(): Promise<void> {
     const isDeleteConfirmed = await modal.confirm({
       title: "Danger Zone",
+      width: ModalWidth.Medium,
       content: (
         <div>
           <Typography.Title level={4} type="danger">
@@ -35,7 +37,6 @@ export function OrganizationDangerZoneView() {
       ),
       okText: <>Yes, delete this organization now and log me out.</>,
       okType: "danger",
-      width: 500,
     });
 
     if (isDeleteConfirmed) {
@@ -54,15 +55,16 @@ export function OrganizationDangerZoneView() {
       />
       <SettingsCard
         title="Danger Zone"
-        content={
-          <Button
-            danger
-            loading={isDeleting}
-            onClick={handleDeleteButtonClicked}
-            style={{ marginTop: 10 }}
-          >
-            Delete Organization
-          </Button>
+        style={{ height: "auto" }}
+        icon={<DeleteOutlined style={{ color: token.colorError }} />}
+        content={`Delete ${organization.name}`}
+        hint="Removes all annotations, datasets and user accounts. This cannot be undone."
+        footerAction={
+          canManageOrganization ? (
+            <Button danger loading={isDeleting} onClick={handleDeleteButtonClicked}>
+              Delete Organization
+            </Button>
+          ) : null
         }
       />
     </>

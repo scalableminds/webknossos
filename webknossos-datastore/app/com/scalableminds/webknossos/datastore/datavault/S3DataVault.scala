@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{
   CredentializedUPath,
+  DataVaultCredential,
   LegacyDataVaultCredential,
   S3AccessKeyCredential,
   S3ClientPool
@@ -137,7 +138,7 @@ class S3DataVault(
       prefixKey <- S3UriUtils.objectKeyFromVaultPath(path).toFox
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
       vaultPaths <- Fox.serialCombined(s3SubPrefixKeys) { key =>
-        UPath.fromString(s"${uri.getScheme}://$bucketName/$key").map(new VaultPath(_, this)).toFox
+        UPath.fromString(S3UriUtils.uriLiteralForObjectKey(uri, bucketName, key)).map(new VaultPath(_, this)).toFox
       }
     } yield vaultPaths
 
@@ -202,15 +203,16 @@ class S3DataVault(
 object S3DataVault {
   def create(credentializedUPath: CredentializedUPath, s3ClientPool: S3ClientPool)(implicit
       ec: ExecutionContext
-  ): Box[S3DataVault] = {
-    val credential = credentializedUPath.credential.flatMap {
+  ): Box[S3DataVault] =
+    for {
+      remoteUri <- credentializedUPath.upath.toRemoteUri
+    } yield new S3DataVault(s3CredentialFrom(credentializedUPath.credential), remoteUri, s3ClientPool, ec)
+
+  def s3CredentialFrom(credentialOpt: Option[DataVaultCredential]): Option[S3AccessKeyCredential] =
+    credentialOpt.flatMap {
       case f: S3AccessKeyCredential     => Some(f)
       case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
       case _                            => None
     }
-    for {
-      remoteUri <- credentializedUPath.upath.toRemoteUri
-    } yield new S3DataVault(credential, remoteUri, s3ClientPool, ec)
-  }
 
 }

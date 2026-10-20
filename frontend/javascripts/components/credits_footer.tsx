@@ -2,7 +2,7 @@ import maxPlanckGesellschaftLogo from "@images/max-planck-gesellschaft.svg";
 import mpiBrainResearchLogo from "@images/mpi-brain-research.svg";
 import scalablemindsLogo from "@images/scalableminds-logo.svg";
 import { ConfigProvider, Layout, Typography } from "antd";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { getAntdTheme } from "theme";
 
 const { Footer } = Layout;

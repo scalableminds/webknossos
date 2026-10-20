@@ -7,7 +7,6 @@ import com.scalableminds.util.box.Box
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -28,7 +27,6 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class DataSourceMirrorService @Inject() (
-    config: DataStoreConfig,
     baseDirService: BaseDirService
 ) extends LazyLogging {
 

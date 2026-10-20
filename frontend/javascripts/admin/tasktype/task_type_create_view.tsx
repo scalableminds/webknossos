@@ -20,10 +20,11 @@ import {
 } from "antd";
 import type { RuleObject } from "antd/es/form";
 import { useFetch } from "libs/react_helpers";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 import { jsonStringify } from "libs/utils";
 import merge from "lodash-es/merge";
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import {
   type APIAllowedMode,
   type APIMagRestrictions,
@@ -102,10 +103,6 @@ function TaskTypeCreateView() {
     [],
   );
 
-  useEffect(() => {
-    applyDefaults();
-  }, []);
-
   async function applyDefaults() {
     const taskType = taskTypeId ? await getTaskType(taskTypeId) : null;
 
@@ -140,6 +137,10 @@ function TaskTypeCreateView() {
     if (taskType?.settings.magRestrictions.min || taskType?.settings.magRestrictions.max)
       form.setFieldValue(["isMagRestricted"], true);
   }
+
+  useEffectOnlyOnce(() => {
+    applyDefaults();
+  });
 
   async function onFinish(formValues: FormValues) {
     const {

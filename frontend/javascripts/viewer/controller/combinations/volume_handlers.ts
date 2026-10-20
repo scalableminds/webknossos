@@ -34,15 +34,22 @@ import type { WebknossosState } from "viewer/store";
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
-  const globalPosRounded = calculateGlobalPos(state, pos).rounded;
-  const layerPos = getUntransformedSegmentationPosition(state, globalPosRounded);
+  const { layerPos, floatingLayerPos } = getLayerPositions(state, pos);
 
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
-  Store.dispatch(startEditingAction(layerPos, plane));
-  Store.dispatch(addToContourListAction(layerPos));
+  Store.dispatch(startEditingAction(layerPos, plane, floatingLayerPos));
+  Store.dispatch(addToContourListAction(layerPos, floatingLayerPos));
 }
 
-function getUntransformedSegmentationPosition(state: WebknossosState, globalPosRounded: Vector3) {
+function getLayerPositions(state: WebknossosState, pos: Point2) {
+  const { rounded, floating } = calculateGlobalPos(state, pos);
+  return {
+    layerPos: getUntransformedSegmentationPosition(state, rounded),
+    floatingLayerPos: getUntransformedSegmentationPosition(state, floating),
+  };
+}
+
+function getUntransformedSegmentationPosition(state: WebknossosState, globalPos: Vector3) {
   /*
    * Converts the given position from world space to layer space.
    */
@@ -58,26 +65,23 @@ function getUntransformedSegmentationPosition(state: WebknossosState, globalPosR
     layer,
     nativelyRenderedLayerName,
   );
-  const layerPos = transformPointUnscaled(invertTransform(segmentationTransforms))(
-    globalPosRounded,
-  );
+  const layerPos = transformPointUnscaled(invertTransform(segmentationTransforms))(globalPos);
   return layerPos;
 }
 
 export function handleEraseStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
-  const globalPosRounded = calculateGlobalPos(state, pos).rounded;
-  const layerPos = getUntransformedSegmentationPosition(state, globalPosRounded);
+  const { layerPos, floatingLayerPos } = getLayerPositions(state, pos);
 
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
-  Store.dispatch(startEditingAction(layerPos, plane));
+  Store.dispatch(startEditingAction(layerPos, plane, floatingLayerPos));
+  Store.dispatch(addToContourListAction(layerPos, floatingLayerPos));
 }
 
 export function handleMoveForDrawOrErase(pos: Point2) {
   const state = Store.getState();
-  const globalPosRounded = calculateGlobalPos(state, pos).rounded;
-  const layerPos = getUntransformedSegmentationPosition(state, globalPosRounded);
-  Store.dispatch(addToContourListAction(layerPos));
+  const { layerPos, floatingLayerPos } = getLayerPositions(state, pos);
+  Store.dispatch(addToContourListAction(layerPos, floatingLayerPos));
 }
 
 export function handleEndForDrawOrErase() {

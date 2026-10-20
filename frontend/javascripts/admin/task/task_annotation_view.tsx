@@ -18,15 +18,16 @@ import {
   reOpenAnnotation as reOpenAnnotationAPI,
   resetAnnotation as resetAnnotationAPI,
 } from "admin/rest_api";
+import DeactivatedUserTag from "admin/user/deactivated_user_tag";
 import { App, Dropdown, type MenuProps, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import { formatSeconds } from "libs/format_utils";
-import { useWkSelector } from "libs/react_hooks";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import messages from "messages";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { APIAnnotation, APITask } from "types/api_types";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 
@@ -42,14 +43,14 @@ function TaskAnnotationView({ task }: Props) {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [annotations, setAnnotations] = useState<APIAnnotation[]>([]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   async function fetchData() {
     const annotations = await getAnnotationsForTask(task.id);
     setAnnotations(annotations);
   }
+
+  useEffectOnlyOnce(() => {
+    fetchData();
+  });
 
   function deleteAnnotation(annotation: APIAnnotation) {
     modal.confirm({
@@ -68,6 +69,11 @@ function TaskAnnotationView({ task }: Props) {
     Toast.success(messages["annotation.reset_success"]);
   }
 
+  function updateAnnotationState(updatedAnnotation: APIAnnotation) {
+    setIsTransferModalOpen(false);
+    setAnnotations(annotations.map((a) => (a.id === updatedAnnotation.id ? updatedAnnotation : a)));
+  }
+
   async function finishAnnotation(annotation: APIAnnotation) {
     const updatedAnnotation = await finishAnnotationAPI(annotation.id, annotation.typ);
     updateAnnotationState(updatedAnnotation);
@@ -76,11 +82,6 @@ function TaskAnnotationView({ task }: Props) {
   async function reOpenAnnotation(annotation: APIAnnotation) {
     const updatedAnnotation = await reOpenAnnotationAPI(annotation.id, annotation.typ);
     updateAnnotationState(updatedAnnotation);
-  }
-
-  function updateAnnotationState(updatedAnnotation: APIAnnotation) {
-    setIsTransferModalOpen(false);
-    setAnnotations(annotations.map((a) => (a.id === updatedAnnotation.id ? updatedAnnotation : a)));
   }
 
   function getViewOrOpenLabel(annotation: APIAnnotation) {
@@ -184,7 +185,10 @@ function TaskAnnotationView({ task }: Props) {
               : "<no user>";
             return (
               <tr key={`${annotation.id}-tr`}>
-                <td>{userString}</td>
+                <td>
+                  {userString}{" "}
+                  {annotation.owner?.isActive === false ? <DeactivatedUserTag /> : null}
+                </td>
                 <td>
                   <FormattedDate timestamp={annotation.modified} />
                 </td>
@@ -205,7 +209,8 @@ function TaskAnnotationView({ task }: Props) {
                   <div>{getViewOrOpenLabel(annotation)}</div>
                   <Dropdown menu={getDropdownMenu(annotation)} trigger={["click"]}>
                     <a className="ant-dropdown-link">
-                      Actions <DownOutlined />
+                      <DownOutlined className="icon-margin-right" />
+                      Actions
                     </a>
                   </Dropdown>
                 </td>

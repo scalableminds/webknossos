@@ -48,17 +48,23 @@ object AxisOrder {
 case class Axis(name: String)
 
 // Constructed from AxisOrder and AdditionalAxes. Always contains the full rank (plus 1 for z in 2d adapter case).
+//
+// Two axis orderings are in play throughout this class:
+//  - "physical": the on-disk/native dimension order the data source declares (AxisOrder.x/y/z/c,
+//    AdditionalAxis.index are physical indices). Not to be confused with ArrayOrder.C/F, which is
+//    the unrelated concept of a chunk's memory layout (row- vs column-major).
+//  - "wk": WEBKNOSSOS's canonical, always-the-same order: additionalAxes + (c)xyz.
 case class FullAxisOrder(axes: Seq[Axis]) {
 
   override def toString: String = axes.map(_.name).mkString("")
   def toStringWk: String =
     axesWk.map(_.name).mkString("")
 
-  def axesWk: Array[Axis] = arrayToWkPermutation.map(axes)
+  def axesWk: Array[Axis] = physicalToWkPermutation.map(axes)
 
   lazy val rank: Int = axes.length
 
-  lazy val arrayToWkPermutation: Array[Int] = {
+  lazy val physicalToWkPermutation: Array[Int] = {
     // wk is always the additionalAxes + (c)xyz
     val permutationMutable: Array[Int] = Array.fill(axes.length)(0)
 
@@ -77,28 +83,35 @@ case class FullAxisOrder(axes: Seq[Axis]) {
     permutationMutable
   }
 
-  lazy val arrayFToWkFPermutation: Array[Int] = arrayToWkPermutation.reverse.map(elem => rank - 1 - elem)
-  lazy val arrayCToWkFPermutation: Array[Int] = arrayToWkPermutation.reverse
+  lazy val physicalFToWkFPermutation: Array[Int] = physicalToWkPermutation.reverse.map(elem => rank - 1 - elem)
+  lazy val physicalCToWkFPermutation: Array[Int] = physicalToWkPermutation.reverse
 
-  private lazy val wkToArrayPermutation: Array[Int] = {
-    val permutationMutable: Array[Int] = Array.fill(arrayToWkPermutation.length)(0)
-    arrayToWkPermutation.zipWithIndex.foreach { case (p, i) =>
+  // This is a gather permutation, beware the direction!
+  // wkToPhysicalPermutation(physicalIndex) gives the wk slot for that physical index,
+  // the inverse of physicalToWkPermutation(wkSlot), which gives the physical index for a wk slot.
+  // Prefer using access methods below.
+  private lazy val wkToPhysicalPermutation: Array[Int] = {
+    val permutationMutable: Array[Int] = Array.fill(physicalToWkPermutation.length)(0)
+    physicalToWkPermutation.zipWithIndex.foreach { case (p, i) =>
       permutationMutable(p) = i
     }
     permutationMutable
   }
 
-  def permuteIndicesWkToArray(indices: Array[Int]): Array[Int] =
-    wkToArrayPermutation.map(indices(_))
+  def wkSlotOfPhysicalIndex(physicalIndex: Int): Int = wkToPhysicalPermutation(physicalIndex)
+  def physicalIndexOfWkSlot(wkSlot: Int): Int = physicalToWkPermutation(wkSlot)
 
-  def permuteIndicesWkToArrayLong(indices: Array[Long]): Array[Long] =
-    wkToArrayPermutation.map(indices(_))
+  def permuteIndicesWkToPhysical(indices: Array[Int]): Array[Int] =
+    wkToPhysicalPermutation.map(indices(_))
 
-  def permuteIndicesArrayToWk(indices: Array[Int]): Array[Int] =
-    arrayToWkPermutation.map(indices(_))
+  def permuteIndicesWkToPhysicalLong(indices: Array[Long]): Array[Long] =
+    wkToPhysicalPermutation.map(indices(_))
 
-  def permuteIndicesArrayToWkLong(indices: Array[Long]): Array[Long] =
-    arrayToWkPermutation.map(indices(_))
+  def permuteIndicesPhysicalToWk(indices: Array[Int]): Array[Int] =
+    physicalToWkPermutation.map(indices(_))
+
+  def permuteIndicesPhysicalToWkLong(indices: Array[Long]): Array[Long] =
+    physicalToWkPermutation.map(indices(_))
 
   def toWkLibsJson: JsValue =
     Json.toJson(axes.zipWithIndex.collect {

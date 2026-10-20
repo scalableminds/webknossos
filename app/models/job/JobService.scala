@@ -121,8 +121,8 @@ class JobService @Inject() (
         case JobCommand.export_tiff =>
           Some(
             genericEmailTemplate(
-              "Tiff Export",
-              "Your dataset has been exported as Tiff and is ready for download."
+              "TIFF / OME-Zarr Export",
+              "Your data export is ready for download."
             )
           )
         case JobCommand.infer_neurons =>
@@ -173,9 +173,13 @@ class JobService @Inject() (
     for {
       multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
+      errorMessage = job.latestRunErrorDetails
+        .flatMap(details => (details \ "message").asOpt[String])
+        .map(_.trim)
+        .filter(_.nonEmpty)
       emailTemplate = job.command match {
-        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(multiUser, datasetName)
-        case _ => defaultMails.jobFailedGenericMail(multiUser, datasetName, job.command.toString)
+        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(multiUser, datasetName, errorMessage)
+        case _ => defaultMails.jobFailedGenericMail(multiUser, datasetName, job.command.toString, errorMessage)
       }
       _ = Mailer ! Send(emailTemplate)
     } yield ()
@@ -228,6 +232,7 @@ class JobService @Inject() (
         ownerEmail = ownerMultiUser.email,
         args = job.args - "webknossos_token" - "user_auth_token",
         state = job.effectiveState,
+        errorDetails = job.latestRunErrorDetails,
         returnValue = job.returnValue,
         resultLink = job.constructResultLink(organization._id),
         voxelyticsWorkflowHash = job._voxelyticsWorkflowHash,
@@ -370,10 +375,13 @@ class JobService @Inject() (
     }
 
   def calculateJobCostInMilliCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[Int] =
-    getJobCostInMilliCreditsPerGVx(jobCommand).map { costPerGVx =>
-      val volumeInGVx = boundingBoxInTargetMag.volume / ONE_GIGAVOXEL
-      val costInMilliCredits = math.ceil(volumeInGVx * costPerGVx).toInt
-      math.max(costInMilliCredits, 0)
-    }
+    for {
+      costPerGVx <- getJobCostInMilliCreditsPerGVx(jobCommand)
+      // Computed as Double so that huge bounding boxes cannot overflow; Double.toInt saturates at Int.MaxValue
+      volumeInGVx =
+        if (boundingBoxInTargetMag.isEmpty) 0.0
+        else
+          boundingBoxInTargetMag.width.toDouble * boundingBoxInTargetMag.height * boundingBoxInTargetMag.depth / ONE_GIGAVOXEL
+    } yield math.max(math.ceil(volumeInGVx * costPerGVx).toInt, 0)
 
 }

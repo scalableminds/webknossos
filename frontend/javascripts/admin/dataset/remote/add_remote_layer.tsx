@@ -1,6 +1,6 @@
 import { exploreRemoteDataset } from "admin/rest_api";
 import { Col, Collapse, Form, type FormInstance, Input, Radio, Row, Tag } from "antd";
-import type { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
+import type { RcFile, UploadChangeParam, UploadFile } from "antd/es/upload";
 import { AsyncButton } from "components/async_clickables";
 import { formatScale } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";

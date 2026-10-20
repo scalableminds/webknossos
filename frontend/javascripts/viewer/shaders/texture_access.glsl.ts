@@ -172,6 +172,23 @@ export const getColorForCoords: ShaderModule = {
       return bucketAddressInTexture;
     }
 
+    // For t-recycling layers the z-addressing is repurposed: the lookup key uses a
+    // "t-batch index" (floor(t/32)) and the in-bucket offset uses t%32, since up to 32 t-slices
+    // share one atlas region. See TextureBucketManager.getCuckooKey on the JS side.
+    float maybeOverrideBucketPositionZ(uint globalLayerIndex, float realZ) {
+      if (usesTRecyclingPerLayer[globalLayerIndex] > 0.5) {
+        return floor(currentTCoordinate / bucketWidth);
+      }
+      return realZ;
+    }
+
+    float maybeOverrideOffsetInBucketZ(uint globalLayerIndex, float realOffsetZ) {
+      if (usesTRecyclingPerLayer[globalLayerIndex] > 0.5) {
+        return mod(currentTCoordinate, bucketWidth);
+      }
+      return realOffsetZ;
+    }
+
     vec4[2] getColorForCoords64(
       float localLayerIndex,
       float d_texture_width,
@@ -224,6 +241,7 @@ export const getColorForCoords: ShaderModule = {
           renderedMagIdx = activeMagIdx + i;
           vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
           vec3 absoluteBucketPosition = div(coords, bucketWidth);
+          absoluteBucketPosition.z = maybeOverrideBucketPositionZ(globalLayerIndex, absoluteBucketPosition.z);
           offsetInBucket = mod(coords, bucketWidth);
           bucketAddress = lookUpBucket(
             globalLayerIndex,
@@ -241,6 +259,7 @@ export const getColorForCoords: ShaderModule = {
         renderedMagIdx = outputMagIdx[globalLayerIndex];
         vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
         vec3 absoluteBucketPosition = div(coords, bucketWidth);
+        absoluteBucketPosition.z = maybeOverrideBucketPositionZ(globalLayerIndex, absoluteBucketPosition.z);
         offsetInBucket = mod(coords, bucketWidth);
         bucketAddress = lookUpBucket(
           globalLayerIndex,
@@ -294,11 +313,20 @@ export const getColorForCoords: ShaderModule = {
         );
       }
 
+      // Applied once, here, after all of the above (re-)computations of
+      // offsetInBucket.z from real world coordinates, so it can't be stomped by a
+      // later reassignment. See maybeOverrideOffsetInBucketZ's doc comment.
+      offsetInBucket.z = maybeOverrideOffsetInBucketZ(globalLayerIndex, offsetInBucket.z);
+
       // bucketAddress can span multiple data textures. If the address is higher
       // than the capacity of one texture, we mod the value and use the div (floored division) as the
-      // texture index
-      float packedBucketSize = bucketSize / packingDegree;
-      float bucketCapacityPerTexture = d_texture_width * d_texture_width / packedBucketSize;
+      // texture index.
+      // Each bucket occupies a whole number of texture rows; a row is never shared by two
+      // buckets. Layers with a small bucket footprint (e.g. 2D) pack into less than one row and
+      // are rounded up to a full one, matching TextureBucketManager on the JS side.
+      float packedBucketSize = bucketVoxelCountPerLayer[globalLayerIndex] / packingDegree;
+      float bucketHeightInTexture = max(1., packedBucketSize / d_texture_width);
+      float bucketCapacityPerTexture = d_texture_width / bucketHeightInTexture;
       float textureIndex = floor(bucketAddress / bucketCapacityPerTexture);
       bucketAddress = mod(bucketAddress, bucketCapacityPerTexture);
 
@@ -311,7 +339,7 @@ export const getColorForCoords: ShaderModule = {
         linearizeVec3ToIndex(offsetInBucket / packingDegree, bucketWidth);
       float y =
         div(pixelIdxInBucket, d_texture_width) +
-        div(packedBucketSize * bucketAddress, d_texture_width);
+        bucketHeightInTexture * bucketAddress;
 
       // The lower 32-bit of the value.
       vec4 bucketColor = getRgbaAtXYIndex(

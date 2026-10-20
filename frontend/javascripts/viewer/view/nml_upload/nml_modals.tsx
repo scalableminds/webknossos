@@ -134,6 +134,7 @@ export function ImportModal({
       okButtonProps={{
         disabled: createGroupForEachFile && isNewGroupNameEditable && !isNewGroupNameValid,
       }}
+      mask={{ closable: false }}
     >
       <Flex vertical gap="middle">
         <NmlFileList files={files} />

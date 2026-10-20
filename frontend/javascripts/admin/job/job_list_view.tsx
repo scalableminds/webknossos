@@ -8,12 +8,13 @@ import {
   LoadingOutlined,
   PlayCircleOutlined,
   QuestionCircleTwoTone,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
-import { App, Input, Space, Spin, Table, Tooltip } from "antd";
+import { App, Input, Space, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
@@ -33,7 +34,7 @@ import {
 import capitalize from "lodash-es/capitalize";
 import type * as React from "react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { type APIJob, APIJobCommand } from "types/api_types";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
@@ -152,7 +153,7 @@ export function JobState({ job }: { job: APIJob }) {
 export function getJobTypeName(command: APIJobCommand): string {
   const jobTypeNames: Record<string, string> = {
     [APIJobCommand.CONVERT_TO_WKW]: "Convert to WKW",
-    [APIJobCommand.EXPORT_TIFF]: "Export TIFF",
+    [APIJobCommand.EXPORT_TIFF]: "TIFF / OME-Zarr Export",
     [APIJobCommand.RENDER_ANIMATION]: "Render Animation",
     [APIJobCommand.COMPUTE_MESH_FILE]: "Compute Mesh",
     [APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE]: "Compute Segment Index",
@@ -227,7 +228,7 @@ function JobListView() {
         );
       return (
         <span>
-          Tiff export of layer {layerName} from {labelToAnnotationOrDataset} (Bounding Box{" "}
+          TIFF/OME-Zarr export of layer {layerName} from {labelToAnnotationOrDataset} (Bounding Box{" "}
           {job.args.ndBoundingBox
             ? formatWkLibsNdBBox(job.args.ndBoundingBox)
             : job.args.boundingBox}
@@ -393,25 +394,51 @@ function JobListView() {
     } else if (job.state === "FAILURE" || job.state === "CANCELLED") {
       // Regular users may retry a job once. Super users may always retry.
       const canRetry = isCurrentUserSuperUser || job.lastRetry == null;
+      const message =
+        job.errorDetails?.message != null ? (
+          <p>{job.errorDetails.message as string}</p>
+        ) : (
+          <pre style={{ maxHeight: 400, overflow: "auto" }}>
+            {JSON.stringify(job.errorDetails, null, 2)}
+          </pre>
+        );
+      const showErrorLink =
+        job.errorDetails != null ? (
+          <a
+            onClick={() =>
+              modal.error({
+                title: "Job Error Details",
+                width: 600,
+                content: message,
+              })
+            }
+          >
+            <WarningOutlined className="icon-margin-right" />
+            Show Error
+          </a>
+        ) : null;
       if (canRetry) {
         return (
-          <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
-            <AsyncLink
-              onClick={async () => {
-                try {
-                  await retryJob(job.id);
-                  await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-                  Toast.success("Job is being retried");
-                } catch (e) {
-                  console.error("Could not retry job", e);
-                  Toast.error("Failed to start retrying the job");
-                }
-              }}
-              icon={<PlayCircleOutlined className="icon-margin-right" />}
-            >
-              Retry
-            </AsyncLink>
-          </Tooltip>
+          <Space orientation="vertical" size={4}>
+            <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
+              <AsyncLink
+                onClick={async () => {
+                  try {
+                    await retryJob(job.id);
+                    await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+                    Toast.success("Job is being retried");
+                  } catch (e) {
+                    console.error("Could not retry job", e);
+                    Toast.error("Failed to start retrying the job");
+                  }
+                }}
+                icon={<PlayCircleOutlined className="icon-margin-right" />}
+              >
+                Retry
+              </AsyncLink>
+            </Tooltip>
+            {showErrorLink}
+          </Space>
         );
       }
       if (job.state === "FAILURE") {
@@ -423,12 +450,15 @@ function JobListView() {
           "Please contact an administrator for help."
         );
         return (
-          <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
-            <span>{failureMessage}</span>
-          </Tooltip>
+          <Space orientation="vertical" size={4}>
+            <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
+              <span>{failureMessage}</span>
+            </Tooltip>
+            {showErrorLink}
+          </Space>
         );
       }
-      return null;
+      return showErrorLink;
     } else if (
       job.command === APIJobCommand.CONVERT_TO_WKW ||
       job.command === APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE ||
@@ -533,7 +563,8 @@ function JobListView() {
       descriptionURI="https://docs.webknossos.org/webknossos/automation/jobs.html"
       description={
         <>
-          Some actions such as dataset conversions or TIFF exports require background processing.
+          Some actions such as dataset conversions or TIFF and OME-Zarr exports require background
+          processing.
           <br />
           WEBKNOSSOS notifies you by email once background jobs finish.
         </>
@@ -576,7 +607,7 @@ function JobListView() {
             render={(job: APIJob) => (
               <>
                 <div>{`${job.ownerLastName}, ${job.ownerFirstName}`}</div>
-                <div>{`(${job.ownerEmail})`}</div>
+                <Typography.Text type="secondary">{job.ownerEmail}</Typography.Text>
               </>
             )}
           />

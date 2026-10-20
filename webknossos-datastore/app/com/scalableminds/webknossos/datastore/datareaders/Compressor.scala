@@ -56,6 +56,10 @@ abstract class Compressor {
   @throws[IOException]
   def decompress(input: Array[Byte]): Array[Byte]
 
+  // For encodings that need the (possibly clipped) shape of the chunk to decode it
+  @throws[IOException]
+  def decompress(input: Array[Byte], chunkShape: Array[Int]): Array[Byte] = decompress(input)
+
   @throws[IOException]
   protected def passThrough(is: InputStream, os: OutputStream): Unit = {
     val bytes = new Array[Byte](4096)
@@ -326,18 +330,22 @@ class CompressoCompressor extends Compressor {
 
 }
 
-class CompressedSegmentationCompressor(dataType: ArrayDataType, volumeSize: Array[Int], blockSize: Vec3Int)
-    extends Compressor {
+class CompressedSegmentationCompressor(dataType: ArrayDataType, blockSize: Vec3Int) extends Compressor {
   override def getId: String = "compressedsegmentation"
 
   override def toString: String = s"compressor=$getId/dataType=${dataType.toString}"
 
   override def decompress(input: Array[Byte]): Array[Byte] =
+    throw new UnsupportedOperationException(
+      "Compressed segmentation can only be decompressed with a known chunk shape."
+    )
+
+  override def decompress(input: Array[Byte], chunkShape: Array[Int]): Array[Byte] =
     dataType match {
       case ArrayDataType.u4 =>
-        CompressedSegmentation32.decompress(input, volumeSize, blockSize)
+        CompressedSegmentation32.decompress(input, chunkShape, blockSize)
       case ArrayDataType.u8 =>
-        CompressedSegmentation64.decompress(input, volumeSize, blockSize)
+        CompressedSegmentation64.decompress(input, chunkShape, blockSize)
       case _ =>
         throw new UnsupportedOperationException("Can not use compressed segmentation for datatypes other than u4, u8.")
     }
@@ -384,5 +392,8 @@ class ChainedCompressor(compressors: Seq[Compressor]) extends Compressor {
 
   override def decompress(input: Array[Byte]): Array[Byte] =
     compressors.foldRight(input)((c, bytes) => c.decompress(bytes))
+
+  override def decompress(input: Array[Byte], chunkShape: Array[Int]): Array[Byte] =
+    compressors.foldRight(input)((c, bytes) => c.decompress(bytes, chunkShape))
 
 }

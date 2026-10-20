@@ -10,7 +10,7 @@ import renderIndependently from "libs/render_independently";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { APIUser } from "types/api_types";
 
 type WhatsNextActionProps = {

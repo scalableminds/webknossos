@@ -15,7 +15,7 @@ import features from "features";
 import messages from "messages";
 import type React from "react";
 import { useCallback } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 
 const { Sider, Content } = Layout;

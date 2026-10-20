@@ -1,4 +1,5 @@
 import { Button, Flex, Modal, Spin, Tooltip, Typography } from "antd";
+import { ModalWidth } from "theme";
 
 type Props = {
   isCloseable: boolean;
@@ -18,8 +19,7 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
       open
       title="Merger mode enabled"
       closable={false}
-      width={600}
-      centered
+      width={ModalWidth.Medium}
       footer={
         !isCloseable ? (
           <Tooltip title="At the moment, the existing trees are used to merge segments. This dialog can be closed after the initial processing has been completed.">

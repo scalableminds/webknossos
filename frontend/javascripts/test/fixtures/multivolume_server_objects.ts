@@ -24,6 +24,7 @@ export const annotation: APIAnnotation = {
   id: "598b52293c00009906f043e7",
   visibility: "Internal",
   modified: 1529066010230,
+  created: 1529066010230,
   name: "",
   teams: [],
   typ: "Explorational",

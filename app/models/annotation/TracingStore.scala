@@ -1,6 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -46,15 +47,15 @@ class TracingStoreService @Inject() (
     )
 
   def validateAccess(name: String, key: String)(block: TracingStore => Fox[Result]): Fox[Result] =
-    Fox.fromFuture(
-      tracingStoreDAO
-        .findOneByKey(key) // Check if key is valid
-        .flatMap(tracingStore => block(tracingStore)) // Run underlying action
-        .getOrElse {
+    for {
+      tracingStoreBox <- tracingStoreDAO.findOneByKey(key).shiftBox
+      result <- tracingStoreBox match {
+        case Full(tracingStore) => block(tracingStore)
+        case _                  =>
           logger.info(s"Denying tracing store request from $name due to unknown key.")
-          Forbidden(Msg.TracingStore.notFound)
-        }
-    )
+          Fox.successful(Forbidden(Msg.TracingStore.notFound))
+      }
+    } yield result
 
   def clientFor(dataset: Dataset): Fox[WKRemoteTracingStoreClient] =
     for {

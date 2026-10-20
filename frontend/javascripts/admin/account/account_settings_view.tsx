@@ -1,7 +1,7 @@
 import { SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router";
 
 const { Sider, Content } = Layout;
 

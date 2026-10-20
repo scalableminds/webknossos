@@ -25,7 +25,7 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/rest_api";
-import { App, Button, Input, Spin, Table, Tooltip } from "antd";
+import { App, Button, Input, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { handleGenericError } from "libs/error_handling";
@@ -43,7 +43,7 @@ import partial from "lodash-es/partial";
 import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import React, { useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router";
 import {
   type APIProject,
   type APIProjectWithStatus,
@@ -320,7 +320,9 @@ function ProjectListView() {
             render={(owner: APIUserBase) => (
               <>
                 <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
-                <div>{owner.email ? `(${owner.email})` : "-"}</div>
+                {owner.email ? (
+                  <Typography.Text type="secondary">{owner.email}</Typography.Text>
+                ) : null}
               </>
             )}
             filters={uniqBy(

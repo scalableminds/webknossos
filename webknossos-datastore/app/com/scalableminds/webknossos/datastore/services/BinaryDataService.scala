@@ -132,9 +132,18 @@ class BinaryDataService(
   private def clipToLayerBoundingBox(request: DataServiceDataRequest)(inputArray: Array[Byte]): Box[Array[Byte]] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val requestBboxInMag = request.cuboid.toBoundingBoxInMag
-    val layerBboxInMag =
-      request.dataLayer.boundingBox / request.mag // Note that this div is implemented to round to the bigger bbox so we don’t lose voxels inside.
-    val intersectionOpt = requestBboxInMag.intersection(layerBboxInMag).map(_.move(-requestBboxInMag.topLeft))
+    // Note that this div is implemented to round to the bigger bbox so we don’t lose voxels inside.
+    val layerBboxInMag = request.dataLayer.boundingBox / request.mag
+    val bboxToClipToInMag =
+      if (request.isBatchedAdditionalCoordinateRequest)
+        // The request uses the output z axis for the batched additional axis.
+        // Skip clipping for the dataset’s real z axis.
+        layerBboxInMag.copy(
+          topLeft = layerBboxInMag.topLeft.copy(z = requestBboxInMag.topLeft.z),
+          depth = requestBboxInMag.depth
+        )
+      else layerBboxInMag
+    val intersectionOpt = requestBboxInMag.intersection(bboxToClipToInMag).map(_.move(-requestBboxInMag.topLeft))
     val outputArray = new Array[Byte](inputArray.length)
     intersectionOpt.foreach { intersection =>
       for {

@@ -35,7 +35,7 @@ import models.folder.FolderService
 import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.{TeamDAO, TeamService}
-import models.user.{User, UserDAO, UserService}
+import models.user.{NotificationEmailService, User, UserDAO, UserService}
 import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
@@ -160,6 +160,7 @@ class DatasetController @Inject() (
     teamDAO: TeamDAO,
     wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
     teamService: TeamService,
+    notificationEmailService: NotificationEmailService,
     datasetDAO: DatasetDAO,
     datasetLayerAttachmentsDAO: DatasetLayerAttachmentDAO,
     datasetUploadToPathsService: UploadToPathsService,
@@ -188,7 +189,7 @@ class DatasetController @Inject() (
       } yield Ok
     }
 
-  def thumbnail(
+  def layerThumbnail(
       datasetId: ObjectId,
       dataLayerName: String,
       w: Option[Int],
@@ -202,7 +203,23 @@ class DatasetController @Inject() (
         _ <- datasetDAO.findOne(datasetId)(using ctx) ?~> notFoundMessage(
           datasetId
         ) ~> NOT_FOUND // To check Access Rights
-        image <- thumbnailService.getThumbnailWithCache(datasetId, dataLayerName, w, h, mappingName)
+        image <- thumbnailService.getLayerThumbnailWithCache(datasetId, dataLayerName, w, h, mappingName)
+      } yield addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
+    }
+
+  def datasetThumbnail(
+      datasetId: ObjectId,
+      w: Option[Int],
+      h: Option[Int],
+      sharingToken: Option[String]
+  ): Action[AnyContent] =
+    sil.UserAwareAction.fox { implicit request =>
+      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+      for {
+        _ <- datasetDAO.findOne(datasetId)(using ctx) ?~> notFoundMessage(
+          datasetId
+        ) ~> NOT_FOUND // To check Access Rights
+        image <- thumbnailService.getDatasetThumbnailWithCache(datasetId, w, h)
       } yield addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
     }
 
@@ -290,7 +307,7 @@ class DatasetController @Inject() (
       } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
-  // List all accessible datasets (list of json objects, one per dataset)
+  // List all accessible datasets (list of compact json objects, one per dataset)
   def list(
       // Optional filtering: If true, list only active datasets, if false, list only inactive datasets
       isActive: Option[Boolean],
@@ -310,8 +327,8 @@ class DatasetController @Inject() (
       searchQuery: Option[String],
       // return only the first n matching datasets.
       limit: Option[Int],
-      // Change output format to return only a compact list with essential information on the datasets
-      compact: Option[Boolean]
+      // include the number of active explorational annotations the requesting user can list per dataset
+      includeAnnotationCount: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
       _ <- Fox.successful(())
@@ -320,71 +337,22 @@ class DatasetController @Inject() (
           request.identity.map(_._organization)
         else
           organizationId
-      js <-
-        if (compact.getOrElse(false)) {
-          for {
-            datasetInfos <- datasetDAO.findAllCompactWithSearch(
-              isActive,
-              isUnreported,
-              organizationIdOpt,
-              folderId,
-              uploaderId,
-              searchQuery,
-              request.identity.map(_._id),
-              recursive.getOrElse(false),
-              limitOpt = limit,
-              requestingUserOrga = request.identity.map(_._organization)
-            )
-          } yield Json.toJson(datasetInfos)
-        } else {
-          for {
-            datasets <- datasetDAO.findAllWithSearch(
-              isActive,
-              isUnreported,
-              organizationIdOpt,
-              folderId,
-              uploaderId,
-              searchQuery,
-              recursive.getOrElse(false),
-              limit
-            ) ?~> Msg.Dataset.List.failed
-            js <- listGrouped(datasets, request.identity) ?~> Msg.Dataset.List.groupingFailed
-          } yield Json.toJson(js)
-        }
-      _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
-    } yield addRemoteOriginHeaders(Ok(js))
-  }
-
-  private def listGrouped(datasets: List[Dataset], requestingUser: Option[User])(using
-      ctx: DBAccessContext
-  ): Fox[List[JsObject]] =
-    for {
-      requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
-        userService.teamManagerMembershipsFor(user._id)
+      datasetInfos <- datasetDAO.findAllCompactWithSearch(
+        isActive,
+        isUnreported,
+        organizationIdOpt,
+        folderId,
+        uploaderId,
+        searchQuery,
+        request.identity.map(_._id),
+        recursive.getOrElse(false),
+        limitOpt = limit,
+        requestingUserOrga = request.identity.map(_._organization),
+        includeAnnotationCount = includeAnnotationCount.getOrElse(false)
       )
-      groupedByOrga = datasets.groupBy(_._organization).toList
-      js <- Fox.serialCombined(groupedByOrga) { (byOrgaTuple: (String, List[Dataset])) =>
-        for {
-          organization <- organizationDAO.findOne(byOrgaTuple._1)(using GlobalAccessContext) ?~> Msg.Organization
-            .notFound(byOrgaTuple._1)
-          groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
-          result <- Fox.serialCombined(groupedByDataStore) { (byDataStoreTuple: (String, List[Dataset])) =>
-            for {
-              dataStore <- dataStoreDAO.findOneByName(byDataStoreTuple._1.trim)(using GlobalAccessContext)
-              resultByDataStore: Seq[JsObject] <- Fox.serialCombined(byDataStoreTuple._2) { d =>
-                datasetService.publicWrites(
-                  d,
-                  requestingUser,
-                  Some(organization),
-                  Some(dataStore),
-                  requestingUserTeamManagerMemberships
-                ) ?~> Msg.Dataset.publicWritesFailed(d._id)
-              }
-            } yield resultByDataStore
-          }
-        } yield result.flatten
-      }
-    } yield js.flatten
+      _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
+    } yield addRemoteOriginHeaders(Ok(Json.toJson(datasetInfos)))
+  }
 
   def accessList(datasetId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
@@ -512,9 +480,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
         _ <- Fox.runOptional(request.body.dataSource)(dataSourceUpdates =>
@@ -541,9 +507,7 @@ class DatasetController @Inject() (
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         metadataWithFallback = request.body.metadata.getOrElse(dataset.metadata)
         _ <- assertNoDuplicateMetadataKeys(metadataWithFallback)
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- datasetDAO.updateFields(
           dataset._id,
           request.body.description,
@@ -564,9 +528,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[List[ObjectId]]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         includeMemberOnlyTeams = request.identity.isDatasetManager
         userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
         oldAllowedTeams <- teamService.allowedTeamIdsForDataset(
@@ -576,7 +538,14 @@ class DatasetController @Inject() (
         teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
         newTeams = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
-        _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, newTeams)
+        _ <- notificationEmailService.updateDatasetTeamsAndSendEmails(
+          dataset,
+          oldAllowedTeams,
+          newTeams,
+          request.identity
+        )(
+          teamDAO.updateAllowedTeamsForDataset(dataset._id, newTeams)
+        )
       } yield Ok(Json.toJson(newTeams))
     }
 
@@ -594,9 +563,7 @@ class DatasetController @Inject() (
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.fromBool(dataset._organization == request.identity._organization) ~> FORBIDDEN
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- datasetDAO.updateSharingTokenById(datasetId, None)
       } yield Ok
     }
@@ -747,9 +714,7 @@ class DatasetController @Inject() (
           for {
             dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
             _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> Msg.Dataset.Delete.notEnabled
-            _ <- Fox.assertTrue(
-              datasetService.isEditableBy(dataset, Some(request.identity))
-            ) ?~> Msg.notAllowed ~> FORBIDDEN
+            _ <- datasetService.assertEditableBy(dataset, request.identity)
             before = Instant.now
             _ = logger.info(
               s"Deleting dataset $datasetId as requested by user ${request.identity._id}. Details: orga=${dataset._organization}, isVirtual=${dataset.isVirtual}, name=${dataset.name}, directoryName=${dataset.directoryName} ..."
@@ -774,21 +739,25 @@ class DatasetController @Inject() (
   def composeAddLayer(datasetId: ObjectId): Action[ComposeRequestLayer] =
     sil.SecuredAction.fox(validateJson[ComposeRequestLayer]) { implicit request =>
       for {
-        _ <- composeService.addLayer(datasetId, request.body) ?~> Msg.Dataset.Compose.addLayerFailed
+        _ <- composeService.addLayer(datasetId, request.body, request.identity) ?~> Msg.Dataset.Compose.addLayerFailed
       } yield Ok
     }
 
   def composeAddMag(datasetId: ObjectId): Action[ComposeAddMagRequest] =
     sil.SecuredAction.fox(validateJson[ComposeAddMagRequest]) { implicit request =>
       for {
-        _ <- composeService.addMag(datasetId, request.body) ?~> Msg.Dataset.Compose.addMagFailed
+        _ <- composeService.addMag(datasetId, request.body, request.identity) ?~> Msg.Dataset.Compose.addMagFailed
       } yield Ok
     }
 
   def composeAddAttachment(datasetId: ObjectId): Action[ComposeAddAttachmentRequest] =
     sil.SecuredAction.fox(validateJson[ComposeAddAttachmentRequest]) { implicit request =>
       for {
-        _ <- composeService.addAttachment(datasetId, request.body) ?~> Msg.Dataset.Compose.addAttachmentFailed
+        _ <- composeService.addAttachment(
+          datasetId,
+          request.body,
+          request.identity
+        ) ?~> Msg.Dataset.Compose.addAttachmentFailed
       } yield Ok
     }
 
@@ -797,9 +766,7 @@ class DatasetController @Inject() (
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Upload.magUploadOnlyVirtual
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         magPath <- datasetUploadToPathsService.reserveMagUploadToPath(dataset, request.body)
       } yield Ok(Json.toJson(magPath))
     }
@@ -808,9 +775,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- datasetMagsDAO.findOneWithPendingUploadToPath(
           datasetId,
           request.body.layerName,
@@ -837,9 +802,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         attachmentPath <- datasetUploadToPathsService.reserveAttachmentUploadToPath(dataset, request.body)
 
       } yield Ok(Json.toJson(attachmentPath))
@@ -849,7 +812,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- datasetLayerAttachmentsDAO.findOneWithPendingUploadToPath(
           datasetId,
           request.body.layerName,
@@ -908,9 +871,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- Fox.fromBool(
           dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded
         ) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
@@ -930,9 +891,7 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Mirror.onlyForVirtual
         _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.Mirror.onlyForUsable
         _ <- datasetService.writeMirrorForVirtual(dataset) ?~> Msg.Dataset.Mirror.writeFailed
@@ -979,9 +938,7 @@ class DatasetController @Inject() (
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         // While reading these details is not exactly editing, only those who can see the settings page should see this.
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(datasetId)
         magDetails <- organizationDAO.getUsedStorageMagDetailsForDataset(datasetId)
         attachmentDetails <- organizationDAO.getUsedStorageAttachmentDetailsForDataset(datasetId)

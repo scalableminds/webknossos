@@ -1,7 +1,7 @@
 import { UnlockOutlined } from "@ant-design/icons";
 import type { FileList } from "admin/dataset/composition_wizard/common.ts";
 import { Form, Upload } from "antd";
-import type { UploadChangeParam, UploadFile } from "antd/lib/upload";
+import type { UploadChangeParam, UploadFile } from "antd/es/upload";
 import { Unicode } from "viewer/constants";
 
 const FormItem = Form.Item;

@@ -26,6 +26,21 @@ const getDropdownIconStyle = (isDisabled: boolean): React.CSSProperties => ({
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
+// Determines which tool of a tool group (e.g., brush and trace) a dropdown button should
+// represent. The adapted active tool takes precedence. Otherwise, the active tool is used
+// so that the button still represents it while a modifier adapts it to another tool. Note
+// that cycling through the tools doesn't update the preferred tool of a group.
+function getDisplayToolOfGroup(
+  groupTools: AnnotationTool[],
+  adaptedActiveTool: AnnotationTool,
+  activeTool: AnnotationTool,
+  preferredTool: AnnotationTool,
+): AnnotationTool {
+  if (groupTools.includes(adaptedActiveTool)) return adaptedActiveTool;
+  if (groupTools.includes(activeTool)) return activeTool;
+  return preferredTool;
+}
+
 export const ToolIdToComponent: Record<
   AnnotationToolId,
   (p: ToolButtonProps) => ReactElement | null
@@ -117,6 +132,7 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const brushPreference = useWkSelector((state) => state.userConfiguration.writePreference);
   const currentTool = brushPreference === "BRUSH" ? AnnotationTool.BRUSH : AnnotationTool.TRACE;
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
 
   const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -125,9 +141,12 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
 
   const isBrushDisabled = disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled;
   const isTraceDisabled = disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled;
-  const isBrushOrTraceActive =
-    adaptedActiveTool === AnnotationTool.BRUSH || adaptedActiveTool === AnnotationTool.TRACE;
-  const displayTool = isBrushOrTraceActive ? adaptedActiveTool : currentTool;
+  const displayTool = getDisplayToolOfGroup(
+    [AnnotationTool.BRUSH, AnnotationTool.TRACE],
+    adaptedActiveTool,
+    activeTool,
+    currentTool,
+  );
 
   return (
     <ToolRadioButtonWithDropdown
@@ -209,6 +228,7 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   const erasePreference = useWkSelector((state) => state.userConfiguration.erasePreference);
   const currentTool =
     erasePreference === "ERASE_BRUSH" ? AnnotationTool.ERASE_BRUSH : AnnotationTool.ERASE_TRACE;
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
 
   const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -216,10 +236,12 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   }
   const isEraseBrushDisabled = disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].isDisabled;
   const isEraseTraceDisabled = disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].isDisabled;
-  const isEraseBrushOrEraseTraceActive =
-    adaptedActiveTool === AnnotationTool.ERASE_BRUSH ||
-    adaptedActiveTool === AnnotationTool.ERASE_TRACE;
-  const displayTool = isEraseBrushOrEraseTraceActive ? adaptedActiveTool : currentTool;
+  const displayTool = getDisplayToolOfGroup(
+    [AnnotationTool.ERASE_BRUSH, AnnotationTool.ERASE_TRACE],
+    adaptedActiveTool,
+    activeTool,
+    currentTool,
+  );
   return (
     <ToolRadioButtonWithDropdown
       disabled={isEraseBrushDisabled && isEraseTraceDisabled}
@@ -446,15 +468,18 @@ function MeasurementToolMenu({ adaptedActiveTool }: ToolButtonProps) {
     measurementPreference === "LINE_MEASUREMENT"
       ? AnnotationTool.LINE_MEASUREMENT
       : AnnotationTool.AREA_MEASUREMENT;
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const isLineMeasurementDisabled =
     disabledInfosForTools[AnnotationTool.LINE_MEASUREMENT.id].isDisabled;
   const isAreaMeasurementDisabled =
     disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id].isDisabled;
-  const isMeasurementToolActive =
-    adaptedActiveTool === AnnotationTool.LINE_MEASUREMENT ||
-    adaptedActiveTool === AnnotationTool.AREA_MEASUREMENT;
-  const displayTool = isMeasurementToolActive ? adaptedActiveTool : favoriteMeasurementTool;
+  const displayTool = getDisplayToolOfGroup(
+    [AnnotationTool.LINE_MEASUREMENT, AnnotationTool.AREA_MEASUREMENT],
+    adaptedActiveTool,
+    activeTool,
+    favoriteMeasurementTool,
+  );
   return (
     <ToolRadioButtonWithDropdown
       disabled={isAreaMeasurementDisabled && isLineMeasurementDisabled}

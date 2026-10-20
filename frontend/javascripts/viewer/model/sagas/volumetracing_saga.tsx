@@ -27,6 +27,8 @@ import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
+  getBrushCenterInMag,
+  getBrushDiameterInMag,
   getContourTracingMode,
   getMaximumBrushSize,
   getRenderableMagForSegmentationTracing,
@@ -101,11 +103,6 @@ const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 // path. Buckets are mutated in place; nothing reaches the save queue or the
 // undo stack (design doc §12.2). The trace tool is unaffected — it keeps
 // using the section labeler.
-
-/** Global (mag-1) layer-space position -> source-mag voxel coordinates. */
-function toMagVoxel(position: Vector3, mag: Vector3): Vector3 {
-  return [position[0] / mag[0], position[1] / mag[1], position[2] / mag[2]];
-}
 
 function* watchVolumeTracingAsync(): Saga<void> {
   yield* call(ensureWkInitialized);
@@ -280,6 +277,9 @@ export function* editVolumeLayerAsync(): Saga<never> {
       runAxis: RunAxis;
       saveMode: SaveMode;
     } | null = null;
+    // Maps a floating mag-1 position to the brush center in source-mag voxels.
+    let getBrushCenter: ((position: Vector3) => Vector3) | null = null;
+    let lastBrushCenter: Vector3 | null = null;
 
     if (isBrushTool(activeTool)) {
       const segmentationLayer = yield* call(
@@ -290,16 +290,18 @@ export function* editVolumeLayerAsync(): Saga<never> {
       const voxelSize = yield* select((state) => state.dataset.dataSource.scale);
       const dimIndices = Dimensions.getIndices(startEditingAction.planeId);
       const planeAxis = dimIndices[2] as 0 | 1 | 2;
-      // brushSize is a diameter in "base voxels" — units of the finest axis of
-      // the voxel size. Converting it to a per-axis voxel radius therefore
-      // folds in both the voxel size (so the brush is a sphere in physical
-      // space, not an ellipsoid) and the mag.
-      const baseVoxelFactors = getBaseVoxelFactorsInUnit(voxelSize);
-      const unzoomedRadius = Math.round(brushSize / 2);
+      const diameterInMag = getBrushDiameterInMag(
+        brushSize,
+        getBaseVoxelFactorsInUnit(voxelSize),
+        labeledMag,
+      );
+      // Not rounded: together with the strict inside test of the rasterizer, a
+      // brush of size 1 paints exactly the hovered voxel.
+      const radius = V3.scale(diameterInMag, 0.5);
+      getBrushCenter = (position) =>
+        getBrushCenterInMag(position, labeledMag, diameterInMag, planeAxis);
+      lastBrushCenter = getBrushCenter(startEditingAction.floatingPositionInLayerSpace);
       const saveMode = yield* call(getVolumeSaveMode);
-      const radius: Vector3 = [0, 1, 2].map(
-        (axis) => (unzoomedRadius * baseVoxelFactors[axis]) / labeledMag[axis],
-      ) as Vector3;
       const driver = new BrushDriver(
         {
           cube: segmentationLayer.cube,
@@ -318,7 +320,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
           planeAxis,
           saveMode,
         },
-        toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
+        lastBrushCenter,
       );
       brushStroke = {
         driver,
@@ -356,6 +358,18 @@ export function* editVolumeLayerAsync(): Saga<never> {
         continue;
       }
 
+      if (brushStroke != null && getBrushCenter != null && lastBrushCenter != null) {
+        // The brush center can change within a mag-1 voxel (see getBrushCenterInMag),
+        // which is why this happens before the check below.
+        const brushCenter = getBrushCenter(addToContourListAction.floatingPositionInLayerSpace);
+        if (!V3.equals(lastBrushCenter, brushCenter)) {
+          // One incremental capsule per pointer-move; the transaction's write set
+          // coalesces overlap, and mag propagation is deferred to pointer-up.
+          brushStroke.driver.extend(brushCenter);
+          lastBrushCenter = brushCenter;
+        }
+      }
+
       if (V3.equals(lastPosition, addToContourListAction.positionInLayerSpace)) {
         // The voxel position did not change since the last action (the mouse moved
         // within a voxel). There is no need to do anything.
@@ -369,14 +383,6 @@ export function* editVolumeLayerAsync(): Saga<never> {
         // auto-fill would then erase the whole cell instead of just the stroke.
         // See https://github.com/scalableminds/webknossos/issues/4624.
         currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
-      }
-
-      if (brushStroke != null) {
-        // One incremental capsule per pointer-move; the transaction's write set
-        // coalesces overlap, and mag propagation is deferred to pointer-up.
-        brushStroke.driver.extend(
-          toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag),
-        );
       }
 
       lastPosition = addToContourListAction.positionInLayerSpace;

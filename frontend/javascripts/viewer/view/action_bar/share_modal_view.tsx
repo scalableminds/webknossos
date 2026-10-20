@@ -149,12 +149,24 @@ export function useDatasetSharingToken(dataset: APIDataset) {
   return datasetToken;
 }
 
-export function getUrl(sharingToken: string, includeToken: boolean) {
+function buildUrl(hash: string, sharingToken: string, includeToken: boolean) {
   const { pathname, origin } = location;
-  const hash = UrlManager.buildUrlHashJson(Store.getState());
   const query = includeToken ? `?token=${sharingToken}` : "";
-  const url = `${origin}${pathname}${query}#${hash}`;
-  return url;
+  return `${origin}${pathname}${query}#${hash}`;
+}
+
+function getUrl(sharingToken: string, includeToken: boolean) {
+  return buildUrl(UrlManager.buildUrlHashJson(Store.getState()), sharingToken, includeToken);
+}
+
+/**
+ * Returns the sharing URL for the current state. The URL hash depends on large parts
+ * of the store (position, zoom, layer settings, ...), so it is only computed while
+ * the modal that shows it is open.
+ */
+export function useSharingUrl(isOpen: boolean, sharingToken: string, includeToken: boolean) {
+  const hash = useWkSelector((state) => (isOpen ? UrlManager.buildUrlHashJson(state) : ""));
+  return buildUrl(hash, sharingToken, includeToken);
 }
 
 function copyUrlToClipboard(url: string) {
@@ -432,7 +444,7 @@ function ShareModalViewInner(props: Props) {
     Private: <LockOutlined />,
   };
   const includeToken = !dataset.isPublic && visibility === "Public";
-  const longUrl = getUrl(sharingToken, includeToken);
+  const longUrl = useSharingUrl(isOpen, sharingToken, includeToken);
 
   const allowsVolumeAnnotation = WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation;
   const concurrentDisabledReason = useMemo(() => {

@@ -44,6 +44,7 @@ case class UpdateLastTaskTypeIdParameters(lastTaskTypeId: Option[ObjectId]) deri
 
 class UserController @Inject() (
     userService: UserService,
+    notificationEmailService: NotificationEmailService,
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     credentialsProvider: CredentialsProvider,
@@ -397,6 +398,13 @@ class UserController @Inject() (
           lastTaskTypeId
         )
         updatedUser <- userDAO.findOne(userId)
+        _ = notificationEmailService.sendAccessChangedEmail(
+          user,
+          oldTeamMemberships,
+          updatedUser,
+          updatedTeams,
+          request.identity
+        )
         updatedJs <- userService.publicWrites(updatedUser, request.identity)
       } yield Ok(updatedJs)
     }

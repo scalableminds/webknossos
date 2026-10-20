@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   ZarrHeader
 }
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.*
-import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
@@ -137,28 +137,11 @@ class VolumeTracingZarrStreamingController @Inject() (
           _ <- Fox
             .fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume.wrongMag(tracingId, mag) ~> NOT_FOUND
 
-          cubeLength = DataLayer.bucketLength
-          (channels, dtype) = ElementClass.toChannelAndZarrString(elementClassFromProto(tracing.elementClass))
-          // data request method always decompresses before sending
-          compressor = None
-
-          shape = Array(
-            channels,
-            // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
-            (tracing.boundingBox.width + tracing.boundingBox.topLeft.x) / magParsed.x,
-            (tracing.boundingBox.height + tracing.boundingBox.topLeft.y) / magParsed.y,
-            (tracing.boundingBox.depth + tracing.boundingBox.topLeft.z) / magParsed.z
-          )
-
-          chunks = Array(channels, cubeLength, cubeLength, cubeLength)
-
-          zarrHeader = ZarrHeader(
-            zarr_format = 2,
-            shape = shape.map(_.toLong),
-            chunks = chunks,
-            compressor = compressor,
-            dtype = dtype,
-            order = ArrayOrder.F
+          zarrHeader = ZarrHeader.forArray(
+            elementClassFromProto(tracing.elementClass),
+            boundingBoxFromProto(tracing.boundingBox),
+            AdditionalAxis.fromProtos(tracing.additionalAxes),
+            magParsed
           )
         } yield Ok(Json.toJson(zarrHeader))
       }
@@ -177,41 +160,11 @@ class VolumeTracingZarrStreamingController @Inject() (
           _ <- Fox
             .fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume.wrongMag(tracingId, mag) ~> NOT_FOUND
 
-          additionalAxes = AdditionalAxis.fromProtos(tracing.additionalAxes)
-          dimNames = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
-
-          zarrHeader = Zarr3ArrayHeader(
-            zarr_format = 3,
-            node_type = "array",
-            // channel, additional axes, XYZ
-            shape = (Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ Array(
-              (tracing.boundingBox.width + tracing.boundingBox.topLeft.x) / magParsed.x,
-              (tracing.boundingBox.height + tracing.boundingBox.topLeft.y) / magParsed.y,
-              (tracing.boundingBox.depth + tracing.boundingBox.topLeft.z) / magParsed.z
-            )).map(_.toLong),
-            data_type = Left(tracing.elementClass.toString),
-            chunk_grid = Left(
-              ChunkGridSpecification(
-                "regular",
-                ChunkGridConfiguration(
-                  chunk_shape = Array.fill(1 + additionalAxes.length)(1) ++ Array(
-                    DataLayer.bucketLength,
-                    DataLayer.bucketLength,
-                    DataLayer.bucketLength
-                  )
-                )
-              )
-            ),
-            chunk_key_encoding =
-              ChunkKeyEncoding("v2", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
-            fill_value = Right(0),
-            attributes = None,
-            codecs = Seq(
-              TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(additionalAxes.length + 4)),
-              BytesCodecConfiguration(Some("little"))
-            ),
-            storage_transformers = None,
-            dimension_names = dimNames
+          zarrHeader = Zarr3ArrayHeader.forArray(
+            elementClassFromProto(tracing.elementClass),
+            boundingBoxFromProto(tracing.boundingBox),
+            AdditionalAxis.fromProtos(tracing.additionalAxes),
+            magParsed
           )
         } yield Ok(Json.toJson(zarrHeader))
       }
@@ -238,7 +191,8 @@ class VolumeTracingZarrStreamingController @Inject() (
         omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(
           tracingId,
           dataSourceVoxelSize = dataSource.scale,
-          mags = existingMags.toList
+          mags = existingMags.toList,
+          additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes).map(reorderAdditionalAxes)
         )
       } yield Ok(Json.toJson(omeNgffHeader))
     }
@@ -257,7 +211,7 @@ class VolumeTracingZarrStreamingController @Inject() (
           tracingId,
           dataSourceVoxelSize = dataSource.scale,
           mags = sortedExistingMags,
-          additionalAxes = dataSource.additionalAxesUnion
+          additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes).map(reorderAdditionalAxes)
         )
         zarr3GroupHeader = NgffZarr3GroupHeader(3, "group", omeNgffHeader)
       } yield Ok(Json.toJson(zarr3GroupHeader))
@@ -271,6 +225,8 @@ class VolumeTracingZarrStreamingController @Inject() (
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           layerName = tracingName.getOrElse(tracingId)
+          additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes).map(reorderAdditionalAxes)
+          rank = additionalAxes.map(_.length).getOrElse(0) + 4 // We’re writing c, additionalAxes, xyz
           zarrLayer = StaticSegmentationLayer(
             name = layerName,
             dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3,
@@ -284,11 +240,12 @@ class VolumeTracingZarrStreamingController @Inject() (
                   m,
                   Some(UPath.fromLocalPath(Path.of(s"./$layerName/${m.toMagLiteral(allowScalar = true)}"))),
                   None,
-                  Some(AxisOrder.cxyz),
+                  Some(AxisOrder.cAdditionalxyz(rank)),
                   None,
                   None
                 )
               ),
+            additionalAxes = additionalAxes,
             mappings = None
           )
         } yield Ok(Json.toJson(zarrLayer))

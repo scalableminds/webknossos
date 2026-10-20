@@ -330,6 +330,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
   "dataset.clear_cache_success": "The dataset was reloaded successfully.",
+  "dataset.clear_cache_failed": "The dataset could not be reloaded.",
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "task.tooltip_explain_reset":
     "Resets this task instance to its initial state, undoing any annotation work of the assigned user. The task will remain assigned to this user for further annotation work.",

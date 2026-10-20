@@ -20,14 +20,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
-import { ColorWKBlue, getSystemColorTheme, getThemeFromUser } from "theme";
+import { ColorWKBlue, getActiveTheme } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ViewModeValues } from "viewer/constants";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import type { UserConfiguration } from "viewer/store";
 import {
@@ -159,7 +159,7 @@ export const CommandPalette = () => {
     annotationOwner,
   };
 
-  const theme = getThemeFromUser(activeUser);
+  const theme = useWkSelector(getActiveTheme);
 
   const getTabsAndSettingsMenuItems = () => {
     if (!isInAnnotationView) return [];
@@ -353,10 +353,7 @@ export const CommandPalette = () => {
       commands.push({
         name: `Switch to “${name}” color theme`,
         command: async () => {
-          const resolvedTheme = theme === "auto" ? getSystemColorTheme() : theme;
-
-          const newUser = await updateSelectedThemeOfUser(activeUser.id, resolvedTheme);
-          dispatch(setThemeAction(resolvedTheme));
+          const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
           dispatch(setActiveUserAction(newUser));
         },
         color: commandEntryColor,

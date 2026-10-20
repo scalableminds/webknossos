@@ -4,6 +4,7 @@ import window from "libs/window";
 import clone from "lodash-es/clone";
 import merge from "lodash-es/merge";
 import type { APIUser } from "types/api_types";
+import type { WebknossosState } from "viewer/store";
 
 export type Theme = "light" | "dark";
 
@@ -162,17 +163,34 @@ export const NavAndStatusBarTheme = merge(
   OverridesForNavbarAndStatusBarTheme,
 );
 
+const darkColorSchemeQuery = "(prefers-color-scheme: dark)";
+
 export function getSystemColorTheme(): Theme {
-  return window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
+  return window.matchMedia(darkColorSchemeQuery).media !== "not all" &&
+    window.matchMedia(darkColorSchemeQuery).matches
     ? "dark"
     : "light";
 }
 
-export function getThemeFromUser(activeUser: APIUser | null | undefined): Theme {
-  if (activeUser == null || activeUser.selectedTheme === "auto") return getSystemColorTheme();
+export function listenToSystemColorThemeChanges(onChange: (systemTheme: Theme) => void) {
+  window
+    .matchMedia(darkColorSchemeQuery)
+    .addEventListener?.("change", () => onChange(getSystemColorTheme()));
+}
+
+function getThemeFromUser(
+  activeUser: APIUser | null | undefined,
+  systemTheme: Theme = getSystemColorTheme(),
+): Theme {
+  if (activeUser == null || activeUser.selectedTheme === "auto") return systemTheme;
 
   return activeUser.selectedTheme;
+}
+
+// The effective color theme. Derived from the user's selected theme so that it can never get out
+// of sync with it. The OS theme is part of the store so that "auto" re-renders when it changes.
+export function getActiveTheme(state: WebknossosState): Theme {
+  return getThemeFromUser(state.activeUser, state.uiInformation.systemTheme);
 }
 
 export function getAntdTheme(userTheme: Theme) {

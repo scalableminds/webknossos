@@ -1,4 +1,5 @@
 import app from "app";
+import { getActiveTheme } from "theme";
 import { BufferGeometry, Line, LineBasicMaterial, Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
@@ -77,7 +78,7 @@ class Cube {
 
   getLineColor(): number {
     if (this.isHighlighted) {
-      return Store.getState().uiInformation.theme === "light" ? 0xeeeeee : 0xffffff;
+      return getActiveTheme(Store.getState()) === "light" ? 0xeeeeee : 0xffffff;
     }
     return this.color;
   }

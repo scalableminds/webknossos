@@ -106,6 +106,11 @@ import {
   validateShortcutMapText,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import { getLayerRegistrationEditBlocker } from "viewer/view/layer_registration/layer_registration_edit_blocker";
+import {
+  getLayerRegistrationViewUrl,
+  isLayerRegistrationStore,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import {
   doAllLayersHaveTheSameRotation,
@@ -120,6 +125,17 @@ import {
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
+
+// Layer registration annotations are worked on in the layer registration view, so the user who may
+// work on one there is redirected. Everybody else sees it in the normal viewer, which offers to
+// copy it. The hidden store iframe of the layer registration view is never redirected.
+function shouldRedirectToLayerRegistrationView(annotation: APIAnnotation): boolean {
+  return (
+    annotation.layerRegistration != null &&
+    !isLayerRegistrationStore() &&
+    getLayerRegistrationEditBlocker(annotation, Store.getState().activeUser?.id) == null
+  );
+}
 
 export async function initialize(
   initialMaybeCompoundType: APICompoundType | null,
@@ -152,6 +168,16 @@ export async function initialize(
         throw unversionedAnnotationResult.error.cause;
       }
       let unversionedAnnotation = unversionedAnnotationResult.value;
+      if (shouldRedirectToLayerRegistrationView(unversionedAnnotation)) {
+        location.replace(
+          getLayerRegistrationViewUrl(
+            { name: unversionedAnnotation.dataSetName, id: unversionedAnnotation.datasetId },
+            unversionedAnnotation.id,
+          ),
+        );
+        // Keep showing the loading spinner until the browser has left this page.
+        await new Promise(() => {});
+      }
       annotationProto = await getAnnotationProto(
         unversionedAnnotation.tracingStore.url,
         unversionedAnnotation.id,

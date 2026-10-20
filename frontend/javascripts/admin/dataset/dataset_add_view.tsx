@@ -9,20 +9,11 @@ import { useFetch } from "libs/react_helpers";
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import type { APIDataStore } from "types/api_types";
-import PostUploadModal from "./components/post_upload_modal";
+import PostUploadModal, { DatasetAddType } from "./components/post_upload_modal";
 import VoxelyticsBanner from "./components/voxelytics_banner";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content } = Layout;
-
-// Used for the tab keys as well as for
-// distinguishing between the add type after
-// successful import.
-export enum DatasetAddType {
-  UPLOAD = "upload",
-  REMOTE = "remote",
-  COMPOSE = "compose",
-}
 
 function DatasetAddView() {
   const navigate = useNavigate();

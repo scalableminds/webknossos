@@ -43,6 +43,14 @@ export type LandmarkPair = {
   residual: number | null;
 };
 
+// A row of getLandmarkPairs whose landmarks have a pair id, i.e. not a landmark that can't be
+// paired.
+export type IdentifiedLandmarkPair = LandmarkPair & { pairId: number };
+// A row of getLandmarkPairs with a landmark on both sides.
+export type CompleteLandmarkPairRow = IdentifiedLandmarkPair & {
+  landmarks: Record<Side, Landmark>;
+};
+// The landmarks of a complete pair, as used for the transform and the export.
 export type CompleteLandmarkPair = { pairId: number } & Record<Side, Landmark>;
 
 // The two landmarks of a pair are trees with the same name, "Landmark <pair id>", one in each
@@ -155,16 +163,20 @@ export function getLandmarkPairs(
 }
 
 // The pairs that have a landmark on both sides, sorted by pair id.
+export function hasPairId(pair: LandmarkPair): pair is IdentifiedLandmarkPair {
+  return pair.pairId != null;
+}
+
+export function isCompletePair(pair: LandmarkPair): pair is CompleteLandmarkPairRow {
+  return hasPairId(pair) && pair.landmarks.fixed != null && pair.landmarks.moving != null;
+}
+
 export function getCompleteLandmarkPairs(
   landmarks: Record<Side, Landmark[]>,
 ): CompleteLandmarkPair[] {
-  return getLandmarkPairs(landmarks, null).flatMap(({ pairId, landmarks: { fixed, moving } }) =>
-    pairId != null && fixed != null && moving != null ? [{ pairId, fixed, moving }] : [],
-  );
-}
-
-export function isCompletePair(pair: LandmarkPair): boolean {
-  return pair.pairId != null && pair.landmarks.fixed != null && pair.landmarks.moving != null;
+  return getLandmarkPairs(landmarks, null)
+    .filter(isCompletePair)
+    .map(({ pairId, landmarks: { fixed, moving } }) => ({ pairId, fixed, moving }));
 }
 
 // What a worker needs to know about the landmarks of the other worker to choose the pair id of

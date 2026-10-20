@@ -297,7 +297,7 @@ function getDeleteColumn(
       <span onClick={(event) => event.stopPropagation()}>
         <Popconfirm
           title={
-            isCompletePair(pair) && pair.pairId != null
+            isCompletePair(pair)
               ? `Delete ${getLandmarkTreeName(pair.pairId)} in both views?`
               : "Delete this landmark?"
           }

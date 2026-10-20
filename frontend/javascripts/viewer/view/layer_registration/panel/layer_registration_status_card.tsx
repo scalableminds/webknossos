@@ -30,7 +30,7 @@ function getNextStepContent(
     case "completePair": {
       const { pair, missingSide } = nextStep;
       return {
-        text: `${getLandmarkTreeName(pair.pairId ?? 0)}: click the matching spot in the ${VIEW_NAMES[missingSide]} view.`,
+        text: `${getLandmarkTreeName(pair.pairId)}: click the matching spot in the ${VIEW_NAMES[missingSide]} view.`,
         action: { label: "Show it", onClick: () => onSelectPair(pair) },
       };
     }
@@ -41,7 +41,7 @@ function getNextStepContent(
     case "checkOutlier": {
       const { pair, errorFactor } = nextStep;
       return {
-        text: `${getLandmarkTreeName(pair.pairId ?? 0)} has ${errorFactor.toFixed(1)}× the mean error. It was probably clicked off-target.`,
+        text: `${getLandmarkTreeName(pair.pairId)} has ${errorFactor.toFixed(1)}× the mean error. It was probably clicked off-target.`,
         action: { label: "Show it", onClick: () => onSelectPair(pair) },
       };
     }

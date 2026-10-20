@@ -1,6 +1,9 @@
 import type { Vector3 } from "viewer/constants";
 import type { AppliedState } from "./layer_registration_dataset_transforms";
 import {
+  type CompleteLandmarkPairRow,
+  hasPairId,
+  type IdentifiedLandmarkPair,
   isCompletePair,
   isHighResidual,
   type LandmarkPair,
@@ -13,9 +16,9 @@ import { MIN_LANDMARK_PAIR_COUNT } from "./layer_registration_transform_estimati
 // step wins, in the order of the type below.
 export type NextStep =
   | { type: "placeFirstLandmark" }
-  | { type: "completePair"; pair: LandmarkPair; missingSide: Side }
+  | { type: "completePair"; pair: IdentifiedLandmarkPair; missingSide: Side }
   | { type: "placeMorePairs"; missingPairCount: number }
-  | { type: "checkOutlier"; pair: LandmarkPair; errorFactor: number }
+  | { type: "checkOutlier"; pair: CompleteLandmarkPairRow; errorFactor: number }
   | { type: "compareAndApply"; hasSeveralMovingLayers: boolean }
   | { type: "nextLayer"; layerName: string; completePairCount: number; appliedState: AppliedState }
   | { type: "allApplied"; hasSeveralMovingLayers: boolean };
@@ -25,7 +28,7 @@ function getLandmarkStep(pairs: LandmarkPair[]): NextStep | null {
   if (pairs.length === 0) {
     return { type: "placeFirstLandmark" };
   }
-  const incompletePair = pairs.find((pair) => pair.pairId != null && !isCompletePair(pair));
+  const incompletePair = pairs.filter(hasPairId).find((pair) => !isCompletePair(pair));
   if (incompletePair != null) {
     return {
       type: "completePair",
@@ -48,13 +51,16 @@ function getOutlierStep(
   meanResidual: number | null,
   voxelSizeFactor: Vector3,
 ): NextStep | null {
-  const worstPair = pairs.reduce<LandmarkPair | null>(
-    (worst, pair) =>
-      pair.residual != null && (worst?.residual == null || pair.residual > worst.residual)
-        ? pair
-        : worst,
-    null,
-  );
+  // Only complete pairs have a residual.
+  const worstPair = pairs
+    .filter(isCompletePair)
+    .reduce<CompleteLandmarkPairRow | null>(
+      (worst, pair) =>
+        pair.residual != null && (worst?.residual == null || pair.residual > worst.residual)
+          ? pair
+          : worst,
+      null,
+    );
   if (
     worstPair?.residual == null ||
     meanResidual == null ||

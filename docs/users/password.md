@@ -36,6 +36,8 @@ The theme can be set to:
 - **Light**: Forces a light-mode user interface.
 - **Dark**: Forces a dark-mode user interface.
 
+The theme also affects the background of the 3D viewport: it is black in dark mode and white in light mode. With **System Default**, the background follows your operating system's current theme.
+
 ## Security
 
 The security page allows users to manage their password and passkeys, as well as their active sessions.

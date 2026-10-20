@@ -54,6 +54,8 @@ import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metad
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
 import DatasetSettingsStorageTab from "dashboard/dataset/dataset_settings_storage_tab";
 import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
+import LayerRegistrationListView from "viewer/view/layer_registration/layer_registration_list_view";
+import LayerRegistrationView from "viewer/view/layer_registration/layer_registration_view";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -77,13 +79,13 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
   () => import("admin/voxelytics/workflow_list_view"),
 );
 
-function RootLayout() {
+function RootLayout({ showNavbar = true }: { showNavbar?: boolean }) {
   return (
-    <Layout>
+    <Layout className={showNavbar ? undefined : "no-navbar"}>
       {/* The command palette can leave the view or undo the forced settings of the
       layer registration workers. Thus, don't allow them there. */}
       {isLayerRegistrationWorker() ? null : <CommandPalette />}
-      <Navbar />
+      {showNavbar && <Navbar />}
       <Content>
         <ErrorBoundary>
           <Outlet />
@@ -258,6 +260,14 @@ const routes: RouteObject[] = [
         element: (
           <SecuredRoute requiresAdminOrManagerRole>
             <DatasetAddView />
+          </SecuredRoute>
+        ),
+      },
+      {
+        path: "/datasets/:datasetNameAndId/register-layers",
+        element: (
+          <SecuredRoute>
+            <LayerRegistrationListView />
           </SecuredRoute>
         ),
       },
@@ -489,6 +499,21 @@ const routes: RouteObject[] = [
         ],
       },
       { path: "*", element: <PageNotFoundView /> },
+    ],
+  },
+  {
+    // The layer registration view has no navbar of its own, because each of its worker iframes
+    // shows one.
+    element: <RootLayout showNavbar={false} />,
+    children: [
+      {
+        path: "/datasets/:datasetNameAndId/register-layers/:annotationId",
+        element: (
+          <SecuredRoute>
+            <LayerRegistrationView />
+          </SecuredRoute>
+        ),
+      },
     ],
   },
 ];

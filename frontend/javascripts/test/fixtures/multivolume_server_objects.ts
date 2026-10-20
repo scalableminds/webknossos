@@ -81,6 +81,7 @@ export const annotation: APIAnnotation = {
   tracingTime: 0,
   contributors: [],
   collaborationMode: "OwnerOnly",
+  layerRegistration: null,
   isLockedByOwner: false,
 };
 

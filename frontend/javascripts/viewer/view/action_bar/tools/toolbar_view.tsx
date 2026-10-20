@@ -21,8 +21,10 @@ import { setToolAction } from "viewer/model/actions/ui_actions";
 import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
+import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
 import { ToolDropdown } from "../tool_dropdown";
 import { ChangeBrushSizePopover } from "./brush_presets";
+import { LayerRegistrationButtons } from "./layer_registration_specific_ui";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
 import {
@@ -79,7 +81,13 @@ export default function ToolbarView() {
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
-  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
+  // The layer registration workers are always narrow, but their toolkit only has two tools.
+  const isInLayerRegistrationWorker = isLayerRegistrationWorker();
+  const showAllTools =
+    isWiderScreen ||
+    toolkit === Toolkit.READ_ONLY_TOOLS ||
+    isViewMode ||
+    isInLayerRegistrationWorker;
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -132,7 +140,7 @@ export default function ToolbarView() {
             const ToolButton = ToolIdToComponent[tool.id];
             return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
           })}
-          <ToolDropdown />
+          {isInLayerRegistrationWorker ? null : <ToolDropdown />}
         </Radio.Group>
       </UnderlyingActiveToolContext.Provider>
 
@@ -174,7 +182,10 @@ function ToolSpecificSettings({
   isControlOrMetaPressed: boolean;
   isShiftPressed: boolean;
 }) {
-  const showSkeletonButtons = hasSkeleton && adaptedActiveTool === AnnotationTool.SKELETON;
+  // The layer registration workers always create one tree per node (see
+  // layer_registration_worker.ts), so the skeleton tool options are hidden there.
+  const showSkeletonButtons =
+    hasSkeleton && adaptedActiveTool === AnnotationTool.SKELETON && !isLayerRegistrationWorker();
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationTool.BOUNDING_BOX;
   const showCreateCellButton = hasVolume && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =
@@ -185,6 +196,8 @@ function ToolSpecificSettings({
 
   return (
     <>
+      {isLayerRegistrationWorker() ? <LayerRegistrationButtons /> : null}
+
       {showSkeletonButtons ? <SkeletonSpecificButtons /> : null}
 
       {showNewBoundingBoxButton ? (

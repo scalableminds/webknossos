@@ -1,5 +1,5 @@
 import { FileExcelOutlined } from "@ant-design/icons";
-import { Button, Upload } from "antd";
+import { Button, Typography, Upload } from "antd";
 import type { UploadChangeParam, UploadFile } from "antd/es/upload";
 import { AsyncButton } from "components/async_clickables";
 import ErrorHandling from "libs/error_handling";
@@ -79,6 +79,10 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
         </p>
       )}
 
+      <Typography.Paragraph type="secondary">
+        No landmarks yet? Go back, combine the datasets without any transforms, and register the
+        layers in WEBKNOSSOS afterwards.
+      </Typography.Paragraph>
       <div>
         <p>
           Landmark files ({wizardContext.composeMode === "BIG_WARP" ? "1 CSV file" : "2 NML files"}

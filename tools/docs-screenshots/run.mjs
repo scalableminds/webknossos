@@ -11,9 +11,10 @@ import {
   captureContextOptions,
   captureScreenshot,
   clickText,
+  decodeImage,
   waitForViewer,
 } from "./browser.mjs";
-import { applyReport, digest, imagePath, reviewPath, writeReport } from "./core.mjs";
+import { applyReport, diffImages, digest, imagePath, reviewPath, writeReport } from "./core.mjs";
 import { checkCoverage } from "./inventory.mjs";
 import { recipes as viewerRecipes } from "./viewer.mjs";
 
@@ -29,6 +30,7 @@ const { values } = parseArgs({
     executable: { type: "string" },
     "browser-url": { type: "string" },
     "browser-frame": { type: "string", default: "none" },
+    "diff-threshold": { type: "string", default: "3" },
     list: { type: "boolean" },
     apply: { type: "boolean" },
     headed: { type: "boolean" },
@@ -37,6 +39,9 @@ const { values } = parseArgs({
 });
 if (!["none", "generic"].includes(values["browser-frame"]))
   throw new Error("--browser-frame must be none or generic.");
+const diffThreshold = Number(values["diff-threshold"]) / 100;
+if (!(diffThreshold >= 0 && diffThreshold <= 1))
+  throw new Error("--diff-threshold must be a percentage between 0 and 100.");
 const recipes = [...viewerRecipes, ...adminRecipes];
 const outputs = new Set();
 const ids = new Set();
@@ -51,7 +56,7 @@ for (const recipe of recipes) {
 }
 if (values.help) {
   console.log(
-    "Usage: yarn docs:screenshots [--base-url http://localhost:9000] [--only id,id] [--fixtures file.json] [--dataset-id ID] [--organization sample_organization] [--executable CHROME_PATH] [--browser-url URL] [--browser-frame none|generic] [--headed] [--output .docs-screenshots] [--list | --apply]\nSee tools/docs-screenshots/README.md. WK_AUTH_TOKEN authenticates to the local instance.",
+    "Usage: yarn docs:screenshots [--base-url http://localhost:9000] [--only id,id] [--fixtures file.json] [--dataset-id ID] [--organization sample_organization] [--executable CHROME_PATH] [--browser-url URL] [--browser-frame none|generic] [--headed] [--output .docs-screenshots] [--diff-threshold 3] [--list | --apply]\nSee tools/docs-screenshots/README.md. WK_AUTH_TOKEN authenticates to the local instance.",
   );
 } else if (values.list) {
   for (const recipe of recipes) console.log(`${recipe.id}\t${recipe.output}`);
@@ -167,10 +172,13 @@ async function run() {
     datasetId,
     browser: await browser.version(),
     browserFrame: values["browser-frame"],
+    diffThreshold,
     // Excluded images are listed in the review so they are not overlooked.
     excluded: coverage.excluded.map(({ path, kind, reason }) => ({ path, kind, reason })),
     results: [],
   };
+  // A separate blank page decodes images for comparison, independent of the recipe contexts.
+  const decodePage = await (await browser.newContext()).newPage();
   try {
     for (const recipe of selected) {
       console.log(`Capturing ${recipe.id}`);
@@ -294,6 +302,16 @@ async function run() {
           sha256: digest(image),
           previousSha256: digest(old),
         });
+        const diff = diffImages(
+          await decodeImage(decodePage, old),
+          await decodeImage(decodePage, image),
+        );
+        entry.diffRatio = diff.ratio;
+        if (diff.image) {
+          entry.diffImage = `diff/${path.basename(recipe.output)}.png`;
+          await fs.mkdir(path.join(output, "diff"), { recursive: true });
+          await fs.writeFile(path.join(output, entry.diffImage), diff.image);
+        }
       } catch (error) {
         const failureImage = `failure-${encodeURIComponent(recipe.id)}.png`;
         await page

@@ -473,3 +473,26 @@ export async function addBrowserFrame(page, bytes, output, baseUrl) {
     await frame.close();
   }
 }
+
+// Decodes PNG/JPEG screenshots to RGBA pixels with the browser's codecs, so comparing
+// images needs no native image library.
+export async function decodeImage(page, bytes) {
+  const { width, height, rgba } = await page.evaluate(async (base64) => {
+    const blob = await (await fetch(`data:application/octet-stream;base64,${base64}`)).blob();
+    const bitmap = await createImageBitmap(blob, {
+      colorSpaceConversion: "none",
+      premultiplyAlpha: "none",
+    });
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const context = canvas.getContext("2d");
+    context.drawImage(bitmap, 0, 0);
+    const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+    const dataUrl = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(new Blob([data]));
+    });
+    return { width: bitmap.width, height: bitmap.height, rgba: dataUrl.split(",")[1] };
+  }, Buffer.from(bytes).toString("base64"));
+  return { width, height, data: Buffer.from(rgba, "base64") };
+}

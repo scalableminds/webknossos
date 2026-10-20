@@ -3,7 +3,15 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { applyReport, digest, imagePath, reviewPath, writeReport } from "./core.mjs";
+import {
+  applyReport,
+  diffImages,
+  digest,
+  imagePath,
+  isChanged,
+  reviewPath,
+  writeReport,
+} from "./core.mjs";
 
 test("rejects paths outside documentation raster images", () => {
   for (const value of ["../image.png", "docs/../../image.png", "docs/x.svg", "/docs/x.png"])
@@ -83,4 +91,21 @@ test("failed captures cannot replace originals and tampered captures are refused
   await fs.rm(path.join(output, "new"), { recursive: true });
   await assert.rejects(applyReport(root, output, [recipe]), /Missing capture of docs\/a\.png/);
   assert.equal(await fs.readFile(imagePath(root, recipe.output), "utf8"), "original");
+});
+
+test("diff ratio counts differing pixels and ignores small color noise", () => {
+  const image = (pixels) => ({ width: 10, height: 10, data: Buffer.from(pixels.flat()) });
+  const gray = Array.from({ length: 100 }, () => [200, 200, 200, 255]);
+  const noisy = gray.map(([r, g, b, a]) => [r + 2, g - 2, b + 1, a]);
+  const changed = gray.map((pixel, index) => (index < 5 ? [0, 0, 0, 255] : pixel));
+  assert.equal(diffImages(image(gray), image(noisy)).ratio, 0);
+  const diff = diffImages(image(gray), image(changed));
+  assert.equal(diff.ratio, 0.05);
+  assert.ok(diff.image.length > 0);
+  assert.deepEqual(diffImages(image(gray), { width: 5, height: 20, data: image(gray).data }), {
+    ratio: 1,
+  });
+  assert.equal(isChanged({ status: "success", diffRatio: 0.05 }, 0.03), true);
+  assert.equal(isChanged({ status: "success", diffRatio: 0.01 }, 0.03), false);
+  assert.equal(isChanged({ status: "failed" }, 0.03), false);
 });

@@ -26,10 +26,10 @@ import {
   createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
   flatToNestedMatrix,
+  getTransformPointUnscaledFn,
   invertTransform,
   nestedToFlatMatrix,
   type Transform,
-  transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 import { getDataLayers, getLayerBoundingBox, getLayerByName } from "./dataset_accessor";
 
@@ -244,7 +244,7 @@ export function getInverseSegmentationTransformer(
   const { nativelyRenderedLayerName } = state.datasetConfiguration;
   const layer = getLayerByName(dataset, segmentationLayerName);
   const segmentationTransforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
-  return transformPointUnscaled(invertTransform(segmentationTransforms));
+  return getTransformPointUnscaledFn(invertTransform(segmentationTransforms));
 }
 
 export const hasDatasetTransforms = memoizeOne((dataset: APIDataset) => {
@@ -318,7 +318,7 @@ export function globalToLayerTransformedPosition(
     state.datasetConfiguration.nativelyRenderedLayerName,
   );
   if (layerTransforms) {
-    return transformPointUnscaled(invertTransform(layerTransforms))(globalPos);
+    return getTransformPointUnscaledFn(invertTransform(layerTransforms))(globalPos);
   }
   return globalPos;
 }
@@ -339,7 +339,7 @@ export function layerToGlobalTransformedPosition(
     state.datasetConfiguration.nativelyRenderedLayerName,
   );
   if (layerTransforms) {
-    return transformPointUnscaled(layerTransforms)(layerPos);
+    return getTransformPointUnscaledFn(layerTransforms)(layerPos);
   }
   return layerPos;
 }
@@ -368,7 +368,9 @@ function _getTransformedDatasetBoundingBox(
     const layerBox = getLayerBoundingBox(dataset, dataLayer.name);
     const transform = getTransformsForLayerOrNull(dataset, dataLayer, nativelyRenderedLayerName);
     const corners = new BoundingBox(layerBox).getCorners();
-    const transformedCorners = transform ? corners.map(transformPointUnscaled(transform)) : corners;
+    const transformedCorners = transform
+      ? corners.map(getTransformPointUnscaledFn(transform))
+      : corners;
 
     for (const corner of transformedCorners) {
       for (const i of Vector3Indices) {
@@ -536,7 +538,7 @@ export function rebaseTranslationToPivot(
   // function cannot disagree with it about the rotation order or the matrix convention.
   const chain = buildLiveTransforms(srt.scale, srt.rotation, [0, 0, 0], [0, 0, 0]);
   const linearPart = combineCoordinateTransformations(chain.slice(1, 5), [1, 1, 1]);
-  const mappedDelta = transformPointUnscaled(linearPart)(delta);
+  const mappedDelta = getTransformPointUnscaledFn(linearPart)(delta);
   return [
     srt.translation[0] + delta[0] - mappedDelta[0],
     srt.translation[1] + delta[1] - mappedDelta[1],

@@ -45,9 +45,9 @@ import {
 } from "../helpers/rotation_helpers";
 import {
   chainTransforms,
+  getTransformPointUnscaledFn,
   invertTransform,
   type Transform,
-  transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
@@ -241,14 +241,16 @@ export function getNewPositionAndZoomChangeFromTransformationChange(
   const changeInAppliedTransformation = chainTransforms(currentTransformInverted, nextTransform);
 
   const currentPosition = getPosition(state.flycam);
-  const newPosition = transformPointUnscaled(changeInAppliedTransformation)(currentPosition);
+  const newPosition = getTransformPointUnscaledFn(changeInAppliedTransformation)(currentPosition);
 
   // Also transform a reference coordinate to determine how the scaling
   // changed. Then, adapt the zoom accordingly.
 
   const referenceOffset: Vector3 = [10, 10, 10];
   const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
-  const newSecondPosition = transformPointUnscaled(changeInAppliedTransformation)(secondPosition);
+  const newSecondPosition = getTransformPointUnscaledFn(changeInAppliedTransformation)(
+    secondPosition,
+  );
 
   const scaleChange = mean(
     // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)

@@ -1122,11 +1122,12 @@ function SkeletonTracingReducer(
     }
 
     case "CREATE_TREE": {
-      const { timestamp } = action;
-      const tree = createTree(state, timestamp);
-      if (tree == null) {
+      const { timestamp, name, color } = action;
+      const createdTree = createTree(state, timestamp, true, name);
+      if (createdTree == null) {
         return state;
       }
+      const tree = color != null ? { ...createdTree, color } : createdTree;
 
       if (action.treeIdCallback) {
         action.treeIdCallback(tree.treeId);

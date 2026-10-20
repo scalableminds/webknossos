@@ -37,6 +37,15 @@ import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { openAIJobDrawerFromUrl } from "viewer/view/ai_jobs/ai_job_url_param";
+import {
+  isLayerRegistrationStore,
+  isLayerRegistrationWorker,
+} from "viewer/view/layer_registration/layer_registration_protocol";
+import {
+  applyLayerRegistrationWorkerSettings,
+  blockLayerRegistrationWorkerNavigation,
+  reportLayerRegistrationStoreSavedState,
+} from "viewer/view/layer_registration/layer_registration_worker";
 import { AnnotationTool } from "./model/accessors/tool_accessor";
 import {
   toggleAllTreesAction,
@@ -214,20 +223,29 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       return;
     };
 
-    window.onbeforeunload = beforeUnload;
+    const blockNavigation = isLayerRegistrationWorker()
+      ? blockLayerRegistrationWorkerNavigation
+      : beforeUnload;
+    window.onbeforeunload = blockNavigation;
     this.props.setBlocking({
       // @ts-expect-error beforeUnload signature is overloaded
-      shouldBlock: beforeUnload,
+      shouldBlock: blockNavigation,
     });
 
     UrlManager.startUrlUpdater();
     openAIJobDrawerFromUrl();
+    if (isLayerRegistrationWorker()) {
+      applyLayerRegistrationWorkerSettings();
+    }
     await initializeSceneController();
     this.initKeyboard();
     this.initTaskScript();
     window.webknossos = new ApiLoader(Model);
     app.vent.emit("webknossos:initialized");
     Store.dispatch(wkInitializedAction());
+    if (isLayerRegistrationStore()) {
+      reportLayerRegistrationStoreSavedState();
+    }
     this.props.setControllerStatus("loaded");
   }
 

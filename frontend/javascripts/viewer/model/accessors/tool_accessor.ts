@@ -161,6 +161,9 @@ export const Toolkit = {
   VOLUME_TOOLS: "VOLUME_TOOLS",
   READ_ONLY_TOOLS: "READ_ONLY_TOOLS",
   SPLIT_SEGMENTS: "SPLIT_SEGMENTS",
+  // Only used by the layer registration workers (see layer_registration_worker.ts). It is not
+  // offered in the toolkit switcher.
+  LANDMARKS: "LANDMARKS",
 } as const;
 export type Toolkit = (typeof Toolkit)[keyof typeof Toolkit];
 
@@ -189,6 +192,7 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
     AnnotationTool.VOXEL_PIPETTE,
     AnnotationTool.BOUNDING_BOX,
   ] as AnnotationTool[],
+  LANDMARKS: [AnnotationTool.MOVE, AnnotationTool.SKELETON] as AnnotationTool[],
 };
 
 export const WRITE_TOOLS = without(Toolkits.ALL_TOOLS, ...Toolkits.READ_ONLY_TOOLS);

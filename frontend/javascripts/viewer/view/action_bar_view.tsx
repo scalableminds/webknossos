@@ -42,6 +42,7 @@ import TracingActionsView, {
 } from "viewer/view/action_bar/tracing_actions_view";
 import ViewDatasetActionsView from "viewer/view/action_bar/view_dataset_actions_view";
 import { getAIJobsUnsupportedReason } from "viewer/view/ai_jobs/ai_job_url_param";
+import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
 import {
   addNewLayout,
   deleteLayout,
@@ -274,9 +275,11 @@ function ModesView() {
   const isOrthoMode = useWkSelector(
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );
+  // The layer registration workers use a fixed toolkit (see layer_registration_worker.ts).
+  const isToolkitFixed = isLayerRegistrationWorker();
 
   // The outer div is necessary for proper spacing.
-  return isViewMode || isReadOnly || !isOrthoMode ? null : (
+  return isViewMode || isReadOnly || !isOrthoMode || isToolkitFixed ? null : (
     <div>
       <Space.Compact>
         <ToolkitView />

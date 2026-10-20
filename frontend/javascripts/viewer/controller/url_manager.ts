@@ -47,7 +47,7 @@ type PrecomputedMeshUrlDescriptor = BaseMeshUrlDescriptor & {
   readonly isPrecomputed: true;
   meshFileName: string;
 };
-type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
+export type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
 export type DirectLayerSpecificProps = Mutable<
   Partial<
     Pick<

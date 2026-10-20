@@ -8,7 +8,7 @@ import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import type { APIAnnotationBookmark } from "types/api_types";
 import { validateUrlStateJSON } from "types/validation";
-import { applyState } from "viewer/controller/apply_url_state";
+import { applyBookmarkState } from "viewer/controller/apply_url_state";
 import UrlManager from "viewer/controller/url_manager";
 import { addBookmarkAction } from "viewer/model/actions/annotation_actions";
 import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
@@ -48,11 +48,9 @@ export default function BookmarksTab() {
         console.error(e);
         return;
       }
-      // applyState covers everything a fresh page load with this JSON in the URL hash would
-      // apply (position, rotation, zoom, tdCamera, per-layer settings, meshes, ...) except the
-      // view mode, which -- mirroring model_initialization.ts's own initial-load handling -- is
-      // dispatched separately.
-      applyState(urlState, false, Store.getState().dataset);
+      // The view mode is not part of applyState and is dispatched separately,
+      // mirroring model_initialization.ts.
+      applyBookmarkState(urlState, Store.getState().dataset);
       if (urlState.mode != null) {
         dispatch(setViewModeAction(urlState.mode));
       }

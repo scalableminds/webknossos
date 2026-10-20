@@ -471,7 +471,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     bucketDiffs,
     cube.magInfo,
     volumeTracing.tracingId,
-    runAxisForPlane(thirdDim as 0 | 1 | 2),
+    runAxisForPlane(activeViewport),
   );
 
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));

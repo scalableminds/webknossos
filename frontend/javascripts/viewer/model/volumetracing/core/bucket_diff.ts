@@ -1,3 +1,4 @@
+import type { OrthoView } from "viewer/constants";
 import { BucketVoxelMask, type RunAxis } from "./bucket_voxel_mask";
 import type { BucketWrite, BucketWriteMap } from "./bucket_write_map";
 import {
@@ -87,10 +88,19 @@ export const BUCKET_DIFF_FORMAT_VERSION = 1;
 /**
  * The run order in which a stroke drawn in a viewport is contiguous: the one
  * whose two fastest axes span the viewport (x,y,z for XY, y,z,x for YZ,
- * z,x,y for XZ). `planeNormal` is the viewport normal (0 = YZ, 1 = XZ, 2 = XY).
+ * z,x,y for XZ).
  */
-export function runAxisForPlane(planeNormal: 0 | 1 | 2): RunAxis {
-  return ((planeNormal + 1) % 3) as RunAxis;
+export function runAxisForPlane(plane: OrthoView): RunAxis {
+  switch (plane) {
+    case "PLANE_XY":
+      return 0;
+    case "PLANE_YZ":
+      return 1;
+    case "PLANE_XZ":
+      return 2;
+    default:
+      throw new Error(`There is no run order for the viewport ${plane}.`);
+  }
 }
 
 /**
@@ -155,6 +165,9 @@ function writeVarint(bytes: Uint8Array, offset: number, value: number): number {
   return offset;
 }
 
+// Bytes per String.fromCharCode call in encodeBucketDiffBase64.
+const BASE64_CHUNK_SIZE = 8192;
+
 /**
  * Base64 of `encodeBucketDiff`'s bytes, ready to go straight into an
  * `updateBucketPartial` update action. Converted in chunks, because spreading
@@ -164,8 +177,8 @@ function writeVarint(bytes: Uint8Array, offset: number, value: number): number {
 export function encodeBucketDiffBase64(diff: BucketDiff, runAxis: RunAxis = 0): string {
   const bytes = encodeBucketDiff(diff, runAxis);
   let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 0x2000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x2000));
+  for (let offset = 0; offset < bytes.length; offset += BASE64_CHUNK_SIZE) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + BASE64_CHUNK_SIZE));
   }
   return btoa(binary);
 }

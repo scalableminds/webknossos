@@ -434,6 +434,7 @@ function ShareModalViewInner(props: Props) {
   const includeToken = !dataset.isPublic && visibility === "Public";
   const longUrl = getUrl(sharingToken, includeToken);
 
+  const allowsVolumeAnnotation = WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation;
   const concurrentDisabledReason = useMemo(() => {
     if (!hasUpdatePermissions) {
       return "You don't have the permissions to change this setting. Ask the owner to change it instead.";
@@ -621,7 +622,13 @@ function ShareModalViewInner(props: Props) {
                 disabled={concurrentDisabledReason != null}
               >
                 Yes, allow simultaneous editing
-                <FastTooltip title="Currently not recommended for production use. Requires at least one saved proofreading action.">
+                <FastTooltip
+                  title={
+                    allowsVolumeAnnotation
+                      ? "Currently not recommended for production use. Requires a locked mapping."
+                      : "Currently not recommended for production use. Requires at least one saved proofreading action."
+                  }
+                >
                   <Tag
                     style={{ marginLeft: 4 }}
                     color="warning"
@@ -639,10 +646,19 @@ function ShareModalViewInner(props: Props) {
               }}
             >
               When enabled, users can edit the annotation in parallel. This feature is experimental
-              and is currently limited to the proofreading tool (
-              <b>skeleton and brushing will be disabled</b>). When disabled, only one user can edit
-              at the same time. We recommend to coordinate the collaboration with your peers to
-              avoid being blocked.
+              and is currently limited to{" "}
+              {allowsVolumeAnnotation ? (
+                <>
+                  the proofreading tool, the brush, the eraser and the fill tool (
+                  <b>skeleton and other volume tools will be disabled</b>).
+                </>
+              ) : (
+                <>
+                  the proofreading tool (<b>skeleton and brushing will be disabled</b>).
+                </>
+              )}{" "}
+              When disabled, only one user can edit at the same time. We recommend to coordinate the
+              collaboration with your peers to avoid being blocked.
             </Hint>
           </Col>
         </Row>

@@ -307,10 +307,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     });
     // A 2D fill lies in the viewport's plane, so it uses the run order in which
     // that plane is contiguous. A 3D fill has no such plane and keeps x order.
-    const runAxis: RunAxis =
-      fillMode === FillModeEnum._3D
-        ? 0
-        : runAxisForPlane(Dimensions.thirdDimensionForPlane(planeId) as 0 | 1 | 2);
+    const runAxis: RunAxis = fillMode === FillModeEnum._3D ? 0 : runAxisForPlane(planeId);
     yield* call(
       pushPartialBucketUpdates,
       saveMode,

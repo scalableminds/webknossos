@@ -46,7 +46,9 @@ class TemporalBucketManager {
         this.pendingBuckets.delete(bucket);
         if (bucket.dirty) {
           if (bucket.savedViaPartialUpdates) {
-            // The backend data is merged now; the changes are saved as partial updates.
+            // The bucket was edited while loading, so ending the mutation couldn't clear
+            // `dirty` yet: it has to stay set until the backend data is merged (see
+            // receiveData). That happened now, and nothing needs to be pushed.
             bucket.clearDirtyIfSavedViaPartialUpdates();
           } else {
             this.pushQueue.insert(bucket);

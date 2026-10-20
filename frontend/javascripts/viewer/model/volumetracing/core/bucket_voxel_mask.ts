@@ -105,20 +105,27 @@ export class BucketVoxelMask {
    * contiguous, as an XY stroke is in x order.
    */
   *orderedRuns(fastAxis: RunAxis): Generator<{ start: number; length: number }> {
+    // Word w holds the order's linear indices 32w to 32w + 31, bit b being 32w + b.
     const words = fastAxis === 0 ? this.words : transposedWords(this.words, fastAxis);
+    // Start of the run that is still open, or -1. A run stays open across words,
+    // which merges runs across rows and slices.
     let runStart = -1;
     for (let word = 0; word < WORD_COUNT; word++) {
       const value = words[word];
       const base = word * WORD_BITS;
+      // Fast path for empty and full words, which need no bit scan.
       if (value === 0 || value === 0xffffffff) {
         if (value === 0 && runStart >= 0) {
+          // An empty word ends the open run.
           yield { start: runStart, length: base - runStart };
           runStart = -1;
         } else if (value !== 0 && runStart < 0) {
+          // A full word starts a run if none is open.
           runStart = base;
         }
         continue;
       }
+      // Otherwise, a set bit starts a run and an unset bit ends it.
       for (let bit = 0; bit < WORD_BITS; bit++) {
         const index = base + bit;
         if ((value & (1 << bit)) !== 0) {
@@ -129,6 +136,7 @@ export class BucketVoxelMask {
         }
       }
     }
+    // A run that is still open ends at the bucket's end.
     if (runStart >= 0) yield { start: runStart, length: BUCKET_VOXEL_COUNT - runStart };
   }
 
@@ -152,6 +160,17 @@ export type RunAxis = 0 | 1 | 2;
  *   z + 32x with bits y.
  * - z order (z + 32x + 1024y): per y-slice, rows z with bits x become words
  *   x + 32y with bits z.
+ *
+ * Example for the y order, shrunk to 4×4: a YZ stroke at x = 1 that covers
+ * y = 0 to 2 in slice z. Bits are written lowest first.
+ *
+ *   mask words (rows y, bits x)              transposed words (rows x, bits y)
+ *   word y + 32z, y = 0:  0100               word z + 32x, x = 0:  0000
+ *                 y = 1:  0100   transpose                 x = 1:  1110
+ *                 y = 2:  0100   ────────►                 x = 2:  0000
+ *                 y = 3:  0000                             x = 3:  0000
+ *
+ * The three x-runs of length 1 become one y-run of length 3.
  */
 function transposedWords(words: Uint32Array, fastAxis: 1 | 2): Uint32Array {
   const out = new Uint32Array(WORD_COUNT);

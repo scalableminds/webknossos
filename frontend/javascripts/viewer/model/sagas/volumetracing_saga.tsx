@@ -323,7 +323,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       brushStroke = {
         driver,
         magInfo: segmentationLayer.cube.magInfo,
-        runAxis: runAxisForPlane(planeAxis),
+        runAxis: runAxisForPlane(startEditingAction.planeId),
         saveMode,
       };
     }

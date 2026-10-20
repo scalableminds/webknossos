@@ -1,3 +1,5 @@
+import { type OrthoView, OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
+import Dimensions from "viewer/model/dimensions";
 import {
   BUCKET_DIFF_FORMAT_VERSION,
   type BucketDiff,
@@ -13,7 +15,8 @@ import { describe, expect, it } from "vitest";
 
 const ADDRESS = [0, 0, 0, 0, null] as unknown as BucketDiff["address"];
 
-// A diff as the core produces it: the mask's per-row x-runs, one value.
+// Builds a diff that writes `value` to the given voxels. Its runs follow x and end at
+// each row's end, as the diffs of a transaction do.
 function diffOf(indices: Iterable<number>, value = 7n): BucketDiff {
   const mask = new BucketVoxelMask();
   for (const index of indices) mask.mark(index);
@@ -21,16 +24,15 @@ function diffOf(indices: Iterable<number>, value = 7n): BucketDiff {
   return { address: ADDRESS, runs };
 }
 
-// A disk of radius 10 around the bucket center in the plane with the given
-// normal, one voxel thick, as a brush dab in that viewport.
-function diskIndices(planeNormal: 0 | 1 | 2): number[] {
+// A disk of radius 10 around the bucket center in the given viewport's plane,
+// one voxel thick, as a brush dab in that viewport.
+function diskIndices(plane: OrthoView): number[] {
   const indices: number[] = [];
   for (let a = 0; a < 32; a++) {
     for (let b = 0; b < 32; b++) {
       if ((a - 16) ** 2 + (b - 16) ** 2 > 100) continue;
-      const position = [a, b];
-      position.splice(planeNormal, 0, 16);
-      indices.push(voxelIndexOf(position[0], position[1], position[2]));
+      const [x, y, z] = Dimensions.transDim([a, b, 16], plane);
+      indices.push(voxelIndexOf(x, y, z));
     }
   }
   return indices;
@@ -38,14 +40,14 @@ function diskIndices(planeNormal: 0 | 1 | 2): number[] {
 
 describe("volume annotation core — bucket diff encoding", () => {
   it("picks the run order whose two fastest axes span the viewport", () => {
-    expect(runAxisForPlane(2)).toBe(0); // XY: x, y, z
-    expect(runAxisForPlane(0)).toBe(1); // YZ: y, z, x
-    expect(runAxisForPlane(1)).toBe(2); // XZ: z, x, y
+    expect(runAxisForPlane(OrthoViews.PLANE_XY)).toBe(0); // x, y, z
+    expect(runAxisForPlane(OrthoViews.PLANE_YZ)).toBe(1); // y, z, x
+    expect(runAxisForPlane(OrthoViews.PLANE_XZ)).toBe(2); // z, x, y
   });
 
   it("round-trips in every run order", () => {
-    for (const planeNormal of [0, 1, 2] as const) {
-      const diff = diffOf(diskIndices(planeNormal), 2n ** 64n - 1n);
+    for (const plane of OrthoViewValuesWithoutTDView) {
+      const diff = diffOf(diskIndices(plane), 2n ** 64n - 1n);
       for (const runAxis of [0, 1, 2] as const) {
         expect(decodeBucketDiff(encodeBucketDiff(diff, runAxis))).toEqual(diff.runs);
       }
@@ -53,13 +55,14 @@ describe("volume annotation core — bucket diff encoding", () => {
   });
 
   it("encodes a stroke as compactly in YZ and XZ as in XY, given the viewport's order", () => {
-    const sizes = ([0, 1, 2] as const).map(
-      (planeNormal) =>
-        encodeBucketDiff(diffOf(diskIndices(planeNormal)), runAxisForPlane(planeNormal)).length,
+    const sizes = OrthoViewValuesWithoutTDView.map(
+      (plane) => encodeBucketDiff(diffOf(diskIndices(plane)), runAxisForPlane(plane)).length,
     );
     expect(new Set(sizes).size).toBe(1);
     // In x order, the YZ disk is one run per voxel instead of one per row.
-    expect(encodeBucketDiff(diffOf(diskIndices(0)), 0).length).toBeGreaterThan(sizes[0] * 10);
+    expect(encodeBucketDiff(diffOf(diskIndices(OrthoViews.PLANE_YZ)), 0).length).toBeGreaterThan(
+      sizes[0] * 10,
+    );
   });
 
   it("writes the header and varints as specified", () => {
@@ -103,7 +106,7 @@ describe("volume annotation core — bucket diff encoding", () => {
   });
 
   it("produces the same bytes in base64", () => {
-    const diff = diffOf(diskIndices(1));
+    const diff = diffOf(diskIndices(OrthoViews.PLANE_XZ));
     const bytes = encodeBucketDiff(diff, 2);
     expect(Uint8Array.from(atob(encodeBucketDiffBase64(diff, 2)), (c) => c.charCodeAt(0))).toEqual(
       bytes,

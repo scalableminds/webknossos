@@ -570,6 +570,13 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       expect(await api.data.getDataValue(volumeTracingLayerName, position)).toBe(newCellId);
     });
 
+    /**
+     * Simulates receiving another user's updateBucketPartial for a loaded bucket: it writes
+     * newCellId to the first three voxels of a bucket that is oldCellId locally. Afterwards,
+     * the backend answers bucket requests with newCellId everywhere, so the result shows
+     * whether the bucket got the runs applied (only the first voxels change) or was fetched
+     * again (all voxels change), depending on refetchBucketsForRemotePartialUpdates.
+     */
     async function incorporateRemotePartialUpdate(
       context: WebknossosTestContext,
       refetchBucketsForRemotePartialUpdates: boolean,

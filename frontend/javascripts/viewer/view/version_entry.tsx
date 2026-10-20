@@ -242,7 +242,7 @@ const descriptionFns: Record<
       icon: <PictureOutlined />,
     };
   },
-  // SPIKE: new volume architecture, see update_actions.ts.
+  // From the new volume architecture, see update_actions.ts.
   updateBucketPartial: (
     firstAction: AsServerAction<UpdateBucketPartialUpdateAction>,
     _actionCount: number,

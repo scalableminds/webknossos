@@ -185,9 +185,9 @@ export function* tryToIncorporateActions(
 
           const bucket = cube.getBucket(bucketAddress);
           const voxelRunsBase64 =
-            action.name === "updateBucketPartial" ? action.value.voxelRunsBase64 : "";
+            action.name === "updateBucketPartial" ? action.value.voxelRunsBase64 : null;
           if (
-            voxelRunsBase64 !== "" &&
+            voxelRunsBase64 != null &&
             bucket.type === "data" &&
             bucket.isLoaded() &&
             !WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates

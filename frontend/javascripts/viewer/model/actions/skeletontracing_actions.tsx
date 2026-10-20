@@ -412,11 +412,15 @@ export const createTreeAction = (
   // will be triggered with the id that will be assigned.
   treeIdCallback?: (id: number) => void,
   timestamp: number = Date.now(),
+  // Without a name and color, the tree gets a generated name and the color of its id.
+  { name, color }: { name?: string; color?: Vector3 } = {},
 ) =>
   ({
     type: "CREATE_TREE",
     treeIdCallback,
     timestamp,
+    name,
+    color,
   }) as const;
 
 export const setTreeEdgeVisibilityAction = (

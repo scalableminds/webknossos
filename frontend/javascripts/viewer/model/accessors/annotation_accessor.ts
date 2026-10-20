@@ -167,8 +167,9 @@ export const isEditingAnnotationLayerSetDisabled = reuseInstanceOnEquality(
 export function mayEditAnnotationViewConfig(state: WebknossosState) {
   // All users that are allowed to update the annotation have their own view
   // config and can thus update it. This is independent of the collaboration
-  // mode and annotation mutexes.
-  return state.annotation.restrictions.allowUpdate;
+  // mode and annotation mutexes. Sandbox annotations allow updates but not saving.
+  // They don't exist on the server, so their view config can't be stored either.
+  return state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave;
 }
 
 export function isAnnotationOwner(state: WebknossosState) {

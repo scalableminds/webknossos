@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   UpsertSegmentGroupVolumeAction
 }
 import org.scalatest.wordspec.AsyncWordSpec
+import play.api.libs.json.Json
 
 class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryConversions {
 
@@ -314,6 +315,33 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
       assert(updateSegmentPartialAction.color.contains(segment.color.map(colorFromProto)))
       assert(updateSegmentPartialAction.groupId.contains(segment.groupId))
       assert(updateSegmentPartialAction.creationTime.contains(segment.creationTime))
+    }
+
+    "distinguish between absent keys and null values when parsed from json" in {
+      def parse(json: String): UpdateSegmentPartialVolumeAction =
+        Json.parse(json).as[UpdateSegmentPartialVolumeAction]
+
+      val withGroup = applyUpdateAction(
+        parse(s"""{"id": 5, "groupId": 1, "actionTracingId": "${Dummies.tracingId}"}""")
+      )
+      assert(withGroup.segments.find(_.segmentId == 5).get.groupId.contains(1))
+
+      // An absent key must keep the property unchanged.
+      val absentAction = parse(s"""{"id": 5, "actionTracingId": "${Dummies.tracingId}"}""")
+      assert(absentAction.groupId.isEmpty)
+      assert(absentAction.anchorPosition.isEmpty)
+      val afterAbsent = absentAction.applyOn(withGroup).segments.find(_.segmentId == 5).get
+      assert(afterAbsent.groupId.contains(1))
+      assert(afterAbsent.anchorPosition.contains(Vec3IntProto(7, 7, 7)))
+
+      // A null value must unset the property.
+      val nullAction =
+        parse(s"""{"id": 5, "groupId": null, "anchorPosition": null, "actionTracingId": "${Dummies.tracingId}"}""")
+      assert(nullAction.groupId.contains(None))
+      assert(nullAction.anchorPosition.contains(None))
+      val afterNull = nullAction.applyOn(withGroup).segments.find(_.segmentId == 5).get
+      assert(afterNull.groupId.isEmpty)
+      assert(afterNull.anchorPosition.isEmpty)
     }
   }
 

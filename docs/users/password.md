@@ -6,6 +6,8 @@ Users can manage their account settings by clicking on their user avatar in the 
 
 The profile page allows users to manage their personal information and preferences.
 
+![Profile tab of the account settings](../images/account_profile.jpeg)
+
 ### Name
 
 Users can update their displayed username from the `Profile` tab within `Account Settings`.

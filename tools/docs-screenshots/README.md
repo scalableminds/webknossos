@@ -21,7 +21,7 @@ yarn docs:screenshots --only images-main_ui-png --base-url http://localhost:9000
 # Capture all screenshots using the reusable local fixtures.
 yarn docs:screenshots --fixtures /absolute/path/to/fixtures.json
 
-# Inspect .docs-screenshots/index.html, then apply successful captures.
+# Inspect .docs-screenshots/index.html ("Changed" lists captures that differ from the docs), then apply successful captures.
 yarn docs:screenshots:apply
 ```
 
@@ -88,7 +88,7 @@ Scenes that only need UI state have dedicated recipes in `viewer.mjs` instead: t
 
 `report.json` records the browser, dataset ID, successful outputs, and per-recipe failures. `index.html` shows before/after pairs and errors. Each capture is compared with the current docs image pixel by pixel (ignoring JPEG noise); the share of changed pixels is shown on its card with an overlay of the changed pixels, and the "Changed" filter lists captures where at least `--diff-threshold` percent of pixels differ (default 3). A changed image size counts as 100 %. The command exits unsuccessfully if any selected recipe fails, but keeps successful captures available for review. Apply copies only successful images from the latest report, verifies their hashes, and refuses to overwrite a docs image changed since capture. Failed images remain unchanged. Different-sized screenshots are allowed; crops follow elements rather than fixed screen coordinates.
 
-Capture uses the real app UI. Missing selectors, disabled features, unavailable records, and server errors must be fixed instead of accepted as new baselines. The browser is isolated between recipes, but the local database fixtures are shared and should be kept stable. `index.html` has a header with the number of captured, succeeded, failed and excluded images and filters for each; excluded images are listed with their reason and current image. Run sequentially against the dedicated local account.
+Capture uses the real app UI. Missing selectors, disabled features, unavailable records, and server errors must be fixed instead of accepted as new baselines. The browser is isolated between recipes, but the local database fixtures are shared and should be kept stable. `index.html` has a header with the number of captured, succeeded, changed, failed and excluded images and filters for each; excluded images are listed with their reason and current image. Run sequentially against the dedicated local account.
 
 ## Framing
 
@@ -106,7 +106,7 @@ Editorial `callouts` add red text boxes with curved arrows, as in the box-sampli
 - `admin.mjs`: dashboard, dataset settings, users, tasks, jobs, onboarding.
 - `assets.json`: complete image classification, with reasons for exclusions.
 - `run.mjs`: browser lifecycle, dataset resolution, authenticated requests, capture, cleanup.
-- `core.mjs`: gallery and guarded apply operation.
+- `core.mjs`: gallery, image diff and guarded apply operation.
 - `setup-fixtures.mjs`: creates the local admin records and writes `.docs-screenshots/fixtures.local.json`.
 
 Add one recipe per still screenshot with a unique ID and existing output path, then run:
@@ -117,7 +117,7 @@ yarn docs:screenshots:test
 yarn biome check tools/docs-screenshots
 ```
 
-The coverage/unit checks run without Chrome or a local server. They check inventory/reference coverage and safe apply behavior; they do not establish that live UI selectors work. Verify changed recipes against the running local app before applying their results.
+The coverage/unit checks run without Chrome or a local server. They check inventory/reference coverage, the image diff ratio and safe apply behavior; they do not establish that live UI selectors work. Verify changed recipes against the running local app before applying their results.
 
 To exercise authentication and worker fetches in real Chrome, run `DOCS_SCREENSHOTS_BROWSER_TEST=1 node --test tools/docs-screenshots/browser.test.mjs`. Failed captures also record the page URL, initialization message, browser/request errors, queue state, and a diagnostic PNG in the review directory.
 

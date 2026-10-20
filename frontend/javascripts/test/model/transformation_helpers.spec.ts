@@ -4,8 +4,8 @@ import {
   chainTransforms,
   createAffineTransform,
   createThinPlateSplineTransform,
+  getTransformPointUnscaledFn,
   invertTransform,
-  transformPointUnscaled,
 } from "viewer/model/helpers/transformation_helpers";
 import { describe, expect, it } from "vitest";
 
@@ -30,8 +30,8 @@ describe("Transformation Helpers", () => {
     const aff1 = createAffineTransform(source, target);
     const aff1Inv = invertTransform(aff1);
 
-    const transform = transformPointUnscaled(aff1);
-    const transformInv = transformPointUnscaled(aff1Inv);
+    const transform = getTransformPointUnscaledFn(aff1);
+    const transformInv = getTransformPointUnscaledFn(aff1Inv);
 
     almostEqual(expect, transform([0, 0, 0]), [10, 10, 10], EPSILON);
     almostEqual(expect, transform([3, 7, 8]), [16, 24, 26], EPSILON);
@@ -42,7 +42,7 @@ describe("Transformation Helpers", () => {
     almostEqual(expect, transformInv([78, 66, 28]), [34, 28, 9], EPSILON);
 
     const roundtripTransform = chainTransforms(aff1, aff1Inv);
-    const transformRoundtrip = transformPointUnscaled(roundtripTransform);
+    const transformRoundtrip = getTransformPointUnscaledFn(roundtripTransform);
 
     const points = [
       [0, 0, 0],
@@ -78,10 +78,10 @@ describe("Transformation Helpers", () => {
     const tps1 = createThinPlateSplineTransform(source, target, [1, 1, 1]);
     const tps1Inv = invertTransform(tps1);
 
-    const transform = transformPointUnscaled(tps1);
-    const transformInv = transformPointUnscaled(tps1Inv);
+    const transform = getTransformPointUnscaledFn(tps1);
+    const transformInv = getTransformPointUnscaledFn(tps1Inv);
     const roundtripTransform = chainTransforms(tps1, tps1Inv);
-    const transformRoundtrip = transformPointUnscaled(roundtripTransform);
+    const transformRoundtrip = getTransformPointUnscaledFn(roundtripTransform);
 
     for (let idx = 0; idx < source.length; idx++) {
       almostEqual(expect, transform(source[idx]), target[idx], EPSILON);
@@ -135,8 +135,8 @@ describe("Transformation Helpers", () => {
       [25, 40, 55],
     ] as Vector3[];
     const aff2 = createAffineTransform(affineSource2, affineTarget2);
-    const transform12 = transformPointUnscaled(chainTransforms(aff1, aff2));
-    const transform21 = transformPointUnscaled(chainTransforms(aff2, aff1));
+    const transform12 = getTransformPointUnscaledFn(chainTransforms(aff1, aff2));
+    const transform21 = getTransformPointUnscaledFn(chainTransforms(aff2, aff1));
 
     almostEqual(expect, transform12([10, 10, 10]), [100, 100, 100], EPSILON);
     almostEqual(expect, transform21([10, 10, 10]), [90, 90, 90], EPSILON);
@@ -181,7 +181,7 @@ describe("Transformation Helpers", () => {
     ] as Vector3[];
     const tps2 = createThinPlateSplineTransform(source2, target2, [1, 1, 1]);
 
-    const transform12 = transformPointUnscaled(chainTransforms(tps1, tps2));
+    const transform12 = getTransformPointUnscaledFn(chainTransforms(tps1, tps2));
 
     almostEqual(expect, transform12([0, 0, 0]), [40, 40, 40], EPSILON);
   });
@@ -222,9 +222,9 @@ describe("Transformation Helpers", () => {
     ] as Vector3[];
     const tps = createThinPlateSplineTransform(source, target, [1, 1, 1]);
 
-    const transformA = transformPointUnscaled(aff);
-    const transformB = transformPointUnscaled(tps);
-    const transformAB = transformPointUnscaled(chainTransforms(aff, tps));
+    const transformA = getTransformPointUnscaledFn(aff);
+    const transformB = getTransformPointUnscaledFn(tps);
+    const transformAB = getTransformPointUnscaledFn(chainTransforms(aff, tps));
     // Test chaining for 0, 0, 0 -> 10, 10, 10 -> 0, 0, 0
     almostEqual(expect, transformA([0, 0, 0]), [10, 10, 10], EPSILON);
     almostEqual(expect, transformB([10, 10, 10]), [0, 0, 0], EPSILON);
@@ -272,9 +272,9 @@ describe("Transformation Helpers", () => {
     ] as Vector3[];
     const aff = createAffineTransform(affineSource, affineTarget);
 
-    const transformA = transformPointUnscaled(tps);
-    const transformB = transformPointUnscaled(aff);
-    const transformAB = transformPointUnscaled(chainTransforms(tps, aff));
+    const transformA = getTransformPointUnscaledFn(tps);
+    const transformB = getTransformPointUnscaledFn(aff);
+    const transformAB = getTransformPointUnscaledFn(chainTransforms(tps, aff));
     // Test chaining for 10, 10, 10 -> 0, 0, 0 -> 10, 10, 10
     almostEqual(expect, transformA([10, 10, 10]), [0, 0, 0], EPSILON);
     almostEqual(expect, transformB([0, 0, 0]), [10, 10, 10], EPSILON);

@@ -59,7 +59,7 @@ import LayerRegistrationView from "viewer/view/layer_registration/layer_registra
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
-  CreateExplorativeRouteWrapper,
+  CreateAnnotationRouteWrapper,
   DashboardRouteRootWrapper,
   DashboardRouteWrapper,
   DatasetSettingsRouteWrapper,
@@ -421,7 +421,7 @@ const routes: RouteObject[] = [
         path: "/datasets/:datasetId/createExplorative/:type",
         element: (
           <SecuredRoute>
-            <CreateExplorativeRouteWrapper />
+            <CreateAnnotationRouteWrapper />
           </SecuredRoute>
         ),
       },

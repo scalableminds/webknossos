@@ -8,7 +8,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type React from "react";
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getDatasetExtentInVoxel } from "viewer/model/accessors/dataset_accessor";
@@ -39,7 +39,6 @@ function DatasetPositionView() {
   const dataset = useWkSelector((state) => state.dataset);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const task = useWkSelector((state) => state.task);
-  const maybeErrorMessageRef = useRef<string | null>(null);
   const dispatch = useDispatch();
 
   const copyPositionToClipboard = () => {
@@ -95,10 +94,9 @@ function DatasetPositionView() {
   } else if (!maybeErrorMessage && isOutOfTaskBounds) {
     maybeErrorMessage = message["tracing.out_of_task_bounds"];
   }
-  maybeErrorMessageRef.current = maybeErrorMessage;
 
-  const getPositionTooltipContent = useCallback(() => {
-    if (maybeErrorMessageRef.current != null) return null;
+  const getPositionTooltipContent = () => {
+    if (maybeErrorMessage != null) return null;
     const currentFlycam = Store.getState().flycam;
     const currentPosition = V3.floor(getPosition(currentFlycam));
     const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
@@ -124,7 +122,7 @@ function DatasetPositionView() {
         </Row>
       </div>
     );
-  }, [voxelSize]);
+  };
 
   return (
     <FastTooltip title={maybeErrorMessage || null} wrapper="div">

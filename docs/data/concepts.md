@@ -149,7 +149,7 @@ WEBKNOSSOS requires several metadata properties for each dataset to properly dis
     * `index`: An integer ordering index used for sorting.
   + `dataLayers.attachments` *(optional)*: Pre-computed attachment files associated with this layer. Each attachment has a `name`, `path`, `dataFormat` (`hdf5`, `json`, `zarr3`, or `neuroglancerPrecomputed`), and optional `credentialId`. Attachment collections:
     * `meshes`: Array of pre-computed mesh files.
-    * `agglomerates`: Array of agglomerate mapping files (HDF5).
+    * `agglomerates`: Array of agglomerate mapping files.
     * `segmentIndex` *(single)*: A segment index file for fast segment lookup.
     * `connectomes`: Array of connectome files.
     * `cumsum` *(single)*: A cumulative sum file used together with agglomerate mappings.
@@ -366,7 +366,9 @@ Both `<thing>` (tree) and `<segment>` elements may contain a `<metadata>` child 
 
 WEBKNOSSOS supports [dynamic, on-demand re-mapping of the segmentation IDs](../proofreading/segmentation_mappings.md), allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These mapping files, also known as agglomerate files, need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for WEBKNOSSOS to identify and read them (self-hosted instance only).
 
-WEBKNOSSOS expects hdf5 agglomerate files in the `agglomerates` directory of the segmentation layer.
+Mapping files can be stored as HDF5 files or in a zarr3-based format, either locally or on remote object storage.
+HDF5 files placed in the `agglomerates` directory of the segmentation layer are detected automatically.
+Zarr3-based or remote mapping files need to be listed in the `attachments` of the layer in `datasource-properties.json` (see `dataLayers.attachments` above).
 
 E.g.:
 ```

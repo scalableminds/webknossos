@@ -8,18 +8,22 @@ import {
 import { getDataset } from "admin/rest_api";
 import { Alert, Avatar, Button, Divider, Flex, Modal, Typography, theme } from "antd";
 import { formatBytes } from "libs/format_utils";
-import { useQueryWithErrorHandling } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { ModalWidth } from "theme";
-import type { APIMaybeUnimportedDataset } from "types/api_types";
+import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_types";
 import {
   getDatasetThumbnailURL,
   getReadableURLPart,
   getViewDatasetURL,
 } from "viewer/model/accessors/dataset_accessor";
-import type { DatasetAddType } from "../dataset_add_type";
+import {
+  canRunAIAlignment,
+  getViewDatasetUrlWithAIAlignment,
+} from "viewer/view/ai_jobs/ai_job_url_param";
+import { DatasetAddType } from "../dataset_add_type";
 import { getDatasetLayerRows, type LayerRow } from "./upload_layers";
 import {
   LayerList,
@@ -35,6 +39,10 @@ import type { UploadStatus } from "./use_resumable_dataset_upload";
 import { useTransferRate } from "./use_transfer_rate";
 
 type ActiveUploadStatus = Exclude<UploadStatus, { kind: "idle" }>;
+
+// How often and how long the modal waits for the added dataset to become active.
+const DATASET_RELOAD_INTERVAL_MS = 2000;
+const MAX_DATASET_LOAD_COUNT = 30;
 
 const addAnotherLabel: Record<DatasetAddType, string> = {
   upload: "Upload another",
@@ -100,6 +108,32 @@ function FooterHint({ icon, children }: { icon?: React.ReactNode; children: Reac
   );
 }
 
+// Points to the AI alignment if the sections of a layer may not line up. A composed dataset
+// combines existing datasets, so this is not suggested for it.
+function NextStepHints({
+  dataset,
+  datasetAddType,
+}: {
+  dataset: APIDataset;
+  datasetAddType: DatasetAddType;
+}) {
+  const activeUser = useWkSelector((state) => state.activeUser);
+  if (datasetAddType === DatasetAddType.COMPOSE || !canRunAIAlignment(dataset, activeUser)) {
+    return null;
+  }
+  return (
+    <Typography.Paragraph style={{ margin: 0 }}>
+      If something doesn&apos;t look right:
+      <ul>
+        <li>
+          The sections of a layer are shifted against each other?{" "}
+          <Link to={getViewDatasetUrlWithAIAlignment(dataset)}>Align them with AI</Link>
+        </li>
+      </ul>
+    </Typography.Paragraph>
+  );
+}
+
 function ReadyHeader() {
   const { token } = theme.useToken();
   return (
@@ -139,6 +173,12 @@ function UploadProgressContent({
     queryKey: ["uploadedDataset", datasetId],
     queryFn: () => getDataset(datasetId as string),
     enabled: isReady && datasetId != null,
+    // A dataset can become active a moment after it is ready, when the datastore reports its
+    // data source. Until then, its layers and the next step hints are not known.
+    refetchInterval: (query) =>
+      query.state.data?.isActive || query.state.dataUpdateCount >= MAX_DATASET_LOAD_COUNT
+        ? false
+        : DATASET_RELOAD_INTERVAL_MS,
   });
   const transferRate = useTransferRate(
     getBytesSent(status),
@@ -264,6 +304,9 @@ function UploadProgressContent({
           <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
             {bodyText}
           </Typography.Paragraph>
+        ) : null}
+        {isReady && dataset?.isActive ? (
+          <NextStepHints dataset={dataset} datasetAddType={datasetAddType} />
         ) : null}
         {phase.kind === "failed" ? <Alert type="error" showIcon title={phase.message} /> : null}
 

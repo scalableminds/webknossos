@@ -30,15 +30,12 @@ const linearizeVec3ToIndexWithMod: ShaderModule = {
 
 const getRgbaAtXYIndex: ShaderModule = {
   code: `
-    // Define this function for each segmentation and color layer, since iOS cannot handle
-    // sampler2D textures[dataTextureCountPerLayer]
-    // as a function parameter properly
+    // One function per layer, so that the pool and the dtype handling are
+    // constants for the compiler.
 
     <% each(layerNamesWithSegmentation, (name) => { %>
+      // textureIdx is the slice within the layer's pool texture.
       vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
-        // Since WebGL 1 doesn't allow dynamic texture indexing, we use an exhaustive if-else-construct
-        // here which checks for each case individually. The else-if-branches are constructed via
-        // lodash templates.
 
         <%
           const textureLayerInfo = textureLayerInfos[name];
@@ -60,28 +57,12 @@ const getRgbaAtXYIndex: ShaderModule = {
           })())
         %>;
 
-        <% if (textureLayerInfo.dataTextureCount === 1) { %>
-            // Don't use if-else when there is only one data texture anyway
-            val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
-
-            <% if (elementClass.endsWith("int16")) { %>
-              return vec4(val.x, 0., val.y, 0.);
-            <% } else { %>
-              return dtype_normalizer * vec4(val);
-            <% }%>
+        val = texelFetch(<%= getPoolSamplerName(elementClass) %>, ivec3(x, y, textureIdx), 0);
+        <% if (elementClass.endsWith("int16")) { %>
+          return vec4(val.x, 0., val.y, 0.);
         <% } else { %>
-          <% range(0, textureLayerInfo.dataTextureCount).forEach(textureIndex => { %>
-          <%= textureIndex > 0 ? "else" : "" %> if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-            val = texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0);
-            <% if (elementClass.endsWith("int16")) { %>
-              return vec4(val.x, 0., val.y, 0.);
-            <% } else { %>
-              return dtype_normalizer * vec4(val);
-            <% }%>
-          }
-          <% }) %>
-          return vec4(0.5, 0.0, 0.0, 0.0);
-        <% } %>
+          return dtype_normalizer * vec4(val);
+        <% }%>
       }
     <% }); %>
 

@@ -1,6 +1,4 @@
-import max from "lodash-es/max";
 import memoize from "lodash-es/memoize";
-import min from "lodash-es/min";
 import {
   ByteType,
   FloatType,
@@ -20,16 +18,8 @@ import type { TypedArrayConstructor } from "../helpers/typed_buffer";
 export type GpuSpecs = {
   supportedTextureSize: number;
   maxTextureCount: number;
-};
-const lookupTextureCount = 1;
-export type DataTextureSizeAndCount = {
-  textureSize: number;
-  textureCount: number;
-  packingDegree: number;
-  // The number of voxels a single bucket occupies in this layer's atlas. Equal to
-  // constants.BUCKET_SIZE, unless the layer has a degenerate (e.g., z-extent-1) axis,
-  // in which case buckets are packed with a smaller footprint. See getEffectiveBucketDepth.
-  bucketVoxelCount: number;
+  // Maximum number of slices per texture array, i.e. per pool.
+  maxArrayTextureLayers: number;
 };
 
 // A data texture is a flat 2D atlas in which each bucket occupies a whole number of texture
@@ -116,136 +106,6 @@ function getDataTextureCount(
   );
 }
 
-// Only exported for testing
-export function calculateTextureSizeAndCountForLayer(
-  specs: GpuSpecs,
-  elementClass: ElementClass,
-  requiredBucketCapacity: number,
-  bucketVoxelCount: number = constants.BUCKET_SIZE,
-): DataTextureSizeAndCount {
-  let textureSize = specs.supportedTextureSize;
-  const { packingDegree } = getDtypeConfigForElementClass(elementClass);
-
-  // Try to half the texture size as long as it does not require more
-  // data textures. This ensures that we maximize the number of simultaneously
-  // renderable layers.
-  while (
-    getDataTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity, bucketVoxelCount) <=
-    getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity, bucketVoxelCount)
-  ) {
-    textureSize /= 2;
-  }
-
-  const textureCount = getDataTextureCount(
-    textureSize,
-    packingDegree,
-    requiredBucketCapacity,
-    bucketVoxelCount,
-  );
-  return {
-    textureSize,
-    textureCount,
-    packingDegree,
-    bucketVoxelCount,
-  };
-}
-
-function buildTextureInformationMap<
-  Layer extends {
-    elementClass: ElementClass;
-    category: "color" | "segmentation";
-    boundingBox: { depth: number };
-    additionalAxes: Array<AdditionalAxis> | null;
-    // Set for layers backed by a volume tracing (see APISegmentationLayer). Needed here
-    // because atlas sizing has to make the same t-recycling decision the runtime does.
-    tracingId?: string;
-  },
->(
-  layers: Array<Layer>,
-  specs: GpuSpecs,
-  requiredBucketCapacity: number,
-): Map<Layer, DataTextureSizeAndCount> {
-  const textureInformationPerLayer = new Map();
-  layers.forEach((layer) => {
-    const hasTAxis = layer.additionalAxes?.some((axis) => axis.name === "t") ?? false;
-    // A t-recycling layer needs its atlas sized for full-depth buckets despite being
-    // z-degenerate, hence the shared helper.
-    const bucketVoxelCount = usesTRecycling(
-      layer.boundingBox.depth,
-      hasTAxis,
-      layer.tracingId != null,
-    )
-      ? constants.BUCKET_SIZE
-      : constants.BUCKET_SIZE_2D *
-        getEffectiveBucketDepth(layer.boundingBox.depth, layer.tracingId != null);
-    const sizeAndCount = calculateTextureSizeAndCountForLayer(
-      specs,
-      layer.elementClass,
-      requiredBucketCapacity,
-      bucketVoxelCount,
-    );
-    textureInformationPerLayer.set(layer, sizeAndCount);
-  });
-  return textureInformationPerLayer;
-}
-
-function getSmallestCommonBucketCapacity<
-  Layer extends {
-    elementClass: ElementClass;
-  },
->(textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>): number {
-  const capacities = Array.from(textureInformationPerLayer.values()).map((sizeAndCount) =>
-    getBucketCapacity(
-      sizeAndCount.textureCount,
-      sizeAndCount.textureSize,
-      sizeAndCount.packingDegree,
-      sizeAndCount.bucketVoxelCount,
-    ),
-  );
-  return min(capacities) || 0;
-}
-
-function getRenderSupportedLayerCount<
-  Layer extends {
-    elementClass: ElementClass;
-    category: "color" | "segmentation";
-  },
->(
-  specs: GpuSpecs,
-  textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>,
-  hasSegmentation: boolean,
-) {
-  // Find out which layer needs the most textures. We assume that value is equal for all layers
-  // so that we can tell the user that X layers can be rendered simultaneously. We could be more precise
-  // here (because some layers might need fewer textures), but this would be harder to communicate to
-  // the user and also more complex to maintain code-wise.
-  const maximumTextureCountForLayer =
-    max(
-      Array.from(textureInformationPerLayer.values()).map(
-        (sizeAndCount) => sizeAndCount.textureCount,
-      ),
-    ) ?? 0;
-
-  // If a segmentation layer exists, we need to allocate a texture for custom colors,
-  // and two for mappings.
-  const textureCountForSegmentation = hasSegmentation ? 3 : 0;
-  const maximumLayerCountToRender = Math.floor(
-    (specs.maxTextureCount - textureCountForSegmentation - lookupTextureCount) /
-      maximumTextureCountForLayer,
-  );
-
-  // Without any GPU restrictions, WK would be able to render all color layers
-  // plus one segmentation layer. Use that as the upper layer count limit to avoid
-  // compiling too complex shaders.
-  const maximumLayerCount =
-    Array.from(textureInformationPerLayer.keys()).filter((l) => l.category === "color").length +
-    (hasSegmentation ? 1 : 0);
-  return {
-    maximumLayerCountToRender: Math.min(maximumLayerCountToRender, maximumLayerCount),
-    maximumTextureCountForLayer,
-  };
-}
-
 export type LayerLike = {
   elementClass: ElementClass;
   category: "color" | "segmentation";
@@ -254,39 +114,180 @@ export type LayerLike = {
   tracingId?: string;
 };
 
-export function computeDataTexturesSetup<Layer extends LayerLike>(
-  specs: GpuSpecs,
-  layers: Array<Layer>,
-  hasSegmentation: boolean,
-  requiredBucketCapacity: number,
-) {
-  const textureInformationPerLayer = buildTextureInformationMap(
-    layers,
-    specs,
-    requiredBucketCapacity,
-  );
-  // The textures are rounded up and may hold more buckets than required, but
-  // TextureBucketManager uses at most requiredBucketCapacity.
-  const smallestCommonBucketCapacity = Math.min(
-    getSmallestCommonBucketCapacity(textureInformationPerLayer),
-    requiredBucketCapacity,
-  );
-  const { maximumLayerCountToRender, maximumTextureCountForLayer } = getRenderSupportedLayerCount(
-    specs,
-    textureInformationPerLayer,
-    hasSegmentation,
-  );
+// The number of voxels one bucket of this layer occupies on the GPU. Smaller
+// than constants.BUCKET_SIZE for layers with a degenerate depth (see
+// getEffectiveBucketDepth).
+export function getGpuBucketVoxelCountForLayer(layer: LayerLike): number {
+  const hasTAxis = layer.additionalAxes?.some((axis) => axis.name === "t") ?? false;
+  // A t-recycling layer needs full-depth slots despite being z-degenerate.
+  return usesTRecycling(layer.boundingBox.depth, hasTAxis, layer.tracingId != null)
+    ? constants.BUCKET_SIZE
+    : constants.BUCKET_SIZE_2D *
+        getEffectiveBucketDepth(layer.boundingBox.depth, layer.tracingId != null);
+}
 
-  if (import.meta.env.MODE !== "test") {
-    console.log("maximumLayerCountToRender", maximumLayerCountToRender);
+// The buckets of all layers that share a GPU texture format are stored in one
+// shared sampler2DArray (a "pool"). Each layer owns a range of the pool's
+// slices. So there is one texture per pool, no matter how many layers exist.
+export enum LayerPool {
+  F32 = 0,
+  U8 = 1,
+  S8 = 2,
+  U16 = 3,
+  S16 = 4,
+}
+export const LAYER_POOLS = [
+  LayerPool.F32,
+  LayerPool.U8,
+  LayerPool.S8,
+  LayerPool.U16,
+  LayerPool.S16,
+] as const;
+
+// Width and height of every pool texture; 2048 is the smallest MAX_TEXTURE_SIZE
+// that WebGL2 guarantees. Only the depth differs between pools.
+export const LAYER_POOL_TEXTURE_WIDTH = 2048;
+
+// Shader uniform name and GLSL sampler type of each pool.
+export const LAYER_POOL_SAMPLERS: Record<LayerPool, { uniformName: string; glslType: string }> = {
+  [LayerPool.F32]: { uniformName: "pool_f32_textures", glslType: "sampler2DArray" },
+  [LayerPool.U8]: { uniformName: "pool_u8_textures", glslType: "sampler2DArray" },
+  [LayerPool.S8]: { uniformName: "pool_s8_textures", glslType: "sampler2DArray" },
+  [LayerPool.U16]: { uniformName: "pool_u16_textures", glslType: "usampler2DArray" },
+  [LayerPool.S16]: { uniformName: "pool_s16_textures", glslType: "isampler2DArray" },
+};
+
+export function getLayerPoolForElementClass(elementClass: ElementClass): LayerPool {
+  switch (elementClass) {
+    case "float":
+      return LayerPool.F32;
+    case "int8":
+      return LayerPool.S8;
+    case "uint16":
+      return LayerPool.U16;
+    case "int16":
+      return LayerPool.S16;
+    // uint8, uint24, uint32, int32, uint64, int64, double: stored as raw RGBA
+    // bytes and decoded in the shader.
+    default:
+      return LayerPool.U8;
+  }
+}
+
+export function getLayerPoolGpuConfig(pool: LayerPool): {
+  textureType: TextureDataType;
+  pixelFormat: PixelFormat;
+  internalFormat: PixelFormatGPU | undefined;
+} {
+  switch (pool) {
+    case LayerPool.F32:
+      return { textureType: FloatType, pixelFormat: RGBAFormat, internalFormat: undefined };
+    case LayerPool.U8:
+      return { textureType: UnsignedByteType, pixelFormat: RGBAFormat, internalFormat: undefined };
+    case LayerPool.S8:
+      return { textureType: ByteType, pixelFormat: RGBAFormat, internalFormat: "RGBA8_SNORM" };
+    case LayerPool.U16:
+      return {
+        textureType: UnsignedShortType,
+        pixelFormat: RGIntegerFormat,
+        internalFormat: "RG16UI",
+      };
+    case LayerPool.S16:
+      return { textureType: ShortType, pixelFormat: RGIntegerFormat, internalFormat: "RG16I" };
+    default:
+      throw new Error(`Unknown layer pool: ${pool}`);
+  }
+}
+
+// Lookup-table entries store a bucket address in 21 bits; the largest value
+// means "not yet committed" (see TextureBucketManager).
+const MAX_BUCKET_ADDRESS = 2 ** 21 - 2;
+
+export type LayerPoolAssignment = {
+  pool: LayerPool;
+  baseSlice: number;
+  dataTextureCount: number;
+  bucketsPerSlice: number;
+};
+
+// Assigns every layer to its pool and reserves the slices
+// [baseSlice, baseSlice + dataTextureCount) of that pool for it. Also returns
+// each pool's total depth, which must be known up front, because texStorage3D
+// allocates storage that can't grow later.
+export function computeLayerPoolAssignments<Layer extends LayerLike & { name: string }>(
+  layers: Array<Layer>,
+  requiredBucketCapacity: number,
+): {
+  assignmentByLayerName: Map<string, LayerPoolAssignment>;
+  poolDepths: Record<LayerPool, number>;
+} {
+  const poolDepths: Record<LayerPool, number> = {
+    [LayerPool.F32]: 0,
+    [LayerPool.U8]: 0,
+    [LayerPool.S8]: 0,
+    [LayerPool.U16]: 0,
+    [LayerPool.S16]: 0,
+  };
+  const assignmentByLayerName = new Map<string, LayerPoolAssignment>();
+
+  for (const layer of layers) {
+    const pool = getLayerPoolForElementClass(layer.elementClass);
+    const { packingDegree } = getDtypeConfigForElementClass(layer.elementClass);
+    const bucketVoxelCount = getGpuBucketVoxelCountForLayer(layer);
+    const dataTextureCount = getDataTextureCount(
+      LAYER_POOL_TEXTURE_WIDTH,
+      packingDegree,
+      requiredBucketCapacity,
+      bucketVoxelCount,
+    );
+    const bucketsPerSlice = getBucketsPerTexture(
+      LAYER_POOL_TEXTURE_WIDTH,
+      packingDegree,
+      bucketVoxelCount,
+    );
+    const baseSlice = poolDepths[pool];
+    poolDepths[pool] += dataTextureCount;
+    assignmentByLayerName.set(layer.name, { pool, baseSlice, dataTextureCount, bucketsPerSlice });
   }
 
-  return {
-    textureInformationPerLayer,
-    smallestCommonBucketCapacity,
-    maximumLayerCountToRender,
-    maximumTextureCountForLayer,
+  return { assignmentByLayerName, poolDepths };
+}
+
+// Lowers the per-layer bucket capacity until every pool fits into
+// maxPoolDepth slices (the GPU's MAX_ARRAY_TEXTURE_LAYERS) and every bucket
+// address fits into the lookup table.
+export function computeLayerPoolPlan<Layer extends LayerLike & { name: string }>(
+  layers: Array<Layer>,
+  requiredBucketCapacity: number,
+  maxPoolDepth: number,
+): {
+  bucketCapacity: number;
+  assignmentByLayerName: Map<string, LayerPoolAssignment>;
+  poolDepths: Record<LayerPool, number>;
+} {
+  let bucketCapacity = requiredBucketCapacity;
+  let plan = computeLayerPoolAssignments(layers, bucketCapacity);
+  const getOverflowRatio = () => {
+    const deepestPool = Math.max(...Object.values(plan.poolDepths));
+    const largestAddressCount = Math.max(
+      0,
+      ...Array.from(plan.assignmentByLayerName.values()).map(
+        ({ baseSlice, dataTextureCount, bucketsPerSlice }) =>
+          (baseSlice + dataTextureCount) * bucketsPerSlice,
+      ),
+    );
+    return Math.max(deepestPool / maxPoolDepth, largestAddressCount / (MAX_BUCKET_ADDRESS + 1));
   };
+  let overflowRatio = getOverflowRatio();
+  while (overflowRatio > 1 && bucketCapacity > 1) {
+    // Slice counts are rounded up, so the proportional estimate may still be
+    // too big; the loop then shrinks further.
+    const estimate = Math.floor(bucketCapacity / overflowRatio);
+    bucketCapacity = Math.max(1, Math.min(bucketCapacity - 1, estimate));
+    plan = computeLayerPoolAssignments(layers, bucketCapacity);
+    overflowRatio = getOverflowRatio();
+  }
+  return { bucketCapacity, ...plan };
 }
 
 export function getGpuFactorsWithLabels() {

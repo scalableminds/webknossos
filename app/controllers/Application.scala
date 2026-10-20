@@ -59,8 +59,9 @@ class Application @Inject() (
 
   def checkCertificate: Action[AnyContent] = Action.fox { _ =>
     certificateValidationService.checkCertificateCached().map {
-      case (true, expiresAt)  => Ok(Json.obj("isValid" -> true, "expiresAt" -> expiresAt))
-      case (false, expiresAt) => BadRequest(Json.obj("isValid" -> false, "expiresAt" -> expiresAt))
+      case (true, expiresAt)  => addRemoteOriginHeaders(Ok(Json.obj("isValid" -> true, "expiresAt" -> expiresAt)))
+      case (false, expiresAt) =>
+        addRemoteOriginHeaders(BadRequest(Json.obj("isValid" -> false, "expiresAt" -> expiresAt)))
     }
   }
 

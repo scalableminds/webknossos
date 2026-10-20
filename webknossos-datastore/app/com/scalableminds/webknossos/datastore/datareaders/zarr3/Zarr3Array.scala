@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.util.box.Full
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.datareaders.ChunkReadCoalescing.ChunkByteRange
 import com.scalableminds.webknossos.datastore.datareaders.{
   AxisOrder,
@@ -20,7 +20,9 @@ import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.box.Box.tryo
 import ucar.ma2.Array as MultiArray
 
-import scala.concurrent.ExecutionContext
+import java.util.concurrent.ConcurrentHashMap
+import scala.concurrent.{ExecutionContext, Promise}
+import scala.jdk.CollectionConverters.*
 
 object Zarr3Array extends LazyLogging {
 
@@ -196,44 +198,95 @@ class Zarr3Array(
       chunkIndex.zip(header.chunkShape).map { case (i, s) => i * s }
     )
 
-  // Reads the stored chunks of a shard that lie close together with a single request.
+  /* Reads the stored chunks of a shard that lie close together with a single request. Chunks that are neither cached
+   * nor being read are claimed in the chunk cache first, so that concurrent reads of the same chunks wait for this read
+   * instead of requesting them again.
+   */
   override def readChunks(chunkIndices: Seq[Array[Long]], coalescing: ChunkReadCoalescing)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[MultiArray]] =
     if (shardingCodec.isEmpty || !coalescing.isEnabled) super.readChunks(chunkIndices, coalescing)
     else {
-      val cacheKeys = chunkIndices.map(typedChunkCacheKey)
-      val uncachedPositions =
-        chunkIndices.indices.filter(i => sharedChunkContentsCache.getIfPresent(cacheKeys(i)).isEmpty)
+      val claims = new ConcurrentHashMap[Int, Promise[Box[MultiArray]]]()
+      // The cache calls the loader while getOrLoad is called, if the chunk is absent.
+      val chunks = chunkIndices.indices.map { i =>
+        sharedChunkContentsCache.getOrLoad(
+          typedChunkCacheKey(chunkIndices(i)),
+          _ => {
+            val promise = Promise[Box[MultiArray]]()
+            claims.put(i, promise)
+            Fox.fromFutureBox(promise.future)
+          }
+        )
+      }
+      val claimedPositions = claims.keySet().asScala.toSeq.sorted
       for {
-        locations <- Fox.combined(uncachedPositions.map { i =>
-          getShardedChunkPathAndRange(chunkIndices(i)).shiftBox.map(location => (i, location))
-        })
-        // Missing chunks are created from the fill value by readTypedChunkWithCache.
-        storedChunks = locations.collect { case (i, Full((shardPath, range))) => (shardPath, i, range) }
-        requests = storedChunks.groupBy(_._1).toSeq.flatMap { case (shardPath, chunksOfShard) =>
-          ChunkReadCoalescing
-            .coalesce(chunksOfShard.map { case (_, i, range) => ChunkByteRange(i, range.start, range.end) }, coalescing)
-            .map(request => (shardPath, request))
+        fetched <- Fox.fromFuture(readClaimedChunks(chunkIndices, claimedPositions, claims, coalescing).futureBox)
+        // Waiting reads must not hang if the read failed before completing all claims.
+        _ = claims.values().asScala.foreach(_.trySuccess(Failure(s"Reading chunks failed: $fetched")))
+        result <- Fox.combined(chunks)
+      } yield result
+    }
+
+  private def readClaimedChunks(
+      chunkIndices: Seq[Array[Long]],
+      claimedPositions: Seq[Int],
+      claims: ConcurrentHashMap[Int, Promise[Box[MultiArray]]],
+      coalescing: ChunkReadCoalescing
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] = {
+    def complete(position: Int, chunk: Fox[MultiArray]): Fox[Unit] =
+      Fox.fromFuture(chunk.futureBox.map(box => claims.get(position).trySuccess(box)).map(_ => ()))
+    for {
+      locations <- Fox.combined(claimedPositions.map { i =>
+        getShardedChunkPathAndRange(chunkIndices(i)).shiftBox.map(location => (i, location))
+      })
+      storedChunks = locations.collect { case (i, Full((shardPath, range))) => (shardPath, i, range) }
+      _ <- Fox.serialCombined(locations.collect { case (i, Empty) => i }) { i =>
+        complete(i, chunkReader.createFromFillValue(chunkShapeAtIndex(chunkIndices(i)), useSkipTypingShortcut = false))
+      }
+      _ = locations.collect { case (i, failure: Failure) => claims.get(i).trySuccess(failure) }
+      requests = storedChunks.groupBy(_._1).toSeq.flatMap { case (shardPath, chunksOfShard) =>
+        ChunkReadCoalescing
+          .coalesce(chunksOfShard.map { case (_, i, range) => ChunkByteRange(i, range.start, range.end) }, coalescing)
+          .map(request => (shardPath, request))
+      }
+      _ <- Fox.batchCombined(requests, coalescing.maxParallelRequests) { case (shardPath, request) =>
+        for {
+          requestBytes <- shardPath.readBytes(ByteRange.startEndExclusive(request.start, request.endExclusive))
+          _ <- Fox.serialCombined(request.chunks) { chunk =>
+            val chunkBytes = requestBytes.slice(
+              Math.toIntExact(chunk.start - request.start),
+              Math.toIntExact(chunk.endExclusive - request.start)
+            )
+            complete(chunk.key, chunkReader.decodeAndType(chunkBytes, chunkShapeAtIndex(chunkIndices(chunk.key))))
+          }
+        } yield ()
+      }
+    } yield ()
+  }
+
+  // Reads the shard indexes of all shards if there are at most maxShards, so that they are not read on first access.
+  def prefetchShardIndexes(maxShards: Int)(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    (shardingCodec, header.datasetShape) match {
+      case (Some(_), Some(datasetShape)) =>
+        val shardsPerDimension = datasetShape.zip(shardShape).map { case (size, shard) =>
+          Math.max(1L, (size + shard - 1) / shard)
         }
-        _ <- Fox.batchCombined(requests, coalescing.maxParallelRequests) { case (shardPath, request) =>
+        if (shardsPerDimension.product > maxShards) Fox.successful(())
+        else {
+          val shardCoordinates = shardsPerDimension.foldLeft(Seq(Array.empty[Long])) { (prefixes, count) =>
+            prefixes.flatMap(prefix => (0L until count).map(prefix :+ _))
+          }
           for {
-            requestBytes <- shardPath.readBytes(ByteRange.startEndExclusive(request.start, request.endExclusive))
-            _ <- Fox.serialCombined(request.chunks) { chunk =>
-              val chunkBytes = requestBytes.slice(
-                Math.toIntExact(chunk.start - request.start),
-                Math.toIntExact(chunk.endExclusive - request.start)
-              )
-              sharedChunkContentsCache.getOrLoad(
-                cacheKeys(chunk.key),
-                _ => chunkReader.decodeAndType(chunkBytes, chunkShapeAtIndex(chunkIndices(chunk.key)))
-              )
-            }
+            _ <- Fox.combined(shardCoordinates.map { coordinates =>
+              val shardPath = vaultPath / getChunkFilename(coordinates)
+              // Shards without stored chunks may not exist.
+              parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex).shiftBox.map(_ => ())
+            })
           } yield ()
         }
-        chunks <- Fox.serialCombined(chunkIndices)(readTypedChunkWithCache)
-      } yield chunks
+      case _ => Fox.successful(())
     }
 
   override protected def getShardedChunkPathAndRange(

@@ -52,6 +52,8 @@ import { OrthoBaseRotations } from "viewer/ortho_base_rotations";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 import type FlightModeView from "viewer/view/arbitrary_view";
+import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
+import { getNewLandmarkTreeProperties } from "viewer/view/layer_registration/layer_registration_worker";
 import type PlaneView from "viewer/view/plane_view";
 import { renderToTexture } from "viewer/view/rendering_utils";
 
@@ -283,7 +285,14 @@ export function handleCreateNodeFromGlobalPosition(
   const createNewTree =
     state.annotation.restrictions.somaClickingAllowed && state.userConfiguration.newNodeNewTree;
   if (createNewTree) {
-    Store.dispatch(createTreeAction());
+    // In the layer registration view, the tree name tells which landmark pair the node belongs to.
+    Store.dispatch(
+      createTreeAction(
+        undefined,
+        undefined,
+        isLayerRegistrationWorker() ? getNewLandmarkTreeProperties() : undefined,
+      ),
+    );
   }
 
   const {

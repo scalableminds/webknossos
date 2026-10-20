@@ -572,7 +572,7 @@ object ZarrMeshFileService {
 
   // The percentile of mappings named like agglomerate_view_90.
   def percentileOfMappingName(mappingName: String): Option[Int] =
-    "_(\\d+)$".r.findFirstMatchIn(mappingName).flatMap(m => m.group(1).toIntOption)
+    "agglomerate_view_(\\d+)".r.findFirstMatchIn(mappingName).flatMap(m => m.group(1).toIntOption)
 
   def evenlySpaced(sortedValues: Array[Long], count: Int): Seq[Long] =
     if (sortedValues.length <= count) sortedValues.toSeq

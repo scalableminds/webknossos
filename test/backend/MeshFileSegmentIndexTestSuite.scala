@@ -111,7 +111,10 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
   "ZarrMeshFileService.percentileOfMappingName" should {
     "parse percentile mapping names" in {
       assert(ZarrMeshFileService.percentileOfMappingName("agglomerate_view_90").contains(90))
+      assert(ZarrMeshFileService.percentileOfMappingName("agglomerate_view_65_zarr").contains(65))
+      assert(ZarrMeshFileService.percentileOfMappingName("alik-agglomerate_view_5").contains(5))
       assert(ZarrMeshFileService.percentileOfMappingName("agglomerate_view_custom").isEmpty)
+      assert(ZarrMeshFileService.percentileOfMappingName("mapping_90").isEmpty)
     }
   }
 

@@ -20,6 +20,10 @@ import {
   getViewDatasetURL,
 } from "viewer/model/accessors/dataset_accessor";
 import { canRunAIJob, getViewDatasetUrlWithAIJob } from "viewer/view/ai_jobs/ai_job_url_param";
+import {
+  canRegisterLayers,
+  getLayerRegistrationListUrl,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 import { DatasetAddType } from "../dataset_add_type";
 import { getDatasetLayerRows, type LayerRow } from "./upload_layers";
 import {
@@ -105,8 +109,10 @@ function FooterHint({ icon, children }: { icon?: React.ReactNode; children: Reac
   );
 }
 
-// Points to the AI jobs that the user can start on the dataset. A composed dataset combines
-// existing datasets, so they are not suggested for it.
+// Points to the next steps on the dataset: the AI jobs that the user can start and the
+// registration of layers that don't line up. A composed dataset combines existing datasets, so
+// the AI jobs are not suggested for it. As it usually combines layers of different microscopes,
+// registering its layers is suggested more prominently.
 function NextStepHints({
   dataset,
   datasetAddType,
@@ -116,17 +122,34 @@ function NextStepHints({
 }) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  const navigate = useNavigate();
+  const showRegisterLayers = canRegisterLayers(dataset);
+  const layerRegistrationListUrl = getLayerRegistrationListUrl(dataset);
+
   if (datasetAddType === DatasetAddType.COMPOSE) {
-    return null;
+    return showRegisterLayers ? (
+      <Alert
+        type="info"
+        showIcon
+        title="Do the layers not line up yet?"
+        description="Register them in WEBKNOSSOS: place matching landmarks in the layers side by side, check the result right away and apply it to the dataset."
+        action={
+          <Button size="small" onClick={() => navigate(layerRegistrationListUrl)}>
+            Register Layers…
+          </Button>
+        }
+      />
+    ) : null;
   }
+
   const canRunAlignment = canRunAIJob("open_ai_alignment", dataset, activeUser, activeOrganization);
   const canRunInference = canRunAIJob("open_ai_inference", dataset, activeUser, activeOrganization);
-  if (!canRunAlignment && !canRunInference) {
+  if (!canRunAlignment && !canRunInference && !showRegisterLayers) {
     return null;
   }
   return (
     <Typography.Paragraph style={{ margin: 0 }}>
-      Next steps with AI:
+      Next steps:
       <ul>
         {canRunAlignment ? (
           <li>
@@ -149,6 +172,14 @@ function NextStepHints({
               rel="noreferrer"
             >
               Run an AI segmentation
+            </Link>
+          </li>
+        ) : null}
+        {showRegisterLayers ? (
+          <li>
+            The layers don&apos;t line up?{" "}
+            <Link to={layerRegistrationListUrl} target="_blank" rel="noreferrer">
+              Register them with landmarks
             </Link>
           </li>
         ) : null}

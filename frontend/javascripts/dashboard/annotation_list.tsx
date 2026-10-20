@@ -1,4 +1,4 @@
-import Icon, { TeamOutlined } from "@ant-design/icons";
+import Icon, { NodeIndexOutlined, TeamOutlined } from "@ant-design/icons";
 import IconSort from "@images/icons/icon-sort.svg?react";
 import { Button, Radio, Space, Table, Tag } from "antd";
 import type { ColumnType } from "antd/es/table/interface";
@@ -121,6 +121,10 @@ type Props = {
   onClearFilters: () => void;
   // Called with the annotations shown on the current page (after search, filters and sorting).
   onCurrentPageDataChange?: (annotations: Readonly<APIAnnotationInfo[]>) => void;
+  // Layer registration annotations are marked with their fixed layer, e.g. "Layer registration
+  // to color_1".
+  // Lists that only contain layer registration annotations can show "Fixed: color_1" instead.
+  hideLayerRegistrationPrefix?: boolean;
 };
 
 // A list of annotations with a header to filter and sort them, as shown in the dashboard.
@@ -141,6 +145,7 @@ export function AnnotationList({
   emptyPlaceholder,
   onClearFilters,
   onCurrentPageDataChange,
+  hideLayerRegistrationPrefix = false,
 }: Props) {
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -231,6 +236,12 @@ export function AnnotationList({
           isReadOnly={!isAnnotationEditable(annotation, activeUser)}
           isLocked={annotation.isLockedByOwner}
         />
+        {annotation.layerRegistration != null ? (
+          <Tag icon={<NodeIndexOutlined />} variant="outlined">
+            {hideLayerRegistrationPrefix ? "Fixed: " : "Layer registration to "}
+            {annotation.layerRegistration.fixedLayerName}
+          </Tag>
+        ) : null}
         {/* Tags are edited in the details sidebar, so they are only clickable for filtering here. */}
         <AnnotationTags
           annotation={annotation}

@@ -92,10 +92,16 @@ function FixedLayerPicker({
             await onCreate(fixedLayerName);
           }
         }}
+        // A long layer name is cut off with "…" instead of making the button wider than the
+        // picker. The tooltip shows the full name.
+        style={{ maxWidth: "100%" }}
+        title={fixedLayerName ?? undefined}
       >
-        {fixedLayerName != null
-          ? `Create new layer registration to ${fixedLayerName}`
-          : "Create new layer registration"}
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+          {fixedLayerName != null
+            ? `Create new layer registration to ${fixedLayerName}`
+            : "Create new layer registration"}
+        </span>
       </AsyncButton>
     </Space>
   );

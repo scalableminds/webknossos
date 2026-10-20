@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { DatasetAddType } from "admin/dataset/dataset_add_type";
 import { getDataset } from "admin/rest_api";
 import { Alert, Button, Modal, Space, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
@@ -15,6 +14,14 @@ import {
   canRegisterLayers,
   getLayerRegistrationListUrl,
 } from "viewer/view/layer_registration/layer_registration_protocol";
+
+// How a dataset was added: the tab keys of the "Add Dataset" page (dataset_add_view.tsx), also
+// used to describe the added dataset in this modal.
+export enum DatasetAddType {
+  UPLOAD = "upload",
+  REMOTE = "remote",
+  COMPOSE = "compose",
+}
 
 const addTypeToVerb: Record<DatasetAddType, string> = {
   upload: "uploaded",
@@ -85,6 +92,10 @@ function NextStepHints({
   );
 }
 
+// How often and how long the modal waits for the uploaded dataset to become active.
+const DATASET_RELOAD_INTERVAL_MS = 2000;
+const MAX_DATASET_LOAD_COUNT = 30;
+
 type Props = {
   datasetNeedsConversion: boolean;
   datasetAddType: DatasetAddType;
@@ -103,12 +114,19 @@ export default function PostUploadModal({
   navigate,
 }: Props) {
   const close = () => setDatasetId("");
-  // The layers are only known once a dataset that needs a conversion is converted.
+  // The layers are only known once a dataset that needs a conversion is converted. Other datasets
+  // can become active a moment after the upload finished, when the datastore reports their data
+  // source, so the dataset is loaded again until it is active.
   const { data: dataset } = useQuery({
     queryKey: ["postUploadDataset", datasetId],
     queryFn: () => getDataset(datasetId),
     enabled: !datasetNeedsConversion,
+    refetchInterval: (query) =>
+      query.state.data?.isActive || query.state.dataUpdateCount >= MAX_DATASET_LOAD_COUNT
+        ? false
+        : DATASET_RELOAD_INTERVAL_MS,
   });
+  console.log("dataset?.isActive", dataset?.isActive);
   return (
     <Modal
       open

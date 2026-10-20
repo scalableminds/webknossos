@@ -18,18 +18,29 @@ export function getViewDatasetUrlWithAIAlignment(dataset: { name: string; id: st
   return `${getViewDatasetURL(dataset)}?${AI_JOB_URL_PARAM}=${AI_ALIGNMENT_URL_PARAM_VALUE}`;
 }
 
-// The same conditions as for the "Run AI Alignment" item of the "AI Analysis" menu, see
-// action_bar_view.tsx.
-export function canRunAIAlignment(dataset: APIDataset, activeUser: APIUser | null | undefined) {
+// Why no AI job can run on the dataset, or null if they can. The "AI Analysis" menu
+// (action_bar_view.tsx) shows the reason as the tooltip of its disabled button.
+export function getAIJobsUnsupportedReason(dataset: APIDataset): string | null {
   const colorLayers = getColorLayers(dataset);
-  const isNd = (colorLayers[0]?.additionalAxes ?? []).length > 0;
+  if (colorLayers.length === 0) {
+    return "The dataset needs to have a color layer to start AI processing jobs.";
+  }
+  if (is2dDataset(dataset)) {
+    return "AI Analysis is not supported for 2D datasets.";
+  }
+  if ((colorLayers[0]?.additionalAxes ?? []).length > 0) {
+    return "AI Analysis is not supported for ND datasets.";
+  }
+  return null;
+}
+
+// Whether the user can start the AI alignment from the "AI Analysis" menu (action_bar_view.tsx).
+export function canRunAIAlignment(dataset: APIDataset, activeUser: APIUser | null | undefined) {
   return (
     activeUser != null &&
     isUserAdminOrManager(activeUser) &&
     dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.ALIGN_SECTIONS) &&
-    colorLayers.length > 0 &&
-    !is2dDataset(dataset) &&
-    !isNd
+    getAIJobsUnsupportedReason(dataset) == null
   );
 }
 

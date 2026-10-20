@@ -1,7 +1,6 @@
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
-import { DatasetAddType } from "admin/dataset/dataset_add_type";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { getDatastores } from "admin/rest_api";
 import { Layout, Tabs, type TabsProps } from "antd";
@@ -10,7 +9,7 @@ import { useFetch } from "libs/react_helpers";
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import type { APIDataStore } from "types/api_types";
-import PostUploadModal from "./components/post_upload_modal";
+import PostUploadModal, { DatasetAddType } from "./components/post_upload_modal";
 import VoxelyticsBanner from "./components/voxelytics_banner";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 

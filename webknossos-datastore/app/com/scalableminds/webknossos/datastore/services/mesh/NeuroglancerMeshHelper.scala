@@ -144,16 +144,30 @@ trait NeuroglancerMeshHelper {
       lod: Int
   ): Array[Array[Double]]
 
+  // For mesh data that directly precedes its manifest, which starts at neuroglancerOffsetStart.
   protected def enrichSegmentInfo(
       segmentInfo: NeuroglancerSegmentManifest,
       lodScaleMultiplier: Double,
       transform: Array[Array[Double]],
       neuroglancerOffsetStart: Long,
       segmentId: Long
+  ): List[MeshLodInfo] =
+    enrichSegmentInfoWithMeshStart(
+      segmentInfo,
+      lodScaleMultiplier,
+      transform,
+      neuroglancerOffsetStart - segmentInfo.chunkByteSizes.map(_.sum).sum,
+      segmentId
+    )
+
+  protected def enrichSegmentInfoWithMeshStart(
+      segmentInfo: NeuroglancerSegmentManifest,
+      lodScaleMultiplier: Double,
+      transform: Array[Array[Double]],
+      meshByteStartOffset: Long,
+      segmentId: Long
   ): List[MeshLodInfo] = {
     val bytesPerLod = segmentInfo.chunkByteSizes.map(_.sum)
-    val totalMeshSize = bytesPerLod.sum
-    val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
     val chunkByteOffsetsInLod = segmentInfo.chunkByteSizes.map(_.scanLeft(0L)(_ + _)) // builds cumulative sum
 
     def getChunkByteOffset(lod: Int, currentChunk: Int): Long =

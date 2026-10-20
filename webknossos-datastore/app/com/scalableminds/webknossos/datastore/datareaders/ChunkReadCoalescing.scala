@@ -37,7 +37,11 @@ object ChunkReadCoalescing {
               if chunk.start - request.endExclusive <= coalescing.maxGapBytes &&
                 Math.max(request.endExclusive, chunk.endExclusive) - request.start <= coalescing.maxRequestBytes =>
             current = Some(
-              CoalescedRequest(request.start, Math.max(request.endExclusive, chunk.endExclusive), request.chunks :+ chunk)
+              CoalescedRequest(
+                request.start,
+                Math.max(request.endExclusive, chunk.endExclusive),
+                request.chunks :+ chunk
+              )
             )
           case Some(request) =>
             requests += request

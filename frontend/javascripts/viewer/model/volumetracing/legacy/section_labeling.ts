@@ -18,9 +18,9 @@ import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 import { invertAndTranspose } from "../../accessors/dataset_layer_transformation_accessor";
 import {
+  getTransformPointUnscaledFn,
   invertTransform,
   type Transform,
-  transformPointUnscaled,
 } from "../../helpers/transformation_helpers";
 
 /*
@@ -612,8 +612,8 @@ export class TransformedSectionLabeler {
       activeMag,
     );
 
-    this.applyTransform = transformPointUnscaled(this.transform);
-    this.applyInverseTransform = transformPointUnscaled(invertTransform(this.transform));
+    this.applyTransform = getTransformPointUnscaledFn(this.transform);
+    this.applyInverseTransform = getTransformPointUnscaledFn(invertTransform(this.transform));
   }
 
   createVoxelBuffer2D(minCoord2d: Vector2, width: number, height: number, fillValue: number = 0) {

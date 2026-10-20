@@ -43,6 +43,16 @@ function withStableTaskRunOrder(report: VoxelyticsWorkflowReport): VoxelyticsWor
   };
 }
 
+// Aggregates like stddev are computed by Postgres and can differ in the last digits
+// between machines.
+function withRoundedFloats<T>(value: T): T {
+  return JSON.parse(
+    JSON.stringify(value, (_key, entry) =>
+      typeof entry === "number" && !Number.isInteger(entry) ? Number(entry.toPrecision(10)) : entry,
+    ),
+  );
+}
+
 describe("Voxelytics API (E2E)", () => {
   beforeAll(async () => {
     resetDatabase();
@@ -99,7 +109,7 @@ describe("Voxelytics API (E2E)", () => {
     const statistics = await getVoxelyticsChunkStatistics(inferenceWorkflowHash, null, "predict");
 
     expect(statistics.length).toBeGreaterThan(0);
-    expect(statistics).toMatchSnapshot();
+    expect(withRoundedFloats(statistics)).toMatchSnapshot();
   });
 
   it("getVoxelyticsArtifactChecksums()", async ({ expect }) => {

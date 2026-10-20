@@ -12,14 +12,14 @@ exports[`Voxelytics API (E2E) > getVoxelyticsChunkStatistics() 1`] = `
       "total": 1,
     },
     "cpuSystem": {
-      "max": 0.9056455260874233,
-      "median": 0.8873311318707207,
-      "stddev": 0.20879057209732008,
+      "max": 0.9056455261,
+      "median": 0.8873311319,
+      "stddev": 0.2087905721,
     },
     "cpuUser": {
-      "max": 1.0629563211769502,
-      "median": 0.9314626861592893,
-      "stddev": 0.3709039990571362,
+      "max": 1.062956321,
+      "median": 0.9314626862,
+      "stddev": 0.3709039991,
     },
     "duration": {
       "max": 0,
@@ -31,7 +31,7 @@ exports[`Voxelytics API (E2E) > getVoxelyticsChunkStatistics() 1`] = `
     "memory": {
       "max": 4051.140625,
       "median": 1410.796875,
-      "stddev": 1525.3060849119008,
+      "stddev": 1525.306085,
     },
     "wallTime": 0,
   },
@@ -45,14 +45,14 @@ exports[`Voxelytics API (E2E) > getVoxelyticsChunkStatistics() 1`] = `
       "total": 1,
     },
     "cpuSystem": {
-      "max": 0.8349385407814297,
-      "median": 0.8047827966048604,
-      "stddev": 0.44925064626341976,
+      "max": 0.8349385408,
+      "median": 0.8047827966,
+      "stddev": 0.4492506463,
     },
     "cpuUser": {
-      "max": 1.079529611761976,
-      "median": 1.075754818378887,
-      "stddev": 0.45753265965714346,
+      "max": 1.079529612,
+      "median": 1.075754818,
+      "stddev": 0.4575326597,
     },
     "duration": {
       "max": 2.367,
@@ -65,7 +65,7 @@ exports[`Voxelytics API (E2E) > getVoxelyticsChunkStatistics() 1`] = `
     "memory": {
       "max": 1036.296875,
       "median": 1026.78125,
-      "stddev": 5.89327692295424,
+      "stddev": 5.893276923,
     },
     "wallTime": 2.367,
   },

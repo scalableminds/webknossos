@@ -9,22 +9,7 @@ WEBKNOSSOS has a context menu that can be opened via _Right Click_. This context
 Example of the context menu
 ///
 
-Example operations include (but are not limited to):
-
-- Clicking on a node:
-    - measuring the path length of the active node to the selected node
-    - measuring the path length of a tree
-    - node deletion
-    - marking a node as branchpoint
-    - tree merging & splitting
-    - extracting shortest path to a node
-    - hiding tree
-- Clicking on a volume segmentation:
-    - compute or load its 3D mesh
-    - flood-filling the segment (assigning a new ID)
-- Clicking on the background data:
-    - Creating a new node or tree
-    - Creating a new bounding box
+Right-clicking a node lets you, for example, delete it, mark it as a branchpoint, merge or split trees, extract the shortest path to it, or measure path lengths. Right-clicking elsewhere lets you create a new node or tree. For a full list of items, see the [Context Menu reference](../ui/context_menu.md).
 
 ## Merging / Splitting Trees
 

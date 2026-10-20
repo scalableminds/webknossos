@@ -47,8 +47,8 @@ class CertificateValidationService @Inject() (implicit ec: ExecutionContext) ext
         token <- JwtJson.decodeJson(certificate, publicKey, JwtOptions(expiration = false)).toOption
         expirationInSeconds <- (token \ "exp").asOpt[Long]
         currentTimeInSeconds = System.currentTimeMillis() / 1000
-        isExpired = currentTimeInSeconds < expirationInSeconds
-      } yield (isExpired, expirationInSeconds)).getOrElse((false, 0L))
+        isStillValid = currentTimeInSeconds < expirationInSeconds
+      } yield (isStillValid, expirationInSeconds)).getOrElse((false, 0L))
     case Empty => (true, 0L) // No public key provided, so certificate is always valid.
     case _     => (false, 0L) // Invalid public key provided, so certificate is always invalid.
   }

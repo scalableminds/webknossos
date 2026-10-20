@@ -1,6 +1,7 @@
 package mail
 
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import models.organization.{Organization, PricingPlan, PricingPlanFeatures}
 import models.user.MultiUser
@@ -116,15 +117,6 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
       replyTo = List(multiUser.email, supportEmail)
     )
 
-  def extendPricingPlanMail(multiUser: MultiUser, organizationName: String): Mail =
-    Mail(
-      from = defaultSender,
-      subject = "WEBKNOSSOS Plan Extension",
-      bodyHtml = html.mail.extendPricingPlan(multiUser.fullName, additionalFooter, organizationName).body,
-      recipients = List(supportEmail, multiUser.email),
-      replyTo = List(multiUser.email, supportEmail)
-    )
-
   def pricingPlanExpiryReminderMail(
       multiUser: MultiUser,
       organization: Organization,
@@ -152,51 +144,18 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
     )
   }
 
-  def upgradePricingPlanToTeamMail(multiUser: MultiUser, organizationName: String): Mail =
+  def upgradeRequestMail(
+      multiUser: MultiUser,
+      organizationName: String,
+      requestedChanges: Seq[String],
+      note: Option[String]
+  ): Mail =
     Mail(
       from = defaultSender,
-      subject = "WEBKNOSSOS Upgrade: Team Plan",
-      bodyHtml = html.mail.upgradePricingPlanToTeam(multiUser.fullName, additionalFooter, organizationName).body,
-      recipients = List(supportEmail, multiUser.email),
-      replyTo = List(multiUser.email, supportEmail)
-    )
-
-  def upgradePricingPlanToPowerMail(multiUser: MultiUser, organizationName: String): Mail =
-    Mail(
-      from = defaultSender,
-      subject = "WEBKNOSSOS Upgrade: Power Plan",
-      bodyHtml = html.mail.upgradePricingPlanToPower(multiUser.fullName, additionalFooter, organizationName).body,
-      recipients = List(supportEmail, multiUser.email),
-      replyTo = List(multiUser.email, supportEmail)
-    )
-
-  def upgradePricingPlanUsersMail(multiUser: MultiUser, requestedUsers: Int, organizationName: String): Mail =
-    Mail(
-      from = defaultSender,
-      subject = "WEBKNOSSOS Upgrade: Additional Users",
-      bodyHtml =
-        html.mail.upgradePricingPlanUsers(multiUser.fullName, requestedUsers, additionalFooter, organizationName).body,
-      recipients = List(supportEmail, multiUser.email),
-      replyTo = List(multiUser.email, supportEmail)
-    )
-
-  def upgradePricingPlanStorageMail(multiUser: MultiUser, requestedStorage: Int, organizationName: String): Mail =
-    Mail(
-      from = defaultSender,
-      subject = "WEBKNOSSOS Upgrade: Additional Storage",
+      subject = s"WEBKNOSSOS Upgrade Request: $organizationName",
       bodyHtml = html.mail
-        .upgradePricingPlanStorage(multiUser.fullName, requestedStorage, additionalFooter, organizationName)
+        .upgradeRequest(multiUser.fullName, multiUser.email, organizationName, requestedChanges, note, additionalFooter)
         .body,
-      recipients = List(supportEmail, multiUser.email),
-      replyTo = List(multiUser.email, supportEmail)
-    )
-
-  def upgradeAiAddonMail(multiUser: MultiUser, organizationName: String, aiPlan: String, pricingPlan: String): Mail =
-    Mail(
-      from = defaultSender,
-      subject = s"WEBKNOSSOS Upgrade: AI Add-on ($aiPlan)",
-      bodyHtml =
-        html.mail.upgradeAiAddon(multiUser.fullName, aiPlan, pricingPlan, additionalFooter, organizationName).body,
       recipients = List(supportEmail, multiUser.email),
       replyTo = List(multiUser.email, supportEmail)
     )
@@ -221,24 +180,6 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
         .body,
       recipients = List(multiUser.email),
       replyTo = List(supportEmail)
-    )
-
-  def orderCreditsMail(multiUser: MultiUser, requestedCredits: Int): Mail =
-    Mail(
-      from = defaultSender,
-      subject = "Request to buy WEBKNOSSOS credits",
-      bodyHtml = html.mail.orderCredits(multiUser.fullName, requestedCredits, additionalFooter).body,
-      recipients = List(multiUser.email)
-    )
-
-  def orderCreditsRequestMail(multiUser: MultiUser, organizationName: String, messageBody: String): Mail =
-    Mail(
-      from = defaultSender,
-      subject = "Request to buy WEBKNOSSOS credits",
-      bodyHtml = html.mail
-        .orderCreditsRequest(multiUser.fullName, multiUser.email, organizationName, messageBody, additionalFooter)
-        .body,
-      recipients = List(supportEmail)
     )
 
   def jobSuccessfulGenericMail(
@@ -320,6 +261,118 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
       bodyHtml = html.mail.jobFailedUploadConvert(multiUser.fullName, datasetName, errorMessage, additionalFooter).body,
       recipients = List(multiUser.email)
     )
+
+  def annotationSharedMail(
+      multiUser: MultiUser,
+      sharerName: String,
+      annotationId: ObjectId,
+      annotationName: String,
+      datasetName: String,
+      teamNames: List[String]
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | $sharerName shared an annotation with you",
+      bodyHtml = html.mail
+        .annotationShared(
+          multiUser.fullName,
+          sharerName,
+          annotationName,
+          datasetName,
+          teamNames,
+          annotationUrl(annotationId),
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email)
+    )
+
+  def annotationTransferredMail(
+      multiUser: MultiUser,
+      issuerName: String,
+      annotationId: ObjectId,
+      annotationName: String,
+      datasetName: String
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | $issuerName transferred an annotation to you",
+      bodyHtml = html.mail
+        .annotationTransferred(
+          multiUser.fullName,
+          issuerName,
+          annotationName,
+          datasetName,
+          annotationUrl(annotationId),
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email)
+    )
+
+  def datasetSharedMail(
+      multiUser: MultiUser,
+      sharerName: String,
+      datasetId: ObjectId,
+      datasetName: String,
+      teamNames: List[String]
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | $sharerName shared the dataset $datasetName with you",
+      bodyHtml = html.mail
+        .datasetShared(
+          multiUser.fullName,
+          sharerName,
+          datasetName,
+          teamNames,
+          // The dataset name is left out, as it may contain characters that are not valid in a URL path.
+          s"$uri/datasets/$datasetId/view",
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email)
+    )
+
+  def accessChangedMail(
+      multiUser: MultiUser,
+      issuerName: String,
+      organizationName: String,
+      changes: List[String]
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | Your access in $organizationName has changed",
+      bodyHtml = html.mail
+        .accessChanged(multiUser.fullName, issuerName, organizationName, changes, s"$uri/dashboard", additionalFooter)
+        .body,
+      recipients = List(multiUser.email)
+    )
+
+  def taskAssignedMail(
+      multiUser: MultiUser,
+      issuerName: String,
+      projectName: String,
+      taskTypeName: String,
+      annotationId: ObjectId
+  ): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS | $issuerName assigned a task to you",
+      bodyHtml = html.mail
+        .taskAssigned(
+          multiUser.fullName,
+          issuerName,
+          projectName,
+          taskTypeName,
+          annotationUrl(annotationId),
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email)
+    )
+
+  private def annotationUrl(annotationId: ObjectId): String = s"$uri/annotations/$annotationId"
 
   def emailVerificationMail(multiUser: MultiUser, key: String): Mail = {
     val linkExpiry = conf.WebKnossos.User.EmailVerification.linkExpiry

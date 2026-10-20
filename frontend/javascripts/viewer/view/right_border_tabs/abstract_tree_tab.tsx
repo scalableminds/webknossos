@@ -2,7 +2,7 @@ import { Button } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { EmptyObject } from "types/type_utils";
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
@@ -36,16 +36,10 @@ const AbstractTreeTab: React.FC<EmptyObject> = () => {
   }, [skeletonTracing, isVisible, activeTreeId]);
 
   // The throttled function is created only once and delegates to the latest
-  // drawTreeImpl via a ref. Otherwise, the throttling would not take effect
-  // across renders (drawing may be slow for very large tracings).
-  const drawTreeImplRef = useRef(drawTreeImpl);
-  // Keep the ref in sync in an effect (not during render) to keep the render
-  // phase pure. This effect is declared before the drawing effect below so the
-  // ref is updated first when drawTreeImpl changes.
-  useEffect(() => {
-    drawTreeImplRef.current = drawTreeImpl;
-  }, [drawTreeImpl]);
-  const drawTree = useMemo(() => throttle(() => drawTreeImplRef.current(), 1000), []);
+  // drawTreeImpl via an effect event. Otherwise, the throttling would not take
+  // effect across renders (drawing may be slow for very large tracings).
+  const drawLatestTree = useEffectEvent(drawTreeImpl);
+  const [drawTree] = useState(() => throttle(drawLatestTree, 1000));
 
   useEffect(() => {
     window.addEventListener("resize", drawTree, false);
@@ -56,6 +50,7 @@ const AbstractTreeTab: React.FC<EmptyObject> = () => {
     };
   }, [drawTree]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: drawTreeImpl changes whenever the tree has to be redrawn.
   useEffect(() => {
     drawTree();
   }, [drawTreeImpl, drawTree]);

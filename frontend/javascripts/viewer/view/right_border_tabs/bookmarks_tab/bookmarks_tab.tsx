@@ -1,5 +1,5 @@
 import { PlusOutlined } from "@ant-design/icons";
-import { Empty, List } from "antd";
+import { Empty, List, Space } from "antd";
 import { bigIntReplacer } from "libs/bigint_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -16,6 +16,7 @@ import { setViewModeAction } from "viewer/model/actions/settings_actions";
 import { max } from "viewer/model/helpers/iterator_utils";
 import { addBookmark } from "viewer/model/sagas/volume/update_actions";
 import Store from "viewer/store";
+import { captureBookmarkThumbnail } from "viewer/view/rendering_utils";
 import ButtonComponent from "../../components/button_component";
 
 function getMaximumBookmarkId(bookmarks: APIAnnotationBookmark[]): number {
@@ -26,13 +27,21 @@ export default function BookmarksTab() {
   const bookmarks = useWkSelector((state) => state.annotation.bookmarks);
   const dispatch = useDispatch();
 
-  const handleAddBookmark = useCallback(() => {
-    const state = Store.getState();
+  const handleAddBookmark = useCallback(async () => {
+    const stateHash = JSON.stringify(UrlManager.getUrlState(Store.getState()), bigIntReplacer);
+    let thumbnailDataBase64: string | null = null;
+    try {
+      thumbnailDataBase64 = await captureBookmarkThumbnail();
+    } catch (error) {
+      console.error("Could not capture bookmark thumbnail.", error);
+    }
+    // Determine the id only after the await so that concurrently added bookmarks don't collide.
     const bookmark: APIAnnotationBookmark = {
-      id: getMaximumBookmarkId(state.annotation.bookmarks) + 1,
+      id: getMaximumBookmarkId(Store.getState().annotation.bookmarks) + 1,
       created: Date.now(),
       name: null,
-      stateHash: JSON.stringify(UrlManager.getUrlState(state), bigIntReplacer),
+      stateHash,
+      thumbnailDataBase64,
     };
     dispatch(addBookmarkAction(bookmark));
     dispatch(pushSaveQueueTransaction([addBookmark(bookmark)]));
@@ -81,7 +90,16 @@ export default function BookmarksTab() {
               style={{ cursor: "pointer" }}
               title="Click to jump to this bookmark."
             >
-              {bookmark.name ?? `Bookmark ${bookmark.id}`}
+              <Space>
+                {bookmark.thumbnailDataBase64 != null ? (
+                  <img
+                    src={`data:image/webp;base64,${bookmark.thumbnailDataBase64}`}
+                    alt=""
+                    style={{ maxWidth: 48, maxHeight: 48, display: "block" }}
+                  />
+                ) : null}
+                {bookmark.name ?? `Bookmark ${bookmark.id}`}
+              </Space>
             </List.Item>
           )}
         />

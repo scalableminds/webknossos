@@ -1259,6 +1259,7 @@ export function addBookmark(bookmark: {
   created: number;
   name: string | null;
   stateHash: string;
+  thumbnailDataBase64: string | null;
 }) {
   return {
     name: "addBookmark",

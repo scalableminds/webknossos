@@ -223,6 +223,44 @@ export async function captureScreenshots(
   return results;
 }
 
+const BOOKMARK_THUMBNAIL_PRIORITY: OrthoView[] = [
+  OrthoViews.PLANE_XY,
+  OrthoViews.PLANE_YZ,
+  OrthoViews.PLANE_XZ,
+  OrthoViews.TDView,
+];
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    // The data URL has the form "data:<mime>;base64,<data>".
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Renders the first visible viewport (by priority) as a base64-encoded WebP image.
+// Returns null if no viewport is visible in the current layout.
+export async function captureBookmarkThumbnail(): Promise<string | null> {
+  const state = Store.getState();
+  const candidates: Array<OrthoView | typeof FlightViewport> =
+    state.temporaryConfiguration.viewMode === constants.MODE_PLANE_TRACING
+      ? BOOKMARK_THUMBNAIL_PRIORITY
+      : [FlightViewport];
+  const viewport = candidates.find((candidate) => {
+    const { width, height } = getInputCatcherRect(state, candidate);
+    return width > 0 && height > 0;
+  });
+  if (viewport == null) return null;
+
+  const { width, height } = getInputCatcherRect(state, viewport);
+  // A clear color of 0xffffff is mapped to the theme's background color, matching the on-screen look.
+  const buffer = renderToTexture(viewport, undefined, undefined, false, 0xffffff, true);
+  const blob = await convertBufferToImage(buffer, width, height, null, null, true, "image/webp");
+  return blob != null ? blobToBase64(blob) : null;
+}
+
 export async function downloadScreenshot() {
   // Save each screenshot after another with a delay as else Safari only downloads the last one. (See #10018)
   await captureScreenshots(undefined, ({ name, blob }) => saveAs(blob, name));

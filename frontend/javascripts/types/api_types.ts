@@ -646,6 +646,7 @@ export type APIAnnotationBookmark = {
   created: number;
   name: string | null;
   stateHash: string;
+  thumbnailDataBase64: string | null;
 };
 
 export type APITracingStoreAnnotation = {
@@ -654,7 +655,9 @@ export type APITracingStoreAnnotation = {
   readonly earliestAccessibleVersion: number;
   readonly annotationLayers: APITracingStoreAnnotationLayer[];
   readonly userStates: APIAnnotationUserState[];
-  readonly bookmarks: APIAnnotationBookmark[];
+  readonly bookmarks: Array<
+    Omit<APIAnnotationBookmark, "thumbnailDataBase64"> & { thumbnailData?: string }
+  >;
 };
 
 export type APITimeTrackingPerUser = {

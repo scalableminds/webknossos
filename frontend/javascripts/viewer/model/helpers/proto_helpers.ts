@@ -135,5 +135,7 @@ export function parseProtoAnnotation(annotationArrayBuffer: ArrayBuffer): any {
     objects: true,
     enums: String,
     longs: Number,
+    // Decodes bytes fields (e.g. bookmark thumbnails) as base64 strings.
+    bytes: String,
   }) as APITracingStoreAnnotation;
 }

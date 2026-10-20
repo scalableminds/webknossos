@@ -165,23 +165,22 @@ export const NavAndStatusBarTheme = merge(
 
 const darkColorSchemeQuery = "(prefers-color-scheme: dark)";
 
+function themeFromDarkQueryMatch(isDark: boolean): Theme {
+  return isDark ? "dark" : "light";
+}
+
 export function getSystemColorTheme(): Theme {
-  return window.matchMedia(darkColorSchemeQuery).media !== "not all" &&
-    window.matchMedia(darkColorSchemeQuery).matches
-    ? "dark"
-    : "light";
+  const query = window.matchMedia(darkColorSchemeQuery);
+  return themeFromDarkQueryMatch(query.media !== "not all" && query.matches);
 }
 
 export function listenToSystemColorThemeChanges(onChange: (systemTheme: Theme) => void) {
   window
     .matchMedia(darkColorSchemeQuery)
-    .addEventListener?.("change", () => onChange(getSystemColorTheme()));
+    .addEventListener?.("change", (event) => onChange(themeFromDarkQueryMatch(event.matches)));
 }
 
-function getThemeFromUser(
-  activeUser: APIUser | null | undefined,
-  systemTheme: Theme = getSystemColorTheme(),
-): Theme {
+function getThemeFromUser(activeUser: APIUser | null | undefined, systemTheme: Theme): Theme {
   if (activeUser == null || activeUser.selectedTheme === "auto") return systemTheme;
 
   return activeUser.selectedTheme;

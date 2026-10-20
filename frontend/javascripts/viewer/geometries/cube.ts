@@ -59,6 +59,11 @@ class Cube {
       this.setCorners(this.min, this.max);
     }
 
+    // The highlight color depends on the theme.
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(getActiveTheme, () => this.updateLineColors()),
+    );
+
     if (this.showCrossSections) {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
@@ -181,6 +186,10 @@ class Cube {
     }
 
     this.isHighlighted = highlighted;
+    this.updateLineColors();
+  }
+
+  updateLineColors() {
     this.getMeshes().forEach((mesh) => {
       // @ts-expect-error We don't use material arrays
       const meshMaterial: LineBasicMaterial = mesh.material;

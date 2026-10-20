@@ -349,11 +349,11 @@ export const CommandPalette = () => {
       ["dark", "Dark"],
     ] as const;
 
-    for (const [theme, name] of themesWithNames) {
+    for (const [selectableTheme, name] of themesWithNames) {
       commands.push({
         name: `Switch to “${name}” color theme`,
         command: async () => {
-          const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
+          const newUser = await updateSelectedThemeOfUser(activeUser.id, selectableTheme);
           dispatch(setActiveUserAction(newUser));
         },
         color: commandEntryColor,

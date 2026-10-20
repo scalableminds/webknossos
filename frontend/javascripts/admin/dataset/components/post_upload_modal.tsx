@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getDataset } from "admin/rest_api";
-import { Button, Modal, Space, Typography } from "antd";
+import { Alert, Button, Modal, Space, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { Link, type useNavigate } from "react-router";
 import { ModalWidth } from "theme";
@@ -10,6 +10,10 @@ import {
   canRunAIAlignment,
   getViewDatasetUrlWithAIAlignment,
 } from "viewer/view/ai_jobs/ai_job_url_param";
+import {
+  canRegisterLayers,
+  getLayerRegistrationListUrl,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 
 // How a dataset was added: the tab keys of the "Add Dataset" page (dataset_add_view.tsx), also
 // used to describe the added dataset in this modal.
@@ -31,27 +35,58 @@ const addTypeToTitle: Record<DatasetAddType, string> = {
   compose: "Dataset Created",
 };
 
-// Points to the AI alignment if the sections of a layer may not line up. A composed dataset
-// combines existing datasets, so this is not suggested for it.
+// Points to the tools that fix sections or layers that don't line up. A composed dataset usually
+// combines layers of different microscopes, so registering its layers is suggested more
+// prominently.
 function NextStepHints({
   dataset,
   datasetAddType,
+  navigate,
 }: {
   dataset: APIDataset;
   datasetAddType: DatasetAddType;
+  navigate: ReturnType<typeof useNavigate>;
 }) {
   const activeUser = useWkSelector((state) => state.activeUser);
-  if (datasetAddType === DatasetAddType.COMPOSE || !canRunAIAlignment(dataset, activeUser)) {
+  const showRegisterLayers = canRegisterLayers(dataset);
+  const layerRegistrationListUrl = getLayerRegistrationListUrl(dataset);
+
+  if (datasetAddType === DatasetAddType.COMPOSE) {
+    return showRegisterLayers ? (
+      <Alert
+        type="info"
+        showIcon
+        title="Do the layers not line up yet?"
+        description="Register them in WEBKNOSSOS: place matching landmarks in the layers side by side, check the result right away and apply it to the dataset."
+        action={
+          <Button size="small" onClick={() => navigate(layerRegistrationListUrl)}>
+            Register Layers…
+          </Button>
+        }
+      />
+    ) : null;
+  }
+
+  const canAlignSections = canRunAIAlignment(dataset, activeUser);
+  if (!showRegisterLayers && !canAlignSections) {
     return null;
   }
   return (
     <Typography.Paragraph>
       If something doesn&apos;t look right:
       <ul>
-        <li>
-          The sections of a layer are shifted against each other?{" "}
-          <Link to={getViewDatasetUrlWithAIAlignment(dataset)}>Align them with AI</Link>
-        </li>
+        {canAlignSections ? (
+          <li>
+            The sections of a layer are shifted against each other?{" "}
+            <Link to={getViewDatasetUrlWithAIAlignment(dataset)}>Align them with AI</Link>
+          </li>
+        ) : null}
+        {showRegisterLayers ? (
+          <li>
+            The layers don&apos;t line up?{" "}
+            <Link to={layerRegistrationListUrl}>Register them with landmarks</Link>
+          </li>
+        ) : null}
       </ul>
     </Typography.Paragraph>
   );
@@ -148,7 +183,7 @@ export default function PostUploadModal({
           : "Your dataset is now ready to use. You can open it in the viewer, configure its settings, or return to the dashboard."}
       </Typography.Paragraph>
       {dataset?.isActive ? (
-        <NextStepHints dataset={dataset} datasetAddType={datasetAddType} />
+        <NextStepHints dataset={dataset} datasetAddType={datasetAddType} navigate={navigate} />
       ) : null}
     </Modal>
   );

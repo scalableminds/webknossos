@@ -32,6 +32,10 @@ import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants
 import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import {
+  canRegisterLayers,
+  getLayerRegistrationListUrl,
+} from "viewer/view/layer_registration/layer_registration_protocol";
+import {
   AxisRotationSettingForDataset,
   getDatasetBoundingBoxFromLayers,
   getRotationalTransformation,
@@ -165,6 +169,8 @@ function SimpleDatasetForm({
       },
     });
   };
+
+  const showRegisterLayersButton = dataset != null && canRegisterLayers(dataset);
 
   const transformationItems = [
     { value: TransformationsMode.NONE, label: "None" },
@@ -305,7 +311,9 @@ function SimpleDatasetForm({
                   <>
                     You can remove all transformations by selecting "None", add rotational and
                     mirroring transformations in "Simple" mode, or define custom transformations per
-                    layer in "Advanced" mode.
+                    layer in "Advanced" mode. To align layers with each other by placing matching
+                    landmarks, use "Register Layers…". Its results are stored as "Advanced"
+                    transformations.
                   </>
                 }
               >
@@ -360,6 +368,21 @@ function SimpleDatasetForm({
                   }))}
                 />
               </FormItemWithInfo>
+              {showRegisterLayersButton ? (
+                // The empty label keeps the button in line with the "Transformation Mode" select.
+                <Form.Item label=" " colon={false}>
+                  <Tooltip title="Opens the layer registration of this dataset in a new tab. There, you place matching landmarks in two layers, and WEBKNOSSOS calculates the transformations from them. Applying them changes the transformations of this dataset, so reload this page afterwards.">
+                    <Button
+                      // A new tab keeps the unsaved changes of this form.
+                      onClick={() =>
+                        window.open(getLayerRegistrationListUrl(dataset), "_blank", "noopener")
+                      }
+                    >
+                      Register Layers…
+                    </Button>
+                  </Tooltip>
+                </Form.Item>
+              ) : null}
             </Col>
           </Row>
         }

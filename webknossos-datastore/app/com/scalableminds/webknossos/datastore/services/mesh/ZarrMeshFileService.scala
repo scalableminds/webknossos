@@ -88,8 +88,6 @@ class ZarrMeshFileService @Inject() (
   private lazy val openArraysCache = AlfuCache[(MeshFileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[MeshFileKey, MeshFileAttributes]()
   private lazy val rowLevelSummaryCache = AlfuCache[MeshFileKey, Array[Byte]]()
-  // Arrays with at most this many shards get all their shard indexes read when a mesh file is first used.
-  private val maxPrefetchedShards = 16
 
   private def readMeshFileAttributesImpl(
       meshFileKey: MeshFileKey
@@ -318,27 +316,19 @@ class ZarrMeshFileService @Inject() (
     } yield meshInfos
   }
 
-  /* Opens the arrays, reads the shard indexes of arrays with few shards and the row level summary in parallel, so
-   * that the first lookup in a mesh file does not read them one after the other. Failures only show up later, where the
-   * data is needed.
+  /* Opens the arrays and reads the row level summary in parallel, so that the first lookup in a mesh file does not
+   * open them one after the other. Failures only show up later, where the data is needed.
    */
   private def prepareRowTableArrays(meshFileKey: MeshFileKey, meshFileAttributes: MeshFileAttributes)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Unit] = {
     val arrayNames = Seq(keyIdIndex, keyRows, keyRowLevelSummary, keyManifests, keyNeuroglancer) ++
-      meshFileAttributes.nFenceLevels.map(levels => keyFence(levels - 1)).toSeq
+      meshFileAttributes.nFenceLevels.map(levels => (0 until levels).map(keyFence)).getOrElse(Seq.empty)
     for {
       _ <- Fox.combined(
-        arrayNames.map { arrayName =>
-          (for {
-            array <- openZarrArray(meshFileKey, arrayName)
-            _ <- array match {
-              case zarr3Array: Zarr3Array => zarr3Array.prefetchShardIndexes(maxPrefetchedShards)
-              case _                      => Fox.successful(())
-            }
-          } yield ()).shiftBox.map(_ => ())
-        } :+ rowLevelSummaryCache.getOrLoad(meshFileKey, readRowLevelSummary).shiftBox.map(_ => ())
+        arrayNames.map(arrayName => openZarrArray(meshFileKey, arrayName).shiftBox.map(_ => ())) :+
+          rowLevelSummaryCache.getOrLoad(meshFileKey, readRowLevelSummary).shiftBox.map(_ => ())
       )
     } yield ()
   }

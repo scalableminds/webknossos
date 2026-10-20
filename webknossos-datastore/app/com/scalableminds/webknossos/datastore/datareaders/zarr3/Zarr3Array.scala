@@ -266,29 +266,6 @@ class Zarr3Array(
     } yield ()
   }
 
-  // Reads the shard indexes of all shards if there are at most maxShards, so that they are not read on first access.
-  def prefetchShardIndexes(maxShards: Int)(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
-    (shardingCodec, header.datasetShape) match {
-      case (Some(_), Some(datasetShape)) =>
-        val shardsPerDimension = datasetShape.zip(shardShape).map { case (size, shard) =>
-          Math.max(1L, (size + shard - 1) / shard)
-        }
-        if (shardsPerDimension.product > maxShards) Fox.successful(())
-        else {
-          val shardCoordinates = shardsPerDimension.foldLeft(Seq(Array.empty[Long])) { (prefixes, count) =>
-            prefixes.flatMap(prefix => (0L until count).map(prefix :+ _))
-          }
-          for {
-            _ <- Fox.combined(shardCoordinates.map { coordinates =>
-              val shardPath = vaultPath / getChunkFilename(coordinates)
-              // Shards without stored chunks may not exist.
-              parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex).shiftBox.map(_ => ())
-            })
-          } yield ()
-        }
-      case _ => Fox.successful(())
-    }
-
   override protected def getShardedChunkPathAndRange(
       chunkIndex: Array[Long]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =

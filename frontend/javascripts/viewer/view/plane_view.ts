@@ -6,6 +6,7 @@ import { updateTweens } from "libs/tween_group";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
+import { getActiveTheme } from "theme";
 import {
   DirectionalLight,
   OrthographicCamera,
@@ -497,6 +498,12 @@ class PlaneView {
         ErrorHandling.notify(error);
       });
     window.addEventListener("resize", this.resizeThrottled);
+    this.unsubscribeFunctions.push(
+      // The clear color of the viewports depends on the theme.
+      listenToStoreProperty(getActiveTheme, () => {
+        this.needsRerender = true;
+      }),
+    );
     this.unsubscribeFunctions.push(
       listenToStoreProperty(
         (storeState) => storeState.uiInformation.navbarHeight,

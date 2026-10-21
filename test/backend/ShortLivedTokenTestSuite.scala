@@ -108,7 +108,7 @@ class ShortLivedTokenTestSuite extends AnyWordSpec {
 
     "not find an expired token" in {
       val (_, service) = setup()
-      val token = create(service, ObjectId.generate, -1.second)
+      val token = create(service, ObjectId.generate, (-1).second)
       assert(findValid(service, token.value).isEmpty)
     }
 

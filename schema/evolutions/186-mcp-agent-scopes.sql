@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 183 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 185 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 -- Short-lived tokens, handed out to AI agents via the MCP server (see security.ShortLivedTokenService).
 ALTER TYPE webknossos.TOKEN_TYPES ADD VALUE IF NOT EXISTS 'ShortLived';
@@ -25,6 +25,6 @@ FROM webknossos.users_ u
 JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 184;
+UPDATE webknossos.releaseInformation SET schemaVersion = 186;
 
 COMMIT TRANSACTION;

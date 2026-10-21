@@ -52,6 +52,7 @@ import { Fragment, PureComponent, useCallback, useContext, useEffect } from "rea
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Link } from "react-router";
+import { getActiveTheme } from "theme";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { Unicode } from "viewer/constants";
@@ -306,7 +307,7 @@ const DraggableDatasetRow = ({
   rowKey,
   ...restProps
 }: DraggableDatasetRowProps) => {
-  const theme = useWkSelector((state) => state.uiInformation.theme);
+  const theme = useWkSelector(getActiveTheme);
 
   // @ts-expect-error
   const datasetId = restProps["data-row-key"];

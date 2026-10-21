@@ -17,4 +17,7 @@ The segments tab contains a list of all segments in the dataset. You can load, h
 
 Additionally, hiding, removing, reloading a mesh or jumping to its hovered position can be done with the context menu in the 3D viewport via right-click on a hovered mesh.
 
+!!! info "3D viewport background"
+    The background of the 3D viewport follows your [theme](../users/password.md#theme): it is black in dark mode and white in light mode. With `System Default`, it follows your operating system's current theme.
+
 You can also include meshes in [WEBKNOSSOS animations](../automation/animations.md).

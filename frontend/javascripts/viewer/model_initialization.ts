@@ -181,6 +181,10 @@ export async function initialize(
         description: annotationProto.description,
         annotationProto: annotationProto.earliestAccessibleVersion,
         annotationLayers: layersWithStats,
+        bookmarks: annotationProto.bookmarks.map(({ thumbnailData, ...bookmark }) => ({
+          ...bookmark,
+          thumbnailDataBase64: thumbnailData ?? null,
+        })),
       };
       annotation = completeAnnotation;
     }

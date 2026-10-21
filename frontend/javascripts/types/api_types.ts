@@ -607,6 +607,9 @@ type APIAnnotationBase = APIAnnotationInfo & {
   readonly user?: APIUserBase;
   readonly contributors: APIUserBase[];
   readonly collaborationMode: AnnotationCollaborationMode;
+  // Only populated once the tracingstore's AnnotationProto has been fetched
+  // (see model_initialization.ts); not part of the plain /info JSON.
+  readonly bookmarks: APIAnnotationBookmark[];
 };
 export type APIAnnotation = APIAnnotationBase & {
   readonly task: APITask | null | undefined;
@@ -638,12 +641,23 @@ export type APIAnnotationUserState = {
   zoomLevel: number;
 };
 
+export type APIAnnotationBookmark = {
+  id: number;
+  created: number;
+  name: string | null;
+  stateHash: string;
+  thumbnailDataBase64: string | null;
+};
+
 export type APITracingStoreAnnotation = {
   readonly description: string;
   readonly version: number;
   readonly earliestAccessibleVersion: number;
   readonly annotationLayers: APITracingStoreAnnotationLayer[];
   readonly userStates: APIAnnotationUserState[];
+  readonly bookmarks: Array<
+    Omit<APIAnnotationBookmark, "thumbnailDataBase64"> & { thumbnailData?: string }
+  >;
 };
 
 export type APITimeTrackingPerUser = {

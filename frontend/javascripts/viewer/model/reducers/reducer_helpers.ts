@@ -137,6 +137,7 @@ export function convertServerAnnotationToFrontendAnnotation(
     collaborationMode,
     isLockedByOwner,
     annotationLayers,
+    bookmarks,
   } = annotation;
   const restrictions = {
     ...annotation.restrictions,
@@ -166,6 +167,9 @@ export function convertServerAnnotationToFrontendAnnotation(
     contributors,
     collaborationMode,
     annotationLayers,
+    // Falls back to [] for annotation-info responses that never went through the
+    // tracingstore-proto merge in model_initialization.ts (e.g. compound/sandbox annotations).
+    bookmarks: bookmarks ?? [],
     isUpdatingCurrentlyAllowed,
   };
 }

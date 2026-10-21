@@ -40,11 +40,13 @@ class MappingService @Inject() (config: DataStoreConfig, baseDirService: BaseDir
     for {
       dataSourceId <- Box.fromOption(request.dataSourceId)
       orgaDir <- baseDirService.getOneLocalForOrga(dataSourceId.organizationId)
-      mappingFilePath = orgaDir
+      mappingsDirPath = orgaDir
         .resolve(dataSourceId.directoryName)
         .resolve(request.dataLayer.name)
         .resolve(mappingsDir)
-        .resolve(s"${request.mapping}.$mappingFileExtension")
+        .normalize()
+      mappingFilePath = mappingsDirPath.resolve(s"${request.mapping}.$mappingFileExtension").normalize()
+      _ <- Box.fromBool(mappingFilePath.getParent == mappingsDirPath) ?~> s"Invalid mapping name: ${request.mapping}"
       result <- FileIO.readFileToByteArray(mappingFilePath.toFile)
     } yield result
 

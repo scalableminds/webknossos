@@ -1,7 +1,7 @@
 import ErrorHandling from "libs/error_handling";
 import Mutex from "libs/mutex";
-import { type ActionPattern, call, put, take } from "redux-saga/effects";
-import { race, takeEvery, delay as typedDelay } from "typed-redux-saga";
+import { type ActionPattern, call, put } from "redux-saga/effects";
+import { delay, race, takeEvery } from "typed-redux-saga";
 import type { Action } from "viewer/model/actions/actions";
 import type {
   OperationId,
@@ -14,7 +14,7 @@ import {
   unregisterOperationAction,
 } from "viewer/model/actions/operation_context_actions";
 import type { WebknossosState } from "viewer/store";
-import { type Saga, select, take as typedTake } from "./effect_generators";
+import { type Saga, select, take } from "./effect_generators";
 
 /*
  * This module introduces the concept of Operation Contexts that can be used
@@ -170,7 +170,7 @@ export function* createOperationContext(
   }
 
   if (behavior === "wait") {
-    yield take("UNREGISTER_OPERATION");
+    yield* take("UNREGISTER_OPERATION");
     // Re-check after waking: another waiter may have grabbed the lock first.
     // Cast is safe: we only reach "wait" when behaviorWhenDisallowed is "wait" or undefined.
     return yield call(createOperationContext, options as NonNullableOptions);
@@ -238,7 +238,7 @@ export function* getOrCreateOperationContext(
 // While an operation is registered, the user interface is blocked. An operation that
 // never finishes (e.g., because it waits for something that never happens) makes the
 // viewports unusable without any hint about the reason. The watchdog reports such operations.
-export const LONG_RUNNING_OPERATION_THRESHOLD_MS = 60 * 1000;
+export const LONG_RUNNING_OPERATION_THRESHOLD_MS = 20 * 1000;
 
 function* reportIfOperationRunsTooLong(
   action: RegisterOperationAction,
@@ -250,10 +250,14 @@ function* reportIfOperationRunsTooLong(
   const startTime = Date.now();
 
   const { unregistered } = yield* race({
-    unregistered: typedTake(isThisOperationUnregistered),
-    timeout: typedDelay(thresholdMs),
+    unregistered: take(isThisOperationUnregistered),
+    timeout: delay(thresholdMs),
   });
-  if (unregistered != null) {
+  // If the browser thread was blocked for longer than the threshold, the timeout
+  // cannot fire in time and the unregistration can win the race even though the
+  // operation took too long. Therefore, check the elapsed time explicitly.
+  const hasExceededThreshold = Date.now() - startTime >= thresholdMs;
+  if (unregistered != null && !hasExceededThreshold) {
     return;
   }
 
@@ -271,7 +275,9 @@ function* reportIfOperationRunsTooLong(
     "warning",
   );
 
-  yield* typedTake(isThisOperationUnregistered);
+  if (unregistered == null) {
+    yield* take(isThisOperationUnregistered);
+  }
   console.warn(`Operation "${id}" finished after ${(Date.now() - startTime) / 1000} seconds.`);
 }
 

@@ -388,6 +388,32 @@ describe("operation_context_saga", () => {
       expect(severity).toBe("warning");
     });
 
+    it("reports an operation that blocks the thread longer than the threshold", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      sagaMiddleware.run(watchForLongRunningOperations, THRESHOLD_MS);
+
+      // Simulate a blocked thread: the clock advances while the operation runs, but the
+      // timeout of the watchdog cannot fire before the operation is unregistered.
+      let now = 1_000_000;
+      const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
+
+      function* op() {
+        const ctx = yield* createOperationContext({ id: "PROOFREADING" });
+        yield* ctx.execute(function* () {
+          now += 2 * THRESHOLD_MS;
+          yield* call(noop);
+        });
+      }
+
+      try {
+        await sagaMiddleware.run(op).toPromise();
+      } finally {
+        dateNowSpy.mockRestore();
+      }
+
+      expect(ErrorHandling.notify).toHaveBeenCalledTimes(1);
+    });
+
     it("does not report operations that finish in time", async () => {
       const { sagaMiddleware } = makeTestStore();
       sagaMiddleware.run(watchForLongRunningOperations, THRESHOLD_MS);

@@ -62,7 +62,7 @@ class DatasetArray(
     header.chunkShape :+ 1
   }
 
-  protected def chunkShapeAtIndex(index: Array[Long]): Array[Int] =
+  private def chunkShapeAtIndex(index: Array[Long]) =
     if (axisOrder.hasZAxis) { header.chunkShapeAtIndex(index) }
     else {
       chunkShape // irregular shaped chunk indexes are currently not supported for 2d datasets
@@ -308,34 +308,13 @@ class DatasetArray(
     builder.toString
   }
 
-  // Reads whole chunks, typed and in the order of chunkIndices.
-  def readChunks(chunkIndices: Seq[Array[Long]], coalescing: ChunkReadCoalescing)(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Seq[MultiArray]] =
-    for {
-      chunkBoxes <- readChunkBoxes(chunkIndices, coalescing)
-      chunks <- Fox.combined(chunkBoxes.map(_.toFox))
-    } yield chunks
-
-  // Like readChunks, with the result of each chunk, so that callers can do without the chunks that failed.
-  def readChunkBoxes(chunkIndices: Seq[Array[Long]], coalescing: ChunkReadCoalescing)(using
+  // Reads whole chunks, typed and in the order of chunkIndices, with at most maxParallelReads reads at a time. The
+  // result of each chunk is kept, so that callers can do without the chunks that failed.
+  def readChunks(chunkIndices: Seq[Array[Long]], maxParallelReads: Int)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[Box[MultiArray]]] =
-    Fox.batchCombined(chunkIndices, coalescing.maxParallelRequests)(readTypedChunkWithCache(_).shiftBox)
-
-  // Kept apart from the keys of getSourceChunkDataWithCache, which may hold untyped chunks.
-  protected def typedChunkCacheKey(chunkIndex: Array[Long]): String = s"${chunkContentsCacheKey(chunkIndex)}__typed"
-
-  protected def readTypedChunkWithCache(chunkIndex: Array[Long])(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[MultiArray] =
-    sharedChunkContentsCache.getOrLoad(
-      typedChunkCacheKey(chunkIndex),
-      _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut = false)
-    )
+    Fox.batchCombined(chunkIndices, maxParallelReads)(getSourceChunkDataWithCache(_).shiftBox)
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean = false)(using
       ec: ExecutionContext,

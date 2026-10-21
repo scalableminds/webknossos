@@ -424,3 +424,4 @@ jobs:
         run: .github/slack-notification.sh
         env:
           SLACK_NOTIFY_TOKEN: ${{ secrets.SLACK_NOTIFY_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

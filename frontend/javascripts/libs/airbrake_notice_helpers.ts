@@ -1,7 +1,7 @@
 import type { INotice } from "@airbrake/browser";
 
 // Airbrake groups errors by type, message, file and environment. To keep the grouping
-// of long messages (which often contain varying ids, urls or tokens) stable, only the
+// of long messages (which often contain varying ids, urls or tokens) somewhat stable, only the
 // first characters of the message are used for prefixed errors.
 const MAX_GROUPING_MESSAGE_LENGTH = 80;
 

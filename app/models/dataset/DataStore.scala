@@ -1,6 +1,7 @@
 package models.dataset
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
@@ -47,11 +48,16 @@ class DataStoreService @Inject() (dataStoreDAO: DataStoreDAO, jobService: JobSer
     )
 
   def validateAccess(name: String, key: String)(block: DataStore => Fox[Result]): Fox[Result] =
-    Fox.fromFuture((for {
-      dataStore <- dataStoreDAO.findOneByName(name)(using GlobalAccessContext)
-      _ <- Fox.fromBool(key == dataStore.key)
-      result <- block(dataStore)
-    } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Msg.DataStore.notFound))))
+    for {
+      dataStoreBox <- (for {
+        dataStore <- dataStoreDAO.findOneByName(name)(using GlobalAccessContext)
+        _ <- Fox.fromBool(key == dataStore.key)
+      } yield dataStore).shiftBox
+      result <- dataStoreBox match {
+        case Full(dataStore) => block(dataStore)
+        case _               => Fox.successful(Forbidden(Json.obj("granted" -> false, "msg" -> Msg.DataStore.notFound)))
+      }
+    } yield result
 
 }
 

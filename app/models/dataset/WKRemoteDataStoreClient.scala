@@ -4,7 +4,11 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.controllers.{GetEffectiveVoxelSizeParameters, PathValidationResult}
+import com.scalableminds.webknossos.datastore.controllers.{
+  DatasetThumbnailRequest,
+  GetEffectiveVoxelSizeParameters,
+  PathValidationResult
+}
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
   ExploreRemoteDatasetResponse,
@@ -34,7 +38,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
 
   private lazy val effectiveAiModelVoxelSizeCache: AlfuCache[UPath, VoxelSize] = AlfuCache(timeToLive = 15 minutes)
 
-  def getDataLayerThumbnail(
+  def getLayerThumbnail(
       dataset: Dataset,
       dataLayerName: String,
       mag1BoundingBox: BoundingBox,
@@ -47,7 +51,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     logger.info(
       s"Thumbnail called for: ${dataset._id}, organization: ${dataset._organization}, directoryName: ${dataset.directoryName}, Layer: $dataLayerName"
     )
-    rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/thumbnail.jpg")
+    rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/layerThumbnail")
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .addQueryParam("mag", mag.toMagLiteral(allowScalar = false))
       .addQueryParam("x", mag1BoundingBox.topLeft.x)
@@ -62,6 +66,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryParam("invertColor", colorSettingsOpt.map(_.isInverted))
       .getWithBytesResponse
   }
+
+  def getDatasetThumbnail(dataset: Dataset, datasetThumbnailRequest: DatasetThumbnailRequest): Fox[Array[Byte]] =
+    rpc(s"${dataStore.url}/data/datasets/${dataset._id}/datasetThumbnail")
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
+      .postJsonWithBytesResponse(datasetThumbnailRequest)
 
   def getLayerData(
       dataset: Dataset,

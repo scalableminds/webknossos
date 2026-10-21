@@ -58,6 +58,20 @@ class Request {
       this.handleEmptyJsonResponse,
     );
 
+  receiveJSONWithHeaders = (
+    url: string,
+    options: RequestOptions = {},
+  ): Promise<{ data: any; headers: Headers }> =>
+    this.triggerRequest(
+      url,
+      defaultsDeep(options, {
+        headers: {
+          Accept: "application/json",
+        },
+      }),
+      this.handleEmptyJsonResponseWithHeaders,
+    );
+
   prepareJSON = async (
     url: string,
     options: RequestOptionsWithData<any>,
@@ -343,6 +357,14 @@ class Request {
         return JSON.parse(responseText, bigIntReviver);
       }
     });
+
+  handleEmptyJsonResponseWithHeaders = (
+    response: Response,
+  ): Promise<{ data: ArbitraryObject; headers: Headers }> =>
+    response.text().then((responseText) => ({
+      data: responseText.length === 0 ? {} : JSON.parse(responseText, bigIntReviver),
+      headers: response.headers,
+    }));
 }
 
 const requestSingleton = new Request();

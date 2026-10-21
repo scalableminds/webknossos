@@ -87,8 +87,9 @@ class UserController @Inject() (
           isFinished,
           Some(request.identity._id),
           filterOwnedOrShared = true,
-          limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-          pageNumber.getOrElse(0)
+          datasetId = None,
+          limit = limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+          pageNumber = pageNumber.getOrElse(0)
         )
         annotationCount: Option[Int] <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational)
@@ -147,8 +148,9 @@ class UserController @Inject() (
           isFinished,
           Some(userId),
           filterOwnedOrShared = false,
-          limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-          pageNumber.getOrElse(0)
+          datasetId = None,
+          limit = limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+          pageNumber = pageNumber.getOrElse(0)
         )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(userId, isFinished, AnnotationType.Explorational)

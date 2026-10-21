@@ -27,6 +27,7 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
     ],
     "status": "",
     "tags": [],
+    "thumbnailCacheVersion": 0,
     "usedStorageBytes": 0,
   },
 ]
@@ -96,6 +97,7 @@ exports[`Dataset API (E2E) > getDatasets 1`] = `
     "segmentationLayerNames": [],
     "status": "No longer available on datastore.",
     "tags": [],
+    "thumbnailCacheVersion": 0,
     "usedStorageBytes": 0,
   },
   {
@@ -113,6 +115,7 @@ exports[`Dataset API (E2E) > getDatasets 1`] = `
     "segmentationLayerNames": [],
     "status": "No longer available on datastore.",
     "tags": [],
+    "thumbnailCacheVersion": 0,
     "usedStorageBytes": 0,
   },
   {
@@ -130,6 +133,7 @@ exports[`Dataset API (E2E) > getDatasets 1`] = `
     "segmentationLayerNames": [],
     "status": "No longer available on datastore.",
     "tags": [],
+    "thumbnailCacheVersion": 0,
     "usedStorageBytes": 0,
   },
   {
@@ -147,6 +151,7 @@ exports[`Dataset API (E2E) > getDatasets 1`] = `
     "segmentationLayerNames": [],
     "status": "No longer available on datastore.",
     "tags": [],
+    "thumbnailCacheVersion": 0,
     "usedStorageBytes": 0,
   },
   {
@@ -164,6 +169,7 @@ exports[`Dataset API (E2E) > getDatasets 1`] = `
     "segmentationLayerNames": [],
     "status": "No longer available on datastore.",
     "tags": [],
+    "thumbnailCacheVersion": 0,
     "usedStorageBytes": 0,
   },
   {
@@ -181,6 +187,7 @@ exports[`Dataset API (E2E) > getDatasets 1`] = `
     "segmentationLayerNames": [],
     "status": "No longer available on datastore.",
     "tags": [],
+    "thumbnailCacheVersion": 0,
     "usedStorageBytes": 0,
   },
   {
@@ -200,6 +207,7 @@ exports[`Dataset API (E2E) > getDatasets 1`] = `
     ],
     "status": "",
     "tags": [],
+    "thumbnailCacheVersion": 0,
     "usedStorageBytes": 0,
   },
 ]

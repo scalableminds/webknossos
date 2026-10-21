@@ -1,8 +1,9 @@
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { getPublication } from "admin/rest_api";
-import { Button, Flex, Layout, List, Space, Spin, Tooltip } from "antd";
+import { Button, Flex, Layout, Space, Spin, Tooltip, theme } from "antd";
 import PublicationCard from "dashboard/publication_card";
+import { PublicationsEmptyText } from "dashboard/publication_view";
 import { handleGenericError } from "libs/error_handling";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router";
@@ -11,6 +12,7 @@ const { Content } = Layout;
 
 function PublicationDetailView() {
   const { id: publicationId = "" } = useParams();
+  const { token } = theme.useToken();
 
   const {
     data: publication = null,
@@ -32,7 +34,7 @@ function PublicationDetailView() {
   return (
     <Layout className="container">
       <Content style={{ marginTop: "4em" }}>
-        <Flex orientation="vertical" gap="medium">
+        <Flex orientation="vertical" gap="medium" style={{ paddingBottom: token.paddingXL }}>
           <Space>
             <Link to="/">
               <Tooltip title="Back to the frontpage.">
@@ -43,18 +45,15 @@ function PublicationDetailView() {
             </Link>
           </Space>
           <Spin size="large" spinning={isLoading}>
-            <List
-              dataSource={publication ? [publication] : []}
-              locale={{
-                emptyText: "Could not find the requested publication.",
-              }}
-              className="antd-no-border-list publication-list"
-              renderItem={(publicationItem) => (
-                <List.Item key={publicationItem.id}>
-                  <PublicationCard publication={publicationItem} showDetailedLink={false} />
-                </List.Item>
-              )}
-            />
+            {publication != null ? (
+              <PublicationCard publication={publication} showDetailedLink={false} defaultExpanded />
+            ) : (
+              !isLoading && (
+                <PublicationsEmptyText>
+                  Could not find the requested publication.
+                </PublicationsEmptyText>
+              )
+            )}
           </Spin>
         </Flex>
       </Content>

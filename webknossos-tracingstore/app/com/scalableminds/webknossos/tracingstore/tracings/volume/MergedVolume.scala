@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.File
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{ByteUtils, Fox}
+import com.scalableminds.util.tools.{ByteUtils, Fox, FoxIterator}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
@@ -58,20 +58,22 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
     } else Fox.successful(())
 
   def addIdSetFromBucketStream(
-      bucketStream: Iterator[(BucketPosition, Array[Byte])],
+      bucketStream: FoxIterator[(BucketPosition, Array[Byte])],
       allowedMags: Set[Vec3Int]
-  ): Unit =
+  )(implicit ec: ExecutionContext): Fox[Unit] =
     if (remapSegmentIds) {
       val idSet: mutable.Set[Long] = scala.collection.mutable.Set()
-      bucketStream.foreach { case (bucketPosition, data) =>
-        if (allowedMags.contains(bucketPosition.mag)) {
-          val bucketSegmentIds =
-            bucketScanner.collectSegmentIds(data, bytesPerElement, elementsAreSigned, skipZeroes = true)
-          idSet ++= bucketSegmentIds
+      for {
+        _ <- bucketStream.foreach { case (bucketPosition, data) =>
+          if (allowedMags.contains(bucketPosition.mag)) {
+            val bucketSegmentIds =
+              bucketScanner.collectSegmentIds(data, bytesPerElement, elementsAreSigned, skipZeroes = true)
+            idSet ++= bucketSegmentIds
+          }
         }
-      }
-      addIdSet(idSet)
-    }
+        _ = addIdSet(idSet)
+      } yield ()
+    } else Fox.successful(())
 
   private def addIdSet(idSet: mutable.Set[Long]): Unit = idSets += idSet
 
@@ -101,9 +103,9 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
 
   def addFromBucketStream(
       sourceVolumeIndex: Int,
-      bucketStream: Iterator[(BucketPosition, Array[Byte])],
+      bucketStream: FoxIterator[(BucketPosition, Array[Byte])],
       allowedMags: Option[Set[Vec3Int]] = None
-  ): Unit =
+  )(implicit ec: ExecutionContext): Fox[Unit] =
     bucketStream.foreach { case (bucketPosition, bytes) =>
       if (!isAllZero(bytes) && allowedMags.forall(_.contains(bucketPosition.mag))) {
         add(sourceVolumeIndex, bucketPosition, bytes)

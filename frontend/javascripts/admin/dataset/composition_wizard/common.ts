@@ -1,4 +1,4 @@
-import { getDataset, getDatasetLegacy } from "admin/rest_api";
+import { getDatasetLegacy, getImportedDataset } from "admin/rest_api";
 import type { UploadFile } from "antd";
 import Toast from "libs/toast";
 import type { APIDataStore, APIDataset } from "types/api_types";
@@ -45,7 +45,7 @@ export async function tryToFetchDatasetsByNameOrId(
       ...names.map((name) =>
         getDatasetLegacy(activeUser?.organization || "", name, null, { showErrorToast: false }),
       ),
-      ...ids.map((id) => getDataset(id, null, { showErrorToast: false })),
+      ...ids.map((id) => getImportedDataset(id, null, { showErrorToast: false })),
     ]);
     return datasets;
   } catch (exception) {

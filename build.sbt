@@ -39,7 +39,8 @@ Compile / console / scalacOptions -= "-Xlint:unused"
 lazy val commonSettings = Seq(
   resolvers ++= Dependencies.dependencyResolvers,
   Compile / doc / sources := Seq.empty,
-  Compile / packageDoc / publishArtifact := false
+  Compile / packageDoc / publishArtifact := false,
+  coverageExcludedFiles := ".*/target/.*;.*/MarchingCubesTable"
 )
 
 lazy val protocolBufferSettings = Seq(

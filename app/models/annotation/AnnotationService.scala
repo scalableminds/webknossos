@@ -900,6 +900,7 @@ class AnnotationService @Inject() (
       "isLockedByOwner" -> annotationInfo.isLockedByOwner,
       "annotationLayers" -> annotationLayerJson,
       "dataSetName" -> annotationInfo.dataSetName,
+      "dataSetId" -> annotationInfo.dataSetId,
       "organization" -> annotationInfo.organization,
       "visibility" -> annotationInfo.visibility,
       "tracingTime" -> annotationInfo.tracingTime,

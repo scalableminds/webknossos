@@ -4,6 +4,7 @@ import FastTooltip from "components/fast_tooltip";
 
 import { document } from "libs/window";
 import type React from "react";
+import { createContext, useContext } from "react";
 import { useDispatch } from "react-redux";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { setToolAction } from "viewer/model/actions/ui_actions";
@@ -13,6 +14,18 @@ export const NARROW_BUTTON_STYLE = {
   paddingLeft: "var(--ant-margin-xs)",
   paddingRight: "var(--ant-margin-xs)",
 };
+
+// Holds the id of the active tool if it currently differs from the adapted active tool
+// (e.g., because a modifier key is pressed). The corresponding tool button is highlighted
+// so that the user can still see which tool is active without the modifier.
+export const UnderlyingActiveToolContext = createContext<AnnotationToolId | null>(null);
+
+function useToolButtonClassName(value: unknown) {
+  const underlyingActiveToolId = useContext(UnderlyingActiveToolContext);
+  return underlyingActiveToolId != null && value === underlyingActiveToolId
+    ? "no-padding underlying-active-tool"
+    : "no-padding";
+}
 
 export function RadioButtonWithTooltip({
   title,
@@ -38,11 +51,12 @@ export function RadioButtonWithTooltip({
   // Therefore, we move the tooltip into the button which requires tweaking the padding
   // a bit (otherwise, the tooltip would only occur when hovering exactly over the icon
   // instead of everywhere within the button).
+  const className = useToolButtonClassName(props.value);
   return (
     <Radio.Button
       disabled={disabled}
       // Remove the padding here and add it within the tooltip.
-      className="no-padding"
+      className={className}
       onClick={(event: React.MouseEvent) => {
         if (document.activeElement) {
           (document.activeElement as HTMLElement).blur();
@@ -107,6 +121,7 @@ export function ToolRadioButtonWithDropdown({
   disabledExplanation?: string;
 }) {
   const dispatch = useDispatch();
+  const className = useToolButtonClassName(props.value);
   // See explanation for RadioButtonWithTooltip: Add dropdown/tooltip into the button and tweak
   // padding so that it is triggered when hovering anywhere within the button, not just the icon.
   const innerContent = disabled ? (
@@ -127,7 +142,7 @@ export function ToolRadioButtonWithDropdown({
   return (
     <Radio.Button
       disabled={disabled}
-      className="no-padding"
+      className={className}
       onClick={(event: React.MouseEvent) => {
         if (document.activeElement) {
           (document.activeElement as HTMLElement).blur();

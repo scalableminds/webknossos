@@ -4,12 +4,7 @@ import testRotations from "test/fixtures/test_rotations";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { Euler, MathUtils, Matrix4, Quaternion } from "three";
 import { userSettings } from "types/schemas/user_settings.schema";
-import {
-  OrthoBaseRotations,
-  OrthoViewToNumber,
-  OrthoViewValuesWithoutTDView,
-  type Vector3,
-} from "viewer/constants";
+import { OrthoViewToNumber, OrthoViewValuesWithoutTDView, type Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import { setMappingEnabledAction } from "viewer/model/actions/settings_actions";
@@ -19,6 +14,7 @@ import {
   eulerAngleToReducerInternalMatrix,
   reducerInternalMatrixToEulerAngle,
 } from "viewer/model/helpers/rotation_helpers";
+import { OrthoBaseRotations } from "viewer/ortho_base_rotations";
 import Store from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

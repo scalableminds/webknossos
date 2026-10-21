@@ -41,7 +41,7 @@ const uint24Colors = [
   [255, 65, 54],
   [46, 204, 64],
   [24, 144, 255],
-];
+] as Vector3[];
 const CANVAS_HEIGHT = 100;
 const CANVAS_WIDTH = 318;
 
@@ -83,6 +83,29 @@ function getMinAndMax(props: HistogramProps) {
 function getPrecisionOf(num: number): number {
   const decimals = num.toString().split(".")[1];
   return decimals ? decimals.length : 0;
+}
+
+// A single sample of the histogram curve. x/y are in canvas coordinates
+// (note that the canvas is flipped, see onCanvasRefChange), whereas intensity is
+// the data value the sample belongs to.
+type CurvePoint = {
+  x: number;
+  y: number;
+  intensity: number;
+};
+
+// Returns the y value of the curve at an arbitrary canvas x by linearly interpolating
+// between the two enclosing samples. Since the samples are evenly spaced, the enclosing
+// pair can be computed directly instead of searching for it.
+function interpolateYAtCanvasX(points: CurvePoint[], canvasX: number): number {
+  if (points.length < 2) {
+    return points[0]?.y ?? 0;
+  }
+  const spacing = points[1].x - points[0].x;
+  const exactIndex = spacing === 0 ? 0 : (canvasX - points[0].x) / spacing;
+  const leftIndex = Math.max(0, Math.min(points.length - 2, Math.floor(exactIndex)));
+  const fraction = Math.max(0, Math.min(1, exactIndex - leftIndex));
+  return (1 - fraction) * points[leftIndex].y + fraction * points[leftIndex + 1].y;
 }
 
 const DUMMY_HISTOGRAM_DATA = [
@@ -162,18 +185,24 @@ class Histogram extends PureComponent<HistogramProps, HistogramState> {
         // We only take the elements of the array into account that are displayed.
         const displayedPartStartOffset = Math.max(histogramMin, min) - histogramMin;
         const displayedPartEndOffset = Math.min(histogramMax, max) - histogramMin;
-        // Here we scale the offsets to the range of the elements array.
-        const startingIndex =
-          (displayedPartStartOffset * elementCounts.length) / (histogramMax - histogramMin);
-        const endingIndex =
-          (displayedPartEndOffset * elementCounts.length) / (histogramMax - histogramMin);
-        return Math.max(...elementCounts.slice(startingIndex, endingIndex + 1));
+        // Here we scale the offsets to the range of the elements array. The bounds are
+        // rounded outwards, because the partially displayed buckets are drawn, too.
+        const startingIndex = Math.floor(
+          (displayedPartStartOffset * elementCounts.length) / (histogramMax - histogramMin),
+        );
+        const endingIndex = Math.ceil(
+          (displayedPartEndOffset * elementCounts.length) / (histogramMax - histogramMin),
+        );
+        // Note that Math.max is not spread over the slice here, because the number of
+        // buckets can exceed the maximum argument count.
+        return elementCounts
+          .slice(startingIndex, endingIndex + 1)
+          .reduce((a, b) => Math.max(a, b), Number.NEGATIVE_INFINITY);
       }),
     );
 
     for (const [i, histogram] of data.entries()) {
       const color = data.length > 1 ? uint24Colors[i] : PRIMARY_COLOR;
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       this.drawHistogram(ctx, histogram, maxValue, color, min, max);
     }
   }
@@ -189,6 +218,8 @@ class Histogram extends PureComponent<HistogramProps, HistogramState> {
     minRange: number,
     maxRange: number,
   ) => {
+    // Note that the canvas is flipped vertically (see onCanvasRefChange), which is why
+    // the y values below are used as-is (i.e., larger y means higher up).
     const { intensityRangeMin, intensityRangeMax } = this.props;
     const { min: histogramMin, max: histogramMax, elementCounts } = histogram;
     const histogramLength = histogramMax - histogramMin;
@@ -196,31 +227,51 @@ class Histogram extends PureComponent<HistogramProps, HistogramState> {
     const xOffset = histogramMin - minRange;
     ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
-    ctx.beginPath();
-    // Scale data to the height of the histogram canvas.
-    const downscaledData = elementCounts.map((value) => (value / maxValue) * CANVAS_HEIGHT);
-    const activeRegion = new Path2D();
-    ctx.moveTo(0, 0);
-    activeRegion.moveTo(((intensityRangeMin - minRange) / fullLength) * CANVAS_WIDTH, 0);
 
-    for (let i = 0; i < downscaledData.length; i++) {
-      const xInHistogramScale = (i * histogramLength) / downscaledData.length;
-      const xInCanvasScale = ((xOffset + xInHistogramScale) * CANVAS_WIDTH) / fullLength;
-      const xValue = histogramMin + xInHistogramScale;
+    const toCanvasX = (x: number) => (x / fullLength) * CANVAS_WIDTH;
 
-      if (xValue >= intensityRangeMin && xValue <= intensityRangeMax) {
-        activeRegion.lineTo(xInCanvasScale, downscaledData[i]);
-      }
-
-      ctx.lineTo(xInCanvasScale, downscaledData[i]);
+    const points: CurvePoint[] = elementCounts.map((elementCount, index) => {
+      const xInHistogramScale = (index * histogramLength) / elementCounts.length;
+      return {
+        x: toCanvasX(xOffset + xInHistogramScale),
+        // Scale data to the height of the histogram canvas.
+        y: (elementCount / maxValue) * CANVAS_HEIGHT,
+        intensity: histogramMin + xInHistogramScale,
+      };
+    });
+    if (points.length === 0) {
+      return;
     }
 
+    // Draw the curve itself.
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    for (const point of points) {
+      ctx.lineTo(point.x, point.y);
+    }
     ctx.stroke();
-    ctx.closePath();
-    const activeRegionRightLimit = Math.min(histogramMax, intensityRangeMax);
-    const activeRegionLeftLimit = Math.max(histogramMin, intensityRangeMin);
-    activeRegion.lineTo(((activeRegionRightLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
-    activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
+
+    // Draw the highlighted "area under the curve" in the configured min/max range. Since the
+    // range limits usually don't fall onto a sample, the curve is interpolated at both ends.
+    const activeRegionLeftLimit = Math.max(histogramMin, intensityRangeMin) - minRange;
+    const activeRegionRightLimit = Math.min(histogramMax, intensityRangeMax) - minRange;
+    const activeRegionStartX = toCanvasX(activeRegionLeftLimit);
+    const activeRegionEndX = toCanvasX(activeRegionRightLimit);
+    if (activeRegionEndX <= activeRegionStartX) {
+      // The configured range doesn't overlap with this histogram.
+      return;
+    }
+
+    const activeRegion = new Path2D();
+    activeRegion.moveTo(activeRegionStartX, 0);
+    activeRegion.lineTo(activeRegionStartX, interpolateYAtCanvasX(points, activeRegionStartX));
+    for (const point of points) {
+      if (point.intensity >= intensityRangeMin && point.intensity <= intensityRangeMax) {
+        activeRegion.lineTo(point.x, point.y);
+      }
+    }
+    activeRegion.lineTo(activeRegionEndX, interpolateYAtCanvasX(points, activeRegionEndX));
+    activeRegion.lineTo(activeRegionEndX, 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
   };

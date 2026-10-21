@@ -71,6 +71,7 @@ export function handleEraseStart(pos: Point2, plane: OrthoView) {
 
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
   Store.dispatch(startEditingAction(layerPos, plane));
+  Store.dispatch(addToContourListAction(layerPos));
 }
 
 export function handleMoveForDrawOrErase(pos: Point2) {

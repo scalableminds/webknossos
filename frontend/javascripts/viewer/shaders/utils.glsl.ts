@@ -81,6 +81,7 @@ export function jsRgb2hsl(rgb: Vector3): Vector3 {
   return [h, s, l];
 }
 
+// Note that the segment color map is also mirrored to the backend and voxelytics. Changes should be synced.
 export const colormapJet: ShaderModule = {
   requirements: [],
   code: `

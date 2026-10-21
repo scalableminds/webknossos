@@ -1,6 +1,11 @@
 import type { Matrix4x4 } from "mjs";
-import { Euler, Matrix4 } from "three";
-export type AdditionalCoordinate = { name: string; value: number };
+export type AdditionalCoordinate = {
+  name: string;
+  value: number;
+  // `length`: how many consecutive values to request along this axis instead of just one.
+  // Only meaningful on requests sent to the backend.
+  length?: number;
+};
 
 export const ViewModeValues = ["orthogonal", "flight"] as ViewMode[];
 
@@ -122,37 +127,6 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.PLANE_YZ]: [PINK, TURQUOISE],
   [OrthoViews.PLANE_XZ]: [BLUE, PINK],
   [OrthoViews.TDView]: [0x000000, 0x000000],
-};
-
-// See the following or an explanation about the relative orientation of the viewports toward the XY viewport.
-// https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c63800e8682e92a5c91a519
-export const OrthoBaseRotations = {
-  [OrthoViews.PLANE_XY]: new Euler(0, 0, 0),
-  [OrthoViews.PLANE_YZ]: new Euler(0, (3 / 2) * Math.PI, 0),
-  [OrthoViews.PLANE_XZ]: new Euler(Math.PI / 2, 0, 0),
-  [OrthoViews.TDView]: new Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
-};
-
-function correctCameraViewingDirection(baseEuler: Euler): Euler {
-  const cameraCorrectionEuler = new Euler(Math.PI, 0, 0);
-  const correctedEuler = new Euler();
-  correctedEuler.setFromRotationMatrix(
-    new Matrix4()
-      .makeRotationFromEuler(baseEuler)
-      .multiply(new Matrix4().makeRotationFromEuler(cameraCorrectionEuler)),
-    "ZYX",
-  );
-
-  return correctedEuler;
-}
-
-// The orthographic cameras point towards negative z direction per default. To make it look into positive direction of the z axis,
-// an additional rotation around x axis by 180° is needed. This is appended via correctCameraViewingDirection.
-export const OrthoCamerasBaseRotations = {
-  [OrthoViews.PLANE_XY]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_XY]),
-  [OrthoViews.PLANE_YZ]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_YZ]),
-  [OrthoViews.PLANE_XZ]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_XZ]),
-  [OrthoViews.TDView]: new Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
 };
 
 export type BorderTabType = {
@@ -324,6 +298,7 @@ const Constants = {
   MODES_SKELETON: ["orthogonal", "flight"] as ViewMode[],
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
+  BUCKET_SIZE_2D: 32 ** 2,
   BUCKET_SHAPE: [32, 32, 32] as Vector3,
   VIEWPORT_WIDTH,
   DEFAULT_NAVBAR_HEIGHT: 48,
@@ -391,6 +366,32 @@ const Constants = {
 export const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
 export default Constants;
+
+// For non-editable layers with depth=1, the effective depth is 1 instead of 32.
+// This property may be used to reduce storage in CPU bucket arrays and in GPU textures.
+// Editable volume layers are excluded because their buckets are also sent back and the
+// tracingstore expects bucketLength ^ 3 voxels.
+export function getEffectiveBucketDepth(
+  layerDepthInMag1: number,
+  isEditableVolumeLayer: boolean,
+): 1 | typeof Constants.BUCKET_WIDTH {
+  return layerDepthInMag1 <= 1 && !isEditableVolumeLayer ? 1 : Constants.BUCKET_WIDTH;
+}
+
+// For a z-degenerate layer with a t axis, the unused z-dimension of a bucket instead caches
+// up to BUCKET_WIDTH t-slices on the GPU. Editable layers are excluded because their
+// locally created data has no shared batch buffer.
+export function usesTRecycling(
+  layerDepthInMag1: number,
+  hasTAxis: boolean,
+  isEditableVolumeLayer: boolean,
+): boolean {
+  return (
+    getEffectiveBucketDepth(layerDepthInMag1, isEditableVolumeLayer) === 1 &&
+    hasTAxis &&
+    !isEditableVolumeLayer
+  );
+}
 
 export type TypedArray =
   | Uint8Array<ArrayBuffer>

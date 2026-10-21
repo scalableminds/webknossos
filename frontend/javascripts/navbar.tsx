@@ -3,6 +3,7 @@ import Icon, {
   ExperimentOutlined,
   HomeOutlined,
   LoadingOutlined,
+  MessageOutlined,
   QuestionCircleOutlined,
   ScheduleOutlined,
   SwapOutlined,
@@ -24,6 +25,7 @@ import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
+  Button,
   ConfigProvider,
   Flex,
   Input,
@@ -960,6 +962,20 @@ function Navbar() {
     trailingNavItems.push(<AnnotationLockedTag key="annotation-locked-tag" />);
 
     trailingNavItems.push(
+      <Button
+        key="help-chat-button"
+        shape="round"
+        icon={<MessageOutlined />}
+        onClick={() => setIsHelpModalOpen(true)}
+        style={{
+          marginTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
+        }}
+      >
+        Help
+      </Button>,
+    );
+
+    trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"
         activeUser={loggedInUser}
@@ -1016,11 +1032,7 @@ function Navbar() {
         items={menuItems}
       />
       {isInAnnotationView ? separator : null}
-      <HelpModal
-        isModalOpen={isHelpModalOpen}
-        onCancel={() => setIsHelpModalOpen(false)}
-        centeredLayout
-      />
+      <HelpModal isModalOpen={isHelpModalOpen} onCancel={() => setIsHelpModalOpen(false)} />
       <PortalTarget
         portalId="navbarTracingSlot"
         style={{

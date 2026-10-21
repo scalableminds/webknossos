@@ -1,6 +1,7 @@
 import { CloseOutlined, ExpandAltOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons";
 import { Button, Flex, Modal, Segmented, Tooltip } from "antd";
 import features from "features";
+import { useWkSelector } from "libs/react_hooks";
 import { type CSSProperties, useState } from "react";
 import { clearHelpChatSession, HelpChat } from "./help_chat";
 import { HelpEmail } from "./help_email";
@@ -9,7 +10,6 @@ type HelpMode = "ai" | "email";
 
 type HelpModalProps = {
   isModalOpen: boolean;
-  centeredLayout: boolean;
   onCancel: () => void;
 };
 
@@ -18,7 +18,9 @@ export function HelpModal(props: HelpModalProps) {
   const [mode, setMode] = useState<HelpMode>(aiAgentEnabled ? "ai" : "email");
   const [isExpanded, setIsExpanded] = useState(false);
   const [chatResetKey, setChatResetKey] = useState(0);
-  const positionStyle: CSSProperties = { right: 10, bottom: 40, top: "auto", position: "fixed" };
+  const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+  // Dock the panel to the top right, right below the navbar's help button.
+  const positionStyle: CSSProperties = { right: 10, top: navbarHeight + 8, position: "fixed" };
 
   const modalTitle = (
     <Flex align="center" gap={4} style={{ paddingRight: 8 }}>
@@ -51,11 +53,11 @@ export function HelpModal(props: HelpModalProps) {
   return (
     <Modal
       title={modalTitle}
-      style={!props.centeredLayout ? positionStyle : undefined}
+      style={positionStyle}
       open={props.isModalOpen}
-      mask={props.centeredLayout}
+      mask={false}
       onCancel={props.onCancel}
-      // This renders as a panel docked to the bottom right rather than a centered dialog, and
+      // This renders as a panel docked to the top right rather than a centered dialog, and
       // toggles between a compact and an expanded size.
       // biome-ignore lint/plugin: deliberately off the ModalWidth scale, see above
       width={isExpanded ? 720 : 540}

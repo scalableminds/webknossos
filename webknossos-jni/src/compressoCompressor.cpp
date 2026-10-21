@@ -2,7 +2,8 @@
 
 #include "jniutils.h"
 #include "compresso.hpp"
-#include<string>
+#include <string>
+#include <vector>
 
 uint16_t combineUint16LittleEndian(uint8_t lower, uint8_t higher) {
     uint16_t combined = static_cast<uint16_t>(lower);
@@ -20,46 +21,56 @@ size_t readOutputLengthFromHeader(unsigned char* inputBytes) {
 }
 
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_compresso_NativeCompressoCompressor_decompress
-    (JNIEnv *env, jobject instance, jbyteArray inputJavaArray) {
+    (JNIEnv *env, jobject instance, jbyteArray inputJavaArray, jint maxOutputLength) {
 
     const size_t inputLength = static_cast<size_t>(env->GetArrayLength(inputJavaArray));
     jbyte *inputJBytes = env->GetByteArrayElements(inputJavaArray, nullptr);
+    if (inputJBytes == nullptr) {
+        throwRuntimeException(env, "Error while decoding with compresso: Could not access input bytes");
+        return nullptr;
+    }
     unsigned char* inputBytes = reinterpret_cast<unsigned char*>(inputJBytes);
 
-    if (inputLength < 36) {
-        env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, 0);
-        throwRuntimeException(env, "Error while decoding with compresso: Expected at least 36 bytes of input for the compresso header, got " + std::to_string(inputLength));
+    try {
+        if (inputLength < compresso::CompressoHeader::header_size) {
+            env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, JNI_ABORT);
+            throwRuntimeException(env, "Error while decoding with compresso: Expected at least 36 bytes of input for the compresso header, got " + std::to_string(inputLength));
+            return nullptr;
+        }
+
+        const size_t outputLength = readOutputLengthFromHeader(inputBytes);
+
+        if (outputLength == 0 || maxOutputLength < 0 || outputLength > static_cast<size_t>(maxOutputLength)) {
+            env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, JNI_ABORT);
+            throwRuntimeException(env, "Error while decoding with compresso: output length as read from header must be >0 and at most " + std::to_string(maxOutputLength) + ", got " + std::to_string(outputLength));
+            return nullptr;
+        }
+
+        std::vector<unsigned char> outputBytes(outputLength);
+
+        const int errorCode = compresso::decompress<void,void>(inputBytes, inputLength, outputBytes.data());
+
+        if (errorCode != 0) {
+            env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, JNI_ABORT);
+            throwRuntimeException(env, "Error while decoding with compresso: " + std::to_string(errorCode));
+            return nullptr;
+        }
+
+        env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, JNI_ABORT);
+        const jsize outputJavaLength = static_cast<jsize>(outputLength);
+        jbyteArray outputJavaArray = env->NewByteArray(outputJavaLength);
+        if (outputJavaArray == nullptr) {
+            return nullptr; // OutOfMemoryError is already pending
+        }
+        env->SetByteArrayRegion(outputJavaArray, 0, outputJavaLength, reinterpret_cast<const jbyte*>(outputBytes.data()));
+        return outputJavaArray;
+    } catch (const std::exception &e) {
+        env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception while decoding with compresso: " + std::string(e.what()));
+        return nullptr;
+    } catch (...) {
+        env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception while decoding with compresso");
         return nullptr;
     }
-
-    size_t outputLength = readOutputLengthFromHeader(inputBytes);
-
-    if (outputLength <= 0) {
-        env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, 0);
-        throwRuntimeException(env, "Error while decoding with compresso: output length as read from header must be >0, got " + std::to_string(outputLength));
-        return nullptr;
-    }
-
-    unsigned char* outputBytes = static_cast<unsigned char*>(malloc(outputLength));
-
-    int errorCode = compresso::decompress<void,void>(inputBytes, inputLength, outputBytes);
-
-    if (errorCode != 0) {
-        free(outputBytes);
-        env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, 0);
-        throwRuntimeException(env, "Error while decoding with compresso: " + std::to_string(errorCode));
-        return nullptr;
-    }
-
-    jbyteArray outputJavaArray = env->NewByteArray(outputLength);
-    jbyte *outputJBytes = env->GetByteArrayElements(outputJavaArray, nullptr);
-    for (size_t i = 0; i < outputLength; ++i) {
-        outputJBytes[i] = static_cast<jbyte>(outputBytes[i]);
-    }
-
-    free(outputBytes);
-    env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, 0);
-    env->ReleaseByteArrayElements(outputJavaArray, outputJBytes, JNI_COMMIT);
-
-    return outputJavaArray;
 }

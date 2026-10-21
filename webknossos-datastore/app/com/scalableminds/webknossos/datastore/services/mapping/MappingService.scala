@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services.mapping
 
 import com.scalableminds.util.io.{FileIO, PathUtils}
 import com.scalableminds.util.box.Box
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -45,7 +46,8 @@ class MappingService @Inject() (config: DataStoreConfig, baseDirService: BaseDir
         .resolve(request.dataLayer.name)
         .resolve(mappingsDir)
         .normalize()
-      mappingFilePath = mappingsDirPath.resolve(s"${request.mapping}.$mappingFileExtension").normalize()
+      mappingFilePath <- tryo(mappingsDirPath.resolve(s"${request.mapping}.$mappingFileExtension").normalize()) ?~>
+        s"Invalid mapping name: ${request.mapping}"
       _ <- Box.fromBool(mappingFilePath.getParent == mappingsDirPath) ?~> s"Invalid mapping name: ${request.mapping}"
       result <- FileIO.readFileToByteArray(mappingFilePath.toFile)
     } yield result

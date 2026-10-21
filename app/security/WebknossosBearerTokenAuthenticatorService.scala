@@ -27,7 +27,6 @@ class WebknossosBearerTokenAuthenticatorService(
     idGenerator: IDGenerator,
     clock: Clock,
     userService: UserService,
-    shortLivedTokenService: ShortLivedTokenService,
     conf: WkConf
 )(implicit override val executionContext: ExecutionContext)
     extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock) {
@@ -83,18 +82,12 @@ class WebknossosBearerTokenAuthenticatorService(
     } yield tokenId
 
   def userForToken(tokenValue: String): Fox[User] =
-    shortLivedTokenService.findValid(tokenValue) match {
-      // Short-lived tokens are not in the database, but must still grant datastore/tracingstore access
-      // (this is what the WEBKNOSSOS Python library uses to read data).
-      case Some(shortLivedToken) => userService.findOneCached(shortLivedToken.userId)(using GlobalAccessContext)
-      case None                  =>
-        for {
-          tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> Msg.User.Token.invalid
-          _ <- Fox.fromBool(tokenAuthenticator.isValid) ?~> Msg.User.Token.invalid
-          idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> Msg.User.Token.invalid
-          user <- userService.findOneCached(idValidated)(using GlobalAccessContext)
-        } yield user
-    }
+    for {
+      tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> Msg.User.Token.invalid
+      _ <- Fox.fromBool(tokenAuthenticator.isValid) ?~> Msg.User.Token.invalid
+      idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> Msg.User.Token.invalid
+      user <- userService.findOneCached(idValidated)(using GlobalAccessContext)
+    } yield user
 
   def userForTokenOpt(tokenOpt: Option[String]): Fox[User] = tokenOpt match {
     case Some(token) => userForToken(token)

@@ -1,6 +1,6 @@
 package backend
 
-import mcp.{JsonRpc, JsonRpcError, PythonDocsService}
+import mcp.{EmSkillsService, JsonRpc, JsonRpcError, PythonDocsService}
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.{JsNumber, Json}
 
@@ -52,6 +52,25 @@ class McpTestSuite extends AnyWordSpec {
       assert((error \ "id").asOpt[String].isEmpty)
       assert((error \ "error" \ "code").as[Int] == JsonRpcError.methodNotFoundCode)
       assert((error \ "error" \ "message").as[String] == "Method not found: foo")
+    }
+  }
+
+  "EmSkillsService.isValidSkillName" should {
+    "accept the skill names of the collection" in {
+      assert(EmSkillsService.isValidSkillName("segneuron-inference"))
+      assert(EmSkillsService.isValidSkillName("mitonet-inference"))
+      assert(EmSkillsService.isValidSkillName("bootstrap-em-segmentation"))
+    }
+
+    "reject anything that could escape the repository path" in {
+      // The name is interpolated into a URL under a fixed prefix.
+      assert(!EmSkillsService.isValidSkillName("../../etc/passwd"))
+      assert(!EmSkillsService.isValidSkillName("a/b"))
+      assert(!EmSkillsService.isValidSkillName(".."))
+      assert(!EmSkillsService.isValidSkillName("skill?x=1"))
+      assert(!EmSkillsService.isValidSkillName("Skill"))
+      assert(!EmSkillsService.isValidSkillName("-leading-dash"))
+      assert(!EmSkillsService.isValidSkillName(""))
     }
   }
 

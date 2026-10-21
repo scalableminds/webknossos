@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.box.{Box, Full}
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -21,7 +21,17 @@ import models.user.{User, UserService}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
-import security.{RandomIDGenerator, URLSharing, WkEnv, WkSilhouetteEnvironment}
+import play.silhouette.api.actions.UserAwareRequest
+import play.silhouette.impl.authenticators.BearerTokenAuthenticator
+import security.{
+  RandomIDGenerator,
+  Scope,
+  ScopeMode,
+  ShortLivedTokenService,
+  URLSharing,
+  WkEnv,
+  WkSilhouetteEnvironment
+}
 import utils.WkConf
 
 import javax.inject.Inject
@@ -48,6 +58,7 @@ class UserTokenController @Inject() (
     tracingStoreService: TracingStoreService,
     jobDAO: JobDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    shortLivedTokenService: ShortLivedTokenService,
     conf: WkConf,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -59,7 +70,11 @@ class UserTokenController @Inject() (
   def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
-        bearerTokenService.createAndInitDataStoreTokenForUser(user)
+        if (isRequestedByAgent(request))
+          // An agent token must not be able to trade itself in for a DataStore token, which would not be subject
+          // to the agent permissions. It gets another short-lived token instead, which is.
+          shortLivedTokenService.create(user._id, conf.Silhouette.TokenAuthenticator.shortLivedExpiry).map(_.value)
+        else bearerTokenService.createAndInitDataStoreTokenForUser(user)
       case None => Fox.successful("")
     }
     for {
@@ -93,21 +108,59 @@ class UserTokenController @Inject() (
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {
+        scopesAllowed <- scopesAllow(token, accessRequest)
         userBox <- bearerTokenService.userForTokenOpt(token).shiftBox
         sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(using DBAccessContext(userBox.toOption))
-        answer <- accessRequest.resourceType match {
-          case AccessResourceType.dataset =>
-            handleDataSetAccess(accessRequest.resourceId, accessRequest.mode, userBox)(using sharingTokenAccessCtx)
-          case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox, token)
-          case AccessResourceType.annotation =>
-            handleAnnotationAccess(accessRequest.resourceId, accessRequest.mode, userBox, token)
-          case AccessResourceType.jobExport =>
-            handleJobExportAccess(accessRequest.resourceId, accessRequest.mode, userBox)
-          case _ =>
-            Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
-        }
+        answer <-
+          if (!scopesAllowed)
+            Fox.successful(UserAccessAnswer(granted = false, Some("Not allowed for this token, missing scope.")))
+          else
+            accessRequest.resourceType match {
+              case AccessResourceType.dataset =>
+                handleDataSetAccess(accessRequest.resourceId, accessRequest.mode, userBox)(using sharingTokenAccessCtx)
+              case AccessResourceType.tracing =>
+                handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox, token)
+              case AccessResourceType.annotation =>
+                handleAnnotationAccess(accessRequest.resourceId, accessRequest.mode, userBox, token)
+              case AccessResourceType.jobExport =>
+                handleJobExportAccess(accessRequest.resourceId, accessRequest.mode, userBox)
+              case _ =>
+                Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
+            }
       } yield Ok(Json.toJson(answer))
+    }
+
+  // The authenticator has already been validated at this point, so recognizing the token type is enough.
+  private def isRequestedByAgent(request: UserAwareRequest[WkEnv, ?]): Boolean =
+    request.authenticator.map(_.actualAuthenticator).exists {
+      case a: BearerTokenAuthenticator => shortLivedTokenService.isShortLivedTokenValue(a.id)
+      case _                           => false
+    }
+
+  /*
+   * The datastore and tracingstore ask here whether a token may access a resource. This is the second place where
+   * scopes are enforced, next to filters.ScopeFilter, and it is the one that covers reading and writing voxel data.
+   */
+  private def scopesAllow(token: Option[String], accessRequest: UserAccessRequest)(implicit
+      ec: ExecutionContext
+  ): Fox[Boolean] =
+    token match {
+      case None             => Fox.successful(true)
+      case Some(tokenValue) =>
+        // Fails (rather than allowing) if the lookup itself fails.
+        shortLivedTokenService.findValid(tokenValue).shiftBox.flatMap {
+          case Full(agentToken) =>
+            for {
+              // Read per request, so that changing the agent permissions takes effect at once.
+              user <- userService.findOneCached(agentToken.userId)(using GlobalAccessContext)
+              grantedScopes = Scope.Set.parse(user.mcpAgentScopes)
+            } yield Scope.fromAccessResourceType(accessRequest.resourceType).exists { resource =>
+              grantedScopes.allows(Scope(resource, ScopeMode.fromAccessMode(accessRequest.mode)))
+            }
+          // Only agent tokens are restricted here. A revoked or expired one does not resolve to a user below either.
+          case Empty            => Fox.successful(true)
+          case failure: Failure => failure.toFox
+        }
     }
 
   private def handleDataSetAccess(idOpt: Option[String], mode: AccessMode.Value, userBox: Box[User])(using

@@ -5,7 +5,7 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.json.*
-import security.ShortLivedTokenService
+import security.{Scope, ShortLivedTokenService}
 import utils.WkConf
 
 import javax.inject.{Inject, Singleton}
@@ -18,6 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class McpService @Inject() (
     shortLivedTokenService: ShortLivedTokenService,
     pythonDocsService: PythonDocsService,
+    emSkillsService: EmSkillsService,
     conf: WkConf
 )(implicit ec: ExecutionContext)
     extends Formatter {
@@ -28,6 +29,8 @@ class McpService @Inject() (
   private val getTokenToolName = "get_short_lived_api_token"
   private val listDocsToolName = "list_python_library_docs"
   private val readDocsToolName = "read_python_library_docs_page"
+  private val listSkillsToolName = "list_em_processing_skills"
+  private val readSkillToolName = "read_em_processing_skill"
 
   private val emptySchema = Json.obj("type" -> "object", "properties" -> Json.obj())
 
@@ -59,6 +62,9 @@ class McpService @Inject() (
            |
            |Keep the token out of the script file, as shown above. If uv is not available, fall back to installing
            |the `webknossos` package into a virtual environment with pip.
+           |
+           |The result lists the scopes the token is limited to, in the form `resource:mode`. Anything outside them
+           |is rejected with 403, so check them before planning destructive work.
            |""".stripMargin,
       "inputSchema" -> emptySchema
     ),
@@ -89,6 +95,37 @@ class McpService @Inject() (
         ),
         "required" -> Json.arr("url")
       )
+    ),
+    Json.obj(
+      "name" -> listSkillsToolName,
+      "title" -> "List the volume EM processing skills",
+      "description" ->
+        s"""Returns the catalogue of the EM-Skills collection (${EmSkillsService.repositoryUrl}): agent skills for
+           |processing and analysing volume electron microscopy data, covering neuron and mitochondria segmentation,
+           |annotation planning, segmentation review and visualisation.
+           |
+           |Consult this before writing your own image processing or analysis code for EM data. The skills work on
+           |local files, so combine them with the `webknossos` Python library, which downloads the data from
+           |WEBKNOSSOS and uploads the results back.""".stripMargin,
+      "inputSchema" -> emptySchema
+    ),
+    Json.obj(
+      "name" -> readSkillToolName,
+      "title" -> "Read one volume EM processing skill",
+      "description" ->
+        """Returns the SKILL.md of one skill from the EM-Skills collection, which describes when to use it and how
+          |to run it. Pass the skill name as listed by the list_em_processing_skills tool, for example
+          |segneuron-inference.""".stripMargin,
+      "inputSchema" -> Json.obj(
+        "type" -> "object",
+        "properties" -> Json.obj(
+          "name" -> Json.obj(
+            "type" -> "string",
+            "description" -> "Name of the skill, e.g. segneuron-inference or mitonet-inference"
+          )
+        ),
+        "required" -> Json.arr("name")
+      )
     )
   )
 
@@ -102,7 +139,12 @@ class McpService @Inject() (
       |3. Write the code to a file and run it with uv, which installs the library into a temporary environment:
       |   `uv run --with webknossos <script>.py`. There is no separate installation step, and the project's own
       |   dependencies are not touched. Pass the token via an environment variable rather than writing it into
-      |   the script.""".stripMargin
+      |   the script.
+      |
+      |For processing and analysing the data itself (segmenting neurons or mitochondria, planning annotations,
+      |reviewing a segmentation, rendering videos), look at list_em_processing_skills and
+      |read_em_processing_skill first, instead of writing such pipelines from scratch. Those skills operate on
+      |local files, so use the `webknossos` library to fetch the data and to upload results back.""".stripMargin
 
   /** Handles one JSON-RPC message. Returns None for notifications, which must not be answered.
     */
@@ -149,25 +191,33 @@ class McpService @Inject() (
       case Some(name) =>
         val arguments = (params \ "arguments").asOpt[JsObject].getOrElse(Json.obj())
         name match {
-          case `getTokenToolName` => asToolResult(Fox.successful(shortLivedTokenFor(user)))
+          case `getTokenToolName` => asToolResult(shortLivedTokenFor(user))
           case `listDocsToolName` => asToolResult(pythonDocsService.getIndex)
           case `readDocsToolName` =>
             (arguments \ "url").asOpt[String] match {
               case None      => Future.successful(Left(JsonRpcError.invalidParams("Missing or invalid argument: url")))
               case Some(url) => asToolResult(pythonDocsService.getPage(url))
             }
+          case `listSkillsToolName` => asToolResult(emSkillsService.getCatalogue)
+          case `readSkillToolName`  =>
+            (arguments \ "name").asOpt[String] match {
+              case None => Future.successful(Left(JsonRpcError.invalidParams("Missing or invalid argument: name")))
+              case Some(name) => asToolResult(emSkillsService.getSkill(name))
+            }
           case _ => Future.successful(Left(JsonRpcError.invalidParams(s"Unknown tool: $name")))
         }
     }
 
-  private def shortLivedTokenFor(user: User): String = {
-    val token = shortLivedTokenService.create(user._id, conf.Silhouette.TokenAuthenticator.shortLivedExpiry)
-    Json.prettyPrint(
+  private def shortLivedTokenFor(user: User): Fox[String] =
+    for {
+      token <- shortLivedTokenService.create(user._id, conf.Silhouette.TokenAuthenticator.shortLivedExpiry)
+    } yield Json.prettyPrint(
       Json.obj(
         "token" -> token.value,
         "expiresAt" -> token.expiresAt.toString,
         "webknossosUrl" -> conf.Http.uri,
         "organizationId" -> user._organization,
+        "scopes" -> Scope.Set.parse(user.mcpAgentScopes).toString,
         "usage" -> Json.obj(
           "python" ->
             s"""import os, webknossos as wk
@@ -179,7 +229,6 @@ class McpService @Inject() (
         )
       )
     )
-  }
 
   // Failures of a tool are reported inside the result, not as a JSON-RPC error, so that the model can react to them.
   private def asToolResult(textFox: Fox[String]): Future[Either[JsonRpcError, JsValue]] =

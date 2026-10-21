@@ -22,7 +22,6 @@ class WkSilhouetteEnvironment @Inject() (
     conf: WkConf,
     tokenDAO: TokenDAO,
     userService: UserService,
-    shortLivedTokenService: ShortLivedTokenService,
     cookieHeaderEncoding: CookieHeaderEncoding
 )(implicit val executionContext: ExecutionContext)
     extends Environment[WkEnv] {
@@ -67,7 +66,6 @@ class WkSilhouetteEnvironment @Inject() (
     idGenerator,
     Clock(),
     userService,
-    shortLivedTokenService,
     conf
   )
 

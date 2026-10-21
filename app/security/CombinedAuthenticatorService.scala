@@ -37,7 +37,6 @@ case class CombinedAuthenticatorService(
     idGenerator: IDGenerator,
     clock: Clock,
     userService: UserService,
-    shortLivedTokenService: ShortLivedTokenService,
     conf: WkConf
 )(implicit val executionContext: ExecutionContext)
     extends AuthenticatorService[CombinedAuthenticator]
@@ -59,15 +58,7 @@ case class CombinedAuthenticatorService(
   )
 
   val tokenAuthenticatorService =
-    new WebknossosBearerTokenAuthenticatorService(
-      tokenSettings,
-      tokenDao,
-      idGenerator,
-      clock,
-      userService,
-      shortLivedTokenService,
-      conf
-    )
+    new WebknossosBearerTokenAuthenticatorService(tokenSettings, tokenDao, idGenerator, clock, userService, conf)
 
   // is actually createCookie, called as "create" because it is the default
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] =
@@ -99,34 +90,12 @@ case class CombinedAuthenticatorService(
     } yield optionCookieUnlessSignedOutEverywhere
       .map(CombinedAuthenticator(_))
       .orElse(optionTokenOrBearer.map(CombinedAuthenticator(_)))
-      .orElse(retrieveShortLived(request).map(CombinedAuthenticator(_)))
 
   private def retrieveByAuthorizationHeader(request: RequestHeader): Future[Option[BearerTokenAuthenticator]] =
     bearerAuthorizationHeaderValue(request) match {
       case None        => Future.successful(None)
       case Some(value) => tokenDao.findOneByValue(value).toFutureOption
     }
-
-  /*
-   * Short-lived tokens are held in memory only (see ShortLivedTokenService), so they are not found by the
-   * silhouette token retrieval, which looks them up in the database. They are synthesized into a
-   * BearerTokenAuthenticator here so that they authenticate all API routes just like a regular token.
-   * Note that idleTimeout must stay None: silhouette only calls AuthenticatorService.update (which would
-   * try to write to the database) for authenticators that define an idle timeout.
-   */
-  private def retrieveShortLived(request: RequestHeader): Option[BearerTokenAuthenticator] =
-    tokenValueFromRequest(request).flatMap(shortLivedTokenService.findValid).map { shortLivedToken =>
-      BearerTokenAuthenticator(
-        id = shortLivedToken.value,
-        loginInfo = LoginInfoAdapter.loginInfoFromUserId(shortLivedToken.userId),
-        lastUsedDateTime = clock.now,
-        expirationDateTime = shortLivedToken.expiresAt.toZonedDateTime,
-        idleTimeout = None
-      )
-    }
-
-  private def tokenValueFromRequest(request: RequestHeader): Option[String] =
-    request.headers.get(tokenSettings.fieldName).orElse(bearerAuthorizationHeaderValue(request))
 
   private def bearerAuthorizationHeaderValue(request: RequestHeader): Option[String] =
     request.headers.get(HeaderNames.AUTHORIZATION).map(_.trim).collect {
@@ -196,8 +165,6 @@ case class CombinedAuthenticatorService(
   ): Future[AuthenticatorResult] =
     authenticator.actualAuthenticator match {
       case a: CookieAuthenticator      => cookieAuthenticatorService.discard(a, result)
-      case a: BearerTokenAuthenticator =>
-        shortLivedTokenService.remove(a.id)
-        tokenAuthenticatorService.discard(a, result)
+      case a: BearerTokenAuthenticator => tokenAuthenticatorService.discard(a, result)
     }
 }

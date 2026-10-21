@@ -120,6 +120,10 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
 
     val operatorData: String = get[String]("webKnossos.operatorData")
 
+    object TokenScopes {
+      val enforced: Boolean = get[Boolean]("webKnossos.tokenScopes.enforced")
+    }
+
     object Datasets {
       object UploadToPaths {
         val prefixes: Option[Seq[String]] =
@@ -139,6 +143,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
         SampleOrganization,
         FetchUsedStorage,
         TermsOfService,
+        TokenScopes,
         Datasets
       )
   }

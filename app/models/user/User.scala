@@ -40,6 +40,8 @@ case class User(
     created: Instant = Instant.now,
     lastTaskTypeId: Option[ObjectId] = None,
     loggedOutEverywhereTime: Option[Instant] = None,
+    // Scope expression limiting what AI agents connecting via the MCP server may do, see security.Scope.
+    mcpAgentScopes: String = "write",
     isDeleted: Boolean = false
 ) extends DBAccessContextPayload
     with Identity {
@@ -108,6 +110,7 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       Instant.fromSql(r.created),
       r.lasttasktypeid.map(ObjectId(_)),
       r.loggedouteverywheretime.map(Instant.fromSql),
+      r.mcpagentscopes,
       r.isdeleted
     )
 
@@ -501,6 +504,14 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(q"UPDATE webknossos.users SET lastActivity = $lastActivity WHERE _id = $userId".asUpdate)
+    } yield ()
+
+  def updateMcpAgentScopes(userId: ObjectId, mcpAgentScopes: String)(using ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(userId)
+      _ <- run(q"""UPDATE webknossos.users
+                   SET mcpAgentScopes = $mcpAgentScopes
+                   WHERE _id = $userId""".asUpdate)
     } yield ()
 
   def updateUserConfiguration(userId: ObjectId, userConfiguration: JsObject)(using ctx: DBAccessContext): Fox[Unit] =

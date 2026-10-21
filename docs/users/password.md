@@ -96,6 +96,7 @@ If your token has been compromised or you suspect someone else has gained access
 
 Certain API integrations need the organization ID which can be found here, in the developer settings.
 
-### MCP Server
+### MCP Agent Connections
 
-WEBKNOSSOS ships an [MCP server](mcp.md) so that AI agents can work with your datasets and annotations.
+The `MCP Agent Connections` tab has everything needed to connect an AI agent to WEBKNOSSOS through the
+[MCP server](mcp.md), so that it can work with your datasets and annotations.

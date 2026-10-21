@@ -452,13 +452,18 @@ class AuthenticationController @Inject() (
   }
 
   def deleteToken(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
-    // Revoking the API token also revokes all short-lived tokens that were derived from the user's account.
-    shortLivedTokenService.revokeAllForUser(request.identity._id)
-    Fox.fromFuture(combinedAuthenticatorService.findTokenForUser(request.identity._id)).flatMap {
-      case Some(token) =>
-        Fox.fromFuture(combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted))))
-      case _ => Fox.successful(Ok)
-    }
+    for {
+      // Revoking the API token also revokes all short-lived tokens that were derived from the user's account.
+      _ <- shortLivedTokenService.revokeAllForUser(request.identity._id)
+      tokenOpt <- Fox.fromFuture(combinedAuthenticatorService.findTokenForUser(request.identity._id))
+      result <- tokenOpt match {
+        case Some(token) =>
+          Fox.fromFuture(
+            combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted)))
+          )
+        case _ => Fox.successful(Ok)
+      }
+    } yield result
   }
 
   def logout: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
@@ -945,7 +950,7 @@ class AuthenticationController @Inject() (
       _ <- userDAO.logOutEverywhereByMultiUserId(request.identity._multiUser)
       userIds <- userDAO.findIdsByMultiUserId(request.identity._multiUser)
       _ = userIds.map(userService.removeUserFromCache)
-      _ = userIds.foreach(shortLivedTokenService.revokeAllForUser)
+      _ <- shortLivedTokenService.revokeAllForUsers(userIds)
       _ <- tokenDAO.deleteDataStoreTokensForMultiUser(request.identity._multiUser)
     } yield Ok
   }

@@ -1,0 +1,22 @@
+name: Prune labels after merge
+
+# Removes the automerge and autodeploy labels once a PR is merged.
+# uses pull_request_target so that fork PRs get a token with write access; safe because no PR code is checked out.
+
+on:
+  pull_request_target:
+    types: [closed]
+
+jobs:
+  remove-labels:
+    runs-on: ubuntu-22.04
+    if: github.event.pull_request.merged
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Remove automerge and autodeploy labels
+        run: gh pr edit "$PR_NUMBER" --repo "$REPO" --remove-label automerge --remove-label autodeploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}

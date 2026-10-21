@@ -94,6 +94,15 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
     }
   }
 
+  "ZarrMeshFileService.runFitsRequest" should {
+    "read runs of a few chunks or of at most four rows per requested segment" in {
+      assert(ZarrMeshFileService.runFitsRequest(spanChunks = 4, rowsPerChunk = 1024, requestedCount = 2))
+      assert(!ZarrMeshFileService.runFitsRequest(spanChunks = 5, rowsPerChunk = 1024, requestedCount = 2))
+      assert(ZarrMeshFileService.runFitsRequest(spanChunks = 1000, rowsPerChunk = 1024, requestedCount = 256000))
+      assert(!ZarrMeshFileService.runFitsRequest(spanChunks = 1000, rowsPerChunk = 1024, requestedCount = 255999))
+    }
+  }
+
   "ZarrMeshFileService.runAround" should {
     "find the run of a mapping level around a row" in {
       def run(row: Long, level: Int) = {

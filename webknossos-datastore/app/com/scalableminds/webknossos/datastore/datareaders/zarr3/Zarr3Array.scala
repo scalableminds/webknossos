@@ -202,11 +202,11 @@ class Zarr3Array(
    * nor being read are claimed in the chunk cache first, so that concurrent reads of the same chunks wait for this read
    * instead of requesting them again.
    */
-  override def readChunks(chunkIndices: Seq[Array[Long]], coalescing: ChunkReadCoalescing)(using
+  override def readChunkBoxes(chunkIndices: Seq[Array[Long]], coalescing: ChunkReadCoalescing)(using
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[Seq[MultiArray]] =
-    if (shardingCodec.isEmpty || !coalescing.isEnabled) super.readChunks(chunkIndices, coalescing)
+  ): Fox[Seq[Box[MultiArray]]] =
+    if (shardingCodec.isEmpty || !coalescing.isEnabled) super.readChunkBoxes(chunkIndices, coalescing)
     else {
       val claims = new ConcurrentHashMap[Int, Promise[Box[MultiArray]]]()
       // The cache calls the loader while getOrLoad is called, if the chunk is absent.
@@ -225,7 +225,7 @@ class Zarr3Array(
         fetched <- Fox.fromFuture(readClaimedChunks(chunkIndices, claimedPositions, claims, coalescing).futureBox)
         // Waiting reads must not hang if the read failed before completing all claims.
         _ = claims.values().asScala.foreach(_.trySuccess(Failure(s"Reading chunks failed: $fetched")))
-        result <- Fox.combined(chunks)
+        result <- Fox.combined(chunks.map(_.shiftBox))
       } yield result
     }
 

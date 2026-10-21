@@ -413,10 +413,16 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
         return false;
       }
       let result: typeof versions;
+      // If a fetch fails, the result still contains the old pages. Stop in that case,
+      // because the same page would be requested again and again otherwise.
       if (version > newestLoaded && pages[0].previousPage != null) {
-        result = (await fetchPreviousPage()).data;
+        const fetchResult = await fetchPreviousPage();
+        if (fetchResult.isError) return false;
+        result = fetchResult.data;
       } else if (version < oldestLoaded && pages[pages.length - 1].nextPage != null) {
-        result = (await fetchNextPage()).data;
+        const fetchResult = await fetchNextPage();
+        if (fetchResult.isError) return false;
+        result = fetchResult.data;
       } else {
         return false;
       }

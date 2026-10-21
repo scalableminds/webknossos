@@ -29,34 +29,28 @@ class McpBundleService @Inject() (mcpService: McpService, conf: WkConf) extends 
   // The manifest version must be semver, while the WEBKNOSSOS version is a release tag, a CI build number or "dev".
   private val semverPattern = """^(\d+\.\d+\.\d+).*""".r
 
-  /** @param scopesOpt
-    *   the permission level selected in the UI. It becomes part of the URL the bundle points at, so that installing the
-    *   bundle carries the same restriction as the other connection options.
-    */
-  def bundleBytes(scopesOpt: Option[String] = None): Array[Byte] = build(scopesOpt)
+  // The bundle carries no agent permissions. Those are a per-user setting (User.mcpAgentScopes), applied on every request.
+  def bundleBytes(): Array[Byte] = build()
 
   def warmUp(): Unit =
-    try logger.info(s"Generated MCP bundle $fileName (${bundleBytes().length} bytes) for ${mcpUrl(None)}")
+    try logger.info(s"Generated MCP bundle $fileName (${bundleBytes().length} bytes) for $mcpUrl")
     catch case e: Exception => logger.error(s"Could not generate the MCP bundle: ${e.getMessage}", e)
 
-  private def mcpUrl(scopesOpt: Option[String]): String = {
-    val base = s"${conf.Http.uri.stripSuffix("/")}/api/mcp"
-    scopesOpt.map(scopes => s"$base?scopes=$scopes").getOrElse(base)
-  }
+  private def mcpUrl: String = s"${conf.Http.uri.stripSuffix("/")}/api/mcp"
 
   private def manifestVersion: String = webknossos.BuildInfo.version match {
     case semverPattern(version) => version
     case _                      => "0.0.0"
   }
 
-  private def build(scopesOpt: Option[String]): Array[Byte] = {
+  private def build(): Array[Byte] = {
     val bridgeSource = Using.resource(getClass.getResourceAsStream(bridgeResourcePath)) { stream =>
       if (stream == null) throw new Exception(s"Could not find $bridgeResourcePath on the classpath")
       Source.fromInputStream(stream, StandardCharsets.UTF_8.name).mkString
     }
     val out = new ByteArrayOutputStream()
     Using.resource(new ZipOutputStream(out)) { zip =>
-      addEntry(zip, "manifest.json", Json.prettyPrint(manifest(scopesOpt)))
+      addEntry(zip, "manifest.json", Json.prettyPrint(manifest))
       addEntry(zip, "server/index.js", bridgeSource)
     }
     out.toByteArray
@@ -73,7 +67,7 @@ class McpBundleService @Inject() (mcpService: McpService, conf: WkConf) extends 
   // 2000-01-01, an arbitrary fixed date. Zip entries cannot express dates before 1980.
   private val fixedEntryTime: Long = 946684800000L
 
-  private def manifest(scopesOpt: Option[String]): JsObject = Json.obj(
+  private def manifest: JsObject = Json.obj(
     "manifest_version" -> "0.3",
     "name" -> "webknossos",
     "display_name" -> "WEBKNOSSOS",
@@ -110,7 +104,7 @@ class McpBundleService @Inject() (mcpService: McpService, conf: WkConf) extends 
         "title" -> "WEBKNOSSOS MCP URL",
         "description" -> "The MCP endpoint of your WEBKNOSSOS instance",
         "required" -> true,
-        "default" -> mcpUrl(scopesOpt)
+        "default" -> mcpUrl
       ),
       "token" -> Json.obj(
         "type" -> "string",

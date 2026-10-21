@@ -93,7 +93,7 @@ object Scope {
       */
     def parse(commaSeparated: String): Set = {
       val entries = commaSeparated.split(',').toList.map(_.trim).filter(_.nonEmpty)
-      val fromLevels = entries.flatMap(ScopeMode.fromString).flatMap(level => forLevel(level).scopes)
+      val fromLevels = entries.flatMap(levelFromString).flatMap(level => forLevel(level).scopes)
       Set((entries.flatMap(fromString) ++ fromLevels).distinct)
     }
 
@@ -117,19 +117,26 @@ object Scope {
       ScopeResource.user
     )
 
-    /** The three coarse permission levels offered in the UI. Each grants read on everything, plus the given mode on the
-      * resources an agent works on.
-      */
     // The explicit way to say "no permissions at all", so that it is not mistaken for a typo.
     val noneLiteral = "none"
+
+    // administrate is no level: it is not part of the read/write/delete ladder (see ScopeMode.rank), so forLevel would
+    // grant it on teams and users while not even granting read on datasets.
+    private val levels: List[ScopeMode.Value] = List(ScopeMode.read, ScopeMode.write, ScopeMode.delete)
+
+    private def levelFromString(s: String): Option[ScopeMode.Value] =
+      ScopeMode.fromString(s).filter(levels.contains)
 
     // Rejects values that would silently grant nothing because of a typo, e.g. "raed".
     def isParsable(commaSeparated: String): Boolean = {
       val entries = commaSeparated.split(',').toList.map(_.trim).filter(_.nonEmpty)
       entries.isEmpty || entries == List(noneLiteral) ||
-      entries.forall(entry => fromString(entry).isDefined || ScopeMode.fromString(entry).isDefined)
+      entries.forall(entry => fromString(entry).isDefined || levelFromString(entry).isDefined)
     }
 
+    /** The three coarse permission levels offered in the UI. Each grants read on everything, plus the given mode on the
+      * resources an agent works on.
+      */
     def forLevel(level: ScopeMode.Value): Set = {
       val perResource = ScopeResource.values.toList.map { resource =>
         if (contentResources.contains(resource)) Scope(resource, level) else Scope(resource, ScopeMode.read)

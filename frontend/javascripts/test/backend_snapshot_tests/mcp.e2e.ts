@@ -79,6 +79,22 @@ describe("Short-lived tokens via MCP (E2E)", () => {
     expect((await requestWithToken("/api/user", dataStoreToken)).status).toBe(200);
   });
 
+  it("cannot dodge their scopes by sending a second token header", async ({ expect }) => {
+    const { token } = await createShortLivedToken();
+    const requestWithBothHeaders = (path: string, authToken: string) =>
+      fetch(path, {
+        headers: { "X-Auth-Token": authToken, Authorization: `Bearer ${token}` },
+      });
+
+    // If any header carries a short-lived token, the request is scoped, whatever the other header holds.
+    expect((await requestWithBothHeaders("/api/auth/token", "unknownToken")).status).toBe(403);
+    expect((await requestWithBothHeaders("/api/auth/token", tokenUserA)).status).toBe(403);
+
+    // An unknown X-Auth-Token must not make the authentication fall back to the Bearer header.
+    // /api/user is allowed for short-lived tokens, so this checks the authentication rather than the scopes.
+    expect((await requestWithBothHeaders("/api/user", "unknownToken")).status).toBe(401);
+  });
+
   it("follow the current agent permissions of their user", async ({ expect }) => {
     const { token } = await createShortLivedToken();
     expect((await requestWithToken("/api/user", token)).status).toBe(200);

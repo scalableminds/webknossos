@@ -5,12 +5,11 @@ import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.UserService
 import org.apache.pekko.stream.Materializer
-import play.api.http.HeaderNames
 import play.api.libs.json.Json
 import play.api.mvc.{Filter, RequestHeader, Result}
 import play.api.mvc.Results.{Forbidden, InternalServerError}
 import play.api.routing.Router
-import security.{RouteScopes, Scope, ShortLivedToken, ShortLivedTokenService}
+import security.{RouteScopes, Scope, ShortLivedToken, ShortLivedTokenService, TokenHeaders}
 import utils.WkConf
 
 import javax.inject.Inject
@@ -36,8 +35,6 @@ class ScopeFilter @Inject() (
     ec: ExecutionContext
 ) extends Filter
     with LazyLogging {
-
-  private val bearerPrefix = "Bearer "
 
   override def apply(nextFilter: RequestHeader => Future[Result])(request: RequestHeader): Future[Result] =
     scopedTokenFor(request).flatMap {
@@ -78,22 +75,24 @@ class ScopeFilter @Inject() (
 
   /** Empty for revoked or expired short-lived tokens as well. Such requests pass through here, but are then rejected by
     * the regular authentication, which does not find a valid token either. Failure means the lookup itself failed.
+    *
+    * All token headers are checked, not just the one the authentication picks (TokenHeaders.credential). If any of them
+    * holds a valid short-lived token, the request is scoped. Adding a second header can then never lift the
+    * restriction, even if the two ever disagree about which header counts.
     */
   private def scopedTokenFor(request: RequestHeader): Future[Box[ShortLivedToken]] =
     if (!request.path.startsWith("/api/")) Future.successful(Empty)
-    else
-      tokenValueFromHeaders(request) match {
-        case None             => Future.successful(Empty)
-        case Some(tokenValue) => shortLivedTokenService.findValid(tokenValue).futureBox
-      }
+    else firstValidShortLivedToken(TokenHeaders.allTokenValues(request))
 
-  private def tokenValueFromHeaders(request: RequestHeader): Option[String] =
-    request.headers
-      .get("X-Auth-Token")
-      .orElse(request.headers.get(HeaderNames.AUTHORIZATION).map(_.trim).collect {
-        case header if header.toLowerCase.startsWith(bearerPrefix.toLowerCase) =>
-          header.drop(bearerPrefix.length).trim
-      })
+  private def firstValidShortLivedToken(tokenValues: List[String]): Future[Box[ShortLivedToken]] =
+    tokenValues match {
+      case Nil          => Future.successful(Empty)
+      case head :: tail =>
+        shortLivedTokenService.findValid(head).futureBox.flatMap {
+          case Empty => firstValidShortLivedToken(tail)
+          case other => Future.successful(other)
+        }
+    }
 
   private def requiredScopeFor(request: RequestHeader): Option[Scope] =
     request.attrs.get(Router.Attrs.HandlerDef).flatMap { handlerDef =>

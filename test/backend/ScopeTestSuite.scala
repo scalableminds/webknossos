@@ -122,6 +122,12 @@ class ScopeTestSuite extends AnyWordSpec {
       assert(combined.allows(Scope(ScopeResource.annotation, ScopeMode.read)))
       assert(!combined.allows(Scope(ScopeResource.annotation, ScopeMode.delete)))
     }
+
+    "not treat administrate as a level" in {
+      val parsed = Scope.Set.parse("administrate")
+      assert(parsed.scopes.isEmpty)
+      assert(!parsed.allows(Scope(ScopeResource.team, ScopeMode.administrate)))
+    }
   }
 
   "Scope.Set.isParsable" should {
@@ -141,6 +147,11 @@ class ScopeTestSuite extends AnyWordSpec {
       assert(!Scope.Set.isParsable("raed"))
       assert(!Scope.Set.isParsable("dataset:raed"))
       assert(!Scope.Set.isParsable("read,nonsense"))
+    }
+
+    "reject administrate as a level, but accept it as an explicit scope" in {
+      assert(!Scope.Set.isParsable("administrate"))
+      assert(Scope.Set.isParsable("dataset:administrate"))
     }
   }
 

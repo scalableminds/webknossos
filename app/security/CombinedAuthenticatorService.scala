@@ -9,7 +9,6 @@ import play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator
 import play.silhouette.crypto.{JcaSigner, JcaSignerSettings}
 import play.silhouette.impl.authenticators.{CookieAuthenticator, *}
 import models.user.UserService
-import play.api.http.HeaderNames
 import play.api.mvc.*
 import utils.WkConf
 
@@ -41,8 +40,6 @@ case class CombinedAuthenticatorService(
 )(implicit val executionContext: ExecutionContext)
     extends AuthenticatorService[CombinedAuthenticator]
     with Logger {
-
-  private val bearerPrefix = "Bearer "
 
   private val cookieSigner = new JcaSigner(JcaSignerSettings(conf.Silhouette.CookieAuthenticator.signerSecret))
 
@@ -81,26 +78,20 @@ case class CombinedAuthenticatorService(
     for {
       optionCookie <- cookieAuthenticatorService.retrieve(using request)
       optionCookieUnlessSignedOutEverywhere <- cookieUnlessSignedOutEverywhere(optionCookie)
-      // Silhouette only reads the X-Auth-Token header. Authorization: Bearer is handled separately below.
-      optionToken <- tokenAuthenticatorService.retrieve(using request)
-      optionTokenOrBearer <- optionToken match {
-        case Some(_) => Future.successful(optionToken)
-        case None    => retrieveByAuthorizationHeader(request)
-      }
+      // Silhouette only reads the X-Auth-Token header. Authorization: Bearer is handled separately below, and only if
+      // X-Auth-Token is absent. Falling back to it when X-Auth-Token holds an unknown token would let a request be
+      // authenticated by a token that filters.ScopeFilter did not check, see TokenHeaders.
+      optionTokenOrBearer <-
+        if (TokenHeaders.authToken(request).isDefined) tokenAuthenticatorService.retrieve(using request)
+        else retrieveByAuthorizationHeader(request)
     } yield optionCookieUnlessSignedOutEverywhere
       .map(CombinedAuthenticator(_))
       .orElse(optionTokenOrBearer.map(CombinedAuthenticator(_)))
 
   private def retrieveByAuthorizationHeader(request: RequestHeader): Future[Option[BearerTokenAuthenticator]] =
-    bearerAuthorizationHeaderValue(request) match {
+    TokenHeaders.bearerToken(request) match {
       case None        => Future.successful(None)
       case Some(value) => tokenDao.findOneUsableForAuthentication(value).toFutureOption
-    }
-
-  private def bearerAuthorizationHeaderValue(request: RequestHeader): Option[String] =
-    request.headers.get(HeaderNames.AUTHORIZATION).map(_.trim).collect {
-      case header if header.toLowerCase.startsWith(bearerPrefix.toLowerCase) =>
-        header.drop(bearerPrefix.length).trim
     }
 
   private def cookieUnlessSignedOutEverywhere(

@@ -69,8 +69,8 @@ class McpController @Inject() (
   }
 
   // The bundle contains no secrets (the user enters their token when installing it), so it needs no authentication.
-  def bundle(scopes: Option[String]): Action[AnyContent] = Action { _ =>
-    Ok(mcpBundleService.bundleBytes(scopes))
+  def bundle(): Action[AnyContent] = Action { _ =>
+    Ok(mcpBundleService.bundleBytes())
       .as("application/octet-stream")
       .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="${mcpBundleService.fileName}"""")
   }

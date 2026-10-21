@@ -299,17 +299,23 @@ export const getBrushOverlay: ShaderModule = {
       if (!isMouseInCanvas || !isMouseInActiveViewport || !showBrush) {
         return brushOverlayColor;
       }
-      vec3 flooredMousePos = floor(globalMousePosition);
+      // Mirrors isInsideCapsule in voxel_rasterizer.ts for a single brush dab:
+      // a voxel of the brush mag is painted if its center lies strictly within the
+      // radius around the brush center (see getBrushCenterInMag).
+      vec2 brushMagUV = transDim(brushMag).xy;
+      vec2 voxelCenter = (floor(worldCoordUVW.xy / brushMagUV) + 0.5) * brushMagUV;
 
       // Compute the anisotropy of the dataset so that the brush looks the same in
       // each viewport
       float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
       vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
 
-      float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * anisotropyFactorUVW.xy);
-
-      float radius = ceil(brushSizeInPixel / 2.0);
-      if (radius > dist) {
+      vec2 delta = (voxelCenter - transDim(brushCenterPosition).xy) * anisotropyFactorUVW.xy;
+      float radius = brushSizeInPixel / 2.0;
+      // Compare squared values to avoid the imprecise sqrt. Since the brush center
+      // is snapped to a voxel center or corner depending on the parity of the brush
+      // size, no voxel center lies exactly on the border for isotropic voxels.
+      if (dot(delta, delta) < radius * radius) {
         brushOverlayColor = vec4(vec3(1.0), 0.5);
       }
 

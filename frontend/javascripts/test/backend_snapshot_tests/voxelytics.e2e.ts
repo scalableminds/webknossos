@@ -7,8 +7,13 @@ import {
   getVoxelyticsWorkflow,
   getVoxelyticsWorkflows,
 } from "admin/rest_api";
+import { parseReport, parseStatistics, parseWorkflowInfo } from "admin/voxelytics/parse_api_data";
 import sortBy from "lodash-es/sortBy";
-import type { VoxelyticsWorkflowListing, VoxelyticsWorkflowReport } from "types/api_types";
+import {
+  VoxelyticsRunState,
+  type VoxelyticsWorkflowListing,
+  type VoxelyticsWorkflowReport,
+} from "types/api_types";
 import { afterEach, beforeAll, describe, it } from "vitest";
 
 // Seeded via test/db/voxelytics_*.csv
@@ -142,6 +147,149 @@ describe("Voxelytics API (E2E)", () => {
     ]);
     await expect(getVoxelyticsWorkflow(inferenceWorkflowHash, null)).rejects.toMatchObject({
       status: 404,
+    });
+  });
+});
+
+// The API sends epoch milliseconds, although the types declare Dates for the parsed values.
+function toExpectedDate(wireTime: unknown): Date | null {
+  return wireTime == null ? null : new Date(wireTime as number);
+}
+
+describe("Parsing of Voxelytics API results (E2E)", () => {
+  beforeAll(async () => {
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
+  });
+
+  const reportsToParse: Array<[workflowHash: string, runId: string | null]> = [
+    [inferenceWorkflowHash, null],
+    [multiRunWorkflowHash, null],
+    [multiRunWorkflowHash, failedRerunId],
+    [metaTaskWorkflowHash, null],
+  ];
+
+  it.for(reportsToParse)(
+    "parseReport() converts all timestamps of %s",
+    async ([hash, runId], { expect }) => {
+      const wireReport = await getVoxelyticsWorkflow(hash, runId);
+      const report = parseReport(wireReport);
+
+      expect(report.runs).toHaveLength(wireReport.runs.length);
+      wireReport.runs.forEach((wireRun, i) => {
+        expect(report.runs[i].beginTime).toEqual(toExpectedDate(wireRun.beginTime));
+        expect(report.runs[i].endTime).toEqual(toExpectedDate(wireRun.endTime));
+      });
+      expect(report.tasks).toHaveLength(wireReport.tasks.length);
+      wireReport.tasks.forEach((wireTask, i) => {
+        expect(report.tasks[i].beginTime).toEqual(toExpectedDate(wireTask.beginTime));
+        expect(report.tasks[i].endTime).toEqual(toExpectedDate(wireTask.endTime));
+        wireTask.runs.forEach((wireTaskRun, j) => {
+          expect(report.tasks[i].runs[j].beginTime).toEqual(toExpectedDate(wireTaskRun.beginTime));
+          expect(report.tasks[i].runs[j].endTime).toEqual(toExpectedDate(wireTaskRun.endTime));
+        });
+      });
+    },
+  );
+
+  it.for(reportsToParse)(
+    "parseReport() derives a consistent dag for %s",
+    async ([hash, runId], { expect }) => {
+      const wireReport = await getVoxelyticsWorkflow(hash, runId);
+      const report = parseReport(wireReport);
+      const nodeIds = report.dag.nodes.map((node) => node.id);
+
+      expect([...nodeIds].sort()).toEqual(Object.keys(wireReport.config.tasks).sort());
+      expect(Object.keys(report.config.tasks)).toEqual(nodeIds);
+      expect(report.dag.edges.length).toBeGreaterThan(0);
+      for (const edge of report.dag.edges) {
+        expect(nodeIds.indexOf(edge.source)).toBeGreaterThanOrEqual(0);
+        expect(nodeIds.indexOf(edge.source)).toBeLessThan(nodeIds.indexOf(edge.target));
+      }
+      for (const node of report.dag.nodes) {
+        const taskInfo = wireReport.tasks.find((task) => task.taskName === node.id);
+        expect(node.state).toBe(taskInfo?.state ?? VoxelyticsRunState.PENDING);
+      }
+    },
+  );
+
+  it("parseReport() derives the dag edges from the task inputs", async ({ expect }) => {
+    const report = parseReport(await getVoxelyticsWorkflow(multiRunWorkflowHash, null));
+
+    expect(report.dag.nodes.map((node) => node.id)).toEqual([
+      "download",
+      "never_executed",
+      "segment@predict",
+      "segment@agglomerate",
+      "export",
+    ]);
+    expect(sortBy(report.dag.edges, ["source", "target"])).toEqual([
+      { source: "download", target: "never_executed", label: "data" },
+      { source: "download", target: "segment@predict", label: "data" },
+      { source: "segment@agglomerate", target: "export", label: "segmentation" },
+      { source: "segment@predict", target: "segment@agglomerate", label: "probs" },
+    ]);
+  });
+
+  it("parseReport() sorts the dag of nested meta tasks topologically", async ({ expect }) => {
+    const report = parseReport(await getVoxelyticsWorkflow(metaTaskWorkflowHash, null));
+
+    expect(report.dag.nodes.map((node) => node.id)).toEqual([
+      "download",
+      "segment@predict",
+      "segment@postprocess@agglomerate",
+      "export",
+      "segment@postprocess@mesh",
+    ]);
+    expect(sortBy(report.dag.edges, ["source", "target"])).toEqual([
+      { source: "download", target: "segment@predict", label: "data" },
+      { source: "segment@postprocess@agglomerate", target: "export", label: "segmentation" },
+      {
+        source: "segment@postprocess@agglomerate",
+        target: "segment@postprocess@mesh",
+        label: "seg",
+      },
+      { source: "segment@predict", target: "segment@postprocess@agglomerate", label: "probs" },
+    ]);
+  });
+
+  it("parseWorkflowInfo() converts the run times and sorts the runs by begin time", async ({
+    expect,
+  }) => {
+    const wireWorkflows = await getVoxelyticsWorkflows();
+    const workflows = wireWorkflows.map(parseWorkflowInfo);
+
+    expect(workflows.find((workflow) => workflow.hash === multiRunWorkflowHash)?.runs).toHaveLength(
+      5,
+    );
+    wireWorkflows.forEach((wireWorkflow, i) => {
+      const { runs } = workflows[i];
+      expect(runs).toHaveLength(wireWorkflow.runs.length);
+      for (const run of runs) {
+        const wireRun = wireWorkflow.runs.find((candidate) => candidate.id === run.id);
+        expect(run.beginTime).toEqual(toExpectedDate(wireRun?.beginTime));
+        expect(run.endTime).toEqual(toExpectedDate(wireRun?.endTime));
+      }
+      const beginTimes = runs.map((run) => run.beginTime?.getTime() ?? Number.POSITIVE_INFINITY);
+      expect(beginTimes).toEqual([...beginTimes].sort((a, b) => a - b));
+    });
+  });
+
+  it("parseStatistics() converts the begin and end time", async ({ expect }) => {
+    const wireStatistics = await getVoxelyticsChunkStatistics(
+      inferenceWorkflowHash,
+      null,
+      "predict",
+    );
+    const statistics = wireStatistics.map(parseStatistics);
+
+    expect(statistics.length).toBeGreaterThan(0);
+    wireStatistics.forEach((wireRow, i) => {
+      expect(statistics[i].beginTime).toEqual(toExpectedDate(wireRow.beginTime));
+      expect(statistics[i].endTime).toEqual(toExpectedDate(wireRow.endTime));
+      expect(statistics[i].executionId).toBe(wireRow.executionId);
+      expect(statistics[i].chunkCounts).toEqual(wireRow.chunkCounts);
+      expect(statistics[i].memory).toEqual(wireRow.memory);
     });
   });
 });

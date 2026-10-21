@@ -10,7 +10,7 @@ import messages from "messages";
 import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { NavAndStatusBarTheme } from "theme";
+import { getActiveTheme, NavAndStatusBarTheme } from "theme";
 import type { APICompoundType } from "types/api_types";
 import CrossOriginApi from "viewer/api/cross_origin_api";
 import Constants, { type Vector3 } from "viewer/constants";
@@ -455,7 +455,7 @@ function mapStateToProps(state: WebknossosState) {
     organization: state.dataset.owningOrganization,
     activeTool: state.uiInformation.activeTool,
     additionalCoordinates: state.flycam.additionalCoordinates,
-    UITheme: state.uiInformation.theme,
+    UITheme: getActiveTheme(state),
     aiJobDrawerState: state.uiInformation.aIJobDrawerState,
   };
 }

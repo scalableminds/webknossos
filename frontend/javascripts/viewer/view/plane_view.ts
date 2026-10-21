@@ -62,6 +62,9 @@ type RaycasterHit = {
   indexRange: Vector2 | null;
   unmappedSegmentId: bigint | null;
   point: Vector3;
+  // Only in proofreading mode, the hit test highlights the hit (super-voxel) itself.
+  // Otherwise, the hoveredSegmentId store listener highlights the meshes.
+  isHighlightedByHitTest: boolean;
 } | null;
 
 const createDirLight = (
@@ -266,6 +269,8 @@ class PlaneView {
       const face = intersections.length > 0 ? intersections[0].face : null;
       const hitObject =
         intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
+      const hitSegmentId = (hitObject?.parent as SceneGroupForMeshes | null)?.segmentId ?? null;
+      const isProofreading = storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD;
       let unmappedSegmentId = null;
       let highlightEntry = null;
 
@@ -283,21 +288,28 @@ class PlaneView {
 
       // Check whether we are hitting the same object as before, since we can return early
       // in this case, if not explicitly disabled by the allowMeshReuseOptimization parameter.
-      if (storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD) {
+      if (isProofreading) {
         if (hitObject == null && oldRaycasterHit == null) {
           return null;
         }
         if (
           allowMeshReuseOptimization &&
           unmappedSegmentId != null &&
-          unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId
+          unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId &&
+          // The cached hit might stem from before switching to the proofreading tool.
+          oldRaycasterHit.isHighlightedByHitTest
         ) {
           return oldRaycasterHit;
         }
       }
       // Outside of proofreading, there is no highlighting of parts of the meshes.
-      // If the parent group is identical, we can reuse the old hit object.
-      else if (allowMeshReuseOptimization && hitObject?.parent === oldRaycasterHit?.node?.parent) {
+      // If the parent group is identical and still the hovered segment in the store,
+      // we can reuse the old hit object.
+      else if (
+        allowMeshReuseOptimization &&
+        hitObject?.parent === oldRaycasterHit?.node?.parent &&
+        hitSegmentId === hoveredSegmentId
+      ) {
         return oldRaycasterHit;
       }
 
@@ -311,25 +323,22 @@ class PlaneView {
               indexRange: highlightEntry?.range || null,
               unmappedSegmentId,
               point: intersections[0].point.toArray(),
+              isHighlightedByHitTest: isProofreading,
             }
           : null;
 
-      // Highlight new hit
-      if (hitObject?.parent != null) {
-        segmentMeshController.updateMeshAppearance(
-          hitObject,
-          true,
-          undefined,
-          undefined,
-          highlightEntry ? [highlightEntry] : "full",
-        );
-
-        Store.dispatch(
-          updateTemporarySettingAction(
-            "hoveredSegmentId",
-            (hitObject.parent as SceneGroupForMeshes).segmentId,
-          ),
-        );
+      if (hitObject != null && hitSegmentId != null) {
+        // Outside of proofreading, the hoveredSegmentId store listener highlights the meshes.
+        if (isProofreading) {
+          segmentMeshController.updateMeshAppearance(
+            hitObject,
+            true,
+            undefined,
+            undefined,
+            highlightEntry ? [highlightEntry] : "full",
+          );
+        }
+        Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", hitSegmentId));
         return oldRaycasterHit;
       } else {
         Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", null));
@@ -355,7 +364,7 @@ class PlaneView {
     // graph. In any case, clear the module-level reference as it would
     // otherwise pin the (potentially huge) geometry of a removed mesh
     // indefinitely (even across annotation sessions).
-    if (oldRaycasterHit.node.parent != null) {
+    if (oldRaycasterHit.isHighlightedByHitTest && oldRaycasterHit.node.parent != null) {
       const sceneController = getSceneControllerOrNull();
       sceneController?.segmentMeshController.updateMeshAppearance(
         oldRaycasterHit.node,
@@ -366,6 +375,14 @@ class PlaneView {
       );
     }
     oldRaycasterHit = null;
+  };
+
+  handleTDViewMouseOut = () => {
+    this.performMeshHitTest.cancel();
+    this.clearLastMeshHitTest();
+    if (Store.getState().temporaryConfiguration.hoveredSegmentId) {
+      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", null));
+    }
   };
 
   draw(): void {
@@ -525,18 +542,8 @@ class PlaneView {
           ].join("|"),
         () => {
           const storeState = Store.getState();
-          const hoveredSegmentId = getHoveredSegmentIdToHighlight(storeState);
-          // Hovering a different segment elsewhere (e.g., in a 2D viewport) resets the
-          // appearance of the cached 3D hit's mesh. Invalidate the cache so that the next
-          // 3D hit test highlights it again instead of reusing the cached hit.
-          if (
-            oldRaycasterHit != null &&
-            oldRaycasterHit.node.parent?.segmentId !== hoveredSegmentId
-          ) {
-            this.clearLastMeshHitTest();
-          }
           segmentMeshController.updateHoveredSegmentIdHighlighting(
-            hoveredSegmentId,
+            getHoveredSegmentIdToHighlight(storeState),
             getVisibleSegmentationLayer(storeState)?.name ?? null,
             storeState.flycam.additionalCoordinates,
           );

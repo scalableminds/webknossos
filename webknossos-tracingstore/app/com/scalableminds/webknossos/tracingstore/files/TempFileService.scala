@@ -21,7 +21,7 @@ trait TempFileService extends LazyLogging {
   protected def moduleName: String
 
   private val tmpDir: Path =
-    Path.of(System.getProperty("java.io.tmpdir")).toAbsolutePath.resolve(s"$moduleName-tempfiles")
+    Path.of(System.getProperty("java.io.tmpdir")).toAbsolutePath.normalize.resolve(s"$moduleName-tempfiles")
 
   private val activeTempFiles = scala.collection.mutable.Set[(Path, Instant)]()
 

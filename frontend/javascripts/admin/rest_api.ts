@@ -2237,10 +2237,14 @@ type MeshRequest = {
 export function computeAdHocMesh(
   layerSourceInfo: LayerSourceInfo,
   meshRequest: MeshRequest,
-): Promise<{
-  buffer: ArrayBuffer;
-  neighbors: Array<number>;
-}> {
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<
+  ApiResult<{
+    buffer: ArrayBuffer;
+    neighbors: Array<number>;
+  }>
+> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   const {
     positionWithPadding,
@@ -2252,34 +2256,40 @@ export function computeAdHocMesh(
     ...rest
   } = meshRequest;
 
-  return doWithToken(async (token) => {
-    const params = new URLSearchParams();
-    params.set("token", token);
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken(async (token) => {
+        const params = new URLSearchParams();
+        params.set("token", token);
 
-    const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${requestUrl}/adHocMesh?${params}`,
-      {
-        data: {
-          // The back-end needs a small padding at the border of the
-          // bounding box to calculate the mesh. This padding
-          // is added here to the position and bbox size.
-          position: positionWithPadding, // position is in mag1
-          additionalCoordinates,
-          cubeSize, // cubeSize is in target mag
-          // Name and type of mapping to apply before building mesh (optional)
-          mapping: mappingName,
-          voxelSizeFactorInUnit: scaleFactor,
-          mag,
-          ...rest,
-        },
-      },
-    );
-    const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
-    return {
-      buffer,
-      neighbors,
-    };
-  });
+        const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
+          `${requestUrl}/adHocMesh?${params}`,
+          {
+            ...adaptedOptions,
+            data: {
+              // The back-end needs a small padding at the border of the
+              // bounding box to calculate the mesh. This padding
+              // is added here to the position and bbox size.
+              position: positionWithPadding, // position is in mag1
+              additionalCoordinates,
+              cubeSize, // cubeSize is in target mag
+              // Name and type of mapping to apply before building mesh (optional)
+              mapping: mappingName,
+              voxelSizeFactorInUnit: scaleFactor,
+              mag,
+              ...rest,
+            },
+          },
+        );
+        const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
+        return {
+          buffer,
+          neighbors,
+        };
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getBucketPositionsForAdHocMesh(
@@ -2290,26 +2300,34 @@ export function getBucketPositionsForAdHocMesh(
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
   annotationVersion: number,
-): Promise<Vector3[]> {
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Vector3[]>> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
-  return doWithToken(async (token) => {
-    const params = new URLSearchParams();
-    params.set("token", token);
-    const positions = await Request.sendJSONReceiveJSON(
-      `${requestUrl}/segmentIndex/${segmentId}?${params}`,
-      {
-        data: {
-          cubeSize,
-          mag,
-          additionalCoordinates,
-          mappingName,
-          annotationVersion,
-        },
-        method: "POST",
-      },
-    );
-    return positions;
-  });
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken(async (token) => {
+        const params = new URLSearchParams();
+        params.set("token", token);
+        const positions: Vector3[] = await Request.sendJSONReceiveJSON(
+          `${requestUrl}/segmentIndex/${segmentId}?${params}`,
+          {
+            ...adaptedOptions,
+            data: {
+              cubeSize,
+              mag,
+              additionalCoordinates,
+              mappingName,
+              annotationVersion,
+            },
+            method: "POST",
+          },
+        );
+        return positions;
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getAgglomerateTreeAsSkeletonTracing(
@@ -2466,20 +2484,29 @@ export async function getMeshFilesForDatasetLayer(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
-): Promise<Array<APIMeshFileInfo>> {
-  const meshFiles: Array<APIMeshFileInfo> = await doWithToken((token) =>
-    Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/meshes?token=${token}`,
-    ),
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIMeshFileInfo>>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      const meshFiles: Array<APIMeshFileInfo> = await doWithToken((token) =>
+        Request.receiveJSON(
+          `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/meshes?token=${token}`,
+          adaptedOptions,
+        ),
+      );
+
+      for (const file of meshFiles) {
+        if (file.mappingName === "") {
+          file.mappingName = undefined;
+        }
+      }
+
+      return meshFiles;
+    },
+    options,
+    retryOptions,
   );
-
-  for (const file of meshFiles) {
-    if (file.mappingName === "") {
-      file.mappingName = undefined;
-    }
-  }
-
-  return meshFiles;
 }
 
 // ### Connectomes

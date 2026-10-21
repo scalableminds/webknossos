@@ -114,12 +114,24 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
     });
   }
 
-  const availableMeshFiles = yield* call(
+  const availableMeshFilesResult = yield* call(
     getMeshFilesForDatasetLayer,
     dataset.dataStore.url,
     dataset,
     getBaseSegmentationName(segmentationLayer),
   );
+  if (!availableMeshFilesResult.ok) {
+    // The user was already notified by the api function. Don't cache the failed request
+    // so that the next request can try again. Everybody waiting for the deferred gets an
+    // empty list.
+    if (fetchDeferredsPerLayer[layerName] === deferred) {
+      delete fetchDeferredsPerLayer[layerName];
+    }
+    deferred.resolve([]);
+    callback([]);
+    return;
+  }
+  const availableMeshFiles = availableMeshFilesResult.value;
   yield* put(updateMeshFileListAction(layerName, availableMeshFiles));
   deferred.resolve(availableMeshFiles);
 

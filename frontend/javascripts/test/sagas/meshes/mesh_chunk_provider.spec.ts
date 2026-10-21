@@ -1,3 +1,4 @@
+import type { ApiResult } from "admin/api/api_result";
 import type { MeshChunk, MeshSegmentInfo } from "admin/api/mesh";
 import { getSegmentsForAgglomerateFromTracingStore, meshApi } from "admin/rest_api";
 import type { APIMeshFileInfo } from "types/api_types";
@@ -30,13 +31,24 @@ function chunk(segmentId: bigint, byteOffset: number): MeshChunk {
   return { position: [0, 0, 0], byteOffset, byteSize: 10, unmappedSegmentId: segmentId };
 }
 
-function listing(chunks: MeshChunk[], segmentIdsWithoutMesh: bigint[] = []): MeshSegmentInfo {
+// The successful reply of a listing request.
+function listing(
+  chunks: MeshChunk[],
+  segmentIdsWithoutMesh: bigint[] = [],
+): ApiResult<MeshSegmentInfo> {
   return {
-    meshFormat: "draco",
-    lods: chunks.length > 0 ? [{ chunks, transform }] : [],
-    chunkScale: [1, 1, 1],
-    segmentIdsWithoutMesh,
+    ok: true,
+    value: {
+      meshFormat: "draco",
+      lods: chunks.length > 0 ? [{ chunks, transform }] : [],
+      chunkScale: [1, 1, 1],
+      segmentIdsWithoutMesh,
+    },
   };
+}
+
+function failedRequest(status: number, message: string): ApiResult<never> {
+  return { ok: false, error: { kind: "http", status, message, cause: new Error(message) } };
 }
 
 function paramsFor(agglomerateId: bigint): ListMeshChunksParamsWithTracingStoreURL {
@@ -232,7 +244,7 @@ describe("Mesh chunk provider", () => {
       await loadAgglomerate1();
 
       mockSegmentsOfAgglomerate([12n]);
-      listingMock.mockRejectedValueOnce(new Error("zero chunks"));
+      listingMock.mockResolvedValueOnce(failedRequest(400, "zero chunks"));
 
       await expect(listMeshChunks(paramsFor(5n))).rejects.toThrow("zero chunks");
       expect(listingMock).toHaveBeenCalledTimes(2);
@@ -247,7 +259,7 @@ describe("Mesh chunk provider", () => {
       await listMeshChunks(paramsFor(1n));
       // An older data store doesn't know how to list several segments.
       mockSegmentsOfAgglomerate([10n, 11n, 50n]);
-      listingForSegmentsMock.mockRejectedValueOnce(new Error("404"));
+      listingForSegmentsMock.mockResolvedValueOnce(failedRequest(404, "Not Found"));
       listingMock.mockResolvedValueOnce(listing([chunk(10n, 0), chunk(11n, 10), chunk(50n, 70)]));
       const info = await listMeshChunks(paramsFor(1n));
 
@@ -305,11 +317,12 @@ describe("Mesh chunk provider", () => {
     };
 
     function mockChunkData() {
-      chunkDataMock.mockImplementation(async (_dataStoreUrl, _datasetId, _layerName, batch) =>
-        batch.requests.map(
+      chunkDataMock.mockImplementation(async (_dataStoreUrl, _datasetId, _layerName, batch) => ({
+        ok: true,
+        value: batch.requests.map(
           (request) => new Uint8Array(request.byteSize).fill(request.byteOffset % 256).buffer,
         ),
-      );
+      }));
     }
 
     function getData(chunks: MeshChunk[]) {

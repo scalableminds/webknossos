@@ -4,6 +4,7 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import type { ApiResult } from "admin/api/api_result";
 import type { ListMeshChunksParams, MeshSegmentInfo } from "admin/api/mesh";
 import {
   getAgglomeratesForSegmentsFromTracingstore,
@@ -73,26 +74,29 @@ const SUPERVOXELS_BY_AGGLOMERATE_ID = new Map<bigint, bigint[]>([
 // VertexSegmentMapping — built in precomputed_mesh_saga — resolves those supervoxels.
 async function getMultiSupervoxelChunksForSegment({
   segmentId,
-}: ListMeshChunksParams): Promise<MeshSegmentInfo> {
+}: ListMeshChunksParams): Promise<ApiResult<MeshSegmentInfo>> {
   const supervoxels = SUPERVOXELS_BY_AGGLOMERATE_ID.get(segmentId) ?? [segmentId];
   return {
-    meshFormat: "draco",
-    lods: [
-      {
-        chunks: supervoxels.map((unmappedSegmentId) => ({
-          position: [0, 0, 0],
-          byteOffset: 0,
-          byteSize: 666,
-          unmappedSegmentId,
-        })),
-        transform: [
-          [1, 0, 0, 0],
-          [0, 1, 0, 0],
-          [0, 0, 1, 0],
-        ],
-      },
-    ],
-    chunkScale: [1, 1, 1],
+    ok: true,
+    value: {
+      meshFormat: "draco",
+      lods: [
+        {
+          chunks: supervoxels.map((unmappedSegmentId) => ({
+            position: [0, 0, 0],
+            byteOffset: 0,
+            byteSize: 666,
+            unmappedSegmentId,
+          })),
+          transform: [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+          ],
+        },
+      ],
+      chunkScale: [1, 1, 1],
+    },
   };
 }
 

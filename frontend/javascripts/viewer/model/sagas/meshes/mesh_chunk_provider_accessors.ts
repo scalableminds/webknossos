@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import type { ListMeshChunksParams, MeshChunk, MeshSegmentInfo } from "admin/api/mesh";
 import { getSegmentsForAgglomerateFromTracingStore, meshApi } from "admin/rest_api";
 import { chunkDynamically } from "libs/utils";
@@ -26,8 +27,9 @@ export type ListMeshChunksParamsWithTracingStoreURL = Omit<
 };
 
 /*
- * Lists the chunks of segmentId, which is an agglomerate id if a mapping is given. Returns the same
- * as meshApi.getMeshFileChunksForSegment, but answers from the cache where it can.
+ * Lists the chunks of segmentId, which is an agglomerate id if a mapping is given. Returns the value
+ * of meshApi.getMeshFileChunksForSegment, but answers from the cache where it can. Throws if the
+ * listing fails, so that the caller can notify the user.
  */
 export async function listMeshChunks(
   params: ListMeshChunksParamsWithTracingStoreURL,
@@ -47,7 +49,7 @@ export async function listMeshChunks(
     }
   }
   const adaptedParams = { ...params, editableMappingTracingId: params.editableMapping?.tracingId };
-  const listing = await meshApi.getMeshFileChunksForSegment(adaptedParams);
+  const listing = unwrapOrThrow(await meshApi.getMeshFileChunksForSegment(adaptedParams));
   cache.addChunkLists(listing);
   return listing;
 }
@@ -75,13 +77,15 @@ async function fetchChunkListsOfSegments(
   params: ListMeshChunksParamsWithTracingStoreURL,
   segmentIds: bigint[],
 ): Promise<ChunkListsBySegmentId> {
-  const listing = await meshApi.getMeshFileChunksForSegments(
+  const listingResult = await meshApi.getMeshFileChunksForSegments(
     params.dataStoreUrl,
     params.datasetId,
     params.layerName,
     params.meshFile,
     segmentIds,
   );
+  // tryToListMeshChunksFromCache catches the error and falls back to the normal listing.
+  const listing = unwrapOrThrow(listingResult);
   return cache.addChunkLists(listing);
 }
 
@@ -174,12 +178,12 @@ export function batchMeshChunksForLoading(
   return { cachedBatches: batchBySize(cachedChunks), missingBatches: batchBySize(missingChunks) };
 }
 
-function fetchChunkData(
+async function fetchChunkData(
   location: MeshFileLocation,
   segmentIdForRequest: bigint,
   chunks: MeshChunk[],
 ): Promise<Array<ArrayBuffer | undefined>> {
-  return meshApi.getMeshFileChunkData(
+  const result = await meshApi.getMeshFileChunkData(
     location.dataStoreUrl,
     location.datasetId,
     location.layerName,
@@ -192,12 +196,13 @@ function fetchChunkData(
       })),
     },
   );
+  return unwrapOrThrow(result);
 }
 
 /*
  * Returns the bytes of the given chunks of one mesh file and fetches only those that aren't
- * cached. Returns the same as meshApi.getMeshFileChunkData. An entry is undefined if the back-end
- * returned no data for that chunk.
+ * cached. Returns the value of meshApi.getMeshFileChunkData. An entry is undefined if the back-end
+ * returned no data for that chunk. Throws if fetching fails, so that the caller can notify the user.
  */
 export async function getMeshChunkData(
   location: MeshFileLocation,

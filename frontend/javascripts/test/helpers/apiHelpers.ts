@@ -1,3 +1,4 @@
+import type { ApiResult } from "admin/api/api_result";
 import type { ListMeshChunksParams, MeshSegmentInfo } from "admin/api/mesh";
 import type { MeshChunkDataRequestList } from "admin/api/mesh.ts";
 import {
@@ -262,9 +263,10 @@ vi.mock("admin/rest_api.ts", async () => {
     },
   );
 
-  const getMeshFilesForDatasetLayer = vi.fn(async () => {
-    return [dummyMeshFile];
-  });
+  const getMeshFilesForDatasetLayer = vi.fn(async () => ({
+    ok: true as const,
+    value: [dummyMeshFile],
+  }));
 
   return {
     ...actual,
@@ -373,10 +375,10 @@ vi.mock("admin/api/mesh", async () => {
   });
 
   const getMeshFileChunksForSegment = vi.fn(
-    async ({ segmentId }: ListMeshChunksParams): Promise<MeshSegmentInfo> => {
+    async ({ segmentId }: ListMeshChunksParams): Promise<ApiResult<MeshSegmentInfo>> => {
       console.log("Requesting default mesh segment info in mocked test.");
       await sleep(100);
-      return createListingWithOneChunkPerSegment([segmentId]);
+      return { ok: true, value: createListingWithOneChunkPerSegment([segmentId]) };
     },
   );
 
@@ -387,9 +389,12 @@ vi.mock("admin/api/mesh", async () => {
       _layerName: string,
       _meshFile: APIMeshFileInfo,
       segmentIds: bigint[],
-    ): Promise<MeshSegmentInfo> => {
+    ): Promise<ApiResult<MeshSegmentInfo>> => {
       await sleep(100);
-      return { ...createListingWithOneChunkPerSegment(segmentIds), segmentIdsWithoutMesh: [] };
+      return {
+        ok: true,
+        value: { ...createListingWithOneChunkPerSegment(segmentIds), segmentIdsWithoutMesh: [] },
+      };
     },
   );
 
@@ -399,10 +404,13 @@ vi.mock("admin/api/mesh", async () => {
       _datasetId: string,
       _layerName: string,
       batchDescription: MeshChunkDataRequestList,
-    ): Promise<ArrayBuffer[]> => {
+    ): Promise<ApiResult<ArrayBuffer[]>> => {
       // Return ArrayBuffers for each chunk in the batch
       // The size doesn't matter for the test since decodeDracoFileAsync is mocked
-      return batchDescription.requests.map((request) => new ArrayBuffer(request.byteSize));
+      return {
+        ok: true,
+        value: batchDescription.requests.map((request) => new ArrayBuffer(request.byteSize)),
+      };
     },
   );
 

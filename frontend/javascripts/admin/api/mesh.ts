@@ -1,5 +1,6 @@
+import { type ApiResult, type RetryOptions, requestResult } from "admin/api/api_result";
+import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
-import { retryAsyncFunction } from "libs/utils";
 import type { APIMeshFileInfo } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import { serializeProtoListOfLong } from "viewer/model/helpers/proto_helpers";
@@ -33,6 +34,15 @@ type ListMeshChunksRequest = {
   annotationVersion: number | undefined | null;
 };
 
+// Mesh requests are potentially heavy for the data store. Therefore, retries should not
+// follow each other too quickly (2s, 4s, 8s).
+const MESH_RETRY_OPTIONS: RetryOptions = {
+  retries: 3,
+  initialDelayMs: 2000,
+  backoffFactor: 2,
+  maxDelayMs: 8000,
+};
+
 // The parameters of getMeshFileChunksForSegment, as used by the mesh chunk provider.
 export type ListMeshChunksParams = {
   dataStoreUrl: string;
@@ -53,39 +63,47 @@ export type ListMeshChunksParams = {
   annotationVersion: number | undefined | null;
 };
 
-export function getMeshFileChunksForSegment({
-  dataStoreUrl,
-  datasetId,
-  layerName,
-  meshFile,
-  segmentId,
-  targetMappingName,
-  editableMappingTracingId,
-  annotationVersion,
-}: ListMeshChunksParams): Promise<MeshSegmentInfo> {
-  return retryAsyncFunction(() =>
-    doWithToken((token) => {
-      const params = new URLSearchParams();
-      params.append("token", token);
-      if (targetMappingName != null) {
-        params.append("targetMappingName", targetMappingName);
-      }
-      if (editableMappingTracingId != null) {
-        params.append("editableMappingTracingId", editableMappingTracingId);
-      }
-      const payload: ListMeshChunksRequest = {
-        meshFileName: meshFile.name,
-        segmentId,
-        annotationVersion,
-      };
-      return Request.sendJSONReceiveJSON(
-        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks?${params}`,
-        {
-          data: payload,
-          showErrorToast: false,
-        },
-      );
-    }),
+export function getMeshFileChunksForSegment(
+  {
+    dataStoreUrl,
+    datasetId,
+    layerName,
+    meshFile,
+    segmentId,
+    targetMappingName,
+    editableMappingTracingId,
+    annotationVersion,
+  }: ListMeshChunksParams,
+  options: RequestOptions = {},
+  retryOptions: RetryOptions = MESH_RETRY_OPTIONS,
+): Promise<ApiResult<MeshSegmentInfo>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) => {
+        const params = new URLSearchParams();
+        params.append("token", token);
+        if (targetMappingName != null) {
+          params.append("targetMappingName", targetMappingName);
+        }
+        if (editableMappingTracingId != null) {
+          params.append("editableMappingTracingId", editableMappingTracingId);
+        }
+        const payload: ListMeshChunksRequest = {
+          meshFileName: meshFile.name,
+          segmentId,
+          annotationVersion,
+        };
+        return Request.sendJSONReceiveJSON(
+          `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks?${params}`,
+          {
+            ...adaptedOptions,
+            data: payload,
+          },
+        );
+      }),
+    // The callers are responsible for surfacing the final error (see getMeshFileChunkData).
+    { showErrorToast: false, ...options },
+    retryOptions,
   );
 }
 
@@ -102,22 +120,28 @@ export function getMeshFileChunksForSegments(
   layerName: string,
   meshFile: APIMeshFileInfo,
   segmentIds: Array<bigint>,
-): Promise<MeshSegmentInfo> {
-  return retryAsyncFunction(() =>
-    doWithToken((token) => {
-      const params = new URLSearchParams({ token, meshFileName: meshFile.name });
-      // The ids are sent as protobuf, which takes about 4 bytes per id instead of about 50 bytes in
-      // the JSON encoding of bigints. Request bodies are not compressed.
-      return Request.receiveJSON(
-        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/forSegments?${params}`,
-        {
-          method: "POST",
-          body: serializeProtoListOfLong(segmentIds),
-          headers: { "Content-Type": "application/octet-stream" },
-          showErrorToast: false,
-        },
-      );
-    }),
+  options: RequestOptions = {},
+  retryOptions: RetryOptions = MESH_RETRY_OPTIONS,
+): Promise<ApiResult<MeshSegmentInfo>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) => {
+        const params = new URLSearchParams({ token, meshFileName: meshFile.name });
+        // The ids are sent as protobuf, which takes about 4 bytes per id instead of about 50 bytes
+        // in the JSON encoding of bigints. Request bodies are not compressed.
+        return Request.receiveJSON(
+          `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/forSegments?${params}`,
+          {
+            ...adaptedOptions,
+            method: "POST",
+            body: serializeProtoListOfLong(segmentIds),
+            headers: { "Content-Type": "application/octet-stream" },
+          },
+        );
+      }),
+    // The callers fall back to getMeshFileChunksForSegment if this fails.
+    { showErrorToast: false, ...options },
+    retryOptions,
   );
 }
 
@@ -137,41 +161,45 @@ export function getMeshFileChunkData(
   datasetId: string,
   layerName: string,
   batchDescription: MeshChunkDataRequestList,
-): Promise<ArrayBuffer[]> {
-  return retryAsyncFunction(() =>
-    doWithToken(async (token) => {
-      const dracoDataChunks = await Request.sendJSONReceiveArraybuffer(
-        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/data?token=${token}`,
-        {
-          data: batchDescription,
-          useWebworkerForArrayBuffer: true,
-          // Failed attempts are retried (see retryAsyncFunction above) and the
-          // callers are responsible for surfacing the final error, so don't
-          // show a toast for each failed attempt.
-          showErrorToast: false,
-        },
-      );
-      const chunkCount = batchDescription.requests.length;
-      const jumpPositionsForChunks = [];
-      let cumsum = 0;
-      for (const req of batchDescription.requests) {
-        jumpPositionsForChunks.push(cumsum);
-        cumsum += req.byteSize;
-      }
-      jumpPositionsForChunks.push(cumsum);
-
-      const dataEntries = [];
-      for (let chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
-        // slice() creates a copy of the data, but working with TypedArray Views would cause
-        // issues when transferring the data to a webworker.
-        const dracoData = dracoDataChunks.slice(
-          jumpPositionsForChunks[chunkIdx],
-          jumpPositionsForChunks[chunkIdx + 1],
+  options: RequestOptions = {},
+  retryOptions: RetryOptions = MESH_RETRY_OPTIONS,
+): Promise<ApiResult<ArrayBuffer[]>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken(async (token) => {
+        const dracoDataChunks = await Request.sendJSONReceiveArraybuffer(
+          `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/data?token=${token}`,
+          {
+            ...adaptedOptions,
+            data: batchDescription,
+            useWebworkerForArrayBuffer: true,
+          },
         );
-        dataEntries.push(dracoData);
-      }
+        const chunkCount = batchDescription.requests.length;
+        const jumpPositionsForChunks = [];
+        let cumsum = 0;
+        for (const req of batchDescription.requests) {
+          jumpPositionsForChunks.push(cumsum);
+          cumsum += req.byteSize;
+        }
+        jumpPositionsForChunks.push(cumsum);
 
-      return dataEntries;
-    }),
+        const dataEntries = [];
+        for (let chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
+          // slice() creates a copy of the data, but working with TypedArray Views would cause
+          // issues when transferring the data to a webworker.
+          const dracoData = dracoDataChunks.slice(
+            jumpPositionsForChunks[chunkIdx],
+            jumpPositionsForChunks[chunkIdx + 1],
+          );
+          dataEntries.push(dracoData);
+        }
+
+        return dataEntries;
+      }),
+    // Failed attempts are retried and the callers are responsible for surfacing the
+    // final error, so don't show a toast.
+    { showErrorToast: false, ...options },
+    retryOptions,
   );
 }

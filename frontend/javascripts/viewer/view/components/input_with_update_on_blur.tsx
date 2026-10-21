@@ -1,6 +1,6 @@
 import { Input, type InputProps } from "antd";
 import FastTooltip from "components/fast_tooltip";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export function InputWithUpdateOnBlur({
   value,
@@ -15,19 +15,16 @@ export function InputWithUpdateOnBlur({
 } & Omit<InputProps, "onChange">) {
   const [localValue, setLocalValue] = useState(value);
 
-  const onKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === "Enter") {
-        onChange(localValue);
-      } else if (event.key === "Escape") {
-        (document.activeElement as HTMLElement | null)?.blur();
-      }
-      if (props.onKeyDown) {
-        return props.onKeyDown(event);
-      }
-    },
-    [onChange, props.onKeyDown, localValue],
-  );
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      onChange(localValue);
+    } else if (event.key === "Escape") {
+      (document.activeElement as HTMLElement | null)?.blur();
+    }
+    if (props.onKeyDown) {
+      return props.onKeyDown(event);
+    }
+  };
 
   useEffect(() => {
     setLocalValue(value);

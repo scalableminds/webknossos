@@ -27,11 +27,15 @@ export type MeshFileLocation = {
   meshFileName: string;
 };
 
-// Upper bounds for the memory of the caches of all mesh files together, enough for about 5 to 6
-// large agglomerates. An agglomerate with 300k segments has roughly 270k chunks and 80 MB of chunk
-// bytes. About 100k of its segments have no mesh, because they are too small to show up at the mag
-// the meshes were computed at. Each chunk and each segment without a mesh takes one chunk list
-// entry of roughly 130 bytes, so the chunk list cache needs about 260 MB when full.
+// Upper bounds for the memory of the caches of all mesh files together. Both limits are chosen
+// to hold about 5 to 6 large agglomerates. A large agglomerate has about 300k segments and 270k
+// chunks with 80 MB of chunk bytes. About 100k of its segments have no mesh, because they are too
+// small to show up at the mag the meshes were computed at.
+// - Chunk bytes: 6 × 80 MB ≈ 480 MB, so the limit is 512 MB.
+// - Chunk lists: each chunk and each segment without a mesh is one entry, so one such
+//   agglomerate needs 270k + 100k = 370k entries, and 2M entries hold about 5.4 of them. One
+//   MeshChunk object (4 fields, a 3-element position array, a BigInt id) takes roughly 130 bytes,
+//   so the full chunk list cache takes about 2M × 130 bytes = 260 MB.
 const MAX_CACHED_CHUNK_BYTES = 512 * 1024 ** 2;
 const MAX_CACHED_CHUNK_LIST_ENTRIES = 2_000_000;
 
@@ -46,7 +50,7 @@ type CachedChunkData = { byteSize: number; unmappedSegmentId: bigint; buffer: Ar
 export class MeshFileCache {
   // The LOD transforms and the chunk scale are the same for every segment of a mesh file.
   private metadata: MeshFileMetadata | null = null;
-  // A null value marks a segment without a mesh. A segment without chunks still takes an entry.
+  // A null value marks a segment without a mesh. A segment without chunks still takes an entry in the map; thus returning 1 as size.
   readonly chunkLists = new LruMapWithSize<bigint, ChunksPerLod | null>((chunksPerLod) =>
     Math.max(1, sum(chunksPerLod?.map((chunks) => chunks.length))),
   );
@@ -116,10 +120,7 @@ export class MeshFileCache {
   }
 
   getChunkData(chunk: MeshChunk): ArrayBuffer | undefined {
-    const cached = this.chunkData.get(chunk.byteOffset);
-    const isSameChunk =
-      cached?.byteSize === chunk.byteSize && cached.unmappedSegmentId === chunk.unmappedSegmentId;
-    return isSameChunk ? cached.buffer : undefined;
+    return this.chunkData.get(getChunkDataKey(chunk));
   }
 
   // buffers[i] holds the bytes of chunks[i], or undefined if the back-end returned no data for it.
@@ -127,12 +128,16 @@ export class MeshFileCache {
     chunks.forEach((chunk, index) => {
       const buffer = buffers[index];
       if (buffer != null) {
-        const { byteSize, unmappedSegmentId } = chunk;
-        this.chunkData.set(chunk.byteOffset, { byteSize, unmappedSegmentId, buffer });
+        this.chunkData.set(getChunkDataKey(chunk), buffer);
       }
     });
     this.evictIfNeeded();
   }
+}
+
+// Unique within a mesh file. The segment id selects the shard in Neuroglancer precomputed mesh files.
+function getChunkDataKey(chunk: MeshChunk): string {
+  return `${chunk.unmappedSegmentId}-${chunk.byteOffset}`;
 }
 
 function groupChunksBySegmentId(info: MeshSegmentInfo): Map<bigint, ChunksPerLod> {

@@ -58,7 +58,7 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
         FROM webknossos.voxelytics_chunks c
         JOIN webknossos.voxelytics_tasks t ON t._id = c._task
         JOIN (${runsWithStateQ(staleTimeout)}) r ON r._id = t._run
-        WHERE t._run IN ${SqlToken.tupleFromList(runIds)}
+        WHERE ${if (runIds.isEmpty) q"FALSE" else q"t._run IN ${SqlToken.tupleFromList(runIds)}"}
           ${taskName.map(t => q"AND t.name = $t").getOrElse(q"")}"""
 
   private def visibleRunsQ(currentUser: User, allowUnlisted: Boolean) = {
@@ -474,6 +474,12 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
     for {
       r <- run(
         q"""
+        WITH visible_runs AS (${visibleRunsQ(currentUser, allowUnlisted = false)}),
+        visible_tasks AS (
+          SELECT t._id, t._run
+          FROM webknossos.voxelytics_tasks t
+          WHERE t._run IN (SELECT _id FROM visible_runs)
+        )
         SELECT
           r._id,
           r.name,
@@ -493,7 +499,7 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
           COALESCE(tasks.inodeCount, 0) AS inodeCount,
           mu.firstName,
           mu.lastName
-        FROM (${visibleRunsQ(currentUser, allowUnlisted = false)}) r
+        FROM visible_runs r
         JOIN (${runsWithStateQ(staleTimeout)}) rs ON rs._id = r._id
         LEFT JOIN (
           SELECT
@@ -506,16 +512,14 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
             SUM(CASE WHEN ts.state = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled,
             SUM(COALESCE(ta.fileSize, 0)) AS fileSize,
             SUM(COALESCE(ta.inodeCount, 0)) AS inodeCount
-          FROM webknossos.voxelytics_tasks AS t
+          FROM visible_tasks t
           JOIN (${tasksWithStateQ(staleTimeout)}) ts ON ts._id = t._id
           LEFT JOIN (
             SELECT a._task _task, SUM(a.fileSize) fileSize, SUM(a.inodeCount) inodeCount
             FROM webknossos.voxelytics_artifacts a
-            JOIN webknossos.voxelytics_tasks t ON t._id = a._task
-            WHERE t._run IN (SELECT vr._id FROM (${visibleRunsQ(currentUser, allowUnlisted = false)}) vr)
+            WHERE a._task IN (SELECT _id FROM visible_tasks)
             GROUP BY a._task
           ) ta ON ta._task = t._id
-          WHERE t._run IN (SELECT vr._id FROM (${visibleRunsQ(currentUser, allowUnlisted = false)}) vr)
           GROUP BY t._run
         ) tasks ON tasks._run = r._id
         LEFT JOIN webknossos.users_ u ON r._user = u._id
@@ -771,7 +775,7 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
           ORDER BY e.path, e.timestamp
         ) af ON TRUE
         WHERE TRUE ${artifactName.map(a => q"AND a.name = $a").getOrElse(q"")}
-        ORDER BY af.path
+        ORDER BY a.name, af.path
         """.as[(String, String, String, String, Instant, String, String, Long, Instant)])
     } yield r.toList.map(row =>
       ArtifactChecksumEntry(

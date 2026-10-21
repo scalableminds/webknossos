@@ -5,7 +5,7 @@ import last from "lodash-es/last";
 import max from "lodash-es/max";
 import { Component, Fragment } from "react";
 import type { APIUpdateActionBatch } from "types/api_types";
-import VersionEntry from "viewer/view/version_entry";
+import VersionEntry from "viewer/view/version_restore_view/version_entry";
 
 type Props = {
   batches: APIUpdateActionBatch[];

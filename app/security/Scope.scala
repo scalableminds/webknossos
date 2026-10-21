@@ -4,12 +4,11 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.services.AccessMode
 import com.scalableminds.webknossos.datastore.services.AccessResourceType
 
-/**
-  * Scopes restrict what a token may do, so that a token handed to an AI agent can be limited to, say, reading
-  * datasets and writing annotations. They only ever narrow: a scoped token can never do more than its user could.
+/** Scopes restrict what a token may do, so that a token handed to an AI agent can be limited to, say, reading datasets
+  * and writing annotations. They only ever narrow: a scoped token can never do more than its user could.
   *
-  * Tokens without scopes (the regular API token, the session cookie) are unrestricted, so nothing about the
-  * existing authorization behaviour changes.
+  * Tokens without scopes (the regular API token, the session cookie) are unrestricted, so nothing about the existing
+  * authorization behaviour changes.
   */
 object ScopeResource extends ExtendedEnumeration {
   type ScopeResource = Value
@@ -77,13 +76,11 @@ object Scope {
       case AccessResourceType.webknossos => None // internal wk-to-store communication, never scoped
     }
 
-  /**
-    * The set of scopes a token carries. Note the difference between "no restriction" (an unscoped token, e.g. the
+  /** The set of scopes a token carries. Note the difference between "no restriction" (an unscoped token, e.g. the
     * regular API token) and "no permissions at all" (a scoped token with an empty set).
     */
   case class Set(scopes: List[Scope]) {
     def allows(required: Scope): Boolean = scopes.exists(_.covers(required))
-
 
     override def toString: String = scopes.mkString(",")
   }
@@ -91,9 +88,8 @@ object Scope {
   object Set {
     val empty: Set = Set(List.empty)
 
-    /**
-      * Accepts both individual scopes ("dataset:read,annotation:write") and the coarse level names that the UI
-      * offers ("write"). "none" yields a token that may do nothing. Unparsable entries are ignored.
+    /** Accepts both individual scopes ("dataset:read,annotation:write") and the coarse level names that the UI offers
+      * ("write"). "none" yields a token that may do nothing. Unparsable entries are ignored.
       */
     def parse(commaSeparated: String): Set = {
       val entries = commaSeparated.split(',').toList.map(_.trim).filter(_.nonEmpty)
@@ -101,13 +97,12 @@ object Scope {
       Set((entries.flatMap(fromString) ++ fromLevels).distinct)
     }
 
-    /**
-      * Resources an agent works on. Covers everything the WEBKNOSSOS Python library talks to, so that the library
-      * works fully at the create/modify and delete levels. Note that this includes teams and users, because the
-      * library creates teams and updates users (e.g. to assign team memberships).
+    /** Resources an agent works on. Covers everything the WEBKNOSSOS Python library talks to, so that the library works
+      * fully at the create/modify and delete levels. Note that this includes teams and users, because the library
+      * creates teams and updates users (e.g. to assign team memberships).
       *
-      * The organization is deliberately left out and stays read-only at every level: an agent has no business
-      * changing the organization itself, and nothing in the library does.
+      * The organization is deliberately left out and stays read-only at every level: an agent has no business changing
+      * the organization itself, and nothing in the library does.
       */
     private val contentResources: List[ScopeResource.Value] = List(
       ScopeResource.dataset,
@@ -122,9 +117,8 @@ object Scope {
       ScopeResource.user
     )
 
-    /**
-      * The three coarse permission levels offered in the UI. Each grants read on everything, plus the given mode on
-      * the resources an agent works on.
+    /** The three coarse permission levels offered in the UI. Each grants read on everything, plus the given mode on the
+      * resources an agent works on.
       */
     // The explicit way to say "no permissions at all", so that it is not mistaken for a typo.
     val noneLiteral = "none"

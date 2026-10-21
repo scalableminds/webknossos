@@ -2,7 +2,7 @@
 // All modules mocked here are globally mocked for all tests.
 // These mocks have to work with the unit, E2E and screenshot tests alike.
 
-import { vi } from "vitest";
+import { afterAll, vi } from "vitest";
 
 // Mock common utility functions
 vi.mock("libs/toast", () => ({
@@ -142,3 +142,14 @@ vi.mock("antd", () => {
 });
 
 vi.mock("libs/render_independently", () => ({ default: vi.fn() }));
+
+// Mute the console once a test file is done. Async work that outlives the file's tests
+// (e.g., a push queue transaction still being compressed) may otherwise log while vitest
+// tears down the worker, which fails the whole run with
+// "Closing rpc while "onUserConsoleLog" was pending". Hooks from setup files run after
+// all other afterAll hooks, so output of the tests and their hooks is unaffected.
+afterAll(() => {
+  for (const method of ["log", "info", "warn", "error", "debug"] as const) {
+    vi.spyOn(console, method).mockImplementation(() => {});
+  }
+});

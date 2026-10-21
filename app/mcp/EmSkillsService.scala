@@ -8,13 +8,12 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-/**
-  * Serves the EM-Skills collection (https://github.com/yanchaoz/EM-Skills) to MCP clients: agent skills for volume
-  * electron microscopy processing, such as neuron and mitochondria segmentation, annotation planning and review.
-  * They pair with the WEBKNOSSOS Python library, which is how the data gets in and out.
+/** Serves the EM-Skills collection (https://github.com/yanchaoz/EM-Skills) to MCP clients: agent skills for volume
+  * electron microscopy processing, such as neuron and mitochondria segmentation, annotation planning and review. They
+  * pair with the WEBKNOSSOS Python library, which is how the data gets in and out.
   *
-  * The skills are fetched from the repository rather than bundled, so that they stay up to date and so that
-  * WEBKNOSSOS does not redistribute third-party code.
+  * The skills are fetched from the repository rather than bundled, so that they stay up to date and so that WEBKNOSSOS
+  * does not redistribute third-party code.
   */
 @Singleton
 class EmSkillsService @Inject() (rpc: RPC)(implicit ec: ExecutionContext) {

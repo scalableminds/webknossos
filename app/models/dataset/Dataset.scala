@@ -48,6 +48,7 @@ import com.scalableminds.webknossos.schema.Tables.{
   GetResultDatasetsRow
 }
 import controllers.DatasetUpdatePartialParameters
+import models.annotation.{AnnotationAccessQueries, AnnotationState, AnnotationType}
 import models.dataset.DatasetCreationType.DatasetCreationType
 
 import javax.inject.Inject
@@ -110,7 +111,9 @@ case class DatasetCompactInfo(
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
     usedStorageBytes: Long,
-    thumbnailCacheVersion: Int
+    thumbnailCacheVersion: Int,
+    // Active explorationals listable by the requesting user. Only set if requested.
+    annotationCount: Option[Long] = None
 ) derives JsonAutoFormat {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
 }
@@ -196,6 +199,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
             FROM webknossos.annotation_privateLinks_ apl
             JOIN webknossos.annotations_ a ON apl._annotation = a._id
             WHERE apl.accessToken = $t
+            AND (apl.expirationDateTime IS NULL OR apl.expirationDateTime > ${Instant.now})
           )""")
       .getOrElse(q"FALSE")
     // token can either be a dataset sharingToken or a matching annotation’s private link token
@@ -205,7 +209,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
   override def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, q"")
 
-  def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
+  // The user id may also be a column (e.g. q"u._id"), to check the access of many users at once.
+  def readAccessQWithPrefix(requestingUserId: SqlToken, prefix: SqlToken): SqlToken =
     q"""${prefix}isPublic
         OR ( -- user is matching orga admin or dataset manager
           ${prefix}_organization IN (
@@ -236,6 +241,16 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
           )
         )
         """
+
+  // Those of the given users that can see the dataset.
+  def findUserIdsWithReadAccess(datasetId: ObjectId, userIds: List[ObjectId]): Fox[Seq[ObjectId]] =
+    if (userIds.isEmpty) Fox.successful(Seq.empty)
+    else
+      run(q"""SELECT u._id
+              FROM webknossos.users_ u
+              JOIN webknossos.datasets_ d ON d._id = $datasetId
+              WHERE u._id IN ${SqlToken.tupleFromList(userIds)}
+              AND (${readAccessQWithPrefix(q"u._id", q"d.")})""".as[ObjectId])
 
   def findAllWithSearch(
       isActiveOpt: Option[Boolean],
@@ -276,7 +291,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       statusOpt: Option[String] = None,
       createdSinceOpt: Option[Instant] = None,
       limitOpt: Option[Int] = None,
-      requestingUserOrga: Option[String] = None
+      requestingUserOrga: Option[String] = None,
+      includeAnnotationCount: Boolean = false
   )(using ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(
@@ -291,6 +307,24 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         createdSinceOpt
       )
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
+      (annotationCountColumn, annotationCountJoin) = requestingUserIdOpt match {
+        case Some(requestingUserId) if includeAnnotationCount =>
+          // annotationCount join is designed for best index use.
+          // The dataset access check is skipped, since only already-checked datasets are joined.
+          (
+            q"COALESCE(annotationCounts.count, 0)",
+            q"""LEFT JOIN (
+                  SELECT a._dataset, COUNT(*) AS count
+                  FROM webknossos.annotations_ a
+                  WHERE a.typ = ${AnnotationType.Explorational}
+                  AND a.state = ${AnnotationState.Active}
+                  AND ${AnnotationAccessQueries.ownedOrSharedQ(requestingUserId, q"a.")}
+                  GROUP BY a._dataset
+                ) annotationCounts
+                  ON annotationCounts._dataset = d._id"""
+          )
+        case _ => (q"NULL::BIGINT", q"")
+      }
       query = q"""
             SELECT
               d._id,
@@ -303,7 +337,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               COALESCE(
                 (
                   (u.isAdmin AND u._organization = d._organization) OR
-                  u.isDatasetManager OR
+                  (u.isDatasetManager AND u._organization = d._organization) OR
                   d._id IN (              -- team manager of team that has access to the dataset
                     SELECT _dataset
                     FROM webknossos.dataset_allowedTeams dt
@@ -317,7 +351,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                       SELECT at._folder
                       FROM webknossos.folder_allowedTeams at
                       JOIN webknossos.user_team_roles utr ON at._team = utr._team
-                      WHERE utr._user = u._id
+                      WHERE utr._user = u._id AND utr.isTeamManager
                     )
                   )
                 ), FALSE
@@ -328,7 +362,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               cl.names AS colorLayerNames,
               sl.names AS segmentationLayerNames,
               COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes,
-              d.thumbnailCacheVersion
+              d.thumbnailCacheVersion,
+              $annotationCountColumn AS annotationCount
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
             JOIN webknossos.organizations o
@@ -345,6 +380,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               ON d._id = magStorage._dataset
             LEFT JOIN (SELECT _dataset, COALESCE(SUM(usedStorageBytes), 0) AS storage FROM webknossos.organization_usedStorage_attachments GROUP BY _dataset) attachmentStorage
               ON d._id = attachmentStorage._dataset
+            $annotationCountJoin
             """
       rows <- run(
         query.as[
@@ -363,7 +399,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               String,
               String,
               Long,
-              Int
+              Int,
+              Option[Long]
           )
         ]
       )
@@ -385,7 +422,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         segmentationLayerNames = parseArrayLiteral(row._13),
         // Only include usedStorage for datasets of your own organization.
         usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L,
-        thumbnailCacheVersion = row._15
+        thumbnailCacheVersion = row._15,
+        annotationCount = row._16
       )
     )
 
@@ -450,8 +488,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
 
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
     isUnreportedOpt match {
-      case Some(true)  => q"status = ${DataSourceStatus.unreported} OR status = ${DataSourceStatus.deletedByUser}"
-      case Some(false) => q"status != ${DataSourceStatus.unreported} AND status != ${DataSourceStatus.deletedByUser}"
+      case Some(true)  => q"status IN ${SqlToken.tupleFromList(DataSourceStatus.unreportedStatusList)}"
+      case Some(false) => q"status NOT IN ${SqlToken.tupleFromList(DataSourceStatus.unreportedStatusList)}"
       case None        => q"TRUE"
     }
 
@@ -731,11 +769,14 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                    WHERE _id = $datasetId""".asUpdate)
     } yield ()
 
-  def insertOne(d: Dataset): Fox[Unit] = {
+  // Returns false if skipOnDirectoryNameConflict is set and a dataset with this directoryName already exists
+  def insertOne(d: Dataset, skipOnDirectoryNameConflict: Boolean = false): Fox[Boolean] = {
     val adminViewConfiguration: Option[JsValue] = d.adminViewConfiguration.map(Json.toJson(_))
     val defaultViewConfiguration: Option[JsValue] = d.defaultViewConfiguration.map(Json.toJson(_))
+    val onConflictClause =
+      if (skipOnDirectoryNameConflict) q"ON CONFLICT (directoryName, _organization) DO NOTHING" else SqlToken.empty
     for {
-      _ <- run(q"""INSERT INTO webknossos.datasets(
+      insertedRowCount <- run(q"""INSERT INTO webknossos.datasets(
                      _id, _dataStore, _organization, _publication,
                      _uploader, _folder,
                      inboxSourceHash, defaultViewConfiguration, adminViewConfiguration,
@@ -752,8 +793,9 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
                      ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags}, ${d.creationType},
                      ${d.importURL}, ${d.rootPath}, ${d.rootRealPath}, ${d.mirrorPath}, ${d.created}, ${d.isDeleted}
-                   )""".asUpdate)
-    } yield ()
+                   )
+                   $onConflictClause""".asUpdate)
+    } yield insertedRowCount > 0
   }
 
   def updateDataSource(
@@ -994,7 +1036,7 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       _ <- if (updateQueries.nonEmpty) runAsSerializableTransaction(updateQueries) else Fox.successful(())
     } yield ()
 
-  implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
+  implicit private def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
     r => {
       val datasetId = ObjectId(r.nextString())
       val layerName = r.nextString()
@@ -1629,7 +1671,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
            """.asUpdate)
     } yield ()
 
-  implicit def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =
+  implicit private def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =
     r =>
       StorageRelevantDataLayerAttachment(
         ObjectId(r.nextString()),

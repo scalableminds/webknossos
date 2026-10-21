@@ -20,14 +20,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
-import { ColorWKBlue, getSystemColorTheme, getThemeFromUser } from "theme";
+import { ColorWKBlue, getActiveTheme } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ViewModeValues } from "viewer/constants";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import type { UserConfiguration } from "viewer/store";
 import {
@@ -101,6 +101,15 @@ const shortCutDictForTools: Record<string, string> = {
   [AnnotationTool.PROOFREAD.id]: "Ctrl + K, O",
 };
 
+function isEditableElement(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
 export const CommandPalette = () => {
   const dispatch = useDispatch();
 
@@ -119,6 +128,26 @@ export const CommandPalette = () => {
 
   const navigate = useNavigate();
   const [paletteKey, setPaletteKey] = useState(0);
+  const [isOpenRequested, setIsOpenRequested] = useState(false);
+
+  // The palette's own hotkey handling ignores key events from text inputs, so the browser's
+  // print dialog would open instead. Handle the hotkey for those elements here.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isHotkey =
+        (event.ctrlKey || event.metaKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        // event.code also covers non-Latin keyboard layouts, where event.key isn't "p".
+        (event.key.toLowerCase() === "p" || event.code === "KeyP");
+      if (isHotkey && isEditableElement(event.target)) {
+        event.preventDefault();
+        setIsOpenRequested(true);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, []);
 
   const props: TracingViewMenuProps = {
     restrictions,
@@ -130,7 +159,7 @@ export const CommandPalette = () => {
     annotationOwner,
   };
 
-  const theme = getThemeFromUser(activeUser);
+  const theme = useWkSelector(getActiveTheme);
 
   const getTabsAndSettingsMenuItems = () => {
     if (!isInAnnotationView) return [];
@@ -148,57 +177,6 @@ export const CommandPalette = () => {
     });
     return commands;
   };
-
-  // type annotation due to the library
-  const handleSelect = useCallback(async (command: Record<string, unknown>) => {
-    if (command.name == null) {
-      return;
-    }
-
-    if (command.name === DynamicCommands.viewDataset) {
-      try {
-        const items = await getDatasetItems();
-        if (items.length > 0) {
-          setCommands(items);
-        } else {
-          Toast.info("No datasets available.");
-        }
-      } catch (_e) {
-        Toast.error("Failed to load datasets.");
-      }
-      return;
-    }
-
-    if (command.name === DynamicCommands.viewAnnotation) {
-      try {
-        const items = await getAnnotationItems();
-        if (items.length > 0) {
-          setCommands(items);
-        } else {
-          Toast.info("No annotations available.");
-        }
-      } catch (_e) {
-        Toast.error("Failed to load annotations.");
-      }
-      return;
-    }
-
-    if (command.name === DynamicCommands.switchOrganization) {
-      try {
-        const organizations = await getOrganizationItems();
-        if (organizations.length > 0) {
-          setCommands(organizations);
-        } else {
-          Toast.info("No other organizations available.");
-        }
-      } catch (_e) {
-        Toast.error("Failed to load organizations.");
-      }
-      return;
-    }
-
-    closePalette();
-  }, []);
 
   const getDatasetItems = useCallback(async () => {
     const datasets = await getDatasets();
@@ -371,14 +349,11 @@ export const CommandPalette = () => {
       ["dark", "Dark"],
     ] as const;
 
-    for (let [theme, name] of themesWithNames) {
+    for (const [selectableTheme, name] of themesWithNames) {
       commands.push({
         name: `Switch to “${name}” color theme`,
         command: async () => {
-          if (theme === "auto") theme = getSystemColorTheme();
-
-          const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
-          dispatch(setThemeAction(theme));
+          const newUser = await updateSelectedThemeOfUser(activeUser.id, selectableTheme);
           dispatch(setActiveUserAction(newUser));
         },
         color: commandEntryColor,
@@ -458,7 +433,59 @@ export const CommandPalette = () => {
   }, [allowUpdate, userConfig]);
 
   const closePalette = () => {
+    setIsOpenRequested(false);
     setPaletteKey((prevKey) => prevKey + 1);
+  };
+
+  // type annotation due to the library
+  const handleSelect = async (command: Record<string, unknown>) => {
+    if (command.name == null) {
+      return;
+    }
+
+    if (command.name === DynamicCommands.viewDataset) {
+      try {
+        const items = await getDatasetItems();
+        if (items.length > 0) {
+          setCommands(items);
+        } else {
+          Toast.info("No datasets available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load datasets.");
+      }
+      return;
+    }
+
+    if (command.name === DynamicCommands.viewAnnotation) {
+      try {
+        const items = await getAnnotationItems();
+        if (items.length > 0) {
+          setCommands(items);
+        } else {
+          Toast.info("No annotations available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load annotations.");
+      }
+      return;
+    }
+
+    if (command.name === DynamicCommands.switchOrganization) {
+      try {
+        const organizations = await getOrganizationItems();
+        if (organizations.length > 0) {
+          setCommands(organizations);
+        } else {
+          Toast.info("No other organizations available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load organizations.");
+      }
+      return;
+    }
+
+    closePalette();
   };
 
   const commandsWithIds = useMemo(() => {
@@ -472,13 +499,17 @@ export const CommandPalette = () => {
       commands={commandsWithIds}
       key={paletteKey}
       hotKeys={["ctrl+p", "command+p"]}
+      open={isOpenRequested}
       trigger={null}
       maxDisplayed={100}
       theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
       onSelect={handleSelect}
       showSpinnerOnSelect={false}
       resetInputOnOpen
-      onRequestClose={() => setCommands(allStaticCommands)}
+      onRequestClose={() => {
+        setIsOpenRequested(false);
+        setCommands(allStaticCommands);
+      }}
       closeOnSelect={false}
       renderCommand={(command) => {
         const { shortcut, highlight: maybeDirtyString, name } = command as ExtendedCommand;

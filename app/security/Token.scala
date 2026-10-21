@@ -124,7 +124,9 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def deleteAllExpired(): Fox[Unit] =
     for {
-      _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE expirationDateTime <= ${Instant.now}".asUpdate)
+      _ <- run(
+        q"UPDATE $collectionName SET isDeleted = TRUE WHERE NOT isDeleted AND expirationDateTime <= ${Instant.now}".asUpdate
+      )
     } yield ()
 
   private val hardDeleteGracePeriod: FiniteDuration = 7.days
@@ -141,6 +143,7 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"""UPDATE webknossos.tokens
                    SET isDeleted = ${true}
                    WHERE tokenType = ${TokenType.DataStore}
+                   AND NOT isDeleted
                    AND _user IN (
                      SELECT _id
                      FROM webknossos.users_

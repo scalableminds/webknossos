@@ -36,7 +36,7 @@ import models.annotation.AnnotationDAO
 import models.dataset.DatasetCreationType.DatasetCreationType
 import models.job.JobDAO
 import models.storage.UsedStorageService
-import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.{FORBIDDEN, NOT_FOUND}
 import play.api.libs.json.{JsArray, JsObject, Json}
 import security.RandomIDGenerator
 import telemetry.SlackNotificationService
@@ -154,7 +154,8 @@ class DatasetService @Inject() (
       creationType: DatasetCreationType.Value,
       importURL: Option[String] = None,
       rootPath: Option[String] = None,
-      rootRealPath: Option[String] = None
+      rootRealPath: Option[String] = None,
+      reuseExistingOnDirectoryNameConflict: Boolean = false
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
 
@@ -190,13 +191,24 @@ class DatasetService @Inject() (
         rootPath = rootPath,
         rootRealPath = rootRealPath
       )
-      _ <- datasetDAO.insertOne(dataset)
-      _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
-      _ <- teamDAO.updateAllowedTeamsForDataset(datasetId, List())
+      inserted <- datasetDAO.insertOne(dataset, skipOnDirectoryNameConflict = reuseExistingOnDirectoryNameConflict)
+      resultDataset <-
+        if (inserted) setUpInsertedDataset(dataset, dataSource)
+        else {
+          // Concurrent disk scans (or duplicate entries in one report) may report the same new dataset
+          logger.info(s"Dataset ${dataSource.id} already exists, using existing one instead.")
+          datasetDAO.findOneByDataSourceId(dataSource.id)
+        }
+    } yield resultDataset
+  }
+
+  private def setUpInsertedDataset(dataset: Dataset, dataSource: DataSource)(using ctx: DBAccessContext): Fox[Dataset] =
+    for {
+      _ <- datasetDataLayerDAO.updateLayers(dataset._id, dataSource)
+      _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, List())
       _ <- scanRealpathsIfVirtual(dataset)
       _ <- writeMirrorForVirtual(dataset)
     } yield dataset
-  }
 
   def updateDataSources(dataStore: DataStore, dataSourcesWithPathInfo: List[DataSourceWithRootPathInfo])(using
       ctx: DBAccessContext
@@ -240,31 +252,44 @@ class DatasetService @Inject() (
     val dataSource = dataSourceWithRootPathInfo.dataSource
     val rootPath = dataSourceWithRootPathInfo.rootPath
     val rootRealPath = dataSourceWithRootPathInfo.rootRealPath
-    val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
-    val isVirtual = foundDatasetOpt.exists(_.isVirtual)
-    if (isVirtual) { // Virtual datasets should not be updated from the datastore, as we do not expect them to exist as data source properties on the datastore.
-      Fox.successful(foundDatasetOpt.map(_._id))
-    } else {
-      foundDatasetOpt match {
-        case Some(foundDataset) if foundDataset._dataStore == dataStore.name =>
-          updateKnownDataSource(foundDataset, dataSource, dataStore, rootPath, rootRealPath).map(Some(_))
-        case Some(
-              foundDataset
-            ) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
-          updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore, rootPath, rootRealPath)
-        case _ =>
-          createDataset(
+    foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption) match {
+      case Some(foundDataset) => updateExistingDataset(foundDataset, dataSource, dataStore, rootPath, rootRealPath)
+      case None               =>
+        val newDatasetId = ObjectId.generate
+        for {
+          dataset <- createDataset(
             dataStore,
-            ObjectId.generate,
+            newDatasetId,
             dataSource.id.directoryName,
             dataSource,
             creationType = DatasetCreationType.DiskScan,
             rootPath = rootPath,
-            rootRealPath = rootRealPath
-          ).map(ds => Some(ds._id))
-      }
+            rootRealPath = rootRealPath,
+            reuseExistingOnDirectoryNameConflict = true
+          )
+          existingId <-
+            if (dataset._id == newDatasetId) Fox.successful(Some(dataset._id))
+            else updateExistingDataset(dataset, dataSource, dataStore, rootPath, rootRealPath)
+        } yield existingId
     }
   }
+
+  private def updateExistingDataset(
+      foundDataset: Dataset,
+      dataSource: DataSource,
+      dataStore: DataStore,
+      rootPath: Option[String],
+      rootRealPath: Option[String]
+  )(using ctx: DBAccessContext): Fox[Option[ObjectId]] =
+    if (foundDataset.isVirtual) {
+      // Virtual datasets should not be updated from the datastore, as we do not expect them to exist as data source properties on the datastore.
+      Fox.successful(Some(foundDataset._id))
+    } else if (foundDataset._dataStore == dataStore.name) {
+      updateKnownDataSource(foundDataset, dataSource, dataStore, rootPath, rootRealPath).map(Some(_))
+    } else {
+      // Returns None if the dataset is still reported by its original datastore
+      updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore, rootPath, rootRealPath)
+    }
 
   private def updateKnownDataSource(
       foundDataset: Dataset,
@@ -301,32 +326,29 @@ class DatasetService @Inject() (
       rootRealPath: Option[String]
   )(using ctx: DBAccessContext): Fox[Option[ObjectId]] =
     // The dataset is already present (belonging to the same organization), but reported from a different datastore
-    (for {
-      originalDataStore <- dataStoreDAO.findOneByName(foundDataset._dataStore)
-    } yield
-      if (originalDataStore.isScratch && !dataStore.isScratch || isUnreported(foundDataset)) {
-        logger.info(
-          s"Replacing dataset ${foundDataset.name} (with id ${foundDataset._id} and status: ${foundDataset.status}) from datastore ${originalDataStore.name} by the one from ${dataStore.name}"
-        )
-        for {
-          _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-          _ <- datasetDAO.updateDataSource(
-            foundDataset._id,
-            dataStore.name,
-            dataSource.hashCode,
-            dataSource,
-            dataSource.isUsable,
-            rootPath,
-            rootRealPath
-          )(using GlobalAccessContext)
-          _ <- notifyDatastoreOnUpdate(foundDataset._id)
-        } yield Some(foundDataset._id)
-      } else {
-        logger.info(
-          s"Dataset ${foundDataset.name}, as reported from ${dataStore.name}, is already present as id ${foundDataset._id} from datastore ${originalDataStore.name} and will not be replaced."
-        )
-        Fox.successful(None)
-      }).flatten
+    if (isUnreported(foundDataset)) {
+      logger.info(
+        s"Replacing dataset ${foundDataset.name} (with id ${foundDataset._id} and status: ${foundDataset.status}) from datastore ${foundDataset._dataStore} by the one from ${dataStore.name}"
+      )
+      for {
+        _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
+        _ <- datasetDAO.updateDataSource(
+          foundDataset._id,
+          dataStore.name,
+          dataSource.hashCode,
+          dataSource,
+          dataSource.isUsable,
+          rootPath,
+          rootRealPath
+        )(using GlobalAccessContext)
+        _ <- notifyDatastoreOnUpdate(foundDataset._id)
+      } yield Some(foundDataset._id)
+    } else {
+      logger.info(
+        s"Dataset ${foundDataset.name}, as reported from ${dataStore.name}, is already present as id ${foundDataset._id} from datastore ${foundDataset._dataStore} and will not be replaced."
+      )
+      Fox.successful(None)
+    }
 
   def updateDataSourceFromUserChanges(
       dataset: Dataset,
@@ -633,10 +655,13 @@ class DatasetService @Inject() (
             userService.teamManagerMembershipsFor(user._id)
           )
         } yield user.isAdminOf(dataset._organization)
-          || user.isDatasetManager
+          || user.isDatasetManagerOf(dataset._organization)
           || teamManagerMemberships.map(_.teamId).intersect(datasetAllowedTeams).nonEmpty
       case _ => Fox.successful(false)
     }
+
+  def assertEditableBy(dataset: Dataset, user: User): Fox[Unit] =
+    Fox.assertTrue(isEditableBy(dataset, Some(user))) ?~> Msg.notAllowed ~> FORBIDDEN
 
   def isUnreported(dataset: Dataset): Boolean = dataset.status == DataSourceStatus.unreported
 

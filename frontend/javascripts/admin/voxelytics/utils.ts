@@ -1,4 +1,5 @@
 import { useWkSelector } from "libs/react_hooks";
+import { getActiveTheme } from "theme";
 import { VoxelyticsRunState } from "types/api_types";
 
 export const VX_POLLING_INTERVAL = null; // disabled for now. 30 * 1000; // 30s
@@ -50,7 +51,7 @@ const theme = {
 };
 
 export function useTheme(): [typeof theme, boolean] {
-  const selectedTheme = useWkSelector((state) => state.uiInformation.theme);
+  const selectedTheme = useWkSelector(getActiveTheme);
   return [theme, selectedTheme === "light"];
 }
 

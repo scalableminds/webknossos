@@ -22,7 +22,7 @@
 
 .info-tab-identity-line {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
 
   // Keep the title readable when it is long enough to wrap, while the affordance
@@ -41,11 +41,6 @@
   font-weight: 700;
   line-height: 1.25;
   margin: 0;
-}
-
-// Lets a single-line title shrink inside its flex line so that antd's ellipsis kicks in.
-.info-tab-title-ellipsis {
-  min-width: 0;
 }
 
 .info-tab-description {
@@ -123,6 +118,7 @@
 .info-tab-row {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
   padding: 7px 12px;
   border-radius: 6px;
@@ -174,6 +170,9 @@ button.info-tab-row {
 }
 
 .info-tab-row-value {
+  // Lets long values (e.g. dataset names without spaces) wrap instead of overflowing.
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
   align-items: flex-end;

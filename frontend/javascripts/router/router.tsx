@@ -57,7 +57,7 @@ import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_vie
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
-  CreateExplorativeRouteWrapper,
+  CreateAnnotationRouteWrapper,
   DashboardRouteRootWrapper,
   DashboardRouteWrapper,
   DatasetSettingsRouteWrapper,
@@ -409,7 +409,7 @@ const routes: RouteObject[] = [
         path: "/datasets/:datasetId/createExplorative/:type",
         element: (
           <SecuredRoute>
-            <CreateExplorativeRouteWrapper />
+            <CreateAnnotationRouteWrapper />
           </SecuredRoute>
         ),
       },

@@ -102,6 +102,7 @@ case class AnnotationCompactInfo(
     teamNames: Seq[String],
     teamOrganizationIds: Seq[String],
     modified: Instant,
+    created: Instant,
     tags: Set[String],
     state: AnnotationState.Value = AnnotationState.Active,
     isLockedByOwner: Boolean,
@@ -238,38 +239,32 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken =
     q"visibility = ${AnnotationVisibility.Public}"
 
-  private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
-    q"""
-        (
-          ${prefix}_user = $requestingUserId
-          OR (
-            (${prefix}visibility = ${AnnotationVisibility.Public} or ${prefix}visibility = ${AnnotationVisibility.Internal})
-            AND (
-              ${prefix}_id IN (
-                SELECT DISTINCT a._annotation
-                FROM webknossos.annotation_sharedTeams a
-                JOIN webknossos.user_team_roles t ON a._team = t._team
-                WHERE t._user = $requestingUserId
-              )
-              OR
-              ${prefix}_id IN (
-                SELECT _annotation
-                FROM webknossos.annotation_contributors
-                WHERE _user = $requestingUserId
-              )
-            )
-            AND EXISTS ( -- user must also still have access to the annotation's dataset
-              SELECT 1
-              FROM webknossos.datasets_ dd
-              WHERE dd._id = ${prefix}_dataset
-              AND (${datasetDAO.readAccessQWithPrefix(requestingUserId, q"dd.")})
-            )
-          )
+  private def listAccessQ(requestingUserId: SqlToken, prefix: SqlToken): SqlToken =
+    AnnotationAccessQueries.ownedOrSharedQ(
+      requestingUserId,
+      prefix,
+      sharedCondition = q"""
+        EXISTS ( -- user must also still have access to the annotation's dataset
+          SELECT 1
+          FROM webknossos.datasets_ dd
+          WHERE dd._id = ${prefix}_dataset
+          AND (${datasetDAO.readAccessQWithPrefix(requestingUserId, q"dd.")})
         )
-       """
+      """
+    )
 
   private def baseListAccessQ(using ctx: DBAccessContext): Fox[SqlToken] =
-    accessQueryFromAccessQWithPrefix(listAccessQ, q"")(using ctx)
+    accessQueryFromAccessQWithPrefix(listAccessQ(_, _), q"")(using ctx)
+
+  // Those of the given users that see the annotation in their annotation list, i.e. as their own or shared with them.
+  def findUserIdsWithListAccess(annotationId: ObjectId, userIds: List[ObjectId]): Fox[Seq[ObjectId]] =
+    if (userIds.isEmpty) Fox.successful(Seq.empty)
+    else
+      run(q"""SELECT u._id
+              FROM webknossos.users_ u
+              JOIN webknossos.annotations_ a ON a._id = $annotationId
+              WHERE u._id IN ${SqlToken.tupleFromList(userIds)}
+              AND ${listAccessQ(q"u._id", q"a.")}""".as[ObjectId])
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, q"")
@@ -341,7 +336,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   }
 
   // Necessary since a tuple can only have 22 elements
-  implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] =
+  implicit private def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] =
     prs => {
       import prs.*
 
@@ -356,6 +351,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       val teamNames = parseArrayLiteral(<<[String])
       val teamOrganizationIds = parseArrayLiteral(<<[String])
       val modified = <<[Instant]
+      val created = <<[Instant]
       val tags = parseArrayLiteral(<<[String]).toSet
       val state = AnnotationState.fromString(<<[String]).getOrElse(AnnotationState.Active)
       val isLockedByOwner = <<[Boolean]
@@ -384,6 +380,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
         teamNames,
         teamOrganizationIds,
         modified,
+        created,
         tags,
         state,
         isLockedByOwner,
@@ -424,7 +421,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   )(using ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
       accessQuery <-
-        if (filterOwnedOrShared) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
+        if (filterOwnedOrShared) accessQueryFromAccessQWithPrefix(listAccessQ(_, _), q"a.")
         else accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, q"a.")
       stateQuery = getStateQuery(isFinished)
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
@@ -445,6 +442,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
               mu.lastname,
               a.collaborationMode,
               a.modified,
+              a.created,
               a.tags,
               a.state,
               a.isLockedByOwner,
@@ -466,7 +464,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             JOIN webknossos.multiusers_ mu ON u._multiUser = mu._id
             WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery AND $datasetQuery
             GROUP BY
-              a._id, a.name, a.description, a._user, a.collaborationMode, a.modified,
+              a._id, a.name, a.description, a._user, a.collaborationMode, a.modified, a.created,
               a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
               mu.firstname, mu.lastname,
               d.name, d._id, o._id
@@ -486,6 +484,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
             ARRAY_REMOVE(ARRAY_AGG(o._id), null) AS team_organization_ids,
             an.modified,
+            an.created,
             an.tags,
             an.state,
             an.isLockedByOwner,
@@ -512,6 +511,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             an.lastname,
             an.collaborationMode,
             an.modified,
+            an.created,
             an.tags,
             an.state,
             an.isLockedByOwner,

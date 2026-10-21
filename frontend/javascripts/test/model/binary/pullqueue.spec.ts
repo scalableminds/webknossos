@@ -88,7 +88,10 @@ function createMockedCubeAndQueue(
 
   const mockedCube = {
     isSegmentation: true,
-    triggerRenderedBucketDataChanged: () => {},
+    triggerNeededBucketDataChanged: () => {},
+    currentBucketPickerTick: 0,
+    previousBucketPickerTick: 0,
+    onBucketMarkedAsNeeded: () => {},
     getBucket: vi.fn(),
     getOrCreateBucket: vi.fn(),
     boundingBox: {

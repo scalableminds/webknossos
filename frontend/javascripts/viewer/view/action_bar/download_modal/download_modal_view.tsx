@@ -37,7 +37,7 @@ function DownloadModalViewInner({
 
   const tabs: TabsProps["items"] = [
     {
-      label: "TIFF Export",
+      label: "TIFF and OME-Zarr Export",
       key: "export",
       children: (
         <DownloadTiffTab

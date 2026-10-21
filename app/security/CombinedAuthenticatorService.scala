@@ -94,7 +94,7 @@ case class CombinedAuthenticatorService(
   private def retrieveByAuthorizationHeader(request: RequestHeader): Future[Option[BearerTokenAuthenticator]] =
     bearerAuthorizationHeaderValue(request) match {
       case None        => Future.successful(None)
-      case Some(value) => tokenDao.findOneByValue(value).toFutureOption
+      case Some(value) => tokenDao.findOneUsableForAuthentication(value).toFutureOption
     }
 
   private def bearerAuthorizationHeaderValue(request: RequestHeader): Option[String] =

@@ -16,8 +16,7 @@ import utils.WkConf
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-/**
-  * Enforces the scopes of scoped tokens (see security.Scope) for all /api routes.
+/** Enforces the scopes of scoped tokens (see security.Scope) for all /api routes.
   *
   * Requests that are not authenticated by a scoped token pass through untouched, so session cookies and regular API
   * tokens behave exactly as before. Only short-lived tokens carry scopes today. They are recognized by the prefix of
@@ -42,8 +41,8 @@ class ScopeFilter @Inject() (
 
   override def apply(nextFilter: RequestHeader => Future[Result])(request: RequestHeader): Future[Result] =
     scopedTokenFor(request).flatMap {
-      case Empty                => nextFilter(request)
-      case failure: Failure     =>
+      case Empty            => nextFilter(request)
+      case failure: Failure =>
         // Fail closed: the request may well use a scoped token, we just could not check.
         logger.warn(s"Could not look up scoped token for ${request.method} ${request.path}: ${failure.msg}")
         Future.successful(
@@ -64,26 +63,21 @@ class ScopeFilter @Inject() (
         }
     }
 
-  /**
-    * What the token may do right now: the permissions the user currently grants to agents. This is read per request
-    * rather than frozen into the token, so saving new permissions takes effect immediately, including for agents
-    * that are already running.
+  /** What the token may do right now: the permissions the user currently grants to agents. This is read per request
+    * rather than frozen into the token, so saving new permissions takes effect immediately, including for agents that
+    * are already running.
     *
-    * The user is served from UserService's cache, and updateMcpAgentScopes evicts it, so this costs no extra
-    * database roundtrip. None means the user could not be resolved, in which case the request is denied.
+    * The user is served from UserService's cache, and updateMcpAgentScopes evicts it, so this costs no extra database
+    * roundtrip. None means the user could not be resolved, in which case the request is denied.
     */
   private def effectiveScopesFor(token: ShortLivedToken): Future[Option[Scope.Set]] =
-    userService
-      .findOneCached(token.userId)(using GlobalAccessContext)
-      .futureBox
-      .map {
-        case Full(user) => Some(Scope.Set.parse(user.mcpAgentScopes))
-        case _          => None
-      }
+    userService.findOneCached(token.userId)(using GlobalAccessContext).futureBox.map {
+      case Full(user) => Some(Scope.Set.parse(user.mcpAgentScopes))
+      case _          => None
+    }
 
-  /**
-    * Empty for revoked or expired short-lived tokens as well. Such requests pass through here, but are then rejected
-    * by the regular authentication, which does not find a valid token either. Failure means the lookup itself failed.
+  /** Empty for revoked or expired short-lived tokens as well. Such requests pass through here, but are then rejected by
+    * the regular authentication, which does not find a valid token either. Failure means the lookup itself failed.
     */
   private def scopedTokenFor(request: RequestHeader): Future[Box[ShortLivedToken]] =
     if (!request.path.startsWith("/api/")) Future.successful(Empty)

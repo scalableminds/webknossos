@@ -9,7 +9,6 @@ BLACKLIST=(
   docs/images/raw/tracing_ui_overview.svg
   schema/evolutions/008-task-instances-triggers.sql
   tools/check-todos.sh
-  tools/obj_models/obj_parser.py
   webknossos-datastore/deployment/config/datastore-docker.conf
   webknossos-tracingstore/deployment/config/tracingstore-docker.conf
 )

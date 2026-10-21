@@ -17,7 +17,11 @@ class PythonLibraryRoutesTestSuite extends AnyWordSpec {
     ("GET", "controllers.Application", "buildInfo"), // /buildinfo
     ("GET", "controllers.ShortLinkController", "getByKey"), // /shortLinks/byKey/{key}
     ("GET", "controllers.DatasetController", "read"), // /datasets/{dataset_id}
-    ("GET", "controllers.DatasetController", "getDatasetIdFromNameAndOrganization"), // /datasets/disambiguate/{organization_id}/{directory_name}/toId
+    (
+      "GET",
+      "controllers.DatasetController",
+      "getDatasetIdFromNameAndOrganization"
+    ), // /datasets/disambiguate/{organization_id}/{directory_name}/toId
     ("GET", "controllers.DatasetController", "list"), // /datasets
     ("PATCH", "controllers.DatasetController", "updateTeams"), // /datasets/{dataset_id}/teams
     ("PATCH", "controllers.DatasetController", "updatePartial"), // /datasets/{dataset_id}/updatePartial
@@ -26,7 +30,11 @@ class PythonLibraryRoutesTestSuite extends AnyWordSpec {
     ("POST", "controllers.DatasetController", "composeAddAttachment"), // /datasets/{dataset_id}/compose/addAttachment
     ("GET", "controllers.DatasetController", "getSharingToken"), // /datasets/{dataset_id}/sharingToken
     ("GET", "controllers.DatasetController", "isValidNewName"), // /datasets/{dataset_name}/isValidNewName
-    ("POST", "controllers.ConfigurationController", "readDatasetViewConfiguration"), // /datasetConfigurations/{dataset_id}
+    (
+      "POST",
+      "controllers.ConfigurationController",
+      "readDatasetViewConfiguration"
+    ), // /datasetConfigurations/{dataset_id}
     ("POST", "controllers.DatasetController", "exploreAndAddRemoteDataset"), // /datasets/exploreAndAddRemote
     ("DELETE", "controllers.DatasetController", "delete"), // /datasets/{dataset_id}
     ("GET", "controllers.AnnotationController", "listExplorationals"), // /annotations/readable
@@ -45,7 +53,11 @@ class PythonLibraryRoutesTestSuite extends AnyWordSpec {
     ("GET", "controllers.AnnotationController", "infoWithoutType"), // /annotations/{annotation_id}/info
     ("GET", "controllers.AnnotationIOController", "downloadWithoutType"), // /annotations/{annotation_id}/download
     ("POST", "controllers.AnnotationIOController", "upload"), // /annotations/upload
-    ("PATCH", "controllers.AnnotationController", "editAnnotation"), // /annotations/{annotation_typ}/{annotation_id}/edit
+    (
+      "PATCH",
+      "controllers.AnnotationController",
+      "editAnnotation"
+    ), // /annotations/{annotation_typ}/{annotation_id}/edit
     ("GET", "controllers.AnnotationController", "annotationsForTask"), // /tasks/{task_id}/annotations
     ("GET", "controllers.TaskController", "read"), // /tasks/{task_id}
     ("POST", "controllers.TaskController", "listTasks"), // /tasks/list
@@ -69,10 +81,26 @@ class PythonLibraryRoutesTestSuite extends AnyWordSpec {
     ("DELETE", "controllers.TaskController", "delete"), // /tasks/{task_id}
     ("POST", "controllers.TaskController", "createFromFiles"), // /tasks/createFromFiles
     ("POST", "controllers.DatasetController", "reserveUploadToPaths"), // /datasets/reserveUploadToPaths
-    ("POST", "controllers.DatasetController", "reserveUploadToPathsForPreliminary"), // /datasets/{dataset_id}/reserveUploadToPathsForPreliminary
-    ("POST", "controllers.DatasetController", "reserveAttachmentUploadToPath"), // /datasets/{dataset_id}/reserveAttachmentUploadToPath
-    ("POST", "controllers.DatasetController", "finishAttachmentUploadToPath"), // /datasets/{dataset_id}/finishAttachmentUploadToPath
-    ("POST", "controllers.DatasetController", "reserveMagUploadToPath"), // /datasets/{dataset_id}/reserveMagUploadToPath
+    (
+      "POST",
+      "controllers.DatasetController",
+      "reserveUploadToPathsForPreliminary"
+    ), // /datasets/{dataset_id}/reserveUploadToPathsForPreliminary
+    (
+      "POST",
+      "controllers.DatasetController",
+      "reserveAttachmentUploadToPath"
+    ), // /datasets/{dataset_id}/reserveAttachmentUploadToPath
+    (
+      "POST",
+      "controllers.DatasetController",
+      "finishAttachmentUploadToPath"
+    ), // /datasets/{dataset_id}/finishAttachmentUploadToPath
+    (
+      "POST",
+      "controllers.DatasetController",
+      "reserveMagUploadToPath"
+    ), // /datasets/{dataset_id}/reserveMagUploadToPath
     ("POST", "controllers.DatasetController", "finishMagUploadToPath"), // /datasets/{dataset_id}/finishMagUploadToPath
     ("POST", "controllers.AiModelController", "reserveUploadToPath"), // /aiModels/reserveUploadToPath
     ("GET", "controllers.AiModelController", "readAiModelInfo") // /aiModels/{ai_model_id}
@@ -102,8 +130,7 @@ class PythonLibraryRoutesTestSuite extends AnyWordSpec {
       assert(blocked.isEmpty, s"Read-only library routes blocked at the read level: ${blocked.mkString(", ")}")
     }
 
-    "not be able to touch the organization at any level" in {
+    "not be able to touch the organization at any level" in
       assert(!Scope.Set.forLevel(ScopeMode.delete).allows(Scope(ScopeResource.organization, ScopeMode.write)))
-    }
   }
 }

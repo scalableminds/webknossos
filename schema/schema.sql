@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(186);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(187);
 COMMIT TRANSACTION;
 
 
@@ -250,7 +250,6 @@ CREATE TABLE webknossos.dataStores(
   url TEXT UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   publicUrl TEXT UNIQUE NOT NULL CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$'),
   key TEXT NOT NULL,
-  isScratch BOOLEAN NOT NULL DEFAULT FALSE,
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   allowsUpload BOOLEAN NOT NULL DEFAULT TRUE,
   allowsUploadToPaths BOOLEAN NOT NULL DEFAULT TRUE,

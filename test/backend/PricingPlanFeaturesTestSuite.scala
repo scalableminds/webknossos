@@ -23,9 +23,9 @@ class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
 
     "fold in the highlights of skipped tiers" in {
       val unlocked = PricingPlanFeatures.unlockedBy(PricingPlan.Personal, PricingPlan.Power)
-      // "Collaborative Annotation" is a Team highlight, "Up to Unlimited Users" a Power one
+      // "Collaborative Annotation" is a Team highlight, "Segmentation Proof-Reading Tool" a Power one
       assert(unlocked.exists(_.featureHighlights.contains("Collaborative Annotation")))
-      assert(unlocked.exists(_.featureHighlights.contains("Up to Unlimited Users")))
+      assert(unlocked.exists(_.featureHighlights.contains("Segmentation Proof-Reading Tool")))
     }
 
     "list a highlight shared between the folded-in tiers only once" in {
@@ -40,10 +40,7 @@ class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
       // Spelled out rather than sampled, so that any Team highlight leaking into a Team -> Power upgrade fails here
       assert(
         highlightsOf(PricingPlan.Team, PricingPlan.Power) == List(
-          "Up to Unlimited Users",
           "Segmentation Proof-Reading Tool",
-          "On-premise or dedicated hosting solutions available",
-          "Integration with your HPC and storage servers",
           "Eligible for the AI Add-on and AI model training"
         )
       )

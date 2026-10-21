@@ -459,9 +459,12 @@ class WKRemoteDataStoreController @Inject() (
   }
 
   def findCredential(name: String, key: String, credentialId: ObjectId): Action[AnyContent] = Action.fox { _ =>
-    dataStoreService.validateAccess(name, key) { _ =>
+    dataStoreService.validateAccess(name, key) { dataStore =>
       for {
         credential <- credentialDAO.findOne(credentialId)
+        _ <- Fox.fromBool(
+          dataStore.onlyAllowedOrganization.forall(credential.organization.contains)
+        ) ?~> Msg.notAllowed ~> FORBIDDEN
       } yield Ok(Json.toJson(credential))
     }
   }

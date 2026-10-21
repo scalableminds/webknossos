@@ -149,7 +149,7 @@ class UrlManager {
     // don't use location.hash = ""; since it refreshes the page
     if (!keepUrlState) {
       window.history.replaceState(
-        {},
+        window.history.state,
         "",
         location.pathname + (keepUrlSearch ? location.search : ""),
       );
@@ -167,7 +167,8 @@ class UrlManager {
 
   updateUnthrottled() {
     const url = this.buildUrl();
-    window.history.replaceState({}, "", url);
+    // Keep the existing history state, since react-router stores its own data there.
+    window.history.replaceState(window.history.state, "", url);
   }
 
   onHashChange = () => {
@@ -294,6 +295,7 @@ class UrlManager {
     if (this.stopStoreListening != null) {
       this.stopStoreListening();
     }
+    this.update.cancel();
     window.onhashchange = null;
   }
 

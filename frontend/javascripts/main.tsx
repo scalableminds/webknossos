@@ -7,11 +7,11 @@ import { message } from "antd";
 import ErrorBoundary from "components/error_boundary";
 import { FailedToLoadView } from "components/failed_to_load_view";
 import { RootForFastTooltips } from "components/fast_tooltip";
-import { load as loadFeatureToggles } from "features";
+import features, { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
-import window, { document } from "libs/window";
+import window, { document, location } from "libs/window";
 import { compress, decompress } from "lz-string";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -20,7 +20,7 @@ import { Provider } from "react-redux";
 import { setupApi } from "viewer/api/internal_api";
 import Model from "viewer/model";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import { setHasOrganizationsAction, setThemeAction } from "viewer/model/actions/ui_actions";
+import { setHasOrganizationsAction, setSystemThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { warnIfEmailIsUnverified } from "viewer/model/sagas/user_saga";
 import { setModel, setStore } from "viewer/singletons";
@@ -32,9 +32,10 @@ import { checkAnyOrganizationExists, getOrganization } from "admin/api/organizat
 import { CheckCertificateModal } from "components/check_certificate_modal";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
+import { folderHierarchyQueryOptions } from "dashboard/dataset/queries";
 import { RouterProvider } from "react-router/dom";
 import router from "router/router";
-import { getThemeFromUser } from "theme";
+import { listenToSystemColorThemeChanges } from "theme";
 import GlobalThemeProvider from "theme_provider";
 import HelpButton from "viewer/view/help/help_button";
 
@@ -45,6 +46,7 @@ setModel(Model);
 setStore(UnthrottledStore);
 setupApi();
 startSaga(warnIfEmailIsUnverified);
+listenToSystemColorThemeChanges((systemTheme) => Store.dispatch(setSystemThemeAction(systemTheme)));
 
 const reactQueryClient = new QueryClient({
   defaultOptions: {
@@ -68,7 +70,6 @@ async function tryToLoadActiveUser() {
       showErrorToast: false,
     });
     Store.dispatch(setActiveUserAction(user));
-    Store.dispatch(setThemeAction(getThemeFromUser(user)));
     ErrorHandling.setCurrentUser(user);
   } catch (_e) {
     // pass
@@ -89,6 +90,19 @@ async function loadOrganization() {
     const organization = await getOrganization(activeUser.organization);
     Store.dispatch(setActiveOrganizationAction(organization));
   }
+}
+
+function willShowDatasetsTab(pathname: string): boolean {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  if (path === "/dashboard/datasets" || path.startsWith("/dashboard/datasets/")) {
+    return true;
+  }
+  if (path !== "/" && path !== "/dashboard") {
+    return false;
+  }
+  // Without an explicit tab, DashboardView restores the last used tab or falls back to its default.
+  const lastUsedTabKey = UserLocalStorage.getItem("lastUsedDashboardTab");
+  return lastUsedTabKey != null ? lastUsedTabKey === "datasets" : !features().isWkorgInstance;
 }
 
 if (document.readyState === "loading") {
@@ -123,6 +137,11 @@ async function initApp() {
       // with hasOrganizations==true.
       loadHasOrganizations(),
     ]);
+    // The dataset dashboard needs the folder tree first thing after mounting. Starting the request
+    // now overlaps it with loading the organization and rendering the app.
+    if (Store.getState().activeUser != null && willShowDatasetsTab(location.pathname)) {
+      reactQueryClient.prefetchQuery(folderHierarchyQueryOptions).catch(() => {});
+    }
     await loadOrganization();
 
     // In dev setup the original title indicates loading. That’s done now.

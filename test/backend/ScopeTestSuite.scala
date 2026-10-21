@@ -10,9 +10,8 @@ import security.{RouteScopes, Scope, ScopeMode, ScopeResource}
 class ScopeTestSuite extends AnyWordSpec {
 
   "Scope.covers" should {
-    "cover the same scope" in {
+    "cover the same scope" in
       assert(Scope(ScopeResource.dataset, ScopeMode.read).covers(Scope(ScopeResource.dataset, ScopeMode.read)))
-    }
 
     "cover weaker modes on the same resource" in {
       val write = Scope(ScopeResource.dataset, ScopeMode.write)
@@ -30,9 +29,8 @@ class ScopeTestSuite extends AnyWordSpec {
       assert(!Scope(ScopeResource.dataset, ScopeMode.delete).covers(administrate))
     }
 
-    "never cover a different resource" in {
+    "never cover a different resource" in
       assert(!Scope(ScopeResource.dataset, ScopeMode.delete).covers(Scope(ScopeResource.annotation, ScopeMode.read)))
-    }
   }
 
   "Scope.Set" should {
@@ -48,9 +46,8 @@ class ScopeTestSuite extends AnyWordSpec {
       assert(Scope.Set.parse(set.toString).scopes == set.scopes)
     }
 
-    "allow nothing when empty" in {
+    "allow nothing when empty" in
       assert(!Scope.Set.empty.allows(Scope(ScopeResource.dataset, ScopeMode.read)))
-    }
 
     "let the default agent scopes read datasets and write annotations, but not delete datasets" in {
       val default = Scope.Set.defaultForAgents
@@ -147,7 +144,6 @@ class ScopeTestSuite extends AnyWordSpec {
     }
   }
 
-
   "ScopeMode.fromAccessMode" should {
     "map the datastore access modes onto scope modes" in {
       assert(ScopeMode.fromAccessMode(AccessMode.list) == ScopeMode.read)
@@ -159,45 +155,47 @@ class ScopeTestSuite extends AnyWordSpec {
   }
 
   "Scope.fromAccessResourceType" should {
-    "treat a tracing as part of an annotation" in {
+    "treat a tracing as part of an annotation" in
       assert(Scope.fromAccessResourceType(AccessResourceType.tracing).contains(ScopeResource.annotation))
-    }
 
-    "never map the internal webknossos resource type" in {
+    "never map the internal webknossos resource type" in
       assert(Scope.fromAccessResourceType(AccessResourceType.webknossos).isEmpty)
-    }
   }
 
   "RouteScopes.requiredScope" should {
     "derive the mode from the http method" in {
       assert(
-        RouteScopes.requiredScope("controllers.DatasetController", "read", "GET")
+        RouteScopes
+          .requiredScope("controllers.DatasetController", "read", "GET")
           .contains(Scope(ScopeResource.dataset, ScopeMode.read))
       )
       assert(
-        RouteScopes.requiredScope("controllers.DatasetController", "update", "PATCH")
+        RouteScopes
+          .requiredScope("controllers.DatasetController", "update", "PATCH")
           .contains(Scope(ScopeResource.dataset, ScopeMode.write))
       )
       assert(
-        RouteScopes.requiredScope("controllers.DatasetController", "deleteOnDisk", "DELETE")
+        RouteScopes
+          .requiredScope("controllers.DatasetController", "deleteOnDisk", "DELETE")
           .contains(Scope(ScopeResource.dataset, ScopeMode.delete))
       )
     }
 
     "apply overrides where the http method does not describe the action" in {
       assert(
-        RouteScopes.requiredScope("controllers.TaskController", "listTasks", "POST")
+        RouteScopes
+          .requiredScope("controllers.TaskController", "listTasks", "POST")
           .contains(Scope(ScopeResource.task, ScopeMode.read))
       )
       assert(
-        RouteScopes.requiredScope("controllers.UserTokenController", "generateTokenForDataStore", "POST")
+        RouteScopes
+          .requiredScope("controllers.UserTokenController", "generateTokenForDataStore", "POST")
           .contains(Scope(ScopeResource.meta, ScopeMode.read))
       )
     }
 
-    "deny unmapped controllers, so that new routes are not open to scoped tokens by default" in {
+    "deny unmapped controllers, so that new routes are not open to scoped tokens by default" in
       assert(RouteScopes.requiredScope("controllers.SomeNewController", "doThing", "GET").isEmpty)
-    }
 
     "classify every route in the route files" in {
       // Guards against a route being silently unreachable for scoped tokens because its controller was never
@@ -232,11 +230,13 @@ class ScopeTestSuite extends AnyWordSpec {
 
     "scope the legacy api routes like their current counterparts" in {
       assert(
-        RouteScopes.requiredScope("controllers.LegacyApiController", "listV15", "GET")
+        RouteScopes
+          .requiredScope("controllers.LegacyApiController", "listV15", "GET")
           .contains(Scope(ScopeResource.dataset, ScopeMode.read))
       )
       assert(
-        RouteScopes.requiredScope("controllers.LegacyApiController", "updatePartialV14", "PATCH")
+        RouteScopes
+          .requiredScope("controllers.LegacyApiController", "updatePartialV14", "PATCH")
           .contains(Scope(ScopeResource.dataset, ScopeMode.write))
       )
       // A legacy action that has not been classified stays denied.

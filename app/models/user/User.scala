@@ -54,6 +54,9 @@ case class User(
   def isAdminOf(otherUser: User): Boolean =
     isAdminOf(otherUser._organization)
 
+  def isDatasetManagerOf(organizationId: String): Boolean =
+    isDatasetManager && organizationId == this._organization
+
 }
 
 case class UserCompactInfo(
@@ -199,7 +202,7 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
        """
 
   // Necessary since a tuple can only have 22 elements
-  implicit def GetResultUserCompactInfo: GetResult[UserCompactInfo] =
+  implicit private def GetResultUserCompactInfo: GetResult[UserCompactInfo] =
     prs => {
       import prs.*
       UserCompactInfo(

@@ -17,7 +17,7 @@ import {
   hasEditableMapping,
   isMappingLocked,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
+import { dispatchEnsureLayerMappingsAreLoadedAsync } from "viewer/model/actions/dataset_actions";
 import {
   setHideUnmappedIdsAction,
   setMappingAction,
@@ -75,9 +75,16 @@ function MappingSettingsView({ layerName }: Props) {
   const { hideUnmappedIds, mappingStatus, mapping, mappingName, mappingType } = activeMappingInfo;
   const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
 
-  const ensureMappingsAreLoaded = useCallback(() => {
+  const ensureMappingsAreLoaded = useCallback(async () => {
     if (segmentationLayer) {
-      dispatch(ensureLayerMappingsAreLoadedAction(segmentationLayer.name));
+      const success = await dispatchEnsureLayerMappingsAreLoadedAsync(
+        dispatch,
+        segmentationLayer.name,
+      );
+      if (!success) {
+        // Otherwise, the switch would keep loading forever and the user could not retry.
+        setShouldMappingBeEnabled(false);
+      }
     }
   }, [dispatch, segmentationLayer]);
 
@@ -129,14 +136,8 @@ function MappingSettingsView({ layerName }: Props) {
     [dispatch, ensureMappingsAreLoaded, layerName, mappingName],
   );
 
-  const availableMappings = useMemo(
-    () => segmentationLayer?.mappings ?? [],
-    [segmentationLayer?.mappings],
-  );
-  const availableAgglomerates = useMemo(
-    () => segmentationLayer?.agglomerates ?? [],
-    [segmentationLayer?.agglomerates],
-  );
+  const availableMappings = segmentationLayer?.mappings ?? [];
+  const availableAgglomerates = segmentationLayer?.agglomerates ?? [];
 
   // Show mapping-select even when the mapping is disabled but the UI was used before
   // (i.e., mappingName != null)

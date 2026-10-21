@@ -1,6 +1,6 @@
-name: Prune labels after merge
+name: Prune labels after close
 
-# Removes the automerge and autodeploy labels once a PR is merged.
+# Removes the automerge and autodeploy labels once a PR is closed (merged or not).
 # uses pull_request_target so that fork PRs get a token with write access; safe because no PR code is checked out.
 
 on:
@@ -10,7 +10,7 @@ on:
 jobs:
   remove-labels:
     runs-on: ubuntu-22.04
-    if: github.event.pull_request.merged
+    if: contains(github.event.pull_request.labels.*.name, 'automerge') || contains(github.event.pull_request.labels.*.name, 'autodeploy')
     permissions:
       pull-requests: write
     steps:

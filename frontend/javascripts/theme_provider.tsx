@@ -3,7 +3,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { ToastContextMountRoot } from "libs/toast";
 import type React from "react";
 import { useEffect } from "react";
-import { ColorBlack, ColorWhite, getAntdTheme, getThemeFromUser } from "theme";
+import { ColorBlack, ColorWhite, getActiveTheme, getAntdTheme } from "theme";
 
 export default function GlobalThemeProvider({
   children,
@@ -12,8 +12,7 @@ export default function GlobalThemeProvider({
   children?: React.ReactNode;
   isMainProvider?: boolean;
 }) {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const userTheme = getThemeFromUser(activeUser);
+  const userTheme = useWkSelector(getActiveTheme);
   const antdTheme = getAntdTheme(userTheme);
   const isDarkMode = userTheme === "dark";
 
@@ -50,8 +49,6 @@ export default function GlobalThemeProvider({
  * modals would otherwise inherit that theme.
  */
 export function UserThemeConfigProvider({ children }: { children: React.ReactNode }) {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  return (
-    <ConfigProvider theme={getAntdTheme(getThemeFromUser(activeUser))}>{children}</ConfigProvider>
-  );
+  const userTheme = useWkSelector(getActiveTheme);
+  return <ConfigProvider theme={getAntdTheme(userTheme)}>{children}</ConfigProvider>;
 }

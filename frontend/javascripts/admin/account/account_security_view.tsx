@@ -156,6 +156,23 @@ function AccountSecurityView() {
     ) : null;
   }
 
+  function handleResetPassword() {
+    setResetPasswordVisible(!isResetPasswordVisible);
+  }
+
+  async function handleLogout() {
+    logoutUserEverywhere()
+      .then((result) => unwrapOrThrow(result))
+      .then(() => {
+        dispatch(logoutUserAction());
+        navigate("/auth/login");
+      })
+      .catch((error) => {
+        Toast.error("Failed to log out. See console for more details");
+        console.error("Logout failed:", error);
+      });
+  }
+
   const handleLogoutEverywhere = () => {
     modal.confirm({
       title: "Confirm Logout",
@@ -191,23 +208,6 @@ function AccountSecurityView() {
       ),
     },
   ];
-
-  function handleResetPassword() {
-    setResetPasswordVisible(!isResetPasswordVisible);
-  }
-
-  async function handleLogout() {
-    logoutUserEverywhere()
-      .then((result) => unwrapOrThrow(result))
-      .then(() => {
-        dispatch(logoutUserAction());
-        navigate("/auth/login");
-      })
-      .catch((error) => {
-        Toast.error("Failed to log out. See console for more details");
-        console.error("Logout failed:", error);
-      });
-  }
 
   const { passkeysEnabled } = features();
 

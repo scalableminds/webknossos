@@ -15,7 +15,7 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
         activeOrganization: state.activeOrganization,
         uiInformation: {
           ...defaultState.uiInformation,
-          theme: state.uiInformation.theme,
+          systemTheme: state.uiInformation.systemTheme,
           storedLayouts: state.uiInformation.storedLayouts,
           navbarHeight: state.uiInformation.navbarHeight,
           isWkInitialized: false,
@@ -72,9 +72,9 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_THEME": {
+    case "SET_SYSTEM_THEME": {
       return updateKey(state, "uiInformation", {
-        theme: action.value,
+        systemTheme: action.systemTheme,
       });
     }
 

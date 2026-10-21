@@ -310,44 +310,60 @@ body {
   margin: 0 auto;
 }
 
-/** Styles for the dataset upload dropzone, including active, accept, and reject states. */
+/** Styles for the dataset upload dropzone and the summary of the selected data. */
 .dataset-upload-dropzone {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  border-width: 2px;
-  border-radius: 2px;
-  border-color: var(--ant-color-border-secondary);
-  border-style: dashed;
-  background-color: var(--ant-color-bg-container);
-  color: var(--ant-color-text);
-  font-size: 16px;
+  padding: 64px 24px;
+  border: 2px dashed var(--ant-color-primary-border);
+  border-radius: var(--ant-border-radius-lg);
+  background-color: var(--ant-color-fill-quaternary);
   outline: none;
-  transition: border 0.24s ease-in-out;
-  cursor: pointer;
+  transition:
+    border-color 0.2s ease-in-out,
+    background-color 0.2s ease-in-out;
 
   &.dataset-upload-dropzone-active {
-    border-color: var(--ant-color-border);
-  }
-
-  &.dataset-upload-dropzone-accept {
-    border-color: var(--ant-color-success-border);
-  }
-
-  &.dataset-upload-dropzone-reject {
-    border-color: var(--ant-color-error-border);
+    border-color: var(--ant-color-primary);
+    background-color: var(--ant-color-primary-bg);
   }
 }
 
-/** Stylized box for displaying cross-links (e.g. between datasets). */
-.crosslink-box {
-  padding: 20px;
-  margin: 20px;
-  background: var(--ant-color-bg-container);
-  box-shadow: var(--ant-box-shadow);
-  border-radius: 3px;
+.dataset-upload-dropzone-icon {
+  font-size: 64px;
+  color: var(--ant-color-primary);
+}
+
+.dataset-upload-selection {
+  overflow: hidden;
+  border: 1px solid var(--ant-color-border);
+  border-radius: var(--ant-border-radius-lg);
+  transition: border-color 0.2s ease-in-out;
+
+  .dataset-upload-dropzone-active > & {
+    border-color: var(--ant-color-primary);
+  }
+
+  .dataset-upload-selection-header {
+    padding: 16px 24px;
+  }
+
+  .dataset-upload-selection-icon {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--ant-border-radius-lg);
+    background-color: var(--ant-color-primary-bg);
+    color: var(--ant-color-primary);
+    font-size: 24px;
+  }
+
+  .dataset-upload-inspection-banner {
+    padding: 12px 24px;
+    border-width: 1px 0 0;
+    border-radius: 0;
+  }
 }
 
 /** Removes borders from nested input and button elements. */

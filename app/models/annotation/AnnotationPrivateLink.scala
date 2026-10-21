@@ -22,7 +22,9 @@ case class AnnotationPrivateLink(
     accessToken: String,
     expirationDateTime: Option[Instant],
     isDeleted: Boolean = false
-) derives JsonAutoFormat
+) derives JsonAutoFormat {
+  def isExpired: Boolean = expirationDateTime.exists(_ <= Instant.now)
+}
 
 case class AnnotationPrivateLinkParams(annotation: String, expirationDateTime: Option[Instant]) derives JsonAutoFormat
 

@@ -606,7 +606,8 @@ type UiInformation = {
   readonly isInAnnotationView: boolean;
   readonly hasOrganizations: boolean;
   readonly borderOpenStatus: BorderOpenStatus;
-  readonly theme: Theme;
+  // The OS color scheme. Use getActiveTheme() for the theme that is actually in effect.
+  readonly systemTheme: Theme;
   readonly isWkInitialized: boolean;
   readonly isUiReady: boolean;
   readonly quickSelectState:

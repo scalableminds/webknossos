@@ -27,6 +27,8 @@ import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
+  getBrushCenterInMag,
+  getBrushDiameterInMag,
   getContourTracingMode,
   getMaximumBrushSize,
   getRenderableMagForSegmentationTracing,
@@ -71,6 +73,7 @@ import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_se
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
+import { maskShapeFromVoxelBuffer2D } from "viewer/model/volumetracing/integration/fill_mask";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/legacy/section_labeling";
 import { api, Model } from "viewer/singletons";
@@ -86,11 +89,6 @@ const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 // path. Buckets are mutated in place; nothing reaches the save queue or the
 // undo stack (design doc §12.2). The trace tool is unaffected — it keeps
 // using the section labeler.
-
-/** Global (mag-1) layer-space position -> source-mag voxel coordinates. */
-function toMagVoxel(position: Vector3, mag: Vector3): Vector3 {
-  return [position[0] / mag[0], position[1] / mag[1], position[2] / mag[2]];
-}
 
 function* watchVolumeTracingAsync(): Saga<void> {
   yield* call(ensureWkInitialized);
@@ -259,6 +257,9 @@ export function* editVolumeLayerAsync(): Saga<never> {
     // Only the brush is driven from viewer/model/volumetracing; the trace
     // tool below still builds up a section labeler.
     let brushDriver: BrushDriver | null = null;
+    // Maps a floating mag-1 position to the brush center in source-mag voxels.
+    let getBrushCenter: ((position: Vector3) => Vector3) | null = null;
+    let lastBrushCenter: Vector3 | null = null;
 
     if (isBrushTool(activeTool)) {
       const segmentationLayer = yield* call(
@@ -269,15 +270,17 @@ export function* editVolumeLayerAsync(): Saga<never> {
       const voxelSize = yield* select((state) => state.dataset.dataSource.scale);
       const dimIndices = Dimensions.getIndices(startEditingAction.planeId);
       const planeAxis = dimIndices[2] as 0 | 1 | 2;
-      // brushSize is a diameter in "base voxels" — units of the finest axis of
-      // the voxel size. Converting it to a per-axis voxel radius therefore
-      // folds in both the voxel size (so the brush is a sphere in physical
-      // space, not an ellipsoid) and the mag.
-      const baseVoxelFactors = getBaseVoxelFactorsInUnit(voxelSize);
-      const unzoomedRadius = Math.round(brushSize / 2);
-      const radius: Vector3 = [0, 1, 2].map(
-        (axis) => (unzoomedRadius * baseVoxelFactors[axis]) / labeledMag[axis],
-      ) as Vector3;
+      const diameterInMag = getBrushDiameterInMag(
+        brushSize,
+        getBaseVoxelFactorsInUnit(voxelSize),
+        labeledMag,
+      );
+      // Not rounded: together with the strict inside test of the rasterizer, a
+      // brush of size 1 paints exactly the hovered voxel.
+      const radius = V3.scale(diameterInMag, 0.5);
+      getBrushCenter = (position) =>
+        getBrushCenterInMag(position, labeledMag, diameterInMag, planeAxis);
+      lastBrushCenter = getBrushCenter(startEditingAction.floatingPositionInLayerSpace);
       brushDriver = new BrushDriver(
         {
           cube: segmentationLayer.cube,
@@ -295,7 +298,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
           radius,
           planeAxis,
         },
-        toMagVoxel(startEditingAction.positionInLayerSpace, labeledMag),
+        lastBrushCenter,
       );
     }
 
@@ -327,6 +330,18 @@ export function* editVolumeLayerAsync(): Saga<never> {
         continue;
       }
 
+      if (brushDriver != null && getBrushCenter != null && lastBrushCenter != null) {
+        // The brush center can change within a mag-1 voxel (see getBrushCenterInMag),
+        // which is why this happens before the check below.
+        const brushCenter = getBrushCenter(addToContourListAction.floatingPositionInLayerSpace);
+        if (!V3.equals(lastBrushCenter, brushCenter)) {
+          // One incremental capsule per pointer-move; the transaction's write set
+          // coalesces overlap, and mag propagation is deferred to pointer-up.
+          brushDriver.extend(brushCenter);
+          lastBrushCenter = brushCenter;
+        }
+      }
+
       if (V3.equals(lastPosition, addToContourListAction.positionInLayerSpace)) {
         // The voxel position did not change since the last action (the mouse moved
         // within a voxel). There is no need to do anything.
@@ -342,25 +357,24 @@ export function* editVolumeLayerAsync(): Saga<never> {
         currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
       }
 
-      if (brushDriver != null) {
-        // One incremental capsule per pointer-move; the transaction's write set
-        // coalesces overlap, and mag propagation is deferred to pointer-up.
-        brushDriver.extend(toMagVoxel(addToContourListAction.positionInLayerSpace, labeledMag));
-      }
-
       lastPosition = addToContourListAction.positionInLayerSpace;
     }
 
     if (brushDriver != null) {
+      // A stroke released near its start fills the area it encloses. The fill
+      // joins the stroke's transaction, so both are propagated and saved as one.
+      const fill = currentSectionLabeler.getFillingVoxelBuffer2D(activeTool);
+      if (!fill.isEmpty()) {
+        brushDriver.fill(maskShapeFromVoxelBuffer2D(fill, startEditingAction.planeId));
+      }
       // Pointer-up: mag propagation runs once over the coalesced write set.
       // Only a stroke that wrote something counts, so that the "no voxels
       // were changed" hint below still fires when overwrite-empty skipped all.
       if (brushDriver.finish().voxels > 0) wroteVoxelsBox.value = true;
     }
-    // For every tool, including the brush: fills the area enclosed by the
-    // stroke if there is one (for the brush, only when it is released near its
-    // start), within the same undo step, and registers the stroke for volume
-    // interpolation.
+    // For the trace tool: fills the area enclosed by the stroke, within the
+    // same undo step. For every tool, including the brush: registers the stroke
+    // for volume interpolation.
     yield* call(
       finishSectionLabeler,
       currentSectionLabeler,
@@ -410,7 +424,8 @@ export function* finishSectionLabeler(
     return;
   }
 
-  if (isVolumeDrawingTool(activeTool)) {
+  // The brush fills within its own transaction (see editVolumeLayerAsync).
+  if (isVolumeDrawingTool(activeTool) && !isBrushTool(activeTool)) {
     yield* call(
       labelWithVoxelBuffer2D,
       sectionLabeler.getFillingVoxelBuffer2D(activeTool),

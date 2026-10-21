@@ -52,6 +52,7 @@ import { Fragment, PureComponent, useCallback, useContext, useEffect } from "rea
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Link } from "react-router";
+import { getActiveTheme } from "theme";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { Unicode } from "viewer/constants";
@@ -127,7 +128,7 @@ type ContextMenuProps = {
 };
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
-  const inputRef = useContext(ContextMenuContext);
+  const containerElement = useContext(ContextMenuContext);
   const { modal } = App.useApp();
   const { datasets, contextMenuPosition, hideContextMenu, folder, datasetCollectionContext } =
     propsWithInputRef;
@@ -142,13 +143,13 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
       const target = event.target as Element;
       // Submenus may be rendered as separate popups outside of the menu container.
       const isInsideMenu =
-        inputRef?.current?.contains(target) ||
+        containerElement?.contains(target) ||
         target.closest?.(".ant-dropdown, .ant-dropdown-menu-submenu-popup") != null;
       if (!isInsideMenu) hideContextMenu();
     };
     document.addEventListener("mousedown", onMouseDown);
     return () => document.removeEventListener("mousedown", onMouseDown);
-  }, [isOpen, inputRef, hideContextMenu]);
+  }, [isOpen, containerElement, hideContextMenu]);
 
   let menu: MenuProps = { items: [] };
 
@@ -167,8 +168,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
     }
   }
 
-  if (inputRef == null || inputRef.current == null) return null;
-  const refContent = inputRef.current;
+  if (containerElement == null) return null;
 
   return (
     <Fragment>
@@ -177,7 +177,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
         menu={menu}
         classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
-        getPopupContainer={() => refContent}
+        getPopupContainer={() => containerElement}
         destroyOnHidden
       >
         <div />
@@ -307,7 +307,7 @@ const DraggableDatasetRow = ({
   rowKey,
   ...restProps
 }: DraggableDatasetRowProps) => {
-  const theme = useWkSelector((state) => state.uiInformation.theme);
+  const theme = useWkSelector(getActiveTheme);
 
   // @ts-expect-error
   const datasetId = restProps["data-row-key"];

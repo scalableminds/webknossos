@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceStatus
 import models.dataset.{Dataset, DatasetDAO, DataStoreDAO, WKRemoteDataStoreClient}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
@@ -187,7 +188,7 @@ class JobService @Inject() (
   def cleanUpIfFailed(job: Job): Fox[Unit] =
     if (job.state == JobState.FAILURE && job.command == JobCommand.convert_to_wkw) {
       logger.info(
-        s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the directoryName..."
+        s"WKW conversion job ${job._id} failed. Marking dataset as conversion failed..."
       )
       val commandArgs = job.args.value
       for {
@@ -196,7 +197,11 @@ class JobService @Inject() (
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(using
           GlobalAccessContext
         ) ?~> Msg.Dataset.notFound(datasetDirectoryName)
-        _ <- datasetDAO.deleteDataset(dataset._id) ?~> Msg.Dataset.deleteFromDbFailed
+        _ <- datasetDAO.updateDatasetStatusByDatasetId(
+          dataset._id,
+          DataSourceStatus.conversionFailed,
+          isUsable = false
+        )(using GlobalAccessContext)
       } yield ()
     } else Fox.successful(())
 
@@ -375,10 +380,13 @@ class JobService @Inject() (
     }
 
   def calculateJobCostInMilliCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[Int] =
-    getJobCostInMilliCreditsPerGVx(jobCommand).map { costPerGVx =>
-      val volumeInGVx = boundingBoxInTargetMag.volume / ONE_GIGAVOXEL
-      val costInMilliCredits = math.ceil(volumeInGVx * costPerGVx).toInt
-      math.max(costInMilliCredits, 0)
-    }
+    for {
+      costPerGVx <- getJobCostInMilliCreditsPerGVx(jobCommand)
+      // Computed as Double so that huge bounding boxes cannot overflow; Double.toInt saturates at Int.MaxValue
+      volumeInGVx =
+        if (boundingBoxInTargetMag.isEmpty) 0.0
+        else
+          boundingBoxInTargetMag.width.toDouble * boundingBoxInTargetMag.height * boundingBoxInTargetMag.depth / ONE_GIGAVOXEL
+    } yield math.max(math.ceil(volumeInGVx * costPerGVx).toInt, 0)
 
 }

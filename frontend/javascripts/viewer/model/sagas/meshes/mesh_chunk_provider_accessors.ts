@@ -1,3 +1,4 @@
+import type { ListMeshChunksParams, MeshChunk, MeshSegmentInfo } from "admin/api/mesh";
 import { getSegmentsForAgglomerateFromTracingStore, meshApi } from "admin/rest_api";
 import { chunkDynamically } from "libs/utils";
 import partition from "lodash-es/partition";
@@ -12,10 +13,6 @@ import {
  * Loads mesh chunk lists and chunk bytes. Answers from the GlobalMeshChunkProvider where it can
  * and requests everything else from the back-end. See mesh_chunk_provider.ts.
  */
-
-type MeshChunk = meshApi.MeshChunk;
-type MeshSegmentInfo = meshApi.MeshSegmentInfo;
-type ListMeshChunksParams = meshApi.ListMeshChunksParams;
 
 type TracingStoreURLAndTracingId = { tracingStoreUrl: string; tracingId: string };
 

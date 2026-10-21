@@ -382,7 +382,8 @@ function extractScaleFromMatrix(transform: [Vector4, Vector4, Vector4]): Vector3
   return [transform[0][0], transform[1][1], transform[2][2]];
 }
 
-// Unlike an error thrown inside all(), the returned error doesn't cancel the other pool.
+// This runs twice. Once for all cached chunks and once for all needing loading. This helper surrounds
+//  processTasksAndReturnError with a try/catch to prevent it from cancelling the other running task pool upon throwing.
 function* processTasksAndReturnError(tasks: Array<() => Saga<void>>): Saga<unknown> {
   try {
     yield* call(processTaskWithPool, tasks, Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);

@@ -84,7 +84,7 @@ async function addChunkListsOfSegments(
     params.meshFile,
     segmentIds,
   );
-  cache.addChunkLists(listing, segmentIds);
+  cache.addChunkLists(listing);
 }
 
 /*
@@ -116,7 +116,8 @@ async function tryToListMeshChunksFromCache(
     if (uncachedSegmentIds.length > 0) {
       await addChunkListsOfSegments(cache, params, uncachedSegmentIds);
     }
-    // Null if none of the segments has a mesh. The normal listing then reports this as an error.
+    // Null if none of the segments has a mesh, which the normal listing then reports as an error.
+    // Also null if the back-end failed to list a segment, so that the normal listing retries it.
     return cache.getMeshSegmentInfoOfSegmentIds(segmentIds);
   } catch (exception) {
     // E.g., an older data store without the endpoint for listing several segments.

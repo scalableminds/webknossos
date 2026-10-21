@@ -71,12 +71,13 @@ class DSMeshController @Inject() (
             omitMissing = false
           )
           chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds)
-        } yield Ok(Json.toJson(chunkInfos.withSegmentIdsWithoutMesh(segmentIds)))
+        } yield Ok(Json.toJson(chunkInfos))
       }
     }
 
   /** Lists the mesh chunks of several unmapped segment ids at once. Unlike listMeshChunksForSegment, segments without a
-    * mesh don't make the request fail. They are listed in segmentIdsWithoutMesh instead.
+    * mesh don't make the request fail. They are listed in segmentIdsWithoutMesh instead. Segments whose lookup failed,
+    * e.g. because of a read error, are neither listed with chunks nor in segmentIdsWithoutMesh.
     */
   def listMeshChunksForSegments(
       datasetId: ObjectId,
@@ -94,7 +95,7 @@ class DSMeshController @Inject() (
             segmentIds,
             failOnZeroChunks = false
           )
-        } yield Ok(Json.toJson(chunkInfos.withSegmentIdsWithoutMesh(segmentIds)))
+        } yield Ok(Json.toJson(chunkInfos))
       }
     }
 

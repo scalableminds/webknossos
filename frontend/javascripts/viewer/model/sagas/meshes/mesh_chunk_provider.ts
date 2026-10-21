@@ -42,7 +42,6 @@ const MAX_CACHED_CHUNK_LIST_ENTRIES = 2_000_000;
 type MeshFileMetadata = Pick<MeshSegmentInfo, "meshFormat" | "chunkScale"> & {
   lodTransforms: MeshLodInfo["transform"][];
 };
-type CachedChunkData = { byteSize: number; unmappedSegmentId: bigint; buffer: ArrayBuffer };
 
 /*
  * The caches of one mesh file.
@@ -54,12 +53,9 @@ export class MeshFileCache {
   readonly chunkLists = new LruMapWithSize<bigint, ChunksPerLod | null>((chunksPerLod) =>
     Math.max(1, sum(chunksPerLod?.map((chunks) => chunks.length))),
   );
-  // Keyed by byte offset, which is unique within zarr and hdf5 mesh files. Neuroglancer
-  // precomputed mesh files address chunks relative to a shard. There, the entry must also match the
-  // owning segment id, which selects the shard when no mapping is involved.
-  readonly chunkData = new LruMapWithSize<number, CachedChunkData>(
-    (entry) => entry.buffer.byteLength,
-  );
+  // Keyed by getChunkDataKey. The byte offset alone is not unique in Neuroglancer precomputed mesh
+  // files, because they address chunks relative to the shard of the segment.
+  readonly chunkData = new LruMapWithSize<string, ArrayBuffer>((buffer) => buffer.byteLength);
   // Called after the cache grew. The memory limits apply to the caches of all mesh files together.
   private readonly evictIfNeeded: () => void;
 
@@ -78,9 +74,10 @@ export class MeshFileCache {
     return this.chunkLists.has(segmentId);
   }
 
-  // Stores the chunk lists of a listing reply per segment. Segments of requestedSegmentIds without
-  // any chunk in the reply are stored as having no mesh.
-  addChunkLists(info: MeshSegmentInfo, requestedSegmentIds: Iterable<bigint> = []): void {
+  // Stores the chunk lists of a listing reply per segment, and the segments of
+  // segmentIdsWithoutMesh as having no mesh. A requested segment that is in neither, e.g. because
+  // the back-end failed to read it, is not stored, so that it is requested again next time.
+  addChunkLists(info: MeshSegmentInfo): void {
     if (info.lods.length > 0) {
       this.metadata = {
         meshFormat: info.meshFormat,
@@ -88,14 +85,11 @@ export class MeshFileCache {
         lodTransforms: info.lods.map((lod) => lod.transform),
       };
     }
-    const chunksBySegmentId = groupChunksBySegmentId(info);
-    for (const [segmentId, chunksPerLod] of chunksBySegmentId) {
+    for (const [segmentId, chunksPerLod] of groupChunksBySegmentId(info)) {
       this.chunkLists.set(segmentId, chunksPerLod);
     }
-    for (const segmentId of [...(info.segmentIdsWithoutMesh ?? []), ...requestedSegmentIds]) {
-      if (!chunksBySegmentId.has(segmentId)) {
-        this.chunkLists.set(segmentId, null);
-      }
+    for (const segmentId of info.segmentIdsWithoutMesh ?? []) {
+      this.chunkLists.set(segmentId, null);
     }
     this.evictIfNeeded();
   }

@@ -153,20 +153,37 @@ describe("Mesh chunk provider", () => {
       expect(listingMock).toHaveBeenCalledTimes(1);
     });
 
-    it("marks requested segments without chunks as having no mesh, even if the back-end doesn't list them", async () => {
+    it("requests a segment again if the back-end failed to list it", async () => {
+      // The first normal listing. Afterwards, the segments 10, 11 and 12 are cached.
       await loadAgglomerate1();
 
+      // Segment 10 is cached and segment 32 is unknown, so only segment 32 is requested by its id.
+      // The back-end lists segment 32 neither with chunks nor as without a mesh, e.g. because of a
+      // read error. So segment 32 stays unknown in the cache.
       mockSegmentsOfAgglomerate([10n, 32n]);
-      listingForSegmentsMock.mockResolvedValueOnce({
-        ...listing([]),
-        segmentIdsWithoutMesh: undefined,
-      });
+      listingForSegmentsMock.mockResolvedValueOnce(listing([]));
+      // Because segment 32 is still unknown, the listing can't be built from the cache, and the
+      // normal listing is requested instead. It fails to list segment 32, too.
+      listingMock.mockResolvedValueOnce(listing([chunk(10n, 0)]));
       const info = await listMeshChunks(paramsFor(1n));
 
       expect(listedChunks(info)).toEqual([chunk(10n, 0)]);
+      // Once for loadAgglomerate1 and once as the fallback above.
+      expect(listingMock).toHaveBeenCalledTimes(2);
+
+      // Loading the same agglomerate again requests segment 32 again, because it was not stored
+      // as having no mesh. This time, the back-end lists its chunk.
       mockSegmentsOfAgglomerate([10n, 32n]);
-      await listMeshChunks(paramsFor(1n));
-      expect(listingForSegmentsMock).toHaveBeenCalledTimes(1);
+      listingForSegmentsMock.mockResolvedValueOnce(listing([chunk(32n, 80)]));
+      const retriedInfo = await listMeshChunks(paramsFor(1n));
+
+      expect(listedChunks(retriedInfo)).toEqual([chunk(10n, 0), chunk(32n, 80)]);
+      // The second request by ids contains only segment 32. Segment 10 comes from the cache.
+      expect(listingForSegmentsMock).toHaveBeenCalledTimes(2);
+      expect(listingForSegmentsMock.mock.calls[1][4]).toEqual([32n]);
+      // All segments are known now, so the listing is built from the cache without another
+      // normal listing.
+      expect(listingMock).toHaveBeenCalledTimes(2);
     });
 
     it("lists unknown segments by their ids even if most segments are unknown", async () => {
@@ -297,10 +314,11 @@ describe("Mesh chunk provider", () => {
       ]);
     });
 
-    it("does not mix up chunks of different segments at the same byte offset", async () => {
+    it("caches chunks of different segments at the same byte offset separately", async () => {
       mockChunkData();
       await getData([chunk(10n, 0)]);
       await getData([chunk(99n, 0)]);
+      await getData([chunk(10n, 0), chunk(99n, 0)]);
 
       expect(chunkDataMock).toHaveBeenCalledTimes(2);
     });

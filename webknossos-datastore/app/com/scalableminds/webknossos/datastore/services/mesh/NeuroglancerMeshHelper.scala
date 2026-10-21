@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.google.common.io.LittleEndianDataInputStream
-import com.scalableminds.util.box.{Box, Empty, Full}
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.tools.JsonAutoFormat
 import Box.tryo
@@ -97,50 +97,37 @@ case class MeshChunk(
 
 case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]]) derives JsonAutoFormat
 
+// The result of a successful lookup of one segment in a mesh file. lods is None if the mesh file has no entry for the
+// segment.
+case class SegmentMeshLookup(segmentId: Long, lods: Option[List[MeshLodInfo]]) {
+  def hasEntry: Boolean = lods.isDefined
+}
+
 case class WebknossosSegmentInfo(
     meshFormat: String,
     lods: List[MeshLodInfo],
     chunkScale: Array[Double] =
       Array(1.0, 1.0, 1.0), // Used for Neuroglancer Precomputed Meshes to account for vertex quantization
-    // The requested segment ids that have no chunk in any lod, e.g. because they are too small to show up in the
-    // mag the meshes were computed in. Lets clients remember that these segments have no mesh.
+    // The looked-up segment ids that have no chunk in any lod, e.g. because they are too small to show up in the
+    // mag the meshes were computed in. Lets clients remember that these segments have no mesh. Segments whose lookup
+    // failed are not listed, so that clients ask for them again.
     segmentIdsWithoutMesh: Option[List[UnsignedLong]] = None
-) derives JsonAutoFormat {
-
-  def withSegmentIdsWithoutMesh(requestedSegmentIds: Seq[Long]): WebknossosSegmentInfo = {
-    val segmentIdsWithMesh = lods.flatMap(_.chunks.map(_.unmappedSegmentId.toLong)).toSet
-    this.copy(
-      segmentIdsWithoutMesh =
-        Some(requestedSegmentIds.distinct.filterNot(segmentIdsWithMesh.contains).map(UnsignedLong(_)).toList)
-    )
-  }
-}
+) derives JsonAutoFormat
 
 object WebknossosSegmentInfo {
 
-  def fromMeshInfosAndMetadata(
-      chunkInfos: List[List[MeshLodInfo]],
+  // Merges the lods of all segments into one info. lookups must only hold the segments whose lookup succeeded.
+  def fromSegmentLookups(
+      lookups: Seq[SegmentMeshLookup],
       meshFormat: String,
       chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)
   ): Box[WebknossosSegmentInfo] =
-    if (chunkInfos.nonEmpty) {
-      tryo {
-        WebknossosSegmentInfo(
-          meshFormat = meshFormat,
-          lods = chunkInfos.transpose.map(mergeLod),
-          chunkScale = chunkScale
-        )
-      }
-    } else Empty
-
-  // Like fromMeshInfosAndMetadata, but returns an info without lods instead of failing if no segment has chunks.
-  def fromMeshInfosAndMetadataAllowingNoChunks(
-      chunkInfos: List[List[MeshLodInfo]],
-      meshFormat: String,
-      chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)
-  ): Box[WebknossosSegmentInfo] =
-    if (chunkInfos.isEmpty) Full(WebknossosSegmentInfo(meshFormat, lods = List.empty, chunkScale))
-    else fromMeshInfosAndMetadata(chunkInfos, meshFormat, chunkScale)
+    tryo {
+      val lods = lookups.flatMap(_.lods).toList.transpose.map(mergeLod)
+      val segmentIdsWithChunks = lods.flatMap(_.chunks.map(_.unmappedSegmentId.toLong)).toSet
+      val segmentIdsWithoutMesh = lookups.map(_.segmentId).distinct.filterNot(segmentIdsWithChunks.contains)
+      WebknossosSegmentInfo(meshFormat, lods, chunkScale, Some(segmentIdsWithoutMesh.map(UnsignedLong(_)).toList))
+    }
 
   private def mergeLod(thisLodFromAllChunks: List[MeshLodInfo]): MeshLodInfo = {
     val first = thisLodFromAllChunks.head

@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
@@ -80,21 +81,30 @@ class NeuroglancerPrecomputedMeshFileService @Inject() (dataVaultService: DataVa
       vaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
       mesh <- meshInfoCache.getOrLoad(meshFileKey, loadRemoteMeshInfo)
       chunkScale = Array.fill(3)(1 / math.pow(2, mesh.meshInfo.vertex_quantization_bits))
-      meshSegmentInfos <-
-        if (failOnZeroChunks) Fox.serialCombined(segmentIds)(id => listMeshChunks(vaultPath, mesh, id))
-        else listMeshChunksSkippingMissing(vaultPath, mesh, segmentIds)
-      _ <- Fox.fromBool(meshSegmentInfos.nonEmpty || !failOnZeroChunks) ?~>
+      lookups <-
+        if (failOnZeroChunks)
+          Fox.serialCombined(segmentIds)(id =>
+            listMeshChunks(vaultPath, mesh, id).map(lods => SegmentMeshLookup(id, Some(lods)))
+          )
+        else lookUpSegmentsSkippingFailed(vaultPath, mesh, segmentIds)
+      _ <- Fox.fromBool(lookups.exists(_.hasEntry) || !failOnZeroChunks) ?~>
         Msg.Mesh.File.zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
-      segmentInfo <- WebknossosSegmentInfo
-        .fromMeshInfosAndMetadataAllowingNoChunks(meshSegmentInfos, NeuroglancerMesh.meshEncoding, chunkScale)
-        .toFox
+      segmentInfo <- WebknossosSegmentInfo.fromSegmentLookups(lookups, NeuroglancerMesh.meshEncoding, chunkScale).toFox
     } yield segmentInfo
 
-  private def listMeshChunksSkippingMissing(vaultPath: VaultPath, mesh: NeuroglancerMesh, segmentIds: Seq[Long])(using
+  // Leaves out the segments whose lookup failed, e.g. because of a read error. listMeshChunks returns Empty, not a
+  // Failure, if the shard or its minishard index has no entry for the segment.
+  private def lookUpSegmentsSkippingFailed(vaultPath: VaultPath, mesh: NeuroglancerMesh, segmentIds: Seq[Long])(using
       tc: TokenContext
-  ): Fox[List[List[MeshLodInfo]]] =
+  ): Fox[List[SegmentMeshLookup]] =
     Fox
-      .serialCombined(segmentIds)(id => listMeshChunks(vaultPath, mesh, id).map(Some(_)).orElse(Fox.successful(None)))
+      .serialCombined(segmentIds)(id =>
+        listMeshChunks(vaultPath, mesh, id).shiftBox.map {
+          case Full(lods) => Some(SegmentMeshLookup(id, Some(lods)))
+          case Empty      => Some(SegmentMeshLookup(id, None))
+          case _: Failure => None
+        }
+      )
       .map(_.flatten)
 
   private def listMeshChunks(vaultPath: VaultPath, mesh: NeuroglancerMesh, segmentId: Long)(using

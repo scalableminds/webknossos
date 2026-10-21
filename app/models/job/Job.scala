@@ -145,9 +145,17 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       )
      """
 
+  // Own jobs, plus all jobs of the organization(s) the requesting user is admin of.
+  // Phrased as a set of owner ids (instead of looking up each job owner’s organization) so that
+  // the planner can fetch the matching jobs via the _owner index instead of scanning all jobs.
   private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken) =
-    q"""${prefix}_owner = $requestingUserId OR
-         ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = ${prefix}_owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
+    q"""${prefix}_owner IN (
+          SELECT $requestingUserId::TEXT
+          UNION ALL
+          SELECT orgUser._id
+          FROM webknossos.users_ orgUser
+          WHERE orgUser._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)
+        )
        """
 
   def findAllCompact(commandOpt: Option[JobCommand], skipForDeletedDatasets: Boolean)(using
@@ -232,30 +240,46 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
             """.asUpdate)
     } yield ()
 
-  def countUnassignedPendingForDataStore(dataStoreName: String, jobCommands: Set[JobCommand]): Fox[Int] =
-    if (jobCommands.isEmpty) Fox.successful(0)
+  private def commandInQ(jobCommands: Set[JobCommand]): SqlToken =
+    if (jobCommands.isEmpty) q"FALSE" else q"command IN ${SqlToken.tupleFromList(jobCommands)}"
+
+  // Returns the counts for both command sets with a single query
+  def countUnassignedPendingForDataStore(
+      dataStoreName: String,
+      jobCommandsA: Set[JobCommand],
+      jobCommandsB: Set[JobCommand]
+  ): Fox[(Int, Int)] =
+    if (jobCommandsA.isEmpty && jobCommandsB.isEmpty) Fox.successful((0, 0))
     else {
       for {
-        r <- run(q"""SELECT COUNT(*) from $existingCollectionName
+        r <- run(q"""SELECT COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsA)}),
+                            COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsB)})
+                   FROM $existingCollectionName
                    WHERE state = ${JobState.PENDING}
-                   AND command IN ${SqlToken.tupleFromList(jobCommands)}
+                   AND ${commandInQ(jobCommandsA ++ jobCommandsB)}
                    AND manualState IS NULL
                    AND _dataStore = $dataStoreName
-                   AND _worker IS NULL""".as[Int])
+                   AND _worker IS NULL""".as[(Int, Int)])
         head <- r.headOption.toFox
       } yield head
     }
 
-  def countUnfinishedByWorker(workerId: ObjectId, jobCommands: Set[JobCommand]): Fox[Int] =
-    if (jobCommands.isEmpty) Fox.successful(0)
+  // Returns the counts for both command sets with a single query
+  def countUnfinishedByWorker(
+      workerId: ObjectId,
+      jobCommandsA: Set[JobCommand],
+      jobCommandsB: Set[JobCommand]
+  ): Fox[(Int, Int)] =
+    if (jobCommandsA.isEmpty && jobCommandsB.isEmpty) Fox.successful((0, 0))
     else {
       for {
-        r <- run(q"""SELECT COUNT(*)
+        r <- run(q"""SELECT COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsA)}),
+                            COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsB)})
                      FROM $existingCollectionName
                      WHERE _worker = $workerId
                      AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
-                     AND command IN ${SqlToken.tupleFromList(jobCommands)}
-                     AND manualState IS NULL""".as[Int])
+                     AND ${commandInQ(jobCommandsA ++ jobCommandsB)}
+                     AND manualState IS NULL""".as[(Int, Int)])
         head <- r.headOption.toFox
       } yield head
     }

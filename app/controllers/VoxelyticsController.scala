@@ -149,15 +149,19 @@ class VoxelyticsController @Inject() (
           .map(runId => sortedRuns.find(_.id == runId).toFox ?~> Msg.Voxelytics.runNotFound ~> NOT_FOUND)
           .getOrElse(sortedRuns.headOption.toFox ?~> Msg.Voxelytics.zeroRunWorkflow)
 
-        // Fetch task runs for all runs
-        allTaskRuns <- voxelyticsDAO.findTaskRuns(sortedRuns.map(_.id), conf.staleTimeout)
-        combinedTaskRuns <- voxelyticsDAO.findCombinedTaskRuns(sortedRuns.map(_.id), conf.staleTimeout)
-
-        // Fetch artifact data for task runs
-        artifacts <- voxelyticsDAO.findArtifacts(request.identity, sortedRuns.map(_.id), conf.staleTimeout)
-
-        // Fetch task configs for the selected run
-        tasks <- voxelyticsDAO.findTasks(selectedRun.id)
+        runIds = sortedRuns.map(_.id)
+        // These queries are independent of each other. Start them all before awaiting any, so that they run in parallel.
+        // Task runs for all runs
+        allTaskRunsFox = voxelyticsDAO.findTaskRuns(runIds, conf.staleTimeout)
+        combinedTaskRunsFox = voxelyticsDAO.findCombinedTaskRuns(runIds, conf.staleTimeout)
+        // Artifact data for task runs
+        artifactsFox = voxelyticsDAO.findArtifacts(request.identity, runIds, conf.staleTimeout)
+        // Task configs for the selected run
+        tasksFox = voxelyticsDAO.findTasks(selectedRun.id)
+        allTaskRuns <- allTaskRunsFox
+        combinedTaskRuns <- combinedTaskRunsFox
+        artifacts <- artifactsFox
+        tasks <- tasksFox
 
         // Assemble workflow report JSON
         result = Json.obj(

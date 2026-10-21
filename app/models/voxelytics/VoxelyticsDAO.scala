@@ -14,7 +14,9 @@ import scala.concurrent.duration.FiniteDuration
 
 class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
-  private def runsWithStateQ(staleTimeout: FiniteDuration): SqlToken =
+  // runIdsQ optionally restricts the runs, e.g. to a tuple of ids or a subquery. Without it, the state of every run
+  // in the database is computed.
+  private def runsWithStateQ(staleTimeout: FiniteDuration, runIdsQ: Option[SqlToken] = None): SqlToken =
     q"""SELECT
           r._id,
           CASE
@@ -28,16 +30,18 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
         LEFT JOIN (
           SELECT _run, timestamp
           FROM webknossos.voxelytics_runHeartbeatEvents
-        ) run_heartbeat ON r._id = run_heartbeat._run"""
+        ) run_heartbeat ON r._id = run_heartbeat._run
+        ${runIdsQ.map(ids => q"WHERE r._id IN $ids").getOrElse(q"")}"""
 
-  private def tasksWithStateQ(staleTimeout: FiniteDuration): SqlToken =
+  private def tasksWithStateQ(staleTimeout: FiniteDuration, runIdsQ: Option[SqlToken] = None): SqlToken =
     q"""SELECT
           t._id,
           CASE WHEN t.state = ${VoxelyticsRunState.RUNNING} AND r.state = ${VoxelyticsRunState.STALE} THEN ${VoxelyticsRunState.STALE} ELSE t.state END AS state,
           t.beginTime AS beginTime,
           CASE WHEN t.state = ${VoxelyticsRunState.RUNNING} AND r.state = ${VoxelyticsRunState.STALE} THEN r.endTime ELSE t.endTime END AS endTime
         FROM webknossos.voxelytics_tasks t
-        JOIN (${runsWithStateQ(staleTimeout)}) r ON r._id = t._run"""
+        JOIN (${runsWithStateQ(staleTimeout, runIdsQ)}) r ON r._id = t._run
+        ${runIdsQ.map(ids => q"WHERE t._run IN $ids").getOrElse(q"")}"""
 
   // Postgres can't estimate the row count of the derived state column and tends to choose nested-loop plans
   // that are very slow for large workflows. Use this as a MATERIALIZED CTE and don't re-join voxelytics_chunks.
@@ -74,7 +78,8 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
   // Defines the CTEs chunk_states and latest_chunk_states.
   // latest_chunk_states holds the latest state of each chunk (by task name, executionId and chunkName) across the runs.
   // States other than skipped or pending take precedence, so that e.g. a chunk that was skipped in a later run reports
-  // the state of the run that actually computed it.
+  // the state of the run that actually computed it. beginTime and endTime are taken from that same row, even if they
+  // are NULL. Intentionally, there is no fallback to the times of a later skipped or pending row (covered by e2e tests).
   private def latestChunkStatesCtesQ(runIds: List[ObjectId], taskName: Option[String], staleTimeout: FiniteDuration) =
     q"""chunk_states AS MATERIALIZED (${chunksWithStateQ(runIds, taskName, staleTimeout)}),
         latest_chunk_states AS (
@@ -471,6 +476,7 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       staleTimeout: FiniteDuration
   ): Fox[List[WorkflowListingRunEntry]] = {
     val organizationId = currentUser._organization
+    val visibleRunIdsQ = Some(q"(SELECT _id FROM visible_runs)")
     for {
       r <- run(
         q"""
@@ -500,7 +506,7 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
           mu.firstName,
           mu.lastName
         FROM visible_runs r
-        JOIN (${runsWithStateQ(staleTimeout)}) rs ON rs._id = r._id
+        JOIN (${runsWithStateQ(staleTimeout, visibleRunIdsQ)}) rs ON rs._id = r._id
         LEFT JOIN (
           SELECT
             t._run AS _run,
@@ -513,7 +519,7 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
             SUM(COALESCE(ta.fileSize, 0)) AS fileSize,
             SUM(COALESCE(ta.inodeCount, 0)) AS inodeCount
           FROM visible_tasks t
-          JOIN (${tasksWithStateQ(staleTimeout)}) ts ON ts._id = t._id
+          JOIN (${tasksWithStateQ(staleTimeout, visibleRunIdsQ)}) ts ON ts._id = t._id
           LEFT JOIN (
             SELECT a._task _task, SUM(a.fileSize) fileSize, SUM(a.inodeCount) inodeCount
             FROM webknossos.voxelytics_artifacts a

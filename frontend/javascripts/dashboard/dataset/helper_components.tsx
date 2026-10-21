@@ -44,7 +44,7 @@ export const FormItemWithInfo = ({
       <span>
         {label}{" "}
         <Tooltip title={info}>
-          <InfoCircleOutlined style={{ color: "gray" }} />
+          <InfoCircleOutlined style={{ color: "var(--ant-color-text-description)" }} />
         </Tooltip>
       </span>
     }

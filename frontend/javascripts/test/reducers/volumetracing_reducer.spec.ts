@@ -15,16 +15,21 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { cycleToolAction, setToolAction } from "viewer/model/actions/ui_actions";
 import {
   addToContourListAction,
+  clickSegmentAction,
   createCellAction,
   finishAnnotationStrokeAction,
   mergeSegmentItemsAction,
   registerLabelPointAction,
   resetContourAction,
   setActiveCellAction,
+  setExpandedSegmentGroupsAction,
+  setSegmentGroupsAction,
+  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import UiReducer from "viewer/model/reducers/ui_reducer";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
-import type { StoreAnnotation, VolumeTracing, WebknossosState } from "viewer/store";
+import type { SegmentGroup, StoreAnnotation, VolumeTracing, WebknossosState } from "viewer/store";
+import { getGroupNodeKey } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { describe, expect, it } from "vitest";
 
 function getFirstVolumeTracingOrFail(annotation: StoreAnnotation): VolumeTracing {
@@ -395,6 +400,62 @@ describe("VolumeTracing", () => {
       expect(segment1).toEqual(segment1BeforeMerge);
       expect(segment2).toBeUndefined();
     });
+  });
+
+  describe("segment groups of a hidden segmentation layer", () => {
+    const segmentGroups: SegmentGroup[] = [
+      {
+        groupId: 1,
+        name: "Parent",
+        isExpanded: false,
+        children: [{ groupId: 2, name: "Child", isExpanded: false, children: [] }],
+      },
+    ];
+
+    const prepareState = (layerSettings: { isDisabled?: boolean; alpha?: number }) => {
+      let state = VolumeTracingReducer(
+        initialState,
+        setSegmentGroupsAction(segmentGroups, VOLUME_TRACING_ID),
+      );
+      state = VolumeTracingReducer(
+        state,
+        updateSegmentAction(id1, { groupId: 2, anchorPosition: [1, 1, 1] }, VOLUME_TRACING_ID),
+      );
+      return update(state, {
+        datasetConfiguration: { layers: { [VOLUME_TRACING_ID]: { $merge: layerSettings } } },
+      });
+    };
+
+    for (const layerSettings of [{ isDisabled: true }, { alpha: 0 }]) {
+      it(`should keep groups when a segment is clicked (${JSON.stringify(layerSettings)})`, () => {
+        const state = prepareState(layerSettings);
+        const newState = VolumeTracingReducer(
+          state,
+          clickSegmentAction(id1, [1, 1, 1], undefined, VOLUME_TRACING_ID),
+        );
+
+        const tracing = getFirstVolumeTracingOrFail(newState.annotation);
+        expect(tracing.segmentGroups.map((group) => group.groupId)).toEqual([1]);
+        expect(tracing.segmentGroups[0].children.map((group) => group.groupId)).toEqual([2]);
+        // The parents of the clicked segment should be expanded.
+        expect(tracing.segmentGroups[0].isExpanded).toBe(true);
+        expect(tracing.segmentGroups[0].children[0].isExpanded).toBe(true);
+        expect(getSegment(newState, id1)?.groupId).toBe(2);
+      });
+
+      it(`should keep groups when expanded groups are set (${JSON.stringify(layerSettings)})`, () => {
+        const state = prepareState(layerSettings);
+        const newState = VolumeTracingReducer(
+          state,
+          setExpandedSegmentGroupsAction(new Set([getGroupNodeKey(1)]), VOLUME_TRACING_ID),
+        );
+
+        const tracing = getFirstVolumeTracingOrFail(newState.annotation);
+        expect(tracing.segmentGroups[0].isExpanded).toBe(true);
+        expect(tracing.segmentGroups[0].children.map((group) => group.groupId)).toEqual([2]);
+        expect(getSegment(newState, id1)?.groupId).toBe(2);
+      });
+    }
   });
 });
 

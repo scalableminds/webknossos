@@ -3,7 +3,7 @@ import type { Color } from "antd/es/color-picker";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
 import { map3 } from "libs/utils";
 import type { CSSProperties, ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Vector3, Vector4 } from "viewer/constants";
 
 type RgbaColor = { r: number; g: number; b: number; a: number };
@@ -49,7 +49,9 @@ const ThrottledColorPicker = ({
   // render. Routing it through a ref keeps the throttled function stable - otherwise it
   // would be re-created on each render and its 20ms window would never take effect.
   const onChangeColorRef = useRef(onChangeColor);
-  onChangeColorRef.current = onChangeColor;
+  useLayoutEffect(() => {
+    onChangeColorRef.current = onChangeColor;
+  });
   const callLatestOnChangeColor = useCallback(
     (newColor: RgbaColor) => onChangeColorRef.current(newColor),
     [],

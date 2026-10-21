@@ -2,7 +2,7 @@ import logoScreenshot from "@images/logo-screenshot.svg";
 import { saveAs } from "file-saver";
 import importDynamic from "libs/import_dynamic";
 import { convertBufferToImage } from "libs/utils";
-import { getLayoutBackgroundColor } from "theme";
+import { getActiveTheme } from "theme";
 import {
   type OrthographicCamera,
   type PerspectiveCamera,
@@ -24,9 +24,8 @@ import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import Store from "viewer/store";
 
-// The page background, so that the 3D viewport and the gaps between viewports blend in.
-const getBackgroundColor = (): string =>
-  getLayoutBackgroundColor(Store.getState().uiInformation.theme);
+const getBackgroundColor = (): number =>
+  getActiveTheme(Store.getState()) === "dark" ? 0x000000 : 0xffffff;
 
 // Shared with PlaneView.getActiveTDViewCamera so both places agree on which
 // camera is actually active for the TD viewport.

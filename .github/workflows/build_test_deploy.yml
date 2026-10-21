@@ -46,6 +46,8 @@ jobs:
         run: yarn typecheck
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
+      - name: Check that the React Compiler compiles all components
+        run: yarn check-react-compiler
       - name: Run frontend tests
         run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true --silent=passed-only
       - name:
@@ -422,3 +424,4 @@ jobs:
         run: .github/slack-notification.sh
         env:
           SLACK_NOTIFY_TOKEN: ${{ secrets.SLACK_NOTIFY_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

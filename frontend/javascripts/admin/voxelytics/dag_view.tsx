@@ -15,6 +15,7 @@ import ReactFlow, {
   MiniMap,
   type ReactFlowInstance,
 } from "reactflow";
+import { getActiveTheme } from "theme";
 import "reactflow/dist/style.css";
 import { WK_FONT } from "theme";
 import {
@@ -472,7 +473,7 @@ function DAGView({
   onClickHandler: (id: string) => void;
 }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const theme = useWkSelector((state) => state.uiInformation.theme);
+  const theme = useWkSelector(getActiveTheme);
   // Resolved token values, because React Flow passes these into SVG presentation
   // attributes where `var(--ant-…)` references are not resolved.
   const { token } = antdTheme.useToken();

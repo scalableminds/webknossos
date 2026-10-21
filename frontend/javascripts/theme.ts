@@ -3,6 +3,7 @@ import type { AliasToken, OverrideToken } from "antd/es/theme/interface";
 import window from "libs/window";
 import merge from "lodash-es/merge";
 import type { APIUser } from "types/api_types";
+import type { WebknossosState } from "viewer/store";
 
 export type Theme = "light" | "dark";
 
@@ -247,15 +248,25 @@ export const NavAndStatusBarTheme = merge(
   OverridesForNavbarAndStatusBarTheme,
 );
 
-export function getSystemColorTheme(): Theme {
-  return window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+const darkColorSchemeQuery = "(prefers-color-scheme: dark)";
+
+function themeFromDarkQueryMatch(isDark: boolean): Theme {
+  return isDark ? "dark" : "light";
 }
 
-export function getThemeFromUser(activeUser: APIUser | null | undefined): Theme {
-  if (activeUser == null || activeUser.selectedTheme === "auto") return getSystemColorTheme();
+export function getSystemColorTheme(): Theme {
+  const query = window.matchMedia(darkColorSchemeQuery);
+  return themeFromDarkQueryMatch(query.media !== "not all" && query.matches);
+}
+
+export function listenToSystemColorThemeChanges(onChange: (systemTheme: Theme) => void) {
+  window
+    .matchMedia(darkColorSchemeQuery)
+    .addEventListener?.("change", (event) => onChange(themeFromDarkQueryMatch(event.matches)));
+}
+
+function getThemeFromUser(activeUser: APIUser | null | undefined, systemTheme: Theme): Theme {
+  if (activeUser == null || activeUser.selectedTheme === "auto") return systemTheme;
 
   return activeUser.selectedTheme;
 }
@@ -263,6 +274,12 @@ export function getThemeFromUser(activeUser: APIUser | null | undefined): Theme 
 // The page background, for elements outside of antd's CSS variable scope (e.g. <body>).
 export function getLayoutBackgroundColor(userTheme: Theme): string {
   return userTheme === "dark" ? darkGlobalToken.colorBgLayout : lightGlobalToken.colorBgLayout;
+}
+
+// The effective color theme. Derived from the user's selected theme so that it can never get out
+// of sync with it. The OS theme is part of the store so that "auto" re-renders when it changes.
+export function getActiveTheme(state: WebknossosState): Theme {
+  return getThemeFromUser(state.activeUser, state.uiInformation.systemTheme);
 }
 
 export function getAntdTheme(userTheme: Theme) {

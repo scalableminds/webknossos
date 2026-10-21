@@ -159,6 +159,7 @@ export function DatastoreFormItem({
 }
 
 export function AllowedTeamsFormItem({
+  label,
   isDatasetManagerOrAdmin,
   selectedTeams,
   setSelectedTeams,
@@ -166,6 +167,7 @@ export function AllowedTeamsFormItem({
   formRef,
   disabled,
 }: {
+  label?: string;
   isDatasetManagerOrAdmin: boolean;
   selectedTeams: APITeam | Array<APITeam>;
   setSelectedTeams: (teams: APITeam | Array<APITeam>) => void;
@@ -176,7 +178,7 @@ export function AllowedTeamsFormItem({
   return (
     <FormItemWithInfo
       name="initialTeams"
-      label="Teams allowed to access this dataset"
+      label={label ?? "Teams allowed to access this dataset"}
       info="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder to which the dataset is uploaded. If you want to grant additional teams access, define these teams here."
       hasFeedback
     >

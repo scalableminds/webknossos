@@ -1,12 +1,12 @@
-import { defineConfig } from "vite";
+import path from "node:path";
 import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
+import assertCodeSplitting from "./frontend/vite/vite-plugin-assert-code-splitting";
 import assertWorkerPurity from "./frontend/vite/vite-plugin-assert-worker-purity";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import replaceSvgColorWithCurrentColor from "./frontend/vite/vite-plugin-replace-svg-color";
-
-import path from "node:path";
 
 const alias = {
   "@images": path.resolve(__dirname, "frontend/assets/images"),
@@ -49,6 +49,25 @@ const viteConfig = {
     }),
     viteProtobufPlugin({
       protoDir: "webknossos-datastore/proto",
+    }),
+    assertCodeSplitting({
+      entry: "frontend/javascripts/main.tsx",
+      lazyEntries: ["frontend/javascripts/viewer/viewer_entry.ts"],
+      // Markers of the viewer that must only load with viewer_entry. Not exhaustive: the budget
+      // below catches the rest, these name the culprit.
+      forbiddenInInitialPayload: [
+        ["three.js", /node_modules\/(three|three-mesh-bvh|@tweenjs)\//],
+        ["protobufjs", /node_modules\/protobufjs\//],
+        ["flexlayout-react", /node_modules\/flexlayout-react\//],
+        ["the Model", /[\\/]viewer[\\/]model\.ts$/],
+        ["the root saga", /[\\/]viewer[\\/]model[\\/]sagas[\\/]root_saga\.ts$/],
+        ["the root reducer", /[\\/]viewer[\\/]model[\\/]reducers[\\/]root_reducer\.ts$/],
+        ["the viewer layout", /[\\/]viewer[\\/]view[\\/]layouting[\\/]tracing_layout_view\.tsx$/],
+        ["the controllers", /[\\/]viewer[\\/]controller(\.tsx$|[\\/])/],
+        ["the geometries and shaders", /[\\/]viewer[\\/](geometries|shaders)[\\/]/],
+      ],
+      // Gzipped JS + CSS loaded upfront by every page (1,026 kB as of #10088).
+      initialPayloadBudgetKb: 1050,
     }),
   ],
   devtools: {

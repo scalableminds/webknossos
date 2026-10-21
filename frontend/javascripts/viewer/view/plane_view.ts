@@ -37,6 +37,7 @@ import getSceneController, {
 } from "viewer/controller/scene_controller_provider";
 import type { MeshSceneNode, SceneGroupForMeshes } from "viewer/controller/segment_mesh_controller";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import {
@@ -46,7 +47,7 @@ import {
 import { uiReadyAction } from "viewer/model/actions/actions";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import Store from "viewer/store";
+import Store, { type WebknossosState } from "viewer/store";
 import { getGroundTruthLayoutRect } from "viewer/view/layouting/default_layout_configs";
 import {
   clearCanvas,
@@ -83,6 +84,11 @@ raycaster.firstHitOnly = true;
 const MESH_HOVER_THROTTLING_DELAY = 50;
 
 let oldRaycasterHit: RaycasterHit = null;
+
+const getHoveredSegmentIdToHighlight = (storeState: WebknossosState) =>
+  storeState.uiInformation.activeTool !== AnnotationTool.PROOFREAD
+    ? storeState.temporaryConfiguration.hoveredSegmentId
+    : null;
 
 class PlaneView {
   // Orthographic cameras of the three plane viewports.
@@ -509,12 +515,26 @@ class PlaneView {
         // hoveredSegmentId to the hit mesh, which is then highlighted in the same way.
         // In proofreading mode, highlighting the whole agglomerate mesh would hide the
         // highlighting of the active supervoxel.
+        // The selected key also contains the visible layer and the additional coordinates
+        // so that the highlighting is updated when these change while hovering.
         (storeState) =>
-          storeState.uiInformation.activeTool !== AnnotationTool.PROOFREAD
-            ? storeState.temporaryConfiguration.hoveredSegmentId
-            : null,
-        (hoveredSegmentId) => {
+          [
+            getHoveredSegmentIdToHighlight(storeState),
+            getVisibleSegmentationLayer(storeState)?.name,
+            getAdditionalCoordinatesAsString(storeState.flycam.additionalCoordinates),
+          ].join("|"),
+        () => {
           const storeState = Store.getState();
+          const hoveredSegmentId = getHoveredSegmentIdToHighlight(storeState);
+          // Hovering a different segment elsewhere (e.g., in a 2D viewport) resets the
+          // appearance of the cached 3D hit's mesh. Invalidate the cache so that the next
+          // 3D hit test highlights it again instead of reusing the cached hit.
+          if (
+            oldRaycasterHit != null &&
+            oldRaycasterHit.node.parent?.segmentId !== hoveredSegmentId
+          ) {
+            this.clearLastMeshHitTest();
+          }
           segmentMeshController.updateHoveredSegmentIdHighlighting(
             hoveredSegmentId,
             getVisibleSegmentationLayer(storeState)?.name ?? null,

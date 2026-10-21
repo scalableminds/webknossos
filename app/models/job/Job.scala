@@ -148,6 +148,7 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   // Own jobs, plus all jobs of the organization(s) the requesting user is admin of.
   // Phrased as a set of owner ids (instead of looking up each job owner’s organization) so that
   // the planner can fetch the matching jobs via the _owner index instead of scanning all jobs.
+  // (readAccessQ keeps the per-row lookup, as it is only used for single-job lookups by _id.)
   private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken) =
     q"""${prefix}_owner IN (
           SELECT $requestingUserId::TEXT
@@ -249,20 +250,17 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       jobCommandsA: Set[JobCommand],
       jobCommandsB: Set[JobCommand]
   ): Fox[(Int, Int)] =
-    if (jobCommandsA.isEmpty && jobCommandsB.isEmpty) Fox.successful((0, 0))
-    else {
-      for {
-        r <- run(q"""SELECT COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsA)}),
-                            COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsB)})
-                   FROM $existingCollectionName
-                   WHERE state = ${JobState.PENDING}
-                   AND ${commandInQ(jobCommandsA ++ jobCommandsB)}
-                   AND manualState IS NULL
-                   AND _dataStore = $dataStoreName
-                   AND _worker IS NULL""".as[(Int, Int)])
-        head <- r.headOption.toFox
-      } yield head
-    }
+    for {
+      r <- run(q"""SELECT COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsA)}),
+                          COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsB)})
+                 FROM $existingCollectionName
+                 WHERE state = ${JobState.PENDING}
+                 AND ${commandInQ(jobCommandsA ++ jobCommandsB)}
+                 AND manualState IS NULL
+                 AND _dataStore = $dataStoreName
+                 AND _worker IS NULL""".as[(Int, Int)])
+      head <- r.headOption.toFox
+    } yield head
 
   // Returns the counts for both command sets with a single query
   def countUnfinishedByWorker(
@@ -270,19 +268,16 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       jobCommandsA: Set[JobCommand],
       jobCommandsB: Set[JobCommand]
   ): Fox[(Int, Int)] =
-    if (jobCommandsA.isEmpty && jobCommandsB.isEmpty) Fox.successful((0, 0))
-    else {
-      for {
-        r <- run(q"""SELECT COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsA)}),
-                            COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsB)})
-                     FROM $existingCollectionName
-                     WHERE _worker = $workerId
-                     AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
-                     AND ${commandInQ(jobCommandsA ++ jobCommandsB)}
-                     AND manualState IS NULL""".as[(Int, Int)])
-        head <- r.headOption.toFox
-      } yield head
-    }
+    for {
+      r <- run(q"""SELECT COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsA)}),
+                          COUNT(*) FILTER (WHERE ${commandInQ(jobCommandsB)})
+                   FROM $existingCollectionName
+                   WHERE _worker = $workerId
+                   AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                   AND ${commandInQ(jobCommandsA ++ jobCommandsB)}
+                   AND manualState IS NULL""".as[(Int, Int)])
+      head <- r.headOption.toFox
+    } yield head
 
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {

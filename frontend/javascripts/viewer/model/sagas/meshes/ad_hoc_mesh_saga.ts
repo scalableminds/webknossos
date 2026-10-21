@@ -1,4 +1,4 @@
-import { unwrapOrThrow } from "admin/api/api_result";
+import type { RetryOptions } from "admin/api/api_result";
 import {
   computeAdHocMesh,
   getBucketPositionsForAdHocMesh,
@@ -57,8 +57,16 @@ import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accesso
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { acquireMeshWorker, releaseMeshWorker } from "./common_mesh_saga";
 
-const MAX_RETRY_COUNT = 5;
+// A failed mesh chunk request is attempted five times in total. The waiting time before
+// the retries is 10s, 20s, 40s and 80s.
+const MAX_RETRY_COUNT = 4;
 const RETRY_WAIT_TIME = 5000;
+const MESH_CHUNK_RETRY_OPTIONS: RetryOptions = {
+  retries: MAX_RETRY_COUNT,
+  initialDelayMs: RETRY_WAIT_TIME * 2,
+  backoffFactor: 2,
+  maxDelayMs: RETRY_WAIT_TIME * 2 ** MAX_RETRY_COUNT,
+};
 const MESH_CHUNK_THROTTLE_DELAY = 500;
 
 // The calculation of a mesh is spread across multiple requests.
@@ -537,66 +545,64 @@ function* maybeLoadMeshChunk(
     });
   }
 
-  let retryCount = 0;
-
   const { segmentMeshController } = getSceneController();
 
-  while (retryCount < MAX_RETRY_COUNT) {
-    try {
-      const meshResult = yield* call(
-        {
-          context: null,
-          fn: computeAdHocMesh,
-        },
-        layerSourceInfo,
-        {
-          positionWithPadding: paddedPosition,
-          additionalCoordinates: additionalCoordinates || undefined,
-          mag,
-          segmentId,
-          cubeSize: paddedCubeSize,
-          scaleFactor,
-          findNeighbors,
-          annotationVersion,
-          ...meshExtraInfo,
-        },
-        {},
-        // Failed requests are retried by the loop around this call (with a longer backoff).
-        { retries: 0 },
-      );
-      const { buffer: responseBuffer, neighbors } = unwrapOrThrow(meshResult);
-      const vertices = new Float32Array(responseBuffer);
-
-      if (removeExistingMesh) {
-        segmentMeshController.removeMeshById(segmentId, layer.name);
-      }
-
-      // We await addMeshFromVerticesAsync here, because the mesh saga will remove
-      // an ad-hoc loaded mesh immediately if it was "empty". Since the check is
-      // done by looking at the scene, we await the population of the scene.
-      // Theoretically, this could be built differently so that other ad-hoc chunks
-      // can be loaded in parallel to addMeshFromVerticesAsync. However, it's unclear
-      // how big the bottleneck really is.
-      yield* call(
-        { fn: segmentMeshController.addMeshFromVerticesAsync, context: segmentMeshController },
-        vertices,
-        segmentId,
-        layer.name,
-        meshExtraInfo.opacity,
-        additionalCoordinates,
-      );
-      return neighbors.map((neighbor) =>
-        getNeighborPosition(clippedPosition, neighbor, zoomStep, magInfo),
-      );
-    } catch (exception) {
-      retryCount++;
-      ErrorHandling.notify(exception as Error);
-      console.warn("Retrying mesh generation due to", exception);
-      yield* call(sleep, RETRY_WAIT_TIME * 2 ** retryCount);
-    }
+  const meshResult = yield* call(
+    {
+      context: null,
+      fn: computeAdHocMesh,
+    },
+    layerSourceInfo,
+    {
+      positionWithPadding: paddedPosition,
+      additionalCoordinates: additionalCoordinates || undefined,
+      mag,
+      segmentId,
+      cubeSize: paddedCubeSize,
+      scaleFactor,
+      findNeighbors,
+      annotationVersion,
+      ...meshExtraInfo,
+    },
+    {},
+    MESH_CHUNK_RETRY_OPTIONS,
+  );
+  if (!meshResult.ok) {
+    // The user was already notified by the api function.
+    ErrorHandling.notify(meshResult.error.cause as Error);
+    return [];
   }
+  const { buffer: responseBuffer, neighbors } = meshResult.value;
 
-  return [];
+  try {
+    const vertices = new Float32Array(responseBuffer);
+
+    if (removeExistingMesh) {
+      segmentMeshController.removeMeshById(segmentId, layer.name);
+    }
+
+    // We await addMeshFromVerticesAsync here, because the mesh saga will remove
+    // an ad-hoc loaded mesh immediately if it was "empty". Since the check is
+    // done by looking at the scene, we await the population of the scene.
+    // Theoretically, this could be built differently so that other ad-hoc chunks
+    // can be loaded in parallel to addMeshFromVerticesAsync. However, it's unclear
+    // how big the bottleneck really is.
+    yield* call(
+      { fn: segmentMeshController.addMeshFromVerticesAsync, context: segmentMeshController },
+      vertices,
+      segmentId,
+      layer.name,
+      meshExtraInfo.opacity,
+      additionalCoordinates,
+    );
+  } catch (exception) {
+    ErrorHandling.notify(exception as Error);
+    console.warn("Adding the ad-hoc mesh chunk failed due to", exception);
+    return [];
+  }
+  return neighbors.map((neighbor) =>
+    getNeighborPosition(clippedPosition, neighbor, zoomStep, magInfo),
+  );
 }
 
 function getPaddedCubeSizeInTargetMag(

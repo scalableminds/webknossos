@@ -214,8 +214,6 @@ function* refreshAffectedSegmentItems(layerName: string, items: AgglomerateChang
       additionalCoordinates,
     ),
   );
-  // By using `all`, we avoid problems which can occur when running too many
-  // call effects in a for loop. Also see https://github.com/redux-saga/redux-saga/issues/1592.
   yield* all(ensureSegmentItemEffects);
 }
 

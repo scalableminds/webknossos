@@ -6,7 +6,6 @@ import { mergeGeometries } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import { getDracoLoader } from "libs/draco";
 import Toast from "libs/toast";
-import { sleep } from "libs/utils";
 import sortBy from "lodash-es/sortBy";
 import zip from "lodash-es/zip";
 import messages from "messages";
@@ -435,7 +434,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     MIN_BATCH_SIZE_IN_BYTES,
   );
 
-  const chunkGeometries: UnmergedBufferGeometryWithInfo[] = [];
+  const allChunkGeometries: UnmergedBufferGeometryWithInfo[] = [];
   const cachedChunkGeometries: UnmergedBufferGeometryWithInfo[] = [];
   // Chunks that aren't shown by an intermediate mesh (see below). Only these need to be added to
   // the scene if the final merge fails.
@@ -473,7 +472,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     function* loadChunks(): Saga<void> {
       const dataForChunks = yield* call(getMeshChunkData, meshFileLocation, segmentId, chunks);
       const { geometries, errors } = yield* call(decodeChunks, chunks, dataForChunks, chunkScale);
-      chunkGeometries.push(...geometries);
+      allChunkGeometries.push(...geometries);
       yield* call(onBatchDecoded, geometries, isCached);
 
       if (errors.length > 0) {
@@ -514,11 +513,11 @@ function* loadPrecomputedMeshesInChunksForLod(
     console.error(error);
   }
 
-  const mergedGeometry = yield* call(mergeChunkGeometries, chunkGeometries, segmentId);
+  const mergedGeometry = yield* call(mergeChunkGeometries, allChunkGeometries, segmentId);
   if (mergedGeometry == null) {
     // Don't fail hard. Instead, keep the intermediate meshes and show the remaining chunks as
     // separate meshes so that the mesh is still rendered.
-    warnAboutUnmergedMesh(segmentId, chunkGeometries.length > 0);
+    warnAboutUnmergedMesh(segmentId, allChunkGeometries.length > 0);
     for (const geometry of chunkGeometriesWithoutIntermediateMesh) {
       yield* call(addGeometryToScene, sceneParams, geometry, false);
     }
@@ -612,12 +611,6 @@ function* decodeChunks(
     } catch (error) {
       errors.push({ error, chunk });
     }
-
-    // Yield to the event loop after each chunk. Decoding and preparing the
-    // geometries is mostly synchronous and would otherwise form a tight
-    // loop that starves rendering and can even stop the saga middleware
-    // silently (see https://github.com/redux-saga/redux-saga/issues/1592).
-    yield* call(sleep, 0);
   }
   return { geometries, errors };
 }

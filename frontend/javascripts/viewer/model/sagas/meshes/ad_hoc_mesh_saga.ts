@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import {
   computeAdHocMesh,
   getBucketPositionsForAdHocMesh,
@@ -395,7 +396,7 @@ function* loadFullAdHocMesh(
       useDataStore: forceUsingDataStore,
     };
 
-    let positionsToRequest = usePositionsFromSegmentIndex
+    const initialPositions = usePositionsFromSegmentIndex
       ? yield* getChunkPositionsFromSegmentIndex(
           layerSourceInfo,
           segmentId,
@@ -407,6 +408,14 @@ function* loadFullAdHocMesh(
           annotation.version,
         )
       : [clippedPosition];
+
+    if (initialPositions == null) {
+      // Requesting the positions failed (the user was already notified by the api function).
+      yield* put(finishedLoadingMeshAction(layer.name, segmentId));
+      yield* put(removeMeshAction(layer.name, segmentId));
+      return;
+    }
+    let positionsToRequest: Vector3[] = initialPositions;
 
     if (positionsToRequest.length === 0) {
       //if no positions are requested, remove the mesh,
@@ -457,7 +466,7 @@ function* getChunkPositionsFromSegmentIndex(
   mappingName: string | null | undefined,
   tracingVersion: number,
 ) {
-  const targetMagPositions = yield* call(
+  const targetMagPositionsResult = yield* call(
     getBucketPositionsForAdHocMesh,
     layerSourceInfo,
     segmentId,
@@ -467,7 +476,10 @@ function* getChunkPositionsFromSegmentIndex(
     mappingName,
     tracingVersion,
   );
-  const mag1Positions = targetMagPositions.map((pos) => V3.scale3(pos, mag));
+  if (!targetMagPositionsResult.ok) {
+    return null;
+  }
+  const mag1Positions = targetMagPositionsResult.value.map((pos) => V3.scale3(pos, mag));
   return sortByDistanceTo(mag1Positions, clippedPosition) as Vector3[];
 }
 
@@ -531,7 +543,7 @@ function* maybeLoadMeshChunk(
 
   while (retryCount < MAX_RETRY_COUNT) {
     try {
-      const { buffer: responseBuffer, neighbors } = yield* call(
+      const meshResult = yield* call(
         {
           context: null,
           fn: computeAdHocMesh,
@@ -548,7 +560,11 @@ function* maybeLoadMeshChunk(
           annotationVersion,
           ...meshExtraInfo,
         },
+        {},
+        // Failed requests are retried by the loop around this call (with a longer backoff).
+        { retries: 0 },
       );
+      const { buffer: responseBuffer, neighbors } = unwrapOrThrow(meshResult);
       const vertices = new Float32Array(responseBuffer);
 
       if (removeExistingMesh) {

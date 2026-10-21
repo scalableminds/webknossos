@@ -44,8 +44,8 @@ import {
 import { api, Model } from "viewer/singletons";
 import type { StoreAnnotation } from "viewer/store";
 import Store from "viewer/store";
-import VersionEntryGroup, { isActiveVersionInGroup } from "viewer/view/version_entry_group";
-import VersionPowerTools, { VersionPowerToolsToggle } from "viewer/view/version_power_tools";
+import VersionEntryGroup, { isActiveVersionInGroup } from "viewer/view/version_restore_view/version_entry_group";
+import VersionPowerTools, { VersionPowerToolsToggle } from "viewer/view/version_restore_view/version_power_tools";
 
 // This used to be 5000 but we had logs where lots of UPDATE_BUCKET
 // update actions existed in one batch. The JSON payload exceeded a length

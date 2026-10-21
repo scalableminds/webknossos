@@ -28,9 +28,6 @@ class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) {
   private def getOrLoadAdapter(key: K, loadValue: K => Future[Box[V]]): Future[Box[V]] =
     store.get(key, AlfuCache.toJavaMappingFunction[K, Box[V]](loadValue)).asScala
 
-  def getIfPresent(key: K)(implicit ec: ExecutionContext): Option[Fox[V]] =
-    Option(store.getIfPresent(key)).map(future => Fox.fromFuture(future.asScala).flatMap(_.toFox))
-
   def remove(key: K): Unit = store.synchronous().invalidate(key)
 
   def clear(fn: K => Boolean): Int = {

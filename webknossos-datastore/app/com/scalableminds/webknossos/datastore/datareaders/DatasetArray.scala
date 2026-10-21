@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.box.{Empty, Failure, Full}
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
@@ -313,7 +313,17 @@ class DatasetArray(
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[MultiArray]] =
-    Fox.batchCombined(chunkIndices, coalescing.maxParallelRequests)(readTypedChunkWithCache)
+    for {
+      chunkBoxes <- readChunkBoxes(chunkIndices, coalescing)
+      chunks <- Fox.combined(chunkBoxes.map(_.toFox))
+    } yield chunks
+
+  // Like readChunks, with the result of each chunk, so that callers can do without the chunks that failed.
+  def readChunkBoxes(chunkIndices: Seq[Array[Long]], coalescing: ChunkReadCoalescing)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Box[MultiArray]]] =
+    Fox.batchCombined(chunkIndices, coalescing.maxParallelRequests)(readTypedChunkWithCache(_).shiftBox)
 
   // Kept apart from the keys of getSourceChunkDataWithCache, which may hold untyped chunks.
   protected def typedChunkCacheKey(chunkIndex: Array[Long]): String = s"${chunkContentsCacheKey(chunkIndex)}__typed"

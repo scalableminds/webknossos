@@ -59,11 +59,6 @@ class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigRea
     object AgglomerateGraph {
       val maxEdges: Int = get[Int]("datastore.agglomerateGraph.maxEdges")
     }
-    object MeshFile {
-      val maxGapBytes: Long = get[Long]("datastore.meshFile.maxGapBytes")
-      val maxRequestBytes: Long = get[Long]("datastore.meshFile.maxRequestBytes")
-      val maxParallelRequests: Int = get[Int]("datastore.meshFile.maxParallelRequests")
-    }
     object DataVaults {
       val credentials: List[Config] = getList[Config]("datastore.dataVaults.credentials")
     }
@@ -72,18 +67,7 @@ class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigRea
         get[Boolean]("datastore.upload.deleteTemporaryFilesAfterUpload")
     }
     val children: List[Object] =
-      List(
-        WebKnossos,
-        WatchFileSystem,
-        Cache,
-        AdHocMesh,
-        Redis,
-        AgglomerateTree,
-        AgglomerateGraph,
-        MeshFile,
-        DataVaults,
-        Upload
-      )
+      List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateTree, AgglomerateGraph, DataVaults, Upload)
   }
 
   object SlackNotifications {

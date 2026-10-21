@@ -1,19 +1,26 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
-import com.scalableminds.util.box.Box
-import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, DatasetHeader}
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
+
+import scala.concurrent.ExecutionContext
 
 class Zarr3ChunkReader(header: DatasetHeader, array: Zarr3Array) extends ChunkReader(header) {
 
-  override protected def decodeChunkBytes(storedBytes: Array[Byte]): Box[Array[Byte]] =
-    tryo(
-      array.codecs.foldRight(storedBytes)((c, bytes) =>
+  override protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(implicit
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[(Array[Byte], Option[Array[Int]])] =
+    for {
+      bytes <- path.readBytes(range)
+      decoded = array.codecs.foldRight(bytes)((c, bytes) =>
         c match {
           case codec: BytesToBytesCodec => codec.decode(bytes)
           case _                        => bytes
         }
       )
-    )
+    } yield (decoded, None)
 
 }

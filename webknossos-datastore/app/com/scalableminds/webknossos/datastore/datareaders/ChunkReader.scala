@@ -25,30 +25,16 @@ class ChunkReader(header: DatasetHeader) {
       chunkBytesAndShapeBox: Box[(Array[Byte], Option[Array[Int]])] <- readChunkBytesAndShape(path, range).shiftBox
       chunkShape: Array[Int] = chunkBytesAndShapeBox.toOption.flatMap(_._2).getOrElse(chunkShapeFromMetadata)
       typed <- chunkBytesAndShapeBox.map(_._1) match {
-        case Full(chunkBytes) => typeChunkBytes(chunkBytes, chunkShape, useSkipTypingShortcut)
-        case Empty            =>
+        case Full(chunkBytes) if useSkipTypingShortcut =>
+          shortcutChunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> Msg.Dataset.Chunk.shortcutWrapAndTypeFailed
+        case Full(chunkBytes) =>
+          chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> Msg.Dataset.Chunk.wrapAndTypeFailed
+        case Empty =>
           createFromFillValue(chunkShape, useSkipTypingShortcut)
         case f: Failure =>
           f.toFox ?~> s"Reading chunk at $path failed"
       }
     } yield typed
-
-  // Decodes and types the stored bytes of a chunk that were read by the caller.
-  def decodeAndType(storedBytes: Array[Byte], chunkShape: Array[Int])(implicit
-      ec: ExecutionContext
-  ): Fox[MultiArray] =
-    for {
-      decoded <- decodeChunkBytes(storedBytes).toFox ?~> Msg.Dataset.Chunk.decompressFailed
-      typed <- typeChunkBytes(decoded, chunkShape, useSkipTypingShortcut = false)
-    } yield typed
-
-  private def typeChunkBytes(chunkBytes: Array[Byte], chunkShape: Array[Int], useSkipTypingShortcut: Boolean)(implicit
-      ec: ExecutionContext
-  ): Fox[MultiArray] =
-    if (useSkipTypingShortcut)
-      shortcutChunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> Msg.Dataset.Chunk.shortcutWrapAndTypeFailed
-    else
-      chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> Msg.Dataset.Chunk.wrapAndTypeFailed
 
   def createFromFillValue(chunkShape: Array[Int], useSkipTypingShortcut: Boolean)(implicit
       ec: ExecutionContext
@@ -66,9 +52,6 @@ class ChunkReader(header: DatasetHeader) {
   ): Fox[(Array[Byte], Option[Array[Int]])] =
     for {
       bytes <- path.readBytes(range)
-      decompressed <- decodeChunkBytes(bytes).toFox ?~> Msg.Dataset.Chunk.decompressFailed
+      decompressed <- tryo(header.compressorImpl.decompress(bytes)).toFox ?~> Msg.Dataset.Chunk.decompressFailed
     } yield (decompressed, None)
-
-  protected def decodeChunkBytes(storedBytes: Array[Byte]): Box[Array[Byte]] =
-    tryo(header.compressorImpl.decompress(storedBytes))
 }

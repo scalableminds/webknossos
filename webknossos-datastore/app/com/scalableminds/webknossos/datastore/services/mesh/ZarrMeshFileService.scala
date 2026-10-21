@@ -8,8 +8,7 @@ import com.scalableminds.util.box.{Box, EmptyBox, Full}
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.datareaders.{ChunkReadCoalescing, DatasetArray}
+import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.{
@@ -73,18 +72,9 @@ object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils
   }
 }
 
-class ZarrMeshFileService @Inject() (
-    chunkCacheService: DSChunkCacheService,
-    dataVaultService: DataVaultService,
-    config: DataStoreConfig
-) extends MeshFileUtils
+class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dataVaultService: DataVaultService)
+    extends MeshFileUtils
     with NeuroglancerMeshHelper {
-
-  private lazy val coalescing = ChunkReadCoalescing(
-    maxGapBytes = config.Datastore.MeshFile.maxGapBytes,
-    maxRequestBytes = config.Datastore.MeshFile.maxRequestBytes,
-    maxParallelRequests = config.Datastore.MeshFile.maxParallelRequests
-  )
 
   private lazy val openArraysCache = AlfuCache[(MeshFileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[MeshFileKey, MeshFileAttributes]()
@@ -466,13 +456,22 @@ class ZarrMeshFileService @Inject() (
       summary <- summaryArray.readAsMultiArray(offset = 0L, shape = Math.toIntExact(summaryLength))
     } yield summary.get1DJavaArray(ucar.ma2.DataType.BYTE).asInstanceOf[Array[Byte]]
 
+  private def readAllChunks(array: DatasetArray, chunkIndices: Seq[Array[Long]])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[MultiArray]] =
+    for {
+      chunkBoxes <- array.readChunks(chunkIndices, ZarrMeshFileService.maxParallelChunkReads)
+      chunks <- Fox.combined(chunkBoxes.map(_.toFox))
+    } yield chunks
+
   // Chunks of a 2-d uint64 table by chunk number, each as its values in C order.
   private def readTableChunks(array: DatasetArray, chunkNumbers: Seq[Long])(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Map[Long, Array[Long]]] =
     for {
-      chunks <- array.readChunks(chunkNumbers.map(chunkNumber => Array(chunkNumber, 0L)), coalescing)
+      chunks <- readAllChunks(array, chunkNumbers.map(chunkNumber => Array(chunkNumber, 0L)))
     } yield chunkNumbers
       .zip(chunks)
       .map { case (chunkNumber, chunk) =>
@@ -512,7 +511,7 @@ class ZarrMeshFileService @Inject() (
       fenceLength <- arrayLength(fenceArray)
       entriesPerChunk = fenceArray.chunkShape(0).toLong
       chunkNumbers = upperLevelPositions.filter(_ >= 0).distinct.sorted
-      chunks <- fenceArray.readChunks(chunkNumbers.toSeq.map(chunkNumber => Array(chunkNumber)), coalescing)
+      chunks <- readAllChunks(fenceArray, chunkNumbers.toSeq.map(chunkNumber => Array(chunkNumber)))
       entriesByChunk = chunkNumbers
         .zip(chunks)
         .map { case (chunkNumber, chunk) =>
@@ -540,7 +539,10 @@ class ZarrMeshFileService @Inject() (
     def chunkNumbersOf(start: Long, end: Long) = (start / chunkSize) until ((end + chunkSize - 1) / chunkSize)
     val chunkNumbers = ranges.flatMap(chunkNumbersOf).distinct.sorted
     for {
-      chunkBoxes <- array.readChunkBoxes(chunkNumbers.map(chunkNumber => Array(chunkNumber)), coalescing)
+      chunkBoxes <- array.readChunks(
+        chunkNumbers.map(chunkNumber => Array(chunkNumber)),
+        ZarrMeshFileService.maxParallelChunkReads
+      )
       boxByChunk = chunkNumbers.zip(chunkBoxes).toMap
       bytesByChunk = boxByChunk.collect { case (chunkNumber, Full(chunk)) =>
         chunkNumber -> chunk.get1DJavaArray(ucar.ma2.DataType.BYTE).asInstanceOf[Array[Byte]]
@@ -574,6 +576,8 @@ class ZarrMeshFileService @Inject() (
 object ZarrMeshFileService {
 
   case class SegmentRow(segmentId: Long, meshOffset: Long, manifestOffset: Long, manifestLength: Long)
+
+  private val maxParallelChunkReads = 32
 
   // Columns of the row table.
   private val rowSegmentId = 0

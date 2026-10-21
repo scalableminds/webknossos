@@ -2,6 +2,7 @@ import { getSegmentsForAgglomerateFromTracingStore, meshApi } from "admin/rest_a
 import { chunkDynamically } from "libs/utils";
 import partition from "lodash-es/partition";
 import {
+  type ChunkListsBySegmentId,
   GlobalMeshChunkProvider,
   type MeshFileCache,
   type MeshFileLocation,
@@ -72,11 +73,11 @@ async function getSegmentsOfEditedAgglomerate(
   return agglomerateIdIsPresent && segmentIds.length > 0 ? segmentIds : null;
 }
 
-async function addChunkListsOfSegments(
+async function fetchChunkListsOfSegments(
   cache: MeshFileCache,
   params: ListMeshChunksParamsWithTracingStoreURL,
   segmentIds: bigint[],
-): Promise<void> {
+): Promise<ChunkListsBySegmentId> {
   const listing = await meshApi.getMeshFileChunksForSegments(
     params.dataStoreUrl,
     params.datasetId,
@@ -84,13 +85,17 @@ async function addChunkListsOfSegments(
     params.meshFile,
     segmentIds,
   );
-  cache.addChunkLists(listing);
+  return cache.addChunkLists(listing);
 }
 
 /*
  * Builds the listing of an agglomerate of the editable mapping from the cached chunk lists of its
  * segments. The chunk lists of uncached segments are requested by their ids in one request, which
  * needs less work on the server and a smaller response than the normal listing of the agglomerate.
+ * The cached and the requested chunk lists are combined here instead of being read back from the
+ * cache, because storing the requested ones can evict cached ones of a large agglomerate.
+ * Segments the back-end failed to list are left out. They are not cached, so the next listing
+ * requests them again.
  * Returns null if a normal listing should be requested instead, e.g., because none of the segments
  * is cached.
  */
@@ -108,17 +113,24 @@ async function tryToListMeshChunksFromCache(
     if (segmentIds == null) {
       return null;
     }
-    const uncachedSegmentIds = segmentIds.filter((id) => !cache.hasChunkListForSegmentId(id));
-    const hasNoChunkCached = uncachedSegmentIds.length === segmentIds.length;
-    if (hasNoChunkCached) {
+    const chunkLists = cache.getChunkLists(segmentIds);
+    if (chunkLists.size === 0) {
       return null;
     }
+    const uncachedSegmentIds = segmentIds.filter((id) => !chunkLists.has(id));
     if (uncachedSegmentIds.length > 0) {
-      await addChunkListsOfSegments(cache, params, uncachedSegmentIds);
+      const requestedChunkLists = await fetchChunkListsOfSegments(
+        cache,
+        params,
+        uncachedSegmentIds,
+      );
+      for (const [segmentId, chunksPerLod] of requestedChunkLists) {
+        chunkLists.set(segmentId, chunksPerLod);
+      }
+      warnAboutUnlistedSegments(params.segmentId, uncachedSegmentIds, chunkLists);
     }
     // Null if none of the segments has a mesh, which the normal listing then reports as an error.
-    // Also null if the back-end failed to list a segment, so that the normal listing retries it.
-    return cache.getMeshSegmentInfoOfSegmentIds(segmentIds);
+    return cache.toMeshSegmentInfo(chunkLists.values());
   } catch (exception) {
     // E.g., an older data store without the endpoint for listing several segments.
     console.warn(
@@ -126,6 +138,22 @@ async function tryToListMeshChunksFromCache(
       exception,
     );
     return null;
+  }
+}
+
+function warnAboutUnlistedSegments(
+  agglomerateId: bigint,
+  requestedSegmentIds: bigint[],
+  chunkLists: ChunkListsBySegmentId,
+): void {
+  const unlistedSegmentIds = requestedSegmentIds.filter((id) => !chunkLists.has(id));
+  if (unlistedSegmentIds.length > 0) {
+    const maxShownSegmentIds = 10;
+    const shownSegmentIds = unlistedSegmentIds.slice(0, maxShownSegmentIds).join(", ");
+    const ellipsis = unlistedSegmentIds.length > maxShownSegmentIds ? ", ..." : "";
+    console.warn(
+      `The mesh of agglomerate ${agglomerateId} is incomplete. The back-end failed to list the mesh chunks of ${unlistedSegmentIds.length} segments (${shownSegmentIds}${ellipsis}). They are requested again the next time the mesh is loaded.`,
+    );
   }
 }
 

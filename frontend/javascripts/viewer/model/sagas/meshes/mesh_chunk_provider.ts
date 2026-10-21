@@ -18,6 +18,8 @@ import sum from "lodash-es/sum";
 
 // The chunks of one segment, indexed by LOD: ChunksPerLod[lodIndex][chunkIndex].
 type ChunksPerLod = MeshChunk[][];
+// A null value marks a segment without a mesh.
+export type ChunkListsBySegmentId = Map<bigint, ChunksPerLod | null>;
 
 export type MeshFileLocation = {
   dataStoreUrl: string;
@@ -67,17 +69,25 @@ export class MeshFileCache {
     return this.metadata != null && this.chunkLists.count > 0;
   }
 
-  /** Returns whether the MeshFileCache has an entry for segmentId.
-   * Note that the list might be empty due to the segment not having a chunk.
-   */
-  hasChunkListForSegmentId(segmentId: bigint): boolean {
-    return this.chunkLists.has(segmentId);
+  // Returns the cached chunk lists of the given segments and leaves out the segments the cache
+  // doesn't know. Marks the returned entries as recently used, so that they are evicted last.
+  getChunkLists(segmentIds: bigint[]): ChunkListsBySegmentId {
+    const chunkLists: ChunkListsBySegmentId = new Map();
+    for (const segmentId of segmentIds) {
+      const chunksPerLod = this.chunkLists.get(segmentId);
+      if (chunksPerLod !== undefined) {
+        chunkLists.set(segmentId, chunksPerLod);
+      }
+    }
+    return chunkLists;
   }
 
   // Stores the chunk lists of a listing reply per segment, and the segments of
   // segmentIdsWithoutMesh as having no mesh. A requested segment that is in neither, e.g. because
   // the back-end failed to read it, is not stored, so that it is requested again next time.
-  addChunkLists(info: MeshSegmentInfo): void {
+  // Returns the stored chunk lists. Callers should use them instead of reading them back from the
+  // cache, because storing them can evict other entries, even ones of the same reply.
+  addChunkLists(info: MeshSegmentInfo): ChunkListsBySegmentId {
     if (info.lods.length > 0) {
       this.metadata = {
         meshFormat: info.meshFormat,
@@ -85,31 +95,23 @@ export class MeshFileCache {
         lodTransforms: info.lods.map((lod) => lod.transform),
       };
     }
-    for (const [segmentId, chunksPerLod] of groupChunksBySegmentId(info)) {
+    const chunkLists: ChunkListsBySegmentId = new Map(groupChunksBySegmentId(info));
+    for (const segmentId of info.segmentIdsWithoutMesh ?? []) {
+      chunkLists.set(segmentId, null);
+    }
+    for (const [segmentId, chunksPerLod] of chunkLists) {
       this.chunkLists.set(segmentId, chunksPerLod);
     }
-    for (const segmentId of info.segmentIdsWithoutMesh ?? []) {
-      this.chunkLists.set(segmentId, null);
-    }
     this.evictIfNeeded();
+    return chunkLists;
   }
 
-  // Builds the listing of the given segments from the cache. Returns null if a segment is unknown
-  // or if none of the segments has a mesh.
-  getMeshSegmentInfoOfSegmentIds(segmentIds: bigint[]): MeshSegmentInfo | null {
+  // Builds a listing from the given chunk lists. Returns null if none of them has a chunk.
+  toMeshSegmentInfo(chunkLists: Iterable<ChunksPerLod | null>): MeshSegmentInfo | null {
     if (this.metadata == null) {
       return null;
     }
-    const chunksPerLodOfSegments: ChunksPerLod[] = [];
-    for (const segmentId of segmentIds) {
-      const chunksPerLod = this.chunkLists.get(segmentId);
-      if (chunksPerLod === undefined) {
-        return null;
-      }
-      if (chunksPerLod != null) {
-        chunksPerLodOfSegments.push(chunksPerLod);
-      }
-    }
+    const chunksPerLodOfSegments = [...chunkLists].filter((chunksPerLod) => chunksPerLod != null);
     return formatToMeshSegmentInfo(this.metadata, chunksPerLodOfSegments);
   }
 

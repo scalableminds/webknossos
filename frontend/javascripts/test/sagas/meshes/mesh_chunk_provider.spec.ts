@@ -153,23 +153,20 @@ describe("Mesh chunk provider", () => {
       expect(listingMock).toHaveBeenCalledTimes(1);
     });
 
-    it("requests a segment again if the back-end failed to list it", async () => {
+    it("leaves out a segment the back-end failed to list and requests it again", async () => {
       // The first normal listing. Afterwards, the segments 10, 11 and 12 are cached.
       await loadAgglomerate1();
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
       // Segment 10 is cached and segment 32 is unknown, so only segment 32 is requested by its id.
       // The back-end lists segment 32 neither with chunks nor as without a mesh, e.g. because of a
-      // read error. So segment 32 stays unknown in the cache.
+      // read error. So segment 32 is left out of the listing and stays unknown in the cache.
       mockSegmentsOfAgglomerate([10n, 32n]);
       listingForSegmentsMock.mockResolvedValueOnce(listing([]));
-      // Because segment 32 is still unknown, the listing can't be built from the cache, and the
-      // normal listing is requested instead. It fails to list segment 32, too.
-      listingMock.mockResolvedValueOnce(listing([chunk(10n, 0)]));
       const info = await listMeshChunks(paramsFor(1n));
 
       expect(listedChunks(info)).toEqual([chunk(10n, 0)]);
-      // Once for loadAgglomerate1 and once as the fallback above.
-      expect(listingMock).toHaveBeenCalledTimes(2);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
 
       // Loading the same agglomerate again requests segment 32 again, because it was not stored
       // as having no mesh. This time, the back-end lists its chunk.
@@ -181,9 +178,30 @@ describe("Mesh chunk provider", () => {
       // The second request by ids contains only segment 32. Segment 10 comes from the cache.
       expect(listingForSegmentsMock).toHaveBeenCalledTimes(2);
       expect(listingForSegmentsMock.mock.calls[1][4]).toEqual([32n]);
-      // All segments are known now, so the listing is built from the cache without another
-      // normal listing.
-      expect(listingMock).toHaveBeenCalledTimes(2);
+      // Only loadAgglomerate1 requested the normal listing.
+      expect(listingMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the cached segments of an agglomerate that storing the requested ones evicts", async () => {
+      await loadAgglomerate1();
+      // Simulates an agglomerate that is larger than the cache: storing the requested chunk lists
+      // evicts all other entries, including the cached segments 10 and 11 of this agglomerate.
+      const cache = GlobalMeshChunkProvider.getCacheForMeshFile({
+        ...paramsFor(1n),
+        meshFileName: meshFile.name,
+      });
+      const addChunkLists = cache.addChunkLists.bind(cache);
+      vi.spyOn(cache, "addChunkLists").mockImplementation((info) => {
+        cache.chunkLists.clear();
+        return addChunkLists(info);
+      });
+
+      mockSegmentsOfAgglomerate([10n, 11n, 30n]);
+      listingForSegmentsMock.mockResolvedValueOnce(listing([chunk(30n, 40)]));
+      const info = await listMeshChunks(paramsFor(1n));
+
+      expect(listedChunks(info)).toEqual([chunk(10n, 0), chunk(11n, 10), chunk(30n, 40)]);
+      expect(listingMock).toHaveBeenCalledTimes(1);
     });
 
     it("lists unknown segments by their ids even if most segments are unknown", async () => {

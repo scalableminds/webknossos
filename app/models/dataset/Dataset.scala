@@ -488,8 +488,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
 
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
     isUnreportedOpt match {
-      case Some(true)  => q"status = ${DataSourceStatus.unreported} OR status = ${DataSourceStatus.deletedByUser}"
-      case Some(false) => q"status != ${DataSourceStatus.unreported} AND status != ${DataSourceStatus.deletedByUser}"
+      case Some(true)  => q"status IN ${SqlToken.tupleFromList(DataSourceStatus.unreportedStatusList)}"
+      case Some(false) => q"status NOT IN ${SqlToken.tupleFromList(DataSourceStatus.unreportedStatusList)}"
       case None        => q"TRUE"
     }
 
@@ -769,11 +769,14 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                    WHERE _id = $datasetId""".asUpdate)
     } yield ()
 
-  def insertOne(d: Dataset): Fox[Unit] = {
+  // Returns false if skipOnDirectoryNameConflict is set and a dataset with this directoryName already exists
+  def insertOne(d: Dataset, skipOnDirectoryNameConflict: Boolean = false): Fox[Boolean] = {
     val adminViewConfiguration: Option[JsValue] = d.adminViewConfiguration.map(Json.toJson(_))
     val defaultViewConfiguration: Option[JsValue] = d.defaultViewConfiguration.map(Json.toJson(_))
+    val onConflictClause =
+      if (skipOnDirectoryNameConflict) q"ON CONFLICT (directoryName, _organization) DO NOTHING" else SqlToken.empty
     for {
-      _ <- run(q"""INSERT INTO webknossos.datasets(
+      insertedRowCount <- run(q"""INSERT INTO webknossos.datasets(
                      _id, _dataStore, _organization, _publication,
                      _uploader, _folder,
                      inboxSourceHash, defaultViewConfiguration, adminViewConfiguration,
@@ -790,8 +793,9 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
                      ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags}, ${d.creationType},
                      ${d.importURL}, ${d.rootPath}, ${d.rootRealPath}, ${d.mirrorPath}, ${d.created}, ${d.isDeleted}
-                   )""".asUpdate)
-    } yield ()
+                   )
+                   $onConflictClause""".asUpdate)
+    } yield insertedRowCount > 0
   }
 
   def updateDataSource(

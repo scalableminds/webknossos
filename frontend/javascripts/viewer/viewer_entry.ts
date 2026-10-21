@@ -4,7 +4,8 @@
 // Keep it that way: outside of the viewer, only import light-weight viewer modules (e.g., the
 // actions, constants, dataset_accessor or annotation_accessor). A single import of a heavier
 // one (e.g., skeletontracing_accessor, which depends on three.js) pulls large parts of the
-// viewer back into every page.
+// viewer back into every page. `yarn build` fails if that happens (see
+// frontend/vite/vite-plugin-assert-code-splitting.ts).
 import TracingLayoutView from "viewer/view/layouting/tracing_layout_view";
 import { setupViewer } from "viewer/viewer_setup";
 

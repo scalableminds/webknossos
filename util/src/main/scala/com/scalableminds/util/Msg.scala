@@ -105,6 +105,12 @@ object Msg {
       val notFound: String = "Could not determine annotation access restrictions."
       val failedToCheck: String = "Could not check annotation access."
     }
+    object LayerRegistration {
+      val tooFewLayers: String = "Registering layers needs a dataset with at least two layers."
+      def layerNotFound(layerName: String): String = s"The dataset has no layer “$layerName”."
+      val createFailed: String = "Could not create the layer registration annotation."
+      val listFailed: String = "Could not list the layer registration annotations."
+    }
     object Merge {
       val failed: String = "Could not merge annotations."
       val success: String = "Merging annotations was successful."

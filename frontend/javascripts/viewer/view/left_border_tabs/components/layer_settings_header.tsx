@@ -6,6 +6,7 @@ import Icon, {
   EllipsisOutlined,
   LockOutlined,
   MergeCellsOutlined,
+  NodeIndexOutlined,
   ReloadOutlined,
   ScanOutlined,
   UnlockOutlined,
@@ -73,6 +74,11 @@ import type { DatasetLayerConfiguration, StoreDataset, VolumeTracing } from "vie
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
+import {
+  canRegisterLayers,
+  getLayerRegistrationListUrl,
+  isLayerRegistrationWorker,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 import { validateReadableLayerName } from "../modals/add_volume_layer_modal";
 import { DragHandle, DummyDragHandle } from "./drag_handle";
 import LayerInfoIconWithTooltip from "./layer_info_icon_with_tooltip";
@@ -480,6 +486,18 @@ export default function LayerSettingsHeader({
     onClick: () => setIsTransformPopoverOpen(true),
   });
 
+  // Opens a new tab, so that the annotation in this tab stays open.
+  const getRegisterLayersItem = (): ItemType => ({
+    key: "registerLayers",
+    icon: <NodeIndexOutlined />,
+    label: "Register Layers…",
+    onClick: () => window.open(getLayerRegistrationListUrl(dataset), "_blank", "noopener"),
+  });
+  // Volume annotation layers are not part of the dataset, so they can't be registered. The views
+  // of a layer registration show the layers already.
+  const showRegisterLayersItem =
+    !isAnnotationLayer && canRegisterLayers(dataset) && !isLayerRegistrationWorker();
+
   // --- Visibility logic ---
 
   const setSingleLayerVisibility = useCallback(
@@ -539,6 +557,7 @@ export default function LayerSettingsHeader({
     isHistogramAvailable && !isDisabled ? getEditMinMaxItem() : null,
     hasHistogram && !isDisabled ? getClipItem() : null,
     !isLayerWithoutTransformationConfigSupport(layer) ? getEditLayerTransformsItem() : null,
+    showRegisterLayersItem ? getRegisterLayersItem() : null,
     dataset.dataStore.jobsEnabled &&
     dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
       APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,

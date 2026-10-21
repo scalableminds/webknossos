@@ -74,6 +74,7 @@ class AnnotationService @Inject() (
     savedTracingInformationHandler: SavedTracingInformationHandler,
     annotationDAO: AnnotationDAO,
     annotationLayerDAO: AnnotationLayerDAO,
+    annotationLayerRegistrationDAO: AnnotationLayerRegistrationDAO,
     userDAO: UserDAO,
     taskTypeDAO: TaskTypeDAO,
     taskService: TaskService,
@@ -293,9 +294,13 @@ class AnnotationService @Inject() (
       _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
     } yield newAnnotationLayers
 
-  def createExplorationalFor(user: User, dataset: Dataset, annotationLayerParameters: List[AnnotationLayerParameters])(
-      using ctx: DBAccessContext
-  ): Fox[Annotation] = {
+  def createExplorationalFor(
+      user: User,
+      dataset: Dataset,
+      annotationLayerParameters: List[AnnotationLayerParameters],
+      name: String = AnnotationDefaults.defaultName,
+      layerRegistration: Option[AnnotationLayerRegistration] = None
+  )(using ctx: DBAccessContext): Fox[Annotation] = {
     val newAnnotationId = ObjectId.generate
     val datasetId = dataset._id
     for {
@@ -304,10 +309,36 @@ class AnnotationService @Inject() (
         newAnnotationId,
         annotationLayerParameters
       ) ?~> Msg.Annotation.createTracingsFailed
-      annotation = Annotation(newAnnotationId, datasetId, None, user._id, annotationLayers)
-      _ <- annotationDAO.insertOne(annotation)
+      annotation = Annotation(newAnnotationId, datasetId, None, user._id, annotationLayers, name = name)
+      _ <- annotationDAO.insertOne(annotation, layerRegistration)
     } yield annotation
   }
+
+  // Creates a skeleton annotation whose landmarks map the other layers of the dataset onto the fixed layer.
+  def createLayerRegistrationFor(user: User, dataset: Dataset, layerRegistration: AnnotationLayerRegistration)(using
+      ctx: DBAccessContext
+  ): Fox[Annotation] =
+    for {
+      dataSource <- datasetService.usableDataSourceFor(dataset)
+      layerNames = dataSource.dataLayers.map(_.name)
+      _ <- Fox.fromBool(layerNames.length >= 2) ?~> Msg.Annotation.LayerRegistration.tooFewLayers
+      _ <- Fox.fromBool(layerNames.contains(layerRegistration.fixedLayerName)) ?~> Msg.Annotation.LayerRegistration
+        .layerNotFound(layerRegistration.fixedLayerName)
+      skeletonLayerParameters = AnnotationLayerParameters(
+        AnnotationLayerType.Skeleton,
+        fallbackLayerName = None,
+        magRestrictions = None,
+        name = None,
+        additionalAxes = None
+      )
+      annotation <- createExplorationalFor(
+        user,
+        dataset,
+        List(skeletonLayerParameters),
+        layerRegistration.defaultAnnotationName(dataset.name),
+        Some(layerRegistration)
+      )
+    } yield annotation
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
   def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(using
@@ -783,6 +814,7 @@ class AnnotationService @Inject() (
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
       contributors <- userDAO.findContributorsForAnnotation(annotation._id)
       contributorsJs <- Fox.serialCombined(contributors)(c => userJsonForAnnotation(c._id, Some(c)))
+      layerRegistration <- annotationLayerRegistrationDAO.findOneForAnnotation(annotation._id)
     } yield Json.obj(
       "modified" -> annotation.modified,
       "created" -> annotation.created,
@@ -810,7 +842,8 @@ class AnnotationService @Inject() (
       "user" -> userJson,
       "owner" -> userJson,
       "contributors" -> contributorsJs,
-      "collaborationMode" -> annotation.collaborationMode
+      "collaborationMode" -> annotation.collaborationMode,
+      "layerRegistration" -> layerRegistration
     )
   }
 
@@ -908,7 +941,8 @@ class AnnotationService @Inject() (
         "firstName" -> annotationInfo.ownerFirstName,
         "lastName" -> annotationInfo.ownerLastName
       ),
-      "collaborationMode" -> annotationInfo.collaborationMode
+      "collaborationMode" -> annotationInfo.collaborationMode,
+      "layerRegistration" -> annotationInfo.layerRegistration
     )
   }
 

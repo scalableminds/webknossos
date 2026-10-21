@@ -2,6 +2,7 @@ import {
   CopyOutlined,
   EllipsisOutlined,
   EyeOutlined,
+  NodeIndexOutlined,
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
@@ -17,10 +18,14 @@ import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, type NavigateFunction } from "react-router";
 import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
+import {
+  canRegisterLayers,
+  getLayerRegistrationListUrl,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 
 function NewAnnotationLink({
   dataset,
@@ -168,11 +173,13 @@ export function getDatasetActionContextMenu({
   datasets,
   hideContextMenu,
   modal,
+  navigate,
 }: {
   clearCacheAndReloadDataset: (arg0: string) => Promise<void>;
   datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
   modal: useAppProps["modal"];
+  navigate: NavigateFunction;
 }): MenuProps {
   if (datasets.length !== 1) {
     return getNoActionsAvailableMenu(hideContextMenu);
@@ -209,6 +216,14 @@ export function getDatasetActionContextMenu({
                 onClick: () => {
                   window.location.href = `/datasets/${getReadableURLPart(dataset)}/edit`;
                 },
+              }
+            : null,
+          canRegisterLayers(dataset)
+            ? {
+                key: "register-layers",
+                icon: <NodeIndexOutlined className="icon-margin-right" />,
+                label: "Register Layers…",
+                onClick: () => navigate(getLayerRegistrationListUrl(dataset)),
               }
             : null,
           {

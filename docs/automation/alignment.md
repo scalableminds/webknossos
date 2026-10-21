@@ -1,5 +1,8 @@
 # Image Alignment
 
+The alignment described here aligns the sections or tiles of one layer with each other.
+To bring different layers of a dataset into the same coordinate system (e.g., light and electron microscopy), see [Registering Layers](../datasets/registering_layers.md).
+
 For single-tile image stacks, an alignment is directly possible from within WEBKNOSSOS.
 Simply upload the dataset, open it and select the "AI Analysis" button in the toolbar. From the dropdown, choose "Run AI Alignment".
 

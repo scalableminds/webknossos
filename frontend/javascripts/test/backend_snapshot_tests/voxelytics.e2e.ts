@@ -285,8 +285,9 @@ describe("Parsing of Voxelytics API results (E2E)", () => {
 
     expect(statistics.length).toBeGreaterThan(0);
     wireStatistics.forEach((wireRow, i) => {
-      expect(statistics[i].beginTime).toEqual(toExpectedDate(wireRow.beginTime));
-      expect(statistics[i].endTime).toEqual(toExpectedDate(wireRow.endTime));
+      // The backend omits null columns, so a missing time stays absent instead of becoming null.
+      expect(statistics[i].beginTime ?? null).toEqual(toExpectedDate(wireRow.beginTime));
+      expect(statistics[i].endTime ?? null).toEqual(toExpectedDate(wireRow.endTime));
       expect(statistics[i].executionId).toBe(wireRow.executionId);
       expect(statistics[i].chunkCounts).toEqual(wireRow.chunkCounts);
       expect(statistics[i].memory).toEqual(wireRow.memory);

@@ -23,7 +23,6 @@ describe("Reporting of failed rebasing", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
     vi.mocked(ErrorHandling.notify).mockClear();
-    vi.mocked(ErrorHandling.notifyWithPrefix).mockClear();
   });
 
   afterEach<WebknossosTestContext>((context) => {
@@ -79,18 +78,21 @@ describe("Reporting of failed rebasing", () => {
   });
 
   it("should retry fetching the missing update actions until the server is back", async (context: WebknossosTestContext) => {
-    void dispatchEnsureHasNewestVersionAsync(Store.dispatch);
-    await sleep(200);
+    dispatchEnsureHasNewestVersionAsync(Store.dispatch);
 
-    expect(context.mocks.getUpdateActionLog).toHaveBeenLastCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      undefined,
-      false,
-      true,
-      {},
-      expect.objectContaining({ retries: Number.POSITIVE_INFINITY, maxDelayMs: 60 * 1000 }),
+    await vi.waitFor(
+      () =>
+        expect(context.mocks.getUpdateActionLog).toHaveBeenLastCalledWith(
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          undefined,
+          false,
+          true,
+          {},
+          expect.objectContaining({ retries: Number.POSITIVE_INFINITY, maxDelayMs: 60 * 1000 }),
+        ),
+      { timeout: 5000 },
     );
   });
 
@@ -101,14 +103,16 @@ describe("Reporting of failed rebasing", () => {
       error: { kind: "http", status: 403, message: "Forbidden", cause },
     });
 
-    void dispatchEnsureHasNewestVersionAsync(Store.dispatch);
-    await sleep(500);
+    // Not awaited on purpose: if rebasing fails, the promise is never resolved.
+    dispatchEnsureHasNewestVersionAsync(Store.dispatch);
+    await vi.waitFor(() => expect(ErrorHandling.notify).toHaveBeenCalledTimes(1), {
+      timeout: 5000,
+    });
 
     expect(hasRootSagaCrashed()).toBe(false);
-    expect(ErrorHandling.notifyWithPrefix).toHaveBeenCalledTimes(1);
-    const [error, prefix, params] = vi.mocked(ErrorHandling.notifyWithPrefix).mock.calls[0];
+    const [error, params, severity] = vi.mocked(ErrorHandling.notify).mock.calls[0];
     expect(error).toBe(cause);
-    expect(prefix).toBe("Rebasing failed: ");
+    expect(severity).toBe("error");
     expect(params).toMatchObject({
       reason: "Fetching the missing update actions failed",
       errorKind: "http",

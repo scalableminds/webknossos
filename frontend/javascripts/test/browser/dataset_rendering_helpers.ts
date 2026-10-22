@@ -339,7 +339,7 @@ export async function screenshotTracingView(
     "#screenshot_target_inputcatcher_PLANE_YZ",
     "#screenshot_target_inputcatcher_PLANE_XZ",
   ];
-  const screenshots = [];
+  const screenshots: Array<Buffer> = [];
 
   async function setOpacity(value: number) {
     await page.evaluate((value: number) => {
@@ -366,12 +366,12 @@ export async function screenshotTracingView(
     // triggered by a resize event when capturing beyond the viewport. Concretely, some
     // antd observers got into an infinite loop. The symptom was an error toast in the UI.
     const screenshot = await element.screenshot({ captureBeyondViewport: false });
-    screenshots.push(screenshot);
+    screenshots.push(Buffer.from(screenshot));
   }
 
   await revertOpacityIfNecessary();
   // Concatenate all screenshots
-  const img = mergeImagesHorizontally(screenshots as Array<Buffer>);
+  const img = mergeImagesHorizontally(screenshots);
 
   return {
     screenshot: PNG.sync.write(img),

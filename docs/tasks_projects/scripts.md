@@ -3,7 +3,7 @@
 Scripts let you run custom JavaScript logic automatically when annotators open assigned tasks.
 They are useful for project-specific keyboard shortcuts, UI helpers, and task setup automation.
 
-For API details, see the WEBKNOSSOS [Frontend API documentation](https://webknossos.org/assets/docs/frontend-api/index.html).
+For API details, see the WEBKNOSSOS [Frontend API documentation](../../frontend-api/index.md).
 
 ## Create a Script
 
